@@ -312,7 +312,20 @@
             0% { stroke: rgba(147, 197, 253, 0.3); }
             100% { stroke: rgba(147, 197, 253, 0.9); }
         }
-        
+
+        .hero-signature {
+            position: absolute;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 4;
+            pointer-events: none;
+        }
+        .hero-signature img {
+            height: 3em;
+            opacity: 0.6;
+            filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.8));
+        }
+
         /* Navigation - Slim with left title */
         nav {
             position: fixed;
@@ -457,23 +470,32 @@
             scroll-margin-top: 0;
         }
         .overview-box {
-            padding: var(--space-lg);
-            background: linear-gradient(135deg, #f0f9ff 0%, #fef3c7 100%);
-            border-left: 4px solid var(--accent);
-            border-radius: 0 8px 8px 0;
-            margin-top: var(--space-sm);
+            padding: var(--space-xl) var(--space-lg);
+            background: rgba(0, 217, 255, 0.08);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 217, 255, 0.2);
+            border-radius: 16px;
+            margin-top: var(--space-md);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3),
+                        0 0 60px rgba(0, 217, 255, 0.1);
         }
         .overview-box p {
-            font-size: var(--text-xl);
+            font-size: clamp(1.5rem, 3vw, 2rem);
             font-style: italic;
-            line-height: 1.65;
-            color: var(--ink-soft);
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.95);
+            font-weight: 400;
         }
         .overview-box p:first-child {
             font-weight: 500;
         }
         .overview-box p:last-child {
             margin-bottom: 0;
+        }
+        .overview-box strong {
+            color: var(--bio-cyan);
+            font-weight: 600;
         }
         
         section {
@@ -605,7 +627,7 @@
             background: rgba(199, 125, 255, 0.05);
             backdrop-filter: blur(16px) saturate(1.5);
             -webkit-backdrop-filter: blur(16px) saturate(1.5);
-            border-radius: 0 12px 12px 0;
+            border-radius: 12px;
             box-shadow: 0 2px 10px rgba(199, 125, 255, 0.05);
             border: 1px solid transparent;
             position: relative;
@@ -1038,7 +1060,17 @@
         
         /* Principles - v1 watermark + v3 stripe */
         .principles-grid { display: grid; gap: var(--space-sm); margin: var(--space-md) 0; }
-        
+
+        .principle-link {
+            text-decoration: none;
+            color: inherit;
+            display: block;
+            transition: transform 0.2s ease;
+        }
+        .principle-link:hover {
+            transform: none; /* Let .principle handle the transform */
+        }
+
         .principle {
             background: rgba(10, 13, 20, 0.3);
             backdrop-filter: blur(16px) saturate(1.5);
@@ -1050,6 +1082,10 @@
             overflow: hidden;
             box-shadow: 0 2px 10px rgba(0, 217, 255, 0.05);
             cursor: default;
+        }
+
+        .principle-link .principle {
+            cursor: pointer;
         }
 
         .principle:hover {
@@ -1532,6 +1568,10 @@
                 <path d="M7 13l5 5 5-5M7 6l5 5 5-5"/>
             </svg>
         </a>
+
+        <div class="hero-signature">
+            <img src="./Assets/footer-JHsig.png" alt="John Hanacek signature">
+        </div>
     </header>
 
     <main>
@@ -1619,30 +1659,40 @@
             <h2>Links & Resources</h2>
 
             <div class="principles-grid">
-                <div class="principle" data-num="01">
-                    <h4><a href="https://jhanacek.net/jh-consulting-services-59" target="_blank" rel="noopener">CONSULTING</a></h4>
-                    <p>Product design, UX strategy, and innovation consulting services</p>
-                </div>
+                <a href="https://jhanacek.net/jh-consulting-services-59" target="_blank" rel="noopener" class="principle-link">
+                    <div class="principle" data-num="01">
+                        <h4>CONSULTING</h4>
+                        <p>Product design, UX strategy, and innovation consulting services</p>
+                    </div>
+                </a>
 
-                <div class="principle" data-num="02">
-                    <h4><a href="https://johnhanacek.smugmug.com" target="_blank" rel="noopener">MEDIA SERVICES</a></h4>
-                    <p>Photography and creative media work</p>
-                </div>
+                <a href="https://johnhanacek.smugmug.com" target="_blank" rel="noopener" class="principle-link">
+                    <div class="principle" data-num="02">
+                        <h4>MEDIA SERVICES</h4>
+                        <p>Photography and creative media work</p>
+                    </div>
+                </a>
 
-                <div class="principle" data-num="03">
-                    <h4><a href="https://jhanacek.net/design-27" target="_blank" rel="noopener">DESIGN EXAMPLES</a></h4>
-                    <p>Portfolio of design work and case studies</p>
-                </div>
+                <a href="https://jhanacek.net/design-27" target="_blank" rel="noopener" class="principle-link">
+                    <div class="principle" data-num="03">
+                        <h4>DESIGN EXAMPLES</h4>
+                        <p>Portfolio of design work and case studies</p>
+                    </div>
+                </a>
 
-                <div class="principle" data-num="04">
-                    <h4><a href="https://jhanacek.net/jh-links-53" target="_blank" rel="noopener">ALL LINKS</a></h4>
-                    <p>Complete directory of projects and resources</p>
-                </div>
+                <a href="https://jhanacek.net/jh-links-53" target="_blank" rel="noopener" class="principle-link">
+                    <div class="principle" data-num="04">
+                        <h4>ALL LINKS</h4>
+                        <p>Complete directory of projects and resources</p>
+                    </div>
+                </a>
 
-                <div class="principle" data-num="05">
-                    <h4><a href="https://jhanacek.net/resume-john-hanacek-15" target="_blank" rel="noopener">RESUME</a></h4>
-                    <p>Full professional resume and CV</p>
-                </div>
+                <a href="https://jhanacek.net/resume-john-hanacek-15" target="_blank" rel="noopener" class="principle-link">
+                    <div class="principle" data-num="05">
+                        <h4>RESUME</h4>
+                        <p>Full professional resume and CV</p>
+                    </div>
+                </a>
             </div>
         </section>
 
