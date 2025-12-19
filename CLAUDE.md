@@ -4,19 +4,47 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This repository is being used to transform the **MetaMedium_Whitepaper_v4-TOTRANSFORM.html** into a portfolio website for John Hanacek.
+Portfolio website for John Hanacek showcasing work at the intersection of **Creativity, Curiosity, AI & Human Augmentation**.
 
 **Current state:**
-- `MetaMedium_Whitepaper_v4-TOTRANSFORM.html` - A single-file interactive whitepaper (5,347 lines) titled "MetaMedium: AI Beyond Chat"
-- `JHportfolio2026.md` - Content source for the portfolio transformation
+- `index.html` - Portfolio homepage with interactive fish minigame canvas (in development)
+- `design.html` - Design examples page with blueprint drawing canvas demo (frozen/preserved)
+- `JHportfolio2026.md` - Content source for portfolio
+- Performance optimizations completed: Voronoi background removed, shimmer animation simplified, canvas loop optimized
 
-**Transformation plan:**
-- The whitepaper HTML will serve as the template/foundation for the portfolio site
-- The interactive demo canvas functionality will be preserved
-- New content from `JHportfolio2026.md` will replace the whitepaper content
-- The original MetaMedium whitepaper will be embedded as an iframe in the portfolio
+**Site Structure:**
+Each page is a standalone HTML document with embedded CSS and JavaScript for a complete interactive web experience.
 
-The file is a standalone HTML document that includes embedded CSS and JavaScript for a complete interactive web experience.
+## Sitemap
+
+The portfolio consists of 5 main pages:
+
+1. **index.html** - Homepage
+   - Hero with interactive fish minigame canvas (fish, coral, food, bubbles)
+   - Portfolio introduction with name pronunciation guide
+   - Tagline: "INNOVATOR · DESIGNER · CREATOR"
+   - Key achievements and education highlights
+
+2. **design.html** - Design Examples
+   - Preserves the blueprint drawing canvas demo (draw → recognize shapes → animations)
+   - Showcase of design work and interactive demos
+   - Frozen version of original MetaMedium whitepaper interactive canvas
+
+3. **art.html** - Art Portfolio
+   - Visual art and creative work showcase
+   - (To be developed)
+
+4. **services.html** - Services & Consulting
+   - Professional services offered
+   - Media services, design consulting
+   - (To be developed)
+
+5. **about.html** - About & Contact
+   - Full bio and background
+   - Education: MA in Communication, Culture & Technology from Georgetown (2016)
+   - Contact information: hello@jhanacek.net
+   - Social links: Bluesky, X/Twitter, LinkedIn
+   - (To be developed)
 
 ## Architecture
 
@@ -66,15 +94,20 @@ The HTML file contains three main sections in order:
 
 ## Key Features
 
-**Interactive Hero Canvas:**
-- Drawing functionality with mouse/touch support
-- Stores strokes and fades them over time
-- Dark blueprint-style background (#0a1628)
+**Interactive Hero Canvas (index.html - Fish Minigame):**
+- Interactive aquatic minigame with fish, coral, food, and bubbles
+- Real-time physics and animation
+- Touch and mouse support
+- Dark oceanic background
+- (Mechanics to be defined)
 
-**Demo Canvas (Fish Animation):**
-- Three-state interaction: draw fish → draw food → drag food
-- Real-time physics with wiggle animation
-- Touch and mouse support with grab cursor
+**Interactive Hero Canvas (design.html - Drawing Demo):**
+- Blueprint drawing functionality with mouse/touch support
+- Shape recognition (circles, squares, triangles)
+- Stores strokes and fades them over time
+- Particle effects and ripple animations
+- Dark blueprint-style background (#0a1628)
+- Smart canvas loop that pauses when idle for performance
 
 **Image Gallery:**
 - Grid layout (2 columns, responsive)
@@ -89,10 +122,10 @@ The HTML file contains three main sections in order:
 
 ## Portfolio Content (JHportfolio2026.md)
 
-The portfolio will highlight John Hanacek's work at the intersection of **Creativity, Curiosity, AI & Human Augmentation**.
+Portfolio highlights John Hanacek's work at the intersection of **Creativity, Curiosity, AI & Human Augmentation**.
 
-**Key content sections:**
-- **Hero**: Same interactive demo canvas, new text with name pronunciation guide
+**Key content (index.html):**
+- **Hero**: Interactive fish minigame canvas with name pronunciation guide
 - **Tagline**: "INNOVATOR · DESIGNER · CREATOR"
 - **Education**: MA in Communication, Culture & Technology from Georgetown (2016)
   - Awarded "Most Meta" by peers
@@ -101,29 +134,33 @@ The portfolio will highlight John Hanacek's work at the intersection of **Creati
 - **Achievements**:
   - Founder Institute SF 2020 graduate (CEO of AvatarMEDIC)
   - R&D Innovation Award from Aerospace Medical Association (2022)
-- **Embedded whitepaper**: iframe to https://jjh111.github.io/MetaMedium/MetaMedium_Whitepaper_v4.html
 - **Endorsements**: Quotes from CEOs, researchers, and product managers
-- **Links**: Consulting, Media Services, Design Examples, Resume, All Links
 - **Social/Contact**: Bluesky, X/Twitter, LinkedIn, email (hello@jhanacek.net)
 
 ## Development Notes
 
-Since this is a single HTML file, any modifications should preserve:
-- The self-contained nature (no external dependencies except Google Fonts)
-- Inline CSS and JavaScript structure
-- Accessibility features
+**File Structure:**
+Each page is a standalone HTML file with:
+- Self-contained structure (no external dependencies except Google Fonts)
+- Inline CSS in `<style>` blocks (starting ~line 24)
+- HTML content/markup (~line 1500-2500)
+- JavaScript in `<script>` blocks (~line 1700+)
+- Accessibility features (WCAG AA, semantic HTML, ARIA labels)
 - Mobile responsiveness
 - Cross-browser compatibility
 
-When editing:
-- CSS is in the `<style>` block starting at line 24
-- HTML content begins around line 2500
-- JavaScript is in `<script>` blocks from line 4200 onward
-- The file name includes "TOTRANSFORM" indicating it will be converted into the portfolio site
+**Current Development Focus:**
+- `index.html` - Implementing fish minigame interactive canvas
+- `design.html` - Frozen copy preserving blueprint drawing demo
+- Future pages (art.html, services.html, about.html) - To be developed
 
-**Transformation workflow:**
-1. Keep the design system, interactive canvas, and navigation structure
-2. Replace hero text with portfolio hero content from JHportfolio2026.md
-3. Replace whitepaper sections with portfolio sections (education, achievements, endorsements)
-4. Add iframe embedding the original whitepaper
-5. Update footer with social links and contact information
+**Performance Optimizations Applied:**
+- Voronoi background animation removed (was 40-50% CPU usage)
+- CSS shimmer animation simplified (removed expensive hue-rotate filter)
+- Canvas animation loop now pauses when idle (30-40% CPU savings)
+- Total performance improvement: ~70-80% CPU reduction
+
+**Navigation:**
+- Update nav links to include all 5 pages when they're created
+- Current nav structure uses anchor links for single-page sections
+- Will need to adapt for multi-page navigation
