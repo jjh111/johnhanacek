@@ -469,34 +469,6 @@
         #abstract {
             scroll-margin-top: 0;
         }
-        .overview-box {
-            padding: var(--space-xl) var(--space-lg);
-            background: rgba(0, 217, 255, 0.08);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(0, 217, 255, 0.2);
-            border-radius: 16px;
-            margin-top: var(--space-md);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3),
-                        0 0 60px rgba(0, 217, 255, 0.1);
-        }
-        .overview-box p {
-            font-size: clamp(1.5rem, 3vw, 2rem);
-            font-style: italic;
-            line-height: 1.6;
-            color: rgba(255, 255, 255, 0.95);
-            font-weight: 400;
-        }
-        .overview-box p:first-child {
-            font-weight: 500;
-        }
-        .overview-box p:last-child {
-            margin-bottom: 0;
-        }
-        .overview-box strong {
-            color: var(--bio-cyan);
-            font-weight: 600;
-        }
         
         section {
             margin-bottom: var(--space-xl);
@@ -515,10 +487,6 @@
             color: #ffffff;
             text-shadow: 0 0 40px rgba(0, 217, 255, 0.7), 0 2px 8px rgba(0, 0, 0, 0.8);
             cursor: default;
-        }
-
-        h2:hover {
-            font-weight: 700;
         }
 
         h2::before {
@@ -544,10 +512,6 @@
             cursor: default;
         }
 
-        h3:hover {
-            font-weight: 600;
-        }
-
         h4 {
             font-family: 'Space Grotesk', -apple-system, sans-serif;
             font-size: var(--text-lg);
@@ -559,10 +523,6 @@
             cursor: default;
         }
 
-        h4:hover {
-            font-weight: 700;
-        }
-        
         p {
             margin-bottom: var(--space-md);
             max-width: 65ch;
@@ -571,10 +531,6 @@
             cursor: default;
         }
 
-        p:hover {
-            font-weight: 500;
-        }
-        
         strong {
             font-weight: 600;
             color: rgba(255, 255, 255, 0.98);
@@ -612,38 +568,68 @@
                 text-shadow: 0 0 20px var(--silk-glow), 0 0 30px var(--bio-purple);
             }
         }
-        
-        /* Blockquotes - Glass-morphism with bioluminescent accent */
-        blockquote {
+
+        /* External link icon */
+        a[target="_blank"]::after {
+            content: "↗";
+            display: inline-block;
+            font-size: 0.75em;
+            margin-left: 0.25em;
+            opacity: 0.6;
+            transition: opacity 0.3s ease;
+        }
+
+        a[target="_blank"]:hover::after {
+            opacity: 1;
+        }
+
+        /* Core Content Card - Standardized glass-morphism style */
+        .content-card {
             font-family: 'DM Sans', sans-serif;
+            background: rgba(199, 125, 255, 0.05);
+            backdrop-filter: blur(16px) saturate(1.5);
+            -webkit-backdrop-filter: blur(16px) saturate(1.5);
+            border-radius: 12px;
+            border: 1px solid transparent;
+            box-shadow: 0 2px 10px rgba(199, 125, 255, 0.05);
+            padding: var(--space-lg);
+            margin: var(--space-lg) 0;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        /* Clickable variant - adds stripe and hover effects */
+        .content-card.clickable {
+            cursor: pointer;
+        }
+
+        .content-card.clickable::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 4px; height: 100%;
+            background: linear-gradient(180deg, var(--sketch-blue), var(--sketch-green));
+        }
+
+        .content-card.clickable:hover {
+            background: rgba(199, 125, 255, 0.18);
+            box-shadow: 0 8px 32px rgba(199, 125, 255, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 12px 48px rgba(0, 0, 0, 0.4);
+            transform: translateY(-2px);
+            border: 1px solid rgba(199, 125, 255, 0.4);
+        }
+
+        /* Endorsement-specific styles (replace blockquote) */
+        .content-card.endorsement {
             font-size: 1.3rem;
             font-weight: 400;
             font-style: italic;
             line-height: 1.6;
             color: rgba(255, 255, 255, 0.95);
-            border-left: 3px solid transparent;
-            padding: var(--space-md) var(--space-md) var(--space-md) var(--space-lg);
-            margin: var(--space-lg) 0;
-            background: rgba(199, 125, 255, 0.05);
-            backdrop-filter: blur(16px) saturate(1.5);
-            -webkit-backdrop-filter: blur(16px) saturate(1.5);
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(199, 125, 255, 0.05);
-            border: 1px solid transparent;
-            position: relative;
-            cursor: default;
+            padding: var(--space-md) var(--space-xl) var(--space-md) var(--space-lg);
         }
 
-        blockquote:hover {
-            background: rgba(199, 125, 255, 0.18);
-            box-shadow: 0 8px 32px rgba(199, 125, 255, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 12px 48px rgba(0, 0, 0, 0.4);
-            transform: translateY(-2px);
-            font-weight: 500;
-            border-left: 3px solid var(--bio-purple);
-            border: 1px solid rgba(199, 125, 255, 0.4);
-        }
-        
-        blockquote cite {
+        .content-card.endorsement cite {
             display: block;
             font-family: 'DM Sans', sans-serif;
             font-style: normal;
@@ -652,7 +638,55 @@
             color: var(--muted-light);
             margin-top: var(--space-sm);
         }
-        blockquote cite em { font-style: italic; }
+        .content-card.endorsement cite em { font-style: italic; }
+
+        /* Remove hover effects on endorsement links */
+        .content-card.endorsement a:hover {
+            animation: none;
+            text-shadow: none;
+        }
+
+        /* Typography inside cards */
+        .content-card h4 {
+            margin-top: 0;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: var(--text-lg);
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.95);
+        }
+        .content-card p {
+            font-size: var(--text-base);
+            line-height: 1.65;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        .content-card p:last-child { margin-bottom: 0; }
+
+        /* Data number watermark (for education, achievements, etc.) */
+        .content-card::before {
+            content: attr(data-num);
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 5rem;
+            font-weight: 700;
+            color: rgba(26, 26, 46, 0.04);
+            line-height: 1;
+            pointer-events: none;
+        }
+
+        /* About section - larger text variant */
+        .content-card.about p {
+            font-size: clamp(1.5rem, 3vw, 2rem);
+            font-style: italic;
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.95);
+            font-weight: 400;
+        }
+        .content-card.about strong {
+            color: var(--bio-cyan);
+            font-weight: 600;
+        }
         
         ul, ol {
             margin-bottom: var(--space-md);
@@ -667,10 +701,6 @@
             cursor: default;
         }
 
-        li:hover {
-            font-weight: 500;
-        }
-        
         /* Figures */
         /*figure { margin: var(--space-lg) 0; }
         */
@@ -843,10 +873,6 @@
             border: 1px solid rgba(0, 217, 255, 0.5);
         }
 
-        .callout:hover h4,
-        .callout:hover p {
-            font-weight: 600;
-        }
         .callout.insight { border-left-color: var(--sketch-purple); }
         .callout.key { border-left-color: var(--accent); }
         .callout h4 {
@@ -858,53 +884,6 @@
             line-height: 1.65;
         }
         .callout p:last-child { margin-bottom: 0; }
-        
-        /* Use Cases - Glass-morphism style */
-        .use-case {
-            background: rgba(10, 13, 20, 0.3);
-            backdrop-filter: blur(16px) saturate(1.5);
-            -webkit-backdrop-filter: blur(16px) saturate(1.5);
-            border-radius: 10px;
-            padding: var(--space-md);
-            margin: var(--space-md) 0;
-            border-left: 3px solid transparent;
-            border: 1px solid transparent;
-            box-shadow: 0 2px 10px rgba(122, 229, 130, 0.05);
-            position: relative;
-            cursor: default;
-        }
-
-        .use-case:hover {
-            background: rgba(10, 13, 20, 0.7);
-            box-shadow: 0 8px 32px rgba(122, 229, 130, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 12px 48px rgba(0, 0, 0, 0.4);
-            transform: translateY(-2px);
-            border-left: 3px solid var(--bio-green);
-            border: 1px solid rgba(122, 229, 130, 0.5);
-        }
-
-        .use-case:hover h4,
-        .use-case:hover .scenario,
-        .use-case:hover .capabilities {
-            font-weight: 600;
-        }
-        .use-case h4 {
-            margin-top: 0;
-            color: var(--sketch-green);
-            font-size: var(--text-sm);
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-        }
-        .use-case .scenario {
-            font-style: italic;
-            font-size: var(--text-base);
-            line-height: 1.65;
-            margin-bottom: var(--space-sm);
-        }
-        .use-case .capabilities {
-            font-size: var(--text-sm);
-            color: var(--muted);
-            margin-bottom: 0;
-        }
         
         /* Genealogy */
         .genealogy-item {
@@ -1058,80 +1037,23 @@
             }
         }
         
-        /* Principles - v1 watermark + v3 stripe */
-        .principles-grid { display: grid; gap: var(--space-sm); margin: var(--space-md) 0; }
+        /* Card grid layout */
+        .card-grid {
+            display: grid;
+            gap: var(--space-xs);
+            margin: var(--space-md) 0;
+        }
 
-        .principle-link {
+        /* Tighter spacing for cards in grid */
+        .card-grid .content-card {
+            margin: 0;
+        }
+
+        /* Card link wrapper */
+        .card-link {
             text-decoration: none;
             color: inherit;
             display: block;
-            transition: transform 0.2s ease;
-        }
-        .principle-link:hover {
-            transform: none; /* Let .principle handle the transform */
-        }
-
-        .principle {
-            background: rgba(10, 13, 20, 0.3);
-            backdrop-filter: blur(16px) saturate(1.5);
-            -webkit-backdrop-filter: blur(16px) saturate(1.5);
-            border-radius: 12px;
-            padding: var(--space-lg);
-            border: 1px solid transparent;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 2px 10px rgba(0, 217, 255, 0.05);
-            cursor: default;
-        }
-
-        .principle-link .principle {
-            cursor: pointer;
-        }
-
-        .principle:hover {
-            background: rgba(10, 13, 20, 0.75);
-            box-shadow: 0 8px 40px rgba(0, 217, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 12px 48px rgba(0, 0, 0, 0.4);
-            transform: translateY(-2px);
-            border: 1px solid rgba(0, 217, 255, 0.5);
-        }
-
-        .principle:hover h4,
-        .principle:hover p {
-            font-weight: 600;
-        }
-        .principle::before {
-            content: attr(data-num);
-            position: absolute;
-            top: -15px;
-            right: 15px;
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 5rem;
-            font-weight: 700;
-            color: rgba(26, 26, 46, 0.04);
-            line-height: 1;
-            pointer-events: none;
-        }
-        .principle::after {
-            content: '';
-            position: absolute;
-            top: 0; left: 0;
-            width: 4px; height: 100%;
-            background: linear-gradient(180deg, var(--sketch-blue), var(--sketch-green));
-        }
-        .principle h4 {
-            margin-top: 0;
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: var(--text-lg);
-            font-weight: 600;
-        }
-        .principle p { font-size: var(--text-base); line-height: 1.65; }
-        .principle p:last-child { margin-bottom: 0; }
-        .principle-example {
-            font-size: var(--text-sm);
-            color: var(--muted);
-            border-left: 2px solid var(--border);
-            padding-left: var(--space-sm);
-            margin-top: var(--space-xs);
         }
         
         /* Practice use cases - principles label */
@@ -1538,6 +1460,7 @@
             </button>
             <ul>
                 <li><a href="#about">About</a></li>
+                <li><a href="#overview">Overview</a></li>
                 <li><a href="#education">Education</a></li>
                 <li><a href="#achievements">Achievements</a></li>
                 <li><a href="#endorsements">Endorsements</a></li>
@@ -1558,7 +1481,7 @@
         <div class="hero-content">
             <h1>John <span class="meta">Hanacek</span></h1>
             <p class="tagline">INNOVATOR · DESIGNER · CREATOR</p>
-            <p class="byline"> <span class="role">Sounds like · /ˈhænəˌtʃɛk/ (Hana-check)</span></p>
+            <p class="byline"> <span class="role">Sounds like · (Hana-check)</span></p>
             
             <!--<p class="subtitle">Working at the intersection of Creativity, Curiosity & Human Augmentation</p>-->
             
@@ -1579,8 +1502,32 @@
         <section id="about">
             <h2>About</h2>
 
-            <div class="overview-box">
+            <div class="content-card about">
                 <p>At the intersection of <strong>Creativity</strong>, <strong>Curiosity</strong> & <strong>Technology </strong> as <strong>Human Augmentation</strong>.</p>
+            </div>
+
+            <div class="video-embed">
+                <iframe src="https://www.youtube.com/embed/Ti3taENE12o" title="YouTube video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+            </div>
+        </section>
+
+        <!-- OVERVIEW -->
+        <section id="overview">
+            <h2>Overview</h2>
+
+            <div class="content-card">
+                <h4>Skills</h4>
+                <p>Product Design · User Interface Design · User Experience and Persona · Design Process Development · Knowledge Management · User Feedback Session Facilitation · Workshop Teaching</p>
+            </div>
+
+            <div class="content-card">
+                <h4>Experience</h4>
+                <p>Spatial Computing / VR / XR · Agentic AI - Chat & Data</p>
+            </div>
+
+            <div class="content-card">
+                <h4>Tools</h4>
+                <p>Figma · Adobe Suite · Blender · Unity · Coda · Notion · Airtable · Google Workspace · Claude Code · Ollama · MLStudio</p>
             </div>
         </section>
 
@@ -1588,12 +1535,12 @@
         <section id="education">
             <h2>Education</h2>
 
-            <div class="principle" data-num="MA">
+            <div class="content-card" data-num="MA">
                 <h4>MA in Communication, Culture & Technology (CCT) from Georgetown University (2016)</h4>
                 <ul>
-                    <li>Awarded the 'Black Box' trophy for <a href="https://sketchfab.com/3d-models/blackbox-award-most-meta-181721f63e98429db5961ee738e363db" target="_blank" rel="noopener"><strong>"Most Meta"</strong></a> by Georgetown peers</li>
-                    <li>Thesis on <a href="https://jhanacek.net/art-math-math-art-toward-a-boundless-grounded-infinity-13" target="_blank" rel="noopener"><strong>AI-enabled drawing app</strong></a> for education</li>
-                    <li><a href="https://www.researchgate.net/publication/324877076_Capturing_Tracing_and_Visualizing_the_Spread_of_Technology-Enhanced_Instructional_Strategies" target="_blank" rel="noopener"><strong>Published research</strong></a> on technology adoption in the Medical School at <a href="https://library.iated.org/view/DAVIS2015CAP" target="_blank" rel="noopener"><strong>EduLearn 2015</strong></a></li>
+                    <li>Awarded the 'Black Box' trophy for <strong><a href="https://sketchfab.com/3d-models/blackbox-award-most-meta-181721f63e98429db5961ee738e363db" target="_blank" rel="noopener">"Most Meta"</a></strong> by Georgetown peers</li>
+                    <li>Thesis on <strong><a href="https://jhanacek.net/art-math-math-art-toward-a-boundless-grounded-infinity-13" target="_blank" rel="noopener">AI-enabled drawing app</a></strong> for education</li>
+                    <li><strong><a href="https://www.researchgate.net/publication/324877076_Capturing_Tracing_and_Visualizing_the_Spread_of_Technology-Enhanced_Instructional_Strategies" target="_blank" rel="noopener">Published research</a></strong> on technology adoption in the Medical School at <strong><a href="https://library.iated.org/view/DAVIS2015CAP" target="_blank" rel="noopener">EduLearn 2015</a></strong></li>
                 </ul>
             </div>
         </section>
@@ -1602,14 +1549,14 @@
         <section id="achievements">
             <h2>Achievements</h2>
 
-            <div class="use-case">
+            <div class="content-card">
                 <h4>2020 Founder Institute San Francisco</h4>
-                <p class="scenario">Graduate as CEO of <a href="https://www.avatarmedic.com" target="_blank" rel="noopener"><strong>AvatarMEDIC</strong></a></p>
+                <p>Graduate as CEO of <strong><a href="https://www.avatarmedic.com" target="_blank" rel="noopener">AvatarMEDIC</a></strong></p>
             </div>
 
-            <div class="use-case">
+            <div class="content-card">
                 <h4>2022 Research & Development Innovation Award</h4>
-                <p class="scenario"><strong>Programming Robotic Arm via XR Digital Twin</strong> Aerospace Medical Association <a href="https://www.spatial.io/s/AvatarMEDIC-Inc-JH-Innovation-Award-5f8292cffa7f116d57160d3d?share=4187546324134403936" target="_blank" rel="noopener">More Info</a></p>
+                <p><strong>Programming Robotic Arm via XR Digital Twin</strong> Aerospace Medical Association </p>
             </div>
         </section>
 
@@ -1633,66 +1580,56 @@
         <section id="endorsements">
             <h2>Endorsements</h2>
 
-            <blockquote>
+            <div class="content-card endorsement">
                 <p>"Talented and very experienced designer!"</p>
                 <cite><strong><a href="https://www.linkedin.com/in/ipetryaevskaya/" target="_blank" rel="noopener">Inga Petryaevskaya</a></strong> CEO <a href="https://www.shapesxr.com" target="_blank" rel="noopener">ShapesXR</a></cite>
-            </blockquote>
+            </div>
 
-            <blockquote>
+            <div class="content-card endorsement">
                 <p>"John's ability to stay ahead of rapid industry shifts is evident not only in his consulting work but also in his thought leadership. I highly recommend John for roles requiring design leadership, systems thinking, and future-focused innovation."</p>
                 <cite><strong><a href="https://www.linkedin.com/in/hurriyetok/" target="_blank" rel="noopener">Dr. Hurriyet Ok</a></strong> Professor <a href="https://cs.engineering.gwu.edu/celebrating-xrperience-gw" target="_blank" rel="noopener">George Washington University</a></cite>
-            </blockquote>
+            </div>
 
-            <blockquote>
+            <div class="content-card endorsement">
                 <p>"John recently led a customer journey mapping workshop for my team, and it was an outstanding experience from start to finish. My team and I came away with a deeper understanding of our customers and a clear appreciation for the impact of product design from the very start of a project."</p>
                 <cite><strong><a href="https://www.linkedin.com/in/tommy-kronmark/" target="_blank" rel="noopener">Tommy Kronmark</a></strong>, COO <a href="https://www.mycells.bio" target="_blank" rel="noopener">Muse.bio</a></cite>
-            </blockquote>
+            </div>
 
-            <blockquote>
+            <div class="content-card endorsement">
                 <p>"It was such a tremendous pleasure and honor to work on the <a href="https://spatialandimmersivedesign.substack.com/p/xr-product-design-case-study-nanome" target="_blank" rel="noopener">Nanome 2 Redesign</a> with John. He's not only a true Visionary, but also an amazing listener with incredible intuition. I've never seen anyone able to so readily understand scientists, easily communicate with them, then design an experience they can scarcely imagine, but recognize as what they wanted (even Needed) as soon as they step into it."</p>
                 <cite><strong><a href="https://www.linkedin.com/in/sheila-zipfel/" target="_blank" rel="noopener">Sheila Zipfel</a></strong>, as Nanome Product Manager, <strong>Medicinal Chemist, SME</strong></cite>
-            </blockquote>
+            </div>
         </section>
 
         <!-- LINKS -->
         <section id="links">
             <h2>Links & Resources</h2>
 
-            <div class="principles-grid">
-                <a href="https://jhanacek.net/jh-consulting-services-59" target="_blank" rel="noopener" class="principle-link">
-                    <div class="principle" data-num="01">
-                        <h4>CONSULTING</h4>
-                        <p>Product design, UX strategy, and innovation consulting services</p>
-                    </div>
-                </a>
+            <div class="card-grid">
+                <div class="content-card" data-num="01">
+                    <h4><a href="https://jhanacek.net/jh-consulting-services-59" target="_blank" rel="noopener">CONSULTING</a></h4>
+                    <p>Product design, UX strategy, and innovation consulting services</p>
+                </div>
 
-                <a href="https://johnhanacek.smugmug.com" target="_blank" rel="noopener" class="principle-link">
-                    <div class="principle" data-num="02">
-                        <h4>MEDIA SERVICES</h4>
-                        <p>Photography and creative media work</p>
-                    </div>
-                </a>
+                <div class="content-card" data-num="02">
+                    <h4><a href="https://johnhanacek.smugmug.com" target="_blank" rel="noopener">MEDIA SERVICES</a></h4>
+                    <p>Photography and creative media work</p>
+                </div>
 
-                <a href="https://jhanacek.net/design-27" target="_blank" rel="noopener" class="principle-link">
-                    <div class="principle" data-num="03">
-                        <h4>DESIGN EXAMPLES</h4>
-                        <p>Portfolio of design work and case studies</p>
-                    </div>
-                </a>
+                <div class="content-card" data-num="03">
+                    <h4><a href="https://jhanacek.net/design-27" target="_blank" rel="noopener">DESIGN EXAMPLES</a></h4>
+                    <p>Portfolio of design work and case studies</p>
+                </div>
 
-                <a href="https://jhanacek.net/jh-links-53" target="_blank" rel="noopener" class="principle-link">
-                    <div class="principle" data-num="04">
-                        <h4>ALL LINKS</h4>
-                        <p>Complete directory of projects and resources</p>
-                    </div>
-                </a>
+                <div class="content-card" data-num="04">
+                    <h4><a href="https://jhanacek.net/jh-links-53" target="_blank" rel="noopener">ALL LINKS</a></h4>
+                    <p>Complete directory of projects and resources</p>
+                </div>
 
-                <a href="https://jhanacek.net/resume-john-hanacek-15" target="_blank" rel="noopener" class="principle-link">
-                    <div class="principle" data-num="05">
-                        <h4>RESUME</h4>
-                        <p>Full professional resume and CV</p>
-                    </div>
-                </a>
+                <div class="content-card" data-num="05">
+                    <h4><a href="https://jhanacek.net/resume-john-hanacek-15" target="_blank" rel="noopener">RESUME</a></h4>
+                    <p>Full professional resume and CV</p>
+                </div>
             </div>
         </section>
 
