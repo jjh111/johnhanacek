@@ -144,7 +144,7 @@
             justify-content: flex-start;
             align-items: center;
             text-align: center;
-            padding: clamp(8rem, 15vh, 12rem) var(--space-sm) 0;
+            padding: clamp(5rem, 10vh, 8rem) var(--space-sm) 0;
             position: relative;
             overflow: hidden;
             background: radial-gradient(ellipse at center, var(--void-mid) 0%, var(--void-deep) 100%);
@@ -290,8 +290,7 @@
         
         .scroll-indicator {
             position: absolute;
-            /*bottom: var(--space-xl); */
-            bottom: 11rem;
+            bottom: 2.5rem;
             z-index: 4;
             animation: bounce 2s infinite;
             cursor: pointer;
@@ -316,16 +315,10 @@
             100% { stroke: rgba(147, 197, 253, 0.9); }
         }
 
-        .hero-signature {
-            position: absolute;
-            bottom: 2rem;
-            right: 2rem;
-            z-index: 4;
-            pointer-events: none;
-        }
-        .hero-signature img {
-            height: 3em;
-            opacity: 0.6;
+        .hero-sig-inline {
+            height: 2.5em;
+            opacity: 0.5;
+            margin-top: var(--space-sm);
             filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.8));
         }
 
@@ -418,7 +411,83 @@
             transition: color 0.2s;
         }
         nav ul a:hover, nav ul a:focus { color: var(--accent); }
-        
+
+        /* Nav page tabs and separators */
+        .nav-tab { font-weight: 700; }
+        .nav-page { color: var(--accent); font-weight: 700; }
+        .nav-separator {
+            color: rgba(255, 255, 255, 0.25);
+            font-size: 0.75rem;
+            padding: 0 0.5rem;
+            pointer-events: none;
+        }
+
+        /* Shape Navigation */
+        .shape-nav {
+            position: absolute;
+            top: 1.5rem;
+            left: 50%;
+            right: auto;
+            transform: translateX(-50%);
+            z-index: 5;
+            display: flex;
+            width: fit-content;
+            gap: 1.5rem;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.5rem 0.75rem;
+            border-radius: 2rem;
+            border: 1px solid rgba(0, 217, 255, 0.15);
+        }
+        .shape-link {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+            opacity: 0.4;
+            transition: opacity 0.3s;
+            text-decoration: none;
+        }
+        .shape-link:hover {
+            opacity: 0.8;
+        }
+        .shape-link.active {
+            opacity: 1;
+        }
+        .shape-link .shape {
+            width: 32px;
+            height: 32px;
+            fill: none;
+            stroke: var(--bio-cyan, #00d9ff);
+            stroke-width: 2;
+        }
+        .shape-link.active .shape {
+            fill: rgba(0, 217, 255, 0.15);
+            filter: drop-shadow(0 0 8px rgba(0, 217, 255, 0.6));
+        }
+        .shape-label {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.5rem;
+            font-weight: 700;
+            color: var(--bio-cyan, #00d9ff);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .shape-label-img {
+            height: 0.7rem;
+            width: auto;
+            filter: brightness(1.2);
+        }
+        .shape-link:hover .shape-label,
+        .shape-link.active .shape-label {
+            opacity: 1;
+        }
+        @media (max-width: 768px) {
+            .shape-label { opacity: 1; }
+        }
+
         /* Mobile nav styles */
         @media (max-width: 900px) {
             .nav-toggle {
@@ -1430,7 +1499,7 @@
             .media-placeholder.image { aspect-ratio: 3/2; }
             .timeline-video { aspect-ratio: 16/9; }
             blockquote { padding-left: var(--space-sm); }
-            .hero { padding-top: 6rem; padding-left: var(--space-md); padding-right: var(--space-md); }
+            .hero { padding-top: 4rem; padding-left: var(--space-md); padding-right: var(--space-md); }
             .hero-hint { bottom: 7rem; }
         }
         
@@ -1460,25 +1529,44 @@
 
     <nav id="nav" role="navigation" aria-label="Main navigation">
         <div class="nav-inner">
-            <a href="#top" class="nav-title">John Hanacek</a>
+            <a href="index.html" class="nav-title">John Hanacek</a>
             <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
                 <span></span>
                 <span></span>
                 <span></span>
             </button>
             <ul>
+                <li><a href="index.html" class="nav-page">Home</a></li>
+                <li><a href="design.html" class="nav-tab">Design</a></li>
+                <li><a href="art.html" class="nav-tab">Art</a></li>
+                <li class="nav-separator">|</li>
                 <li><a href="#about">About</a></li>
                 <li><a href="#overview">Overview</a></li>
                 <li><a href="#education">Education</a></li>
                 <li><a href="#achievements">Achievements</a></li>
                 <li><a href="#endorsements">Endorsements</a></li>
-                <li><a href="#links">Links</a></li>
                 <li><a href="#contact">Contact</a></li>
             </ul>
         </div>
     </nav>
 
     <header class="hero" id="top">
+        <!-- Shape Navigation -->
+        <nav class="shape-nav" aria-label="Page navigation">
+            <a href="index.html" class="shape-link active" aria-label="Home" aria-current="page">
+                <svg class="shape triangle" viewBox="0 0 40 40"><polygon points="20,8 34,32 6,32"/></svg>
+                <img class="shape-label shape-label-img" src="./Assets/footer-JHsig.png" alt="JH">
+            </a>
+            <a href="design.html" class="shape-link" aria-label="Design">
+                <svg class="shape rounded-square" viewBox="0 0 40 40"><rect x="6" y="6" width="28" height="28" rx="6"/></svg>
+                <span class="shape-label">DESIGN</span>
+            </a>
+            <a href="art.html" class="shape-link" aria-label="Art">
+                <svg class="shape circle" viewBox="0 0 40 40"><circle cx="20" cy="20" r="14"/></svg>
+                <span class="shape-label">ART</span>
+            </a>
+        </nav>
+
         <!-- Interactive Blueprint Canvas -->
         <canvas id="heroCanvas"></canvas>
         <div class="hero-hint">
@@ -1490,19 +1578,13 @@
             <h1>John <span class="meta">Hanacek</span></h1>
             <p class="tagline">INNOVATOR · DESIGNER · CREATOR</p>
             <p class="byline"> <span class="role">Sounds like · (Hana-check)</span></p>
-            
-            <!--<p class="subtitle">Working at the intersection of Creativity, Curiosity & Human Augmentation</p>-->
-            
+            <img class="hero-sig-inline" src="./Assets/footer-JHsig.png" alt="John Hanacek signature">
         </div>
         <a href="#about" class="scroll-indicator" aria-label="Scroll to content">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
                 <path d="M7 13l5 5 5-5M7 6l5 5 5-5"/>
             </svg>
         </a>
-
-        <div class="hero-signature">
-            <img src="./Assets/footer-JHsig.png" alt="John Hanacek signature">
-        </div>
     </header>
 
     <main>
@@ -2476,26 +2558,10 @@
         function drawGrid() {
             const w = canvas.width / (window.devicePixelRatio || 1);
             const h = canvas.height / (window.devicePixelRatio || 1);
-            
+
             ctx.fillStyle = colors.bg;
             ctx.fillRect(0, 0, w, h);
-            
-            // Small grid
-            ctx.strokeStyle = colors.grid;
-            ctx.lineWidth = 0.5;
-            ctx.beginPath();
-            for (let x = 0; x <= w; x += 40) { ctx.moveTo(x, 0); ctx.lineTo(x, h); }
-            for (let y = 0; y <= h; y += 40) { ctx.moveTo(0, y); ctx.lineTo(w, y); }
-            ctx.stroke();
-            
-            // Large grid
-            ctx.strokeStyle = colors.gridAccent;
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            for (let x = 0; x <= w; x += 200) { ctx.moveTo(x, 0); ctx.lineTo(x, h); }
-            for (let y = 0; y <= h; y += 200) { ctx.moveTo(0, y); ctx.lineTo(w, y); }
-            ctx.stroke();
-            
+
             drawGlyphs(w, h);
         }
         

@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Art - John Hanacek</title>
+    <meta name="description" content="Art and creative visual explorations by John Hanacek - interactive cosmic canvas">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="./Assets/favicon-jhsigfrmpaper.png">
+
+    <!-- Open Graph / Social Share -->
+    <meta property="og:title" content="Art - John Hanacek">
+    <meta property="og:description" content="Interactive cosmic canvas - visual and audio art">
+    <meta property="og:image" content="./Assets/socialgraph-jhcom.png">
+    <meta property="og:type" content="website">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Art - John Hanacek">
+    <meta name="twitter:description" content="Interactive cosmic canvas - visual and audio art">
+    <meta name="twitter:image" content="./Assets/socialgraph-jhcom.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400;1,9..40,500&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- Shared Styles -->
+    <link rel="stylesheet" href="./styles/shared.css">
+
+    <style>
+        /* Shape Navigation */
+        .shape-nav {
+            position: absolute;
+            top: 1.5rem;
+            left: 50%;
+            right: auto;
+            transform: translateX(-50%);
+            z-index: 5;
+            display: flex;
+            width: fit-content;
+            gap: 1.5rem;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.5rem 0.75rem;
+            border-radius: 2rem;
+            border: 1px solid rgba(0, 217, 255, 0.15);
+        }
+        .shape-link {
+            display: block;
+            width: 40px;
+            height: 40px;
+            opacity: 0.4;
+            transition: opacity 0.3s, transform 0.3s;
+        }
+        .shape-link:hover {
+            opacity: 0.8;
+            transform: scale(1.15);
+        }
+        .shape-link.active {
+            opacity: 1;
+        }
+        .shape-link .shape {
+            width: 100%;
+            height: 100%;
+            fill: none;
+            stroke: var(--bio-cyan, #00d9ff);
+            stroke-width: 2;
+        }
+        .shape-link.active .shape {
+            fill: rgba(0, 217, 255, 0.15);
+            filter: drop-shadow(0 0 8px rgba(0, 217, 255, 0.6));
+        }
+
+        /* Art page specific styles */
+        .hero-hint .hint-icon {
+            animation: star-pulse 4s ease-in-out infinite;
+        }
+        @keyframes star-pulse {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.15); }
+        }
+
+        /* Slower scroll indicator animation */
+        .scroll-indicator svg {
+            animation: strokeGlow 2s ease-in-out infinite alternate !important;
+        }
+
+        /* Forest silhouette overlay */
+        .forest-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 2;
+            pointer-events: none;
+        }
+        .forest-overlay img {
+            width: 100%;
+            height: auto;
+            display: block;
+            opacity: 1;
+            filter: brightness(0.4);
+            transition: filter 0.5s ease;
+        }
+
+        /* Nav page tabs and separators */
+        .nav-tab { font-weight: 700; }
+        .nav-page { color: var(--bio-cyan, #00d9ff); font-weight: 700; }
+        .nav-separator {
+            color: rgba(255, 255, 255, 0.25);
+            font-size: 0.75rem;
+            padding: 0 0.5rem;
+            pointer-events: none;
+        }
+
+        /* JH Signature in title */
+        .hero h1 .jh-sig {
+            display: inline-block;
+            vertical-align: top;
+            position: relative;
+        }
+        .hero h1 .jh-sig img {
+            height: 1.2em;
+            width: auto;
+            vertical-align: top;
+            filter: brightness(1.2) drop-shadow(0 0 20px rgba(0, 217, 255, 0.6));
+            margin-right: 0.05em;
+        }
+        .hero h1 .meta {
+            vertical-align: top;
+        }
+
+        /* Scroll indicator - position near bottom */
+        .scroll-indicator {
+            bottom: 2.5rem !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Interactive Cursor Spotlight -->
+    <div id="cursorSpotlight"></div>
+
+    <a href="#content" class="skip-link">Skip to main content</a>
+
+    <nav id="nav" role="navigation" aria-label="Main navigation">
+        <div class="nav-inner">
+            <a href="index.html" class="nav-title">John Hanacek</a>
+            <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <ul>
+                <li><a href="index.html" class="nav-tab">Home</a></li>
+                <li><a href="design.html" class="nav-tab">Design</a></li>
+                <li><a href="art.html" class="nav-page">Art</a></li>
+                <li class="nav-separator">|</li>
+                <li><a href="#about">About</a></li>
+                <li><a href="#photography">Photography</a></li>
+                <li><a href="#links">Explore</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <header class="hero" id="top">
+        <!-- Shape Navigation -->
+        <nav class="shape-nav" aria-label="Page navigation">
+            <a href="index.html" class="shape-link" aria-label="Home">
+                <svg class="shape triangle" viewBox="0 0 40 40"><polygon points="20,8 34,32 6,32"/></svg>
+            </a>
+            <a href="design.html" class="shape-link" aria-label="Design">
+                <svg class="shape rounded-square" viewBox="0 0 40 40"><rect x="6" y="6" width="28" height="28" rx="6"/></svg>
+            </a>
+            <a href="art.html" class="shape-link active" aria-label="Art" aria-current="page">
+                <svg class="shape circle" viewBox="0 0 40 40"><circle cx="20" cy="20" r="14"/></svg>
+            </a>
+        </nav>
+
+        <!-- Interactive Cosmos Canvas -->
+        <canvas id="heroCanvas"></canvas>
+
+        <!-- Forest Silhouette Overlay -->
+        <div class="forest-overlay">
+            <img src="./jhanazone-inspo&assetforartpage/FSalone.png" alt="" aria-hidden="true">
+        </div>
+
+        <div class="hero-hint">
+            <span class="hint-icon">&#10024;</span>
+            <span class="hint-text">click</span>
+        </div>
+
+        <div class="hero-content">
+            <h1><span class="jh-sig"><span class="sr-only">JH</span><img src="./Assets/footer-JHsig.png" alt="" aria-hidden="true"></span> <span class="meta">Art</span></h1>
+            <!-- TODO: Finalize tagline and byline copy before launch
+            <p class="tagline">COSMOS · SOUND · LIGHT</p>
+            <p class="byline"><span class="role">Interactive visual & audio experience</span></p>
+            -->
+        </div>
+        <a href="#content" class="scroll-indicator" aria-label="Scroll to content">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                <path d="M7 13l5 5 5-5M7 6l5 5 5-5"/>
+            </svg>
+        </a>
+
+    </header>
+
+    <main id="content">
+        <section id="about">
+            <h2>Visual Art</h2>
+
+            <div class="content-card about">
+                <p>Exploring the intersection of <strong>technology</strong>, <strong>nature</strong>, and <strong>human experience</strong> through visual media.</p>
+            </div>
+
+            <div class="content-card">
+                <h4>About This Canvas</h4>
+                <p>This interactive starfield is inspired by <strong><a href="https://jhana.zone" target="_blank" rel="noopener">jhana.zone</a></strong> - an audiovisual meditation on light and sound. Click anywhere to create expanding ripples of light.</p>
+            </div>
+        </section>
+
+        <section id="photography">
+            <h2>Photography & Media</h2>
+
+            <div class="content-card" data-num="01">
+                <h4><a href="https://johnhanacek.smugmug.com" target="_blank" rel="noopener">Photography Portfolio</a></h4>
+                <p>Nature, landscapes, and moments captured across California and beyond. Professional photography services available.</p>
+            </div>
+
+            <div class="content-card" data-num="02">
+                <h4><a href="https://jhanacek.net/art-26" target="_blank" rel="noopener">Full Art Gallery</a></h4>
+                <p>Complete collection of visual art and creative experiments.</p>
+            </div>
+        </section>
+
+        <section id="links">
+            <h2>Explore</h2>
+
+            <div class="card-grid">
+                <div class="content-card">
+                    <h4><a href="design.html">Design Work</a></h4>
+                    <p>Product design and UX case studies</p>
+                </div>
+
+                <div class="content-card">
+                    <h4><a href="index.html">Back to Home</a></h4>
+                    <p>Return to main portfolio</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p class="footer-title">John Hanacek</p>
+        <p class="footer-subtitle">Innovator · Designer · Creator</p>
+        <p class="footer-copyright">© 2025 John Hanacek · JHDesign LLC</p>
+        <p class="footer-signature"><img src="./Assets/footer-JHsig.png" alt="John Hanacek signature" style="height: 2em; opacity: 0.7;"></p>
+        <p class="version">Portfolio v1.0</p>
+    </footer>
+
+    <!-- Shared Scripts -->
+    <script src="./scripts/shared.js"></script>
+
+    <!-- Hero Canvas - Cosmos Starfield -->
+    <script>
+        const canvas = document.getElementById('heroCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // ============================================
+        // Cosmos Configuration
+        // ============================================
+        const CONFIG = {
+            starCount: 400,
+            expansionSpeed: 4,
+            maxRadius: 300,
+            fadeSpeed: 0.015
+        };
+
+        // State
+        let stars = [];
+        let expansions = [];
+        let animationId = null;
+        let isActive = false;
+
+        // Colors
+        const colors = {
+            bg: '#020208',
+            star: 'rgba(255, 255, 255, 0.8)',
+            starGlow: 'rgba(0, 217, 255, 0.5)',
+            expansion: 'rgba(199, 125, 255, 0.6)',
+            expansionInner: 'rgba(0, 217, 255, 0.4)'
+        };
+
+        // ============================================
+        // Canvas Setup
+        // ============================================
+        function resizeCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+            initStars();
+        }
+
+        function initStars() {
+            stars = [];
+            const rect = canvas.getBoundingClientRect();
+            for (let i = 0; i < CONFIG.starCount; i++) {
+                stars.push({
+                    x: Math.random() * rect.width,
+                    y: Math.random() * rect.height,
+                    radius: Math.random() * 1.5 + 0.5,
+                    twinkle: Math.random() * Math.PI * 2,
+                    twinkleSpeed: Math.random() * 0.03 + 0.01
+                });
+            }
+        }
+
+        // ============================================
+        // Drawing Functions
+        // ============================================
+        function drawBackground() {
+            const rect = canvas.getBoundingClientRect();
+            const w = rect.width;
+            const h = rect.height;
+
+            // Base dark fill
+            ctx.fillStyle = '#020208';
+            ctx.fillRect(0, 0, w, h);
+
+            // Milky way gradient - diagonal from top-left
+            const milkyWay = ctx.createRadialGradient(
+                w * 0.15, h * 0.1, 0,
+                w * 0.15, h * 0.1, w * 0.6
+            );
+            milkyWay.addColorStop(0, 'rgba(180, 140, 200, 0.15)');
+            milkyWay.addColorStop(0.3, 'rgba(100, 80, 140, 0.1)');
+            milkyWay.addColorStop(0.6, 'rgba(40, 60, 100, 0.08)');
+            milkyWay.addColorStop(1, 'transparent');
+            ctx.fillStyle = milkyWay;
+            ctx.fillRect(0, 0, w, h);
+
+            // Deep blue glow in center-upper area
+            const blueGlow = ctx.createRadialGradient(
+                w * 0.5, h * 0.35, 0,
+                w * 0.5, h * 0.35, w * 0.7
+            );
+            blueGlow.addColorStop(0, 'rgba(20, 50, 100, 0.25)');
+            blueGlow.addColorStop(0.4, 'rgba(10, 30, 70, 0.15)');
+            blueGlow.addColorStop(1, 'transparent');
+            ctx.fillStyle = blueGlow;
+            ctx.fillRect(0, 0, w, h);
+        }
+
+        function drawStars() {
+            stars.forEach(star => {
+                star.twinkle += star.twinkleSpeed;
+                const brightness = 0.4 + Math.sin(star.twinkle) * 0.3;
+
+                // Star glow
+                ctx.shadowColor = colors.starGlow;
+                ctx.shadowBlur = 8;
+                ctx.fillStyle = `rgba(255, 255, 255, ${brightness})`;
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            });
+        }
+
+        function drawExpansions() {
+            expansions = expansions.filter(exp => {
+                exp.radius += CONFIG.expansionSpeed;
+                exp.opacity -= CONFIG.fadeSpeed;
+
+                if (exp.opacity <= 0) return false;
+
+                // Outer ring
+                ctx.strokeStyle = `rgba(199, 125, 255, ${exp.opacity * 0.8})`;
+                ctx.lineWidth = 2;
+                ctx.shadowColor = colors.expansion;
+                ctx.shadowBlur = 20;
+                ctx.beginPath();
+                ctx.arc(exp.x, exp.y, exp.radius, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Inner ring
+                ctx.strokeStyle = `rgba(0, 217, 255, ${exp.opacity * 0.5})`;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(exp.x, exp.y, exp.radius * 0.6, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.shadowBlur = 0;
+                return true;
+            });
+        }
+
+        // ============================================
+        // Animation Loop
+        // ============================================
+        function animate() {
+            drawBackground();
+            drawStars();
+            drawExpansions();
+
+            if (expansions.length > 0 || isActive) {
+                animationId = requestAnimationFrame(animate);
+            } else {
+                animationId = null;
+            }
+        }
+
+        function startAnimation() {
+            if (!animationId) {
+                isActive = true;
+                animate();
+            }
+        }
+
+        function stopAnimation() {
+            isActive = false;
+            // Animation will stop naturally when expansions are done
+        }
+
+        // ============================================
+        // Forest Brightness (increases with each click)
+        // ============================================
+        let forestBrightness = 0.4;
+        const forestImg = document.querySelector('.forest-overlay img');
+
+        function brightenForest() {
+            if (forestImg && forestBrightness < 1.0) {
+                forestBrightness = Math.min(1.0, forestBrightness + 0.05);
+                forestImg.style.filter = `brightness(${forestBrightness})`;
+            }
+        }
+
+        // ============================================
+        // Event Handlers
+        // ============================================
+        function handleClick(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            expansions.push({
+                x: x,
+                y: y,
+                radius: 5,
+                opacity: 1
+            });
+
+            brightenForest();
+            startAnimation();
+        }
+
+        function handleTouch(e) {
+            e.preventDefault();
+            if (e.touches.length > 0) {
+                const rect = canvas.getBoundingClientRect();
+                const touch = e.touches[0];
+                const x = touch.clientX - rect.left;
+                const y = touch.clientY - rect.top;
+
+                expansions.push({
+                    x: x,
+                    y: y,
+                    radius: 5,
+                    opacity: 1
+                });
+
+                brightenForest();
+                startAnimation();
+            }
+        }
+
+        // ============================================
+        // Initialize
+        // ============================================
+        window.addEventListener('resize', resizeCanvas);
+        canvas.addEventListener('click', handleClick);
+        canvas.addEventListener('touchstart', handleTouch, { passive: false });
+
+        resizeCanvas();
+        startAnimation();
+
+        // Keep stars twinkling
+        setInterval(() => {
+            if (!animationId) {
+                drawBackground();
+                drawStars();
+            }
+        }, 50);
+    </script>
+</body>
+</html>
