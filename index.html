@@ -433,11 +433,11 @@
             display: flex;
             width: fit-content;
             gap: 1.5rem;
-            align-items: center;
+            align-items: flex-start;
             background: rgba(0, 0, 0, 0.3);
             padding: 0.5rem 0.75rem;
             border-radius: 2rem;
-            border: 1px solid rgba(0, 217, 255, 0.15);
+            /*border: 1px solid rgba(0, 217, 255, 0.15);*/
         }
         .shape-link {
             display: flex;
@@ -455,11 +455,12 @@
             opacity: 1;
         }
         .shape-link .shape {
-            width: 32px;
-            height: 32px;
+            width: 28px;
+            height: 28px;
             fill: none;
             stroke: var(--bio-cyan, #00d9ff);
             stroke-width: 2;
+            transition: width 0.2s, height 0.2s;
         }
         .shape-link.active .shape {
             fill: rgba(0, 217, 255, 0.15);
@@ -472,20 +473,33 @@
             color: var(--bio-cyan, #00d9ff);
             text-transform: uppercase;
             letter-spacing: 0.05em;
+            line-height: 1;
+            white-space: nowrap;
+            max-height: 0;
             opacity: 0;
-            transition: opacity 0.2s;
+            overflow: visible;
+            transition: max-height 0.2s, opacity 0.2s;
         }
         .shape-label-img {
-            height: 0.7rem;
+            height: auto;
+            max-height: 0;
             width: auto;
             filter: brightness(1.2);
+            opacity: 0;
+            overflow: hidden;
+            transition: max-height 0.2s, opacity 0.2s;
         }
-        .shape-link:hover .shape-label,
-        .shape-link.active .shape-label {
+        .shape-nav:hover .shape {
+            width: 36px;
+            height: 36px;
+        }
+        .shape-nav:hover .shape-label {
+            max-height: 1.5rem;
             opacity: 1;
         }
-        @media (max-width: 768px) {
-            .shape-label { opacity: 1; }
+        .shape-nav:hover .shape-label-img {
+            max-height: 0.9rem;
+            opacity: 1;
         }
 
         /* Mobile nav styles */
