@@ -293,9 +293,9 @@
     <footer>
         <p class="footer-title">John Hanacek</p>
         <p class="footer-subtitle">Innovator · Designer · Creator</p>
-        <p class="footer-copyright">© 2025 John Hanacek · JHDesign LLC</p>
-        <p class="footer-signature"><img src="./Assets/footer-JHsig.png" alt="John Hanacek signature" style="height: 2em; opacity: 0.7;"></p>
-        <p class="version">Portfolio v1.0</p>
+        <p class="footer-copyright">© 2026 John Hanacek · JHDesign LLC</p>
+        <p class="footer-signature"><img src="./Assets/footer-JHsig.png" alt="John Hanacek signature" style="height: 2em; opacity: 0.7;" loading="lazy"></p>
+        <p class="version">Portfolio v1.0 · Made with Claude Code</p>
     </footer>
 
     <!-- Shared Scripts -->
@@ -395,7 +395,6 @@
 
         function drawStars() {
             stars.forEach(star => {
-                star.twinkle += star.twinkleSpeed;
                 const brightness = 0.4 + Math.sin(star.twinkle) * 0.3;
 
                 // Star glow
@@ -440,12 +439,27 @@
         // ============================================
         // Animation Loop
         // ============================================
-        function animate() {
+        let lastTwinkleTime = 0;
+        const TWINKLE_INTERVAL = 50; // ms between twinkle updates
+
+        function animate(timestamp) {
             drawBackground();
+
+            // Update twinkle at fixed interval for performance
+            if (timestamp - lastTwinkleTime > TWINKLE_INTERVAL) {
+                stars.forEach(star => {
+                    star.twinkle += star.twinkleSpeed;
+                });
+                lastTwinkleTime = timestamp;
+            }
+
             drawStars();
             drawExpansions();
 
-            if (expansions.length > 0 || isActive) {
+            // Continue if there are active expansions or page is visible and active
+            if (expansions.length > 0) {
+                animationId = requestAnimationFrame(animate);
+            } else if (isActive && !document.hidden) {
                 animationId = requestAnimationFrame(animate);
             } else {
                 animationId = null;
@@ -455,13 +469,12 @@
         function startAnimation() {
             if (!animationId) {
                 isActive = true;
-                animate();
+                animationId = requestAnimationFrame(animate);
             }
         }
 
         function stopAnimation() {
             isActive = false;
-            // Animation will stop naturally when expansions are done
         }
 
         // ============================================
@@ -523,16 +536,17 @@
         canvas.addEventListener('click', handleClick);
         canvas.addEventListener('touchstart', handleTouch, { passive: false });
 
+        // Pause/resume on visibility change
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                stopAnimation();
+            } else {
+                startAnimation();
+            }
+        });
+
         resizeCanvas();
         startAnimation();
-
-        // Keep stars twinkling
-        setInterval(() => {
-            if (!animationId) {
-                drawBackground();
-                drawStars();
-            }
-        }, 50);
     </script>
 </body>
 </html>
