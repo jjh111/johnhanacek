@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meeting of Blurriness</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      background: transparent;
+      color: #e5e5e5;
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 8px;
+    }
+
+    .diagram-container {
+      width: 100%;
+      max-width: 420px;
+    }
+
+    canvas {
+      width: 100%;
+      height: auto;
+      aspect-ratio: 5/4;
+    }
+
+    .caption {
+      margin-top: 10px;
+      text-align: center;
+      max-width: 400px;
+    }
+
+    .caption-main {
+      font-size: 0.75rem;
+      color: #888;
+      line-height: 1.5;
+    }
+    
+    .caption-main strong {
+      color: #fff;
+    }
+    
+    .caption-main em {
+      color: #10b981;
+      font-style: normal;
+    }
+  </style>
+</head>
+<body>
+  <div class="diagram-container">
+    <canvas id="canvas"></canvas>
+  </div>
+  
+  <div class="caption">
+    <div class="caption-main">
+      Both human and AI arrive with <strong>blurry depths</strong>. 
+      The canvas creates <em>crystallized meeting points</em>: 
+      shapes, equations, spatial relations both can point to.
+    </div>
+  </div>
+  
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    function resize() {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
+      draw(rect.width, rect.height);
+    }
+    
+    function draw(w, h) {
+      ctx.clearRect(0, 0, w, h);
+      
+      const cx = w / 2;
+      const cy = h / 2;
+      
+      // === HUMAN FUNNEL (top) - more compact ===
+      const humanTop = 28;
+      const humanBottom = cy - 35;
+      const humanWidthTop = 120;
+      const humanWidthBottom = 50;
+      
+      const gradH = ctx.createLinearGradient(0, humanTop, 0, humanBottom);
+      gradH.addColorStop(0, '#3b82f60a');
+      gradH.addColorStop(0.4, '#3b82f622');
+      gradH.addColorStop(1, '#3b82f6aa');
+      
+      ctx.fillStyle = gradH;
+      ctx.beginPath();
+      ctx.moveTo(cx - humanWidthTop/2, humanTop);
+      ctx.lineTo(cx + humanWidthTop/2, humanTop);
+      ctx.lineTo(cx + humanWidthBottom/2, humanBottom);
+      ctx.lineTo(cx - humanWidthBottom/2, humanBottom);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Internal layers
+      ctx.strokeStyle = '#3b82f640';
+      ctx.lineWidth = 1;
+      const humanLayers = ['motive', 'intention', 'action'];
+      humanLayers.forEach((label, i) => {
+        const t = (i + 1) / 4;
+        const y = humanTop + t * (humanBottom - humanTop);
+        const halfW = humanWidthTop/2 - t * (humanWidthTop - humanWidthBottom)/2;
+        
+        ctx.beginPath();
+        ctx.moveTo(cx - halfW, y);
+        ctx.lineTo(cx + halfW, y);
+        ctx.stroke();
+        
+        ctx.fillStyle = '#3b82f677';
+        ctx.font = '10px Space Grotesk, system-ui';
+        ctx.textAlign = 'right';
+        ctx.fillText(label, cx - halfW - 6, y + 4);
+      });
+      
+      // === AI FUNNEL (bottom) ===
+      const aiBottom = h - 28;
+      const aiTop = cy + 35;
+      const aiWidthBottom = 120;
+      const aiWidthTop = 50;
+      
+      const gradA = ctx.createLinearGradient(0, aiBottom, 0, aiTop);
+      gradA.addColorStop(0, '#8b5cf60a');
+      gradA.addColorStop(0.4, '#8b5cf622');
+      gradA.addColorStop(1, '#8b5cf6aa');
+      
+      ctx.fillStyle = gradA;
+      ctx.beginPath();
+      ctx.moveTo(cx - aiWidthBottom/2, aiBottom);
+      ctx.lineTo(cx + aiWidthBottom/2, aiBottom);
+      ctx.lineTo(cx + aiWidthTop/2, aiTop);
+      ctx.lineTo(cx - aiWidthTop/2, aiTop);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Internal layers
+      ctx.strokeStyle = '#8b5cf640';
+      const aiLayers = ['latent', 'pattern', 'output'];
+      aiLayers.forEach((label, i) => {
+        const t = (i + 1) / 4;
+        const y = aiBottom - t * (aiBottom - aiTop);
+        const halfW = aiWidthBottom/2 - t * (aiWidthBottom - aiWidthTop)/2;
+        
+        ctx.beginPath();
+        ctx.moveTo(cx - halfW, y);
+        ctx.lineTo(cx + halfW, y);
+        ctx.stroke();
+        
+        ctx.fillStyle = '#8b5cf677';
+        ctx.font = '10px Space Grotesk, system-ui';
+        ctx.textAlign = 'right';
+        ctx.fillText(label, cx - halfW - 6, y + 4);
+      });
+      
+      // === CANVAS PARALLELOGRAM (center) ===
+      const paraW = 90;
+      const paraH = 55;
+      const skew = 12;
+      
+      ctx.fillStyle = '#10b98120';
+      ctx.strokeStyle = '#10b981';
+      ctx.lineWidth = 2;
+      
+      ctx.beginPath();
+      ctx.moveTo(cx - paraW/2 + skew, cy - paraH/2);
+      ctx.lineTo(cx + paraW/2 + skew, cy - paraH/2);
+      ctx.lineTo(cx + paraW/2 - skew, cy + paraH/2);
+      ctx.lineTo(cx - paraW/2 - skew, cy + paraH/2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      
+      // Canvas contents
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      
+      // Circle
+      ctx.beginPath();
+      ctx.arc(cx - 20, cy - 5, 11, 0, Math.PI * 2);
+      ctx.stroke();
+      
+      // Triangle
+      ctx.beginPath();
+      ctx.moveTo(cx + 18, cy - 14);
+      ctx.lineTo(cx + 32, cy + 6);
+      ctx.lineTo(cx + 4, cy + 6);
+      ctx.closePath();
+      ctx.stroke();
+      
+      // Equation
+      ctx.font = '11px Space Grotesk, system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ffffffcc';
+      ctx.fillText('x² + y² = r²', cx, cy + 22);
+      
+      // Relation line
+      ctx.strokeStyle = '#ffffff55';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 2]);
+      ctx.beginPath();
+      ctx.moveTo(cx - 8, cy - 3);
+      ctx.lineTo(cx + 6, cy - 3);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      
+      // === FEEDBACK LOOPS ===
+      ctx.strokeStyle = '#10b98150';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      
+      // Left loop: canvas → human
+      ctx.beginPath();
+      ctx.moveTo(cx - paraW/2 - 5, cy - 10);
+      ctx.quadraticCurveTo(cx - 100, cy - 35, cx - humanWidthTop/2 + 15, humanTop + 25);
+      ctx.stroke();
+      
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#10b98155';
+      ctx.beginPath();
+      ctx.moveTo(cx - humanWidthTop/2 + 15, humanTop + 25);
+      ctx.lineTo(cx - humanWidthTop/2 + 22, humanTop + 34);
+      ctx.lineTo(cx - humanWidthTop/2 + 10, humanTop + 32);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Right loop: canvas → AI
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = '#10b98150';
+      ctx.beginPath();
+      ctx.moveTo(cx + paraW/2 + 5, cy + 10);
+      ctx.quadraticCurveTo(cx + 100, cy + 35, cx + aiWidthBottom/2 - 15, aiBottom - 25);
+      ctx.stroke();
+      
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(cx + aiWidthBottom/2 - 15, aiBottom - 25);
+      ctx.lineTo(cx + aiWidthBottom/2 - 22, aiBottom - 34);
+      ctx.lineTo(cx + aiWidthBottom/2 - 10, aiBottom - 32);
+      ctx.closePath();
+      ctx.fill();
+      
+      // === LABELS ===
+      ctx.font = '600 13px Space Grotesk, system-ui';
+      ctx.textAlign = 'center';
+      
+      ctx.fillStyle = '#3b82f6';
+      ctx.fillText('HUMAN', cx, humanTop - 8);
+      
+      ctx.fillStyle = '#8b5cf6';
+      ctx.fillText('LLM', cx, aiBottom + 18);
+      
+      ctx.fillStyle = '#10b981';
+      ctx.font = '600 11px Space Grotesk, system-ui';
+      ctx.textAlign = 'left';
+      ctx.fillText('CANVAS', cx + paraW/2 + 14, cy - 8);
+      
+      ctx.fillStyle = '#666';
+      ctx.font = '9px Space Grotesk, system-ui';
+      ctx.fillText('crystallized', cx + paraW/2 + 14, cy + 5);
+      ctx.fillText('meeting point', cx + paraW/2 + 14, cy + 16);
+    }
+    
+    window.addEventListener('resize', resize);
+    resize();
+  </script>
+</body>
+</html>
