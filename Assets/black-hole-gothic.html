@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Black Hole Gothic</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@100;200;300;400;500;600;700&family=Playfair+Display:wght@100;200;300;400;500;600;700;800;900&family=Cinzel:wght@100;200;300;400;500;600;700;800;900&family=Raleway:wght@100;200;300;400;500&family=Syncopate:wght@100;200;300;400;700&family=Space+Mono:wght@400;700&family=JetBrains+Mono:wght@400;700&family=Roboto+Mono:wght@400;700&family=Fira+Code:wght@400;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-deep: #000000;
+            --bg-accent: #0a0a0f;
+            --white: #f5f5f5;
+            --silver: #c0c0c0;
+            --gold: #d4af37;
+            --particle: rgba(255, 255, 255, 0.8);
+            --particle-dim: rgba(255, 255, 255, 0.3);
+            --particle-glow: rgba(212, 175, 55, 0.6);
+            --event-horizon: #1a1a2e;
+            --singularity: #ffffff;
+            --accretion: rgba(212, 175, 55, 0.1);
+            --plasma-hot: #ffaa00;
+            --plasma-warm: #ff6600;
+            --plasma-cool: #ff3300;
+        }
+
+        body {
+            background: var(--bg-deep);
+            min-height: 100vh;
+            padding: 40px 20px;
+            font-family: 'Raleway', sans-serif;
+            color: var(--white);
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .cosmic-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: radial-gradient(ellipse at center, var(--bg-accent) 0%, var(--bg-deep) 100%);
+        }
+
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background-image:
+                radial-gradient(0.5px 0.5px at 10px 20px, rgba(255, 255, 255, 0.6), transparent),
+                radial-gradient(1px 1px at 40px 70px, rgba(255, 255, 255, 0.4), transparent),
+                radial-gradient(0.5px 0.5px at 50px 160px, rgba(255, 255, 255, 0.5), transparent),
+                radial-gradient(1px 1px at 90px 40px, rgba(255, 255, 255, 0.3), transparent),
+                radial-gradient(0.5px 0.5px at 130px 80px, rgba(255, 255, 255, 0.6), transparent),
+                radial-gradient(1px 1px at 160px 120px, rgba(255, 200, 100, 0.4), transparent),
+                radial-gradient(0.5px 0.5px at 200px 50px, rgba(255, 255, 255, 0.4), transparent),
+                radial-gradient(1px 1px at 250px 180px, rgba(255, 255, 255, 0.3), transparent),
+                radial-gradient(0.5px 0.5px at 300px 90px, rgba(255, 255, 255, 0.5), transparent),
+                radial-gradient(1px 1px at 350px 140px, rgba(255, 200, 100, 0.4), transparent),
+                radial-gradient(0.5px 0.5px at 380px 30px, rgba(255, 255, 255, 0.6), transparent),
+                radial-gradient(1px 1px at 420px 100px, rgba(255, 255, 255, 0.3), transparent);
+            background-size: 500px 200px;
+            opacity: 0.6;
+            animation: twinkle 8s ease-in-out infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 0.9; }
+        }
+
+        /* Cosmic Dust */
+        .cosmic-dust {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background:
+                radial-gradient(ellipse at 20% 30%, rgba(255, 100, 50, 0.03) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 70%, rgba(100, 150, 255, 0.02) 0%, transparent 50%),
+                radial-gradient(ellipse at 60% 40%, rgba(200, 100, 150, 0.02) 0%, transparent 50%);
+            animation: drift 30s ease-in-out infinite;
+        }
+
+        @keyframes drift {
+            0%, 100% { transform: translateX(0) translateY(0); }
+            50% { transform: translateX(20px) translateY(10px); }
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 80px;
+            position: relative;
+        }
+
+        h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 5rem;
+            font-weight: 100;
+            color: var(--white);
+            letter-spacing: 0.4em;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            transform: scaleX(1.5);
+            opacity: 0.9;
+        }
+
+        .subtitle {
+            font-family: 'Raleway', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 100;
+            color: var(--silver);
+            letter-spacing: 0.8em;
+            text-transform: uppercase;
+        }
+
+        .section {
+            margin-bottom: 120px;
+            position: relative;
+        }
+
+        .section::before {
+            content: '✦';
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.8rem;
+            color: var(--gold);
+            opacity: 0.4;
+        }
+
+        .section-label {
+            font-family: 'Cinzel', serif;
+            font-size: 0.55rem;
+            font-weight: 200;
+            color: var(--gold);
+            letter-spacing: 0.7em;
+            text-transform: uppercase;
+            margin-bottom: 60px;
+            text-align: center;
+        }
+
+        /* Gothic Thin Stretched Typography */
+        .gothic-display {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 6rem;
+            font-weight: 100;
+            color: var(--white);
+            letter-spacing: 0.15em;
+            line-height: 1;
+            transform: scaleX(1.3);
+            opacity: 0.95;
+            position: relative;
+            text-shadow: 0 0 60px rgba(0, 0, 0, 0.8);
+        }
+
+        .gothic-display::after {
+            content: '';
+            position: absolute;
+            bottom: -20px;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+        }
+
+        .thin-minimal {
+            font-family: 'Raleway', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 100;
+            color: var(--silver);
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            transform: scaleX(1.1);
+        }
+
+        .gothic-sub {
+            font-family: 'Playfair Display', serif;
+            font-size: 3rem;
+            font-weight: 200;
+            color: var(--gold);
+            letter-spacing: 0.2em;
+            transform: scaleX(1.5);
+        }
+
+        /* Black Hole Diagrams - Head-On View */
+        .black-hole-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 120px 0;
+            position: relative;
+        }
+
+        .black-hole {
+            width: 400px;
+            height: 400px;
+            position: relative;
+        }
+
+        /* Photon Ring - Bright Edge Around All Sides */
+        .photon-ring {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: radial-gradient(circle,
+                transparent 40%,
+                rgba(255, 220, 150, 0.8) 55%,
+                rgba(255, 200, 120, 1) 60%,
+                rgba(255, 180, 100, 1) 70%,
+                rgba(255, 220, 150, 0.8) 75%,
+                transparent 80%
+            );
+            box-shadow:
+                0 0 30px rgba(255, 220, 150, 0.6),
+                0 0 60px rgba(255, 200, 120, 0.4),
+                0 0 90px rgba(255, 180, 100, 0.2),
+                inset 0 0 20px rgba(255, 220, 150, 0.3);
+            z-index: 5;
+            animation: photon-pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes photon-pulse {
+            0%, 100% { opacity: 0.9; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.03); }
+        }
+
+        /* Event Horizon - Pure Black Circle */
+        .event-horizon {
+            width: 100px;
+            height: 100px;
+            background: #000000;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow:
+                0 0 15px rgba(0, 0, 0, 1),
+                inset 0 0 30px rgba(0, 0, 0, 1);
+            z-index: 10;
+        }
+
+        /* Accretion Disk - Thin Head-On View */
+        .accretion-disk {
+            width: 320px;
+            height: 320px;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 3;
+            background: radial-gradient(circle,
+                transparent 35%,
+                rgba(255, 150, 80, 0.15) 45%,
+                rgba(255, 180, 100, 0.25) 55%,
+                rgba(255, 200, 120, 0.3) 65%,
+                rgba(255, 160, 90, 0.25) 75%,
+                rgba(255, 140, 70, 0.15) 85%,
+                transparent 100%
+            );
+            box-shadow:
+                0 0 40px rgba(255, 180, 100, 0.2),
+                0 0 80px rgba(255, 150, 80, 0.1);
+            animation: disk-rotate 60s linear infinite;
+        }
+
+        @keyframes disk-rotate {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        /* Accretion Disk - Inner Hotter Ring */
+        .accretion-disk-inner {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 4;
+            background: radial-gradient(circle,
+                transparent 40%,
+                rgba(255, 200, 120, 0.3) 50%,
+                rgba(255, 220, 150, 0.4) 60%,
+                rgba(255, 200, 120, 0.35) 70%,
+                transparent 85%
+            );
+            box-shadow:
+                0 0 25px rgba(255, 220, 150, 0.3),
+                0 0 50px rgba(255, 200, 120, 0.15);
+            animation: disk-rotate 45s linear infinite reverse;
+        }
+
+        /* Ambient Glow */
+        .black-hole-glow {
+            width: 500px;
+            height: 500px;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+            background: radial-gradient(circle,
+                transparent 30%,
+                rgba(255, 180, 100, 0.08) 50%,
+                rgba(255, 150, 80, 0.05) 70%,
+                transparent 100%
+            );
+        }
+
+        /* Feynman Diagrams */
+        .feynman-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 60px;
+            margin: 80px 0;
+        }
+
+        .feynman {
+            background: var(--bg-accent);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            position: relative;
+            min-height: 250px;
+        }
+
+        .feynman svg {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .particle-line {
+            fill: none;
+            stroke: var(--particle);
+            stroke-width: 1;
+        }
+
+        .particle-line.gold {
+            stroke: var(--gold);
+        }
+
+        .particle-line.dashed {
+            stroke-dasharray: 4, 4;
+        }
+
+        .vertex {
+            fill: var(--singularity);
+        }
+
+        .feynman-label {
+            font-family: 'Raleway', sans-serif;
+            font-size: 0.6rem;
+            font-weight: 200;
+            color: var(--silver);
+            letter-spacing: 0.4em;
+            text-transform: uppercase;
+            position: absolute;
+            bottom: 15px;
+            left: 20px;
+        }
+
+        /* Particle Trajectories */
+        .trajectory-container {
+            position: relative;
+            height: 400px;
+            margin: 80px 0;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: var(--bg-accent);
+        }
+
+        .trajectory-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .trajectory {
+            fill: none;
+            stroke-width: 1;
+            opacity: 0.6;
+        }
+
+        .trajectory-1 {
+            stroke: var(--particle);
+        }
+
+        .trajectory-2 {
+            stroke: var(--gold);
+            stroke-dasharray: 2, 2;
+        }
+
+        .trajectory-3 {
+            stroke: var(--silver);
+            stroke-dasharray: 4, 4;
+        }
+
+        /* Spacetime Grid */
+        .spacetime-grid {
+            display: grid;
+            grid-template-columns: repeat(20, 1fr);
+            grid-template-rows: repeat(15, 1fr);
+            gap: 1px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1px;
+            margin: 80px 0;
+        }
+
+        .spacetime-cell {
+            background: var(--bg-deep);
+            aspect-ratio: 1;
+            position: relative;
+        }
+
+        .spacetime-cell.curved {
+            background: var(--event-horizon);
+        }
+
+        /* Physics Equations Display */
+        .equation-block {
+            text-align: center;
+            margin: 60px 0;
+            padding: 80px 40px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: var(--bg-accent);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .equation-block::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+            animation: shimmer 3s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.8; }
+        }
+
+        .equation {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2.5rem;
+            font-weight: 200;
+            color: var(--gold);
+            letter-spacing: 0.15em;
+            transform: scaleX(1.1);
+            margin-bottom: 20px;
+            text-shadow: 0 0 30px rgba(212, 175, 55, 0.3);
+        }
+
+        .equation-note {
+            font-family: 'Raleway', sans-serif;
+            font-size: 0.65rem;
+            font-weight: 100;
+            color: var(--silver);
+            letter-spacing: 0.4em;
+            text-transform: uppercase;
+        }
+
+        /* Data Visualization */
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 40px;
+            margin: 60px 0;
+        }
+
+        .data-item {
+            text-align: center;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            position: relative;
+        }
+
+        .data-value {
+            font-family: 'Cinzel', serif;
+            font-size: 3.5rem;
+            font-weight: 100;
+            color: var(--white);
+            letter-spacing: 0.15em;
+            transform: scaleX(1.2);
+            margin-bottom: 15px;
+            text-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+        }
+
+        .data-label {
+            font-family: 'Raleway', sans-serif;
+            font-size: 0.55rem;
+            font-weight: 200;
+            color: var(--silver);
+            letter-spacing: 0.5em;
+            text-transform: uppercase;
+        }
+
+        /* Monospace Font Styles */
+        .mono {
+            font-family: 'Space Mono', monospace;
+            font-weight: 400;
+            letter-spacing: 0.05em;
+        }
+
+        .mono-bold {
+            font-family: 'Space Mono', monospace;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+
+        .mono-small {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            font-weight: 400;
+            letter-spacing: 0.05em;
+            color: var(--silver);
+        }
+
+        .mono-code {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.65rem;
+            font-weight: 400;
+            letter-spacing: 0.02em;
+            color: rgba(255, 255, 255, 0.6);
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 2px;
+        }
+
+        .mono-equation {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 1rem;
+            font-weight: 400;
+            letter-spacing: 0.08em;
+            color: rgba(255, 220, 150, 0.9);
+        }
+
+        .data-item {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .data-item::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+            animation: scan 4s ease-in-out infinite;
+        }
+
+        @keyframes scan {
+            0% { left: -100%; }
+            50% { left: 100%; }
+            100% { left: 100%; }
+        }
+
+        /* Particle Trace Animation */
+        .particle-trace {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: var(--singularity);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--particle-glow);
+            animation: trace 8s ease-in-out infinite;
+        }
+
+        .particle-trace::after {
+            content: '';
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: var(--particle-dim);
+            border-radius: 50%;
+            top: -10px;
+            left: 1px;
+        }
+
+        @keyframes trace {
+            0% { transform: translate(0, 0); opacity: 1; }
+            100% { transform: translate(200px, 300px); opacity: 0; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+        }
+
+        /* Typography Variations */
+        .cosmic-title {
+            font-family: 'Cinzel', serif;
+            font-size: 6rem;
+            font-weight: 100;
+            color: var(--white);
+            letter-spacing: 0.5em;
+            text-transform: uppercase;
+            transform: scaleX(1.8);
+            text-align: center;
+            margin: 100px 0;
+            position: relative;
+        }
+
+        .cosmic-title::before {
+            content: '×';
+            position: absolute;
+            left: -40px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 2rem;
+            color: var(--gold);
+            font-weight: 100;
+            text-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
+            animation: rotate-slow 20s linear infinite;
+        }
+
+        .cosmic-title::after {
+            content: '×';
+            position: absolute;
+            right: -40px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 2rem;
+            color: var(--gold);
+            font-weight: 100;
+            text-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
+            animation: rotate-slow 20s linear infinite reverse;
+        }
+
+        @keyframes rotate-slow {
+            from { transform: translateY(-50%) rotate(0deg); }
+            to { transform: translateY(-50%) rotate(360deg); }
+        }
+
+        .physics-text {
+            font-family: 'Raleway', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 200;
+            color: var(--silver);
+            letter-spacing: 0.3em;
+            line-height: 2.5;
+            text-align: justify;
+            text-align-last: center;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        /* Horocycle Pattern */
+        .horocycle {
+            width: 100%;
+            height: 200px;
+            position: relative;
+            margin: 80px 0;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: var(--bg-accent);
+            overflow: hidden;
+        }
+
+        .horocycle svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .horocycle-line {
+            fill: none;
+            stroke: var(--particle-dim);
+            stroke-width: 0.5;
+        }
+
+        /* Metric Tensor Grid */
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2px;
+            background: rgba(255, 255, 255, 0.1);
+            max-width: 300px;
+            margin: 60px auto;
+            padding: 2px;
+        }
+
+        .metric-cell {
+            background: var(--bg-deep);
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.2rem;
+            font-weight: 200;
+            color: var(--gold);
+            letter-spacing: 0.1em;
+        }
+
+        .footer-note {
+            text-align: center;
+            font-family: 'Raleway', sans-serif;
+            font-size: 0.55rem;
+            font-weight: 100;
+            color: rgba(255, 255, 255, 0.3);
+            letter-spacing: 0.6em;
+            text-transform: uppercase;
+            margin-top: 100px;
+            padding: 40px 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            position: relative;
+        }
+
+        .footer-note::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+        }
+
+        /* Gravitational Lensing Pattern */
+        .lensing-pattern {
+            width: 100%;
+            height: 150px;
+            margin: 80px 0;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: var(--bg-accent);
+        }
+
+        .lensing-pattern svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .lensing-curve {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.1);
+            stroke-width: 0.5;
+        }
+
+        .lensing-curve.gold {
+            stroke: rgba(212, 175, 55, 0.3);
+            stroke-width: 1;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+                letter-spacing: 0.15em;
+            }
+
+            .gothic-display {
+                font-size: 2.5rem;
+                letter-spacing: 0.1em;
+                transform: scaleX(1.1);
+            }
+
+            .cosmic-title {
+                font-size: 3rem;
+                letter-spacing: 0.3em;
+            }
+
+            .equation {
+                font-size: 1.8rem;
+                letter-spacing: 0.1em;
+                transform: scaleX(1.0);
+            }
+
+            .data-value {
+                font-size: 2.5rem;
+                letter-spacing: 0.1em;
+                transform: scaleX(1.1);
+            }
+
+            .black-hole {
+                width: 300px;
+                height: 300px;
+            }
+
+            .photon-ring {
+                width: 100px;
+                height: 100px;
+            }
+
+            .event-horizon {
+                width: 70px;
+                height: 70px;
+            }
+
+            .accretion-disk {
+                width: 240px;
+                height: 240px;
+            }
+
+            .accretion-disk-inner {
+                width: 140px;
+                height: 140px;
+            }
+
+            .black-hole-glow {
+                width: 380px;
+                height: 380px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="cosmic-bg"></div>
+    <div class="stars"></div>
+    <div class="cosmic-dust"></div>
+
+    <div class="container">
+        <header>
+            <h1>Event Horizon</h1>
+            <p class="subtitle">Black Hole Gothic</p>
+        </header>
+
+        <div class="section">
+            <div class="section-label">Singularity Typography</div>
+            <div class="gothic-display">Singularity</div>
+            <div style="text-align: center; margin-top: 60px;">
+                <p class="thin-minimal">Where Light Cannot Escape</p>
+                <div class="mono-code" style="margin-top: 20px;">
+                    r → 0 | ρ → ∞ | T → 0
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-label">Event Horizon</div>
+            <div class="black-hole-container">
+                <div class="black-hole">
+                    <div class="black-hole-glow"></div>
+                    <div class="accretion-disk"></div>
+                    <div class="accretion-disk-inner"></div>
+                    <div class="photon-ring"></div>
+                    <div class="event-horizon"></div>
+                </div>
+            </div>
+            <div style="text-align: center;">
+                <p class="gothic-sub">Point of No Return</p>
+            </div>
+
+            <div class="tech-border" style="margin-top: 80px;">
+                <div class="description" style="margin-bottom: 40px; text-align: left;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px;">
+                        <div>
+                            <div class="brand-subtitle" style="margin-bottom: 15px; color: var(--gold);">Event Horizon</div>
+                            <div class="physics-text" style="text-align: left; font-size: 0.85rem;">
+                                Pure black sphere where <span class="mono-code">v_escape > c</span>
+                            </div>
+                            <div class="mono-small" style="margin-top: 10px; display: block;">
+                                R_s = 2GM / c²
+                            </div>
+                        </div>
+                        <div>
+                            <div class="brand-subtitle" style="margin-bottom: 15px; color: rgba(255, 150, 50, 0.8);">Accretion Disk</div>
+                            <div class="physics-text" style="text-align: left; font-size: 0.85rem;">
+                                Superheated plasma spiraling at <span class="mono-code">v ≈ 0.3c</span>
+                            </div>
+                            <div class="mono-small" style="margin-top: 10px; display: block;">
+                                T ≈ 10⁶ K | λ_peak ≈ 3 nm
+                            </div>
+                        </div>
+                        <div>
+                            <div class="brand-subtitle" style="margin-bottom: 15px; color: rgba(255, 255, 200, 0.8);">Photon Ring</div>
+                            <div class="physics-text" style="text-align: left; font-size: 0.85rem;">
+                                Gravitational lensing: <span class="mono-code">r_ph = 3√3 GM/c²</span>
+                            </div>
+                            <div class="mono-small" style="margin-top: 10px; display: block;">
+                                θ_E = √(27GM/ c²d)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-label">Feynman Diagrams</div>
+            <div class="feynman-container">
+                <div class="feynman">
+                    <svg viewBox="0 0 300 250">
+                        <path class="particle-line" d="M 50 200 Q 150 150 250 200" />
+                        <path class="particle-line gold dashed" d="M 150 50 L 150 150" />
+                        <circle class="vertex" cx="150" cy="150" r="3" />
+                        <path class="particle-line" d="M 50 100 Q 150 150 250 100" />
+                    </svg>
+                    <div class="feynman-label mono-small">Electron Scattering <span style="color: var(--gold);">e⁻ + γ → e⁻ + γ</span></div>
+                </div>
+                <div class="feynman">
+                    <svg viewBox="0 0 300 250">
+                        <path class="particle-line" d="M 50 125 L 100 125" />
+                        <path class="particle-line gold dashed" d="M 100 125 L 200 125" />
+                        <path class="particle-line" d="M 200 125 L 250 125" />
+                        <path class="particle-line dashed" d="M 100 125 Q 150 50 200 125" />
+                        <path class="particle-line dashed" d="M 100 125 Q 150 200 200 125" />
+                        <circle class="vertex" cx="100" cy="125" r="3" />
+                        <circle class="vertex" cx="200" cy="125" r="3" />
+                    </svg>
+                    <div class="feynman-label mono-small">Photon Exchange <span style="color: var(--gold);">γ mediation</span></div>
+                </div>
+                <div class="feynman">
+                    <svg viewBox="0 0 300 250">
+                        <path class="particle-line" d="M 50 200 C 50 50 250 50 250 200" />
+                        <path class="particle-line gold dashed" d="M 50 50 C 50 200 250 200 250 50" />
+                        <circle class="vertex" cx="150" cy="125" r="3" />
+                        <path class="particle-line dashed" d="M 150 125 L 150 50" />
+                    </svg>
+                    <div class="feynman-label mono-small">Beta Decay <span style="color: var(--gold);">n → p + e⁻ + ν̄_e</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-label">Particle Trajectories</div>
+            <div class="trajectory-container">
+                <svg class="trajectory-svg" viewBox="0 0 800 400">
+                    <path class="trajectory trajectory-1" d="M 0 350 Q 200 300 400 350 Q 600 400 800 350" />
+                    <path class="trajectory trajectory-2" d="M 0 200 Q 200 100 400 200 Q 600 300 800 200" />
+                    <path class="trajectory trajectory-3" d="M 0 50 Q 200 150 400 50 Q 600 0 800 50" />
+                    <circle class="vertex" cx="400" cy="200" r="4" />
+                    <line class="particle-line dashed" x1="400" y1="200" x2="400" y2="350" />
+                    <line class="particle-line dashed" x1="400" y1="200" x2="400" y2="50" />
+                </svg>
+            </div>
+            <div style="text-align: center;">
+                <p class="thin-minimal">Geodesic Paths</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-label">Spacetime Curvature</div>
+            <div class="spacetime-grid" style="grid-template-columns: repeat(20, 1fr); grid-template-rows: repeat(10, 1fr);">
+            </div>
+            <div style="text-align: center; margin-top: 40px;">
+                <p class="gothic-sub">Curved Geometry</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-label">Einstein Field Equations</div>
+            <div class="equation-block">
+                <div class="mono-equation" style="margin-bottom: 30px;">
+                    G_μν + Λg_μν = 8πT_μν / c⁴
+                </div>
+                <div class="mono-small" style="color: var(--silver);">
+                    ∇_μ G^μν = 0 (conservation)
+                </div>
+                <div class="mono-equation" style="margin-top: 40px;">
+                    R_μν - ½Rg_μν = 8πG T_μν
+                </div>
+                <div class="mono-small" style="margin-top: 20px; color: var(--silver);">
+                    Where spacetime tells matter how to move
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-label">Quantum Observables</div>
+            <div class="data-grid">
+                <div class="data-item">
+                    <div class="data-value">∞</div>
+                    <div class="data-label">Singularity</div>
+                    <div class="mono-small" style="margin-top: 10px; color: rgba(255, 200, 100, 0.6);">ρ → ∞</div>
+                </div>
+                <div class="data-item">
+                    <div class="data-value">c</div>
+                    <div class="data-label">Light Speed</div>
+                    <div class="mono-small" style="margin-top: 10px; color: rgba(255, 200, 100, 0.6);">299,792,458 m/s</div>
+                </div>
+                <div class="data-item">
+                    <div class="data-value">ħ</div>
+                    <div class="data-label">Planck Constant</div>
+                    <div class="mono-small" style="margin-top: 10px; color: rgba(255, 200, 100, 0.6);">1.054×10⁻³⁴</div>
+                </div>
+                <div class="data-item">
+                    <div class="data-value">G</div>
+                    <div class="data-label">Gravitational</div>
+                    <div class="mono-small" style="margin-top: 10px; color: rgba(255, 200, 100, 0.6);">6.674×10⁻¹¹</div>
+                </div>
+                <div class="data-item">
+                    <div class="data-value">k_B</div>
+                    <div class="data-label">Boltzmann</div>
+                    <div class="mono-small" style="margin-top: 10px; color: rgba(255, 200, 100, 0.6);">1.381×10⁻²³ J/K</div>
+                </div>
+                <div class="data-item">
+                    <div class="data-value">σ</div>
+                    <div class="data-label">Stefan-Boltzmann</div>
+                    <div class="mono-small" style="margin-top: 10px; color: rgba(255, 200, 100, 0.6);">5.67×10⁻⁸</div>
+                </div>
+                <div class="data-item">
+                    <div class="data-value">λ_c</div>
+                    <div class="data-label">Compton</div>
+                    <div class="mono-small" style="margin-top: 10px; color: rgba(255, 200, 100, 0.6);">ħ/mc</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-label">Event Horizon Radius</div>
+            <div class="equation-block">
+                <div class="mono-equation" style="margin-bottom: 20px;">
+                    R_s = 2GM / c²
+                </div>
+                <div class="mono-small" style="color: var(--silver);">
+                    Schwarzschild Metric
+                </div>
+                <div class="mono-code" style="margin-top: 30px; display: block;">
+                    For M_⊙: R_s ≈ 2.95 km
+                </div>
+                <div class="mono-code" style="margin-top: 10px; display: block;">
+                    For 10⁶ M_⊙: R_s ≈ 2.95×10⁶ km
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-label">Metric Tensor</div>
+            <div class="metric-grid">
+                <div class="metric-cell mono">g₀₀</div>
+                <div class="metric-cell mono">g₀₁</div>
+                <div class="metric-cell mono">g₀₂</div>
+                <div class="metric-cell mono">g₁₀</div>
+                <div class="metric-cell mono">g₁₁</div>
+                <div class="metric-cell mono">g₁₂</div>
+                <div class="metric-cell mono">g₂₀</div>
+                <div class="metric-cell mono">g₂₁</div>
+                <div class="metric-cell mono">g₂₂</div>
+            </div>
+            <div class="mono-small" style="margin-top: 30px; text-align: center; color: rgba(255, 200, 100, 0.7);">
+                ds² = -(1-2M/r)dt² + (1-2M/r)⁻¹dr² + r²dΩ²
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-label">Geodesic Orbits</div>
+            <div class="horocycle">
+                <svg viewBox="0 0 800 200">
+                    <path class="horocycle-line" d="M 0 100 Q 200 50 400 100 Q 600 150 800 100" />
+                    <path class="horocycle-line" d="M 0 100 Q 200 150 400 100 Q 600 50 800 100" />
+                    <path class="horocycle-line" d="M 0 100 Q 200 80 400 100 Q 600 120 800 100" />
+                    <path class="horocycle-line" d="M 0 100 Q 200 120 400 100 Q 600 80 800 100" />
+                    <circle class="vertex" cx="400" cy="100" r="3" />
+                </svg>
+            </div>
+            <div style="text-align: center;">
+                <p class="thin-minimal">Photon Sphere <span class="mono-code">r = 3GM/c²</span></p>
+                <div class="mono-small" style="margin-top: 15px; color: rgba(255, 200, 100, 0.7);">
+                    Unstable circular photon orbits
+                </div>
+            </div>
+        </div>
+
+        <div class="cosmic-title">Cosmic Horizon</div>
+
+        <div class="section">
+            <div class="section-label">Gravitational Lensing</div>
+            <div class="lensing-pattern">
+                <svg viewBox="0 0 800 150">
+                    <path class="lensing-curve" d="M 50 75 Q 200 25 400 75 Q 600 125 750 75" />
+                    <path class="lensing-curve gold" d="M 100 75 Q 250 35 400 75 Q 550 115 700 75" />
+                    <path class="lensing-curve" d="M 150 75 Q 275 45 400 75 Q 525 105 650 75" />
+                    <path class="lensing-curve gold" d="M 200 75 Q 300 55 400 75 Q 500 95 600 75" />
+                    <circle cx="400" cy="75" r="8" fill="none" stroke="rgba(255,200,100,0.3)" stroke-width="1" />
+                    <circle cx="400" cy="75" r="15" fill="none" stroke="rgba(255,200,100,0.2)" stroke-width="0.5" />
+                    <circle cx="400" cy="75" r="25" fill="none" stroke="rgba(255,200,100,0.1)" stroke-width="0.5" />
+                </svg>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-label">Hawking Radiation</div>
+            <div class="equation-block">
+                <div class="mono-equation" style="margin-bottom: 20px;">
+                    T_H = ħc³ / (8πGMk_B)
+                </div>
+                <div class="mono-small" style="color: var(--silver);">
+                    Black hole thermal emission (quantum tunneling at event horizon)
+                </div>
+                <div class="mono-code" style="margin-top: 30px; display: block;">
+                    For M_⊙: T_H ≈ 62 nK (negligible)
+                </div>
+                <div class="mono-code" style="margin-top: 10px; display: block;">
+                    Lifetime: t ≈ (5120πG²M³) / (ħc⁴)
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-label">Bekenstein-Hawking Entropy</div>
+            <div class="equation-block">
+                <div class="mono-equation" style="margin-bottom: 20px;">
+                    S_BH = Akc³ / (4Għ)
+                </div>
+                <div class="mono-small" style="color: var(--silver);">
+                    Entropy proportional to horizon area (not volume)
+                </div>
+                <div class="mono-code" style="margin-top: 30px; display: block;">
+                    A = 4πR_s² = 16πG²M² / c⁴
+                </div>
+                <div class="mono-code" style="margin-top: 10px; display: block;">
+                    S/M ratio: s = S/M = 4πk_BGM / (ħc)
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-label">Kerr Metric (Rotating)</div>
+            <div class="equation-block">
+                <div class="mono-equation" style="margin-bottom: 20px;">
+                    R_± = GM/c² ± √[(GM/c²)² - (J/Mc)²]
+                </div>
+                <div class="mono-small" style="color: var(--silver);">
+                    Rotating black holes have inner (R_-) and outer (R_+) horizons
+                </div>
+                <div class="mono-code" style="margin-top: 30px; display: block;">
+                    Spin parameter: a = J/(Mc) | Dimensionless spin: a* = a/(GM/c²)
+                </div>
+                <div class="mono-code" style="margin-top: 10px; display: block;">
+                    Ergosphere radius: r_E = GM/c² + √[(GM/c²)² - (J/Mc)²cos²θ]
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-label">Philosophical Note</div>
+            <div style="text-align: center;">
+                <p class="physics-text">
+                    At the event horizon, time ceases to flow as we understand it.
+                    Space and time exchange their roles. The fabric of reality itself
+                    curves beyond comprehension. Yet mathematics offers us a language
+                    to describe the indescribable.
+                </p>
+            </div>
+        </div>
+
+        <div class="footer-note">
+            <span style="opacity: 0.8;">Where general relativity meets quantum uncertainty</span>
+            <br><br>
+            <span class="mono-code">∇ × E = -∂B/∂t</span>
+            <br>
+            <span class="mono-small" style="opacity: 0.5;">[G_μν] = 0 | ∂_μ T^μν = 0 | R_μν = 0</span>
+            <br><br>
+            <span class="mono-small" style="opacity: 0.4; font-size: 0.4rem;">ds² = g_μν dx^μ dx^ν</span>
+        </div>
+    </div>
+</body>
+</html>
