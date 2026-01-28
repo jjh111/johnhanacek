@@ -284,13 +284,25 @@ body {
     animation: bounce 2s infinite;
     cursor: pointer;
     text-decoration: none;
-    display: block;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
 }
 .scroll-indicator svg {
     width: 35px;
     height: 35px;
     stroke-width: 2.5;
     animation: strokeGlow 0.8s ease-in-out infinite alternate;
+}
+.scroll-indicator .scroll-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    font-weight: 500;
+    color: var(--cyan);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    opacity: 0.6;
 }
 
 /* ===========================================
@@ -306,17 +318,26 @@ nav {
     transform: translateY(-100%);
     transition: transform 0.25s ease;
     height: 40px;
+    overflow: visible;
 }
 nav.visible { transform: translateY(0); }
 
 .nav-inner {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     max-width: 1100px;
     margin: 0 auto;
-    padding: 0 var(--space-md);
+    padding: 0.6rem var(--space-md) 0;
     height: 100%;
+}
+
+/* Left side: shapes + name */
+.nav-left {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.35rem;
+    overflow: visible;
 }
 
 .nav-title {
@@ -327,6 +348,7 @@ nav.visible { transform: translateY(0); }
     text-decoration: none;
     letter-spacing: 0.1em;
     line-height: 1;
+    margin-left: 0.5rem;
 }
 .nav-title:hover { color: var(--gold); }
 
@@ -350,24 +372,23 @@ nav.visible { transform: translateY(0); }
 .nav-toggle.active span:nth-child(2) { opacity: 0; }
 .nav-toggle.active span:nth-child(3) { transform: rotate(-45deg) translate(4px, -4px); }
 
-nav ul {
+/* Right side: section links */
+.nav-right {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 0;
     list-style: none;
     margin: 0;
     padding: 0;
-    height: 100%;
 }
 
-nav li {
+.nav-right li {
     display: flex;
-    align-items: center;
-    height: 100%;
+    align-items: flex-start;
     margin: 0;
 }
 
-nav a {
+.nav-right a {
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.7rem;
     font-weight: 500;
@@ -376,15 +397,10 @@ nav a {
     text-transform: uppercase;
     letter-spacing: 0.08em;
     padding: 0 0.625rem;
-    display: flex;
-    align-items: center;
-    height: 100%;
     transition: color 0.2s;
 }
-nav ul a:hover, nav ul a:focus { color: var(--gold); }
+.nav-right a:hover, .nav-right a:focus { color: var(--gold); }
 
-.nav-tab { font-weight: 500; }
-.nav-page { color: var(--cyan); font-weight: 500; }
 .nav-separator {
     color: rgba(255, 255, 255, 0.25);
     font-size: 0.75rem;
@@ -395,6 +411,8 @@ nav ul a:hover, nav ul a:focus { color: var(--gold); }
 /* ===========================================
    5. SHAPE NAVIGATION
 =========================================== */
+
+/* --- Hero shape-nav (centered pill in hero) --- */
 .shape-nav {
     position: absolute;
     top: 1.5rem;
@@ -403,25 +421,25 @@ nav ul a:hover, nav ul a:focus { color: var(--gold); }
     z-index: 5;
     display: flex;
     width: fit-content;
-    gap: .5rem;
-    align-items: flex-start;
+    gap: 0;
+    align-items: stretch;
     background: rgba(0, 0, 0, 0.3);
-    padding: 0.5rem 0.75rem 0.5rem;
+    padding: 0.4rem 0.5rem;
     border-radius: 2rem;
-    transition: padding 0.2s ease;
 }
-.shape-nav:hover {
-    padding-bottom: 1.5rem; /* Make room for labels */
-}
+
+/* --- Shared shape-link base (hero) --- */
 .shape-link {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.25rem;
+    justify-content: flex-start;
     opacity: 0.4;
     transition: opacity 0.3s;
     text-decoration: none;
-    position: relative;
+    width: 44px;
+    height: 28px;
+    overflow: hidden;
 }
 .shape-link:hover { opacity: 0.8; }
 .shape-link.active { opacity: 1; }
@@ -429,6 +447,8 @@ nav ul a:hover, nav ul a:focus { color: var(--gold); }
 .shape-link .shape {
     width: 28px;
     height: 28px;
+    min-width: 28px;
+    min-height: 28px;
     fill: none;
     stroke: var(--cyan);
     stroke-width: 2;
@@ -439,39 +459,80 @@ nav ul a:hover, nav ul a:focus { color: var(--gold); }
     filter: drop-shadow(0 0 8px var(--cyan-glow));
 }
 
+/* --- Shape labels (in flow, not absolute) --- */
 .shape-label {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.55rem;
+    font-size: 0.5rem;
     font-weight: 500;
     color: var(--cyan);
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     line-height: 1;
     white-space: nowrap;
-    position: absolute;
-    top: 100%;
-    margin-top: 0.35rem;
     opacity: 0;
-    transition: opacity 0.2s ease;
+    transition: opacity 0.15s ease;
+    margin-top: 0.15rem;
 }
 .shape-label-img {
-    height: 0.7rem;
+    height: 0.6rem;
     width: auto;
     filter: brightness(1.2);
-    position: absolute;
-    top: 100%;
-    margin-top: 0.25rem;
     opacity: 0;
-    transition: opacity 0.2s ease;
+    transition: opacity 0.15s ease;
+    margin-top: 0.1rem;
 }
 
-/* On hover: icons shrink, labels appear */
-.shape-nav:hover .shape {
-    width: 20px;
-    height: 20px;
+/* Hero: on hover, shrink shapes to top, show labels */
+.shape-nav .shape-link:hover .shape,
+.shape-nav:hover .shape-link .shape {
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    min-height: 18px;
 }
-.shape-nav:hover .shape-label,
-.shape-nav:hover .shape-label-img {
+.shape-nav .shape-link:hover .shape-label,
+.shape-nav .shape-link:hover .shape-label-img,
+.shape-nav:hover .shape-link .shape-label,
+.shape-nav:hover .shape-link .shape-label-img {
+    opacity: 1;
+}
+
+/* --- Navbar shape overrides (compact) --- */
+.nav-left .shape-link {
+    width: 26px;
+    height: 24px;
+    opacity: 0.5;
+    padding: 0 0.1rem;
+    box-sizing: border-box;
+}
+.nav-left .shape-link:hover { opacity: 0.85; }
+.nav-left .shape-link.active { opacity: 1; }
+.nav-left .shape-link .shape {
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    min-height: 16px;
+}
+.nav-left .shape-link.active .shape {
+    filter: drop-shadow(0 0 4px var(--cyan-glow));
+}
+/* Navbar: shrink shapes on hover to fit labels inside nav height */
+.nav-left .shape-link:hover .shape {
+    width: 12px;
+    height: 12px;
+    min-width: 12px;
+    min-height: 12px;
+}
+.nav-left .shape-label {
+    font-size: 0.4rem;
+    margin-top: 0.1rem;
+}
+.nav-left .shape-label-img {
+    height: 0.45rem;
+    margin-top: 0.08rem;
+}
+.nav-left .shape-link:hover .shape-label,
+.nav-left .shape-link:hover .shape-label-img {
     opacity: 1;
 }
 
@@ -541,6 +602,11 @@ em {
     color: var(--text-bright);
 }
 
+.muted {
+    color: var(--muted);
+    font-size: var(--text-sm);
+}
+
 a {
     color: var(--cyan);
     text-decoration: underline;
@@ -595,6 +661,13 @@ section {
 }
 
 /* Grid Layouts */
+.grid-1 {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-md);
+}
+.grid-1 > .content-card { margin: 0; }
+
 .grid-2 {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -1079,6 +1152,52 @@ footer .version {
     margin-top: var(--space-sm);
     letter-spacing: 0.05em;
 }
+.footer-signature img {
+    height: 2em;
+    opacity: 0.7;
+}
+
+/* Utility: Beliefs list */
+.beliefs-list {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+}
+.beliefs-list li {
+    margin-bottom: 0.5rem;
+}
+
+/* Utility: Video embed iframe rounding */
+.video-embed iframe {
+    border-radius: 4px;
+}
+
+/* Utility: Blockquote citation */
+.blockquote-citation {
+    border-left: 2px solid var(--cyan);
+    padding-left: 1rem;
+    margin: 1rem 0;
+    font-style: italic;
+    opacity: 0.9;
+}
+.citation-author {
+    font-size: 0.9em;
+    font-style: normal;
+}
+
+/* Utility: Image placeholder (for SVG/icon placeholders) */
+.image-placeholder {
+    aspect-ratio: 4/3;
+    background: rgba(0, 20, 40, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.image-placeholder.dashed {
+    background: rgba(0, 20, 40, 0.3);
+    border: 1px dashed rgba(77, 201, 246, 0.15);
+}
 
 /* ===========================================
    11. ANIMATIONS
@@ -1121,9 +1240,10 @@ footer .version {
         position: relative;
         z-index: 1001;
     }
-    nav ul {
+    .nav-title { display: none; }
+    .nav-right {
         position: absolute;
-        top: 10px;
+        top: 40px;
         left: 0;
         right: 0;
         background: rgba(2, 10, 18, 0.98);
@@ -1135,10 +1255,10 @@ footer .version {
         border-bottom: 1px solid rgba(77, 201, 246, 0.1);
         display: none;
     }
-    nav ul.open { display: flex; }
-    nav li { height: auto; }
-    nav ul a {
-        padding: .5rem var(--space-sm);
+    .nav-right.open { display: flex; }
+    .nav-right li { height: auto; }
+    .nav-right a {
+        padding: .5rem var(--space-md);
         height: auto;
         font-size: 0.85rem;
         font-weight: 500;
@@ -1146,7 +1266,7 @@ footer .version {
         text-transform: uppercase;
         color: var(--text-primary);
     }
-    nav ul a:hover, nav ul a:focus { color: var(--gold); }
+    .nav-right a:hover, .nav-right a:focus { color: var(--gold); }
 
     /* Grid collapse */
     .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
