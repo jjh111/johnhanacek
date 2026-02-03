@@ -9,21 +9,31 @@
 function initNavigation() {
     const nav = document.getElementById('nav');
     const hero = document.querySelector('.hero');
+    const pageHeader = document.querySelector('.page-header');
 
-    if (!nav || !hero) return;
+    if (!nav) return;
 
-    function updateNavVisibility() {
-        const heroBottom = hero.offsetTop + hero.offsetHeight - 60;
-        if (window.scrollY > heroBottom) {
-            nav.classList.add('visible');
-        } else {
-            nav.classList.remove('visible');
+    // For page-header pages (about, services), show nav immediately
+    if (pageHeader && !hero) {
+        nav.classList.add('visible');
+        // Still set up mobile toggle below
+    } else if (hero) {
+        // For hero pages, show nav after scrolling past hero
+        function updateNavVisibility() {
+            const heroBottom = hero.offsetTop + hero.offsetHeight - 60;
+            if (window.scrollY > heroBottom) {
+                nav.classList.add('visible');
+            } else {
+                nav.classList.remove('visible');
+            }
         }
-    }
 
-    window.addEventListener('scroll', updateNavVisibility);
-    window.addEventListener('resize', updateNavVisibility);
-    updateNavVisibility();
+        window.addEventListener('scroll', updateNavVisibility);
+        window.addEventListener('resize', updateNavVisibility);
+        updateNavVisibility();
+    } else {
+        return; // No hero or page-header found
+    }
 
     // Mobile navigation toggle
     const navToggle = document.querySelector('.nav-toggle');

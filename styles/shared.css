@@ -472,6 +472,7 @@ nav.visible { transform: translateY(0); }
     opacity: 0;
     transition: opacity 0.15s ease;
     margin-top: 0.15rem;
+    pointer-events: none;
 }
 .shape-label-img {
     height: 0.6rem;
@@ -480,6 +481,13 @@ nav.visible { transform: translateY(0); }
     opacity: 0;
     transition: opacity 0.15s ease;
     margin-top: 0.1rem;
+    pointer-events: none;
+}
+
+/* Ensure labels reset on non-hover (touch device fix) */
+.shape-link:not(:hover) .shape-label,
+.shape-link:not(:hover) .shape-label-img {
+    opacity: 0;
 }
 
 /* Hero: on hover, shrink shapes to top, show labels */
@@ -534,6 +542,50 @@ nav.visible { transform: translateY(0); }
 .nav-left .shape-link:hover .shape-label,
 .nav-left .shape-link:hover .shape-label-img {
     opacity: 1;
+}
+
+/* --- Secondary shapes (smaller: About, Services) --- */
+.shape-link.secondary {
+    width: 36px;
+    opacity: 0.35;
+}
+.shape-link.secondary .shape {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    min-height: 22px;
+    stroke-width: 1.5;
+}
+.shape-link.secondary:hover { opacity: 0.7; }
+.shape-link.secondary.active { opacity: 0.9; }
+
+/* Hero: secondary shapes shrink on hover */
+.shape-nav .shape-link.secondary:hover .shape,
+.shape-nav:hover .shape-link.secondary .shape {
+    width: 14px;
+    height: 14px;
+    min-width: 14px;
+    min-height: 14px;
+}
+
+/* Navbar: secondary shapes (even smaller) */
+.nav-left .shape-link.secondary {
+    width: 22px;
+}
+.nav-left .shape-link.secondary .shape {
+    width: 12px;
+    height: 12px;
+    min-width: 12px;
+    min-height: 12px;
+}
+.nav-left .shape-link.secondary:hover .shape {
+    width: 9px;
+    height: 9px;
+    min-width: 9px;
+    min-height: 9px;
+}
+.nav-left .shape-link.secondary .shape-label {
+    font-size: 0.35rem;
 }
 
 /* ===========================================
@@ -1101,6 +1153,108 @@ section {
 .genealogy-item .content p { font-size: var(--text-base); line-height: 1.65; }
 .genealogy-item .content p:last-of-type { margin-bottom: 0; }
 
+/* Timeline (About page work history) */
+.timeline {
+    position: relative;
+    padding-left: var(--space-md);
+    border-left: 1px solid rgba(77, 201, 246, 0.2);
+}
+.timeline-item {
+    display: grid;
+    grid-template-columns: 90px 1fr;
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+    padding-bottom: var(--space-md);
+    position: relative;
+}
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: calc(-1 * var(--space-md) - 4px);
+    top: 4px;
+    width: 8px;
+    height: 8px;
+    background: var(--sea-deep);
+    border: 2px solid var(--cyan);
+    border-radius: 50%;
+}
+.timeline-item .year {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--gold);
+    line-height: 1.4;
+}
+.timeline-content h4 {
+    margin: 0 0 0.25rem 0;
+    font-size: var(--text-base);
+    color: var(--text-bright);
+}
+.timeline-content .company {
+    margin: 0 0 0.5rem 0;
+    font-size: var(--text-sm);
+    color: var(--cyan);
+}
+.timeline-content .company a {
+    color: var(--cyan);
+}
+.timeline-content ul {
+    margin: 0;
+    padding-left: 1.25rem;
+}
+.timeline-content ul li {
+    font-size: var(--text-sm);
+    line-height: 1.6;
+    margin-bottom: 0.25rem;
+}
+
+/* Hero minimal (for secondary pages without canvas) */
+.hero.hero-minimal {
+    min-height: 40vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+.hero.hero-minimal .hero-content {
+    margin-top: auto;
+    margin-bottom: auto;
+}
+
+/* Page header (for info pages - clean, no hero) */
+.page-header {
+    background: var(--sea-deep);
+    padding: clamp(2rem, 5vh, 3rem) var(--space-md) var(--space-md);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    border-bottom: 1px solid rgba(77, 201, 246, 0.1);
+}
+.page-header h1 {
+    font-family: 'Raleway', sans-serif;
+    font-size: clamp(2rem, 6vw, 3.5rem);
+    font-weight: 200;
+    letter-spacing: 0.15em;
+    color: var(--text-heading);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.page-header h1 .jh-sig img {
+    height: 0.9em;
+    width: auto;
+    filter: brightness(1.2) drop-shadow(0 0 10px var(--cyan-glow));
+}
+.page-header h1 .meta {
+    background: linear-gradient(180deg, var(--cyan) 0%, var(--text-subhead) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 15px var(--gold-glow));
+}
+
 /* ===========================================
    10. FOOTER
 =========================================== */
@@ -1296,6 +1450,9 @@ footer .version {
 
     .genealogy-item { grid-template-columns: 1fr; gap: var(--space-xs); }
     .genealogy-item .year { margin-bottom: var(--space-xs); }
+
+    .timeline-item { grid-template-columns: 70px 1fr; gap: var(--space-sm); }
+    .timeline-item .year { font-size: 0.7rem; }
 
     .hero { padding-top: 4rem; padding-left: var(--space-md); padding-right: var(--space-md); }
     .hero-hint { bottom: 7rem; }
