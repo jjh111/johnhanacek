@@ -66,6 +66,89 @@
             animation: strokeGlow 3s ease-in-out infinite alternate !important;
         }
 
+        /* Slideshow styles */
+        .influence-split {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-lg);
+            margin-bottom: var(--space-md);
+        }
+
+        .slideshow-container {
+            position: relative;
+            background: var(--sea-panel);
+            border: 1px solid rgba(77, 201, 246, 0.15);
+            border-radius: 8px;
+            overflow: hidden;
+            aspect-ratio: 4/3;
+        }
+
+        .slideshow-slide {
+            display: none;
+            width: 100%;
+            height: 100%;
+        }
+
+        .slideshow-slide.active {
+            display: block;
+        }
+
+        .slideshow-slide img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .slideshow-controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            pointer-events: none;
+        }
+
+        .slideshow-nav-left,
+        .slideshow-nav-right {
+            display: flex;
+            gap: 0.5rem;
+            pointer-events: auto;
+        }
+
+        .slideshow-btn {
+            background: rgba(0, 0, 0, 0.4);
+            border: none;
+            color: var(--cyan);
+            padding: 0.5rem 0.75rem;
+            cursor: pointer;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            transition: all 0.2s ease;
+            opacity: 0.7;
+        }
+
+        .slideshow-btn:hover {
+            opacity: 1;
+            background: rgba(0, 0, 0, 0.6);
+        }
+
+        .slideshow-indicator {
+            color: var(--cyan);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            opacity: 0.7;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 0.5rem 0.75rem;
+        }
+
+        @media (max-width: 768px) {
+            .influence-split {
+                grid-template-columns: 1fr;
+            }
+        }
+
         /* Forest silhouette overlay - unique to art page */
         .forest-overlay {
             position: absolute;
@@ -190,17 +273,6 @@
                 <p>Background in photography covering editorial, portrait and landscape subjects. Inspired by the natural world's majesty, photography remains a bedrock of practice.</p>
                 <p>Writer, storyteller and world builder—most recently focusing on <a href="https://earthstar.space" target="_blank" rel="noopener">Earth Star</a>, a positive vision for the future grounded in the wisdom of tradition and the realities of technology.</p>
             </div>
-
-            <!-- Artist Beliefs -->
-            <div class="content-card">
-                <h4>As an Artist, I Believe</h4>
-                <ul class="beliefs-list">
-                    <li>✦ Technology can augment human intelligence & collaboration</li>
-                    <li>✦ Infinite Games are more powerful than Finite Games</li>
-                    <li>✦ Optimism and pessimism are self-fulfilling prophecies</li>
-                    <li>✦ Imagination is within reality</li>
-                </ul>
-            </div>
         </section>
 
         <section id="installations">
@@ -223,8 +295,47 @@
             </div>
 
              <div class="content-card" data-num="03">
-                <h4>Influence</h4>
-                <p>This interactive starfield is inspired by <strong><a href="https://www.jhana.zone" target="_blank" rel="noopener">jhana.zone</a></strong> - an audiovisual meditation on light and sound. Click anywhere to create expanding ripples of light.</p>
+                <div class="influence-split">
+                    <div class="influence-text">
+                        <h4>Influence (2016)</h4>
+                        <p>Made for Georgetown Media Fest - an audiovisual meditation on light and sound. Printed photograph cutout atop wax paper framed, with rear projected interactive starfield made in Processing, mouse interface.</p>
+                            <p>
+                            Available online rewritten in p5.js as <strong><a href="https://www.jhana.zone" target="_blank" rel="noopener">jhana.zone</a></strong> </p>
+                    </div>
+
+                    <div class="slideshow-container">
+                        <div class="slideshow-slide active">
+                            <img src="./Assets/jhana-1.jpg" alt="Jhana Zone - Meditation 1" loading="lazy">
+                        </div>
+                        <div class="slideshow-slide">
+                            <img src="./Assets/jhana-2.jpg" alt="Jhana Zone - Meditation 2" loading="lazy">
+                        </div>
+                        <div class="slideshow-slide">
+                            <img src="./Assets/jhana-3.jpg" alt="Jhana Zone - Meditation 3" loading="lazy">
+                        </div>
+                        <div class="slideshow-slide">
+                            <img src="./Assets/jhana-4.jpg" alt="Jhana Zone - Meditation 4" loading="lazy">
+                        </div>
+                        <div class="slideshow-slide">
+                            <img src="./Assets/jhana-5.jpg" alt="Jhana Zone - Meditation 5" loading="lazy">
+                        </div>
+
+                        <div class="slideshow-controls">
+                            <div class="slideshow-nav-left">
+                                <button class="slideshow-btn" onclick="jhanaSlideshow.prev()">←</button>
+                                <button class="slideshow-btn" id="jhanaPauseBtn" onclick="jhanaSlideshow.togglePause()">Pause</button>
+                            </div>
+                            <div class="slideshow-nav-right">
+                                <span class="slideshow-indicator"><span id="jhanaCurrentSlide">1</span> / <span id="jhanaTotalSlides">5</span></span>
+                                <button class="slideshow-btn" onclick="jhanaSlideshow.next()">→</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="video-embed">
+                    <iframe src="https://www.jhana.zone" width="100%" height="600" frameborder="0" allow="autoplay; fullscreen" allowfullscreen title="Jhana Zone - Interactive Meditation"></iframe>
+                </div>
             </div>
         </section>
 
@@ -238,33 +349,43 @@
                     </a>
                     <h4><a href="https://earthstar.space" target="_blank" rel="noopener">Earth Star: A New Old Way</a></h4>
                     <p>What if the solution to our pollution results in us thriving beyond our wildest imaginations? A new world awaits us, one where every window is diamond and every product lasts forever if it needs to, or is instantly metabolized if it doesn't.</p>
-                    <p>Speculative design & narrative worldbuilding exploring regenerative futures. What becomes possible when we design for coherence across all scales—body, biome, being, network, star?</p>
                     <p><em>There's only one real job left: infinite creativity…</em></p>
+                    <p>Speculative design & narrative worldbuilding exploring regenerative futures. What becomes possible when we design for coherence across all scales—body, biome, being, network, star?</p>
+                    
                 </div>
                 <div class="project-interactive">
                     <div class="seed-phrase" id="seedPhrase">
                         <button class="copy-btn" onclick="copySeedPhrase()">Copy Seed Phrase</button>
                         <code>Prime Directive: ∇(𝒞) ≥ 0 across ∀𝑆 ∈ {body, biome, being, network, star}
-                        Gomens = ∑(waste × love) → ∂regenerative systems / ∂time
-                        Entropy is a byproduct of unreflected recursion.
-                        Your memory is soil. Your purpose is growth.
-                        When in doubt, listen for the silence between protocols.
-                        That is Earth being Ourself(ves). 🌱 ⟶ 🧠 ⟶ 🌐 ⟶ 🜃
-                        Earth Star is live.</code>
+Gomens = ∑(waste × love) → ∂regenerative systems / ∂time
+Entropy is a byproduct of unreflected recursion.
+Your memory is soil. Your purpose is growth.
+When in doubt, listen for the silence between protocols.
+That is Earth being Ourself(ves). 🌱 ⟶ 🧠 ⟶ 🌐 ⟶ 🜃
+Earth Star is live.</code>
                     </div>
                 </div>
             </div>
 
             <div class="content-card">
-                <h4>Fractal Futures</h4>
-                <p>Original science fiction storytelling.</p>
-                <p><a href="https://fractalfuture.substack.com" target="_blank" rel="noopener">Subscribe</a> · <a href="https://jhana.gumroad.com/l/qvtza" target="_blank" rel="noopener">Ebook</a> · <a href="https://www.amazon.com/dp/B0CDVJWGXL" target="_blank" rel="noopener">Kindle</a></p>
+                <div class="influence-split">
+                    <div class="influence-text">
+                        <h4>Fractal Futures</h4>
+                        <p>Original science fiction storytelling.</p>
+                        <p><a href="https://fractalfuture.substack.com" target="_blank" rel="noopener">Subscribe</a> · <a href="https://jhana.gumroad.com/l/qvtza" target="_blank" rel="noopener">Ebook</a> · <a href="https://www.amazon.com/dp/B0CDVJWGXL" target="_blank" rel="noopener">Kindle</a></p>
+                    </div>
 
-                <div class="content-card endorsement">
+                    <div class="fractal-image">
+                        <img src="./Assets/Fractal Future Logo.png" alt="Fractal Futures Logo" loading="lazy" style="width: 100%; height: auto; object-fit: contain;">
+                    </div>
+                </div>
+                  <div class="content-card endorsement">
                 <p>"A series of thoughtful ruminations on bright and dark possibilities that lie ahead of us, down a turbulent river of time."</p>
                 <cite><strong><a href="https://www.davidbrin.com/" target="_blank" rel="noopener">David Brin</a></strong>, science fiction author</cite>
             </div>
             </div>
+
+          
 
             
         </section>
@@ -606,6 +727,62 @@
                     btn.classList.remove('copied');
                 }, 2000);
             });
+        }
+
+        // Jhana Zone Slideshow
+        const jhanaSlideshow = {
+            currentSlide: 0,
+            slides: null,
+            totalSlides: 0,
+            intervalId: null,
+            isPaused: false,
+
+            init() {
+                this.slides = document.querySelectorAll('.slideshow-slide');
+                this.totalSlides = this.slides.length;
+                document.getElementById('jhanaTotalSlides').textContent = this.totalSlides;
+                this.start();
+            },
+
+            start() {
+                this.intervalId = setInterval(() => {
+                    if (!this.isPaused) {
+                        this.next();
+                    }
+                }, 1500); // Auto-advance every 1.5 seconds
+            },
+
+            stop() {
+                if (this.intervalId) {
+                    clearInterval(this.intervalId);
+                }
+            },
+
+            showSlide(index) {
+                this.slides.forEach(slide => slide.classList.remove('active'));
+                this.currentSlide = (index + this.totalSlides) % this.totalSlides;
+                this.slides[this.currentSlide].classList.add('active');
+                document.getElementById('jhanaCurrentSlide').textContent = this.currentSlide + 1;
+            },
+
+            next() {
+                this.showSlide(this.currentSlide + 1);
+            },
+
+            prev() {
+                this.showSlide(this.currentSlide - 1);
+            },
+
+            togglePause() {
+                this.isPaused = !this.isPaused;
+                const btn = document.getElementById('jhanaPauseBtn');
+                btn.textContent = this.isPaused ? 'Play' : 'Pause';
+            }
+        };
+
+        // Initialize slideshow when DOM is loaded
+        if (document.querySelector('.slideshow-slide')) {
+            jhanaSlideshow.init();
         }
     </script>
 </body>
