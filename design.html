@@ -122,39 +122,11 @@
         }
 
         .demo-labels {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            pointer-events: none;
+            display: none;
         }
 
         .demo-label {
-            position: absolute;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.7rem;
-            font-weight: 500;
-            padding: 0.25rem 0.5rem;
-            border-radius: 0;
-            transform: translate(-50%, -100%);
-            margin-top: -8px;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .demo-label.visible {
-            opacity: 1;
-        }
-
-        .demo-label.fish {
-            background: rgba(59, 130, 246, 0.9);
-            color: white;
-        }
-
-        .demo-label.food {
-            background: rgba(74, 222, 128, 0.9);
-            color: #1a1a2e;
+            display: none;
         }
 
         .demo-controls {
@@ -551,7 +523,7 @@
             <div class="content-card card-featured">
                 <div class="umbrella-header">
                     <h3><a href="https://www.avatarmedic.com" target="_blank" rel="noopener">AvatarMEDIC</a> <span class="year-badge">2019–2021</span></h3>
-                    <p>Founded and led product design for an XR telepresence platform enabling remote medical training and robotic surgery collaboration. Founder Institute SF 2020 graduate as CEO.</p>
+                    <p>Founded and led product concept design, focusing on XR telepresence enabling remote medical training and robotic surgery collaboration. Founder Institute SF 2020 graduate as CEO.</p>
                 </div>
 
                 <div class="grid-3">
@@ -1249,17 +1221,19 @@
                 
                 // Ease out for smoother fade
                 const easedOpacity = opacity * opacity;
-                
-                // Draw connection line
-                ctx.strokeStyle = `rgba(251, 191, 36, ${0.4 * easedOpacity})`; // Warm yellow
-                ctx.lineWidth = 1;
-                ctx.setLineDash([4, 4]);
-                ctx.beginPath();
-                ctx.moveTo(a.center.x, a.center.y);
-                ctx.lineTo(b.center.x, b.center.y);
-                ctx.stroke();
-                ctx.setLineDash([]);
-                
+
+                // Draw connection line (only if labels are shown)
+                if (showLabels) {
+                    ctx.strokeStyle = `rgba(251, 191, 36, ${0.4 * easedOpacity})`; // Warm yellow
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash([4, 4]);
+                    ctx.beginPath();
+                    ctx.moveTo(a.center.x, a.center.y);
+                    ctx.lineTo(b.center.x, b.center.y);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+
                 // Draw relationship indicator at midpoint
                 const midX = (a.center.x + b.center.x) / 2;
                 const midY = (a.center.y + b.center.y) / 2;
@@ -1294,8 +1268,8 @@
                     }
                 }
                 
-                if (rel.type === 'contains') {
-                    // Draw containment brackets
+                if (rel.type === 'contains' && showLabels) {
+                    // Draw containment brackets (only if labels are shown)
                     ctx.strokeStyle = `rgba(74, 222, 128, ${0.5 * easedOpacity})`; // Green
                     ctx.lineWidth = 2;
                     const r = getShapeSize(rel.container) / 2 + 8;
@@ -1307,24 +1281,22 @@
                     ctx.stroke();
 
                     // Add label
-                    if (showLabels) {
-                        ctx.font = '500 10px "Raleway", sans-serif';
-                        ctx.textAlign = 'center';
-                        ctx.fillStyle = `rgba(74, 222, 128, ${0.8 * easedOpacity})`;
-                        ctx.fillText('⊃ contains', rel.container.center.x, rel.container.center.y - r - 8);
-                    }
+                    ctx.font = '500 10px "Raleway", sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillStyle = `rgba(74, 222, 128, ${0.8 * easedOpacity})`;
+                    ctx.fillText('⊃ contains', rel.container.center.x, rel.container.center.y - r - 8);
                 }
                 
-                if (rel.type === 'adjacent') {
-                    // Draw proximity indicator
+                if (rel.type === 'adjacent' && showLabels) {
+                    // Draw proximity indicator (only if labels are shown)
                     ctx.fillStyle = `rgba(147, 197, 253, ${0.6 * easedOpacity})`;
                     ctx.beginPath();
                     ctx.arc(midX, midY, 3, 0, Math.PI * 2);
                     ctx.fill();
                 }
                 
-                if (rel.type === 'aligned-vertical' || rel.type === 'aligned-horizontal') {
-                    // Draw alignment guide
+                if ((rel.type === 'aligned-vertical' || rel.type === 'aligned-horizontal') && showLabels) {
+                    // Draw alignment guide (only if labels are shown)
                     ctx.strokeStyle = `rgba(167, 139, 250, ${0.4 * easedOpacity})`; // Purple
                     ctx.lineWidth = 1;
                     ctx.setLineDash([2, 4]);
