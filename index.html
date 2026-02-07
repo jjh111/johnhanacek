@@ -146,8 +146,8 @@
             <h2>About</h2>
 
             <div class="content-card about">
-                <p><strong>Founding Designer & Design Engineer</strong> building at the intersection of AI, spatial computing, and human-computer symbiosis.</p>
-                <p>I design and code <strong>agentic systems</strong>, XR interfaces, and AI-augmented tools. Currently exploring <strong>MetaMedium</strong> concepts, dynamic design systems that blur the line between tool and medium, and a self improving research framework <strong>Earth Star </strong>using OpenClaw</p>
+                <p><strong>Founding Designer </strong>& <strong>Design Engineer</strong> building at the intersection of AI, spatial computing, and human-computer symbiosis.</p>
+                <p>I design and develop <strong>agentic systems</strong>, XR interfaces, and AI-augmented tools. Currently exploring <strong>MetaMedium</strong> concepts, dynamic design systems that blur the line between tool and medium, and a self improving automated research framework <strong>Earth Star </strong>using OpenClaw.</p>
             </div>
         </section>
 
@@ -312,58 +312,52 @@
         // Unified Timing Constants (in ms)
         // ============================================
         const TIMING = {
-            // Raw strokes
             strokeHold: 1500,       // Time before stroke starts fading
             strokeFade: 2000,       // Fade duration for strokes
-            
-            // Recognized shapes
-            morphDuration: 400,     // Shape morph animation
-            shapeHold: 4000,        // Time shape stays at full opacity
-            shapeFade: 1500,        // Fade duration for shapes
-            
-            // Whisper labels
-            labelFadeIn: 200,       // Label fade in
-            labelHold: 2500,        // Label at full opacity  
-            labelFade: 800,         // Label fade out
-            
-            // Relationships & intersections
-            relationshipFade: 1200, // Relationship indicator fade
-            
-            // Glyph reaction
-            glyphActive: 2500,      // How long glyphs react after shape
         };
-        
-        // Computed totals
         TIMING.strokeTotal = TIMING.strokeHold + TIMING.strokeFade;
-        TIMING.shapeTotal = TIMING.shapeHold + TIMING.shapeFade;
-        TIMING.labelTotal = TIMING.labelFadeIn + TIMING.labelHold + TIMING.labelFade;
         
         let isDrawing = false;
         let strokes = [];           // Raw strokes (fade out)
-        let recognizedShapes = [];  // Completed shapes (persist longer)
-        let whisperLabels = [];     // Floating labels
-        let rawIntersections = [];  // Intersections between raw strokes
         let currentStroke = null;
-        let glyphRotation = 0;      // For reactive glyphs
-        let glyphPulse = 0;
-        let lastShapeTime = 0;
         let ripples = [];           // Tap ripple effects
         let particles = [];         // Recognition particle bursts
         let ambientParticles = [];  // Floating ambient particles
-        
+
+        // ============================================
+        // Entity State (Fish Minigame)
+        // ============================================
+        let jellyfish = [];
+        let fish = [];
+        let coral = [];
+        let bubbles = [];
+        let food = [];
+        let tempLines = [];
+        let entityIdCounter = 0;
+
+        const MAX_JELLYFISH = 3;
+        const MAX_FISH = 10;
+        const MAX_CORAL = 6;
+        const MAX_BUBBLES = 20;
+        const MAX_FOOD = 12;
+        const FOOD_LIFETIME = 15000;
+        const LINE_DURATION = 1500;
+
+        const aquaColors = {
+            jellyfish: ['#c77dff', '#a78bfa', '#e879f9'],
+            fish: ['#00d9ff', '#4dc9f6', '#38bdf8'],
+            coral: ['#ff6ec7', '#f472b6', '#fb7185'],
+            bubble: 'rgba(77, 201, 246, 0.3)',
+            food: '#7ae582',
+            line: 'rgba(77, 201, 246, 0.5)'
+        };
+
         // Deep Sea Terminal color palette
         const colors = {
             bg: '#020a12',
-            grid: 'rgba(77, 201, 246, 0.06)',
-            gridAccent: 'rgba(77, 201, 246, 0.12)',
             stroke: 'rgba(77, 201, 246, 0.85)',
-            strokeComplete: 'rgba(212, 175, 55, 0.9)',
-            ghost: 'rgba(77, 201, 246, 0.2)',
-            glyph: 'rgba(77, 201, 246, 0.25)',
-            glyphActive: 'rgba(212, 175, 55, 0.6)',
             cursor: 'rgba(212, 175, 55, 0.85)',
             glow: 'rgba(77, 201, 246, 0.4)',
-            label: 'rgba(122, 229, 130, 0.8)'
         };
 
         // ============================================
@@ -384,6 +378,42 @@
             return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
         }
 
+        // Shortest angular difference (returns value in [-PI, PI])
+        function angleDiff(target, current) {
+            let d = target - current;
+            while (d > Math.PI) d -= Math.PI * 2;
+            while (d < -Math.PI) d += Math.PI * 2;
+            return d;
+        }
+
+        // Check if food position is inside any bubble (hidden from fish)
+        function isFoodInBubble(fx, fy) {
+            for (let i = 0; i < bubbles.length; i++) {
+                const b = bubbles[i];
+                const dx = fx - b.x;
+                const dy = fy - b.y;
+                if (dx * dx + dy * dy < b.radius * b.radius) return true;
+            }
+            return false;
+        }
+
+        // Check if line segment intersects a circle
+        function segmentIntersectsCircle(p1, p2, cx, cy, r) {
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const fx = p1.x - cx;
+            const fy = p1.y - cy;
+            const a = dx * dx + dy * dy;
+            const b2 = 2 * (fx * dx + fy * dy);
+            const c = fx * fx + fy * fy - r * r;
+            let disc = b2 * b2 - 4 * a * c;
+            if (disc < 0) return false;
+            disc = Math.sqrt(disc);
+            const t1 = (-b2 - disc) / (2 * a);
+            const t2 = (-b2 + disc) / (2 * a);
+            return (t1 >= 0 && t1 <= 1) || (t2 >= 0 && t2 <= 1) || (t1 < 0 && t2 > 1);
+        }
+
         function getCircleScore(points, center, radius) {
             let totalError = 0;
             points.forEach(p => {
@@ -393,6 +423,7 @@
             return Math.max(0, 1 - (totalError / points.length));
         }
 
+        // Exact scoring functions from design.html
         function getRectScore(points, bounds) {
             const width = bounds.maxX - bounds.minX;
             const height = bounds.maxY - bounds.minY;
@@ -411,20 +442,8 @@
         }
 
         function getTriangleScore(points, bounds) {
-            // Improved triangle detection
             const width = bounds.maxX - bounds.minX;
             const height = bounds.maxY - bounds.minY;
-            const cx = (bounds.minX + bounds.maxX) / 2;
-            const cy = (bounds.minY + bounds.maxY) / 2;
-
-            // Find the 3 most extreme points (potential vertices)
-            let topPoint = points[0], bottomLeft = points[0], bottomRight = points[0];
-
-            points.forEach(p => {
-                if (p.y < topPoint.y) topPoint = p;
-                if (p.y > bottomLeft.y || (p.y === bottomLeft.y && p.x < bottomLeft.x)) bottomLeft = p;
-                if (p.y > bottomRight.y || (p.y === bottomRight.y && p.x > bottomRight.x)) bottomRight = p;
-            });
 
             // Check for roughly 3 direction changes (corners)
             let turns = 0;
@@ -535,483 +554,292 @@
 
             return null;
         }
-        
+
         // ============================================
-        // Generate Ideal Shape Points
+        // Stroke → Entity Classification
         // ============================================
-        function generateIdealShape(shape, numPoints = 60) {
-            const points = [];
-            
-            if (shape.type === 'circle') {
-                for (let i = 0; i <= numPoints; i++) {
-                    const angle = (i / numPoints) * Math.PI * 2;
-                    points.push({
-                        x: shape.center.x + Math.cos(angle) * shape.radius,
-                        y: shape.center.y + Math.sin(angle) * shape.radius
-                    });
-                }
-            } else if (shape.type === 'rectangle') {
-                const b = shape.bounds;
-                const corners = [
-                    { x: b.minX, y: b.minY }, { x: b.maxX, y: b.minY },
-                    { x: b.maxX, y: b.maxY }, { x: b.minX, y: b.maxY },
-                    { x: b.minX, y: b.minY }
-                ];
-                const perSide = Math.floor(numPoints / 4);
-                for (let s = 0; s < 4; s++) {
-                    for (let i = 0; i < perSide; i++) {
-                        const t = i / perSide;
-                        points.push({
-                            x: corners[s].x + t * (corners[s + 1].x - corners[s].x),
-                            y: corners[s].y + t * (corners[s + 1].y - corners[s].y)
-                        });
-                    }
-                }
-            } else if (shape.type === 'triangle') {
-                const b = shape.bounds;
-                const cx = (b.minX + b.maxX) / 2;
-                const triPoints = [
-                    { x: cx, y: b.minY },
-                    { x: b.maxX, y: b.maxY },
-                    { x: b.minX, y: b.maxY },
-                    { x: cx, y: b.minY }
-                ];
-                const perSide = Math.floor(numPoints / 3);
-                for (let s = 0; s < 3; s++) {
-                    for (let i = 0; i < perSide; i++) {
-                        const t = i / perSide;
-                        points.push({
-                            x: triPoints[s].x + t * (triPoints[s + 1].x - triPoints[s].x),
-                            y: triPoints[s].y + t * (triPoints[s + 1].y - triPoints[s].y)
-                        });
-                    }
-                }
-            } else if (shape.type === 'line' || shape.type === 'arrow') {
-                for (let i = 0; i <= numPoints; i++) {
-                    const t = i / numPoints;
-                    points.push({
-                        x: shape.start.x + t * (shape.end.x - shape.start.x),
-                        y: shape.start.y + t * (shape.end.y - shape.start.y)
-                    });
-                }
-                if (shape.type === 'arrow') {
-                    const angle = Math.atan2(shape.end.y - shape.start.y, shape.end.x - shape.start.x);
-                    const headLen = 15;
-                    points.push({ x: shape.end.x - headLen * Math.cos(angle - 0.4), y: shape.end.y - headLen * Math.sin(angle - 0.4) });
-                    points.push(shape.end);
-                    points.push({ x: shape.end.x - headLen * Math.cos(angle + 0.4), y: shape.end.y - headLen * Math.sin(angle + 0.4) });
-                }
-            } else if (shape.type === 'dot') {
-                // Dot is just a single point
-                points.push(shape.center);
-            }
-            
-            return points;
-        }
-        
-        // ============================================
-        // Relationship Detection
-        // ============================================
-        function detectRelationships() {
-            const relationships = [];
-            const shapes = recognizedShapes.filter(s => Date.now() - s.createdAt < TIMING.shapeTotal);
-            
-            for (let i = 0; i < shapes.length; i++) {
-                for (let j = i + 1; j < shapes.length; j++) {
-                    const a = shapes[i];
-                    const b = shapes[j];
-                    
-                    const rel = analyzeRelationship(a, b);
-                    if (rel) {
-                        relationships.push({
-                            shapeA: a,
-                            shapeB: b,
-                            ...rel
-                        });
-                    }
-                }
-            }
-            return relationships;
-        }
-        
-        function analyzeRelationship(a, b) {
-            const dist = distance(a.center, b.center);
-            const aSize = getShapeSize(a);
-            const bSize = getShapeSize(b);
-            const combinedSize = (aSize + bSize) / 2;
-            
-            // Lines don't "contain" things - skip containment check for lines
-            const aIsLine = a.type === 'line' || a.type === 'arrow';
-            const bIsLine = b.type === 'line' || b.type === 'arrow';
-            
-            // Check containment (only for closed shapes)
-            if (!aIsLine && !bIsLine && dist < Math.abs(aSize - bSize) * 0.5) {
-                const container = aSize > bSize ? a : b;
-                const contained = aSize > bSize ? b : a;
-                return { type: 'contains', container, contained, dist };
-            }
-            
-            // Check intersection/overlap - always check for lines
-            if (aIsLine || bIsLine || dist < combinedSize * 0.9) {
-                const intersections = findIntersectionPoints(a, b);
-                if (intersections.length > 0) {
-                    return { type: 'intersects', intersections, dist };
-                }
-                if (!aIsLine && !bIsLine) {
-                    return { type: 'overlaps', dist };
-                }
-            }
-            
-            // Check adjacency (close but not overlapping)
-            if (dist < combinedSize * 1.5) {
-                return { type: 'adjacent', dist };
-            }
-            
-            // Check alignment
-            const dx = Math.abs(a.center.x - b.center.x);
-            const dy = Math.abs(a.center.y - b.center.y);
-            if (dx < 15) return { type: 'aligned-vertical', dist };
-            if (dy < 15) return { type: 'aligned-horizontal', dist };
-            
-            return null;
-        }
-        
-        function getShapeSize(shape) {
-            if (shape.type === 'circle') return shape.radius * 2;
-            if (shape.type === 'dot') return 12; // Small fixed size for dots
-            if (shape.bounds) {
-                return Math.max(shape.bounds.maxX - shape.bounds.minX, shape.bounds.maxY - shape.bounds.minY);
-            }
-            if (shape.start && shape.end) {
-                return distance(shape.start, shape.end);
-            }
-            return 50;
-        }
-        
-        function findIntersectionPoints(a, b) {
-            const points = [];
-            
-            // Special case: two circles - use geometric calculation
-            if (a.type === 'circle' && b.type === 'circle') {
-                const d = distance(a.center, b.center);
-                const r1 = a.radius;
-                const r2 = b.radius;
-                
-                // Check if circles actually intersect
-                if (d < r1 + r2 && d > Math.abs(r1 - r2)) {
-                    // Calculate intersection points
-                    const a2 = (r1 * r1 - r2 * r2 + d * d) / (2 * d);
-                    const h = Math.sqrt(Math.max(0, r1 * r1 - a2 * a2));
-                    
-                    const px = a.center.x + a2 * (b.center.x - a.center.x) / d;
-                    const py = a.center.y + a2 * (b.center.y - a.center.y) / d;
-                    
-                    const dx = h * (b.center.y - a.center.y) / d;
-                    const dy = h * (b.center.x - a.center.x) / d;
-                    
-                    points.push({ x: px + dx, y: py - dy });
-                    if (h > 1) { // Two distinct points
-                        points.push({ x: px - dx, y: py + dy });
-                    }
-                }
-                return points;
-            }
-            
-            // General case: check line segment intersections
-            const aPoints = a.idealPoints || [];
-            const bPoints = b.idealPoints || [];
-            
-            if (aPoints.length < 4 || bPoints.length < 4) return points;
-            
-            const stepA = Math.max(1, Math.floor(aPoints.length / 24));
-            const stepB = Math.max(1, Math.floor(bPoints.length / 24));
-            
-            for (let i = 0; i < aPoints.length - stepA; i += stepA) {
-                const a1 = aPoints[i];
-                const a2 = aPoints[i + stepA];
-                
-                for (let j = 0; j < bPoints.length - stepB; j += stepB) {
-                    const b1 = bPoints[j];
-                    const b2 = bPoints[j + stepB];
-                    
-                    const intersection = lineIntersection(a1, a2, b1, b2);
-                    if (intersection) {
-                        const tooClose = points.some(p => distance(p, intersection) < 15);
-                        if (!tooClose) points.push(intersection);
-                    }
-                }
-            }
-            return points.slice(0, 4);
-        }
-        
-        function lineIntersection(p1, p2, p3, p4) {
+
+        // Check if two line segments intersect, return intersection point
+        function segmentsIntersect(p1, p2, p3, p4, returnPoint = false) {
             const d = (p1.x - p2.x) * (p3.y - p4.y) - (p1.y - p2.y) * (p3.x - p4.x);
-            if (Math.abs(d) < 0.001) return null;
-            
+            if (Math.abs(d) < 0.001) return returnPoint ? null : false;
             const t = ((p1.x - p3.x) * (p3.y - p4.y) - (p1.y - p3.y) * (p3.x - p4.x)) / d;
             const u = -((p1.x - p2.x) * (p1.y - p3.y) - (p1.y - p2.y) * (p1.x - p3.x)) / d;
-            
-            if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
-                return {
-                    x: p1.x + t * (p2.x - p1.x),
-                    y: p1.y + t * (p2.y - p1.y)
-                };
+            if (t > 0 && t < 1 && u > 0 && u < 1) {
+                if (returnPoint) {
+                    return {
+                        x: p1.x + t * (p2.x - p1.x),
+                        y: p1.y + t * (p2.y - p1.y)
+                    };
+                }
+                return true;
+            }
+            return returnPoint ? null : false;
+        }
+
+        // Detect self-intersection and find loop center (fish body pivot)
+        // Returns { loopCenter, loopStart, loopEnd, intersectionPoint } or null
+        function findSelfIntersectionLoop(points) {
+            if (points.length < 15) return null;
+
+            const step = Math.max(1, Math.floor(points.length / 50));
+
+            for (let i = 0; i < points.length - step * 4; i += step) {
+                const a1 = points[i];
+                const a2 = points[Math.min(i + step, points.length - 1)];
+
+                for (let j = i + step * 3; j < points.length - step; j += step) {
+                    const b1 = points[j];
+                    const b2 = points[Math.min(j + step, points.length - 1)];
+
+                    const intersection = segmentsIntersect(a1, a2, b1, b2, true);
+                    if (intersection) {
+                        // Found intersection - extract the loop (points between i and j)
+                        const loopPoints = points.slice(i, j + 1);
+
+                        // Check loop is curved (not sharp angular)
+                        // Measure curvature by checking angle changes
+                        let totalAngleChange = 0;
+                        const sampleStep = Math.max(1, Math.floor(loopPoints.length / 10));
+                        for (let k = sampleStep; k < loopPoints.length - sampleStep; k += sampleStep) {
+                            const prev = loopPoints[k - sampleStep];
+                            const curr = loopPoints[k];
+                            const next = loopPoints[Math.min(k + sampleStep, loopPoints.length - 1)];
+                            const a1 = Math.atan2(curr.y - prev.y, curr.x - prev.x);
+                            const a2 = Math.atan2(next.y - curr.y, next.x - curr.x);
+                            let diff = Math.abs(a2 - a1);
+                            if (diff > Math.PI) diff = 2 * Math.PI - diff;
+                            totalAngleChange += diff;
+                        }
+
+                        // Reject if too angular (sharp corners)
+                        const avgAngleChange = totalAngleChange / (loopPoints.length / sampleStep);
+                        if (avgAngleChange > 0.8) continue; // Too sharp, not a curved loop
+
+                        // Calculate loop centroid (fish body center)
+                        let cx = 0, cy = 0;
+                        loopPoints.forEach(p => { cx += p.x; cy += p.y; });
+                        cx /= loopPoints.length;
+                        cy /= loopPoints.length;
+
+                        // Check loop has decent size
+                        const loopBounds = getBounds(loopPoints);
+                        const loopSize = Math.max(loopBounds.maxX - loopBounds.minX, loopBounds.maxY - loopBounds.minY);
+                        if (loopSize < 25) continue; // Loop too small
+
+                        return {
+                            loopCenter: { x: cx, y: cy },
+                            loopStart: i,
+                            loopEnd: j,
+                            intersectionPoint: intersection,
+                            loopSize: loopSize
+                        };
+                    }
+                }
             }
             return null;
         }
-        
-        function drawRelationships() {
-            const relationships = detectRelationships();
-            const now = Date.now();
-            
-            relationships.forEach(rel => {
-                const a = rel.shapeA;
-                const b = rel.shapeB;
-                const age = Math.max(now - a.createdAt, now - b.createdAt);
-                let opacity = 1;
-                // Fade with the shapes
-                if (age > TIMING.shapeHold) {
-                    opacity = 1 - ((age - TIMING.shapeHold) / TIMING.relationshipFade);
-                }
-                if (opacity <= 0) return;
-                
-                // Ease out for smoother fade
-                const easedOpacity = opacity * opacity;
-                
-                // Draw connection line
-                ctx.strokeStyle = `rgba(251, 191, 36, ${0.4 * easedOpacity})`; // Warm yellow
-                ctx.lineWidth = 1;
-                ctx.setLineDash([4, 4]);
-                ctx.beginPath();
-                ctx.moveTo(a.center.x, a.center.y);
-                ctx.lineTo(b.center.x, b.center.y);
-                ctx.stroke();
-                ctx.setLineDash([]);
-                
-                // Draw relationship indicator at midpoint
-                const midX = (a.center.x + b.center.x) / 2;
-                const midY = (a.center.y + b.center.y) / 2;
-                
-                // Relationship-specific visuals
-                if (rel.type === 'intersects' && rel.intersections) {
-                    // Draw glowing intersection points
-                    rel.intersections.forEach(pt => {
-                        ctx.shadowColor = 'rgba(251, 191, 36, 0.8)';
-                        ctx.shadowBlur = 12 * easedOpacity;
-                        ctx.fillStyle = `rgba(251, 191, 36, ${0.9 * easedOpacity})`;
-                        ctx.beginPath();
-                        ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
-                        ctx.fill();
-                        
-                        // Outer ring
-                        ctx.strokeStyle = `rgba(251, 191, 36, ${0.5 * easedOpacity})`;
-                        ctx.lineWidth = 1;
-                        ctx.beginPath();
-                        ctx.arc(pt.x, pt.y, 8, 0, Math.PI * 2);
-                        ctx.stroke();
-                        ctx.shadowBlur = 0;
+
+        // Simple boolean check for backwards compatibility
+        function hasSelfIntersection(points) {
+            return findSelfIntersectionLoop(points) !== null;
+        }
+
+        // Generate jellyfish replacement art (bell + flowing tentacles)
+        // Generate jellyfish with bell and separate tentacle data for animation
+        function generateJellyfishShape(size) {
+            const r = size * 0.35;
+            const numTentacles = 5 + Math.floor(Math.random() * 3);
+            const tentacleLength = 4 + Math.floor(Math.random() * 3);
+
+            return {
+                bellRadius: r,
+                bellHeight: r * 0.6,
+                numTentacles: numTentacles,
+                tentacleLength: tentacleLength,
+                // Random variation per jellyfish
+                tentacleSpacing: 0.7 + Math.random() * 0.3,
+                wobbleOffset: Math.random() * Math.PI * 2,
+                pulseOffset: Math.random() * Math.PI * 2
+            };
+        }
+
+        // Generate coral - simplified for performance
+        function generateCoralShape(size, bounds) {
+            const width = bounds ? (bounds.maxX - bounds.minX) : size;
+            const height = bounds ? (bounds.maxY - bounds.minY) : size * 0.8;
+
+            // Fewer stalks for better performance
+            const numStalks = Math.max(2, Math.min(6, Math.floor(width / 25)));
+            const stalks = [];
+
+            for (let s = 0; s < numStalks; s++) {
+                const xPos = -width / 2 + (s + 0.5) * (width / numStalks);
+                const stalkHeight = height * (0.5 + Math.random() * 0.4);
+
+                // 2-3 branches per stalk
+                const numBranches = 2 + Math.floor(Math.random() * 2);
+
+                stalks.push({
+                    x: xPos + (Math.random() - 0.5) * 6,
+                    height: stalkHeight,
+                    branches: []
+                });
+
+                for (let b = 0; b < numBranches; b++) {
+                    const branchY = stalkHeight * (0.3 + (b / numBranches) * 0.5);
+                    const branchDir = (b % 2 === 0) ? -1 : 1;
+                    const branchLen = 8 + Math.random() * 15;
+                    const branchAngle = (0.3 + Math.random() * 0.4) * branchDir;
+
+                    stalks[s].branches.push({
+                        y: branchY,
+                        angle: branchAngle,
+                        length: branchLen,
+                        hasTip: Math.random() > 0.3
                     });
-                    
-                    // Add label near first intersection
-                    if (rel.intersections.length > 0) {
-                        const pt = rel.intersections[0];
-                        ctx.font = '500 10px "Raleway", sans-serif';
-                        ctx.textAlign = 'center';
-                        ctx.fillStyle = `rgba(251, 191, 36, ${0.9 * easedOpacity})`;
-                        ctx.fillText('intersects', pt.x, pt.y - 16);
-                    }
                 }
-                
-                if (rel.type === 'contains') {
-                    // Draw containment brackets
-                    ctx.strokeStyle = `rgba(74, 222, 128, ${0.5 * easedOpacity})`; // Green
-                    ctx.lineWidth = 2;
-                    const r = getShapeSize(rel.container) / 2 + 8;
-                    ctx.beginPath();
-                    ctx.arc(rel.container.center.x, rel.container.center.y, r, -0.3, 0.3);
-                    ctx.stroke();
-                    ctx.beginPath();
-                    ctx.arc(rel.container.center.x, rel.container.center.y, r, Math.PI - 0.3, Math.PI + 0.3);
-                    ctx.stroke();
-                    
-                    // Add label
-                    ctx.font = '500 10px "Raleway", sans-serif';
-                    ctx.textAlign = 'center';
-                    ctx.fillStyle = `rgba(74, 222, 128, ${0.8 * easedOpacity})`;
-                    ctx.fillText('⊃ contains', rel.container.center.x, rel.container.center.y - r - 8);
+            }
+
+            return {
+                width: width,
+                height: height,
+                stalks: stalks,
+                swayOffset: Math.random() * Math.PI * 2
+            };
+        }
+
+        // Generate fish shape - proper fish outline with body and tail integrated
+        function generateFishShape(loopInfo, originalPoints, size) {
+            // Get loop dimensions
+            const loopPoints = originalPoints.slice(loopInfo.loopStart, loopInfo.loopEnd + 1);
+            const loopBounds = getBounds(loopPoints);
+            const loopWidth = loopBounds.maxX - loopBounds.minX;
+            const loopHeight = loopBounds.maxY - loopBounds.minY;
+
+            // Fish dimensions based on drawn loop
+            const bodyLen = Math.max(loopWidth, loopHeight) * 0.45;
+            const bodyH = Math.min(loopWidth, loopHeight) * 0.35;
+            const tailLen = bodyLen * 0.6;
+            const tailSpread = bodyH * 0.9;
+
+            // Calculate orientation from stroke
+            const headDir = Math.atan2(
+                loopInfo.intersectionPoint.y - loopInfo.loopCenter.y,
+                loopInfo.intersectionPoint.x - loopInfo.loopCenter.x
+            );
+
+            // Create proper fish outline (head at +X, tail at -X)
+            // Top edge: head -> body curve -> tail
+            const pts = [];
+
+            // Head point (nose)
+            pts.push({ x: bodyLen, y: 0 });
+
+            // Top body curve
+            pts.push({ x: bodyLen * 0.7, y: -bodyH * 0.5 });
+            pts.push({ x: bodyLen * 0.3, y: -bodyH * 0.8 });
+            pts.push({ x: -bodyLen * 0.2, y: -bodyH * 0.6 });
+
+            // Tail top
+            pts.push({ x: -bodyLen * 0.5, y: -bodyH * 0.3 });
+            pts.push({ x: -bodyLen * 0.5 - tailLen, y: -tailSpread });
+
+            // Tail center notch
+            pts.push({ x: -bodyLen * 0.5 - tailLen * 0.5, y: 0 });
+
+            // Tail bottom
+            pts.push({ x: -bodyLen * 0.5 - tailLen, y: tailSpread });
+            pts.push({ x: -bodyLen * 0.5, y: bodyH * 0.3 });
+
+            // Bottom body curve
+            pts.push({ x: -bodyLen * 0.2, y: bodyH * 0.6 });
+            pts.push({ x: bodyLen * 0.3, y: bodyH * 0.8 });
+            pts.push({ x: bodyLen * 0.7, y: bodyH * 0.5 });
+
+            // Back to head
+            pts.push({ x: bodyLen, y: 0 });
+
+            return {
+                points: pts,
+                initialHeading: headDir,
+                bodyWidth: bodyLen,
+                bodyHeight: bodyH
+            };
+        }
+
+        // Shape classification - matches design.html detectShape() exactly, plus fish
+        function classifyStroke(points) {
+            if (!points || points.length === 0) return null;
+
+            // Tiny tap/dot → food (before other checks)
+            if (points.length < 8) {
+                const bounds = getBounds(points);
+                const size = Math.max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);
+                if (size < 25) {
+                    const center = { x: (bounds.minX + bounds.maxX) / 2, y: (bounds.minY + bounds.maxY) / 2 };
+                    return { type: 'food', center, size, points };
                 }
-                
-                if (rel.type === 'adjacent') {
-                    // Draw proximity indicator
-                    ctx.fillStyle = `rgba(147, 197, 253, ${0.6 * easedOpacity})`;
-                    ctx.beginPath();
-                    ctx.arc(midX, midY, 3, 0, Math.PI * 2);
-                    ctx.fill();
+            }
+
+            if (points.length < 5) return null;
+
+            const bounds = getBounds(points);
+            const center = { x: (bounds.minX + bounds.maxX) / 2, y: (bounds.minY + bounds.maxY) / 2 };
+            const width = bounds.maxX - bounds.minX;
+            const height = bounds.maxY - bounds.minY;
+            const size = Math.max(width, height);
+
+            if (size < 20) return null; // Too small
+
+            // Check if closed (start near end) - exact design.html logic
+            const start = points[0];
+            const end = points[points.length - 1];
+            const closedThreshold = size * 0.25;
+            const isClosed = distance(start, end) < closedThreshold;
+
+            if (isClosed) {
+                // Analyze closed shape - exact design.html scoring and comparison
+                const circleScore = getCircleScore(points, center, size / 2);
+                const rectScore = getRectScore(points, bounds);
+                const triScore = getTriangleScore(points, bounds);
+
+                // Circle → bubble (must beat both others)
+                if (circleScore > 0.7 && circleScore > rectScore && circleScore > triScore) {
+                    return { type: 'bubble', center, radius: size / 2, size, points };
                 }
-                
-                if (rel.type === 'aligned-vertical' || rel.type === 'aligned-horizontal') {
-                    // Draw alignment guide
-                    ctx.strokeStyle = `rgba(167, 139, 250, ${0.4 * easedOpacity})`; // Purple
-                    ctx.lineWidth = 1;
-                    ctx.setLineDash([2, 4]);
-                    ctx.beginPath();
-                    if (rel.type === 'aligned-vertical') {
-                        ctx.moveTo(a.center.x, Math.min(a.center.y, b.center.y) - 20);
-                        ctx.lineTo(a.center.x, Math.max(a.center.y, b.center.y) + 20);
-                    } else {
-                        ctx.moveTo(Math.min(a.center.x, b.center.x) - 20, a.center.y);
-                        ctx.lineTo(Math.max(a.center.x, b.center.x) + 20, a.center.y);
-                    }
-                    ctx.stroke();
-                    ctx.setLineDash([]);
+                // Rectangle → coral (must beat triangle)
+                if (rectScore > 0.6 && rectScore > triScore) {
+                    const coralShape = generateCoralShape(size, bounds);
+                    return { type: 'coral', center, size, bounds, shape: coralShape };
                 }
-                
-                // Draw relationship label with word
-                const labelData = {
-                    'intersects': { symbol: '×', word: 'intersects' },
-                    'contains': { symbol: '⊃', word: 'contains' },
-                    'overlaps': { symbol: '∩', word: 'overlaps' },
-                    'adjacent': { symbol: '↔', word: 'near' },
-                    'aligned-vertical': { symbol: '│', word: 'aligned' },
-                    'aligned-horizontal': { symbol: '─', word: 'aligned' }
+                // Triangle → jellyfish
+                if (triScore > 0.5) {
+                    const jellyShape = generateJellyfishShape(size);
+                    return { type: 'jellyfish', center, size, bounds, shape: jellyShape };
+                }
+                // Unrecognized closed shape → no entity
+                return null;
+            }
+
+            // OPEN STROKES - check for self-intersecting fish shape (ichthys)
+            // This is the ONE new shape type we add to design.html's logic
+            const loopInfo = findSelfIntersectionLoop(points);
+            if (loopInfo && loopInfo.loopSize > 25) {
+                const fishShape = generateFishShape(loopInfo, points, size);
+                return {
+                    type: 'fish',
+                    center: loopInfo.loopCenter,
+                    size: loopInfo.loopSize,
+                    fishShape: fishShape,  // Contains points, initialHeading, bodyWidth, bodyHeight
+                    loopInfo: loopInfo
                 };
-                
-                const labelInfo = labelData[rel.type];
-                if (labelInfo && rel.type !== 'intersects') { // intersects already has point markers
-                    const displayText = `${labelInfo.symbol} ${labelInfo.word}`;
-                    ctx.font = '500 10px "Raleway", sans-serif';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    
-                    // Background pill
-                    ctx.fillStyle = `rgba(10, 22, 40, ${0.85 * easedOpacity})`;
-                    const metrics = ctx.measureText(displayText);
-                    const pw = metrics.width + 12;
-                    const ph = 18;
-                    ctx.beginPath();
-                    const rr = 9;
-                    ctx.moveTo(midX - pw/2 + rr, midY - ph/2);
-                    ctx.lineTo(midX + pw/2 - rr, midY - ph/2);
-                    ctx.quadraticCurveTo(midX + pw/2, midY - ph/2, midX + pw/2, midY - ph/2 + rr);
-                    ctx.lineTo(midX + pw/2, midY + ph/2 - rr);
-                    ctx.quadraticCurveTo(midX + pw/2, midY + ph/2, midX + pw/2 - rr, midY + ph/2);
-                    ctx.lineTo(midX - pw/2 + rr, midY + ph/2);
-                    ctx.quadraticCurveTo(midX - pw/2, midY + ph/2, midX - pw/2, midY + ph/2 - rr);
-                    ctx.lineTo(midX - pw/2, midY - ph/2 + rr);
-                    ctx.quadraticCurveTo(midX - pw/2, midY - ph/2, midX - pw/2 + rr, midY - ph/2);
-                    ctx.closePath();
-                    ctx.fill();
-                    
-                    // Label text
-                    ctx.fillStyle = `rgba(251, 191, 36, ${0.95 * easedOpacity})`;
-                    ctx.fillText(displayText, midX, midY);
-                }
-            });
-        }
-        
-        // ============================================
-        // Raw Stroke Intersection Detection
-        // ============================================
-        function detectRawIntersections() {
-            const now = Date.now();
-            const activeStrokes = strokes.filter(s => {
-                const age = now - s.startTime;
-                return age < s.fadeStart + TIMING.strokeFade && s.points.length > 3;
-            });
-            
-            const intersections = [];
-            
-            // Check strokes against each other
-            for (let i = 0; i < activeStrokes.length; i++) {
-                for (let j = i + 1; j < activeStrokes.length; j++) {
-                    const pts = findStrokeIntersections(activeStrokes[i].points, activeStrokes[j].points);
-                    pts.forEach(pt => {
-                        intersections.push({
-                            ...pt,
-                            createdAt: Math.max(activeStrokes[i].startTime, activeStrokes[j].startTime)
-                        });
-                    });
-                }
             }
-            
-            // Check strokes against recognized shapes
-            const activeShapes = recognizedShapes.filter(s => now - s.createdAt < TIMING.shapeTotal);
-            for (const stroke of activeStrokes) {
-                for (const shape of activeShapes) {
-                    const pts = findStrokeIntersections(stroke.points, shape.idealPoints || []);
-                    pts.forEach(pt => {
-                        intersections.push({
-                            ...pt,
-                            createdAt: Math.max(stroke.startTime, shape.createdAt)
-                        });
-                    });
-                }
-            }
-            
-            return intersections;
+
+            // Open stroke → temporary line (for bubble-popping)
+            return { type: 'line', center, size, points, start, end };
         }
-        
-        function findStrokeIntersections(pointsA, pointsB) {
-            const results = [];
-            if (pointsA.length < 5 || pointsB.length < 5) return results;
-            
-            // Coarser sampling to reduce noise
-            const stepA = Math.max(3, Math.floor(pointsA.length / 15));
-            const stepB = Math.max(3, Math.floor(pointsB.length / 15));
-            
-            for (let i = 0; i < pointsA.length - stepA; i += stepA) {
-                const a1 = pointsA[i];
-                const a2 = pointsA[Math.min(i + stepA, pointsA.length - 1)];
-                
-                for (let j = 0; j < pointsB.length - stepB; j += stepB) {
-                    const b1 = pointsB[j];
-                    const b2 = pointsB[Math.min(j + stepB, pointsB.length - 1)];
-                    
-                    const intersection = lineIntersection(a1, a2, b1, b2);
-                    if (intersection) {
-                        // Larger minimum distance to avoid clustering
-                        const tooClose = results.some(p => distance(p, intersection) < 40);
-                        if (!tooClose) results.push(intersection);
-                    }
-                }
-            }
-            return results.slice(0, 3); // Max 3 per pair
-        }
-        
-        function drawRawIntersections() {
-            const now = Date.now();
-            const intersections = detectRawIntersections();
-            
-            intersections.forEach(pt => {
-                const age = now - pt.createdAt;
-                let opacity = 1;
-                // Sync fade with strokes
-                if (age > TIMING.strokeHold) {
-                    opacity = 1 - ((age - TIMING.strokeHold) / TIMING.strokeFade);
-                }
-                if (opacity <= 0) return;
-                
-                // Ease out curve for smoother fade
-                const easedOpacity = opacity * opacity; // Quadratic ease out
-                
-                // Subtle cyan glow for raw intersections
-                ctx.shadowColor = 'rgba(34, 211, 238, 0.7)';
-                ctx.shadowBlur = 10 * easedOpacity;
-                ctx.fillStyle = `rgba(34, 211, 238, ${0.8 * easedOpacity})`;
-                ctx.beginPath();
-                ctx.arc(pt.x, pt.y, 3, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Outer ring
-                ctx.strokeStyle = `rgba(34, 211, 238, ${0.4 * easedOpacity})`;
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.arc(pt.x, pt.y, 7, 0, Math.PI * 2);
-                ctx.stroke();
-                ctx.shadowBlur = 0;
-            });
-        }
-        
+
         // ============================================
         // Canvas Setup
         // ============================================
@@ -1037,96 +865,8 @@
 
             ctx.fillStyle = colors.bg;
             ctx.fillRect(0, 0, w, h);
-
-            drawGlyphs(w, h);
         }
         
-        function drawGlyphs(w, h) {
-            const now = Date.now();
-            const timeSinceShape = now - lastShapeTime;
-            const isActive = timeSinceShape < TIMING.glyphActive;
-            
-            // Smooth transition for active state
-            let activeAmount = 0;
-            if (isActive) {
-                // Fade in quickly, fade out smoothly
-                if (timeSinceShape < 200) {
-                    activeAmount = timeSinceShape / 200;
-                } else if (timeSinceShape > TIMING.glyphActive - 500) {
-                    activeAmount = (TIMING.glyphActive - timeSinceShape) / 500;
-                } else {
-                    activeAmount = 1;
-                }
-            }
-            
-            // Pulse when idle
-            if (!isActive && !isDrawing) {
-                glyphPulse = Math.sin(now / 1000) * 0.15 + 0.85;
-            } else {
-                glyphPulse = 1;
-            }
-            
-            // Rotate when shape detected (slow down as it fades)
-            if (isActive) {
-                glyphRotation += 0.02 * activeAmount;
-            }
-            
-            const corners = [[40, 40], [w - 40, 40], [40, h - 40], [w - 40, h - 40]];
-            corners.forEach(([x, y], i) => {
-                ctx.save();
-                ctx.translate(x, y);
-                ctx.rotate(glyphRotation * (i % 2 === 0 ? 1 : -1));
-                
-                // Interpolate between cyan (idle) and gold (active)
-                const idleColor = [77, 201, 246];  // cyan
-                const activeColor = [212, 175, 55];  // gold
-                const r = Math.round(idleColor[0] + (activeColor[0] - idleColor[0]) * activeAmount);
-                const g = Math.round(idleColor[1] + (activeColor[1] - idleColor[1]) * activeAmount);
-                const b = Math.round(idleColor[2] + (activeColor[2] - idleColor[2]) * activeAmount);
-                const a = 0.3 + 0.4 * activeAmount;
-
-                ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${a})`;
-                ctx.globalAlpha = glyphPulse;
-                ctx.lineWidth = 1.5 + 0.5 * activeAmount;
-
-                // Art Nouveau crystalline motif - hexagonal with organic curves
-                // Central hexagon
-                ctx.beginPath();
-                for (let j = 0; j < 6; j++) {
-                    const angle = (j / 6) * Math.PI * 2 - Math.PI / 2;
-                    const x = Math.cos(angle) * 8;
-                    const y = Math.sin(angle) * 8;
-                    if (j === 0) ctx.moveTo(x, y);
-                    else ctx.lineTo(x, y);
-                }
-                ctx.closePath();
-                ctx.stroke();
-
-                // Radiating lines (like spider silk strands)
-                ctx.globalAlpha = glyphPulse * 0.6;
-                for (let j = 0; j < 6; j++) {
-                    const angle = (j / 6) * Math.PI * 2;
-                    ctx.beginPath();
-                    ctx.moveTo(Math.cos(angle) * 8, Math.sin(angle) * 8);
-                    ctx.lineTo(Math.cos(angle) * 15, Math.sin(angle) * 15);
-                    ctx.stroke();
-                }
-
-                // Outer ring with subtle glow (crystallization boundary)
-                if (activeAmount > 0.2) {
-                    ctx.globalAlpha = glyphPulse * activeAmount;
-                    ctx.shadowColor = `rgba(${r}, ${g}, ${b}, 0.6)`;
-                    ctx.shadowBlur = 8 + 6 * activeAmount;
-                    ctx.beginPath();
-                    ctx.arc(0, 0, 12 + 2 * activeAmount, 0, Math.PI * 2);
-                    ctx.stroke();
-                    ctx.shadowBlur = 0;
-                }
-                
-                ctx.restore();
-            });
-            ctx.globalAlpha = 1;
-        }
         
         function drawRawStrokes() {
             const now = Date.now();
@@ -1164,124 +904,837 @@
                 return true;
             });
         }
-        
-        function drawRecognizedShapes() {
+
+        // ============================================
+        // Entity Rendering
+        // ============================================
+        function drawFishEntities() {
             const now = Date.now();
-            
-            recognizedShapes = recognizedShapes.filter(shape => {
-                const age = now - shape.createdAt;
-                if (age > TIMING.shapeTotal) return false;
-                
-                let opacity = 1;
-                if (age > TIMING.shapeHold) {
-                    opacity = 1 - ((age - TIMING.shapeHold) / TIMING.shapeFade);
+            const w = canvas.width / (window.devicePixelRatio || 1);
+            const h = canvas.height / (window.devicePixelRatio || 1);
+
+            // Physics constants - tuned for smooth movement
+            const DETECT_RANGE = 400;
+            const EAT_RANGE = 18;
+            const SEEK_SPEED = 1.2;
+            const IDLE_SPEED = 0.4;
+            const TURN_RATE = 0.03;         // Slower turning for smoother motion
+            const MAX_TURN_PER_FRAME = 0.08; // Cap heading change per frame
+            const EDGE_MARGIN = 50;
+            const EDGE_FORCE = 0.1;
+
+            // Boids - separation is critical to prevent overlap
+            const BOID_SEP_RANGE = 100;      // Larger separation range
+            const BOID_ALIGN_RANGE = 180;
+            const BOID_COHESION_RANGE = 280;
+
+            // Size-based behavior thresholds
+            const SMALL_FISH_SIZE = 50;    // Below this = "small" fish
+
+            fish.forEach((f, fi) => {
+                const pts = f.points;
+                if (pts.length < 2) return;
+
+                // Per-fish unique color using hue shift
+                const baseColor = aquaColors.fish[f.id % aquaColors.fish.length];
+                const hueShift = f.hueShift || 0;
+                // Apply hue shift by rotating through color spectrum
+                const hsl = `hsl(${(180 + hueShift) % 360}, 80%, 65%)`;
+                const color = hueShift ? hsl : baseColor;
+
+                // Per-fish randomness offset (consistent per fish)
+                const fishRand = (f.id * 0.618) % 1;
+
+                // ---- Fish AI: seek visible food (not inside bubbles) ----
+                let nearestFood = null;
+                let nearestDist = Infinity;
+                food.forEach(fd => {
+                    if (isFoodInBubble(fd.x, fd.y)) return;
+                    const d = Math.sqrt((f.x - fd.x) ** 2 + (f.y - fd.y) ** 2);
+                    if (d < nearestDist) { nearestDist = d; nearestFood = fd; }
+                });
+
+                if (nearestFood && nearestDist < DETECT_RANGE) {
+                    f.state = 'seeking';
+                    f.targetHeading = Math.atan2(nearestFood.y - f.y, nearestFood.x - f.x);
+                    // Add slight wobble to avoid all fish converging on same point
+                    f.targetHeading += (fishRand - 0.5) * 0.3;
+
+                    // Eat food on proximity
+                    if (nearestDist < EAT_RANGE) {
+                        const idx = food.indexOf(nearestFood);
+                        if (idx !== -1) {
+                            food.splice(idx, 1);
+                            for (let i = 0; i < 5; i++) {
+                                const a = (i / 5) * Math.PI * 2;
+                                particles.push({
+                                    x: nearestFood.x, y: nearestFood.y,
+                                    vx: Math.cos(a) * 0.8, vy: Math.sin(a) * 0.8,
+                                    life: 1, createdAt: now
+                                });
+                            }
+                        }
+                        f.state = 'idle';
+                    }
+                } else {
+                    f.state = 'idle';
+                    const isSmallFish = f.size < SMALL_FISH_SIZE;
+
+                    // Size-based behavior
+                    if (isSmallFish) {
+                        // Small fish: cluster near coral at bottom
+                        let nearestCoral = null;
+                        let coralDist = Infinity;
+                        coral.forEach(c => {
+                            if (!c.settled) return;
+                            const d = Math.sqrt((f.x - c.x) ** 2 + (f.y - c.y) ** 2);
+                            if (d < coralDist) { coralDist = d; nearestCoral = c; }
+                        });
+
+                        if (nearestCoral && coralDist > 40 && coralDist < 300) {
+                            // Gently drift toward coral, orbit above it
+                            const coralAngle = Math.atan2(nearestCoral.y - 60 - f.y, nearestCoral.x - f.x);
+                            f.targetHeading += angleDiff(coralAngle, f.heading) * 0.02;
+                        }
+
+                        // Small gentle wander
+                        f.targetHeading += (Math.random() - 0.5) * 0.08;
+                    } else {
+                        // Big fish: school up in upper area
+                        // Prefer upper third of tank
+                        const preferredY = h * 0.35;
+                        if (f.y > preferredY) {
+                            f.targetHeading += angleDiff(-Math.PI / 2, f.heading) * 0.03;
+                        }
+
+                        // Gentle random wander
+                        f.targetHeading += (Math.random() - 0.5) * 0.12;
+
+                        // Occasional larger direction change
+                        if (Math.random() < 0.005) {
+                            f.targetHeading += (Math.random() - 0.5) * Math.PI * 0.4;
+                        }
+                    }
                 }
-                // Ease out for smoother fade
-                const easedOpacity = opacity * opacity;
-                
-                const progress = Math.min(1, age / TIMING.morphDuration);
-                const morphEase = 1 - Math.pow(1 - progress, 3); // Ease out cubic
-                
-                // Interpolate between raw and ideal points
-                const points = [];
-                const idealLen = shape.idealPoints.length;
-                const rawLen = shape.rawPoints.length;
-                
-                for (let i = 0; i < idealLen; i++) {
-                    const rawIdx = Math.floor((i / idealLen) * rawLen);
-                    const raw = shape.rawPoints[Math.min(rawIdx, rawLen - 1)];
-                    const ideal = shape.idealPoints[i];
-                    points.push({
-                        x: raw.x + (ideal.x - raw.x) * morphEase,
-                        y: raw.y + (ideal.y - raw.y) * morphEase
-                    });
+
+                // ---- Boids: smooth velocity-based separation, size-dependent schooling ----
+                const isSmallFish = f.size < SMALL_FISH_SIZE;
+                let sepX = 0, sepY = 0;
+                let alignVx = 0, alignVy = 0, alignCount = 0;
+                let cohX = 0, cohY = 0, cohCount = 0;
+
+                fish.forEach((other, oi) => {
+                    if (oi === fi) return;
+                    const dx = f.x - other.x;
+                    const dy = f.y - other.y;
+                    const d = Math.sqrt(dx * dx + dy * dy);
+
+                    // Separation - always active, uses velocity push not heading
+                    if (d < BOID_SEP_RANGE && d > 0) {
+                        const strength = 1 - (d / BOID_SEP_RANGE);
+                        sepX += (dx / d) * strength;
+                        sepY += (dy / d) * strength;
+                    }
+
+                    // Alignment and cohesion - only for big fish schooling
+                    if (!isSmallFish && other.size >= SMALL_FISH_SIZE) {
+                        if (d < BOID_ALIGN_RANGE && d > BOID_SEP_RANGE) {
+                            alignVx += other.vx;
+                            alignVy += other.vy;
+                            alignCount++;
+                        }
+                        if (d < BOID_COHESION_RANGE && d > BOID_SEP_RANGE) {
+                            cohX += other.x;
+                            cohY += other.y;
+                            cohCount++;
+                        }
+                    }
+                });
+
+                // Apply separation as direct velocity push - stronger when closer
+                if (sepX !== 0 || sepY !== 0) {
+                    const sepMag = Math.sqrt(sepX * sepX + sepY * sepY);
+                    // Scale force by accumulated separation (stronger when many/close neighbors)
+                    const sepForce = Math.min(0.5, sepMag * 0.3);
+                    f.vx += (sepX / sepMag) * sepForce;
+                    f.vy += (sepY / sepMag) * sepForce;
                 }
-                
-                // Draw shape
-                ctx.shadowColor = 'rgba(96, 165, 250, 0.6)';
-                ctx.shadowBlur = 20 * easedOpacity;
-                ctx.strokeStyle = `rgba(96, 165, 250, ${0.9 * easedOpacity})`;
+
+                // Apply alignment for big fish
+                if (alignCount > 0) {
+                    const avgAngle = Math.atan2(alignVy / alignCount, alignVx / alignCount);
+                    f.targetHeading += angleDiff(avgAngle, f.heading) * 0.015;
+                }
+
+                // Apply cohesion for big fish (gentle pull toward school center)
+                if (cohCount > 0) {
+                    const centerX = cohX / cohCount;
+                    const centerY = cohY / cohCount;
+                    const cohAngle = Math.atan2(centerY - f.y, centerX - f.x);
+                    f.targetHeading += angleDiff(cohAngle, f.heading) * 0.008;
+                }
+
+                // ---- Jellyfish avoidance ----
+                const JELLY_AVOID_RANGE = 80;
+                const JELLY_AVOID_FORCE = 0.2;
+                jellyfish.forEach(j => {
+                    if (!j.shape) return;
+                    const dx = f.x - j.x;
+                    const dy = f.y - j.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const minDist = JELLY_AVOID_RANGE + j.shape.bellRadius;
+                    if (dist < minDist && dist > 0) {
+                        const avoidAngle = Math.atan2(dy, dx);
+                        const strength = (minDist - dist) / minDist;
+                        f.targetHeading += angleDiff(avoidAngle, f.heading) * JELLY_AVOID_FORCE * strength;
+                    }
+                });
+
+                // ---- Soft edge avoidance ----
+                let avoidX = 0, avoidY = 0;
+                if (f.x < EDGE_MARGIN) avoidX = (EDGE_MARGIN - f.x) / EDGE_MARGIN;
+                if (f.x > w - EDGE_MARGIN) avoidX = -(f.x - (w - EDGE_MARGIN)) / EDGE_MARGIN;
+                if (f.y < EDGE_MARGIN) avoidY = (EDGE_MARGIN - f.y) / EDGE_MARGIN;
+                if (f.y > h - EDGE_MARGIN) avoidY = -(f.y - (h - EDGE_MARGIN)) / EDGE_MARGIN;
+
+                if (avoidX !== 0 || avoidY !== 0) {
+                    const avoidAngle = Math.atan2(avoidY, avoidX);
+                    f.targetHeading += angleDiff(avoidAngle, f.heading) * EDGE_FORCE;
+                }
+
+                // ---- Smooth heading interpolation with capped turn rate ----
+                let headingDelta = angleDiff(f.targetHeading, f.heading) * TURN_RATE;
+                // Cap maximum turn per frame to prevent jittery oscillation
+                headingDelta = Math.max(-MAX_TURN_PER_FRAME, Math.min(MAX_TURN_PER_FRAME, headingDelta));
+                f.heading += headingDelta;
+
+                // ---- Apply velocity with per-fish speed variation ----
+                const speedMult = 0.85 + fishRand * 0.3;
+                const speed = (f.state === 'seeking' ? SEEK_SPEED : IDLE_SPEED) * speedMult;
+                f.vx = Math.cos(f.heading) * speed;
+                f.vy = Math.sin(f.heading) * speed;
+                f.x += f.vx;
+                f.y += f.vy;
+
+                // Strong edge bounce - prevent getting stuck
+                const hardMargin = 30;
+                const bounceStrength = 0.25;
+                if (f.x < hardMargin) {
+                    f.vx += bounceStrength;
+                    f.x = hardMargin;
+                    f.targetHeading = Math.PI * 0.1 * (Math.random() - 0.5); // Bounce right
+                }
+                if (f.x > w - hardMargin) {
+                    f.vx -= bounceStrength;
+                    f.x = w - hardMargin;
+                    f.targetHeading = Math.PI + Math.PI * 0.1 * (Math.random() - 0.5); // Bounce left
+                }
+                if (f.y < hardMargin) {
+                    f.vy += bounceStrength;
+                    f.y = hardMargin;
+                    f.targetHeading = Math.PI * 0.5 + Math.PI * 0.1 * (Math.random() - 0.5); // Bounce down
+                }
+                if (f.y > h - hardMargin - 20) {
+                    f.vy -= bounceStrength * 1.5; // Extra strong floor bounce
+                    f.y = h - hardMargin - 20;
+                    f.targetHeading = -Math.PI * 0.5 + Math.PI * 0.1 * (Math.random() - 0.5); // Bounce up
+                }
+
+                // ---- Render (normalized points, centered at origin) ----
+                const wiggleSpeed = f.state === 'seeking' ? 120 : 200;
+                const wiggleAmt = f.state === 'seeking' ? 5 : 3;
+                const wiggle = Math.sin(now / wiggleSpeed + f.id) * wiggleAmt;
+
+                // Apply per-fish scale variation
+                const scaleX = f.scaleX || 1;
+                const scaleY = f.scaleY || 1;
+
+                ctx.save();
+                ctx.translate(f.x, f.y);
+                ctx.rotate(f.heading);
+                ctx.scale(scaleX, scaleY);
+
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 12;
+                ctx.strokeStyle = color;
                 ctx.lineWidth = 2.5;
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
-                
-                // Special handling for dots
-                if (shape.type === 'dot') {
-                    ctx.fillStyle = `rgba(96, 165, 250, ${0.9 * easedOpacity})`;
-                    ctx.beginPath();
-                    ctx.arc(shape.center.x, shape.center.y, 5 + 2 * morphEase, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.shadowBlur = 0;
-                    return true;
-                }
-                
+                ctx.globalAlpha = 0.9;
+
                 ctx.beginPath();
-                ctx.moveTo(points[0].x, points[0].y);
-                for (let i = 1; i < points.length; i++) {
-                    ctx.lineTo(points[i].x, points[i].y);
+                ctx.moveTo(pts[0].x, pts[0].y);
+                for (let i = 1; i < pts.length; i++) {
+                    const t = i / pts.length;
+                    const wg = wiggle * Math.sin(t * Math.PI);
+                    const p0 = pts[i - 1];
+                    const p1 = pts[i];
+                    ctx.quadraticCurveTo(
+                        p0.x + wg, p0.y,
+                        (p0.x + p1.x) / 2 + wg, (p0.y + p1.y) / 2
+                    );
                 }
-                if (shape.type === 'circle' || shape.type === 'rectangle' || shape.type === 'triangle') {
-                    ctx.closePath();
+                ctx.stroke();
+
+                // Subtle fill
+                ctx.globalAlpha = 0.1;
+                ctx.fillStyle = color;
+                ctx.fill();
+
+                ctx.shadowBlur = 0;
+                ctx.globalAlpha = 1;
+                ctx.restore();
+            });
+        }
+
+        function drawCoralEntities() {
+            const now = Date.now();
+            const canvasW = canvas.width / (window.devicePixelRatio || 1);
+            const canvasH = canvas.height / (window.devicePixelRatio || 1);
+
+            coral.forEach((c, ci) => {
+                if (!c.shape) return;
+
+                const shape = c.shape;
+                const color = aquaColors.coral[c.id % aquaColors.coral.length];
+                const altColor = aquaColors.coral[(c.id + 1) % aquaColors.coral.length];
+
+                // Sink to bottom with space-filling behavior
+                if (!c.settled) {
+                    const targetY = canvasH - 5;
+                    c.y += 1.8; // Sink speed
+
+                    // Space-filling: push away from other coral while sinking
+                    coral.forEach((other, oi) => {
+                        if (oi === ci) return;
+                        const dx = c.x - other.x;
+                        const dist = Math.abs(dx);
+                        const minDist = (shape.width + (other.shape?.width || 50)) * 0.5 + 20;
+
+                        if (dist < minDist) {
+                            // Push apart horizontally
+                            const push = (minDist - dist) * 0.05 * (dx > 0 ? 1 : -1);
+                            c.x += push;
+                        }
+                    });
+
+                    // Keep in horizontal bounds
+                    const margin = shape.width * 0.5 + 20;
+                    if (c.x < margin) c.x = margin;
+                    if (c.x > canvasW - margin) c.x = canvasW - margin;
+
+                    // Gentle drift while sinking
+                    c.x += Math.sin(now / 1500 + c.id) * 0.15;
+
+                    if (c.y >= targetY) {
+                        c.y = targetY;
+                        c.settled = true;
+                    }
+                }
+
+                // Gentle sway - each stalk sways slightly different
+                const baseSway = Math.sin(now / 3500 + shape.swayOffset) * (c.settled ? 2.5 : 0.5);
+
+                ctx.save();
+                ctx.translate(c.x + baseSway, c.y);
+
+                // Draw each stalk with branches
+                shape.stalks.forEach((stalk, si) => {
+                    const stalkSway = Math.sin(now / 2800 + si * 0.7 + shape.swayOffset) * 1.8;
+                    const stalkX = stalk.x + stalkSway;
+
+                    // Alternate colors between stalks with variation
+                    const stalkColor = si % 3 === 0 ? color : (si % 3 === 1 ? altColor : color);
+
+                    ctx.shadowColor = stalkColor;
+                    ctx.shadowBlur = 10;
+                    ctx.strokeStyle = stalkColor;
+                    // Thicker stalks based on stalk.width property
+                    ctx.lineWidth = stalk.width || 3;
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    ctx.globalAlpha = 0.85;
+
+                    // Draw main stalk (growing upward, so negative Y)
+                    ctx.beginPath();
+                    ctx.moveTo(stalkX, 0);
+
+                    // Curved stalk with more character
+                    const curveMid = -stalk.height * 0.5;
+                    const curveAmt = stalkSway * 1.2 + (si % 2 === 0 ? 3 : -3);
+                    ctx.quadraticCurveTo(
+                        stalkX + curveAmt, curveMid,
+                        stalkX + stalkSway * 0.4, -stalk.height
+                    );
+                    ctx.stroke();
+
+                    // Draw tip bulb (larger, more visible)
+                    ctx.globalAlpha = 0.7;
+                    const tipSize = 4 + (stalk.width || 2);
+                    ctx.beginPath();
+                    ctx.arc(stalkX + stalkSway * 0.4, -stalk.height - tipSize * 0.5, tipSize, 0, Math.PI * 2);
+                    ctx.fillStyle = stalkColor;
+                    ctx.fill();
+
+                    // Draw branches with sub-branches
+                    ctx.globalAlpha = 0.8;
+                    stalk.branches.forEach((branch, bi) => {
+                        const branchSway = Math.sin(now / 2200 + bi * 1.1 + shape.swayOffset) * 1.2;
+                        ctx.lineWidth = branch.width || 2;
+
+                        // Branch starts from stalk at given Y position
+                        const branchStartY = -branch.y;
+                        const branchStartX = stalkX + (branchStartY / -stalk.height) * stalkSway * 0.4;
+
+                        // Branch end position
+                        const branchEndX = branchStartX + Math.sin(branch.angle) * branch.length + branchSway;
+                        const branchEndY = branchStartY - Math.cos(branch.angle) * branch.length * 0.85;
+
+                        ctx.beginPath();
+                        ctx.moveTo(branchStartX, branchStartY);
+                        ctx.lineTo(branchEndX, branchEndY);
+                        ctx.stroke();
+
+                        // Sub-branch for more lushness
+                        if (branch.hasSubBranch) {
+                            ctx.lineWidth = (branch.width || 2) * 0.7;
+                            ctx.globalAlpha = 0.65;
+                            const subStartX = branchStartX + (branchEndX - branchStartX) * 0.5;
+                            const subStartY = branchStartY + (branchEndY - branchStartY) * 0.5;
+                            const subEndX = subStartX + Math.sin(branch.subBranchAngle) * branch.subBranchLen;
+                            const subEndY = subStartY - Math.cos(branch.subBranchAngle) * branch.subBranchLen * 0.8;
+
+                            ctx.beginPath();
+                            ctx.moveTo(subStartX, subStartY);
+                            ctx.lineTo(subEndX, subEndY);
+                            ctx.stroke();
+
+                            // Sub-branch tip
+                            ctx.globalAlpha = 0.45;
+                            ctx.beginPath();
+                            ctx.arc(subEndX, subEndY - 1.5, 2.5, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+
+                        // Branch tip
+                        if (branch.hasTip) {
+                            ctx.globalAlpha = 0.6;
+                            const tipSize = 3 + (branch.width || 2) * 0.5;
+                            ctx.beginPath();
+                            ctx.arc(branchEndX, branchEndY - tipSize * 0.3, tipSize, 0, Math.PI * 2);
+                            ctx.fill();
+                            ctx.globalAlpha = 0.8;
+                        }
+                    });
+                });
+
+                // Add subtle glow at base
+                ctx.globalAlpha = 0.2;
+                ctx.shadowBlur = 25;
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, shape.width * 0.45, 10, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.shadowBlur = 0;
+                ctx.globalAlpha = 1;
+                ctx.restore();
+            });
+        }
+
+        function drawJellyfishEntities() {
+            const now = Date.now();
+            const w = canvas.width / (window.devicePixelRatio || 1);
+            const h = canvas.height / (window.devicePixelRatio || 1);
+
+            jellyfish.forEach(j => {
+                if (!j.shape) return;
+
+                const color = aquaColors.jellyfish[j.id % aquaColors.jellyfish.length];
+                const shape = j.shape;
+
+                // Gentle figure-8 drift pattern
+                j.orbitAngle += j.orbitSpeed * 0.4;
+
+                const phaseOffset = j.id * 2.5;
+                const currentAngle = j.orbitAngle + phaseOffset;
+
+                // Drift path
+                const centerX = w * 0.5;
+                const centerY = h * 0.45;
+                const radiusX = w * 0.28;
+                const radiusY = h * 0.18;
+
+                const targetX = centerX + Math.sin(currentAngle) * radiusX;
+                const targetY = centerY + Math.sin(currentAngle * 2) * radiusY;
+
+                // Very gentle, capped attraction - no erratic movement
+                const dx = targetX - j.x;
+                const dy = targetY - j.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                // Constant gentle force, capped acceleration
+                const maxAccel = 0.008;
+                if (dist > 10) {
+                    const accel = Math.min(maxAccel, dist * 0.00008);
+                    j.vx += (dx / dist) * accel;
+                    j.vy += (dy / dist) * accel;
+                }
+
+                // Strong damping for smooth movement
+                j.vx *= 0.96;
+                j.vy *= 0.96;
+
+                // Cap max velocity
+                const maxSpeed = 0.8;
+                const speed = Math.sqrt(j.vx * j.vx + j.vy * j.vy);
+                if (speed > maxSpeed) {
+                    j.vx = (j.vx / speed) * maxSpeed;
+                    j.vy = (j.vy / speed) * maxSpeed;
+                }
+
+                // Gentle minimum drift
+                const minSpeed = 0.1;
+                if (speed < minSpeed && speed > 0) {
+                    j.vx = (j.vx / speed) * minSpeed;
+                    j.vy = (j.vy / speed) * minSpeed;
+                } else if (speed === 0) {
+                    // Kick-start if completely stopped
+                    const kickAngle = currentAngle;
+                    j.vx = Math.cos(kickAngle) * minSpeed;
+                    j.vy = Math.sin(kickAngle) * minSpeed;
+                }
+
+                // Avoid other jellyfish
+                jellyfish.forEach(other => {
+                    if (other.id === j.id || !other.shape) return;
+                    const dx = j.x - other.x;
+                    const dy = j.y - other.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const minDist = shape.bellRadius + other.shape.bellRadius + 40;
+                    if (dist < minDist && dist > 0) {
+                        const pushForce = 0.02 * (minDist - dist) / minDist;
+                        j.vx += (dx / dist) * pushForce;
+                        j.vy += (dy / dist) * pushForce;
+                    }
+                });
+
+                // Avoid fish
+                fish.forEach(f => {
+                    const dx = j.x - f.x;
+                    const dy = j.y - f.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const minDist = shape.bellRadius + f.size * 0.5 + 30;
+                    if (dist < minDist && dist > 0) {
+                        const pushForce = 0.015 * (minDist - dist) / minDist;
+                        j.vx += (dx / dist) * pushForce;
+                        j.vy += (dy / dist) * pushForce;
+                    }
+                });
+
+                // Pumping propulsion - slower, gentler pulse
+                const pulsePhase = (now * 0.0015 + j.pulsePhase) % (Math.PI * 2); // Slower pulse
+                const isPulsing = pulsePhase < 0.5;
+                if (isPulsing && pulsePhase > 0.1) {
+                    j.vy -= 0.008; // Gentler upward thrust
+                }
+
+                j.x += j.vx;
+                j.y += j.vy;
+
+                // Strong edge avoidance - bounce off walls
+                const margin = 50;
+                const bounceForce = 0.08;
+                if (j.x < margin) { j.vx += bounceForce; j.x = margin; }
+                if (j.x > w - margin) { j.vx -= bounceForce; j.x = w - margin; }
+                if (j.y < margin) { j.vy += bounceForce; j.y = margin; }
+                if (j.y > h - margin - 30) { j.vy -= bounceForce * 1.5; j.y = h - margin - 30; }
+
+                // Pulse animation for bell
+                const pulse = Math.sin(pulsePhase);
+                const bellSquash = 1 - pulse * 0.15;
+                const bellStretch = 1 + pulse * 0.1;
+
+                // Render jellyfish
+                ctx.save();
+                ctx.translate(j.x, j.y);
+
+                const r = shape.bellRadius;
+                const bellH = shape.bellHeight;
+
+                // Draw bell (dome shape)
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 20;
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.globalAlpha = 0.8;
+
+                ctx.beginPath();
+                ctx.ellipse(0, 0, r * bellSquash, bellH * bellStretch, 0, Math.PI, 0);
+                ctx.stroke();
+
+                // Bell fill
+                ctx.globalAlpha = 0.2;
+                ctx.fillStyle = color;
+                ctx.fill();
+
+                // Inner bell detail
+                ctx.globalAlpha = 0.3;
+                ctx.beginPath();
+                ctx.ellipse(0, bellH * 0.1, r * 0.5 * bellSquash, bellH * 0.4 * bellStretch, 0, Math.PI, 0);
+                ctx.stroke();
+
+                // Draw trailing tentacles
+                ctx.shadowBlur = 8;
+                ctx.lineWidth = 1.5;
+                ctx.globalAlpha = 0.6;
+
+                const tentacleTime = now * 0.002 + shape.wobbleOffset;
+                for (let t = 0; t < shape.numTentacles; t++) {
+                    const tx = -r * 0.8 + (t / (shape.numTentacles - 1)) * r * 1.6;
+
+                    ctx.beginPath();
+                    ctx.moveTo(tx * bellSquash, bellH * 0.05);
+
+                    // Draw wavy tentacle trailing down
+                    for (let s = 1; s <= shape.tentacleLength; s++) {
+                        const segY = bellH * 0.05 + s * (r * 0.4);
+                        const wave = Math.sin(tentacleTime + t * 0.7 + s * 0.5) * (8 + s * 2);
+                        const drift = Math.sin(tentacleTime * 0.5 + t) * 3;
+                        ctx.lineTo(tx * bellSquash + wave + drift, segY);
+                    }
+                    ctx.stroke();
+                }
+
+                ctx.shadowBlur = 0;
+                ctx.globalAlpha = 1;
+                ctx.restore();
+            });
+        }
+
+        function drawBubbleEntities() {
+            const now = Date.now();
+            const w = canvas.width / (window.devicePixelRatio || 1);
+
+            // Helper to spawn pop particles
+            function popBubble(b) {
+                for (let i = 0; i < 6; i++) {
+                    const angle = (i / 6) * Math.PI * 2;
+                    particles.push({
+                        x: b.x, y: b.y,
+                        vx: Math.cos(angle) * 1.5,
+                        vy: Math.sin(angle) * 1.5 - 0.8,
+                        life: 1, createdAt: now
+                    });
+                }
+            }
+
+            bubbles = bubbles.filter((b, bi) => {
+                // Initialize variety properties if not set
+                if (b.wobbleSpeed === undefined) {
+                    b.wobbleSpeed = 300 + Math.random() * 400;
+                    b.wobbleAmt = 0.2 + Math.random() * 0.4;
+                    b.riseSpeed = b.vy || (0.4 + Math.random() * 0.4);
+                    b.hueOffset = Math.random() * 30 - 15;
+                }
+
+                // Bubble-bubble avoidance
+                let avoidX = 0;
+                bubbles.forEach((other, oi) => {
+                    if (oi === bi) return;
+                    const dx = b.x - other.x;
+                    const dy = b.y - other.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const minDist = b.radius + other.radius + 10;
+                    if (dist < minDist && dist > 0) {
+                        avoidX += (dx / dist) * (minDist - dist) * 0.1;
+                    }
+                });
+                b.x += avoidX;
+
+                // Rise upward with wobble
+                b.y -= b.riseSpeed;
+                b.x += Math.sin(now / b.wobbleSpeed + b.id) * b.wobbleAmt;
+
+                // Slight horizontal drift
+                b.x += Math.sin(now / 2000 + b.id * 0.3) * 0.15;
+
+                // Keep in bounds horizontally
+                if (b.x < b.radius + 10) b.x = b.radius + 10;
+                if (b.x > w - b.radius - 10) b.x = w - b.radius - 10;
+
+                // Pop when reaching top
+                if (b.y + b.radius < -10) {
+                    popBubble(b);
+                    return false;
+                }
+
+                // Check collision with fish
+                for (const f of fish) {
+                    const dx = b.x - f.x;
+                    const dy = b.y - f.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < b.radius + f.size * 0.4) {
+                        popBubble(b);
+                        return false;
+                    }
+                }
+
+                // Check collision with jellyfish
+                for (const j of jellyfish) {
+                    if (!j.shape) continue;
+                    const dx = b.x - j.x;
+                    const dy = b.y - j.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < b.radius + j.shape.bellRadius * 1.5) {
+                        popBubble(b);
+                        return false;
+                    }
+                }
+
+                // Draw bubble with variety
+                const hue = 195 + b.hueOffset;
+                const bubbleColor = `hsla(${hue}, 70%, 65%, 0.6)`;
+                const glowColor = `hsla(${hue}, 70%, 65%, 0.4)`;
+
+                // Subtle squash/stretch as it rises
+                const squash = 1 + 0.05 * Math.sin(now / 300 + b.id);
+
+                ctx.save();
+                ctx.globalAlpha = 0.4;
+                ctx.strokeStyle = bubbleColor;
+                ctx.lineWidth = 1.5;
+                ctx.shadowColor = glowColor;
+                ctx.shadowBlur = 12;
+
+                ctx.beginPath();
+                ctx.ellipse(b.x, b.y, b.radius * squash, b.radius / squash, 0, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Secondary inner ring for depth
+                ctx.globalAlpha = 0.15;
+                ctx.lineWidth = 0.8;
+                ctx.beginPath();
+                ctx.ellipse(b.x, b.y, b.radius * 0.7 * squash, b.radius * 0.7 / squash, 0, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Shine highlight
+                ctx.globalAlpha = 0.25;
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                ctx.beginPath();
+                ctx.ellipse(
+                    b.x - b.radius * 0.25,
+                    b.y - b.radius * 0.25,
+                    b.radius * 0.2,
+                    b.radius * 0.15,
+                    -0.4,
+                    0, Math.PI * 2
+                );
+                ctx.fill();
+
+                ctx.shadowBlur = 0;
+                ctx.globalAlpha = 1;
+                ctx.restore();
+                return true;
+            });
+        }
+
+        function drawFoodEntities() {
+            const now = Date.now();
+            food = food.filter(f => {
+                const age = now - f.createdAt;
+                if (age > FOOD_LIFETIME) return false;
+
+                // Fade out in last 3 seconds
+                let opacity = 1;
+                if (age > FOOD_LIFETIME - 3000) {
+                    opacity = (FOOD_LIFETIME - age) / 3000;
+                }
+
+                ctx.save();
+                ctx.shadowColor = aquaColors.food;
+                ctx.shadowBlur = 8 * opacity;
+                ctx.globalAlpha = opacity;
+
+                // Pulsing dot
+                const pulse = 1 + 0.2 * Math.sin(now / 400 + f.id);
+                const radius = 4 * pulse;
+
+                ctx.fillStyle = aquaColors.food;
+                ctx.beginPath();
+                ctx.arc(f.x, f.y, radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Outer glow ring
+                ctx.globalAlpha = opacity * 0.3;
+                ctx.strokeStyle = aquaColors.food;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(f.x, f.y, radius + 4, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.shadowBlur = 0;
+                ctx.globalAlpha = 1;
+                ctx.restore();
+                return true;
+            });
+        }
+
+        function drawTempLineEntities() {
+            const now = Date.now();
+            tempLines = tempLines.filter(ln => {
+                const age = now - ln.createdAt;
+                if (age > LINE_DURATION) return false;
+
+                const opacity = 1 - (age / LINE_DURATION);
+                const pts = ln.points;
+                if (pts.length < 2) return true;
+
+                // Line-to-bubble popping: check each segment against bubbles
+                const step = Math.max(1, Math.floor(pts.length / 20));
+                for (let i = step; i < pts.length; i += step) {
+                    const p1 = pts[i - step];
+                    const p2 = pts[i];
+                    for (let bi = bubbles.length - 1; bi >= 0; bi--) {
+                        const b = bubbles[bi];
+                        if (segmentIntersectsCircle(p1, p2, b.x, b.y, b.radius)) {
+                            for (let j = 0; j < 6; j++) {
+                                const a = (j / 6) * Math.PI * 2;
+                                particles.push({
+                                    x: b.x, y: b.y,
+                                    vx: Math.cos(a) * 1.2,
+                                    vy: Math.sin(a) * 0.5 - 0.5,
+                                    life: 1, createdAt: now
+                                });
+                            }
+                            bubbles.splice(bi, 1);
+                        }
+                    }
+                }
+
+                ctx.save();
+                ctx.strokeStyle = `rgba(77, 201, 246, ${0.5 * opacity})`;
+                ctx.lineWidth = 2;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.shadowColor = `rgba(77, 201, 246, ${0.3 * opacity})`;
+                ctx.shadowBlur = 6;
+
+                ctx.beginPath();
+                ctx.moveTo(pts[0].x, pts[0].y);
+                for (let i = 1; i < pts.length; i++) {
+                    const p0 = pts[i - 1];
+                    const p1 = pts[i];
+                    ctx.quadraticCurveTo(p0.x, p0.y, (p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
                 }
                 ctx.stroke();
                 ctx.shadowBlur = 0;
-                
+                ctx.globalAlpha = 1;
+                ctx.restore();
                 return true;
             });
         }
-        
-        function drawGhostSuggestion() {
-            if (!isDrawing || !currentStroke || currentStroke.points.length < 10) return;
-            
-            const shape = detectShape(currentStroke.points);
-            if (!shape || shape.confidence < 0.4) return;
-            
-            const idealPoints = generateIdealShape(shape);
-            
-            ctx.strokeStyle = colors.ghost;
-            ctx.lineWidth = 2;
-            ctx.setLineDash([8, 8]);
-            ctx.lineCap = 'round';
-            
-            ctx.beginPath();
-            ctx.moveTo(idealPoints[0].x, idealPoints[0].y);
-            for (let i = 1; i < idealPoints.length; i++) {
-                ctx.lineTo(idealPoints[i].x, idealPoints[i].y);
-            }
-            if (shape.type === 'circle' || shape.type === 'rectangle' || shape.type === 'triangle') {
-                ctx.closePath();
-            }
-            ctx.stroke();
-            ctx.setLineDash([]);
-        }
-        
-        function drawWhisperLabels() {
-            const now = Date.now();
-            
-            whisperLabels = whisperLabels.filter(label => {
-                const age = now - label.createdAt;
-                if (age > TIMING.labelTotal) return false;
-                
-                let opacity = 1;
-                if (age < TIMING.labelFadeIn) {
-                    opacity = age / TIMING.labelFadeIn;
-                } else if (age > TIMING.labelFadeIn + TIMING.labelHold) {
-                    opacity = 1 - ((age - TIMING.labelFadeIn - TIMING.labelHold) / TIMING.labelFade);
-                }
-                // Ease out for smoother fade
-                const easedOpacity = opacity * opacity;
-                
-                const yOffset = -20 - (age / 80); // Float upward slightly slower
-                
-                ctx.font = '500 13px "Raleway", sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillStyle = `rgba(147, 197, 253, ${0.8 * easedOpacity})`;
-                ctx.fillText(label.text, label.x, label.y + yOffset);
-                
-                return true;
-            });
-        }
-        
+
         // Cursor with glow
         let cursorPos = { x: -100, y: -100 };
         let cursorVisible = false;
@@ -1429,7 +1882,36 @@
             }
         }
         initAmbientParticles();
-        
+
+        // Spawn a starter jellyfish to invite interaction
+        (function spawnStarterJellyfish() {
+            const w = canvas.width / (window.devicePixelRatio || 1);
+            const h = canvas.height / (window.devicePixelRatio || 1);
+            const cx = w * 0.35 + Math.random() * w * 0.3;
+            const cy = h * 0.35 + Math.random() * h * 0.3;
+            const size = 50;
+
+            // Use the new shape structure
+            const shape = generateJellyfishShape(size);
+            const orbitAngle = Math.random() * Math.PI * 2;
+
+            jellyfish.push({
+                id: entityIdCounter++,
+                shape: shape,
+                x: cx, y: cy,
+                size: size,
+                vx: 0,
+                vy: 0,
+                orbitAngle: orbitAngle,
+                orbitRadius: 80 + Math.random() * 60,
+                orbitSpeed: 0.0003 + Math.random() * 0.0002,
+                orbitCenterX: w / 2,
+                orbitCenterY: h * 0.4,
+                pulsePhase: Math.random() * Math.PI * 2,
+                createdAt: Date.now()
+            });
+        })();
+
         function drawAmbientParticles() {
             const now = Date.now();
             const w = canvas.width / (window.devicePixelRatio || 1);
@@ -1465,20 +1947,25 @@
                    particles.length > 0 ||
                    ripples.length > 0 ||
                    strokes.length > 0 ||
-                   recognizedShapes.length > 0 ||
-                   whisperLabels.length > 0 ||
+                   jellyfish.length > 0 ||
+                   fish.length > 0 ||
+                   coral.length > 0 ||
+                   bubbles.length > 0 ||
+                   food.length > 0 ||
+                   tempLines.length > 0 ||
                    currentStroke !== null;
         }
 
         function animate() {
             drawGrid();
             drawAmbientParticles();
+            drawCoralEntities();
+            drawFoodEntities();
+            drawFishEntities();
+            drawJellyfishEntities();
+            drawBubbleEntities();
+            drawTempLineEntities();
             drawRawStrokes();
-            drawRawIntersections();
-            drawRecognizedShapes();
-            drawRelationships();
-            drawGhostSuggestion();
-            drawWhisperLabels();
             drawRipples();
             drawParticles();
             drawCursor();
@@ -1539,92 +2026,137 @@
         }
         
         function endDraw() {
-            // Detect tap/dot (few points, small area)
-            if (currentStroke && currentStroke.points.length >= 1 && currentStroke.points.length <= 8) {
-                const bounds = getBounds(currentStroke.points);
-                const size = Math.max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);
-                
-                if (size < 25) {
-                    // It's a tap/dot!
-                    const center = currentStroke.points.length === 1 
-                        ? currentStroke.points[0]
-                        : { x: (bounds.minX + bounds.maxX) / 2, y: (bounds.minY + bounds.maxY) / 2 };
-                    
-                    // Add dot as recognized shape
-                    recognizedShapes.push({
-                        type: 'dot',
-                        center,
-                        radius: 6,
-                        confidence: 1,
-                        rawPoints: [...currentStroke.points],
-                        idealPoints: [center],
-                        createdAt: Date.now()
-                    });
-                    
-                    // Add whisper label
-                    whisperLabels.push({
-                        text: 'Point',
-                        x: center.x,
-                        y: center.y,
-                        createdAt: Date.now()
-                    });
-                    
-                    // Add ripple effect
-                    ripples.push({
-                        x: center.x,
-                        y: center.y,
-                        createdAt: Date.now(),
-                        maxRadius: 40
-                    });
-                    startAnimation(); // Restart animation for ripple
-
-                    lastShapeTime = Date.now();
-                    currentStroke.fadeStart = 0;
-                }
+            if (!currentStroke) {
+                isDrawing = false;
+                return;
             }
-            
-            if (currentStroke && currentStroke.points.length > 5) {
-                const shape = detectShape(currentStroke.points);
-                
-                if (shape && shape.confidence > 0.5) {
-                    // Create recognized shape with ideal points
-                    recognizedShapes.push({
-                        ...shape,
-                        rawPoints: [...currentStroke.points],
-                        idealPoints: generateIdealShape(shape),
-                        createdAt: Date.now()
+
+            const points = [...currentStroke.points];
+            const classified = classifyStroke(points);
+
+            if (classified) {
+                const id = entityIdCounter++;
+                const now = Date.now();
+
+                if (classified.type === 'food') {
+                    // FIFO: remove oldest if at limit
+                    if (food.length >= MAX_FOOD) food.shift();
+                    food.push({
+                        id,
+                        x: classified.center.x,
+                        y: classified.center.y,
+                        createdAt: now
                     });
-                    
-                    // Add whisper label
-                    const labelText = shape.type.charAt(0).toUpperCase() + shape.type.slice(1);
-                    whisperLabels.push({
-                        text: labelText,
-                        x: shape.center.x,
-                        y: shape.center.y,
-                        createdAt: Date.now()
+
+                    // Ripple feedback
+                    ripples.push({
+                        x: classified.center.x,
+                        y: classified.center.y,
+                        createdAt: now,
+                        maxRadius: 30
                     });
-                    
-                    // Add particle burst for recognition feedback
-                    for (let i = 0; i < 8; i++) {
-                        const angle = (i / 8) * Math.PI * 2;
+
+                } else if (classified.type === 'bubble') {
+                    if (bubbles.length >= MAX_BUBBLES) bubbles.shift();
+                    bubbles.push({
+                        id,
+                        x: classified.center.x,
+                        y: classified.center.y,
+                        radius: classified.radius,
+                        vy: 0.3 + Math.random() * 0.4,
+                        createdAt: now
+                    });
+
+                } else if (classified.type === 'coral') {
+                    if (coral.length >= MAX_CORAL) coral.shift();
+                    coral.push({
+                        id,
+                        shape: classified.shape,
+                        x: classified.center.x,
+                        y: classified.center.y,
+                        size: classified.size,
+                        settled: false,
+                        createdAt: now
+                    });
+
+                } else if (classified.type === 'fish') {
+                    if (fish.length >= MAX_FISH) fish.shift();
+                    // Use initial heading from stroke orientation
+                    const fishShape = classified.fishShape;
+                    const heading = fishShape.initialHeading;
+                    // Generate unique color hue for each fish
+                    const hueShift = (id * 47) % 360;
+                    fish.push({
+                        id,
+                        points: fishShape.points,
+                        bodyWidth: fishShape.bodyWidth,
+                        bodyHeight: fishShape.bodyHeight,
+                        x: classified.center.x,
+                        y: classified.center.y,
+                        size: classified.size,
+                        vx: Math.cos(heading) * 0.4,
+                        vy: Math.sin(heading) * 0.4,
+                        heading: heading,
+                        targetHeading: heading,
+                        state: 'idle',
+                        hueShift: hueShift,
+                        scaleX: 0.9 + Math.random() * 0.2,
+                        scaleY: 0.9 + Math.random() * 0.2,
+                        createdAt: now
+                    });
+
+                } else if (classified.type === 'jellyfish') {
+                    if (jellyfish.length >= MAX_JELLYFISH) jellyfish.shift();
+                    const w = canvas.width / (window.devicePixelRatio || 1);
+                    const h = canvas.height / (window.devicePixelRatio || 1);
+                    // Initialize orbit around center of tank
+                    const orbitAngle = Math.random() * Math.PI * 2;
+                    jellyfish.push({
+                        id,
+                        shape: classified.shape,
+                        x: classified.center.x,
+                        y: classified.center.y,
+                        size: classified.size,
+                        vx: 0,
+                        vy: 0,
+                        orbitAngle: orbitAngle,
+                        orbitRadius: 80 + Math.random() * 60,
+                        orbitSpeed: 0.0003 + Math.random() * 0.0002,
+                        orbitCenterX: w / 2,
+                        orbitCenterY: h * 0.4,
+                        pulsePhase: Math.random() * Math.PI * 2,
+                        createdAt: now
+                    });
+
+                } else if (classified.type === 'line') {
+                    tempLines.push({
+                        id,
+                        points: classified.points,
+                        createdAt: now
+                    });
+                }
+
+                // Particle burst feedback for recognized entity types (not lines)
+                if (classified.type !== 'line') {
+                    const burstCount = classified.type === 'food' ? 4 : 8;
+                    for (let i = 0; i < burstCount; i++) {
+                        const angle = (i / burstCount) * Math.PI * 2;
                         particles.push({
-                            x: shape.center.x,
-                            y: shape.center.y,
-                            vx: Math.cos(angle) * (1.5 + Math.random()),
-                            vy: Math.sin(angle) * (1.5 + Math.random()),
+                            x: classified.center.x,
+                            y: classified.center.y,
+                            vx: Math.cos(angle) * (1 + Math.random()),
+                            vy: Math.sin(angle) * (1 + Math.random()),
                             life: 1,
                             createdAt: Date.now()
                         });
                     }
-                    startAnimation(); // Restart animation for particles
-
-                    lastShapeTime = Date.now();
-                    
-                    // Hide raw stroke quickly since we're showing recognized version
-                    currentStroke.fadeStart = 0;
                 }
+
+                // Hide raw stroke quickly since entity is now rendered
+                currentStroke.fadeStart = 0;
+                startAnimation();
             }
-            
+
             isDrawing = false;
             currentStroke = null;
             setTimeout(() => {
