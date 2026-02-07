@@ -1154,8 +1154,6 @@
                 ctx.rotate(f.heading);
                 ctx.scale(scaleX, scaleY);
 
-                ctx.shadowColor = color;
-                ctx.shadowBlur = 12;
                 ctx.strokeStyle = color;
                 ctx.lineWidth = 2.5;
                 ctx.lineCap = 'round';
@@ -1177,11 +1175,10 @@
                 ctx.stroke();
 
                 // Subtle fill
-                ctx.globalAlpha = 0.1;
+                ctx.globalAlpha = 0.15;
                 ctx.fillStyle = color;
                 ctx.fill();
 
-                ctx.shadowBlur = 0;
                 ctx.globalAlpha = 1;
                 ctx.restore();
             });
@@ -1246,8 +1243,6 @@
                     // Alternate colors between stalks with variation
                     const stalkColor = si % 3 === 0 ? color : (si % 3 === 1 ? altColor : color);
 
-                    ctx.shadowColor = stalkColor;
-                    ctx.shadowBlur = 10;
                     ctx.strokeStyle = stalkColor;
                     // Thicker stalks based on stalk.width property
                     ctx.lineWidth = stalk.width || 3;
@@ -1295,27 +1290,6 @@
                         ctx.lineTo(branchEndX, branchEndY);
                         ctx.stroke();
 
-                        // Sub-branch for more lushness
-                        if (branch.hasSubBranch) {
-                            ctx.lineWidth = (branch.width || 2) * 0.7;
-                            ctx.globalAlpha = 0.65;
-                            const subStartX = branchStartX + (branchEndX - branchStartX) * 0.5;
-                            const subStartY = branchStartY + (branchEndY - branchStartY) * 0.5;
-                            const subEndX = subStartX + Math.sin(branch.subBranchAngle) * branch.subBranchLen;
-                            const subEndY = subStartY - Math.cos(branch.subBranchAngle) * branch.subBranchLen * 0.8;
-
-                            ctx.beginPath();
-                            ctx.moveTo(subStartX, subStartY);
-                            ctx.lineTo(subEndX, subEndY);
-                            ctx.stroke();
-
-                            // Sub-branch tip
-                            ctx.globalAlpha = 0.45;
-                            ctx.beginPath();
-                            ctx.arc(subEndX, subEndY - 1.5, 2.5, 0, Math.PI * 2);
-                            ctx.fill();
-                        }
-
                         // Branch tip
                         if (branch.hasTip) {
                             ctx.globalAlpha = 0.6;
@@ -1328,15 +1302,6 @@
                     });
                 });
 
-                // Add subtle glow at base
-                ctx.globalAlpha = 0.2;
-                ctx.shadowBlur = 25;
-                ctx.fillStyle = color;
-                ctx.beginPath();
-                ctx.ellipse(0, 0, shape.width * 0.45, 10, 0, 0, Math.PI * 2);
-                ctx.fill();
-
-                ctx.shadowBlur = 0;
                 ctx.globalAlpha = 1;
                 ctx.restore();
             });
@@ -1463,31 +1428,28 @@
                 const bellH = shape.bellHeight;
 
                 // Draw bell (dome shape)
-                ctx.shadowColor = color;
-                ctx.shadowBlur = 20;
                 ctx.strokeStyle = color;
                 ctx.lineWidth = 2;
-                ctx.globalAlpha = 0.8;
+                ctx.globalAlpha = 0.85;
 
                 ctx.beginPath();
                 ctx.ellipse(0, 0, r * bellSquash, bellH * bellStretch, 0, Math.PI, 0);
                 ctx.stroke();
 
                 // Bell fill
-                ctx.globalAlpha = 0.2;
+                ctx.globalAlpha = 0.25;
                 ctx.fillStyle = color;
                 ctx.fill();
 
                 // Inner bell detail
-                ctx.globalAlpha = 0.3;
+                ctx.globalAlpha = 0.35;
                 ctx.beginPath();
                 ctx.ellipse(0, bellH * 0.1, r * 0.5 * bellSquash, bellH * 0.4 * bellStretch, 0, Math.PI, 0);
                 ctx.stroke();
 
                 // Draw trailing tentacles
-                ctx.shadowBlur = 8;
                 ctx.lineWidth = 1.5;
-                ctx.globalAlpha = 0.6;
+                ctx.globalAlpha = 0.65;
 
                 const tentacleTime = now * 0.002 + shape.wobbleOffset;
                 for (let t = 0; t < shape.numTentacles; t++) {
@@ -1506,7 +1468,6 @@
                     ctx.stroke();
                 }
 
-                ctx.shadowBlur = 0;
                 ctx.globalAlpha = 1;
                 ctx.restore();
             });
@@ -1601,26 +1562,17 @@
                 const squash = 1 + 0.05 * Math.sin(now / 300 + b.id);
 
                 ctx.save();
-                ctx.globalAlpha = 0.4;
+                ctx.globalAlpha = 0.5;
                 ctx.strokeStyle = bubbleColor;
                 ctx.lineWidth = 1.5;
-                ctx.shadowColor = glowColor;
-                ctx.shadowBlur = 12;
 
                 ctx.beginPath();
                 ctx.ellipse(b.x, b.y, b.radius * squash, b.radius / squash, 0, 0, Math.PI * 2);
                 ctx.stroke();
 
-                // Secondary inner ring for depth
-                ctx.globalAlpha = 0.15;
-                ctx.lineWidth = 0.8;
-                ctx.beginPath();
-                ctx.ellipse(b.x, b.y, b.radius * 0.7 * squash, b.radius * 0.7 / squash, 0, 0, Math.PI * 2);
-                ctx.stroke();
-
                 // Shine highlight
-                ctx.globalAlpha = 0.25;
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                ctx.globalAlpha = 0.3;
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
                 ctx.beginPath();
                 ctx.ellipse(
                     b.x - b.radius * 0.25,
@@ -1632,7 +1584,6 @@
                 );
                 ctx.fill();
 
-                ctx.shadowBlur = 0;
                 ctx.globalAlpha = 1;
                 ctx.restore();
                 return true;
@@ -1713,12 +1664,10 @@
                 }
 
                 ctx.save();
-                ctx.strokeStyle = `rgba(77, 201, 246, ${0.5 * opacity})`;
+                ctx.strokeStyle = `rgba(77, 201, 246, ${0.6 * opacity})`;
                 ctx.lineWidth = 2;
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
-                ctx.shadowColor = `rgba(77, 201, 246, ${0.3 * opacity})`;
-                ctx.shadowBlur = 6;
 
                 ctx.beginPath();
                 ctx.moveTo(pts[0].x, pts[0].y);
@@ -1728,8 +1677,6 @@
                     ctx.quadraticCurveTo(p0.x, p0.y, (p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
                 }
                 ctx.stroke();
-                ctx.shadowBlur = 0;
-                ctx.globalAlpha = 1;
                 ctx.restore();
                 return true;
             });
@@ -1842,9 +1789,7 @@
                 ctx.translate(p.x, p.y);
                 ctx.rotate(p.createdAt * 0.002); // Subtle rotation based on creation time
 
-                // Hexagonal crystal shard with glow
-                ctx.shadowColor = `rgba(${r}, ${g}, ${b}, ${0.6 * opacity})`;
-                ctx.shadowBlur = 6 * opacity;
+                // Hexagonal crystal shard
                 ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${0.9 * opacity})`;
                 ctx.lineWidth = 1.5;
                 ctx.beginPath();
@@ -1857,7 +1802,6 @@
                 }
                 ctx.closePath();
                 ctx.stroke();
-                ctx.shadowBlur = 0;
 
                 ctx.restore();
                 
