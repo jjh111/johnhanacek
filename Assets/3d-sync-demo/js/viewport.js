@@ -1,3 +1,5 @@
+import Cursor3D from './cursor-3d.js';
+
 class Viewport {
     constructor(id, canvas, model) {
         this.id = id;
@@ -8,12 +10,40 @@ class Viewport {
         this.debounceTimer = null;
         this.interactionCallback = null;
         
+        // Cursor colors for each viewport
+        this.cursorColors = {
+            'a': 0xff4444, // Red
+            'b': 0x4444ff, // Blue  
+            'c': 0x44ff44  // Green
+        };
+        
+        // Store cursors from other viewports
+        this.otherCursors = new Map();
+        
+        // Raycaster for mouse tracking
+        this.raycaster = new THREE.Raycaster();
+        this.mouse = new THREE.Vector2();
+        this.rayDirection = new THREE.Vector3(0, -1, 0);
+        this.isHovering = false;
+        this.isInteracting = false;
+        this.isZooming = false;
+        this.lastMousePosition = new THREE.Vector2();
+        this.mouseVelocity = new THREE.Vector2();
+        
+        // Cursor position callback
+        this.cursorPositionCallback = null;
+        this.cursorVisibilityCallback = null;
+        this.cursorDirectionCallback = null;
+        this.cursorNormalCallback = null;
+        
         this.initScene();
         this.initCamera();
         this.initRenderer();
         this.initControls();
         this.addModel();
         this.addLights();
+        this.setupCursors();
+        this.setupMouseTracking();
         this.animate();
         
         this.setupResize();
@@ -59,6 +89,28 @@ class Viewport {
         this.controls.enableRotate = true;
         this.controls.minDistance = 2;
         this.controls.maxDistance = 20;
+        
+        // Track zoom/scale events
+        this.controls.addEventListener('change', () => {
+            if (this.isZooming && this.isHovering) {
+                this.updateCursorFromMouse();
+            }
+        });
+        
+        // Detect zoom specifically
+        this.canvas.addEventListener('wheel', () => {
+            this.isZooming = true;
+            if (this.isHovering) {
+                this.showOwnCursor();
+                this.updateCursorFromMouse();
+            }
+        }, { passive: true });
+        
+        this.canvas.addEventListener('wheel', () => {
+            setTimeout(() => {
+                this.isZooming = false;
+            }, 100);
+        }, { passive: true });
     }
     
     addModel() {
@@ -80,6 +132,144 @@ class Viewport {
         this.scene.add(directionalLight2);
     }
     
+    setupCursors() {
+        // Create cursors for other viewports
+        const otherIds = ['a', 'b', 'c'].filter(id => id !== this.id);
+        otherIds.forEach(otherId => {
+            const cursor = new Cursor3D(otherId, this.cursorColors[otherId]);
+            cursor.addToScene(this.scene);
+            cursor.setVisible(false);
+            this.otherCursors.set(otherId, cursor);
+        });
+    }
+    
+    setupMouseTracking() {
+        // Mouse move - track position on molecule
+        this.canvas.addEventListener('mousemove', (e) => {
+            this.handleMouseMove(e);
+        });
+        
+        // Mouse enter/leave - show/hide cursor
+        this.canvas.addEventListener('mouseenter', () => {
+            this.isHovering = true;
+            this.showOwnCursor();
+        });
+        
+        this.canvas.addEventListener('mouseleave', () => {
+            this.isHovering = false;
+            this.hideOwnCursor();
+        });
+        
+        // Touch events for mobile
+        this.canvas.addEventListener('touchstart', (e) => {
+            this.isInteracting = true;
+            this.showOwnCursor();
+            this.handleTouch(e);
+        }, { passive: false });
+        
+        this.canvas.addEventListener('touchmove', (e) => {
+            this.handleTouch(e);
+        }, { passive: false });
+        
+        this.canvas.addEventListener('touchend', () => {
+            this.isInteracting = false;
+            // Delay hiding to allow for tap gestures
+            setTimeout(() => {
+                if (!this.isInteracting && !this.isHovering) {
+                    this.hideOwnCursor();
+                }
+            }, 100);
+        });
+        
+        // Mouse down/up for click interaction
+        this.canvas.addEventListener('mousedown', () => {
+            this.isInteracting = true;
+            this.showOwnCursor();
+        });
+        
+        this.canvas.addEventListener('mouseup', () => {
+            this.isInteracting = false;
+            if (!this.isHovering) {
+                this.hideOwnCursor();
+            }
+        });
+    }
+    
+    handleMouseMove(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        
+        // Calculate mouse velocity for better tracking
+        const currentPos = new THREE.Vector2(e.clientX, e.clientY);
+        this.mouseVelocity.subVectors(currentPos, this.lastMousePosition);
+        this.lastMousePosition.copy(currentPos);
+        
+        this.updateCursorFromMouse();
+    }
+    
+    handleTouch(e) {
+        e.preventDefault();
+        const rect = this.canvas.getBoundingClientRect();
+        const touch = e.touches[0];
+        this.mouse.x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
+        this.mouse.y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
+        
+        this.updateCursorFromMouse();
+    }
+    
+    updateCursorFromMouse() {
+        // Raycast from camera to find intersection with molecule
+        this.raycaster.setFromCamera(this.mouse, this.camera);
+        
+        // Store ray direction
+        this.rayDirection.copy(this.raycaster.ray.direction);
+        
+        // Check intersection with the model
+        const intersects = this.raycaster.intersectObject(this.sceneModel, true);
+        
+        if (intersects.length > 0) {
+            const point = intersects[0].point;
+            const normal = intersects[0].face.normal.clone();
+            normal.transformDirection(intersects[0].object.matrixWorld);
+            
+            // The cone tip should be at the surface point
+            // Cone length is 0.4 (from -0.1 to 0.3 in Y), tip is at 0.3 in local space
+            // We want the cone to point TOWARD the surface, so the tip touches the surface
+            // Position = surface point + normal * (cone_length + margin)
+            const coneLength = 0.4;
+            const margin = 0.05;
+            const offsetDistance = coneLength + margin;
+            
+            // Offset from surface along the normal (away from surface)
+            const offset = normal.clone().multiplyScalar(offsetDistance);
+            const cursorPos = point.clone().add(offset);
+            
+            // Broadcast cursor position, direction, and surface normal to other viewports
+            if (this.cursorPositionCallback) {
+                this.cursorPositionCallback(this.id, cursorPos);
+            }
+            if (this.cursorDirectionCallback) {
+                this.cursorDirectionCallback(this.id, this.rayDirection);
+            }
+            if (this.cursorNormalCallback) {
+                this.cursorNormalCallback(this.id, normal.clone());
+            }
+        }
+    }
+    
+    showOwnCursor() {
+        if (this.cursorVisibilityCallback) {
+            this.cursorVisibilityCallback(this.id, true);
+        }
+    }
+    
+    hideOwnCursor() {
+        if (this.cursorVisibilityCallback) {
+            this.cursorVisibilityCallback(this.id, false);
+        }
+    }
+    
     setupResize() {
         const resizeObserver = new ResizeObserver(() => {
             const width = this.canvas.clientWidth;
@@ -95,7 +285,6 @@ class Viewport {
     
     setupInteractionDetection() {
         // Use OrbitControls' start event instead of mousedown
-        // This ensures we catch the interaction regardless of event propagation
         this.controls.addEventListener('start', () => {
             this.handleInteractionStart();
         });
@@ -112,9 +301,67 @@ class Viewport {
         this.interactionCallback = callback;
     }
     
+    // Callbacks for cursor sharing
+    setCursorPositionCallback(callback) {
+        this.cursorPositionCallback = callback;
+    }
+
+    setCursorVisibilityCallback(callback) {
+        this.cursorVisibilityCallback = callback;
+    }
+
+    setCursorDirectionCallback(callback) {
+        this.cursorDirectionCallback = callback;
+    }
+
+    setCursorNormalCallback(callback) {
+        this.cursorNormalCallback = callback;
+    }
+    
+    // Show/hide cursor from another viewport
+    setCursorVisible(viewportId, visible) {
+        const cursor = this.otherCursors.get(viewportId);
+        if (cursor) {
+            cursor.setVisible(visible);
+        }
+    }
+    
+    // Update cursor position from another viewport
+    updateCursorPosition(viewportId, position) {
+        const cursor = this.otherCursors.get(viewportId);
+        if (cursor) {
+            cursor.setPosition(position.x, position.y, position.z);
+        }
+    }
+    
+    // Update cursor ray direction from another viewport
+    updateCursorDirection(viewportId, direction) {
+        const cursor = this.otherCursors.get(viewportId);
+        if (cursor) {
+            cursor.setRayDirection(direction);
+        }
+    }
+
+    // Update cursor surface normal from another viewport
+    updateCursorNormal(viewportId, normal) {
+        const cursor = this.otherCursors.get(viewportId);
+        if (cursor) {
+            cursor.setSurfaceNormal(normal);
+        }
+    }
+    
     animate() {
         requestAnimationFrame(() => this.animate());
         this.controls.update();
+        
+        // Update all cursors with smoothing and orientation
+        this.otherCursors.forEach(cursor => {
+            if (cursor.visible) {
+                cursor.update();
+                cursor.updateOrientation(this.camera);
+            }
+        });
+        
         this.renderer.render(this.scene, this.camera);
     }
     

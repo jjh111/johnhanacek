@@ -15,6 +15,7 @@ class Application {
         await this.loadModel();
         this.createViewports();
         this.setupSyncManager();
+        this.setupCursorSharing();
         this.setupUI();
     }
     
@@ -36,6 +37,47 @@ class Application {
         this.syncManager = new SyncManager(this.viewports);
         this.syncManager.setStateChangeCallback(() => {
             this.updateUI();
+        });
+    }
+    
+    setupCursorSharing() {
+        // Set up cursor position, direction, normal, and visibility sharing between viewports
+        this.viewports.forEach(sourceViewport => {
+            // When this viewport's cursor moves, update it in all other viewports
+            sourceViewport.setCursorPositionCallback((viewportId, position) => {
+                this.viewports.forEach(targetViewport => {
+                    if (targetViewport.id !== viewportId) {
+                        targetViewport.updateCursorPosition(viewportId, position);
+                    }
+                });
+            });
+
+            // When this viewport's cursor direction changes, update all other viewports
+            sourceViewport.setCursorDirectionCallback((viewportId, direction) => {
+                this.viewports.forEach(targetViewport => {
+                    if (targetViewport.id !== viewportId) {
+                        targetViewport.updateCursorDirection(viewportId, direction);
+                    }
+                });
+            });
+
+            // When this viewport's cursor surface normal changes, update all other viewports
+            sourceViewport.setCursorNormalCallback((viewportId, normal) => {
+                this.viewports.forEach(targetViewport => {
+                    if (targetViewport.id !== viewportId) {
+                        targetViewport.updateCursorNormal(viewportId, normal);
+                    }
+                });
+            });
+
+            // When this viewport's cursor visibility changes, update all other viewports
+            sourceViewport.setCursorVisibilityCallback((viewportId, visible) => {
+                this.viewports.forEach(targetViewport => {
+                    if (targetViewport.id !== viewportId) {
+                        targetViewport.setCursorVisible(viewportId, visible);
+                    }
+                });
+            });
         });
     }
     
