@@ -22,67 +22,94 @@ class ModelLoader {
     static createFallbackModel() {
         const group = new THREE.Group();
         
-        const atomMaterial = new THREE.MeshPhongMaterial({
-            color: 0x4facfe,
-            shininess: 100
-        });
+        // Carbon ring with tail - atoms only, no hydrogens
+        const carbonPositions = [];
         
-        const bondMaterial = new THREE.MeshPhongMaterial({
-            color: 0x6b7280,
-            shininess: 50
-        });
-        
-        const atomGeometry = new THREE.SphereGeometry(0.5, 32, 32);
-        
-        const atomPositions = [
-            { x: 0, y: 0, z: 0, color: 0x4facfe, size: 0.6 },
-            { x: 2, y: 1, z: 0, color: 0xf59e0b, size: 0.5 },
-            { x: -1, y: -1, z: 1, color: 0x10b981, size: 0.5 },
-            { x: 1, y: -1, z: -1, color: 0xef4444, size: 0.5 },
-            { x: 0, y: 2, z: 0, color: 0x8b5cf6, size: 0.4 },
-        ];
-        
-        const bonds = [
-            [0, 1],
-            [0, 2],
-            [0, 3],
-            [1, 4],
-        ];
-        
-        atomPositions.forEach((atom) => {
-            const material = new THREE.MeshPhongMaterial({
-                color: atom.color,
-                shininess: 100
+        // Create carbon ring (6 carbons in hexagon)
+        const ringRadius = 2;
+        const numRingAtoms = 6;
+        for (let i = 0; i < numRingAtoms; i++) {
+            const angle = (i / numRingAtoms) * Math.PI * 2;
+            carbonPositions.push({
+                x: Math.cos(angle) * ringRadius,
+                y: 0,
+                z: Math.sin(angle) * ringRadius,
+                size: 0.5
             });
-            const sphere = new THREE.Mesh(atomGeometry, material);
+        }
+        
+        // Add tail atoms (2 carbons extending from one ring position)
+        const tailStart = carbonPositions[0];
+        carbonPositions.push({
+            x: tailStart.x + 1.8,  // Shortened from 2.5
+            y: 0.5,
+            z: tailStart.z + 0.6,  // Adjusted proportionally
+            size: 0.5
+        });
+        
+        carbonPositions.push({
+            x: tailStart.x + 3.2,  // Adjusted from 4
+            y: 0,
+            z: tailStart.z + 1.0,  // Adjusted from 1.2
+            size: 0.5
+        });
+        
+        // Create spheres for carbon atoms - light grey with roughness for diffuse reflection
+        const sphereGeometry = new THREE.SphereGeometry(1, 32, 32);
+        const carbonMaterial = new THREE.MeshStandardMaterial({
+            color: 0xa0a0a0, // Light grey
+            roughness: 0.7,  // High roughness for diffuse reflection
+            metalness: 0.1   // Low metalness
+        });
+        
+        carbonPositions.forEach((atom) => {
+            const sphere = new THREE.Mesh(sphereGeometry, carbonMaterial);
             sphere.position.set(atom.x, atom.y, atom.z);
-            sphere.scale.setScalar(atom.size / 0.5);
+            sphere.scale.setScalar(atom.size);
             group.add(sphere);
         });
         
-        bonds.forEach(([start, end]) => {
-            const startPos = atomPositions[start];
-            const endPos = atomPositions[end];
-            
-            const startVec = new THREE.Vector3(startPos.x, startPos.y, startPos.z);
-            const endVec = new THREE.Vector3(endPos.x, endPos.y, endPos.z);
-            
-            const distance = startVec.distanceTo(endVec);
-            const bondGeometry = new THREE.CylinderGeometry(0.1, 0.1, distance, 16);
-            const bond = new THREE.Mesh(bondGeometry, bondMaterial);
-            
-            const midPoint = new THREE.Vector3().addVectors(startVec, endVec).multiplyScalar(0.5);
-            bond.position.copy(midPoint);
-            
-            bond.lookAt(endVec);
-            bond.rotateX(Math.PI / 2);
-            
-            group.add(bond);
+        // Create bonds between atoms - thicker
+        const bondMaterial = new THREE.MeshStandardMaterial({
+            color: 0x707070, // Darker grey for bonds
+            roughness: 0.8,
+            metalness: 0.1
         });
+        const bondRadius = 0.15; // Increased from 0.08 for thicker lines
         
-        group.scale.setScalar(1.5);
+        // Bonds for ring (connect consecutive atoms)
+        for (let i = 0; i < numRingAtoms; i++) {
+            const start = carbonPositions[i];
+            const end = carbonPositions[(i + 1) % numRingAtoms];
+            this.createBond(start, end, bondMaterial, group, bondRadius);
+        }
+        
+        // Bonds for tail
+        this.createBond(carbonPositions[0], carbonPositions[numRingAtoms], bondMaterial, group, bondRadius);
+        this.createBond(carbonPositions[numRingAtoms], carbonPositions[numRingAtoms + 1], bondMaterial, group, bondRadius);
+        
+        // Center the molecule
+        const box = new THREE.Box3().setFromObject(group);
+        const center = box.getCenter(new THREE.Vector3());
+        group.position.sub(center);
         
         return group;
+    }
+    
+    static createBond(start, end, material, group, radius = 0.15) {
+        const startVec = new THREE.Vector3(start.x, start.y, start.z);
+        const endVec = new THREE.Vector3(end.x, end.y, end.z);
+        
+        const distance = startVec.distanceTo(endVec);
+        const bondGeometry = new THREE.CylinderGeometry(radius, radius, distance, 16);
+        const bond = new THREE.Mesh(bondGeometry, material);
+        
+        const midPoint = new THREE.Vector3().addVectors(startVec, endVec).multiplyScalar(0.5);
+        bond.position.copy(midPoint);
+        bond.lookAt(endVec);
+        bond.rotateX(Math.PI / 2);
+        
+        group.add(bond);
     }
     
     static async loadModel(url) {

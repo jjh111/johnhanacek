@@ -9,8 +9,6 @@ class Application {
         this.viewports = [];
         this.syncManager = null;
         this.init();
-        
-        window.app = this;
     }
     
     async init() {
@@ -90,7 +88,16 @@ class Application {
     
     updateUI() {
         const spotlighter = this.syncManager.getSpotlighter();
-        console.log(`updateUI called, spotlighter: ${spotlighter ? spotlighter.id : 'none'}`);
+        
+        // Calculate followers list for spotlight label
+        let followersList = '';
+        if (spotlighter) {
+            const followers = VIEWPORT_IDS.filter(vid => {
+                const vp = this.getViewportById(vid);
+                return vp !== spotlighter && (vp.state === 'follower' || this.syncManager.getFollowTarget(vp));
+            }).map(vid => vid.toUpperCase());
+            followersList = followers.length > 0 ? followers.join(', ') : 'none';
+        }
         
         VIEWPORT_IDS.forEach(id => {
             const viewport = this.getViewportById(id);
@@ -101,36 +108,42 @@ class Application {
             const followBtns = document.querySelectorAll(`.btn-follow-circle[data-viewport="${id}"]`);
             const breakoutBtn = document.querySelector(`.btn-breakout[data-viewport="${id}"]`);
             
-            wrapper.classList.remove('spotlighter', 'follower', 'independent');
-            overlay.classList.remove('show');
-            overlay.textContent = '';
-            
+            // Reset all button states
+            spotlightBtn.classList.remove('active');
+            followBtns.forEach(btn => btn.classList.remove('active', 'disabled'));
+            breakoutBtn.classList.remove('active', 'disabled');
             spotlightBtn.disabled = false;
             followBtns.forEach(btn => btn.disabled = false);
             breakoutBtn.disabled = false;
             
-            console.log(`Viewport ${id}: state=${viewport.state}, followTarget=${viewport.followTarget ? viewport.followTarget.id : 'none'}`);
+            wrapper.classList.remove('spotlighter', 'follower', 'independent');
+            overlay.classList.remove('show');
+            overlay.textContent = '';
             
             if (spotlighter === viewport) {
                 wrapper.classList.add('spotlighter');
-                overlay.textContent = 'SPOTLIGHTING';
+                overlay.textContent = `SPOTLIGHTING - Viewports following: ${followersList}`;
                 overlay.classList.add('show');
+                spotlightBtn.classList.add('active');
             } else {
                 const followTarget = this.syncManager.getFollowTarget(viewport);
                 
                 if (followTarget) {
                     wrapper.classList.add('follower');
-                    overlay.textContent = `FOLLOWING ${followTarget.id.toUpperCase()}`;
+                    overlay.textContent = `FOLLOWING VIEWPORT ${followTarget.id.toUpperCase()}`;
                     overlay.classList.add('show');
+                    breakoutBtn.classList.add('active');
                     followBtns.forEach(btn => {
                         if (btn.dataset.target === followTarget.id) {
+                            btn.classList.add('active');
                             btn.disabled = true;
                         }
                     });
                 } else if (spotlighter && viewport.state === 'follower') {
                     wrapper.classList.add('follower');
-                    overlay.textContent = 'FOLLOWING';
+                    overlay.textContent = `FOLLOWING VIEWPORT ${spotlighter.id.toUpperCase()}`;
                     overlay.classList.add('show');
+                    breakoutBtn.classList.add('active');
                 } else {
                     wrapper.classList.add('independent');
                     breakoutBtn.disabled = true;

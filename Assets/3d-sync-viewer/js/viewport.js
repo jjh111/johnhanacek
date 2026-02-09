@@ -94,17 +94,16 @@ class Viewport {
     }
     
     setupInteractionDetection() {
-        this.canvas.addEventListener('mousedown', () => {
-            this.handleInteractionStart();
-        });
-        
-        this.canvas.addEventListener('touchstart', () => {
+        // Use OrbitControls' start event instead of mousedown
+        // This ensures we catch the interaction regardless of event propagation
+        this.controls.addEventListener('start', () => {
             this.handleInteractionStart();
         });
     }
     
     handleInteractionStart() {
-        if (this.interactionCallback) {
+        // Only trigger breakout if we're currently following
+        if (this.state === 'follower' && this.interactionCallback) {
             this.interactionCallback();
         }
     }
@@ -140,7 +139,6 @@ class Viewport {
     }
     
     setState(newState, target = null) {
-        console.log(`Viewport ${this.id}: setState(${newState}, ${target}) - was ${this.state}, ${this.followTarget}`);
         this.state = newState;
         this.followTarget = target;
     }

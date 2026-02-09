@@ -36,9 +36,7 @@ class SyncManager {
     }
     
     handleViewportInteraction(viewport) {
-        console.log(`Interaction detected on viewport ${viewport.id}, state: ${viewport.state}`);
         if (viewport.state === 'follower') {
-            console.log(`Calling breakout on viewport ${viewport.id}`);
             this.breakout(viewport);
         }
     }
@@ -121,26 +119,18 @@ class SyncManager {
     }
     
     breakout(viewport) {
-        console.log(`Breakout called on viewport ${viewport.id}, state: ${viewport.state}, followTarget: ${viewport.followTarget ? viewport.followTarget.id : 'none'}`);
-        
         if (viewport === this.spotlighter) {
-            console.log('Clearing spotlight');
             this.clearSpotlight();
             return;
         }
-        
-        console.log(`Before breakout - state: ${viewport.state}, followTarget: ${viewport.followTarget ? viewport.followTarget.id : 'none'}`);
-        
+
         if (viewport.followTarget) {
             const targetViewport = viewport.followTarget;
             const followers = this.followers.get(targetViewport) || [];
             this.followers.set(targetViewport, followers.filter(vp => vp !== viewport));
-            console.log(`Removed ${viewport.id} from ${targetViewport.id}'s followers`);
         }
-        
+
         viewport.setState('independent');
-        console.log(`After breakout - state: ${viewport.state}, followTarget: ${viewport.followTarget ? viewport.followTarget.id : 'none'}`);
-        
         this.notifyStateChange();
     }
     
