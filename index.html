@@ -54,6 +54,70 @@
         }
     }
     </script>
+
+    <style>
+        /* Debug toggle for fish minigame */
+        .canvas-controls {
+            position: fixed;
+            bottom: 1rem;
+            left: 1rem;
+            display: flex;
+            gap: 1rem;
+            z-index: 100;
+            opacity: 0.6;
+            transition: opacity 0.2s ease;
+        }
+        .canvas-controls:hover {
+            opacity: 1;
+        }
+        .canvas-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.6rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: rgba(125, 216, 247, 0.5);
+            cursor: pointer;
+        }
+        .canvas-toggle input {
+            display: none;
+        }
+        .toggle-switch {
+            width: 28px;
+            height: 14px;
+            background: rgba(10, 22, 40, 0.6);
+            border: 1px solid rgba(77, 201, 246, 0.2);
+            border-radius: 7px;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 8px;
+            height: 8px;
+            background: rgba(125, 216, 247, 0.4);
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+        .canvas-toggle input:checked + .toggle-switch {
+            background: rgba(77, 201, 246, 0.15);
+            border-color: rgba(77, 201, 246, 0.4);
+        }
+        .canvas-toggle input:checked + .toggle-switch::after {
+            left: 16px;
+            background: rgba(125, 216, 247, 0.9);
+            box-shadow: 0 0 6px rgba(77, 201, 246, 0.5);
+        }
+        .canvas-toggle:hover {
+            color: rgba(125, 216, 247, 0.7);
+        }
+    </style>
 </head>
 <body>
     <!-- Interactive Cursor Spotlight -->
@@ -125,7 +189,16 @@
             <span class="hint-icon">✎</span>
             <span class="hint-text">draw</span>
         </div>
-        
+
+        <!-- Debug Controls -->
+        <div class="canvas-controls">
+            <label class="canvas-toggle">
+                <input type="checkbox" id="toggleDebug">
+                <span class="toggle-switch"></span>
+                Debug
+            </label>
+        </div>
+
         <div class="hero-content">
             <h1>John <span class="meta">Hanacek</span></h1>
             <p class="tagline">DESIGN ENGINEER · PRODUCT DESIGNER · ARTIST</p>
@@ -342,6 +415,9 @@
         const MAX_FOOD = 12;
         const FOOD_LIFETIME = 15000;
         const LINE_DURATION = 1500;
+
+        // Debug mode - toggle with UI
+        let debugMode = false;
 
         const aquaColors = {
             jellyfish: ['#c77dff', '#a78bfa', '#e879f9'],
@@ -709,9 +785,8 @@
             };
         }
 
-        // Generate fish shape - proper fish outline with body and tail integrated
-        function generateFishShape(loopInfo, originalPoints, size) {
-            // Get loop dimensions
+        // Generate SIMPLE fish shape for small fish - procedural outline
+        function generateSimpleFishShape(loopInfo, originalPoints, size) {
             const loopPoints = originalPoints.slice(loopInfo.loopStart, loopInfo.loopEnd + 1);
             const loopBounds = getBounds(loopPoints);
             const loopWidth = loopBounds.maxX - loopBounds.minX;
@@ -723,49 +798,115 @@
             const tailLen = bodyLen * 0.6;
             const tailSpread = bodyH * 0.9;
 
-            // Calculate orientation from stroke
+            // Head direction from intersection point
             const headDir = Math.atan2(
                 loopInfo.intersectionPoint.y - loopInfo.loopCenter.y,
                 loopInfo.intersectionPoint.x - loopInfo.loopCenter.x
             );
 
-            // Create proper fish outline (head at +X, tail at -X)
-            // Top edge: head -> body curve -> tail
+            // Create fish outline centered at body center (not geometric center)
+            // Offset so body center is at origin, nose at +X
+            const bodyCenter = bodyLen * 0.1; // Body center offset from geometric center
             const pts = [];
 
-            // Head point (nose)
-            pts.push({ x: bodyLen, y: 0 });
+            pts.push({ x: bodyLen - bodyCenter, y: 0 }); // Nose
+            pts.push({ x: bodyLen * 0.7 - bodyCenter, y: -bodyH * 0.5 });
+            pts.push({ x: bodyLen * 0.3 - bodyCenter, y: -bodyH * 0.8 });
+            pts.push({ x: -bodyLen * 0.2 - bodyCenter, y: -bodyH * 0.6 });
+            pts.push({ x: -bodyLen * 0.5 - bodyCenter, y: -bodyH * 0.3 });
+            pts.push({ x: -bodyLen * 0.5 - tailLen - bodyCenter, y: -tailSpread }); // Tail top
+            pts.push({ x: -bodyLen * 0.5 - tailLen * 0.5 - bodyCenter, y: 0 }); // Tail notch
+            pts.push({ x: -bodyLen * 0.5 - tailLen - bodyCenter, y: tailSpread }); // Tail bottom
+            pts.push({ x: -bodyLen * 0.5 - bodyCenter, y: bodyH * 0.3 });
+            pts.push({ x: -bodyLen * 0.2 - bodyCenter, y: bodyH * 0.6 });
+            pts.push({ x: bodyLen * 0.3 - bodyCenter, y: bodyH * 0.8 });
+            pts.push({ x: bodyLen * 0.7 - bodyCenter, y: bodyH * 0.5 });
+            pts.push({ x: bodyLen - bodyCenter, y: 0 }); // Back to nose
 
-            // Top body curve
-            pts.push({ x: bodyLen * 0.7, y: -bodyH * 0.5 });
-            pts.push({ x: bodyLen * 0.3, y: -bodyH * 0.8 });
-            pts.push({ x: -bodyLen * 0.2, y: -bodyH * 0.6 });
-
-            // Tail top
-            pts.push({ x: -bodyLen * 0.5, y: -bodyH * 0.3 });
-            pts.push({ x: -bodyLen * 0.5 - tailLen, y: -tailSpread });
-
-            // Tail center notch
-            pts.push({ x: -bodyLen * 0.5 - tailLen * 0.5, y: 0 });
-
-            // Tail bottom
-            pts.push({ x: -bodyLen * 0.5 - tailLen, y: tailSpread });
-            pts.push({ x: -bodyLen * 0.5, y: bodyH * 0.3 });
-
-            // Bottom body curve
-            pts.push({ x: -bodyLen * 0.2, y: bodyH * 0.6 });
-            pts.push({ x: bodyLen * 0.3, y: bodyH * 0.8 });
-            pts.push({ x: bodyLen * 0.7, y: bodyH * 0.5 });
-
-            // Back to head
-            pts.push({ x: bodyLen, y: 0 });
+            // Calculate actual bounds for collision
+            const shapeBounds = getBounds(pts);
+            const actualWidth = shapeBounds.maxX - shapeBounds.minX;
+            const actualHeight = shapeBounds.maxY - shapeBounds.minY;
 
             return {
                 points: pts,
                 initialHeading: headDir,
-                bodyWidth: bodyLen,
-                bodyHeight: bodyH
+                bodyWidth: actualWidth / 2,  // Half-width for radius
+                bodyHeight: actualHeight / 2,
+                noseOffset: bodyLen - bodyCenter,  // Distance from center to nose
+                isStrokeBased: false
             };
+        }
+
+        // SVG fish template path - from Assets/fish-large-template.svg
+        // This is a single continuous stroke: body loop + through-line + tail
+        const FISH_SVG_PATH = "M1069 305.184C1002.34 474.878 823 512 717 512C326.131 512 316.472 334.531 316.472 297.439M316.472 297.439C326.5 177.5 512.371 120 723.55 120C883.704 120 1093.74 215.974 1065.61 256.375C1057.99 267.316 971.358 328.708 749.191 334.531C506.537 340.891 388.979 316.987 316.472 297.439ZM316.472 297.439C249.891 279.489 145.743 99.6744 111.909 127.568C95.6466 140.975 188.625 248.318 188.626 334.531C188.626 413.321 80.6552 501.811 118 518.5C155.345 535.189 189.091 402.659 284.5 384.5";
+
+        // SVG dimensions for scaling - measured from the actual path
+        // Body spans roughly x=316 to x=1069, y=120 to y=512
+        // Tail extends to x≈80
+        const FISH_SVG_BODY_WIDTH = 753;   // 1069 - 316 (body only, not tail)
+        const FISH_SVG_BODY_HEIGHT = 392;  // 512 - 120
+        const FISH_SVG_CENTER_X = 690;     // Center of body: (316 + 1069) / 2 ≈ 690
+        const FISH_SVG_CENTER_Y = 316;     // Center Y: (120 + 512) / 2
+        const FISH_SVG_NOSE_X = 1069;      // Nose position (rightmost point)
+
+        // Create the Path2D object once
+        let fishPath2D = null;
+        try {
+            fishPath2D = new Path2D(FISH_SVG_PATH);
+        } catch (e) {
+            console.warn('Path2D not supported, falling back to simple fish');
+        }
+
+        // Generate STROKE-BASED fish shape for big fish - uses SVG template
+        function generateStrokeFishShape(loopInfo, originalPoints, size) {
+            const loopPoints = originalPoints.slice(loopInfo.loopStart, loopInfo.loopEnd + 1);
+            const loopBounds = getBounds(loopPoints);
+            const loopWidth = loopBounds.maxX - loopBounds.minX;
+            const loopHeight = loopBounds.maxY - loopBounds.minY;
+
+            // Calculate centroid for position
+            let cx = 0, cy = 0;
+            loopPoints.forEach(p => { cx += p.x; cy += p.y; });
+            cx /= loopPoints.length;
+            cy /= loopPoints.length;
+
+            // Head direction from loop shape - nose points away from intersection
+            const headDir = Math.atan2(
+                cy - loopInfo.intersectionPoint.y,
+                cx - loopInfo.intersectionPoint.x
+            );
+
+            // Scale factor based on drawn size vs SVG body size
+            const drawnSize = Math.max(loopWidth, loopHeight);
+            const scaleFactor = drawnSize / FISH_SVG_BODY_WIDTH;
+
+            // Calculate actual dimensions after scaling
+            const scaledBodyWidth = FISH_SVG_BODY_WIDTH * scaleFactor;
+            const scaledBodyHeight = FISH_SVG_BODY_HEIGHT * scaleFactor;
+            const noseOffset = (FISH_SVG_NOSE_X - FISH_SVG_CENTER_X) * scaleFactor;
+
+            return {
+                useSvgPath: true,
+                scaleFactor: scaleFactor,
+                initialHeading: headDir,
+                bodyWidth: scaledBodyWidth / 2,
+                bodyHeight: scaledBodyHeight / 2,
+                noseOffset: noseOffset,
+                isStrokeBased: true
+            };
+        }
+
+        // Main fish shape generator - chooses style based on size
+        function generateFishShape(loopInfo, originalPoints, size) {
+            // Big fish (loop size > 60) get stroke-based shape
+            // Small fish get simple procedural shape
+            if (loopInfo.loopSize > 60) {
+                return generateStrokeFishShape(loopInfo, originalPoints, size);
+            } else {
+                return generateSimpleFishShape(loopInfo, originalPoints, size);
+            }
         }
 
         // Shape classification - matches design.html detectShape() exactly, plus fish
@@ -915,25 +1056,62 @@
 
             // Physics constants - tuned for smooth movement
             const DETECT_RANGE = 400;
-            const EAT_RANGE = 18;
+            const EAT_RANGE = 35;  // Distance from mouth to eat (larger for better pickup)
             const SEEK_SPEED = 1.2;
-            const IDLE_SPEED = 0.4;
-            const TURN_RATE = 0.03;         // Slower turning for smoother motion
-            const MAX_TURN_PER_FRAME = 0.08; // Cap heading change per frame
+            const IDLE_SPEED = 0.5;
+            const FLEE_SPEED = 3.5;         // Fast escape when scared
+            const TURN_RATE = 0.04;         // Turning speed
+            const MAX_TURN_PER_FRAME = 0.1; // Cap heading change per frame
             const EDGE_MARGIN = 50;
             const EDGE_FORCE = 0.1;
 
             // Boids - separation is critical to prevent overlap
-            const BOID_SEP_RANGE = 100;      // Larger separation range
-            const BOID_ALIGN_RANGE = 180;
-            const BOID_COHESION_RANGE = 280;
+            const BOID_SEP_RANGE = 100;
+            const BOID_ALIGN_RANGE = 200;
+            const BOID_COHESION_RANGE = 300;
 
-            // Size-based behavior thresholds
-            const SMALL_FISH_SIZE = 50;    // Below this = "small" fish
+            // Size categories (based on bodyWidth)
+            const SMALL_THRESHOLD = 35;     // Below = small
+            const MEDIUM_THRESHOLD = 60;    // Below = medium, above = large
+
+            // Coral repulsion for medium/large fish
+            const CORAL_REPEL_RANGE = 100;
+            const CORAL_REPEL_FORCE = 0.15;
+
+            // ---- SHARED SCHOOL TARGET for medium fish ----
+            // Calculate school center and pick a shared wander target
+            let schoolCenterX = 0, schoolCenterY = 0, mediumCount = 0;
+            fish.forEach(f => {
+                const bw = f.bodyWidth || 20;
+                if (bw >= SMALL_THRESHOLD && bw < MEDIUM_THRESHOLD) {
+                    schoolCenterX += f.x;
+                    schoolCenterY += f.y;
+                    mediumCount++;
+                }
+            });
+            if (mediumCount > 0) {
+                schoolCenterX /= mediumCount;
+                schoolCenterY /= mediumCount;
+            }
+
+            // Update shared school target occasionally (every ~8 seconds)
+            if (!this.schoolTarget || !this.schoolTargetTimer || this.schoolTargetTimer <= 0) {
+                this.schoolTargetTimer = 8000 + Math.random() * 4000;
+                // Pick a new shared target in middle area, offset from current school center
+                const offsetX = (Math.random() - 0.5) * w * 0.4;
+                const offsetY = (Math.random() - 0.5) * h * 0.25;
+                this.schoolTarget = {
+                    x: Math.max(80, Math.min(w - 80, (mediumCount > 0 ? schoolCenterX : w * 0.5) + offsetX)),
+                    y: Math.max(h * 0.25, Math.min(h * 0.65, (mediumCount > 0 ? schoolCenterY : h * 0.45) + offsetY))
+                };
+            } else {
+                this.schoolTargetTimer -= 16;
+            }
 
             fish.forEach((f, fi) => {
                 const pts = f.points;
-                if (pts.length < 2) return;
+                // SVG fish don't have points array, skip this check for them
+                if (!f.useSvgPath && (!pts || pts.length < 2)) return;
 
                 // Per-fish unique color using hue shift
                 const baseColor = aquaColors.fish[f.id % aquaColors.fish.length];
@@ -946,12 +1124,27 @@
                 const fishRand = (f.id * 0.618) % 1;
 
                 // ---- Fish AI: seek visible food (not inside bubbles) ----
+                // Calculate mouth position - moved closer to body center (60% of nose offset)
+                const rawNoseOffset = f.useSvgPath
+                    ? (f.noseOffset || f.bodyWidth || 20)
+                    : (f.noseOffset || f.bodyWidth || 20) * (f.scaleX || 1);
+                const mouthOffset = rawNoseOffset * 0.6; // Mouth is 60% toward nose from center
+                const mouthX = f.x + Math.cos(f.heading) * mouthOffset;
+                const mouthY = f.y + Math.sin(f.heading) * mouthOffset;
+
                 let nearestFood = null;
                 let nearestDist = Infinity;
+                let nearestMouthDist = Infinity;
                 food.forEach(fd => {
                     if (isFoodInBubble(fd.x, fd.y)) return;
+                    // Use center distance for detection/seeking
                     const d = Math.sqrt((f.x - fd.x) ** 2 + (f.y - fd.y) ** 2);
-                    if (d < nearestDist) { nearestDist = d; nearestFood = fd; }
+                    if (d < nearestDist) {
+                        nearestDist = d;
+                        nearestFood = fd;
+                        // Calculate mouth-to-food distance for eating
+                        nearestMouthDist = Math.sqrt((mouthX - fd.x) ** 2 + (mouthY - fd.y) ** 2);
+                    }
                 });
 
                 if (nearestFood && nearestDist < DETECT_RANGE) {
@@ -960,8 +1153,8 @@
                     // Add slight wobble to avoid all fish converging on same point
                     f.targetHeading += (fishRand - 0.5) * 0.3;
 
-                    // Eat food on proximity
-                    if (nearestDist < EAT_RANGE) {
+                    // Eat food when MOUTH is close enough (not center)
+                    if (nearestMouthDist < EAT_RANGE) {
                         const idx = food.indexOf(nearestFood);
                         if (idx !== -1) {
                             food.splice(idx, 1);
@@ -978,47 +1171,241 @@
                     }
                 } else {
                     f.state = 'idle';
-                    const isSmallFish = f.size < SMALL_FISH_SIZE;
 
-                    // Size-based behavior
-                    if (isSmallFish) {
-                        // Small fish: cluster near coral at bottom
-                        let nearestCoral = null;
-                        let coralDist = Infinity;
-                        coral.forEach(c => {
-                            if (!c.settled) return;
-                            const d = Math.sqrt((f.x - c.x) ** 2 + (f.y - c.y) ** 2);
-                            if (d < coralDist) { coralDist = d; nearestCoral = c; }
+                    // Get personality (with defaults for old fish)
+                    const energy = f.energy || 0.5;
+                    const curiosity = f.curiosity || 0.4;
+                    const nervousness = f.nervousness || 0.4;
+
+                    // Determine size category
+                    const bw = f.bodyWidth || 20;
+                    const isSmall = bw < SMALL_THRESHOLD;
+                    const isLarge = bw >= MEDIUM_THRESHOLD;
+                    const isMedium = !isSmall && !isLarge;
+
+                    // ---- LARGE FISH: Predator behavior - hunt small fish ----
+                    if (isLarge) {
+                        let prey = null;
+                        let preyDist = Infinity;
+                        const HUNT_RANGE = 250;
+                        const EAT_PREY_RANGE = 25;
+
+                        // Look for small fish to hunt
+                        fish.forEach(other => {
+                            if (other.id === f.id) return;
+                            const otherBw = other.bodyWidth || 20;
+                            if (otherBw >= SMALL_THRESHOLD) return; // Only hunt small fish
+
+                            const dx = other.x - f.x;
+                            const dy = other.y - f.y;
+                            const d = Math.sqrt(dx * dx + dy * dy);
+                            if (d < HUNT_RANGE && d < preyDist) {
+                                prey = other;
+                                preyDist = d;
+                            }
                         });
 
-                        if (nearestCoral && coralDist > 40 && coralDist < 300) {
-                            // Gently drift toward coral, orbit above it
-                            const coralAngle = Math.atan2(nearestCoral.y - 60 - f.y, nearestCoral.x - f.x);
-                            f.targetHeading += angleDiff(coralAngle, f.heading) * 0.02;
+                        if (prey && Math.random() < 0.3 + energy * 0.4) {
+                            // Hunt this prey
+                            f.state = 'hunting';
+                            f.huntTarget = prey.id;
+                            const huntAngle = Math.atan2(prey.y - f.y, prey.x - f.x);
+                            f.targetHeading = huntAngle;
+
+                            // Check if close enough to eat
+                            if (preyDist < EAT_PREY_RANGE) {
+                                // EAT the small fish!
+                                const preyIdx = fish.findIndex(p => p.id === prey.id);
+                                if (preyIdx !== -1) {
+                                    fish.splice(preyIdx, 1);
+                                    f.lastAteAt = now;
+                                    // Burst of particles
+                                    for (let i = 0; i < 8; i++) {
+                                        const a = (i / 8) * Math.PI * 2;
+                                        particles.push({
+                                            x: prey.x, y: prey.y,
+                                            vx: Math.cos(a) * 1.5, vy: Math.sin(a) * 1.5,
+                                            life: 1, createdAt: now
+                                        });
+                                    }
+                                }
+                                f.state = 'idle';
+                                f.huntTarget = null;
+                            }
+                        }
+                    }
+
+                    // ---- SMALL FISH: Check for predators and flee ----
+                    if (isSmall) {
+                        let predator = null;
+                        let predatorDist = Infinity;
+                        const DANGER_RANGE = 150;
+
+                        fish.forEach(other => {
+                            if (other.id === f.id) return;
+                            const otherBw = other.bodyWidth || 20;
+                            if (otherBw < MEDIUM_THRESHOLD) return; // Only fear large fish
+
+                            const dx = other.x - f.x;
+                            const dy = other.y - f.y;
+                            const d = Math.sqrt(dx * dx + dy * dy);
+                            if (d < DANGER_RANGE && d < predatorDist) {
+                                predator = other;
+                                predatorDist = d;
+                            }
+                        });
+
+                        if (predator) {
+                            // FLEE from predator!
+                            f.state = 'fleeing';
+                            f.fleeTimer = 500 + nervousness * 500;
+                            const fleeAngle = Math.atan2(f.y - predator.y, f.x - predator.x);
+                            f.targetHeading = fleeAngle + (Math.random() - 0.5) * 0.5;
+                        }
+                    }
+
+                    // ---- MEDIUM FISH: Scatter if large fish nearby ----
+                    if (isMedium) {
+                        let threat = null;
+                        let threatDist = Infinity;
+                        const SCATTER_RANGE = 120;
+
+                        fish.forEach(other => {
+                            if (other.id === f.id) return;
+                            const otherBw = other.bodyWidth || 20;
+                            if (otherBw < MEDIUM_THRESHOLD) return; // Only scatter from large
+
+                            const dx = other.x - f.x;
+                            const dy = other.y - f.y;
+                            const d = Math.sqrt(dx * dx + dy * dy);
+                            if (d < SCATTER_RANGE && d < threatDist) {
+                                threat = other;
+                                threatDist = d;
+                            }
+                        });
+
+                        if (threat && Math.random() < nervousness) {
+                            // Scatter briefly
+                            f.state = 'fleeing';
+                            f.fleeTimer = 200 + nervousness * 300;
+                            const scatterAngle = Math.atan2(f.y - threat.y, f.x - threat.x);
+                            f.targetHeading = scatterAngle + (Math.random() - 0.5) * 1.0;
+                        }
+                    }
+
+                    // ---- WANDER SYSTEM (if not fleeing/hunting) ----
+                    if (f.state === 'idle') {
+                        // Decrement timers
+                        f.wanderTimer = (f.wanderTimer || 0) - 16;
+                        f.restTimer = (f.restTimer || 0) - 16;
+
+                        // Rest behavior - occasionally slow down
+                        if (f.restTimer > 0) {
+                            f.currentSpeed = IDLE_SPEED * 0.2; // Drift slowly
+                            // Subtle idle wobble
+                            f.targetHeading += (Math.random() - 0.5) * 0.02;
+                        } else {
+                            // Maybe start resting
+                            if (Math.random() < 0.001 * (1 - energy)) {
+                                f.restTimer = 1000 + Math.random() * 2000;
+                            }
+                            f.currentSpeed = IDLE_SPEED * (0.7 + energy * 0.6);
                         }
 
-                        // Small gentle wander
-                        f.targetHeading += (Math.random() - 0.5) * 0.08;
-                    } else {
-                        // Big fish: school up in upper area
-                        // Prefer upper third of tank
-                        const preferredY = h * 0.35;
-                        if (f.y > preferredY) {
-                            f.targetHeading += angleDiff(-Math.PI / 2, f.heading) * 0.03;
+                        // Pick new wander target if needed
+                        if (!f.wanderTarget || f.wanderTimer <= 0) {
+                            f.wanderTimer = 2000 + Math.random() * 4000 * (1 - curiosity);
+
+                            if (isSmall) {
+                                // Small fish: wander near coral in lower area
+                                let targetX, targetY;
+                                const nearestCoral = coral.find(c => c.settled);
+                                if (nearestCoral && Math.random() < 0.7) {
+                                    // Wander around coral
+                                    const angle = Math.random() * Math.PI * 2;
+                                    const dist = 40 + Math.random() * 80;
+                                    targetX = nearestCoral.x + Math.cos(angle) * dist;
+                                    targetY = nearestCoral.y - 30 - Math.random() * 60;
+                                } else {
+                                    // Wander in lower area
+                                    targetX = w * 0.2 + Math.random() * w * 0.6;
+                                    targetY = h * 0.6 + Math.random() * h * 0.3;
+                                }
+                                f.wanderTarget = { x: targetX, y: targetY };
+
+                            } else if (isMedium) {
+                                // Medium fish: wander in middle, biased toward school
+                                let targetX = w * 0.15 + Math.random() * w * 0.7;
+                                let targetY = h * 0.3 + Math.random() * h * 0.4;
+
+                                // Bias toward other medium fish (schooling)
+                                let schoolX = 0, schoolY = 0, schoolCount = 0;
+                                fish.forEach(other => {
+                                    if (other.id === f.id) return;
+                                    const otherBw = other.bodyWidth || 20;
+                                    if (otherBw >= SMALL_THRESHOLD && otherBw < MEDIUM_THRESHOLD) {
+                                        schoolX += other.x;
+                                        schoolY += other.y;
+                                        schoolCount++;
+                                    }
+                                });
+                                if (schoolCount > 0 && Math.random() < 0.6) {
+                                    targetX = schoolX / schoolCount + (Math.random() - 0.5) * 100;
+                                    targetY = schoolY / schoolCount + (Math.random() - 0.5) * 80;
+                                }
+                                f.wanderTarget = { x: targetX, y: targetY };
+
+                            } else {
+                                // Large fish: wander anywhere, solitary
+                                const targetX = w * 0.1 + Math.random() * w * 0.8;
+                                const targetY = h * 0.15 + Math.random() * h * 0.6;
+                                f.wanderTarget = { x: targetX, y: targetY };
+                            }
                         }
 
-                        // Gentle random wander
-                        f.targetHeading += (Math.random() - 0.5) * 0.12;
+                        // Swim toward wander target
+                        if (f.wanderTarget) {
+                            const dx = f.wanderTarget.x - f.x;
+                            const dy = f.wanderTarget.y - f.y;
+                            const dist = Math.sqrt(dx * dx + dy * dy);
 
-                        // Occasional larger direction change
-                        if (Math.random() < 0.005) {
-                            f.targetHeading += (Math.random() - 0.5) * Math.PI * 0.4;
+                            if (dist < 30) {
+                                // Reached target, pick new one soon
+                                f.wanderTimer = Math.min(f.wanderTimer, 500);
+                            } else {
+                                const wanderAngle = Math.atan2(dy, dx);
+                                // Smooth turning with personality-based responsiveness
+                                const turnRate = 0.02 + energy * 0.02;
+                                f.targetHeading += angleDiff(wanderAngle, f.heading) * turnRate;
+                            }
                         }
+
+                        // Add micro-wobble for liveliness
+                        f.targetHeading += (Math.random() - 0.5) * 0.03 * energy;
                     }
                 }
 
-                // ---- Boids: smooth velocity-based separation, size-dependent schooling ----
-                const isSmallFish = f.size < SMALL_FISH_SIZE;
+                // ---- Size category (small/medium/large) ----
+                const bw = f.bodyWidth || 20;
+                let sizeCategory;
+                if (bw < SMALL_THRESHOLD) sizeCategory = 'small';
+                else if (bw < MEDIUM_THRESHOLD) sizeCategory = 'medium';
+                else sizeCategory = 'large';
+                f.sizeCategory = sizeCategory; // Store for debug
+
+                // ---- Fish collision and separation based on OVAL body shape ----
+                // Oval dimensions (half-widths) - increased by 25%
+                const fWidthH = (f.bodyWidth || 20) * 0.75;  // Length along heading
+                const fHeightH = (f.bodyHeight || f.bodyWidth * 0.4 || 8) * 0.75; // Perpendicular
+
+                // Helper: get oval radius in a given direction (relative to fish heading)
+                function getOvalRadius(widthH, heightH, heading, dirAngle) {
+                    const relAngle = dirAngle - heading;
+                    const cos = Math.cos(relAngle);
+                    const sin = Math.sin(relAngle);
+                    return (widthH * heightH) / Math.sqrt((heightH * cos) ** 2 + (widthH * sin) ** 2);
+                }
+
                 let sepX = 0, sepY = 0;
                 let alignVx = 0, alignVy = 0, alignCount = 0;
                 let cohX = 0, cohY = 0, cohCount = 0;
@@ -1028,22 +1415,53 @@
                     const dx = f.x - other.x;
                     const dy = f.y - other.y;
                     const d = Math.sqrt(dx * dx + dy * dy);
+                    if (d === 0) return;
 
-                    // Separation - always active, uses velocity push not heading
-                    if (d < BOID_SEP_RANGE && d > 0) {
-                        const strength = 1 - (d / BOID_SEP_RANGE);
+                    const dirAngle = Math.atan2(dy, dx);
+
+                    // Get oval radii in the direction between fish (25% larger)
+                    const fRadius = getOvalRadius(fWidthH, fHeightH, f.heading, dirAngle);
+                    const otherWidthH = (other.bodyWidth || 20) * 0.75;
+                    const otherHeightH = (other.bodyHeight || other.bodyWidth * 0.4 || 8) * 0.75;
+                    const otherRadius = getOvalRadius(otherWidthH, otherHeightH, other.heading, dirAngle + Math.PI);
+
+                    const minDist = fRadius + otherRadius;
+                    const comfortDist = minDist * 1.4;
+
+                    // Hard collision - physically push apart if overlapping
+                    if (d < minDist) {
+                        const overlap = minDist - d;
+                        const pushX = (dx / d) * overlap * 0.5;
+                        const pushY = (dy / d) * overlap * 0.5;
+                        f.x += pushX;
+                        f.y += pushY;
+                        f.vx += pushX * 0.2;
+                        f.vy += pushY * 0.2;
+                        f.targetHeading += angleDiff(dirAngle, f.heading) * 0.1;
+                    }
+
+                    // Soft separation - gentle steering when in comfort zone
+                    if (d < comfortDist) {
+                        const strength = 1 - (d / comfortDist);
                         sepX += (dx / d) * strength;
                         sepY += (dy / d) * strength;
                     }
 
-                    // Alignment and cohesion - only for big fish schooling
-                    if (!isSmallFish && other.size >= SMALL_FISH_SIZE) {
-                        if (d < BOID_ALIGN_RANGE && d > BOID_SEP_RANGE) {
+                    // Get other fish's size category
+                    const otherBw = other.bodyWidth || 20;
+                    let otherSize;
+                    if (otherBw < SMALL_THRESHOLD) otherSize = 'small';
+                    else if (otherBw < MEDIUM_THRESHOLD) otherSize = 'medium';
+                    else otherSize = 'large';
+
+                    // Alignment and cohesion - school with SAME SIZE fish
+                    if (otherSize === sizeCategory) {
+                        if (d < BOID_ALIGN_RANGE && d > comfortDist) {
                             alignVx += other.vx;
                             alignVy += other.vy;
                             alignCount++;
                         }
-                        if (d < BOID_COHESION_RANGE && d > BOID_SEP_RANGE) {
+                        if (d < BOID_COHESION_RANGE && d > comfortDist) {
                             cohX += other.x;
                             cohY += other.y;
                             cohCount++;
@@ -1051,27 +1469,48 @@
                     }
                 });
 
-                // Apply separation as direct velocity push - stronger when closer
+                // Apply soft separation as heading adjustment
                 if (sepX !== 0 || sepY !== 0) {
+                    const sepAngle = Math.atan2(sepY, sepX);
                     const sepMag = Math.sqrt(sepX * sepX + sepY * sepY);
-                    // Scale force by accumulated separation (stronger when many/close neighbors)
-                    const sepForce = Math.min(0.5, sepMag * 0.3);
-                    f.vx += (sepX / sepMag) * sepForce;
-                    f.vy += (sepY / sepMag) * sepForce;
+                    f.targetHeading += angleDiff(sepAngle, f.heading) * Math.min(0.12, sepMag * 0.06);
                 }
 
-                // Apply alignment for big fish
+                // Apply alignment (school with same size)
                 if (alignCount > 0) {
                     const avgAngle = Math.atan2(alignVy / alignCount, alignVx / alignCount);
-                    f.targetHeading += angleDiff(avgAngle, f.heading) * 0.015;
+                    f.targetHeading += angleDiff(avgAngle, f.heading) * 0.025;
                 }
 
-                // Apply cohesion for big fish (gentle pull toward school center)
+                // Apply cohesion (pull toward school center of same size)
                 if (cohCount > 0) {
                     const centerX = cohX / cohCount;
                     const centerY = cohY / cohCount;
                     const cohAngle = Math.atan2(centerY - f.y, centerX - f.x);
-                    f.targetHeading += angleDiff(cohAngle, f.heading) * 0.008;
+                    f.targetHeading += angleDiff(cohAngle, f.heading) * 0.015;
+                }
+
+                // ---- Size-based area preference ----
+                if (sizeCategory === 'small') {
+                    // Small fish: prefer lower area near coral
+                    const preferredY = h * 0.75;
+                    if (f.y < preferredY - 80) {
+                        f.targetHeading += angleDiff(Math.PI * 0.5, f.heading) * 0.025;
+                    }
+                } else if (sizeCategory === 'medium') {
+                    // Medium fish: prefer middle area
+                    const preferredY = h * 0.5;
+                    if (f.y < preferredY - 100) {
+                        f.targetHeading += angleDiff(Math.PI * 0.5, f.heading) * 0.015;
+                    } else if (f.y > preferredY + 100) {
+                        f.targetHeading += angleDiff(-Math.PI * 0.5, f.heading) * 0.015;
+                    }
+                } else {
+                    // Large fish: prefer upper area
+                    const preferredY = h * 0.3;
+                    if (f.y > preferredY + 120) {
+                        f.targetHeading += angleDiff(-Math.PI * 0.5, f.heading) * 0.02;
+                    }
                 }
 
                 // ---- Jellyfish avoidance ----
@@ -1108,9 +1547,25 @@
                 headingDelta = Math.max(-MAX_TURN_PER_FRAME, Math.min(MAX_TURN_PER_FRAME, headingDelta));
                 f.heading += headingDelta;
 
+                // ---- Handle fleeing state decay ----
+                if (f.state === 'fleeing') {
+                    f.fleeTimer = (f.fleeTimer || 0) - 16; // Approximate frame time
+                    if (f.fleeTimer <= 0) {
+                        f.state = 'idle';
+                        f.fleeTimer = 0;
+                    }
+                }
+
                 // ---- Apply velocity with per-fish speed variation ----
                 const speedMult = 0.85 + fishRand * 0.3;
-                const speed = (f.state === 'seeking' ? SEEK_SPEED : IDLE_SPEED) * speedMult;
+                let speed;
+                if (f.state === 'fleeing') {
+                    speed = FLEE_SPEED * speedMult;
+                } else if (f.state === 'seeking') {
+                    speed = SEEK_SPEED * speedMult;
+                } else {
+                    speed = IDLE_SPEED * speedMult;
+                }
                 f.vx = Math.cos(f.heading) * speed;
                 f.vy = Math.sin(f.heading) * speed;
                 f.x += f.vx;
@@ -1140,44 +1595,115 @@
                     f.targetHeading = -Math.PI * 0.5 + Math.PI * 0.1 * (Math.random() - 0.5); // Bounce up
                 }
 
-                // ---- Render (normalized points, centered at origin) ----
-                const wiggleSpeed = f.state === 'seeking' ? 120 : 200;
-                const wiggleAmt = f.state === 'seeking' ? 5 : 3;
+                // ---- Render ----
+                // Wiggle parameters based on state
+                let wiggleSpeed, wiggleAmt;
+                if (f.state === 'fleeing') {
+                    wiggleSpeed = 60;  // Fast panic wiggle
+                    wiggleAmt = 10;
+                } else if (f.state === 'seeking') {
+                    wiggleSpeed = 100;
+                    wiggleAmt = 7;
+                } else {
+                    wiggleSpeed = 180;
+                    wiggleAmt = 4;
+                }
                 const wiggle = Math.sin(now / wiggleSpeed + f.id) * wiggleAmt;
 
-                // Apply per-fish scale variation
+                // Stroke animation - subtle pulse
+                const strokePulse = 1 + 0.15 * Math.sin(now / 800 + f.id * 2);
+                const baseLineWidth = f.state === 'fleeing' ? 3 : 2.5;
+
                 const scaleX = f.scaleX || 1;
                 const scaleY = f.scaleY || 1;
 
                 ctx.save();
                 ctx.translate(f.x, f.y);
                 ctx.rotate(f.heading);
-                ctx.scale(scaleX, scaleY);
 
                 ctx.strokeStyle = color;
-                ctx.lineWidth = 2.5;
+                ctx.lineWidth = baseLineWidth * strokePulse;
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
-                ctx.globalAlpha = 0.9;
 
-                ctx.beginPath();
-                ctx.moveTo(pts[0].x, pts[0].y);
-                for (let i = 1; i < pts.length; i++) {
-                    const t = i / pts.length;
-                    const wg = wiggle * Math.sin(t * Math.PI);
-                    const p0 = pts[i - 1];
-                    const p1 = pts[i];
-                    ctx.quadraticCurveTo(
-                        p0.x + wg, p0.y,
-                        (p0.x + p1.x) / 2 + wg, (p0.y + p1.y) / 2
-                    );
+                // Check if this fish uses the SVG path template
+                if (f.useSvgPath && fishPath2D) {
+                    const sf = f.scaleFactor || 0.1;
+
+                    // Scale line width inversely, with pulse
+                    ctx.lineWidth = (3 * strokePulse) / sf;
+
+                    ctx.scale(sf, sf);
+                    ctx.translate(-FISH_SVG_CENTER_X, -FISH_SVG_CENTER_Y);
+
+                    // Add wiggle via skew - more dramatic when fleeing
+                    const skewMult = f.state === 'fleeing' ? 0.004 : 0.002;
+                    const skew = wiggle * skewMult;
+                    ctx.transform(1, 0, skew, 1, 0, 0);
+
+                    // Fleeing fish flash brighter
+                    ctx.globalAlpha = f.state === 'fleeing' ? 1 : 0.9;
+                    ctx.stroke(fishPath2D);
+
+                } else {
+                    // Fallback: simple procedural fish
+                    ctx.scale(scaleX, scaleY);
+
+                    const bodyPts = f.bodyPoints || pts;
+                    const throughPts = f.throughLine;
+
+                    // Draw body outline
+                    ctx.globalAlpha = 0.9;
+                    ctx.beginPath();
+                    ctx.moveTo(bodyPts[0].x, bodyPts[0].y);
+                    for (let i = 1; i < bodyPts.length; i++) {
+                        const p0 = bodyPts[i - 1];
+                        const p1 = bodyPts[i];
+                        ctx.quadraticCurveTo(p0.x, p0.y, (p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
+                    }
+                    ctx.closePath();
+                    ctx.stroke();
+
+                    // Fill body
+                    ctx.globalAlpha = 0.15;
+                    ctx.fillStyle = color;
+                    ctx.fill();
+
+                    // Draw through-line (bisecting stroke + tail) - THIS WIGGLES!
+                    if (throughPts && throughPts.length > 1) {
+                        ctx.globalAlpha = 0.85;
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(throughPts[0].x, throughPts[0].y);
+                        for (let i = 1; i < throughPts.length; i++) {
+                            const t = i / throughPts.length;
+                            const wg = wiggle * Math.sin(t * Math.PI * 1.5);
+                            const p0 = throughPts[i - 1];
+                            const p1 = throughPts[i];
+                            ctx.quadraticCurveTo(
+                                p0.x, p0.y + wg,
+                                (p0.x + p1.x) / 2, (p0.y + p1.y) / 2 + wg
+                            );
+                        }
+                        ctx.stroke();
+                    } else {
+                        // Simple fish - wiggle the body outline instead
+                        ctx.globalAlpha = 0.9;
+                        ctx.beginPath();
+                        ctx.moveTo(pts[0].x, pts[0].y);
+                        for (let i = 1; i < pts.length; i++) {
+                            const t = i / pts.length;
+                            const wg = wiggle * Math.sin(t * Math.PI);
+                            const p0 = pts[i - 1];
+                            const p1 = pts[i];
+                            ctx.quadraticCurveTo(
+                                p0.x + wg, p0.y,
+                                (p0.x + p1.x) / 2 + wg, (p0.y + p1.y) / 2
+                            );
+                        }
+                        ctx.stroke();
+                    }
                 }
-                ctx.stroke();
-
-                // Subtle fill
-                ctx.globalAlpha = 0.15;
-                ctx.fillStyle = color;
-                ctx.fill();
 
                 ctx.globalAlpha = 1;
                 ctx.restore();
@@ -1874,20 +2400,238 @@
                 
                 // Pulsing opacity
                 const pulse = 0.15 + 0.1 * Math.sin(now / 2000 + p.phase);
-                
+
                 ctx.fillStyle = `rgba(147, 197, 253, ${pulse})`;
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
                 ctx.fill();
             });
         }
-        
+
+        // ============================================
+        // Debug Visualization
+        // ============================================
+        function drawDebug() {
+            if (!debugMode) return;
+
+            ctx.save();
+
+            // Draw food hitboxes
+            food.forEach(fd => {
+                // Food detection range (just a small marker)
+                ctx.strokeStyle = 'rgba(122, 229, 130, 0.5)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([3, 3]);
+                ctx.beginPath();
+                ctx.arc(fd.x, fd.y, 8, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Label
+                ctx.setLineDash([]);
+                ctx.font = '9px JetBrains Mono';
+                ctx.fillStyle = 'rgba(122, 229, 130, 0.7)';
+                ctx.fillText('food', fd.x + 10, fd.y + 3);
+            });
+
+            // Draw fish debug info
+            fish.forEach(f => {
+                const bodyWidth = f.bodyWidth || 20;
+                const bodyHeight = f.bodyHeight || bodyWidth * 0.4;
+                const scaleX = f.scaleX || 1;
+
+                // Mouth position (60% toward nose from center, matching AI code)
+                const rawNoseOffset = f.useSvgPath
+                    ? (f.noseOffset || bodyWidth)
+                    : (f.noseOffset || bodyWidth) * scaleX;
+                const mouthOffset = rawNoseOffset * 0.6;
+
+                // Oval collision dimensions (25% larger, matching collision code)
+                const collisionW = bodyWidth * 0.75;
+                const collisionH = bodyHeight * 0.75;
+
+                // Draw OVAL collision bounds (rotated to fish heading)
+                ctx.strokeStyle = 'rgba(255, 100, 100, 0.5)';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.save();
+                ctx.translate(f.x, f.y);
+                ctx.rotate(f.heading);
+                ctx.ellipse(0, 0, collisionW, collisionH, 0, 0, Math.PI * 2);
+                ctx.restore();
+                ctx.stroke();
+
+                // Fish body bounds (full visual size)
+                ctx.strokeStyle = 'rgba(255, 200, 100, 0.2)';
+                ctx.setLineDash([2, 2]);
+                ctx.beginPath();
+                ctx.save();
+                ctx.translate(f.x, f.y);
+                ctx.rotate(f.heading);
+                ctx.ellipse(0, 0, bodyWidth, bodyHeight, 0, 0, Math.PI * 2);
+                ctx.restore();
+                ctx.stroke();
+
+                // Mouth position (closer to center now)
+                const mouthX = f.x + Math.cos(f.heading) * mouthOffset;
+                const mouthY = f.y + Math.sin(f.heading) * mouthOffset;
+
+                // Mouth marker (crosshair)
+                ctx.setLineDash([]);
+                ctx.strokeStyle = 'rgba(0, 255, 150, 0.8)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(mouthX - 5, mouthY);
+                ctx.lineTo(mouthX + 5, mouthY);
+                ctx.moveTo(mouthX, mouthY - 5);
+                ctx.lineTo(mouthX, mouthY + 5);
+                ctx.stroke();
+
+                // Eating range circle around mouth
+                const EAT_RANGE = 35;
+                ctx.strokeStyle = 'rgba(0, 255, 150, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.arc(mouthX, mouthY, EAT_RANGE, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Heading direction arrow (current)
+                ctx.setLineDash([]);
+                ctx.strokeStyle = 'rgba(100, 200, 255, 0.7)';
+                ctx.lineWidth = 2;
+                const arrowLen = 30;
+                const arrowX = f.x + Math.cos(f.heading) * arrowLen;
+                const arrowY = f.y + Math.sin(f.heading) * arrowLen;
+                ctx.beginPath();
+                ctx.moveTo(f.x, f.y);
+                ctx.lineTo(arrowX, arrowY);
+                ctx.stroke();
+
+                // Arrowhead
+                const headLen = 6;
+                const headAngle = 0.5;
+                ctx.beginPath();
+                ctx.moveTo(arrowX, arrowY);
+                ctx.lineTo(
+                    arrowX - Math.cos(f.heading - headAngle) * headLen,
+                    arrowY - Math.sin(f.heading - headAngle) * headLen
+                );
+                ctx.moveTo(arrowX, arrowY);
+                ctx.lineTo(
+                    arrowX - Math.cos(f.heading + headAngle) * headLen,
+                    arrowY - Math.sin(f.heading + headAngle) * headLen
+                );
+                ctx.stroke();
+
+                // Target heading (where fish wants to go)
+                if (f.targetHeading !== undefined) {
+                    ctx.strokeStyle = 'rgba(255, 200, 0, 0.5)';
+                    ctx.setLineDash([3, 3]);
+                    const targetArrowLen = 22;
+                    const targetX = f.x + Math.cos(f.targetHeading) * targetArrowLen;
+                    const targetY = f.y + Math.sin(f.targetHeading) * targetArrowLen;
+                    ctx.beginPath();
+                    ctx.moveTo(f.x, f.y);
+                    ctx.lineTo(targetX, targetY);
+                    ctx.stroke();
+                }
+
+                // Center marker
+                ctx.setLineDash([]);
+                ctx.fillStyle = 'rgba(255, 100, 100, 0.6)';
+                ctx.beginPath();
+                ctx.arc(f.x, f.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw wander target if exists
+                if (f.wanderTarget) {
+                    ctx.strokeStyle = 'rgba(100, 255, 200, 0.3)';
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash([2, 4]);
+                    ctx.beginPath();
+                    ctx.moveTo(f.x, f.y);
+                    ctx.lineTo(f.wanderTarget.x, f.wanderTarget.y);
+                    ctx.stroke();
+                    // Wander target marker
+                    ctx.fillStyle = 'rgba(100, 255, 200, 0.4)';
+                    ctx.beginPath();
+                    ctx.arc(f.wanderTarget.x, f.wanderTarget.y, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Draw hunt target line if hunting
+                if (f.state === 'hunting' && f.huntTarget !== null) {
+                    const prey = fish.find(p => p.id === f.huntTarget);
+                    if (prey) {
+                        ctx.strokeStyle = 'rgba(255, 50, 50, 0.6)';
+                        ctx.lineWidth = 2;
+                        ctx.setLineDash([4, 4]);
+                        ctx.beginPath();
+                        ctx.moveTo(f.x, f.y);
+                        ctx.lineTo(prey.x, prey.y);
+                        ctx.stroke();
+                    }
+                }
+
+                // Labels
+                ctx.setLineDash([]);
+                ctx.font = '9px JetBrains Mono';
+                const labelX = f.x + collisionW + 10;
+
+                // Size category label (SMALL/MEDIUM/LARGE)
+                const sizeCategory = f.sizeCategory || 'medium';
+                let sizeColor;
+                if (sizeCategory === 'small') sizeColor = 'rgba(150, 220, 150, 0.9)';
+                else if (sizeCategory === 'medium') sizeColor = 'rgba(220, 200, 100, 0.9)';
+                else sizeColor = 'rgba(150, 150, 220, 0.9)';
+                ctx.fillStyle = sizeColor;
+                ctx.fillText(sizeCategory.toUpperCase(), labelX, f.y - 14);
+
+                // State label (with hunting indicator)
+                let stateColor;
+                let stateText = f.state || 'idle';
+                if (f.state === 'fleeing') stateColor = 'rgba(255, 100, 100, 1)';
+                else if (f.state === 'hunting') { stateColor = 'rgba(255, 50, 50, 0.9)'; stateText = '🎯 hunting'; }
+                else if (f.state === 'seeking') stateColor = 'rgba(255, 200, 0, 0.9)';
+                else stateColor = 'rgba(100, 200, 255, 0.6)';
+                ctx.fillStyle = stateColor;
+                ctx.fillText(stateText, labelX, f.y);
+
+                // Personality bar (E/C/N = energy/curiosity/nervousness)
+                const e = f.energy || 0.5;
+                const c = f.curiosity || 0.4;
+                const n = f.nervousness || 0.4;
+                ctx.fillStyle = 'rgba(150, 150, 150, 0.4)';
+                ctx.fillText(`E${(e*10).toFixed(0)} C${(c*10).toFixed(0)} N${(n*10).toFixed(0)}`, labelX, f.y + 14);
+
+                // Dimensions
+                ctx.fillStyle = 'rgba(120, 120, 120, 0.4)';
+                ctx.fillText(`${Math.round(bodyWidth)}×${Math.round(bodyHeight)}`, labelX, f.y + 26);
+            });
+
+            // Draw jellyfish bounds
+            jellyfish.forEach(j => {
+                if (!j.shape) return;
+                ctx.strokeStyle = 'rgba(199, 125, 255, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.arc(j.x, j.y, j.shape.bellRadius * 1.5, 0, Math.PI * 2);
+                ctx.stroke();
+            });
+
+            ctx.setLineDash([]);
+            ctx.restore();
+        }
+
         // Animation loop - smart pausing when idle
         let animationFrameId = null;
         let isAnimating = false;
 
         function hasActiveAnimation() {
             return isDrawing ||
+                   debugMode ||
                    particles.length > 0 ||
                    ripples.length > 0 ||
                    strokes.length > 0 ||
@@ -1913,6 +2657,7 @@
             drawRipples();
             drawParticles();
             drawCursor();
+            drawDebug();
 
             // Only continue animation if there's something active
             if (hasActiveAnimation()) {
@@ -2025,16 +2770,26 @@
 
                 } else if (classified.type === 'fish') {
                     if (fish.length >= MAX_FISH) fish.shift();
-                    // Use initial heading from stroke orientation
                     const fishShape = classified.fishShape;
                     const heading = fishShape.initialHeading;
-                    // Generate unique color hue for each fish
                     const hueShift = (id * 47) % 360;
+
+                    // Personality traits (0-1 scale)
+                    const energy = 0.3 + Math.random() * 0.7;      // Lazy to hyperactive
+                    const curiosity = 0.2 + Math.random() * 0.6;   // Stick to area vs explore
+                    const nervousness = 0.2 + Math.random() * 0.6; // Calm vs easily startled
+
                     fish.push({
                         id,
                         points: fishShape.points,
+                        bodyPoints: fishShape.bodyPoints,
+                        throughLine: fishShape.throughLine,
                         bodyWidth: fishShape.bodyWidth,
                         bodyHeight: fishShape.bodyHeight,
+                        noseOffset: fishShape.noseOffset,
+                        isStrokeBased: fishShape.isStrokeBased,
+                        useSvgPath: fishShape.useSvgPath,
+                        scaleFactor: fishShape.scaleFactor,
                         x: classified.center.x,
                         y: classified.center.y,
                         size: classified.size,
@@ -2046,6 +2801,18 @@
                         hueShift: hueShift,
                         scaleX: 0.9 + Math.random() * 0.2,
                         scaleY: 0.9 + Math.random() * 0.2,
+                        // Personality
+                        energy: energy,
+                        curiosity: curiosity,
+                        nervousness: nervousness,
+                        // Wander system
+                        wanderTarget: null,
+                        wanderTimer: 0,
+                        restTimer: 0,
+                        currentSpeed: 0.4,
+                        // Hunting (for large fish)
+                        huntTarget: null,
+                        lastAteAt: 0,
                         createdAt: now
                     });
 
@@ -2119,6 +2886,60 @@
         canvas.addEventListener('touchmove', draw, { passive: false });
         canvas.addEventListener('touchend', endDraw);
         canvas.addEventListener('touchcancel', endDraw);
+
+        // Debug toggle
+        const debugToggle = document.getElementById('toggleDebug');
+        if (debugToggle) {
+            debugToggle.addEventListener('change', (e) => {
+                debugMode = e.target.checked;
+                startAnimation();
+            });
+        }
+
+        // Click to scare fish - check if click hit a fish
+        function scareFishAtPoint(x, y) {
+            const SCARE_RADIUS = 60; // How close click needs to be
+            let scared = false;
+
+            fish.forEach(f => {
+                const dx = x - f.x;
+                const dy = y - f.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                // Check if click is within fish's general area
+                const hitRadius = Math.max(f.bodyWidth || 30, f.bodyHeight || 20) + SCARE_RADIUS;
+
+                if (dist < hitRadius) {
+                    // Scare this fish! Flee away from click point
+                    f.state = 'fleeing';
+                    f.fleeTimer = 800 + Math.random() * 400; // Flee for 0.8-1.2 seconds
+                    f.targetHeading = Math.atan2(f.y - y, f.x - x); // Away from click
+                    f.heading = f.targetHeading; // Instant turn when scared
+                    scared = true;
+
+                    // Burst of particles at fish location
+                    for (let i = 0; i < 4; i++) {
+                        const angle = Math.random() * Math.PI * 2;
+                        particles.push({
+                            x: f.x, y: f.y,
+                            vx: Math.cos(angle) * 2,
+                            vy: Math.sin(angle) * 2,
+                            life: 1, createdAt: Date.now()
+                        });
+                    }
+                }
+            });
+
+            return scared;
+        }
+
+        // Add click listener for scaring fish
+        canvas.addEventListener('click', (e) => {
+            const pos = getPos(e);
+            if (scareFishAtPoint(pos.x, pos.y)) {
+                startAnimation();
+            }
+        });
 
         // ============================================
         // Cursor Spotlight Effect
