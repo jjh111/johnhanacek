@@ -8,8 +8,6 @@ class Cursor3D {
         this.surfaceNormal = new THREE.Vector3(0, 1, 0);
         this.visible = false;
         this.smoothingFactor = 0.15;
-        
-        console.log(`Cursor ${viewportId} created`);
     }
     
     createCursorMesh() {
@@ -39,13 +37,13 @@ class Cursor3D {
         
         group.add(this.arrowGroup);
         
-        // Create label
+        // Create label - thinner background
         this.labelGroup = new THREE.Group();
         
-        // Label background
+        // Label background - thinner (0.02 instead of 0.04)
         const labelWidth = 0.7;
         const labelHeight = 0.3;
-        const labelDepth = 0.04;
+        const labelDepth = 0.02; // Thinner background
         const labelGeometry = new THREE.BoxGeometry(labelWidth, labelHeight, labelDepth);
         const labelMaterial = new THREE.MeshStandardMaterial({
             color: 0x1a1a2e,
@@ -57,7 +55,7 @@ class Cursor3D {
         const labelBg = new THREE.Mesh(labelGeometry, labelMaterial);
         this.labelGroup.add(labelBg);
         
-        // Create text label
+        // Create text label with JetBrains Mono font
         const canvas = document.createElement('canvas');
         canvas.width = 128;
         canvas.height = 64;
@@ -73,7 +71,7 @@ class Cursor3D {
         ctx.stroke();
         
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 32px Arial';
+        ctx.font = 'bold 32px "JetBrains Mono", monospace';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(this.viewportId.toUpperCase(), 64, 32);
@@ -85,7 +83,7 @@ class Cursor3D {
             transparent: true
         });
         const textMesh = new THREE.Mesh(textGeometry, textMaterial);
-        textMesh.position.z = 0.025;
+        textMesh.position.z = 0.015; // Adjusted for thinner background
         this.labelGroup.add(textMesh);
         
         this.labelGroup.position.set(0.6, 0.2, 0);
@@ -108,7 +106,6 @@ class Cursor3D {
     }
     
     setSurfaceNormal(normal) {
-        console.log(`Cursor ${this.viewportId} received normal:`, normal.x.toFixed(2), normal.y.toFixed(2), normal.z.toFixed(2));
         this.surfaceNormal.copy(normal).normalize();
     }
     
@@ -142,8 +139,6 @@ class Cursor3D {
         // We want it to point toward the surface, which is opposite the surface normal
         const up = new THREE.Vector3(0, 1, 0);
         const targetDir = this.surfaceNormal.clone().negate();
-        
-        console.log(`Cursor ${this.viewportId} updating orientation, toward surface:`, targetDir.x.toFixed(2), targetDir.y.toFixed(2), targetDir.z.toFixed(2));
         
         const quaternion = new THREE.Quaternion();
         quaternion.setFromUnitVectors(up, targetDir);

@@ -41,16 +41,16 @@ class ModelLoader {
         // Add tail atoms (2 carbons extending from one ring position)
         const tailStart = carbonPositions[0];
         carbonPositions.push({
-            x: tailStart.x + 1.8,  // Shortened from 2.5
+            x: tailStart.x + 1.8,
             y: 0.5,
-            z: tailStart.z + 0.6,  // Adjusted proportionally
+            z: tailStart.z + 0.6,
             size: 0.5
         });
         
         carbonPositions.push({
-            x: tailStart.x + 3.2,  // Adjusted from 4
+            x: tailStart.x + 3.2,
             y: 0,
-            z: tailStart.z + 1.0,  // Adjusted from 1.2
+            z: tailStart.z + 1.0,
             size: 0.5
         });
         
@@ -88,10 +88,18 @@ class ModelLoader {
         this.createBond(carbonPositions[0], carbonPositions[numRingAtoms], bondMaterial, group, bondRadius);
         this.createBond(carbonPositions[numRingAtoms], carbonPositions[numRingAtoms + 1], bondMaterial, group, bondRadius);
         
-        // Center the molecule
-        const box = new THREE.Box3().setFromObject(group);
-        const center = box.getCenter(new THREE.Vector3());
-        group.position.sub(center);
+        // Center the molecule on the ring atoms only (not the tail)
+        // Calculate center of just the 6 ring atoms
+        const ringCenter = new THREE.Vector3();
+        for (let i = 0; i < numRingAtoms; i++) {
+            ringCenter.x += carbonPositions[i].x;
+            ringCenter.y += carbonPositions[i].y;
+            ringCenter.z += carbonPositions[i].z;
+        }
+        ringCenter.divideScalar(numRingAtoms);
+        
+        // Move group so ring center is at origin
+        group.position.sub(ringCenter);
         
         return group;
     }

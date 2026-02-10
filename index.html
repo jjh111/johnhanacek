@@ -1147,14 +1147,35 @@
                     }
                 });
 
-                if (nearestFood && nearestDist < DETECT_RANGE) {
+                // Get personality (with defaults for old fish)
+                const energy = f.energy || 0.5;
+                const curiosity = f.curiosity || 0.4;
+                const nervousness = f.nervousness || 0.4;
+
+                // Determine size category
+                const bw = f.bodyWidth || 20;
+                const isSmall = bw < SMALL_THRESHOLD;
+                const isLarge = bw >= MEDIUM_THRESHOLD;
+                const isMedium = !isSmall && !isLarge;
+
+                // Initialize state timers if missing
+                if (f.huntTimer === undefined) f.huntTimer = 0;
+                if (f.fleeTimer === undefined) f.fleeTimer = 0;
+
+                // ---- DECREMENT STATE TIMERS ----
+                f.huntTimer = Math.max(0, (f.huntTimer || 0) - 16);
+                f.fleeTimer = Math.max(0, (f.fleeTimer || 0) - 16);
+
+                // ---- FOOD SEEKING (highest priority for all fish) ----
+                // Eat range varies by size: large=35, medium=17 (50%), small=9 (25%)
+                const sizeEatRange = isLarge ? EAT_RANGE : (isMedium ? EAT_RANGE * 0.5 : EAT_RANGE * 0.25);
+
+                if (nearestFood && nearestDist < DETECT_RANGE && f.state !== 'fleeing') {
                     f.state = 'seeking';
                     f.targetHeading = Math.atan2(nearestFood.y - f.y, nearestFood.x - f.x);
-                    // Add slight wobble to avoid all fish converging on same point
                     f.targetHeading += (fishRand - 0.5) * 0.3;
 
-                    // Eat food when MOUTH is close enough (not center)
-                    if (nearestMouthDist < EAT_RANGE) {
+                    if (nearestMouthDist < sizeEatRange) {
                         const idx = food.indexOf(nearestFood);
                         if (idx !== -1) {
                             food.splice(idx, 1);
@@ -1169,32 +1190,60 @@
                         }
                         f.state = 'idle';
                     }
-                } else {
+                }
+                // ---- FLEEING STATE (persists until timer expires) ----
+                else if (f.state === 'fleeing' && f.fleeTimer > 0) {
+                    // Stay fleeing, keep current heading
+                }
+                // ---- HUNTING STATE (persists until timer expires or prey eaten/lost) ----
+                else if (f.state === 'hunting' && f.huntTimer > 0 && isLarge) {
+                    const prey = fish.find(p => p.id === f.huntTarget);
+                    if (prey) {
+                        const preyDist = Math.sqrt((prey.x - f.x) ** 2 + (prey.y - f.y) ** 2);
+                        const huntAngle = Math.atan2(prey.y - f.y, prey.x - f.x);
+                        f.targetHeading = huntAngle;
+
+                        // Check if close enough to eat
+                        const EAT_PREY_RANGE = 30;
+                        if (preyDist < EAT_PREY_RANGE) {
+                            const preyIdx = fish.findIndex(p => p.id === prey.id);
+                            if (preyIdx !== -1) {
+                                fish.splice(preyIdx, 1);
+                                f.lastAteAt = now;
+                                for (let i = 0; i < 8; i++) {
+                                    const a = (i / 8) * Math.PI * 2;
+                                    particles.push({
+                                        x: prey.x, y: prey.y,
+                                        vx: Math.cos(a) * 1.5, vy: Math.sin(a) * 1.5,
+                                        life: 1, createdAt: now
+                                    });
+                                }
+                            }
+                            f.state = 'idle';
+                            f.huntTarget = null;
+                            f.huntTimer = 0;
+                        }
+                    } else {
+                        // Prey gone, stop hunting
+                        f.state = 'idle';
+                        f.huntTarget = null;
+                        f.huntTimer = 0;
+                    }
+                }
+                // ---- IDLE STATE: Check for threats and behaviors ----
+                else {
                     f.state = 'idle';
 
-                    // Get personality (with defaults for old fish)
-                    const energy = f.energy || 0.5;
-                    const curiosity = f.curiosity || 0.4;
-                    const nervousness = f.nervousness || 0.4;
-
-                    // Determine size category
-                    const bw = f.bodyWidth || 20;
-                    const isSmall = bw < SMALL_THRESHOLD;
-                    const isLarge = bw >= MEDIUM_THRESHOLD;
-                    const isMedium = !isSmall && !isLarge;
-
-                    // ---- LARGE FISH: Predator behavior - hunt small fish ----
+                    // ---- LARGE FISH: Start hunting if prey nearby ----
                     if (isLarge) {
                         let prey = null;
                         let preyDist = Infinity;
                         const HUNT_RANGE = 250;
-                        const EAT_PREY_RANGE = 25;
 
-                        // Look for small fish to hunt
                         fish.forEach(other => {
                             if (other.id === f.id) return;
                             const otherBw = other.bodyWidth || 20;
-                            if (otherBw >= SMALL_THRESHOLD) return; // Only hunt small fish
+                            if (otherBw >= SMALL_THRESHOLD) return;
 
                             const dx = other.x - f.x;
                             const dy = other.y - f.y;
@@ -1205,46 +1254,26 @@
                             }
                         });
 
-                        if (prey && Math.random() < 0.3 + energy * 0.4) {
-                            // Hunt this prey
+                        if (prey) {
+                            // Start hunting - no random chance, commit to the hunt
                             f.state = 'hunting';
                             f.huntTarget = prey.id;
+                            f.huntTimer = 3000 + energy * 2000; // Hunt for 3-5 seconds
                             const huntAngle = Math.atan2(prey.y - f.y, prey.x - f.x);
                             f.targetHeading = huntAngle;
-
-                            // Check if close enough to eat
-                            if (preyDist < EAT_PREY_RANGE) {
-                                // EAT the small fish!
-                                const preyIdx = fish.findIndex(p => p.id === prey.id);
-                                if (preyIdx !== -1) {
-                                    fish.splice(preyIdx, 1);
-                                    f.lastAteAt = now;
-                                    // Burst of particles
-                                    for (let i = 0; i < 8; i++) {
-                                        const a = (i / 8) * Math.PI * 2;
-                                        particles.push({
-                                            x: prey.x, y: prey.y,
-                                            vx: Math.cos(a) * 1.5, vy: Math.sin(a) * 1.5,
-                                            life: 1, createdAt: now
-                                        });
-                                    }
-                                }
-                                f.state = 'idle';
-                                f.huntTarget = null;
-                            }
                         }
                     }
 
-                    // ---- SMALL FISH: Check for predators and flee ----
-                    if (isSmall) {
+                    // ---- SMALL FISH: Flee from predators TOWARD CORAL ----
+                    if (isSmall && f.state === 'idle') {
                         let predator = null;
                         let predatorDist = Infinity;
-                        const DANGER_RANGE = 150;
+                        const DANGER_RANGE = 180;
 
                         fish.forEach(other => {
                             if (other.id === f.id) return;
                             const otherBw = other.bodyWidth || 20;
-                            if (otherBw < MEDIUM_THRESHOLD) return; // Only fear large fish
+                            if (otherBw < MEDIUM_THRESHOLD) return;
 
                             const dx = other.x - f.x;
                             const dy = other.y - f.y;
@@ -1256,24 +1285,47 @@
                         });
 
                         if (predator) {
-                            // FLEE from predator!
                             f.state = 'fleeing';
-                            f.fleeTimer = 500 + nervousness * 500;
-                            const fleeAngle = Math.atan2(f.y - predator.y, f.x - predator.x);
-                            f.targetHeading = fleeAngle + (Math.random() - 0.5) * 0.5;
+                            f.fleeTimer = 1500 + nervousness * 1000;
+
+                            // Find nearest coral and flee TOWARD it (safe haven)
+                            let nearestCoral = null;
+                            let nearestCoralDist = Infinity;
+                            coral.forEach(c => {
+                                if (!c.settled) return;
+                                const d = Math.sqrt((c.x - f.x) ** 2 + (c.y - f.y) ** 2);
+                                if (d < nearestCoralDist) {
+                                    nearestCoralDist = d;
+                                    nearestCoral = c;
+                                }
+                            });
+
+                            if (nearestCoral && nearestCoralDist < 400) {
+                                // Flee toward coral (safety)
+                                const coralH = nearestCoral.shape?.height || 60;
+                                const safeY = nearestCoral.y - coralH * 0.5; // Aim for middle of coral
+                                const fleeAngle = Math.atan2(safeY - f.y, nearestCoral.x - f.x);
+                                f.targetHeading = fleeAngle + (Math.random() - 0.5) * 0.2;
+                            } else {
+                                // No coral nearby, flee away from predator and down
+                                const fleeAngle = Math.atan2(f.y - predator.y, f.x - predator.x);
+                                // Bias toward bottom of screen where coral usually is
+                                const biasedAngle = fleeAngle * 0.6 + (Math.PI * 0.5) * 0.4;
+                                f.targetHeading = biasedAngle + (Math.random() - 0.5) * 0.3;
+                            }
                         }
                     }
 
-                    // ---- MEDIUM FISH: Scatter if large fish nearby ----
-                    if (isMedium) {
+                    // ---- MEDIUM FISH: Scatter from large fish ----
+                    if (isMedium && f.state === 'idle') {
                         let threat = null;
                         let threatDist = Infinity;
-                        const SCATTER_RANGE = 120;
+                        const SCATTER_RANGE = 140;
 
                         fish.forEach(other => {
                             if (other.id === f.id) return;
                             const otherBw = other.bodyWidth || 20;
-                            if (otherBw < MEDIUM_THRESHOLD) return; // Only scatter from large
+                            if (otherBw < MEDIUM_THRESHOLD) return;
 
                             const dx = other.x - f.x;
                             const dy = other.y - f.y;
@@ -1284,81 +1336,93 @@
                             }
                         });
 
-                        if (threat && Math.random() < nervousness) {
-                            // Scatter briefly
+                        if (threat) {
                             f.state = 'fleeing';
-                            f.fleeTimer = 200 + nervousness * 300;
+                            f.fleeTimer = 800 + nervousness * 600; // Scatter for 0.8-1.4 seconds
                             const scatterAngle = Math.atan2(f.y - threat.y, f.x - threat.x);
-                            f.targetHeading = scatterAngle + (Math.random() - 0.5) * 1.0;
+                            f.targetHeading = scatterAngle + (Math.random() - 0.5) * 0.6;
                         }
                     }
 
-                    // ---- WANDER SYSTEM (if not fleeing/hunting) ----
+                    // ---- WANDER SYSTEM (only if still idle) ----
                     if (f.state === 'idle') {
-                        // Decrement timers
                         f.wanderTimer = (f.wanderTimer || 0) - 16;
                         f.restTimer = (f.restTimer || 0) - 16;
 
-                        // Rest behavior - occasionally slow down
+                        // Rest behavior
                         if (f.restTimer > 0) {
-                            f.currentSpeed = IDLE_SPEED * 0.2; // Drift slowly
-                            // Subtle idle wobble
-                            f.targetHeading += (Math.random() - 0.5) * 0.02;
+                            f.currentSpeed = IDLE_SPEED * 0.2;
+                            f.targetHeading += (Math.random() - 0.5) * 0.015;
                         } else {
-                            // Maybe start resting
-                            if (Math.random() < 0.001 * (1 - energy)) {
-                                f.restTimer = 1000 + Math.random() * 2000;
+                            if (Math.random() < 0.0005 * (1 - energy)) {
+                                f.restTimer = 2000 + Math.random() * 3000;
                             }
                             f.currentSpeed = IDLE_SPEED * (0.7 + energy * 0.6);
                         }
 
-                        // Pick new wander target if needed
+                        // Pick new wander target - MUCH SLOWER timing
                         if (!f.wanderTarget || f.wanderTimer <= 0) {
-                            f.wanderTimer = 2000 + Math.random() * 4000 * (1 - curiosity);
+                            // 6-12 seconds between wander target changes
+                            f.wanderTimer = 6000 + Math.random() * 6000 * (1 - curiosity * 0.5);
 
                             if (isSmall) {
-                                // Small fish: wander near coral in lower area
                                 let targetX, targetY;
-                                const nearestCoral = coral.find(c => c.settled);
-                                if (nearestCoral && Math.random() < 0.7) {
-                                    // Wander around coral
-                                    const angle = Math.random() * Math.PI * 2;
-                                    const dist = 40 + Math.random() * 80;
-                                    targetX = nearestCoral.x + Math.cos(angle) * dist;
-                                    targetY = nearestCoral.y - 30 - Math.random() * 60;
+                                // Find nearest coral - small fish STRONGLY prefer coral
+                                let bestCoral = null;
+                                let bestCoralDist = Infinity;
+                                coral.forEach(c => {
+                                    if (!c.settled) return;
+                                    const d = Math.sqrt((c.x - f.x) ** 2 + (c.y - f.y) ** 2);
+                                    if (d < bestCoralDist) {
+                                        bestCoralDist = d;
+                                        bestCoral = c;
+                                    }
+                                });
+
+                                if (bestCoral && Math.random() < 0.95) {
+                                    // Hang out within coral's full height range
+                                    const coralW = (bestCoral.shape?.width || 50) * 0.5;
+                                    const coralH = bestCoral.shape?.height || 60;
+                                    // Wander within coral area - full height
+                                    const xOffset = (Math.random() - 0.5) * coralW * 1.5;
+                                    const yOffset = Math.random() * coralH; // 0 to full height
+                                    targetX = bestCoral.x + xOffset;
+                                    targetY = bestCoral.y - yOffset; // Coral grows upward
+                                } else if (coral.length > 0) {
+                                    // Occasionally venture to another coral
+                                    const randomCoral = coral[Math.floor(Math.random() * coral.length)];
+                                    if (randomCoral && randomCoral.settled) {
+                                        const coralH = randomCoral.shape?.height || 60;
+                                        targetX = randomCoral.x + (Math.random() - 0.5) * 40;
+                                        targetY = randomCoral.y - Math.random() * coralH;
+                                    } else {
+                                        targetX = w * 0.2 + Math.random() * w * 0.6;
+                                        targetY = h * 0.65 + Math.random() * h * 0.25;
+                                    }
                                 } else {
-                                    // Wander in lower area
+                                    // No coral exists, wander in lower area
                                     targetX = w * 0.2 + Math.random() * w * 0.6;
-                                    targetY = h * 0.6 + Math.random() * h * 0.3;
+                                    targetY = h * 0.65 + Math.random() * h * 0.25;
                                 }
                                 f.wanderTarget = { x: targetX, y: targetY };
 
                             } else if (isMedium) {
-                                // Medium fish: wander in middle, biased toward school
-                                let targetX = w * 0.15 + Math.random() * w * 0.7;
-                                let targetY = h * 0.3 + Math.random() * h * 0.4;
-
-                                // Bias toward other medium fish (schooling)
-                                let schoolX = 0, schoolY = 0, schoolCount = 0;
-                                fish.forEach(other => {
-                                    if (other.id === f.id) return;
-                                    const otherBw = other.bodyWidth || 20;
-                                    if (otherBw >= SMALL_THRESHOLD && otherBw < MEDIUM_THRESHOLD) {
-                                        schoolX += other.x;
-                                        schoolY += other.y;
-                                        schoolCount++;
-                                    }
-                                });
-                                if (schoolCount > 0 && Math.random() < 0.6) {
-                                    targetX = schoolX / schoolCount + (Math.random() - 0.5) * 100;
-                                    targetY = schoolY / schoolCount + (Math.random() - 0.5) * 80;
+                                // Medium fish: USE SHARED SCHOOL TARGET with slight offset
+                                if (this.schoolTarget) {
+                                    const offsetX = (Math.random() - 0.5) * 60;
+                                    const offsetY = (Math.random() - 0.5) * 40;
+                                    f.wanderTarget = {
+                                        x: this.schoolTarget.x + offsetX,
+                                        y: this.schoolTarget.y + offsetY
+                                    };
+                                } else {
+                                    f.wanderTarget = { x: w * 0.5, y: h * 0.45 };
                                 }
-                                f.wanderTarget = { x: targetX, y: targetY };
 
                             } else {
                                 // Large fish: wander anywhere, solitary
                                 const targetX = w * 0.1 + Math.random() * w * 0.8;
-                                const targetY = h * 0.15 + Math.random() * h * 0.6;
+                                const targetY = h * 0.15 + Math.random() * h * 0.55;
                                 f.wanderTarget = { x: targetX, y: targetY };
                             }
                         }
@@ -1369,34 +1433,32 @@
                             const dy = f.wanderTarget.y - f.y;
                             const dist = Math.sqrt(dx * dx + dy * dy);
 
-                            if (dist < 30) {
-                                // Reached target, pick new one soon
-                                f.wanderTimer = Math.min(f.wanderTimer, 500);
+                            if (dist < 40) {
+                                // Near target, slow down and linger
+                                f.wanderTimer = Math.min(f.wanderTimer, 2000);
                             } else {
                                 const wanderAngle = Math.atan2(dy, dx);
-                                // Smooth turning with personality-based responsiveness
-                                const turnRate = 0.02 + energy * 0.02;
+                                const turnRate = 0.015 + energy * 0.015;
                                 f.targetHeading += angleDiff(wanderAngle, f.heading) * turnRate;
                             }
                         }
 
-                        // Add micro-wobble for liveliness
-                        f.targetHeading += (Math.random() - 0.5) * 0.03 * energy;
+                        // Subtle wobble
+                        f.targetHeading += (Math.random() - 0.5) * 0.02 * energy;
                     }
                 }
 
-                // ---- Size category (small/medium/large) ----
-                const bw = f.bodyWidth || 20;
+                // ---- Store size category for debug ----
                 let sizeCategory;
-                if (bw < SMALL_THRESHOLD) sizeCategory = 'small';
-                else if (bw < MEDIUM_THRESHOLD) sizeCategory = 'medium';
+                if (isSmall) sizeCategory = 'small';
+                else if (isMedium) sizeCategory = 'medium';
                 else sizeCategory = 'large';
-                f.sizeCategory = sizeCategory; // Store for debug
+                f.sizeCategory = sizeCategory;
 
                 // ---- Fish collision and separation based on OVAL body shape ----
-                // Oval dimensions (half-widths) - increased by 25%
-                const fWidthH = (f.bodyWidth || 20) * 0.75;  // Length along heading
-                const fHeightH = (f.bodyHeight || f.bodyWidth * 0.4 || 8) * 0.75; // Perpendicular
+                // Oval dimensions (half-widths) - 30% larger than body for collision buffer
+                const fWidthH = (f.bodyWidth || 20) * 1.3;  // Length along heading
+                const fHeightH = (f.bodyHeight || f.bodyWidth * 0.4 || 8) * 1.3; // Perpendicular
 
                 // Helper: get oval radius in a given direction (relative to fish heading)
                 function getOvalRadius(widthH, heightH, heading, dirAngle) {
@@ -1419,10 +1481,10 @@
 
                     const dirAngle = Math.atan2(dy, dx);
 
-                    // Get oval radii in the direction between fish (25% larger)
+                    // Get oval radii in the direction between fish (30% larger buffer)
                     const fRadius = getOvalRadius(fWidthH, fHeightH, f.heading, dirAngle);
-                    const otherWidthH = (other.bodyWidth || 20) * 0.75;
-                    const otherHeightH = (other.bodyHeight || other.bodyWidth * 0.4 || 8) * 0.75;
+                    const otherWidthH = (other.bodyWidth || 20) * 1.3;
+                    const otherHeightH = (other.bodyHeight || other.bodyWidth * 0.4 || 8) * 1.3;
                     const otherRadius = getOvalRadius(otherWidthH, otherHeightH, other.heading, dirAngle + Math.PI);
 
                     const minDist = fRadius + otherRadius;
@@ -1529,6 +1591,64 @@
                     }
                 });
 
+                // ---- Coral interaction based on fish size ----
+                // Large fish: stay buffer away from coral (can't get close)
+                // Medium fish: can approach coral edge but not enter
+                // Small fish: attracted to coral (handled in wander/flee)
+                coral.forEach(c => {
+                    if (!c.settled || !c.shape) return;
+                    const coralW = (c.shape.width || 50) * 0.5;
+                    const coralH = c.shape.height || 60;
+                    const coralTop = c.y - coralH; // Top of coral (grows upward from base)
+
+                    const dx = f.x - c.x;
+                    const dy = f.y - c.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (sizeCategory === 'large') {
+                        // Large fish: stay FAR from coral - buffer of coral height + 150px
+                        const largeBuffer = coralH + 150;
+                        const keepOutRadius = coralW + largeBuffer;
+                        if (dist < keepOutRadius && dist > 0) {
+                            const avoidAngle = Math.atan2(dy, dx);
+                            const strength = (keepOutRadius - dist) / keepOutRadius;
+                            f.targetHeading += angleDiff(avoidAngle, f.heading) * 0.35 * strength;
+                            // Strong upward push if anywhere near coral vertical zone
+                            if (f.y > coralTop - 80) {
+                                f.targetHeading += angleDiff(-Math.PI * 0.5, f.heading) * 0.2;
+                            }
+                        }
+                        // Hard boundary - physically push away if too close
+                        const hardLimit = coralW + coralH + 60;
+                        if (dist < hardLimit) {
+                            const pushStrength = (hardLimit - dist) * 0.02;
+                            f.x += (dx / dist) * pushStrength;
+                            f.y += (dy / dist) * pushStrength;
+                        }
+                    } else if (sizeCategory === 'medium') {
+                        // Medium fish: can go right up to edge but NOT inside coral
+                        // Check if fish is inside coral zone (within width and below top)
+                        const insideCoral = Math.abs(dx) < coralW && f.y > coralTop;
+                        if (insideCoral) {
+                            // Push out - find shortest exit
+                            const exitLeft = -(coralW + 5) - dx;
+                            const exitRight = (coralW + 5) - dx;
+                            const exitUp = coralTop - 5 - f.y;
+                            // Choose closest exit
+                            if (Math.abs(exitUp) < Math.min(Math.abs(exitLeft), Math.abs(exitRight))) {
+                                f.y += exitUp * 0.3;
+                                f.targetHeading = -Math.PI * 0.5; // Point up
+                            } else if (Math.abs(exitLeft) < Math.abs(exitRight)) {
+                                f.x += exitLeft * 0.3;
+                                f.targetHeading = Math.PI; // Point left
+                            } else {
+                                f.x += exitRight * 0.3;
+                                f.targetHeading = 0; // Point right
+                            }
+                        }
+                    }
+                });
+
                 // ---- Soft edge avoidance ----
                 let avoidX = 0, avoidY = 0;
                 if (f.x < EDGE_MARGIN) avoidX = (EDGE_MARGIN - f.x) / EDGE_MARGIN;
@@ -1547,20 +1667,13 @@
                 headingDelta = Math.max(-MAX_TURN_PER_FRAME, Math.min(MAX_TURN_PER_FRAME, headingDelta));
                 f.heading += headingDelta;
 
-                // ---- Handle fleeing state decay ----
-                if (f.state === 'fleeing') {
-                    f.fleeTimer = (f.fleeTimer || 0) - 16; // Approximate frame time
-                    if (f.fleeTimer <= 0) {
-                        f.state = 'idle';
-                        f.fleeTimer = 0;
-                    }
-                }
-
                 // ---- Apply velocity with per-fish speed variation ----
                 const speedMult = 0.85 + fishRand * 0.3;
                 let speed;
                 if (f.state === 'fleeing') {
                     speed = FLEE_SPEED * speedMult;
+                } else if (f.state === 'hunting') {
+                    speed = SEEK_SPEED * 1.3 * speedMult; // Hunting is faster than seeking
                 } else if (f.state === 'seeking') {
                     speed = SEEK_SPEED * speedMult;
                 } else {
@@ -1652,25 +1765,26 @@
                     const bodyPts = f.bodyPoints || pts;
                     const throughPts = f.throughLine;
 
-                    // Draw body outline
-                    ctx.globalAlpha = 0.9;
-                    ctx.beginPath();
-                    ctx.moveTo(bodyPts[0].x, bodyPts[0].y);
-                    for (let i = 1; i < bodyPts.length; i++) {
-                        const p0 = bodyPts[i - 1];
-                        const p1 = bodyPts[i];
-                        ctx.quadraticCurveTo(p0.x, p0.y, (p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
-                    }
-                    ctx.closePath();
-                    ctx.stroke();
-
-                    // Fill body
-                    ctx.globalAlpha = 0.15;
-                    ctx.fillStyle = color;
-                    ctx.fill();
-
-                    // Draw through-line (bisecting stroke + tail) - THIS WIGGLES!
                     if (throughPts && throughPts.length > 1) {
+                        // Fish with body + through-line: draw body static, through-line wiggles
+                        // Draw body outline
+                        ctx.globalAlpha = 0.9;
+                        ctx.beginPath();
+                        ctx.moveTo(bodyPts[0].x, bodyPts[0].y);
+                        for (let i = 1; i < bodyPts.length; i++) {
+                            const p0 = bodyPts[i - 1];
+                            const p1 = bodyPts[i];
+                            ctx.quadraticCurveTo(p0.x, p0.y, (p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
+                        }
+                        ctx.closePath();
+                        ctx.stroke();
+
+                        // Fill body
+                        ctx.globalAlpha = 0.15;
+                        ctx.fillStyle = color;
+                        ctx.fill();
+
+                        // Draw through-line with wiggle
                         ctx.globalAlpha = 0.85;
                         ctx.lineWidth = 2;
                         ctx.beginPath();
@@ -1687,7 +1801,7 @@
                         }
                         ctx.stroke();
                     } else {
-                        // Simple fish - wiggle the body outline instead
+                        // Simple fish - draw body with wiggle (no throughline)
                         ctx.globalAlpha = 0.9;
                         ctx.beginPath();
                         ctx.moveTo(pts[0].x, pts[0].y);
@@ -1701,7 +1815,13 @@
                                 (p0.x + p1.x) / 2 + wg, (p0.y + p1.y) / 2
                             );
                         }
+                        ctx.closePath();
                         ctx.stroke();
+
+                        // Fill body
+                        ctx.globalAlpha = 0.15;
+                        ctx.fillStyle = color;
+                        ctx.fill();
                     }
                 }
 
@@ -2445,9 +2565,9 @@
                     : (f.noseOffset || bodyWidth) * scaleX;
                 const mouthOffset = rawNoseOffset * 0.6;
 
-                // Oval collision dimensions (25% larger, matching collision code)
-                const collisionW = bodyWidth * 0.75;
-                const collisionH = bodyHeight * 0.75;
+                // Oval collision dimensions (30% buffer, matching collision code)
+                const collisionW = bodyWidth * 1.3;
+                const collisionH = bodyHeight * 1.3;
 
                 // Draw OVAL collision bounds (rotated to fish heading)
                 ctx.strokeStyle = 'rgba(255, 100, 100, 0.5)';
@@ -2487,13 +2607,16 @@
                 ctx.lineTo(mouthX, mouthY + 5);
                 ctx.stroke();
 
-                // Eating range circle around mouth
-                const EAT_RANGE = 35;
+                // Eating range circle around mouth (varies by size)
+                const sizeCategory = f.sizeCategory || 'medium';
+                const BASE_EAT = 35;
+                const debugEatRange = sizeCategory === 'large' ? BASE_EAT :
+                                      (sizeCategory === 'medium' ? BASE_EAT * 0.5 : BASE_EAT * 0.25);
                 ctx.strokeStyle = 'rgba(0, 255, 150, 0.3)';
                 ctx.lineWidth = 1;
                 ctx.setLineDash([5, 5]);
                 ctx.beginPath();
-                ctx.arc(mouthX, mouthY, EAT_RANGE, 0, Math.PI * 2);
+                ctx.arc(mouthX, mouthY, debugEatRange, 0, Math.PI * 2);
                 ctx.stroke();
 
                 // Heading direction arrow (current)
@@ -2579,8 +2702,7 @@
                 ctx.font = '9px JetBrains Mono';
                 const labelX = f.x + collisionW + 10;
 
-                // Size category label (SMALL/MEDIUM/LARGE)
-                const sizeCategory = f.sizeCategory || 'medium';
+                // Size category label (SMALL/MEDIUM/LARGE) - sizeCategory already defined above
                 let sizeColor;
                 if (sizeCategory === 'small') sizeColor = 'rgba(150, 220, 150, 0.9)';
                 else if (sizeCategory === 'medium') sizeColor = 'rgba(220, 200, 100, 0.9)';
