@@ -1367,53 +1367,75 @@
 
                             if (isSmall) {
                                 let targetX, targetY;
-                                // Find nearest coral - small fish STRONGLY prefer coral
-                                let bestCoral = null;
-                                let bestCoralDist = Infinity;
+                                // Find home coral for this fish
+                                let homeCoral = null;
+                                let homeCoralDist = Infinity;
                                 coral.forEach(c => {
                                     if (!c.settled) return;
                                     const d = Math.sqrt((c.x - f.x) ** 2 + (c.y - f.y) ** 2);
-                                    if (d < bestCoralDist) {
-                                        bestCoralDist = d;
-                                        bestCoral = c;
+                                    if (d < homeCoralDist) {
+                                        homeCoralDist = d;
+                                        homeCoral = c;
                                     }
                                 });
 
-                                if (bestCoral && Math.random() < 0.95) {
-                                    // Hang out within coral's full height range
-                                    const coralW = (bestCoral.shape?.width || 50) * 0.5;
-                                    const coralH = bestCoral.shape?.height || 60;
-                                    // Wander within coral area - full height
-                                    const xOffset = (Math.random() - 0.5) * coralW * 1.5;
-                                    const yOffset = Math.random() * coralH; // 0 to full height
-                                    targetX = bestCoral.x + xOffset;
-                                    targetY = bestCoral.y - yOffset; // Coral grows upward
-                                } else if (coral.length > 0) {
-                                    // Occasionally venture to another coral
-                                    const randomCoral = coral[Math.floor(Math.random() * coral.length)];
-                                    if (randomCoral && randomCoral.settled) {
-                                        const coralH = randomCoral.shape?.height || 60;
-                                        targetX = randomCoral.x + (Math.random() - 0.5) * 40;
-                                        targetY = randomCoral.y - Math.random() * coralH;
+                                if (homeCoral) {
+                                    const coralW = (homeCoral.shape?.width || 50) * 0.5;
+                                    const coralH = homeCoral.shape?.height || 60;
+                                    const behaviorRoll = Math.random();
+
+                                    if (behaviorRoll < 0.70) {
+                                        // 70%: Stay DEEP in coral - among the stalks
+                                        const xOffset = (Math.random() - 0.5) * coralW * 0.8;
+                                        const yOffset = coralH * 0.2 + Math.random() * coralH * 0.5; // Middle 50% of coral
+                                        targetX = homeCoral.x + xOffset;
+                                        targetY = homeCoral.y - yOffset;
+                                    } else if (behaviorRoll < 0.90) {
+                                        // 20%: Venture to coral edge/top - "looking around"
+                                        const edgeRoll = Math.random();
+                                        if (edgeRoll < 0.5) {
+                                            // Top of coral - peeking out
+                                            targetX = homeCoral.x + (Math.random() - 0.5) * coralW;
+                                            targetY = homeCoral.y - coralH - 10 - Math.random() * 20;
+                                        } else {
+                                            // Side edges of coral
+                                            const side = Math.random() < 0.5 ? -1 : 1;
+                                            targetX = homeCoral.x + side * (coralW + 10 + Math.random() * 15);
+                                            targetY = homeCoral.y - coralH * 0.3 - Math.random() * coralH * 0.4;
+                                        }
                                     } else {
-                                        targetX = w * 0.2 + Math.random() * w * 0.6;
-                                        targetY = h * 0.65 + Math.random() * h * 0.25;
+                                        // 10%: Explore toward another coral
+                                        if (coral.length > 1) {
+                                            const otherCorals = coral.filter(c => c !== homeCoral && c.settled);
+                                            if (otherCorals.length > 0) {
+                                                const destCoral = otherCorals[Math.floor(Math.random() * otherCorals.length)];
+                                                const destH = destCoral.shape?.height || 60;
+                                                targetX = destCoral.x + (Math.random() - 0.5) * 30;
+                                                targetY = destCoral.y - destH * 0.5;
+                                            } else {
+                                                targetX = homeCoral.x;
+                                                targetY = homeCoral.y - coralH * 0.5;
+                                            }
+                                        } else {
+                                            // Only one coral, stay near top
+                                            targetX = homeCoral.x + (Math.random() - 0.5) * coralW;
+                                            targetY = homeCoral.y - coralH - 5;
+                                        }
                                     }
                                 } else {
                                     // No coral exists, wander in lower area
                                     targetX = w * 0.2 + Math.random() * w * 0.6;
-                                    targetY = h * 0.65 + Math.random() * h * 0.25;
+                                    targetY = h * 0.7 + Math.random() * h * 0.2;
                                 }
                                 f.wanderTarget = { x: targetX, y: targetY };
 
                             } else if (isMedium) {
-                                // Medium fish: USE SHARED SCHOOL TARGET with slight offset
+                                // Medium fish: ALL share EXACT same target (true schooling)
+                                // No individual offset - they move as one unit
                                 if (this.schoolTarget) {
-                                    const offsetX = (Math.random() - 0.5) * 60;
-                                    const offsetY = (Math.random() - 0.5) * 40;
                                     f.wanderTarget = {
-                                        x: this.schoolTarget.x + offsetX,
-                                        y: this.schoolTarget.y + offsetY
+                                        x: this.schoolTarget.x,
+                                        y: this.schoolTarget.y
                                     };
                                 } else {
                                     f.wanderTarget = { x: w * 0.5, y: h * 0.45 };
@@ -1552,23 +1574,11 @@
                     f.targetHeading += angleDiff(cohAngle, f.heading) * 0.015;
                 }
 
-                // ---- Size-based area preference ----
-                if (sizeCategory === 'small') {
-                    // Small fish: prefer lower area near coral
-                    const preferredY = h * 0.75;
-                    if (f.y < preferredY - 80) {
-                        f.targetHeading += angleDiff(Math.PI * 0.5, f.heading) * 0.025;
-                    }
-                } else if (sizeCategory === 'medium') {
-                    // Medium fish: prefer middle area
-                    const preferredY = h * 0.5;
-                    if (f.y < preferredY - 100) {
-                        f.targetHeading += angleDiff(Math.PI * 0.5, f.heading) * 0.015;
-                    } else if (f.y > preferredY + 100) {
-                        f.targetHeading += angleDiff(-Math.PI * 0.5, f.heading) * 0.015;
-                    }
-                } else {
-                    // Large fish: prefer upper area
+                // ---- Size-based area preference (large fish only) ----
+                // Small fish: handled by coral wander targets
+                // Medium fish: handled by shared school target
+                if (sizeCategory === 'large') {
+                    // Large fish: prefer upper area, away from coral
                     const preferredY = h * 0.3;
                     if (f.y > preferredY + 120) {
                         f.targetHeading += angleDiff(-Math.PI * 0.5, f.heading) * 0.02;
