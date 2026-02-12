@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nanome 2 Redesign - John Hanacek</title>
+    <meta name="description" content="Case study: Nanome 2 XR molecular visualization redesign. Complete rebuild with cohesive interface, wrist UI, and spotlight/follow paradigm.">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="./Assets/favicon-jhsigfrmpaper.png">
+
+    <!-- Open Graph / Social Share -->
+    <meta property="og:title" content="Nanome 2 Redesign - John Hanacek">
+    <meta property="og:description" content="Case study: Complete redesign of Nanome's VR molecular visualization platform.">
+    <meta property="og:image" content="https://www.johnhanacek.com/Assets/nanome2casestudy.webp">
+    <meta property="og:url" content="https://www.johnhanacek.com/nanome2.html">
+    <meta property="og:type" content="website">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Nanome 2 Redesign - John Hanacek">
+    <meta name="twitter:description" content="Complete redesign of Nanome's VR molecular visualization platform.">
+    <meta name="twitter:image" content="https://www.johnhanacek.com/Assets/nanome2casestudy.webp">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Raleway:wght@100;200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./styles/shared.css">
+
+    <!-- Structured Data for AI/Search -->
+    <link rel="alternate" type="application/json" href="./john-hanacek.json" title="Structured data">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "name": "Nanome 2 Redesign Case Study",
+        "description": "Complete redesign of Nanome's VR molecular visualization platform for drug discovery",
+        "url": "https://www.johnhanacek.com/nanome2.html",
+        "author": {
+            "@type": "Person",
+            "name": "John Hanacek"
+        }
+    }
+    </script>
+
+    <style>
+        /* Case study specific overrides */
+        .demo-container {
+            margin: var(--space-lg) 0;
+            border: 1px solid rgba(77, 201, 246, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+            background: var(--sea-panel, #0a1628);
+        }
+        .demo-container iframe {
+            width: 100%;
+            height: 600px;
+            border: none;
+            display: block;
+        }
+        .quote-block {
+            border-left: 3px solid var(--accent, #e63946);
+            padding-left: var(--space-md);
+            margin: var(--space-lg) 0;
+            font-style: italic;
+            color: var(--muted, #888);
+        }
+        .demo-gated {
+            position: relative;
+        }
+        .demo-gated .demo-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10, 22, 40, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            cursor: pointer;
+            transition: opacity 0.3s ease;
+        }
+        .demo-gated.active .demo-overlay {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .demo-unlock-btn {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: var(--text-base);
+            font-weight: 500;
+            padding: var(--space-md) var(--space-xl);
+            background: rgba(77, 201, 246, 0.2);
+            border: 2px solid rgba(77, 201, 246, 0.6);
+            color: var(--text-bright, #7dd8f7);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .demo-unlock-btn:hover {
+            background: rgba(77, 201, 246, 0.3);
+            border-color: rgba(77, 201, 246, 0.9);
+            transform: scale(1.05);
+        }
+        .demo-hint {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: var(--text-sm);
+            color: var(--muted, #888);
+            margin-top: var(--space-md);
+        }
+    </style>
+</head>
+<body>
+    <!-- Interactive Cursor Spotlight -->
+    <div id="cursorSpotlight"></div>
+
+    <a href="#overview" class="skip-link">Skip to main content</a>
+
+    <nav id="nav" role="navigation" aria-label="Main navigation">
+        <div class="nav-inner">
+            <div class="nav-left">
+                <a href="index.html" class="shape-link" aria-label="Home">
+                    <svg class="shape triangle" viewBox="0 0 40 40"><polygon points="20,8 34,32 6,32"/></svg>
+                    <img class="shape-label shape-label-img" src="./Assets/footer-JHsig.png" alt="JH">
+                </a>
+                <a href="design.html" class="shape-link active" aria-label="Design" aria-current="page">
+                    <svg class="shape rounded-square" viewBox="0 0 40 40"><rect x="6" y="6" width="28" height="28" rx="6"/></svg>
+                    <span class="shape-label">DESIGN</span>
+                </a>
+                <a href="art.html" class="shape-link" aria-label="Art">
+                    <svg class="shape circle" viewBox="0 0 40 40"><circle cx="20" cy="20" r="14"/></svg>
+                    <span class="shape-label">ART</span>
+                </a>
+                <a href="index.html" class="nav-title">John Hanacek</a>
+                <a href="about.html" class="shape-link secondary" aria-label="About">
+                    <svg class="shape diamond" viewBox="0 0 40 40"><polygon points="20,6 34,20 20,34 6,20"/></svg>
+                    <span class="shape-label">ABOUT</span>
+                </a>
+                <a href="services.html" class="shape-link secondary" aria-label="Services">
+                    <svg class="shape star" viewBox="0 0 40 40"><polygon points="20,6 23,16 34,16 25,22 28,34 20,26 12,34 15,22 6,16 17,16"/></svg>
+                    <span class="shape-label">SERVICES</span>
+                </a>
+            </div>
+            <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <ul class="nav-right">
+                <li><a href="#overview">Overview</a></li>
+                <li><a href="#process">Process</a></li>
+                <li><a href="#demo">Demo</a></li>
+                <li><a href="#videos">Videos</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <header class="page-header" id="top">
+        <h1><span class="jh-sig"><span class="sr-only">JH</span><img src="./Assets/footer-JHsig.png" alt="" aria-hidden="true"></span> <span class="meta">Nanome 2 Redesign</span></h1>
+    </header>
+
+    <main>
+        <!-- OVERVIEW -->
+        <section id="overview">
+            <h2>Overview</h2>
+            
+            <div class="content-card">
+                <img src="./Assets/nanome2-beforeafter.webp" alt="Nanome 1 vs Nanome 2 comparison" loading="lazy" style="width:100%; margin-bottom:1.5rem; border-radius:4px;">
+                
+                <h3>Challenge</h3>
+                <p><a href="https://nanome.ai" target="_blank" rel="noopener">Nanome</a> is a powerful VR software for molecular visualization. However users were hindered by clutter and navigation confusion. It lacked a consistent design, comfortable environment, and intuitive UI. A redesign was needed to focus on the core needs of end users.</p>
+
+                <h3>Goal</h3>
+                <p>Completely rebuild the software from the ground up, with a cohesive interface and style that will be intuitive to the user, enabling their productivity.</p>
+
+                <h3>Role and Responsibilities</h3>
+                <p>One of two Product Designers. We did everything. Our work consisted of creating concept art, building a style guide including a component library in Figma, wire-framing, user testing, and handing off high fidelity designs to developers.</p>
+            </div>
+        </section>
+
+        <!-- PROCESS -->
+        <section id="process">
+            <h2>Design Process</h2>
+
+            <div class="content-card">
+                <h3>Discovery</h3>
+                <p>Understanding Users' true needs. This involved evaluating our user journeys, researching other collaborative applications. Creating flowcharts and storyboards to explore existing workflows and possible solutions.</p>
+                <img src="./Assets/nanome2-discovery.webp" alt="Discovery process flowcharts and user journey maps" loading="lazy" style="width:100%; margin-top:1rem; border-radius:4px;">
+            </div>
+
+            <div class="content-card">
+                <h3>Concept Art</h3>
+                <p>Ease of use meets pleasing to the eye. We had plenty of complaints about the complexity of the previous app's UI, so we went for something minimalistic and trendy. This is software for work so it needs to stay minimal yet clear and be comfortable for hours of use.</p>
+                <img src="./Assets/nanome2-concept.webp" alt="Concept art for Nanome 2 interface" loading="lazy" style="width:100%; margin-top:1rem; border-radius:4px;">
+            </div>
+
+            <div class="content-card">
+                <h3>Building A Library</h3>
+                <p>Building blocks. In order to quickly build designs and iterate on them, we needed a cohesive system for all buttons, icons, text, and colors.</p>
+                <img src="./Assets/nanome2-library.webp" alt="Design system component library" loading="lazy" style="width:100%; margin-top:1rem; border-radius:4px;">
+            </div>
+
+            <div class="content-card">
+                <h3>Prototyping</h3>
+                <p>Blocking out quick interfaces and ideas in Figma, and testing them in XR prototyping software ShapesXR to better understand the direction. We continuously iterated based off feedback from internal scientists.</p>
+                <img src="./Assets/nanome2-prototyping.webp" alt="XR prototyping in ShapesXR" loading="lazy" style="width:100%; margin-top:1rem; border-radius:4px;">
+            </div>
+
+            <div class="content-card">
+                <h3>Design</h3>
+                <p>Simplicity that can scale. For Nanome 2, we created a minimalistic avatar and environment to keep focus on molecular structures. We developed key interfaces like wrist UI, project navigation, ligand editor, file manager, and countless more, all streamlined into four main tabs accessible from the wrist.</p>
+                <img src="./Assets/nanome2-design.webp" alt="Final Nanome 2 interface design" loading="lazy" style="width:100%; margin-top:1rem; border-radius:4px;">
+            </div>
+
+            <div class="content-card">
+                <h3>User Testing</h3>
+                <p>We tested through multiple rounds of real pharmaceutical customer user groups, both existing Nanome 1 Users and new users. First rounds of testing users appreciated the UI's aesthetic and simplicity but found movement in VR still challenging.</p>
+                
+                <div class="quote-block">
+                    "Cleaner and more streamlined. Still have trouble with moving around the structure and other users."
+                </div>
+            </div>
+
+            <div class="content-card">
+                <h3>Iteration</h3>
+                <p>There is no spoon. To address this, we removed teleportation navigation and introduced a spotlight and follow paradigm. The idea was known as 'Non-Rivalrous' structures that can be manipulated freely or shown to others with shared cursors that keep everyone on the same page in any view. Applying this increasingly used paradigm from 2D tools into XR was a challenge but the end result was worth it. User testing validated our hypothesis and a new paradigm for Nanome was born.</p>
+                
+                <img src="./Assets/nanome2-spotlight.webp" alt="Spotlight and Follow paradigm demonstration" loading="lazy" style="width:100%; margin-top:1rem; border-radius:4px;">
+                
+                <div class="quote-block">
+                    "Seeing stuff from each other's perspective is more helpful."
+                </div>
+                
+                <div class="quote-block">
+                    "After trying Nanome 2, I prefer it. Just give me the structure. It gets to the point faster than before."
+                </div>
+                
+                <div class="quote-block">
+                    "Spotlight/follow gives collaborators a chance to explore by themselves."
+                </div>
+            </div>
+
+            <!-- INTERACTIVE 3D DEMO -->
+            <section id="demo">
+                <h2>Interactive 3D Demo</h2>
+                <div class="content-card">
+                    <p>Experience the molecular scaffold viewer—a preview of the Nanome 2 interface. Use the controls to spotlight, follow, or breakout.</p>
+                </div>
+                
+                <div class="demo-container demo-gated">
+                    <div class="demo-overlay" onclick="this.parentElement.classList.add('active')">
+                        <button class="demo-unlock-btn">Click to Explore</button>
+                        <p class="demo-hint">Unlock interactive 3D viewer</p>
+                    </div>
+                    <iframe src="./Assets/3d-sync-demo/index.html" title="Nanome 2 Interactive 3D Demo" scrolling="no"></iframe>
+                </div>
+            </section>
+
+            <div class="content-card">
+                <h3>Conclusion</h3>
+                <p>They loved it. We improved Stability & Ease of Use, Minimized 'Time to Structure' and even Simplified Collaboration without hampering individual usage with the innovative Spotlight/Follow feature.</p>
+                
+                <h4>What Nanome Offers Today</h4>
+                <p>The redesign laid the foundation for what Nanome has become: a platform for <strong>elevating drug discovery ideation & collaboration</strong>. Key capabilities include:</p>
+                <ul>
+                    <li><strong>Conversational Design</strong> — Set up your workspace and change representations with Natural Language</li>
+                    <li><strong>New Collaboration & Visualization</strong> — Instantly see and interact with molecular surfaces, ligands, and more</li>
+                    <li><strong>Re-imagined Design Sessions</strong> — Quickly brainstorm compound ideas with medicinal chemistry colleagues</li>
+                    <li><strong>Spatial Computing</strong> — Built for Mixed Reality and Augmented Reality devices</li>
+                </ul>
+                
+                <video autoplay loop muted playsinline style="width:100%; margin-top:1rem; border-radius:4px;">
+                    <source src="./Assets/nanome-hero.mp4" type="video/mp4">
+                </video>
+                
+                <div class="grid-2" style="margin-top: 1rem;">
+                    <video autoplay loop muted playsinline style="width:100%; border-radius:4px;">
+                        <source src="./Assets/nanome-mara.mp4" type="video/mp4">
+                    </video>
+                    <video autoplay loop muted playsinline style="width:100%; border-radius:4px;">
+                        <source src="./Assets/nanome-assisted-building.mp4" type="video/mp4">
+                    </video>
+                </div>
+            </div>
+        </section>
+
+        <!-- LINKS -->
+        <section id="links">
+            <h2>Learn More</h2>
+            <div class="content-card">
+                <ul>
+                    <li><a href="https://spatialandimmersivedesign.substack.com/p/xr-product-design-case-study-nanome" target="_blank" rel="noopener">Full Case Study on Substack</a></li>
+                    <li><a href="https://nanome.ai" target="_blank" rel="noopener">Nanome Website</a></li>
+                </ul>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p class="footer-title">John Hanacek</p>
+        <p class="footer-subtitle">Founding Designer · Design Engineer · Product Designer</p>
+        <p class="footer-copyright">© 2026 John Hanacek · JHDesign LLC</p>
+        <p class="footer-signature"><img src="./Assets/footer-JHsig.png" alt="John Hanacek signature" loading="lazy"></p>
+    </footer>
+
+    <script src="./scripts/shared.js"></script>
+    
+    <script>
+        // Reset demo gate when scrolled out of view
+        (function() {
+            const demoContainer = document.querySelector('.demo-gated');
+            if (!demoContainer) return;
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (!entry.isIntersecting) {
+                        demoContainer.classList.remove('active');
+                    }
+                });
+            }, { threshold: 0.1 });
+            
+            observer.observe(demoContainer);
+        })();
+    </script>
+</body>
+</html>
