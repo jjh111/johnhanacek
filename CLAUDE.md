@@ -95,11 +95,28 @@ The HTML file contains three main sections in order:
 ## Key Features
 
 **Interactive Hero Canvas (index.html - Fish Minigame):**
-- Interactive aquatic minigame with fish, coral, food, and bubbles
-- Real-time physics and animation
-- Touch and mouse support
-- Dark oceanic background
-- (Mechanics to be defined)
+- Interactive aquatic ecosystem with fish, coral, food, and bubbles
+- Real-time physics, AI behaviors, and steering systems
+- Touch and mouse support for drawing entities
+- Dark oceanic background (#0a1628)
+- See `Assets/FISH_SYSTEM_TECHNICAL.md` for full technical reference
+
+**Fish Minigame Architecture:**
+- **Layered Behavior System**: Priority stack (Edge Avoidance → Heading Commitment → State Behaviors → Collision → Formation → Wander)
+- **Three Fish Categories**: Small (<35px), Medium (35-60px), Large (>60px)
+- **Small Fish**: Home in coral, flee from predators, behavior locking to prevent oscillation
+- **Medium Fish**: V-formation schooling with stable slot assignments
+- **Large Fish**: Solitary, territorial, cruise/patrol patterns, dominance challenges
+- **Edge Avoidance**: Anticipatory (60-frame look-ahead), reactive (buffer zones), emergency (instant turn)
+- **Heading Commitment**: Reversal pressure system prevents abrupt 180° turns
+- **Collision System**: Directional push with perpendicular slide (70%) + direct push (30%)
+- **Debug Mode**: Press 'D' to toggle visualization of steering forces, zones, and states
+
+**Key Fish Code Locations (index.html):**
+- Fish behavior logic: lines ~1000-2200
+- Debug visualization: lines ~3065-3450
+- Design doc: `Assets/FISH_MINIGAME_DESIGN.md`
+- Technical ref: `Assets/FISH_SYSTEM_TECHNICAL.md`
 
 **Interactive Hero Canvas (design.html - Drawing Demo):**
 - Blueprint drawing functionality with mouse/touch support

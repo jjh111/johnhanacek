@@ -52,9 +52,12 @@ class Viewport {
     
     initScene() {
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x0d1117);
+        // No scene background - let CSS gradient show through
+        this.scene.background = null;
         
-        const gridHelper = new THREE.GridHelper(20, 20, 0x2d3748, 0x1a1f2e);
+        // Lighter grid colors to stand out against dark background
+        // Central line: 0x718096 (lighter gray), Grid lines: 0x4a5568 (medium gray)
+        const gridHelper = new THREE.GridHelper(20, 20, 0x718096, 0x4a5568);
         gridHelper.position.y = -5;
         this.scene.add(gridHelper);
     }
@@ -74,7 +77,8 @@ class Viewport {
     initRenderer() {
         this.renderer = new THREE.WebGLRenderer({
             canvas: this.canvas,
-            antialias: true
+            antialias: true,
+            alpha: true
         });
         this.renderer.setSize(this.canvas.clientWidth, this.canvas.clientHeight);
         this.renderer.setPixelRatio(window.devicePixelRatio);
