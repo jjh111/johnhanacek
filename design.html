@@ -27,6 +27,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Raleway:wght@100;200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./styles/shared.css">
 
+    <!-- Model Viewer for 3D content -->
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
+
     <!-- Structured Data for AI/Search -->
     <link rel="alternate" type="application/json" href="./john-hanacek.json" title="Structured data">
     <script type="application/ld+json">
@@ -270,6 +273,34 @@
         .canvas-toggle:hover {
             color: rgba(125, 216, 247, 0.7);
         }
+
+        /* Model viewer fixes */
+        model-viewer {
+            --poster-color: transparent;
+            margin: 0;
+        }
+        /* Reduce padding in awards content-cards */
+        #awards .content-card {
+            padding: var(--space-md);
+        }
+        
+        /* Canvas controls responsive */
+        @media (max-width: 768px) {
+            .canvas-controls {
+                bottom: 1rem;
+                left: 50%;
+                transform: translateX(-50%);
+                flex-wrap: wrap;
+                justify-content: center;
+                padding: 0 1rem;
+            }
+        }
+        @media (min-width: 769px) {
+            .canvas-controls {
+                bottom: 5rem;
+                left: 5rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -476,20 +507,26 @@
             <div class="content-card card-featured">
                  <div class="umbrella-header">
                     <h3>Nanome: Lead Product Designer<span class="year-badge">2022-2024</span></h3>
-                
+               
                 </div>
                       <div class="project-content">
+                    <div class="video-embed" style="margin-bottom:1rem;">
+                        <video id="nanomeVideo" muted playsinline preload="auto" loop style="width:100%; display:block;">
+                            <source src="./Assets/nanome-hero.mp4" type="video/mp4">
+                        </video>
+                    </div>
                     <p>Led the complete redesign of Nanome's molecular visualization platform for VR and Mixed Reality. Worked closely with scientists and researchers to create intuitive spatial interfaces for drug discovery.</p>
-                    <h4><a href="https://spatialandimmersivedesign.substack.com/p/xr-product-design-case-study-nanome" target="_blank" rel="noopener">Nanome 2: XR Product Design Case Study</a> </h4>
+                    <h4><a href="nanome2.html">Nanome 2: XR Product Design Case Study</a> <span class="year-badge">Interactive</span></h4>
+                   
                        <div class="grid-1">
                     <div class="image-card">
-                        <a href="https://spatialandimmersivedesign.substack.com/p/xr-product-design-case-study-nanome" target="_blank" rel="noopener">
+                        <a href="nanome2.html">
                         <img src="./Assets/nanome2casestudy.webp" alt="Nanome 2 Redesign Case Study" loading="lazy">
                         </a>
-                         
+                          
                     </div>
-                  
                    
+                    
                 </div>
                
 
@@ -525,6 +562,38 @@
                     <p>Founded and led product concept design, focusing on XR telepresence enabling remote medical training and robotic surgery collaboration. Founder Institute SF 2020 graduate as CEO.</p>
                 </div>
 
+                <!-- Local Videos - 2 column autoplay -->
+                <div class="grid-2">
+                    <!-- HoloTRIAGE (Local) -->
+                    <div class="video-card">
+                        <div class="video-embed">
+                            <video id="holotriageVideo" muted playsinline preload="auto" loop style="width:100%; display:block;">
+                                <source src="./Assets/Avatarmedic-Holotriageclip-1.mp4" type="video/mp4">
+                            </video>
+                        </div>
+                        <div class="video-info">
+                            <h4>HoloTRIAGE Demo</h4>
+                            <p>XR medical triage training system.</p>
+                            <span class="platform-badge">HoloLens 2 · 2020</span>
+                        </div>
+                    </div>
+
+                    <!-- AvatarMEDIC Clinic (Local) -->
+                    <div class="video-card">
+                        <div class="video-embed">
+                            <video id="clinicVideo" muted playsinline preload="auto" loop style="width:100%; display:block;">
+                                <source src="./Assets/AvatarMEDIC -Clinic-concept.mp4" type="video/mp4">
+                            </video>
+                        </div>
+                        <div class="video-info">
+                            <h4>AvatarMEDIC Clinic</h4>
+                            <p>XR telepresence platform concept.</p>
+                            <span class="platform-badge">Concept · 2020</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- YouTube Videos - 3 column -->
                 <div class="grid-3">
                     <!-- A1R -->
                     <div class="video-card">
@@ -538,7 +607,7 @@
                         </div>
                     </div>
 
-                    <!-- HoloTRIAGE -->
+                    <!-- HoloTRIAGE (YouTube) -->
                     <div class="video-card">
                         <div class="video-embed">
                             <iframe src="https://www.youtube.com/embed/FtbAL-kmIJs" title="HoloTRIAGE Demo" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>
@@ -550,7 +619,7 @@
                         </div>
                     </div>
 
-                    <!-- Robot Digital Twin -->
+                    <!-- Robot Digital Twin (YouTube) -->
                     <div class="video-card">
                         <div class="video-embed">
                             <iframe src="https://www.youtube.com/embed/gz5KL8uXK2A" title="Robot Digital Twin Demo" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>
@@ -575,19 +644,29 @@
                 <div class="content-card card-standard">
                     <h4>R&D Innovation Award <span class="year-badge">2022</span></h4>
                     <p><strong>Aerospace Medical Association</strong> — Programming robot arm via XR digital twin</p>
-                    <div class="sketchfab-embed-wrapper"> <iframe title="Innovation Award" frameborder="0" allowfullscreen mozallowfullscreen="true" webkitallowfullscreen="true" allow="autoplay; fullscreen; xr-spatial-tracking" xr-spatial-tracking execution-while-out-of-viewport execution-while-not-rendered web-share src="https://sketchfab.com/models/09628e843470449a92e7ff252abf3cc8/embed?ui_theme=dark" loading="lazy"> </iframe> </div>
-                </div>
-
-
-                <div class="content-card card-standard">
-                    <h4>Founder Institute Graduate <span class="year-badge">2020</span></h4>
-                    <p>San Francisco cohort as CEO of <strong><a href="https://www.avatarmedic.com" target="_blank" rel="noopener">AvatarMEDIC</a></strong></p>
+                    <model-viewer 
+                        src="./Assets/Aerospace Award.glb" 
+                        alt="Aerospace Innovation Award 3D model"
+                        camera-controls
+                        disable-zoom
+                        interaction-prompt="none"
+                        camera-orbits="0deg 75deg 2.5deg"
+                        style="width: 110%; height: 275px; margin-left:-5%; background: transparent;">
+                    </model-viewer>
                 </div>
 
                  <div class="content-card card-standard">
                     <h4>"Most Meta" Award <span class="year-badge">2016</span></h4>
                     <p>Awarded "Black Box" trophy by Georgetown CCT peers</p>
-                    <div class="sketchfab-embed-wrapper"> <iframe title="BlackBox Award - Most Meta" frameborder="0" allowfullscreen mozallowfullscreen="true" webkitallowfullscreen="true" allow="autoplay; fullscreen; xr-spatial-tracking" xr-spatial-tracking execution-while-out-of-viewport execution-while-not-rendered web-share src="https://sketchfab.com/models/181721f63e98429db5961ee738e363db/embed?ui_theme=dark" loading="lazy"> </iframe> </div>
+                    <model-viewer 
+                        src="./Assets/BlackBox-Model.glb" 
+                        alt="BlackBox Award 3D model"
+                        auto-rotate 
+                        camera-controls
+                        disable-zoom
+                        interaction-prompt="none"
+                        style="width: 110%; height: 275px; margin-left:-5%; background: transparent;">
+                    </model-viewer>
                 </div>
                
             </section>
@@ -596,16 +675,21 @@
             <section id="education">
                 <h2>Education</h2>
 
+                <div class="content-card card-standard">
+                    <h4>Founder Institute Graduate <span class="year-badge">2020</span></h4>
+                    <p>San Francisco cohort as CEO of <strong><a href="https://www.avatarmedic.com" target="_blank" rel="noopener">AvatarMEDIC</a></strong></p>
+                </div>
+
                 <div class="content-card card-standard" data-num="MA">
-                    <h4>MA Communication, Culture & Technology <span class="year-badge">2014-2016</span></h4>
-                    <p><strong>Georgetown University</strong></p>
+                    <h4><strong>MA</strong> Communication, Culture & Technology <span class="year-badge">2014-2016</span></h4>
+                    <p><strong><a href="https://cct.georgetown.edu" target="_blank" rel="noopener">Georgetown University</a></strong></p>
                     <ul>
                         <li>Thesis <strong><a href="https://jjh111.github.io/MetaMedium/" target="_blank" rel="noopener">"As We May Sketch"</a></strong> — AI-enabled drawing for education, now <strong>MetaMedium</strong></li>
                         <li>Published <strong><a href="https://www.researchgate.net/publication/324877076_Capturing_Tracing_and_Visualizing_the_Spread_of_Technology-Enhanced_Instructional_Strategies" target="_blank" rel="noopener">"Capturing, Tracing and Visualizing the Spread of Technology-Enhanced Instructional Strategies"</a></strong> at <a href="https://library.iated.org/view/DAVIS2015CAP?utm_source=coda&utm_medium=iframely" target="_blank" rel="noopener" >EduLearn 2015</a><p>Interviews, Data Coding, Social Network Research & Analysis</p></li>
                     </ul>
                 </div>
                 <div class="content-card card-standard" data-num="BA">
-                    <h4>BA Political Science, Minor Neuroscience <span class="year-badge">2008 - 2012</span></h4>
+                    <h4><strong>BA</strong> Political Science, Minor Neuroscience <span class="year-badge">2008 - 2012</span></h4>
                     <p><strong>UC San Diego</strong></p>
                     <ul>
                         <li>Thesis <strong><a href="https://johnhanacek.substack.com/p/remote-controlled-warfare" target="_blank" rel="noopener">"Can Modern War Be Just?"</a></strong> — Drone/RPA usage in warfare</li>
@@ -741,6 +825,43 @@
                 navToggle.classList.remove('active');
                 navMenu.classList.remove('open');
             });
+        });
+
+        // Video: play 2 loops then pause with replay button
+        const videos = [
+            { id: 'nanomeVideo', maxLoops: 2 },
+            { id: 'holotriageVideo', maxLoops: 2 },
+            { id: 'clinicVideo', maxLoops: 2 }
+        ];
+
+        videos.forEach(v => {
+            const video = document.getElementById(v.id);
+            if (!video) return;
+            
+            let loopCount = 0;
+            
+            video.addEventListener('ended', () => {
+                loopCount++;
+                if (loopCount >= v.maxLoops) {
+                    video.pause();
+                    video.loop = false;
+                    // Show replay button
+                    video.style.cursor = 'pointer';
+                    video.title = 'Click to replay';
+                }
+            });
+
+            video.addEventListener('click', () => {
+                if (video.paused && loopCount >= v.maxLoops) {
+                    video.currentTime = 0;
+                    video.loop = true;
+                    loopCount = 0;
+                    video.play();
+                    video.title = '';
+                }
+            });
+
+            video.play();
         });
     </script>
 
