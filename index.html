@@ -544,7 +544,8 @@
             const width = bounds.maxX - bounds.minX;
             const height = bounds.maxY - bounds.minY;
 
-            // Check for roughly 3 direction changes (corners)
+            // Count sharp corners — tightened window (0.5–2.3 rad) avoids
+            // picking up the gradual curves of fish-loop strokes
             let turns = 0;
             const step = Math.max(1, Math.floor(points.length / 20));
             for (let i = step; i < points.length - step; i += step) {
@@ -555,17 +556,17 @@
                 const angle2 = Math.atan2(next.y - curr.y, next.x - curr.x);
                 let diff = Math.abs(angle2 - angle1);
                 if (diff > Math.PI) diff = 2 * Math.PI - diff;
-                if (diff > 0.4 && diff < 2.8) turns++;
+                if (diff > 0.5 && diff < 2.3) turns++;
             }
 
             // Aspect ratio check - triangles shouldn't be too thin
             const aspect = Math.min(width, height) / Math.max(width, height);
             const aspectOk = aspect > 0.3;
 
-            if (turns >= 2 && turns <= 6 && aspectOk) {
-                return 0.65;
-            }
-            return 0.25;
+            // Graded score: exactly 3 corners = clear triangle, 2 or 4 = marginal
+            if (turns === 3 && aspectOk) return 0.75;
+            if ((turns === 2 || turns === 4) && aspectOk) return 0.58;
+            return 0.2;
         }
 
         function getLineScore(points) {
@@ -723,15 +724,21 @@
 
                         // Check loop has decent size
                         const loopBounds = getBounds(loopPoints);
-                        const loopSize = Math.max(loopBounds.maxX - loopBounds.minX, loopBounds.maxY - loopBounds.minY);
+                        const loopW = loopBounds.maxX - loopBounds.minX;
+                        const loopH = loopBounds.maxY - loopBounds.minY;
+                        const loopSize = Math.max(loopW, loopH);
                         if (loopSize < 25) continue; // Loop too small
+
+                        // Aspect ratio — rejects tiny crossings on long thin lines
+                        const loopAspect = Math.min(loopW, loopH) / (Math.max(loopW, loopH) + 0.001);
 
                         return {
                             loopCenter: { x: cx, y: cy },
                             loopStart: i,
                             loopEnd: j,
                             intersectionPoint: intersection,
-                            loopSize: loopSize
+                            loopSize: loopSize,
+                            loopAspect: loopAspect
                         };
                     }
                 }
@@ -970,33 +977,35 @@
 
                 // Circle → bubble (must beat both others)
                 if (circleScore > 0.7 && circleScore > rectScore && circleScore > triScore) {
-                    return { type: 'bubble', center, radius: size / 2, size, points };
+                    return { type: 'bubble', center, radius: size / 2, size, points, confident: circleScore > 0.75 };
                 }
                 // Rectangle → coral (must beat triangle)
                 if (rectScore > 0.6 && rectScore > triScore) {
                     const coralShape = generateCoralShape(size, bounds);
-                    return { type: 'coral', center, size, bounds, shape: coralShape };
+                    return { type: 'coral', center, size, bounds, shape: coralShape, confident: rectScore > 0.65 };
                 }
-                // Triangle → jellyfish
-                if (triScore > 0.5) {
+                // Triangle → jellyfish (raised from 0.5 → 0.57 so 3-corner draws are reliable)
+                if (triScore > 0.57) {
                     const jellyShape = generateJellyfishShape(size);
-                    return { type: 'jellyfish', center, size, bounds, shape: jellyShape };
+                    return { type: 'jellyfish', center, size, bounds, shape: jellyShape, confident: triScore >= 0.75 };
                 }
                 // Unrecognized closed shape → no entity
                 return null;
             }
 
             // OPEN STROKES - check for self-intersecting fish shape (ichthys)
-            // This is the ONE new shape type we add to design.html's logic
+            // Raised loopSize minimum 25→45 and require loopAspect>0.3
+            // to reject tiny crossings on long thin lines
             const loopInfo = findSelfIntersectionLoop(points);
-            if (loopInfo && loopInfo.loopSize > 25) {
+            if (loopInfo && loopInfo.loopSize > 45 && loopInfo.loopAspect > 0.3) {
                 const fishShape = generateFishShape(loopInfo, points, size);
                 return {
                     type: 'fish',
                     center: loopInfo.loopCenter,
                     size: loopInfo.loopSize,
-                    fishShape: fishShape,  // Contains points, initialHeading, bodyWidth, bodyHeight
-                    loopInfo: loopInfo
+                    fishShape: fishShape,
+                    loopInfo: loopInfo,
+                    confident: loopInfo.loopSize > 55 && loopInfo.loopAspect > 0.35
                 };
             }
 
@@ -1514,6 +1523,9 @@
 
             // ---- PERFORMANCE: Frame counter for throttling periodic calculations ----
             this.frameCounter = (this.frameCounter || 0) + 1;
+
+            // Track fish caught by jellyfish tentacles this frame (avoid splice mid-iteration)
+            const jellyfishCaughtFish = new Set();
 
             fish.forEach((f, fi) => {
                 const pts = f.points;
@@ -2681,19 +2693,56 @@
                     }
                 }
 
-                // ---- Jellyfish avoidance ----
-                const JELLY_AVOID_RANGE = 60;  // Reduced range
-                const JELLY_AVOID_FORCE = 0.06; // REDUCED from 0.2
+                // ---- Jellyfish avoidance + tentacle predation ----
+                const JELLY_AVOID_RANGE = 60;
+                const JELLY_AVOID_FORCE = 0.06;
                 jellyfish.forEach(j => {
                     if (!j.shape) return;
+                    const shape = j.shape;
                     const dx = f.x - j.x;
                     const dy = f.y - j.y;
                     const dist = Math.sqrt(dx * dx + dy * dy);
-                    const minDist = JELLY_AVOID_RANGE + j.shape.bellRadius;
+
+                    // Steering avoidance
+                    const minDist = JELLY_AVOID_RANGE + shape.bellRadius;
                     if (dist < minDist && dist > 0) {
                         const avoidAngle = Math.atan2(dy, dx);
                         const strength = (minDist - dist) / minDist;
                         f.targetHeading += angleDiff(avoidAngle, f.heading) * JELLY_AVOID_FORCE * strength;
+                    }
+
+                    // Inner danger zone — force immediate flee if within tentacle reach
+                    const r = shape.bellRadius;
+                    const tentacleReach = r + shape.tentacleLength * r * 0.4 + 10;
+                    if (dist < tentacleReach) {
+                        f.state = 'fleeing';
+                        f.fleeTimer = Math.max(f.fleeTimer || 0, 1500);
+                        f.behaviorLockTimer = Math.max(f.behaviorLockTimer || 0, 1500);
+                    }
+
+                    // Tentacle tip collision — small fish only
+                    if (isSmall && !jellyfishCaughtFish.has(f.id)) {
+                        const bellH = shape.bellHeight || r * 0.6;
+                        const segLen = r * 0.4;
+                        const tentacleTime = now * 0.002 + (shape.wobbleOffset || 0);
+                        for (let t = 0; t < shape.numTentacles; t++) {
+                            const tx = -r * 0.8 + (t / Math.max(1, shape.numTentacles - 1)) * r * 1.6;
+                            const s = shape.tentacleLength;
+                            const wave = Math.sin(tentacleTime + t * 0.7 + s * 0.5) * (8 + s * 2);
+                            const drift = Math.sin(tentacleTime * 0.5 + t) * 3;
+                            const tipX = j.x + tx + wave + drift;
+                            const tipY = j.y + bellH * 0.05 + s * segLen;
+                            const tipDist = Math.sqrt((f.x - tipX) ** 2 + (f.y - tipY) ** 2);
+                            if (tipDist < 16) {
+                                jellyfishCaughtFish.add(f.id);
+                                j.flashUntil = now + 350;
+                                for (let p = 0; p < 6; p++) {
+                                    const a = (p / 6) * Math.PI * 2;
+                                    particles.push({ x: f.x, y: f.y, vx: Math.cos(a), vy: Math.sin(a) - 0.5, life: 1, createdAt: now });
+                                }
+                                break;
+                            }
+                        }
                     }
                 });
 
@@ -3518,6 +3567,11 @@
                 ctx.globalAlpha = 1;
                 ctx.restore();
             });
+
+            // Remove fish caught by jellyfish tentacles this frame
+            if (jellyfishCaughtFish.size > 0) {
+                fish = fish.filter(f => !jellyfishCaughtFish.has(f.id));
+            }
         }
 
         function drawCoralEntities() {
@@ -3766,7 +3820,8 @@
                 // Draw bell (dome shape)
                 ctx.strokeStyle = color;
                 ctx.lineWidth = 2;
-                ctx.globalAlpha = 0.85;
+                const isFlashing = j.flashUntil && now < j.flashUntil;
+                ctx.globalAlpha = isFlashing ? 1.0 : 0.85;
 
                 ctx.beginPath();
                 ctx.ellipse(0, 0, r * bellSquash, bellH * bellStretch, 0, Math.PI, 0);
@@ -3813,8 +3868,11 @@
             const now = Date.now();
             const w = canvas.width / (window.devicePixelRatio || 1);
 
-            // Helper to spawn pop particles
+            // Helper to trigger pop — fires particles and marks bubble for ring animation
             function popBubble(b) {
+                if (b.popping) return; // already popping
+                b.popping = true;
+                b.popStart = now;
                 for (let i = 0; i < 6; i++) {
                     const angle = (i / 6) * Math.PI * 2;
                     particles.push({
@@ -3831,8 +3889,26 @@
                 if (b.wobbleSpeed === undefined) {
                     b.wobbleSpeed = 300 + Math.random() * 400;
                     b.wobbleAmt = 0.2 + Math.random() * 0.4;
-                    b.riseSpeed = b.vy || (0.4 + Math.random() * 0.4);
+                    // Size-based rise: larger bubbles rise slower
+                    b.riseSpeed = Math.max(0.2, 0.75 - (b.radius / 150));
                     b.hueOffset = Math.random() * 30 - 15;
+                }
+
+                // Pop ring animation — plays for 220ms after pop, then removes bubble
+                if (b.popping) {
+                    const progress = (now - b.popStart) / 220;
+                    if (progress >= 1) return false;
+                    const hue = 195 + b.hueOffset;
+                    const ringR = b.radius * (1 + progress * 0.9);
+                    ctx.save();
+                    ctx.globalAlpha = 0.5 * (1 - progress);
+                    ctx.strokeStyle = `hsla(${hue}, 75%, 80%, 1)`;
+                    ctx.lineWidth = Math.max(0.5, 1.5 * (1 - progress));
+                    ctx.beginPath();
+                    ctx.arc(b.x, b.y, ringR, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.restore();
+                    return true;
                 }
 
                 // Bubble-bubble avoidance
@@ -3863,7 +3939,7 @@
                 // Pop when reaching top
                 if (b.y + b.radius < -10) {
                     popBubble(b);
-                    return false;
+                    return true; // keep for ring animation
                 }
 
                 // Check collision with fish
@@ -3873,7 +3949,7 @@
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     if (dist < b.radius + f.size * 0.4) {
                         popBubble(b);
-                        return false;
+                        return true; // keep for ring animation
                     }
                 }
 
@@ -3885,36 +3961,48 @@
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     if (dist < b.radius + j.shape.bellRadius * 1.5) {
                         popBubble(b);
-                        return false;
+                        return true; // keep for ring animation
                     }
                 }
 
-                // Draw bubble with variety
+                // Draw bubble
                 const hue = 195 + b.hueOffset;
                 const bubbleColor = `hsla(${hue}, 70%, 65%, 0.6)`;
-                const glowColor = `hsla(${hue}, 70%, 65%, 0.4)`;
 
                 // Subtle squash/stretch as it rises
                 const squash = 1 + 0.05 * Math.sin(now / 300 + b.id);
 
                 ctx.save();
+
+                // Inner radial gradient — refraction/lens look
+                ctx.beginPath();
+                ctx.ellipse(b.x, b.y, b.radius * squash, b.radius / squash, 0, 0, Math.PI * 2);
+                const grad = ctx.createRadialGradient(
+                    b.x - b.radius * 0.3, b.y - b.radius * 0.35, b.radius * 0.05,
+                    b.x, b.y, b.radius
+                );
+                grad.addColorStop(0, `hsla(${hue}, 85%, 92%, 0.18)`);
+                grad.addColorStop(0.6, `hsla(${hue}, 70%, 65%, 0.06)`);
+                grad.addColorStop(1, `hsla(${hue}, 60%, 45%, 0.02)`);
+                ctx.fillStyle = grad;
+                ctx.globalAlpha = 0.9;
+                ctx.fill();
+
+                // Rim stroke
                 ctx.globalAlpha = 0.5;
                 ctx.strokeStyle = bubbleColor;
                 ctx.lineWidth = 1.5;
-
-                ctx.beginPath();
-                ctx.ellipse(b.x, b.y, b.radius * squash, b.radius / squash, 0, 0, Math.PI * 2);
                 ctx.stroke();
 
                 // Shine highlight
-                ctx.globalAlpha = 0.3;
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.globalAlpha = 0.35;
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
                 ctx.beginPath();
                 ctx.ellipse(
                     b.x - b.radius * 0.25,
-                    b.y - b.radius * 0.25,
+                    b.y - b.radius * 0.28,
                     b.radius * 0.2,
-                    b.radius * 0.15,
+                    b.radius * 0.13,
                     -0.4,
                     0, Math.PI * 2
                 );
@@ -5096,8 +5184,9 @@
                     });
                 }
 
-                // Particle burst feedback for recognized entity types (not lines)
-                if (classified.type !== 'line') {
+                // Particle burst feedback — only for confident recognitions
+                // Borderline matches (low score, small loop) get no burst
+                if (classified.type !== 'line' && classified.confident) {
                     const burstCount = classified.type === 'food' ? 4 : 8;
                     for (let i = 0; i < burstCount; i++) {
                         const angle = (i / burstCount) * Math.PI * 2;
