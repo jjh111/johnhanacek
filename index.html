@@ -428,14 +428,24 @@
         let tempLines = [];
         let entityIdCounter = 0;
 
-        const MAX_JELLYFISH = 2;
-        const MAX_FISH = 18;  // Total cap (3+6+9)
-        const MAX_LARGE_FISH = 2;  // Max 2 large fish at a time
-        const MAX_MEDIUM_FISH = 6; // Larger school
-        const MAX_SMALL_FISH = 9;  // More small fish
-        const MAX_CORAL = 6;
-        const MAX_BUBBLES = 20;
-        const MAX_FOOD = 12;
+        // Canvas-size-aware entity limits — computed once at start, updated on resize
+        // Small screens (mobile) get fewer entities to stay readable and performant
+        function computeEntityLimits() {
+            const w = canvas.getBoundingClientRect().width;
+            const isMobile = w < 600;
+            return {
+                MAX_JELLYFISH: isMobile ? 1 : 2,
+                MAX_LARGE_FISH: 1,          // Always 1 — single apex predator
+                MAX_MEDIUM_FISH: isMobile ? 4 : 6,
+                MAX_SMALL_FISH:  isMobile ? 6 : 9,
+                MAX_FISH:        isMobile ? 11 : 16,
+                MAX_CORAL:       isMobile ? 4 : 6,
+                MAX_BUBBLES:     isMobile ? 12 : 20,
+                MAX_FOOD:        isMobile ? 8 : 12,
+            };
+        }
+        let { MAX_JELLYFISH, MAX_LARGE_FISH, MAX_MEDIUM_FISH, MAX_SMALL_FISH,
+              MAX_FISH, MAX_CORAL, MAX_BUBBLES, MAX_FOOD } = computeEntityLimits();
         const FOOD_LIFETIME = 15000;
         const LINE_DURATION = 1500;
 
@@ -1030,6 +1040,9 @@
         // loop, resizes, then restarts cleanly to avoid duplicate animate() chains
         function resizeCanvas() {
             applyCanvasSize();
+            // Recompute entity limits for new screen size
+            ({ MAX_JELLYFISH, MAX_LARGE_FISH, MAX_MEDIUM_FISH, MAX_SMALL_FISH,
+               MAX_FISH, MAX_CORAL, MAX_BUBBLES, MAX_FOOD } = computeEntityLimits());
             if (animationFrameId) cancelAnimationFrame(animationFrameId);
             isAnimating = false;
             startAnimation();
@@ -1524,9 +1537,6 @@
             // ---- PERFORMANCE: Frame counter for throttling periodic calculations ----
             this.frameCounter = (this.frameCounter || 0) + 1;
 
-            // Track fish caught by jellyfish tentacles this frame (avoid splice mid-iteration)
-            const jellyfishCaughtFish = new Set();
-
             fish.forEach((f, fi) => {
                 const pts = f.points;
                 // SVG fish don't have points array, skip this check for them
@@ -1542,25 +1552,67 @@
                 // Per-fish randomness offset (consistent per fish)
                 const fishRand = (f.id * 0.618) % 1;
 
+                // ---- DISSOLVING FISH: Caught by jellyfish — freeze, fade, skip all AI ----
+                if (f.dissolving) {
+                    const dissolveProgress = Math.min(1, (now - f.dissolveStart) / 800);
+                    const alpha = (1 - dissolveProgress) * 0.9;
+                    const scaleX = f.scaleX || 1;
+                    const scaleY = f.scaleY || 1;
+                    ctx.save();
+                    ctx.globalAlpha = alpha;
+                    ctx.translate(f.x, f.y);
+                    ctx.rotate(f.heading);
+                    ctx.scale(scaleX * (1 - dissolveProgress * 0.3), scaleY * (1 - dissolveProgress * 0.3)); // slight shrink
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 2.5;
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    ctx.fillStyle = color;
+                    const pts2 = f.points;
+                    if (pts2 && pts2.length >= 3) {
+                        ctx.beginPath();
+                        ctx.moveTo(pts2[0].x, pts2[0].y);
+                        for (let i = 1; i < pts2.length; i++) {
+                            const p0 = pts2[i-1], p1 = pts2[i];
+                            ctx.quadraticCurveTo(p0.x, p0.y, (p0.x+p1.x)/2, (p0.y+p1.y)/2);
+                        }
+                        ctx.closePath();
+                        ctx.stroke();
+                        ctx.globalAlpha = alpha * 0.5;
+                        ctx.fill();
+                    }
+                    ctx.globalAlpha = 1;
+                    ctx.restore();
+                    return; // skip all AI/physics for dissolving fish
+                }
+
                 // ---- Fish AI: seek visible food (not inside bubbles) ----
                 // Calculate mouth position - 78% toward nose from center
                 const rawNoseOffset = f.useSvgPath
                     ? (f.noseOffset || f.bodyWidth || 20)
                     : (f.noseOffset || f.bodyWidth || 20) * (f.scaleX || 1);
-                const mouthOffset = rawNoseOffset * 0.78; // Mouth forward 30% from previous 0.6
+                const mouthOffset = rawNoseOffset * 0.78;
                 const mouthX = f.x + Math.cos(f.heading) * mouthOffset;
                 const mouthY = f.y + Math.sin(f.heading) * mouthOffset;
+
+                // Body center: midpoint between nose and tail in heading direction.
+                // Used for detection and steering so fish swim THROUGH food naturally.
+                // Nose is ~mouthOffset ahead; tail is ~bodyWidth behind → center offset ≈ (mouthOffset - bodyWidth) * 0.5
+                const bodyCenterOffset = (mouthOffset - (f.bodyWidth || 20)) * 0.5;
+                const centerX = f.x + Math.cos(f.heading) * bodyCenterOffset;
+                const centerY = f.y + Math.sin(f.heading) * bodyCenterOffset;
 
                 let nearestFood = null;
                 let nearestDist = Infinity;
                 let nearestMouthDist = Infinity;
                 food.forEach(fd => {
-                    if (fd.inBubble) return; // Updated each frame in drawBubbleEntities()
-                    // Use mouth distance for both detection and proximity ranking.
-                    // Avoids "seeing" food that's already behind the fish's eating point.
+                    if (fd.inBubble) return;
+                    // Detection uses body center — fish notices food when their body is near it
+                    const cd = Math.sqrt((centerX - fd.x) ** 2 + (centerY - fd.y) ** 2);
+                    // Eat check uses mouth — but much more generous range
                     const md = Math.sqrt((mouthX - fd.x) ** 2 + (mouthY - fd.y) ** 2);
-                    if (md < nearestDist) {
-                        nearestDist = md;
+                    if (cd < nearestDist) {
+                        nearestDist = cd;
                         nearestMouthDist = md;
                         nearestFood = fd;
                     }
@@ -1603,8 +1655,9 @@
                 f.challengeTimer = Math.max(0, (f.challengeTimer || 0) - deltaTime);
 
                 // ---- FOOD SEEKING (highest priority for all fish) ----
-                // Eat range varies by size: large=35, medium=17 (50%), small=9 (25%)
-                const sizeEatRange = isLarge ? EAT_RANGE : (isMedium ? EAT_RANGE * 0.5 : EAT_RANGE * 0.25);
+                // Eat range: large fish eat from wide area; small fish generous too
+                // so they don't have to pixel-perfectly align their nose tip
+                const sizeEatRange = isLarge ? EAT_RANGE : (isMedium ? EAT_RANGE * 0.7 : EAT_RANGE * 0.6);
 
                 // Clear food target if not seeking
                 if (f.state !== 'seeking') {
@@ -1612,9 +1665,9 @@
                 }
 
                 if (nearestFood && nearestDist < DETECT_RANGE && f.state !== 'fleeing' && f.state !== 'hiding') {
-                    // Steer mouth toward food, not center toward food.
-                    // This prevents overshooting: the fish aligns its eating point, not its pivot.
-                    const foodAngle = Math.atan2(nearestFood.y - mouthY, nearestFood.x - mouthX);
+                    // Steer body CENTER toward food — fish swims through the food naturally.
+                    // Using mouth-to-food caused circling: fish tried to align a far-offset point.
+                    const foodAngle = Math.atan2(nearestFood.y - centerY, nearestFood.x - centerX);
                     const angleToFood = Math.abs(angleDiff(foodAngle, f.heading));
 
                     // ---- MEDIUM FISH: Check if large fish is competing for same food ----
@@ -2721,7 +2774,7 @@
                     }
 
                     // Tentacle tip collision — small fish only
-                    if (isSmall && !jellyfishCaughtFish.has(f.id)) {
+                    if (isSmall && !f.dissolving) {
                         const bellH = shape.bellHeight || r * 0.6;
                         const segLen = r * 0.4;
                         const tentacleTime = now * 0.002 + (shape.wobbleOffset || 0);
@@ -2733,12 +2786,17 @@
                             const tipX = j.x + tx + wave + drift;
                             const tipY = j.y + bellH * 0.05 + s * segLen;
                             const tipDist = Math.sqrt((f.x - tipX) ** 2 + (f.y - tipY) ** 2);
-                            if (tipDist < 16) {
-                                jellyfishCaughtFish.add(f.id);
-                                j.flashUntil = now + 350;
-                                for (let p = 0; p < 6; p++) {
-                                    const a = (p / 6) * Math.PI * 2;
-                                    particles.push({ x: f.x, y: f.y, vx: Math.cos(a), vy: Math.sin(a) - 0.5, life: 1, createdAt: now });
+                            if (tipDist < 11) {
+                                // Mark as dissolving — freeze in place, fade over 800ms
+                                if (!f.dissolving) {
+                                    f.dissolving = true;
+                                    f.dissolveStart = now;
+                                    f.vx = 0; f.vy = 0; // freeze
+                                    j.flashUntil = now + 350;
+                                    for (let p = 0; p < 6; p++) {
+                                        const a = (p / 6) * Math.PI * 2;
+                                        particles.push({ x: f.x, y: f.y, vx: Math.cos(a), vy: Math.sin(a) - 0.5, life: 1, createdAt: now });
+                                    }
                                 }
                                 break;
                             }
@@ -2893,24 +2951,28 @@
                 let isAnticipating = false;
                 let inEmergency = false;
 
-                // Check ANTICIPATED collision (gentle early turn)
-                // Apply edge multipliers for small fish near coral at edges
-                if (futureX < ANTICIPATE_ZONE && f.x > BUFFER_ZONE) {
+                // Check ANTICIPATED collision — only nudge when heading is actually toward the wall.
+                // Previously this fired every frame near an edge regardless of direction,
+                // causing a constant rotational force that made fish spin like clocks.
+                // Now: only activate when the future position penetrates AND the fish is moving toward it.
+                const headingVx = Math.cos(f.heading);
+                const headingVy = Math.sin(f.heading);
+                if (futureX < ANTICIPATE_ZONE && f.x > BUFFER_ZONE && headingVx < 0) {
                     const urgency = 1 - (futureX / ANTICIPATE_ZONE);
                     avoidX += urgency * 0.8 * leftEdgeMultiplier;
                     isAnticipating = true;
                 }
-                if (futureX > w - ANTICIPATE_ZONE && f.x < w - BUFFER_ZONE) {
+                if (futureX > w - ANTICIPATE_ZONE && f.x < w - BUFFER_ZONE && headingVx > 0) {
                     const urgency = 1 - ((w - futureX) / ANTICIPATE_ZONE);
                     avoidX -= urgency * 0.8 * rightEdgeMultiplier;
                     isAnticipating = true;
                 }
-                if (futureY < ANTICIPATE_ZONE && f.y > BUFFER_ZONE) {
+                if (futureY < ANTICIPATE_ZONE && f.y > BUFFER_ZONE && headingVy < 0) {
                     const urgency = 1 - (futureY / ANTICIPATE_ZONE);
-                    avoidY += urgency * 0.8; // Top edge - no multiplier needed
+                    avoidY += urgency * 0.8;
                     isAnticipating = true;
                 }
-                if (futureY > h - ANTICIPATE_ZONE && f.y < h - BUFFER_ZONE) {
+                if (futureY > h - ANTICIPATE_ZONE && f.y < h - BUFFER_ZONE && headingVy > 0) {
                     const urgency = 1 - ((h - futureY) / ANTICIPATE_ZONE);
                     avoidY -= urgency * 0.8 * bottomEdgeMultiplier;
                     isAnticipating = true;
@@ -3568,10 +3630,11 @@
                 ctx.restore();
             });
 
-            // Remove fish caught by jellyfish tentacles this frame
-            if (jellyfishCaughtFish.size > 0) {
-                fish = fish.filter(f => !jellyfishCaughtFish.has(f.id));
-            }
+            // Remove fish that have finished dissolving (800ms fade complete)
+            fish = fish.filter(f => {
+                if (!f.dissolving) return true;
+                return (now - f.dissolveStart) < 800;
+            });
         }
 
         function drawCoralEntities() {

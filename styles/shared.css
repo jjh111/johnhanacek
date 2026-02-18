@@ -179,13 +179,21 @@ body {
     border: 1px solid rgba(77, 201, 246, 0.18);
     /* 50% radius on a short+wide box = squished ellipse */
     border-radius: 50%;
-    box-shadow:
-        0 0 0 1px rgba(77, 201, 246, 0.06),
-        0 8px 40px rgba(0, 0, 0, 0.55),
-        inset 0 1px 0 rgba(77, 201, 246, 0.12);
+    /* Safari fix: use drop-shadow instead of box-shadow for non-square border-radius */
+    filter: drop-shadow(0 0 1px rgba(77, 201, 246, 0.06)) drop-shadow(0 8px 40px rgba(0, 0, 0, 0.55));
 
     pointer-events: auto;
     /* NO overflow:hidden — lets shape-nav pill sit on top edge visibly */
+}
+
+/* Inset highlight via pseudo-element (can't use inset with drop-shadow) */
+.hero-oval::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: linear-gradient(to bottom, rgba(77, 201, 246, 0.08) 0%, transparent 50%);
+    pointer-events: none;
 }
 
 
@@ -1479,10 +1487,19 @@ footer { pointer-events: none; }
     -webkit-backdrop-filter: blur(8px) saturate(1.1);
     border: 1px solid rgba(77, 201, 246, 0.18);
     border-radius: 50%;
-    box-shadow:
-        0 0 0 1px rgba(77, 201, 246, 0.06),
-        0 8px 40px rgba(0, 0, 0, 0.55),
-        inset 0 1px 0 rgba(77, 201, 246, 0.12);
+    /* Safari fix: use drop-shadow instead of box-shadow for non-square border-radius */
+    filter: drop-shadow(0 0 1px rgba(77, 201, 246, 0.06)) drop-shadow(0 8px 40px rgba(0, 0, 0, 0.55));
+    position: relative;
+}
+
+/* Inset highlight via pseudo-element (can't use inset with drop-shadow) */
+.footer-oval::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: linear-gradient(to bottom, rgba(77, 201, 246, 0.08) 0%, transparent 50%);
+    pointer-events: none;
 }
 
 .footer-title {
