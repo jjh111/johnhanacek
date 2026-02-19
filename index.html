@@ -5721,26 +5721,19 @@
             });
         }
 
-        // Draw hint — visible on every fresh page load, fades after enough interactions this session
-        // Uses sessionStorage (clears on tab close) so no cross-visit memory
+        // Draw hint — always visible on page load, fades after enough draws this visit
+        // Pure in-memory counter: no storage — resets on every page load/refresh
         const heroDrawHint = document.getElementById('heroDrawHint');
         if (heroDrawHint) {
-            const HINT_KEY = 'drawHintCount_session';
             const HINT_THRESHOLD = 12;
-            let drawHintCount = parseInt(sessionStorage.getItem(HINT_KEY) || '0', 10);
+            let drawHintCount = 0; // always 0 at load — no persistence
 
             function bumpDrawHint() {
                 if (drawHintCount >= HINT_THRESHOLD) return;
                 drawHintCount++;
-                sessionStorage.setItem(HINT_KEY, drawHintCount);
                 if (drawHintCount >= HINT_THRESHOLD) {
                     heroDrawHint.classList.add('hidden');
                 }
-            }
-
-            // Already interacted enough this session — keep hidden
-            if (drawHintCount >= HINT_THRESHOLD) {
-                heroDrawHint.classList.add('hidden');
             }
 
             // Count on completed strokes (pointerup), not on press — keeps hint visible while drawing
