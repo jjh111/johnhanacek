@@ -407,9 +407,14 @@ body {
     text-transform: uppercase;
     letter-spacing: 0.15em;
     pointer-events: none;
-    transition: opacity 0.8s ease;
+    opacity: 1;                   /* explicit — prevents browser painting at 0 then transitioning up */
+    transition: none;             /* no transition at load time — only .hidden adds the fade */
 }
-.hero-hint.hidden { opacity: 0; pointer-events: none; }
+.hero-hint.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1.2s ease; /* fade only triggers when .hidden is added by JS */
+}
 .hero-hint .hint-icon {
     font-size: 1rem;
     animation: pencil-wiggle 4s ease-in-out infinite;
