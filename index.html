@@ -936,9 +936,11 @@
                         const loopPoints = points.slice(i, j + 1);
 
                         // Check loop is curved (not sharp angular)
-                        // Measure curvature by checking angle changes
+                        // Use finer sampling to catch sharp corners reliably
                         let totalAngleChange = 0;
-                        const sampleStep = Math.max(1, Math.floor(loopPoints.length / 10));
+                        let maxSingleChange = 0;
+                        const sampleStep = Math.max(1, Math.floor(loopPoints.length / 20));
+                        let sampleCount = 0;
                         for (let k = sampleStep; k < loopPoints.length - sampleStep; k += sampleStep) {
                             const prev = loopPoints[k - sampleStep];
                             const curr = loopPoints[k];
@@ -947,12 +949,16 @@
                             const a2 = Math.atan2(next.y - curr.y, next.x - curr.x);
                             let diff = Math.abs(a2 - a1);
                             if (diff > Math.PI) diff = 2 * Math.PI - diff;
+                            if (diff > maxSingleChange) maxSingleChange = diff;
                             totalAngleChange += diff;
+                            sampleCount++;
                         }
 
-                        // Reject if too angular (sharp corners)
-                        const avgAngleChange = totalAngleChange / (loopPoints.length / sampleStep);
-                        if (avgAngleChange > 0.8) continue; // Too sharp, not a curved loop
+                        // Reject if too angular: average per-sample change too high
+                        const avgAngleChange = sampleCount > 0 ? totalAngleChange / sampleCount : 0;
+                        if (avgAngleChange > 0.65) continue; // Too sharp on average (rectangle corners ≈ 0.5-0.7)
+                        // Reject if any single step is extremely sharp (corner of a rectangle ≈ 1.3-1.6 rad)
+                        if (maxSingleChange > 1.1) continue; // Single corner too sharp for a fish loop
 
                         // Calculate loop centroid (fish body center)
                         let cx = 0, cy = 0;
@@ -1013,46 +1019,51 @@
             const width = bounds ? (bounds.maxX - bounds.minX) : size;
             const height = bounds ? (bounds.maxY - bounds.minY) : size * 0.8;
 
-            const numStalks = Math.max(2, Math.min(6, Math.floor(width / 25)));
+            const numStalks = Math.max(2, Math.min(8, Math.floor(width / 20)));
             const stalks = [];
 
             // Generate a branch node recursively. Returns {endX, endY, branches[], baubles[]}
             // All coords relative to branch start. depth=0 is main stalk.
+            // Max depth is 3 for 4-level fractal (0→1→2→3 terminal)
             function genBranch(parentLen, parentAngle, depth, rng) {
-                // How many children at each depth
-                const childCounts = [3, 2, 1]; // depth 0→3 children, 1→2, 2→1 terminal baubles
+                // How many children at each depth — more children = denser fractal
+                const childCounts = [4, 3, 2, 0]; // depth 0→4, 1→3, 2→2, 3→terminal
                 const numChildren = depth < childCounts.length ? childCounts[depth] : 0;
                 const branches = [];
                 const baubles = [];
 
-                // Terminal bauble at branch tip
-                const tipRadius = depth === 0 ? 0 : (depth === 1 ? 3.5 + rng() * 1.5 : 2.0 + rng() * 1.0);
+                // Terminal bauble at branch tip (all depths except stalk)
+                const tipRadius = depth === 0 ? 0 : (depth === 1 ? 3.5 + rng() * 1.5 : (depth === 2 ? 2.0 + rng() * 1.0 : 1.2 + rng() * 0.8));
                 baubles.push({ x: 0, y: 0, r: tipRadius, isTip: true }); // placed at end by renderer
 
                 for (let i = 0; i < numChildren; i++) {
+                    // Start branching from the very base (frac≈0.05) all the way to near the tip
                     const frac = depth === 0
-                        ? 0.55 + (i / Math.max(1, numChildren - 1)) * 0.38  // spread along stalk 55%-93% (branches start higher)
-                        : 0.35 + (i / Math.max(1, numChildren - 1)) * 0.5;
+                        ? 0.05 + (i / Math.max(1, numChildren - 1)) * 0.88  // spread 5%-93% of stalk (bottom to top)
+                        : 0.10 + (i / Math.max(1, numChildren - 1)) * 0.75; // 10%-85% of parent
                     const side = (i % 2 === 0) ? 1 : -1;
                     // Angle opens wider at top of stalk (smaller depth number = closer to base)
-                    const spreadBase = depth === 0 ? 0.55 : 0.45;
-                    const spreadVar = depth === 0 ? 0.3 : 0.25;
+                    const spreadBase = depth === 0 ? 0.55 : (depth === 1 ? 0.48 : 0.40);
+                    const spreadVar = depth === 0 ? 0.3 : 0.22;
                     const childAngle = side * (spreadBase + rng() * spreadVar);
-                    const lenFactor = depth === 0 ? (0.28 + rng() * 0.18) : (0.55 + rng() * 0.3);
+                    // Longer relative lengths for better space filling
+                    const lenFactor = depth === 0 ? (0.35 + rng() * 0.22)   // 35%-57% of stalk
+                                    : depth === 1 ? (0.50 + rng() * 0.25)   // 50%-75% of parent
+                                    :               (0.45 + rng() * 0.25);  // 45%-70% (depth 2+)
                     const childLen = parentLen * lenFactor;
 
-                    // Sub-bauble cluster along branches at depth 0
-                    if (depth === 0 && rng() > 0.4) {
+                    // Sub-bauble cluster along branches at depth 0 and 1
+                    if (depth <= 1 && rng() > 0.35) {
                         const bFrac = frac - 0.06 + rng() * 0.05;
-                        baubles.push({ frac: bFrac, r: 1.8 + rng() * 1.2, isTip: false });
+                        baubles.push({ frac: bFrac, r: (depth === 0 ? 2.0 : 1.4) + rng() * 1.0, isTip: false });
                     }
 
                     branches.push({
                         frac,            // position along parent (0=base, 1=tip)
                         angle: childAngle,
                         length: childLen,
-                        width: Math.max(0.9, 3.5 - depth * 1.1 + rng() * 0.4),
-                        children: depth < 2 ? genBranch(childLen, childAngle, depth + 1, rng) : null,
+                        width: Math.max(0.7, 3.5 - depth * 1.0 + rng() * 0.4),
+                        children: depth < 3 ? genBranch(childLen, childAngle, depth + 1, rng) : null,
                         // bezier control: organic curve away from stalk then back
                         cpFrac: 0.45 + rng() * 0.2,
                         cpOffsetX: side * (3 + rng() * 5)
@@ -1064,21 +1075,26 @@
 
             for (let s = 0; s < numStalks; s++) {
                 const xPos = -width / 2 + (s + 0.5) * (width / numStalks);
-                const stalkHeight = height * (0.55 + Math.random() * 0.38);
-                const stalkWidth = 4.0 + Math.random() * 2.0;
+                const stalkHeight = height * (0.75 + Math.random() * 0.22); // taller: 75%-97% of drawn rect
+                const stalkWidth = 12.0 + Math.random() * 6.0; // 3× thicker (was 4-6)
 
                 // Deterministic-ish rng seeded per stalk for reproducibility during sway
                 let seed = s * 1000 + Math.floor(xPos * 7);
                 const rng = () => { seed = (seed * 16807 + 0) % 2147483647; return (seed % 1000) / 1000; };
 
-                const tree = genBranch(stalkHeight, 0, 0, rng);
+                // Fan outward from center: stalks lean away from the coral's center axis
+                // xPos ranges from -width/2 to +width/2; normalise to [-1, +1] and scale lean angle
+                const normalised = numStalks > 1 ? (s / (numStalks - 1)) * 2 - 1 : 0; // -1 (leftmost) to +1 (rightmost)
+                const stalkLean = normalised * 0.35 + (rng() - 0.5) * 0.12; // ±35° max lean + small random jitter
+                const tree = genBranch(stalkHeight, stalkLean, 0, rng);
 
                 stalks.push({
                     x: xPos + (Math.random() - 0.5) * 6,
                     height: stalkHeight,
                     width: stalkWidth,
-                    tree,          // recursive branch tree
-                    branches: []   // legacy compat (unused now)
+                    lean: stalkLean,   // initial outward lean angle (radians)
+                    tree,              // recursive branch tree
+                    branches: []       // legacy compat (unused now)
                 });
             }
 
@@ -1190,7 +1206,7 @@
             // Calculate actual dimensions after scaling
             const scaledBodyWidth = FISH_SVG_BODY_WIDTH * scaleFactor;
             const scaledBodyHeight = FISH_SVG_BODY_HEIGHT * scaleFactor;
-            const noseOffset = (FISH_SVG_NOSE_X - FISH_SVG_CENTER_X) * scaleFactor;
+            const noseOffset = (scaledBodyWidth / 2) * 0.85; // Fixed: SVG center-to-nose ratio ≈1, so use bodyWidth fraction instead
 
             return {
                 useSvgPath: true,
@@ -1238,10 +1254,12 @@
 
             if (size < 20) return null; // Too small
 
-            // Check if closed (start near end) - exact design.html logic
+            // Check if closed (start near end) - tighter threshold prevents small fish loops from being mistaken for coral
             const start = points[0];
             const end = points[points.length - 1];
-            const closedThreshold = size * 0.25;
+            // Smaller shapes need to be MORE explicitly closed (tighter % gap allowed)
+            // At size=30 → threshold=4.5px (very tight). At size=120 → 18px (forgiving).
+            const closedThreshold = size < 60 ? size * 0.15 : size * 0.22;
             const isClosed = distance(start, end) < closedThreshold;
 
             if (isClosed) {
@@ -1269,10 +1287,10 @@
             }
 
             // OPEN STROKES - check for self-intersecting fish shape (ichthys)
-            // Raised loopSize minimum 25→45 and require loopAspect>0.3
-            // to reject tiny crossings on long thin lines
+            // loopSize > 40 (generous threshold — angular quality checks in findSelfIntersectionLoop
+            // handle false positives from rectangular crossings via maxSingleChange + avgAngleChange)
             const loopInfo = findSelfIntersectionLoop(points);
-            if (loopInfo && loopInfo.loopSize > 45 && loopInfo.loopAspect > 0.3) {
+            if (loopInfo && loopInfo.loopSize > 40 && loopInfo.loopAspect > 0.25) {
                 const fishShape = generateFishShape(loopInfo, points, size);
                 return {
                     type: 'fish',
@@ -1280,7 +1298,7 @@
                     size: loopInfo.loopSize,
                     fishShape: fishShape,
                     loopInfo: loopInfo,
-                    confident: loopInfo.loopSize > 55 && loopInfo.loopAspect > 0.35
+                    confident: loopInfo.loopSize > 48 && loopInfo.loopAspect > 0.30
                 };
             }
 
@@ -1461,6 +1479,8 @@
             fish.forEach(other => {
                 const otherBw = other.bodyWidth || 20;
                 if (otherBw < 60) return;  // Only large fish are threats
+                // Large fish focused on each other (challenging/retreating) are not a school threat
+                if (other.state === 'challenging' || other.state === 'retreating') return;
 
                 const dx = other.x - schoolCenterX;
                 const dy = other.y - schoolCenterY;
@@ -1572,6 +1592,22 @@
             rawTargetX = Math.max(waypointMargin, Math.min(w - waypointMargin, rawTargetX));
             rawTargetY = Math.max(80, Math.min(h * 0.55, rawTargetY));
 
+            // ---- CORAL AVOIDANCE: nudge school target away from settled coral ----
+            coral.forEach(c => {
+                if (!c.settled) return;
+                const cdx = rawTargetX - c.x;
+                const cdy = rawTargetY - c.y;
+                const cdist = Math.sqrt(cdx * cdx + cdy * cdy);
+                if (cdist < 110) {
+                    // Push waypoint away from coral
+                    const pushAmt = (110 - cdist) / 110;
+                    rawTargetX += (cdx / (cdist + 1)) * 90 * pushAmt;
+                    rawTargetY += (cdy / (cdist + 1)) * 90 * pushAmt;
+                    rawTargetX = Math.max(waypointMargin, Math.min(w - waypointMargin, rawTargetX));
+                    rawTargetY = Math.max(80, Math.min(h * 0.55, rawTargetY));
+                }
+            });
+
             // ---- SMOOTH school target toward raw target (prevents jumping) ----
             // Flee: snap immediately so school escapes fast. Patrol: gentle blend to avoid jitter.
             const blendRate = (schoolTargetReason === 'fleeing') ? 1.0 :   // instant snap when fleeing
@@ -1624,8 +1660,18 @@
                     const targetHeading = Math.atan2(dy, dx);
                     this.schoolHeading = this.schoolHeading || targetHeading;
                     this.schoolHeading += angleDiff(targetHeading, this.schoolHeading) * 0.02;
+                    this.schoolLastMovedAt = now; // Track last meaningful movement
                 }
                 // When close to target, maintain current heading (don't spin)
+
+                // ---- STAGNATION DETECTION: inject randomness if school is stuck ----
+                // If school center hasn't moved toward target in 6+ seconds, nudge the waypoint
+                if (!this.schoolLastMovedAt) this.schoolLastMovedAt = now;
+                if (now - this.schoolLastMovedAt > 6000 && schoolTargetReason === 'patrol') {
+                    // School is stagnant — pick a fresh random patrol point and reset timer
+                    this.schoolTargetTimer = 0;
+                    this.schoolLastMovedAt = now;
+                }
             }
 
             // Store for debug visualization
@@ -2102,17 +2148,20 @@
                         const rivalDist = Math.sqrt((rival.x - f.x) ** 2 + (rival.y - f.y) ** 2);
                         const rivalAngle = Math.atan2(rival.y - f.y, rival.x - f.x);
 
-                        // COMPLETION: Timer exhausted, rival retreated far enough, or made contact
-                        if (rivalDist < 50) {
-                            // Made contact — display complete, winner pauses triumphantly
+                        // COMPLETION: Rival is retreating and we've closed enough — declare victory, don't bump
+                        const rivalIsRetreating = rival.state === 'retreating';
+                        const closeEnough = rivalIsRetreating ? rivalDist < 120 : rivalDist < 50;
+                        if (closeEnough) {
+                            // Display complete — winner pauses triumphantly
                             f.state = 'idle';
                             f.lastRivalPos = { x: rival.x, y: rival.y };
                             f.rivalId = null;
                             f.lastChallengeTime = now;
-                            f.cruiseTimer = 2000; // Brief pause
+                            f.cruiseTimer = 2500; // Brief triumphant pause
                         } else {
-                            // Advance toward rival — strong blend so fish arcs naturally as rival moves
-                            f.targetHeading += angleDiff(rivalAngle, f.targetHeading) * 0.20;
+                            // Advance toward rival — ease off when rival already retreating (no need to ram)
+                            const advanceRate = rivalIsRetreating ? 0.08 : 0.20;
+                            f.targetHeading += angleDiff(rivalAngle, f.targetHeading) * advanceRate;
                             f.committedHeading = f.targetHeading;
                         }
                     } else {
@@ -2128,8 +2177,8 @@
                     if (rival) {
                         const rivalDist = Math.sqrt((rival.x - f.x) ** 2 + (rival.y - f.y) ** 2);
 
-                        // COMPLETION: If far enough from rival, safe to stop retreating
-                        if (rivalDist > 200) {
+                        // COMPLETION: If far enough from rival, safe to stop retreating (120px — challenger stops early so this is reachable)
+                        if (rivalDist > 130) {
                             f.state = 'idle';
                             f.ignoreRivalId = f.rivalId;
                             f.ignoreRivalUntil = now + 6000;  // Ignore for 6 seconds
@@ -2160,10 +2209,11 @@
                     if (f.state === 'fleeing' || f.state === 'retreating') {
                         f.stateChangeCooldown = Math.max(f.stateChangeCooldown || 0, 1500);
                     }
-                    // Expired challenge — clean up timer/rival reference
+                    // Expired challenge (timer ran out without contact) — set cooldown so they don't immediately re-challenge
                     if (f.state === 'challenging') {
                         f.rivalId = null;
-                        f.lastChallengeTime = now;
+                        f.lastChallengeTime = now; // Enforce 3s cooldown before next challenge
+                        f.cruiseTimer = 1500; // Brief pause before resuming patrol
                     }
                     // Preserve 'seeking' — food block already committed this state.
                     // Only reset to idle if we weren't already doing something purposeful.
@@ -2172,8 +2222,7 @@
                     }
 
                     // ---- LARGE FISH: Tuna-like territorial behavior ----
-                    // Skip while seeking food — food takes priority, no distractions
-                    if (isLarge && f.state !== 'seeking') {
+                    if (isLarge) {
                         // TERRITORY_RANGE, HUNT_RANGE are module-scoped
 
                         let rival = null;
@@ -2198,8 +2247,8 @@
                                 rivalDist = d;
                             }
 
-                            // Check for small fish prey
-                            if (otherBw < SMALL_THRESHOLD && d < HUNT_RANGE && d < preyDist) {
+                            // Check for small fish prey (only when not seeking food)
+                            if (f.state !== 'seeking' && otherBw < SMALL_THRESHOLD && d < HUNT_RANGE && d < preyDist) {
                                 prey = other;
                                 preyDist = d;
                             }
@@ -2213,7 +2262,7 @@
                             const canChallenge = !f.lastChallengeTime || (now - f.lastChallengeTime > CHALLENGE_COOLDOWN);
 
                             // ASYMMETRY FIX: If rival is already challenging ME, I MUST retreat
-                            // (regardless of canChangeState — being charged overrides everything)
+                            // (regardless of canChangeState or seeking food — being charged overrides everything)
                             const rivalIsChallengingMe = rival.state === 'challenging' && rival.rivalId === f.id;
 
                             if (rivalIsChallengingMe && f.state !== 'retreating') {
@@ -2228,19 +2277,21 @@
                                 const retreatAngle = retreatBase + retreatScatter;
                                 f.targetHeading = retreatAngle;
                                 f.committedHeading = retreatAngle;
+                                f.heading = retreatAngle; // Snap heading so fish immediately turns away
                                 f.reversalPressure = 0;
-                            } else if (canChangeState && f.dominance > rivalDominance && canChallenge && f.state !== 'challenging') {
-                                // I'm dominant and can challenge - advance
+                            } else if (f.state !== 'seeking' && (f.dominance > rivalDominance || (f.dominance === rivalDominance && f.id > rival.id)) && canChallenge && f.state !== 'challenging') {
+                                // I'm dominant (or tie-break by ID) and can challenge - advance (no canChangeState gate so challenge fires reliably)
+                                // (Skip initiating challenge when seeking food — food takes priority)
                                 f.state = 'challenging';
-                                f.stateChangeCooldown = 2500;
+                                f.stateChangeCooldown = 1500; // Shorter lockout so new challenge can begin sooner
                                 f.rivalId = rival.id;
                                 f.challengeTimer = 4000;
                                 const challengeAngle = Math.atan2(rival.y - f.y, rival.x - f.x);
                                 f.targetHeading = challengeAngle;
                                 f.committedHeading = challengeAngle;
                                 f.reversalPressure = 0;
-                            } else if (canChangeState && f.dominance <= rivalDominance && canChallenge && f.state !== 'retreating') {
-                                // I'm submissive - retreat immediately
+                            } else if (f.state !== 'seeking' && canChangeState && f.dominance <= rivalDominance && canChallenge && f.state !== 'retreating') {
+                                // I'm submissive - retreat immediately (skip when seeking food)
                                 f.state = 'retreating';
                                 f.stateChangeCooldown = 2500;
                                 f.rivalId = rival.id;
@@ -2250,6 +2301,7 @@
                                 const retreatAngle2 = retreatBase2 + retreatScatter2;
                                 f.targetHeading = retreatAngle2;
                                 f.committedHeading = retreatAngle2;
+                                f.heading = retreatAngle2; // Snap heading so fish immediately turns away
                                 f.reversalPressure = 0;
                             }
                             // If already in correct state or on cooldown, continue current state
@@ -2362,6 +2414,8 @@
                             if (other.id === f.id) return;
                             const otherBw = other.bodyWidth || 20;
                             if (otherBw < MEDIUM_THRESHOLD) return;
+                            // Challenging/retreating large fish are focused on each other — not a predator threat to bystanders
+                            if (other.state === 'challenging' || other.state === 'retreating') return;
 
                             const dx = other.x - f.x;
                             const dy = other.y - f.y;
@@ -2423,13 +2477,15 @@
                     if (isMedium && f.state === 'idle' && canChangeState) {
                         let threat = null;
                         let threatDist = Infinity;
-                        const SCATTER_CLOSE = 110;  // Always scatter regardless of facing
-                        const SCATTER_FAR  = 200;   // Only scatter if large fish is facing us
+                        const SCATTER_CLOSE = 80;   // Always scatter regardless of facing (was 110)
+                        const SCATTER_FAR  = 140;   // Only scatter if large fish is facing us (was 200 — too hair-trigger)
 
                         fish.forEach(other => {
                             if (other.id === f.id) return;
                             const otherBw = other.bodyWidth || 20;
                             if (otherBw < MEDIUM_THRESHOLD) return;
+                            // Challenging/retreating large fish are focused on each other — don't scatter bystanders
+                            if (other.state === 'challenging' || other.state === 'retreating') return;
 
                             const dx = other.x - f.x;
                             const dy = other.y - f.y;
@@ -2583,9 +2639,12 @@
                             const slotAngleDiff = Math.abs(angleDiff(slotAngle, schoolHeading));
                             const farFromSchool = distToSchoolCenter > REGROUP_THRESHOLD;
 
+                            // Reduce slot pull weight near canvas edges so edge avoidance wins
+                            const nearEdge = f.x < 120 || f.x > w - 120 || f.y < 120 || f.y > h - 120;
+                            const slotWeight = nearEdge ? 0.004 : 0.01;
                             if (!farFromSchool && slotAngleDiff < Math.PI * 0.5 && dist > 40) {
                                 // Slot is ahead of us and we're close to school - gentle correction
-                                f.targetHeading += angleDiff(slotAngle, f.targetHeading) * 0.01;
+                                f.targetHeading += angleDiff(slotAngle, f.targetHeading) * slotWeight;
                             }
                             // If regrouping or slot is behind us, skip - getting back to school first
 
@@ -2830,7 +2889,7 @@
                 // The nose extends noseOffset ahead of center - we add half that to the forward
                 // radius so head-on encounters register before noses visually overlap.
                 const fNoseOff = f.noseOffset || (f.bodyWidth || 20);
-                const fWidthH = (f.bodyWidth || 20) + fNoseOff * 0.5; // Nose-aware forward reach
+                const fWidthH = (f.bodyWidth || 20) + Math.min(fNoseOff * 0.3, (f.bodyWidth || 20) * 0.4); // Nose-aware forward reach (capped to prevent large fish over-detection)
                 const fHeightH = (f.bodyHeight || (f.bodyWidth || 20) * 0.4 || 8) * 1.4; // Perpendicular (tighter than before to avoid false positives side-by-side)
 
                 // ---- SIMPLE MODE FOR LARGE FISH ----
@@ -2889,7 +2948,7 @@
                     // register before noses visually overlap.
                     const fRadius = getOvalRadius(fWidthH, fHeightH, f.heading, dirAngle);
                     const otherNoseOff = other.noseOffset || otherBw;
-                    const otherWidthH = otherBw + otherNoseOff * 0.5; // Nose-aware, matches fWidthH logic
+                    const otherWidthH = otherBw + Math.min(otherNoseOff * 0.3, otherBw * 0.4); // Nose-aware, matches fWidthH logic
                     const otherHeightH = (other.bodyHeight || otherBw * 0.4 || 8) * 1.4;
                     const otherRadius = getOvalRadius(otherWidthH, otherHeightH, other.heading, dirAngle + Math.PI);
 
@@ -3083,10 +3142,10 @@
                         f.targetHeading += angleDiff(avoidAngle, f.heading) * JELLY_AVOID_FORCE * strength;
                     }
 
-                    // Inner danger zone — force immediate flee if within tentacle reach
+                    // Inner danger zone — force immediate flee if within tentacle reach (small/medium only; large fish don't fear jellyfish)
                     const r = shape.bellRadius;
                     const tentacleReach = r + shape.tentacleLength * r * 0.4 + 10;
-                    if (dist < tentacleReach) {
+                    if (!isLarge && dist < tentacleReach) {
                         f.state = 'fleeing';
                         f.fleeTimer = Math.max(f.fleeTimer || 0, 1500);
                         f.behaviorLockTimer = Math.max(f.behaviorLockTimer || 0, 1500);
@@ -3347,35 +3406,46 @@
 
                 // EMERGENCY ZONE - hard edge - STRONG steering but NO instant heading snap
                 // Direct heading assignment causes 180° snaps - must go through smoothing
+                // Exception: fleeing fish keep their flee heading — the corner flash comes from
+                // the flee heading fighting the emergency cardinal snap. Let avoidance force handle it.
+                const inFleeState = f.state === 'fleeing';
                 if (f.x < HARD_EDGE) {
                     avoidX = 3; avoidStrength = 1; inEmergency = true;
-                    f.targetHeading = 0; // Want to go right
-                    f.committedHeading = 0; // Commit to this direction
-                    f.cruiseAngle = 0; // Reset cruise to match (prevents fighting)
-                    f.reversalPressure = 0; // Allow immediate turn
+                    if (!inFleeState) {
+                        f.targetHeading = 0; // Want to go right
+                        f.committedHeading = 0; // Commit to this direction
+                        f.cruiseAngle = 0; // Reset cruise to match (prevents fighting)
+                        f.reversalPressure = 0; // Allow immediate turn
+                    }
                 }
                 if (f.x > w - HARD_EDGE) {
                     avoidX = -3; avoidStrength = 1; inEmergency = true;
-                    f.targetHeading = Math.PI;
-                    f.committedHeading = Math.PI;
-                    f.cruiseAngle = Math.PI;
-                    f.reversalPressure = 0;
+                    if (!inFleeState) {
+                        f.targetHeading = Math.PI;
+                        f.committedHeading = Math.PI;
+                        f.cruiseAngle = Math.PI;
+                        f.reversalPressure = 0;
+                    }
                 }
                 if (f.y < HARD_EDGE) {
                     avoidY = 3; avoidStrength = 1; inEmergency = true;
-                    f.targetHeading = Math.PI * 0.5;
-                    f.committedHeading = Math.PI * 0.5;
-                    f.cruiseAngle = Math.PI * 0.5;
-                    f.reversalPressure = 0;
+                    if (!inFleeState) {
+                        f.targetHeading = Math.PI * 0.5;
+                        f.committedHeading = Math.PI * 0.5;
+                        f.cruiseAngle = Math.PI * 0.5;
+                        f.reversalPressure = 0;
+                    }
                 }
                 if (f.y > h - HARD_EDGE) {
                     // Small fish returning to coral can go closer to bottom edge
                     if (!f.isReturningToCoral) {
                         avoidY = -3; avoidStrength = 1; inEmergency = true;
-                        f.targetHeading = -Math.PI * 0.5;
-                        f.committedHeading = -Math.PI * 0.5;
-                        f.cruiseAngle = -Math.PI * 0.5;
-                        f.reversalPressure = 0;
+                        if (!inFleeState) {
+                            f.targetHeading = -Math.PI * 0.5;
+                            f.committedHeading = -Math.PI * 0.5;
+                            f.cruiseAngle = -Math.PI * 0.5;
+                            f.reversalPressure = 0;
+                        }
                     } else {
                         // Softer avoidance for returning fish
                         avoidY -= 1.5;
@@ -3484,8 +3554,8 @@
                     }
                 } else {
                     // Small adjustment - apply smoothly
-                    // Seeking food / challenging: faster blend so heading actually commits to target direction
-                    const commitBlend = (f.state === 'seeking' || f.state === 'challenging') ? 0.25 : 0.1;
+                    // Seeking food / challenging / retreating: faster blend so heading actually commits to target direction
+                    const commitBlend = (f.state === 'seeking' || f.state === 'challenging' || f.state === 'retreating') ? 0.25 : 0.1;
                     f.committedHeading += rawTargetDelta * commitBlend;
                     f.reversalPressure = Math.max(0, (f.reversalPressure || 0) - 0.05);
                 }
@@ -4081,11 +4151,11 @@
                     const cpX = (startX + endX) * 0.5 + sideOff;
                     const cpY = (startY + endY) * 0.5;
 
-                    // Stroke width tapers with depth
-                    const lw = depth === 0 ? 4.5 : Math.max(0.8, 3.2 - depth * 1.0);
+                    // Stroke width tapers with depth (3× thicker than original)
+                    const lw = depth === 0 ? 13.5 : Math.max(2.4, 9.6 - depth * 3.0);
                     ctx.lineWidth = lw;
                     ctx.strokeStyle = branchColor;
-                    ctx.globalAlpha = depth === 0 ? 0.88 : 0.75 - depth * 0.08;
+                    ctx.globalAlpha = depth === 0 ? 0.75 : Math.max(0.32, 0.64 - depth * 0.07); // -15% opacity; depth 3 ≈ 0.43
 
                     ctx.beginPath();
                     ctx.moveTo(startX, startY);
@@ -4095,8 +4165,8 @@
                     // Draw mid-stalk baubles
                     tree.baubles.forEach(b => {
                         if (b.isTip) {
-                            // Tip bauble at endX/endY
-                            ctx.globalAlpha = 0.72 - depth * 0.08;
+                            // Tip bauble at endX/endY (-15% opacity)
+                            ctx.globalAlpha = 0.61 - depth * 0.07;
                             ctx.fillStyle = branchColor;
                             ctx.beginPath();
                             ctx.arc(endX, endY, b.r, 0, Math.PI * 2);
@@ -4106,7 +4176,7 @@
                             const t = b.frac;
                             const mx = (1-t)*(1-t)*startX + 2*(1-t)*t*cpX + t*t*endX;
                             const my = (1-t)*(1-t)*startY + 2*(1-t)*t*cpY + t*t*endY;
-                            ctx.globalAlpha = 0.55;
+                            ctx.globalAlpha = 0.47; // -15%
                             ctx.fillStyle = branchColor;
                             ctx.beginPath();
                             ctx.arc(mx, my, b.r, 0, Math.PI * 2);
@@ -4137,8 +4207,8 @@
                     ctx.lineJoin = 'round';
 
                     if (stalk.tree) {
-                        // New recursive renderer
-                        drawBranchTree(stalkX, 0, 0, stalk.height, 0, stalk.tree,
+                        // New recursive renderer — pass stalk lean so stalks fan outward
+                        drawBranchTree(stalkX, 0, stalk.lean || 0, stalk.height, 0, stalk.tree,
                                        now / 2200 + si * 1.3 + shape.swayOffset, stalkColor);
                     } else {
                         // Legacy fallback (old coral without tree)
@@ -4236,16 +4306,27 @@
                     }
                 });
 
-                // Avoid fish
+                // Avoid fish — large/medium fish actively bump the jellyfish (physical collision)
                 fish.forEach(f => {
+                    const fBw = f.bodyWidth || 20;
                     const dx = j.x - f.x;
                     const dy = j.y - f.y;
                     const dist = Math.sqrt(dx * dx + dy * dy);
-                    const minDist = shape.bellRadius + f.size * 0.5 + 30;
+                    const minDist = shape.bellRadius + fBw + 20;
                     if (dist < minDist && dist > 0) {
-                        const pushForce = 0.015 * (minDist - dist) / minDist;
-                        j.vx += (dx / dist) * pushForce;
-                        j.vy += (dy / dist) * pushForce;
+                        const isLargeOrMedium = fBw >= SMALL_THRESHOLD;
+                        // Large/medium fish physically push the jellyfish with their momentum
+                        if (isLargeOrMedium) {
+                            const fishSpeed = Math.sqrt((f.vx || 0) ** 2 + (f.vy || 0) ** 2);
+                            const impactStrength = 0.08 + fishSpeed * 0.06; // Stronger push at higher fish speed
+                            j.vx += (dx / dist) * impactStrength;
+                            j.vy += (dy / dist) * impactStrength;
+                        } else {
+                            // Small fish — gentle avoidance only
+                            const pushForce = 0.015 * (minDist - dist) / minDist;
+                            j.vx += (dx / dist) * pushForce;
+                            j.vy += (dy / dist) * pushForce;
+                        }
                     }
                 });
 
@@ -4855,12 +4936,12 @@
                 const mouthOffset = rawNoseOffset * 0.78;
 
                 // Collision oval — MUST match physics formula in drawFishEntities() exactly:
-                //   fWidthH = bodyWidth + noseOffset * 0.5
+                //   fWidthH = bodyWidth + min(noseOffset * 0.3, bodyWidth * 0.4)
                 //   fHeightH = bodyHeight * 1.4
                 // The oval is drawn shifted forward by half the nose overhang so it
                 // visually wraps the actual fish shape rather than centering on f.x/f.y.
                 const debugNoseOff = rawNoseOffset; // same as AI code uses for noseOffset
-                const collisionW = bodyWidth + debugNoseOff * 0.5;
+                const collisionW = bodyWidth + Math.min(debugNoseOff * 0.3, bodyWidth * 0.4);
                 const collisionH = bodyHeight * 1.4;
                 // Shift center forward: nose sticks out noseOffset, tail ~bodyWidth behind center.
                 // The visual midpoint is (noseOffset - bodyWidth) / 2 ahead of f.x/f.y.
@@ -5582,8 +5663,18 @@
                         if (oldestIdx !== -1) fish.splice(oldestIdx, 1);
                     }
 
-                    // Overall cap - remove oldest if still over limit
-                    if (fish.length >= MAX_FISH) fish.shift();
+                    // Overall cap - remove the fish nearest to a canvas edge (least visible)
+                    // rather than the oldest, to avoid a visible central fish blinking out
+                    if (fish.length >= MAX_FISH) {
+                        const cw = _cw, ch = _ch;
+                        let edgeIdx = 0;
+                        let minEdgeDist = Infinity;
+                        fish.forEach((ef, ei) => {
+                            const edgeDist = Math.min(ef.x, cw - ef.x, ef.y, ch - ef.y);
+                            if (edgeDist < minEdgeDist) { minEdgeDist = edgeDist; edgeIdx = ei; }
+                        });
+                        fish.splice(edgeIdx, 1);
+                    }
 
                     const heading = fishShape.initialHeading;
                     const hueShift = (id * 47) % 360;
