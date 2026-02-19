@@ -113,7 +113,8 @@
             bottom: 1rem;
             left: 1rem;
             display: flex;
-            gap: 1rem;
+            gap: 0.75rem;
+            align-items: center;
             z-index: 100;
             opacity: 0.6;
             transition: opacity 0.2s ease;
@@ -126,7 +127,7 @@
             align-items: center;
             gap: 0.5rem;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.6rem;
+            font-size: 0.65rem;
             font-weight: 500;
             text-transform: uppercase;
             letter-spacing: 0.1em;
@@ -167,6 +168,35 @@
         }
         .canvas-toggle:hover {
             color: rgba(125, 216, 247, 0.7);
+        }
+        /* Info button — shows/hides the draw hint */
+        .info-btn {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            font-weight: 500;
+            line-height: 1;
+            color: rgba(125, 216, 247, 0.5);
+            background: rgba(10, 22, 40, 0.4);
+            border: 1px solid rgba(77, 201, 246, 0.2);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 0;
+        }
+        .info-btn:hover {
+            color: rgba(125, 216, 247, 0.9);
+            border-color: rgba(77, 201, 246, 0.5);
+            background: rgba(10, 22, 40, 0.7);
+        }
+        .info-btn.active {
+            color: rgba(125, 216, 247, 0.9);
+            border-color: rgba(77, 201, 246, 0.5);
+            background: rgba(77, 201, 246, 0.12);
         }
     </style>
 </head>
@@ -268,12 +298,13 @@
             <span class="hint-tap">tap anywhere to drop food</span>
         </div>
 
-        <!-- Debug Controls — fixed bottom-left, off by default -->
+        <!-- Canvas Controls — fixed bottom-left -->
         <div class="canvas-controls">
+            <button class="info-btn" id="toggleHint" aria-label="Toggle draw instructions" title="How to draw">i</button>
             <label class="canvas-toggle">
                 <input type="checkbox" id="toggleDebug">
                 <span class="toggle-switch"></span>
-                Debug
+                Logic
             </label>
         </div>
     </header>
@@ -5724,20 +5755,34 @@
         // Draw hint — always visible on page load, fades after enough draws this visit
         // Pure in-memory counter: no storage — resets on every page load/refresh
         const heroDrawHint = document.getElementById('heroDrawHint');
+        const hintToggleBtn = document.getElementById('toggleHint');
         if (heroDrawHint) {
             const HINT_THRESHOLD = 12;
             let drawHintCount = 0; // always 0 at load — no persistence
+            let hintDismissed = false;
 
             function bumpDrawHint() {
                 if (drawHintCount >= HINT_THRESHOLD) return;
                 drawHintCount++;
                 if (drawHintCount >= HINT_THRESHOLD) {
                     heroDrawHint.classList.add('hidden');
+                    hintDismissed = true;
+                    if (hintToggleBtn) hintToggleBtn.classList.remove('active');
                 }
             }
 
             // Count on completed strokes (pointerup), not on press — keeps hint visible while drawing
             canvas.addEventListener('pointerup', bumpDrawHint);
+
+            // ℹ button toggles hint visibility manually
+            if (hintToggleBtn) {
+                hintToggleBtn.classList.add('active'); // starts active since hint is visible
+                hintToggleBtn.addEventListener('click', () => {
+                    hintDismissed = !heroDrawHint.classList.contains('hidden');
+                    heroDrawHint.classList.toggle('hidden');
+                    hintToggleBtn.classList.toggle('active', !heroDrawHint.classList.contains('hidden'));
+                });
+            }
         }
 
         // Click to scare fish - check if click hit a fish
