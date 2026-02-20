@@ -1072,6 +1072,16 @@
             const numStalks = Math.max(2, Math.min(8, Math.floor(width / 20)));
             const stalks = [];
 
+            // How much horizontal space each stalk gets — used to rein in spread for large coral
+            // Small coral (width~40): budget~20 → scale~1.0 (full spread)
+            // Large coral (width~300): budget~37 per stalk but height is also large, so
+            // we compare half-stalk-budget against expected branch reach and compress accordingly
+            const stalkBudget = width / numStalks; // px per stalk slot
+            // spreadScale: 1.0 for small coral, tapers toward 0.55 for very large
+            const spreadScale = Math.max(0.55, Math.min(1.0, stalkBudget / 55));
+            // lenScale: keep branches proportionally shorter when stalk budget is tight vs height
+            const lenScale = Math.max(0.65, Math.min(1.0, stalkBudget / (height * 0.55)));
+
             // Generate a branch node recursively. Returns {endX, endY, branches[], baubles[]}
             // All coords relative to branch start. depth=0 is main stalk.
             // Max depth is 3 for 4-level fractal (0→1→2→3 terminal)
@@ -1092,14 +1102,15 @@
                         ? 0.05 + (i / Math.max(1, numChildren - 1)) * 0.88  // spread 5%-93% of stalk (bottom to top)
                         : 0.10 + (i / Math.max(1, numChildren - 1)) * 0.75; // 10%-85% of parent
                     const side = (i % 2 === 0) ? 1 : -1;
-                    // Angle opens wider at top of stalk (smaller depth number = closer to base)
-                    const spreadBase = depth === 0 ? 0.55 : (depth === 1 ? 0.48 : 0.40);
-                    const spreadVar = depth === 0 ? 0.3 : 0.22;
+                    // Angle opens wider at top of stalk — scaled down for large coral to stay in bounds
+                    const spreadBase = (depth === 0 ? 0.55 : (depth === 1 ? 0.48 : 0.40)) * spreadScale;
+                    const spreadVar = (depth === 0 ? 0.3 : 0.22) * spreadScale;
                     const childAngle = side * (spreadBase + rng() * spreadVar);
-                    // Longer relative lengths for better space filling
-                    const lenFactor = depth === 0 ? (0.35 + rng() * 0.22)   // 35%-57% of stalk
+                    // Branch lengths scaled shorter for large coral so they don't escape the drawn rect
+                    const lenFactor = (depth === 0 ? (0.35 + rng() * 0.22)   // 35%-57% of stalk
                                     : depth === 1 ? (0.50 + rng() * 0.25)   // 50%-75% of parent
-                                    :               (0.45 + rng() * 0.25);  // 45%-70% (depth 2+)
+                                    :               (0.45 + rng() * 0.25))  // 45%-70% (depth 2+)
+                                    * lenScale;
                     const childLen = parentLen * lenFactor;
 
                     // Sub-bauble cluster along branches at depth 0 and 1
@@ -1134,8 +1145,10 @@
 
                 // Fan outward from center: stalks lean away from the coral's center axis
                 // xPos ranges from -width/2 to +width/2; normalise to [-1, +1] and scale lean angle
+                // Lean is also reduced for large coral so tall stalks don't carry branches far outside bounds
                 const normalised = numStalks > 1 ? (s / (numStalks - 1)) * 2 - 1 : 0; // -1 (leftmost) to +1 (rightmost)
-                const stalkLean = normalised * 0.35 + (rng() - 0.5) * 0.12; // ±35° max lean + small random jitter
+                const maxLean = 0.35 * spreadScale; // tighter lean for large coral
+                const stalkLean = normalised * maxLean + (rng() - 0.5) * 0.08 * spreadScale;
                 const tree = genBranch(stalkHeight, stalkLean, 0, rng);
 
                 stalks.push({
