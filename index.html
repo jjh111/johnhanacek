@@ -382,16 +382,16 @@
         <!-- EXPLORE & CONTACT - side by side on widescreen -->
         <div class="widescreen-split">
             <section id="explore">
-                <h2>Explore</h2>
+                <h2>Explore Site</h2>
 
                 <div class="content-card">
                     <h4><a href="design.html">Design Portfolio</a></h4>
-                    <p>Professional work, case studies, and XR projects</p>
+                    <p>Professional work, case studies, and projects</p>
                 </div>
 
                 <div class="content-card">
                     <h4><a href="art.html">Art & Creative</a></h4>
-                    <p>Visual art, photography, and creative experiments</p>
+                    <p>Interactive, photographic, volumetric creative experiments</p>
                 </div>
 
                 <div class="content-card">
@@ -401,24 +401,11 @@
 
                 <div class="content-card">
                     <h4><a href="services.html">Services & Consulting</a></h4>
-                    <p>Founding designer, design engineering, and AI product services</p>
+                    <p>Cosnulting, design engineering, and AI product services</p>
                 </div>
 
-                <div class="content-card">
-                    <h4>Current Concepts</h4>
-                    <ul>
-                        <li><a href="https://earthstar.space" target="_blank" rel="noopener">Earth Star</a> — positive vision fiction &amp; worldbuilding</li>
-                        <li><a href="design.html">MetaMedium</a> — AI-native design systems that blur tool and medium</li>
-                    </ul>
-                </div>
-
-                <div class="content-card">
-                    <h4>Open Source &amp; Code</h4>
-                    <ul>
-                        <li><a href="https://github.com/johnhanacek" target="_blank" rel="noopener">GitHub — johnhanacek</a></li>
-                        <li>This site: interactive canvas, fish AI, Claude Code</li>
-                    </ul>
-                </div>
+         
+            
             </section>
 
             <section id="contact">
@@ -427,22 +414,34 @@
                 <div class="content-card">
                     <h4>Email</h4>
                     <p><a href="mailto:hi@johnhanacek.com">hi@johnhanacek.com</a></p>
+               
+                    </div>
 
-                    <h4>Writing</h4>
-                    <ul>
-                        <li><a href="https://spatialandimmersivedesign.substack.com/" target="_blank" rel="noopener">Spatial &amp; Immersive Design Blog</a></li>
-                        <li><a href="https://johnhanacek.substack.com" target="_blank" rel="noopener">Personal Blog — Tech, Strategy &amp; Research</a></li>
-                    </ul>
-
-                    <h4>Social</h4>
+                <div class="content-card" >
+                <h4>Social</h4>
                     <ul>
                         <li><a href="https://bsky.app/profile/johnhanacek.bsky.social" target="_blank" rel="noopener">Bluesky</a></li>
                         <li><a href="https://x.com/johnhanacek" target="_blank" rel="noopener">X (Twitter)</a></li>
                         <li><a href="https://www.linkedin.com/in/johnhanacek/" target="_blank" rel="noopener">LinkedIn</a></li>
                     </ul>
-
-                    <h4>Book a Call</h4>
-                    <p><a href="https://calendar.app.google/gpSXKWuwxrGZ2HweA" target="_blank" rel="noopener">15 Min Intro Call →</a></p>
+               </div>
+<div class="content-card" >
+              
+                 
+                <h4>Blogs & Projects</h4>
+                    <ul>
+                      <li><a href="https://fractalfuture.substack.com" target="_blank" rel="noopener">Fractal Future</a> Original Science Fiction</li>
+                        <li><a href="https://spatialandimmersivedesign.substack.com/" target="_blank" rel="noopener">Spatial &amp; Immersive Design</a> VR, AR, XR</li>
+                        <li><a href="https://johnhanacek.substack.com" target="_blank" rel="noopener">Personal Blog </a> Tech, Strategy &amp; Research</li>
+                    </ul>
+                       <p>
+                        <a href="https://earthstar.space" target="_blank" rel="noopener">Earth Star</a> Prime Directive: ∇(𝒞) ≥ 0 across ∀𝑆 ∈ {body, biome, being, network, star}
+                        </p>
+                        <a href="https://jjh111.github.io/MetaMedium/" target="_blank" rel="noopener">MetaMedium</a> AI beyond chat towards a truly new and humane medium
+                    </div>
+                  
+                       
+                 
                 </div>
             </section>
         </div>
@@ -2377,11 +2376,11 @@
                                  ((rival.dominance || 0) === (f.dominance || 0) && rival.id > f.id));
 
                             if (rivalIsTrulyDominant && f.state !== 'retreating') {
-                                // Rival is genuinely more dominant — dignified withdrawal
+                                // Rival is genuinely more dominant — escape with immediate velocity kick
                                 f.state = 'retreating';
                                 f.stateChangeCooldown = 2500;
                                 f.rivalId = rival.id;
-                                f.fleeTimer = 3000;
+                                f.fleeTimer = 3500;
                                 // Slight angular scatter so retreat looks organic, not robotic
                                 const retreatBase = Math.atan2(f.y - rival.y, f.x - rival.x);
                                 const retreatScatter = (Math.random() - 0.5) * (Math.PI / 6); // ±30°
@@ -2390,6 +2389,10 @@
                                 f.committedHeading = retreatAngle;
                                 f.heading = retreatAngle; // Snap heading so fish immediately turns away
                                 f.reversalPressure = 0;
+                                // Immediate velocity kick so retreat is visually snappy
+                                const kickSpeed = IDLE_SPEED * 3.5;
+                                f.vx = Math.cos(retreatAngle) * kickSpeed;
+                                f.vy = Math.sin(retreatAngle) * kickSpeed;
                             } else if (f.state !== 'seeking' && (f.dominance > rivalDominance || (f.dominance === rivalDominance && f.id > rival.id)) && canChallenge && f.state !== 'challenging') {
                                 // I'm dominant (or tie-break by ID) and can challenge - advance (no canChangeState gate so challenge fires reliably)
                                 // (Skip initiating challenge when seeking food — food takes priority)
@@ -2402,18 +2405,22 @@
                                 f.committedHeading = challengeAngle;
                                 f.reversalPressure = 0;
                             } else if (f.state !== 'seeking' && canChangeState && f.dominance <= rivalDominance && canChallenge && f.state !== 'retreating') {
-                                // I'm submissive - retreat immediately (skip when seeking food)
+                                // I'm submissive - retreat with velocity kick
                                 f.state = 'retreating';
                                 f.stateChangeCooldown = 2500;
                                 f.rivalId = rival.id;
-                                f.fleeTimer = 3000;
+                                f.fleeTimer = 3500;
                                 const retreatBase2 = Math.atan2(f.y - rival.y, f.x - rival.x);
                                 const retreatScatter2 = (Math.random() - 0.5) * (Math.PI / 6); // ±30°
                                 const retreatAngle2 = retreatBase2 + retreatScatter2;
                                 f.targetHeading = retreatAngle2;
                                 f.committedHeading = retreatAngle2;
-                                f.heading = retreatAngle2; // Snap heading so fish immediately turns away
+                                f.heading = retreatAngle2;
                                 f.reversalPressure = 0;
+                                // Immediate velocity kick
+                                const kickSpeed2 = IDLE_SPEED * 3.5;
+                                f.vx = Math.cos(retreatAngle2) * kickSpeed2;
+                                f.vy = Math.sin(retreatAngle2) * kickSpeed2;
                             }
                             // If already in correct state or on cooldown, continue current state
                         }
@@ -2468,7 +2475,7 @@
 
                             if ((f.cruiseTimer <= 0 && turnComplete) || edgeEmergency) {
 
-                                f.cruiseTimer = 9000 + Math.random() * 5000;
+                                f.cruiseTimer = 14000 + Math.random() * 8000; // was 9000+5000 — longer lazy cruises
                                 f.lastEdgeTurn = now; // cooldown to prevent re-trigger
 
                                 // Pick new direction — prefer reversing horizontal component
@@ -2497,7 +2504,7 @@
                             // Steer toward cruise angle smoothly
                             // SKIP when seeking food — food direction must win over cruise momentum
                             if (f.state !== 'seeking') {
-                                const cruiseSteer = angleDiff(f.cruiseAngle, f.heading) * 0.06;
+                                const cruiseSteer = angleDiff(f.cruiseAngle, f.heading) * 0.03; // was 0.06 — halved for lazier turns
                                 f.targetHeading += cruiseSteer;
 
                                 // Also commit heading to cruise angle to reduce wobble from other forces
@@ -2585,18 +2592,20 @@
 
                     // ---- MEDIUM FISH: Scatter from large fish ----
                     // Two-zone: always flee when very close, facing check required at medium range
-                    if (isMedium && f.state === 'idle' && canChangeState) {
+                    // canChangeState gate is bypassed in the close zone (emergency scatter)
+                    if (isMedium && f.state === 'idle') {
                         let threat = null;
                         let threatDist = Infinity;
-                        const SCATTER_CLOSE = 80;   // Always scatter regardless of facing (was 110)
-                        const SCATTER_FAR  = 140;   // Only scatter if large fish is facing us (was 200 — too hair-trigger)
+                        const SCATTER_CLOSE = 90;   // Always scatter regardless of facing or cooldown
+                        const SCATTER_FAR  = 150;   // Only scatter if large fish is facing us (requires canChangeState)
 
                         fish.forEach(other => {
                             if (other.id === f.id) return;
                             const otherBw = other.bodyWidth || 20;
                             if (otherBw < MEDIUM_THRESHOLD) return;
-                            // Challenging/retreating large fish are focused on each other — don't scatter bystanders
-                            if (other.state === 'challenging' || other.state === 'retreating') return;
+                            // Only skip retreating large fish (they are backing OFF — not a threat)
+                            // Challenging large fish ARE a threat and should scatter medium fish
+                            if (other.state === 'retreating') return;
 
                             const dx = other.x - f.x;
                             const dy = other.y - f.y;
@@ -2604,22 +2613,23 @@
                             if (d >= SCATTER_FAR) return;
 
                             if (d < SCATTER_CLOSE) {
-                                // Always a threat when very close
-                                if (d < threatDist) { threat = other; threatDist = d; }
-                            } else {
-                                // Far zone: only if large fish is facing us
+                                // Emergency zone: always a threat, bypasses state cooldown
+                                if (d < threatDist) { threat = other; threatDist = d; threat._close = true; }
+                            } else if (canChangeState) {
+                                // Far zone: only scatter if not on cooldown AND large fish is facing us
                                 const angleToMe = Math.atan2(-dy, -dx);
                                 const facingDiff = Math.abs(angleDiff(angleToMe, other.heading || 0));
-                                if (facingDiff < Math.PI * 0.45 && d < threatDist) {
-                                    threat = other; threatDist = d;
+                                if (facingDiff < Math.PI * 0.50 && d < threatDist) {
+                                    threat = other; threatDist = d; threat._close = false;
                                 }
                             }
                         });
 
-                        if (threat) {
+                        // Fire scatter if: close-zone threat (always) or far-zone threat (needs cooldown clear)
+                        if (threat && (threat._close || canChangeState)) {
                             f.state = 'fleeing';
-                            f.stateChangeCooldown = 2500; // Hold scatter state longer
-                            f.fleeTimer = 2000 + nervousness * 1000; // 2-3s scatter
+                            f.stateChangeCooldown = 2000;
+                            f.fleeTimer = 1800 + nervousness * 1000; // 1.8-2.8s scatter
                             f.lastThreatId = threat.id; // Remember which predator we fled
                             // Scatter away from threat - direct escape
                             const scatterAngle = Math.atan2(f.y - threat.y, f.x - threat.x);
@@ -3704,11 +3714,11 @@
                     rawHeadingDelta = angleDiff(f.cruiseAngle, f.heading);
                     const absDelta = Math.abs(rawHeadingDelta);
                     if (absDelta > Math.PI * 0.5) {
-                        headingDelta = rawHeadingDelta * 0.055; // Active banking turn
+                        headingDelta = rawHeadingDelta * 0.030; // Lazy wide banking turn (was 0.055)
                     } else if (absDelta > Math.PI * 0.2) {
-                        headingDelta = rawHeadingDelta * 0.035; // Settling into new direction
+                        headingDelta = rawHeadingDelta * 0.020; // Settling into new direction (was 0.035)
                     } else {
-                        headingDelta = rawHeadingDelta * 0.018; // Gentle steady cruise
+                        headingDelta = rawHeadingDelta * 0.010; // Gentle steady cruise (was 0.018)
                     }
                 } else {
                     rawHeadingDelta = angleDiff(f.committedHeading, f.heading);
@@ -3849,9 +3859,8 @@
                     // Full panic flee (small/medium fish from predators)
                     speed = FLEE_SPEED * speedMult * turnSlowdown;
                 } else if (f.state === 'retreating') {
-                    // Large fish dignified withdrawal — faster than cruise, slower than full flee
-                    // Should look like deliberate backing-off, not panicked bolting
-                    speed = IDLE_SPEED * 2.8 * speedMult * turnSlowdown;
+                    // Large fish dignified withdrawal — notably faster than cruise so retreat is readable
+                    speed = IDLE_SPEED * 4.5 * speedMult * turnSlowdown; // was 2.8 — boosted for visible escape
                 } else if (f.state === 'hunting') {
                     // Hunting prey - fast pursuit
                     speed = SEEK_SPEED * 1.3 * speedMult * turnSlowdown;
@@ -3892,7 +3901,7 @@
                 } else if (isChallenging) {
                     smoothOld = 0.80; smoothNew = 0.20; // Purposeful advance — steady acceleration
                 } else if (isRetreating) {
-                    smoothOld = 0.82; smoothNew = 0.18; // Dignified withdrawal — controlled deceleration
+                    smoothOld = 0.68; smoothNew = 0.32; // Escape burst — faster velocity build-up (was 0.82/0.18)
                 } else if (isSeeking) {
                     smoothOld = 0.78; smoothNew = 0.22; // Quick acceleration to food
                 } else {
@@ -5746,13 +5755,21 @@
         }
         
         function draw(e) {
-            const pos = getPos(e);
-            cursorPos = pos;
             cursorVisible = true;
-            
-            if (!isDrawing || !currentStroke) return;
+            if (!isDrawing || !currentStroke) {
+                cursorPos = getPos(e);
+                return;
+            }
             e.preventDefault();
-            currentStroke.points.push(pos);
+            // Use coalesced events to capture all intermediate positions during fast strokes.
+            // Without this, fast mouse/touch movement only samples at screen refresh rate (60fps)
+            // and misses the tight loop-crossing needed for fish recognition.
+            const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+            for (const ce of events) {
+                const pos = getPos(ce);
+                currentStroke.points.push(pos);
+            }
+            cursorPos = getPos(e); // cursor tracks live position
         }
         
         function endDraw() {
@@ -5997,22 +6014,28 @@
                     }
                 }
 
-                // Recognition label — brief fading type name near spawn point
-                // Always shown on any recognized entity (not lines), confident or not
-                if (classified.type !== 'line') {
-                    const labelText = {
-                        fish: 'FISH',
-                        coral: 'CORAL',
-                        bubble: 'BUBBLE',
-                        food: 'FOOD',
-                        jellyfish: 'JELLYFISH'
-                    }[classified.type] || classified.type.toUpperCase();
+                // Recognition label — only shown in debug/logic view
+                if (classified.type !== 'line' && debugMode) {
+                    let labelText;
+                    if (classified.type === 'fish') {
+                        // Show what size tier was spawned based on bodyWidth
+                        const bw = (classified.fishShape && classified.fishShape.bodyWidth) || (classified.size / 2);
+                        const tier = bw >= MEDIUM_THRESHOLD ? 'LARGE' : bw >= SMALL_THRESHOLD ? 'MEDIUM' : 'SMALL';
+                        labelText = `${tier} FISH`;
+                    } else {
+                        labelText = {
+                            coral: 'CORAL',
+                            bubble: 'BUBBLE',
+                            food: 'FOOD',
+                            jellyfish: 'JELLYFISH'
+                        }[classified.type] || classified.type.toUpperCase();
+                    }
                     spawnLabels.push({
                         text: labelText,
                         x: classified.center.x,
-                        y: classified.center.y - 30, // float just above spawn center
+                        y: classified.center.y - 30,
                         createdAt: Date.now(),
-                        duration: classified.confident ? 1400 : 900, // confident = longer display
+                        duration: classified.confident ? 1400 : 900,
                         confident: classified.confident
                     });
                 }
