@@ -454,7 +454,7 @@
             <p class="footer-signature"><img src="./Assets/footer-JHsig.png" alt="John Hanacek signature" loading="lazy"></p>
             <p class="footer-copyright">© 2026 John Hanacek · JHDesign LLC</p>
             <p class="footer-github"><a href="https://github.com/johnhanacek" target="_blank" rel="noopener">github.com/johnhanacek</a></p>
-            <p class="version">Portfolio v1.4 · Feb 2026<br>Made with Claude Code &amp; Open Code</p>
+            <p class="version">Portfolio v1.5 · Feb 2026<br>Made with Claude Code &amp; Open Code</p>
         </div>
     </footer>
 
@@ -754,6 +754,17 @@
             while (d > Math.PI) d -= Math.PI * 2;
             while (d < -Math.PI) d += Math.PI * 2;
             return d;
+        }
+
+        // Cleanup rival/ignore references pointing to a removed fish ID
+        // Called whenever a fish is spliced from the array to prevent stale pointers
+        function cleanupFishRefs(removedId) {
+            fish.forEach(f => {
+                if (f.rivalId === removedId) { f.rivalId = null; f.state = 'idle'; }
+                if (f.ignoreRivalId === removedId) { f.ignoreRivalId = null; f.ignoreRivalUntil = 0; }
+                if (f.huntTarget === removedId) { f.huntTarget = null; f.state = 'idle'; }
+                if (f.lastThreatId === removedId) { f.lastThreatId = undefined; }
+            });
         }
 
         // Check if food position is inside any bubble (hidden from fish)
@@ -5617,20 +5628,26 @@
             _cw = canvas.width / _dpr;
             _ch = canvas.height / _dpr;
 
-            drawGrid();
-            drawAmbientParticles();
-            drawCoralEntities();
-            drawFoodEntities();
-            drawFishEntities();
-            drawJellyfishEntities();
-            drawBubbleEntities();
-            drawTempLineEntities();
-            drawRawStrokes();
-            drawRipples();
-            drawParticles();
-            drawSpawnLabels();
-            drawCursor();
-            drawDebug();
+            try {
+                drawGrid();
+                drawAmbientParticles();
+                drawCoralEntities();
+                drawFoodEntities();
+                drawFishEntities();
+                drawJellyfishEntities();
+                drawBubbleEntities();
+                drawTempLineEntities();
+                drawRawStrokes();
+                drawRipples();
+                drawParticles();
+                drawSpawnLabels();
+                drawCursor();
+                drawDebug();
+            } catch (err) {
+                // Swallow render errors so the loop never permanently dies.
+                // Log to console for debugging but keep running.
+                console.warn('[fish] render error (frame skipped):', err);
+            }
 
             // Only continue animation if there's something active
             if (hasActiveAnimation()) {
@@ -5850,26 +5867,22 @@
                     // ---- SIZE-SPECIFIC CAPS: Remove oldest of same type (not block spawn) ----
                     // This prevents drawing glitch where user draws but nothing appears
                     if (isNewLarge && largeCount >= MAX_LARGE_FISH) {
-                        // Find and remove oldest large fish
                         const oldestIdx = fish.findIndex(f => (f.bodyWidth || 20) >= MEDIUM_THRESHOLD);
-                        if (oldestIdx !== -1) fish.splice(oldestIdx, 1);
+                        if (oldestIdx !== -1) { const removed = fish.splice(oldestIdx, 1)[0]; cleanupFishRefs(removed.id); }
                     }
                     if (isNewMedium && mediumCount >= MAX_MEDIUM_FISH) {
-                        // Find and remove oldest medium fish
                         const oldestIdx = fish.findIndex(f => {
                             const bw = f.bodyWidth || 20;
                             return bw >= SMALL_THRESHOLD && bw < MEDIUM_THRESHOLD;
                         });
-                        if (oldestIdx !== -1) fish.splice(oldestIdx, 1);
+                        if (oldestIdx !== -1) { const removed = fish.splice(oldestIdx, 1)[0]; cleanupFishRefs(removed.id); }
                     }
                     if (isNewSmall && smallCount >= MAX_SMALL_FISH) {
-                        // Find and remove oldest small fish
                         const oldestIdx = fish.findIndex(f => (f.bodyWidth || 20) < SMALL_THRESHOLD);
-                        if (oldestIdx !== -1) fish.splice(oldestIdx, 1);
+                        if (oldestIdx !== -1) { const removed = fish.splice(oldestIdx, 1)[0]; cleanupFishRefs(removed.id); }
                     }
 
-                    // Overall cap - remove the fish nearest to a canvas edge (least visible)
-                    // rather than the oldest, to avoid a visible central fish blinking out
+                    // Overall cap - remove fish nearest to edge (least visible)
                     if (fish.length >= MAX_FISH) {
                         const cw = _cw, ch = _ch;
                         let edgeIdx = 0;
@@ -5878,7 +5891,8 @@
                             const edgeDist = Math.min(ef.x, cw - ef.x, ef.y, ch - ef.y);
                             if (edgeDist < minEdgeDist) { minEdgeDist = edgeDist; edgeIdx = ei; }
                         });
-                        fish.splice(edgeIdx, 1);
+                        const removed = fish.splice(edgeIdx, 1)[0];
+                        cleanupFishRefs(removed.id);
                     }
 
                     const heading = fishShape.initialHeading;
