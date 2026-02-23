@@ -117,7 +117,7 @@ Robot Control & Manipulation · Digital Twins & Teleoperation · 3D Scanning & P
 
 - **Masters Thesis** — [Art Math, Math Art: Toward a Boundless Grounded Infinity](https://coda.io/d/_dD_lXK3DTPV/_suFPWoSK) — AI-interpreted learning canvas design for infinite creative expression
 - **EduLearn 2015, Barcelona** — [Capturing, Tracing, & Visualizing Spread of Technology-Enhanced Instructional Strategies](https://www.researchgate.net/publication/324877076_Capturing_Tracing_and_Visualizing_the_Spread_of_Technology-Enhanced_Instructional_Strategies) — Published research on technology adoption in education
-- **Atlantic Council — Strategic Foresight** — [Internet as Answer Engine, Part I](https://www.atlanticcouncil.org/blogs/futuresource/internet-as-answer-engine-part-i/) & [Part II](https://www.atlanticcouncil.org/blogs/futuresource/internet-as-answer-engine-part-ii/) — Predicted the rise of answer engines displacing search, written 10+ years before ChatGPT
+- **Atlantic Council — Strategic Foresight** — [Internet as Answer Engine, Part I](https://www.atlanticcouncil.org/blogs/futuresource/internet-as-answer-engine-part-i/) & [Part II](https://www.atlanticcouncil.org/blogs/futuresource/internet-as-answer-engine-part-ii/) — Predicted the rise of answer engines displacing search, written years before ChatGPT
 - **The Technium (Kevin Kelly)** — [A Desirable Future: Haiku](https://kk.org/thetechnium/a-desirable-future-haiku/) — Haiku published on Kevin Kelly's long-running technology and culture blog
 - **HuffPost — Opinion** — [Beyond Network Feudalism](http://www.huffingtonpost.com/john-hanacek/beyond-network-feudalism_b_5173249.html) — On the political economy of the open internet and platform monopolism
 
