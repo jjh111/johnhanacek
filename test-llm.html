@@ -149,44 +149,11 @@
         import * as webllm from "https://esm.run/@mlc-ai/web-llm";
 
         // ============================================
-        // Content Index — portfolio chunks
+        // Content Index — loaded from external JSON
+        // Source: Assets/search-chunks.json
         // ============================================
-        const chunks = [
-            { id: 1, title: "About John Hanacek", tags: "innovator designer creator AI human augmentation",
-              content: "John Hanacek works at the intersection of Creativity, Curiosity, AI & Human Augmentation. Innovator, Designer, Creator.", page: "index" },
-            { id: 2, title: "Education — Georgetown CCT", tags: "education masters thesis research",
-              content: "MA in Communication, Culture & Technology from Georgetown University (2016). Awarded 'Most Meta' by peers. Thesis on AI-enabled drawing app for education. Published research on technology adoption at EduLearn 2015 Barcelona.", page: "index" },
-            { id: 3, title: "Founder Institute & AvatarMEDIC", tags: "startup CEO founder aerospace medical",
-              content: "Founder Institute SF 2020 graduate. CEO of AvatarMEDIC, a startup focused on aerospace medical technology. Received R&D Innovation Award from Aerospace Medical Association in 2022.", page: "index" },
-            { id: 4, title: "Lead Designer at Nanome", tags: "XR VR molecular product design spatial computing",
-              content: "Led design for Nanome's molecular VR platform. Product design for spatial computing and scientific visualization in virtual reality.", page: "design" },
-            { id: 5, title: "BadVR — Data Visualization in XR", tags: "XR VR AR data visualization immersive analytics",
-              content: "Design work at BadVR, building immersive data visualization tools in extended reality. XR analytics and spatial data experiences.", page: "design" },
-            { id: 6, title: "Earth Star — Speculative Design", tags: "earth star worldbuilding speculative regenerative futures AI",
-              content: "Speculative design and narrative worldbuilding exploring regenerative futures. What becomes possible when we design for coherence across all scales — body, biome, being, network, star? Systems thinking meets storytelling: designing protocols for human-AI collaboration grounded in living wisdom.", page: "design" },
-            { id: 7, title: "JHDesign LLC — Consulting", tags: "consulting UX product design services freelance",
-              content: "JHDesign LLC offers product design, UX consulting, customer journey mapping, and design workshops. Professional services for startups and enterprises.", page: "design" },
-            { id: 8, title: "Interactive Installations — Godish & God Like", tags: "art installation interactive leap motion kinect",
-              content: "Godish (2015): Using a Leap Motion controller to trigger lightning video on hand hover. God Like (2016): Follow-up using Microsoft Kinect for full body pose interaction. Collaboration with Nathan Danskey.", page: "art" },
-            { id: 9, title: "Fractal Futures — Short Stories", tags: "writing fiction science fiction stories worldbuilding",
-              content: "A series of short stories — thoughtful ruminations on bright and dark possibilities that lie ahead of us, down a turbulent river of time. Endorsed by David Brin, science fiction author.", page: "art" },
-            { id: 10, title: "Photography & Visual Art", tags: "photography landscape portrait editorial multimedia",
-              content: "Multimedia artist working in interactive installation, VR/AR, digital illustration, 3D scanning and modeling, and animation. Background in photography covering editorial, portrait and landscape subjects across California and beyond.", page: "art" },
-            { id: 11, title: "Skills & Expertise", tags: "skills tools figma unity blender prototyping user research",
-              content: "Product design, UX/UI, spatial computing, XR design, prototyping, user research, customer journey mapping, design systems, Figma, Unity, Blender, 3D modeling, animation, AI tools integration.", page: "design" },
-            { id: 12, title: "Artist Beliefs & Philosophy", tags: "beliefs philosophy art technology infinite games",
-              content: "As an artist John believes: Technology can augment human intelligence & collaboration. Infinite Games are more powerful than Finite Games. Optimism and pessimism are self-fulfilling prophecies. Imagination is within reality.", page: "art" },
-            { id: 13, title: "Robot Digital Twin Control", tags: "robotics digital twin XR control remote",
-              content: "Past project involving robot digital twin control systems. XR-based remote control and monitoring of robotic systems using digital twin technology.", page: "design" },
-            { id: 14, title: "HoloTRIAGE — Medical XR", tags: "medical XR holographic triage healthcare AR",
-              content: "HoloTRIAGE: An XR medical triage system. Holographic interface for medical assessment and decision support in healthcare settings.", page: "design" },
-            { id: 15, title: "Contact & Social", tags: "contact email linkedin bluesky twitter",
-              content: "Email: hello@jhanacek.net. Social: Bluesky @johnhanacek.bsky.social, LinkedIn linkedin.com/in/johnhanacek, X/Twitter.", page: "index" },
-        ];
+        let chunks = [];
 
-        // ============================================
-        // Search Layer (MiniSearch)
-        // ============================================
         const miniSearch = new MiniSearch({
             fields: ['title', 'content', 'tags'],
             storeFields: ['title', 'content', 'page'],
@@ -196,7 +163,21 @@
                 prefix: true,
             }
         });
-        miniSearch.addAll(chunks);
+
+        async function loadSearchIndex() {
+            try {
+                const response = await fetch('Assets/search-chunks.json');
+                const data = await response.json();
+                chunks = data.chunks;
+                miniSearch.addAll(chunks);
+                console.log(`Loaded ${chunks.length} search chunks (updated: ${data._meta.lastUpdated})`);
+            } catch (err) {
+                console.error('Failed to load search index:', err);
+            }
+        }
+
+        // Load search index on startup
+        loadSearchIndex();
 
         function search(query) {
             if (!query.trim()) return [];
