@@ -99,6 +99,21 @@
             min-height: 3rem;
         }
 
+        .thinking-spinner {
+            color: #6a9fca;
+            font-style: italic;
+        }
+        .thinking-spinner::after {
+            content: '';
+            animation: dots 1.5s infinite;
+        }
+        @keyframes dots {
+            0% { content: ''; }
+            25% { content: '.'; }
+            50% { content: '..'; }
+            75% { content: '...'; }
+        }
+
         .status-dot {
             display: inline-block;
             width: 8px;
@@ -289,14 +304,13 @@
 
             const answerEl = document.getElementById('aiAnswer');
             answerEl.style.display = 'block';
-            answerEl.textContent = 'Generating...';
+            answerEl.innerHTML = '<span class="thinking-spinner">Thinking</span>';
 
             const context = results.slice(0, 4).map(r =>
                 `[${r.title}]: ${r.content}`
             ).join('\n\n');
 
             try {
-                // /nothink disables Qwen3's thinking mode for faster, direct answers
                 const stream = await engine.chat.completions.create({
                     messages: [
                         {
@@ -305,22 +319,51 @@
                         },
                         {
                             role: "user",
-                            content: `/nothink\nContext:\n${context}\n\nQuestion: ${query}`
+                            content: `Context:\n${context}\n\nQuestion: ${query}`
                         }
                     ],
                     stream: true,
-                    max_tokens: 150,
-                    temperature: 0.2,
+                    max_tokens: 200,
+                    temperature: 0.3,
                 });
 
-                answerEl.textContent = '';
+                // Stream with <think> tag stripping
+                let fullText = '';
+                let isThinking = false;
+                let answerStarted = false;
+
                 for await (const chunk of stream) {
                     const delta = chunk.choices[0]?.delta?.content || '';
-                    answerEl.textContent += delta;
+                    fullText += delta;
+
+                    // Check for think tags in accumulated text
+                    if (fullText.includes('<think>') && !fullText.includes('</think>')) {
+                        isThinking = true;
+                    }
+                    if (fullText.includes('</think>')) {
+                        isThinking = false;
+                        answerStarted = true;
+                    }
+
+                    // Only show content after </think> or if no thinking at all
+                    if (!isThinking && answerStarted) {
+                        const afterThink = fullText.split('</think>').pop().trim();
+                        answerEl.textContent = afterThink;
+                    } else if (!fullText.includes('<think>') && fullText.length > 0) {
+                        // No think tags - show directly
+                        answerEl.textContent = fullText;
+                    }
                 }
 
-                if (!answerEl.textContent.trim()) {
+                // Final cleanup - strip any remaining think tags
+                let finalAnswer = fullText
+                    .replace(/<think>[\s\S]*?<\/think>/g, '')
+                    .trim();
+
+                if (!finalAnswer) {
                     answerEl.textContent = '(No answer generated)';
+                } else {
+                    answerEl.textContent = finalAnswer;
                 }
             } catch (err) {
                 answerEl.textContent = `Error: ${err.message}`;
