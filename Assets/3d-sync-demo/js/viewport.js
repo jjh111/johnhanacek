@@ -55,9 +55,8 @@ class Viewport {
         // No scene background - let CSS gradient show through
         this.scene.background = null;
         
-        // Lighter grid colors to stand out against dark background
-        // Central line: 0x718096 (lighter gray), Grid lines: 0x4a5568 (medium gray)
-        const gridHelper = new THREE.GridHelper(20, 20, 0x718096, 0x4a5568);
+        // Teal-tinted grid to complement the shallow-water caustic theme
+        const gridHelper = new THREE.GridHelper(20, 20, 0x2d7a8a, 0x1a4a5a);
         gridHelper.position.y = -5;
         this.scene.add(gridHelper);
     }
@@ -81,7 +80,8 @@ class Viewport {
             alpha: true
         });
         this.renderer.setSize(this.canvas.clientWidth, this.canvas.clientHeight);
-        this.renderer.setPixelRatio(window.devicePixelRatio);
+        // Cap at 1.5× — saves ~44% GPU vs full 2× Retina with negligible visual diff in small cards
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     }
     
     initControls() {
@@ -356,8 +356,10 @@ class Viewport {
     
     animate() {
         requestAnimationFrame(() => this.animate());
+        // Skip render when tab is hidden — saves GPU/CPU while user is away
+        if (document.hidden) return;
         this.controls.update();
-        
+
         // Update all cursors with smoothing and orientation
         this.otherCursors.forEach(cursor => {
             if (cursor.visible) {
@@ -365,7 +367,7 @@ class Viewport {
                 cursor.updateOrientation(this.camera);
             }
         });
-        
+
         this.renderer.render(this.scene, this.camera);
     }
     

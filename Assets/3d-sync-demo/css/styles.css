@@ -14,8 +14,29 @@ html, body {
 
 body {
     font-family: 'JetBrains Mono', monospace;
-    background: linear-gradient(to bottom, #1a1a2e 0%, #0d1117 50%, #0a0a12 100%);
-    color: #fff;
+    background: linear-gradient(160deg, #061820 0%, #082030 40%, #0a2838 70%, #071c28 100%);
+    color: #e8f4f8;
+}
+
+/* Shallow-water caustic shimmer — CSS only, no canvas cost */
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.18;
+    background:
+        radial-gradient(ellipse 60% 40% at 20% 30%, rgba(64,196,196,0.5) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 60% at 75% 60%, rgba(32,160,180,0.4) 0%, transparent 65%),
+        radial-gradient(ellipse 50% 35% at 50% 80%, rgba(80,210,200,0.35) 0%, transparent 60%);
+    animation: causticDrift 12s ease-in-out infinite alternate;
+}
+
+@keyframes causticDrift {
+    0%   { transform: scale(1) translate(0, 0); opacity: 0.18; }
+    50%  { transform: scale(1.04) translate(-1%, 1.5%); opacity: 0.22; }
+    100% { transform: scale(0.97) translate(1.5%, -1%); opacity: 0.16; }
 }
 
 .container {
@@ -23,6 +44,8 @@ body {
     width: 100vw;
     display: flex;
     flex-direction: column;
+    position: relative;
+    z-index: 1;
 }
 
 .viewports-container {
@@ -36,10 +59,10 @@ body {
 .viewport-wrapper {
     flex: 1;
     min-width: 0;
-    border: 2px solid #2d3748;
+    border: 1px solid rgba(64, 196, 196, 0.18);
     border-radius: 8px;
     overflow: hidden;
-    background: #0d1117;
+    background: rgba(6, 18, 28, 0.75);
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
     position: relative;
     display: flex;
@@ -47,18 +70,18 @@ body {
 }
 
 .viewport-wrapper.spotlighter {
-    border-color: #f59e0b;
-    border-width: 3px;
-    box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+    border-color: rgba(245, 200, 80, 0.75);
+    border-width: 2px;
+    box-shadow: 0 0 16px rgba(245, 200, 80, 0.2);
 }
 
 .viewport-wrapper.follower {
-    border-color: #3b82f6;
+    border-color: rgba(64, 196, 196, 0.45);
     border-width: 2px;
 }
 
 .viewport-wrapper.independent {
-    border-color: #4b5563;
+    border-color: rgba(64, 196, 196, 0.12);
     border-width: 1px;
 }
 
@@ -67,8 +90,8 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 8px 12px;
-    background: #161b22;
-    border-bottom: 1px solid #2d3748;
+    background: rgba(6, 24, 36, 0.88);
+    border-bottom: 1px solid rgba(64, 196, 196, 0.1);
     flex-shrink: 0;
 }
 

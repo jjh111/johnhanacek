@@ -172,7 +172,7 @@ class Application {
                 
                 if (followTarget) {
                     wrapper.classList.add('follower');
-                    overlay.textContent = `FOLLOWING VIEWPORT ${followTarget.id.toUpperCase()}`;
+                    overlay.textContent = `FOLLOWING ${followTarget.id.toUpperCase()}`;
                     overlay.classList.add('show');
                     breakoutBtn.classList.add('active');
                     followBtns.forEach(btn => {
@@ -183,7 +183,7 @@ class Application {
                     });
                 } else if (spotlighter && viewport.state === 'follower') {
                     wrapper.classList.add('follower');
-                    overlay.textContent = `FOLLOWING VIEWPORT ${spotlighter.id.toUpperCase()}`;
+                    overlay.textContent = `FOLLOWING ${spotlighter.id.toUpperCase()}`;
                     overlay.classList.add('show');
                     breakoutBtn.classList.add('active');
                 } else {
