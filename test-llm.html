@@ -289,13 +289,14 @@
 
             const answerEl = document.getElementById('aiAnswer');
             answerEl.style.display = 'block';
-            answerEl.textContent = 'Thinking...';
+            answerEl.textContent = 'Generating...';
 
             const context = results.slice(0, 4).map(r =>
                 `[${r.title}]: ${r.content}`
             ).join('\n\n');
 
             try {
+                // /nothink disables Qwen3's thinking mode for faster, direct answers
                 const stream = await engine.chat.completions.create({
                     messages: [
                         {
@@ -304,12 +305,12 @@
                         },
                         {
                             role: "user",
-                            content: `Context:\n${context}\n\nQuestion: ${query}`
+                            content: `/nothink\nContext:\n${context}\n\nQuestion: ${query}`
                         }
                     ],
                     stream: true,
-                    max_tokens: 200,
-                    temperature: 0.3,
+                    max_tokens: 150,
+                    temperature: 0.2,
                 });
 
                 answerEl.textContent = '';
