@@ -3,49 +3,285 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Social Network Drawing Demo</title>
+  <title>Social Network Analysis Tool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@200;300;400;500;600&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
   <style>
-    * { box-sizing: border-box; }
-    html, body, #root { margin: 0; padding: 0; height: 100%; width: 100%; }
-    body { font-family: system-ui, -apple-system, sans-serif; background: #e8e5e0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body, #root { height: 100%; width: 100%; }
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: #f8f5f0;
+      color: #4a6a7a;
+      -webkit-font-smoothing: antialiased;
+    }
   </style>
 </head>
 <body>
   <div id="root"></div>
   <script type="text/babel">
-    const { useState, useRef, useEffect, useCallback } = React;
+    const { useState, useRef, useEffect, useCallback, useMemo } = React;
 
-    // --- SNA METRICS ---
+    /* ============================================
+       DESIGN TOKENS — Light Paper
+       (from writing.html [data-theme="light"])
+    ============================================ */
+    const T = {
+      bg:          '#f8f5f0',
+      surface:     '#f0ece4',
+      glass:       'rgba(255, 255, 255, 0.85)',
+      white:       '#ffffff',
+      accent:      '#2a6b8a',
+      accentHover: '#3a7d9c',
+      accentFaint: 'rgba(42, 107, 138, 0.12)',
+      gold:        '#9a7b2a',
+      goldFaint:   'rgba(154, 123, 42, 0.12)',
+      goldBg:      'rgba(154, 123, 42, 0.08)',
+      green:       '#2d7a3a',
+      greenBg:     'rgba(45, 122, 58, 0.06)',
+      warm:        '#c97856',
+      heading:     '#2a4a5a',
+      subhead:     '#1a2a3a',
+      bright:      '#3a5a6a',
+      primary:     '#4a6a7a',
+      muted:       '#8a9aa4',
+      mutedFaint:  'rgba(138, 154, 164, 0.25)',
+      border:      'rgba(42, 74, 90, 0.2)',
+      borderSub:   'rgba(42, 74, 90, 0.08)',
+      shadow:      'rgba(0, 0, 0, 0.08)',
+      dotGrid:     'rgba(42, 74, 90, 0.12)',
+      fontUI:      "'Raleway', sans-serif",
+      fontMono:    "'JetBrains Mono', monospace",
+    };
+
+    /* Edge colors by type pair */
+    const EDGE_STYLES = {
+      'person-person':   { color: T.accent,  dash: [],       label: 'Social tie',   width: 2.5 },
+      'person-concept':  { color: T.gold,    dash: [6, 4],   label: 'Affiliation',   width: 2 },
+      'concept-concept': { color: T.muted,   dash: [3, 3],   label: 'Conceptual',    width: 1.5 },
+    };
+
+    function getEdgeType(sourceNode, targetNode) {
+      const types = [sourceNode.type || 'person', targetNode.type || 'person'].sort();
+      return types.join('-');
+    }
+
+    /* ============================================
+       ID GENERATOR — no Date.now() collisions
+    ============================================ */
+    let _nextId = 1;
+    const genId = () => _nextId++;
+
+    /* ============================================
+       LOCALSTORAGE PERSISTENCE
+    ============================================ */
+    const STORAGE_KEY = 'sna-demo-graph';
+    const STORAGE_VERSION = 1;
+
+    function saveGraph(nodes, edges) {
+      try {
+        const data = { version: STORAGE_VERSION, nodes, edges, saved: Date.now() };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      } catch (e) { /* quota exceeded — silent */ }
+    }
+
+    function loadGraph() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        const data = JSON.parse(raw);
+        if (data.version !== STORAGE_VERSION) return null;
+        if (!Array.isArray(data.nodes) || !Array.isArray(data.edges)) return null;
+        const maxId = Math.max(0, ...data.nodes.map(n => n.id), ...data.edges.map(e => e.id || 0));
+        _nextId = maxId + 1;
+        return { nodes: data.nodes, edges: data.edges };
+      } catch (e) { return null; }
+    }
+
+    function clearSavedGraph() {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+
+    /* ============================================
+       EXPORT UTILITIES
+    ============================================ */
+    function downloadBlob(content, filename, mime) {
+      const blob = new Blob([content], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function exportJSON(nodes, edges) {
+      const metrics = calculateMetrics(nodes, edges);
+      const data = {
+        metadata: {
+          exported: new Date().toISOString(),
+          tool: 'SNA Drawing Demo — JH 2025',
+          nodeCount: nodes.length,
+          edgeCount: edges.length,
+          people: nodes.filter(n => n.type !== 'concept').length,
+          concepts: nodes.filter(n => n.type === 'concept').length,
+        },
+        nodes: nodes.map(n => {
+          const m = metrics.nodes[n.id] || {};
+          return {
+            id: n.id, label: n.label, type: n.type || 'person',
+            x: Math.round(n.x), y: Math.round(n.y),
+            degree: m.degree || 0,
+            sameTypeLinks: m.sameTypeLinks || 0,
+            crossTypeLinks: m.crossTypeLinks || 0,
+            centrality: parseFloat((m.centrality || 0).toFixed(4)),
+          };
+        }),
+        edges: edges.map(e => {
+          const s = nodes.find(n => n.id === e.source);
+          const t = nodes.find(n => n.id === e.target);
+          return { source: e.source, target: e.target, edgeType: s && t ? getEdgeType(s, t) : 'unknown' };
+        }),
+        network: metrics.network,
+      };
+      downloadBlob(JSON.stringify(data, null, 2), 'sna-graph.json', 'application/json');
+    }
+
+    function exportCSV(nodes, edges) {
+      const metrics = calculateMetrics(nodes, edges);
+      const nHeader = 'id,label,type,x,y,degree,sameTypeLinks,crossTypeLinks,centrality';
+      const nRows = nodes.map(n => {
+        const m = metrics.nodes[n.id] || { degree: 0, sameTypeLinks: 0, crossTypeLinks: 0, centrality: 0 };
+        return `${n.id},"${(n.label || '').replace(/"/g, '""')}",${n.type || 'person'},${Math.round(n.x)},${Math.round(n.y)},${m.degree},${m.sameTypeLinks},${m.crossTypeLinks},${m.centrality.toFixed(4)}`;
+      });
+      downloadBlob([nHeader, ...nRows].join('\n'), 'sna-nodes.csv', 'text/csv');
+
+      const nodeMap = {};
+      nodes.forEach(n => { nodeMap[n.id] = n; });
+      const eHeader = 'source,target,sourceLabel,targetLabel,sourceType,targetType,edgeType';
+      const eRows = edges.map(e => {
+        const s = nodeMap[e.source], t = nodeMap[e.target];
+        const et = s && t ? getEdgeType(s, t) : 'unknown';
+        return `${e.source},${e.target},"${(s?.label || '').replace(/"/g, '""')}","${(t?.label || '').replace(/"/g, '""')}",${s?.type || 'person'},${t?.type || 'person'},${et}`;
+      });
+      downloadBlob([eHeader, ...eRows].join('\n'), 'sna-edges.csv', 'text/csv');
+    }
+
+    /* ============================================
+       BIPARTITE-AWARE SNA METRICS
+       — Per-node: degree, same/cross type links
+       — Network: density by type pair
+       — Co-affiliation: shared concepts/people
+    ============================================ */
     const calculateMetrics = (nodes, edges) => {
-      const metrics = {};
+      const nodeMap = {};
+      nodes.forEach(n => { nodeMap[n.id] = n; });
 
+      const nodeMetrics = {};
       nodes.forEach(node => {
-        const connections = edges.filter(e => e.source === node.id || e.target === node.id);
-        const degree = connections.length;
+        const nodeEdges = edges.filter(e => e.source === node.id || e.target === node.id);
+        let sameTypeLinks = 0, crossTypeLinks = 0;
+        nodeEdges.forEach(e => {
+          const otherId = e.source === node.id ? e.target : e.source;
+          const other = nodeMap[otherId];
+          if (!other) return;
+          if (other.type === node.type) sameTypeLinks++;
+          else crossTypeLinks++;
+        });
 
-        metrics[node.id] = {
-          degree,
-          centrality: nodes.length > 1 ? degree / (nodes.length - 1) : 0
+        nodeMetrics[node.id] = {
+          degree: nodeEdges.length,
+          sameTypeLinks,
+          crossTypeLinks,
+          centrality: nodes.length > 1 ? nodeEdges.length / (nodes.length - 1) : 0,
         };
       });
 
-      // Network-wide metrics
-      const totalEdges = edges.length;
+      // Type counts
+      const people = nodes.filter(n => (n.type || 'person') !== 'concept');
+      const concepts = nodes.filter(n => n.type === 'concept');
+      const nP = people.length, nC = concepts.length;
+
+      // Edge type counts
+      let ppEdges = 0, pcEdges = 0, ccEdges = 0;
+      edges.forEach(e => {
+        const s = nodeMap[e.source], t = nodeMap[e.target];
+        if (!s || !t) return;
+        const et = getEdgeType(s, t);
+        if (et === 'person-person') ppEdges++;
+        else if (et === 'person-concept' || et === 'concept-person') pcEdges++;
+        else ccEdges++;
+      });
+
+      const maxPP = nP > 1 ? (nP * (nP - 1)) / 2 : 0;
+      const maxPC = nP * nC;
+      const maxCC = nC > 1 ? (nC * (nC - 1)) / 2 : 0;
       const totalNodes = nodes.length;
-      const maxEdges = (totalNodes * (totalNodes - 1)) / 2;
-      const density = maxEdges > 0 ? totalEdges / maxEdges : 0;
-      const avgDegree = totalNodes > 0 ? (totalEdges * 2) / totalNodes : 0;
+      const totalEdges = edges.length;
+      const maxEdges = totalNodes > 1 ? (totalNodes * (totalNodes - 1)) / 2 : 0;
+
+      // Co-affiliation: pairs of people who share concept connections
+      const coAffiliation = [];
+      if (nP > 1 && nC > 0) {
+        const personConcepts = {};
+        people.forEach(p => {
+          personConcepts[p.id] = new Set();
+          edges.forEach(e => {
+            const otherId = e.source === p.id ? e.target : (e.target === p.id ? e.source : null);
+            if (otherId && nodeMap[otherId]?.type === 'concept') {
+              personConcepts[p.id].add(otherId);
+            }
+          });
+        });
+
+        for (let i = 0; i < people.length; i++) {
+          for (let j = i + 1; j < people.length; j++) {
+            const shared = [...personConcepts[people[i].id]].filter(c => personConcepts[people[j].id].has(c));
+            if (shared.length > 0) {
+              // Check if they already have a direct tie
+              const hasTie = edges.some(e =>
+                (e.source === people[i].id && e.target === people[j].id) ||
+                (e.source === people[j].id && e.target === people[i].id)
+              );
+              coAffiliation.push({
+                personA: people[i],
+                personB: people[j],
+                sharedConcepts: shared.map(id => nodeMap[id]),
+                count: shared.length,
+                hasTie,
+              });
+            }
+          }
+        }
+        coAffiliation.sort((a, b) => b.count - a.count);
+      }
 
       return {
-        nodes: metrics,
-        network: { density, avgDegree, totalNodes, totalEdges }
+        nodes: nodeMetrics,
+        network: {
+          totalNodes, totalEdges,
+          people: nP, concepts: nC,
+          density: maxEdges > 0 ? totalEdges / maxEdges : 0,
+          avgDegree: totalNodes > 0 ? (totalEdges * 2) / totalNodes : 0,
+          ppEdges, pcEdges, ccEdges,
+          ppDensity: maxPP > 0 ? ppEdges / maxPP : 0,
+          pcDensity: maxPC > 0 ? pcEdges / maxPC : 0,
+          ccDensity: maxCC > 0 ? ccEdges / maxCC : 0,
+        },
+        coAffiliation,
       };
     };
 
-    // --- FORCE-DIRECTED LAYOUT ---
+    /* ============================================
+       BIPARTITE-AWARE FORCE LAYOUT
+       — Gravity bias: people left, concepts right
+       — Stronger same-type repulsion
+       — Cross-type edges get longer ideal length
+    ============================================ */
     const applyForceLayout = (nodes, edges, canvasWidth = 400, canvasHeight = 320, iterations = 50) => {
       if (nodes.length === 0) return nodes;
 
@@ -53,61 +289,73 @@
       const nodeRadius = 28;
       const repulsion = 3000;
       const attraction = 0.01;
+      const crossAttraction = 0.006; // weaker for cross-type — longer ideal distance
       const damping = 0.8;
+      const gravityStrength = 0.15;
+
+      const indexMap = {};
+      const nodeMap = {};
+      workingNodes.forEach((n, i) => { indexMap[n.id] = i; nodeMap[n.id] = n; });
+
+      // Gravity targets: people left-center, concepts right-center
+      const personGravX = canvasWidth * 0.35;
+      const conceptGravX = canvasWidth * 0.65;
+      const gravY = canvasHeight * 0.5;
 
       for (let iter = 0; iter < iterations; iter++) {
-        // Reset forces
+        workingNodes.forEach(n => { n.fx = 0; n.fy = 0; });
+
+        // Bipartite gravity — mild pull toward type region
         workingNodes.forEach(n => {
-          n.fx = 0;
-          n.fy = 0;
+          const isConcept = n.type === 'concept';
+          const targetX = isConcept ? conceptGravX : personGravX;
+          n.fx += (targetX - n.x) * gravityStrength;
+          n.fy += (gravY - n.y) * gravityStrength * 0.3;
         });
 
-        // Repulsion between all nodes
+        // Repulsion — stronger between same type
         for (let i = 0; i < workingNodes.length; i++) {
           for (let j = i + 1; j < workingNodes.length; j++) {
-            const dx = workingNodes[j].x - workingNodes[i].x;
-            const dy = workingNodes[j].y - workingNodes[i].y;
+            const a = workingNodes[i], b = workingNodes[j];
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
             const dist = Math.max(1, Math.sqrt(dx * dx + dy * dy));
-            const force = repulsion / (dist * dist);
-
+            const sameType = (a.type || 'person') === (b.type || 'person');
+            const rep = sameType ? repulsion * 1.3 : repulsion * 0.8;
+            const force = rep / (dist * dist);
             const fx = (dx / dist) * force;
             const fy = (dy / dist) * force;
-
-            workingNodes[i].fx -= fx;
-            workingNodes[i].fy -= fy;
-            workingNodes[j].fx += fx;
-            workingNodes[j].fy += fy;
+            a.fx -= fx; a.fy -= fy;
+            b.fx += fx; b.fy += fy;
           }
         }
 
         // Attraction along edges
         edges.forEach(edge => {
-          const source = workingNodes.find(n => n.id === edge.source);
-          const target = workingNodes.find(n => n.id === edge.target);
-          if (!source || !target) return;
-
+          const si = indexMap[edge.source];
+          const ti = indexMap[edge.target];
+          if (si === undefined || ti === undefined) return;
+          const source = workingNodes[si];
+          const target = workingNodes[ti];
           const dx = target.x - source.x;
           const dy = target.y - source.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 1) return;
 
-          const force = dist * attraction;
+          const sameType = (source.type || 'person') === (target.type || 'person');
+          const att = sameType ? attraction : crossAttraction;
+          const force = dist * att;
           const fx = (dx / dist) * force;
           const fy = (dy / dist) * force;
-
-          source.fx += fx;
-          source.fy += fy;
-          target.fx -= fx;
-          target.fy -= fy;
+          source.fx += fx; source.fy += fy;
+          target.fx -= fx; target.fy -= fy;
         });
 
-        // Update positions
         workingNodes.forEach(n => {
           n.vx = (n.vx + n.fx) * damping;
           n.vy = (n.vy + n.fy) * damping;
           n.x += n.vx;
           n.y += n.vy;
-
-          // Keep in bounds
           const margin = nodeRadius + 20;
           n.x = Math.max(margin, Math.min(canvasWidth - margin, n.x));
           n.y = Math.max(margin, Math.min(canvasHeight - margin, n.y));
@@ -117,13 +365,30 @@
       return workingNodes.map(({ vx, vy, fx, fy, ...n }) => n);
     };
 
-    // --- CORE GRAPH STATE ---
+    /* ============================================
+       CORE GRAPH STATE HOOK
+    ============================================ */
     const useGraph = () => {
       const [nodes, setNodes] = useState([]);
       const [edges, setEdges] = useState([]);
+      const initialized = useRef(false);
+
+      useEffect(() => {
+        const saved = loadGraph();
+        if (saved) { setNodes(saved.nodes); setEdges(saved.edges); }
+        initialized.current = true;
+      }, []);
+
+      const saveTimer = useRef(null);
+      useEffect(() => {
+        if (!initialized.current) return;
+        clearTimeout(saveTimer.current);
+        saveTimer.current = setTimeout(() => saveGraph(nodes, edges), 500);
+      }, [nodes, edges]);
 
       const addNode = useCallback((node) => {
-        setNodes(prev => [...prev, { id: Date.now(), label: '', x: node.x, y: node.y, ...node }]);
+        const id = node.id || genId();
+        setNodes(prev => [...prev, { id, label: '', x: node.x, y: node.y, type: 'person', ...node, id }]);
       }, []);
 
       const updateNode = useCallback((id, updates) => {
@@ -135,6 +400,12 @@
         setEdges(prev => prev.filter(e => e.source !== id && e.target !== id));
       }, []);
 
+      const toggleNodeType = useCallback((id) => {
+        setNodes(prev => prev.map(n =>
+          n.id === id ? { ...n, type: n.type === 'concept' ? 'person' : 'concept' } : n
+        ));
+      }, []);
+
       const addEdge = useCallback((source, target) => {
         if (source === target) return;
         setEdges(prev => {
@@ -143,7 +414,7 @@
             (e.source === target && e.target === source)
           );
           if (exists) return prev;
-          return [...prev, { id: Date.now(), source, target }];
+          return [...prev, { id: genId(), source, target }];
         });
       }, []);
 
@@ -159,14 +430,15 @@
       }, [edges]);
 
       const clearAll = useCallback(() => {
-        setNodes([]);
-        setEdges([]);
+        setNodes([]); setEdges([]); clearSavedGraph();
       }, []);
 
-      return { nodes, edges, setNodes, setEdges, addNode, updateNode, removeNode, addEdge, removeEdge, arrangeNodes, clearAll };
+      return { nodes, edges, setNodes, setEdges, addNode, updateNode, removeNode, toggleNodeType, addEdge, removeEdge, arrangeNodes, clearAll };
     };
 
-    // --- GESTURE RECOGNITION ---
+    /* ============================================
+       GESTURE RECOGNITION
+    ============================================ */
     const analyzeStroke = (points, nodes, nodeRadius) => {
       if (points.length < 8) return { type: 'none' };
 
@@ -185,34 +457,24 @@
       const avgRadius = (width + height) / 4;
 
       const isClosed = dist < avgRadius * 0.9;
-
-      // Check for square/rectangle (closed, similar width/height, corners)
       const aspectRatio = width / height;
       const isSquarish = aspectRatio > 0.6 && aspectRatio < 1.4;
 
       if (isClosed && isSquarish && avgRadius > 12) {
-        // Check for corners - calculate path angles
         let corners = 0;
         for (let i = 2; i < points.length - 2; i += 3) {
-          const prev = points[i - 2];
-          const curr = points[i];
-          const next = points[i + 2];
-
+          const prev = points[i - 2], curr = points[i], next = points[i + 2];
           const angle1 = Math.atan2(curr.y - prev.y, curr.x - prev.x);
           const angle2 = Math.atan2(next.y - curr.y, next.x - curr.x);
           let angleDiff = Math.abs(angle2 - angle1);
           if (angleDiff > Math.PI) angleDiff = 2 * Math.PI - angleDiff;
-
-          if (angleDiff > Math.PI / 3) corners++; // ~60 degrees or more = corner
+          if (angleDiff > Math.PI / 3) corners++;
         }
-
         if (corners >= 3) {
-          const size = Math.max(25, Math.min(40, avgRadius));
-          return { type: 'square', x: centerX, y: centerY, size };
+          return { type: 'square', x: centerX, y: centerY, size: Math.max(25, Math.min(40, avgRadius)) };
         }
       }
 
-      // Check for circle
       const radii = points.map(p => Math.hypot(p.x - centerX, p.y - centerY));
       const avgR = radii.reduce((a, b) => a + b, 0) / radii.length;
       const variance = radii.reduce((a, r) => a + Math.pow(r - avgR, 2), 0) / radii.length;
@@ -222,7 +484,6 @@
         return { type: 'circle', x: centerX, y: centerY, radius: Math.max(25, Math.min(40, avgRadius)) };
       }
 
-      // Check for edge
       const hitRadius = nodeRadius + 20;
       const startNode = nodes.find(n => Math.hypot(n.x - first.x, n.y - first.y) < hitRadius);
       const endNode = nodes.find(n => Math.hypot(n.x - last.x, n.y - last.y) < hitRadius);
@@ -234,8 +495,12 @@
       return { type: 'none' };
     };
 
-    // --- CANVAS COMPONENT ---
-    const NetworkCanvas = ({ nodes, edges, onAddNode, onUpdateNode, onRemoveNode, onAddEdge, onCanvasSizeChange }) => {
+    /* ============================================
+       CANVAS COMPONENT
+       — Typed edge rendering (solid/dashed/dotted)
+       — Legend overlay
+    ============================================ */
+    const NetworkCanvas = ({ nodes, edges, onAddNode, onUpdateNode, onRemoveNode, onAddEdge, onCanvasSizeChange, nodeType }) => {
       const containerRef = useRef(null);
       const canvasRef = useRef(null);
       const [canvasSize, setCanvasSize] = useState({ width: 400, height: 320 });
@@ -245,133 +510,163 @@
       const [currentStroke, setCurrentStroke] = useState([]);
       const [editingNode, setEditingNode] = useState(null);
       const [inputPos, setInputPos] = useState({ x: 0, y: 0 });
-      const [nodeType, setNodeType] = useState('person'); // 'person' or 'concept'
       const inputRef = useRef(null);
       const lastTapRef = useRef(0);
+      const lastActionRef = useRef(0);
 
       const nodeRadius = 28;
 
       useEffect(() => {
-        const updateSize = () => {
-          if (containerRef.current) {
-            const rect = containerRef.current.getBoundingClientRect();
-            const newSize = { width: Math.floor(rect.width), height: Math.floor(rect.height) };
-            setCanvasSize(newSize);
-            onCanvasSizeChange?.(newSize);
+        if (!containerRef.current) return;
+        const ro = new ResizeObserver(entries => {
+          for (const entry of entries) {
+            const { width, height } = entry.contentRect;
+            if (width > 0 && height > 0) {
+              const newSize = { width: Math.floor(width), height: Math.floor(height) };
+              setCanvasSize(newSize);
+              onCanvasSizeChange?.(newSize);
+            }
           }
-        };
-        updateSize();
-        window.addEventListener('resize', updateSize);
-        return () => window.removeEventListener('resize', updateSize);
+        });
+        ro.observe(containerRef.current);
+        return () => ro.disconnect();
       }, [onCanvasSizeChange]);
-      
+
       const getCanvasPoint = useCallback((e) => {
         const canvas = canvasRef.current;
         const rect = canvas.getBoundingClientRect();
         let clientX, clientY;
-        
         if (e.touches && e.touches.length > 0) {
-          clientX = e.touches[0].clientX;
-          clientY = e.touches[0].clientY;
+          clientX = e.touches[0].clientX; clientY = e.touches[0].clientY;
         } else if (e.changedTouches && e.changedTouches.length > 0) {
-          clientX = e.changedTouches[0].clientX;
-          clientY = e.changedTouches[0].clientY;
+          clientX = e.changedTouches[0].clientX; clientY = e.changedTouches[0].clientY;
         } else {
-          clientX = e.clientX;
-          clientY = e.clientY;
+          clientX = e.clientX; clientY = e.clientY;
         }
-        
         return {
           x: (clientX - rect.left) * (canvas.width / rect.width),
           y: (clientY - rect.top) * (canvas.height / rect.height)
         };
       }, []);
-      
+
       const draw = useCallback(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        ctx.fillStyle = '#ddd8d2';
+
+        // Dot grid
+        ctx.fillStyle = T.dotGrid;
         for (let x = 20; x < canvas.width; x += 25) {
           for (let y = 20; y < canvas.height; y += 25) {
-            ctx.beginPath();
-            ctx.arc(x, y, 1, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.beginPath(); ctx.arc(x, y, 0.8, 0, Math.PI * 2); ctx.fill();
           }
         }
-        
+
+        // Build node lookup for edge rendering
+        const nodeMap = {};
+        nodes.forEach(n => { nodeMap[n.id] = n; });
+
+        // Edges — typed rendering
         edges.forEach(edge => {
-          const source = nodes.find(n => n.id === edge.source);
-          const target = nodes.find(n => n.id === edge.target);
-          if (source && target) {
+          const source = nodeMap[edge.source];
+          const target = nodeMap[edge.target];
+          if (!source || !target) return;
+
+          const et = getEdgeType(source, target);
+          const style = EDGE_STYLES[et] || EDGE_STYLES['person-person'];
+
+          ctx.beginPath();
+          ctx.setLineDash(style.dash);
+          ctx.strokeStyle = style.color;
+          ctx.lineWidth = style.width;
+          ctx.lineCap = 'round';
+          ctx.moveTo(source.x, source.y);
+          ctx.lineTo(target.x, target.y);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // Connection dots at node borders
+          [source, target].forEach(node => {
+            const other = node === source ? target : source;
+            const angle = Math.atan2(other.y - node.y, other.x - node.x);
+            const px = node.x + Math.cos(angle) * nodeRadius;
+            const py = node.y + Math.sin(angle) * nodeRadius;
             ctx.beginPath();
-            ctx.strokeStyle = '#5a7d6d';
-            ctx.lineWidth = 2.5;
-            ctx.lineCap = 'round';
-            ctx.moveTo(source.x, source.y);
-            ctx.lineTo(target.x, target.y);
-            ctx.stroke();
-            
-            [source, target].forEach(node => {
-              const other = node === source ? target : source;
-              const angle = Math.atan2(other.y - node.y, other.x - node.x);
-              const px = node.x + Math.cos(angle) * nodeRadius;
-              const py = node.y + Math.sin(angle) * nodeRadius;
-              ctx.beginPath();
-              ctx.arc(px, py, 4, 0, Math.PI * 2);
-              ctx.fillStyle = '#5a7d6d';
-              ctx.fill();
-            });
-          }
+            ctx.arc(px, py, 3, 0, Math.PI * 2);
+            ctx.fillStyle = style.color;
+            ctx.fill();
+          });
         });
-        
+
+        // Nodes
         nodes.forEach(node => {
           const isConcept = node.type === 'concept';
+          const isEditing = editingNode === node.id;
 
           // Shadow
+          ctx.fillStyle = T.shadow;
           if (isConcept) {
-            ctx.fillStyle = 'rgba(0,0,0,0.08)';
-            ctx.fillRect(node.x - nodeRadius + 2, node.y - nodeRadius + 2, nodeRadius * 2, nodeRadius * 2);
+            const r = 5;
+            const x = node.x - nodeRadius + 2, y = node.y - nodeRadius + 2, w = nodeRadius * 2, h = nodeRadius * 2;
+            ctx.beginPath();
+            ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+            ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+            ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+            ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y);
+            ctx.fill();
           } else {
             ctx.beginPath();
             ctx.arc(node.x + 2, node.y + 2, nodeRadius, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(0,0,0,0.08)';
             ctx.fill();
           }
 
-          // Node shape
+          // Shape — concepts get rounded rect
           if (isConcept) {
-            ctx.fillStyle = editingNode === node.id ? '#fff' : '#faf8f5';
-            ctx.fillRect(node.x - nodeRadius, node.y - nodeRadius, nodeRadius * 2, nodeRadius * 2);
-            ctx.strokeStyle = editingNode === node.id ? '#c97856' : '#2d3a35';
-            ctx.lineWidth = editingNode === node.id ? 2.5 : 1.5;
-            ctx.strokeRect(node.x - nodeRadius, node.y - nodeRadius, nodeRadius * 2, nodeRadius * 2);
+            const r = 5;
+            const x = node.x - nodeRadius, y = node.y - nodeRadius, w = nodeRadius * 2, h = nodeRadius * 2;
+            ctx.beginPath();
+            ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+            ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+            ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+            ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y);
+            ctx.fillStyle = isEditing ? T.white : T.goldFaint;
+            ctx.fill();
+            ctx.strokeStyle = isEditing ? T.accentHover : T.gold;
+            ctx.lineWidth = isEditing ? 2.5 : 1.5;
+            ctx.stroke();
           } else {
             ctx.beginPath();
             ctx.arc(node.x, node.y, nodeRadius, 0, Math.PI * 2);
-            ctx.fillStyle = editingNode === node.id ? '#fff' : '#faf8f5';
+            ctx.fillStyle = isEditing ? T.white : T.accentFaint;
             ctx.fill();
-            ctx.strokeStyle = editingNode === node.id ? '#c97856' : '#2d3a35';
-            ctx.lineWidth = editingNode === node.id ? 2.5 : 1.5;
+            ctx.strokeStyle = isEditing ? T.accentHover : T.accent;
+            ctx.lineWidth = isEditing ? 2.5 : 1.5;
             ctx.stroke();
           }
 
           // Label
           if (node.label && editingNode !== node.id) {
-            ctx.font = isConcept ? 'bold 11px ui-monospace, SFMono-Regular, monospace' : '11px ui-monospace, SFMono-Regular, monospace';
-            ctx.fillStyle = '#2d3a35';
+            let label = node.label;
+            ctx.font = `${isConcept ? '500 ' : ''}11px JetBrains Mono, monospace`;
+            const maxWidth = nodeRadius * 1.7;
+            if (ctx.measureText(label).width > maxWidth) {
+              while (label.length > 1 && ctx.measureText(label + '…').width > maxWidth) {
+                label = label.slice(0, -1);
+              }
+              label += '…';
+            }
+            ctx.fillStyle = isConcept ? T.gold : T.heading;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            const text = node.label.length > 6 ? node.label.slice(0, 5) + '…' : node.label;
-            ctx.fillText(text, node.x, node.y);
+            ctx.fillText(label, node.x, node.y);
           }
         });
-        
+
+        // Active stroke
         if (currentStroke.length > 1) {
           ctx.beginPath();
-          ctx.strokeStyle = '#c97856';
+          ctx.strokeStyle = T.gold;
           ctx.lineWidth = 2;
           ctx.lineCap = 'round';
           ctx.lineJoin = 'round';
@@ -379,202 +674,138 @@
           currentStroke.forEach(p => ctx.lineTo(p.x, p.y));
           ctx.stroke();
         }
+
+        // Canvas legend (bottom-left)
+        if (nodes.length > 0) {
+          const lx = 12, ly = canvas.height - 12;
+          ctx.font = '9px JetBrains Mono, monospace';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'bottom';
+
+          const legendItems = [
+            { color: T.accent, dash: [], label: 'Social tie' },
+            { color: T.gold, dash: [4, 3], label: 'Affiliation' },
+            { color: T.muted, dash: [2, 2], label: 'Conceptual' },
+          ];
+
+          let ox = lx;
+          legendItems.forEach((item, i) => {
+            // Line sample
+            ctx.beginPath();
+            ctx.setLineDash(item.dash);
+            ctx.strokeStyle = item.color;
+            ctx.lineWidth = 1.5;
+            ctx.moveTo(ox, ly - 3);
+            ctx.lineTo(ox + 16, ly - 3);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            // Label
+            ctx.fillStyle = T.muted;
+            ctx.fillText(item.label, ox + 19, ly);
+            ox += ctx.measureText(item.label).width + 30;
+          });
+        }
       }, [nodes, edges, currentStroke, editingNode, nodeRadius]);
-      
+
       useEffect(() => { draw(); }, [draw, canvasSize]);
-      
+
       const openEditor = useCallback((node) => {
         setEditingNode(node.id);
         const canvas = canvasRef.current;
-        const rect = canvas.getBoundingClientRect();
+        const container = containerRef.current;
+        if (!canvas || !container) return;
+        const canvasRect = canvas.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        const scaleX = canvasRect.width / canvas.width;
+        const scaleY = canvasRect.height / canvas.height;
         setInputPos({
-          x: (node.x / canvas.width) * rect.width + rect.left - 35,
-          y: (node.y / canvas.height) * rect.height + rect.top - 10
+          x: (node.x * scaleX) + (canvasRect.left - containerRect.left) - 45,
+          y: (node.y * scaleY) + (canvasRect.top - containerRect.top) - 12
         });
         setTimeout(() => inputRef.current?.focus(), 50);
       }, []);
-      
+
       const startDrawing = useCallback((e) => {
         e.preventDefault();
         const point = getCanvasPoint(e);
+        const now = Date.now();
+        if (now - lastActionRef.current < 50) return;
 
-        // Smaller grab radius for dragging (center area only)
-        const grabRadius = nodeRadius * 0.5; // 14px - center half only
+        const grabRadius = nodeRadius * 0.5;
         const clickedNodeForDrag = nodes.find(n => Math.hypot(n.x - point.x, n.y - point.y) < grabRadius);
-
-        // Full radius for editing detection
         const clickedNode = nodes.find(n => Math.hypot(n.x - point.x, n.y - point.y) < nodeRadius);
 
-        // Double-tap detection for touch
-        const now = Date.now();
         const isDoubleTap = (now - lastTapRef.current) < 300;
         lastTapRef.current = now;
 
         if (clickedNode && (e.detail === 2 || isDoubleTap)) {
+          lastActionRef.current = now;
           openEditor(clickedNode);
           return;
         }
-
-        // Start dragging only if clicking center of node
         if (clickedNodeForDrag) {
-          setIsDragging(true);
-          setDragNodeId(clickedNodeForDrag.id);
-          return;
+          setIsDragging(true); setDragNodeId(clickedNodeForDrag.id); return;
         }
-
-        // Otherwise start drawing (allows drawing from edge of node)
-        setIsDrawing(true);
-        setCurrentStroke([point]);
+        setIsDrawing(true); setCurrentStroke([point]);
       }, [getCanvasPoint, nodes, nodeRadius, openEditor]);
-      
+
       const continueDrawing = useCallback((e) => {
         e.preventDefault();
         const point = getCanvasPoint(e);
-
-        if (isDragging && dragNodeId) {
-          // Update node position while dragging
-          onUpdateNode(dragNodeId, { x: point.x, y: point.y });
-          return;
-        }
-
-        if (isDrawing) {
-          setCurrentStroke(prev => [...prev, point]);
-        }
+        if (isDragging && dragNodeId) { onUpdateNode(dragNodeId, { x: point.x, y: point.y }); return; }
+        if (isDrawing) { setCurrentStroke(prev => [...prev, point]); }
       }, [isDrawing, isDragging, dragNodeId, getCanvasPoint, onUpdateNode]);
-      
+
       const endDrawing = useCallback((e) => {
         e?.preventDefault();
-
-        // End dragging
-        if (isDragging) {
-          setIsDragging(false);
-          setDragNodeId(null);
-          return;
-        }
-
-        // End drawing
+        if (isDragging) { setIsDragging(false); setDragNodeId(null); return; }
         if (isDrawing) {
           setIsDrawing(false);
-
           const result = analyzeStroke(currentStroke, nodes, nodeRadius);
-
           if (result.type === 'circle' || result.type === 'square') {
-            const newId = Date.now();
+            const newId = genId();
             const nodeTypeToUse = result.type === 'square' ? 'concept' : nodeType;
             onAddNode({ id: newId, x: result.x, y: result.y, label: '', type: nodeTypeToUse });
-            setTimeout(() => {
-              const newNode = { id: newId, x: result.x, y: result.y };
-              openEditor(newNode);
-            }, 50);
+            lastActionRef.current = Date.now();
+            setTimeout(() => openEditor({ id: newId, x: result.x, y: result.y }), 50);
           } else if (result.type === 'edge') {
             onAddEdge(result.source, result.target);
           }
-
           setCurrentStroke([]);
         }
       }, [isDrawing, isDragging, currentStroke, nodes, nodeRadius, nodeType, onAddNode, onAddEdge, openEditor]);
-      
+
+      useEffect(() => {
+        const handleWindowUp = (e) => { if (isDrawing || isDragging) endDrawing(e); };
+        window.addEventListener('mouseup', handleWindowUp);
+        window.addEventListener('touchend', handleWindowUp);
+        return () => { window.removeEventListener('mouseup', handleWindowUp); window.removeEventListener('touchend', handleWindowUp); };
+      }, [isDrawing, isDragging, endDrawing]);
+
       return (
-        <div 
-          ref={containerRef}
-          style={{ 
-            flex: 1, 
-            minWidth: 0, 
-            minHeight: '200px',
-            position: 'relative',
-            background: '#f0ede8',
-            borderRadius: '6px',
-            border: '1.5px solid #2d3a35',
-            overflow: 'hidden'
-          }}
-        >
-          <canvas
-            ref={canvasRef}
-            width={canvasSize.width}
-            height={canvasSize.height}
-            style={{
-              display: 'block',
-              width: '100%',
-              height: '100%',
-              cursor: 'crosshair',
-              touchAction: 'none'
-            }}
-            onMouseDown={startDrawing}
-            onMouseMove={continueDrawing}
-            onMouseUp={endDrawing}
-            onMouseLeave={endDrawing}
-            onTouchStart={startDrawing}
-            onTouchMove={continueDrawing}
-            onTouchEnd={endDrawing}
-            onTouchCancel={endDrawing}
+        <div ref={containerRef} style={{
+          flex: 1, minWidth: 0, minHeight: '200px', position: 'relative',
+          background: T.surface, borderRadius: '8px', border: `1.5px solid ${T.border}`, overflow: 'hidden'
+        }}>
+          <canvas ref={canvasRef} width={canvasSize.width} height={canvasSize.height}
+            style={{ display: 'block', width: '100%', height: '100%', cursor: 'crosshair', touchAction: 'none' }}
+            onMouseDown={startDrawing} onMouseMove={continueDrawing}
+            onTouchStart={startDrawing} onTouchMove={continueDrawing}
+            onTouchEnd={endDrawing} onTouchCancel={endDrawing}
           />
-          <div style={{
-            position: 'absolute',
-            top: '8px',
-            right: '8px',
-            display: 'flex',
-            gap: '4px',
-            background: 'rgba(250,248,245,0.9)',
-            borderRadius: '4px',
-            padding: '4px',
-            border: '1px solid #2d3a35'
-          }}>
-            <button
-              onClick={() => setNodeType('person')}
-              style={{
-                padding: '6px 10px',
-                background: nodeType === 'person' ? '#5a7d6d' : 'transparent',
-                color: nodeType === 'person' ? '#fff' : '#2d3a35',
-                border: 'none',
-                borderRadius: '3px',
-                cursor: 'pointer',
-                fontFamily: 'ui-monospace, SFMono-Regular, monospace',
-                fontSize: '10px'
-              }}
-              title="Draw circles for people"
-            >
-              ○ Person
-            </button>
-            <button
-              onClick={() => setNodeType('concept')}
-              style={{
-                padding: '6px 10px',
-                background: nodeType === 'concept' ? '#5a7d6d' : 'transparent',
-                color: nodeType === 'concept' ? '#fff' : '#2d3a35',
-                border: 'none',
-                borderRadius: '3px',
-                cursor: 'pointer',
-                fontFamily: 'ui-monospace, SFMono-Regular, monospace',
-                fontSize: '10px',
-                fontWeight: 'bold'
-              }}
-              title="Draw squares for concepts"
-            >
-              ▢ Concept
-            </button>
-          </div>
           {editingNode && (
-            <input
-              ref={inputRef}
-              type="text"
+            <input ref={inputRef} type="text"
               value={nodes.find(n => n.id === editingNode)?.label || ''}
               onChange={(e) => onUpdateNode(editingNode, { label: e.target.value })}
               onBlur={() => setEditingNode(null)}
               onKeyDown={(e) => e.key === 'Enter' && setEditingNode(null)}
               style={{
-                position: 'fixed',
-                left: inputPos.x,
-                top: inputPos.y,
-                width: '70px',
-                padding: '4px 6px',
-                fontSize: '12px',
-                fontFamily: 'ui-monospace, SFMono-Regular, monospace',
-                border: '2px solid #c97856',
-                borderRadius: '4px',
-                background: '#fff',
-                textAlign: 'center',
-                outline: 'none',
-                zIndex: 1000
+                position: 'absolute', left: inputPos.x, top: inputPos.y,
+                width: '90px', padding: '5px 8px', fontSize: '12px',
+                fontFamily: T.fontMono, border: `2px solid ${T.accentHover}`,
+                borderRadius: '4px', background: T.white, color: T.heading,
+                textAlign: 'center', outline: 'none', zIndex: 1000,
+                boxShadow: `0 2px 8px ${T.shadow}`
               }}
             />
           )}
@@ -582,59 +813,48 @@
       );
     };
 
-    // --- HELPER: Find valid spawn position ---
+    /* ============================================
+       HELPER: Find valid spawn position
+    ============================================ */
     const findValidSpawnPosition = (nodes, canvasWidth = 400, canvasHeight = 320, nodeRadius = 28) => {
-      const minDistance = nodeRadius * 3; // Minimum distance from other nodes
-      const margin = nodeRadius + 20; // Margin from edges
-      const maxAttempts = 100;
-
-      // Try random positions
-      for (let i = 0; i < maxAttempts; i++) {
+      const minDistance = nodeRadius * 3;
+      const margin = nodeRadius + 20;
+      for (let i = 0; i < 100; i++) {
         const x = margin + Math.random() * (canvasWidth - 2 * margin);
         const y = margin + Math.random() * (canvasHeight - 2 * margin);
-
-        // Check if this position is far enough from all existing nodes
-        const isFarEnough = nodes.every(node =>
-          Math.hypot(node.x - x, node.y - y) >= minDistance
-        );
-
-        if (isFarEnough) {
-          return { x, y };
+        if (nodes.every(node => Math.hypot(node.x - x, node.y - y) >= minDistance)) return { x, y };
+      }
+      const cx = canvasWidth / 2, cy = canvasHeight / 2;
+      for (let a = 0; a < Math.PI * 8; a += 0.3) {
+        const r = 60 + a * 10;
+        const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+        if (x >= margin && x <= canvasWidth - margin && y >= margin && y <= canvasHeight - margin) {
+          if (nodes.every(node => Math.hypot(node.x - x, node.y - y) >= minDistance)) return { x, y };
         }
       }
-
-      // Fallback: use spiral pattern if random didn't work
-      const centerX = canvasWidth / 2;
-      const centerY = canvasHeight / 2;
-      for (let angle = 0; angle < Math.PI * 8; angle += 0.3) {
-        const radius = 60 + angle * 10;
-        const x = centerX + Math.cos(angle) * radius;
-        const y = centerY + Math.sin(angle) * radius;
-
-        if (x < margin || x > canvasWidth - margin || y < margin || y > canvasHeight - margin) {
-          continue;
-        }
-
-        const isFarEnough = nodes.every(node =>
-          Math.hypot(node.x - x, node.y - y) >= minDistance
-        );
-
-        if (isFarEnough) {
-          return { x, y };
-        }
-      }
-
-      // Last resort: just return center with some offset
-      return { x: centerX + Math.random() * 40 - 20, y: centerY + Math.random() * 40 - 20 };
+      return { x: cx + Math.random() * 40 - 20, y: cy + Math.random() * 40 - 20 };
     };
 
-    // --- TABLE COMPONENT ---
-    const NetworkTable = ({ nodes, edges, onAddNode, onUpdateNode, onRemoveNode, onAddEdge, onRemoveEdge, onArrange, onClear }) => {
+    /* ============================================
+       SIDEBAR — Enhanced bipartite analytics
+       — Type conversion per node
+       — Connection breakdown (people vs concepts)
+       — Network density by type pair
+       — Co-affiliation discovery
+    ============================================ */
+    const NetworkTable = ({ nodes, edges, onAddNode, onUpdateNode, onRemoveNode, onToggleNodeType, onAddEdge, onRemoveEdge, onArrange, onClear, onExportJSON, onExportCSV, nodeType, onNodeTypeChange, style }) => {
       const [newLabel, setNewLabel] = useState('');
       const [edgeSrc, setEdgeSrc] = useState('');
       const [edgeTgt, setEdgeTgt] = useState('');
+      const [sidebarTab, setSidebarTab] = useState('nodes'); // 'nodes' | 'analysis'
 
-      const metrics = calculateMetrics(nodes, edges);
+      const metrics = useMemo(() => calculateMetrics(nodes, edges), [nodes, edges]);
+
+      const nodeMap = useMemo(() => {
+        const m = {};
+        nodes.forEach(n => { m[n.id] = n; });
+        return m;
+      }, [nodes]);
 
       const getConnections = (nodeId) => edges
         .filter(e => e.source === nodeId || e.target === nodeId)
@@ -643,164 +863,384 @@
       const handleAddNode = () => {
         if (newLabel.trim()) {
           const pos = findValidSpawnPosition(nodes);
-          onAddNode({ label: newLabel.trim(), type: 'person', ...pos });
+          onAddNode({ label: newLabel.trim(), type: nodeType, ...pos });
           setNewLabel('');
         }
       };
-      
+
       const handleAddEdge = () => {
         if (edgeSrc && edgeTgt && edgeSrc !== edgeTgt) {
           onAddEdge(parseInt(edgeSrc), parseInt(edgeTgt));
           setEdgeSrc(''); setEdgeTgt('');
         }
       };
-      
+
       const inputStyle = {
         flex: 1, minWidth: 0, padding: '6px 8px', fontSize: '12px',
-        fontFamily: 'ui-monospace, SFMono-Regular, monospace', border: '1px solid #ccc', borderRadius: '4px'
+        fontFamily: T.fontMono, border: `1px solid ${T.border}`, borderRadius: '4px',
+        background: T.white, color: T.heading, outline: 'none'
       };
-      
+
       const btnStyle = {
-        padding: '6px 12px', background: '#5a7d6d', color: '#fff', border: 'none',
-        borderRadius: '4px', cursor: 'pointer', fontFamily: 'ui-monospace, SFMono-Regular, monospace', 
-        fontSize: '11px', flexShrink: 0
+        padding: '6px 12px', background: T.accent, color: T.white, border: 'none',
+        borderRadius: '4px', cursor: 'pointer', fontFamily: T.fontMono,
+        fontSize: '11px', flexShrink: 0, transition: 'background 0.15s'
       };
-      
+
+      const smallBtnStyle = {
+        padding: '4px 8px', fontSize: '10px', fontFamily: T.fontMono,
+        border: `1px solid ${T.border}`, borderRadius: '3px', cursor: 'pointer',
+        background: T.white, color: T.primary, transition: 'all 0.15s'
+      };
+
+      const net = metrics.network;
+
       return (
         <div style={{
-          width: '240px', flexShrink: 0, background: '#faf8f5', borderRadius: '6px',
-          border: '1.5px solid #2d3a35', padding: '12px', display: 'flex', flexDirection: 'column', 
-          gap: '12px', overflow: 'hidden'
+          width: '280px', flexShrink: 0, background: T.glass, borderRadius: '8px',
+          border: `1.5px solid ${T.border}`, padding: '12px', display: 'flex', flexDirection: 'column',
+          gap: '10px', overflow: 'hidden', ...style
         }}>
+          {/* Node type toggle for new nodes */}
+          <div style={{ display: 'flex', gap: '4px', background: T.surface, borderRadius: '6px', padding: '3px' }}>
+            <button onClick={() => onNodeTypeChange('person')} style={{
+              flex: 1, padding: '4px 6px', border: 'none', borderRadius: '4px', cursor: 'pointer',
+              fontFamily: T.fontUI, fontSize: '11px', fontWeight: 500, transition: 'all 0.15s',
+              background: nodeType === 'person' ? T.accent : 'transparent',
+              color: nodeType === 'person' ? T.white : T.primary,
+            }}>○ Person</button>
+            <button onClick={() => onNodeTypeChange('concept')} style={{
+              flex: 1, padding: '4px 6px', border: 'none', borderRadius: '4px', cursor: 'pointer',
+              fontFamily: T.fontUI, fontSize: '11px', fontWeight: 500, transition: 'all 0.15s',
+              background: nodeType === 'concept' ? T.gold : 'transparent',
+              color: nodeType === 'concept' ? T.white : T.primary,
+            }}>▢ Concept</button>
+          </div>
+
+          {/* Add node */}
           <div style={{ display: 'flex', gap: '6px' }}>
-            <input
-              value={newLabel} onChange={e => setNewLabel(e.target.value)}
+            <input value={newLabel} onChange={e => setNewLabel(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleAddNode()}
-              placeholder="+ Node name" style={inputStyle}
-            />
+              placeholder="+ Node name" style={inputStyle} />
             <button onClick={handleAddNode} style={btnStyle}>Add</button>
           </div>
-          
+
+          {/* Add edge */}
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
             <select value={edgeSrc} onChange={e => setEdgeSrc(e.target.value)} style={{ ...inputStyle, padding: '5px' }}>
               <option value="">From…</option>
-              {nodes.map(n => <option key={n.id} value={n.id}>{n.label || '○'}</option>)}
+              {nodes.map(n => <option key={n.id} value={n.id}>{(n.type === 'concept' ? '▢ ' : '○ ') + (n.label || '?')}</option>)}
             </select>
-            <span style={{ color: '#999', fontSize: '11px' }}>→</span>
+            <span style={{ color: T.muted, fontSize: '11px' }}>→</span>
             <select value={edgeTgt} onChange={e => setEdgeTgt(e.target.value)} style={{ ...inputStyle, padding: '5px' }}>
               <option value="">To…</option>
-              {nodes.map(n => <option key={n.id} value={n.id}>{n.label || '○'}</option>)}
+              {nodes.map(n => <option key={n.id} value={n.id}>{(n.type === 'concept' ? '▢ ' : '○ ') + (n.label || '?')}</option>)}
             </select>
             <button onClick={handleAddEdge} style={btnStyle}>Link</button>
           </div>
 
+          {/* Action buttons */}
           <div style={{ display: 'flex', gap: '6px' }}>
             {nodes.length > 1 && (
-              <button
-                onClick={onArrange}
-                style={{
-                  ...btnStyle,
-                  flex: 1,
-                  background: '#c97856',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '4px'
-                }}
-              >
-                ⚡ Auto-Arrange
+              <button onClick={onArrange} style={{ ...btnStyle, flex: 1, background: T.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                ⚡ Arrange
               </button>
             )}
-            <button
-              onClick={onClear}
-              style={{
-                ...btnStyle,
-                flex: nodes.length > 1 ? 0 : 1,
-                background: '#999',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '4px'
-              }}
-              title="Reset to default state"
-            >
+            <button onClick={onClear} style={{ ...btnStyle, flex: nodes.length > 1 ? 0 : 1, background: T.muted }} title="Clear graph & saved data">
               ↺ Clear
             </button>
           </div>
-          
-          <div style={{ flex: 1, overflow: 'auto', borderTop: '1px solid #e5e2dc', paddingTop: '10px' }}>
-            {nodes.length === 0 ? (
-              <p style={{ fontSize: '11px', color: '#999', margin: 0, fontStyle: 'italic' }}>
-                Draw circles on canvas…
-              </p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {nodes.map(node => {
-                  const conns = getConnections(node.id);
-                  return (
-                    <div key={node.id} style={{ background: '#f0ede8', padding: '8px 10px', borderRadius: '5px' }}>
-                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                        <input
-                          value={node.label} onChange={e => onUpdateNode(node.id, { label: e.target.value })}
-                          placeholder="…" style={{ flex: 1, minWidth: 0, padding: '3px 5px', fontSize: '12px',
-                            fontFamily: 'ui-monospace, SFMono-Regular, monospace', fontWeight: 600, 
-                            border: 'none', background: 'transparent' }}
-                        />
-                        <button onClick={() => onRemoveNode(node.id)} style={{
-                          padding: '2px 7px', background: '#c97856', color: '#fff', border: 'none', 
-                          borderRadius: '3px', cursor: 'pointer', fontSize: '11px'
-                        }}>×</button>
-                      </div>
-                      <div style={{ marginTop: '4px', display: 'flex', gap: '8px', fontSize: '10px',
-                        fontFamily: 'ui-monospace, SFMono-Regular, monospace', color: '#999' }}>
-                        <span title="Degree (connections)">deg: {metrics.nodes[node.id]?.degree || 0}</span>
-                        <span title="Degree centrality">cen: {(metrics.nodes[node.id]?.centrality || 0).toFixed(2)}</span>
-                      </div>
-                      {conns.length > 0 && (
-                        <div style={{ marginTop: '4px', color: '#666',
-                          fontFamily: 'ui-monospace, SFMono-Regular, monospace', fontSize: '10px' }}>
-                          → {conns.map((cId, i) => {
-                            const c = nodes.find(n => n.id === cId);
-                            return (
-                              <span key={cId}>
-                                <span onClick={() => onRemoveEdge(node.id, cId)}
-                                  style={{ color: '#5a7d6d', cursor: 'pointer', textDecoration: 'underline dotted' }}
-                                  title="Click to disconnect">
-                                  {c?.label || '○'}
-                                </span>{i < conns.length - 1 ? ', ' : ''}
-                              </span>
-                            );
-                          })}
+
+          {/* Tab switcher */}
+          {nodes.length > 0 && (
+            <div style={{ display: 'flex', gap: '0', background: T.surface, borderRadius: '4px', overflow: 'hidden', border: `1px solid ${T.borderSub}` }}>
+              {['nodes', 'analysis'].map(tab => (
+                <button key={tab} onClick={() => setSidebarTab(tab)} style={{
+                  flex: 1, padding: '5px', border: 'none', cursor: 'pointer',
+                  fontFamily: T.fontMono, fontSize: '10px', letterSpacing: '0.05em',
+                  textTransform: 'uppercase', transition: 'all 0.15s',
+                  background: sidebarTab === tab ? T.accent : 'transparent',
+                  color: sidebarTab === tab ? T.white : T.muted,
+                }}>{tab}</button>
+              ))}
+            </div>
+          )}
+
+          {/* NODES TAB */}
+          {sidebarTab === 'nodes' && (
+            <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+              {nodes.length === 0 ? (
+                <div style={{ fontSize: '11px', color: T.muted, fontStyle: 'italic', lineHeight: 1.6 }}>
+                  <p style={{ marginBottom: '8px' }}>Draw on the canvas to get started:</p>
+                  <p>◯ Circle → Person node</p>
+                  <p>▢ Square → Concept node</p>
+                  <p>Line between nodes → Edge</p>
+                  <p style={{ marginTop: '8px' }}>Double-click a node to edit its label.</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  {nodes.map(node => {
+                    const conns = getConnections(node.id);
+                    const m = metrics.nodes[node.id] || {};
+                    const isConcept = node.type === 'concept';
+                    const peopleConns = conns.filter(cId => (nodeMap[cId]?.type || 'person') !== 'concept');
+                    const conceptConns = conns.filter(cId => nodeMap[cId]?.type === 'concept');
+
+                    return (
+                      <div key={node.id} style={{
+                        background: T.surface, padding: '7px 9px', borderRadius: '6px',
+                        border: `1px solid ${T.borderSub}`,
+                        borderLeft: `3px solid ${isConcept ? T.gold : T.accent}`
+                      }}>
+                        <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+                          {/* Clickable type toggle */}
+                          <button onClick={() => onToggleNodeType(node.id)} title={`Convert to ${isConcept ? 'person' : 'concept'}`}
+                            style={{
+                              fontSize: '13px', background: 'none', border: 'none', cursor: 'pointer',
+                              color: isConcept ? T.gold : T.accent, padding: '0 2px', flexShrink: 0,
+                              transition: 'transform 0.15s',
+                            }}
+                            onMouseEnter={e => e.target.style.transform = 'scale(1.3)'}
+                            onMouseLeave={e => e.target.style.transform = 'scale(1)'}
+                          >
+                            {isConcept ? '▢' : '○'}
+                          </button>
+                          <input value={node.label} onChange={e => onUpdateNode(node.id, { label: e.target.value })}
+                            placeholder="…" style={{
+                              flex: 1, minWidth: 0, padding: '2px 4px', fontSize: '11px',
+                              fontFamily: T.fontMono, fontWeight: 500, color: T.heading,
+                              border: 'none', background: 'transparent', outline: 'none'
+                            }}
+                          />
+                          <button onClick={() => onRemoveNode(node.id)} style={{
+                            padding: '1px 6px', background: T.warm, color: T.white, border: 'none',
+                            borderRadius: '3px', cursor: 'pointer', fontSize: '10px', opacity: 0.8
+                          }}>×</button>
                         </div>
-                      )}
+
+                        {/* Per-node metrics */}
+                        <div style={{
+                          marginTop: '4px', display: 'flex', gap: '6px', fontSize: '9px',
+                          fontFamily: T.fontMono, color: T.muted, flexWrap: 'wrap'
+                        }}>
+                          <span title="Total degree">deg:{m.degree || 0}</span>
+                          <span title="Centrality">cen:{(m.centrality || 0).toFixed(2)}</span>
+                          {m.crossTypeLinks > 0 && (
+                            <span title={isConcept ? 'Members (people linked)' : 'Affiliations (concepts linked)'}
+                              style={{ color: isConcept ? T.accent : T.gold }}>
+                              {isConcept ? `${m.crossTypeLinks}p` : `${m.crossTypeLinks}c`}
+                            </span>
+                          )}
+                          {m.sameTypeLinks > 0 && (
+                            <span title={isConcept ? 'Related concepts' : 'Social ties'}
+                              style={{ color: T.primary }}>
+                              {isConcept ? `${m.sameTypeLinks}cc` : `${m.sameTypeLinks}pp`}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Connections grouped by type */}
+                        {conns.length > 0 && (
+                          <div style={{ marginTop: '3px', fontFamily: T.fontMono, fontSize: '9px', lineHeight: 1.5 }}>
+                            {peopleConns.length > 0 && (
+                              <div style={{ color: T.primary }}>
+                                <span style={{ color: T.accent }}>○</span>{' '}
+                                {peopleConns.map((cId, i) => (
+                                  <span key={cId}>
+                                    <span onClick={() => onRemoveEdge(node.id, cId)}
+                                      style={{ color: T.accent, cursor: 'pointer', textDecoration: 'underline dotted' }}
+                                      title="Click to disconnect">{nodeMap[cId]?.label || '?'}</span>
+                                    {i < peopleConns.length - 1 ? ', ' : ''}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            {conceptConns.length > 0 && (
+                              <div style={{ color: T.primary }}>
+                                <span style={{ color: T.gold }}>▢</span>{' '}
+                                {conceptConns.map((cId, i) => (
+                                  <span key={cId}>
+                                    <span onClick={() => onRemoveEdge(node.id, cId)}
+                                      style={{ color: T.gold, cursor: 'pointer', textDecoration: 'underline dotted' }}
+                                      title="Click to disconnect">{nodeMap[cId]?.label || '?'}</span>
+                                    {i < conceptConns.length - 1 ? ', ' : ''}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ANALYSIS TAB */}
+          {sidebarTab === 'analysis' && nodes.length > 0 && (
+            <div style={{ flex: 1, overflow: 'auto', minHeight: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {/* Network summary */}
+              <div style={{ fontSize: '10px', fontFamily: T.fontMono, color: T.primary }}>
+                <div style={{ fontFamily: T.fontUI, fontWeight: 500, fontSize: '10px', color: T.heading, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  Network Summary
+                </div>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9px' }}>
+                  <tbody>
+                    <tr>
+                      <td style={{ padding: '2px 0', color: T.muted }}>People</td>
+                      <td style={{ padding: '2px 0', textAlign: 'right', color: T.accent, fontWeight: 500 }}>{net.people}</td>
+                    </tr>
+                    <tr>
+                      <td style={{ padding: '2px 0', color: T.muted }}>Concepts</td>
+                      <td style={{ padding: '2px 0', textAlign: 'right', color: T.gold, fontWeight: 500 }}>{net.concepts}</td>
+                    </tr>
+                    <tr><td colSpan="2" style={{ borderBottom: `1px solid ${T.borderSub}`, padding: '3px 0' }} /></tr>
+                    <tr>
+                      <td style={{ padding: '2px 0', color: T.muted }}>Total edges</td>
+                      <td style={{ padding: '2px 0', textAlign: 'right' }}>{net.totalEdges}</td>
+                    </tr>
+                    <tr>
+                      <td style={{ padding: '2px 0', color: T.muted }}>Avg degree</td>
+                      <td style={{ padding: '2px 0', textAlign: 'right' }}>{net.avgDegree.toFixed(1)}</td>
+                    </tr>
+                    <tr>
+                      <td style={{ padding: '2px 0', color: T.muted }}>Overall density</td>
+                      <td style={{ padding: '2px 0', textAlign: 'right' }}>{net.density.toFixed(3)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Density by edge type */}
+              <div style={{ fontSize: '10px', fontFamily: T.fontMono, color: T.primary }}>
+                <div style={{ fontFamily: T.fontUI, fontWeight: 500, fontSize: '10px', color: T.heading, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  Edge Density
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  {/* Social ties PP */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', marginBottom: '2px' }}>
+                      <span style={{ color: T.accent }}>○↔○ Social ties</span>
+                      <span>{net.ppEdges} {net.people > 1 ? `(${(net.ppDensity * 100).toFixed(0)}%)` : ''}</span>
                     </div>
-                  );
-                })}
+                    {net.people > 1 && (
+                      <div style={{ height: '3px', background: T.borderSub, borderRadius: '2px', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${Math.min(100, net.ppDensity * 100)}%`, background: T.accent, borderRadius: '2px' }} />
+                      </div>
+                    )}
+                  </div>
+                  {/* Affiliations PC */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', marginBottom: '2px' }}>
+                      <span style={{ color: T.gold }}>○↔▢ Affiliations</span>
+                      <span>{net.pcEdges} {net.people > 0 && net.concepts > 0 ? `(${(net.pcDensity * 100).toFixed(0)}%)` : ''}</span>
+                    </div>
+                    {net.people > 0 && net.concepts > 0 && (
+                      <div style={{ height: '3px', background: T.borderSub, borderRadius: '2px', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${Math.min(100, net.pcDensity * 100)}%`, background: T.gold, borderRadius: '2px' }} />
+                      </div>
+                    )}
+                  </div>
+                  {/* Conceptual CC */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', marginBottom: '2px' }}>
+                      <span style={{ color: T.muted }}>▢↔▢ Conceptual</span>
+                      <span>{net.ccEdges} {net.concepts > 1 ? `(${(net.ccDensity * 100).toFixed(0)}%)` : ''}</span>
+                    </div>
+                    {net.concepts > 1 && (
+                      <div style={{ height: '3px', background: T.borderSub, borderRadius: '2px', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${Math.min(100, net.ccDensity * 100)}%`, background: T.muted, borderRadius: '2px' }} />
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-            )}
+
+              {/* Co-Affiliation Discovery */}
+              {metrics.coAffiliation.length > 0 && (
+                <div style={{ fontSize: '10px', fontFamily: T.fontMono, color: T.primary }}>
+                  <div style={{ fontFamily: T.fontUI, fontWeight: 500, fontSize: '10px', color: T.heading, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    Co-Affiliation
+                  </div>
+                  <div style={{ fontSize: '9px', color: T.muted, marginBottom: '6px', fontStyle: 'italic' }}>
+                    People sharing concept links
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    {metrics.coAffiliation.slice(0, 8).map((ca, i) => (
+                      <div key={i} style={{
+                        background: ca.hasTie ? T.surface : T.goldBg,
+                        padding: '5px 7px', borderRadius: '4px',
+                        border: `1px solid ${ca.hasTie ? T.borderSub : T.goldFaint}`,
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ color: T.heading, fontSize: '9px' }}>
+                            {ca.personA.label || '?'} ↔ {ca.personB.label || '?'}
+                          </span>
+                          {ca.hasTie ? (
+                            <span style={{ fontSize: '8px', color: T.accent, fontWeight: 500 }}>linked</span>
+                          ) : (
+                            <span style={{ fontSize: '8px', color: T.gold, fontWeight: 500 }}>potential</span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '8px', color: T.muted, marginTop: '2px' }}>
+                          via: {ca.sharedConcepts.map(c => c.label || '?').join(', ')}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Summary bar (always visible) */}
+          <div style={{
+            fontSize: '9px', color: T.muted, fontFamily: T.fontMono,
+            borderTop: `1px solid ${T.borderSub}`, paddingTop: '6px',
+            display: 'flex', gap: '4px', flexWrap: 'wrap'
+          }}>
+            <span style={{ color: T.accent }}>{net.people}p</span>
+            <span>·</span>
+            <span style={{ color: T.gold }}>{net.concepts}c</span>
+            <span>·</span>
+            <span>{net.totalEdges}e</span>
+            {net.totalNodes > 1 && <>
+              <span>·</span>
+              <span>d:{net.density.toFixed(2)}</span>
+            </>}
           </div>
-          
-          <div style={{ fontSize: '10px', color: '#999', fontFamily: 'ui-monospace, SFMono-Regular, monospace',
-            borderTop: '1px solid #e5e2dc', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-            <div>{nodes.length} nodes · {edges.length} edges</div>
-            {nodes.length > 1 && (
-              <div>
-                density: {metrics.network.density.toFixed(3)} · avg deg: {metrics.network.avgDegree.toFixed(1)}
-              </div>
-            )}
+
+          {/* Export + Attribution */}
+          {nodes.length > 0 && (
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button onClick={onExportJSON} style={{ ...smallBtnStyle, flex: 1 }} title="Download graph as JSON">↓ JSON</button>
+              <button onClick={onExportCSV} style={{ ...smallBtnStyle, flex: 1 }} title="Download nodes & edges as CSV">↓ CSV</button>
+            </div>
+          )}
+          <div style={{
+            fontSize: '8px', color: T.muted, fontFamily: T.fontMono,
+            textAlign: 'center', paddingTop: '2px', borderTop: `1px solid ${T.borderSub}`,
+            letterSpacing: '0.04em', opacity: 0.6
+          }}>
+            Social Network Analysis Tool · JH 2025
           </div>
         </div>
       );
     };
 
-    // --- MAIN APP ---
+    /* ============================================
+       MAIN APP
+    ============================================ */
     function SocialNetworkDemo() {
       const graph = useGraph();
-      const [isVertical, setIsVertical] = useState(window.innerWidth < 600);
+      const [isVertical, setIsVertical] = useState(window.innerWidth < 640);
       const [canvasSize, setCanvasSize] = useState({ width: 400, height: 320 });
+      const [nodeType, setNodeType] = useState('person');
 
       useEffect(() => {
-        const checkLayout = () => setIsVertical(window.innerWidth < 600);
+        const checkLayout = () => setIsVertical(window.innerWidth < 640);
         window.addEventListener('resize', checkLayout);
         return () => window.removeEventListener('resize', checkLayout);
       }, []);
@@ -809,34 +1249,45 @@
         graph.arrangeNodes(canvasSize.width, canvasSize.height);
       }, [graph, canvasSize]);
 
+      const handleExportJSON = useCallback(() => exportJSON(graph.nodes, graph.edges), [graph.nodes, graph.edges]);
+      const handleExportCSV = useCallback(() => exportCSV(graph.nodes, graph.edges), [graph.nodes, graph.edges]);
+
       return (
         <div style={{
-          display: 'flex', flexDirection: 'column', gap: '8px',
-          padding: '12px', height: '100%', maxWidth: '800px',
+          display: 'flex', flexDirection: 'column', gap: '10px',
+          padding: '14px', height: '100%', maxWidth: '960px',
           margin: '0 auto', boxSizing: 'border-box'
         }}>
-          <div style={{ fontSize: '10px', color: '#666', fontFamily: 'ui-monospace, SFMono-Regular, monospace' }}>
-            Draw ◯ for people, ▢ for concepts · Draw lines to connect · Drag to move · Double-click/tap to edit
-          </div>
           <div style={{
-            display: 'flex',
-            flexDirection: isVertical ? 'column' : 'row',
-            gap: '10px',
-            flex: 1,
-            minHeight: 0
+            display: 'flex', alignItems: 'baseline', gap: '10px',
+            paddingBottom: '6px', borderBottom: `1px solid ${T.borderSub}`
+          }}>
+            <span style={{ fontFamily: T.fontUI, fontSize: '13px', fontWeight: 400, color: T.heading, letterSpacing: '0.03em' }}>
+              Social Network Analysis
+            </span>
+            <span style={{ fontSize: '10px', color: T.muted, fontFamily: T.fontMono }}>
+              Draw ◯ people · ▢ concepts · lines to connect · drag to move
+            </span>
+          </div>
+
+          <div style={{
+            display: 'flex', flexDirection: isVertical ? 'column' : 'row',
+            gap: '12px', flex: 1, minHeight: 0
           }}>
             <NetworkCanvas
               nodes={graph.nodes} edges={graph.edges}
               onAddNode={graph.addNode} onUpdateNode={graph.updateNode}
               onRemoveNode={graph.removeNode} onAddEdge={graph.addEdge}
-              onCanvasSizeChange={setCanvasSize}
+              onCanvasSizeChange={setCanvasSize} nodeType={nodeType}
             />
             <NetworkTable
               nodes={graph.nodes} edges={graph.edges}
               onAddNode={graph.addNode} onUpdateNode={graph.updateNode}
-              onRemoveNode={graph.removeNode} onAddEdge={graph.addEdge} onRemoveEdge={graph.removeEdge}
-              onArrange={handleArrange}
-              onClear={graph.clearAll}
+              onRemoveNode={graph.removeNode} onToggleNodeType={graph.toggleNodeType}
+              onAddEdge={graph.addEdge} onRemoveEdge={graph.removeEdge}
+              onArrange={handleArrange} onClear={graph.clearAll}
+              onExportJSON={handleExportJSON} onExportCSV={handleExportCSV}
+              nodeType={nodeType} onNodeTypeChange={setNodeType}
               style={isVertical ? { width: '100%' } : {}}
             />
           </div>
