@@ -1,0 +1,1639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deep Sea Terminal — Brand Styleguide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Raleway:wght@200;300;400;500&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   DEEP SEA TERMINAL — DESIGN TOKENS
+   Portable Brand Styleguide v1.0
+   Portfolio of John Hanacek
+=========================================== */
+
+/* -------------------------------------------
+   DROP THIS :root BLOCK INTO ANY PROJECT
+------------------------------------------- */
+:root {
+    /* Deep Sea Palette */
+    --sea-deep:  #020a12;
+    --sea-mid:   #051018;
+    --sea-panel: rgba(0, 20, 40, 0.08);
+
+    --cyan:      #7dd8f7;
+    --cyan-dim:  #4dc9f6;
+    --cyan-glow: rgba(77, 201, 246, 0.4);
+    --gold:      #d4af37;
+    --gold-glow: rgba(212, 175, 55, 0.3);
+    --green:     #b6ffba;
+
+    --text-primary:  #8cb8cc;
+    --text-bright:   #b8dced;
+    --text-heading:  #7dd8f7;
+    --text-subhead:  #e8f4ff;
+
+    /* Semantic tokens */
+    --accent:       var(--cyan);
+    --accent-hover: var(--gold);
+    --muted:        #7a9aaa;
+    --muted-light:  #8aabb8;
+    --border:       rgba(77, 201, 246, 0.2);
+    --shadow:       rgba(77, 201, 246, 0.15);
+    --focus:        var(--cyan);
+
+    /* Typography Scale */
+    --text-xs:   0.8rem;
+    --text-sm:   0.9rem;
+    --text-base: 1.05rem;
+    --text-lg:   1.2rem;
+    --text-xl:   1.35rem;
+    --text-2xl:  1.55rem;
+    --text-3xl:  2.5rem;
+
+    /* Spacing Scale */
+    --space-xs:  0.375rem;
+    --space-sm:  0.75rem;
+    --space-md:  1.25rem;
+    --space-lg:  1.75rem;
+    --space-xl:  2.5rem;
+    --space-2xl: 4rem;
+}
+
+/* ===========================================
+   BASE RESET & BODY
+=========================================== */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; font-size: 100%; }
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+body {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--text-base);
+    font-weight: 400;
+    line-height: 1.7;
+    color: var(--text-primary);
+    background: var(--sea-deep);
+    -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+
+/* ===========================================
+   STYLEGUIDE LAYOUT (guide-only styles)
+=========================================== */
+.sg-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: var(--space-xl) var(--space-md) var(--space-2xl);
+}
+
+.sg-header {
+    text-align: center;
+    padding: var(--space-xl) var(--space-md) var(--space-2xl);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: var(--space-2xl);
+}
+
+.sg-brand-name {
+    font-family: 'Raleway', sans-serif;
+    font-size: clamp(2.4rem, 5vw, 4rem);
+    font-weight: 200;
+    letter-spacing: 0.15em;
+    color: var(--text-heading);
+    text-shadow: 0 0 40px var(--cyan-glow), 0 2px 10px rgba(0,0,0,0.8);
+    margin-bottom: 0.5rem;
+}
+
+.sg-brand-tagline {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: var(--cyan);
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    text-shadow: 0 0 12px var(--cyan-glow);
+    margin-bottom: var(--space-sm);
+}
+
+.sg-brand-meta {
+    font-size: var(--text-sm);
+    color: var(--muted);
+}
+
+/* Section titles (guide only) */
+.sg-section {
+    margin-bottom: var(--space-2xl);
+}
+
+.sg-section-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    margin-bottom: var(--space-lg);
+    padding-bottom: var(--space-sm);
+    border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.sg-section-title::before {
+    content: '§';
+    color: rgba(212, 175, 55, 0.5);
+    font-size: 1rem;
+}
+
+.sg-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--text-xs);
+    color: var(--muted);
+    display: block;
+    margin-bottom: var(--space-xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.sg-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+    align-items: flex-start;
+}
+
+.sg-code {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--text-xs);
+    color: var(--green);
+    background: rgba(0, 10, 20, 0.6);
+    border: 1px solid rgba(122, 229, 130, 0.15);
+    border-radius: 3px;
+    padding: 0.15rem 0.4rem;
+    margin-top: 0.25rem;
+}
+
+.sg-note {
+    font-size: var(--text-sm);
+    color: var(--muted);
+    font-style: italic;
+    margin-top: var(--space-xs);
+}
+
+/* ===========================================
+   1. COLOR PALETTE (swatches)
+=========================================== */
+.color-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+}
+
+.swatch {
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.06);
+}
+
+.swatch-preview {
+    height: 60px;
+}
+
+.swatch-info {
+    padding: 0.4rem 0.5rem;
+    background: rgba(5, 16, 24, 0.9);
+}
+
+.swatch-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted-light);
+    display: block;
+    margin-bottom: 0.1rem;
+}
+
+.swatch-hex {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-bright);
+    font-weight: 500;
+}
+
+/* ===========================================
+   2. TYPOGRAPHY
+=========================================== */
+h2 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--text-base);
+    font-weight: 500;
+    margin-bottom: var(--space-md);
+    letter-spacing: 0.1em;
+    line-height: 1.2;
+    text-transform: uppercase;
+    color: var(--text-heading);
+    text-shadow: 0 0 10px var(--cyan-glow);
+    cursor: default;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+h2::before {
+    content: '\203A\0020';
+    opacity: 0.5;
+    flex-shrink: 0;
+}
+h2::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, rgba(77, 201, 246, 0.4), rgba(77, 201, 246, 0.05));
+}
+
+h3 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--text-lg);
+    font-weight: 500;
+    margin: var(--space-md) 0 var(--space-sm);
+    line-height: 1.25;
+    color: var(--text-heading);
+}
+
+h4 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--text-base);
+    font-weight: 500;
+    margin: var(--space-sm) 0 var(--space-xs);
+    color: var(--text-subhead);
+}
+
+p {
+    margin-bottom: var(--space-sm);
+    color: var(--text-primary);
+}
+
+strong {
+    font-weight: 500;
+    color: var(--cyan);
+    text-shadow: 0 0 8px var(--cyan-glow);
+}
+em {
+    font-style: italic;
+    color: var(--text-bright);
+}
+.muted {
+    color: var(--muted);
+    font-size: var(--text-sm);
+}
+
+a {
+    color: var(--cyan);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+    text-decoration-color: rgba(212, 175, 55, 0.5);
+    transition: all 0.3s ease;
+}
+a:hover {
+    color: var(--gold);
+    text-decoration-color: var(--gold);
+}
+
+.type-specimen {
+    margin-bottom: var(--space-md);
+    padding: var(--space-md);
+    background: rgba(5, 16, 24, 0.6);
+    border-radius: 4px;
+    border: 1px solid var(--border);
+}
+
+.h1-sample {
+    font-family: 'Raleway', sans-serif;
+    font-size: clamp(2.4rem, 4.5vw, 3.5rem);
+    font-weight: 200;
+    letter-spacing: 0.12em;
+    line-height: 1.2;
+    color: var(--text-heading);
+    text-shadow: 0 0 40px var(--cyan-glow), 0 2px 10px rgba(0,0,0,0.8);
+}
+
+/* ===========================================
+   3. SPACING SCALE
+=========================================== */
+.spacing-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.spacing-table tr {
+    border-bottom: 1px solid rgba(77, 201, 246, 0.06);
+}
+
+.spacing-table td {
+    padding: 0.5rem var(--space-sm);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--text-sm);
+    color: var(--text-primary);
+    vertical-align: middle;
+}
+
+.spacing-table td:first-child {
+    color: var(--cyan);
+    width: 120px;
+}
+
+.spacing-table td:nth-child(2) {
+    color: var(--muted);
+    width: 80px;
+}
+
+.spacing-bar {
+    height: 8px;
+    background: linear-gradient(to right, var(--cyan-dim), rgba(77, 201, 246, 0.2));
+    border-radius: 2px;
+    display: inline-block;
+}
+
+/* ===========================================
+   4. CONTENT CARDS
+=========================================== */
+.content-card {
+    font-family: 'JetBrains Mono', monospace;
+    background: transparent;
+    border-radius: 4px;
+    border: none;
+    padding: var(--space-sm);
+    padding-left: calc(var(--space-md) + 1px);
+    margin: var(--space-sm) 0;
+    position: relative;
+    overflow: hidden;
+}
+.content-card::after {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 1px;
+    background: linear-gradient(to bottom, rgba(77, 201, 246, 0.4), rgba(77, 201, 246, 0.05));
+    transition: width 0.3s ease;
+}
+.content-card:hover::after { width: 2px; }
+
+.content-card h4 {
+    margin-top: 0;
+    font-size: var(--text-base);
+    font-weight: 500;
+    color: var(--text-subhead);
+}
+.content-card p {
+    font-size: var(--text-base);
+    line-height: 1.7;
+    color: var(--text-primary);
+}
+.content-card p:last-child { margin-bottom: 0; }
+
+/* Watermark number */
+.content-card::before {
+    content: attr(data-num);
+    position: absolute;
+    top: 10px; right: 15px;
+    font-size: 4rem;
+    font-weight: 500;
+    color: rgba(77, 201, 246, 0.05);
+    line-height: 1;
+    pointer-events: none;
+}
+
+/* About card variant */
+.content-card.about p {
+    font-size: clamp(1.1rem, 2vw, 1.4rem);
+    line-height: 1.7;
+    color: var(--text-bright);
+    font-weight: 400;
+}
+.content-card.about strong {
+    color: var(--cyan);
+    font-weight: 500;
+    text-shadow: 0 0 8px var(--cyan-glow);
+}
+
+/* Endorsement card variant */
+.content-card.endorsement {
+    font-size: var(--text-base);
+    font-weight: 400;
+    font-style: italic;
+    line-height: 1.7;
+    color: var(--text-bright);
+    padding: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+.content-card.endorsement cite {
+    display: block;
+    font-style: normal;
+    font-size: var(--text-xs);
+    font-weight: 400;
+    color: var(--muted);
+    margin-top: var(--space-sm);
+}
+
+/* ===========================================
+   5. TIMELINE
+=========================================== */
+.timeline {
+    position: relative;
+    padding-left: var(--space-md);
+    border-left: 1px solid rgba(77, 201, 246, 0.2);
+}
+.timeline-item {
+    display: grid;
+    grid-template-columns: 90px 1fr;
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+    padding-bottom: var(--space-md);
+    position: relative;
+}
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: calc(-1 * var(--space-md) - 4px);
+    top: 4px;
+    width: 8px; height: 8px;
+    background: var(--sea-deep);
+    border: 2px solid var(--cyan);
+    border-radius: 50%;
+}
+.timeline-item .year {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--gold);
+    line-height: 1.4;
+}
+.timeline-content h4 {
+    margin: 0 0 0.25rem 0;
+    font-size: var(--text-base);
+    color: var(--text-bright);
+}
+.timeline-content .company {
+    margin: 0 0 0.5rem 0;
+    font-size: var(--text-sm);
+    color: var(--cyan);
+}
+.timeline-content ul {
+    margin: 0;
+    padding-left: 1.25rem;
+}
+.timeline-content ul li {
+    font-size: var(--text-sm);
+    line-height: 1.6;
+    margin-bottom: 0.25rem;
+    color: var(--text-primary);
+}
+
+/* ===========================================
+   6. BADGES & TAGS
+=========================================== */
+.year-badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    background: rgba(212, 175, 55, 0.15);
+    border-radius: 4px;
+    font-size: var(--text-xs);
+    color: var(--gold);
+    margin-left: var(--space-sm);
+    font-weight: 500;
+}
+
+.platform-badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    background: rgba(77, 201, 246, 0.1);
+    border-radius: 4px;
+    font-size: var(--text-xs);
+    color: var(--cyan);
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    background: rgba(182, 255, 186, 0.1);
+    border-radius: 4px;
+    font-size: var(--text-xs);
+    color: var(--green);
+}
+
+/* ===========================================
+   7. BUTTONS
+=========================================== */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--text-sm);
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-decoration: none;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    padding: 0.4rem 0.9rem;
+}
+
+.btn-primary {
+    background: rgba(77, 201, 246, 0.15);
+    border: 1px solid rgba(77, 201, 246, 0.3);
+    color: var(--cyan);
+}
+.btn-primary:hover {
+    background: rgba(77, 201, 246, 0.25);
+    border-color: var(--cyan);
+    color: var(--text-bright);
+    text-decoration: none;
+}
+
+.btn-gold {
+    background: rgba(212, 175, 55, 0.15);
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    color: var(--gold);
+}
+.btn-gold:hover {
+    background: rgba(212, 175, 55, 0.25);
+    border-color: var(--gold);
+    color: #f0d060;
+    text-decoration: none;
+}
+
+.btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+}
+.btn-ghost:hover {
+    border-color: rgba(77, 201, 246, 0.4);
+    color: var(--text-bright);
+    text-decoration: none;
+}
+
+/* Copy button */
+.copy-btn {
+    padding: 0.25rem 0.75rem;
+    background: rgba(77, 201, 246, 0.15);
+    border: 1px solid rgba(77, 201, 246, 0.3);
+    color: var(--cyan);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: var(--text-xs);
+    font-family: 'JetBrains Mono', monospace;
+    transition: all 0.2s;
+}
+.copy-btn:hover { background: rgba(77, 201, 246, 0.25); }
+.copy-btn.copied {
+    background: rgba(122, 229, 130, 0.2);
+    border-color: rgba(122, 229, 130, 0.4);
+    color: var(--green);
+}
+
+/* ===========================================
+   8. GLASS OVAL (hero/footer pattern)
+=========================================== */
+.glass-oval {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: fit-content;
+    min-width: 260px;
+    max-width: 420px;
+    padding: 1.2rem 3.5rem 1rem;
+    background: rgba(2, 10, 18, 0.55);
+    backdrop-filter: blur(8px) saturate(1.1);
+    -webkit-backdrop-filter: blur(8px) saturate(1.1);
+    border: 1px solid rgba(77, 201, 246, 0.18);
+    border-radius: 50%;
+    filter:
+        drop-shadow(0 0 1px rgba(77, 201, 246, 0.06))
+        drop-shadow(0 8px 40px rgba(0, 0, 0, 0.55));
+    position: relative;
+    margin: 0 auto;
+}
+.glass-oval::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: linear-gradient(to bottom, rgba(77, 201, 246, 0.08) 0%, transparent 50%);
+    pointer-events: none;
+}
+
+/* ===========================================
+   9. SECTION (glass panel)
+=========================================== */
+.glass-section {
+    margin-bottom: var(--space-xl);
+    background: rgba(2, 10, 18, 0.72);
+    backdrop-filter: blur(10px) saturate(1.05);
+    -webkit-backdrop-filter: blur(10px) saturate(1.05);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(77, 201, 246, 0.08);
+    padding: var(--space-lg);
+}
+
+/* ===========================================
+   10. SHAPE NAVIGATION (static demo)
+=========================================== */
+.shape-nav-demo {
+    display: flex;
+    gap: 0;
+    align-items: stretch;
+    background: rgba(2, 10, 18, 0.70);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(77, 201, 246, 0.18);
+    border-radius: 2rem;
+    padding: 0.2rem 0.5rem;
+    width: fit-content;
+}
+
+.shape-link-demo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    opacity: 0.5;
+    text-decoration: none;
+    width: 44px;
+    height: 38px;
+    overflow: visible;
+    gap: 2px;
+}
+.shape-link-demo.active { opacity: 1; }
+.shape-link-demo:hover { opacity: 0.85; }
+
+.shape-link-demo svg {
+    width: 20px; height: 20px;
+    fill: none;
+    stroke: var(--cyan);
+    stroke-width: 2;
+}
+.shape-link-demo.active svg {
+    fill: rgba(77, 201, 246, 0.15);
+    filter: drop-shadow(0 0 6px var(--cyan-glow));
+}
+.shape-link-demo span {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.45rem;
+    font-weight: 500;
+    color: var(--cyan);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* ===========================================
+   11. GRIDS (demo wrappers)
+=========================================== */
+.grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-lg);
+}
+
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-lg);
+}
+
+.columns-2 {
+    column-count: 2;
+    column-gap: var(--space-lg);
+    column-fill: balance;
+}
+.columns-2 > * {
+    break-inside: avoid;
+    margin-bottom: var(--space-md);
+}
+
+@media (max-width: 600px) {
+    .grid-2, .card-grid { grid-template-columns: 1fr; }
+    .columns-2 { column-count: 1; }
+    .color-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ===========================================
+   12. COPY-PASTE BLOCK
+=========================================== */
+.seed-phrase {
+    display: block;
+    padding: var(--space-sm) var(--space-md);
+    background: rgba(0, 10, 20, 0.6);
+    border: 1px solid rgba(122, 229, 130, 0.2);
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    line-height: 1.6;
+    color: var(--green);
+    white-space: pre;
+    overflow-x: auto;
+    position: relative;
+}
+
+.seed-phrase code {
+    display: block;
+    user-select: all;
+    color: inherit;
+}
+
+/* ===========================================
+   13. ANIMATIONS (defined for reference)
+=========================================== */
+@keyframes shimmer {
+    0%, 100% {
+        filter: drop-shadow(0 0 20px var(--cyan-glow));
+        opacity: 0.95;
+    }
+    50% {
+        filter: drop-shadow(0 0 25px var(--gold-glow));
+        opacity: 1;
+    }
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-8px); }
+    60% { transform: translateY(-4px); }
+}
+
+@keyframes bounce-gentle {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+}
+
+@keyframes strokeGlow {
+    0%   { stroke: rgba(125, 216, 247, 0.3); }
+    100% { stroke: rgba(125, 216, 247, 0.8); }
+}
+
+@keyframes pencil-wiggle {
+    0%, 100% { transform: rotate(-5deg); }
+    50% { transform: rotate(5deg); }
+}
+
+/* Animation demo boxes */
+.anim-demo {
+    display: inline-block;
+    width: 32px; height: 32px;
+    background: rgba(77, 201, 246, 0.25);
+    border: 1px solid rgba(77, 201, 246, 0.4);
+    border-radius: 4px;
+}
+.anim-demo.shimmer-box { animation: shimmer 3s ease-in-out infinite; }
+.anim-demo.bounce-box  { animation: bounce 2.5s ease-in-out infinite; }
+.anim-demo.gentle-box  { animation: bounce-gentle 3s ease-in-out infinite; }
+.anim-demo.wiggle-box  { animation: pencil-wiggle 4s ease-in-out infinite; }
+
+.anim-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-sm) 0;
+    border-bottom: 1px solid rgba(77, 201, 246, 0.06);
+}
+.anim-info {
+    flex: 1;
+}
+.anim-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--text-sm);
+    color: var(--cyan);
+}
+.anim-desc {
+    font-size: var(--text-xs);
+    color: var(--muted);
+}
+
+/* ===========================================
+   BLOCKQUOTE / CITATION
+=========================================== */
+.blockquote-citation {
+    border-left: 2px solid var(--cyan);
+    padding-left: 1rem;
+    margin: 1rem 0;
+    font-style: italic;
+    opacity: 0.9;
+}
+.citation-author {
+    font-size: 0.9em;
+    font-style: normal;
+    color: var(--muted);
+}
+
+/* ===========================================
+   TABLE UTILITY
+=========================================== */
+.asset-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-sm);
+}
+.asset-table th {
+    text-align: left;
+    padding: 0.4rem var(--space-sm);
+    font-size: var(--text-xs);
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+}
+.asset-table td {
+    padding: 0.4rem var(--space-sm);
+    color: var(--text-primary);
+    border-bottom: 1px solid rgba(77, 201, 246, 0.05);
+    vertical-align: top;
+}
+.asset-table td:first-child {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--green);
+    white-space: nowrap;
+}
+.asset-table td:nth-child(2) {
+    color: var(--muted);
+}
+</style>
+</head>
+<body>
+
+<!-- =======================================
+     HEADER
+======================================= -->
+<div class="sg-header">
+    <div class="sg-brand-tagline">Deep Sea Terminal</div>
+    <div class="sg-brand-name">John Hanacek</div>
+    <div class="sg-brand-tagline" style="margin-top:0.5rem; letter-spacing:0.2em;">Innovator · Designer · Creator</div>
+    <p class="sg-brand-meta" style="margin-top:1rem;">
+        Brand Styleguide v1.0 &nbsp;·&nbsp; jhanacek.net &nbsp;·&nbsp;
+        <a href="mailto:hello@jhanacek.net">hello@jhanacek.net</a>
+    </p>
+</div>
+
+<div class="sg-page">
+
+<!-- =======================================
+     §1 BRAND IDENTITY
+======================================= -->
+<div class="sg-section">
+    <div class="sg-section-title">Brand Identity</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-lg);">
+        <div>
+            <span class="sg-label">Voice &amp; Tone</span>
+            <p>Terminal-precise, ocean-deep. Technical authority without sterility — every label is lowercase or small-caps mono, headlines are airy Raleway ultralight. The system whispers depth.</p>
+            <p class="muted">Think: ocean floor console. Calm, minimal, luminescent.</p>
+        </div>
+        <div>
+            <span class="sg-label">Fonts (Google Fonts)</span>
+            <ul style="list-style:none;padding:0;margin:0;">
+                <li style="padding:0.25rem 0;border-bottom:1px solid rgba(77,201,246,0.06);">
+                    <strong>Raleway 200–500</strong>
+                    <span class="sg-code">font-family: 'Raleway'</span>
+                    <div class="sg-note">Headings, hero name</div>
+                </li>
+                <li style="padding:0.25rem 0;border-bottom:1px solid rgba(77,201,246,0.06);">
+                    <strong>JetBrains Mono 300–500</strong>
+                    <span class="sg-code">font-family: 'JetBrains Mono'</span>
+                    <div class="sg-note">Body, labels, nav, code</div>
+                </li>
+                <li style="padding:0.25rem 0;">
+                    <strong>Cinzel 400–600</strong>
+                    <span class="sg-code">font-family: 'Cinzel'</span>
+                    <div class="sg-note">Optional decorative display</div>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div style="margin-top:var(--space-lg);">
+        <span class="sg-label">Glass Oval — Hero / Footer Pattern</span>
+        <div style="padding:var(--space-xl) 0; background:rgba(2,10,18,0.5);border-radius:8px;display:flex;justify-content:center;align-items:center;border:1px solid var(--border);">
+            <div class="glass-oval">
+                <div style="font-family:'Raleway',sans-serif;font-size:0.65rem;font-weight:400;color:var(--cyan);letter-spacing:0.2em;text-transform:uppercase;text-shadow:0 0 12px var(--cyan-glow);">innovator · designer · creator</div>
+                <div style="font-family:'Raleway',sans-serif;font-size:2.2rem;font-weight:200;letter-spacing:0.12em;color:var(--text-heading);text-shadow:0 0 40px var(--cyan-glow);white-space:nowrap;">Hanacek</div>
+                <div style="font-size:0.65rem;color:var(--muted);">designer + coder + dreamer</div>
+            </div>
+        </div>
+        <p class="sg-note">CSS: <code class="sg-code">.glass-oval</code> — <code>border-radius: 50%</code> on wide short box creates the squished ellipse. Use <code>drop-shadow</code> not <code>box-shadow</code> for Safari compatibility.</p>
+    </div>
+</div>
+
+<!-- =======================================
+     §2 COLOR PALETTE
+======================================= -->
+<div class="sg-section">
+    <div class="sg-section-title">Color Palette</div>
+
+    <span class="sg-label">Background / Surface</span>
+    <div class="color-grid" style="margin-bottom:var(--space-lg);">
+        <div class="swatch">
+            <div class="swatch-preview" style="background:#020a12;"></div>
+            <div class="swatch-info">
+                <span class="swatch-name">--sea-deep</span>
+                <span class="swatch-hex">#020a12</span>
+            </div>
+        </div>
+        <div class="swatch">
+            <div class="swatch-preview" style="background:#051018;"></div>
+            <div class="swatch-info">
+                <span class="swatch-name">--sea-mid</span>
+                <span class="swatch-hex">#051018</span>
+            </div>
+        </div>
+        <div class="swatch">
+            <div class="swatch-preview" style="background:rgba(2,10,18,0.72);border:1px dashed rgba(77,201,246,0.15);"></div>
+            <div class="swatch-info">
+                <span class="swatch-name">glass panel</span>
+                <span class="swatch-hex">rgba(2,10,18,0.72)</span>
+            </div>
+        </div>
+        <div class="swatch">
+            <div class="swatch-preview" style="background:rgba(2,10,18,0.55);border:1px dashed rgba(77,201,246,0.15);"></div>
+            <div class="swatch-info">
+                <span class="swatch-name">glass oval</span>
+                <span class="swatch-hex">rgba(2,10,18,0.55)</span>
+            </div>
+        </div>
+    </div>
+
+    <span class="sg-label">Primary Accent — Cyan</span>
+    <div class="color-grid" style="margin-bottom:var(--space-lg);">
+        <div class="swatch">
+            <div class="swatch-preview" style="background:#7dd8f7;"></div>
+            <div class="swatch-info">
+                <span class="swatch-name">--cyan</span>
+                <span class="swatch-hex">#7dd8f7</span>
+            </div>
+        </div>
+        <div class="swatch">
+            <div class="swatch-preview" style="background:#4dc9f6;"></div>
+            <div class="swatch-info">
+                <span class="swatch-name">--cyan-dim</span>
+                <span class="swatch-hex">#4dc9f6</span>
+            </div>
+        </div>
+        <div class="swatch">
+            <div class="swatch-preview" style="background:rgba(77,201,246,0.4);"></div>
+            <div class="swatch-info">
+                <span class="swatch-name">--cyan-glow</span>
+                <span class="swatch-hex">rgba(77,201,246,0.4)</span>
+            </div>
+        </div>
+        <div class="swatch">
+            <div class="swatch-preview" style="background:rgba(77,201,246,0.1);border:1px solid rgba(77,201,246,0.2);"></div>
+            <div class="swatch-info">
+                <span class="swatch-name">--border</span>
+                <span class="swatch-hex">rgba(77,201,246,0.2)</span>
+            </div>
+        </div>
+    </div>
+
+    <span class="sg-label">Secondary Accent — Gold</span>
+    <div class="color-grid" style="margin-bottom:var(--space-lg);">
+        <div class="swatch">
+            <div class="swatch-preview" style="background:#d4af37;"></div>
+            <div class="swatch-info">
+                <span class="swatch-name">--gold</span>
+                <span class="swatch-hex">#d4af37</span>
+            </div>
+        </div>
+        <div class="swatch">
+            <div class="swatch-preview" style="background:rgba(212,175,55,0.3);"></div>
+            <div class="swatch-info">
+                <span class="swatch-name">--gold-glow</span>
+                <span class="swatch-hex">rgba(212,175,55,0.3)</span>
+            </div>
+        </div>
+        <div class="swatch">
+            <div class="swatch-preview" style="background:rgba(212,175,55,0.15);"></div>
+            <div class="swatch-info">
+                <span class="swatch-name">year-badge bg</span>
+                <span class="swatch-hex">rgba(212,175,55,0.15)</span>
+            </div>
+        </div>
+        <div class="swatch">
+            <div class="swatch-preview" style="background:#b6ffba;"></div>
+            <div class="swatch-info">
+                <span class="swatch-name">--green</span>
+                <span class="swatch-hex">#b6ffba</span>
+            </div>
+        </div>
+    </div>
+
+    <span class="sg-label">Text Scale</span>
+    <div class="color-grid">
+        <div class="swatch">
+            <div class="swatch-preview" style="background:#7dd8f7;"></div>
+            <div class="swatch-info">
+                <span class="swatch-name">--text-heading</span>
+                <span class="swatch-hex">#7dd8f7</span>
+            </div>
+        </div>
+        <div class="swatch">
+            <div class="swatch-preview" style="background:#e8f4ff;"></div>
+            <div class="swatch-info">
+                <span class="swatch-name">--text-subhead</span>
+                <span class="swatch-hex">#e8f4ff</span>
+            </div>
+        </div>
+        <div class="swatch">
+            <div class="swatch-preview" style="background:#b8dced;"></div>
+            <div class="swatch-info">
+                <span class="swatch-name">--text-bright</span>
+                <span class="swatch-hex">#b8dced</span>
+            </div>
+        </div>
+        <div class="swatch">
+            <div class="swatch-preview" style="background:#8cb8cc;"></div>
+            <div class="swatch-info">
+                <span class="swatch-name">--text-primary</span>
+                <span class="swatch-hex">#8cb8cc</span>
+            </div>
+        </div>
+        <div class="swatch">
+            <div class="swatch-preview" style="background:#7a9aaa;"></div>
+            <div class="swatch-info">
+                <span class="swatch-name">--muted</span>
+                <span class="swatch-hex">#7a9aaa</span>
+            </div>
+        </div>
+        <div class="swatch">
+            <div class="swatch-preview" style="background:#8aabb8;"></div>
+            <div class="swatch-info">
+                <span class="swatch-name">--muted-light</span>
+                <span class="swatch-hex">#8aabb8</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- =======================================
+     §3 TYPOGRAPHY
+======================================= -->
+<div class="sg-section">
+    <div class="sg-section-title">Typography</div>
+
+    <div class="type-specimen">
+        <span class="sg-label">h1 — Raleway 200, letter-spacing 0.12em</span>
+        <div class="h1-sample">John Hanacek</div>
+        <span class="sg-code">font-family: 'Raleway'; font-weight: 200; font-size: clamp(2.4rem, 4.5vw, 3.5rem); letter-spacing: 0.12em; color: var(--text-heading);</span>
+    </div>
+
+    <div class="type-specimen">
+        <span class="sg-label">h2 — Section heading with decorative rules</span>
+        <h2>Section Heading</h2>
+        <span class="sg-code">h2 { font-family: 'JetBrains Mono'; font-size: var(--text-base); font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-heading); }</span>
+        <div class="sg-note">Auto-prefixes <code>›&nbsp;</code> and appends a gradient rule via pseudo-elements.</div>
+    </div>
+
+    <div class="type-specimen">
+        <span class="sg-label">h3 — Sub-section title</span>
+        <h3>Sub-section Title</h3>
+        <span class="sg-code">h3 { font-family: 'JetBrains Mono'; font-size: var(--text-lg); font-weight: 500; color: var(--text-heading); }</span>
+    </div>
+
+    <div class="type-specimen">
+        <span class="sg-label">h4 — Card / item title</span>
+        <h4>Card Title or Item Label</h4>
+        <span class="sg-code">h4 { font-family: 'JetBrains Mono'; font-size: var(--text-base); font-weight: 500; color: var(--text-subhead); }</span>
+    </div>
+
+    <div class="type-specimen">
+        <span class="sg-label">Body text, inline elements</span>
+        <p>Default body: <strong>strong text glows cyan</strong>, <em>italic text is bright</em>, and <a href="#">links are cyan with gold underline on hover</a>. Body is JetBrains Mono, color <code class="sg-code">--text-primary</code>.</p>
+        <p class="muted">Muted text uses <code class="sg-code">--muted</code> at font-size <code class="sg-code">--text-sm</code>.</p>
+        <span class="sg-code">font-family: 'JetBrains Mono'; font-size: var(--text-base); line-height: 1.7; color: var(--text-primary);</span>
+    </div>
+
+    <div class="type-specimen">
+        <span class="sg-label">Type Scale Reference</span>
+        <table style="width:100%;border-collapse:collapse;">
+            <tr style="border-bottom:1px solid rgba(77,201,246,0.08);">
+                <td style="padding:0.3rem;"><span class="sg-code">--text-xs</span></td>
+                <td style="padding:0.3rem;color:var(--muted);">0.8rem</td>
+                <td style="padding:0.3rem;font-size:0.8rem;color:var(--text-primary);">Labels, badges, fine print</td>
+            </tr>
+            <tr style="border-bottom:1px solid rgba(77,201,246,0.08);">
+                <td style="padding:0.3rem;"><span class="sg-code">--text-sm</span></td>
+                <td style="padding:0.3rem;color:var(--muted);">0.9rem</td>
+                <td style="padding:0.3rem;font-size:0.9rem;color:var(--text-primary);">Secondary body, muted lines</td>
+            </tr>
+            <tr style="border-bottom:1px solid rgba(77,201,246,0.08);">
+                <td style="padding:0.3rem;"><span class="sg-code">--text-base</span></td>
+                <td style="padding:0.3rem;color:var(--muted);">1.05rem</td>
+                <td style="padding:0.3rem;font-size:1.05rem;color:var(--text-primary);">Primary body copy</td>
+            </tr>
+            <tr style="border-bottom:1px solid rgba(77,201,246,0.08);">
+                <td style="padding:0.3rem;"><span class="sg-code">--text-lg</span></td>
+                <td style="padding:0.3rem;color:var(--muted);">1.2rem</td>
+                <td style="padding:0.3rem;font-size:1.2rem;color:var(--text-heading);">h3 headings</td>
+            </tr>
+            <tr style="border-bottom:1px solid rgba(77,201,246,0.08);">
+                <td style="padding:0.3rem;"><span class="sg-code">--text-xl</span></td>
+                <td style="padding:0.3rem;color:var(--muted);">1.35rem</td>
+                <td style="padding:0.3rem;font-size:1.35rem;color:var(--text-heading);">Large cards</td>
+            </tr>
+            <tr style="border-bottom:1px solid rgba(77,201,246,0.08);">
+                <td style="padding:0.3rem;"><span class="sg-code">--text-2xl</span></td>
+                <td style="padding:0.3rem;color:var(--muted);">1.55rem</td>
+                <td style="padding:0.3rem;font-size:1.55rem;color:var(--text-heading);">Display sub-heads</td>
+            </tr>
+            <tr>
+                <td style="padding:0.3rem;"><span class="sg-code">--text-3xl</span></td>
+                <td style="padding:0.3rem;color:var(--muted);">2.5rem</td>
+                <td style="padding:0.3rem;font-size:2.5rem;color:var(--text-heading);line-height:1.2;">Display</td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<!-- =======================================
+     §4 SPACING SCALE
+======================================= -->
+<div class="sg-section">
+    <div class="sg-section-title">Spacing Scale</div>
+    <table class="spacing-table">
+        <tr>
+            <td>--space-xs</td>
+            <td>0.375rem<br><span style="font-size:0.6rem;color:var(--muted);">6px</span></td>
+            <td><span class="spacing-bar" style="width:6px;"></span></td>
+        </tr>
+        <tr>
+            <td>--space-sm</td>
+            <td>0.75rem<br><span style="font-size:0.6rem;color:var(--muted);">12px</span></td>
+            <td><span class="spacing-bar" style="width:12px;"></span></td>
+        </tr>
+        <tr>
+            <td>--space-md</td>
+            <td>1.25rem<br><span style="font-size:0.6rem;color:var(--muted);">20px</span></td>
+            <td><span class="spacing-bar" style="width:20px;"></span></td>
+        </tr>
+        <tr>
+            <td>--space-lg</td>
+            <td>1.75rem<br><span style="font-size:0.6rem;color:var(--muted);">28px</span></td>
+            <td><span class="spacing-bar" style="width:28px;"></span></td>
+        </tr>
+        <tr>
+            <td>--space-xl</td>
+            <td>2.5rem<br><span style="font-size:0.6rem;color:var(--muted);">40px</span></td>
+            <td><span class="spacing-bar" style="width:40px;"></span></td>
+        </tr>
+        <tr>
+            <td>--space-2xl</td>
+            <td>4rem<br><span style="font-size:0.6rem;color:var(--muted);">64px</span></td>
+            <td><span class="spacing-bar" style="width:64px;"></span></td>
+        </tr>
+    </table>
+    <p class="sg-note" style="margin-top:var(--space-sm);">Border-radius conventions: <code class="sg-code">4px</code> cards/badges, <code class="sg-code">0.75rem</code> sections, <code class="sg-code">2rem</code> pills, <code class="sg-code">50%</code> ovals.</p>
+</div>
+
+<!-- =======================================
+     §5 COMPONENTS — CARDS
+======================================= -->
+<div class="sg-section">
+    <div class="sg-section-title">Components — Content Cards</div>
+
+    <span class="sg-label">Base card — <code>.content-card</code></span>
+    <div style="background:rgba(5,16,24,0.7);padding:var(--space-md);border-radius:6px;margin-bottom:var(--space-lg);">
+        <div class="content-card" data-num="01">
+            <h4>Card Title</h4>
+            <p>Default content card with a left cyan gradient rule. The rule widens from 1px to 2px on hover. Optional <code>data-num</code> attribute renders a large watermark digit.</p>
+        </div>
+        <div class="content-card">
+            <h4>Second Card</h4>
+            <p>No watermark. Padding adds <code>--space-md + 1px</code> on the left to clear the rule.</p>
+        </div>
+    </div>
+
+    <span class="sg-label">About card — <code>.content-card.about</code> (larger text)</span>
+    <div style="background:rgba(5,16,24,0.7);padding:var(--space-md);border-radius:6px;margin-bottom:var(--space-lg);">
+        <div class="content-card about">
+            <p>I work at the intersection of <strong>creativity, curiosity, AI and human augmentation</strong> — building tools that extend what people can think and make.</p>
+        </div>
+    </div>
+
+    <span class="sg-label">Endorsement cards — <code>.content-card.endorsement</code></span>
+    <div style="background:rgba(5,16,24,0.7);padding:var(--space-md);border-radius:6px;">
+        <div class="grid-2">
+            <div class="content-card endorsement">
+                "John brings an extraordinary combination of creative vision and technical depth that I haven't seen elsewhere."
+                <cite>— Alex Chen<br><em>CEO, TechCorp</em></cite>
+            </div>
+            <div class="content-card endorsement">
+                "His work on spatial computing redefined how our team thought about the problem space."
+                <cite>— Dr. Sarah Kim<br><em>Research Director</em></cite>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- =======================================
+     §6 COMPONENTS — TIMELINE
+======================================= -->
+<div class="sg-section">
+    <div class="sg-section-title">Components — Timeline</div>
+
+    <div class="timeline" style="margin-top:var(--space-md);">
+        <div class="timeline-item">
+            <div class="year">2022</div>
+            <div class="timeline-content">
+                <h4>R&amp;D Innovation Award</h4>
+                <div class="company">Aerospace Medical Association</div>
+                <ul>
+                    <li>Led spatial computing initiative for medical simulation</li>
+                    <li>Presented at international conference</li>
+                </ul>
+            </div>
+        </div>
+        <div class="timeline-item">
+            <div class="year">2020</div>
+            <div class="timeline-content">
+                <h4>CEO / Co-founder</h4>
+                <div class="company"><a href="#">AvatarMEDIC</a> · Founder Institute SF Graduate</div>
+                <ul>
+                    <li>Built AI-powered medical avatar training platform</li>
+                </ul>
+            </div>
+        </div>
+        <div class="timeline-item">
+            <div class="year">2016</div>
+            <div class="timeline-content">
+                <h4>MA · Communication, Culture &amp; Technology</h4>
+                <div class="company">Georgetown University</div>
+                <ul>
+                    <li>Thesis: AI-enabled drawing app for education</li>
+                    <li>Awarded "Most Meta" by peers</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- =======================================
+     §7 BUTTONS & INTERACTIVE
+======================================= -->
+<div class="sg-section">
+    <div class="sg-section-title">Buttons &amp; Interactive</div>
+
+    <span class="sg-label">Button variants</span>
+    <div class="sg-row" style="margin-bottom:var(--space-lg);">
+        <a href="#" class="btn btn-primary">Primary Button</a>
+        <a href="#" class="btn btn-gold">Gold Action</a>
+        <a href="#" class="btn btn-ghost">Ghost Link</a>
+        <button class="copy-btn">Copy</button>
+    </div>
+
+    <span class="sg-label">Usage</span>
+    <p class="sg-note">
+        <code class="sg-code">.btn .btn-primary</code> — Cyan tint; main CTAs.<br>
+        <code class="sg-code">.btn .btn-gold</code> — Gold tint; hover/accent actions.<br>
+        <code class="sg-code">.btn .btn-ghost</code> — Transparent; secondary links.<br>
+        <code class="sg-code">.copy-btn</code> — Add <code>.copied</code> class to switch to green state.
+    </p>
+
+    <div style="margin-top:var(--space-lg);">
+        <span class="sg-label">Badges / Tags</span>
+        <div class="sg-row">
+            <span class="year-badge">2024</span>
+            <span class="platform-badge">YouTube</span>
+            <span class="platform-badge">Sketchfab</span>
+            <span class="status-badge">Active</span>
+        </div>
+        <p class="sg-note">
+            <code class="sg-code">.year-badge</code> — Gold tint.<br>
+            <code class="sg-code">.platform-badge</code> — Cyan tint (video platforms, media types).<br>
+            <code class="sg-code">.status-badge</code> — Green tint (status indicators).
+        </p>
+    </div>
+
+    <div style="margin-top:var(--space-lg);">
+        <span class="sg-label">Blockquote / Citation</span>
+        <div class="blockquote-citation">
+            "The best interface is the one that disappears."
+            <div class="citation-author">— Unknown</div>
+        </div>
+    </div>
+</div>
+
+<!-- =======================================
+     §8 SHAPE NAVIGATION
+======================================= -->
+<div class="sg-section">
+    <div class="sg-section-title">Shape Navigation</div>
+    <p style="margin-bottom:var(--space-md);">The signature nav element — 5 SVG shapes map to the 5 portfolio pages. Active shape fills with a cyan tint and casts a glow. On hover, shapes shrink and labels appear below.</p>
+
+    <span class="sg-label">Hero pill — glass background</span>
+    <div style="display:flex;justify-content:center;padding:var(--space-xl);background:rgba(10,22,40,0.8);border-radius:8px;border:1px solid var(--border);">
+        <nav class="shape-nav-demo">
+            <!-- Circle = Homepage -->
+            <a class="shape-link-demo active" title="Home">
+                <svg viewBox="0 0 28 28"><circle cx="14" cy="14" r="8"/></svg>
+                <span>Home</span>
+            </a>
+            <!-- Diamond = Design -->
+            <a class="shape-link-demo" title="Design">
+                <svg viewBox="0 0 28 28"><polygon points="14,4 24,14 14,24 4,14"/></svg>
+                <span>Design</span>
+            </a>
+            <!-- Triangle = Art -->
+            <a class="shape-link-demo" title="Art">
+                <svg viewBox="0 0 28 28"><polygon points="14,4 26,24 2,24"/></svg>
+                <span>Art</span>
+            </a>
+            <!-- Square = Services -->
+            <a class="shape-link-demo" title="Services">
+                <svg viewBox="0 0 28 28"><rect x="5" y="5" width="18" height="18"/></svg>
+                <span>Services</span>
+            </a>
+            <!-- Hexagon = About -->
+            <a class="shape-link-demo" title="About">
+                <svg viewBox="0 0 28 28"><polygon points="14,2 25,8 25,20 14,26 3,20 3,8"/></svg>
+                <span>About</span>
+            </a>
+        </nav>
+    </div>
+
+    <p class="sg-note" style="margin-top:var(--space-sm);">
+        Shape mapping: ○ Circle = Home · ◆ Diamond = Design · △ Triangle = Art · □ Square = Services · ⬡ Hexagon = About
+    </p>
+</div>
+
+<!-- =======================================
+     §9 GLASS SECTION / LAYOUT
+======================================= -->
+<div class="sg-section">
+    <div class="sg-section-title">Glass Section &amp; Grids</div>
+
+    <span class="sg-label">Glass section panel — <code>section</code></span>
+    <div class="glass-section" style="margin-bottom:var(--space-lg);">
+        <h2>Section Title</h2>
+        <p>Glass sections sit above the fixed canvas background. They use <code class="sg-code">backdrop-filter: blur(10px)</code> and <code class="sg-code">background: rgba(2,10,18,0.72)</code>.</p>
+    </div>
+
+    <span class="sg-label">2-column card grid — <code>.card-grid</code></span>
+    <div class="card-grid" style="margin-bottom:var(--space-lg);">
+        <div class="content-card">
+            <h4>Grid Item A</h4>
+            <p>Auto-responsive: 2-col default, 1-col below 600px, 3-col above 1200px with <code>.cols-3</code>.</p>
+        </div>
+        <div class="content-card">
+            <h4>Grid Item B</h4>
+            <p>Each card has <code>margin: 0</code> inside the grid — spacing is handled by <code>gap</code>.</p>
+        </div>
+    </div>
+
+    <span class="sg-label">Masonry columns — <code>.columns-2</code></span>
+    <div class="columns-2">
+        <div class="content-card endorsement">
+            "Shorter endorsement quote that flows naturally."
+            <cite>— Person A</cite>
+        </div>
+        <div class="content-card endorsement">
+            "A slightly longer endorsement that needs more space to breathe properly — the masonry layout balances column heights automatically."
+            <cite>— Person B</cite>
+        </div>
+        <div class="content-card endorsement">
+            "Brief note."
+            <cite>— Person C</cite>
+        </div>
+    </div>
+</div>
+
+<!-- =======================================
+     §10 ANIMATIONS
+======================================= -->
+<div class="sg-section">
+    <div class="sg-section-title">Animation Reference</div>
+
+    <div class="anim-row">
+        <div class="anim-demo shimmer-box"></div>
+        <div class="anim-info">
+            <div class="anim-name">shimmer</div>
+            <div class="anim-desc">Alternates drop-shadow between cyan-glow and gold-glow, opacity 0.95→1. 8s cycle. Used on hero name gradient.</div>
+        </div>
+        <span class="sg-code">animation: shimmer 8s ease-in-out infinite</span>
+    </div>
+
+    <div class="anim-row">
+        <div class="anim-demo bounce-box"></div>
+        <div class="anim-info">
+            <div class="anim-name">bounce</div>
+            <div class="anim-desc">Classic bounce with multi-keyframe: 0→-8px→-4px→0. 2.5s. Scroll/chevron indicators.</div>
+        </div>
+        <span class="sg-code">animation: bounce 2.5s ease-in-out infinite</span>
+    </div>
+
+    <div class="anim-row">
+        <div class="anim-demo gentle-box"></div>
+        <div class="anim-info">
+            <div class="anim-name">bounce-gentle</div>
+            <div class="anim-desc">Soft float: 0→-3px→0. 3s. Used on scroll hint buttons inside hero oval.</div>
+        </div>
+        <span class="sg-code">animation: bounce-gentle 3s ease-in-out infinite</span>
+    </div>
+
+    <div class="anim-row">
+        <div class="anim-demo wiggle-box" style="font-size:1.2rem;display:flex;align-items:center;justify-content:center;background:transparent;border-color:transparent;">✏️</div>
+        <div class="anim-info">
+            <div class="anim-name">pencil-wiggle</div>
+            <div class="anim-desc">Rotate -5deg ↔ 5deg. 4s. Used on the draw-hint icon in the canvas hero.</div>
+        </div>
+        <span class="sg-code">animation: pencil-wiggle 4s ease-in-out infinite</span>
+    </div>
+
+    <div class="anim-row" style="border-bottom:none;">
+        <div class="anim-demo" style="background:transparent;border-color:transparent;">
+            <svg width="32" height="32" viewBox="0 0 32 32">
+                <circle cx="16" cy="16" r="10" fill="none" stroke="var(--cyan)" stroke-width="2"
+                    style="animation:strokeGlow 1s ease-in-out infinite alternate;"/>
+            </svg>
+        </div>
+        <div class="anim-info">
+            <div class="anim-name">strokeGlow</div>
+            <div class="anim-desc">SVG stroke transitions from rgba(125,216,247,0.3) to 0.8. Used on shape-nav active states.</div>
+        </div>
+        <span class="sg-code">animation: strokeGlow 1s ease-in-out infinite alternate</span>
+    </div>
+
+    <p class="sg-note" style="margin-top:var(--space-md);">All animations respect <code>prefers-reduced-motion</code> — set to <code>0.01ms</code> duration in the global reset.</p>
+</div>
+
+<!-- =======================================
+     §11 ASSET REFERENCE
+======================================= -->
+<div class="sg-section">
+    <div class="sg-section-title">Asset Reference</div>
+    <p style="margin-bottom:var(--space-md);">Paths are relative to the portfolio root (<code>johnhanacek/</code>). Adjust prefix when using from a subdirectory.</p>
+
+    <table class="asset-table">
+        <tr>
+            <th>File</th>
+            <th>Usage</th>
+            <th>Notes</th>
+        </tr>
+        <tr>
+            <td>Assets/footer-JHsig.png</td>
+            <td>Footer signature</td>
+            <td>White/transparent PNG, <code>height: 2em</code>, <code>opacity: 0.7</code></td>
+        </tr>
+        <tr>
+            <td>Assets/favicon-jhsigfrmpaper.png</td>
+            <td>Favicon, hero oval sig</td>
+            <td>Also used inline in hero oval at <code>height: 3rem</code></td>
+        </tr>
+        <tr>
+            <td>Assets/fish-large-template.svg</td>
+            <td>Fish canvas template</td>
+            <td>SVG template for the interactive fish minigame</td>
+        </tr>
+        <tr>
+            <td>Assets/thumb-metamedium.jpg</td>
+            <td>MetaMedium project thumbnail</td>
+            <td>Used in design.html project showcase</td>
+        </tr>
+        <tr>
+            <td>Assets/jhana-1..5.jpg</td>
+            <td>Portrait photography</td>
+            <td>jhana-1 through jhana-5 — art/about pages</td>
+        </tr>
+        <tr>
+            <td>styles/shared.css</td>
+            <td>Design system source</td>
+            <td>All tokens, components, layouts — the canonical CSS</td>
+        </tr>
+    </table>
+
+    <div style="margin-top:var(--space-lg);">
+        <span class="sg-label">Signature image usage</span>
+        <p>The JH signature PNG works best with:</p>
+        <pre class="sg-code" style="display:block;padding:var(--space-sm);white-space:pre;line-height:1.6;">filter: brightness(1.2) drop-shadow(0 0 12px var(--cyan-glow));
+opacity: 0.75;</pre>
+    </div>
+</div>
+
+<!-- =======================================
+     §12 COPY-PASTE CSS BLOCK
+======================================= -->
+<div class="sg-section">
+    <div class="sg-section-title">Copy-Paste: CSS Variables</div>
+    <p style="margin-bottom:var(--space-md);">Drop this <code>:root</code> block at the top of any stylesheet to import the full Deep Sea Terminal design token set. Select all → copy.</p>
+
+    <div class="seed-phrase" style="font-size:0.72rem;line-height:1.8;">
+<code>:root {
+  /* === DEEP SEA TERMINAL — Design Tokens === */
+
+  /* Backgrounds */
+  --sea-deep:  #020a12;
+  --sea-mid:   #051018;
+  --sea-panel: rgba(0, 20, 40, 0.08);
+
+  /* Accent: Cyan */
+  --cyan:      #7dd8f7;
+  --cyan-dim:  #4dc9f6;
+  --cyan-glow: rgba(77, 201, 246, 0.4);
+
+  /* Accent: Gold */
+  --gold:      #d4af37;
+  --gold-glow: rgba(212, 175, 55, 0.3);
+
+  /* Accent: Green (code / success) */
+  --green:     #b6ffba;
+
+  /* Text hierarchy */
+  --text-heading:  #7dd8f7;  /* h2/h3 */
+  --text-subhead:  #e8f4ff;  /* h4     */
+  --text-bright:   #b8dced;  /* em, endorsements */
+  --text-primary:  #8cb8cc;  /* body   */
+  --muted:         #7a9aaa;  /* secondary / meta */
+  --muted-light:   #8aabb8;
+
+  /* Semantic */
+  --accent:        var(--cyan);
+  --accent-hover:  var(--gold);
+  --border:        rgba(77, 201, 246, 0.2);
+  --shadow:        rgba(77, 201, 246, 0.15);
+  --focus:         var(--cyan);
+
+  /* Type scale */
+  --text-xs:   0.8rem;    /* badges, fine print   */
+  --text-sm:   0.9rem;    /* secondary body       */
+  --text-base: 1.05rem;   /* primary body         */
+  --text-lg:   1.2rem;    /* h3 / large labels    */
+  --text-xl:   1.35rem;   /* display sub-heads    */
+  --text-2xl:  1.55rem;   /* large display        */
+  --text-3xl:  2.5rem;    /* hero display         */
+
+  /* Spacing scale */
+  --space-xs:  0.375rem;  /* 6px  – tight gaps   */
+  --space-sm:  0.75rem;   /* 12px – compact      */
+  --space-md:  1.25rem;   /* 20px – default      */
+  --space-lg:  1.75rem;   /* 28px – comfortable  */
+  --space-xl:  2.5rem;    /* 40px – section gap  */
+  --space-2xl: 4rem;      /* 64px – hero padding */
+
+  /* Fonts (load from Google Fonts) */
+  /* 'Raleway'       — headings  (weight 200–500) */
+  /* 'JetBrains Mono'— body/mono (weight 300–500) */
+  /* 'Cinzel'        — decorative display         */
+}</code>
+    </div>
+
+    <div style="margin-top:var(--space-lg);">
+        <span class="sg-label">Google Fonts import</span>
+        <div class="seed-phrase" style="font-size:0.72rem;">
+<code>&lt;link rel="preconnect" href="https://fonts.googleapis.com"&gt;
+&lt;link rel="preconnect" href="https://fonts.gstatic.com" crossorigin&gt;
+&lt;link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&amp;family=Raleway:wght@200;300;400;500&amp;family=JetBrains+Mono:wght@300;400;500&amp;display=swap" rel="stylesheet"&gt;</code>
+        </div>
+    </div>
+
+    <div style="margin-top:var(--space-lg);">
+        <span class="sg-label">Body baseline</span>
+        <div class="seed-phrase" style="font-size:0.72rem;">
+<code>body {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: var(--text-base);
+  font-weight: 400;
+  line-height: 1.7;
+  color: var(--text-primary);
+  background: var(--sea-deep);
+  -webkit-font-smoothing: antialiased;
+}</code>
+        </div>
+    </div>
+</div>
+
+</div><!-- /sg-page -->
+
+<!-- =======================================
+     FOOTER
+======================================= -->
+<div style="text-align:center;padding:var(--space-xl) var(--space-md);border-top:1px solid var(--border);">
+    <p class="muted">Deep Sea Terminal · Brand Styleguide · jhanacek.net</p>
+    <p style="font-size:var(--text-xs);color:var(--muted);margin-top:0.25rem;opacity:0.6;">
+        File: Assets/brand-styleguide.html · Source tokens: styles/shared.css
+    </p>
+</div>
+
+</body>
+</html>
