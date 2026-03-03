@@ -97,14 +97,6 @@
             border-left: 2px solid var(--gold);
         }
 
-        .os-feature {
-            border-left: 2px solid var(--gold);
-            padding-left: var(--space-md);
-        }
-        .os-feature h4 {
-            color: var(--gold) !important;
-        }
-
         .tier-label {
             font-family: 'JetBrains Mono', monospace;
             font-size: var(--text-xs);
@@ -114,32 +106,101 @@
             margin-bottom: var(--space-xs);
         }
 
-        .how-steps {
-            list-style: none;
-            padding: 0;
-            counter-reset: step;
+        /* OS Feature Strip — compact horizontal feature list */
+        .os-strip {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1px;
+            background: var(--border-subtle);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: var(--space-xl);
         }
-        .how-steps li {
-            counter-increment: step;
-            margin-bottom: var(--space-md);
-            padding-left: 2.5rem;
+        .os-strip-item {
+            background: var(--sea-panel, rgba(2, 10, 18, 0.72));
+            padding: var(--space-md);
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+        .os-strip-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: var(--text-xs);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--gold);
+            font-weight: 500;
+        }
+        .os-strip-desc {
+            font-size: var(--text-sm);
+            color: var(--text-muted, #8cb8cc);
+            line-height: 1.4;
+        }
+
+        /* Step Track — horizontal process steps */
+        .step-track {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--space-sm);
+            margin-bottom: var(--space-xl);
             position: relative;
         }
-        .how-steps li::before {
-            content: counter(step);
+        .step-track::before {
+            content: '';
             position: absolute;
-            left: 0;
-            top: 0;
-            width: 1.6rem;
-            height: 1.6rem;
+            top: 1rem;
+            left: 2rem;
+            right: 2rem;
+            height: 1px;
+            background: linear-gradient(to right, var(--gold), rgba(212,175,55,0.15));
+            z-index: 0;
+        }
+        .step-node {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 0.4rem;
+            position: relative;
+            z-index: 1;
+        }
+        .step-num {
+            width: 2rem;
+            height: 2rem;
             border-radius: 50%;
-            border: 1px solid rgba(212, 175, 55, 0.4);
+            border: 1.5px solid var(--gold);
             color: var(--gold);
+            font-family: 'JetBrains Mono', monospace;
             font-size: var(--text-xs);
             display: flex;
             align-items: center;
             justify-content: center;
+            background: var(--sea-deep, #020a12);
+            margin-bottom: 0.25rem;
+        }
+        .step-node strong {
             font-family: 'JetBrains Mono', monospace;
+            font-size: var(--text-sm);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-heading, #7dd8f7);
+        }
+        .step-node span:last-child {
+            font-size: var(--text-sm);
+            color: var(--text-muted, #8cb8cc);
+            line-height: 1.4;
+            max-width: 18ch;
+        }
+
+        @media (max-width: 768px) {
+            .os-strip { grid-template-columns: repeat(2, 1fr); }
+            .step-track { grid-template-columns: repeat(2, 1fr); gap: var(--space-md); }
+            .step-track::before { display: none; }
+        }
+        @media (max-width: 480px) {
+            .os-strip { grid-template-columns: 1fr; }
+            .step-track { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -199,149 +260,94 @@
             <h2>What I Offer</h2>
 
             <div class="content-card about">
-                <p><strong>AI coaching and agentic systems consulting</strong> for founders, executives, and professionals who want to actually use this stuff — not just hear about it. I also take on <strong>founding designer</strong> engagements for teams building AI-native products, spatial computing, and robotics.</p>
-                <p>The coaching runs on the <strong>JH Coaching OS</strong> — a custom adaptive system that learns your business, delivers personalized materials, and gives you an AI workspace that keeps working after our sessions end.</p>
+                <p><strong>AI coaching for founders and executives</strong> who want to actually use this stuff — not just hear about it. Live sessions, a private AI workspace, and a system that adapts to your business. I also take on <strong>founding designer</strong> engagements for teams building AI-native products.</p>
             </div>
         </section>
 
         <!-- AI COACHING -->
         <section id="coaching">
-            <h2>AI Coaching & the Coaching OS</h2>
+            <h2>AI Coaching <span class="year-badge">The JH Coaching OS</span></h2>
 
             <div class="content-card about">
-                <p>Most AI coaching is a slide deck and a Zoom call. This is different. You get a <strong>private workspace</strong> with an AI coaching agent that knows your business, your goals, and your style — plus live sessions with me where we build real things together.</p>
-                <p>The system adapts to you. Whether you're a founder who wants to build and automate, or an executive who wants AI integrated into how you work, the Coaching OS meets you where you are and grows with you.</p>
+                <p>Not a slide deck. You get a <strong>private workspace</strong> with an AI coaching agent that knows your business — plus live sessions where we build real things together. The workspace is yours to keep.</p>
             </div>
 
-            <!-- What's in the OS -->
-            <div class="umbrella-header">
-                <h3>What You Get <span class="year-badge">The JH Coaching OS</span></h3>
-                <p>A living system, not a static course. Everything below is yours to keep.</p>
-            </div>
-
-            <div class="card-grid cols-3" style="margin-bottom: var(--space-xl);">
-                <div class="content-card os-feature">
-                    <h4>AI Coaching Agent</h4>
-                    <ul class="beliefs-list">
-                        <li>Personalized AI that reads your context docs and knows your business</li>
-                        <li>One-command setup and guided onboarding</li>
-                        <li>Built on Claude Code — the real tool, not a wrapper</li>
-                    </ul>
+            <!-- OS Feature Strip -->
+            <div class="os-strip">
+                <div class="os-strip-item">
+                    <span class="os-strip-label">AI Agent</span>
+                    <span class="os-strip-desc">Personalized AI that reads your context docs</span>
                 </div>
-
-                <div class="content-card os-feature">
-                    <h4>Adaptive Materials</h4>
-                    <ul class="beliefs-list">
-                        <li>Cheatsheets, guides, and references tuned to your level</li>
-                        <li>Interactive dashboard for browsing everything</li>
-                        <li>Fresh content pushed between sessions, tied to your goals</li>
-                    </ul>
+                <div class="os-strip-item">
+                    <span class="os-strip-label">Materials</span>
+                    <span class="os-strip-desc">Cheatsheets, guides, and references — always fresh</span>
                 </div>
-
-                <div class="content-card os-feature">
-                    <h4>Your Context Docs</h4>
-                    <ul class="beliefs-list">
-                        <li>Brand bible, workflow map, and intake — your AI reads these automatically</li>
-                        <li>Created conversationally with the coaching agent</li>
-                        <li>The foundation for everything you build with AI going forward</li>
-                    </ul>
+                <div class="os-strip-item">
+                    <span class="os-strip-label">Context Docs</span>
+                    <span class="os-strip-desc">Brand bible + workflow map your AI reads automatically</span>
+                </div>
+                <div class="os-strip-item">
+                    <span class="os-strip-label">Dashboard</span>
+                    <span class="os-strip-desc">Interactive hub for browsing everything in your workspace</span>
                 </div>
             </div>
 
-            <!-- How it works -->
-            <div class="umbrella-header">
-                <h3>How It Works <span class="year-badge">The arc</span></h3>
-            </div>
-
-            <div class="content-card" style="margin-bottom: var(--space-xl);">
-                <ol class="how-steps">
-                    <li><strong>Onboard:</strong> You get your private workspace and run one command. The AI coaching agent walks you through intake — who you are, what you do, what you want to build.</li>
-                    <li><strong>Build:</strong> In live sessions, we build real things from your business using AI. Not exercises — actual tools, content, workflows, and automations you keep.</li>
-                    <li><strong>Learn:</strong> Between sessions, you get homework, fresh materials, and async support. The workspace stays alive with new content personalized to your progress.</li>
-                    <li><strong>Own it:</strong> By the end, you have a working AI setup, context docs that any AI tool can read, and the skills to keep going. The workspace is yours forever.</li>
-                </ol>
-            </div>
-
-            <!-- Who it's for -->
-            <div class="umbrella-header">
-                <h3>Who It's For <span class="year-badge">Two tracks</span></h3>
-            </div>
-
-            <div class="card-grid cols-2" style="margin-bottom: var(--space-xl);">
-                <div class="content-card">
-                    <h4>Founders & Business Owners</h4>
-                    <p class="service-tagline">Build and automate without hiring a dev team</p>
-                    <ul class="beliefs-list">
-                        <li>Build tools, automations, and products with AI</li>
-                        <li>Replace fragile automation chains with agentic workflows</li>
-                        <li>Ship real things during our sessions together</li>
-                        <li>Learn to scope and execute projects independently</li>
-                    </ul>
+            <!-- How It Works — horizontal steps -->
+            <div class="step-track">
+                <div class="step-node">
+                    <span class="step-num">1</span>
+                    <strong>Onboard</strong>
+                    <span>Run one command. AI walks you through intake.</span>
                 </div>
-
-                <div class="content-card">
-                    <h4>Executives & Professionals</h4>
-                    <p class="service-tagline">Use AI effectively in your daily work</p>
-                    <ul class="beliefs-list">
-                        <li>Understand AI well enough to make strategic decisions</li>
-                        <li>Integrate AI into your existing workflows and routines</li>
-                        <li>Build a personal knowledge system your AI can read</li>
-                        <li>Stay ahead of the curve without the hype</li>
-                    </ul>
+                <div class="step-node">
+                    <span class="step-num">2</span>
+                    <strong>Build</strong>
+                    <span>Live sessions. We build real things from your business.</span>
+                </div>
+                <div class="step-node">
+                    <span class="step-num">3</span>
+                    <strong>Learn</strong>
+                    <span>Homework, fresh materials, async support between calls.</span>
+                </div>
+                <div class="step-node">
+                    <span class="step-num">4</span>
+                    <strong>Own It</strong>
+                    <span>Working AI setup + skills to keep going. Yours forever.</span>
                 </div>
             </div>
 
             <!-- Tiers -->
             <div class="umbrella-header">
                 <h3>Engagement Options <span class="year-badge">Flexible</span></h3>
-                <p>Different levels of depth, access, and ongoing support. <a href="#book">Reach out</a> and we'll figure out the right fit.</p>
             </div>
 
             <div class="card-grid cols-2" style="margin-bottom: var(--space-xl);">
                 <div class="content-card">
                     <p class="tier-label">Guided Coaching</p>
                     <h4>The Core Program</h4>
-                    <ul class="beliefs-list">
-                        <li>4 live sessions over 2 months</li>
-                        <li>Full JH Coaching OS — your private workspace and AI agent</li>
-                        <li>Session notes, homework, and fresh content between calls</li>
-                        <li>Async support for when you get stuck</li>
-                    </ul>
-                    <p class="service-tagline">Best for most people. You go from zero to building with AI.</p>
+                    <p>4 sessions over 2 months. Full Coaching OS, session notes, homework, and async support.</p>
+                    <p class="service-tagline">Best for most people. Zero to building with AI.</p>
                 </div>
 
                 <div class="content-card">
                     <p class="tier-label">Embedded Retainer</p>
                     <h4>Ongoing Partnership</h4>
-                    <ul class="beliefs-list">
-                        <li>Ongoing sessions — weekly or biweekly</li>
-                        <li>Custom AI skills built specifically for your workflows</li>
-                        <li>Frequent content updates and workspace scaffolding</li>
-                        <li>Priority async access</li>
-                    </ul>
+                    <p>Weekly or biweekly sessions. Custom AI skills, frequent content updates, priority access.</p>
                     <p class="service-tagline">For power users who want AI deeply embedded in their work.</p>
                 </div>
 
                 <div class="content-card">
                     <p class="tier-label">Build Sprint</p>
                     <h4>Intensive Project Build</h4>
-                    <ul class="beliefs-list">
-                        <li>1–2 week intensive with daily standups and pairing</li>
-                        <li>We build your specific project together</li>
-                        <li>You learn by doing — fastest path from idea to shipped</li>
-                    </ul>
-                    <p class="service-tagline">For founders with a specific thing to build and a deadline to hit.</p>
+                    <p>1-2 week intensive with daily pairing. We build your specific project together.</p>
+                    <p class="service-tagline">Fastest path from idea to shipped.</p>
                 </div>
 
                 <div class="content-card">
                     <p class="tier-label">Audit</p>
                     <h4>One-Session Deep Dive</h4>
-                    <ul class="beliefs-list">
-                        <li>Single session: audit your tools, workflows, and AI readiness</li>
-                        <li>Walk away with a prioritized action plan</li>
-                        <li>Option to continue into guided coaching after</li>
-                    </ul>
-                    <p class="service-tagline">Good starting point if you're not sure what you need yet.</p>
+                    <p>Audit your tools, workflows, and AI readiness. Walk away with a prioritized action plan.</p>
+                    <p class="service-tagline">Good starting point if you're not sure what you need.</p>
                 </div>
             </div>
         </section>

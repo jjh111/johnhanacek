@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ancient Matrix Laboratory</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=Cinzel:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&family=Teko:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-deep: #0a0a0f;
+            --bg-panel: #14141a;
+            --gold: #d4af37;
+            --gold-light: #f4d03f;
+            --gold-dark: #b8941f;
+            --teal: #00d4aa;
+            --teal-dark: #00a88a;
+            --matrix-green: #00ff88;
+            --purple: #a855f7;
+            --crimson: #990000;
+            --white: #f5f5f5;
+            --silver: #c0c0c0;
+            --copper: #b87333;
+        }
+
+        body {
+            background: var(--bg-deep);
+            min-height: 100vh;
+            padding: 40px 20px;
+            font-family: 'Cormorant Garamond', serif;
+            color: var(--white);
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Matrix Rain Effect */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                repeating-linear-gradient(
+                    0deg,
+                    transparent 0px,
+                    transparent 1px
+                ),
+                repeating-linear-gradient(
+                    90deg,
+                    transparent 0px,
+                    transparent 1px
+                );
+            background-size: 50px 50px;
+            background-position:
+                    0 0,
+                    25px 25px;
+            opacity: 0.03;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        /* Art Deco Sunburst */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at 50% 0%, 
+                transparent 0%, 
+                transparent 40%,
+                rgba(212, 175, 55, 0.05) 60%,
+                transparent 70%
+            );
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+            padding: 60px 40px;
+            position: relative;
+            border: 2px solid var(--gold);
+            background: linear-gradient(180deg, var(--bg-panel) 0%, var(--bg-deep) 100%);
+        }
+
+        /* Gothic Title */
+        .gothic-title {
+            font-family: 'Cinzel', serif;
+            font-size: 4rem;
+            font-weight: 800;
+            color: var(--gold);
+            text-align: center;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            position: relative;
+        }
+
+        .gothic-title::before {
+            content: '❧';
+            position: absolute;
+            left: 10%;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.5rem;
+            color: var(--gold);
+        }
+
+        .gothic-title::after {
+            content: '❧';
+            position: absolute;
+            right: 10%;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.5rem;
+            color: var(--gold);
+        }
+
+        /* Art Deco Subtitle */
+        .deco-subtitle {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--teal);
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.4em;
+            position: relative;
+        }
+
+        .deco-subtitle::before,
+        .deco-subtitle::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 100px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+        }
+
+        .deco-subtitle::before { left: 0; }
+        .deco-subtitle::after { right: 0; }
+
+        /* Art Deco Geometric Frame */
+        .deco-frame {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            bottom: 15px;
+            border: 1px solid var(--gold);
+            pointer-events: none;
+        }
+
+        .deco-frame::before {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            right: 5px;
+            bottom: 5px;
+            border: 1px solid var(--teal);
+        }
+
+        /* Section Styles */
+        .section {
+            margin: 50px 0;
+            padding: 50px 40px;
+            background: var(--bg-panel);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+
+        /* Matrix Grid Background */
+        .matrix-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(0, 255, 136, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 136, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            opacity: 0.3;
+        }
+
+        /* Section Headers */
+        .section-header {
+            font-family: 'Cinzel', serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--gold);
+            text-align: center;
+            margin-bottom: 40px;
+            text-transform: uppercase;
+            letter-spacing: 0.3em;
+            position: relative;
+        }
+
+        .section-header::before {
+            content: '◇';
+            position: absolute;
+            left: 10%;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.2rem;
+            color: var(--teal);
+        }
+
+        .section-header::after {
+            content: '◇';
+            position: absolute;
+            right: 10%;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.2rem;
+            color: var(--teal);
+        }
+
+        /* Matrix Data Display */
+        .matrix-display {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--matrix-green);
+            background: rgba(0, 0, 0, 0.5);
+            padding: 30px;
+            margin: 30px 0;
+            border: 2px solid rgba(0, 255, 136, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .matrix-display::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--matrix-green), transparent);
+            animation: scan 3s linear infinite;
+        }
+
+        @keyframes scan {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .matrix-row {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .matrix-cell {
+            text-align: center;
+            font-size: 0.8rem;
+        }
+
+        .matrix-cell.active {
+            color: var(--matrix-green);
+            font-weight: 700;
+        }
+
+        .matrix-cell.inactive {
+            color: rgba(0, 255, 136, 0.3);
+        }
+
+        /* Ancient Symbols */
+        .ancient-symbol {
+            font-family: 'Cinzel', serif;
+            font-size: 3rem;
+            color: var(--gold);
+            text-align: center;
+            margin: 40px 0;
+            position: relative;
+        }
+
+        .ancient-symbol::before {
+            content: '';
+            position: absolute;
+            width: 80px;
+            height: 2px;
+            background: var(--gold);
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .ancient-symbol::after {
+            content: '';
+            position: absolute;
+            width: 80px;
+            height: 2px;
+            background: var(--gold);
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        /* Art Deco Panel */
+        .deco-panel {
+            border: 2px solid var(--gold);
+            padding: 40px;
+            margin: 40px 0;
+            position: relative;
+            background: linear-gradient(135deg, var(--bg-panel) 0%, var(--bg-deep) 100%);
+        }
+
+        .deco-panel::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            border: 1px solid var(--teal);
+        }
+
+        /* Futurism Typography */
+        .futurism-text {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--teal);
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            margin: 30px 0;
+        }
+
+        /* Teko Compressed */
+        .compressed-text {
+            font-family: 'Teko', sans-serif;
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--gold);
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            line-height: 1;
+            margin: 30px 0;
+            position: relative;
+        }
+
+        .compressed-text::before {
+            content: 'ANCIENT';
+            position: absolute;
+            font-size: 0.8rem;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--teal);
+            letter-spacing: 0.5em;
+        }
+
+        /* Data Visualization */
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin: 40px 0;
+        }
+
+        .data-card {
+            padding: 30px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--gold);
+            text-align: center;
+            position: relative;
+        }
+
+        .data-card::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            bottom: 10px;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+
+        .data-value {
+            font-family: 'Space Mono', monospace;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--teal);
+            margin-bottom: 10px;
+        }
+
+        .data-label {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.7rem;
+            color: var(--gold);
+            text-transform: uppercase;
+            letter-spacing: 0.3em;
+        }
+
+        /* Hieroglyphic Style */
+        .hieroglyph {
+            font-family: 'Cinzel', serif;
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: var(--gold);
+            text-align: center;
+            margin: 40px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            position: relative;
+        }
+
+        .hieroglyph::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+        }
+
+        /* Laboratory Notes */
+        .lab-notes {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1rem;
+            line-height: 1.8;
+            color: var(--silver);
+            padding: 30px;
+            background: rgba(0, 0, 0, 0.2);
+            border-left: 3px solid var(--gold);
+            margin: 30px 0;
+            position: relative;
+        }
+
+        .lab-notes::before {
+            content: 'DATA ENTRY';
+            position: absolute;
+            top: -12px;
+            left: 10px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.65rem;
+            color: var(--teal);
+            letter-spacing: 0.3em;
+        }
+
+        /* Art Deco Divider */
+        .deco-divider {
+            text-align: center;
+            margin: 60px 0;
+            position: relative;
+        }
+
+        .deco-divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 40%;
+            height: 1px;
+            background: var(--gold);
+        }
+
+        .deco-divider::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            right: 0;
+            width: 40%;
+            height: 1px;
+            background: var(--gold);
+        }
+
+        .deco-ornament {
+            display: inline-block;
+            font-family: 'Cinzel', serif;
+            font-size: 1.5rem;
+            color: var(--gold);
+            padding: 15px 30px;
+            background: var(--bg-deep);
+            border: 2px solid var(--gold);
+            border-radius: 30px 30px 0 30px;
+            position: relative;
+        }
+
+        .deco-ornament::before {
+            content: '◆ ◇ ◆';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--teal);
+            font-size: 1rem;
+            letter-spacing: 0.5em;
+        }
+
+        /* Ancient Calendar */
+        .ancient-calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 15px;
+            padding: 30px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--gold);
+            margin: 40px 0;
+        }
+
+        .calendar-day {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--teal);
+            text-align: center;
+            padding: 15px 0;
+            border: 1px solid rgba(0, 255, 136, 0.1);
+        }
+
+        .calendar-day.active {
+            background: rgba(212, 175, 55, 0.1);
+            border-color: var(--gold);
+            color: var(--gold);
+            font-weight: 700;
+        }
+
+        .calendar-day.ancient {
+            background: rgba(168, 85, 247, 0.1);
+            border-color: var(--purple);
+            color: var(--purple);
+        }
+
+        /* Technical Schematic */
+        .schematic {
+            padding: 40px;
+            margin: 40px 0;
+            border: 2px solid var(--teal);
+            background: rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .schematic::before {
+            content: 'SCHEMATIC α';
+            position: absolute;
+            top: 10px;
+            left: 20px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.65rem;
+            color: var(--teal);
+            letter-spacing: 0.3em;
+        }
+
+        .schematic-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 5px;
+            margin: 40px 0;
+        }
+
+        .schematic-cell {
+            width: 40px;
+            height: 40px;
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .schematic-cell.active {
+            background: rgba(0, 255, 136, 0.3);
+            border-color: var(--matrix-green);
+        }
+
+        .schematic-symbol {
+            font-family: 'Cinzel', serif;
+            font-size: 1.2rem;
+            color: var(--matrix-green);
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 60px 40px;
+            border-top: 2px solid var(--gold);
+            margin-top: 80px;
+            position: relative;
+        }
+
+        .footer::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+        }
+
+        .footer-text {
+            font-family: 'Cinzel', serif;
+            font-size: 0.9rem;
+            color: var(--silver);
+            text-transform: uppercase;
+            letter-spacing: 0.3em;
+            margin-bottom: 20px;
+        }
+
+        .footer-code {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--teal);
+            letter-spacing: 0.1em;
+        }
+
+        @media (max-width: 768px) {
+            .gothic-title {
+                font-size: 2.5rem;
+            }
+
+            .section-header {
+                font-size: 1.5rem;
+            }
+
+            .matrix-display {
+                font-size: 0.7rem;
+            }
+
+            .data-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .schematic-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="deco-frame">
+                <div class="gothic-title">A N C I E N T</div>
+                <div class="deco-subtitle">Futurism Interface</div>
+            </div>
+        </header>
+
+        <div class="section">
+            <div class="matrix-grid"></div>
+            <div class="section-header">System Initialization</div>
+            
+            <div class="matrix-display">
+                <div class="matrix-row">
+                    <span class="matrix-cell active">1</span>
+                    <span class="matrix-cell inactive">0</span>
+                    <span class="matrix-cell inactive">1</span>
+                    <span class="matrix-cell inactive">0</span>
+                    <span class="matrix-cell inactive">0</span>
+                    <span class="matrix-cell inactive">0</span>
+                    <span class="matrix-cell inactive">1</span>
+                    <span class="matrix-cell inactive">0</span>
+                    <span class="matrix-cell inactive">1</span>
+                    <span class="matrix-cell inactive">1</span>
+                </div>
+                <div class="matrix-row">
+                    <span class="matrix-cell inactive">0</span>
+                    <span class="matrix-cell inactive">0</span>
+                    <span class="matrix-cell active">1</span>
+                    <span class="matrix-cell inactive">0</span>
+                    <span class="matrix-cell inactive">1</span>
+                    <span class="matrix-cell inactive">1</span>
+                    <span class="matrix-cell inactive">0</span>
+                    <span class="matrix-cell inactive">0</span>
+                    <span class="matrix-cell inactive">1</span>
+                    <span class="matrix-cell inactive">0</span>
+                </div>
+                <div class="matrix-row">
+                    <span class="matrix-cell inactive">0</span>
+                    <span class="matrix-cell inactive">1</span>
+                    <span class="matrix-cell inactive">0</span>
+                    <span class="matrix-cell active">0</span>
+                    <span class="matrix-cell inactive">0</span>
+                    <span class="matrix-cell inactive">0</span>
+                    <span class="matrix-cell inactive">1</span>
+                    <span class="matrix-cell inactive">1</span>
+                    <span class="matrix-cell inactive">0</span>
+                    <span class="matrix-cell inactive">0</span>
+                </div>
+                <div class="matrix-row">
+                    <span class="matrix-cell inactive">0</span>
+                    <span class="matrix-cell inactive">0</span>
+                    <span class="matrix-cell inactive">0</span>
+                    <span class="matrix-cell inactive">0</span>
+                    <span class="matrix-cell active">1</span>
+                    <span class="matrix-cell inactive">1</span>
+                    <span class="matrix-cell inactive">1</span>
+                    <span class="matrix-cell inactive">0</span>
+                    <span class="matrix-cell inactive">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">Temporal Coordinates</div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px;">
+                <div class="deco-panel">
+                    <div class="futurism-text">Epoch</div>
+                    <div class="compressed-text">MMXXVI</div>
+                    <div class="ancient-symbol">✦</div>
+                </div>
+                <div class="deco-panel">
+                    <div class="futurism-text">Cycle</div>
+                    <div class="compressed-text">Δ7</div>
+                    <div class="ancient-symbol">❧</div>
+                </div>
+                <div class="deco-panel">
+                    <div class="futurism-text">Phase</div>
+                    <div class="compressed-text">Γ</div>
+                    <div class="ancient-symbol">◇</div>
+                </div>
+                <div class="deco-panel">
+                    <div class="futurism-text">State</div>
+                    <div class="compressed-text">Ω</div>
+                    <div class="ancient-symbol">◆</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="deco-divider">
+            <span class="deco-ornament">◆ ◇ ❧</span>
+        </div>
+
+        <div class="section">
+            <div class="matrix-grid"></div>
+            <div class="section-header">Analysis Matrix</div>
+            
+            <div class="data-grid">
+                <div class="data-card">
+                    <div class="data-value">89.7%</div>
+                    <div class="data-label">Stability</div>
+                </div>
+                <div class="data-card">
+                    <div class="data-value">∞</div>
+                    <div class="data-label">Entropy</div>
+                </div>
+                <div class="data-card">
+                    <div class="data-value">10⁶</div>
+                    <div class="data-label">Iterations</div>
+                </div>
+                <div class="data-card">
+                    <div class="data-value">α</div>
+                    <div class="data-label">Convergence</div>
+                </div>
+                <div class="data-card">
+                    <div class="data-value">π</div>
+                    <div class="data-label">Precision</div>
+                </div>
+                <div class="data-card">
+                    <div class="data-value">φ</div>
+                    <div class="data-label">Golden Ratio</div>
+                </div>
+                <div class="data-card">
+                    <div class="data-value">Ω</div>
+                    <div class="data-label">Final State</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">Hieroglyphic Translation</div>
+            
+            <div class="hieroglyph">∇·E = -∂B/∂t</div>
+            
+            <div class="lab-notes">
+                <div class="compressed-text" style="margin-bottom: 20px;">QUANTUM FIELD FLUCTUATIONS</div>
+                The interaction between ancient geometries and quantum field theory reveals a fundamental connection. Where Egyptian pyramid mathematics encoded the golden ratio, modern physics discovers the same constants in atomic structures. Time may be cyclical rather than linear, repeating in grand cycles of cosmic creation and destruction.
+            </div>
+        </div>
+
+        <div class="deco-divider">
+            <span class="deco-ornament">◆ ❧ ◇</span>
+        </div>
+
+        <div class="section">
+            <div class="matrix-grid"></div>
+            <div class="section-header">Calendar Synchronization</div>
+            
+            <div class="ancient-calendar">
+                <div class="calendar-day ancient">LUNA</div>
+                <div class="calendar-day">01</div>
+                <div class="calendar-day">02</div>
+                <div class="calendar-day ancient">03</div>
+                <div class="calendar-day">04</div>
+                <div class="calendar-day">05</div>
+                <div class="calendar-day">06</div>
+                <div class="calendar-day ancient">SOL</div>
+                <div class="calendar-day active">07</div>
+                <div class="calendar-day">08</div>
+                <div class="calendar-day">09</div>
+                <div class="calendar-day">10</div>
+                <div class="calendar-day">11</div>
+                <div class="calendar-day">12</div>
+                <div class="calendar-day">13</div>
+                <div class="calendar-day">14</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">Schematic Diagram</div>
+            
+            <div class="schematic">
+                <div class="schematic-grid">
+                    <div class="schematic-cell"><span class="schematic-symbol">◇</span></div>
+                    <div class="schematic-cell"><span class="schematic-symbol">◇</span></div>
+                    <div class="schematic-cell"><span class="schematic-symbol">◆</span></div>
+                    <div class="schematic-cell"><span class="schematic-symbol">◆</span></div>
+                    <div class="schematic-cell"><span class="schematic-symbol">✦</span></div>
+                    <div class="schematic-cell"><span class="schematic-symbol">✦</span></div>
+                    <div class="schematic-cell active"><span class="schematic-symbol">❧</span></div>
+                </div>
+                <div class="schematic-grid">
+                    <div class="schematic-cell"><span class="schematic-symbol">❧</span></div>
+                    <div class="schematic-cell"><span class="schematic-symbol">✦</span></div>
+                    <div class="schematic-cell"><span class="schematic-symbol">◇</span></div>
+                    <div class="schematic-cell active"><span class="schematic-symbol">◆</span></div>
+                    <div class="schematic-cell"><span class="schematic-symbol">✦</span></div>
+                    <div class="schematic-cell"><span class="schematic-symbol">◆</span></div>
+                    <div class="schematic-cell"><span class="schematic-symbol">❧</span></div>
+                </div>
+                <div class="schematic-grid">
+                    <div class="schematic-cell"><span class="schematic-symbol">◆</span></div>
+                    <div class="schematic-cell active"><span class="schematic-symbol">◇</span></div>
+                    <div class="schematic-cell"><span class="schematic-symbol">❧</span></div>
+                    <div class="schematic-cell"><span class="schematic-symbol">✦</span></div>
+                    <div class="schematic-cell active"><span class="schematic-symbol">◆</span></div>
+                    <div class="schematic-cell"><span class="schematic-symbol">◇</span></div>
+                    <div class="schematic-cell"><span class="schematic-symbol">❧</span></div>
+                </div>
+                <div class="schematic-grid">
+                    <div class="schematic-cell"><span class="schematic-symbol">✦</span></div>
+                    <div class="schematic-cell"><span class="schematic-symbol">◆</span></div>
+                    <div class="schematic-cell active"><span class="schematic-symbol">❧</span></div>
+                    <div class="schematic-cell"><span class="schematic-symbol">◇</span></div>
+                    <div class="schematic-cell"><span class="schematic-symbol">◆</span></div>
+                    <div class="schematic-cell"><span class="schematic-symbol">✦</span></div>
+                    <div class="schematic-cell"><span class="schematic-symbol">◇</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div class="footer-text">Temple of Future Past</div>
+            <div class="footer-code">
+                ⊗ ⊖ ⊙ Δ∇ · ΣΠΩ · ∞φ <br>
+                QUANTUM_HIEROGLYPHS_V2.0
+            </div>
+        </div>
+    </div>
+</body>
+</html>
