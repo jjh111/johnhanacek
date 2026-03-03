@@ -8,7 +8,7 @@ hi@johnhanacek.com · [johnhanacek.com](https://www.johnhanacek.com) · [LinkedI
 
 ## Summary
 
-Product Designer and Design Engineer building AI-native products and spatial computing interfaces. I design and code agentic systems, XR interfaces, and AI-augmented tools — working across the full stack from prompt engineering and agent orchestration to Unity prototypes and XR interaction design. Through JH Design LLC (est. 2014), I've served as founding designer for startups and R&D teams, leading 0→1 product development, design system creation, and technical prototyping. Work at the intersection of **Creativity, Curiosity, AI & Human Augmentation**.
+Product Designer and Design Engineer building AI-native products and spatial computing interfaces. I design and code agentic systems, XR interfaces, and AI-augmented tools — working across the full stack from prompt engineering and agent orchestration to Unity prototypes and XR interaction design. Through JH Design LLC (est. 2016), I've served as founding designer for startups and R&D teams, leading 0→1 product development, design system creation, and technical prototyping. Work at the intersection of **Creativity, Curiosity, AI & Human Augmentation**.
 
 ---
 
@@ -38,7 +38,7 @@ Product Designer and Design Engineer building AI-native products and spatial com
 - Content and brand development
 
 ### Product and Founding Designer as a Service
-**JH Design LLC** · 2014–Present
+**JH Design LLC** · 2016–Present
 
 - Subject matter expert in XR and spatial computing
 - Solutions and product design across AI, XR, and robotics domains
