@@ -2,7 +2,7 @@
 
 Portfolio website for John Hanacek — work at the intersection of Creativity, Curiosity, AI & Human Augmentation.
 
-**[www.johnhanacek.com](https://www.johnhanacek.com)** · Portfolio v1.5
+**[www.johnhanacek.com](https://www.johnhanacek.com)** · Portfolio v1.6
 
 ---
 
@@ -22,14 +22,25 @@ Contact: hi@johnhanacek.com · [LinkedIn](https://linkedin.com/in/johnhanacek) �
 
 ## Sitemap
 
+### Primary Pages (main nav)
+
+| Page | Shape | Description |
+|------|-------|-------------|
+| [index.html](index.html) | Triangle | Home — interactive fish minigame canvas |
+| [design.html](design.html) | Rounded Square | Design — blueprint drawing demo, case studies, 3D award models |
+| [art.html](art.html) | Circle | Art — interactive installations, writing, 3D/photogrammetry, photography |
+| [about.html](about.html) | Diamond | About — bio, work history, education, research & publications |
+| [services.html](services.html) | Star | Services — AI coaching, Claude Code coaching, founding designer |
+
+### Secondary Pages
+
 | Page | Description |
 |------|-------------|
-| [index.html](index.html) | Home — interactive fish minigame canvas |
-| [design.html](design.html) | Design — blueprint drawing demo, case studies, 3D award models |
-| [art.html](art.html) | Art — interactive installations, writing, 3D/photogrammetry, photography |
-| [about.html](about.html) | About — bio, work history, education, research & publications |
-| [services.html](services.html) | Services — consulting, design engineering, media production |
-| [404.html](404.html) | Custom 404 page |
+| [search.html](search.html) | AI-powered search — BM25 + in-browser LLM (WebGPU) + local model support |
+| [nanome2.html](nanome2.html) | Nanome 2 Redesign — design case study (subpage of Design) |
+| [playground.html](playground.html) | Infinite canvas board with iframe demo cards |
+| [writing.html](writing.html) | JH Coaching Dashboard — standalone coaching resource tool |
+| [404.html](404.html) | Custom 404 page with fish canvas overlay |
 
 ---
 
@@ -62,7 +73,7 @@ Layered behavior stack evaluated per fish per frame:
 
 Three fish tiers by drawn loop size:
 - **Small** (bodyWidth < 35px): coral homecoming, contagious flee, curiosity toward new coral
-- **Medium** (35–60px): stable V-formation with slot assignments, scatter from large fish
+- **Medium** (35-60px): stable V-formation with slot assignments, scatter from large fish
 - **Large** (>=60px): solitary patrol/cruise, territorial challenges, dominance hierarchy
 
 Key implementation details:
@@ -71,6 +82,25 @@ Key implementation details:
 - `cleanupFishRefs(id)` called on every `fish.splice()` — prevents stale rivalId / ignoreRivalId / huntTarget pointers
 - Animate loop wrapped in `try/catch` — frame errors are logged and skipped, loop never permanently stops
 - `hasActiveAnimation()` pauses `requestAnimationFrame` when nothing is moving (significant CPU savings)
+
+---
+
+## AI Search System (search.html)
+
+Three-tier search system with progressive enhancement:
+
+| Tier | Engine | Description |
+|------|--------|-------------|
+| Tier 1 | MiniSearch BM25 | Instant keyword search — always on, no dependencies |
+| Tier 2 | Qwen3.5-0.8B WebGPU | In-browser LLM via Transformers.js v4 — runs entirely client-side |
+| Tier 3 | LMStudio / Ollama | Auto-discovered local models on localhost — higher quality answers |
+| BYOM | Custom endpoint | User-provided OpenAI-compatible API endpoint |
+
+**Features:**
+- Engine color coding: WebGPU (blue), LMStudio (purple), Ollama (orange), Custom (green)
+- Search overlay accessible from any page via `⌘K` or `/` key
+- AI toggle: users can disable LLM even when an engine is detected
+- 32 search chunks in `Assets/search-chunks.json` with field boosting (title 3x, tags 2x, content 1x)
 
 ---
 
@@ -104,13 +134,41 @@ Full professional timeline, education, and research publications:
 
 ---
 
+## Playground (playground.html)
+
+Infinite canvas board with pan/zoom (trackpad + mouse). Iframe demo cards loaded on visibility, categorized by 3D, Code, Design, and Style. Features a caustic ripple background animation.
+
+---
+
+## Navigation System
+
+Shape-based navigation with geometric SVG icons:
+
+```
+[🔍 Search] | [△ Home] [□ Design] [○ Art]   "John Hanacek"   [◇ About] [☆ Services]
+```
+
+- Search icon (magnifying glass) — leftmost, opens search overlay
+- Primary shapes (left): Home, Design, Art
+- Center: "John Hanacek" text link → index.html
+- Secondary shapes (right): About, Services
+- Hero shape-nav visible at top of page; fixed nav appears after scrolling past hero
+- Mobile: hamburger toggle for right-side section links, closes on outside click
+- Active page gets `class="active"` + `aria-current="page"`
+
+---
+
 ## Tech Stack
 
 ```
 HTML / CSS / Vanilla JavaScript     no frameworks, no build step
-styles/shared.css                   global design system (~1500 lines)
+styles/shared.css                   global design system (Deep Sea Terminal theme)
 scripts/shared.js                   nav scroll, cursor spotlight, mobile toggle
-Google Fonts                        Raleway, JetBrains Mono, Cinzel, DM Sans
+scripts/search-overlay.js           search overlay (⌘K / /) + engine popover
+scripts/search-overlay.css          search overlay styles
+Google Fonts                        Cinzel, Raleway, JetBrains Mono, DM Sans
+Transformers.js v4                  in-browser LLM inference (WebGPU)
+MiniSearch                          BM25 keyword search engine
 @google/model-viewer v3.3           3D GLB rendering (design page)
 Sketchfab embed                     photogrammetry viewer (art page)
 ```
@@ -119,21 +177,25 @@ Every page is a standalone HTML file. No build tools, no npm, no framework. Depl
 
 ---
 
-## Design System
+## Design System — "Deep Sea Terminal"
 
 Colors (CSS custom properties):
 
 | Token | Value | Usage |
 |-------|-------|-------|
-| `--ink` | `#1a1a2e` | Primary dark background |
-| `--paper` | `#f8f6f1` | Light background |
-| `--accent` | `#e63946` | Links, highlights |
-| `--cyan` | `#4dc9f6` | Canvas UI, glow effects |
-| `--gold` | `#d4af37` | Headings, shimmer |
+| `--sea-deep` | `#020a12` | Page background |
+| `--sea-mid` | `#051018` | Secondary background |
+| `--cyan` | `#7dd8f7` | Headings, accents |
+| `--cyan-dim` | `#4dc9f6` | Secondary accent, glow effects |
+| `--gold` | `#d4af37` | Hover accent, highlights |
+| `--text-primary` | `#8cb8cc` | Body text |
+| `--text-bright` | `#b8dced` | Emphasized text |
+| `--muted` | `#7a9aaa` | Dimmed text |
+| `--border` | `rgba(77, 201, 246, 0.2)` | Borders, dividers |
 
-Typography: Raleway (headings, 200–600 weight) · DM Sans (body) · JetBrains Mono (labels/code) · Cinzel (decorative)
+Typography: Cinzel (headings, decorative) · Raleway (subheadings, 100-600 weight) · JetBrains Mono (body, code) · DM Sans (alternate body)
 
-Accessibility: WCAG AA contrast · `prefers-reduced-motion` support · skip links · semantic HTML with ARIA labels
+Accessibility: WCAG AA contrast · `prefers-reduced-motion` support · skip links · semantic HTML with ARIA labels · JSON-LD structured data
 
 ---
 
@@ -141,22 +203,32 @@ Accessibility: WCAG AA contrast · `prefers-reduced-motion` support · skip link
 
 ```
 /
-├── index.html            Home — fish minigame
-├── design.html           Design examples
-├── art.html              Art portfolio
-├── about.html            Bio and publications
-├── services.html         Services
-├── 404.html              Custom 404
-├── CLAUDE.md             AI assistant context (codebase instructions)
-├── README.md             This file
-├── CNAME                 johnhanacek.com
-├── john-hanacek.json     Structured data for AI/search crawlers
-├── llms.txt              LLM-readable site summary
+├── index.html              Home — fish minigame
+├── design.html             Design examples
+├── art.html                Art portfolio
+├── about.html              Bio and publications
+├── services.html           Services & coaching
+├── search.html             AI-powered search
+├── nanome2.html            Nanome 2 case study
+├── playground.html         Infinite canvas board
+├── writing.html            Coaching dashboard
+├── 404.html                Custom 404
+├── CLAUDE.md               AI assistant context (codebase instructions)
+├── README.md               This file
+├── CNAME                   johnhanacek.com
+├── john-hanacek.json       Structured data for AI/search crawlers
+├── llms.txt                LLM-readable site summary
 ├── styles/
-│   └── shared.css        Global design system
+│   └── shared.css          Global design system
 ├── scripts/
-│   └── shared.js         Shared nav and UI behavior
-└── Assets/               Images, GLB models, fonts
+│   ├── shared.js           Shared nav and UI behavior
+│   ├── search-overlay.js   Search overlay + engine popover
+│   └── search-overlay.css  Search overlay styles
+└── Assets/
+    ├── search-chunks.json  Search index (32 chunks)
+    ├── demos/              Test/PoC pages (test-llm.html, test-vision.html)
+    ├── DemosPlayground/    Creative code demos for playground.html
+    └── ...                 Images, GLB models, fonts
 ```
 
 ---

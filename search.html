@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search — John Hanacek</title>
+    <meta name="description" content="AI-powered search across John Hanacek's portfolio — projects, skills, services, and more. Instant keyword search with optional LLM answers.">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="./Assets/favicon-jhsigfrmpaper.png">
+
+    <!-- Open Graph / Social Share -->
+    <meta property="og:title" content="Search — John Hanacek">
+    <meta property="og:description" content="AI-powered search across John Hanacek's portfolio — projects, skills, services, and more.">
+    <meta property="og:image" content="https://www.johnhanacek.com/Assets/socialgraph-jhcom.webp">
+    <meta property="og:url" content="https://www.johnhanacek.com/search.html">
+    <meta property="og:type" content="website">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Search — John Hanacek">
+    <meta name="twitter:description" content="AI-powered search across John Hanacek's portfolio.">
+    <meta name="twitter:image" content="https://www.johnhanacek.com/Assets/socialgraph-jhcom.webp">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Raleway:wght@100;200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./styles/shared.css">
+
+    <!-- Structured Data -->
+    <link rel="alternate" type="application/json" href="./john-hanacek.json" title="Structured data">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "SearchResultsPage",
+        "name": "Search — John Hanacek Portfolio",
+        "url": "https://www.johnhanacek.com/search.html",
+        "mainEntity": {
+            "@type": "WebSite",
+            "name": "John Hanacek Portfolio",
+            "url": "https://www.johnhanacek.com",
+            "potentialAction": {
+                "@type": "SearchAction",
+                "target": "https://www.johnhanacek.com/search.html?q={search_term_string}",
+                "query-input": "required name=search_term_string"
+            }
+        }
+    }
+    </script>
+    <style>
+        :root {
+            --sea-deep: #020a12;
+            --sea-mid: #0a1628;
+            --cyan: #7dd8f7;
+            --cyan-dim: #4dc9f6;
+            --gold: #d4af37;
+            --text-primary: #a8d0e4;
+            --text-bright: #d8edf8;
+            --text-heading: #7dd8f7;
+            --muted: #6a90a4;
+            --border: rgba(77, 201, 246, 0.15);
+            --border-hover: rgba(77, 201, 246, 0.3);
+            /* Engine colors */
+            --engine-browser: #4dc9f6;
+            --engine-lmstudio: #c084fc;
+            --engine-ollama: #fb923c;
+            --engine-custom: #4ade80;
+            --engine-color: var(--muted); /* set dynamically */
+        }
+
+        /* Search page body — full width for nav, content constrained */
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            background: var(--sea-deep);
+            color: var(--text-bright);
+            -webkit-font-smoothing: antialiased;
+            padding-top: 0;
+        }
+
+        /* Search page: nav is always visible (no scroll-trigger) */
+        #nav { opacity: 1; transform: none; pointer-events: auto; }
+
+        /* Footer within search page */
+        footer { margin-top: var(--space-xl, 2.5rem); }
+
+        /* ─── Engine Bar (above search) ─── */
+        .search-wrap {
+            position: relative;
+            max-width: 660px;
+            margin: 0 auto;
+            padding: 3.5rem 1.5rem 3rem;
+        }
+        .engine-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-bottom: 0.35rem;
+            position: relative;
+            min-height: 1.4rem;
+            z-index: 200;
+        }
+        .engine-model-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+            color: var(--engine-color, var(--text-primary));
+            font-weight: 500;
+        }
+        .engine-source-badge {
+            display: inline-block;
+            font-size: 0.65rem;
+            padding: 0.1rem 0.4rem;
+            border-radius: 2px;
+            font-weight: 500;
+        }
+        .engine-source-badge.lmstudio { background: rgba(192, 132, 252, 0.12); color: var(--engine-lmstudio); }
+        .engine-source-badge.ollama { background: rgba(251, 146, 60, 0.12); color: var(--engine-ollama); }
+        .engine-source-badge.browser { background: rgba(77, 201, 246, 0.12); color: var(--engine-browser); }
+        .engine-source-badge.custom { background: rgba(74, 222, 128, 0.12); color: var(--engine-custom); }
+        .engine-source-badge.none { background: rgba(100, 116, 139, 0.08); color: #64748b; }
+
+        .status-dot {
+            display: inline-block;
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .status-dot.off { background: #333; }
+        .status-dot.loading { background: var(--gold); animation: pulse-dot 1s infinite; }
+        .status-dot.ready { background: var(--engine-color, #22c55e); }
+        @keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+        /* Engine info button + popover */
+        .engine-info-btn {
+            background: none; border: none; cursor: pointer;
+            color: var(--muted); opacity: 0.5;
+            padding: 0.35rem; border-radius: 3px;
+            display: flex; align-items: center; justify-content: center;
+            transition: opacity 0.15s;
+            margin-left: auto;
+        }
+        .engine-info-btn:hover { opacity: 1; }
+        .engine-popover {
+            display: none;
+            position: absolute;
+            top: calc(100% + 0.3rem);
+            right: 0;
+            background: var(--sea-mid);
+            border: 1px solid var(--border-hover);
+            border-radius: 6px;
+            padding: 0.65rem 0.85rem;
+            min-width: 260px;
+            z-index: 100;
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+        }
+        .engine-popover.open { display: block; }
+
+        /* Popover sections */
+        .popover-section {
+            padding: 0.45rem 0.55rem;
+            border-radius: 4px;
+            margin-bottom: 0.35rem;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: border-color 0.15s, background 0.15s;
+        }
+        .popover-section:last-child { margin-bottom: 0; }
+        .popover-section:hover { border-color: rgba(77, 201, 246, 0.1); }
+        .popover-section.active { border-color: var(--section-color, rgba(77, 201, 246, 0.25)); background: rgba(255,255,255,0.02); }
+        .popover-section.disabled { opacity: 0.4; cursor: default; }
+        .popover-section-header {
+            display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.1rem;
+        }
+        .popover-radio {
+            width: 8px; height: 8px; border-radius: 50%;
+            border: 1.5px solid var(--muted); flex-shrink: 0;
+        }
+        .popover-section.active .popover-radio {
+            border-color: var(--section-color, var(--cyan-dim)); background: var(--section-color, var(--cyan-dim));
+        }
+        .popover-section-name { font-size: 0.78rem; font-weight: 500; color: var(--text-bright); }
+        .popover-section-badge {
+            font-size: 0.58rem; padding: 0.06rem 0.3rem;
+            border-radius: 2px; margin-left: auto; font-weight: 500;
+        }
+        .popover-section-detail { font-size: 0.65rem; color: var(--text-primary); margin-left: 1.15rem; }
+
+        #localModelSection { display: none; }
+        #localModelSection.detected { display: flex; flex-direction: column; }
+        .badge-lmstudio { background: rgba(192, 132, 252, 0.12); color: var(--engine-lmstudio); }
+        .badge-ollama { background: rgba(251, 146, 60, 0.12); color: var(--engine-ollama); }
+        .badge-browser { background: rgba(77, 201, 246, 0.12); color: var(--engine-browser); }
+        .badge-webgpu { background: rgba(77, 201, 246, 0.08); color: var(--engine-browser); }
+        .badge-custom { background: rgba(74, 222, 128, 0.12); color: var(--engine-custom); }
+
+        #enableBtn {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.62rem;
+            background: rgba(77, 201, 246, 0.08);
+            color: var(--cyan-dim);
+            border: 1px solid rgba(77, 201, 246, 0.12);
+            padding: 0.22rem 0.5rem;
+            border-radius: 3px; cursor: pointer;
+            transition: all 0.15s;
+            width: 100%; margin-top: 0.2rem; margin-left: 1.15rem;
+            width: calc(100% - 1.15rem);
+        }
+        #enableBtn:hover { background: rgba(77, 201, 246, 0.14); border-color: rgba(77, 201, 246, 0.25); }
+        #enableBtn:disabled { opacity: 0.3; cursor: default; }
+        #enableBtn.cached { background: rgba(34, 197, 94, 0.05); border-color: rgba(34, 197, 94, 0.12); color: #4ade80; }
+        #enableBtn.cached:hover { background: rgba(34, 197, 94, 0.1); }
+        #enableBtn.model-active { background: rgba(34, 197, 94, 0.06); border-color: rgba(34, 197, 94, 0.12); color: #4ade80; cursor: default; }
+        .cache-hint { font-size: 0.55rem; color: var(--muted); margin-top: 0.08rem; opacity: 0.6; margin-left: 1.15rem; }
+        #progress { font-size: 0.58rem; color: var(--muted); margin-top: 0.1rem; margin-left: 1.15rem; }
+        #progressBar { width: calc(100% - 1.15rem); height: 2px; background: rgba(0,20,40,0.4); border-radius: 1px; margin-top: 0.1rem; display: none; margin-left: 1.15rem; }
+        #progressFill { height: 100%; background: var(--cyan-dim); border-radius: 1px; width: 0%; transition: width 0.3s; }
+
+        /* Custom endpoint */
+        .custom-endpoint-input {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.68rem; width: 100%;
+            background: rgba(0, 20, 40, 0.5);
+            color: var(--text-bright);
+            border: 1px solid rgba(77, 201, 246, 0.1);
+            border-radius: 3px;
+            padding: 0.2rem 0.4rem;
+            outline: none; margin-top: 0.2rem; margin-left: 1.15rem;
+            width: calc(100% - 1.15rem);
+            transition: border-color 0.15s;
+        }
+        .custom-endpoint-input:focus { border-color: rgba(77, 201, 246, 0.3); }
+        .custom-endpoint-input::placeholder { color: var(--muted); opacity: 0.5; }
+
+        /* ─── Search Input ─── */
+        .search-input-wrap { position: relative; }
+        #searchInput {
+            width: 100%;
+            padding: 0.75rem 2.8rem 0.75rem 1rem;
+            font-family: 'Raleway', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 300;
+            background: rgba(0, 20, 40, 0.55);
+            color: var(--text-bright);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        #searchInput:focus {
+            border-color: rgba(77, 201, 246, 0.35);
+            box-shadow: 0 0 0 3px rgba(77, 201, 246, 0.07);
+        }
+        #searchInput::placeholder { color: var(--muted); opacity: 0.65; }
+        .clear-btn {
+            position: absolute; right: 0.6rem; top: 50%; transform: translateY(-50%);
+            background: none; border: none; color: var(--muted); cursor: pointer;
+            font-size: 1.1rem; padding: 0.2rem 0.35rem; border-radius: 3px;
+            display: none; line-height: 1; opacity: 0.5; transition: opacity 0.15s;
+        }
+        .clear-btn:hover { opacity: 1; color: var(--text-bright); }
+
+        /* ─── AI Answer ─── */
+        .ai-answer-wrap { position: relative; margin: 0.6rem 0 0; }
+        #aiAnswer {
+            display: none;
+            padding: 0.8rem 1rem;
+            background: rgba(255, 255, 255, 0.015);
+            border-left: 2px solid var(--engine-color, var(--gold));
+            border-radius: 0 5px 5px 0;
+            font-size: 0.88rem;
+            font-weight: 400;
+            line-height: 1.7;
+            color: var(--text-bright);
+            white-space: pre-wrap;
+            padding-right: 3.5rem;
+        }
+        #aiAnswer[data-model]::after {
+            content: attr(data-model);
+            display: block;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.68rem;
+            color: var(--engine-color, var(--text-primary));
+            text-align: right;
+            margin-top: 0.4rem;
+            opacity: 0.8;
+        }
+        #aiAnswer.generating { border-left-color: var(--engine-color, var(--cyan-dim)); }
+        #aiAnswer.generating::after { display: none; }
+
+        .thinking-spinner { color: var(--cyan-dim); font-style: italic; font-size: 0.88rem; }
+        .thinking-spinner::after { content: ''; animation: dots 1.5s infinite; }
+        @keyframes dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
+
+        .ai-actions {
+            position: absolute; top: 0.5rem; right: 0.5rem;
+            display: none; gap: 0.2rem;
+        }
+        .ai-actions.visible { display: flex; }
+        .ai-action-btn {
+            background: rgba(0, 20, 40, 0.6); border: 1px solid rgba(77, 201, 246, 0.1);
+            color: var(--muted); cursor: pointer;
+            width: 28px; height: 28px; border-radius: 4px;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0.4; transition: all 0.15s; position: relative;
+        }
+        .ai-action-btn:hover { opacity: 1; border-color: var(--border-hover); color: var(--text-bright); }
+        .ai-action-btn.copied::after, .ai-action-btn.linked::after {
+            content: 'Copied!';
+            position: absolute; top: -1.6rem; left: 50%; transform: translateX(-50%);
+            font-family: 'JetBrains Mono', monospace; font-size: 0.55rem; color: #4ade80;
+            white-space: nowrap; pointer-events: none;
+            animation: fade-hint 1.5s forwards;
+        }
+        .ai-action-btn.linked::after { content: 'Link copied!'; }
+        @keyframes fade-hint { 0%,60% { opacity: 1; } 100% { opacity: 0; } }
+
+        /* ─── Sources ─── */
+        #sourcesSection { display: none; margin-top: 0.7rem; }
+        #sourcesSection.visible { display: block; }
+        .section-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            color: var(--muted);
+            margin-bottom: 0.3rem;
+            display: flex; align-items: center; gap: 0.35rem;
+        }
+        .query-hint {
+            font-size: 0.75rem; color: var(--cyan-dim);
+            font-style: italic; opacity: 0.7;
+            margin: 0 0 0.2rem; font-family: 'Raleway', sans-serif;
+        }
+        .score-info {
+            cursor: help; color: rgba(106, 144, 164, 0.6);
+            font-size: 0.65rem; position: relative;
+        }
+        .score-info:hover .score-tooltip { display: block; }
+        .score-tooltip {
+            display: none; position: absolute; bottom: 1.5em; left: -5rem;
+            width: 15rem; background: var(--sea-mid);
+            border: 1px solid var(--border-hover); border-radius: 4px;
+            padding: 0.5rem 0.65rem; font-size: 0.7rem;
+            color: var(--text-primary); line-height: 1.4; z-index: 10;
+            font-style: normal; letter-spacing: normal; text-transform: none;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+        }
+
+        .result {
+            background: rgba(0, 20, 40, 0.3);
+            border: 1px solid rgba(77, 201, 246, 0.05);
+            border-radius: 5px;
+            padding: 0.55rem 0.75rem;
+            margin-bottom: 0.3rem;
+            transition: border-color 0.15s;
+        }
+        .result:hover { border-color: var(--border); }
+        .result-row { display: flex; gap: 0.65rem; }
+        .result-body { flex: 1; min-width: 0; }
+        .result-thumb {
+            width: 72px; height: 72px; border-radius: 4px;
+            object-fit: cover; flex-shrink: 0;
+            background: rgba(0, 20, 40, 0.4);
+            border: 1px solid rgba(77, 201, 246, 0.06);
+        }
+        .result-header { display: flex; align-items: baseline; gap: 0.35rem; }
+        .result-title {
+            font-family: 'JetBrains Mono', monospace; font-weight: 400;
+            color: var(--text-primary); font-size: 0.8rem; flex: 1;
+        }
+        .result-page {
+            font-size: 0.55rem; padding: 0.08rem 0.3rem;
+            border-radius: 2px; background: rgba(77, 201, 246, 0.05);
+            color: var(--muted); white-space: nowrap;
+        }
+        .result-content {
+            color: var(--text-bright); font-size: 0.82rem;
+            font-weight: 400;
+            margin-top: 0.2rem; line-height: 1.55;
+        }
+        .result-bar { display: flex; align-items: center; gap: 0.3rem; margin-top: 0.2rem; }
+        .result-bar .score-track { flex: 1; height: 2px; background: rgba(0,20,40,0.4); border-radius: 1px; overflow: hidden; }
+        .result-bar .score-fill { height: 100%; border-radius: 1px; background: linear-gradient(90deg, rgba(77,201,246,0.1), rgba(77,201,246,0.3)); }
+        .result-bar .score-num { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: var(--text-primary); min-width: 1.5rem; text-align: right; opacity: 0.7; }
+
+        .show-more-btn {
+            width: 100%; background: transparent;
+            border: 1px dashed rgba(77,201,246,0.08);
+            border-radius: 4px; color: var(--muted);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.68rem; padding: 0.4rem; cursor: pointer;
+            margin-top: 0.15rem; transition: all 0.15s;
+        }
+        .show-more-btn:hover { border-color: var(--border-hover); color: var(--text-heading); }
+
+        @media (max-width: 500px) {
+            body { padding: 1rem 0.8rem 2rem; }
+            #searchInput { font-size: 1rem; padding: 0.65rem 2.5rem 0.65rem 0.8rem; }
+            #aiAnswer { font-size: 0.92rem; padding: 0.65rem 0.8rem; padding-right: 3rem; }
+            .ai-action-btn { opacity: 0.5; }
+            .result-content { font-size: 0.8rem; }
+            .engine-popover { min-width: 220px; right: -0.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Interactive Cursor Spotlight -->
+    <div id="cursorSpotlight"></div>
+
+    <a href="#searchInput" class="skip-link">Skip to search</a>
+
+    <nav id="nav" role="navigation" aria-label="Main navigation">
+        <div class="nav-inner">
+            <div class="nav-left">
+                <a href="search.html" class="shape-link search-icon active" aria-label="Search" aria-current="page">
+                    <svg class="shape" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="17" cy="17" r="8"/><line x1="23" y1="23" x2="32" y2="32" stroke-linecap="round"/></svg>
+                </a>
+                <a href="index.html" class="shape-link" aria-label="Home">
+                    <svg class="shape triangle" viewBox="0 0 40 40"><polygon points="20,8 34,32 6,32"/></svg>
+                    <img class="shape-label shape-label-img" src="./Assets/footer-JHsig.png" alt="JH">
+                </a>
+                <a href="design.html" class="shape-link" aria-label="Design">
+                    <svg class="shape rounded-square" viewBox="0 0 40 40"><rect x="6" y="6" width="28" height="28" rx="6"/></svg>
+                    <span class="shape-label">DESIGN</span>
+                </a>
+                <a href="art.html" class="shape-link" aria-label="Art">
+                    <svg class="shape circle" viewBox="0 0 40 40"><circle cx="20" cy="20" r="14"/></svg>
+                    <span class="shape-label">ART</span>
+                </a>
+                <a href="index.html" class="nav-title">John Hanacek</a>
+                <a href="about.html" class="shape-link secondary" aria-label="About">
+                    <svg class="shape diamond" viewBox="0 0 40 40"><polygon points="20,6 34,20 20,34 6,20"/></svg>
+                    <span class="shape-label">ABOUT</span>
+                </a>
+                <a href="services.html" class="shape-link secondary" aria-label="Services">
+                    <svg class="shape star" viewBox="0 0 40 40"><polygon points="20,6 23,16 34,16 25,22 28,34 20,26 12,34 15,22 6,16 17,16"/></svg>
+                    <span class="shape-label">SERVICES</span>
+                </a>
+            </div>
+            <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <div class="search-wrap">
+        <!-- Engine bar -->
+        <div class="engine-bar">
+            <span id="aiDot" class="status-dot off"></span>
+            <span id="engineModelLabel" class="engine-model-label"></span>
+            <span id="engineSourceBadge" class="engine-source-badge none"></span>
+            <button class="engine-info-btn" id="engineInfoBtn" aria-label="Engine details">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            </button>
+            <div class="engine-popover" id="enginePopover">
+                <!-- Pipeline label -->
+                <div style="font-size:0.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:0.3rem;padding:0 0.1rem;">Search Pipeline</div>
+                <!-- BM25 always-on -->
+                <div class="popover-section" style="cursor:default;opacity:0.8;margin-bottom:0.5rem;border-bottom:1px solid rgba(77,201,246,0.06);border-radius:4px 4px 0 0;padding-bottom:0.55rem;">
+                    <div class="popover-section-header">
+                        <span class="popover-radio" style="border-color:var(--cyan-dim);background:var(--cyan-dim);"></span>
+                        <span class="popover-section-name" style="font-size:0.72rem;">Keyword Search</span>
+                        <span class="popover-section-badge" style="background:rgba(77,201,246,0.06);color:var(--text-primary);font-size:0.52rem;">BM25</span>
+                    </div>
+                    <div class="popover-section-detail" style="font-size:0.6rem;">Always on — instant results</div>
+                </div>
+                <!-- AI engine header -->
+                <div style="font-size:0.55rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.25rem;padding:0 0.1rem;display:flex;align-items:center;gap:0.3rem;">
+                    AI Answer
+                    <label id="aiToggleLabel" style="margin-left:auto;display:flex;align-items:center;gap:0.3rem;cursor:pointer;font-size:0.55rem;color:var(--text-primary);text-transform:none;letter-spacing:0;">
+                        <input type="checkbox" id="aiToggle" checked style="accent-color:var(--engine-color,var(--cyan-dim));width:12px;height:12px;">
+                        <span id="aiToggleText">on</span>
+                    </label>
+                </div>
+                <!-- Local server section -->
+                <div id="localModelSection" class="popover-section" style="--section-color:var(--engine-lmstudio);">
+                    <div class="popover-section-header">
+                        <span class="popover-radio"></span>
+                        <span class="popover-section-name" id="localModelName"></span>
+                        <span class="popover-section-badge badge-lmstudio" id="localModelSource"></span>
+                    </div>
+                    <div class="popover-section-detail" id="localModelDetail">localhost:1234</div>
+                </div>
+                <!-- In-browser section -->
+                <div id="browserModelSection" class="popover-section" style="--section-color:var(--engine-browser);">
+                    <div class="popover-section-header">
+                        <span class="popover-radio"></span>
+                        <span class="popover-section-name">Qwen 0.8B</span>
+                        <span class="popover-section-badge badge-browser">In-Browser</span>
+                        <span class="popover-section-badge badge-webgpu" id="webgpuBadge"></span>
+                    </div>
+                    <div class="popover-section-detail" id="browserModelDetail">WebGPU inference</div>
+                    <button id="enableBtn">Load Model</button>
+                    <div class="cache-hint" id="cacheHint"></div>
+                    <div id="progress"></div>
+                    <div id="progressBar"><div id="progressFill"></div></div>
+                </div>
+                <!-- Custom endpoint section -->
+                <div id="customSection" class="popover-section" style="--section-color:var(--engine-custom);">
+                    <div class="popover-section-header">
+                        <span class="popover-radio"></span>
+                        <span class="popover-section-name">Custom Endpoint</span>
+                    </div>
+                    <input type="text" class="custom-endpoint-input" id="customEndpoint"
+                           placeholder="http://localhost:8080/v1" spellcheck="false">
+                </div>
+            </div>
+        </div>
+
+        <!-- Search input -->
+        <div class="search-input-wrap">
+            <input type="text" id="searchInput" placeholder="Ask about John Hanacek..." autofocus>
+            <button id="clearBtn" class="clear-btn" aria-label="Clear search">&times;</button>
+        </div>
+    </div>
+
+    <!-- AI Answer -->
+    <div class="ai-answer-wrap">
+        <div id="aiAnswer"></div>
+        <div class="ai-actions" id="aiActions">
+            <button class="ai-action-btn" id="copyBtn" title="Copy answer">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+            <button class="ai-action-btn" id="shareBtn" title="Copy link to this query">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Sources -->
+    <div id="sourcesSection">
+        <div class="section-label">
+            Sources
+            <span class="score-info">ⓘ<span class="score-tooltip">BM25 keyword relevance: title 3×, tags 2×, content 1× with fuzzy matching.</span></span>
+        </div>
+        <div id="searchResults"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/minisearch@7.1.1/dist/umd/index.min.js"></script>
+
+    <script type="module">
+        import { AutoProcessor, Qwen3_5ForConditionalGeneration, TextStreamer } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.0.0-next.5";
+
+        // ============================================
+        // Content Index
+        // ============================================
+        let chunks = [];
+        const miniSearch = new MiniSearch({
+            fields: ['title', 'content', 'tags'],
+            storeFields: ['title', 'content', 'page', 'image'],
+            searchOptions: { boost: { title: 3, tags: 2 }, fuzzy: 0.2, prefix: true }
+        });
+
+        async function loadSearchIndex() {
+            try {
+                const response = await fetch('Assets/search-chunks.json');
+                const data = await response.json();
+                chunks = data.chunks;
+                miniSearch.addAll(chunks);
+                console.log(`Loaded ${chunks.length} search chunks`);
+            } catch (err) { console.error('Failed to load search index:', err); }
+        }
+        loadSearchIndex();
+
+        // ============================================
+        // Query Intent Mapping
+        // ============================================
+        const QUERY_INTENTS = [
+            { patterns: [/should\s+\w*\s*(hire|work\s+with|contract|engage)/i, /is\s+he\s+(good|qualified|worth|a\s+good\s+fit)/i, /why\s+\w*\s*(hire|choose|pick)\s+him/i, /what\s+makes\s+him\s+(stand\s+out|different|unique|special)/i, /why\s+should\s+\w+\s+hire/i], expanded: 'unique differentiator skills expertise experience awards shipped products design AI leadership', hint: 'Showing expertise, awards, and what makes him unique' },
+            { patterns: [/what('s|\s+is)\s+his\s+background/i, /tell\s+me\s+about\s+(him|john|this\s+(guy|person))/i, /who\s+is\s+(he|john|this)/i, /what\s+does\s+he\s+do$/i, /^about$/i], expanded: 'about john hanacek innovator designer creator education career work history unique san diego', hint: 'Showing background and career overview' },
+            { patterns: [/what\s+has\s+he\s+(built|made|created|shipped|designed|launched|delivered)/i, /his\s+(projects|portfolio|work)/i, /show\s+me\s+his\s+work/i, /what\s+are\s+his\s+projects/i, /shipped\s+(any|AI|products?)/i, /has\s+he\s+shipped/i], expanded: 'shipped AI products nanome badvr avatarmedic holotriage metamedium coaching built', hint: 'Showing shipped products and projects' },
+            { patterns: [/what\s+are\s+his\s+(skills|abilities|strengths)/i, /what\s+can\s+he\s+do/i, /his\s+(expertise|capabilities|specialties)/i, /areas\s+of\s+expertise/i], expanded: 'expertise skills AI XR robotics design product LLM agent spatial computing coding engineering', hint: 'Showing skills and areas of expertise' },
+            { patterns: [/can\s+he\s+(code|program|write\s+code|develop|build|engineer)/i, /does\s+he\s+(code|program|write\s+code|develop|build)/i, /is\s+he\s+(technical|a\s+developer|an\s+engineer)/i, /coding|programming|technical\s+skills/i, /just\s+design/i], expanded: 'code coding programming engineer technical javascript html css python unity build ship prototype design engineering', hint: 'Showing design engineering and coding ability' },
+            { patterns: [/where\s+did\s+he\s+(go\s+to\s+school|study|graduate)/i, /his\s+education/i, /degree|university|college|school/i], expanded: 'education masters thesis Georgetown UCSD research publications', hint: 'Showing education and research' },
+            { patterns: [/has\s+he\s+won\s+(any|an)\s+(award|prize)/i, /awards?|recognition|achievement|accomplishment/i, /what\s+has\s+he\s+(won|achieved|accomplished)/i, /biggest\s+(accomplishment|achievement)/i], expanded: 'awards innovation aerospace nist microsoft founder institute accomplishment achievement won', hint: 'Showing awards and recognition' },
+            { patterns: [/how\s+(do\s+i|can\s+i|to)\s+(contact|reach|email|message)\s+(him|john)/i, /contact|email|linkedin|twitter|social/i], expanded: 'contact email linkedin bluesky twitter social', hint: 'Showing contact information' },
+            { patterns: [/what\s+does\s+he\s+(charge|cost)|pricing|rates?|how\s+much/i, /services?|consulting|coaching|freelance/i, /can\s+he\s+help\s+(me|us|with)/i], expanded: 'services coaching consulting design product workshops retainer sprint', hint: 'Showing services and engagement options' },
+            { patterns: [/has\s+he\s+(led|managed|run)\s+(teams?|people|a\s+company)/i, /leadership|management|team\s+lead/i, /manage\s+(people|teams?|reports)/i], expanded: 'leadership team managed led CEO founder cross-functional collaboration hire people', hint: 'Showing leadership and team experience' },
+            { patterns: [/his\s+(design\s+)?process/i, /how\s+does\s+he\s+(work|design|approach)/i, /methodology|workflow/i], expanded: 'process methodology design thinking research prototype iterate user-centered approach', hint: 'Showing design process and methodology' },
+            { patterns: [/where\s+(does\s+he|is\s+he)\s+(live|based|located)/i, /location|city|state|san\s+diego/i, /where\s+is\s+(he|john)/i], expanded: 'san diego california location lifestyle UCSD native plants gardening outdoors', hint: 'Showing location and lifestyle' },
+            { patterns: [/hobbies|hobby|personal|interests|outside\s+work|free\s+time|fun|for\s+fun/i, /what\s+does\s+he\s+(like|enjoy|do\s+for\s+fun)/i, /besides\s+work/i, /personal\s+(life|interests)/i], expanded: 'personal hobby cooking gardening native plants hiking camping photography food san diego outdoors', hint: 'Showing personal interests and hobbies' },
+            { patterns: [/cook(ing|s)?|food|recipe|chef|kitchen/i], expanded: 'cooking food personal hobby recipe albondigas tahdig pasta fish brownie', hint: 'Showing cooking interests' },
+            { patterns: [/garden(ing|s)?|plant(s|ing)?|native|nature|outdoor(s)?|hik(e|ing)|camp(ing)?/i], expanded: 'gardening native plants california outdoors hiking camping san diego nature', hint: 'Showing outdoor interests' },
+            { patterns: [/XR|VR|AR|spatial|immersive|mixed\s+reality|virtual\s+reality/i], expanded: null, hint: null },
+            { patterns: [/AI|machine\s+learning|LLM|agent|artificial\s+intelligence/i], expanded: null, hint: null },
+        ];
+
+        function expandQuery(rawQuery) {
+            const trimmed = rawQuery.trim();
+            if (!trimmed) return { query: trimmed, hint: null };
+            for (const intent of QUERY_INTENTS) {
+                for (const pattern of intent.patterns) {
+                    if (pattern.test(trimmed)) {
+                        if (intent.expanded) return { query: intent.expanded, hint: intent.hint, originalQuery: trimmed };
+                        return { query: trimmed, hint: intent.hint };
+                    }
+                }
+            }
+            let resolved = trimmed.replace(/\b(him|he|his)\b/gi, 'John Hanacek');
+            if (resolved !== trimmed) return { query: resolved, hint: null };
+            return { query: trimmed, hint: null };
+        }
+
+        const RESULTS_PER_PAGE = 5;
+        function search(query) { if (!query.trim()) return []; return miniSearch.search(query); }
+
+        function renderResults(results, hint) {
+            const el = document.getElementById('searchResults');
+            if (results.length === 0) {
+                el.innerHTML = '<div class="result" style="color:var(--muted);font-family:Raleway,sans-serif;font-size:0.85rem;">No results found.</div>';
+                return;
+            }
+            const maxScore = results[0]?.score || 1;
+            const topResults = results.slice(0, RESULTS_PER_PAGE);
+            const remaining = results.length - RESULTS_PER_PAGE;
+            let html = '';
+            html += topResults.map(r => renderResultCard(r, maxScore)).join('');
+            if (remaining > 0) {
+                html += `<button class="show-more-btn" onclick="this.parentNode.querySelectorAll('.result-hidden').forEach(e=>e.style.display='block');this.remove();">Show ${remaining} more</button>`;
+                html += results.slice(RESULTS_PER_PAGE).map(r => `<div class="result result-hidden" style="display:none">${renderResultCardInner(r, maxScore)}</div>`).join('');
+            }
+            el.innerHTML = html;
+        }
+
+        function renderResultCard(r, maxScore) { return `<div class="result">${renderResultCardInner(r, maxScore)}</div>`; }
+        function renderResultCardInner(r, maxScore) {
+            const pct = Math.min(100, (r.score / maxScore) * 100);
+            const imgHtml = r.image ? `<img class="result-thumb" src="${r.image}" alt="" loading="lazy" />` : '';
+            return `<div class="result-row">${imgHtml}<div class="result-body"><div class="result-header"><span class="result-title">${r.title}</span><span class="result-page">${r.page}</span></div><div class="result-content">${r.content}</div><div class="result-bar"><span class="score-track"><span class="score-fill" style="width:${pct}%"></span></span><span class="score-num">${r.score.toFixed(0)}</span></div></div></div>`;
+        }
+
+        // ============================================
+        // Engine State Management
+        // ============================================
+        let activeEngine = null; // 'local' | 'browser' | 'custom' | null
+
+        let aiEnabled = true; // user toggle for AI answers
+
+        function getEngineColor(engine) {
+            if (engine === 'local' && localModel) {
+                return localModel.source === 'Ollama' ? 'var(--engine-ollama)' : 'var(--engine-lmstudio)';
+            }
+            if (engine === 'browser') return 'var(--engine-browser)';
+            if (engine === 'custom') return 'var(--engine-custom)';
+            return 'var(--muted)';
+        }
+
+        function updateEngineBar() {
+            const dot = document.getElementById('aiDot');
+            const label = document.getElementById('engineModelLabel');
+            const badge = document.getElementById('engineSourceBadge');
+            const root = document.documentElement;
+
+            // Clear all popover active states
+            document.querySelectorAll('#enginePopover .popover-section').forEach(s => s.classList.remove('active'));
+
+            // Set engine color CSS variable
+            const color = getEngineColor(activeEngine);
+            root.style.setProperty('--engine-color', color);
+
+            // Update local section color if ollama
+            if (localModel) {
+                const localColor = localModel.source === 'Ollama' ? 'var(--engine-ollama)' : 'var(--engine-lmstudio)';
+                document.getElementById('localModelSection').style.setProperty('--section-color', localColor);
+            }
+
+            if (!aiEnabled) {
+                label.textContent = 'AI off';
+                badge.textContent = '';
+                badge.className = 'engine-source-badge none';
+                dot.className = 'status-dot off';
+                root.style.setProperty('--engine-color', 'var(--muted)');
+                return;
+            }
+
+            if (activeEngine === 'local' && localModel) {
+                const shortName = localModel.name.split('/').pop();
+                label.textContent = shortName;
+                badge.textContent = localModel.source;
+                badge.className = 'engine-source-badge ' + localModel.source.toLowerCase();
+                dot.className = 'status-dot ready';
+                document.getElementById('localModelSection').classList.add('active');
+            } else if (activeEngine === 'browser' && modelReady) {
+                label.textContent = 'Qwen 0.8B';
+                badge.textContent = 'In-Browser';
+                badge.className = 'engine-source-badge browser';
+                dot.className = 'status-dot ready';
+                document.getElementById('browserModelSection').classList.add('active');
+            } else if (activeEngine === 'custom' && customModel) {
+                const shortName = customModel.name.split('/').pop();
+                label.textContent = shortName;
+                badge.textContent = 'Custom';
+                badge.className = 'engine-source-badge custom';
+                dot.className = 'status-dot ready';
+                document.getElementById('customSection').classList.add('active');
+            } else {
+                label.textContent = 'No AI model';
+                badge.textContent = '';
+                badge.className = 'engine-source-badge none';
+                dot.className = 'status-dot off';
+            }
+        }
+
+        function setActiveEngine(engine) {
+            activeEngine = engine;
+            if (engine) aiEnabled = true;
+            updateEngineBar();
+            localStorage.setItem('searchActiveEngine', engine || '');
+        }
+
+        // ============================================
+        // WebGPU Detection
+        // ============================================
+        const webgpuBadge = document.getElementById('webgpuBadge');
+        let hasWebGPU = false;
+        async function checkWebGPU() {
+            if (!navigator.gpu) { webgpuBadge.textContent = 'No WebGPU'; webgpuBadge.className = 'popover-section-badge'; return false; }
+            const adapter = await navigator.gpu.requestAdapter();
+            if (!adapter) { webgpuBadge.textContent = 'No adapter'; webgpuBadge.className = 'popover-section-badge'; return false; }
+            webgpuBadge.textContent = 'WebGPU'; webgpuBadge.className = 'popover-section-badge badge-webgpu'; return true;
+        }
+        hasWebGPU = await checkWebGPU();
+        if (!hasWebGPU) { document.getElementById('enableBtn').textContent = 'WebGPU unavailable'; document.getElementById('enableBtn').disabled = true; }
+
+        // ============================================
+        // Local Model Detection (LMStudio / Ollama)
+        // ============================================
+        let localModel = null;
+        async function checkLocalModels() {
+            try { const res = await fetch('http://localhost:1234/v1/models', { signal: AbortSignal.timeout(2000) }); if (res.ok) { const data = await res.json(); if (data.data?.length > 0) { const m = data.data[0]; return { name: m.id || 'Unknown', source: 'LMStudio', endpoint: 'http://localhost:1234/v1/chat/completions', host: 'localhost:1234' }; } } } catch {}
+            try { const res = await fetch('http://localhost:11434/api/tags', { signal: AbortSignal.timeout(2000) }); if (res.ok) { const data = await res.json(); if (data.models?.length > 0) { const m = data.models[0]; return { name: m.name || 'Unknown', source: 'Ollama', endpoint: 'http://localhost:11434/api/chat', host: 'localhost:11434' }; } } } catch {}
+            return null;
+        }
+        localModel = await checkLocalModels();
+
+        if (localModel) {
+            console.log(`Local model detected: ${localModel.name} via ${localModel.source}`);
+            document.getElementById('localModelSection').classList.add('detected');
+            document.getElementById('localModelName').textContent = localModel.name.split('/').pop();
+            document.getElementById('localModelSource').textContent = localModel.source;
+            document.getElementById('localModelSource').className = 'popover-section-badge badge-' + localModel.source.toLowerCase();
+            document.getElementById('localModelDetail').textContent = localModel.host;
+            setActiveEngine('local');
+        }
+
+        // ============================================
+        // Custom Endpoint Support
+        // ============================================
+        let customModel = null;
+        const savedEndpoint = localStorage.getItem('searchCustomEndpoint') || '';
+        if (savedEndpoint) document.getElementById('customEndpoint').value = savedEndpoint;
+
+        async function probeCustomEndpoint(url) {
+            try {
+                const base = url.replace(/\/+$/, '');
+                const modelsUrl = base.endsWith('/v1') ? base + '/models' : base + '/v1/models';
+                const res = await fetch(modelsUrl, { signal: AbortSignal.timeout(3000) });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.data?.length > 0) {
+                        const m = data.data[0];
+                        const chatUrl = base.endsWith('/v1') ? base + '/chat/completions' : base + '/v1/chat/completions';
+                        return { name: m.id || 'Custom Model', source: 'Custom', endpoint: chatUrl };
+                    }
+                }
+            } catch {}
+            return null;
+        }
+
+        document.getElementById('customEndpoint').addEventListener('change', async (e) => {
+            const url = e.target.value.trim();
+            if (!url) { customModel = null; localStorage.removeItem('searchCustomEndpoint'); updateEngineBar(); return; }
+            localStorage.setItem('searchCustomEndpoint', url);
+            customModel = await probeCustomEndpoint(url);
+            if (customModel) setActiveEngine('custom');
+            else e.target.style.borderColor = 'rgba(248, 113, 113, 0.4)';
+        });
+
+        // Auto-probe saved custom endpoint
+        if (savedEndpoint && !localModel) {
+            customModel = await probeCustomEndpoint(savedEndpoint);
+            if (customModel) setActiveEngine('custom');
+        }
+
+        // ── Popover section clicks (switch engine) ──
+        document.getElementById('localModelSection').addEventListener('click', () => {
+            if (localModel) setActiveEngine('local');
+        });
+        document.getElementById('browserModelSection').addEventListener('click', (e) => {
+            if (e.target.id === 'enableBtn' || e.target.closest('#enableBtn')) return; // let load button handle itself
+            if (modelReady) setActiveEngine('browser');
+        });
+        document.getElementById('customSection').addEventListener('click', (e) => {
+            if (e.target.classList.contains('custom-endpoint-input')) return; // let input handle itself
+            if (customModel) setActiveEngine('custom');
+        });
+
+        // ── Popover toggle ──
+        let popoverOpen = false;
+        document.getElementById('engineInfoBtn').addEventListener('click', (e) => {
+            e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+            popoverOpen = !popoverOpen;
+            document.getElementById('enginePopover').classList.toggle('open', popoverOpen);
+        });
+        document.addEventListener('click', (e) => {
+            if (!popoverOpen) return;
+            const pop = document.getElementById('enginePopover');
+            const btn = document.getElementById('engineInfoBtn');
+            if (!pop.contains(e.target) && !btn.contains(e.target)) {
+                popoverOpen = false;
+                pop.classList.remove('open');
+            }
+        });
+
+        // ── AI toggle ──
+        document.getElementById('aiToggle').addEventListener('change', (e) => {
+            aiEnabled = e.target.checked;
+            document.getElementById('aiToggleText').textContent = aiEnabled ? 'on' : 'off';
+            updateEngineBar();
+            if (!aiEnabled) {
+                // Hide AI answer
+                const answerEl = document.getElementById('aiAnswer');
+                answerEl.style.display = 'none'; delete answerEl.dataset.model;
+                document.getElementById('aiActions').classList.remove('visible');
+            } else if (lastLlmQuery.trim() && lastSearchResults.length > 0) {
+                // Re-generate if we have a query
+                doAIGeneration();
+            }
+        });
+
+        // Initial engine bar if nothing detected
+        if (!activeEngine) updateEngineBar();
+
+        // ── Local/custom model streaming generation ──
+        async function generateAnswerLocal(query, results, genId, model) {
+            model = model || localModel;
+            const answerEl = document.getElementById('aiAnswer');
+            const dot = document.getElementById('aiDot');
+            answerEl.style.display = 'block';
+            answerEl.classList.add('generating');
+            answerEl.innerHTML = '<span class="thinking-spinner">Thinking</span>';
+            answerEl.dataset.model = model.name.split('/').pop() + ' · ' + model.source;
+            document.getElementById('aiActions').classList.remove('visible');
+            dot.className = 'status-dot loading';
+
+            const context = results.slice(0, 8).map(r => `[${r.title}]: ${r.content}`).join('\n\n');
+            const messages = [
+                { role: "system", content: `Answer questions about John Hanacek using ONLY facts from the context below. NEVER invent or assume facts not in the context.\n- Name specific projects, companies, tools, awards, and places from the context.\n- John has extensive experience — the context lists his real jobs, products, and achievements.\n- For hiring questions: highlight his strengths with specific evidence from context.\n- For personal questions: answer warmly using only stated facts.\n- 3-5 sentences. No preamble. Stop when you run out of context facts.` },
+                { role: "user", content: `Context:\n${context}\n\nQuestion: ${query}\n\nAnswer directly and concisely:` }
+            ];
+
+            try {
+                if (model.source === 'LMStudio' || model.source === 'Custom') {
+                    const res = await fetch(model.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: model.name, messages, max_tokens: 300, temperature: 0, stream: true }) });
+                    const reader = res.body.getReader(); const decoder = new TextDecoder(); let outputText = '', buffer = '';
+                    while (true) {
+                        const { done, value } = await reader.read(); if (done) break;
+                        if (genId !== currentGenId) { reader.cancel(); break; }
+                        buffer += decoder.decode(value, { stream: true }); const lines = buffer.split('\n'); buffer = lines.pop();
+                        for (const line of lines) { if (!line.startsWith('data: ')) continue; const payload = line.slice(6).trim(); if (payload === '[DONE]') continue; try { const chunk = JSON.parse(payload); const token = chunk.choices?.[0]?.delta?.content; if (token) { outputText += token; answerEl.textContent = outputText.trimStart(); } } catch {} }
+                    }
+                    if (genId === currentGenId) answerEl.textContent = outputText.trim() || '(No answer generated.)';
+                } else if (model.source === 'Ollama') {
+                    const res = await fetch(model.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: model.name, messages, stream: true, options: { temperature: 0, num_predict: 300 } }) });
+                    const reader = res.body.getReader(); const decoder = new TextDecoder(); let outputText = '';
+                    while (true) {
+                        const { done, value } = await reader.read(); if (done) break;
+                        if (genId !== currentGenId) { reader.cancel(); break; }
+                        const text = decoder.decode(value, { stream: true });
+                        for (const line of text.split('\n')) { if (!line.trim()) continue; try { const chunk = JSON.parse(line); if (chunk.message?.content) { outputText += chunk.message.content; answerEl.textContent = outputText.trimStart(); } } catch {} }
+                    }
+                    if (genId === currentGenId) answerEl.textContent = outputText.trim() || '(No answer generated.)';
+                }
+            } catch (err) {
+                if (genId === currentGenId) { answerEl.textContent = `Error: ${err.message}`; console.error('Local generation error:', err); }
+            } finally {
+                if (genId === currentGenId) {
+                    answerEl.classList.remove('generating');
+                    dot.className = 'status-dot ready';
+                    document.getElementById('aiActions').classList.add('visible');
+                }
+            }
+        }
+
+        // ============================================
+        // Tier 2: In-Browser LLM
+        // ============================================
+        let processor = null, llmModel = null, modelReady = false;
+        let currentGenId = 0, isGenerating = false, pendingGen = null;
+        const MODEL_ID = "onnx-community/Qwen3.5-0.8B-ONNX";
+        let modelIsCached = false;
+
+        async function checkModelCache() {
+            try { const names = await caches.keys(); for (const name of names) { const cache = await caches.open(name); const keys = await cache.keys(); if (keys.filter(r => r.url.includes('Qwen3.5-0.8B-ONNX')).length >= 3) return true; } return false; } catch { return false; }
+        }
+
+        if (hasWebGPU) {
+            modelIsCached = await checkModelCache();
+            const btn = document.getElementById('enableBtn');
+            const cacheHint = document.getElementById('cacheHint');
+            if (modelIsCached) {
+                btn.textContent = 'Load Qwen 0.8B';
+                btn.classList.add('cached');
+                cacheHint.textContent = 'Cached — loads in seconds';
+            } else {
+                btn.textContent = 'Download Qwen 0.8B (~700MB)';
+                cacheHint.textContent = '';
+            }
+        }
+
+        document.getElementById('enableBtn').addEventListener('click', async () => {
+            if (!hasWebGPU || modelReady) return;
+            const btn = document.getElementById('enableBtn');
+            const progress = document.getElementById('progress');
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+            const dot = document.getElementById('aiDot');
+            btn.disabled = true; btn.textContent = modelIsCached ? 'Loading...' : 'Downloading...';
+            dot.className = 'status-dot loading'; progressBar.style.display = 'block';
+            document.getElementById('cacheHint').textContent = '';
+            const fileProgress = new Map(); let loadStartTime = Date.now(); let detectedSource = modelIsCached ? 'cache' : null;
+
+            function onProgress(info) {
+                if (info.status === 'progress' && info.total) {
+                    fileProgress.set(info.file, { loaded: info.loaded, total: info.total });
+                    let loaded = 0, total = 0; for (const fp of fileProgress.values()) { loaded += fp.loaded; total += fp.total; }
+                    if (detectedSource === null && Date.now() - loadStartTime > 1000) detectedSource = (loaded / total > 0.5) ? 'cache' : 'download';
+                    if (total > 0) { progressFill.style.width = (loaded / total * 100) + '%'; progress.textContent = detectedSource === 'download' ? `Downloading ${(loaded/1e6).toFixed(0)}/${(total/1e6).toFixed(0)} MB` : 'Loading from cache...'; }
+                } else if (info.status === 'initiate') { progress.textContent = `Loading ${info.file || 'model'}...`; }
+            }
+
+            try {
+                progress.textContent = 'Loading processor...';
+                processor = await AutoProcessor.from_pretrained(MODEL_ID, { progress_callback: onProgress });
+                progress.textContent = 'Loading weights...';
+                llmModel = await Qwen3_5ForConditionalGeneration.from_pretrained(MODEL_ID, { dtype: { embed_tokens: "q4", vision_encoder: "q4", decoder_model_merged: "q4" }, device: "webgpu", progress_callback: onProgress });
+                progress.textContent = 'Compiling shaders...';
+                const warmup = processor.tokenizer("hi"); await llmModel.generate({ ...warmup, max_new_tokens: 1 });
+                const loadTime = ((Date.now() - loadStartTime) / 1000).toFixed(1);
+                modelReady = true; modelIsCached = true;
+                btn.textContent = '✓ Active'; btn.classList.remove('cached'); btn.classList.add('model-active');
+                progress.textContent = `Ready in ${loadTime}s`; progressBar.style.display = 'none';
+                setActiveEngine('browser');
+                const query = document.getElementById('searchInput').value;
+                if (query.trim()) { doSearchOnly(query); doAIGeneration(); }
+            } catch (err) {
+                btn.textContent = 'Error — retry'; btn.disabled = false; dot.className = 'status-dot off';
+                progress.textContent = `Error: ${err.message}`; progressBar.style.display = 'none'; console.error('Model load error:', err);
+            }
+        });
+
+        // ── Queue-based generation ──
+        async function generateAnswer(query, results) {
+            if (!llmModel || !modelReady) return;
+            const genId = ++currentGenId;
+            const answerEl = document.getElementById('aiAnswer'); const dot = document.getElementById('aiDot');
+            answerEl.style.display = 'block'; answerEl.classList.add('generating');
+            answerEl.innerHTML = '<span class="thinking-spinner">Thinking</span>';
+            answerEl.dataset.model = 'Qwen 0.8B · in-browser';
+            document.getElementById('aiActions').classList.remove('visible');
+            dot.className = 'status-dot loading';
+            if (isGenerating) { pendingGen = { query, results, genId }; return; }
+            await runGeneration(query, results, genId);
+        }
+
+        async function runGeneration(query, results, genId) {
+            isGenerating = true;
+            const answerEl = document.getElementById('aiAnswer'); const dot = document.getElementById('aiDot');
+            const context = results.slice(0, 5).map(r => `[${r.title}]: ${r.content}`).join('\n\n');
+            try {
+                const messages = [
+                    { role: "system", content: `Answer questions about John Hanacek using ONLY facts from the context below. NEVER invent or assume facts not in the context.\n- Name specific projects, companies, tools, awards, and places from the context.\n- John has extensive experience — the context lists his real jobs, products, and achievements.\n- For hiring questions: highlight his strengths with specific evidence from context.\n- For personal questions: answer warmly using only stated facts.\n- 2-3 sentences. No preamble. Stop when you run out of context facts.` },
+                    { role: "user", content: `Context:\n${context}\n\nQuestion: ${query}\n\nAnswer directly and concisely:` }
+                ];
+                const text = processor.apply_chat_template(messages, { add_generation_prompt: true, tokenizer_kwargs: { enable_thinking: false } });
+                const inputs = processor.tokenizer(text);
+                const isCurrent = () => genId === currentGenId; let outputText = '';
+                await llmModel.generate({ ...inputs, max_new_tokens: 128, do_sample: false, repetition_penalty: 1.15,
+                    streamer: new TextStreamer(processor.tokenizer, { skip_prompt: true, skip_special_tokens: true, callback_function: (token) => { if (!isCurrent()) return; outputText += token; answerEl.textContent = outputText.trimStart(); } })
+                });
+                if (isCurrent()) { const f = outputText.trim(); answerEl.textContent = f || '(No answer generated.)'; }
+            } catch (err) { if (genId === currentGenId) { answerEl.textContent = `Error: ${err.message}`; console.error('Generation error:', err); } }
+            finally {
+                isGenerating = false;
+                if (pendingGen) { const { query: pq, results: pr, genId: pg } = pendingGen; pendingGen = null; if (pg === currentGenId) { answerEl.innerHTML = '<span class="thinking-spinner">Thinking</span>'; dot.className = 'status-dot loading'; await runGeneration(pq, pr, pg); } }
+                if (!isGenerating && genId === currentGenId) {
+                    answerEl.classList.remove('generating'); dot.className = 'status-dot ready';
+                    document.getElementById('aiActions').classList.add('visible');
+                }
+            }
+        }
+
+        // ============================================
+        // Search wiring
+        // ============================================
+        let searchDebounce, aiDebounce, lastSearchResults = [], lastLlmQuery = '';
+        const searchInput = document.getElementById('searchInput');
+        const clearBtn = document.getElementById('clearBtn');
+        const sourcesSection = document.getElementById('sourcesSection');
+        const aiActionsEl = document.getElementById('aiActions');
+
+        function doSearchOnly(rawQuery) {
+            const answerEl = document.getElementById('aiAnswer');
+            if (!rawQuery.trim()) {
+                sourcesSection.classList.remove('visible');
+                answerEl.style.display = 'none'; delete answerEl.dataset.model;
+                aiActionsEl.classList.remove('visible');
+                lastSearchResults = []; lastLlmQuery = '';
+                clearBtn.style.display = 'none';
+                return;
+            }
+            clearBtn.style.display = 'block';
+            const { query: expanded, hint, originalQuery } = expandQuery(rawQuery);
+            const results = search(expanded);
+            sourcesSection.classList.add('visible');
+            renderResults(results, hint);
+            lastSearchResults = results; lastLlmQuery = originalQuery || rawQuery;
+            if (answerEl.style.display !== 'none' && isGenerating) answerEl.innerHTML = '<span class="thinking-spinner">Thinking</span>';
+            const aiAvailable = modelReady || localModel;
+            if (!aiAvailable || results.length === 0) { answerEl.style.display = 'none'; delete answerEl.dataset.model; aiActionsEl.classList.remove('visible'); }
+        }
+
+        function doAIGeneration() {
+            if (!lastLlmQuery.trim() || lastSearchResults.length === 0) return;
+            if ((activeEngine === 'local' && localModel) || (activeEngine === 'custom' && customModel)) {
+                const model = activeEngine === 'local' ? localModel : customModel;
+                const genId = ++currentGenId;
+                generateAnswerLocal(lastLlmQuery, lastSearchResults, genId, model);
+            } else if (activeEngine === 'browser' && modelReady) {
+                generateAnswer(lastLlmQuery, lastSearchResults);
+            }
+        }
+
+        const hasAnyEngine = () => aiEnabled && activeEngine && ((activeEngine === 'local' && localModel) || (activeEngine === 'browser' && modelReady) || (activeEngine === 'custom' && customModel));
+
+        searchInput.addEventListener('input', (e) => {
+            const val = e.target.value;
+            clearTimeout(searchDebounce); searchDebounce = setTimeout(() => doSearchOnly(val), 200);
+            clearTimeout(aiDebounce);
+            if (hasAnyEngine() && val.trim()) { const delay = activeEngine === 'browser' ? 800 : 500; aiDebounce = setTimeout(() => doAIGeneration(), delay); }
+        });
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { clearTimeout(searchDebounce); clearTimeout(aiDebounce); doSearchOnly(e.target.value); if (hasAnyEngine()) doAIGeneration(); }
+        });
+
+        // ── Clear button ──
+        clearBtn.addEventListener('click', () => {
+            searchInput.value = ''; searchInput.focus(); doSearchOnly('');
+            history.replaceState(null, '', window.location.pathname);
+        });
+
+        // ── Copy answer ──
+        document.getElementById('copyBtn').addEventListener('click', function() {
+            const text = document.getElementById('aiAnswer').textContent;
+            navigator.clipboard.writeText(text);
+            this.classList.add('copied'); setTimeout(() => this.classList.remove('copied'), 1500);
+        });
+
+        // ── Share link ──
+        document.getElementById('shareBtn').addEventListener('click', function() {
+            const query = searchInput.value;
+            const url = new URL(window.location.href.split('?')[0]);
+            url.searchParams.set('q', query);
+            navigator.clipboard.writeText(url.toString());
+            history.replaceState(null, '', url);
+            this.classList.add('linked'); setTimeout(() => this.classList.remove('linked'), 1500);
+        });
+
+        // ── URL query param auto-search ──
+        const urlParams = new URLSearchParams(window.location.search);
+        const initialQuery = urlParams.get('q');
+        if (initialQuery) {
+            searchInput.value = initialQuery;
+            // Small delay to ensure search index is loaded
+            setTimeout(() => { doSearchOnly(initialQuery); if (hasAnyEngine()) doAIGeneration(); }, 500);
+        }
+    </script>
+
+    <footer>
+        <div class="footer-oval">
+            <p class="footer-signature"><img src="./Assets/footer-JHsig.png" alt="John Hanacek signature" loading="lazy"></p>
+            <p class="footer-copyright">© 2026 John Hanacek · JHDesign LLC</p>
+            <p class="footer-github"><a href="https://github.com/jjh111/johnhanacek" target="_blank" rel="noopener">github.com/jjh111/johnhanacek</a></p>
+        </div>
+    </footer>
+<script src="./scripts/shared.js"></script>
+</body>
+</html>

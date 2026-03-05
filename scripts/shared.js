@@ -55,6 +55,16 @@ function initNavigation() {
                 navMenu.classList.remove('open');
             });
         });
+
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!navMenu.classList.contains('open')) return;
+            if (!navMenu.contains(e.target) && !navToggle.contains(e.target)) {
+                navToggle.setAttribute('aria-expanded', 'false');
+                navToggle.classList.remove('active');
+                navMenu.classList.remove('open');
+            }
+        });
     }
 }
 

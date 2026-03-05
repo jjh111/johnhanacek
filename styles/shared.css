@@ -709,9 +709,18 @@ nav.visible { transform: translateY(0); }
 .shape-link.secondary:hover { opacity: 0.7; }
 .shape-link.secondary.active { opacity: 0.9; }
 
-/* Hero: secondary shapes shrink on hover */
+/* Hero shape-nav: search utility icon — left of page shapes, right divider */
+.shape-nav .shape-link.search-icon {
+    margin-right: 0.15rem;
+    padding-right: 0.35rem;
+    border-right: 1px solid rgba(77, 201, 246, 0.1);
+}
+
+/* Hero: secondary/search shapes shrink on hover */
 .shape-nav .shape-link.secondary:hover .shape,
-.shape-nav:hover .shape-link.secondary .shape {
+.shape-nav:hover .shape-link.secondary .shape,
+.shape-nav .shape-link.search-icon:hover .shape,
+.shape-nav:hover .shape-link.search-icon .shape {
     width: 14px;
     height: 14px;
     min-width: 14px;
@@ -749,6 +758,27 @@ nav.visible { transform: translateY(0); }
     opacity: 1;
 }
 
+/* --- Nav search icon (inside .nav-left, first child, right divider) --- */
+.nav-left .shape-link.search-icon {
+    width: 26px;
+    margin-right: 2px;
+    padding-right: 6px;
+    border-right: 1px solid rgba(77, 201, 246, 0.08);
+}
+.nav-left .shape-link.search-icon .shape {
+    width: 14px;
+    height: 14px;
+    min-width: 14px;
+    min-height: 14px;
+    stroke-width: 2.5;
+}
+.nav-left .shape-link.search-icon:hover .shape {
+    width: 12px;
+    height: 12px;
+    min-width: 12px;
+    min-height: 12px;
+}
+
 /* ===========================================
    5a. TOUCH DEVICE OVERRIDES
    On touch (no fine pointer), labels show always — not hover-only.
@@ -757,7 +787,8 @@ nav.visible { transform: translateY(0); }
 @media (hover: none) and (pointer: coarse) {
     /* Hero shape-nav links: unconstrain height so labels aren't clipped */
     .shape-nav .shape-link,
-    .shape-nav .shape-link.secondary {
+    .shape-nav .shape-link.secondary,
+    .shape-nav .shape-link.search-icon {
         height: auto;
         overflow: visible;
         min-width: 44px;
@@ -765,7 +796,8 @@ nav.visible { transform: translateY(0); }
 
     /* Shapes compact — label shown below */
     .shape-nav .shape-link .shape,
-    .shape-nav .shape-link.secondary .shape {
+    .shape-nav .shape-link.secondary .shape,
+    .shape-nav .shape-link.search-icon .shape {
         width: 18px; height: 18px;
         min-width: 18px; min-height: 18px;
     }
@@ -1728,6 +1760,12 @@ footer .version {
 
 /* Mobile nav */
 @media (max-width: 900px) {
+    .nav-inner {
+        align-items: center;
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+    .nav-left { align-items: center; }
     .nav-toggle {
         display: block;
         position: relative;
