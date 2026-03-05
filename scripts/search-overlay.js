@@ -27,6 +27,7 @@
     let modelIsCached = false;
     let previousFocus = null;
     const MODEL_ID = "onnx-community/Qwen3.5-0.8B-ONNX";
+    const MODEL_DISPLAY_NAME = "Qwen 3.5";
     const RESULTS_PER_PAGE = 5;
 
     // Transformers.js imports (lazy)
@@ -92,6 +93,7 @@
                     <span id="so-aiDot" class="status-dot off"></span>
                     <span id="so-engineModelLabel" class="engine-model-label"></span>
                     <span id="so-engineSourceBadge" class="engine-source-badge none"></span>
+                    <button class="engine-bar-load-btn" id="so-engineBarLoadBtn" style="display:none;">Load AI</button>
                     <button class="engine-info-btn" id="so-engineInfoBtn" aria-label="Engine settings">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                     </button>
@@ -118,19 +120,20 @@
                         <div id="so-localModelSection" class="popover-section" style="--section-color:var(--engine-lmstudio);">
                             <div class="popover-section-header">
                                 <span class="popover-radio"></span>
-                                <span class="popover-section-name" id="so-localModelName"></span>
+                                <span class="popover-section-name" id="so-localModelName">Local Model</span>
                                 <span class="popover-section-badge badge-lmstudio" id="so-localModelSource"></span>
                             </div>
-                            <div class="popover-section-detail" id="so-localModelDetail">localhost:1234</div>
+                            <div class="popover-section-detail" id="so-localModelDetail">LMStudio or Ollama on localhost</div>
+                            <button id="so-detectLocalBtn">Detect</button>
                         </div>
                         <div id="so-browserModelSection" class="popover-section" style="--section-color:var(--engine-browser);">
                             <div class="popover-section-header">
                                 <span class="popover-radio"></span>
-                                <span class="popover-section-name">Qwen 0.8B</span>
+                                <span class="popover-section-name">Qwen 3.5</span>
                                 <span class="popover-section-badge badge-browser">In-Browser</span>
                                 <span class="popover-section-badge badge-webgpu" id="so-webgpuBadge"></span>
                             </div>
-                            <div class="popover-section-detail" id="so-browserModelDetail">WebGPU inference</div>
+                            <div class="popover-section-detail" id="so-browserModelDetail">WebGPU inference · 0.8B params</div>
                             <button id="so-enableBtn">Load Model</button>
                             <div class="cache-hint" id="so-cacheHint"></div>
                             <div id="so-progress"></div>
@@ -253,6 +256,7 @@
         const dot = $('so-aiDot');
         const label = $('so-engineModelLabel');
         const badge = $('so-engineSourceBadge');
+        const loadBtn = $('so-engineBarLoadBtn');
         if (!dot || !label || !badge) return;
         const root = overlayEl;
 
@@ -266,6 +270,10 @@
             const localColor = localModel.source === 'Ollama' ? 'var(--engine-ollama)' : 'var(--engine-lmstudio)';
             $('so-localModelSection').style.setProperty('--section-color', localColor);
         }
+
+        // Reset CTA and badge visibility
+        if (loadBtn) loadBtn.style.display = 'none';
+        badge.style.display = '';
 
         if (!aiEnabled) {
             label.textContent = 'AI off';
@@ -284,7 +292,7 @@
             dot.className = 'status-dot ready';
             $('so-localModelSection').classList.add('active');
         } else if (activeEngine === 'browser' && modelReady) {
-            label.textContent = 'Qwen 0.8B';
+            label.textContent = MODEL_DISPLAY_NAME;
             badge.textContent = 'In-Browser';
             badge.className = 'engine-source-badge browser';
             dot.className = 'status-dot ready';
@@ -297,10 +305,23 @@
             dot.className = 'status-dot ready';
             $('so-customSection').classList.add('active');
         } else {
-            label.textContent = 'No AI model';
-            badge.textContent = '';
-            badge.className = 'engine-source-badge none';
-            dot.className = 'status-dot off';
+            // No active engine — show CTA if WebGPU available
+            if (hasWebGPU && !modelReady) {
+                label.textContent = '';
+                badge.textContent = ''; badge.style.display = 'none';
+                dot.className = 'status-dot off';
+                if (loadBtn) {
+                    loadBtn.style.display = 'inline-block';
+                    loadBtn.textContent = modelIsCached ? 'Load ' + MODEL_DISPLAY_NAME + ' ⚡' : 'Load ' + MODEL_DISPLAY_NAME;
+                    if (modelIsCached) loadBtn.classList.add('cached');
+                    else loadBtn.classList.remove('cached');
+                }
+            } else {
+                label.textContent = 'Search only';
+                badge.textContent = '';
+                badge.className = 'engine-source-badge none';
+                dot.className = 'status-dot off';
+            }
         }
     }
 
@@ -334,15 +355,15 @@
             const btn = $('so-enableBtn');
             const cacheHint = $('so-cacheHint');
             if (modelIsCached) {
-                if (btn) { btn.textContent = 'Load Qwen 0.8B'; btn.classList.add('cached'); }
+                if (btn) { btn.textContent = 'Load ' + MODEL_DISPLAY_NAME; btn.classList.add('cached'); }
                 if (cacheHint) cacheHint.textContent = 'Cached — loads in seconds';
             } else {
-                if (btn) btn.textContent = 'Download Qwen 0.8B (~700MB)';
+                if (btn) btn.textContent = 'Download ' + MODEL_DISPLAY_NAME + ' (~700 MB)';
                 if (cacheHint) cacheHint.textContent = '';
             }
         }
 
-        // Local models
+        // Local models — auto-detect LMStudio/Ollama on localhost
         localModel = await checkLocalModels();
         if (localModel) {
             console.log(`[SearchOverlay] Local model: ${localModel.name} via ${localModel.source}`);
@@ -351,7 +372,12 @@
             $('so-localModelSource').textContent = localModel.source;
             $('so-localModelSource').className = 'popover-section-badge badge-' + localModel.source.toLowerCase();
             $('so-localModelDetail').textContent = localModel.host;
+            const detectBtn = $('so-detectLocalBtn');
+            if (detectBtn) { detectBtn.textContent = '✓ Connected'; detectBtn.classList.add('model-active'); detectBtn.disabled = true; }
             setActiveEngine('local');
+        } else {
+            // Show section but as unconnected — user can click Detect to retry
+            $('so-localModelSection').classList.add('detected');
         }
 
         // Custom endpoint from localStorage
@@ -517,7 +543,7 @@
         const answerEl = $('so-aiAnswer'); const dot = $('so-aiDot');
         answerEl.style.display = 'block'; answerEl.classList.add('generating');
         answerEl.innerHTML = '<span class="thinking-spinner">Thinking</span>';
-        answerEl.dataset.model = 'Qwen 0.8B · in-browser';
+        answerEl.dataset.model = MODEL_DISPLAY_NAME + ' · in-browser';
         $('so-aiActions').classList.remove('visible');
         dot.className = 'status-dot loading';
         if (isGenerating) { pendingGen = { query, results, genId }; return; }
@@ -625,6 +651,15 @@
             if (e.key === 'Escape') { e.preventDefault(); closeSearch(); }
         });
 
+        // Focus search input → close engine settings if open
+        searchInput.addEventListener('focus', () => {
+            if (popoverOpen) {
+                popoverOpen = false;
+                $('so-engineSettings').classList.remove('open');
+                $('so-engineInfoBtn').classList.remove('open');
+            }
+        });
+
         // Clear button
         clearBtn.addEventListener('click', () => {
             searchInput.value = ''; searchInput.focus(); doSearchOnly('');
@@ -686,6 +721,38 @@
                 $('so-aiActions').classList.remove('visible');
             } else if (lastLlmQuery.trim() && lastSearchResults.length > 0) {
                 doAIGeneration();
+            }
+        });
+
+        // Engine bar "Load AI" CTA — triggers in-browser model load
+        $('so-engineBarLoadBtn').addEventListener('click', () => {
+            // Open settings and click the load button
+            if (!popoverOpen) {
+                popoverOpen = true;
+                $('so-engineSettings').classList.add('open');
+                $('so-engineInfoBtn').classList.add('open');
+            }
+            const enableBtn = $('so-enableBtn');
+            if (enableBtn && !enableBtn.disabled) enableBtn.click();
+        });
+
+        // Detect local models button — manual probe to avoid permission prompts on load
+        $('so-detectLocalBtn').addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const detectBtn = $('so-detectLocalBtn');
+            detectBtn.disabled = true; detectBtn.textContent = 'Scanning...';
+            localModel = await checkLocalModels();
+            if (localModel) {
+                console.log(`[SearchOverlay] Local model: ${localModel.name} via ${localModel.source}`);
+                $('so-localModelName').textContent = localModel.name.split('/').pop();
+                $('so-localModelSource').textContent = localModel.source;
+                $('so-localModelSource').className = 'popover-section-badge badge-' + localModel.source.toLowerCase();
+                $('so-localModelDetail').textContent = localModel.host;
+                detectBtn.textContent = '✓ Connected'; detectBtn.classList.add('model-active');
+                setActiveEngine('local');
+            } else {
+                detectBtn.textContent = 'Not found'; detectBtn.disabled = false;
+                setTimeout(() => { detectBtn.textContent = 'Detect'; }, 2000);
             }
         });
 

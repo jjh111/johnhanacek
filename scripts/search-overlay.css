@@ -149,6 +149,33 @@
 .search-overlay .status-dot.ready { background: var(--engine-color, #22c55e); }
 @keyframes so-pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
 
+/* Engine bar "Load AI" CTA — shown when WebGPU available but no engine active */
+.search-overlay .engine-bar-load-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 500;
+    background: rgba(77, 201, 246, 0.08);
+    color: var(--engine-browser);
+    border: 1px solid rgba(77, 201, 246, 0.15);
+    padding: 0.18rem 0.55rem;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+.search-overlay .engine-bar-load-btn:hover {
+    background: rgba(77, 201, 246, 0.14);
+    border-color: rgba(77, 201, 246, 0.3);
+}
+.search-overlay .engine-bar-load-btn.cached {
+    background: rgba(34, 197, 94, 0.05);
+    border-color: rgba(34, 197, 94, 0.15);
+    color: #4ade80;
+}
+.search-overlay .engine-bar-load-btn.cached:hover {
+    background: rgba(34, 197, 94, 0.1);
+}
+
 /* Engine info button — chevron toggle */
 .search-overlay .engine-info-btn {
     background: none; border: none; cursor: pointer;
@@ -273,6 +300,21 @@
 
 .search-overlay #so-localModelSection { display: none; }
 .search-overlay #so-localModelSection.detected { display: flex; flex-direction: column; }
+.search-overlay #so-detectLocalBtn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem;
+    background: rgba(192, 132, 252, 0.06);
+    color: var(--engine-lmstudio);
+    border: 1px solid rgba(192, 132, 252, 0.12);
+    padding: 0.22rem 0.5rem;
+    border-radius: 3px; cursor: pointer;
+    transition: all 0.15s;
+    width: calc(100% - 1.15rem);
+    margin-top: 0.2rem; margin-left: 1.15rem;
+}
+.search-overlay #so-detectLocalBtn:hover { background: rgba(192, 132, 252, 0.12); border-color: rgba(192, 132, 252, 0.25); }
+.search-overlay #so-detectLocalBtn:disabled { opacity: 0.5; cursor: default; }
+.search-overlay #so-detectLocalBtn.model-active { background: rgba(34, 197, 94, 0.06); border-color: rgba(34, 197, 94, 0.12); color: #4ade80; cursor: default; }
 .search-overlay .badge-lmstudio { background: rgba(192, 132, 252, 0.12); color: var(--engine-lmstudio); }
 .search-overlay .badge-ollama { background: rgba(251, 146, 60, 0.12); color: var(--engine-ollama); }
 .search-overlay .badge-browser { background: rgba(77, 201, 246, 0.12); color: var(--engine-browser); }
@@ -330,7 +372,7 @@
     border: 1px solid rgba(77, 201, 246, 0.15);
     border-radius: 20px;
     outline: none;
-    text-align: center;
+    text-align: left;
     transition: border-color 0.2s;
 }
 .search-overlay #so-searchInput:focus {
