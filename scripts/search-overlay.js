@@ -225,8 +225,35 @@
         // Wire up overlay events
         wireOverlayEvents();
 
-        // Check engines (non-blocking)
-        checkEnginesAsync();
+        // Sync overlay DOM with already-detected engine state
+        updateEngineBar();
+        if (hasWebGPU) {
+            const webgpuBadge = $('so-webgpuBadge');
+            if (webgpuBadge) { webgpuBadge.textContent = 'WebGPU'; webgpuBadge.className = 'popover-section-badge badge-webgpu'; }
+            const btn = $('so-enableBtn');
+            const cacheHint = $('so-cacheHint');
+            if (modelIsCached) {
+                if (btn) { btn.textContent = 'Load ' + MODEL_DISPLAY_NAME; btn.classList.add('cached'); }
+                if (cacheHint) cacheHint.textContent = 'Cached — loads in seconds';
+            } else if (!modelReady) {
+                if (btn) btn.textContent = 'Download ' + MODEL_DISPLAY_NAME + ' (~700 MB)';
+                if (cacheHint) cacheHint.textContent = '';
+            }
+        } else {
+            const btn = $('so-enableBtn');
+            if (btn) { btn.textContent = 'WebGPU unavailable'; btn.disabled = true; }
+        }
+        if (localModel) {
+            $('so-localModelSection').classList.add('detected');
+            $('so-localModelName').textContent = localModel.name.split('/').pop();
+            $('so-localModelSource').textContent = localModel.source;
+            $('so-localModelSource').className = 'popover-section-badge badge-' + localModel.source.toLowerCase();
+            $('so-localModelDetail').textContent = localModel.host;
+            const detectBtn = $('so-detectLocalBtn');
+            if (detectBtn) { detectBtn.textContent = '✓ Connected'; detectBtn.classList.add('model-active'); detectBtn.disabled = true; }
+        } else {
+            $('so-localModelSection').classList.add('detected');
+        }
     }
 
     function getBasePath() {
@@ -329,13 +356,40 @@
         activeEngine = engine;
         if (engine) aiEnabled = true;
         updateEngineBar();
+        broadcastEngineState();
         localStorage.setItem('searchActiveEngine', engine || '');
     }
 
+    // Broadcast engine state to body data attribute for nav indicator CSS
+    function broadcastEngineState() {
+        let state = 'bm25';
+        if (!aiEnabled) {
+            state = 'bm25';
+        } else if (activeEngine === 'browser' && modelReady) {
+            state = 'webgpu-active';
+        } else if (activeEngine === 'local' && localModel) {
+            state = localModel.source === 'Ollama' ? 'ollama' : 'lmstudio';
+        } else if (activeEngine === 'custom' && customModel) {
+            state = 'custom';
+        } else if (hasWebGPU) {
+            state = 'webgpu-available';
+        }
+        document.body.dataset.searchEngine = state;
+    }
+
     async function checkEnginesAsync() {
+        // iOS detection — Safari on iOS reports WebGPU but crashes loading models
+        const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent)
+            || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const forceWebGPU = localStorage.getItem('jh-force-webgpu') === 'true';
+
+        if (isIOS && !forceWebGPU) {
+            console.log('[SearchOverlay] iOS detected — WebGPU disabled (crashes Safari). Override: localStorage.setItem("jh-force-webgpu", "true")');
+        }
+
         // WebGPU
         const webgpuBadge = $('so-webgpuBadge');
-        if (navigator.gpu) {
+        if (navigator.gpu && !(isIOS && !forceWebGPU)) {
             const adapter = await navigator.gpu.requestAdapter();
             if (adapter) {
                 hasWebGPU = true;
@@ -344,7 +398,7 @@
                 if (webgpuBadge) { webgpuBadge.textContent = 'No adapter'; }
             }
         } else {
-            if (webgpuBadge) { webgpuBadge.textContent = 'No WebGPU'; }
+            if (webgpuBadge) { webgpuBadge.textContent = isIOS ? 'iOS — disabled' : 'No WebGPU'; }
         }
 
         if (!hasWebGPU) {
@@ -367,23 +421,28 @@
         localModel = await checkLocalModels();
         if (localModel) {
             console.log(`[SearchOverlay] Local model: ${localModel.name} via ${localModel.source}`);
-            $('so-localModelSection').classList.add('detected');
-            $('so-localModelName').textContent = localModel.name.split('/').pop();
-            $('so-localModelSource').textContent = localModel.source;
-            $('so-localModelSource').className = 'popover-section-badge badge-' + localModel.source.toLowerCase();
-            $('so-localModelDetail').textContent = localModel.host;
+            const localSection = $('so-localModelSection');
+            if (localSection) {
+                localSection.classList.add('detected');
+                $('so-localModelName').textContent = localModel.name.split('/').pop();
+                $('so-localModelSource').textContent = localModel.source;
+                $('so-localModelSource').className = 'popover-section-badge badge-' + localModel.source.toLowerCase();
+                $('so-localModelDetail').textContent = localModel.host;
+            }
             const detectBtn = $('so-detectLocalBtn');
             if (detectBtn) { detectBtn.textContent = '✓ Connected'; detectBtn.classList.add('model-active'); detectBtn.disabled = true; }
             setActiveEngine('local');
         } else {
             // Show section but as unconnected — user can click Detect to retry
-            $('so-localModelSection').classList.add('detected');
+            const localSection = $('so-localModelSection');
+            if (localSection) localSection.classList.add('detected');
         }
 
         // Custom endpoint from localStorage
         const savedEndpoint = localStorage.getItem('searchCustomEndpoint') || '';
         if (savedEndpoint) {
-            $('so-customEndpoint').value = savedEndpoint;
+            const customInput = $('so-customEndpoint');
+            if (customInput) customInput.value = savedEndpoint;
             if (!localModel) {
                 customModel = await probeCustomEndpoint(savedEndpoint);
                 if (customModel) setActiveEngine('custom');
@@ -391,6 +450,7 @@
         }
 
         if (!activeEngine) updateEngineBar();
+        broadcastEngineState();
     }
 
     async function checkModelCache() {
@@ -715,6 +775,7 @@
             aiEnabled = e.target.checked;
             $('so-aiToggleText').textContent = aiEnabled ? 'on' : 'off';
             updateEngineBar();
+            broadcastEngineState();
             if (!aiEnabled) {
                 const answerEl = $('so-aiAnswer');
                 answerEl.style.display = 'none'; delete answerEl.dataset.model;
@@ -972,6 +1033,7 @@
         setupNavTriggers();
         setupHeroSearch();
         checkUrlQuery();
+        checkEnginesAsync(); // early detection for nav indicator
     }
 
     if (document.readyState === 'loading') {
