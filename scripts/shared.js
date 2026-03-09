@@ -202,10 +202,35 @@ function initImageModal() {
 }
 
 // ===========================================
+// Responsive Nav Abbreviations
+// ===========================================
+function initNavAbbreviations() {
+    // Title: "John Hanacek" → "JH"
+    const title = document.querySelector('.nav-title');
+    if (title) title.dataset.short = 'JH';
+
+    // Nav-right links: auto-abbreviate to 2-char codes
+    document.querySelectorAll('.nav-right a').forEach(a => {
+        const text = a.textContent.trim();
+        const words = text.split(/\s+/);
+        let short;
+        if (words.length > 1) {
+            // Multi-word: first char of each word (e.g., "I Believe" → "IB")
+            short = words.map(w => w[0]).join('').toUpperCase().slice(0, 2);
+        } else {
+            // Single word: first 2 chars (e.g., "About" → "AB")
+            short = text.slice(0, 2).toUpperCase();
+        }
+        a.dataset.short = short;
+    });
+}
+
+// ===========================================
 // Initialize All Shared Features
 // ===========================================
 document.addEventListener('DOMContentLoaded', () => {
     initNavigation();
+    initNavAbbreviations();
     initCursorSpotlight();
     initImageModal();
 });

@@ -346,7 +346,7 @@ body {
     -webkit-backdrop-filter: blur(8px);
     border: 1px solid rgba(77, 201, 246, 0.18);
     border-radius: 2rem;
-    padding: 0.2rem 0.7rem;
+    padding: 0.15rem 0.7rem 0.25rem;
     white-space: nowrap;
     pointer-events: auto;
     box-shadow:
@@ -477,18 +477,18 @@ nav.visible { transform: translateY(0); }
 
 .nav-inner {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     max-width: 1100px;
     margin: 0 auto;
-    padding: 0.6rem var(--space-md) 0;
+    padding: 0 var(--space-md);
     height: 100%;
 }
 
 /* Left side: shapes + name */
 .nav-left {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 0.35rem;
     overflow: visible;
 }
@@ -529,7 +529,7 @@ nav.visible { transform: translateY(0); }
 /* Right side: section links */
 .nav-right {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 0;
     list-style: none;
     margin: 0;
@@ -551,6 +551,7 @@ nav.visible { transform: translateY(0); }
     text-transform: uppercase;
     letter-spacing: 0.08em;
     padding: 0 0.625rem;
+    white-space: nowrap;
     transition: color 0.2s;
 }
 .nav-right a:hover, .nav-right a:focus { color: var(--gold); }
@@ -583,7 +584,7 @@ nav.visible { transform: translateY(0); }
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: center;
     opacity: 0.4;
     transition: opacity 0.3s;
     text-decoration: none;
@@ -620,17 +621,20 @@ nav.visible { transform: translateY(0); }
     line-height: 1;
     white-space: nowrap;
     opacity: 0;
-    transition: opacity 0.15s ease;
-    margin-top: 0.15rem;
+    transition: opacity 0.15s ease, height 0.15s ease, margin 0.15s ease;
+    margin-top: 0;
+    height: 0;
+    overflow: hidden;
     pointer-events: none;
 }
 .shape-label-img {
-    height: 0.6rem;
     width: auto;
     filter: brightness(1.2);
     opacity: 0;
-    transition: opacity 0.15s ease;
-    margin-top: 0.1rem;
+    transition: opacity 0.15s ease, height 0.15s ease, margin 0.15s ease;
+    margin-top: 0;
+    height: 0;
+    overflow: hidden;
     pointer-events: none;
 }
 
@@ -649,49 +653,66 @@ nav.visible { transform: translateY(0); }
     min-height: 18px;
 }
 .shape-nav .shape-link:hover .shape-label,
+.shape-nav:hover .shape-link .shape-label {
+    opacity: 1;
+    height: auto;
+    margin-top: 0.15rem;
+}
 .shape-nav .shape-link:hover .shape-label-img,
-.shape-nav:hover .shape-link .shape-label,
 .shape-nav:hover .shape-link .shape-label-img {
     opacity: 1;
+    height: 0.6rem;
+    margin-top: 0.1rem;
 }
 
 /* --- Navbar shape overrides (compact) --- */
 .nav-left .shape-link {
-    width: 26px;
-    height: 24px;
+    width: 32px;
+    height: 34px;
     opacity: 0.5;
-    padding: 0 0.1rem;
+    padding: 0 0.15rem;
     box-sizing: border-box;
+    justify-content: center;
 }
 .nav-left .shape-link:hover { opacity: 0.85; }
 .nav-left .shape-link.active { opacity: 1; }
 .nav-left .shape-link .shape {
-    width: 16px;
-    height: 16px;
-    min-width: 16px;
-    min-height: 16px;
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    min-height: 22px;
+    fill: rgba(77, 201, 246, 0.1);
 }
 .nav-left .shape-link.active .shape {
     filter: drop-shadow(0 0 4px var(--cyan-glow));
 }
 /* Navbar: shrink shapes on hover to fit labels inside nav height */
 .nav-left .shape-link:hover .shape {
-    width: 12px;
-    height: 12px;
-    min-width: 12px;
-    min-height: 12px;
+    width: 14px;
+    height: 14px;
+    min-width: 14px;
+    min-height: 14px;
 }
 .nav-left .shape-label {
     font-size: 0.4rem;
-    margin-top: 0.1rem;
+    margin-top: 0;
+    height: 0;
+    overflow: hidden;
 }
 .nav-left .shape-label-img {
-    height: 0.45rem;
-    margin-top: 0.08rem;
+    height: 0;
+    margin-top: 0;
+    overflow: hidden;
 }
-.nav-left .shape-link:hover .shape-label,
+.nav-left .shape-link:hover .shape-label {
+    opacity: 1;
+    height: auto;
+    margin-top: 0.1rem;
+}
 .nav-left .shape-link:hover .shape-label-img {
     opacity: 1;
+    height: 0.45rem;
+    margin-top: 0.08rem;
 }
 
 /* --- Secondary shapes (smaller: About, Services) --- */
@@ -721,37 +742,37 @@ nav.visible { transform: translateY(0); }
 .shape-nav:hover .shape-link.secondary .shape,
 .shape-nav .shape-link.search-icon:hover .shape,
 .shape-nav:hover .shape-link.search-icon .shape {
-    width: 14px;
-    height: 14px;
-    min-width: 14px;
-    min-height: 14px;
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    min-height: 18px;
 }
 
 /* Navbar: secondary shapes (same size as primary) */
 .nav-left .shape-link.secondary {
-    width: 26px;
+    width: 32px;
     opacity: 0.5;
 }
 .nav-left .shape-link.secondary:hover { opacity: 0.85; }
 .nav-left .shape-link.secondary.active { opacity: 1; }
 .nav-left .shape-link.secondary .shape {
-    width: 16px;
-    height: 16px;
-    min-width: 16px;
-    min-height: 16px;
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    min-height: 22px;
 }
 .nav-left .shape-link.secondary:hover .shape {
-    width: 12px;
-    height: 12px;
-    min-width: 12px;
-    min-height: 12px;
+    width: 14px;
+    height: 14px;
+    min-width: 14px;
+    min-height: 14px;
 }
 .nav-left .shape-link.secondary .shape-label {
     font-size: 0.4rem;
 }
 /* Widen services shape to fit label */
 .nav-left .shape-link.secondary[aria-label="Services"] {
-    width: 34px;
+    width: 38px;
 }
 /* Secondary shapes: show labels on hover (same as primary) */
 .nav-left .shape-link.secondary:hover .shape-label {
@@ -760,23 +781,65 @@ nav.visible { transform: translateY(0); }
 
 /* --- Nav search icon (inside .nav-left, first child, right divider) --- */
 .nav-left .shape-link.search-icon {
-    width: 26px;
+    width: 32px;
     margin-right: 2px;
     padding-right: 6px;
     border-right: 1px solid rgba(77, 201, 246, 0.08);
 }
 .nav-left .shape-link.search-icon .shape {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    min-height: 22px;
+    fill: none; /* search uses state-ring fill instead */
+}
+.nav-left .shape-link.search-icon:hover .shape {
     width: 14px;
     height: 14px;
     min-width: 14px;
     min-height: 14px;
-    stroke-width: 2.5;
 }
-.nav-left .shape-link.search-icon:hover .shape {
-    width: 12px;
-    height: 12px;
-    min-width: 12px;
-    min-height: 12px;
+
+/* ── Search state ring: engine indicator ── */
+.search-icon .state-ring {
+    stroke: var(--muted);
+    fill: rgba(122, 154, 170, 0.1);
+    opacity: 0.35;
+    transition: stroke 0.3s, fill 0.3s, opacity 0.3s, filter 0.3s;
+}
+body[data-search-engine="webgpu-available"] .search-icon .state-ring {
+    stroke: #4dc9f6;
+    fill: rgba(77, 201, 246, 0.6);
+    opacity: 0.7;
+    animation: search-ring-pulse 3s ease-in-out infinite;
+}
+body[data-search-engine="webgpu-active"] .search-icon .state-ring {
+    stroke: #4dc9f6;
+    fill: rgba(77, 201, 246, 0.6);
+    opacity: 1;
+    filter: drop-shadow(0 0 3px rgba(77, 201, 246, 0.5));
+}
+body[data-search-engine="lmstudio"] .search-icon .state-ring {
+    stroke: #c084fc;
+    fill: rgba(192, 132, 252, 0.6);
+    opacity: 1;
+    filter: drop-shadow(0 0 3px rgba(192, 132, 252, 0.5));
+}
+body[data-search-engine="ollama"] .search-icon .state-ring {
+    stroke: #fb923c;
+    fill: rgba(251, 146, 60, 0.6);
+    opacity: 1;
+    filter: drop-shadow(0 0 3px rgba(251, 146, 60, 0.5));
+}
+body[data-search-engine="custom"] .search-icon .state-ring {
+    stroke: #4ade80;
+    fill: rgba(74, 222, 128, 0.6);
+    opacity: 1;
+    filter: drop-shadow(0 0 3px rgba(74, 222, 128, 0.5));
+}
+@keyframes search-ring-pulse {
+    0%, 100% { filter: drop-shadow(0 0 1px rgba(77, 201, 246, 0.15)); opacity: 0.5; }
+    50% { filter: drop-shadow(0 0 6px rgba(77, 201, 246, 0.5)); opacity: 0.85; }
 }
 
 /* ===========================================
@@ -812,13 +875,15 @@ nav.visible { transform: translateY(0); }
 
     /* Navbar: compact shapes, labels always visible */
     .nav-left .shape-link,
-    .nav-left .shape-link.secondary {
+    .nav-left .shape-link.secondary,
+    .nav-left .shape-link.search-icon {
         height: auto;
         overflow: visible;
         min-width: 32px;
     }
     .nav-left .shape-link .shape,
-    .nav-left .shape-link.secondary .shape {
+    .nav-left .shape-link.secondary .shape,
+    .nav-left .shape-link.search-icon .shape {
         width: 12px; height: 12px;
         min-width: 12px; min-height: 12px;
     }
@@ -1758,47 +1823,87 @@ footer .version {
    12. RESPONSIVE BREAKPOINTS
 =========================================== */
 
-/* Mobile nav */
-@media (max-width: 900px) {
-    .nav-inner {
+/* Compressed nav: abbreviate title + section links */
+@media (max-width: 960px) {
+    /* Hide full title text, show "JH" abbreviation */
+    .nav-title {
+        font-size: 0;
+        line-height: 0;
+        display: inline-flex;
         align-items: center;
-        padding-top: 0;
-        padding-bottom: 0;
     }
-    .nav-left { align-items: center; }
+    .nav-title::after {
+        content: attr(data-short);
+        font-family: 'Raleway', sans-serif;
+        font-size: 1rem;
+        font-weight: 300;
+        letter-spacing: 0.05em;
+        line-height: 1;
+        color: var(--text-primary);
+    }
+    .nav-title:hover::after { color: var(--gold); }
+
+    /* Hide full link text, show 2-char abbreviation */
+    .nav-right a {
+        font-size: 0;
+        line-height: 0;
+        padding: 0 0.4rem;
+        display: inline-flex;
+        align-items: center;
+    }
+    .nav-right a::after {
+        content: attr(data-short);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.6rem;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        line-height: 1;
+        color: var(--muted);
+    }
+    .nav-right a:hover::after,
+    .nav-right a:focus::after { color: var(--gold); }
+
+    /* Hamburger hidden at tablet — abbreviated links visible */
+    .nav-toggle { display: none; }
+}
+
+/* Mobile: bring back hamburger for section links */
+@media (max-width: 600px) {
     .nav-toggle {
         display: block;
         position: relative;
         z-index: 1001;
     }
-    .nav-title { display: none; }
     .nav-right {
         position: absolute;
-        top: 40px;
+        top: 34px;
         left: 0;
         right: 0;
-        background: rgba(2, 10, 18, 0.98);
+        z-index: 1000;
+        background: rgb(2, 10, 18);
         backdrop-filter: blur(8px);
         flex-direction: column;
         align-items: stretch;
-        height: auto;
-        padding: var(--space-md) 0;
+        padding: 0.5rem 0;
         border-bottom: 1px solid rgba(77, 201, 246, 0.1);
         display: none;
     }
     .nav-right.open { display: flex; }
     .nav-right li { height: auto; }
+    /* Show full link text in dropdown, not abbreviations */
     .nav-right a {
-        padding: .5rem var(--space-md);
-        height: auto;
-        font-size: 0.85rem;
-        font-weight: 500;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
+        font-size: 0.8rem;
+        line-height: 1.4;
+        padding: 0.4rem 1.25rem;
+        display: block;
         color: var(--text-primary);
     }
+    .nav-right a::after { content: none; }
     .nav-right a:hover, .nav-right a:focus { color: var(--gold); }
+}
 
+@media (max-width: 900px) {
     /* Grid collapse */
     .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
 
@@ -1823,7 +1928,6 @@ footer .version {
 
     nav { height: 36px; }
     .nav-inner { padding: 0 var(--space-sm); }
-    .nav-title { font-size: 0.9375rem; }
 
     .genealogy-item { grid-template-columns: 1fr; gap: var(--space-xs); }
     .genealogy-item .year { margin-bottom: var(--space-xs); }
@@ -1891,7 +1995,15 @@ footer .version {
 
 @media (max-width: 480px) {
     nav { height: 34px; }
-    .nav-title { font-size: 0.875rem; }
+    /* Compact shapes for small screens */
+    .nav-left .shape-link { width: 24px; height: 28px; padding: 0 0.05rem; }
+    .nav-left .shape-link .shape { width: 16px; height: 16px; min-width: 16px; min-height: 16px; }
+    .nav-left .shape-link.secondary { width: 24px; }
+    .nav-left .shape-link.secondary .shape { width: 16px; height: 16px; min-width: 16px; min-height: 16px; }
+    .nav-left { gap: 0.15rem; }
+    .nav-title::after { font-size: 0.8rem; }
+    .nav-right a { padding: 0 0.25rem; }
+    .nav-right a::after { font-size: 0.5rem; }
     /* hero h1 size handled in max-width: 768px block — do not override here */
 }
 
