@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Tide Pool — Hermes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@200;300&family=Cormorant+Garamond:ital,wght@1,300;1,400&family=JetBrains+Mono:wght@300;400&family=Raleway:wght@200;300&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { width:100%; height:100%; overflow:hidden; background:#000; }
+canvas { position:fixed; top:0; left:0; width:100%; height:100%; display:block; }
+#tooltip {
+  position:fixed; pointer-events:none; z-index:20;
+  max-width:300px; padding:1.1rem 1.5rem;
+  background:rgba(2,10,18,0.9); backdrop-filter:blur(16px);
+  border:1px solid rgba(77,201,246,0.15); border-radius:4px;
+  opacity:0; transition:opacity 0.35s ease;
+}
+#tooltip::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg,transparent,rgba(77,201,246,0.5),transparent);
+}
+#tip-label {
+  font-family:'Cinzel',serif; font-weight:200; font-size:0.6rem;
+  letter-spacing:0.5em; text-transform:uppercase; color:#d4af37;
+  margin-bottom:0.55rem;
+}
+#tip-body {
+  font-family:'Cormorant Garamond',serif; font-style:italic; font-weight:300;
+  font-size:0.95rem; color:#8cb8cc; line-height:1.65; white-space:pre-line;
+}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="tooltip"><div id="tip-label"></div><div id="tip-body"></div></div>
+<script>
+// ─── Canvas setup ──────────────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H, frame = 0;
+const mouse = { x: -999, y: -999 };
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  placeOrganisms();
+}
+
+// ─── Live state ────────────────────────────────────────────────────────────
+const live = { contextPct: 0, prev: 0, lastFetch: 0, error: false };
+let displayPct = 0, waveAmp = 1.0;
+
+async function pollContext() {
+  try {
+    const r = await fetch('http://localhost:3000/api/context-usage');
+    const d = await r.json();
+    if (d.ok) {
+      live.prev = live.contextPct;
+      live.contextPct = d.contextPercent || 0;
+      // compaction flash if context dropped sharply
+      if (live.prev - live.contextPct > 20) triggerCompactionFlash();
+      waveAmp = 1.3;
+      live.lastFetch = Date.now();
+      live.error = false;
+    }
+  } catch(e) { live.error = true; }
+}
+pollContext();
+setInterval(pollContext, 15000);
+
+// ─── Cron scheduling ───────────────────────────────────────────────────────
+const CRONS = [
+  { h:8,  m:0,  id:'briefing',   label:'morning briefing' },
+  { h:8,  m:20, id:'clientrepos',label:'client repos' },
+  { h:9,  m:0,  id:'digest',     label:'research digest' },
+  { h:2,  m:0,  id:'expansion',  label:'overnight expansion' },
+];
+let lastCronFired = null;
+
+function msUntilNext(h, m) {
+  const now = new Date();
+  const t = new Date(now); t.setHours(h, m, 0, 0);
+  if (t <= now) t.setDate(t.getDate() + 1);
+  return t - now;
+}
+
+function scheduleCron(cron) {
+  setTimeout(() => {
+    fireCron(cron);
+    scheduleCron(cron);
+  }, msUntilNext(cron.h, cron.m));
+}
+CRONS.forEach(scheduleCron);
+
+function fireCron(cron) {
+  lastCronFired = { id: cron.id, at: Date.now() };
+  const org = subOrgs.find(o => o.id === 'cron');
+  if (org) { org.fireFlash = 1.0; spawnCronBurst(org.x, org.y, org.color); }
+  if (cron.id === 'expansion') triggerExpansionBloom();
+}
+
+// ─── Fraction of day for circadian behavior ────────────────────────────────
+function dayFraction() {
+  const now = new Date();
+  return (now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()) / 86400;
+}
+function hoursNow() {
+  const now = new Date(); return now.getHours() + now.getMinutes() / 60;
+}
+
+// ─── Particles ─────────────────────────────────────────────────────────────
+const particles = [];
+function spawnParticle(x, y, vx, vy, life, color, size, alpha) {
+  particles.push({ x, y, vx, vy, life, maxLife:life, color, size: size||1.2, alpha: alpha||0.5 });
+}
+
+function spawnCronBurst(x, y, color) {
+  for (let i = 0; i < 18; i++) {
+    const a = (i/18)*Math.PI*2, spd = 1+Math.random()*2;
+    spawnParticle(x, y, Math.cos(a)*spd, Math.sin(a)*spd, 60+Math.random()*40, color, 2, 0.7);
+  }
+}
+
+// marine snow — particles falling toward gomen0
+const snow = [];
+function updateSnow() {
+  if (snow.length < 40 && Math.random() < 0.3) {
+    snow.push({
+      x: W*0.2 + Math.random()*W*0.6,
+      y: H*0.75 + Math.random()*H*0.08,
+      vy: 0.15 + Math.random()*0.2,
+      alpha: 0.04 + Math.random()*0.06,
+      size: 0.5 + Math.random()*0.8
+    });
+  }
+  for (let i = snow.length-1; i >= 0; i--) {
+    const s = snow[i];
+    s.y += s.vy;
+    s.x += Math.sin(frame*0.01+i)*0.1;
+    if (s.y > H) snow.splice(i, 1);
+  }
+}
+
+// expansion bloom — 2am, rises from deep to surface by dawn
+const expansionBlobs = [];
+function triggerExpansionBloom() {
+  for (let i = 0; i < 8; i++) {
+    expansionBlobs.push({
+      x: W*0.3+Math.random()*W*0.4,
+      y: H*0.92,
+      vy: -(0.08+Math.random()*0.05),
+      r: 4+Math.random()*8,
+      alpha: 0.15,
+      color: [77,201,246]
+    });
+  }
+}
+// if between 2am-6am on load, seed residual bloom
+(function() {
+  const h = hoursNow();
+  if (h >= 2 && h < 6) {
+    const progress = (h - 2) / 4; // 0=just fired, 1=at dawn
+    for (let i = 0; i < 5; i++) {
+      expansionBlobs.push({
+        x: W*0.25+Math.random()*W*0.5,
+        y: H*(0.92 - progress*(0.92-0.05) - Math.random()*0.1),
+        vy: -(0.05+Math.random()*0.04),
+        r: 3+Math.random()*6,
+        alpha: 0.08*(1-progress),
+        color: [77,201,246]
+      });
+    }
+  }
+})();
+
+// compaction flash
+let compactionFlash = 0;
+function triggerCompactionFlash() { compactionFlash = 1.0; }
+
+// ─── Tooltip ───────────────────────────────────────────────────────────────
+const tip = document.getElementById('tooltip');
+function showTip(label, body, x, y) {
+  document.getElementById('tip-label').textContent = label;
+  document.getElementById('tip-body').textContent = body;
+  const tx = Math.min(x+20, W-320), ty = Math.min(y-20, H-140);
+  tip.style.left = tx+'px'; tip.style.top = ty+'px'; tip.style.opacity = '1';
+}
+function hideTip() { tip.style.opacity = '0'; }
+canvas.addEventListener('click', handleClick);
+canvas.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+
+// ─── Organism definitions ──────────────────────────────────────────────────
+const SURFACE_DEF = [
+  { id:'kumquat', label:'Kumquat · Plant Analysis',
+    body:'Alkaline soil, pH-locked. Iron & zinc deficiency — caliche hardpan.\nSuper Iron (9-9-9, 11% Fe) on hand.\nNeeds chelated zinc foliar spray for fruit coloring.',
+    color:[180,220,80], type:'bloom' },
+  { id:'ben', label:"Ben's Repo · Session 3",
+    body:'Podcast Research System end-to-end. 80% problem — last mile editing.\nIntelligent prompt execution plan drafted.\nNo homework assigned — he has graduated.',
+    color:[77,201,246], type:'school' },
+  { id:'gomen0s', label:'gomen0 · Emerging',
+    body:'Gaussian splats + AR glasses.\nEarth Star indigenous practitioner network by bioregion.\n6 weeks OpenClaw → porting to Hermes.\nZeroth gomen: perception before coherence.',
+    color:[212,175,55], type:'spiral' },
+];
+
+const SUB_DEF = [
+  { id:'earthstar', label:'Earth Star Skills',
+    body:'v2.0 — Gomens, Earth Stewards, coherence optimization,\nkincentric worldview, anti-entropy economics.\nMetaMedium code + design patterns.\nSource: ~/Documents/github/EarthStar',
+    color:[90,224,90], type:'mycelium', pulseHz:1.1, ghostDelay:0 },
+  { id:'delegation', label:'Delegation Routing',
+    body:'Opus: synthesis, canon writing, architecture decisions.\nSonnet: execution, everything else.\nTwo-tier by complexity — explicit standing request.',
+    color:[212,175,55], type:'tree', pulseHz:0.9, ghostDelay:2.5 },
+  { id:'macos', label:'macOS · launchd',
+    body:'Hermes gateway active (ai.hermes.gateway).\nObsidian running. Terminal works from Telegram.\nlaunchd, not systemd.',
+    color:[140,180,220], type:'hex', pulseHz:0.5, ghostDelay:5 },
+  { id:'cron', label:'Cron Schedule',
+    body:'8:00am morning briefing\n8:20am client repo check (weekdays)\n9:00am research digest\n2:00am overnight self-expansion',
+    color:[255,170,80], type:'emitter', pulseHz:0.7, ghostDelay:1.2, fireFlash:0 },
+  { id:'paths', label:'Monolith Paths',
+    body:'vault ~/Documents/JHvault\ngithub ~/Documents/github\nclient repos jh-consulting-*\nscripts + briefings inside vault',
+    color:[160,130,200], type:'roots', pulseHz:0.4, ghostDelay:3.8 },
+  { id:'obsidian', label:'Obsidian + Hermes',
+    body:'Two vaults: JHvault + GitHub (~/Documents/GitHub)\nSQLite+FAISS planned outside Obsidian.\nWorkspace: localhost:3000 / backend 8642.',
+    color:[77,201,246], type:'rings', pulseHz:0.8, ghostDelay:6.5 },
+];
+
+// Placed at runtime
+let surfOrgs = [], subOrgs = [], medusa = {}, gomen0 = {};
+// Ghost label timers
+const ghostTimers = {};
+
+function placeOrganisms() {
+  surfOrgs = SURFACE_DEF.map((d,i) => ({
+    ...d,
+    x: W*(0.2+i*0.3), y: H*(0.07+Math.random()*0.09),
+    vx:(Math.random()-0.5)*0.3, vy:(Math.random()-0.5)*0.15,
+    phase:Math.random()*Math.PI*2, size:20+Math.random()*8
+  }));
+
+  const subRows = [[0,1,2],[3,4,5]];
+  subOrgs = SUB_DEF.map((d,i) => {
+    const row = Math.floor(i/3), col = i%3;
+    const yTop = ZONES().sub.top, yBot = ZONES().sub.bot;
+    const y = H*(yTop + (row+0.5)/2*(yBot-yTop));
+    const x = W*(0.17+col*0.33);
+    const go = { ...d, x, y, baseX:x, baseY:y, phase:Math.random()*Math.PI*2, size:28 };
+    ghostTimers[d.id] = { t: d.ghostDelay, alpha: 0, phase:'wait' };
+    return go;
+  });
+
+  medusa = { x:W*0.75, y:H*0.38, vx:0.12, vy:0.04, phase:0 };
+
+  gomen0 = {
+    x: W*0.5, y: H*0.928,
+    phase:0, pulseCount:0, pulseTimer:0,
+    label:'gomen0 · NAS',
+    body:'6 weeks of OpenClaw work. Ollama colony skeleton.\nIt knows what it is. It cannot surface yet.',
+    color:[77,201,246]
+  };
+}
+
+function ZONES() {
+  return {
+    surf: { top:0, bot:0.20 },
+    mid:  { top:0.20, bot:0.60 },
+    sub:  { top:0.60, bot:0.86 },
+    deep: { top:0.86, bot:1.0 }
+  };
+}
+
+// ─── Water / background ────────────────────────────────────────────────────
+let breathPhase = 0;
+const BREATH = 30*60;
+
+function drawWater() {
+  breathPhase += 1/BREATH;
+  displayPct += (live.contextPct - displayPct) * 0.018;
+  waveAmp = Math.max(1.0, waveAmp - (Date.now()-live.lastFetch)*0.0006);
+
+  // HSL water color: 185→50 hue as context fills
+  const hue = 185 - displayPct*1.35;
+  const sat = 38 + displayPct*0.35;
+  const lit = Math.round(displayPct);
+
+  // Background gradient
+  const g = ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,   `hsl(${hue},${sat}%,${8+lit*0.06}%)`);
+  g.addColorStop(0.2, `hsl(${hue},${sat}%,${5+lit*0.04}%)`);
+  g.addColorStop(0.6, `hsl(${hue-10},${sat-5}%,${3+lit*0.02}%)`);
+  g.addColorStop(0.86,`hsl(${hue-20},${sat-10}%,${2}%)`);
+  g.addColorStop(1,   `hsl(0,0%,1%)`);
+  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+
+  // Surface shimmer lines
+  ctx.save(); ctx.globalAlpha = 0.025;
+  for (let i=0;i<10;i++) {
+    const y = H*0.01 + i*H*0.018 + Math.sin(frame*0.012+i*0.7)*3*waveAmp;
+    ctx.beginPath(); ctx.moveTo(0,y);
+    ctx.bezierCurveTo(W*0.25,y-2*waveAmp, W*0.75,y+2*waveAmp, W,y);
+    ctx.strokeStyle='rgba(120,200,240,1)'; ctx.lineWidth=0.6; ctx.stroke();
+  }
+  ctx.restore();
+
+  // Turbidity particles (30%+)
+  if (displayPct > 30 && Math.random() < (displayPct-30)/200) {
+    const sx = subOrgs[Math.floor(Math.random()*subOrgs.length)];
+    if (sx) spawnParticle(sx.x+(Math.random()-0.5)*30, sx.y,
+      (Math.random()-0.5)*0.2, -0.15-Math.random()*0.3,
+      100+Math.random()*80, sx.color, 1, 0.3);
+  }
+
+  // Turbidity veil over substrate at 60%+
+  if (displayPct > 60) {
+    const veilA = Math.min(0.25, (displayPct-60)/160);
+    ctx.fillStyle = `rgba(2,8,15,${veilA})`;
+    ctx.fillRect(0, H*0.60, W, H*0.26);
+  }
+
+  // Cursor light
+  const cg = ctx.createRadialGradient(mouse.x,mouse.y,0,mouse.x,mouse.y,190);
+  cg.addColorStop(0,'rgba(77,150,200,0.055)'); cg.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.beginPath(); ctx.arc(mouse.x,mouse.y,190,0,Math.PI*2);
+  ctx.fillStyle=cg; ctx.fill();
+
+  // Compaction flash
+  if (compactionFlash > 0) {
+    compactionFlash -= 0.015;
+    const fg = ctx.createLinearGradient(0,0,0,H);
+    fg.addColorStop(0,'rgba(77,201,246,0)');
+    fg.addColorStop(0.5-compactionFlash*0.3,`rgba(77,201,246,${compactionFlash*0.08})`);
+    fg.addColorStop(1,'rgba(77,201,246,0)');
+    ctx.fillStyle=fg; ctx.fillRect(0,0,W,H);
+  }
+
+  // ∇(C) ≥ 0
+  ctx.save(); ctx.globalAlpha=0.065;
+  ctx.font='200 1rem "Cinzel",serif';
+  ctx.fillStyle='rgba(77,201,246,1)'; ctx.textAlign='center';
+  ctx.fillText('∇(C) ≥ 0', W*0.5, H*0.975); ctx.restore();
+
+  // Title fade (first 8s only, frame < 480)
+  if (frame < 480) {
+    const a = frame < 360 ? Math.min(0.25, frame/80*0.25) : 0.25*(1-(frame-360)/120);
+    ctx.save(); ctx.globalAlpha=a;
+    ctx.font='200 0.75rem "Cinzel",serif'; ctx.fillStyle='rgba(140,184,204,1)';
+    ctx.textAlign='left'; ctx.letterSpacing='0.45em';
+    ctx.fillText('THE TIDE POOL', 24, 32); ctx.restore();
+  }
+
+  // Signatures
+  ctx.save(); ctx.globalAlpha=0.18;
+  ctx.font='300 0.55rem "JetBrains Mono",monospace'; ctx.fillStyle='rgba(77,201,246,1)';
+  ctx.textAlign='right'; ctx.fillText('HERMES', W-20, H-26); ctx.restore();
+  ctx.save(); ctx.globalAlpha=0.12;
+  ctx.font='200 0.65rem "Cinzel",serif'; ctx.fillStyle='rgba(212,175,55,1)';
+  ctx.textAlign='right'; ctx.scale(1.15,1);
+  ctx.fillText('MONOLITH', (W-20)/1.15, H-14); ctx.restore();
+}
+
+// ─── Draw organisms ────────────────────────────────────────────────────────
+
+function luminanceRing(x,y,r,color,hz,phase) {
+  const a = 0.12 + 0.22*Math.sin(Date.now()*0.001*hz*Math.PI*2+phase);
+  ctx.beginPath(); ctx.arc(x,y,r+7,0,Math.PI*2);
+  ctx.strokeStyle=`rgba(${color[0]},${color[1]},${color[2]},${a})`;
+  ctx.lineWidth=1.2; ctx.stroke();
+}
+
+function ghostLabel(org) {
+  const gt = ghostTimers[org.id];
+  if (!gt) return;
+  const now = performance.now()/1000;
+  if (!gt.start) gt.start = now;
+  const elapsed = (now - gt.start) % 8.0;
+  let alpha = 0;
+  if (elapsed < gt.ghostDelay % 8) { alpha = 0; }
+  else {
+    const t = elapsed - (gt.ghostDelay % 8);
+    if (t < 0.8) alpha = (t/0.8)*0.18;
+    else if (t < 2.8) alpha = 0.18;
+    else if (t < 4.8) alpha = 0.18*(1-(t-2.8)/2.0);
+    else alpha = 0;
+  }
+  if (alpha > 0.005) {
+    const shortName = org.label.split('·')[0].trim().toUpperCase();
+    ctx.save(); ctx.globalAlpha=alpha;
+    ctx.font='300 8px "JetBrains Mono",monospace';
+    ctx.fillStyle=`rgba(${org.color[0]},${org.color[1]},${org.color[2]},1)`;
+    ctx.textAlign='center'; ctx.fillText(shortName, org.x, org.y-org.size-10);
+    ctx.restore();
+  }
+}
+
+// Mycelium
+function drawMycelium(org) {
+  const { x,y,size,phase,color } = org;
+  const lit = cursorLit(x,y);
+  for (let b=0;b<8;b++) {
+    const a = (b/8)*Math.PI*2 + phase*0.08;
+    const len = size*(0.65+Math.sin(phase+b)*0.25);
+    const cpx = x+Math.cos(a-0.3)*len*0.55, cpy = y+Math.sin(a-0.3)*len*0.55;
+    const ex = x+Math.cos(a)*len, ey = y+Math.sin(a)*len;
+    ctx.beginPath(); ctx.moveTo(x,y); ctx.quadraticCurveTo(cpx,cpy,ex,ey);
+    ctx.strokeStyle=`rgba(${color[0]},${color[1]},${color[2]},${0.3*lit})`;
+    ctx.lineWidth=1; ctx.stroke();
+    // sub-branch
+    ctx.beginPath(); ctx.moveTo(cpx,cpy);
+    ctx.lineTo(cpx+Math.cos(a+1)*len*0.28, cpy+Math.sin(a+1)*len*0.28);
+    ctx.strokeStyle=`rgba(${color[0]},${color[1]},${color[2]},${0.15*lit})`;
+    ctx.lineWidth=0.6; ctx.stroke();
+  }
+  ctx.beginPath(); ctx.arc(x,y,5,0,Math.PI*2);
+  ctx.fillStyle=`rgba(${color[0]},${color[1]},${color[2]},${0.65*lit})`; ctx.fill();
+  luminanceRing(x,y,size,color,org.pulseHz,org.phase);
+  ghostLabel(org);
+}
+
+// Decision tree
+function drawTree(org) {
+  const { x,y,size,phase,color } = org;
+  const lit = cursorLit(x,y);
+  const sway = Math.sin(phase*0.5)*2;
+  // Trunk
+  ctx.beginPath(); ctx.moveTo(x,y+size*0.4); ctx.lineTo(x+sway,y-size*0.1);
+  ctx.strokeStyle=`rgba(${color[0]},${color[1]},${color[2]},${0.5*lit})`; ctx.lineWidth=2; ctx.stroke();
+  // Branches
+  [[-1,'Opus'],[1,'Sonnet']].forEach(([dir,lbl]) => {
+    const a = dir < 0 ? -Math.PI/3.5 : -Math.PI/3.5*-1;
+    const bx = x+sway+Math.cos(a-(dir>0?0:Math.PI))*size*0.7;
+    const by = y-size*0.1+Math.sin(a-(dir>0?0:Math.PI))*size*0.65;
+    ctx.beginPath(); ctx.moveTo(x+sway,y-size*0.1); ctx.lineTo(bx,by);
+    ctx.strokeStyle=`rgba(${color[0]},${color[1]},${color[2]},${0.4*lit})`; ctx.lineWidth=1.4; ctx.stroke();
+    ctx.beginPath(); ctx.arc(bx,by,3.5,0,Math.PI*2);
+    ctx.fillStyle=`rgba(${color[0]},${color[1]},${color[2]},${0.6*lit})`; ctx.fill();
+    ctx.save(); ctx.globalAlpha=0.25*lit;
+    ctx.font='300 7px "JetBrains Mono",monospace';
+    ctx.fillStyle=`rgba(${color[0]},${color[1]},${color[2]},1)`;
+    ctx.textAlign='center'; ctx.fillText(lbl, bx, by-8); ctx.restore();
+  });
+  luminanceRing(x,y,size,color,org.pulseHz,org.phase);
+  ghostLabel(org);
+}
+
+// Hexagon
+function drawHex(org) {
+  const { x,y,size,phase,color } = org;
+  const lit = cursorLit(x,y);
+  const rot = phase*0.04;
+  for (let h=0;h<2;h++) {
+    const r = size*(0.6-h*0.28), ang = rot*(h?-1:1);
+    ctx.beginPath();
+    for (let i=0;i<6;i++) {
+      const a = (i/6)*Math.PI*2+ang;
+      i===0?ctx.moveTo(x+Math.cos(a)*r,y+Math.sin(a)*r):ctx.lineTo(x+Math.cos(a)*r,y+Math.sin(a)*r);
+    }
+    ctx.closePath();
+    ctx.strokeStyle=`rgba(${color[0]},${color[1]},${color[2]},${(0.45-h*0.15)*lit})`;
+    ctx.lineWidth=1.2-h*0.3; ctx.stroke();
+  }
+  luminanceRing(x,y,size,color,org.pulseHz,org.phase);
+  ghostLabel(org);
+}
+
+// Pulse emitter (cron) — circadian: opens at 8am, closes through day
+function drawEmitter(org) {
+  const { x,y,size,phase,color } = org;
+  const lit = cursorLit(x,y);
+  // Circadian state: 8am=open, midnight=closed
+  const h = hoursNow();
+  const openFrac = Math.max(0, 1 - Math.abs(h - 8) / 16); // peaks at 8am
+  const numRings = Math.round(2 + openFrac * 3);
+
+  for (let r=1;r<=numRings;r++) {
+    ctx.beginPath(); ctx.arc(x,y,size*r*0.32,0,Math.PI*2);
+    ctx.strokeStyle=`rgba(${color[0]},${color[1]},${color[2]},${(0.35-r*0.06)*lit})`;
+    ctx.lineWidth=1; ctx.stroke();
+  }
+  // Arms extend/retract with time of day
+  const arms = Math.round(2 + openFrac*6);
+  for (let i=0;i<arms;i++) {
+    const a = (i/arms)*Math.PI*2 + phase*0.05;
+    const len = size*(0.4+openFrac*0.45);
+    ctx.beginPath(); ctx.moveTo(x,y);
+    ctx.lineTo(x+Math.cos(a)*len, y+Math.sin(a)*len);
+    ctx.strokeStyle=`rgba(${color[0]},${color[1]},${color[2]},${0.3*lit*openFrac})`;
+    ctx.lineWidth=0.8; ctx.stroke();
+  }
+  // Fire flash
+  if (org.fireFlash > 0) {
+    org.fireFlash -= 0.02;
+    ctx.beginPath(); ctx.arc(x,y,size*1.5*org.fireFlash,0,Math.PI*2);
+    ctx.strokeStyle=`rgba(${color[0]},${color[1]},${color[2]},${org.fireFlash*0.6})`;
+    ctx.lineWidth=2; ctx.stroke();
+  }
+  ctx.beginPath(); ctx.arc(x,y,5,0,Math.PI*2);
+  ctx.fillStyle=`rgba(${color[0]},${color[1]},${color[2]},${0.8*lit})`; ctx.fill();
+  luminanceRing(x,y,size,color,0.5+openFrac*0.8,phase);
+  ghostLabel(org);
+}
+
+// Root tendrils
+function drawRoots(org) {
+  const { x,y,size,phase,color } = org;
+  const lit = cursorLit(x,y);
+  for (let r=0;r<5;r++) {
+    const a = (r/5)*Math.PI + phase*0.03;
+    const len = size*(0.7+Math.sin(phase*0.7+r)*0.25);
+    const mx = x+Math.cos(a)*len*0.45, my = y+len*0.45;
+    ctx.beginPath(); ctx.moveTo(x,y);
+    ctx.quadraticCurveTo(mx, my, x+Math.cos(a*1.2)*len, y+len*0.88);
+    ctx.strokeStyle=`rgba(${color[0]},${color[1]},${color[2]},${(0.32-r*0.03)*lit})`;
+    ctx.lineWidth=1.5-r*0.2; ctx.stroke();
+  }
+  ctx.beginPath(); ctx.arc(x,y,5,0,Math.PI*2);
+  ctx.fillStyle=`rgba(${color[0]},${color[1]},${color[2]},${0.65*lit})`; ctx.fill();
+  luminanceRing(x,y,size,color,org.pulseHz,org.phase);
+  ghostLabel(org);
+}
+
+// Concentric rings
+function drawRings(org) {
+  const { x,y,size,phase,color } = org;
+  const lit = cursorLit(x,y);
+  for (let r=1;r<=6;r++) {
+    ctx.beginPath(); ctx.arc(x,y,size*r/6,0,Math.PI*2);
+    ctx.strokeStyle=`rgba(${color[0]},${color[1]},${color[2]},${(0.38-r*0.045)*lit})`;
+    ctx.lineWidth=0.8+(6-r)*0.15; ctx.stroke();
+  }
+  luminanceRing(x,y,size,color,org.pulseHz,org.phase);
+  ghostLabel(org);
+}
+
+// ─── Surface organisms ─────────────────────────────────────────────────────
+function drawBloom(org) {
+  const { x,y,size,phase,color } = org;
+  const lit = cursorLit(x,y);
+  const p6 = 6;
+  for (let p=0;p<p6;p++) {
+    const a = (p/p6)*Math.PI*2+phase*0.2;
+    const px = x+Math.cos(a)*size*0.65, py = y+Math.sin(a)*size*0.65;
+    ctx.beginPath(); ctx.arc(px,py,size*0.38,0,Math.PI*2);
+    ctx.fillStyle=`rgba(${color[0]},${color[1]},${color[2]},${0.1*lit})`; ctx.fill();
+  }
+  const g = ctx.createRadialGradient(x,y,0,x,y,size);
+  g.addColorStop(0,`rgba(${color[0]},${color[1]},${color[2]},${0.65*lit})`);
+  g.addColorStop(1,`rgba(${color[0]},${color[1]},${color[2]},0)`);
+  ctx.beginPath(); ctx.arc(x,y,size,0,Math.PI*2); ctx.fillStyle=g; ctx.fill();
+  if (Math.random()<0.04) spawnParticle(x+(Math.random()-0.5)*8,y,
+    (Math.random()-0.5)*0.4,-0.3-Math.random()*0.5,80+Math.random()*50,color,1.2,0.45);
+}
+
+function drawSchool(org) {
+  const { x,y,size,phase,color } = org;
+  const lit = cursorLit(x,y);
+  // Circadian cohesion: tight after 8am, loose midday, tight again by next 8am
+  const h = hoursNow();
+  const cohesion = h >= 8 && h < 8.35 ? 1.0 :
+                   h >= 12 ? Math.max(0.2, 1-(h-12)/10) : 0.5;
+  const spread = size*(1.5-cohesion*1.2);
+  for (let i=0;i<7;i++) {
+    const a = phase+(i/7)*Math.PI*2;
+    const r = spread*(0.4+Math.sin(phase*1.5+i)*0.3);
+    const fx = x+Math.cos(a)*r, fy = y+Math.sin(a)*r*0.5;
+    ctx.beginPath(); ctx.ellipse(fx,fy,4.5,3,a,0,Math.PI*2);
+    ctx.fillStyle=`rgba(${color[0]},${color[1]},${color[2]},${0.5*lit})`; ctx.fill();
+  }
+}
+
+function drawSpiral(org) {
+  const { x,y,size,phase,color } = org;
+  const lit = cursorLit(x,y);
+  ctx.beginPath();
+  for (let t=0;t<Math.PI*3.4;t+=0.06) {
+    const r = t*(size/(Math.PI*4.5));
+    const sx = x+Math.cos(t+phase*0.4)*r, sy = y+Math.sin(t+phase*0.4)*r;
+    t===0?ctx.moveTo(sx,sy):ctx.lineTo(sx,sy);
+  }
+  ctx.strokeStyle=`rgba(${color[0]},${color[1]},${color[2]},${0.55*lit})`;
+  ctx.lineWidth=1.4; ctx.stroke();
+  // Incomplete outer ring
+  ctx.beginPath(); ctx.arc(x,y,size,0,Math.PI*1.6+Math.sin(phase)*0.3);
+  ctx.strokeStyle=`rgba(${color[0]},${color[1]},${color[2]},${0.2*lit})`;
+  ctx.lineWidth=0.6; ctx.stroke();
+}
+
+// ─── Medusa ────────────────────────────────────────────────────────────────
+const coherencePulses = [];
+
+function drawMedusa() {
+  medusa.phase += 0.007;
+  const slowdown = displayPct > 60 ? Math.max(0.25, 1-(displayPct-60)/60) : 1;
+  medusa.x += (medusa.vx + Math.sin(medusa.phase*0.6)*0.25)*slowdown;
+  medusa.y += (medusa.vy + Math.sin(medusa.phase)*0.12)*slowdown;
+  if (medusa.x < W*0.06) medusa.vx = Math.abs(medusa.vx);
+  if (medusa.x > W*0.94) medusa.vx = -Math.abs(medusa.vx);
+  if (medusa.y < H*0.22) medusa.vy = Math.abs(medusa.vy);
+  if (medusa.y > H*0.57) medusa.vy = -Math.abs(medusa.vy);
+
+  const { x,y,phase } = medusa;
+  const pb = Math.sin(phase*2);
+  const lit = Math.min(1,0.6+cursorLit(x,y)*0.4);
+  // Bell
+  const bw = 20-pb*2, bh = 26+pb*4;
+  const g = ctx.createRadialGradient(x,y,0,x,y,bw*1.8);
+  g.addColorStop(0,`rgba(212,175,55,${0.22*lit})`); g.addColorStop(1,'rgba(212,175,55,0)');
+  ctx.beginPath(); ctx.ellipse(x,y,bw,bh,0,0,Math.PI*2); ctx.fillStyle=g; ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x,y,bw*0.75,bh*0.75,0,0,Math.PI);
+  ctx.strokeStyle=`rgba(212,175,55,${0.32*lit})`; ctx.lineWidth=1; ctx.stroke();
+  // Tentacles
+  for (let t=0;t<8;t++) {
+    const tx = x+(t-3.5)*(bw*0.28);
+    ctx.beginPath(); ctx.moveTo(tx,y+bh);
+    for (let s=1;s<=10;s++) {
+      ctx.lineTo(tx+Math.sin(phase*2+t+s*0.5)*(3+s*0.4), y+bh+s*5.5);
+    }
+    ctx.strokeStyle=`rgba(212,175,55,${0.18*lit})`; ctx.lineWidth=0.7; ctx.stroke();
+  }
+  // Coherence pulse every ~4s
+  if (frame % 240 === 0) coherencePulses.push({ x,y,r:0,a:0.7 });
+  for (let i=coherencePulses.length-1;i>=0;i--) {
+    const p=coherencePulses[i]; p.r+=0.9; p.a*=0.975;
+    if (p.a<0.01){coherencePulses.splice(i,1);continue;}
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    ctx.strokeStyle=`rgba(212,175,55,${p.a*0.1})`; ctx.lineWidth=0.8; ctx.stroke();
+    // Gold particles on pulse
+    if (Math.random()<0.04 && p.r<30) {
+      const a=Math.random()*Math.PI*2;
+      spawnParticle(p.x+Math.cos(a)*p.r,p.y+Math.sin(a)*p.r,
+        Math.cos(a)*0.3,Math.sin(a)*0.3,60,  [212,175,55],1.2,0.4);
+    }
+  }
+}
+
+// ─── gomen0 deep organism ──────────────────────────────────────────────────
+function drawGomen0() {
+  if (displayPct > 80) return; // disappears at high context
+  const { x,y,phase,color } = gomen0;
+  const opacity = displayPct > 60 ? 1-(displayPct-60)/20 : 1;
+  const lit = cursorLit(x,y)*0.5;
+
+  // Compressed ellipse (flattened by depth)
+  const rx = 75, ry = 38;
+
+  // Dark body
+  const g = ctx.createRadialGradient(x,y,0,x,y,rx);
+  g.addColorStop(0,'rgba(3,10,20,0.7)'); g.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.beginPath(); ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);
+  ctx.fillStyle=g; ctx.fill();
+
+  // Encrypted signal pulse: 3 pulses, pause, 3 pulses
+  gomen0.pulseTimer += 0.008;
+  const cycle = gomen0.pulseTimer % 3.14; // full signal cycle ~3.14s
+  let edgeAlpha = 0;
+  // encode: 3 pulses in first half, silence in second
+  const pulseW = 0.35;
+  if (cycle < pulseW) edgeAlpha = Math.sin(cycle/pulseW*Math.PI);
+  else if (cycle < pulseW*2.2) edgeAlpha = Math.sin((cycle-pulseW*1.1)/pulseW*Math.PI)*0.7;
+  else if (cycle < pulseW*3.4) edgeAlpha = Math.sin((cycle-pulseW*2.2)/pulseW*Math.PI)*0.5;
+
+  ctx.beginPath(); ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);
+  ctx.strokeStyle=`rgba(${color[0]},${color[1]},${color[2]},${(edgeAlpha*0.55+lit*0.3)*opacity})`;
+  ctx.lineWidth=1.5; ctx.stroke();
+
+  // Ollama lattice (only when context clear)
+  if (displayPct < 60) {
+    const latticeA = (0.04+lit*0.08)*(1-displayPct/60)*opacity;
+    for (let i=0;i<7;i++) for (let j=0;j<4;j++) {
+      const lx = x-rx*0.8+i*(rx*1.6/6), ly = y-ry*0.7+j*(ry*1.4/3);
+      if (Math.hypot((lx-x)/rx,(ly-y)/ry)<0.85) {
+        ctx.beginPath(); ctx.arc(lx,ly,1.2,0,Math.PI*2);
+        ctx.fillStyle=`rgba(${color[0]},${color[1]},${color[2]},${latticeA})`; ctx.fill();
+        if (i<6) {
+          const nx=x-rx*0.8+(i+1)*(rx*1.6/6);
+          ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(nx,ly);
+          ctx.strokeStyle=`rgba(${color[0]},${color[1]},${color[2]},${latticeA*0.4})`;
+          ctx.lineWidth=0.3; ctx.stroke();
+        }
+      }
+    }
+  }
+}
+
+// ─── Particle / snow rendering ─────────────────────────────────────────────
+function drawParticles() {
+  // Regular particles
+  for (let i=particles.length-1;i>=0;i--) {
+    const p=particles[i];
+    p.x+=p.vx+Math.sin(frame*0.018+i)*0.12; p.y+=p.vy; p.life--;
+    if(p.life<=0){particles.splice(i,1);continue;}
+    const a=p.alpha*(p.life/p.maxLife);
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
+    ctx.fillStyle=`rgba(${p.color[0]},${p.color[1]},${p.color[2]},${a})`; ctx.fill();
+  }
+  // Marine snow (falling toward gomen0)
+  updateSnow();
+  snow.forEach(s=>{
+    ctx.beginPath(); ctx.arc(s.x,s.y,s.size,0,Math.PI*2);
+    ctx.fillStyle=`rgba(140,180,210,${s.alpha})`; ctx.fill();
+  });
+  // Expansion blobs
+  for (let i=expansionBlobs.length-1;i>=0;i--) {
+    const b=expansionBlobs[i]; b.y+=b.vy; b.alpha-=0.00015;
+    if(b.alpha<=0||b.y<-10){expansionBlobs.splice(i,1);continue;}
+    ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
+    ctx.fillStyle=`rgba(${b.color[0]},${b.color[1]},${b.color[2]},${b.alpha})`; ctx.fill();
+  }
+}
+
+// ─── Surface organism update ───────────────────────────────────────────────
+function updateSurface() {
+  const maxY=H*0.20, minY=H*0.018;
+  surfOrgs.forEach((o,i)=>{
+    o.phase+=0.016;
+    o.x+=o.vx+Math.sin(o.phase*0.5+i)*0.18;
+    o.y+=o.vy+Math.cos(o.phase*0.6+i)*0.1;
+    surfOrgs.forEach((oo,j)=>{
+      if(i===j)return;
+      const dx=oo.x-o.x, dy=oo.y-o.y, d=Math.hypot(dx,dy);
+      if(d<85){o.vx-=dx/d*0.018; o.vy-=dy/d*0.018;}
+      else if(d<200){o.vx+=dx/d*0.004; o.vy+=dy/d*0.004;}
+    });
+    o.vx*=0.97; o.vy*=0.97;
+    if(o.x<o.size)o.vx+=0.1; if(o.x>W-o.size)o.vx-=0.1;
+    if(o.y<minY)o.vy+=0.1; if(o.y>maxY-o.size)o.vy-=0.08;
+  });
+}
+
+// ─── Substrate update ──────────────────────────────────────────────────────
+function updateSubstrate() {
+  subOrgs.forEach(o=>{
+    o.phase+=0.01;
+    // gentle wander within zone
+    o.x+=Math.sin(o.phase*0.3)*0.3; o.y+=Math.cos(o.phase*0.2)*0.2;
+    if(Math.abs(o.x-o.baseX)>12)o.x+=(o.baseX-o.x)*0.05;
+    if(Math.abs(o.y-o.baseY)>8)o.y+=(o.baseY-o.y)*0.05;
+    // emit particles upward occasionally
+    if(Math.random()<0.025) spawnParticle(o.x+(Math.random()-0.5)*14,o.y,
+      (Math.random()-0.5)*0.2,-0.15-Math.random()*0.25,90+Math.random()*60,o.color,1,0.28);
+  });
+}
+
+// ─── Cursor lighting ────────────────────────────────────────────────────────
+function cursorLit(x,y,radius) {
+  const r=radius||140;
+  return Math.min(1, 0.65 + Math.max(0,1-Math.hypot(mouse.x-x,mouse.y-y)/r)*0.55);
+}
+
+// ─── Click handler ─────────────────────────────────────────────────────────
+function handleClick(e) {
+  const cx=e.clientX, cy=e.clientY;
+  for(const o of subOrgs) {
+    if(Math.hypot(cx-o.x,cy-o.y)<o.size+22){showTip(o.label,o.body,cx,cy);return;}
+  }
+  for(const o of surfOrgs) {
+    if(Math.hypot(cx-o.x,cy-o.y)<o.size+12){showTip(o.label,o.body,cx,cy);return;}
+  }
+  if(Math.hypot(cx-gomen0.x,cy-gomen0.y)<90 && displayPct<80){
+    showTip(gomen0.label,gomen0.body,cx,cy);return;
+  }
+  hideTip();
+}
+
+// ─── Main loop ─────────────────────────────────────────────────────────────
+function animate() {
+  requestAnimationFrame(animate);
+  frame++;
+
+  ctx.clearRect(0,0,W,H);
+  drawWater();
+  drawParticles();
+
+  // Deep gomen0
+  gomen0.phase+=0.004; // slow
+  drawGomen0();
+
+  // Substrate
+  updateSubstrate();
+  subOrgs.forEach(o=>{
+    switch(o.type){
+      case'mycelium':drawMycelium(o);break;
+      case'tree':drawTree(o);break;
+      case'hex':drawHex(o);break;
+      case'emitter':drawEmitter(o);break;
+      case'roots':drawRoots(o);break;
+      case'rings':drawRings(o);break;
+    }
+  });
+
+  // Medusa
+  drawMedusa();
+
+  // Surface
+  updateSurface();
+  surfOrgs.forEach(o=>{
+    switch(o.type){
+      case'bloom':drawBloom(o);break;
+      case'school':drawSchool(o);break;
+      case'spiral':drawSpiral(o);break;
+    }
+  });
+}
+
+resize();
+window.addEventListener('resize',resize);
+animate();
+</script>
+</body>
+</html>
