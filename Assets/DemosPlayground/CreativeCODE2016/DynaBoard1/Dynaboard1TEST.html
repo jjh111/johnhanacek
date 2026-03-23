@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Dynaboardv1</title>
+    <link rel="stylesheet" href="./style.css">
+    <script type="text/javascript" src="./dist/paper-full.js"></script>
+    <script type="text/paperscript" canvas="canvas" >
+    var ink;
+    var hitOptions = {
+        segments: true,
+        stroke: true,
+        fill: true,
+        tolerance: 4
+    };
+
+    //The dot
+    var pt = new Path.Circle(new Point(1, 1), 1.5);
+    pt.fillColor = 'black';
+    var dot = new Symbol(pt);
+
+    function onMouseDown(event) {
+        // If we produced a path before, deselect it:
+      if (ink) {
+      path.selected = false;
+     }
+     project.activeLayer.selected = false;
+     new Layer();
+       dot.place(new Point(event.point));
+       // Create a new path and set its stroke color to black:
+      ink = new Path({
+      segments: [event.point],
+      strokeColor: 'black',
+      strokeWidth: 3
+      });
+
+      segment = ink = null;
+      var hitResult = project.hitTest(event.point, hitOptions);
+      if (!hitResult)
+      return;
+
+
+       if (hitResult) {
+           path = hitResult.item;
+           if (hitResult.type == 'segment') {
+               segment = hitResult.segment;
+           } else if (hitResult.type == 'stroke') {
+               var location = hitResult.location;
+               segment = path.insert(location.index + 1, event.point);
+               path.smooth();
+           }
+       }
+       movePath = hitResult.type == 'fill';
+       if (movePath)
+       project.activeLayer.addChild(hitResult.item);
+    }
+
+    //highlight path
+    function onMouseMove(event) {
+        project.activeLayer.selected = false;
+        //event.item.selected = false;
+        if (event.item)
+           event.item.selected = true;
+        }
+
+    // While the user drags the mouse, points are added to the path
+    // at the position of the mouse:
+    function onMouseDrag(event) {
+        path.add(event.point);
+
+    }
+
+    // When the mouse is released, we simplify the path:
+    function onMouseUp(event) {
+          path.simplify([10]);
+    }
+
+    </script>
+</head>
+<body>
+    <canvas id="canvas" resize></canvas>
+</body>
+</html>

@@ -1,0 +1,2485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Design - John Hanacek</title>
+    <meta name="description" content="Design portfolio featuring interactive demos, shape recognition, and visual explorations by John Hanacek">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="./Assets/favicon-jhsigfrmpaper.png">
+
+    <!-- Open Graph / Social Share -->
+    <meta property="og:title" content="Design - John Hanacek">
+    <meta property="og:description" content="Design portfolio featuring interactive demos, shape recognition, and visual explorations">
+    <meta property="og:image" content="https://www.johnhanacek.com/Assets/socialgraph-jhcom.png">
+    <meta property="og:url" content="https://www.johnhanacek.com/design.html">
+    <meta property="og:type" content="website">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Design - John Hanacek">
+    <meta name="twitter:description" content="Design portfolio featuring interactive demos, shape recognition, and visual explorations">
+    <meta name="twitter:image" content="https://www.johnhanacek.com/Assets/socialgraph-jhcom.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Raleway:wght@100;200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./styles/shared.css">
+
+    <!-- Structured Data for AI/Search -->
+    <link rel="alternate" type="application/json" href="./john-hanacek.json" title="Structured data">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        "name": "Design Portfolio - John Hanacek",
+        "description": "Design portfolio featuring interactive demos, shape recognition, and visual explorations",
+        "url": "https://www.johnhanacek.com/design.html",
+        "author": {
+            "@type": "Person",
+            "name": "John Hanacek",
+            "url": "https://www.johnhanacek.com"
+        }
+    }
+    </script>
+
+    <style>
+        /* ===========================================
+           Design Page - Page-Specific Styles
+           Demo container and canvas for blueprint drawing
+        =========================================== */
+
+        /* Demo Container (iframe embed) */
+        .demo-container {
+            margin: var(--space-lg) 0;
+            border: 1px solid rgba(77, 201, 246, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+            background: var(--sea-panel);
+        }
+        .demo-header {
+            background: rgba(0, 20, 40, 0.5);
+            color: var(--text-bright);
+            padding: var(--space-sm) var(--space-md);
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 500;
+            font-size: var(--text-sm);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(77, 201, 246, 0.1);
+        }
+        .demo-header span {
+            font-size: var(--text-sm);
+            opacity: 0.9;
+            font-weight: 400;
+        }
+        .demo-container iframe {
+            width: 100%;
+            height: 640px;
+            border: none;
+            display: block;
+        }
+
+        /* Demo Canvas - Fish Animation */
+        .demo-wrapper {
+            margin: var(--space-lg) 0 var(--space-md);
+        }
+
+        .demo-prompt {
+            text-align: center;
+            margin-bottom: 1rem;
+            font-size: var(--text-base);
+            color: var(--text-primary);
+            font-weight: 400;
+            min-height: 2rem;
+        }
+
+        .demo-prompt .highlight {
+            color: var(--gold);
+            font-weight: 500;
+        }
+
+        .demo-canvas-container {
+            position: relative;
+            background: var(--sea-panel);
+            border-radius: 4px;
+            border: 1px solid rgba(77, 201, 246, 0.1);
+            overflow: hidden;
+        }
+
+        #demoCanvas {
+            display: block;
+            width: 100%;
+            aspect-ratio: 4/3;
+            cursor: crosshair;
+            touch-action: none;
+        }
+
+        #demoCanvas.grabbing {
+            cursor: grabbing;
+        }
+
+        .demo-labels {
+            display: none;
+        }
+
+        .demo-label {
+            display: none;
+        }
+
+        .demo-controls {
+            display: flex;
+            justify-content: center;
+            margin-top: 1rem;
+            gap: 0.75rem;
+        }
+
+        .demo-reset-btn {
+            font-family: inherit;
+            font-size: 0.875rem;
+            font-weight: 500;
+            padding: 0.625rem 1.25rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #1a1a2e;
+            color: white;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .demo-reset-btn.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .demo-reset-btn:hover {
+            background: #2d2d4a;
+        }
+
+        .demo-status {
+            text-align: center;
+            margin-top: 0.75rem;
+            font-size: 0.8125rem;
+            color: #666;
+            min-height: 1.25rem;
+        }
+
+        /* Print: hide demo wrapper (extends shared.css print rules) */
+        @media print {
+            .demo-wrapper { display: none; }
+        }
+
+        /* MetaMedium Diagram - inlined canvas */
+        .metamedium-diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .metamedium-diagram canvas {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 4/2;
+        }
+        .diagram-caption {
+            margin-top: var(--space-sm);
+            text-align: center;
+            font-size: var(--text-sm);
+            color: var(--muted);
+            line-height: 1.5;
+        }
+        .diagram-caption strong { color: var(--text-bright); }
+        .diagram-caption em { color: #10b981; font-style: normal; }
+
+        /* Hero Canvas Controls */
+        .canvas-controls {
+            position: absolute;
+            bottom: 5rem;
+            left: 5rem;
+            z-index: 10;
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+        .canvas-btn {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: rgba(125, 216, 247, 0.6);
+            background: rgba(10, 22, 40, 0.6);
+            border: 1px solid rgba(77, 201, 246, 0.2);
+            padding: 0.4rem 0.75rem;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .canvas-btn:hover {
+            color: rgba(125, 216, 247, 0.9);
+            background: rgba(10, 22, 40, 0.8);
+            border-color: rgba(77, 201, 246, 0.4);
+        }
+        .canvas-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: rgba(125, 216, 247, 0.5);
+            cursor: pointer;
+        }
+        .canvas-toggle input {
+            display: none;
+        }
+        .toggle-switch {
+            width: 28px;
+            height: 14px;
+            background: rgba(10, 22, 40, 0.6);
+            border: 1px solid rgba(77, 201, 246, 0.2);
+            border-radius: 7px;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 8px;
+            height: 8px;
+            background: rgba(125, 216, 247, 0.4);
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+        .canvas-toggle input:checked + .toggle-switch {
+            background: rgba(77, 201, 246, 0.15);
+            border-color: rgba(77, 201, 246, 0.4);
+        }
+        .canvas-toggle input:checked + .toggle-switch::after {
+            left: 16px;
+            background: rgba(125, 216, 247, 0.9);
+            box-shadow: 0 0 6px rgba(77, 201, 246, 0.5);
+        }
+        .canvas-toggle:hover {
+            color: rgba(125, 216, 247, 0.7);
+        }
+    </style>
+</head>
+<body>
+    <!-- Interactive Cursor Spotlight -->
+    <div id="cursorSpotlight"></div>
+
+    <a href="#intro" class="skip-link">Skip to main content</a>
+
+    <nav id="nav" role="navigation" aria-label="Main navigation">
+        <div class="nav-inner">
+            <div class="nav-left">
+                <a href="index.html" class="shape-link" aria-label="Home">
+                    <svg class="shape triangle" viewBox="0 0 40 40"><polygon points="20,8 34,32 6,32"/></svg>
+                    <img class="shape-label shape-label-img" src="./Assets/footer-JHsig.png" alt="JH">
+                </a>
+                <a href="design.html" class="shape-link active" aria-label="Design" aria-current="page">
+                    <svg class="shape rounded-square" viewBox="0 0 40 40"><rect x="6" y="6" width="28" height="28" rx="6"/></svg>
+                    <span class="shape-label">DESIGN</span>
+                </a>
+                <a href="art.html" class="shape-link" aria-label="Art">
+                    <svg class="shape circle" viewBox="0 0 40 40"><circle cx="20" cy="20" r="14"/></svg>
+                    <span class="shape-label">ART</span>
+                </a>
+                <a href="index.html" class="nav-title">John Hanacek</a>
+                <a href="about.html" class="shape-link secondary" aria-label="About">
+                    <svg class="shape diamond" viewBox="0 0 40 40"><polygon points="20,6 34,20 20,34 6,20"/></svg>
+                    <span class="shape-label">ABOUT</span>
+                </a>
+                <a href="services.html" class="shape-link secondary" aria-label="Services">
+                    <svg class="shape star" viewBox="0 0 40 40"><polygon points="20,6 23,16 34,16 25,22 28,34 20,26 12,34 15,22 6,16 17,16"/></svg>
+                    <span class="shape-label">SERVICES</span>
+                </a>
+            </div>
+            <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <ul class="nav-right">
+                <li><a href="#intro">Intro</a></li>
+                <li><a href="#projects">Projects</a></li>
+                <li><a href="#pastwork">Past Work</a></li>
+                <li><a href="#education">Education</a></li>
+                <li><a href="#awards">Awards</a></li>
+                <li><a href="#endorsements">Endorsements</a></li>
+                <li><a href="#services">Services</a></li>
+                <li><a href="#links">More</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <header class="hero" id="top">
+        <!-- Shape Navigation (hero) -->
+        <nav class="shape-nav" aria-label="Page navigation">
+            <a href="index.html" class="shape-link" aria-label="Home">
+                <svg class="shape triangle" viewBox="0 0 40 40"><polygon points="20,8 34,32 6,32"/></svg>
+                <img class="shape-label shape-label-img" src="./Assets/footer-JHsig.png" alt="JH">
+            </a>
+            <a href="design.html" class="shape-link active" aria-label="Design" aria-current="page">
+                <svg class="shape rounded-square" viewBox="0 0 40 40"><rect x="6" y="6" width="28" height="28" rx="6"/></svg>
+                <span class="shape-label">DESIGN</span>
+            </a>
+            <a href="art.html" class="shape-link" aria-label="Art">
+                <svg class="shape circle" viewBox="0 0 40 40"><circle cx="20" cy="20" r="14"/></svg>
+                <span class="shape-label">ART</span>
+            </a>
+        </nav>
+
+        <!-- Interactive Blueprint Canvas -->
+        <canvas id="heroCanvas"></canvas>
+        <div class="hero-hint">
+            <span class="hint-icon">✎</span>
+            <span class="hint-text">draw here</span>
+        </div>
+
+        <!-- Canvas Controls -->
+        <div class="canvas-controls">
+            <button class="canvas-btn" id="clearCanvas">Clear</button>
+            <label class="canvas-toggle">
+                <input type="checkbox" id="toggleLabels" checked>
+                <span class="toggle-switch"></span>
+                Labels
+            </label>
+        </div>
+
+        <div class="hero-content">
+            <h1><span class="jh-sig"><span class="sr-only">JH</span><img src="./Assets/footer-JHsig.png" alt="" aria-hidden="true"></span> <span class="meta">Design</span></h1>
+            <!-- TODO: Finalize tagline and byline copy before launch
+            <p class="tagline">DRAW · RECOGNIZE · EXPLORE</p>
+            <p class="byline"><span class="role">Interactive shape recognition demo</span></p>
+            -->
+        </div>
+        <a href="#intro" class="scroll-indicator" aria-label="Scroll to content">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                <path d="M7 13l5 5 5-5M7 6l5 5 5-5"/>
+            </svg>
+            <span class="scroll-text">goto content</span>
+        </a>
+
+    </header>
+
+    <main>
+        <!-- DESIGN INTRO -->
+        <section id="intro">
+            <h2>Design Portfolio</h2>
+
+            <div class="content-card about">
+                <p>Designing <strong>human-augmenting experiences</strong> specializing in <strong>creative tools</strong>, <strong>scientific tools</strong> & <strong>data exploration</strong> using <strong>AI</strong> & <strong>spatial computing</strong>.</p>
+            </div>
+
+            <div class="grid-2">
+                <div class="content-card">
+                    <h4>Expertise</h4>
+                    <p>Product Design · XR/VR Interface Design · User Experience · Design Systems · AI-Powered Tools · Data Visualization · Workshop Facilitation</p>
+                </div>
+
+                <div class="content-card">
+                    <h4>Tools</h4>
+                    <p>Claude Code · OpenCode · LMStudio · OpenClaw · Figma · Adobe Suite · Blender · Unity · ShapesXR · Obsidian · Coda</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- CURRENT WORK -->
+        <section id="projects">
+            <h2>Current Work</h2>
+
+            <!-- MetaMedium -->
+            <div class="content-card card-featured card-featured-split">
+                <div class="project-info">
+                    <a href="https://jjh111.github.io/MetaMedium/" target="_blank" rel="noopener">
+                        <img class="project-logo" src="./Assets/thumb-metamedium.jpg" alt="MetaMedium" loading="lazy">
+                    </a>
+                    <h4><a href="https://jjh111.github.io/MetaMedium/" target="_blank" rel="noopener">MetaMedium: AI Beyond Chat</a></h4>
+                    <p>A framework for diagrammatic human-AI communication. Exploring how drawing and spatial thinking can augment our interaction with AI systems.</p>
+                    <p class="muted"><a href="https://jjh111.github.io/MetaMedium/" target="_blank" rel="noopener">Interactive whitepaper</a></p>
+                </div>
+                <div class="project-interactive">
+                    <div class="metamedium-diagram">
+                        <canvas id="metamediumCanvas"></canvas>
+                        <div class="diagram-caption">
+                            Both human & AI have <strong>blurry depths</strong>.<br>
+                            The canvas creates the <em>crystallized meeting point</em>.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- JHDesign LLC Client Work -->
+            <div class="content-card card-featured">
+                <div class="umbrella-header">
+                    <h3>JHDesign LLC Client Work 
+                    <p>Design services for founding teams, continuing companies and anyone in between.</p>
+                </div>
+
+                <div class="grid-3">
+                    <!-- Muse x JHDesign -->
+                    <div class="image-card">
+                        <a href="https://www.mycells.bio" target="_blank" rel="noopener">
+                            <img src="./Assets/MusexJH.jpeg" alt="Muse x JHDesign collaboration" loading="lazy">
+                        </a>
+                        <div class="image-info">
+                            <a href="https://www.mycells.bio" target="_blank" rel="noopener">Muse.bio</a>
+                        </div>
+                    </div>
+
+                    <!-- Stealth Project -->
+                    <div class="image-card">
+                        <div class="image-placeholder">
+                            <svg width="100" height="60" viewBox="0 0 100 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M50 10 L80 45 L50 42 L20 45 Z" fill="rgba(77, 201, 246, 0.1)" stroke="var(--cyan)" stroke-width="1"/>
+                                <path d="M50 10 L65 20 L50 42 L35 20 Z" fill="rgba(77, 201, 246, 0.15)"/>
+                            </svg>
+                        </div>
+                        <div class="image-info">Stealth</div>
+                    </div>
+
+                    <!-- New Client CTA -->
+                    <div class="image-card">
+                        <div class="image-placeholder dashed">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(77, 201, 246, 0.4)" stroke-width="1.5">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M12 8v8M8 12h8"/>
+                            </svg>
+                        </div>
+                        <div class="image-info">
+                            <a href="services.html">New Client</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PAST WORK -->
+        <section id="pastwork">
+            <h2>Past Work</h2>
+
+            <!-- XR Reel Video -->
+            <div class="video-embed">
+                <iframe src="https://www.youtube.com/embed/nEdF9OWWrfE?si=o9IvuXZPm675nYAU" title="XR Design Reel" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>
+            </div>
+
+            <!-- Nanome 2: Case Study (Wide) -->
+            <div class="content-card card-featured">
+                 <div class="umbrella-header">
+                    <h3>Nanome: Lead Product Designer<span class="year-badge">2022-2024</span></h3>
+                
+                </div>
+                      <div class="project-content">
+                    <p>Led the complete redesign of Nanome's molecular visualization platform for VR and Mixed Reality. Worked closely with scientists and researchers to create intuitive spatial interfaces for drug discovery.</p>
+                    <h4><a href="https://spatialandimmersivedesign.substack.com/p/xr-product-design-case-study-nanome" target="_blank" rel="noopener">Nanome 2: XR Product Design Case Study</a> </h4>
+                       <div class="grid-1">
+                    <div class="image-card">
+                        <a href="https://spatialandimmersivedesign.substack.com/p/xr-product-design-case-study-nanome" target="_blank" rel="noopener">
+                        <img src="./Assets/nanome2casestudy.webp" alt="Nanome 2 Redesign Case Study" loading="lazy">
+                        </a>
+                         
+                    </div>
+                  
+                   
+                </div>
+               
+
+            </div>
+            </div>
+
+            <!-- BADVR/AROC -->
+            <div class="content-card card-featured">
+                <div class="umbrella-header">
+                    <h3>BadVR: Immersive UI/UX Design <span class="year-badge">2021 - 2022</span></h3>
+                    <p>AR HUD sensor data visualization systems prototypes and handoff assets.</p>
+                </div>
+                <div class="grid-3">
+                    <div class="image-card">
+                        <img src="./Assets/BadVR-2021-06-21 AROC HUD notify v1.5 in view sub draft.gif" alt="AROC AR HUD notification design" loading="lazy">
+                        <div class="image-info">HUD Notification</div>
+                    </div>
+                    <div class="image-card">
+                        <img src="./Assets/BadVR 20210616181741853.png" alt="AROC sensor visualization" loading="lazy">
+                        <div class="image-info">Sensor Vis</div>
+                    </div>
+                    <div class="image-card">
+                        <img src="./Assets/badvr-munichre-manual.png" alt="MunichRE Demo Manual" loading="lazy">
+                        <div class="image-info">MunichRE Manual</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AvatarMEDIC Umbrella -->
+            <div class="content-card card-featured">
+                <div class="umbrella-header">
+                    <h3><a href="https://www.avatarmedic.com" target="_blank" rel="noopener">AvatarMEDIC</a> <span class="year-badge">2019–2021</span></h3>
+                    <p>Founded and led product concept design, focusing on XR telepresence enabling remote medical training and robotic surgery collaboration. Founder Institute SF 2020 graduate as CEO.</p>
+                </div>
+
+                <div class="grid-3">
+                    <!-- A1R -->
+                    <div class="video-card">
+                        <div class="video-embed">
+                            <iframe src="https://www.youtube.com/embed/yHDVc6-nAxQ" title="A1R Demo" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>
+                        </div>
+                        <div class="video-info">
+                            <h4><a href="https://www.chariotchallenge.com/ar-winners/" target="_blank" rel="noopener">A1R: Augmented First Responder</a></h4>
+                            <p>AR HUD for first responders. NIST CHARIoT Phase 2 Winner.</p>
+                            <span class="platform-badge">Magic Leap · 2021</span>
+                        </div>
+                    </div>
+
+                    <!-- HoloTRIAGE -->
+                    <div class="video-card">
+                        <div class="video-embed">
+                            <iframe src="https://www.youtube.com/embed/FtbAL-kmIJs" title="HoloTRIAGE Demo" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>
+                        </div>
+                        <div class="video-info">
+                            <h4><a href="https://www.avatarmedic.com/post/winner-of-microsoft-reactor-hackathon" target="_blank" rel="noopener">HoloTRIAGE</a></h4>
+                            <p>XR medical triage training. Microsoft Reactor Hackathon Winner.</p>
+                            <span class="platform-badge">HoloLens 2 · 2020</span>
+                        </div>
+                    </div>
+
+                    <!-- Robot Digital Twin -->
+                    <div class="video-card">
+                        <div class="video-embed">
+                            <iframe src="https://www.youtube.com/embed/gz5KL8uXK2A" title="Robot Digital Twin Demo" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>
+                        </div>
+                        <div class="video-info">
+                            <h4><a href="https://spatialandimmersivedesign.substack.com/" target="_blank" rel="noopener">Robot Digital Twin Control</a></h4>
+                            <p>Digital twin control of Haddington Dynamics robot arm via XR.</p>
+                            <span class="platform-badge">HoloLens 2 · 2021</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- EDUCATION & AWARDS (Side by Side) -->
+        <div class="grid-2" id="credentials">
+         
+
+            <!-- AWARDS -->
+            <section id="awards">
+                <h2>Awards</h2>
+                <div class="content-card card-standard">
+                    <h4>R&D Innovation Award <span class="year-badge">2022</span></h4>
+                    <p><strong>Aerospace Medical Association</strong> — Programming robot arm via XR digital twin</p>
+                    <div class="sketchfab-embed-wrapper"> <iframe title="Innovation Award" frameborder="0" allowfullscreen mozallowfullscreen="true" webkitallowfullscreen="true" allow="autoplay; fullscreen; xr-spatial-tracking" xr-spatial-tracking execution-while-out-of-viewport execution-while-not-rendered web-share src="https://sketchfab.com/models/09628e843470449a92e7ff252abf3cc8/embed?ui_theme=dark" loading="lazy"> </iframe> </div>
+                </div>
+
+
+                <div class="content-card card-standard">
+                    <h4>Founder Institute Graduate <span class="year-badge">2020</span></h4>
+                    <p>San Francisco cohort as CEO of <strong><a href="https://www.avatarmedic.com" target="_blank" rel="noopener">AvatarMEDIC</a></strong></p>
+                </div>
+
+                 <div class="content-card card-standard">
+                    <h4>"Most Meta" Award <span class="year-badge">2016</span></h4>
+                    <p>Awarded "Black Box" trophy by Georgetown CCT peers</p>
+                    <div class="sketchfab-embed-wrapper"> <iframe title="BlackBox Award - Most Meta" frameborder="0" allowfullscreen mozallowfullscreen="true" webkitallowfullscreen="true" allow="autoplay; fullscreen; xr-spatial-tracking" xr-spatial-tracking execution-while-out-of-viewport execution-while-not-rendered web-share src="https://sketchfab.com/models/181721f63e98429db5961ee738e363db/embed?ui_theme=dark" loading="lazy"> </iframe> </div>
+                </div>
+               
+            </section>
+
+               <!-- EDUCATION -->
+            <section id="education">
+                <h2>Education</h2>
+
+                <div class="content-card card-standard" data-num="MA">
+                    <h4>MA Communication, Culture & Technology <span class="year-badge">2014-2016</span></h4>
+                    <p><strong>Georgetown University</strong></p>
+                    <ul>
+                        <li>Thesis <strong><a href="https://jjh111.github.io/MetaMedium/" target="_blank" rel="noopener">"As We May Sketch"</a></strong> — AI-enabled drawing for education, now <strong>MetaMedium</strong></li>
+                        <li>Published <strong><a href="https://www.researchgate.net/publication/324877076_Capturing_Tracing_and_Visualizing_the_Spread_of_Technology-Enhanced_Instructional_Strategies" target="_blank" rel="noopener">"Capturing, Tracing and Visualizing the Spread of Technology-Enhanced Instructional Strategies"</a></strong> at <a href="https://library.iated.org/view/DAVIS2015CAP?utm_source=coda&utm_medium=iframely" target="_blank" rel="noopener" >EduLearn 2015</a><p>Interviews, Data Coding, Social Network Research & Analysis</p></li>
+                    </ul>
+                </div>
+                <div class="content-card card-standard" data-num="BA">
+                    <h4>BA Political Science, Minor Neuroscience <span class="year-badge">2008 - 2012</span></h4>
+                    <p><strong>UC San Diego</strong></p>
+                    <ul>
+                        <li>Thesis <strong><a href="https://johnhanacek.substack.com/p/remote-controlled-warfare" target="_blank" rel="noopener">"Can Modern War Be Just?"</a></strong> — Drone/RPA usage in warfare</li>
+                    </ul>
+                </div>
+            </section>
+        </div>
+
+        <!-- ENDORSEMENTS -->
+        <section id="endorsements">
+            <h2>What People Say</h2>
+
+            <div class="columns-2">
+               
+
+                <div class="content-card endorsement short">
+                    <p>"Talented and very experienced designer!"</p>
+                    <cite><strong><a href="https://www.linkedin.com/in/ipetryaevskaya/" target="_blank" rel="noopener">Inga Petryaevskaya</a></strong>, CEO <a href="https://www.shapesxr.com" target="_blank" rel="noopener">ShapesXR</a></cite>
+                </div>
+
+                 <div class="content-card endorsement">
+                    <p>"It was a tremendous pleasure and honor to work on the <a href="https://spatialandimmersivedesign.substack.com/p/xr-product-design-case-study-nanome" target="_blank" rel="noopener">Nanome 2 Redesign</a> with John. He's not only a true Visionary, but also an amazing listener with incredible intuition. I've never seen anyone able to so readily understand scientists, easily communicate with them, then design an experience they can scarcely imagine, but recognize as what they wanted (even Needed) as soon as they step into it."</p>
+                    <cite><strong><a href="https://www.linkedin.com/in/sheila-zipfel/" target="_blank" rel="noopener">Sheila Zipfel</a></strong>, Nanome Product Manager, Medicinal Chemist</cite>
+                </div>
+
+                <div class="content-card endorsement">
+                    <p>"John recently led a customer journey mapping workshop for my team, and it was an outstanding experience from start to finish. My team and I came away with a deeper understanding of our customers and a clear appreciation for the impact of product design from the very start of a project."</p>
+                    <cite><strong><a href="https://www.linkedin.com/in/tommy-kronmark/" target="_blank" rel="noopener">Tommy Kronmark</a></strong>, COO <a href="https://www.mycells.bio" target="_blank" rel="noopener">Muse.bio</a></cite>
+                </div>
+
+               
+ <div class="content-card endorsement short">
+                    <p>"I've never known someone who practices design thinking as well as John."</p>
+                    <cite><strong><a href="https://dabenji.art/" target="_blank" rel="noopener">Ben Reed</a></strong>, Illustrator and Designer</cite>
+                </div>
+               
+
+                <div class="content-card endorsement">
+                    <p>"John's ability to stay ahead of rapid industry shifts is evident not only in his consulting work but also in his thought leadership. I highly recommend John for roles requiring design leadership, systems thinking, and future-focused innovation."</p>
+                    <cite><strong><a href="https://www.linkedin.com/in/hurriyetok/" target="_blank" rel="noopener">Dr. Hurriyet Ok</a></strong>, Professor <a href="https://cs.engineering.gwu.edu/celebrating-xrperience-gw" target="_blank" rel="noopener">George Washington University</a></cite>
+                </div>
+ 
+                <div class="content-card endorsement">
+                    <p>"John is an extraordinary person, a brilliant leader, possessing multidisciplinary skills, and a deep knowledge into his craft and profession. He will always strive to give his best and to achieve the mission and objectives no matter how challenging the obstacles."</p>
+                    <cite><strong>Dr. Susan Jewell</strong>, Co-founder AvatarMEDIC</cite>
+                </div>
+                 <div class="content-card endorsement">
+                    <p>"My choice for the most plausible vision of a future I desire goes to John Hanacek's scenario. I think I'd like to live there, and I think it is plausible in 100 years. My $100 goes to him."</p>
+                    <cite><strong><a href="https://kk.org/thetechnium/a-desirable-future-haiku/" target="_blank" rel="noopener">Kevin Kelly</a></strong>, Futurist, Founder of Wired Magazine</cite>
+                </div>
+               
+            </div>
+        </section>
+
+        <!-- SERVICES -->
+        <section id="services">
+            <h2>Services & Consulting</h2>
+
+            <div class="content-card">
+                <p>Available for founding designer engagements, design engineering, AI product design, and XR prototyping. I ship 0→1 products through design thinking and hands-on technical implementation.</p>
+                <p><strong><a href="services.html">View Full Services →</a></strong></p>
+                <p><strong>Contact:</strong> <a href="mailto:hi@johnhanacek.com">hi@johnhanacek.com</a></p>
+            </div>
+        </section>
+
+        <!-- MORE -->
+        <section id="links">
+            <h2>More</h2>
+            <div class="grid-2">
+                <div class="content-card">
+                    <h4><a href="about.html">About & Experience</a></h4>
+                    <p>Full bio, work history, education, and areas of expertise</p>
+                </div>
+                <div class="content-card">
+                    <h4><a href="https://spatialandimmersivedesign.substack.com/" target="_blank" rel="noopener">Spatial & Immersive Design Blog</a></h4>
+                    <p>Tutorials and meditations on spatial computing and immersive design — VR, AR, MR and XR.</p>
+                </div>
+                <div class="content-card">
+                    <h4><a href="https://johnhanacek.substack.com" target="_blank" rel="noopener">Personal Blog</a></h4>
+                    <p>Tech, strategy, research and broader explorations beyond design.</p>
+                </div>
+                <div class="content-card">
+                    <h4><a href="https://www.linkedin.com/in/johnhanacek/" target="_blank" rel="noopener">LinkedIn</a></h4>
+                    <h4><a href="https://jhanacek.net/resume-john-hanacek-15" target="_blank" rel="noopener">Resume</a></h4>
+                    <h4><a href="https://github.com/jjh111" target="_blank" rel="noopener">Github</a></h4>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer>
+        <p class="footer-title">John Hanacek</p>
+        <p class="footer-subtitle">Founding Designer · Design Engineer · Product Designer</p>
+        <p class="footer-copyright">© 2026 John Hanacek · JHDesign LLC </p>
+        <p class="footer-signature"><img src="./Assets/footer-JHsig.png" alt="John Hanacek signature" loading="lazy"></p>
+        <p class="version">Portfolio v1.0 · Updated January 2026 · Made with Claude Code</p>
+    </footer>
+
+    <script>
+        // Navigation scroll visibility - show after scrolling past hero
+        const nav = document.getElementById('nav');
+        const hero = document.querySelector('.hero');
+
+        function updateNavVisibility() {
+            const heroBottom = hero.offsetTop + hero.offsetHeight - 60;
+            if (window.scrollY > heroBottom) {
+                nav.classList.add('visible');
+            } else {
+                nav.classList.remove('visible');
+            }
+        }
+
+        window.addEventListener('scroll', updateNavVisibility);
+        window.addEventListener('resize', updateNavVisibility);
+        updateNavVisibility();
+
+        // Mobile navigation toggle
+        const navToggle = document.querySelector('.nav-toggle');
+        const navMenu = document.querySelector('nav ul');
+
+        navToggle.addEventListener('click', function() {
+            const isExpanded = this.getAttribute('aria-expanded') === 'true';
+            this.setAttribute('aria-expanded', !isExpanded);
+            this.classList.toggle('active');
+            navMenu.classList.toggle('open');
+        });
+
+        // Close menu when clicking a link
+        navMenu.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+                navToggle.setAttribute('aria-expanded', 'false');
+                navToggle.classList.remove('active');
+                navMenu.classList.remove('open');
+            });
+        });
+    </script>
+
+    <!-- Hero Canvas Drawing Interaction -->
+    <script>
+        const canvas = document.getElementById('heroCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // ============================================
+        // Unified Timing Constants (in ms)
+        // ============================================
+        const TIMING = {
+            // Raw strokes - fade out (non-recognized strokes disappear)
+            strokeHold: 1500,       // Time before stroke starts fading
+            strokeFade: 2000,       // Fade duration for strokes
+
+            // Recognized shapes - PERSISTENT MODE
+            morphDuration: 400,     // Shape morph animation
+            shapeHold: Infinity,    // Shapes persist until cleared
+            shapeFade: 0,           // No fade
+            maxShapes: 20,          // Keep last N shapes
+            
+            // Whisper labels
+            labelFadeIn: 200,       // Label fade in
+            labelHold: 2500,        // Label at full opacity  
+            labelFade: 800,         // Label fade out
+            
+            // Relationships & intersections
+            relationshipFade: 1200, // Relationship indicator fade
+            
+            // Glyph reaction
+            glyphActive: 2500,      // How long glyphs react after shape
+        };
+        
+        // Computed totals
+        TIMING.strokeTotal = TIMING.strokeHold + TIMING.strokeFade;
+        TIMING.shapeTotal = TIMING.shapeHold + TIMING.shapeFade;
+        TIMING.labelTotal = TIMING.labelFadeIn + TIMING.labelHold + TIMING.labelFade;
+        
+        let isDrawing = false;
+        let showLabels = true;      // Toggle for semantic labels
+        let strokes = [];           // Raw strokes (fade out)
+        let recognizedShapes = [];  // Completed shapes (persist longer)
+        let whisperLabels = [];     // Floating labels
+        let rawIntersections = [];  // Intersections between raw strokes
+        let currentStroke = null;
+        let glyphRotation = 0;      // For reactive glyphs
+        let glyphPulse = 0;
+        let lastShapeTime = 0;
+        let ripples = [];           // Tap ripple effects
+        let particles = [];         // Recognition particle bursts
+        let ambientParticles = [];  // Floating ambient particles
+        
+        // Deep Sea Terminal color palette
+        const colors = {
+            bg: '#020a12',
+            grid: 'rgba(77, 201, 246, 0.06)',
+            gridAccent: 'rgba(77, 201, 246, 0.12)',
+            stroke: 'rgba(77, 201, 246, 0.85)',
+            strokeComplete: 'rgba(212, 175, 55, 0.9)',
+            ghost: 'rgba(77, 201, 246, 0.2)',
+            glyph: 'rgba(77, 201, 246, 0.25)',
+            glyphActive: 'rgba(212, 175, 55, 0.6)',
+            cursor: 'rgba(212, 175, 55, 0.85)',
+            glow: 'rgba(77, 201, 246, 0.4)',
+            label: 'rgba(122, 229, 130, 0.8)'
+        };
+
+        // ============================================
+        // Helper Functions
+        // ============================================
+        function getBounds(points) {
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            points.forEach(p => {
+                minX = Math.min(minX, p.x);
+                minY = Math.min(minY, p.y);
+                maxX = Math.max(maxX, p.x);
+                maxY = Math.max(maxY, p.y);
+            });
+            return { minX, minY, maxX, maxY };
+        }
+
+        function distance(a, b) {
+            return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+        }
+
+        function getCircleScore(points, center, radius) {
+            let totalError = 0;
+            points.forEach(p => {
+                const dist = distance(p, center);
+                totalError += Math.abs(dist - radius) / radius;
+            });
+            return Math.max(0, 1 - (totalError / points.length));
+        }
+
+        function getRectScore(points, bounds) {
+            const width = bounds.maxX - bounds.minX;
+            const height = bounds.maxY - bounds.minY;
+            let cornerCount = 0;
+            const corners = [
+                { x: bounds.minX, y: bounds.minY },
+                { x: bounds.maxX, y: bounds.minY },
+                { x: bounds.maxX, y: bounds.maxY },
+                { x: bounds.minX, y: bounds.maxY }
+            ];
+            const threshold = Math.max(width, height) * 0.15;
+            corners.forEach(corner => {
+                if (points.some(p => distance(p, corner) < threshold)) cornerCount++;
+            });
+            return cornerCount / 4;
+        }
+
+        function getTriangleScore(points, bounds) {
+            // Improved triangle detection
+            const width = bounds.maxX - bounds.minX;
+            const height = bounds.maxY - bounds.minY;
+            const cx = (bounds.minX + bounds.maxX) / 2;
+            const cy = (bounds.minY + bounds.maxY) / 2;
+
+            // Find the 3 most extreme points (potential vertices)
+            let topPoint = points[0], bottomLeft = points[0], bottomRight = points[0];
+
+            points.forEach(p => {
+                if (p.y < topPoint.y) topPoint = p;
+                if (p.y > bottomLeft.y || (p.y === bottomLeft.y && p.x < bottomLeft.x)) bottomLeft = p;
+                if (p.y > bottomRight.y || (p.y === bottomRight.y && p.x > bottomRight.x)) bottomRight = p;
+            });
+
+            // Check for roughly 3 direction changes (corners)
+            let turns = 0;
+            const step = Math.max(1, Math.floor(points.length / 20));
+            for (let i = step; i < points.length - step; i += step) {
+                const prev = points[i - step];
+                const curr = points[i];
+                const next = points[Math.min(i + step, points.length - 1)];
+                const angle1 = Math.atan2(curr.y - prev.y, curr.x - prev.x);
+                const angle2 = Math.atan2(next.y - curr.y, next.x - curr.x);
+                let diff = Math.abs(angle2 - angle1);
+                if (diff > Math.PI) diff = 2 * Math.PI - diff;
+                if (diff > 0.4 && diff < 2.8) turns++;
+            }
+
+            // Aspect ratio check - triangles shouldn't be too thin
+            const aspect = Math.min(width, height) / Math.max(width, height);
+            const aspectOk = aspect > 0.3;
+
+            if (turns >= 2 && turns <= 6 && aspectOk) {
+                return 0.65;
+            }
+            return 0.25;
+        }
+
+        function getLineScore(points) {
+            if (points.length < 3) return 0;
+            const start = points[0];
+            const end = points[points.length - 1];
+            const lineLen = distance(start, end);
+            if (lineLen < 30) return 0;
+
+            let totalDev = 0;
+            points.forEach(p => {
+                const t = Math.max(0, Math.min(1,
+                    ((p.x - start.x) * (end.x - start.x) + (p.y - start.y) * (end.y - start.y)) / (lineLen * lineLen)
+                ));
+                const proj = { x: start.x + t * (end.x - start.x), y: start.y + t * (end.y - start.y) };
+                totalDev += distance(p, proj);
+            });
+            return Math.max(0, 1 - (totalDev / points.length) / (lineLen * 0.1));
+        }
+
+        function detectArrowHead(points) {
+            if (points.length < 10) return false;
+            const last10 = points.slice(-10);
+            const end = points[points.length - 1];
+            const beforeEnd = points[Math.max(0, points.length - 8)];
+            const mainDir = Math.atan2(end.y - beforeEnd.y, end.x - beforeEnd.x);
+
+            // Check for splaying at end
+            let hasSplay = false;
+            for (let i = 1; i < last10.length - 1; i++) {
+                const dir = Math.atan2(last10[i].y - end.y, last10[i].x - end.x);
+                const diff = Math.abs(dir - mainDir);
+                if (diff > 0.4 && diff < 2.7) hasSplay = true;
+            }
+            return hasSplay;
+        }
+
+        // ============================================
+        // Shape Detection
+        // ============================================
+        function detectShape(points) {
+            if (points.length < 5) return null;
+
+            const bounds = getBounds(points);
+            const center = { x: (bounds.minX + bounds.maxX) / 2, y: (bounds.minY + bounds.maxY) / 2 };
+            const width = bounds.maxX - bounds.minX;
+            const height = bounds.maxY - bounds.minY;
+            const size = Math.max(width, height);
+
+            if (size < 20) return null; // Too small
+
+            // Check if closed (start near end)
+            const start = points[0];
+            const end = points[points.length - 1];
+            const closedThreshold = size * 0.25;
+            const isClosed = distance(start, end) < closedThreshold;
+
+            if (isClosed) {
+                // Analyze closed shape
+                const circleScore = getCircleScore(points, center, size / 2);
+                const rectScore = getRectScore(points, bounds);
+                const triScore = getTriangleScore(points, bounds);
+
+                if (circleScore > 0.7 && circleScore > rectScore && circleScore > triScore) {
+                    return { type: 'circle', center, radius: size / 2, confidence: circleScore };
+                }
+                if (rectScore > 0.6 && rectScore > triScore) {
+                    return { type: 'rectangle', bounds, center, confidence: rectScore };
+                }
+                if (triScore > 0.5) {
+                    return { type: 'triangle', bounds, center, confidence: triScore };
+                }
+            } else {
+                // Open shape - line or arrow
+                const lineScore = getLineScore(points);
+                if (lineScore > 0.7) {
+                    const hasArrow = detectArrowHead(points);
+                    return {
+                        type: hasArrow ? 'arrow' : 'line',
+                        start, end, center,
+                        confidence: lineScore
+                    };
+                }
+            }
+
+            return null;
+        }
+        
+        // ============================================
+        // Generate Ideal Shape Points
+        // ============================================
+        function generateIdealShape(shape, numPoints = 60) {
+            const points = [];
+            
+            if (shape.type === 'circle') {
+                for (let i = 0; i <= numPoints; i++) {
+                    const angle = (i / numPoints) * Math.PI * 2;
+                    points.push({
+                        x: shape.center.x + Math.cos(angle) * shape.radius,
+                        y: shape.center.y + Math.sin(angle) * shape.radius
+                    });
+                }
+            } else if (shape.type === 'rectangle') {
+                const b = shape.bounds;
+                const corners = [
+                    { x: b.minX, y: b.minY }, { x: b.maxX, y: b.minY },
+                    { x: b.maxX, y: b.maxY }, { x: b.minX, y: b.maxY },
+                    { x: b.minX, y: b.minY }
+                ];
+                const perSide = Math.floor(numPoints / 4);
+                for (let s = 0; s < 4; s++) {
+                    for (let i = 0; i < perSide; i++) {
+                        const t = i / perSide;
+                        points.push({
+                            x: corners[s].x + t * (corners[s + 1].x - corners[s].x),
+                            y: corners[s].y + t * (corners[s + 1].y - corners[s].y)
+                        });
+                    }
+                }
+            } else if (shape.type === 'triangle') {
+                const b = shape.bounds;
+                const cx = (b.minX + b.maxX) / 2;
+                const triPoints = [
+                    { x: cx, y: b.minY },
+                    { x: b.maxX, y: b.maxY },
+                    { x: b.minX, y: b.maxY },
+                    { x: cx, y: b.minY }
+                ];
+                const perSide = Math.floor(numPoints / 3);
+                for (let s = 0; s < 3; s++) {
+                    for (let i = 0; i < perSide; i++) {
+                        const t = i / perSide;
+                        points.push({
+                            x: triPoints[s].x + t * (triPoints[s + 1].x - triPoints[s].x),
+                            y: triPoints[s].y + t * (triPoints[s + 1].y - triPoints[s].y)
+                        });
+                    }
+                }
+            } else if (shape.type === 'line' || shape.type === 'arrow') {
+                for (let i = 0; i <= numPoints; i++) {
+                    const t = i / numPoints;
+                    points.push({
+                        x: shape.start.x + t * (shape.end.x - shape.start.x),
+                        y: shape.start.y + t * (shape.end.y - shape.start.y)
+                    });
+                }
+                if (shape.type === 'arrow') {
+                    const angle = Math.atan2(shape.end.y - shape.start.y, shape.end.x - shape.start.x);
+                    const headLen = 15;
+                    points.push({ x: shape.end.x - headLen * Math.cos(angle - 0.4), y: shape.end.y - headLen * Math.sin(angle - 0.4) });
+                    points.push(shape.end);
+                    points.push({ x: shape.end.x - headLen * Math.cos(angle + 0.4), y: shape.end.y - headLen * Math.sin(angle + 0.4) });
+                }
+            } else if (shape.type === 'dot') {
+                // Dot is just a single point
+                points.push(shape.center);
+            }
+            
+            return points;
+        }
+        
+        // ============================================
+        // Relationship Detection
+        // ============================================
+        function detectRelationships() {
+            const relationships = [];
+            const shapes = recognizedShapes.filter(s => Date.now() - s.createdAt < TIMING.shapeTotal);
+            
+            for (let i = 0; i < shapes.length; i++) {
+                for (let j = i + 1; j < shapes.length; j++) {
+                    const a = shapes[i];
+                    const b = shapes[j];
+                    
+                    const rel = analyzeRelationship(a, b);
+                    if (rel) {
+                        relationships.push({
+                            shapeA: a,
+                            shapeB: b,
+                            ...rel
+                        });
+                    }
+                }
+            }
+            return relationships;
+        }
+        
+        function analyzeRelationship(a, b) {
+            const dist = distance(a.center, b.center);
+            const aSize = getShapeSize(a);
+            const bSize = getShapeSize(b);
+            const combinedSize = (aSize + bSize) / 2;
+            
+            // Lines don't "contain" things - skip containment check for lines
+            const aIsLine = a.type === 'line' || a.type === 'arrow';
+            const bIsLine = b.type === 'line' || b.type === 'arrow';
+            
+            // Check containment (only for closed shapes)
+            if (!aIsLine && !bIsLine && dist < Math.abs(aSize - bSize) * 0.5) {
+                const container = aSize > bSize ? a : b;
+                const contained = aSize > bSize ? b : a;
+                return { type: 'contains', container, contained, dist };
+            }
+            
+            // Check intersection/overlap - always check for lines
+            if (aIsLine || bIsLine || dist < combinedSize * 0.9) {
+                const intersections = findIntersectionPoints(a, b);
+                if (intersections.length > 0) {
+                    return { type: 'intersects', intersections, dist };
+                }
+                if (!aIsLine && !bIsLine) {
+                    return { type: 'overlaps', dist };
+                }
+            }
+            
+            // Check adjacency (close but not overlapping)
+            if (dist < combinedSize * 1.5) {
+                return { type: 'adjacent', dist };
+            }
+            
+            // Check alignment
+            const dx = Math.abs(a.center.x - b.center.x);
+            const dy = Math.abs(a.center.y - b.center.y);
+            if (dx < 15) return { type: 'aligned-vertical', dist };
+            if (dy < 15) return { type: 'aligned-horizontal', dist };
+            
+            return null;
+        }
+        
+        function getShapeSize(shape) {
+            if (shape.type === 'circle') return shape.radius * 2;
+            if (shape.type === 'dot') return 12; // Small fixed size for dots
+            if (shape.bounds) {
+                return Math.max(shape.bounds.maxX - shape.bounds.minX, shape.bounds.maxY - shape.bounds.minY);
+            }
+            if (shape.start && shape.end) {
+                return distance(shape.start, shape.end);
+            }
+            return 50;
+        }
+        
+        function findIntersectionPoints(a, b) {
+            const points = [];
+            
+            // Special case: two circles - use geometric calculation
+            if (a.type === 'circle' && b.type === 'circle') {
+                const d = distance(a.center, b.center);
+                const r1 = a.radius;
+                const r2 = b.radius;
+                
+                // Check if circles actually intersect
+                if (d < r1 + r2 && d > Math.abs(r1 - r2)) {
+                    // Calculate intersection points
+                    const a2 = (r1 * r1 - r2 * r2 + d * d) / (2 * d);
+                    const h = Math.sqrt(Math.max(0, r1 * r1 - a2 * a2));
+                    
+                    const px = a.center.x + a2 * (b.center.x - a.center.x) / d;
+                    const py = a.center.y + a2 * (b.center.y - a.center.y) / d;
+                    
+                    const dx = h * (b.center.y - a.center.y) / d;
+                    const dy = h * (b.center.x - a.center.x) / d;
+                    
+                    points.push({ x: px + dx, y: py - dy });
+                    if (h > 1) { // Two distinct points
+                        points.push({ x: px - dx, y: py + dy });
+                    }
+                }
+                return points;
+            }
+            
+            // General case: check line segment intersections
+            const aPoints = a.idealPoints || [];
+            const bPoints = b.idealPoints || [];
+            
+            if (aPoints.length < 4 || bPoints.length < 4) return points;
+            
+            const stepA = Math.max(1, Math.floor(aPoints.length / 24));
+            const stepB = Math.max(1, Math.floor(bPoints.length / 24));
+            
+            for (let i = 0; i < aPoints.length - stepA; i += stepA) {
+                const a1 = aPoints[i];
+                const a2 = aPoints[i + stepA];
+                
+                for (let j = 0; j < bPoints.length - stepB; j += stepB) {
+                    const b1 = bPoints[j];
+                    const b2 = bPoints[j + stepB];
+                    
+                    const intersection = lineIntersection(a1, a2, b1, b2);
+                    if (intersection) {
+                        const tooClose = points.some(p => distance(p, intersection) < 15);
+                        if (!tooClose) points.push(intersection);
+                    }
+                }
+            }
+            return points.slice(0, 4);
+        }
+        
+        function lineIntersection(p1, p2, p3, p4) {
+            const d = (p1.x - p2.x) * (p3.y - p4.y) - (p1.y - p2.y) * (p3.x - p4.x);
+            if (Math.abs(d) < 0.001) return null;
+            
+            const t = ((p1.x - p3.x) * (p3.y - p4.y) - (p1.y - p3.y) * (p3.x - p4.x)) / d;
+            const u = -((p1.x - p2.x) * (p1.y - p3.y) - (p1.y - p2.y) * (p1.x - p3.x)) / d;
+            
+            if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
+                return {
+                    x: p1.x + t * (p2.x - p1.x),
+                    y: p1.y + t * (p2.y - p1.y)
+                };
+            }
+            return null;
+        }
+        
+        function drawRelationships() {
+            const relationships = detectRelationships();
+            const now = Date.now();
+            
+            relationships.forEach(rel => {
+                const a = rel.shapeA;
+                const b = rel.shapeB;
+                const age = Math.max(now - a.createdAt, now - b.createdAt);
+                let opacity = 1;
+                // Fade with the shapes
+                if (age > TIMING.shapeHold) {
+                    opacity = 1 - ((age - TIMING.shapeHold) / TIMING.relationshipFade);
+                }
+                if (opacity <= 0) return;
+                
+                // Ease out for smoother fade
+                const easedOpacity = opacity * opacity;
+
+                // Draw connection line (only if labels are shown)
+                if (showLabels) {
+                    ctx.strokeStyle = `rgba(251, 191, 36, ${0.4 * easedOpacity})`; // Warm yellow
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash([4, 4]);
+                    ctx.beginPath();
+                    ctx.moveTo(a.center.x, a.center.y);
+                    ctx.lineTo(b.center.x, b.center.y);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+
+                // Draw relationship indicator at midpoint
+                const midX = (a.center.x + b.center.x) / 2;
+                const midY = (a.center.y + b.center.y) / 2;
+                
+                // Relationship-specific visuals
+                if (rel.type === 'intersects' && rel.intersections) {
+                    // Draw glowing intersection points
+                    rel.intersections.forEach(pt => {
+                        ctx.shadowColor = 'rgba(251, 191, 36, 0.8)';
+                        ctx.shadowBlur = 12 * easedOpacity;
+                        ctx.fillStyle = `rgba(251, 191, 36, ${0.9 * easedOpacity})`;
+                        ctx.beginPath();
+                        ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        // Outer ring
+                        ctx.strokeStyle = `rgba(251, 191, 36, ${0.5 * easedOpacity})`;
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.arc(pt.x, pt.y, 8, 0, Math.PI * 2);
+                        ctx.stroke();
+                        ctx.shadowBlur = 0;
+                    });
+                    
+                    // Add label near first intersection
+                    if (showLabels && rel.intersections.length > 0) {
+                        const pt = rel.intersections[0];
+                        ctx.font = '500 10px "Raleway", sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillStyle = `rgba(251, 191, 36, ${0.9 * easedOpacity})`;
+                        ctx.fillText('intersects', pt.x, pt.y - 16);
+                    }
+                }
+                
+                if (rel.type === 'contains' && showLabels) {
+                    // Draw containment brackets (only if labels are shown)
+                    ctx.strokeStyle = `rgba(74, 222, 128, ${0.5 * easedOpacity})`; // Green
+                    ctx.lineWidth = 2;
+                    const r = getShapeSize(rel.container) / 2 + 8;
+                    ctx.beginPath();
+                    ctx.arc(rel.container.center.x, rel.container.center.y, r, -0.3, 0.3);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(rel.container.center.x, rel.container.center.y, r, Math.PI - 0.3, Math.PI + 0.3);
+                    ctx.stroke();
+
+                    // Add label
+                    ctx.font = '500 10px "Raleway", sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillStyle = `rgba(74, 222, 128, ${0.8 * easedOpacity})`;
+                    ctx.fillText('⊃ contains', rel.container.center.x, rel.container.center.y - r - 8);
+                }
+                
+                if (rel.type === 'adjacent' && showLabels) {
+                    // Draw proximity indicator (only if labels are shown)
+                    ctx.fillStyle = `rgba(147, 197, 253, ${0.6 * easedOpacity})`;
+                    ctx.beginPath();
+                    ctx.arc(midX, midY, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                if ((rel.type === 'aligned-vertical' || rel.type === 'aligned-horizontal') && showLabels) {
+                    // Draw alignment guide (only if labels are shown)
+                    ctx.strokeStyle = `rgba(167, 139, 250, ${0.4 * easedOpacity})`; // Purple
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash([2, 4]);
+                    ctx.beginPath();
+                    if (rel.type === 'aligned-vertical') {
+                        ctx.moveTo(a.center.x, Math.min(a.center.y, b.center.y) - 20);
+                        ctx.lineTo(a.center.x, Math.max(a.center.y, b.center.y) + 20);
+                    } else {
+                        ctx.moveTo(Math.min(a.center.x, b.center.x) - 20, a.center.y);
+                        ctx.lineTo(Math.max(a.center.x, b.center.x) + 20, a.center.y);
+                    }
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+                
+                // Draw relationship label with word (if labels enabled)
+                if (showLabels) {
+                    const labelData = {
+                        'intersects': { symbol: '×', word: 'intersects' },
+                        'contains': { symbol: '⊃', word: 'contains' },
+                        'overlaps': { symbol: '∩', word: 'overlaps' },
+                        'adjacent': { symbol: '↔', word: 'near' },
+                        'aligned-vertical': { symbol: '│', word: 'aligned' },
+                        'aligned-horizontal': { symbol: '─', word: 'aligned' }
+                    };
+
+                    const labelInfo = labelData[rel.type];
+                    if (labelInfo && rel.type !== 'intersects') { // intersects already has point markers
+                        const displayText = `${labelInfo.symbol} ${labelInfo.word}`;
+                        ctx.font = '500 10px "Raleway", sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+
+                        // Background pill
+                        ctx.fillStyle = `rgba(10, 22, 40, ${0.85 * easedOpacity})`;
+                        const metrics = ctx.measureText(displayText);
+                        const pw = metrics.width + 12;
+                        const ph = 18;
+                        ctx.beginPath();
+                        const rr = 9;
+                        ctx.moveTo(midX - pw/2 + rr, midY - ph/2);
+                        ctx.lineTo(midX + pw/2 - rr, midY - ph/2);
+                        ctx.quadraticCurveTo(midX + pw/2, midY - ph/2, midX + pw/2, midY - ph/2 + rr);
+                        ctx.lineTo(midX + pw/2, midY + ph/2 - rr);
+                        ctx.quadraticCurveTo(midX + pw/2, midY + ph/2, midX + pw/2 - rr, midY + ph/2);
+                        ctx.lineTo(midX - pw/2 + rr, midY + ph/2);
+                        ctx.quadraticCurveTo(midX - pw/2, midY + ph/2, midX - pw/2, midY + ph/2 - rr);
+                        ctx.lineTo(midX - pw/2, midY - ph/2 + rr);
+                        ctx.quadraticCurveTo(midX - pw/2, midY - ph/2, midX - pw/2 + rr, midY - ph/2);
+                        ctx.closePath();
+                        ctx.fill();
+
+                        // Label text
+                        ctx.fillStyle = `rgba(251, 191, 36, ${0.95 * easedOpacity})`;
+                        ctx.fillText(displayText, midX, midY);
+                    }
+                }
+            });
+        }
+        
+        // ============================================
+        // Raw Stroke Intersection Detection
+        // ============================================
+        function detectRawIntersections() {
+            const now = Date.now();
+            const activeStrokes = strokes.filter(s => {
+                const age = now - s.startTime;
+                return age < s.fadeStart + TIMING.strokeFade && s.points.length > 3;
+            });
+            
+            const intersections = [];
+            
+            // Check strokes against each other
+            for (let i = 0; i < activeStrokes.length; i++) {
+                for (let j = i + 1; j < activeStrokes.length; j++) {
+                    const pts = findStrokeIntersections(activeStrokes[i].points, activeStrokes[j].points);
+                    pts.forEach(pt => {
+                        intersections.push({
+                            ...pt,
+                            createdAt: Math.max(activeStrokes[i].startTime, activeStrokes[j].startTime)
+                        });
+                    });
+                }
+            }
+            
+            // Check strokes against recognized shapes
+            const activeShapes = recognizedShapes.filter(s => now - s.createdAt < TIMING.shapeTotal);
+            for (const stroke of activeStrokes) {
+                for (const shape of activeShapes) {
+                    const pts = findStrokeIntersections(stroke.points, shape.idealPoints || []);
+                    pts.forEach(pt => {
+                        intersections.push({
+                            ...pt,
+                            createdAt: Math.max(stroke.startTime, shape.createdAt)
+                        });
+                    });
+                }
+            }
+            
+            return intersections;
+        }
+        
+        function findStrokeIntersections(pointsA, pointsB) {
+            const results = [];
+            if (pointsA.length < 5 || pointsB.length < 5) return results;
+            
+            // Coarser sampling to reduce noise
+            const stepA = Math.max(3, Math.floor(pointsA.length / 15));
+            const stepB = Math.max(3, Math.floor(pointsB.length / 15));
+            
+            for (let i = 0; i < pointsA.length - stepA; i += stepA) {
+                const a1 = pointsA[i];
+                const a2 = pointsA[Math.min(i + stepA, pointsA.length - 1)];
+                
+                for (let j = 0; j < pointsB.length - stepB; j += stepB) {
+                    const b1 = pointsB[j];
+                    const b2 = pointsB[Math.min(j + stepB, pointsB.length - 1)];
+                    
+                    const intersection = lineIntersection(a1, a2, b1, b2);
+                    if (intersection) {
+                        // Larger minimum distance to avoid clustering
+                        const tooClose = results.some(p => distance(p, intersection) < 40);
+                        if (!tooClose) results.push(intersection);
+                    }
+                }
+            }
+            return results.slice(0, 3); // Max 3 per pair
+        }
+        
+        function drawRawIntersections() {
+            const now = Date.now();
+            const intersections = detectRawIntersections();
+            
+            intersections.forEach(pt => {
+                const age = now - pt.createdAt;
+                let opacity = 1;
+                // Sync fade with strokes
+                if (age > TIMING.strokeHold) {
+                    opacity = 1 - ((age - TIMING.strokeHold) / TIMING.strokeFade);
+                }
+                if (opacity <= 0) return;
+                
+                // Ease out curve for smoother fade
+                const easedOpacity = opacity * opacity; // Quadratic ease out
+                
+                // Subtle cyan glow for raw intersections
+                ctx.shadowColor = 'rgba(34, 211, 238, 0.7)';
+                ctx.shadowBlur = 10 * easedOpacity;
+                ctx.fillStyle = `rgba(34, 211, 238, ${0.8 * easedOpacity})`;
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Outer ring
+                ctx.strokeStyle = `rgba(34, 211, 238, ${0.4 * easedOpacity})`;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, 7, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            });
+        }
+        
+        // ============================================
+        // Canvas Setup
+        // ============================================
+        function resizeCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+            canvas.style.width = rect.width + 'px';
+            canvas.style.height = rect.height + 'px';
+        }
+        
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        // ============================================
+        // Drawing Functions
+        // ============================================
+        function drawGrid() {
+            const w = canvas.width / (window.devicePixelRatio || 1);
+            const h = canvas.height / (window.devicePixelRatio || 1);
+            
+            ctx.fillStyle = colors.bg;
+            ctx.fillRect(0, 0, w, h);
+            
+            // Small grid
+            ctx.strokeStyle = colors.grid;
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            for (let x = 0; x <= w; x += 40) { ctx.moveTo(x, 0); ctx.lineTo(x, h); }
+            for (let y = 0; y <= h; y += 40) { ctx.moveTo(0, y); ctx.lineTo(w, y); }
+            ctx.stroke();
+            
+            // Large grid
+            ctx.strokeStyle = colors.gridAccent;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let x = 0; x <= w; x += 200) { ctx.moveTo(x, 0); ctx.lineTo(x, h); }
+            for (let y = 0; y <= h; y += 200) { ctx.moveTo(0, y); ctx.lineTo(w, y); }
+            ctx.stroke();
+            
+            drawGlyphs(w, h);
+        }
+        
+        // Track hovered glyph for visual feedback (will be set by event handlers)
+        let glyphHoverIndex = -1;
+
+        function drawGlyphs(w, h) {
+            const now = Date.now();
+            const timeSinceShape = now - lastShapeTime;
+            const isActive = timeSinceShape < TIMING.glyphActive;
+            const hasContent = strokes.length > 0 || recognizedShapes.length > 0;
+
+            // Smooth transition for active state
+            let activeAmount = 0;
+            if (isActive) {
+                // Fade in quickly, fade out smoothly
+                if (timeSinceShape < 200) {
+                    activeAmount = timeSinceShape / 200;
+                } else if (timeSinceShape > TIMING.glyphActive - 500) {
+                    activeAmount = (TIMING.glyphActive - timeSinceShape) / 500;
+                } else {
+                    activeAmount = 1;
+                }
+            }
+
+            // Pulse when idle
+            if (!isActive && !isDrawing) {
+                glyphPulse = Math.sin(now / 1000) * 0.15 + 0.85;
+            } else {
+                glyphPulse = 1;
+            }
+
+            // Rotate when shape detected (slow down as it fades)
+            if (isActive) {
+                glyphRotation += 0.02 * activeAmount;
+            }
+
+            const corners = [[40, 40], [w - 40, 40], [40, h - 40], [w - 40, h - 40]];
+            corners.forEach(([x, y], i) => {
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(glyphRotation * (i % 2 === 0 ? 1 : -1));
+
+                // Check if this glyph is hovered and there's content to clear
+                const isHovered = glyphHoverIndex === i && hasContent;
+                const hoverBoost = isHovered ? 0.5 : 0;
+
+                // Interpolate between cyan (idle) and gold (active/hovered)
+                const idleColor = [77, 201, 246];  // cyan
+                const activeColor = [212, 175, 55];  // gold
+                const hoverColor = [212, 175, 55];  // gold for clear action
+
+                let r, g, b, a;
+                if (isHovered) {
+                    r = hoverColor[0];
+                    g = hoverColor[1];
+                    b = hoverColor[2];
+                    a = 0.8;
+                } else {
+                    r = Math.round(idleColor[0] + (activeColor[0] - idleColor[0]) * activeAmount);
+                    g = Math.round(idleColor[1] + (activeColor[1] - idleColor[1]) * activeAmount);
+                    b = Math.round(idleColor[2] + (activeColor[2] - idleColor[2]) * activeAmount);
+                    a = 0.3 + 0.4 * activeAmount;
+                }
+
+                ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${a})`;
+                ctx.globalAlpha = isHovered ? 1 : glyphPulse;
+                ctx.lineWidth = 1.5 + 0.5 * activeAmount + (isHovered ? 1 : 0);
+
+                // Art Nouveau crystalline motif - hexagonal with organic curves
+                // Central hexagon
+                ctx.beginPath();
+                for (let j = 0; j < 6; j++) {
+                    const angle = (j / 6) * Math.PI * 2 - Math.PI / 2;
+                    const x = Math.cos(angle) * 8;
+                    const y = Math.sin(angle) * 8;
+                    if (j === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.stroke();
+
+                // Radiating lines (like spider silk strands)
+                ctx.globalAlpha = glyphPulse * 0.6;
+                for (let j = 0; j < 6; j++) {
+                    const angle = (j / 6) * Math.PI * 2;
+                    ctx.beginPath();
+                    ctx.moveTo(Math.cos(angle) * 8, Math.sin(angle) * 8);
+                    ctx.lineTo(Math.cos(angle) * 15, Math.sin(angle) * 15);
+                    ctx.stroke();
+                }
+
+                // Outer ring with subtle glow (crystallization boundary)
+                if (activeAmount > 0.2) {
+                    ctx.globalAlpha = glyphPulse * activeAmount;
+                    ctx.shadowColor = `rgba(${r}, ${g}, ${b}, 0.6)`;
+                    ctx.shadowBlur = 8 + 6 * activeAmount;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 12 + 2 * activeAmount, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.shadowBlur = 0;
+                }
+                
+                ctx.restore();
+            });
+            ctx.globalAlpha = 1;
+        }
+        
+        function drawRawStrokes() {
+            const now = Date.now();
+
+            // Update hero class for clear button visibility
+            const heroEl = document.querySelector('.hero');
+            if (strokes.length > 0 || recognizedShapes.length > 0) {
+                heroEl.classList.add('has-strokes');
+            } else {
+                heroEl.classList.remove('has-strokes');
+            }
+
+            strokes = strokes.filter(stroke => {
+                const age = now - stroke.startTime;
+                if (age > stroke.fadeStart + TIMING.strokeFade) return false;
+
+                let opacity = 1;
+                if (age > stroke.fadeStart) {
+                    opacity = 1 - ((age - stroke.fadeStart) / TIMING.strokeFade);
+                }
+                // Ease out for smoother fade
+                const easedOpacity = opacity * opacity;
+
+                if (stroke.points.length < 2) return true;
+
+                ctx.shadowColor = colors.glow;
+                ctx.shadowBlur = 12 * easedOpacity;
+                ctx.strokeStyle = `rgba(147, 197, 253, ${0.85 * easedOpacity})`;
+                ctx.lineWidth = 2.5;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+
+                ctx.beginPath();
+                ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+                for (let i = 1; i < stroke.points.length; i++) {
+                    const p0 = stroke.points[i - 1];
+                    const p1 = stroke.points[i];
+                    ctx.quadraticCurveTo(p0.x, p0.y, (p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
+                }
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                return true;
+            });
+        }
+        
+        function drawRecognizedShapes() {
+            const now = Date.now();
+
+            // Count-based removal: keep only last N shapes
+            if (recognizedShapes.length > TIMING.maxShapes) {
+                recognizedShapes = recognizedShapes.slice(-TIMING.maxShapes);
+            }
+
+            recognizedShapes.forEach(shape => {
+                const age = now - shape.createdAt;
+                const progress = Math.min(1, age / TIMING.morphDuration);
+                const morphEase = 1 - Math.pow(1 - progress, 3); // Ease out cubic
+
+                // Interpolate between raw and ideal points
+                const points = [];
+                const idealLen = shape.idealPoints.length;
+                const rawLen = shape.rawPoints.length;
+
+                for (let i = 0; i < idealLen; i++) {
+                    const rawIdx = Math.floor((i / idealLen) * rawLen);
+                    const raw = shape.rawPoints[Math.min(rawIdx, rawLen - 1)];
+                    const ideal = shape.idealPoints[i];
+                    points.push({
+                        x: raw.x + (ideal.x - raw.x) * morphEase,
+                        y: raw.y + (ideal.y - raw.y) * morphEase
+                    });
+                }
+
+                // Draw shape
+                ctx.shadowColor = 'rgba(96, 165, 250, 0.6)';
+                ctx.shadowBlur = 20;
+                ctx.strokeStyle = 'rgba(96, 165, 250, 0.9)';
+                ctx.lineWidth = 2.5;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+
+                // Special handling for dots
+                if (shape.type === 'dot') {
+                    ctx.fillStyle = 'rgba(96, 165, 250, 0.9)';
+                    ctx.beginPath();
+                    ctx.arc(shape.center.x, shape.center.y, 5 + 2 * morphEase, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                    return;
+                }
+
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, points[0].y);
+                for (let i = 1; i < points.length; i++) {
+                    ctx.lineTo(points[i].x, points[i].y);
+                }
+                if (shape.type === 'circle' || shape.type === 'rectangle' || shape.type === 'triangle') {
+                    ctx.closePath();
+                }
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            });
+        }
+        
+        function drawGhostSuggestion() {
+            if (!isDrawing || !currentStroke || currentStroke.points.length < 10) return;
+            
+            const shape = detectShape(currentStroke.points);
+            if (!shape || shape.confidence < 0.4) return;
+            
+            const idealPoints = generateIdealShape(shape);
+            
+            ctx.strokeStyle = colors.ghost;
+            ctx.lineWidth = 2;
+            ctx.setLineDash([8, 8]);
+            ctx.lineCap = 'round';
+            
+            ctx.beginPath();
+            ctx.moveTo(idealPoints[0].x, idealPoints[0].y);
+            for (let i = 1; i < idealPoints.length; i++) {
+                ctx.lineTo(idealPoints[i].x, idealPoints[i].y);
+            }
+            if (shape.type === 'circle' || shape.type === 'rectangle' || shape.type === 'triangle') {
+                ctx.closePath();
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+        
+        function drawWhisperLabels() {
+            const now = Date.now();
+
+            whisperLabels = whisperLabels.filter(label => {
+                const age = now - label.createdAt;
+                if (age > TIMING.labelTotal) return false;
+
+                // Only draw if labels are enabled
+                if (showLabels) {
+                    let opacity = 1;
+                    if (age < TIMING.labelFadeIn) {
+                        opacity = age / TIMING.labelFadeIn;
+                    } else if (age > TIMING.labelFadeIn + TIMING.labelHold) {
+                        opacity = 1 - ((age - TIMING.labelFadeIn - TIMING.labelHold) / TIMING.labelFade);
+                    }
+                    // Ease out for smoother fade
+                    const easedOpacity = opacity * opacity;
+
+                    const yOffset = -20 - (age / 80); // Float upward slightly slower
+
+                    ctx.font = '500 13px "Raleway", sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillStyle = `rgba(147, 197, 253, ${0.8 * easedOpacity})`;
+                    ctx.fillText(label.text, label.x, label.y + yOffset);
+                }
+
+                return true;
+            });
+        }
+        
+        // Cursor with glow
+        let cursorPos = { x: -100, y: -100 };
+        let cursorVisible = false;
+        
+        function drawCursor() {
+            if (!cursorVisible) return;
+            
+            const x = cursorPos.x;
+            const y = cursorPos.y;
+            const size = isDrawing ? 14 : 10;
+            
+            const gradient = ctx.createRadialGradient(x, y, 0, x, y, 60);
+            gradient.addColorStop(0, isDrawing ? 'rgba(251, 146, 60, 0.25)' : 'rgba(59, 130, 246, 0.2)');
+            gradient.addColorStop(0.5, isDrawing ? 'rgba(251, 146, 60, 0.08)' : 'rgba(59, 130, 246, 0.05)');
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(x, y, 60, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.strokeStyle = isDrawing ? colors.cursor : 'rgba(147, 197, 253, 0.7)';
+            ctx.lineWidth = 1.5;
+            ctx.shadowColor = isDrawing ? colors.cursor : colors.glow;
+            ctx.shadowBlur = 8;
+            
+            ctx.beginPath();
+            ctx.moveTo(x - size, y); ctx.lineTo(x - 4, y);
+            ctx.moveTo(x + 4, y); ctx.lineTo(x + size, y);
+            ctx.moveTo(x, y - size); ctx.lineTo(x, y - 4);
+            ctx.moveTo(x, y + 4); ctx.lineTo(x, y + size);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            
+            if (isDrawing) {
+                ctx.beginPath();
+                ctx.arc(x, y, 3, 0, Math.PI * 2);
+                ctx.fillStyle = colors.cursor;
+                ctx.fill();
+            }
+        }
+        
+        // Draw ripple effects (for tap/dot feedback)
+        function drawRipples() {
+            const now = Date.now();
+            const rippleDuration = 600;
+            
+            ripples = ripples.filter(ripple => {
+                const age = now - ripple.createdAt;
+                if (age > rippleDuration) return false;
+                
+                const progress = age / rippleDuration;
+                const eased = 1 - Math.pow(1 - progress, 3); // ease out cubic
+                const radius = ripple.maxRadius * eased;
+                const opacity = 1 - progress;
+                
+                ctx.strokeStyle = `rgba(96, 165, 250, ${0.6 * opacity})`;
+                ctx.lineWidth = 2 * (1 - progress * 0.5);
+                ctx.beginPath();
+                ctx.arc(ripple.x, ripple.y, radius, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Second ring
+                if (progress > 0.15) {
+                    const innerProgress = (progress - 0.15) / 0.85;
+                    const innerRadius = ripple.maxRadius * 0.6 * innerProgress;
+                    ctx.strokeStyle = `rgba(147, 197, 253, ${0.4 * (1 - innerProgress)})`;
+                    ctx.lineWidth = 1.5 * (1 - innerProgress * 0.5);
+                    ctx.beginPath();
+                    ctx.arc(ripple.x, ripple.y, innerRadius, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                
+                return true;
+            });
+        }
+        
+        // Draw particle burst (for shape recognition feedback)
+        function drawParticles() {
+            const now = Date.now();
+            const particleDuration = 800;
+            
+            particles = particles.filter(p => {
+                const age = now - p.createdAt;
+                if (age > particleDuration) return false;
+                
+                const progress = age / particleDuration;
+                const opacity = 1 - progress;
+                
+                // Update position with slight gravity
+                p.x += p.vx;
+                p.y += p.vy + progress * 0.5;
+                p.vx *= 0.97;
+                p.vy *= 0.97;
+                
+                // Draw crystalline particle - hexagonal shard
+                const size = 4 * (1 - progress * 0.5);
+
+                // Gradient from cyan to purple (bioluminescent crystallization)
+                const hue = 180 + progress * 100; // cyan to purple transition
+                const r = Math.round(0 + progress * 199);
+                const g = Math.round(217 - progress * 92);
+                const b = 255;
+
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.createdAt * 0.002); // Subtle rotation based on creation time
+
+                // Hexagonal crystal shard with glow
+                ctx.shadowColor = `rgba(${r}, ${g}, ${b}, ${0.6 * opacity})`;
+                ctx.shadowBlur = 6 * opacity;
+                ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${0.9 * opacity})`;
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                for (let i = 0; i < 6; i++) {
+                    const angle = (i / 6) * Math.PI * 2;
+                    const x = Math.cos(angle) * size;
+                    const y = Math.sin(angle) * size;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                ctx.restore();
+                
+                return true;
+            });
+        }
+        
+        // Draw ambient floating particles
+        function initAmbientParticles() {
+            const w = canvas.width / (window.devicePixelRatio || 1);
+            const h = canvas.height / (window.devicePixelRatio || 1);
+            
+            for (let i = 0; i < 15; i++) {
+                ambientParticles.push({
+                    x: Math.random() * w,
+                    y: Math.random() * h,
+                    vx: (Math.random() - 0.5) * 0.3,
+                    vy: (Math.random() - 0.5) * 0.3,
+                    size: 1 + Math.random() * 2,
+                    phase: Math.random() * Math.PI * 2
+                });
+            }
+        }
+        initAmbientParticles();
+        
+        function drawAmbientParticles() {
+            const now = Date.now();
+            const w = canvas.width / (window.devicePixelRatio || 1);
+            const h = canvas.height / (window.devicePixelRatio || 1);
+            
+            ambientParticles.forEach(p => {
+                // Drift movement
+                p.x += p.vx;
+                p.y += p.vy;
+                
+                // Wrap around edges
+                if (p.x < 0) p.x = w;
+                if (p.x > w) p.x = 0;
+                if (p.y < 0) p.y = h;
+                if (p.y > h) p.y = 0;
+                
+                // Pulsing opacity
+                const pulse = 0.15 + 0.1 * Math.sin(now / 2000 + p.phase);
+                
+                ctx.fillStyle = `rgba(147, 197, 253, ${pulse})`;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+        
+        // Animation loop - smart pausing when idle
+        let animationFrameId = null;
+        let isAnimating = false;
+
+        function hasActiveAnimation() {
+            return isDrawing ||
+                   particles.length > 0 ||
+                   ripples.length > 0 ||
+                   strokes.length > 0 ||
+                   recognizedShapes.length > 0 ||
+                   whisperLabels.length > 0 ||
+                   currentStroke !== null;
+        }
+
+        function animate() {
+            drawGrid();
+            drawAmbientParticles();
+            drawRawStrokes();
+            drawRawIntersections();
+            drawRecognizedShapes();
+            drawRelationships();
+            drawGhostSuggestion();
+            drawWhisperLabels();
+            drawRipples();
+            drawParticles();
+            drawCursor();
+
+            // Only continue animation if there's something active
+            if (hasActiveAnimation()) {
+                animationFrameId = requestAnimationFrame(animate);
+            } else {
+                isAnimating = false;
+                animationFrameId = null;
+            }
+        }
+
+        function startAnimation() {
+            if (!isAnimating) {
+                isAnimating = true;
+                animate();
+            }
+        }
+
+        // Start initial animation
+        startAnimation();
+        
+        // ============================================
+        // Event Handlers
+        // ============================================
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            if (e.touches) {
+                return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+            }
+            return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        }
+        
+        function startDraw(e) {
+            e.preventDefault();
+            isDrawing = true;
+            hero.classList.add('drawing');
+            startAnimation(); // Ensure animation loop is running
+
+            const pos = getPos(e);
+            currentStroke = {
+                points: [pos],
+                startTime: Date.now(),
+                fadeStart: TIMING.strokeHold
+            };
+            strokes.push(currentStroke);
+        }
+        
+        function draw(e) {
+            const pos = getPos(e);
+            cursorPos = pos;
+            cursorVisible = true;
+            
+            if (!isDrawing || !currentStroke) return;
+            e.preventDefault();
+            currentStroke.points.push(pos);
+        }
+        
+        function endDraw() {
+            // Detect tap/dot (few points, small area)
+            if (currentStroke && currentStroke.points.length >= 1 && currentStroke.points.length <= 8) {
+                const bounds = getBounds(currentStroke.points);
+                const size = Math.max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);
+                
+                if (size < 25) {
+                    // It's a tap/dot!
+                    const center = currentStroke.points.length === 1 
+                        ? currentStroke.points[0]
+                        : { x: (bounds.minX + bounds.maxX) / 2, y: (bounds.minY + bounds.maxY) / 2 };
+                    
+                    // Add dot as recognized shape
+                    recognizedShapes.push({
+                        type: 'dot',
+                        center,
+                        radius: 6,
+                        confidence: 1,
+                        rawPoints: [...currentStroke.points],
+                        idealPoints: [center],
+                        createdAt: Date.now()
+                    });
+                    
+                    // Add whisper label
+                    whisperLabels.push({
+                        text: 'Point',
+                        x: center.x,
+                        y: center.y,
+                        createdAt: Date.now()
+                    });
+                    
+                    // Add ripple effect
+                    ripples.push({
+                        x: center.x,
+                        y: center.y,
+                        createdAt: Date.now(),
+                        maxRadius: 40
+                    });
+                    startAnimation(); // Restart animation for ripple
+
+                    lastShapeTime = Date.now();
+                    currentStroke.fadeStart = 0;
+                }
+            }
+            
+            if (currentStroke && currentStroke.points.length > 5) {
+                const shape = detectShape(currentStroke.points);
+                
+                if (shape && shape.confidence > 0.5) {
+                    // Create recognized shape with ideal points
+                    recognizedShapes.push({
+                        ...shape,
+                        rawPoints: [...currentStroke.points],
+                        idealPoints: generateIdealShape(shape),
+                        createdAt: Date.now()
+                    });
+                    
+                    // Add whisper label
+                    const labelText = shape.type.charAt(0).toUpperCase() + shape.type.slice(1);
+                    whisperLabels.push({
+                        text: labelText,
+                        x: shape.center.x,
+                        y: shape.center.y,
+                        createdAt: Date.now()
+                    });
+                    
+                    // Add particle burst for recognition feedback
+                    for (let i = 0; i < 8; i++) {
+                        const angle = (i / 8) * Math.PI * 2;
+                        particles.push({
+                            x: shape.center.x,
+                            y: shape.center.y,
+                            vx: Math.cos(angle) * (1.5 + Math.random()),
+                            vy: Math.sin(angle) * (1.5 + Math.random()),
+                            life: 1,
+                            createdAt: Date.now()
+                        });
+                    }
+                    startAnimation(); // Restart animation for particles
+
+                    lastShapeTime = Date.now();
+                    
+                    // Hide raw stroke quickly since we're showing recognized version
+                    currentStroke.fadeStart = 0;
+                }
+            }
+            
+            isDrawing = false;
+            currentStroke = null;
+            setTimeout(() => {
+                if (!isDrawing) hero.classList.remove('drawing');
+            }, 500);
+        }
+        
+        // Event listeners
+        canvas.addEventListener('mousedown', startDraw);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', endDraw);
+        canvas.addEventListener('mouseleave', () => { endDraw(); cursorVisible = false; });
+        canvas.addEventListener('mouseenter', () => { cursorVisible = true; });
+        
+        canvas.addEventListener('touchstart', startDraw, { passive: false });
+        canvas.addEventListener('touchmove', draw, { passive: false });
+        canvas.addEventListener('touchend', endDraw);
+        canvas.addEventListener('touchcancel', endDraw);
+
+        // ============================================
+        // Corner Glyph Clear (click any corner to clear)
+        // ============================================
+        const GLYPH_CLICK_RADIUS = 35; // Click detection radius around glyphs
+
+        function getGlyphPositions() {
+            const w = canvas.width;
+            const h = canvas.height;
+            return [[40, 40], [w - 40, 40], [40, h - 40], [w - 40, h - 40]];
+        }
+
+        function getClickedGlyph(x, y) {
+            const glyphs = getGlyphPositions();
+            for (let i = 0; i < glyphs.length; i++) {
+                const [gx, gy] = glyphs[i];
+                const dist = Math.sqrt((x - gx) ** 2 + (y - gy) ** 2);
+                if (dist < GLYPH_CLICK_RADIUS) return i;
+            }
+            return -1;
+        }
+
+        function clearCanvas() {
+            strokes = [];
+            recognizedShapes = [];
+            whisperLabels = [];
+            rawIntersections = [];
+            particles = [];
+            ripples = [];
+            document.querySelector('.hero').classList.remove('has-strokes');
+            // Trigger a "clear" animation on glyphs
+            lastShapeTime = Date.now();
+            startAnimation();
+        }
+
+        // Check for glyph clicks on mousedown/touchstart
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const clickedGlyph = getClickedGlyph(x, y);
+            if (clickedGlyph !== -1 && (strokes.length > 0 || recognizedShapes.length > 0)) {
+                clearCanvas();
+            }
+        });
+
+        // Canvas control buttons
+        document.getElementById('clearCanvas').addEventListener('click', clearCanvas);
+        document.getElementById('toggleLabels').addEventListener('change', (e) => {
+            showLabels = e.target.checked;
+            startAnimation(); // Redraw to reflect change
+        });
+
+        // Update cursor and hover state when moving over glyphs
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const newHovered = getClickedGlyph(x, y);
+
+            if (newHovered !== glyphHoverIndex) {
+                glyphHoverIndex = newHovered;
+                if (glyphHoverIndex !== -1 && (strokes.length > 0 || recognizedShapes.length > 0)) {
+                    canvas.style.cursor = 'pointer';
+                } else {
+                    canvas.style.cursor = 'crosshair';
+                }
+                startAnimation(); // Redraw to show hover effect
+            }
+        });
+
+        // Reset hover when leaving canvas
+        canvas.addEventListener('mouseleave', () => {
+            if (glyphHoverIndex !== -1) {
+                glyphHoverIndex = -1;
+                startAnimation();
+            }
+        });
+
+        // ============================================
+        // Cursor Spotlight Effect
+        // ============================================
+        const spotlight = document.getElementById('cursorSpotlight');
+        let spotlightX = window.innerWidth / 2;
+        let spotlightY = window.innerHeight / 2;
+        let isSpotlightActive = false;
+
+        function updateSpotlight(x, y) {
+            spotlightX = x;
+            spotlightY = y;
+            const xPercent = (x / window.innerWidth) * 100;
+            const yPercent = (y / window.innerHeight) * 100;
+            spotlight.style.background = `radial-gradient(600px circle at ${xPercent}% ${yPercent}%, rgba(77, 201, 246, 0.12), rgba(212, 175, 55, 0.06) 40%, transparent 70%)`;
+        }
+
+        // Mouse events
+        document.addEventListener('mousemove', (e) => {
+            if (!isSpotlightActive) {
+                spotlight.classList.add('active');
+                isSpotlightActive = true;
+            }
+            updateSpotlight(e.clientX, e.clientY);
+        });
+
+        document.addEventListener('mouseleave', () => {
+            spotlight.classList.remove('active');
+            isSpotlightActive = false;
+        });
+
+        // Touch events
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 0) {
+                spotlight.classList.add('active');
+                isSpotlightActive = true;
+                updateSpotlight(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }, { passive: true });
+
+        document.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) {
+                updateSpotlight(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }, { passive: true });
+
+        document.addEventListener('touchend', () => {
+            // Keep spotlight visible for a moment after touch ends
+            setTimeout(() => {
+                if (!isSpotlightActive) {
+                    spotlight.classList.remove('active');
+                }
+            }, 2000);
+        });
+
+        // ============================================
+        // Demo Canvas - Interactive Fish Animation
+        // ============================================
+
+        // ============================================
+        // MetaMedium Diagram - Blurriness Meeting
+        // ============================================
+        (function() {
+            const mmCanvas = document.getElementById('metamediumCanvas');
+            if (!mmCanvas) return;
+            const mmCtx = mmCanvas.getContext('2d');
+
+            function resizeMetaMedium() {
+                const dpr = window.devicePixelRatio || 1;
+                const rect = mmCanvas.getBoundingClientRect();
+                mmCanvas.width = rect.width * dpr;
+                mmCanvas.height = rect.height * dpr;
+                mmCtx.setTransform(1, 0, 0, 1, 0, 0);
+                mmCtx.scale(dpr, dpr);
+                drawMetaMedium(rect.width, rect.height);
+            }
+
+            function drawMetaMedium(w, h) {
+                mmCtx.clearRect(0, 0, w, h);
+
+                const cx = w / 2;
+                const cy = h / 2;
+
+                // === HUMAN FUNNEL (top) - cyan theme ===
+                const humanTop = 28;
+                const humanBottom = cy - 35;
+                const humanWidthTop = 120;
+                const humanWidthBottom = 50;
+
+                const gradH = mmCtx.createLinearGradient(0, humanTop, 0, humanBottom);
+                gradH.addColorStop(0, 'rgba(77, 201, 246, 0.04)');
+                gradH.addColorStop(0.4, 'rgba(77, 201, 246, 0.13)');
+                gradH.addColorStop(1, 'rgba(77, 201, 246, 0.67)');
+
+                mmCtx.fillStyle = gradH;
+                mmCtx.beginPath();
+                mmCtx.moveTo(cx - humanWidthTop/2, humanTop);
+                mmCtx.lineTo(cx + humanWidthTop/2, humanTop);
+                mmCtx.lineTo(cx + humanWidthBottom/2, humanBottom);
+                mmCtx.lineTo(cx - humanWidthBottom/2, humanBottom);
+                mmCtx.closePath();
+                mmCtx.fill();
+
+                // Internal layers
+                mmCtx.strokeStyle = 'rgba(77, 201, 246, 0.25)';
+                mmCtx.lineWidth = 1;
+                const humanLayers = ['motive', 'intention', 'action'];
+                humanLayers.forEach((label, i) => {
+                    const t = (i + 1) / 4;
+                    const y = humanTop + t * (humanBottom - humanTop);
+                    const halfW = humanWidthTop/2 - t * (humanWidthTop - humanWidthBottom)/2;
+
+                    mmCtx.beginPath();
+                    mmCtx.moveTo(cx - halfW, y);
+                    mmCtx.lineTo(cx + halfW, y);
+                    mmCtx.stroke();
+
+                    mmCtx.fillStyle = 'rgba(77, 201, 246, 0.47)';
+                    mmCtx.font = '14px JetBrains Mono, monospace';
+                    mmCtx.textAlign = 'right';
+                    mmCtx.fillText(label, cx - halfW - 6, y + 4);
+                });
+
+                // === AI FUNNEL (bottom) - gold theme ===
+                const aiBottom = h - 28;
+                const aiTop = cy + 35;
+                const aiWidthBottom = 120;
+                const aiWidthTop = 50;
+
+                const gradA = mmCtx.createLinearGradient(0, aiBottom, 0, aiTop);
+                gradA.addColorStop(0, 'rgba(212, 175, 55, 0.04)');
+                gradA.addColorStop(0.4, 'rgba(212, 175, 55, 0.13)');
+                gradA.addColorStop(1, 'rgba(212, 175, 55, 0.67)');
+
+                mmCtx.fillStyle = gradA;
+                mmCtx.beginPath();
+                mmCtx.moveTo(cx - aiWidthBottom/2, aiBottom);
+                mmCtx.lineTo(cx + aiWidthBottom/2, aiBottom);
+                mmCtx.lineTo(cx + aiWidthTop/2, aiTop);
+                mmCtx.lineTo(cx - aiWidthTop/2, aiTop);
+                mmCtx.closePath();
+                mmCtx.fill();
+
+                // Internal layers
+                mmCtx.strokeStyle = 'rgba(212, 175, 55, 0.25)';
+                const aiLayers = ['latent', 'pattern', 'output'];
+                aiLayers.forEach((label, i) => {
+                    const t = (i + 1) / 4;
+                    const y = aiBottom - t * (aiBottom - aiTop);
+                    const halfW = aiWidthBottom/2 - t * (aiWidthBottom - aiWidthTop)/2;
+
+                    mmCtx.beginPath();
+                    mmCtx.moveTo(cx - halfW, y);
+                    mmCtx.lineTo(cx + halfW, y);
+                    mmCtx.stroke();
+
+                    mmCtx.fillStyle = 'rgba(212, 175, 55, 0.47)';
+                    mmCtx.font = '14px JetBrains Mono, monospace';
+                    mmCtx.textAlign = 'right';
+                    mmCtx.fillText(label, cx - halfW - 6, y + 4);
+                });
+
+                // === CANVAS PARALLELOGRAM (center) - green ===
+                const paraW = 90;
+                const paraH = 55;
+                const skew = 12;
+
+                mmCtx.fillStyle = 'rgba(16, 185, 129, 0.13)';
+                mmCtx.strokeStyle = '#10b981';
+                mmCtx.lineWidth = 2;
+
+                mmCtx.beginPath();
+                mmCtx.moveTo(cx - paraW/2 + skew, cy - paraH/2);
+                mmCtx.lineTo(cx + paraW/2 + skew, cy - paraH/2);
+                mmCtx.lineTo(cx + paraW/2 - skew, cy + paraH/2);
+                mmCtx.lineTo(cx - paraW/2 - skew, cy + paraH/2);
+                mmCtx.closePath();
+                mmCtx.fill();
+                mmCtx.stroke();
+
+                // Canvas contents
+                mmCtx.strokeStyle = '#fff';
+                mmCtx.lineWidth = 1.5;
+
+                // Circle
+                mmCtx.beginPath();
+                mmCtx.arc(cx - 20, cy - 5, 11, 0, Math.PI * 2);
+                mmCtx.stroke();
+
+                // Triangle
+                mmCtx.beginPath();
+                mmCtx.moveTo(cx + 18, cy - 14);
+                mmCtx.lineTo(cx + 32, cy + 6);
+                mmCtx.lineTo(cx + 4, cy + 6);
+                mmCtx.closePath();
+                mmCtx.stroke();
+
+                // Equation
+                mmCtx.font = '11px JetBrains Mono, monospace';
+                mmCtx.textAlign = 'center';
+                mmCtx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                mmCtx.fillText('x² + y² = r²', cx, cy + 22);
+
+                // Relation line
+                mmCtx.strokeStyle = 'rgba(255, 255, 255, 0.33)';
+                mmCtx.lineWidth = 1;
+                mmCtx.setLineDash([2, 2]);
+                mmCtx.beginPath();
+                mmCtx.moveTo(cx - 8, cy - 3);
+                mmCtx.lineTo(cx + 6, cy - 3);
+                mmCtx.stroke();
+                mmCtx.setLineDash([]);
+
+                // === FEEDBACK LOOPS ===
+                mmCtx.strokeStyle = 'rgba(16, 185, 129, 0.31)';
+                mmCtx.lineWidth = 1.5;
+                mmCtx.setLineDash([4, 4]);
+
+                // Left loop: canvas → human
+                mmCtx.beginPath();
+                mmCtx.moveTo(cx - paraW/2 - 5, cy - 10);
+                mmCtx.quadraticCurveTo(cx - 100, cy - 35, cx - humanWidthTop/2 + 15, humanTop + 25);
+                mmCtx.stroke();
+
+                mmCtx.setLineDash([]);
+                mmCtx.fillStyle = 'rgba(16, 185, 129, 0.33)';
+                mmCtx.beginPath();
+                mmCtx.moveTo(cx - humanWidthTop/2 + 15, humanTop + 25);
+                mmCtx.lineTo(cx - humanWidthTop/2 + 22, humanTop + 34);
+                mmCtx.lineTo(cx - humanWidthTop/2 + 10, humanTop + 32);
+                mmCtx.closePath();
+                mmCtx.fill();
+
+                // Right loop: canvas → AI
+                mmCtx.setLineDash([4, 4]);
+                mmCtx.strokeStyle = 'rgba(16, 185, 129, 0.31)';
+                mmCtx.beginPath();
+                mmCtx.moveTo(cx + paraW/2 + 5, cy + 10);
+                mmCtx.quadraticCurveTo(cx + 100, cy + 35, cx + aiWidthBottom/2 - 15, aiBottom - 25);
+                mmCtx.stroke();
+
+                mmCtx.setLineDash([]);
+                mmCtx.beginPath();
+                mmCtx.moveTo(cx + aiWidthBottom/2 - 15, aiBottom - 25);
+                mmCtx.lineTo(cx + aiWidthBottom/2 - 22, aiBottom - 34);
+                mmCtx.lineTo(cx + aiWidthBottom/2 - 10, aiBottom - 32);
+                mmCtx.closePath();
+                mmCtx.fill();
+
+                // === LABELS ===
+                mmCtx.font = '600 18px JetBrains Mono, monospace';
+                mmCtx.textAlign = 'center';
+
+                mmCtx.fillStyle = '#7dd8f7';
+                mmCtx.fillText('HUMAN', cx, humanTop - 8);
+
+                mmCtx.fillStyle = '#d4af37';
+                mmCtx.fillText('LLM', cx, aiBottom + 18);
+
+                mmCtx.fillStyle = '#10b981';
+                mmCtx.font = '600 18px JetBrains Mono, monospace';
+                mmCtx.textAlign = 'left';
+                mmCtx.fillText('CANVAS', cx + paraW/2 + 14, cy - 8);
+
+                mmCtx.fillStyle = '#7a9aaa';
+                mmCtx.font = '11px JetBrains Mono, monospace';
+                mmCtx.fillText('crystallized', cx + paraW/2 + 14, cy + 5);
+                mmCtx.fillText('meeting point', cx + paraW/2 + 14, cy + 16);
+            }
+
+            window.addEventListener('resize', resizeMetaMedium);
+            resizeMetaMedium();
+        })();
+    </script>
+</body>
+</html>

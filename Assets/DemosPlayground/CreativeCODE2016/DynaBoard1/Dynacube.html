@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Dynacube</title>
+    <link rel="stylesheet" href="./style.css">
+    <script type="text/javascript" src="./dist/paper-full.js"></script>
+    <script type="text/paperscript" canvas="canvas" >
+    var ink;
+    var hitOptions = {
+        segments: true,
+        stroke: true,
+        fill: true,
+        tolerance: 4
+    };
+
+    var textItem = new PointText({
+        content: 'Click and drag to draw a line.',
+        fontSize: 10,
+        justification: "left",
+        point: new Point(20, 30),
+        fillColor: 'black',
+
+    });
+
+    //project._changes = [];
+
+    //The dot
+    var pt = new Path.Circle(new Point(1, 1), 1.5);
+    pt.fillColor = 'black';
+    var dot = new Symbol(pt);
+
+    //the 2D primitves
+    var triangle = new Path.RegularPolygon(new Point(80, 70), 3, 50);
+    var tri = new Symbol(triangle);
+
+    var sq = new Path.Rectangle(new Point(50, 50), new Point(50, 50));
+    sq.fillColor = 'black';
+    var square = new Symbol(sq);
+
+    var circle = new Path.Circle(new Point(100, 70), 50);
+    circle.fillColor = 'black';
+    var circ = new Symbol(circle);
+
+
+    function onMouseDown(event) {
+        // If we produced a path before, deselect it:
+      //if (ink) {
+      //path.selected = false;
+    // }
+     //project.activeLayer.selected = false;
+     //new Layer();
+       dot.place(new Point(event.point));
+       // Create a new path and set its stroke color to black:
+      ink = new Path({
+      segments: [event.point],
+      strokeColor: 'black',
+      strokeWidth: 3
+      });
+
+      segment = ink = null;
+      var hitResult = project.hitTest(event.point, hitOptions);
+      if (!hitResult)
+      return;
+
+       if (hitResult) {
+           ink = hitResult.item;
+           if (hitResult.type == 'segment') {
+               segment = hitResult.segment;
+           } else if (hitResult.type == 'stroke') {
+               var location = hitResult.location;
+               segment = ink.insert(location.index + 1, event.point);
+               ink.smooth();
+           }
+       }
+       movePath = hitResult.type == 'fill';
+       if (movePath)
+       project.activeLayer.addChild(hitResult.item);
+    }
+
+    //highlight path
+    function onMouseMove(event) {
+        project.activeLayer.selected = false;
+        if (event.item)
+           event.item.selected = true;
+        }
+
+    // While the user drags the mouse, points are added to the path
+    // at the position of the mouse:
+    function onMouseDrag(event) {
+        ink.add(event.point);
+        segment = ink = null;
+        var hitResult = project.hitTest(event.point, hitOptions);
+        if (!hitResult)
+        return;
+
+        if (hitResult) {
+            ink = hitResult.item;
+            if (hitResult.type == 'segment') {
+              ink.point += event.delta;
+           ink.smooth();
+         } else if (hitResult.type == 'stroke') {
+             var location = hitResult.location;
+             ink.position += event.delta;
+         }
+       }
+        //} else if (path) {
+          //  path.position += event.delta;
+        //}
+
+        // Update the content of the text item to show how many
+        // segments it has
+        textItem.content = 'Segment count: ' + ink.segments.length + "\n" + 'Segment contents' + ink.segments;
+    }
+
+    // When the mouse is released, we simplify the path:
+    function onMouseUp(event) {
+        var segmentCount = ink.segments.length;
+        ink.toShape([true]);
+        //ink.simplify([10]);
+        var newSegmentCount = ink.segments.length;
+        var difference = segmentCount - newSegmentCount;
+        var percentage = 100 - Math.round(newSegmentCount / segmentCount * 100);
+        textItem.content = difference + ' of the ' + segmentCount + ' segments were removed. Saved ' + percentage + '%'+ "\n" + 'Segment contents' + ink.segments;
+        // When the mouse is released, simplify it:
+        //path.simplify(15);
+        console.log(ink.toShape());
+        console.log(ink.segments);
+        console.log(project.layers);
+        // Select the path, so we can see its segments:
+        //path.fullySelected = true;
+    }
+
+    </script>
+</head>
+<body>
+    <canvas id="canvas" resize></canvas>
+</body>
+</html>
