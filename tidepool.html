@@ -2,8 +2,18 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Tide Pool — Hermes</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>The Tide Pool — John Hanacek</title>
+<meta name="description" content="An interactive bioluminescent tidepool visualizing a living AI agent ecosystem — organisms, water depth, and coherence in motion.">
+<link rel="icon" type="image/png" href="./Assets/favicon-jhsigfrmpaper.png">
+<meta property="og:title" content="The Tide Pool — John Hanacek">
+<meta property="og:description" content="An interactive bioluminescent tidepool visualizing a living AI agent ecosystem.">
+<meta property="og:image" content="https://www.johnhanacek.com/Assets/socialgraph-jhcom.webp">
+<meta property="og:url" content="https://www.johnhanacek.com/tidepool.html">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="The Tide Pool — John Hanacek">
+<meta name="twitter:image" content="https://www.johnhanacek.com/Assets/socialgraph-jhcom.webp">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@200;300&family=Cormorant+Garamond:ital,wght@1,300;1,400&family=JetBrains+Mono:wght@300;400&family=Raleway:wght@200;300&display=swap" rel="stylesheet">
@@ -11,6 +21,38 @@
 * { margin:0; padding:0; box-sizing:border-box; }
 html,body { width:100%; height:100%; overflow:hidden; background:#000; }
 canvas { position:fixed; top:0; left:0; width:100%; height:100%; display:block; }
+/* ── Minimal nav back to site ───────────────────────────────────────────── */
+#tidepool-nav {
+  position:fixed; top:0; left:0; right:0; z-index:30;
+  display:flex; align-items:center; gap:0;
+  padding:14px 20px;
+  pointer-events:none;
+}
+#tidepool-nav a {
+  pointer-events:auto;
+  display:flex; align-items:center; gap:8px;
+  font-family:'Cinzel',serif; font-weight:200; font-size:0.58rem;
+  letter-spacing:0.35em; text-transform:uppercase; text-decoration:none;
+  color:rgba(140,184,204,0.55);
+  transition:color 0.3s ease, opacity 0.3s ease;
+  padding:6px 10px;
+  border:1px solid rgba(77,201,246,0.08);
+  border-radius:3px;
+  background:rgba(2,10,18,0.45);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+}
+#tidepool-nav a:hover { color:rgba(77,201,246,0.85); border-color:rgba(77,201,246,0.25); }
+#tidepool-nav svg { width:14px; height:14px; opacity:0.7; }
+#tidepool-nav .sep {
+  font-family:'JetBrains Mono',monospace; font-size:0.5rem;
+  color:rgba(77,201,246,0.18); padding:0 4px; pointer-events:none;
+}
+#tidepool-nav .current {
+  font-family:'Cinzel',serif; font-weight:200; font-size:0.58rem;
+  letter-spacing:0.35em; text-transform:uppercase;
+  color:rgba(77,201,246,0.38); padding:6px 10px;
+}
 #tooltip {
   position:fixed; pointer-events:none; z-index:20;
   max-width:300px; padding:1.1rem 1.5rem;
@@ -35,6 +77,18 @@ canvas { position:fixed; top:0; left:0; width:100%; height:100%; display:block; 
 </head>
 <body>
 <canvas id="c"></canvas>
+<nav id="tidepool-nav" aria-label="Site navigation">
+  <a href="art.html" aria-label="Art">
+    <svg viewBox="0 0 40 40" fill="none" stroke="currentColor"><circle cx="20" cy="20" r="14" stroke-width="1.5"/></svg>
+    ART
+  </a>
+  <span class="sep">/</span>
+  <a href="index.html" aria-label="Home">
+    <svg viewBox="0 0 40 40" fill="currentColor"><polygon points="20,8 34,32 6,32"/></svg>
+    JOHN HANACEK
+  </a>
+  <span class="current">· THE TIDE POOL</span>
+</nav>
 <div id="tooltip"><div id="tip-label"></div><div id="tip-body"></div></div>
 <script>
 // ─── Canvas setup ──────────────────────────────────────────────────────────
@@ -705,11 +759,14 @@ function ghostLabel(org) {
   if (!gt) return;
   const now = performance.now()/1000;
   if (!gt.start) gt.start = now;
-  const elapsed = (now - gt.start) % 8.0;
+  // Cycle is 12s so that high-delay organisms (knowledge=3.8s, substrate=5s, signals=6.5s)
+  // each get a full fade-in/hold/fade-out window within the period.
+  const CYCLE = 12.0;
+  const elapsed = (now - gt.start) % CYCLE;
+  const delay = gt.ghostDelay % CYCLE;
   let alpha = 0;
-  if (elapsed < gt.ghostDelay % 8) { alpha = 0; }
-  else {
-    const t = elapsed - (gt.ghostDelay % 8);
+  if (elapsed >= delay) {
+    const t = elapsed - delay;
     if (t < 0.8) alpha = (t/0.8)*0.18;
     else if (t < 2.8) alpha = 0.18;
     else if (t < 4.8) alpha = 0.18*(1-(t-2.8)/2.0);
