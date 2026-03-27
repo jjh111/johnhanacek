@@ -233,3 +233,8 @@ The math varies, but the direction rarely does.
 ---
 
 _Released under CC-BY-4.0. Use it, adapt it, improve it, share it back._
+
+---
+
+*John Hanacek · [johnhanacek.com](https://johnhanacek.com) · [Read online](https://johnhanacek.com/writing.html#eduos-quickstart)*
+

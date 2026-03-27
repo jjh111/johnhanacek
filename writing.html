@@ -972,6 +972,7 @@
             <div class="breadcrumbs" id="breadcrumbs">
                 <span class="crumb crumb-root" onclick="closePanel()">Writing</span>
             </div>
+            <button class="nav-btn" id="btnDownload" onclick="downloadCurrent()" title="Download as .md">&#8595;md</button>
             <button class="theme-toggle" id="panelThemeToggle" onclick="toggleTheme()" title="Switch to light mode"><span id="panelToggleIcon">&#9788;</span></button>
             <button class="panel-close" onclick="closePanel()" title="Close (Esc)">&times;</button>
         </div>
@@ -994,7 +995,7 @@
 // FILE INDEX — metadata only (content fetched at runtime)
 // ============================================
 const fileIndex = [
-    { path: 'writing/eduos-plea.md', name: 'EduOS Plea', desc: 'Why schools need to own their tools — a manifesto for educational technology sovereignty', cat: 'eduos', tags: ['education', 'sovereignty'], slug: 'eduos-plea' },
+    { path: 'writing/eduos-plea.md', name: 'Students as Sovereign Participants or Peasant Users?', desc: 'Whichever vendor controls the AI in classrooms controls the world', cat: 'eduos', tags: ['education', 'sovereignty'], slug: 'eduos-plea' },
     { path: 'writing/eduos-classroom.md', name: 'The Classroom That Owns Itself', desc: 'Why schools need open source AI — from Engelbart to the present', cat: 'eduos', tags: ['education', 'ai', 'open-source'], slug: 'eduos-classroom' },
     { path: 'writing/eduos-quickstart.md', name: 'Sovereign Stack Pilot Guide', desc: 'How school districts can experiment with owning their infrastructure', cat: 'eduos', tags: ['education', 'technical', 'pilot'], slug: 'eduos-quickstart' },
     { path: 'writing/eduos-implementation.md', name: 'Building the Public Stack', desc: 'Full implementation guide for educational technology sovereignty — policy, governance, and infrastructure', cat: 'eduos', tags: ['education', 'policy', 'governance'], slug: 'eduos-implementation' },
@@ -1232,6 +1233,22 @@ function navNext() {
         const next = fileIndex[idx + 1];
         if (!next.path.endsWith('/')) openFile(next.path);
     }
+}
+
+function downloadCurrent() {
+    if (!currentPath) return;
+    const entry = fileIndex.find(f => f.path === currentPath);
+    const filename = entry ? (entry.slug + '.md') : currentPath.split('/').pop();
+    fetch(currentPath)
+        .then(r => r.text())
+        .then(text => {
+            const blob = new Blob([text], { type: 'text/markdown' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        });
 }
 
 function getFileIndexPos(path) {
