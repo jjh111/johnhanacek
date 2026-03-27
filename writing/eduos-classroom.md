@@ -69,3 +69,8 @@ The tools are ready. The models are ready. The only question is whether schools 
 ---
 
 _The bicycle for the mind was never supposed to have a subscription fee._
+
+---
+
+*John Hanacek · [johnhanacek.com](https://johnhanacek.com) · [Read online](https://johnhanacek.com/writing.html#eduos-classroom)*
+

@@ -394,3 +394,8 @@ The network is ours to build. The sovereignty is ours to claim.
 ---
 
 _Released under CC-BY-4.0. Use it, adapt it, improve it, share it back._
+
+---
+
+*John Hanacek · [johnhanacek.com](https://johnhanacek.com) · [Read online](https://johnhanacek.com/writing.html#eduos-implementation)*
+
