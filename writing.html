@@ -973,7 +973,7 @@
             <div class="breadcrumbs" id="breadcrumbs">
                 <span class="crumb crumb-root" onclick="closePanel()">Writing</span>
             </div>
-            <button class="theme-toggle" id="btnDownload" onclick="downloadCurrent()" title="Download as .md">&#8595; <span>Download</span></button>
+            <button class="theme-toggle" id="btnDownload" onclick="downloadCurrent()" title="Download as .md">&#8595; <span id="downloadLabel">Download</span></button>
             <button class="theme-toggle" id="panelThemeToggle" onclick="toggleTheme()" title="Switch to light mode"><span id="panelToggleIcon">&#9788;</span></button>
             <button class="panel-close" onclick="closePanel()" title="Close (Esc)">&times;</button>
         </div>
@@ -1173,6 +1173,8 @@ function openFile(path, skipHistory) {
     updateNavState();
     updateBreadcrumbs(path);
     updateFooterNav(path);
+    const dlEntry = fileIndex.find(f => f.path === path);
+    document.getElementById('downloadLabel').textContent = dlEntry ? (dlEntry.slug + '.md') : path.split('/').pop();
 
     const body = document.getElementById('panelBody');
     body.innerHTML = `<p style="color:var(--muted);font-style:italic;">Loading...</p>`;
