@@ -1201,8 +1201,7 @@ function openFile(path, skipHistory) {
     updateNavState();
     updateBreadcrumbs(path);
     updateFooterNav(path);
-    const dlEntry = fileIndex.find(f => f.path === path);
-    document.getElementById('downloadLabel').textContent = dlEntry ? (dlEntry.slug + '.md') : path.split('/').pop();
+    document.getElementById('downloadLabel').textContent = 'Download';
 
     const body = document.getElementById('panelBody');
     body.innerHTML = `<p style="color:var(--muted);font-style:italic;">Loading...</p>`;
@@ -1308,7 +1307,8 @@ function updateBreadcrumbs(path) {
     if (catInfo) {
         html += `<span class="crumb-sep">/</span><span class="crumb crumb-category">${catInfo.title}</span>`;
     }
-    html += `<span class="crumb-sep">/</span><span class="crumb crumb-file">${file ? file.name : path}</span>`;
+    const filename = file ? (file.slug + '.md') : path.split('/').pop();
+    html += `<span class="crumb-sep">/</span><span class="crumb crumb-file">${filename}</span>`;
 
     document.getElementById('breadcrumbs').innerHTML = html;
 }
