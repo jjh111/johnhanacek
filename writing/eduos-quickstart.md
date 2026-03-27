@@ -1,14 +1,14 @@
-# Sovereign Stack Quick Start
+# Sovereign Stack Pilot Guide
 
-## A Technical Guide for School Districts Ready to Own Their Infrastructure
+## How School Districts Can Experiment with Owning Their Infrastructure
 
 ---
 
-### What You're Building
+### What You're Exploring
 
 A **sovereign stack** means your district controls the full vertical: hardware, operating system, applications, AI models, and student data. Nothing leaves your jurisdiction unless you decide it should.
 
-This isn't about being anti-technology. It's about being _pro-ownership_.
+This guide is about running a pilot, not replacing your entire infrastructure. Start small, learn what works, and build the case for broader adoption from real experience.
 
 ---
 
@@ -44,7 +44,7 @@ This isn't about being anti-technology. It's about being _pro-ownership_.
 
 ---
 
-## Phase 1: Foundation (Months 1-3)
+## Pilot Phase 1: Foundation (Months 1-3)
 
 ### Operating System Deployment
 
@@ -52,8 +52,8 @@ This isn't about being anti-technology. It's about being _pro-ownership_.
 
 **Deployment approach:**
 
-- **Small district (< 500 devices):** USB imaging with Clonezilla or Ventoy
-- **Medium district (500-2000):** FOG Project for network-based imaging
+- **Small pilot (under 500 devices):** USB imaging with Clonezilla or Ventoy
+- **Medium pilot (500-2000):** FOG Project for network-based imaging
 - **Large district (2000+):** Foreman or MAAS for full lifecycle management
 
 **What students see:** A desktop that looks familiar. Firefox, LibreOffice, file manager. The transition from Windows/ChromeOS is measured in hours, not weeks.
@@ -72,9 +72,9 @@ This isn't about being anti-technology. It's about being _pro-ownership_.
 
 ---
 
-## Phase 2: Local AI (Months 3-6)
+## Pilot Phase 2: Local AI (Months 3-6)
 
-This is where sovereign infrastructure becomes genuinely exciting.
+This is where sovereign infrastructure becomes genuinely interesting.
 
 ### Hardware Requirements
 
@@ -86,7 +86,7 @@ This is where sovereign infrastructure becomes genuinely exciting.
 **For image generation:**
 
 - Requires more GPU memory (16GB+ VRAM recommended)
-- Can be centralized—students don't need local GPUs
+- Can be centralized so students don't need local GPUs
 
 ### Software Stack
 
@@ -99,10 +99,10 @@ curl -fsSL https://ollama.com/install.sh | sh
 # Pull a model
 ollama pull llama3.1
 
-# It's now running and accessible on your network
+# Now running and accessible on your network
 ```
 
-**Open WebUI** gives you a ChatGPT-like interface that points to your local models:
+**Open WebUI** gives you a ChatGPT-like interface pointing to your local models:
 
 ```bash
 docker run -d -p 3000:8080 \
@@ -131,7 +131,7 @@ Students now have AI assistance that:
 
 ---
 
-## Phase 3: Integration (Months 6-12)
+## Pilot Phase 3: Integration (Months 6-12)
 
 ### Learning Management
 
@@ -153,7 +153,7 @@ Both can connect to your local AI for:
 - Integrates with existing Active Directory if you have it
 - Supports SAML, OAuth, OpenID Connect
 
-This is actually _simpler_ than managing separate accounts across vendor platforms.
+Managing SSO through Keycloak is simpler than managing separate accounts across vendor platforms.
 
 ### File Storage and Collaboration
 
@@ -174,7 +174,7 @@ This is actually _simpler_ than managing separate accounts across vendor platfor
 
 **9:00 AM** — In English class, students use the local AI assistant to brainstorm essay topics. The teacher has configured it to ask Socratic questions rather than giving direct answers. All conversations are logged locally for the teacher to review.
 
-**10:30 AM** — Art class uses Stable Diffusion to explore visual concepts. Students generate images, then critique what the model got wrong. They examine the training data sources. One student asks if they can train a model on their own drawings—the teacher says yes, that's next month's project.
+**10:30 AM** — Art class uses Stable Diffusion to explore visual concepts. Students generate images, then critique what the model got wrong. They examine the training data sources. One student asks if they can train a model on their own drawings. The teacher says yes, that's next month's project.
 
 **1:00 PM** — Computer science class contributes a bug fix to the school's scheduling tool. Their pull request gets reviewed by the district's IT lead. They're learning real software development, not simulations.
 
@@ -186,7 +186,7 @@ This is actually _simpler_ than managing separate accounts across vendor platfor
 
 **"We don't have the IT staff for this."**
 
-You have IT staff managing vendor relationships, troubleshooting vendor outages, and explaining vendor limitations. Redirect that energy. The learning curve is real but finite. Consider: one experienced Linux admin can maintain infrastructure that would cost six figures annually in SaaS subscriptions.
+You have IT staff managing vendor relationships, troubleshooting vendor outages, and explaining vendor limitations. Redirect that energy. The learning curve is real but finite. One experienced Linux admin can maintain infrastructure that would cost six figures annually in SaaS subscriptions.
 
 **"What about support?"**
 
@@ -198,7 +198,7 @@ Start with volunteers. Find the teachers who are frustrated with current tools. 
 
 **"The AI won't be as good as GPT-4."**
 
-For many educational uses, local models are genuinely sufficient. And "good enough while preserving student privacy and teaching digital sovereignty" is a meaningful trade-off. You can also maintain API access to commercial models for specific use cases if needed—sovereignty doesn't require isolation.
+For many educational uses, local models are genuinely sufficient. "Good enough while preserving student privacy and teaching digital sovereignty" is a meaningful trade-off. You can also maintain API access to commercial models for specific use cases if needed. Sovereignty doesn't require isolation.
 
 ---
 
@@ -211,8 +211,8 @@ For many educational uses, local models are genuinely sufficient. And "good enou
 |LMS|$50,000 - $100,000|$0 (self-hosted)|
 |AI chatbot access|$100,000+|$0 (after hardware)|
 |Cloud storage|$30,000 - $75,000|$0 (self-hosted)|
-|**Hardware/staffing delta**|—|+$80,000 - $150,000|
-|**Net annual difference**|—|**$125,000 - $375,000 saved**|
+|**Hardware/staffing delta**|n/a|+$80,000 - $150,000|
+|**Net annual difference**|n/a|**$125,000 - $375,000 saved**|
 
 The math varies, but the direction rarely does.
 
@@ -229,251 +229,7 @@ The math varies, but the direction rarely does.
 4. **Run a pilot.** One computer lab. One classroom. One summer program. Prove the concept small.
     
 5. **Document everything.** Your learnings become resources for other districts.
-    
 
 ---
 
-# Fractal Governance: A Policy Framework for Educational Technology Sovereignty
-
-## For Lawmakers at Every Level
-
----
-
-## The Problem with Isolated Sovereignty
-
-A single school district running its own infrastructure is good. Ten thousand districts each solving the same problems independently is wasteful. A million educators each building the same lesson plans from scratch is absurd.
-
-**Sovereignty without coordination is just expensive independence.**
-
-The goal is a system where:
-
-- Each district controls its own stack
-- Everyone benefits from everyone else's work
-- Standards ensure interoperability
-- No single point of control or failure
-
-This is a solved problem in software (it's called open source). The challenge is translating it to educational governance.
-
----
-
-## The Fractal Structure
-
-```
-┌─────────────────────────────────────────────────────────┐
-│  INTERNATIONAL                                          │
-│  UNESCO standards, cross-border data agreements,        │
-│  global curriculum repositories                         │
-├─────────────────────────────────────────────────────────┤
-│  NATIONAL                                               │
-│  Reference architectures, model repositories,           │
-│  accessibility requirements, funding mechanisms         │
-├─────────────────────────────────────────────────────────┤
-│  STATE/REGIONAL                                         │
-│  Shared infrastructure options, teacher training,       │
-│  curriculum alignment, procurement cooperatives         │
-├─────────────────────────────────────────────────────────┤
-│  DISTRICT                                               │
-│  Operational control, local customization,              │
-│  community input, day-to-day decisions                  │
-├─────────────────────────────────────────────────────────┤
-│  SCHOOL/CLASSROOM                                       │
-│  Teacher autonomy, student agency, immediate feedback   │
-│  loops, pedagogical experimentation                     │
-└─────────────────────────────────────────────────────────┘
-```
-
-Each level has distinct responsibilities. The principle: **decide at the lowest level that can decide well, share at the highest level that maintains relevance.**
-
----
-
-## District Level: Operational Sovereignty
-
-### What Districts Control
-
-- Hardware and OS deployment
-- Which AI models to run
-- Data retention policies
-- Interface design and customization
-- Integration with local systems
-
-### What Districts Contribute
-
-- Bug fixes and improvements to shared tools
-- Curriculum materials built on shared platforms
-- Performance data (anonymized) for model improvement
-- Documentation of what works
-
-### Policy Needs
-
-- **Right to repair/modify:** Districts must have legal clarity that modifying open source software doesn't void warranties or violate agreements
-- **Data ownership clarity:** Student data generated on district infrastructure belongs to the district (and by extension, the community)
-- **Procurement flexibility:** State/federal funding must allow open source alternatives to commercial products
-
----
-
-## State Level: Coordination and Support
-
-### What States Provide
-
-- **Shared infrastructure options:** A state-run cloud that districts can use if they lack local capacity (but don't have to)
-- **Training programs:** Certification pathways for IT staff in open source administration
-- **Curriculum frameworks:** Standards-aligned materials designed for open platforms
-- **Procurement cooperatives:** Bulk hardware purchasing for participating districts
-
-### What States Don't Do
-
-- Mandate specific tools or vendors
-- Centralize student data
-- Override district decisions about implementation
-
-### Model Legislation: State Educational Technology Sovereignty Act
-
-```
-SECTION 1: DEFINITIONS
-"Sovereign infrastructure" means computing systems where the 
-operating entity maintains full administrative control over 
-hardware, software, and data, without dependency on external 
-vendors for continued operation.
-
-SECTION 2: DISTRICT RIGHTS
-(a) School districts shall have the right to deploy sovereign 
-    infrastructure for educational purposes.
-(b) No state educational technology mandate shall require 
-    districts to use proprietary software where open source 
-    alternatives exist.
-(c) State funding for educational technology shall be available 
-    for open source deployments on equal terms with proprietary 
-    alternatives.
-
-SECTION 3: STATE SUPPORT SERVICES
-(a) The Department of Education shall maintain a reference 
-    implementation of sovereign educational infrastructure, 
-    available to all districts at no cost.
-(b) The Department shall provide technical assistance to 
-    districts transitioning to sovereign infrastructure.
-(c) The Department shall host a repository of educational 
-    resources compatible with sovereign infrastructure.
-
-SECTION 4: INTEROPERABILITY REQUIREMENTS
-(a) All state-funded educational software shall support open 
-    data formats and standard APIs.
-(b) Student data portability between systems shall be guaranteed.
-(c) The Department shall publish and maintain interoperability 
-    standards updated annually.
-```
-
----
-
-## National Level: Standards and Network Effects
-
-### The National Educational Commons
-
-Imagine a federally-supported (but not federally-controlled) repository:
-
-**For Software:**
-
-- Reference implementations of the sovereign stack
-- Security-audited builds of educational AI models
-- Accessibility-verified interface components
-- Deployment automation scripts
-
-**For Content:**
-
-- Lesson plans tagged by standard, grade, subject
-- Assessment items with psychometric data
-- Multimedia resources with clear licensing
-- Translations and accessibility adaptations
-
-**For Data (Anonymized):**
-
-- Model performance across demographics
-- Effective prompt patterns for different learning goals
-- Infrastructure cost benchmarks
-- Security incident patterns and responses
-
-### Governance Model
-
-Not a federal agency. A **cooperative structure**:
-
-```
-┌─────────────────────────────────────────────────────────┐
-│  NATIONAL EDUCATIONAL TECHNOLOGY COOPERATIVE            │
-├─────────────────────────────────────────────────────────┤
-│  Membership: State DOEs, district consortia, higher ed  │
-│  Funding: Federal grants + member dues + foundations    │
-│  Governance: Elected board from member categories       │
-│  Operations: Professional staff, distributed hosting    │
-├─────────────────────────────────────────────────────────┤
-│  Core Functions:                                        │
-│  • Maintain reference architectures                     │
-│  • Audit AI models for safety/bias                      │
-│  • Coordinate security response                         │
-│  • Host shared repositories                             │
-│  • Develop interoperability standards                   │
-│  • Support research on educational effectiveness        │
-└─────────────────────────────────────────────────────────┘
-```
-
-Think of it like how internet standards work (IETF, W3C) rather than how federal programs usually work.
-
----
-
-## Interoperability Standards
-
-### Why Standards Matter
-
-Without standards, sovereignty becomes isolation. A lesson plan created in one district should work in another. A student moving between states shouldn't lose their learning history. A security fix discovered anywhere should protect everyone.
-
-### The Core Standards Stack
-
-**Data Formats:**
-
-- **Learning records:** xAPI (Experience API) for activity tracking
-- **Content packaging:** IMS Common Cartridge or SCORM (with modernization)
-- **Student information:** Ed-Fi or SIF for administrative data
-- **Credentials:** Open Badges / Verifiable Credentials
-
-**APIs:**
-
-- **LTI (Learning Tools Interoperability):** For connecting tools to platforms
-- **OneRoster:** For class roster exchange
-- **QTI:** For assessment items
-
-**AI-Specific Standards (Emerging):**
-
-- Model cards documenting training data, capabilities, limitations
-- Prompt format standardization for educational use cases
-- Output filtering standards for age-appropriate content
-- Audit log formats for transparency and research
-
-### Model Legislation: Interoperability Requirements
-
-```
-SECTION 1: MANDATORY STANDARDS
-All educational technology systems receiving federal funding 
-shall implement:
-(a) Student data export in Ed-Fi or equivalent open format
-(b) Learning activity data in xAPI format
-(c) Content import/export in IMS Common Cartridge format
-(d) Single sign-on via SAML 2.0 or OpenID Connect
-(e) API access for authorized district systems
-
-SECTION 2: PROHIBITION ON LOCK-IN
-(a) No educational technology contract shall include terms 
-    that prevent data export or system migration.
-(b) Vendors shall provide migration assistance at reasonable 
-    cost upon contract termination.
-(c) Custom developments made for educational institutions 
-    shall be licensable by those institutions for continued use.
-
-SECTION 3: AI TRANSPARENCY
-Educational AI systems shall provide:
-(a) Documentation of training data sources
-(b) Mechanisms for districts to review and adjust system behavior
-(c) Audit logs of AI interactions available to authorized personnel
-(d) Clear disclosure to users when AI is generating content
-```
-
----
-
-## Funding Mechanisms
+_Released under CC-BY-4.0. Use it, adapt it, improve it, share it back._
