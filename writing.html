@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JH Coaching Dashboard</title>
+    <title>Writing — John Hanacek</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@200;300;400;500&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
@@ -441,6 +441,7 @@
         .file-card.cat-templates::after { background: linear-gradient(to bottom, var(--p4-color), rgba(182,255,186,0.1)); }
         .file-card.cat-sessions::after  { background: linear-gradient(to bottom, var(--p5-color), rgba(122,154,170,0.1)); }
         .file-card.cat-news::after     { background: linear-gradient(to bottom, #e8a848, rgba(232, 168, 72, 0.1)); }
+        .file-card.cat-eduos::after    { background: linear-gradient(to bottom, var(--p1-color), rgba(77,201,246,0.1)); }
 
         .file-name {
             font-size: var(--text-sm);
@@ -928,91 +929,24 @@
     <!-- Header -->
     <header class="header">
         <div class="header-brand">
-            <div class="header-tagline">JH Consulting</div>
+            <div class="header-tagline">John Hanacek</div>
             <span class="header-sep">/</span>
-            <h1 class="header-title">Coaching Dashboard</h1>
+            <h1 class="header-title">Writing</h1>
         </div>
         <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Switch to light mode"><span id="toggleIcon">&#9788;</span> <span id="toggleLabel">Light</span></button>
     </header>
-
-    <!-- Fallback notice for file:// protocol -->
-    <div class="fallback-notice" id="fallbackNotice">
-        <strong>Heads up:</strong> The dashboard needs a local server to load files when you click them.
-        Tell Claude: <em>"Run a local server for my coaching repo so I can use the dashboard."</em>
-        It'll handle the rest and give you a link to open.
-    </div>
-
-    <!-- Refresh banner (shown when new content detected) -->
-    <div class="refresh-banner" id="refreshBanner" onclick="location.reload()">
-        New content available from JH — click here to refresh.
-    </div>
-
-    <!-- Welcome card -->
-    <div class="welcome-card" id="welcomeCard">
-        <button class="welcome-close" onclick="dismissWelcome()" title="Dismiss">&times;</button>
-        <div class="welcome-greeting">Welcome to your coaching workspace</div>
-        <p class="welcome-text">
-            Your coaching AI handles setup, gets to know you, and saves your work automatically.
-            Open Claude Code in this folder and run <code style="color:var(--cyan);background:rgba(77,201,246,0.1);border-color:rgba(77,201,246,0.2);">/start</code> to begin.
-        </p>
-        <div class="welcome-steps">
-            <div class="welcome-step">
-                <span class="step-num">/</span>
-                <div>
-                    <div class="step-label">start</div>
-                    <div class="step-desc">Your main entry point — checks where you are and guides the next step</div>
-                </div>
-            </div>
-            <div class="welcome-step">
-                <span class="step-num">/</span>
-                <div>
-                    <div class="step-label">progress</div>
-                    <div class="step-desc">See what's done, what's next, and check repo health</div>
-                </div>
-            </div>
-            <div class="welcome-step">
-                <span class="step-num">/</span>
-                <div>
-                    <div class="step-label">push</div>
-                    <div class="step-desc">Save your work to GitHub so JH can see it</div>
-                </div>
-            </div>
-            <div class="welcome-step">
-                <span class="step-num">/</span>
-                <div>
-                    <div class="step-label">pull</div>
-                    <div class="step-desc">Grab the latest from JH — session notes, homework, new materials</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Filter bar -->
-    <div class="filter-bar">
-        <select class="filter-select" id="filterSelect" onchange="setFilter(this.value)">
-            <option value="all">All Files</option>
-            <option value="start">Start Here</option>
-            <option value="cheats">Cheatsheets</option>
-            <option value="news">News & Updates</option>
-            <option value="deeper">Going Deeper</option>
-            <option value="templates">Templates</option>
-            <option value="sessions">Sessions & Workspace</option>
-        </select>
-        <input type="text" class="search-box" placeholder="Search files..." oninput="handleSearch(this.value)" id="searchInput">
-    </div>
 
     <!-- File listing -->
     <div id="fileList"></div>
 
     <!-- Footer -->
     <footer class="site-footer">
-        <p>JH Consulting · Claude Code & Agentic Systems Coaching</p>
+        <p>John Hanacek · <a href="https://johnhanacek.com">johnhanacek.com</a></p>
         <p class="footer-links">
-            <a href="https://johnhanacek.com" target="_blank">johnhanacek.com</a>
+            <a href="https://johnhanacek.com" target="_blank">Home</a>
             <span style="color:var(--muted);margin:0 0.35rem;">·</span>
-            <a href="https://github.com/jjh111" target="_blank">GitHub</a>
+            <a href="https://github.com/johnhanacek" target="_blank">GitHub</a>
         </p>
-        <span class="show-welcome" id="showWelcome" onclick="showWelcome()">Show setup guide</span>
     </footer>
 
 </div>
@@ -1029,7 +963,7 @@
             <button class="nav-btn" id="btnPrev" onclick="navPrev()" disabled title="Previous file (Alt+Up)">&#8593;</button>
             <button class="nav-btn" id="btnNext" onclick="navNext()" disabled title="Next file (Alt+Down)">&#8595;</button>
             <div class="breadcrumbs" id="breadcrumbs">
-                <span class="crumb crumb-root" onclick="closePanel()">Dashboard</span>
+                <span class="crumb crumb-root" onclick="closePanel()">Writing</span>
             </div>
             <button class="panel-close" onclick="closePanel()" title="Close (Esc)">&times;</button>
         </div>
@@ -1052,54 +986,19 @@
 // FILE INDEX — metadata only (content fetched at runtime)
 // ============================================
 const fileIndex = [
-    // Start Here
-    { path: 'Getting Started Guide.md', name: 'Getting Started Guide', desc: 'What to expect from your coaching workspace — your AI handles setup via /start', cat: 'start', tags: ['setup', 'onboarding'] },
-    { path: 'Glossary.md', name: 'Glossary', desc: 'Plain English definitions for every term we use — repo, commit, prompt, MCP, and more', cat: 'start', tags: ['reference', 'beginner'] },
-    { path: 'CLAUDE.md', name: 'CLAUDE.md', desc: 'The instructions Claude reads automatically when you work in this repo — your AI\'s operating manual', cat: 'start', tags: ['config', 'meta'] },
-
-    // Cheatsheets
-    { path: 'Cheatsheet - Claude Code Basics.md', name: 'Claude Code Basics', desc: 'Day-one commands and patterns — copy, paste, and watch it work', cat: 'cheats', tags: ['commands', 'quick-ref'] },
-    { path: 'Cheatsheet - Git for Non-Devs.md', name: 'Git for Non-Devs', desc: 'What your AI does behind the scenes when you run /push and /pull', cat: 'cheats', tags: ['git', 'under-the-hood'] },
-    { path: 'Cheatsheet - Prompt Engineering.md', name: 'Prompt Engineering', desc: 'The CSCR framework and power moves for getting better results', cat: 'cheats', tags: ['prompts', 'quick-ref'] },
-    { path: 'Cheatsheet - Thinking in Projects.md', name: 'Thinking in Projects', desc: 'How to scope, build, and ship — the build loop, file formats, and avoiding tweak spirals', cat: 'cheats', tags: ['projects', 'workflow', 'quick-ref'] },
-    { path: 'Cheatsheet - Building Agent Systems.md', name: 'Building Agent Systems', desc: 'MCP servers, the Chief of Staff pattern, multi-tool agents — connect Claude to your business', cat: 'cheats', tags: ['agents', 'mcp', 'architecture', 'quick-ref'] },
-
-    // Going Deeper
-    { path: 'Advanced - Permission Modes.md', name: 'Permission Modes', desc: 'Control how much Claude asks — from plan mode to full autonomy', cat: 'deeper', tags: ['permissions', 'modes'] },
-    { path: 'Advanced - Autonomous Builds.md', name: 'Autonomous Builds', desc: 'The "Ralph Wiggum" tutorial — let Claude build things unsupervised, safely', cat: 'deeper', tags: ['autonomy', 'tutorial'] },
-    { path: 'Advanced - Agent Tools.md', name: 'Agent Tools & Multi-Agent', desc: 'What agent harnesses are, whether you need one, and working with multiple AIs', cat: 'deeper', tags: ['agents', 'tools'] },
-
-    // Templates
-    { path: 'TEMPLATES/client-intake-template.md', name: 'Client Intake', desc: 'Start here — your background, goals, tech comfort, and what you want to build. This feeds everything else.', cat: 'templates', tags: ['first', 'fill-in'] },
-    { path: 'TEMPLATES/brand-bible-template.md', name: 'Brand Bible Template', desc: 'Who you are — your voice, audience, positioning. Claude reads this to understand you.', cat: 'templates', tags: ['fill-in', 'brand'] },
-    { path: 'TEMPLATES/workflow-map-template.md', name: 'Workflow Map Template', desc: 'What you do — your processes, tools, and pain points. Claude reads this to help you improve.', cat: 'templates', tags: ['fill-in', 'workflows'] },
-    { path: 'TEMPLATES/audit-worksheet.md', name: 'Audit Worksheet', desc: 'Session 1 tool & process audit — we fill this out together to find quick wins', cat: 'templates', tags: ['session-1', 'fill-in'] },
-    { path: 'TEMPLATES/session-prep.md', name: 'Session Prep', desc: 'Quick checkin before each session — what worked, what didn\'t, what to focus on', cat: 'templates', tags: ['pre-session', 'fill-in'] },
-
-    // News & Updates (dynamic entries loaded at runtime — see loadDynamicNews)
-    { path: 'NEWS/_about.md', name: 'About News & Updates', desc: 'Curated updates from JH on AI, agentic coding, and tools that matter for your work', cat: 'news', tags: ['news', 'updates'] },
-
-    // Sessions & Workspace
-    { path: 'SESSIONS/_about.md', name: 'Session Notes', desc: 'Notes and homework from each session — this folder grows as we work together', cat: 'sessions', tags: ['sessions'] },
-    { path: 'CLIENT-WORKSPACE/_about.md', name: 'Your Workspace', desc: 'Your sandbox for experiments and projects — try things here, nothing breaks', cat: 'sessions', tags: ['sandbox'] },
+    { path: 'writing/eduos-plea.md', name: 'EduOS Plea', desc: 'Why schools need to own their tools — a manifesto for educational technology sovereignty', cat: 'eduos', tags: ['education', 'sovereignty'], slug: 'eduos-plea' },
+    { path: 'writing/eduos-classroom.md', name: 'The Classroom That Owns Itself', desc: 'Why schools need open source AI — from Engelbart to the present', cat: 'eduos', tags: ['education', 'ai', 'open-source'], slug: 'eduos-classroom' },
+    { path: 'writing/eduos-quickstart.md', name: 'Sovereign Stack Quick Start', desc: 'Technical and policy guide for school districts ready to own their infrastructure', cat: 'eduos', tags: ['education', 'technical', 'policy'], slug: 'eduos-quickstart' },
 ];
 
 const categories = {
-    start:     { title: 'Start Here',       icon: '&#x203A;', desc: 'Read these first — setup, vocabulary, and how your AI is configured' },
-    cheats:    { title: 'Cheatsheets',       icon: '&#x203A;', desc: 'Quick references you\'ll come back to — copy-paste patterns' },
-    deeper:    { title: 'Going Deeper',      icon: '&#x203A;', desc: 'More advanced topics — explore when you\'re comfortable with the basics' },
-    news:      { title: 'News & Updates',    icon: '&#x203A;', desc: 'What\'s happening in AI and agentic systems — curated by JH between sessions' },
-    templates: { title: 'Templates',         icon: '&#x203A;', desc: 'Fill these out with Claude\'s help — they teach your AI about you and your work' },
-    sessions:  { title: 'Sessions & Workspace', icon: '&#x203A;', desc: 'Where the real work happens — session notes, homework, and experiments' },
+    eduos: { title: 'EduOS', icon: '&#x203A;', desc: 'Open source AI infrastructure for schools — sovereign computing in education' },
 };
-
-const catOrder = ['start', 'cheats', 'news', 'deeper', 'templates', 'sessions'];
+const catOrder = ['eduos'];
 
 // ============================================
 // STATE
 // ============================================
-let currentFilter = 'all';
-let searchQuery = '';
 let history = [];
 let historyIndex = -1;
 let currentPath = null;
@@ -1109,25 +1008,11 @@ let currentPath = null;
 // ============================================
 function renderFiles() {
     const container = document.getElementById('fileList');
-    let filtered = fileIndex;
-
-    if (currentFilter !== 'all') {
-        filtered = filtered.filter(f => f.cat === currentFilter);
-    }
-
-    if (searchQuery) {
-        const q = searchQuery.toLowerCase();
-        filtered = filtered.filter(f =>
-            f.name.toLowerCase().includes(q) ||
-            f.desc.toLowerCase().includes(q) ||
-            f.tags.some(t => t.includes(q))
-        );
-    }
 
     // Group by category
     const grouped = {};
     catOrder.forEach(c => { grouped[c] = []; });
-    filtered.forEach(f => {
+    fileIndex.forEach(f => {
         if (grouped[f.cat]) grouped[f.cat].push(f);
     });
 
@@ -1141,14 +1026,13 @@ function renderFiles() {
             <div class="category-header">
                 <span class="category-icon">${info.icon}</span>
                 <span class="category-title">${info.title}</span>
-                <span class="category-count">${files.length} file${files.length !== 1 ? 's' : ''}</span>
+                <span class="category-count">${files.length} article${files.length !== 1 ? 's' : ''}</span>
             </div>
             <div class="category-desc">${info.desc}</div>
             <div class="file-grid">`;
 
         files.forEach(f => {
-            const tagClass = cat === 'start' ? 'tag-cyan' : cat === 'cheats' ? 'tag-gold' : cat === 'deeper' ? 'tag-cyan' : cat === 'news' ? 'tag-gold' : cat === 'templates' ? 'tag-green' : 'tag-muted';
-            const tags = f.tags.map(t => `<span class="file-tag ${tagClass}">${t}</span>`).join('');
+            const tags = f.tags.map(t => `<span class="file-tag tag-cyan">${t}</span>`).join('');
 
             html += `<div class="file-card cat-${cat}" onclick="openFile('${f.path}')">
                 <div class="file-name">${f.name}</div>
@@ -1160,26 +1044,7 @@ function renderFiles() {
         html += `</div></div>`;
     });
 
-    if (!html) {
-        html = `<p style="color:var(--muted);text-align:center;padding:var(--space-xl);">No files match your search.</p>`;
-    }
-
     container.innerHTML = html;
-}
-
-// ============================================
-// FILTERS
-// ============================================
-function setFilter(cat) {
-    currentFilter = cat;
-    const select = document.getElementById('filterSelect');
-    if (select) select.value = cat;
-    renderFiles();
-}
-
-function handleSearch(q) {
-    searchQuery = q;
-    renderFiles();
 }
 
 // ============================================
@@ -1273,14 +1138,13 @@ function renderMarkdown(text) {
 // OPEN / CLOSE PANEL
 // ============================================
 function openFile(path, skipHistory) {
-    // Folders — just filter
-    if (path.endsWith('/')) {
-        const cat = fileIndex.find(f => f.path === path)?.cat;
-        if (cat) setFilter(cat);
-        return;
-    }
-
     currentPath = path;
+
+    // Set hash for shareable URL
+    const entry = fileIndex.find(f => f.path === path);
+    if (entry && entry.slug) {
+        window.location.hash = entry.slug;
+    }
 
     if (!skipHistory) {
         if (historyIndex < history.length - 1) {
@@ -1312,13 +1176,9 @@ function openFile(path, skipHistory) {
         })
         .catch(() => {
             body.innerHTML = `<div class="md">
-                <h2>This file isn't loading yet</h2>
-                <p>No worries — this usually just means the dashboard needs a local server running to read your files.</p>
-                <h3>Quick fix</h3>
-                <p>Tell Claude: <em>"Run a local server for my coaching repo so I can use the dashboard."</em></p>
-                <p>It'll start the server and give you a link to open. After that, everything on the dashboard will work.</p>
-                <p>If <code>${path}</code> still doesn't show up, it might not exist yet — some sections get created as you work through sessions with JH.</p>
-                <p style="margin-top:1em;color:var(--muted);">You can also just ask Claude to read any file to you directly — no dashboard needed.</p>
+                <h2>File not found</h2>
+                <p>The file <code>${path}</code> could not be loaded.</p>
+                <p>Make sure you are serving this page from a local server or web host, and that the file exists in the <code>writing/</code> subfolder.</p>
             </div>`;
         });
 }
@@ -1328,6 +1188,8 @@ function closePanel() {
     document.getElementById('panelOverlay').classList.remove('open');
     document.body.style.overflow = '';
     currentPath = null;
+    // Clear hash
+    history.replaceState('', document.title, window.location.pathname + window.location.search);
 }
 
 // ============================================
@@ -1380,7 +1242,7 @@ function updateBreadcrumbs(path) {
     const file = fileIndex.find(f => f.path === path);
     const catInfo = file ? categories[file.cat] : null;
 
-    let html = `<span class="crumb crumb-root" onclick="closePanel()">Dashboard</span>`;
+    let html = `<span class="crumb crumb-root" onclick="closePanel()">Writing</span>`;
     if (catInfo) {
         html += `<span class="crumb-sep">/</span><span class="crumb crumb-category">${catInfo.title}</span>`;
     }
@@ -1438,127 +1300,20 @@ document.addEventListener('keydown', e => {
 });
 
 // ============================================
-// WELCOME CARD DISMISS
+// HASH-BASED ROUTING
 // ============================================
-const WELCOME_KEY = 'jh-coaching-welcome-dismissed';
-
-function initWelcome() {
-    if (localStorage.getItem(WELCOME_KEY) === 'true') {
-        document.getElementById('welcomeCard').style.display = 'none';
-        document.getElementById('showWelcome').style.display = 'inline';
-    }
-}
-
-function dismissWelcome() {
-    document.getElementById('welcomeCard').style.display = 'none';
-    localStorage.setItem(WELCOME_KEY, 'true');
-    document.getElementById('showWelcome').style.display = 'inline';
-}
-
-function showWelcome() {
-    document.getElementById('welcomeCard').style.display = 'block';
-    localStorage.removeItem(WELCOME_KEY);
-    document.getElementById('showWelcome').style.display = 'none';
-}
-
-// ============================================
-// DYNAMIC NEWS DISCOVERY
-// ============================================
-async function discoverMdFiles(dir) {
-    try {
-        const resp = await fetch(dir);
-        if (!resp.ok) return [];
-        const html = await resp.text();
-        const matches = [...html.matchAll(/href="([^"]*?\.md)"/gi)];
-        return matches
-            .map(m => {
-                const raw = m[1].replace(/&#47;/g, '/');
-                return decodeURIComponent(raw.split('/').pop());
-            })
-            .filter(f => f.endsWith('.md') && f !== '_about.md');
-    } catch (e) { return []; }
-}
-
-async function parseNewsFile(path, filename, isArchive) {
-    try {
-        const resp = await fetch(path);
-        if (!resp.ok) return null;
-        const content = await resp.text();
-        const lines = content.split('\n').filter(l => l.trim());
-
-        const h1 = lines.find(l => /^#{1,2}\s/.test(l));
-        let name = h1 ? h1.replace(/^#+\s*/, '') : filename.replace('.md', '');
-        if (isArchive) name = '\u{1F4C2} ' + name;
-
-        const descLine = lines.find(l =>
-            !l.startsWith('#') &&
-            !l.startsWith('---') &&
-            !l.startsWith('*Part of') &&
-            !l.startsWith('>')
-        );
-        const desc = descLine
-            ? descLine.replace(/\*\*/g, '').replace(/\*/g, '').slice(0, 120)
-            : isArchive ? 'Monthly news digest' : 'News update from JH';
-
-        return { path, name, desc, cat: 'news', tags: isArchive ? ['news', 'archive'] : ['news'] };
-    } catch (e) { return null; }
-}
-
-async function loadDynamicNews() {
-    try {
-        // Discover current news entries
-        const currentFiles = (await discoverMdFiles('NEWS/'))
-            .sort().reverse();
-
-        // Discover archived digests
-        const archiveFiles = (await discoverMdFiles('NEWS/archive/'))
-            .sort().reverse();
-
-        if (currentFiles.length === 0 && archiveFiles.length === 0) return;
-
-        const aboutIdx = fileIndex.findIndex(f => f.path === 'NEWS/_about.md');
-        const insertAt = aboutIdx >= 0 ? aboutIdx + 1 : fileIndex.length;
-
-        let inserted = 0;
-
-        // Current entries first (newest at top)
-        for (const filename of currentFiles) {
-            const path = `NEWS/${filename}`;
-            if (fileIndex.some(f => f.path === path)) continue;
-            const entry = await parseNewsFile(path, filename, false);
-            if (entry) {
-                fileIndex.splice(insertAt + inserted, 0, entry);
-                inserted++;
-            }
-        }
-
-        // Archive entries after current (oldest months at bottom)
-        for (const filename of archiveFiles) {
-            const path = `NEWS/archive/${filename}`;
-            if (fileIndex.some(f => f.path === path)) continue;
-            const entry = await parseNewsFile(path, filename, true);
-            if (entry) {
-                fileIndex.splice(insertAt + inserted, 0, entry);
-                inserted++;
-            }
-        }
-
-        if (inserted > 0) renderFiles();
-    } catch (e) {
-        // NEWS/ directory listing not available — static entries only
-    }
+function checkHash() {
+    const hash = window.location.hash.replace('#', '');
+    if (!hash) return;
+    const entry = fileIndex.find(f => f.slug === hash);
+    if (entry) openFile(entry.path);
 }
 
 // ============================================
 // INIT
 // ============================================
-if (window.location.protocol === 'file:') {
-    document.getElementById('fallbackNotice').style.display = 'block';
-}
-
-initWelcome();
 renderFiles();
-loadDynamicNews();
+checkHash();
 
 // ============================================
 // THEME TOGGLE
@@ -1581,41 +1336,6 @@ function updateThemeIcon() {
     if (label) label.textContent = theme === 'light' ? 'Dark' : 'Light';
     btn.title = theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode';
 }
-
-// ============================================
-// CHANGE DETECTION — show refresh banner when content updates
-// ============================================
-let initialSnapshot = null;
-
-async function snapshotContent() {
-    try {
-        const resp = await fetch('NEWS/');
-        if (!resp.ok) return null;
-        let snapshot = await resp.text();
-        // Also check archive directory for changes
-        try {
-            const archResp = await fetch('NEWS/archive/');
-            if (archResp.ok) snapshot += await archResp.text();
-        } catch {}
-        return snapshot;
-    } catch { return null; }
-}
-
-async function checkForUpdates() {
-    if (!initialSnapshot) return;
-    const current = await snapshotContent();
-    if (current && current !== initialSnapshot) {
-        document.getElementById('refreshBanner').style.display = 'block';
-    }
-}
-
-// Take initial snapshot after page loads
-snapshotContent().then(s => { initialSnapshot = s; });
-
-// Check for changes when tab regains focus
-document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') checkForUpdates();
-});
 
 // Load saved theme
 (function() {
