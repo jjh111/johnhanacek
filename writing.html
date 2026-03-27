@@ -177,6 +177,12 @@
             display: none;
         }
 
+        .header-count {
+            font-size: 0.7rem;
+            color: var(--muted);
+            letter-spacing: 0.04em;
+        }
+
         .theme-toggle {
             background: var(--glass);
             border: 1px solid var(--border);
@@ -932,8 +938,9 @@
             <div class="header-tagline">John Hanacek</div>
             <span class="header-sep">/</span>
             <h1 class="header-title">Writing</h1>
+            <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Switch to light mode"><span id="toggleIcon">&#9788;</span> <span id="toggleLabel">Light</span></button>
         </div>
-        <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Switch to light mode"><span id="toggleIcon">&#9788;</span> <span id="toggleLabel">Light</span></button>
+        <div class="header-count" id="headerCount"></div>
     </header>
 
     <!-- File listing -->
@@ -965,6 +972,7 @@
             <div class="breadcrumbs" id="breadcrumbs">
                 <span class="crumb crumb-root" onclick="closePanel()">Writing</span>
             </div>
+            <button class="theme-toggle" id="panelThemeToggle" onclick="toggleTheme()" title="Switch to light mode"><span id="panelToggleIcon">&#9788;</span></button>
             <button class="panel-close" onclick="closePanel()" title="Close (Esc)">&times;</button>
         </div>
     </div>
@@ -1313,6 +1321,7 @@ function checkHash() {
 // INIT
 // ============================================
 renderFiles();
+document.getElementById('headerCount').textContent = fileIndex.length + ' article' + (fileIndex.length !== 1 ? 's' : '');
 checkHash();
 
 // ============================================
@@ -1327,14 +1336,24 @@ function toggleTheme() {
 }
 
 function updateThemeIcon() {
+    const theme = document.documentElement.getAttribute('data-theme');
+    const isDark = theme !== 'light';
+    const sunIcon = '&#9788;';
+    const moonIcon = '&#9790;';
+
+    // Main header toggle
     const icon = document.getElementById('toggleIcon');
     const label = document.getElementById('toggleLabel');
     const btn = document.getElementById('themeToggle');
-    if (!btn) return;
-    const theme = document.documentElement.getAttribute('data-theme');
-    if (icon) icon.innerHTML = theme === 'light' ? '&#9790;' : '&#9788;';
-    if (label) label.textContent = theme === 'light' ? 'Dark' : 'Light';
-    btn.title = theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode';
+    if (icon) icon.innerHTML = isDark ? sunIcon : moonIcon;
+    if (label) label.textContent = isDark ? 'Light' : 'Dark';
+    if (btn) btn.title = isDark ? 'Switch to light mode' : 'Switch to dark mode';
+
+    // Panel toggle
+    const panelIcon = document.getElementById('panelToggleIcon');
+    const panelBtn = document.getElementById('panelThemeToggle');
+    if (panelIcon) panelIcon.innerHTML = isDark ? sunIcon : moonIcon;
+    if (panelBtn) panelBtn.title = isDark ? 'Switch to light mode' : 'Switch to dark mode';
 }
 
 // Load saved theme
