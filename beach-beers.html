@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beach Beers</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #1a0a2e;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: 'Georgia', serif;
+    overflow: hidden;
+  }
+
+  h1 {
+    position: absolute;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255,220,120,0.92);
+    font-size: clamp(1.1rem, 3vw, 1.8rem);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    font-weight: 400;
+    text-shadow: 0 0 30px rgba(255,160,50,0.5), 0 2px 8px rgba(0,0,0,0.6);
+    white-space: nowrap;
+    z-index: 10;
+  }
+
+  .hint {
+    position: absolute;
+    bottom: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255,200,120,0.55);
+    font-size: clamp(0.65rem, 1.8vw, 0.85rem);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    z-index: 10;
+    animation: pulse 3s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.45; }
+    50% { opacity: 0.85; }
+  }
+
+  .scene-wrap {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  svg#scene {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* Wave animation */
+  @keyframes wave1 {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  @keyframes wave2 {
+    0%   { transform: translateX(-50%); }
+    100% { transform: translateX(0); }
+  }
+  .wave-path-1 { animation: wave1 7s linear infinite; }
+  .wave-path-2 { animation: wave2 9s linear infinite; }
+  .wave-path-3 { animation: wave1 11s linear infinite; }
+
+  /* Seagull fly */
+  @keyframes gull {
+    0%   { transform: translateX(-40px) translateY(0px); }
+    25%  { transform: translateX(0px) translateY(-12px); }
+    50%  { transform: translateX(40px) translateY(0px); }
+    75%  { transform: translateX(0px) translateY(8px); }
+    100% { transform: translateX(-40px) translateY(0px); }
+  }
+  .gull { animation: gull 4s ease-in-out infinite; }
+  .gull2 { animation: gull 5.5s ease-in-out infinite reverse; }
+  .gull3 { animation: gull 3.8s ease-in-out 1.2s infinite; }
+
+  /* Sun shimmer */
+  @keyframes shimmer {
+    0%, 100% { opacity: 0.85; r: 48px; }
+    50%       { opacity: 1;    r: 52px; }
+  }
+  #sun { animation: shimmer 4s ease-in-out infinite; }
+
+  /* Star twinkle */
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.2; }
+    50%       { opacity: 0.9; }
+  }
+
+  /* Drink animations */
+  @keyframes drinkHeadL {
+    0%  { transform: rotate(0deg); transform-origin: 50% 100%; }
+    20% { transform: rotate(-18deg); transform-origin: 50% 100%; }
+    70% { transform: rotate(-18deg); transform-origin: 50% 100%; }
+    100%{ transform: rotate(0deg); transform-origin: 50% 100%; }
+  }
+  @keyframes drinkBeerL {
+    0%  { transform: rotate(0deg); }
+    20% { transform: rotate(-55deg); }
+    70% { transform: rotate(-55deg); }
+    100%{ transform: rotate(0deg); }
+  }
+  @keyframes drinkHeadR {
+    0%  { transform: rotate(0deg); transform-origin: 50% 100%; }
+    20% { transform: rotate(18deg); transform-origin: 50% 100%; }
+    70% { transform: rotate(18deg); transform-origin: 50% 100%; }
+    100%{ transform: rotate(0deg); transform-origin: 50% 100%; }
+  }
+  @keyframes drinkBeerR {
+    0%  { transform: rotate(0deg); }
+    20% { transform: rotate(55deg); }
+    70% { transform: rotate(55deg); }
+    100%{ transform: rotate(0deg); }
+  }
+
+  .drinking-head-l { animation: drinkHeadL 1.4s ease-in-out forwards; }
+  .drinking-beer-l { animation: drinkBeerL 1.4s ease-in-out forwards; }
+  .drinking-head-r { animation: drinkHeadR 1.4s ease-in-out forwards; }
+  .drinking-beer-r { animation: drinkBeerR 1.4s ease-in-out forwards; }
+
+  .char-group {
+    cursor: pointer;
+  }
+  .char-group:hover .body-shadow {
+    opacity: 0.5;
+  }
+</style>
+</head>
+<body>
+
+<h1>Beach Beers</h1>
+<div class="scene-wrap">
+<svg id="scene" viewBox="0 0 900 560" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Sky gradient -->
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#0d0524"/>
+      <stop offset="28%"  stop-color="#2b1055"/>
+      <stop offset="55%"  stop-color="#7b2d5e"/>
+      <stop offset="78%"  stop-color="#e8663d"/>
+      <stop offset="100%" stop-color="#f9a94b"/>
+    </linearGradient>
+    <!-- Horizon glow -->
+    <radialGradient id="horizGlow" cx="50%" cy="100%" r="55%">
+      <stop offset="0%"  stop-color="#ffcc66" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#ff6622" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Sun glow -->
+    <radialGradient id="sunGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"  stop-color="#fff7c0" stop-opacity="0.9"/>
+      <stop offset="40%" stop-color="#ffd060" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#ff8030" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Water gradient -->
+    <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#1a5c8a"/>
+      <stop offset="50%"  stop-color="#0e3a5e"/>
+      <stop offset="100%" stop-color="#081e35"/>
+    </linearGradient>
+    <!-- Sand gradient -->
+    <linearGradient id="sand" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#d4a84b"/>
+      <stop offset="60%"  stop-color="#b8894a"/>
+      <stop offset="100%" stop-color="#8c6030"/>
+    </linearGradient>
+    <!-- Sun reflection on water -->
+    <linearGradient id="sunRefl" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#ffd060" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#ff8030" stop-opacity="0.05"/>
+    </linearGradient>
+    <!-- Beer bottle gradient -->
+    <linearGradient id="bottleGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#2a5c20"/>
+      <stop offset="40%"  stop-color="#4a9c38"/>
+      <stop offset="100%" stop-color="#1e4018"/>
+    </linearGradient>
+    <!-- Beer liquid -->
+    <linearGradient id="beerLiquid" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#f5e642" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#c8920a" stop-opacity="0.95"/>
+    </linearGradient>
+    <!-- Skin tones -->
+    <radialGradient id="skin1" cx="45%" cy="40%" r="55%">
+      <stop offset="0%"   stop-color="#f5c99a"/>
+      <stop offset="100%" stop-color="#d4944a"/>
+    </radialGradient>
+    <radialGradient id="skin2" cx="55%" cy="40%" r="55%">
+      <stop offset="0%"   stop-color="#e8a870"/>
+      <stop offset="100%" stop-color="#b87038"/>
+    </radialGradient>
+    <!-- Shirt gradients -->
+    <linearGradient id="shirt1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#e85d8a"/>
+      <stop offset="100%" stop-color="#c0234f"/>
+    </linearGradient>
+    <linearGradient id="shirt2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#4a9de8"/>
+      <stop offset="100%" stop-color="#1a5fb0"/>
+    </linearGradient>
+    <!-- Shorts -->
+    <linearGradient id="shorts1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f0e060"/>
+      <stop offset="100%" stop-color="#c8b020"/>
+    </linearGradient>
+    <linearGradient id="shorts2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#60d8a0"/>
+      <stop offset="100%" stop-color="#20a060"/>
+    </linearGradient>
+    <!-- Shadow filter -->
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="rgba(0,0,0,0.4)"/>
+    </filter>
+    <filter id="glowFilter">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <!-- Clip for waves -->
+    <clipPath id="waveClip">
+      <rect x="0" y="290" width="900" height="160"/>
+    </clipPath>
+    <!-- Bottle cap -->
+    <linearGradient id="capGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e8c830"/>
+      <stop offset="100%" stop-color="#b89010"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ─── SKY ─── -->
+  <rect width="900" height="560" fill="url(#sky)"/>
+  <rect width="900" height="560" fill="url(#horizGlow)"/>
+
+  <!-- Stars -->
+  <g id="stars">
+    <circle cx="80"  cy="35"  r="1.2" fill="white" style="animation: twinkle 2.1s 0.3s ease-in-out infinite;"/>
+    <circle cx="155" cy="18"  r="0.9" fill="white" style="animation: twinkle 3.1s 1.1s ease-in-out infinite;"/>
+    <circle cx="260" cy="45"  r="1.4" fill="white" style="animation: twinkle 2.5s 0.7s ease-in-out infinite;"/>
+    <circle cx="330" cy="22"  r="0.8" fill="white" style="animation: twinkle 3.8s 0.2s ease-in-out infinite;"/>
+    <circle cx="420" cy="55"  r="1.1" fill="white" style="animation: twinkle 2.8s 1.5s ease-in-out infinite;"/>
+    <circle cx="510" cy="30"  r="1.3" fill="white" style="animation: twinkle 3.3s 0.9s ease-in-out infinite;"/>
+    <circle cx="600" cy="48"  r="0.9" fill="white" style="animation: twinkle 2.2s 0.5s ease-in-out infinite;"/>
+    <circle cx="680" cy="16"  r="1.5" fill="white" style="animation: twinkle 4.0s 1.8s ease-in-out infinite;"/>
+    <circle cx="760" cy="40"  r="1.0" fill="white" style="animation: twinkle 2.7s 0.4s ease-in-out infinite;"/>
+    <circle cx="840" cy="25"  r="1.2" fill="white" style="animation: twinkle 3.5s 1.2s ease-in-out infinite;"/>
+    <circle cx="120" cy="65"  r="0.8" fill="white" style="animation: twinkle 2.9s 0.8s ease-in-out infinite;"/>
+    <circle cx="200" cy="80"  r="1.0" fill="white" style="animation: twinkle 3.2s 1.6s ease-in-out infinite;"/>
+    <circle cx="700" cy="70"  r="1.1" fill="white" style="animation: twinkle 2.4s 0.6s ease-in-out infinite;"/>
+    <circle cx="800" cy="58"  r="0.9" fill="white" style="animation: twinkle 3.6s 1.0s ease-in-out infinite;"/>
+  </g>
+
+  <!-- Sun halo -->
+  <circle cx="450" cy="295" r="90" fill="url(#sunGlow)"/>
+  <!-- Sun -->
+  <circle id="sun" cx="450" cy="295" r="48" fill="#ffe566" filter="url(#glowFilter)"/>
+  <circle cx="450" cy="295" r="42" fill="#fff4a0"/>
+
+  <!-- Sun reflection on water -->
+  <ellipse cx="450" cy="340" rx="18" ry="120" fill="url(#sunRefl)" transform="rotate(180,450,380)"/>
+
+  <!-- ─── WATER ─── -->
+  <rect x="0" y="295" width="900" height="155" fill="url(#water)"/>
+
+  <!-- Sun reflection shimmer on water surface -->
+  <rect x="380" y="296" width="140" height="80" fill="url(#sunRefl)" opacity="0.4"/>
+
+  <!-- Waves (animated) -->
+  <g clip-path="url(#waveClip)">
+    <!-- Deep wave layer -->
+    <g class="wave-path-1">
+      <path d="M0,315 Q55,305 110,315 Q165,325 220,315 Q275,305 330,315 Q385,325 440,315 Q495,305 550,315 Q605,325 660,315 Q715,305 770,315 Q825,325 880,315 Q935,305 990,315 Q1045,325 1100,315 Q1155,305 1210,315 Q1265,325 1320,315 Q1375,305 1430,315 Q1485,325 1540,315 Q1595,305 1650,315 Q1705,325 1760,315 Q1815,305 1870,315" stroke="rgba(100,200,255,0.18)" stroke-width="2.5" fill="none"/>
+    </g>
+    <!-- Mid wave -->
+    <g class="wave-path-2">
+      <path d="M0,325 Q70,313 140,325 Q210,337 280,325 Q350,313 420,325 Q490,337 560,325 Q630,313 700,325 Q770,337 840,325 Q910,313 980,325 Q1050,337 1120,325 Q1190,313 1260,325 Q1330,337 1400,325 Q1470,313 1540,325 Q1610,337 1680,325 Q1750,313 1820,325" stroke="rgba(150,220,255,0.22)" stroke-width="3" fill="none"/>
+    </g>
+    <!-- Foam wave -->
+    <g class="wave-path-3">
+      <path d="M0,338 Q80,325 160,338 Q240,351 320,338 Q400,325 480,338 Q560,351 640,338 Q720,325 800,338 Q880,351 960,338 Q1040,325 1120,338 Q1200,351 1280,338 Q1360,325 1440,338 Q1520,351 1600,338 Q1680,325 1760,338 Q1840,351 1920,338" stroke="rgba(255,255,255,0.28)" stroke-width="2" fill="none"/>
+      <path d="M0,341 Q80,328 160,341 Q240,354 320,341 Q400,328 480,341 Q560,354 640,341 Q720,328 800,341 Q880,354 960,341 Q1040,328 1120,341 Q1200,354 1280,341 Q1360,328 1440,341 Q1520,354 1600,341 Q1680,328 1760,341 Q1840,354 1920,341" stroke="rgba(255,255,255,0.15)" stroke-width="1.5" fill="none"/>
+    </g>
+  </g>
+
+  <!-- Horizon glow line -->
+  <rect x="0" y="293" width="900" height="3" fill="rgba(255,230,120,0.25)"/>
+
+  <!-- ─── SAND ─── -->
+  <path d="M0,420 Q150,400 300,415 Q450,430 600,410 Q750,392 900,408 L900,560 L0,560 Z" fill="url(#sand)"/>
+  <!-- Sand texture subtle ripples -->
+  <path d="M50,445 Q120,440 190,447" stroke="rgba(180,140,60,0.3)" stroke-width="1.5" fill="none"/>
+  <path d="M200,435 Q290,429 380,437" stroke="rgba(180,140,60,0.25)" stroke-width="1.2" fill="none"/>
+  <path d="M520,442 Q610,436 700,443" stroke="rgba(180,140,60,0.28)" stroke-width="1.3" fill="none"/>
+  <path d="M680,455 Q760,448 840,456" stroke="rgba(180,140,60,0.22)" stroke-width="1.2" fill="none"/>
+  <!-- Wet sand near water -->
+  <path d="M0,416 Q150,398 300,413 Q450,428 600,408 Q750,390 900,406 L900,430 Q750,414 600,432 Q450,448 300,433 Q150,418 0,434 Z" fill="rgba(160,110,40,0.25)"/>
+
+  <!-- ─── DISTANT HILLS/DUNES ─── -->
+  <path d="M0,400 Q80,370 180,385 Q280,400 360,375 Q440,350 520,370 Q600,390 700,365 Q800,340 900,360 L900,415 Q750,398 600,418 Q450,438 300,420 Q150,402 0,420 Z" fill="rgba(160,100,30,0.35)"/>
+
+  <!-- ─── SEAGULLS ─── -->
+  <g class="gull" transform="translate(120,130)">
+    <path d="M0,0 Q8,-5 16,-1" stroke="rgba(255,240,200,0.85)" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M16,-1 Q24,-5 32,0" stroke="rgba(255,240,200,0.85)" stroke-width="2" fill="none" stroke-linecap="round"/>
+  </g>
+  <g class="gull2" transform="translate(200,100)">
+    <path d="M0,0 Q7,-4 14,-0.5" stroke="rgba(255,240,200,0.7)" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <path d="M14,-0.5 Q21,-4 28,0" stroke="rgba(255,240,200,0.7)" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  </g>
+  <g class="gull3" transform="translate(155,160)">
+    <path d="M0,0 Q6,-3.5 12,-0.5" stroke="rgba(255,240,200,0.6)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <path d="M12,-0.5 Q18,-3.5 24,0" stroke="rgba(255,240,200,0.6)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  </g>
+  <!-- Right side seagulls -->
+  <g class="gull2" transform="translate(720,115)">
+    <path d="M0,0 Q8,-5 16,-1" stroke="rgba(255,240,200,0.75)" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <path d="M16,-1 Q24,-5 32,0" stroke="rgba(255,240,200,0.75)" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  </g>
+  <g class="gull" transform="translate(770,145)">
+    <path d="M0,0 Q6,-4 12,-0.5" stroke="rgba(255,240,200,0.6)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <path d="M12,-0.5 Q18,-4 24,0" stroke="rgba(255,240,200,0.6)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  </g>
+
+  <!-- ─── BEACH TOWEL LEFT ─── -->
+  <ellipse cx="240" cy="436" rx="72" ry="14" fill="rgba(220,80,80,0.6)" transform="rotate(-5,240,436)"/>
+  <ellipse cx="240" cy="436" rx="68" ry="11" fill="rgba(255,130,80,0.35)" transform="rotate(-5,240,436)"/>
+
+  <!-- ─── BEACH TOWEL RIGHT ─── -->
+  <ellipse cx="660" cy="433" rx="72" ry="14" fill="rgba(60,160,220,0.6)" transform="rotate(4,660,433)"/>
+  <ellipse cx="660" cy="433" rx="68" ry="11" fill="rgba(80,200,240,0.35)" transform="rotate(4,660,433)"/>
+
+  <!-- ═══════════════════════════════════════
+       CHARACTER 1 — LEFT FRIEND (Alex)
+  ════════════════════════════════════════ -->
+  <g id="char1" class="char-group" filter="url(#shadow)">
+    <!-- Body shadow -->
+    <ellipse cx="240" cy="456" rx="45" ry="8" fill="rgba(0,0,0,0.3)" class="body-shadow"/>
+
+    <!-- Legs (sitting, crossed) -->
+    <g id="char1-legs">
+      <path d="M218,440 Q205,455 195,460 Q185,462 188,468 Q210,472 225,460 Z" fill="#d4944a"/>
+      <path d="M260,440 Q273,455 282,460 Q292,462 289,468 Q267,472 252,460 Z" fill="#d4944a"/>
+      <!-- Shorts -->
+      <path d="M210,430 Q225,450 240,445 Q255,450 270,430 Q265,420 240,418 Q215,420 210,430 Z" fill="url(#shorts1)"/>
+      <!-- Feet -->
+      <ellipse cx="191" cy="469" rx="10" ry="5" fill="#d4944a" transform="rotate(15,191,469)"/>
+      <ellipse cx="287" cy="469" rx="10" ry="5" fill="#d4944a" transform="rotate(-15,287,469)"/>
+    </g>
+
+    <!-- Torso -->
+    <g id="char1-body">
+      <path d="M215,380 Q205,410 208,430 Q220,442 240,440 Q260,442 272,430 Q275,410 265,380 Q255,370 240,368 Q225,370 215,380 Z" fill="url(#shirt1)"/>
+      <!-- Shirt collar detail -->
+      <path d="M232,370 L240,382 L248,370" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" fill="none"/>
+      <!-- Shirt stripes (Hawaiian-ish) -->
+      <line x1="222" y1="378" x2="220" y2="418" stroke="rgba(255,255,255,0.15)" stroke-width="2.5"/>
+      <line x1="233" y1="370" x2="230" y2="415" stroke="rgba(255,255,255,0.12)" stroke-width="2"/>
+      <line x1="247" y1="370" x2="250" y2="415" stroke="rgba(255,255,255,0.12)" stroke-width="2"/>
+      <line x1="258" y1="375" x2="260" y2="416" stroke="rgba(255,255,255,0.15)" stroke-width="2.5"/>
+    </g>
+
+    <!-- Left arm + beer (drinking arm) -->
+    <g id="char1-beer-arm">
+      <g id="char1-beer-pivot" style="transform-origin: 270px 390px;">
+        <!-- Upper arm -->
+        <path d="M265,385 Q278,392 286,404" stroke="#d4944a" stroke-width="14" fill="none" stroke-linecap="round"/>
+        <!-- Forearm -->
+        <path d="M286,404 Q298,410 302,418" stroke="#d4944a" stroke-width="12" fill="none" stroke-linecap="round"/>
+        <!-- Hand -->
+        <ellipse cx="306" cy="422" rx="9" ry="7" fill="#d4944a"/>
+        <!-- Beer bottle -->
+        <g id="char1-bottle" transform="translate(306,422)">
+          <!-- Bottle body -->
+          <rect x="-6" y="-38" width="12" height="32" rx="4" fill="url(#bottleGrad)"/>
+          <!-- Beer liquid level -->
+          <rect x="-5" y="-22" width="10" height="16" rx="3" fill="url(#beerLiquid)" opacity="0.9"/>
+          <!-- Bottle neck -->
+          <rect x="-3.5" y="-52" width="7" height="16" rx="2" fill="url(#bottleGrad)"/>
+          <!-- Cap -->
+          <rect x="-4.5" y="-57" width="9" height="7" rx="2" fill="url(#capGrad)"/>
+          <!-- Label -->
+          <rect x="-5" y="-28" width="10" height="12" rx="2" fill="rgba(255,230,80,0.85)"/>
+          <text x="0" y="-21" text-anchor="middle" font-size="4" fill="#5a3a00" font-family="Georgia">COLD</text>
+          <!-- Highlight -->
+          <rect x="-1" y="-50" width="2.5" height="36" rx="1" fill="rgba(255,255,255,0.35)"/>
+        </g>
+      </g>
+    </g>
+
+    <!-- Right arm (resting) -->
+    <g id="char1-rest-arm">
+      <path d="M215,385 Q202,395 196,410" stroke="#d4944a" stroke-width="14" fill="none" stroke-linecap="round"/>
+      <path d="M196,410 Q191,422 190,432" stroke="#d4944a" stroke-width="12" fill="none" stroke-linecap="round"/>
+      <ellipse cx="190" cy="436" rx="9" ry="6" fill="#d4944a"/>
+    </g>
+
+    <!-- Neck -->
+    <rect x="234" y="355" width="12" height="20" rx="4" fill="#d4944a"/>
+
+    <!-- Head group (rotates for drink) -->
+    <g id="char1-head" style="transform-origin: 240px 360px;">
+      <!-- Head -->
+      <ellipse cx="240" cy="338" rx="32" ry="34" fill="url(#skin1)"/>
+
+      <!-- Hair -->
+      <path d="M210,330 Q215,305 240,303 Q265,305 270,330 Q258,318 240,316 Q222,318 210,330 Z" fill="#3a2010"/>
+      <path d="M210,330 Q208,322 212,316 Q218,310 226,308" fill="#3a2010"/>
+      <path d="M270,330 Q272,322 268,316 Q262,310 254,308" fill="#3a2010"/>
+
+      <!-- Sunglasses -->
+      <rect x="218" y="334" width="18" height="11" rx="5" fill="rgba(20,10,5,0.85)"/>
+      <rect x="244" y="334" width="18" height="11" rx="5" fill="rgba(20,10,5,0.85)"/>
+      <line x1="236" y1="339" x2="244" y2="339" stroke="#888" stroke-width="2"/>
+      <!-- Lens shine -->
+      <ellipse cx="224" cy="337" rx="4" ry="2.5" fill="rgba(255,160,60,0.3)" transform="rotate(-15,224,337)"/>
+      <ellipse cx="250" cy="337" rx="4" ry="2.5" fill="rgba(255,160,60,0.3)" transform="rotate(-15,250,337)"/>
+      <!-- Frame -->
+      <rect x="218" y="334" width="18" height="11" rx="5" fill="none" stroke="#c8a060" stroke-width="1.5"/>
+      <rect x="244" y="334" width="18" height="11" rx="5" fill="none" stroke="#c8a060" stroke-width="1.5"/>
+      <!-- Temple -->
+      <line x1="210" y1="337" x2="218" y2="338" stroke="#c8a060" stroke-width="1.5"/>
+      <line x1="262" y1="338" x2="270" y2="337" stroke="#c8a060" stroke-width="1.5"/>
+
+      <!-- Smile -->
+      <path d="M228,354 Q240,362 252,354" stroke="#c8784a" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <path d="M230,354 Q240,360 250,354" fill="rgba(200,80,60,0.5)"/>
+
+      <!-- Ear -->
+      <ellipse cx="208" cy="342" rx="5" ry="7" fill="#d4944a"/>
+      <ellipse cx="272" cy="342" rx="5" ry="7" fill="#d4944a"/>
+
+      <!-- Name tag feel — subtle -->
+    </g>
+
+    <!-- Hover highlight ring -->
+    <circle cx="240" cy="380" r="78" fill="none" stroke="rgba(255,200,80,0)" id="char1-ring" stroke-width="2"/>
+  </g>
+
+  <!-- ─── Character 1 label ─── -->
+  <text x="240" y="500" text-anchor="middle" font-family="Georgia" font-size="14" fill="rgba(255,220,140,0.7)" letter-spacing="2">ALEX</text>
+
+  <!-- ═══════════════════════════════════════
+       CHARACTER 2 — RIGHT FRIEND (Sam)
+  ════════════════════════════════════════ -->
+  <g id="char2" class="char-group" filter="url(#shadow)">
+    <!-- Body shadow -->
+    <ellipse cx="660" cy="453" rx="45" ry="8" fill="rgba(0,0,0,0.3)" class="body-shadow"/>
+
+    <!-- Legs -->
+    <g id="char2-legs">
+      <path d="M638,438 Q625,453 615,458 Q605,460 608,466 Q630,470 645,458 Z" fill="#c08050"/>
+      <path d="M680,438 Q693,453 702,458 Q712,460 709,466 Q687,470 672,458 Z" fill="#c08050"/>
+      <!-- Shorts -->
+      <path d="M630,428 Q645,448 660,443 Q675,448 690,428 Q685,418 660,416 Q635,418 630,428 Z" fill="url(#shorts2)"/>
+      <!-- Feet -->
+      <ellipse cx="611" cy="467" rx="10" ry="5" fill="#c08050" transform="rotate(15,611,467)"/>
+      <ellipse cx="707" cy="467" rx="10" ry="5" fill="#c08050" transform="rotate(-15,707,467)"/>
+    </g>
+
+    <!-- Torso -->
+    <g id="char2-body">
+      <path d="M635,378 Q625,408 628,428 Q640,440 660,438 Q680,440 692,428 Q695,408 685,378 Q675,368 660,366 Q645,368 635,378 Z" fill="url(#shirt2)"/>
+      <!-- Shirt collar -->
+      <path d="M652,368 L660,380 L668,368" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" fill="none"/>
+      <!-- Shirt pattern -->
+      <line x1="642" y1="376" x2="640" y2="416" stroke="rgba(255,255,255,0.12)" stroke-width="2"/>
+      <line x1="653" y1="368" x2="650" y2="413" stroke="rgba(255,255,255,0.10)" stroke-width="2"/>
+      <line x1="667" y1="368" x2="670" y2="413" stroke="rgba(255,255,255,0.10)" stroke-width="2"/>
+      <line x1="678" y1="373" x2="680" y2="414" stroke="rgba(255,255,255,0.12)" stroke-width="2"/>
+    </g>
+
+    <!-- Right arm + beer -->
+    <g id="char2-beer-arm">
+      <g id="char2-beer-pivot" style="transform-origin: 650px 388px;">
+        <!-- Upper arm -->
+        <path d="M655,383 Q642,390 634,402" stroke="#c08050" stroke-width="14" fill="none" stroke-linecap="round"/>
+        <!-- Forearm -->
+        <path d="M634,402 Q622,408 618,416" stroke="#c08050" stroke-width="12" fill="none" stroke-linecap="round"/>
+        <!-- Hand -->
+        <ellipse cx="614" cy="420" rx="9" ry="7" fill="#c08050"/>
+        <!-- Beer bottle -->
+        <g id="char2-bottle" transform="translate(614,420)">
+          <rect x="-6" y="-38" width="12" height="32" rx="4" fill="url(#bottleGrad)"/>
+          <rect x="-5" y="-22" width="10" height="18" rx="3" fill="url(#beerLiquid)" opacity="0.9"/>
+          <rect x="-3.5" y="-52" width="7" height="16" rx="2" fill="url(#bottleGrad)"/>
+          <rect x="-4.5" y="-57" width="9" height="7" rx="2" fill="url(#capGrad)"/>
+          <rect x="-5" y="-28" width="10" height="12" rx="2" fill="rgba(255,230,80,0.85)"/>
+          <text x="0" y="-21" text-anchor="middle" font-size="4" fill="#5a3a00" font-family="Georgia">COLD</text>
+          <rect x="-1" y="-50" width="2.5" height="36" rx="1" fill="rgba(255,255,255,0.35)"/>
+        </g>
+      </g>
+    </g>
+
+    <!-- Left arm (resting) -->
+    <g id="char2-rest-arm">
+      <path d="M685,383 Q698,393 704,408" stroke="#c08050" stroke-width="14" fill="none" stroke-linecap="round"/>
+      <path d="M704,408 Q709,420 710,430" stroke="#c08050" stroke-width="12" fill="none" stroke-linecap="round"/>
+      <ellipse cx="710" cy="434" rx="9" ry="6" fill="#c08050"/>
+    </g>
+
+    <!-- Neck -->
+    <rect x="654" y="353" width="12" height="20" rx="4" fill="#c08050"/>
+
+    <!-- Head group -->
+    <g id="char2-head" style="transform-origin: 660px 358px;">
+      <!-- Head -->
+      <ellipse cx="660" cy="336" rx="31" ry="33" fill="url(#skin2)"/>
+
+      <!-- Hair (different style - wavy/longer) -->
+      <path d="M630,326 Q632,298 660,295 Q688,298 690,326" fill="#1a0a08"/>
+      <path d="M630,326 Q627,312 633,302 Q640,294 652,293" fill="#1a0a08"/>
+      <path d="M690,326 Q693,312 687,302 Q680,294 668,293" fill="#1a0a08"/>
+      <!-- Ear hair peek -->
+      <path d="M628,328 Q624,320 630,314" stroke="#1a0a08" stroke-width="5" fill="none"/>
+      <path d="M692,328 Q696,320 690,314" stroke="#1a0a08" stroke-width="5" fill="none"/>
+
+      <!-- Sunglasses (different style - round) -->
+      <ellipse cx="648" cy="337" rx="10" ry="9" fill="rgba(10,30,60,0.9)"/>
+      <ellipse cx="672" cy="337" rx="10" ry="9" fill="rgba(10,30,60,0.9)"/>
+      <line x1="658" y1="337" x2="662" y2="337" stroke="#666" stroke-width="2"/>
+      <!-- Lens shine -->
+      <ellipse cx="644" cy="334" rx="3.5" ry="2.5" fill="rgba(100,180,255,0.3)" transform="rotate(-10,644,334)"/>
+      <ellipse cx="668" cy="334" rx="3.5" ry="2.5" fill="rgba(100,180,255,0.3)" transform="rotate(-10,668,334)"/>
+      <!-- Frame -->
+      <ellipse cx="648" cy="337" rx="10" ry="9" fill="none" stroke="#888" stroke-width="1.8"/>
+      <ellipse cx="672" cy="337" rx="10" ry="9" fill="none" stroke="#888" stroke-width="1.8"/>
+      <!-- Temple -->
+      <line x1="629" y1="335" x2="638" y2="336" stroke="#888" stroke-width="1.8"/>
+      <line x1="682" y1="336" x2="691" y2="335" stroke="#888" stroke-width="1.8"/>
+
+      <!-- Smile -->
+      <path d="M648,353 Q660,362 672,353" stroke="#a05030" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <path d="M649,353 Q660,359 671,353" fill="rgba(180,70,50,0.5)"/>
+
+      <!-- Ear -->
+      <ellipse cx="629" cy="340" rx="5" ry="7" fill="#c08050"/>
+      <ellipse cx="691" cy="340" rx="5" ry="7" fill="#c08050"/>
+
+      <!-- Hat (bucket hat) -->
+      <ellipse cx="660" cy="303" rx="36" ry="8" fill="#e85050"/>
+      <ellipse cx="660" cy="303" rx="36" ry="8" fill="none" stroke="rgba(0,0,0,0.2)" stroke-width="1"/>
+      <path d="M628,305 Q640,295 660,293 Q680,295 692,305 Q680,300 660,299 Q640,300 628,305 Z" fill="#c83030"/>
+      <!-- Hat brim inner shadow -->
+      <ellipse cx="660" cy="303" rx="28" ry="5" fill="rgba(0,0,0,0.15)"/>
+    </g>
+  </g>
+
+  <!-- ─── Character 2 label ─── -->
+  <text x="660" y="498" text-anchor="middle" font-family="Georgia" font-size="14" fill="rgba(255,220,140,0.7)" letter-spacing="2">SAM</text>
+
+  <!-- ─── Middle ambient (distant palm suggestion) ─── -->
+  <g opacity="0.55" transform="translate(450,380)">
+    <path d="M0,50 Q-2,20 0,-10 Q2,20 0,50" stroke="#3a2810" stroke-width="6" fill="none"/>
+    <path d="M0,0 Q-30,-20 -50,-10 Q-30,-5 0,5" fill="#2a6020" opacity="0.8"/>
+    <path d="M0,5 Q30,-15 50,-5 Q30,0 0,10" fill="#2a6020" opacity="0.8"/>
+    <path d="M0,-2 Q-15,-35 -10,-55 Q-2,-35 0,0" fill="#2a6020" opacity="0.75"/>
+    <path d="M0,-2 Q15,-30 12,-52 Q2,-32 0,0" fill="#2a6020" opacity="0.75"/>
+  </g>
+
+  <!-- ─── Overlay vignette ─── -->
+  <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
+    <stop offset="0%" stop-color="transparent"/>
+    <stop offset="100%" stop-color="rgba(5,0,15,0.5)"/>
+  </radialGradient>
+  <rect width="900" height="560" fill="url(#vignette)"/>
+
+</svg>
+</div>
+
+<p class="hint">click a friend to take a sip</p>
+
+<script>
+(function() {
+  // ── Character 1 (Alex) drink animation ──
+  var char1 = document.getElementById('char1');
+  var head1 = document.getElementById('char1-head');
+  var beerPivot1 = document.getElementById('char1-beer-pivot');
+  var drinking1 = false;
+
+  char1.addEventListener('click', function() {
+    if (drinking1) return;
+    drinking1 = true;
+
+    // Apply drink animation classes
+    head1.style.animation = '';
+    beerPivot1.style.animation = '';
+    // Force reflow
+    void head1.offsetWidth;
+    void beerPivot1.offsetWidth;
+
+    head1.style.transformOrigin = '240px 360px';
+    beerPivot1.style.transformOrigin = '270px 390px';
+
+    head1.style.animation = 'drinkHeadL 1.4s ease-in-out forwards';
+    beerPivot1.style.animation = 'drinkBeerL 1.4s ease-in-out forwards';
+
+    // Add a little screen flash / ripple
+    flash();
+
+    setTimeout(function() {
+      head1.style.animation = '';
+      beerPivot1.style.animation = '';
+      drinking1 = false;
+    }, 1500);
+  });
+
+  // ── Character 2 (Sam) drink animation ──
+  var char2 = document.getElementById('char2');
+  var head2 = document.getElementById('char2-head');
+  var beerPivot2 = document.getElementById('char2-beer-pivot');
+  var drinking2 = false;
+
+  char2.addEventListener('click', function() {
+    if (drinking2) return;
+    drinking2 = true;
+
+    head2.style.animation = '';
+    beerPivot2.style.animation = '';
+    void head2.offsetWidth;
+    void beerPivot2.offsetWidth;
+
+    head2.style.transformOrigin = '660px 358px';
+    beerPivot2.style.transformOrigin = '650px 388px';
+
+    head2.style.animation = 'drinkHeadR 1.4s ease-in-out forwards';
+    beerPivot2.style.animation = 'drinkBeerR 1.4s ease-in-out forwards';
+
+    flash();
+
+    setTimeout(function() {
+      head2.style.animation = '';
+      beerPivot2.style.animation = '';
+      drinking2 = false;
+    }, 1500);
+  });
+
+  // ── Flash effect ──
+  function flash() {
+    var overlay = document.createElement('div');
+    overlay.style.cssText = [
+      'position:fixed', 'inset:0', 'pointer-events:none',
+      'background:radial-gradient(ellipse at center, rgba(255,200,80,0.18), transparent 70%)',
+      'z-index:5', 'transition:opacity 0.5s ease',
+      'opacity:1'
+    ].join(';');
+    document.body.appendChild(overlay);
+    setTimeout(function() { overlay.style.opacity = '0'; }, 50);
+    setTimeout(function() { document.body.removeChild(overlay); }, 600);
+  }
+
+  // ── Subtle hover glow on characters ──
+  [char1, char2].forEach(function(ch) {
+    ch.addEventListener('mouseenter', function() {
+      ch.style.filter = 'drop-shadow(0 0 12px rgba(255,180,60,0.5))';
+    });
+    ch.addEventListener('mouseleave', function() {
+      ch.style.filter = '';
+    });
+  });
+})();
+</script>
+</body>
+</html>
