@@ -576,6 +576,35 @@
     <path d="M0,-2 Q15,-30 12,-52 Q2,-32 0,0" fill="#2a6020" opacity="0.75"/>
   </g>
 
+  <!-- ─── UFO ("AI") — flies across sky periodically ─── -->
+  <g id="ufo" opacity="0" transform="translate(-120, 60)">
+    <!-- Beam of light -->
+    <path d="M0,18 L-25,80 L25,80 Z" fill="rgba(120,255,180,0.10)"/>
+    <!-- Saucer body -->
+    <ellipse cx="0" cy="12" rx="38" ry="10" fill="url(#ufoBody)"/>
+    <!-- Dome -->
+    <ellipse cx="0" cy="4" rx="18" ry="12" fill="rgba(180,255,220,0.35)" stroke="rgba(120,255,180,0.5)" stroke-width="0.8"/>
+    <!-- Dome glow -->
+    <ellipse cx="0" cy="6" rx="12" ry="7" fill="rgba(120,255,180,0.15)"/>
+    <!-- Lights under saucer -->
+    <circle cx="-20" cy="14" r="2.5" fill="#ff6060" opacity="0.9">
+      <animate attributeName="opacity" values="0.9;0.3;0.9" dur="0.6s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="0" cy="16" r="2.5" fill="#60ff80" opacity="0.9">
+      <animate attributeName="opacity" values="0.3;0.9;0.3" dur="0.6s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="20" cy="14" r="2.5" fill="#6080ff" opacity="0.9">
+      <animate attributeName="opacity" values="0.9;0.3;0.9" dur="0.8s" repeatCount="indefinite"/>
+    </circle>
+    <!-- "AI" label -->
+    <text x="0" y="0" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="rgba(120,255,180,0.85)" letter-spacing="2">AI</text>
+  </g>
+  <linearGradient id="ufoBody" x1="0%" y1="0%" x2="0%" y2="100%">
+    <stop offset="0%" stop-color="rgba(160,170,180,0.8)"/>
+    <stop offset="50%" stop-color="rgba(100,110,120,0.9)"/>
+    <stop offset="100%" stop-color="rgba(60,65,70,0.85)"/>
+  </linearGradient>
+
   <!-- ─── Overlay vignette ─── -->
   <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
     <stop offset="0%" stop-color="transparent"/>
@@ -688,6 +717,43 @@
     e.preventDefault();
     char2.click();
   }, {passive: false});
+
+  // ── UFO flyby — appears every 8-20 seconds ──
+  var ufo = document.getElementById('ufo');
+  function ufoFlyby() {
+    var y = 30 + Math.random() * 80; // random altitude
+    var dur = 4000 + Math.random() * 3000; // 4-7s crossing
+    var fromRight = Math.random() > 0.5;
+    var startX = fromRight ? 1020 : -120;
+    var endX = fromRight ? -120 : 1020;
+    var wobble = (Math.random() - 0.5) * 40; // slight y drift
+
+    ufo.setAttribute('transform', 'translate(' + startX + ',' + y + ')');
+    ufo.setAttribute('opacity', '0');
+
+    var start = null;
+    function animate(ts) {
+      if (!start) start = ts;
+      var p = Math.min((ts - start) / dur, 1);
+      // ease in-out
+      var ease = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+      var cx = startX + (endX - startX) * ease;
+      var cy = y + Math.sin(p * Math.PI * 3) * 8 + wobble * ease;
+      // fade in first 15%, fade out last 15%
+      var op = p < 0.15 ? p / 0.15 : p > 0.85 ? (1 - p) / 0.15 : 1;
+      ufo.setAttribute('transform', 'translate(' + cx + ',' + cy + ')');
+      ufo.setAttribute('opacity', String(Math.min(op, 0.85)));
+      if (p < 1) requestAnimationFrame(animate);
+      else scheduleUfo();
+    }
+    requestAnimationFrame(animate);
+  }
+  function scheduleUfo() {
+    var delay = 8000 + Math.random() * 12000; // 8-20s gap
+    setTimeout(ufoFlyby, delay);
+  }
+  // First appearance after 3-8s
+  setTimeout(ufoFlyby, 3000 + Math.random() * 5000);
 
   // ── Subtle hover glow on characters (pointer for touch+mouse) ──
   [char1, char2].forEach(function(ch) {
