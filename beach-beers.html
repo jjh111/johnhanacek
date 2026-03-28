@@ -595,7 +595,7 @@
   </g>
 
   <!-- ─── UFO ("AI") — flies across sky periodically ─── -->
-  <g id="ufo" opacity="0" transform="translate(-120, 60)">
+  <g id="ufo" opacity="0" transform="translate(-120, 60)" pointer-events="none">
     <!-- Beam of light -->
     <path d="M0,18 L-25,80 L25,80 Z" fill="rgba(120,255,180,0.10)"/>
     <!-- Saucer body -->
@@ -628,7 +628,7 @@
     <stop offset="0%" stop-color="transparent"/>
     <stop offset="100%" stop-color="rgba(5,0,15,0.5)"/>
   </radialGradient>
-  <rect width="900" height="560" fill="url(#vignette)"/>
+  <rect width="900" height="560" fill="url(#vignette)" pointer-events="none"/>
 
 </svg>
 </div>
@@ -697,10 +697,6 @@
     }, 1500);
   }
 
-  // Bind both click and touch to the drink functions directly
-  char1.addEventListener('click', drink1);
-  char2.addEventListener('click', drink2);
-
   // ── Flash effect ──
   function flash() {
     var overlay = document.createElement('div');
@@ -715,27 +711,26 @@
     setTimeout(function() { document.body.removeChild(overlay); }, 600);
   }
 
-  // ── Touch support — call drink directly, prevent ghost click ──
-  var touched = false;
-  char1.addEventListener('touchstart', function(e) {
-    e.preventDefault();
-    touched = true;
-    drink1();
-  }, {passive: false});
-
-  char2.addEventListener('touchstart', function(e) {
-    e.preventDefault();
-    touched = true;
-    drink2();
-  }, {passive: false});
-
-  // Prevent click from also firing after touch
-  char1.addEventListener('click', function(e) {
-    if (touched) { touched = false; e.stopImmediatePropagation(); }
-  }, true);
-  char2.addEventListener('click', function(e) {
-    if (touched) { touched = false; e.stopImmediatePropagation(); }
-  }, true);
+  // ── Unified pointer handling (mouse + touch) ──
+  // Use pointerdown for instant response on both desktop and mobile
+  function bindTap(el, fn) {
+    el.style.cursor = 'pointer';
+    if (window.PointerEvent) {
+      el.addEventListener('pointerdown', function(e) {
+        e.preventDefault();
+        fn();
+      });
+    } else {
+      // Fallback for older browsers
+      el.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        fn();
+      }, {passive: false});
+      el.addEventListener('click', fn);
+    }
+  }
+  bindTap(char1, drink1);
+  bindTap(char2, drink2);
 
   // ── UFO flyby — appears every 8-20 seconds ──
   var ufo = document.getElementById('ufo');
