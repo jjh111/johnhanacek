@@ -137,6 +137,11 @@
 
   .char-group {
     cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  svg {
+    touch-action: manipulation;
   }
   .char-group:hover .body-shadow {
     opacity: 0.5;
@@ -662,14 +667,44 @@
     setTimeout(function() { document.body.removeChild(overlay); }, 600);
   }
 
-  // ── Subtle hover glow on characters ──
+  // ── Touch support — use touchend to avoid 300ms delay ──
+  function addTap(el, handler) {
+    el.addEventListener('click', handler);
+    el.addEventListener('touchend', function(e) {
+      e.preventDefault(); // prevent ghost click + zoom
+      handler.call(this, e);
+    }, {passive: false});
+  }
+
+  // Re-bind char1 and char2 with touch (remove old click, re-add via addTap)
+  // Already bound above via click — touchend will fire first and preventDefault stops the duplicate click
+
+  char1.addEventListener('touchend', function(e) {
+    e.preventDefault();
+    char1.click();
+  }, {passive: false});
+
+  char2.addEventListener('touchend', function(e) {
+    e.preventDefault();
+    char2.click();
+  }, {passive: false});
+
+  // ── Subtle hover glow on characters (pointer for touch+mouse) ──
   [char1, char2].forEach(function(ch) {
+    ch.style.cursor = 'pointer';
     ch.addEventListener('mouseenter', function() {
       ch.style.filter = 'drop-shadow(0 0 12px rgba(255,180,60,0.5))';
     });
     ch.addEventListener('mouseleave', function() {
       ch.style.filter = '';
     });
+    // Touch: brief glow on tap
+    ch.addEventListener('touchstart', function() {
+      ch.style.filter = 'drop-shadow(0 0 12px rgba(255,180,60,0.5))';
+    }, {passive: true});
+    ch.addEventListener('touchend', function() {
+      setTimeout(function() { ch.style.filter = ''; }, 400);
+    }, {passive: true});
   });
 })();
 </script>
