@@ -625,14 +625,12 @@
   var beerPivot1 = document.getElementById('char1-beer-pivot');
   var drinking1 = false;
 
-  char1.addEventListener('click', function() {
+  function drink1() {
     if (drinking1) return;
     drinking1 = true;
 
-    // Apply drink animation classes
     head1.style.animation = '';
     beerPivot1.style.animation = '';
-    // Force reflow
     void head1.offsetWidth;
     void beerPivot1.offsetWidth;
 
@@ -642,7 +640,6 @@
     head1.style.animation = 'drinkHeadL 1.4s ease-in-out forwards';
     beerPivot1.style.animation = 'drinkBeerL 1.4s ease-in-out forwards';
 
-    // Add a little screen flash / ripple
     flash();
 
     setTimeout(function() {
@@ -650,7 +647,7 @@
       beerPivot1.style.animation = '';
       drinking1 = false;
     }, 1500);
-  });
+  }
 
   // ── Character 2 (Dan) drink animation ──
   var char2 = document.getElementById('char2');
@@ -658,7 +655,7 @@
   var beerPivot2 = document.getElementById('char2-beer-pivot');
   var drinking2 = false;
 
-  char2.addEventListener('click', function() {
+  function drink2() {
     if (drinking2) return;
     drinking2 = true;
 
@@ -680,7 +677,11 @@
       beerPivot2.style.animation = '';
       drinking2 = false;
     }, 1500);
-  });
+  }
+
+  // Bind both click and touch to the drink functions directly
+  char1.addEventListener('click', drink1);
+  char2.addEventListener('click', drink2);
 
   // ── Flash effect ──
   function flash() {
@@ -696,27 +697,27 @@
     setTimeout(function() { document.body.removeChild(overlay); }, 600);
   }
 
-  // ── Touch support — use touchend to avoid 300ms delay ──
-  function addTap(el, handler) {
-    el.addEventListener('click', handler);
-    el.addEventListener('touchend', function(e) {
-      e.preventDefault(); // prevent ghost click + zoom
-      handler.call(this, e);
-    }, {passive: false});
-  }
-
-  // Re-bind char1 and char2 with touch (remove old click, re-add via addTap)
-  // Already bound above via click — touchend will fire first and preventDefault stops the duplicate click
-
-  char1.addEventListener('touchend', function(e) {
+  // ── Touch support — call drink directly, prevent ghost click ──
+  var touched = false;
+  char1.addEventListener('touchstart', function(e) {
     e.preventDefault();
-    char1.click();
+    touched = true;
+    drink1();
   }, {passive: false});
 
-  char2.addEventListener('touchend', function(e) {
+  char2.addEventListener('touchstart', function(e) {
     e.preventDefault();
-    char2.click();
+    touched = true;
+    drink2();
   }, {passive: false});
+
+  // Prevent click from also firing after touch
+  char1.addEventListener('click', function(e) {
+    if (touched) { touched = false; e.stopImmediatePropagation(); }
+  }, true);
+  char2.addEventListener('click', function(e) {
+    if (touched) { touched = false; e.stopImmediatePropagation(); }
+  }, true);
 
   // ── UFO flyby — appears every 8-20 seconds ──
   var ufo = document.getElementById('ufo');
