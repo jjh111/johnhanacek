@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Fish Demo — John Hanacek Design</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,17 +11,11 @@
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root {
-      --bg: #0a1628;
+      --bg: #020a12;
       --text: #d4dce8;
       --heading: #e8eff8;
       --accent: #4a9eed;
-      --accent2: #38d9a9;
       --dim: #5a7090;
-      --fish1: #4a9eed;
-      --fish2: #38d9a9;
-      --fish3: #f59f00;
-      --fish4: #e64980;
-      --fish5: #7c3aed;
     }
 
     html, body {
@@ -40,6 +34,14 @@
       overflow: hidden;
     }
 
+    canvas {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      cursor: none;
+      touch-action: none;
+    }
+
     .text-layer {
       position: absolute;
       inset: 0;
@@ -52,55 +54,18 @@
       white-space: nowrap;
       pointer-events: none;
       will-change: transform;
-      transition: none;
     }
 
-    .fish-layer {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      z-index: 2;
-    }
-
-    .fish {
-      position: absolute;
-      pointer-events: auto;
+    .word {
       cursor: pointer;
-      z-index: 3;
-      filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
-      transition: filter 0.2s ease;
+      pointer-events: auto;
+      transition: color 0.15s ease, text-shadow 0.15s ease;
+      border-radius: 2px;
     }
 
-    .fish:hover {
-      filter: drop-shadow(0 4px 16px rgba(74, 158, 237, 0.4));
-    }
-
-    .fish svg {
-      width: 100%;
-      height: 100%;
-    }
-
-    /* Subtle water caustics overlay */
-    .caustics {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      z-index: 0;
-      opacity: 0.03;
-      background:
-        radial-gradient(ellipse at 20% 50%, rgba(74, 158, 237, 0.5) 0%, transparent 50%),
-        radial-gradient(ellipse at 80% 30%, rgba(56, 217, 169, 0.4) 0%, transparent 40%),
-        radial-gradient(ellipse at 50% 80%, rgba(74, 158, 237, 0.3) 0%, transparent 45%);
-    }
-
-    /* Bubbles */
-    .bubble {
-      position: absolute;
-      border-radius: 50%;
-      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.15), rgba(74,158,237,0.05));
-      border: 1px solid rgba(255,255,255,0.08);
-      pointer-events: none;
-      z-index: 4;
+    .word:hover {
+      color: var(--accent) !important;
+      text-shadow: 0 0 8px rgba(74, 158, 237, 0.3);
     }
 
     .header-bar {
@@ -111,7 +76,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: linear-gradient(to bottom, rgba(10, 22, 40, 0.95), transparent);
+      background: linear-gradient(to bottom, rgba(2, 10, 18, 0.95), transparent);
     }
 
     .header-bar h1 {
@@ -142,21 +107,75 @@
       border-color: var(--accent);
     }
 
+    #drawHint {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      background: rgba(2, 10, 18, 0.72);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      border: 1px solid rgba(74, 158, 237, 0.2);
+      border-radius: 10px;
+      padding: 12px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--dim);
+      transition: opacity 0.4s ease;
+      pointer-events: none;
+      max-width: 320px;
+      text-align: center;
+    }
+
+    #drawHint .hint-title {
+      color: var(--accent);
+      font-weight: 500;
+      font-size: 13px;
+    }
+
+    #drawHint .hint-row {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+    }
+
+    #drawHint .hint-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    #drawHint .hint-icon {
+      font-size: 16px;
+    }
+
     @media (max-width: 600px) {
       .text-line { font-size: 15px !important; }
       .header-bar { padding: 10px 16px 8px; }
       .header-bar h1 { font-size: 14px; }
+      #drawHint { bottom: 16px; font-size: 11px; padding: 10px 16px; }
     }
   </style>
 </head>
 <body>
   <div id="page">
-    <div class="caustics"></div>
     <div class="text-layer" id="textLayer"></div>
-    <div class="fish-layer" id="fishLayer"></div>
+    <canvas id="heroCanvas"></canvas>
     <div class="header-bar">
       <h1>John Hanacek <span>· design</span></h1>
       <a href="https://johnhanacek.com/design.html">full portfolio →</a>
+    </div>
+    <div id="drawHint">
+      <div class="hint-title">Draw & Interact</div>
+      <div class="hint-row">
+        <div class="hint-item"><span class="hint-icon">〰️</span> draw a loop → fish</div>
+      </div>
+      <div class="hint-row">
+        <div class="hint-item"><span class="hint-icon">👆</span> tap a word → fish eats it</div>
+      </div>
     </div>
   </div>
   <script type="module" src="fish.js"></script>
