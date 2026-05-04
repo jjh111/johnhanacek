@@ -24,6 +24,7 @@ Feature plans for the John Hanacek portfolio site, organized by priority and dep
 | 6 | [FISH_V15_FIXES.md](./FISH_V15_FIXES.md) | Planned | Loop recognition, standoff fix, coral avoidance scaling |
 | 7 | [PLAYGROUND_CLEANUP.md](./PLAYGROUND_CLEANUP.md) | Planned | Cull stub cards, caustic fix, zoom/trackpad, iframe unload |
 | 8 | [ART_EARTHSTAR.md](./ART_EARTHSTAR.md) | Planned | Add EarthStar painting to art.html |
+| 9 | [MULTIPLAYER_CURSORS_PLAN.md](./MULTIPLAYER_CURSORS_PLAN.md) | Planned | Live visitor cursors on index.html hero canvas (PartyKit WebSocket) |
 
 ### Existing Reference Docs (context, not actionable plans)
 
@@ -48,6 +49,7 @@ FISH_DESIGN_MERGE ──→ FISH_V15_FIXES  (sequential)
 
 PLAYGROUND_CLEANUP                     (independent)
 ART_EARTHSTAR                          (independent)
+MULTIPLAYER_CURSORS_PLAN               (independent)
 ```
 
 ## Current State (March 2026)
