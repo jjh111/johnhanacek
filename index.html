@@ -14,6 +14,7 @@
     <meta property="og:description" content="Founding Designer & Design Engineer. Building AI-native products, spatial computing interfaces, and agentic systems.">
     <meta property="og:image" content="https://www.johnhanacek.com/Assets/socialgraph-jhcom.webp">
     <meta property="og:url" content="https://www.johnhanacek.com/">
+    <link rel="canonical" href="https://www.johnhanacek.com/">
     <meta property="og:type" content="website">
 
     <!-- Twitter Card -->
@@ -106,6 +107,43 @@
             color: rgba(125, 216, 247, 0.45);
             letter-spacing: 0.1em;
             text-transform: uppercase;
+        }
+        /* Let vertical swipes on the hint scroll the page instead of drawing on the canvas */
+        .hero-hint { touch-action: pan-y; }
+        /* Tap-to-explore affordance — hidden by default, revealed on touch devices */
+        .hint-scroll-cta {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            margin-top: 0.5rem;
+            padding: 0.5rem 0.95rem;
+            border: 1px solid rgba(125, 216, 247, 0.35);
+            border-radius: 999px;
+            background: rgba(77, 201, 246, 0.1);
+            color: rgba(125, 216, 247, 0.95);
+            font-size: 0.7rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            text-decoration: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .hint-scroll-cta svg {
+            width: 1rem;
+            height: 1rem;
+            animation: hint-bob 1.8s ease-in-out infinite;
+        }
+        @keyframes hint-bob {
+            0%, 100% { transform: translateY(0); }
+            50%      { transform: translateY(3px); }
+        }
+        /* Touch devices (the futile-drawing crowd): show the explore CTA + bigger tap target */
+        @media (hover: none) and (pointer: coarse) {
+            .hint-scroll-cta { display: inline-flex; }
+            .hero-hint { padding-bottom: 1.1rem; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .hint-scroll-cta svg { animation: none; }
         }
 
         /* Debug toggle for fish minigame */
@@ -277,6 +315,84 @@
             line-height: 1.6;
         }
 
+        /* ============================================
+           QR easter egg — hidden until an "X" is drawn
+           ============================================ */
+        .qr-reveal {
+            position: absolute;
+            inset: 0;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            background: rgba(2, 10, 18, 0.45);
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.32s ease;
+        }
+        .qr-reveal[hidden] { display: none; }
+        .qr-reveal.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .qr-glass {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: clamp(1.1rem, 3vw, 1.9rem);
+            background: rgba(255, 255, 255, 0.74);
+            backdrop-filter: blur(14px) saturate(1.1);
+            -webkit-backdrop-filter: blur(14px) saturate(1.1);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 22px;
+            box-shadow: 0 8px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+            transform: scale(0.92);
+            transition: transform 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+        }
+        .qr-reveal.visible .qr-glass { transform: scale(1); }
+        .qr-code img {
+            display: block;
+            width: clamp(180px, 40vw, 260px);
+            height: auto;
+            border-radius: 6px;
+        }
+        .qr-close {
+            position: absolute;
+            top: -14px;
+            right: -14px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.35rem;
+            line-height: 1;
+            color: var(--sea-deep, #020a12);
+            background: rgba(255, 255, 255, 0.92);
+            border: 1px solid rgba(2, 10, 18, 0.15);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+            transition: color 0.2s, background 0.2s, transform 0.2s;
+        }
+        .qr-close:hover,
+        .qr-close:focus-visible {
+            color: var(--gold, #d4af37);
+            background: #fff;
+            transform: scale(1.08);
+            outline: none;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .qr-reveal,
+            .qr-glass { transition: none; }
+            .qr-glass { transform: none; }
+        }
+
     </style>
 </head>
 <body>
@@ -383,6 +499,9 @@
                 <span class="hint-row"><span class="hint-glyph">○</span> draw a circle — bubbles</span>
             </div>
             <span class="hint-tap">tap anywhere to drop food</span>
+            <a href="#about" class="hint-scroll-cta" tabindex="-1">tap or swipe here to explore
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+            </a>
         </div>
 
         <!-- Canvas Controls — fixed bottom-left -->
@@ -393,6 +512,16 @@
                 <span class="toggle-switch"></span>
                 Logic
             </label>
+        </div>
+
+        <!-- Hidden QR easter egg — revealed by drawing an "X" (two crossing strokes) on the hero canvas -->
+        <div class="qr-reveal" id="qrReveal" hidden>
+            <div class="qr-glass" role="dialog" aria-modal="false" aria-label="QR code" tabindex="-1">
+                <button class="qr-close" id="qrClose" type="button" aria-label="Close QR code">&times;</button>
+                <div class="qr-code">
+                    <img src="./Assets/jhqr.png" alt="QR code linking to johnhanacek.com" width="260" height="260">
+                </div>
+            </div>
         </div>
     </header>
 
@@ -6428,6 +6557,8 @@
                         points: classified.points,
                         createdAt: now
                     });
+                    // Easter egg: two crossing STRAIGHT strokes form an "X" → reveal QR
+                    registerLineForX(classified.points);
                 }
 
                 // Particle burst feedback — only for confident recognitions
@@ -6539,6 +6670,78 @@
             }
         }
 
+        // ============================================
+        // QR easter egg — draw an "X" (two crossing strokes) to reveal
+        // Reuses segmentsIntersect() and distance() from above.
+        // ============================================
+        const qrReveal = document.getElementById('qrReveal');
+        const qrClose = document.getElementById('qrClose');
+        let qrOpen = false;
+        const recentLines = [];                   // {a, b, len, t} — recent open strokes
+        const X_WINDOW = 2500;                    // ms a stroke stays eligible to pair into an X
+        const X_MIN_LEN = 45;                     // px — ignore tiny scribbles
+        const X_MIN_ANGLE = 35 * Math.PI / 180;   // reject near-parallel / shallow crossings
+        const X_STRAIGHTNESS = 0.86;              // getLineScore() min — only deliberate straight strokes count (curves/scribbles rejected)
+
+        function linesFormX(l1, l2) {
+            const ix = segmentsIntersect(l1.a, l1.b, l2.a, l2.b, true); // interior crossing or null
+            if (!ix) return false;
+            if (l1.len < X_MIN_LEN || l2.len < X_MIN_LEN) return false;
+            // Crossing must be interior to BOTH strokes (not a near-endpoint T / corner)
+            const interior = (l, p) => distance(l.a, p) > l.len * 0.2 && distance(l.b, p) > l.len * 0.2;
+            if (!interior(l1, ix) || !interior(l2, ix)) return false;
+            // Acute angle between the two stroke directions
+            const ang = l => Math.atan2(l.b.y - l.a.y, l.b.x - l.a.x);
+            let diff = Math.abs(ang(l1) - ang(l2)) % Math.PI;
+            if (diff > Math.PI / 2) diff = Math.PI - diff;
+            return diff >= X_MIN_ANGLE;
+        }
+
+        // Called from endDraw() whenever a stroke is classified as a line.
+        // Gate on getLineScore() (design.html straight-line detector) so only deliberate
+        // STRAIGHT strokes qualify — curved/wandering open strokes no longer count toward an X.
+        function registerLineForX(points) {
+            if (!qrReveal || !points || points.length < 3) return;
+            if (getLineScore(points) < X_STRAIGHTNESS) return;   // must be a clean straight line
+            const startPt = points[0], endPt = points[points.length - 1];
+            const now = Date.now();
+            const line = { a: startPt, b: endPt, len: distance(startPt, endPt), t: now };
+            for (let i = recentLines.length - 1; i >= 0; i--) {
+                if (now - recentLines[i].t > X_WINDOW) { recentLines.splice(i, 1); continue; }
+                if (!qrOpen && linesFormX(line, recentLines[i])) {
+                    revealQR();
+                    recentLines.length = 0;
+                    return;
+                }
+            }
+            recentLines.push(line);
+        }
+
+        function revealQR() {
+            if (qrOpen || !qrReveal) return;
+            qrOpen = true;
+            qrReveal.hidden = false;
+            void qrReveal.offsetWidth; // force reflow so the opacity:0 base commits before the transition
+            qrReveal.classList.add('visible');
+            if (qrClose) qrClose.focus();
+            document.addEventListener('keydown', onQrKey);
+        }
+
+        function hideQR() {
+            if (!qrOpen) return;
+            qrOpen = false;
+            qrReveal.classList.remove('visible');
+            document.removeEventListener('keydown', onQrKey);
+            const done = () => { qrReveal.hidden = true; qrReveal.removeEventListener('transitionend', done); };
+            qrReveal.addEventListener('transitionend', done);
+            setTimeout(done, 400); // fallback when transitionend doesn't fire (reduced-motion)
+        }
+
+        function onQrKey(e) { if (e.key === 'Escape') hideQR(); }
+
+        if (qrClose) qrClose.addEventListener('click', hideQR);
+        if (qrReveal) qrReveal.addEventListener('click', (e) => { if (e.target === qrReveal) hideQR(); });
+
         // Click to scare fish - check if click hit a fish
         function scareFishAtPoint(x, y) {
             const SCARE_RADIUS = 60; // How close click needs to be
@@ -6646,7 +6849,7 @@
         // Demo Canvas - Interactive Fish Animation
         // ============================================
     </script>
-<script src="./scripts/search-overlay.js?v=1.8" defer></script>
+<script src="./scripts/search-overlay.js?v=1.9" defer></script>
 <script>document.addEventListener('DOMContentLoaded',()=>{const t=document.querySelector('.nav-title');if(t)t.dataset.short='JH';document.querySelectorAll('.nav-right a').forEach(a=>{const w=a.textContent.trim().split(/\s+/);a.dataset.short=w.length>1?w.map(x=>x[0]).join('').toUpperCase().slice(0,2):a.textContent.trim().slice(0,2).toUpperCase()})});</script>
 </body>
 </html>
