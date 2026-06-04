@@ -565,26 +565,31 @@
         ];
 
         try {
+            // Strip reasoning so only the final answer shows — handles models that emit
+            // <think>…</think> inline in content, or split reasoning into delta.reasoning_content.
+            const stripThink = (s) => { s = s.replace(/<think>[\s\S]*?<\/think>/gi, ''); const o = s.search(/<think>/i); return o === -1 ? s : s.slice(0, o); };
             if (model.source === 'LMStudio' || model.source === 'Custom') {
-                const res = await fetch(model.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: model.name, messages, max_tokens: 300, temperature: 0, stream: true }) });
-                const reader = res.body.getReader(); const decoder = new TextDecoder(); let outputText = '', buffer = '';
+                const res = await fetch(model.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: model.name, messages, max_tokens: 600, temperature: 0, stream: true }) });
+                if (!res.ok) { const body = await res.text().catch(() => ''); throw new Error(`LMStudio ${res.status} ${res.statusText}${body ? ' — ' + body.slice(0, 200) : ''}`); }
+                const reader = res.body.getReader(); const decoder = new TextDecoder(); let outputText = '', reasoning = '', buffer = '';
                 while (true) {
                     const { done, value } = await reader.read(); if (done) break;
                     if (genId !== currentGenId) { reader.cancel(); break; }
                     buffer += decoder.decode(value, { stream: true }); const lines = buffer.split('\n'); buffer = lines.pop();
-                    for (const line of lines) { if (!line.startsWith('data: ')) continue; const payload = line.slice(6).trim(); if (payload === '[DONE]') continue; try { const chunk = JSON.parse(payload); const token = chunk.choices?.[0]?.delta?.content; if (token) { outputText += token; answerEl.textContent = outputText.trimStart(); } } catch {} }
+                    for (const line of lines) { const s = line.trim(); if (!s.startsWith('data:')) continue; const payload = s.slice(5).trim(); if (payload === '[DONE]') continue; try { const delta = JSON.parse(payload).choices?.[0]?.delta || {}; if (delta.reasoning_content) reasoning += delta.reasoning_content; if (delta.content) { outputText += delta.content; const vis = stripThink(outputText).trimStart(); if (vis) answerEl.textContent = vis; } } catch {} }
                 }
-                if (genId === currentGenId) answerEl.textContent = outputText.trim() || '(No answer generated.)';
+                if (genId === currentGenId) { const finalText = stripThink(outputText).trim(); if (!finalText) console.warn('[SearchOverlay] LMStudio returned no answer — content chars:', outputText.length, 'reasoning chars:', reasoning.length, '— a reasoning model may need a higher token budget or a non-reasoning model.'); answerEl.textContent = finalText || '(No answer — the model returned only reasoning. Try a non-reasoning model.)'; }
             } else if (model.source === 'Ollama') {
-                const res = await fetch(model.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: model.name, messages, stream: true, options: { temperature: 0, num_predict: 300 } }) });
+                const res = await fetch(model.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: model.name, messages, stream: true, options: { temperature: 0, num_predict: 600 } }) });
+                if (!res.ok) { const body = await res.text().catch(() => ''); throw new Error(`Ollama ${res.status} ${res.statusText}${body ? ' — ' + body.slice(0, 200) : ''}`); }
                 const reader = res.body.getReader(); const decoder = new TextDecoder(); let outputText = '';
                 while (true) {
                     const { done, value } = await reader.read(); if (done) break;
                     if (genId !== currentGenId) { reader.cancel(); break; }
                     const text = decoder.decode(value, { stream: true });
-                    for (const line of text.split('\n')) { if (!line.trim()) continue; try { const chunk = JSON.parse(line); if (chunk.message?.content) { outputText += chunk.message.content; answerEl.textContent = outputText.trimStart(); } } catch {} }
+                    for (const line of text.split('\n')) { if (!line.trim()) continue; try { const chunk = JSON.parse(line); if (chunk.message?.content) { outputText += chunk.message.content; const vis = stripThink(outputText).trimStart(); if (vis) answerEl.textContent = vis; } } catch {} }
                 }
-                if (genId === currentGenId) answerEl.textContent = outputText.trim() || '(No answer generated.)';
+                if (genId === currentGenId) answerEl.textContent = stripThink(outputText).trim() || '(No answer generated.)';
             }
         } catch (err) {
             if (genId === currentGenId) { answerEl.textContent = `Error: ${err.message}`; console.error('[SearchOverlay] Local generation error:', err); }
