@@ -243,6 +243,21 @@ npx serve .
 python3 -m http.server 8080
 ```
 
+## Releasing (cache version)
+
+Shared assets (`shared.css`, `shared.js`, `search-overlay.*`) load with a `?v=`
+query string so browsers re-fetch them after a change instead of serving a stale
+copy. The version lives in **one** place — `SITE_VERSION` in
+[`scripts/sync-version.mjs`](scripts/sync-version.mjs). After changing a shared
+asset, bump that one line and run:
+
+```bash
+node scripts/sync-version.mjs
+```
+
+It stamps the new `?v=` across every page so the whole site busts cache uniformly.
+(Dev-time only — the site stays plain static HTML; nothing new loads at runtime.)
+
 ---
 
 Built with [Claude Code](https://claude.ai/code) & Open Code.
