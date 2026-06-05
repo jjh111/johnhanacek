@@ -21,7 +21,7 @@ import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-const SITE_VERSION = '1.9'; // ← bump this one line per release, then run the script
+const SITE_VERSION = '1.10'; // ← bump this one line per release, then run the script
 
 const ASSETS = ['shared.css', 'shared.js', 'search-overlay.css', 'search-overlay.js', 'jh-chrome.js'];
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');

@@ -62,12 +62,22 @@ feeds the footer badge AND the asset cache-bust query. Milestones below are numb
 
 ### v1.7 — "Foundation & Coherence"  (do FIRST; everything rides on it)
 Low-risk, high-leverage. No new features; pure unification + correctness.
-> **Already shipped to `main` (this pass):** robots.txt, sitemap.xml (9 public pages), self-canonical
-> on all 9 public pages, JSON-LD infill (playground + writing), noindex on the 4 secret pages,
-> writing.html inbound links + back-link, llms.txt email fix, about.html OG image → .webp.
-> **Still pending in v1.7:** version single-source, nav+footer web components, identity-data
-> single-source, search-chunks refresh, Archive prune. (index.html's canonical is staged locally
-> but held back with the in-limbo QR feature.)
+> **✅ v1.7 COMPLETE (shipped to `main`):**
+> - Discoverability: robots.txt, sitemap.xml, self-canonical on all public pages, JSON-LD infill,
+>   noindex on the secret pages.
+> - Content coherence: llms.txt email fix, about OG → .webp, writing.html links + back-link,
+>   search-chunks refresh (nanome2/playground/writing). Contact email now identical site-wide.
+> - Cache-version single-source: `scripts/sync-version.mjs` (one SITE_VERSION → every `?v=`,
+>   all assets at `?v=1.10`).
+> - **`<jh-footer>` + `<jh-nav>` components** (`scripts/jh-chrome.js`, light DOM + display:contents)
+>   replace the duplicated footer/nav across the 8 standard pages and standardize the divergent
+>   services/nanome2 footers + search's missing version line. Footer version reads from one SITE
+>   config. Verified: every page renders nav/footer from the component, correct per-page active
+>   state, no component console errors.
+> - Archive prune: 8 dead iterations/experiments removed (all `*_PLAN`/audit `.md` + whitepaper kept).
+> **Deferred (not blocking):** binding each page's JSON-LD block to `john-hanacek.json` (those blocks
+> are page-specific @types, not harmful duplication; footer/contact ARE single-sourced); converting
+> playground's bespoke nav and writing.html's standalone chrome to the components.
 - **Version source of truth:** `scripts/config.js` exports `SITE_VERSION`; footer badge + asset
   cache-bust both read it. Retire the `?v=1.8`/README/footer mismatch.
 - **Nav + footer web components:** `scripts/components/jh-nav.js`, `jh-footer.js` (custom
