@@ -23,7 +23,7 @@ import { dirname, join } from 'node:path';
 
 const SITE_VERSION = '1.9'; // ← bump this one line per release, then run the script
 
-const ASSETS = ['shared.css', 'shared.js', 'search-overlay.css', 'search-overlay.js'];
+const ASSETS = ['shared.css', 'shared.js', 'search-overlay.css', 'search-overlay.js', 'jh-chrome.js'];
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 const htmlFiles = readdirSync(root).filter((f) => f.endsWith('.html'));
