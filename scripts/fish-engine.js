@@ -38,6 +38,18 @@
 
         function applyWallPhysics(f) {
             if (!wallRects.length) return;
+            // A wander target buried inside a wall can never be reached — re-roll
+            if (f.wanderTarget) {
+                for (let i = 0; i < wallRects.length; i++) {
+                    const r = wallRects[i];
+                    if (f.wanderTarget.x > r.minX && f.wanderTarget.x < r.maxX &&
+                        f.wanderTarget.y > r.minY && f.wanderTarget.y < r.maxY) {
+                        f.wanderTarget = null;
+                        f.wanderTimer = 0;
+                        break;
+                    }
+                }
+            }
             const bw = f.bodyWidth || 20;
             const standoff = bw >= MEDIUM_THRESHOLD ? 26 : bw >= SMALL_THRESHOLD ? 16 : 9;
             const body = Math.max(6, (f.bodyHeight || 12) * 0.5);
@@ -1221,6 +1233,7 @@
                 let nearestMouthDist = Infinity;
                 food.forEach(fd => {
                     if (fd.inBubble) return;
+                    if (f.ignoredFood && f.ignoredFood[fd.id] > now) return; // gave up on it (walled off)
                     // Detection uses body center — fish notices food when their body is near it
                     const cd = Math.sqrt((centerX - fd.x) ** 2 + (centerY - fd.y) ** 2);
                     // Eat check uses mouth — but much more generous range
@@ -1268,6 +1281,30 @@
                 f.fleeTimer = Math.max(0, (f.fleeTimer || 0) - deltaTime);
                 f.challengeTimer = Math.max(0, (f.challengeTimer || 0) - deltaTime);
 
+                // ---- FRUSTRATION: abandon food we can't reach ----
+                // In the maze, food can sit behind (or inside) walls. A fish that
+                // makes no progress toward its locked food for 2.5s gives up and
+                // ignores that pellet for 9s instead of grinding on a wall forever.
+                if (f.seekFoodId !== undefined) {
+                    const tgt = food.find(fd => fd.id === f.seekFoodId);
+                    if (tgt) {
+                        const td = Math.sqrt((centerX - tgt.x) ** 2 + (centerY - tgt.y) ** 2);
+                        if (f.seekProgressId !== f.seekFoodId) {
+                            f.seekProgressId = f.seekFoodId; f.seekBestDist = td; f.seekProgressAt = now;
+                        } else if (td < f.seekBestDist - 6) {
+                            f.seekBestDist = td; f.seekProgressAt = now;
+                        } else if (now - f.seekProgressAt > 2500) {
+                            if (!f.ignoredFood) f.ignoredFood = {};
+                            f.ignoredFood[f.seekFoodId] = now + 9000;
+                            f.seekFoodId = undefined;
+                            f.seekProgressId = undefined;
+                            if (f.state === 'seeking') { f.state = 'idle'; f.stateChangeCooldown = 1200; }
+                        }
+                    } else {
+                        f.seekProgressId = undefined;
+                    }
+                }
+
                 // ---- FOOD SEEKING (highest priority for all fish) ----
                 // Eat range: large=full, medium/small +10% from previous values
                 // Eat range scales with fish size: large fish have bigger mouths and wider reach
@@ -1288,7 +1325,8 @@
                     let lockedFood = nearestFood; // default: nearest
                     if (f.seekFoodId !== undefined) {
                         const alreadyLocked = food.find(fd => fd.id === f.seekFoodId);
-                        if (alreadyLocked && !alreadyLocked.inBubble) {
+                        if (alreadyLocked && !alreadyLocked.inBubble &&
+                            !(f.ignoredFood && f.ignoredFood[alreadyLocked.id] > now)) {
                             const lockedDist = Math.sqrt((centerX - alreadyLocked.x) ** 2 + (centerY - alreadyLocked.y) ** 2);
                             // Switch only if nearest food is significantly closer (40% threshold = hysteresis)
                             if (nearestDist < lockedDist * 0.6) {

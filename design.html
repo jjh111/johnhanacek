@@ -2120,23 +2120,37 @@
         function syncObstacles() {
             const obs = [];
             let oid = 0;
-            recognizedShapes.forEach(s => {
-                if (s.type === 'dot') return;
-                if ((s.type === 'line' || s.type === 'arrow') && s.start && s.end) {
-                    // Thin barrier: a chain of small blocks along the segment, so a
-                    // diagonal line blocks like a line — not like its bounding box
-                    const dx = s.end.x - s.start.x, dy = s.end.y - s.start.y;
-                    const len = Math.sqrt(dx * dx + dy * dy) || 1;
-                    const steps = Math.max(1, Math.round(len / 16));
-                    for (let i = 0; i <= steps; i++) {
+            // Emit a chain of 24px blocks every ~14px along a polyline —
+            // the wall IS the drawn outline, its interior stays open water.
+            // A rectangle is a pen, a circle is a ring tank, a line a barrier.
+            const chainAlong = (pts, closed) => {
+                const path = closed ? pts.concat([pts[0]]) : pts;
+                let carry = 0;
+                for (let i = 1; i < path.length; i++) {
+                    const ax = path[i - 1].x, ay = path[i - 1].y;
+                    const dx = path[i].x - ax, dy = path[i].y - ay;
+                    const segLen = Math.sqrt(dx * dx + dy * dy);
+                    if (segLen < 0.001) continue;
+                    let d = carry;
+                    while (d <= segLen) {
                         obs.push({
                             id: oid++,
-                            x: s.start.x + dx * i / steps,
-                            y: s.start.y + dy * i / steps + 12,
+                            x: ax + dx * d / segLen,
+                            y: ay + dy * d / segLen + 12,
                             width: 24,
                             height: 24
                         });
+                        d += 14;
                     }
+                    carry = d - segLen;
+                }
+            };
+            recognizedShapes.forEach(s => {
+                if (s.type === 'dot') return;
+                if ((s.type === 'line' || s.type === 'arrow') && s.start && s.end) {
+                    chainAlong([s.start, s.end], false);
+                } else if (s.idealPoints && s.idealPoints.length > 2) {
+                    chainAlong(s.idealPoints, true);
                 } else {
                     const b = shapeBounds(s);
                     obs.push({
@@ -2149,6 +2163,24 @@
                 }
             });
             fishLayer.setObstacles(obs);
+        }
+
+        // Ray-cast point-in-polygon — the system KNOWS inside from outside
+        function pointInPoly(px, py, poly) {
+            let inside = false;
+            for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+                const xi = poly[i].x, yi = poly[i].y, xj = poly[j].x, yj = poly[j].y;
+                if ((yi > py) !== (yj > py) &&
+                    px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) inside = !inside;
+            }
+            return inside;
+        }
+
+        function insideEnclosure(px, py) {
+            return recognizedShapes.some(s =>
+                s.type !== 'dot' && s.type !== 'line' && s.type !== 'arrow' &&
+                s.idealPoints && s.idealPoints.length > 2 &&
+                pointInPoly(px, py, s.idealPoints));
         }
 
         // Squiggle = rapid back-and-forth scribble. Two signals must agree:
@@ -2267,39 +2299,12 @@
                         : { x: (bounds.minX + bounds.maxX) / 2, y: (bounds.minY + bounds.maxY) / 2 };
 
                     if (fishLayer.state.fish.length > 0) {
-                        // Food is unreachable only if the tap is truly ON a line
-                        // (within its thickness) or INSIDE a solid shape — those get
-                        // nudged just clear; everything else stays exactly at the cursor
-                        let fx = center.x, fy = center.y;
-                        recognizedShapes.forEach(s => {
-                            if (s.type === 'dot') return;
-                            if ((s.type === 'line' || s.type === 'arrow') && s.start && s.end) {
-                                const dx = s.end.x - s.start.x, dy = s.end.y - s.start.y;
-                                const L2 = dx * dx + dy * dy || 1;
-                                const t = Math.max(0, Math.min(1, ((fx - s.start.x) * dx + (fy - s.start.y) * dy) / L2));
-                                const cx = s.start.x + dx * t, cy = s.start.y + dy * t;
-                                let ox = fx - cx, oy = fy - cy;
-                                const d = Math.sqrt(ox * ox + oy * oy);
-                                if (d < 15) {
-                                    if (d < 0.5) { const n = Math.sqrt(dx * dx + dy * dy) || 1; ox = -dy / n; oy = dx / n; }
-                                    else { ox /= d; oy /= d; }
-                                    fx = cx + ox * 17;
-                                    fy = cy + oy * 17;
-                                }
-                            } else {
-                                const b = shapeBounds(s);
-                                if (fx > b.minX && fx < b.maxX && fy > b.minY && fy < b.maxY) {
-                                    const dl = fx - b.minX, dr = b.maxX - fx, du = fy - b.minY, dd = b.maxY - fy;
-                                    const mn = Math.min(dl, dr, du, dd);
-                                    if (mn === dl) fx = b.minX - 10;
-                                    else if (mn === dr) fx = b.maxX + 10;
-                                    else if (mn === du) fy = b.minY - 10;
-                                    else fy = b.maxY + 10;
-                                }
-                            }
-                        });
-                        fishLayer.addFood(fx, fy);
-                        whisperLabels.push({ text: 'Food', x: fx, y: fy, createdAt: Date.now() });
+                        // Food is just food — it lands exactly where you tap.
+                        // The system knows whether that's inside an enclosure
+                        // (only fish penned in there can reach it) and says so.
+                        fishLayer.addFood(center.x, center.y);
+                        const enclosed = insideEnclosure(center.x, center.y);
+                        whisperLabels.push({ text: enclosed ? 'Food · enclosed' : 'Food', x: center.x, y: center.y, createdAt: Date.now() });
                     } else {
                         recognizedShapes.push({
                             type: 'dot',
