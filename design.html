@@ -951,6 +951,7 @@
     </script>
 
     <!-- Hero Canvas Drawing Interaction -->
+    <script src="./scripts/shape-detection.js?v=1.11"></script>
     <script>
         const canvas = document.getElementById('heroCanvas');
         const ctx = canvas.getContext('2d');
@@ -1016,174 +1017,12 @@
         };
 
         // ============================================
-        // Helper Functions
+        // Helper Functions + Shape Detection
+        // — shared module (scripts/shape-detection.js); recognition math
+        //   lives there since v1.8 so index.html and design.html stay in sync
         // ============================================
-        function getBounds(points) {
-            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-            points.forEach(p => {
-                minX = Math.min(minX, p.x);
-                minY = Math.min(minY, p.y);
-                maxX = Math.max(maxX, p.x);
-                maxY = Math.max(maxY, p.y);
-            });
-            return { minX, minY, maxX, maxY };
-        }
-
-        function distance(a, b) {
-            return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
-        }
-
-        function getCircleScore(points, center, radius) {
-            let totalError = 0;
-            points.forEach(p => {
-                const dist = distance(p, center);
-                totalError += Math.abs(dist - radius) / radius;
-            });
-            return Math.max(0, 1 - (totalError / points.length));
-        }
-
-        function getRectScore(points, bounds) {
-            const width = bounds.maxX - bounds.minX;
-            const height = bounds.maxY - bounds.minY;
-            let cornerCount = 0;
-            const corners = [
-                { x: bounds.minX, y: bounds.minY },
-                { x: bounds.maxX, y: bounds.minY },
-                { x: bounds.maxX, y: bounds.maxY },
-                { x: bounds.minX, y: bounds.maxY }
-            ];
-            const threshold = Math.max(width, height) * 0.15;
-            corners.forEach(corner => {
-                if (points.some(p => distance(p, corner) < threshold)) cornerCount++;
-            });
-            return cornerCount / 4;
-        }
-
-        function getTriangleScore(points, bounds) {
-            // Improved triangle detection
-            const width = bounds.maxX - bounds.minX;
-            const height = bounds.maxY - bounds.minY;
-            const cx = (bounds.minX + bounds.maxX) / 2;
-            const cy = (bounds.minY + bounds.maxY) / 2;
-
-            // Find the 3 most extreme points (potential vertices)
-            let topPoint = points[0], bottomLeft = points[0], bottomRight = points[0];
-
-            points.forEach(p => {
-                if (p.y < topPoint.y) topPoint = p;
-                if (p.y > bottomLeft.y || (p.y === bottomLeft.y && p.x < bottomLeft.x)) bottomLeft = p;
-                if (p.y > bottomRight.y || (p.y === bottomRight.y && p.x > bottomRight.x)) bottomRight = p;
-            });
-
-            // Check for roughly 3 direction changes (corners)
-            let turns = 0;
-            const step = Math.max(1, Math.floor(points.length / 20));
-            for (let i = step; i < points.length - step; i += step) {
-                const prev = points[i - step];
-                const curr = points[i];
-                const next = points[Math.min(i + step, points.length - 1)];
-                const angle1 = Math.atan2(curr.y - prev.y, curr.x - prev.x);
-                const angle2 = Math.atan2(next.y - curr.y, next.x - curr.x);
-                let diff = Math.abs(angle2 - angle1);
-                if (diff > Math.PI) diff = 2 * Math.PI - diff;
-                if (diff > 0.4 && diff < 2.8) turns++;
-            }
-
-            // Aspect ratio check - triangles shouldn't be too thin
-            const aspect = Math.min(width, height) / Math.max(width, height);
-            const aspectOk = aspect > 0.3;
-
-            if (turns >= 2 && turns <= 6 && aspectOk) {
-                return 0.65;
-            }
-            return 0.25;
-        }
-
-        function getLineScore(points) {
-            if (points.length < 3) return 0;
-            const start = points[0];
-            const end = points[points.length - 1];
-            const lineLen = distance(start, end);
-            if (lineLen < 30) return 0;
-
-            let totalDev = 0;
-            points.forEach(p => {
-                const t = Math.max(0, Math.min(1,
-                    ((p.x - start.x) * (end.x - start.x) + (p.y - start.y) * (end.y - start.y)) / (lineLen * lineLen)
-                ));
-                const proj = { x: start.x + t * (end.x - start.x), y: start.y + t * (end.y - start.y) };
-                totalDev += distance(p, proj);
-            });
-            return Math.max(0, 1 - (totalDev / points.length) / (lineLen * 0.1));
-        }
-
-        function detectArrowHead(points) {
-            if (points.length < 10) return false;
-            const last10 = points.slice(-10);
-            const end = points[points.length - 1];
-            const beforeEnd = points[Math.max(0, points.length - 8)];
-            const mainDir = Math.atan2(end.y - beforeEnd.y, end.x - beforeEnd.x);
-
-            // Check for splaying at end
-            let hasSplay = false;
-            for (let i = 1; i < last10.length - 1; i++) {
-                const dir = Math.atan2(last10[i].y - end.y, last10[i].x - end.x);
-                const diff = Math.abs(dir - mainDir);
-                if (diff > 0.4 && diff < 2.7) hasSplay = true;
-            }
-            return hasSplay;
-        }
-
-        // ============================================
-        // Shape Detection
-        // ============================================
-        function detectShape(points) {
-            if (points.length < 5) return null;
-
-            const bounds = getBounds(points);
-            const center = { x: (bounds.minX + bounds.maxX) / 2, y: (bounds.minY + bounds.maxY) / 2 };
-            const width = bounds.maxX - bounds.minX;
-            const height = bounds.maxY - bounds.minY;
-            const size = Math.max(width, height);
-
-            if (size < 20) return null; // Too small
-
-            // Check if closed (start near end)
-            const start = points[0];
-            const end = points[points.length - 1];
-            const closedThreshold = size * 0.25;
-            const isClosed = distance(start, end) < closedThreshold;
-
-            if (isClosed) {
-                // Analyze closed shape
-                const circleScore = getCircleScore(points, center, size / 2);
-                const rectScore = getRectScore(points, bounds);
-                const triScore = getTriangleScore(points, bounds);
-
-                if (circleScore > 0.7 && circleScore > rectScore && circleScore > triScore) {
-                    return { type: 'circle', center, radius: size / 2, confidence: circleScore };
-                }
-                if (rectScore > 0.6 && rectScore > triScore) {
-                    return { type: 'rectangle', bounds, center, confidence: rectScore };
-                }
-                if (triScore > 0.5) {
-                    return { type: 'triangle', bounds, center, confidence: triScore };
-                }
-            } else {
-                // Open shape - line or arrow
-                const lineScore = getLineScore(points);
-                if (lineScore > 0.7) {
-                    const hasArrow = detectArrowHead(points);
-                    return {
-                        type: hasArrow ? 'arrow' : 'line',
-                        start, end, center,
-                        confidence: lineScore
-                    };
-                }
-            }
-
-            return null;
-        }
+        const { getBounds, distance, getCircleScore, getRectScore, getTriangleScore,
+                getLineScore, detectArrowHead, detectShape } = window.ShapeDetect;
         
         // ============================================
         // Generate Ideal Shape Points

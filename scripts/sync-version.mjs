@@ -30,7 +30,7 @@ const m = chromeSrc.match(/version:\s*'([0-9.]+)'/);
 if (!m) throw new Error("Couldn't find version: '<x.y>' in scripts/jh-chrome.js");
 const SITE_VERSION = m[1];
 
-const ASSETS = ['shared.css', 'shared.js', 'search-overlay.css', 'search-overlay.js', 'jh-chrome.js'];
+const ASSETS = ['shared.css', 'shared.js', 'search-overlay.css', 'search-overlay.js', 'jh-chrome.js', 'shape-detection.js', 'fish-engine.js'];
 
 const htmlFiles = readdirSync(root).filter((f) => f.endsWith('.html'));
 let total = 0;
