@@ -7,60 +7,60 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Portfolio website for John Hanacek showcasing work at the intersection of **Creativity, Curiosity, AI & Human Augmentation**.
 
 **Site Structure:**
-Each page is a standalone HTML document with embedded CSS and JavaScript. All pages share `styles/shared.css` (47KB design system) and Google Fonts (Cinzel, Raleway, JetBrains Mono).
+Each page is a standalone HTML document with embedded CSS and JavaScript. All pages share `styles/shared.css` (design system), the `<jh-nav>`/`<jh-footer>` chrome components (`scripts/jh-chrome.js`), and Google Fonts (Cinzel, Raleway, JetBrains Mono).
+
+**Roadmap:** `Agent Reference/V2_RELEASE_PLAN.md` is the single source of truth for what's planned and decided. Currently: v1.7 "Foundation & Coherence" shipped; next is v1.8 "Unified Canvas Engine" → v1.9 "Fish Maze" (flagship).
 
 ## Sitemap
 
-### Primary Pages (in main nav)
+### Public pages (in sitemap.xml, canonical to https://www.johnhanacek.com)
 
 | Page | Shape | Role |
 |------|-------|------|
 | `index.html` | Triangle | Homepage — fish minigame hero canvas, portfolio intro |
-| `design.html` | Rounded Square | Design — blueprint drawing canvas demo (frozen/preserved) |
+| `design.html` | Rounded Square | Design — blueprint drawing canvas demo (frozen until v1.9 unfreeze, see below) |
 | `art.html` | Circle | Art — cosmic canvas, writing/worldbuilding, Earth Star, Influence |
 | `about.html` | Diamond | About — bio, experience, education, expertise, awards |
 | `services.html` | Star | Services — AI coaching (JH Coaching OS), Claude Code coaching, founding designer |
+| `nanome2.html` | — | Nanome 2 Redesign case study (subpage of Design) |
+| `playground.html` | — | Infinite canvas board with iframe demo cards (slated for a future rebuild on jh-deng-template) |
+| `writing.html` | — | Writing index/reader — fetches and renders the `writing/*.md` essays (EduOS + MetaMedium sets); linked from art.html |
+| `search.html` | 🔍 | AI-powered search (3-tier: BM25 / WebGPU / local LLM) |
 
-### Secondary Pages
+`404.html` — custom 404 with fish canvas overlay (noindex, has JSON-LD).
 
-| Page | Role |
-|------|------|
-| `nanome2.html` | Nanome 2 Redesign case study (subpage of Design) |
-| `playground.html` | Infinite canvas board with iframe demo cards |
-| `writing.html` | JH Coaching Dashboard — standalone coaching resource tool (light/dark theme) |
-| `search.html` | AI-powered search (integrating from `Assets/demos/test-llm.html`) |
-| `404.html` | Custom 404 page with fish canvas overlay |
+### Unlisted pages & internal experiments (registry — do not add to sitemap/nav)
 
-### Test/Demo Archive
+These are intentional. All carry `<meta name="robots" content="noindex, nofollow">` unless noted. Never add `Disallow:` lines for them to robots.txt (that would publish the paths); obscurity = unlisted + noindex.
 
-| File | Purpose |
-|------|---------|
-| `Assets/demos/test-llm.html` | LLM search PoC (Qwen 0.8B WebGPU + LMStudio/Ollama) |
-| `Assets/demos/test-vision.html` | Vision model PoC (Qwen 0.8B VLM) |
-| `Assets/DemosPlayground/` | Creative code demos, style refs, interactive experiments |
+| File | Status |
+|------|--------|
+| `onagents.html` | Finished ~37k-word essay "The Problems of Agent Orchestration". **Held for later release** as part of the future jh-deng-template playground rebuild. |
+| `tidepool.html` | Internal experiment — bioluminescent tidepool canvas visualizing an AI-agent ecosystem. |
+| `beach-beers.html` | Internal experiment — whimsical animated SVG scene. |
+| `fish-demo/` | Standalone extraction of the fish minigame (`index.html` + `fish.js`). Testbed / seed for the v1.8 `scripts/fish-engine.js` extraction. |
+| `Assets/JH-brand-styleguide.html` | Internal brand/design-token reference ("Deep Sea Terminal" styleguide v1.0). |
+| `Assets/DemosPlayground/test-llm.html`, `test-vision.html` | LLM/VLM proof-of-concept pages (Qwen 0.8B WebGPU + LMStudio/Ollama). |
+
+**Never commit business/personal documents (invoices, contracts) to this repo — it is public and served.** Resumes in `Assets/` are intentionally public.
 
 ## Navigation System
 
-The site uses a **shape-based navigation** bar with geometric SVG icons:
+Rendered by the `<jh-nav current="home|design|art|about|services|search">` component from `scripts/jh-chrome.js` — edit the nav in that one file, not per-page:
 
 ```
-[Triangle/Home] [Square/Design] [Circle/Art]   "John Hanacek"   [Diamond/About] [Star/Services]
+[🔍 Search] [Triangle/Home] [Square/Design] [Circle/Art]   "John Hanacek"   [Diamond/About] [Star/Services]
 ```
 
-- Primary shapes (left): Home, Design, Art
+- Search icon leftmost, then primary shapes: Home, Design, Art
 - Center: "John Hanacek" text link → index.html
 - Secondary shapes (right): About, Services
-- `playground.html` adds its own shape-link in its nav only
-- Active page gets `class="active"` + `aria-current="page"`
-- Mobile: hamburger toggle for right-side section links
+- `current` attribute sets `class="active"` + `aria-current="page"`
+- Each page keeps its own `.nav-toggle` + `.nav-right` (per-page section TOC); mobile hamburger toggles it
 - Nav is fixed, appears after scrolling past hero section
+- Exceptions: `playground.html` has a bespoke hardcoded nav (left as-is pending its rebuild); `writing.html` has its own standalone chrome
 
-**Shape SVGs:**
-- Home/Triangle: `<polygon points="20,8 34,32 6,32"/>`
-- Design/Rounded-Square: `<rect x="6" y="6" width="28" height="28" rx="6"/>`
-- Art/Circle: `<circle cx="20" cy="20" r="14"/>`
-- About/Diamond: `<polygon points="20,6 34,20 20,34 6,20"/>`
-- Services/Star: `<polygon points="20,6 23,16 34,16 25,22 28,34 20,26 12,34 15,22 6,16 17,16"/>`
+**Shape SVGs:** defined in `scripts/jh-chrome.js` (triangle, rounded-square, circle, diamond, star, search magnifier).
 
 ## Design System — "Deep Sea Terminal"
 
@@ -81,6 +81,7 @@ The site uses a **shape-based navigation** bar with geometric SVG icons:
 - Subheadings/Labels: 'Raleway' (thin weights 100-600)
 - Body/Code: 'JetBrains Mono' (monospace, primary body font)
 - Loaded from Google Fonts
+- Reference: `Assets/JH-brand-styleguide.html`
 
 **Accessibility:**
 - WCAG AA compliant color contrast
@@ -88,6 +89,16 @@ The site uses a **shape-based navigation** bar with geometric SVG icons:
 - Skip-link for keyboard navigation
 - Semantic HTML with ARIA labels
 - Structured JSON-LD data on all pages
+
+## Versioning (single source of truth)
+
+The site version lives in **one** place: `version` in the `SITE` object in `scripts/jh-chrome.js`. It renders the footer badge at runtime. After bumping it (or changing any shared asset), run:
+
+```
+node scripts/sync-version.mjs
+```
+
+which stamps every `?v=` cache-bust ref across root `*.html` **and** the `Portfolio vX.Y` badge in README.md. Never hand-edit `?v=` values.
 
 ## Key Features
 
@@ -97,6 +108,7 @@ The site uses a **shape-based navigation** bar with geometric SVG icons:
 - Touch and mouse support for drawing entities
 - See `Assets/FISH_SYSTEM_TECHNICAL.md` for full technical reference
 - Debug mode: press 'D' key
+- Also on 404.html (overlay) and `fish-demo/` (standalone) — v1.8 will unify all three onto a shared `scripts/fish-engine.js`
 
 **Fish Minigame Architecture:**
 - **Layered Behavior System**: Priority stack (Edge Avoidance → Heading Commitment → State Behaviors → Collision → Formation → Wander)
@@ -106,16 +118,17 @@ The site uses a **shape-based navigation** bar with geometric SVG icons:
 - **Large Fish**: Solitary, territorial, dominance challenges
 - Design doc: `Assets/FISH_MINIGAME_DESIGN.md`
 
-### Blueprint Drawing Canvas (design.html — Frozen)
+### Blueprint Drawing Canvas (design.html — frozen until v1.9)
 - Shape recognition (circles, squares, triangles, arrows, lines)
 - Morph animations and particle effects
 - Smart canvas loop that pauses when idle
-- DO NOT modify — preserved version of MetaMedium whitepaper demo
+- **Freeze status:** preserved MetaMedium whitepaper demo. Per V2 plan decision #1 it will be **unfrozen in v1.9** for the Fish Maze — but ONLY after snapshotting the current version to `Archive/design-blueprint-frozen.html`. Until that snapshot exists, do not modify the canvas code.
 
-### AI Search System (search.html / Assets/demos/test-llm.html)
+### Site-wide AI Search (scripts/search-overlay.js + search.html)
+- ⌘K overlay on every standard page; search.html is the full standalone page
 - **Tier 1**: BM25 instant search via MiniSearch (always on)
 - **Tier 2**: In-browser Qwen3.5-0.8B via WebGPU (Transformers.js v4)
-- **Tier 3**: Local LMStudio/Ollama auto-discovered on localhost
+- **Tier 3**: Local LMStudio/Ollama auto-discovered on localhost (handles reasoning models)
 - **BYOM**: Custom endpoint input with OpenAI-compatible API probing
 - **Chunks**: `Assets/search-chunks.json` — flat factual text, field-boosted
 - **Engine color coding**: WebGPU=blue, LMStudio=purple, Ollama=orange, Custom=green
@@ -126,45 +139,45 @@ The site uses a **shape-based navigation** bar with geometric SVG icons:
 - Iframe demo cards loaded on visibility
 - Categories: 3D, Code, Design, Style
 - Caustic ripple background animation
+- **Planned rebuild** on jh-deng-template (lives on John's local machine, not in this repo); will host `onagents.html`. Don't invest in the current implementation.
 
-### Coaching Dashboard (writing.html)
-- Standalone page with its own design system (not shared nav)
-- Light/dark theme toggle
-- Priority-based resource sections
-- Not part of main portfolio navigation
+### Writing (writing.html + writing/)
+- Client-side markdown reader with its own chrome (light/dark theme, breadcrumbs, prev/next)
+- Content manifest: `writing/eduos-*.md` (sovereign AI in education) and `writing/metamedium-*.md` (drawing-as-programming lineage)
+- Requires an HTTP server locally (fetch()es the .md files)
 
 ## Shared Resources
 
 ```
-styles/shared.css     — 47KB design system (variables, nav, typography, cards, footer, responsive)
-scripts/shared.js     — Shared JS utilities
-john-hanacek.json     — Structured data for AI/Search (Schema.org Person)
+styles/shared.css         — design system (variables, nav, typography, cards, footer, responsive)
+scripts/jh-chrome.js      — <jh-nav> + <jh-footer> components; JH_SITE identity + THE site version
+scripts/shared.js         — nav scroll-visibility, cursor spotlight, lightbox, responsive nav
+scripts/search-overlay.js — site-wide ⌘K search overlay (3-tier)
+scripts/search-overlay.css— overlay styles
+scripts/sync-version.mjs  — dev-time version stamper (reads version from jh-chrome.js)
+john-hanacek.json         — structured data for AI/Search (Schema.org Person)
+robots.txt                — allows AI crawlers explicitly; points to sitemap
+sitemap.xml               — the 9 public pages (www host); secrets stay out
+llms.txt                  — AI-readable site summary
+CNAME                     — www.johnhanacek.com (GitHub Pages)
 Assets/
-  search-chunks.json  — Search index (32 chunks)
+  search-chunks.json      — search index
   favicon-jhsigfrmpaper.png
-  footer-JHsig.png    — Signature image used in nav + footer
-  socialgraph-jhcom.webp — OG image
-  demos/              — Test/PoC pages (test-llm.html, test-vision.html)
-  DemosPlayground/    — Interactive demos loaded by playground.html
-  3d-sync-demo/       — Three.js synchronized viewports demo
+  footer-JHsig.png        — signature image used in nav + footer
+  socialgraph-jhcom.webp  — OG image
+  FISH_*.md               — fish system design/technical docs
+  DemosPlayground/        — interactive demos loaded by playground.html + test-llm/test-vision PoCs
+  3d-sync-demo/           — Three.js synchronized viewports demo
 ```
 
 ## Footer Pattern
 
-Standard footer across pages:
-```html
-<footer>
-    <div class="footer-oval">
-        <p class="footer-signature"><img src="./Assets/footer-JHsig.png" alt="John Hanacek signature"></p>
-        <p class="footer-copyright">© 2026 John Hanacek · JHDesign LLC</p>
-        <p class="footer-github"><a href="https://github.com/jjh111/johnhanacek">github.com/jjh111/johnhanacek</a></p>
-    </div>
-</footer>
-```
+Rendered by `<jh-footer>` (scripts/jh-chrome.js) on all standard pages — edit there, not per-page:
+signature image → copyright "© 2026 John Hanacek · JHDesign LLC" → GitHub link → version badge.
 
 ## Contact & Social
 
-- Email: hi@johnhanacek.com
+- Email: hi@johnhanacek.com (the ONLY email; jhanacek.net is the retired old domain)
 - LinkedIn: linkedin.com/in/johnhanacek
 - Bluesky: johnhanacek.bsky.social
 - X/Twitter: x.com/johnhanacek
@@ -174,10 +187,9 @@ Standard footer across pages:
 
 **File Structure:**
 Each page is a standalone HTML file with:
-- Self-contained structure (shared.css + Google Fonts + inline CSS/JS)
-- Inline `<style>` blocks for page-specific styles
-- Inline `<script>` blocks for page-specific interactivity
-- Open Graph + Twitter Card meta tags
+- shared.css + jh-chrome.js (components) + Google Fonts + inline CSS/JS
+- Inline `<style>` and `<script>` blocks for page-specific behavior
+- Open Graph + Twitter Card meta tags, self-canonical (public pages only)
 - JSON-LD structured data
 - WCAG AA accessibility
 
@@ -186,3 +198,6 @@ Each page is a standalone HTML file with:
 - CSS shimmer simplified (removed hue-rotate)
 - Canvas animation pauses when idle (30-40% savings)
 - Playground: visibility-based iframe loading/unloading
+- Videos compressed to web bitrates (1280w, H.264 CRF 27, muted-autoplay embeds have no audio track)
+
+**Local dev:** `python3 -m http.server 1337` from the repo root (writing.html and search need HTTP, not file://).

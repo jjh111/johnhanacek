@@ -211,25 +211,34 @@ Accessibility: WCAG AA contrast · `prefers-reduced-motion` support · skip link
 ├── search.html             AI-powered search
 ├── nanome2.html            Nanome 2 case study
 ├── playground.html         Infinite canvas board
-├── writing.html            Coaching dashboard
+├── writing.html            Writing index/reader (renders writing/*.md)
+├── writing/                Markdown essays (EduOS, MetaMedium)
 ├── 404.html                Custom 404
+├── fish-demo/              Standalone fish minigame (engine-extraction testbed)
 ├── CLAUDE.md               AI assistant context (codebase instructions)
 ├── README.md               This file
-├── CNAME                   johnhanacek.com
+├── CNAME                   www.johnhanacek.com
 ├── john-hanacek.json       Structured data for AI/search crawlers
 ├── llms.txt                LLM-readable site summary
+├── robots.txt              Crawler policy (AI crawlers allowed) + sitemap pointer
+├── sitemap.xml             Public pages
 ├── styles/
 │   └── shared.css          Global design system
 ├── scripts/
+│   ├── jh-chrome.js        <jh-nav>/<jh-footer> components + site version (SoT)
 │   ├── shared.js           Shared nav and UI behavior
 │   ├── search-overlay.js   Search overlay + engine popover
-│   └── search-overlay.css  Search overlay styles
+│   ├── search-overlay.css  Search overlay styles
+│   └── sync-version.mjs    Dev-time version stamper
 └── Assets/
-    ├── search-chunks.json  Search index (32 chunks)
-    ├── demos/              Test/PoC pages (test-llm.html, test-vision.html)
-    ├── DemosPlayground/    Creative code demos for playground.html
-    └── ...                 Images, GLB models, fonts
+    ├── search-chunks.json  Search index
+    ├── DemosPlayground/    Creative code demos + test-llm/test-vision PoCs
+    ├── 3d-sync-demo/       Three.js synchronized viewports demo
+    └── ...                 Images, videos, GLB models
 ```
+
+(Some unlisted experiment pages exist deliberately outside the sitemap — see the
+registry in [CLAUDE.md](CLAUDE.md).)
 
 ---
 
@@ -245,18 +254,19 @@ python3 -m http.server 8080
 
 ## Releasing (cache version)
 
-Shared assets (`shared.css`, `shared.js`, `search-overlay.*`) load with a `?v=`
-query string so browsers re-fetch them after a change instead of serving a stale
-copy. The version lives in **one** place — `SITE_VERSION` in
-[`scripts/sync-version.mjs`](scripts/sync-version.mjs). After changing a shared
-asset, bump that one line and run:
+Shared assets (`shared.css`, `shared.js`, `search-overlay.*`, `jh-chrome.js`)
+load with a `?v=` query string so browsers re-fetch them after a change instead
+of serving a stale copy. The version lives in **one** place — `version` in the
+`SITE` object in [`scripts/jh-chrome.js`](scripts/jh-chrome.js) (it also renders
+the footer badge). After changing a shared asset, bump that one line and run:
 
 ```bash
 node scripts/sync-version.mjs
 ```
 
-It stamps the new `?v=` across every page so the whole site busts cache uniformly.
-(Dev-time only — the site stays plain static HTML; nothing new loads at runtime.)
+It stamps the new `?v=` across every page — and the version badge at the top of
+this README — so the whole site busts cache uniformly. (Dev-time only — the site
+stays plain static HTML; nothing new loads at runtime.)
 
 ---
 

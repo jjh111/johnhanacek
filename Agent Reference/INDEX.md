@@ -1,64 +1,46 @@
 # Agent Reference — Implementation Index
-*Last updated: March 2026*
+*Last updated: July 2026*
 
-Feature plans for the John Hanacek portfolio site, organized by priority and dependency.
+**→ [V2_RELEASE_PLAN.md](./V2_RELEASE_PLAN.md) is the single source of truth** for milestones,
+decisions, and doc dispositions. This index is just a map of what lives in this folder.
+
+Completed plan docs get moved to `Archive/` (SEARCH_OVERLAY and ART_EARTHSTAR live there now).
 
 ---
 
-## Implementation Order
+## Active plan docs (dispositions from the V2 plan)
 
-### Search Features (sequential — each builds on the previous)
+| File | Milestone | Summary |
+|------|-----------|---------|
+| [V2_RELEASE_PLAN.md](./V2_RELEASE_PLAN.md) | — | The roadmap: v1.7 ✅ → v1.8 engine → v1.9 fish maze → v2.0 release |
+| [FISH_DESIGN_MERGE.md](./FISH_DESIGN_MERGE.md) | **v1.9** | Fish maze in design.html: shapes-as-walls, squiggle erase (flagship) |
+| [FISH_V15_FIXES.md](./FISH_V15_FIXES.md) | **v1.8** | Loop recognition, standoff fix, coral avoidance — fold into engine extraction |
+| [SEARCH_ENRICHMENT.md](./SEARCH_ENRICHMENT.md) | **v2.0** | Rich result cards (video, 3D model-viewer, linked titles) on the live overlay |
 
-| # | File | Status | Summary |
-|---|------|--------|---------|
-| 1 | [SEARCH_OVERLAY.md](./SEARCH_OVERLAY.md) | **ACTIVE** | ⌘K command palette overlay on every page + hero search input |
-| 2 | [SEARCH_ENRICHMENT.md](./SEARCH_ENRICHMENT.md) | Next | Rich result cards (video, 3D model-viewer, links) + chunk data |
-| 3 | [SEARCH_COMMANDS.md](./SEARCH_COMMANDS.md) | Planned | Intent router — services/contact/schedule action cards |
-| 4 | [SEARCH_HYBRID.md](./SEARCH_HYBRID.md) | Planned | WebGPU draft → local model refinement pipeline |
+## Deferred (v2.1+, per V2 plan)
 
-### Independent Features (any order after search is stable)
+| File | Summary |
+|------|---------|
+| [SEARCH_COMMANDS.md](./SEARCH_COMMANDS.md) | Intent router — services/contact/schedule action cards |
+| [SEARCH_HYBRID.md](./SEARCH_HYBRID.md) | WebGPU draft → local model refinement pipeline |
+| [ART_HERO_ENHANCEMENT_PLAN.md](./ART_HERO_ENHANCEMENT_PLAN.md) | Art page cosmic canvas enhancement (star layers, Web Audio) |
+| [MULTIPLAYER_CURSORS_PLAN.md](./MULTIPLAYER_CURSORS_PLAN.md) | Live visitor cursors on hero canvas (needs server infra — PartyKit) |
+| [PLAYGROUND_CLEANUP.md](./PLAYGROUND_CLEANUP.md) | **Dropped** — superseded by the future jh-deng-template playground rebuild |
 
-| # | File | Status | Summary |
-|---|------|--------|---------|
-| 5 | [FISH_DESIGN_MERGE.md](./FISH_DESIGN_MERGE.md) | Planned | Fish ecosystem in design.html + maze walls + erase gesture |
-| 6 | [FISH_V15_FIXES.md](./FISH_V15_FIXES.md) | Planned | Loop recognition, standoff fix, coral avoidance scaling |
-| 7 | [PLAYGROUND_CLEANUP.md](./PLAYGROUND_CLEANUP.md) | Planned | Cull stub cards, caustic fix, zoom/trackpad, iframe unload |
-| 8 | [ART_EARTHSTAR.md](./ART_EARTHSTAR.md) | Planned | Add EarthStar painting to art.html |
-| 9 | [MULTIPLAYER_CURSORS_PLAN.md](./MULTIPLAYER_CURSORS_PLAN.md) | Planned | Live visitor cursors on index.html hero canvas (PartyKit WebSocket) |
-
-### Existing Reference Docs (context, not actionable plans)
+## Reference docs (context, not actionable plans)
 
 | File | Purpose |
 |------|---------|
-| [LLM_SEARCH_INTEGRATION_PLAN.md](./LLM_SEARCH_INTEGRATION_PLAN.md) | 3-tier architecture overview, vision chunking, model state |
+| [LLM_SEARCH_INTEGRATION_PLAN.md](./LLM_SEARCH_INTEGRATION_PLAN.md) | 3-tier search architecture overview, vision chunking, model state |
 | [METAMEDIUM_CONVERGENCE.md](./METAMEDIUM_CONVERGENCE.md) | Cross-repo synthesis with MetaMedium |
-| [ART_HERO_ENHANCEMENT_PLAN.md](./ART_HERO_ENHANCEMENT_PLAN.md) | Art page cosmic canvas enhancement |
 
 ---
 
-## Dependency Graph
+## Current state (July 2026)
 
-```
-SEARCH_OVERLAY ──→ SEARCH_ENRICHMENT ──→ SEARCH_COMMANDS
-       │                                        │
-       └──→ SEARCH_HYBRID                       │
-                                                 │
-                                    (all search features complete)
-
-FISH_DESIGN_MERGE ──→ FISH_V15_FIXES  (sequential)
-
-PLAYGROUND_CLEANUP                     (independent)
-ART_EARTHSTAR                          (independent)
-MULTIPLAYER_CURSORS_PLAN               (independent)
-```
-
-## Current State (March 2026)
-
-**Completed:**
-- ✅ `search.html` — standalone search page with full 3-tier AI search
-- ✅ Search magnifying glass icon in nav on all 7 pages
-- ✅ Test pages archived at `Assets/demos/`
-- ✅ CLAUDE.md rewritten with correct sitemap
-
-**Active:**
-- 🔄 Search Overlay — extract + embed as site-wide overlay
+- ✅ v1.7 "Foundation & Coherence" shipped: `<jh-nav>`/`<jh-footer>` components, robots/sitemap/
+  canonicals, version single-source (now `SITE.version` in `scripts/jh-chrome.js` → site at v1.11)
+- ✅ House cleanup: invoice scrubbed from history, ~75MB junk/private files pruned, videos compressed
+- 🔄 **Next: v1.8 Unified Canvas Engine** — extract `scripts/shape-detection.js` +
+  `scripts/fish-engine.js`, seeded from `fish-demo/fish.js`; snapshot frozen design.html first
+- Then: v1.9 Fish Maze (the flagship release), v2.0 QA/polish/tag

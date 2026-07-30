@@ -1,7 +1,8 @@
 # Portfolio v1.6 → v2.0 Release Plan
 
-> Status: DRAFT for review · Baseline: v1.6 · Author: synthesized from Agent Reference plans,
-> a content/sitemap audit, and a codebase-architecture audit (June 2026).
+> Status: ACTIVE · Baseline: v1.6 · v1.7 shipped; site at v1.11 · Author: synthesized from
+> Agent Reference plans, a content/sitemap audit, and a codebase-architecture audit (June 2026).
+> Amended July 2026 with the decisions in "Decisions (July 2026)" below.
 
 ## Context & Goals
 johnhanacek.com is a hand-authored, standalone-HTML portfolio (deep-sea terminal aesthetic,
@@ -144,7 +145,7 @@ new canvas features on top.
   the chosen option; enriched cards degrade gracefully when media absent.
 
 ### v2.0 — "Release"
-- **Playground cleanup:** cull broken cards, fix zoom/trackpad/caustic-clip/iframe-unload.
+- ~~Playground cleanup~~ — dropped per decision #5 (jh-deng-template rebuild supersedes).
 - **QA & polish:** accessibility sweep (focus, reduced-motion, contrast), perf pass, cross-browser
   (incl. Safari backdrop-filter), mobile.
 - **Docs:** update `CLAUDE.md` sitemap (add search/playground; document orphan disposition),
@@ -174,6 +175,26 @@ new canvas features on top.
    decide its canonical home (Art vs Services vs its own nav slot) during the nav-component work — it
    reads as a coaching/learning dashboard, so a Services link likely belongs too.
 
+## Decisions (July 2026)
+4. **Focus = finish the core plan and ship the Fish Maze** (v1.8 engine → v1.9 maze). The maze
+   is the release moment / social-bait update.
+5. **Playground → future rebuild on jh-deng-template** (a system on John's local machine, not in
+   this repo). Consequences: PLAYGROUND_CLEANUP is **dropped** from v2.0 scope, and playground's
+   bespoke nav is NOT converted to `<jh-nav>` — don't invest in the current implementation.
+6. **onagents.html is held** for that playground rebuild (stays unlisted + noindex until then).
+7. **tidepool.html, beach-beers.html, fish-demo/ = internal experiments.** Registered in
+   CLAUDE.md's unlisted-pages registry; not promoted, not deleted.
+8. **fish-demo/ seeds v1.8**: `fish-demo/fish.js` is already a working standalone extraction of
+   the fish system — the v1.8 engine work starts by reconciling it against index.html and
+   promoting the result to `scripts/fish-engine.js`, not by extracting from scratch.
+9. **Version SoT resolved differently than planned**: instead of a new `scripts/config.js`, the
+   version lives as `SITE.version` in `scripts/jh-chrome.js` (renders the footer badge);
+   `sync-version.mjs` parses it and stamps every `?v=` + the README badge. Zero extra requests.
+10. **House cleanup shipped (July 2026)**: invoice removed AND scrubbed from git history;
+    private/junk files pruned (~75MB incl. unreferenced media); Nanome videos compressed
+    (35MB→6.3MB); 404 JSON-LD added; last stray old-domain email fixed; CLAUDE.md/README
+    rewritten to match reality.
+
 ## Deferred to v2.1+ (explicitly out of scope for v2)
 - **ART_HERO_ENHANCEMENT** (star layers, Web Audio, shooting stars) — delightful, large, isolated.
 - **MULTIPLAYER_CURSORS** (PartyKit) — adds an external runtime dependency.
@@ -191,7 +212,7 @@ new canvas features on top.
 | SEARCH_OVERLAY | Done |
 | SEARCH_ENRICHMENT | **v1.9** |
 | SEARCH_COMMANDS, SEARCH_HYBRID | v2.1 |
-| PLAYGROUND_CLEANUP | **v2.0** |
+| PLAYGROUND_CLEANUP | **Dropped** (decision #5 — jh-deng-template rebuild supersedes) |
 | ART_HERO_ENHANCEMENT | v2.1 |
 | MULTIPLAYER_CURSORS | v2.1 |
 | ART_EARTHSTAR | Done |
