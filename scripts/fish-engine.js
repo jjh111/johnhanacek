@@ -30,6 +30,50 @@
         // own world; the engine draws transparently on its own layer.
         const FISH_FILL_ALPHA = opts.renderStyle === 'blueprint' ? 0.14 : 0.65;
 
+        // ---- Maze walls (setObstacles) ------------------------------------
+        // Walls are NOT coral: fish swim close (tight, size-based standoff)
+        // and can NEVER pass through (hard per-frame containment). They only
+        // borrow the coral machinery for school-waypoint routing.
+        let wallRects = [];
+
+        function applyWallPhysics(f) {
+            if (!wallRects.length) return;
+            const bw = f.bodyWidth || 20;
+            const standoff = bw >= MEDIUM_THRESHOLD ? 26 : bw >= SMALL_THRESHOLD ? 16 : 9;
+            const body = Math.max(6, (f.bodyHeight || 12) * 0.5);
+            for (let i = 0; i < wallRects.length; i++) {
+                const r = wallRects[i];
+
+                // Proactive steering: if the point ahead of the nose lands in
+                // the standoff zone, ease the heading away from the wall center
+                const lookAhead = 24 + bw * 1.2;
+                const px = f.x + Math.cos(f.heading) * lookAhead;
+                const py = f.y + Math.sin(f.heading) * lookAhead;
+                const s = standoff + body;
+                if (px > r.minX - s && px < r.maxX + s && py > r.minY - s && py < r.maxY + s) {
+                    const away = Math.atan2(f.y - (r.minY + r.maxY) / 2, f.x - (r.minX + r.maxX) / 2);
+                    f.targetHeading += angleDiff(away, f.targetHeading) * 0.12;
+                }
+
+                // Hard containment: resolve overlap along the shallowest axis
+                // and kill the velocity component pointing into the wall.
+                // Fish move ≤ ~5px/frame and walls are ≥ 30px thick + padding,
+                // so per-frame overlap resolution cannot tunnel.
+                const m = body + 2;
+                if (f.x > r.minX - m && f.x < r.maxX + m && f.y > r.minY - m && f.y < r.maxY + m) {
+                    const pushLeft  = f.x - (r.minX - m);
+                    const pushRight = (r.maxX + m) - f.x;
+                    const pushUp    = f.y - (r.minY - m);
+                    const pushDown  = (r.maxY + m) - f.y;
+                    const minPush = Math.min(pushLeft, pushRight, pushUp, pushDown);
+                    if (minPush === pushLeft)       { f.x = r.minX - m; if (f.vx > 0) f.vx = 0; }
+                    else if (minPush === pushRight) { f.x = r.maxX + m; if (f.vx < 0) f.vx = 0; }
+                    else if (minPush === pushUp)    { f.y = r.minY - m; if (f.vy > 0) f.vy = 0; }
+                    else                            { f.y = r.maxY + m; if (f.vy < 0) f.vy = 0; }
+                }
+            }
+        }
+
         function emitDrawing(active) {
             if (opts.onDrawingChange) { try { opts.onDrawingChange(active); } catch (err) { console.error('onDrawingChange hook failed', err); } }
         }
@@ -1437,7 +1481,7 @@
                         let nearestCoral = null;
                         let nearestCoralDist = Infinity;
                         coral.forEach(c => {
-                            if (!c.settled) return;
+                            if (!c.settled || c.isExternal) return; // walls are not havens
                             const d = Math.sqrt((c.x - f.x) ** 2 + (c.y - f.y) ** 2);
                             if (d < nearestCoralDist) {
                                 nearestCoralDist = d;
@@ -1646,6 +1690,7 @@
                             if (f.cruiseLaneY !== undefined) {
                                 let coralCeil = h * 0.65;
                                 for (let ci = 0; ci < coral.length; ci++) {
+                                    if (coral[ci].isExternal) continue; // walls don't raise cruise lanes
                                     const cTop = coral[ci].y - (coral[ci].shape?.height || 60) * 0.5 - bw;
                                     if (cTop < coralCeil) coralCeil = cTop;
                                 }
@@ -1880,6 +1925,7 @@
                                 let coralCeiling = h * 0.65; // default if no coral exists
                                 if (coral.length > 0) {
                                     for (let ci = 0; ci < coral.length; ci++) {
+                                        if (coral[ci].isExternal) continue; // walls don't raise cruise lanes
                                         const cTop = coral[ci].y - (coral[ci].shape?.height || 60) * 0.5;
                                         if (cTop < coralCeiling) coralCeiling = cTop;
                                     }
@@ -2052,7 +2098,7 @@
                             let nearestCoral = null;
                             let nearestCoralDist = Infinity;
                             coral.forEach(c => {
-                                if (!c.settled) return;
+                                if (!c.settled || c.isExternal) return; // walls are not havens
                                 const d = Math.sqrt((c.x - f.x) ** 2 + (c.y - f.y) ** 2);
                                 if (d < nearestCoralDist) {
                                     nearestCoralDist = d;
@@ -2371,7 +2417,7 @@
                                     let homeCoral = null;
                                     let homeCoralDist = Infinity;
                                     coral.forEach(c => {
-                                        if (!c.settled) return;
+                                        if (!c.settled || c.isExternal) return; // walls are not homes
                                         const d = Math.sqrt((c.x - f.x) ** 2 + (c.y - f.y) ** 2);
                                         if (d < homeCoralDist) {
                                             homeCoralDist = d;
@@ -2818,6 +2864,7 @@
                 f.inCoralEmergency = false; // Reset each frame before coral loop
                 coral.forEach(c => {
                     if (!c.settled || !c.shape) return;
+                    if (c.isExternal) return; // walls use applyWallPhysics (tight standoff), not coral buffers
                     const coralW = (c.shape.width || 50) * 0.5;
                     const coralH = c.shape.height || 60;
                     const coralTop = c.y - coralH; // Top of coral (grows upward from base)
@@ -3475,6 +3522,9 @@
                 const clampMargin = Math.min(f.bodyWidth || 20, EMERGENCY_EDGE);
                 f.x = Math.max(clampMargin, Math.min(w - clampMargin, f.x));
                 f.y = Math.max(clampMargin, Math.min(h - clampMargin, f.y));
+
+                // ---- Maze walls: steer near, never through ----
+                applyWallPhysics(f);
 
                 // ---- Render ----
                 // Wiggle parameters based on state
@@ -5722,6 +5772,7 @@
                 for (let i = coral.length - 1; i >= 0; i--) {
                     if (coral[i].isExternal) coral.splice(i, 1);
                 }
+                wallRects = [];
                 (list || []).forEach((o, i) => {
                     coral.push({
                         id: 'ext-' + (o.id != null ? o.id : i),
@@ -5729,6 +5780,11 @@
                         x: o.x, y: o.y,
                         settled: true,
                         shape: { width: o.width, height: o.height }
+                    });
+                    // o.y is the wall's BOTTOM edge (coral convention)
+                    wallRects.push({
+                        minX: o.x - o.width / 2, maxX: o.x + o.width / 2,
+                        minY: o.y - o.height,    maxY: o.y
                     });
                 });
                 startAnimation();

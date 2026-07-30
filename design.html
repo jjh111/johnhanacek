@@ -2132,29 +2132,48 @@
                 }));
         }
 
-        // Squiggle = rapid back-and-forth scribble: ≥3 near-reversals (>150°)
-        // of travel direction. Circles/triangles produce 0 (threshold is well
-        // above any corner a clean shape makes), so no false triggers.
+        // Squiggle = rapid back-and-forth scribble. Two signals must agree:
+        //  1. ≥3 sharp direction reversals (>100°) on a DISTANCE-resampled
+        //     path (~8px steps), so stroke speed / event density don't matter
+        //  2. ink ratio: pathLength ÷ bbox perimeter > 1.3 — a scribble lays
+        //     far more ink than its area. Clean shapes sit near 1.0 (square),
+        //     0.79 (circle), ~0.75 (triangle), so corners alone can't trigger.
         function isSquiggle(points) {
-            if (points.length < 12) return false;
+            if (points.length < 10) return false;
             const bounds = getBounds(points);
-            if (Math.max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY) < 30) return false;
-            let reversals = 0;
-            let prevAngle = null;
-            const step = Math.max(1, Math.floor(points.length / 40));
-            for (let i = step; i < points.length; i += step) {
-                const a = points[i - step], b = points[i];
-                const dx = b.x - a.x, dy = b.y - a.y;
-                if (dx * dx + dy * dy < 9) continue; // skip micro-jitter
-                const ang = Math.atan2(dy, dx);
-                if (prevAngle !== null) {
-                    let diff = Math.abs(ang - prevAngle);
-                    if (diff > Math.PI) diff = 2 * Math.PI - diff;
-                    if (diff > 2.6) reversals++;
-                }
-                prevAngle = ang;
+            const w = bounds.maxX - bounds.minX, h = bounds.maxY - bounds.minY;
+            if (Math.max(w, h) < 30) return false;
+
+            const res = [points[0]];
+            let last = points[0];
+            for (const pt of points) {
+                const dx = pt.x - last.x, dy = pt.y - last.y;
+                if (dx * dx + dy * dy >= 64) { res.push(pt); last = pt; }
             }
-            return reversals >= 3;
+            if (res.length < 6) return false;
+
+            let pathLen = 0;
+            const dirs = [];
+            for (let i = 1; i < res.length; i++) {
+                const dx = res[i].x - res[i - 1].x, dy = res[i].y - res[i - 1].y;
+                pathLen += Math.sqrt(dx * dx + dy * dy);
+                dirs.push(Math.atan2(dy, dx));
+            }
+            // Reversal = direction flips >126° within a 2–4 segment window, so a
+            // turn ROUNDED across several samples still reads as one flip. A circle
+            // only bends ~26° over the same window, so smooth curves never count.
+            let reversals = 0;
+            let i = 0;
+            while (i < dirs.length - 2) {
+                let flipped = false;
+                for (let j = i + 2; j <= Math.min(i + 4, dirs.length - 1); j++) {
+                    let diff = Math.abs(dirs[j] - dirs[i]);
+                    if (diff > Math.PI) diff = 2 * Math.PI - diff;
+                    if (diff > 2.2) { reversals++; i = j; flipped = true; break; }
+                }
+                if (!flipped) i++;
+            }
+            return reversals >= 3 && pathLen / (2 * (w + h) + 1) > 1.3;
         }
 
         // Erase every wall the squiggle's area overlaps — amber burst feedback
@@ -2229,8 +2248,22 @@
                         : { x: (bounds.minX + bounds.maxX) / 2, y: (bounds.minY + bounds.maxY) / 2 };
 
                     if (fishLayer.state.fish.length > 0) {
-                        fishLayer.addFood(center.x, center.y);
-                        whisperLabels.push({ text: 'Food', x: center.x, y: center.y, createdAt: Date.now() });
+                        // Food inside a wall is unreachable — nudge it just outside
+                        let fx = center.x, fy = center.y;
+                        recognizedShapes.filter(s => s.type !== 'dot').forEach(s => {
+                            const b = shapeBounds(s);
+                            if (fx > b.minX - 10 && fx < b.maxX + 10 && fy > b.minY - 10 && fy < b.maxY + 10) {
+                                const dl = fx - (b.minX - 14), dr = (b.maxX + 14) - fx;
+                                const du = fy - (b.minY - 14), dd = (b.maxY + 14) - fy;
+                                const mn = Math.min(dl, dr, du, dd);
+                                if (mn === dl) fx = b.minX - 14;
+                                else if (mn === dr) fx = b.maxX + 14;
+                                else if (mn === du) fy = b.minY - 14;
+                                else fy = b.maxY + 14;
+                            }
+                        });
+                        fishLayer.addFood(fx, fy);
+                        whisperLabels.push({ text: 'Food', x: fx, y: fy, createdAt: Date.now() });
                     } else {
                         recognizedShapes.push({
                             type: 'dot',
