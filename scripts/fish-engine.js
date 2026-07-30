@@ -26,6 +26,10 @@
         const { getBounds, distance, getCircleScore, getRectScore, getTriangleScore,
                 segmentsIntersect, findSelfIntersectionLoop } = window.ShapeDetect;
 
+        // Embedded mode (design.html maze): host page drives input + renders its
+        // own world; the engine draws transparently on its own layer.
+        const FISH_FILL_ALPHA = opts.renderStyle === 'blueprint' ? 0.14 : 0.65;
+
         function emitDrawing(active) {
             if (opts.onDrawingChange) { try { opts.onDrawingChange(active); } catch (err) { console.error('onDrawingChange hook failed', err); } }
         }
@@ -240,6 +244,8 @@
             food: '#7ae582',
             line: 'rgba(77, 201, 246, 0.5)'
         };
+
+        if (opts.palette && opts.palette.fish) aquaColors.fish = opts.palette.fish;
 
         // Deep Sea Terminal color palette
         const colors = {
@@ -664,6 +670,7 @@
         // Drawing Functions
         // ============================================
         function drawGrid() {
+            if (opts.transparent) { ctx.clearRect(0, 0, _cw, _ch); return; }
             ctx.fillStyle = colors.bg;
             ctx.fillRect(0, 0, _cw, _ch);
         }
@@ -1097,8 +1104,11 @@
                 // Per-fish unique color using hue shift
                 const baseColor = aquaColors.fish[f.id % aquaColors.fish.length];
                 const hueShift = f.hueShift || 0;
-                // Apply hue shift by rotating through color spectrum
-                const hsl = `hsl(${(180 + hueShift) % 360}, 80%, 65%)`;
+                // Blueprint mode constrains every fish to the cyan line-art family —
+                // per-fish variety comes from small hue/lightness offsets, not full spectrum
+                const hsl = opts.renderStyle === 'blueprint'
+                    ? `hsl(${188 + (hueShift % 24)}, 75%, ${62 + (hueShift % 17)}%)`
+                    : `hsl(${(180 + hueShift) % 360}, 80%, 65%)`;
                 const color = hueShift ? hsl : baseColor;
 
                 // Per-fish randomness offset (consistent per fish)
@@ -3567,7 +3577,7 @@
                     ctx.stroke();
 
                     // Fill body - 65% opacity (was 50%, +30%)
-                    ctx.globalAlpha = 0.65;
+                    ctx.globalAlpha = FISH_FILL_ALPHA;
                     ctx.fillStyle = color;
                     ctx.fill();
                     ctx.globalAlpha = f.state === 'fleeing' ? 1 : 0.9;
@@ -3662,7 +3672,7 @@
                         ctx.stroke();
 
                         // Fill body - 65% opacity (was 50%, +30%)
-                        ctx.globalAlpha = 0.65;
+                        ctx.globalAlpha = FISH_FILL_ALPHA;
                         ctx.fillStyle = color;
                         ctx.fill();
 
@@ -3739,7 +3749,7 @@
                         ctx.stroke();
 
                         // Fill body - 65% opacity (was 50%, +30%)
-                        ctx.globalAlpha = 0.65;
+                        ctx.globalAlpha = FISH_FILL_ALPHA;
                         ctx.fillStyle = color;
                         ctx.fill();
                     }
@@ -3766,6 +3776,7 @@
 
             coral.forEach((c, ci) => {
                 if (!c.shape) return;
+                if (c.isExternal) return; // wall obstacle via setObstacles — physics only, host page renders it
 
                 const shape = c.shape;
                 const color = aquaColors.coral[c.id % aquaColors.coral.length];
@@ -4576,7 +4587,7 @@
         initAmbientParticles();
 
         // Spawn a starter jellyfish to invite interaction
-        (function spawnStarterJellyfish() {
+        if (opts.seedJellyfish !== false) (function spawnStarterJellyfish() {
             const w = canvas.width / (window.devicePixelRatio || 1);
             const h = canvas.height / (window.devicePixelRatio || 1);
             const cx = w * 0.35 + Math.random() * w * 0.3;
@@ -5220,7 +5231,7 @@
         // ============================================
         // Spawn one small fish at launch (random color)
         // ============================================
-        (function spawnLaunchFish() {
+        if (opts.seedFish !== false) (function spawnLaunchFish() {
             const w = canvas.width / (window.devicePixelRatio || 1);
             const h = canvas.height / (window.devicePixelRatio || 1);
 
@@ -5350,6 +5361,20 @@
 
             if (classified) {
                 if (opts.onStroke) { try { opts.onStroke(classified); } catch (err) { console.error('onStroke hook failed', err); } }
+                spawnClassified(classified);
+            }
+
+            isDrawing = false;
+            currentStroke = null;
+            setTimeout(() => {
+                if (!isDrawing) emitDrawing(false);
+            }, 500);
+        }
+
+        // Spawn whatever classifyStroke recognized onto the canvas. Shared by
+        // endDraw (interactive pages) and the embedded-mode APIs
+        // (processStroke / addFood) that design.html's maze drives.
+        function spawnClassified(classified) {
                 const id = entityIdCounter++;
                 const now = Date.now();
 
@@ -5606,18 +5631,12 @@
                 }
 
                 // Hide raw stroke quickly since entity is now rendered
-                currentStroke.fadeStart = 0;
+                if (currentStroke) currentStroke.fadeStart = 0;
                 startAnimation();
-            }
-
-            isDrawing = false;
-            currentStroke = null;
-            setTimeout(() => {
-                if (!isDrawing) emitDrawing(false);
-            }, 500);
         }
         
-        // Event listeners
+        // Event listeners (skipped in embedded mode — the host page drives input)
+        if (opts.interactive !== false) {
         canvas.addEventListener('mousedown', startDraw);
         canvas.addEventListener('mousemove', draw);
         canvas.addEventListener('mouseup', endDraw);
@@ -5628,6 +5647,7 @@
         canvas.addEventListener('touchmove', draw, { passive: false });
         canvas.addEventListener('touchend', endDraw);
         canvas.addEventListener('touchcancel', endDraw);
+        }
         // Click to scare fish - check if click hit a fish
         function scareFishAtPoint(x, y) {
             const SCARE_RADIUS = 60; // How close click needs to be
@@ -5670,7 +5690,7 @@
         }
 
         // Add click listener for scaring fish
-        canvas.addEventListener('click', (e) => {
+        if (opts.interactive !== false) canvas.addEventListener('click', (e) => {
             const pos = getPos(e);
             if (scareFishAtPoint(pos.x, pos.y)) {
                 startAnimation();
@@ -5686,6 +5706,33 @@
             setDebug(v) { debugMode = !!v; startAnimation(); },
             get debugMode() { return debugMode; },
             scareFishAt: scareFishAtPoint,
+            processStroke(points, allowTypes) {
+                const classified = classifyStroke(points);
+                if (!classified) return null;
+                if (allowTypes && !allowTypes.includes(classified.type)) {
+                    return { type: classified.type, spawned: false };
+                }
+                spawnClassified(classified);
+                return { type: classified.type, spawned: true };
+            },
+            addFood(x, y) {
+                spawnClassified({ type: 'food', center: { x, y }, points: [] });
+            },
+            setObstacles(list) {
+                for (let i = coral.length - 1; i >= 0; i--) {
+                    if (coral[i].isExternal) coral.splice(i, 1);
+                }
+                (list || []).forEach((o, i) => {
+                    coral.push({
+                        id: 'ext-' + (o.id != null ? o.id : i),
+                        isExternal: true,
+                        x: o.x, y: o.y,
+                        settled: true,
+                        shape: { width: o.width, height: o.height }
+                    });
+                });
+                startAnimation();
+            },
             classifyStroke,
             state: {
                 get fish() { return fish; },

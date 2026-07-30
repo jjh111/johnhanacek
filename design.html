@@ -314,9 +314,13 @@
             margin: 0;
         }
 
-        /* Hero half-height for above-fold content visibility */
-        .hero {
-            min-height: 50vh;
+        /* v1.9: hero is fullscreen (shared.css 100vh) — the maze needs room */
+        #fishCanvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+            pointer-events: none; /* input goes to the blueprint canvas beneath */
         }
         .hero-content {
             padding-bottom: 2rem;
@@ -422,6 +426,7 @@
 
         <!-- Interactive Blueprint Canvas -->
         <canvas id="heroCanvas"></canvas>
+        <canvas id="fishCanvas" aria-hidden="true"></canvas>
         <div class="hero-hint hidden">
             <span class="hint-icon">✎</span>
             <span class="hint-text">draw here</span>
@@ -952,9 +957,22 @@
 
     <!-- Hero Canvas Drawing Interaction -->
     <script src="./scripts/shape-detection.js?v=1.12"></script>
+    <script src="./scripts/fish-engine.js?v=1.12"></script>
     <script>
         const canvas = document.getElementById('heroCanvas');
         const ctx = canvas.getContext('2d');
+
+        // ── Fish layer (v1.9 Fish Maze) — shared engine, embedded mode ───────
+        // Swims on its own transparent fixed canvas above the blueprint grid;
+        // all input stays on the blueprint canvas and is routed via endDraw.
+        // Seeds one small fish; blueprint render style = cyan line-art.
+        const fishLayer = window.designFish = FishCanvas(document.getElementById('fishCanvas'), {
+            interactive: false,
+            transparent: true,
+            renderStyle: 'blueprint',
+            seedJellyfish: false,
+            palette: { fish: ['#4dc9f6', '#7dd8f7', '#b8dced', '#8cb8cc'] }
+        });
         
         // ============================================
         // Unified Timing Constants (in ms)
@@ -968,7 +986,7 @@
             morphDuration: 400,     // Shape morph animation
             shapeHold: Infinity,    // Shapes persist until cleared
             shapeFade: 0,           // No fade
-            maxShapes: 20,          // Keep last N shapes
+            maxShapes: 50,          // Keep last N shapes (v1.9: raised 20→50 for maze building)
             
             // Whisper labels
             labelFadeIn: 200,       // Label fade in
@@ -1705,6 +1723,7 @@
             // Count-based removal: keep only last N shapes
             if (recognizedShapes.length > TIMING.maxShapes) {
                 recognizedShapes = recognizedShapes.slice(-TIMING.maxShapes);
+                syncObstacles();
             }
 
             recognizedShapes.forEach(shape => {
@@ -1910,11 +1929,17 @@
                 // Draw crystalline particle - hexagonal shard
                 const size = 4 * (1 - progress * 0.5);
 
-                // Gradient from cyan to purple (bioluminescent crystallization)
-                const hue = 180 + progress * 100; // cyan to purple transition
-                const r = Math.round(0 + progress * 199);
-                const g = Math.round(217 - progress * 92);
-                const b = 255;
+                // Cyan→purple (recognition) or gold→ember (squiggle-erase)
+                let r, g, b;
+                if (p.amber) {
+                    r = 212;
+                    g = Math.round(175 - progress * 70);
+                    b = Math.round(55 * (1 - progress));
+                } else {
+                    r = Math.round(0 + progress * 199);
+                    g = Math.round(217 - progress * 92);
+                    b = 255;
+                }
 
                 ctx.save();
                 ctx.translate(p.x, p.y);
@@ -2069,51 +2094,166 @@
             currentStroke.points.push(pos);
         }
         
-        function endDraw() {
-            // Detect tap/dot (few points, small area)
-            if (currentStroke && currentStroke.points.length >= 1 && currentStroke.points.length <= 8) {
-                const bounds = getBounds(currentStroke.points);
-                const size = Math.max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);
-                
-                if (size < 25) {
-                    // It's a tap/dot!
-                    const center = currentStroke.points.length === 1 
-                        ? currentStroke.points[0]
-                        : { x: (bounds.minX + bounds.maxX) / 2, y: (bounds.minY + bounds.maxY) / 2 };
-                    
-                    // Add dot as recognized shape
-                    recognizedShapes.push({
-                        type: 'dot',
-                        center,
-                        radius: 6,
-                        confidence: 1,
-                        rawPoints: [...currentStroke.points],
-                        idealPoints: [center],
-                        createdAt: Date.now()
-                    });
-                    
-                    // Add whisper label
-                    whisperLabels.push({
-                        text: 'Point',
-                        x: center.x,
-                        y: center.y,
-                        createdAt: Date.now()
-                    });
-                    
-                    // Add ripple effect
-                    ripples.push({
-                        x: center.x,
-                        y: center.y,
-                        createdAt: Date.now(),
-                        maxRadius: 40
-                    });
-                    startAnimation(); // Restart animation for ripple
+        // ── Maze helpers (v1.9) ─────────────────────────────────────────────
 
-                    lastShapeTime = Date.now();
-                    currentStroke.fadeStart = 0;
+        // Bounding box for any recognizedShapes entry (rect/triangle carry
+        // .bounds; circle/dot carry center+radius; line/arrow carry start/end)
+        function shapeBounds(s) {
+            if (s.bounds) return s.bounds;
+            if (s.radius) {
+                return { minX: s.center.x - s.radius, maxX: s.center.x + s.radius,
+                         minY: s.center.y - s.radius, maxY: s.center.y + s.radius };
+            }
+            if (s.start && s.end) {
+                return { minX: Math.min(s.start.x, s.end.x), maxX: Math.max(s.start.x, s.end.x),
+                         minY: Math.min(s.start.y, s.end.y), maxY: Math.max(s.start.y, s.end.y) };
+            }
+            return { minX: s.center.x - 10, maxX: s.center.x + 10,
+                     minY: s.center.y - 10, maxY: s.center.y + 10 };
+        }
+
+        // Push the current walls into the fish engine as obstacles. Engine
+        // obstacles are coral-style: x = center, y = BOTTOM edge. Walls also
+        // act as shelter — small fish home in them like coral.
+        // (Note: line/arrow walls use their bounding box, so diagonals read
+        // as a fat block to the fish — acceptable for v1.9.)
+        function syncObstacles() {
+            fishLayer.setObstacles(recognizedShapes
+                .filter(s => s.type !== 'dot')
+                .map((s, i) => {
+                    const b = shapeBounds(s);
+                    return {
+                        id: i,
+                        x: (b.minX + b.maxX) / 2,
+                        y: b.maxY,
+                        width: Math.max(30, b.maxX - b.minX),
+                        height: Math.max(30, b.maxY - b.minY)
+                    };
+                }));
+        }
+
+        // Squiggle = rapid back-and-forth scribble: ≥3 near-reversals (>150°)
+        // of travel direction. Circles/triangles produce 0 (threshold is well
+        // above any corner a clean shape makes), so no false triggers.
+        function isSquiggle(points) {
+            if (points.length < 12) return false;
+            const bounds = getBounds(points);
+            if (Math.max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY) < 30) return false;
+            let reversals = 0;
+            let prevAngle = null;
+            const step = Math.max(1, Math.floor(points.length / 40));
+            for (let i = step; i < points.length; i += step) {
+                const a = points[i - step], b = points[i];
+                const dx = b.x - a.x, dy = b.y - a.y;
+                if (dx * dx + dy * dy < 9) continue; // skip micro-jitter
+                const ang = Math.atan2(dy, dx);
+                if (prevAngle !== null) {
+                    let diff = Math.abs(ang - prevAngle);
+                    if (diff > Math.PI) diff = 2 * Math.PI - diff;
+                    if (diff > 2.6) reversals++;
+                }
+                prevAngle = ang;
+            }
+            return reversals >= 3;
+        }
+
+        // Erase every wall the squiggle's area overlaps — amber burst feedback
+        function eraseShapesUnder(points) {
+            const sb = getBounds(points);
+            const pad = 20;
+            let erased = 0;
+            for (let i = recognizedShapes.length - 1; i >= 0; i--) {
+                const b = shapeBounds(recognizedShapes[i]);
+                if (b.minX < sb.maxX + pad && b.maxX > sb.minX - pad &&
+                    b.minY < sb.maxY + pad && b.maxY > sb.minY - pad) {
+                    const cx = (b.minX + b.maxX) / 2, cy = (b.minY + b.maxY) / 2;
+                    for (let k = 0; k < 10; k++) {
+                        const angle = (k / 10) * Math.PI * 2;
+                        particles.push({
+                            x: cx, y: cy,
+                            vx: Math.cos(angle) * (1.5 + Math.random()),
+                            vy: Math.sin(angle) * (1.5 + Math.random()),
+                            life: 1, createdAt: Date.now(), amber: true
+                        });
+                    }
+                    recognizedShapes.splice(i, 1);
+                    erased++;
                 }
             }
-            
+            if (erased) {
+                whisperLabels.push({
+                    text: erased > 1 ? 'Erased ×' + erased : 'Erased',
+                    x: (sb.minX + sb.maxX) / 2, y: (sb.minY + sb.maxY) / 2,
+                    createdAt: Date.now()
+                });
+                syncObstacles();
+                startAnimation();
+            }
+        }
+
+        // v1.9 maze routing — priority order per FISH_DESIGN_MERGE:
+        // 1. squiggle → erase walls   2. loop → fish   3. dot → food/point
+        // 4. clean shape → blueprint wall   5. fallback → fading stroke
+        function endDraw() {
+            if (!currentStroke) { isDrawing = false; return; }
+            const points = [...currentStroke.points];
+
+            // 1. Squiggle erase
+            if (isSquiggle(points)) {
+                eraseShapesUnder(points);
+                currentStroke.fadeStart = 0;
+                finishStroke();
+                return;
+            }
+
+            // 2. Fish loop → living fish on the fish layer
+            if (points.length > 5) {
+                const spawn = fishLayer.processStroke(points, ['fish']);
+                if (spawn && spawn.spawned) {
+                    lastShapeTime = Date.now();
+                    currentStroke.fadeStart = 0;
+                    startAnimation();
+                    finishStroke();
+                    return;
+                }
+            }
+
+            // 3. Tap/dot → food for the fish, or a blueprint point if none swim
+            if (points.length >= 1 && points.length <= 8) {
+                const bounds = getBounds(points);
+                const size = Math.max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);
+
+                if (size < 25) {
+                    const center = points.length === 1
+                        ? points[0]
+                        : { x: (bounds.minX + bounds.maxX) / 2, y: (bounds.minY + bounds.maxY) / 2 };
+
+                    if (fishLayer.state.fish.length > 0) {
+                        fishLayer.addFood(center.x, center.y);
+                        whisperLabels.push({ text: 'Food', x: center.x, y: center.y, createdAt: Date.now() });
+                    } else {
+                        recognizedShapes.push({
+                            type: 'dot',
+                            center,
+                            radius: 6,
+                            confidence: 1,
+                            rawPoints: [...points],
+                            idealPoints: [center],
+                            createdAt: Date.now()
+                        });
+                        whisperLabels.push({ text: 'Point', x: center.x, y: center.y, createdAt: Date.now() });
+                    }
+
+                    ripples.push({ x: center.x, y: center.y, createdAt: Date.now(), maxRadius: 40 });
+                    startAnimation(); // Restart animation for ripple
+                    lastShapeTime = Date.now();
+                    currentStroke.fadeStart = 0;
+                    finishStroke();
+                    return;
+                }
+            }
+
+            // 4. Clean geometric shape → blueprint wall + maze obstacle
             if (currentStroke && currentStroke.points.length > 5) {
                 const shape = detectShape(currentStroke.points);
                 
@@ -2150,12 +2290,18 @@
                     startAnimation(); // Restart animation for particles
 
                     lastShapeTime = Date.now();
-                    
+                    syncObstacles(); // wall is live for the fish immediately
+
                     // Hide raw stroke quickly since we're showing recognized version
                     currentStroke.fadeStart = 0;
                 }
             }
-            
+
+            // 5. Fallback: unrecognized stroke just fades
+            finishStroke();
+        }
+
+        function finishStroke() {
             isDrawing = false;
             currentStroke = null;
             setTimeout(() => {
@@ -2199,6 +2345,7 @@
         function clearCanvas() {
             strokes = [];
             recognizedShapes = [];
+            syncObstacles();
             whisperLabels = [];
             rawIntersections = [];
             particles = [];
