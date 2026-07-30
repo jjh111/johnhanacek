@@ -1,18 +1,20 @@
 #!/usr/bin/env node
 /**
- * Single source of truth for the asset cache-bust version.
- *
- * All shared assets are loaded with a `?v=` query string so browsers re-fetch
- * them after a change instead of serving a stale cached copy. Rather than
- * hand-editing that number across every page, bump SITE_VERSION below (once)
- * whenever you change shared.css / shared.js / search-overlay.(css|js), then run:
+ * Version sync tool. The site version lives in ONE place: `version` inside the
+ * SITE object in scripts/jh-chrome.js (which also renders it in the footer
+ * badge at runtime). Bump it there, then run:
  *
  *     node scripts/sync-version.mjs
  *
- * It rewrites every matching `?v=` across the site's *.html so the whole site
- * busts cache uniformly. The value only needs to CHANGE between releases — any
- * new value forces a re-fetch — but keep it moving forward to avoid ever
- * reusing a value a browser may still have cached.
+ * This script reads that value and stamps it everywhere else it appears:
+ *   - every `?v=` cache-bust query on shared assets across the site's *.html
+ *     (so browsers re-fetch changed shared.css / shared.js / search-overlay.* /
+ *     jh-chrome.js instead of serving a stale cached copy)
+ *   - the `Portfolio vX.Y` badge in README.md
+ *
+ * The value only needs to CHANGE between releases — any new value forces a
+ * re-fetch — but keep it moving forward to avoid ever reusing a value a
+ * browser may still have cached.
  *
  * NOTE: this is a dev-time tool. It is NOT loaded by the site and adds no
  * runtime dependency — GitHub Pages still serves plain static HTML.
@@ -21,10 +23,14 @@ import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-const SITE_VERSION = '1.10'; // ← bump this one line per release, then run the script
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+const chromeSrc = readFileSync(join(root, 'scripts/jh-chrome.js'), 'utf8');
+const m = chromeSrc.match(/version:\s*'([0-9.]+)'/);
+if (!m) throw new Error("Couldn't find version: '<x.y>' in scripts/jh-chrome.js");
+const SITE_VERSION = m[1];
 
 const ASSETS = ['shared.css', 'shared.js', 'search-overlay.css', 'search-overlay.js', 'jh-chrome.js'];
-const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 const htmlFiles = readdirSync(root).filter((f) => f.endsWith('.html'));
 let total = 0;
@@ -41,5 +47,10 @@ for (const file of htmlFiles) {
   if (count) { writeFileSync(path, html); total += count; touched.push(`${file} (${count})`); }
 }
 
-console.log(`Stamped ?v=${SITE_VERSION} on ${total} asset ref(s) across ${touched.length} file(s):`);
+const readmePath = join(root, 'README.md');
+const readme = readFileSync(readmePath, 'utf8');
+const stamped = readme.replace(/Portfolio v[0-9.]+/g, `Portfolio v${SITE_VERSION}`);
+if (stamped !== readme) { writeFileSync(readmePath, stamped); touched.push('README.md'); }
+
+console.log(`Stamped v${SITE_VERSION} on ${total} asset ref(s) across ${touched.length} file(s):`);
 for (const t of touched) console.log('  ' + t);
