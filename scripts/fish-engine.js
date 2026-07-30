@@ -5701,5 +5701,171 @@
         return api;
     }
 
+    // ---- Ambient mode — one fish that lazily follows the cursor (404 page) ----
+    // Ported verbatim from 404.html's bespoke "Cursor Fish". Renders with the
+    // same procedural bodyPoints + quadratic outline as the game's medium fish.
+    FishCanvas.ambient = function (canvasEl, opts) {
+        opts = opts || {};
+        const canvas = canvasEl;
+        const ctx = canvas.getContext('2d');
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        // ── Build medium-fish geometry (matches the game's procedural shape) ────
+        const bodyWidth  = opts.bodyWidth || 45; // solidly medium tier: 35–60px range
+        const bodyHeight = bodyWidth * 0.45;
+        const bodyLen    = bodyWidth * 1.5;
+        const tailLen    = bodyLen * 0.5;
+        const tailSpread = bodyHeight * 0.8;
+        const bC         = bodyLen * 0.1; // body centre offset
+
+        const bodyPoints = [
+            { x:  bodyLen - bC,              y:  0               }, // nose
+            { x:  bodyLen * 0.7 - bC,        y: -bodyHeight * 0.5 },
+            { x:  bodyLen * 0.3 - bC,        y: -bodyHeight * 0.8 },
+            { x: -bodyLen * 0.2 - bC,        y: -bodyHeight * 0.6 },
+            { x: -bodyLen * 0.5 - bC,        y: -bodyHeight * 0.3 },
+            { x: -bodyLen * 0.5 - tailLen - bC, y: -tailSpread  },
+            { x: -bodyLen * 0.5 - tailLen * 0.5 - bC, y: 0      },
+            { x: -bodyLen * 0.5 - tailLen - bC, y:  tailSpread  },
+            { x: -bodyLen * 0.5 - bC,        y:  bodyHeight * 0.3 },
+            { x: -bodyLen * 0.2 - bC,        y:  bodyHeight * 0.6 },
+            { x:  bodyLen * 0.3 - bC,        y:  bodyHeight * 0.8 },
+            { x:  bodyLen * 0.7 - bC,        y:  bodyHeight * 0.5 },
+            { x:  bodyLen - bC,              y:  0               },
+        ];
+
+        const fish = {
+            x: window.innerWidth  * 0.5,
+            y: window.innerHeight * 0.6,
+            vx: 0.5, vy: 0,
+            heading: 0,
+            now: 0,   // frame time (ms) for wiggle phase
+        };
+
+        const cursor = {
+            x: window.innerWidth  * 0.5,
+            y: window.innerHeight * 0.4,
+        };
+        document.addEventListener('mousemove', e => { cursor.x = e.clientX; cursor.y = e.clientY; });
+        document.addEventListener('touchmove', e => {
+            cursor.x = e.touches[0].clientX;
+            cursor.y = e.touches[0].clientY;
+        }, { passive: true });
+
+        const COLOR = opts.color || '#4dc9f6';   // aquaColors.fish[1]
+
+        function drawFish() {
+            const strokePulse = 1 + 0.15 * Math.sin(fish.now / 800);
+
+            ctx.save();
+            ctx.translate(fish.x, fish.y);
+            ctx.rotate(fish.heading);
+            ctx.strokeStyle = COLOR;
+            ctx.lineWidth   = 2.5 * strokePulse;
+            ctx.lineCap     = 'round';
+            ctx.lineJoin    = 'round';
+
+            // Body outline
+            ctx.globalAlpha = 0.9;
+            ctx.beginPath();
+            ctx.moveTo(bodyPoints[0].x, bodyPoints[0].y);
+            for (let i = 1; i < bodyPoints.length; i++) {
+                const p0 = bodyPoints[i - 1];
+                const p1 = bodyPoints[i];
+                ctx.quadraticCurveTo(p0.x, p0.y, (p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
+            }
+            ctx.closePath();
+            ctx.stroke();
+
+            // Fill — 65% opacity, same as game
+            ctx.globalAlpha = 0.65;
+            ctx.fillStyle   = COLOR;
+            ctx.fill();
+
+            ctx.globalAlpha = 1;
+            ctx.restore();
+        }
+
+        const MAX_SPEED   = 3.5;
+        const VEL_LERP    = 0.92;
+        const TURN_LERP   = 0.04;
+        const ORBIT_R     = 90;   // orbit radius around cursor (px)
+        const ORBIT_SPEED = 0.018; // radians per frame
+        let orbitAngle    = Math.random() * Math.PI * 2;
+        let orbiting      = false;
+
+        function update() {
+            fish.now += 16;
+
+            const dx   = cursor.x - fish.x;
+            const dy   = cursor.y - fish.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            let targetVx, targetVy;
+
+            if (!orbiting && dist > ORBIT_R + 20) {
+                // Chase — swim toward the orbit radius boundary
+                const pull = Math.min(dist / 200, 1);
+                targetVx = (dx / dist) * MAX_SPEED * pull;
+                targetVy = (dy / dist) * MAX_SPEED * pull;
+            } else {
+                // Orbit — circle the cursor at a fixed radius
+                orbiting = true;
+                orbitAngle += ORBIT_SPEED;
+                // If cursor moved far away, break orbit and chase again
+                if (dist > ORBIT_R * 2.5) orbiting = false;
+                const targetX = cursor.x + Math.cos(orbitAngle) * ORBIT_R;
+                const targetY = cursor.y + Math.sin(orbitAngle) * ORBIT_R;
+                const odx = targetX - fish.x;
+                const ody = targetY - fish.y;
+                const odist = Math.sqrt(odx * odx + ody * ody) || 1;
+                targetVx = (odx / odist) * MAX_SPEED;
+                targetVy = (ody / odist) * MAX_SPEED;
+            }
+
+            fish.vx = fish.vx * VEL_LERP + targetVx * (1 - VEL_LERP);
+            fish.vy = fish.vy * VEL_LERP + targetVy * (1 - VEL_LERP);
+
+            const spd = Math.sqrt(fish.vx * fish.vx + fish.vy * fish.vy);
+            if (spd > MAX_SPEED) { fish.vx = fish.vx / spd * MAX_SPEED; fish.vy = fish.vy / spd * MAX_SPEED; }
+
+            fish.x += fish.vx;
+            fish.y += fish.vy;
+
+            // Soft edge push
+            const m = 80;
+            if (fish.x < m)                  fish.vx += 0.3;
+            if (fish.x > canvas.width  - m)  fish.vx -= 0.3;
+            if (fish.y < m)                  fish.vy += 0.3;
+            if (fish.y > canvas.height - m)  fish.vy -= 0.3;
+
+            // Heading — smooth angle lerp
+            if (spd > 0.05) {
+                const target = Math.atan2(fish.vy, fish.vx);
+                let delta = target - fish.heading;
+                while (delta >  Math.PI) delta -= Math.PI * 2;
+                while (delta < -Math.PI) delta += Math.PI * 2;
+                fish.heading += delta * TURN_LERP;
+            }
+        }
+
+        function loop() {
+            update();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawFish();
+            requestAnimationFrame(loop);
+        }
+
+        loop();
+
+        return { canvas, ctx, fish, cursor };
+    };
+
     window.FishCanvas = FishCanvas;
 })();
