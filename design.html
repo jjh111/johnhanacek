@@ -2118,18 +2118,37 @@
         // (Note: line/arrow walls use their bounding box, so diagonals read
         // as a fat block to the fish — acceptable for v1.9.)
         function syncObstacles() {
-            fishLayer.setObstacles(recognizedShapes
-                .filter(s => s.type !== 'dot')
-                .map((s, i) => {
+            const obs = [];
+            let oid = 0;
+            recognizedShapes.forEach(s => {
+                if (s.type === 'dot') return;
+                if ((s.type === 'line' || s.type === 'arrow') && s.start && s.end) {
+                    // Thin barrier: a chain of small blocks along the segment, so a
+                    // diagonal line blocks like a line — not like its bounding box
+                    const dx = s.end.x - s.start.x, dy = s.end.y - s.start.y;
+                    const len = Math.sqrt(dx * dx + dy * dy) || 1;
+                    const steps = Math.max(1, Math.round(len / 16));
+                    for (let i = 0; i <= steps; i++) {
+                        obs.push({
+                            id: oid++,
+                            x: s.start.x + dx * i / steps,
+                            y: s.start.y + dy * i / steps + 12,
+                            width: 24,
+                            height: 24
+                        });
+                    }
+                } else {
                     const b = shapeBounds(s);
-                    return {
-                        id: i,
+                    obs.push({
+                        id: oid++,
                         x: (b.minX + b.maxX) / 2,
                         y: b.maxY,
                         width: Math.max(30, b.maxX - b.minX),
                         height: Math.max(30, b.maxY - b.minY)
-                    };
-                }));
+                    });
+                }
+            });
+            fishLayer.setObstacles(obs);
         }
 
         // Squiggle = rapid back-and-forth scribble. Two signals must agree:
@@ -2248,18 +2267,35 @@
                         : { x: (bounds.minX + bounds.maxX) / 2, y: (bounds.minY + bounds.maxY) / 2 };
 
                     if (fishLayer.state.fish.length > 0) {
-                        // Food inside a wall is unreachable — nudge it just outside
+                        // Food is unreachable only if the tap is truly ON a line
+                        // (within its thickness) or INSIDE a solid shape — those get
+                        // nudged just clear; everything else stays exactly at the cursor
                         let fx = center.x, fy = center.y;
-                        recognizedShapes.filter(s => s.type !== 'dot').forEach(s => {
-                            const b = shapeBounds(s);
-                            if (fx > b.minX - 10 && fx < b.maxX + 10 && fy > b.minY - 10 && fy < b.maxY + 10) {
-                                const dl = fx - (b.minX - 14), dr = (b.maxX + 14) - fx;
-                                const du = fy - (b.minY - 14), dd = (b.maxY + 14) - fy;
-                                const mn = Math.min(dl, dr, du, dd);
-                                if (mn === dl) fx = b.minX - 14;
-                                else if (mn === dr) fx = b.maxX + 14;
-                                else if (mn === du) fy = b.minY - 14;
-                                else fy = b.maxY + 14;
+                        recognizedShapes.forEach(s => {
+                            if (s.type === 'dot') return;
+                            if ((s.type === 'line' || s.type === 'arrow') && s.start && s.end) {
+                                const dx = s.end.x - s.start.x, dy = s.end.y - s.start.y;
+                                const L2 = dx * dx + dy * dy || 1;
+                                const t = Math.max(0, Math.min(1, ((fx - s.start.x) * dx + (fy - s.start.y) * dy) / L2));
+                                const cx = s.start.x + dx * t, cy = s.start.y + dy * t;
+                                let ox = fx - cx, oy = fy - cy;
+                                const d = Math.sqrt(ox * ox + oy * oy);
+                                if (d < 15) {
+                                    if (d < 0.5) { const n = Math.sqrt(dx * dx + dy * dy) || 1; ox = -dy / n; oy = dx / n; }
+                                    else { ox /= d; oy /= d; }
+                                    fx = cx + ox * 17;
+                                    fy = cy + oy * 17;
+                                }
+                            } else {
+                                const b = shapeBounds(s);
+                                if (fx > b.minX && fx < b.maxX && fy > b.minY && fy < b.maxY) {
+                                    const dl = fx - b.minX, dr = b.maxX - fx, du = fy - b.minY, dd = b.maxY - fy;
+                                    const mn = Math.min(dl, dr, du, dd);
+                                    if (mn === dl) fx = b.minX - 10;
+                                    else if (mn === dr) fx = b.maxX + 10;
+                                    else if (mn === du) fy = b.minY - 10;
+                                    else fy = b.maxY + 10;
+                                }
                             }
                         });
                         fishLayer.addFood(fx, fy);
