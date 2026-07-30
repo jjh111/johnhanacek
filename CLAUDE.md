@@ -18,7 +18,7 @@ Each page is a standalone HTML document with embedded CSS and JavaScript. All pa
 | Page | Shape | Role |
 |------|-------|------|
 | `index.html` | Triangle | Homepage — fish minigame hero canvas, portfolio intro |
-| `design.html` | Rounded Square | Design — blueprint drawing canvas demo (frozen until v1.9 unfreeze, see below) |
+| `design.html` | Rounded Square | Design — blueprint drawing canvas demo (original frozen demo preserved in Archive; see below) |
 | `art.html` | Circle | Art — cosmic canvas, writing/worldbuilding, Earth Star, Influence |
 | `about.html` | Diamond | About — bio, experience, education, expertise, awards |
 | `services.html` | Star | Services — AI coaching (JH Coaching OS), Claude Code coaching, founding designer |
@@ -118,11 +118,11 @@ which stamps every `?v=` cache-bust ref across root `*.html` **and** the `Portfo
 - **Large Fish**: Solitary, territorial, dominance challenges
 - Design doc: `Assets/FISH_MINIGAME_DESIGN.md`
 
-### Blueprint Drawing Canvas (design.html — frozen until v1.9)
+### Blueprint Drawing Canvas (design.html)
 - Shape recognition (circles, squares, triangles, arrows, lines)
 - Morph animations and particle effects
 - Smart canvas loop that pauses when idle
-- **Freeze status:** preserved MetaMedium whitepaper demo. Per V2 plan decision #1 it will be **unfrozen in v1.9** for the Fish Maze — but ONLY after snapshotting the current version to `Archive/design-blueprint-frozen.html`. Until that snapshot exists, do not modify the canvas code.
+- **Freeze status: UNFROZEN as of v1.8.** The original MetaMedium whitepaper demo is snapshotted verbatim at `Archive/design-blueprint-frozen.html` (V2 plan decision #1) — never edit that snapshot. design.html itself may now evolve: v1.8 moves it onto `scripts/shape-detection.js`; v1.9 builds the Fish Maze on it.
 
 ### Site-wide AI Search (scripts/search-overlay.js + search.html)
 - ⌘K overlay on every standard page; search.html is the full standalone page
