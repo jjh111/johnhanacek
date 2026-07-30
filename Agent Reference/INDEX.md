@@ -12,9 +12,8 @@ Completed plan docs get moved to `Archive/` (SEARCH_OVERLAY and ART_EARTHSTAR li
 
 | File | Milestone | Summary |
 |------|-----------|---------|
-| [V2_RELEASE_PLAN.md](./V2_RELEASE_PLAN.md) | — | The roadmap: v1.7 ✅ → v1.8 engine → v1.9 fish maze → v2.0 release |
-| [FISH_DESIGN_MERGE.md](./FISH_DESIGN_MERGE.md) | **v1.9** | Fish maze in design.html: shapes-as-walls, squiggle erase (flagship) |
-| [FISH_V15_FIXES.md](./FISH_V15_FIXES.md) | **v1.8** | Loop recognition, standoff fix, coral avoidance — fold into engine extraction |
+| [V2_RELEASE_PLAN.md](./V2_RELEASE_PLAN.md) | — | The roadmap: v1.7 ✅ → v1.8 engine ✅ → v1.9 fish maze → v2.0 release |
+| [FISH_DESIGN_MERGE.md](./FISH_DESIGN_MERGE.md) | **v1.9** | Fish maze in design.html: shapes-as-walls, squiggle erase (flagship). Part A (shape-detection.js) shipped in v1.8 |
 | [SEARCH_ENRICHMENT.md](./SEARCH_ENRICHMENT.md) | **v2.0** | Rich result cards (video, 3D model-viewer, linked titles) on the live overlay |
 
 ## Deferred (v2.1+, per V2 plan)
@@ -39,8 +38,12 @@ Completed plan docs get moved to `Archive/` (SEARCH_OVERLAY and ART_EARTHSTAR li
 ## Current state (July 2026)
 
 - ✅ v1.7 "Foundation & Coherence" shipped: `<jh-nav>`/`<jh-footer>` components, robots/sitemap/
-  canonicals, version single-source (now `SITE.version` in `scripts/jh-chrome.js` → site at v1.11)
+  canonicals, version single-source (`SITE.version` in `scripts/jh-chrome.js`)
 - ✅ House cleanup: invoice scrubbed from history, ~75MB junk/private files pruned, videos compressed
-- 🔄 **Next: v1.8 Unified Canvas Engine** — extract `scripts/shape-detection.js` +
-  `scripts/fish-engine.js`, seeded from `fish-demo/fish.js`; snapshot frozen design.html first
-- Then: v1.9 Fish Maze (the flagship release), v2.0 QA/polish/tag
+- ✅ **v1.8 "Unified Canvas Engine" shipped**: `scripts/shape-detection.js` (index + design consume)
+  and `scripts/fish-engine.js` (`FishCanvas` full minigame on index; `FishCanvas.ambient` cursor
+  fish on 404); frozen design.html snapshotted to `Archive/design-blueprint-frozen.html`.
+  FISH_V15 fixes, teleport rescue, and TUNING phases 14–21 verified present in the engine
+  (V15/behavior docs → Archive). `fish-demo/` unchanged — compiled bundle, source is local-only.
+- 🔄 **Next: v1.9 Fish Maze** (FISH_DESIGN_MERGE parts B–F, the flagship release), then v2.0
+  Search Enrichment + QA/polish/tag

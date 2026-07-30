@@ -2,7 +2,7 @@
 
 Portfolio website for John Hanacek — work at the intersection of Creativity, Curiosity, AI & Human Augmentation.
 
-**[www.johnhanacek.com](https://www.johnhanacek.com)** · Portfolio v1.11
+**[www.johnhanacek.com](https://www.johnhanacek.com)** · Portfolio v1.12
 
 ---
 
@@ -39,7 +39,7 @@ Contact: hi@johnhanacek.com · [LinkedIn](https://linkedin.com/in/johnhanacek) �
 | [search.html](search.html) | AI-powered search — BM25 + in-browser LLM (WebGPU) + local model support |
 | [nanome2.html](nanome2.html) | Nanome 2 Redesign — design case study (subpage of Design) |
 | [playground.html](playground.html) | Infinite canvas board with iframe demo cards |
-| [writing.html](writing.html) | JH Coaching Dashboard — standalone coaching resource tool |
+| [writing.html](writing.html) | Writing index/reader — renders the `writing/*.md` essays |
 | [404.html](404.html) | Custom 404 page with fish canvas overlay |
 
 ---
@@ -60,7 +60,9 @@ The homepage hero is a fully custom aquatic ecosystem canvas. Draw shapes to spa
 | Circle | Bubble cluster — floats up, pops on contact |
 | Tap / dot | Food pellet — fish compete for it |
 
-Press **D** to toggle debug/logic view — visualizes steering forces, zones, states, and spawn labels.
+Toggle the **Logic view** checkbox (hero controls) for debug view — visualizes steering forces, zones, states, and spawn labels.
+
+Since v1.8 the whole system lives in [`scripts/fish-engine.js`](scripts/fish-engine.js) (`FishCanvas` API; `FishCanvas.ambient` powers the 404 page's cursor fish) with recognition math in [`scripts/shape-detection.js`](scripts/shape-detection.js), shared with the design page.
 
 **Architecture:**
 

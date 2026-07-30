@@ -119,6 +119,21 @@ Low-risk, high-leverage. No new features; pure unification + correctness.
   are public — sequence that decision early in v1.7.
 
 ### v1.8 — "Unified Canvas Engine"  (enabling refactor)
+> **✅ v1.8 COMPLETE (July 2026):**
+> - `scripts/shape-detection.js` (ShapeDetect): recognition math single-sourced; design.html's
+>   169 duplicated lines replaced with a destructure (index's tightened getTriangleScore adopted).
+> - `scripts/fish-engine.js`: full minigame extracted verbatim as `FishCanvas(canvasEl, opts)`
+>   with an explicit page API (onDrawingChange/onStroke hooks; canvas/getPos/startAnimation/
+>   setDebug/scareFishAt/state). index.html 6828 → 932 lines. 404's cursor fish ported as
+>   `FishCanvas.ambient` (404.html 309 → 145 lines).
+> - Frozen demo snapshotted to `Archive/design-blueprint-frozen.html` before any edits.
+> - Stability audit: FISH_V15 fixes A/B/C, the no-teleport rescue mode, and TUNING phases
+>   14–21 were found ALREADY implemented in the mature index.html code — verified in the
+>   engine, docs archived. **Deviation from plan:** `fish-demo/` NOT converted — its fish.js
+>   is a compiled esbuild bundle whose source (fish-src.js) is gitignored/local-only; rebase
+>   it onto the engine locally.
+> - Verified headless end-to-end: boot spawns, loop→fish, dot→food, QR egg via onStroke hook,
+>   debug/scare APIs, 404 follower, design shape recognition; zero console errors.
 The drawing/fish code is triplicated (index.html ~6k lines, `fish-demo/`, partial in `404.html`)
 and the shape-detector is copied between index.html and design.html. Consolidate before building
 new canvas features on top.
@@ -205,9 +220,9 @@ new canvas features on top.
 ## Plan disposition reference
 | Doc | Disposition |
 |---|---|
-| FISH_DESIGN_MERGE | **v1.9** (flagship, pending decision #1) |
-| FISH_V15_FIXES, FISH_BEHAVIOR_IMPROVEMENT (Phase 1) | **v1.8** (fold into engine extraction) |
-| FISH_TUNING_PLAN (14–21) | **v1.8** (verify) |
+| FISH_DESIGN_MERGE | **v1.9** (flagship; part A shape-detection.js shipped in v1.8) |
+| FISH_V15_FIXES, FISH_BEHAVIOR_IMPROVEMENT (Phase 1) | **Done** — verified already implemented in the engine (v1.8 audit); doc archived |
+| FISH_TUNING_PLAN (14–21) | **Done** — all phase markers verified in fish-engine.js (v1.8 audit) |
 | FISH_MINIGAME_DESIGN, FISH_SYSTEM_TECHNICAL, METAMEDIUM_CONVERGENCE, LLM_SEARCH_INTEGRATION | Reference (no work) |
 | SEARCH_OVERLAY | Done |
 | SEARCH_ENRICHMENT | **v1.9** |
