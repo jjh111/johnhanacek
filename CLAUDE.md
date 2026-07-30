@@ -9,7 +9,7 @@ Portfolio website for John Hanacek showcasing work at the intersection of **Crea
 **Site Structure:**
 Each page is a standalone HTML document with embedded CSS and JavaScript. All pages share `styles/shared.css` (design system), the `<jh-nav>`/`<jh-footer>` chrome components (`scripts/jh-chrome.js`), and Google Fonts (Cinzel, Raleway, JetBrains Mono).
 
-**Roadmap:** `Agent Reference/V2_RELEASE_PLAN.md` is the single source of truth for what's planned and decided. Currently: v1.7 "Foundation & Coherence" shipped; next is v1.8 "Unified Canvas Engine" → v1.9 "Fish Maze" (flagship).
+**Roadmap:** `Agent Reference/V2_RELEASE_PLAN.md` is the single source of truth for what's planned and decided. Currently: v1.7 "Foundation" ✅ → v1.8 "Unified Canvas Engine" ✅ → v1.9 "Fish Maze" ✅ (flagship, shipped). Next: v2.0 — Search Enrichment + QA/polish/tag.
 
 ## Sitemap
 
@@ -18,7 +18,7 @@ Each page is a standalone HTML document with embedded CSS and JavaScript. All pa
 | Page | Shape | Role |
 |------|-------|------|
 | `index.html` | Triangle | Homepage — fish minigame hero canvas, portfolio intro |
-| `design.html` | Rounded Square | Design — blueprint drawing canvas demo (original frozen demo preserved in Archive; see below) |
+| `design.html` | Rounded Square | Design — Fish Maze: blueprint drawing canvas + living fish (v1.9 flagship; original demo preserved in Archive) |
 | `art.html` | Circle | Art — cosmic canvas, writing/worldbuilding, Earth Star, Influence |
 | `about.html` | Diamond | About — bio, experience, education, expertise, awards |
 | `services.html` | Star | Services — AI coaching (JH Coaching OS), Claude Code coaching, founding designer |
@@ -118,11 +118,11 @@ which stamps every `?v=` cache-bust ref across root `*.html` **and** the `Portfo
 - **Large Fish**: Solitary, territorial, dominance challenges
 - Design doc: `Assets/FISH_MINIGAME_DESIGN.md`
 
-### Blueprint Drawing Canvas (design.html)
-- Shape recognition (circles, squares, triangles, arrows, lines)
-- Morph animations and particle effects
-- Smart canvas loop that pauses when idle
-- **Freeze status: UNFROZEN as of v1.8.** The original MetaMedium whitepaper demo is snapshotted verbatim at `Archive/design-blueprint-frozen.html` (V2 plan decision #1) — never edit that snapshot. design.html itself may now evolve: v1.8 moves it onto `scripts/shape-detection.js`; v1.9 builds the Fish Maze on it.
+### Blueprint Drawing Canvas + Fish Maze (design.html — v1.9 flagship)
+- Fullscreen blueprint canvas; shape recognition (circles, squares, triangles, arrows, lines) with morph animations, whisper labels, particle effects
+- **Fish Maze:** a transparent `#fishCanvas` above the blueprint runs the shared engine in embedded mode (`interactive:false`, `renderStyle:'blueprint'` cyan line-art). Stroke routing priority in design's `endDraw`: squiggle (≥3 sharp reversals) erases walls it covers (amber burst) → loop spawns a fish → tap feeds fish (blueprint Point when tank empty) → clean shape becomes a blueprint wall + maze obstacle → fallback stroke fades
+- Walls sync to the engine via `setObstacles()` (coral-style physics entries: avoidance + small-fish sheltering); Clear button removes walls, fish remain; maxShapes 50
+- The original pre-maze MetaMedium whitepaper demo is snapshotted verbatim at `Archive/design-blueprint-frozen.html` — never edit that snapshot
 
 ### Site-wide AI Search (scripts/search-overlay.js + search.html)
 - ⌘K overlay on every standard page; search.html is the full standalone page

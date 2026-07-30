@@ -12,8 +12,7 @@ Completed plan docs get moved to `Archive/` (SEARCH_OVERLAY and ART_EARTHSTAR li
 
 | File | Milestone | Summary |
 |------|-----------|---------|
-| [V2_RELEASE_PLAN.md](./V2_RELEASE_PLAN.md) | — | The roadmap: v1.7 ✅ → v1.8 engine ✅ → v1.9 fish maze → v2.0 release |
-| [FISH_DESIGN_MERGE.md](./FISH_DESIGN_MERGE.md) | **v1.9** | Fish maze in design.html: shapes-as-walls, squiggle erase (flagship). Part A (shape-detection.js) shipped in v1.8 |
+| [V2_RELEASE_PLAN.md](./V2_RELEASE_PLAN.md) | — | The roadmap: v1.7 ✅ → v1.8 engine ✅ → v1.9 fish maze ✅ → v2.0 release |
 | [SEARCH_ENRICHMENT.md](./SEARCH_ENRICHMENT.md) | **v2.0** | Rich result cards (video, 3D model-viewer, linked titles) on the live overlay |
 
 ## Deferred (v2.1+, per V2 plan)
@@ -45,5 +44,8 @@ Completed plan docs get moved to `Archive/` (SEARCH_OVERLAY and ART_EARTHSTAR li
   fish on 404); frozen design.html snapshotted to `Archive/design-blueprint-frozen.html`.
   FISH_V15 fixes, teleport rescue, and TUNING phases 14–21 verified present in the engine
   (V15/behavior docs → Archive). `fish-demo/` unchanged — compiled bundle, source is local-only.
-- 🔄 **Next: v1.9 Fish Maze** (FISH_DESIGN_MERGE parts B–F, the flagship release), then v2.0
-  Search Enrichment + QA/polish/tag
+- ✅ **v1.9 "Fish Maze" shipped (site v1.13)**: living cyan line-art fish on design.html's
+  fullscreen blueprint canvas — draw shapes for walls (engine obstacles + fish shelter),
+  loops for fish, taps for food, squiggle to erase (amber burst). Engine embedded mode added
+  (processStroke/addFood/setObstacles). FISH_DESIGN_MERGE → Archive.
+- 🔄 **Next: v2.0 release** — Search Enrichment + QA/accessibility/cross-browser polish + tag

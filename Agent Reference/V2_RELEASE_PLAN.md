@@ -150,6 +150,15 @@ new canvas features on top.
   (debug 'D' overlay); fps budget held; deleting a fish bug now means editing one file.
 
 ### v1.9 — "Fish Maze"  (flagship feature) + Search Enrichment (parallel)
+> **✅ Fish Maze COMPLETE (July 2026, site v1.13).** Scope decisions (July): fish + food +
+> walls only (no coral/jellyfish/bubbles on design — walls double as shelter); blueprint
+> cyan line-art fish; steering-avoidance wall physics (no hard collision). Implementation:
+> engine embedded mode (interactive:false / transparent / seed flags / processStroke /
+> addFood / setObstacles / renderStyle:'blueprint') + transparent #fishCanvas above the
+> blueprint canvas + endDraw priority routing (squiggle-erase ≥3 reversals w/ amber burst →
+> loop→fish → tap→food-or-Point → shape→wall+obstacle sync → fallback). maxShapes 20→50;
+> Clear keeps fish; fullscreen hero. Verified headless end-to-end; index/404 regressions green.
+> **Search Enrichment moved to v2.0.**
 - **Fish Maze (FISH_DESIGN_MERGE):** living fish + recognized shapes as physical walls fish
   pathfind around; tap = food; squiggle (≥3 reversals) erases nearby shapes; raise maxShapes
   20→50. Built on the v1.8 shared engine + detector. **⚠ Requires resolving the "frozen
@@ -220,7 +229,7 @@ new canvas features on top.
 ## Plan disposition reference
 | Doc | Disposition |
 |---|---|
-| FISH_DESIGN_MERGE | **v1.9** (flagship; part A shape-detection.js shipped in v1.8) |
+| FISH_DESIGN_MERGE | **Done** (v1.9 shipped July 2026; doc → Archive) |
 | FISH_V15_FIXES, FISH_BEHAVIOR_IMPROVEMENT (Phase 1) | **Done** — verified already implemented in the engine (v1.8 audit); doc archived |
 | FISH_TUNING_PLAN (14–21) | **Done** — all phase markers verified in fish-engine.js (v1.8 audit) |
 | FISH_MINIGAME_DESIGN, FISH_SYSTEM_TECHNICAL, METAMEDIUM_CONVERGENCE, LLM_SEARCH_INTEGRATION | Reference (no work) |
