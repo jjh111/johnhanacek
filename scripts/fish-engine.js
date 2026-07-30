@@ -30,6 +30,50 @@
         // own world; the engine draws transparently on its own layer.
         const FISH_FILL_ALPHA = opts.renderStyle === 'blueprint' ? 0.14 : 0.65;
 
+        // ---- Behavior info labels (design.html "Labels" toggle) -----------
+        // Live introspection chips over each fish/food: tier · state (· extra
+        // from opts.annotateAt, e.g. "enclosed"). Rendered on the fish layer so
+        // they never go stale when the host page's canvas loop idles.
+        let infoLabels = !!opts.infoLabels;
+
+        function drawFishInfoLabels() {
+            if (!infoLabels) return;
+            const nowL = Date.now();
+            ctx.save();
+            ctx.font = '10px "JetBrains Mono", monospace';
+            ctx.textAlign = 'center';
+            const tag = (x, y, text) => {
+                const tw = ctx.measureText(text).width + 12;
+                const left = x - tw / 2, top = y - 15;
+                ctx.fillStyle = 'rgba(2, 10, 18, 0.72)';
+                ctx.strokeStyle = 'rgba(77, 201, 246, 0.35)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                if (ctx.roundRect) ctx.roundRect(left, top, tw, 15, 3); else ctx.rect(left, top, tw, 15);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = 'rgba(125, 216, 247, 0.9)';
+                ctx.fillText(text, x, y - 4);
+            };
+            fish.forEach(f => {
+                if (f.eaten || f.dissolving) return;
+                const bwL = f.bodyWidth || 20;
+                const tier = bwL >= MEDIUM_THRESHOLD ? 'large' : bwL >= SMALL_THRESHOLD ? 'medium' : 'small';
+                let state = f.state || 'idle';
+                if (state === 'idle' && f.lastWallContact && nowL - f.lastWallContact < 700) state = 'sliding';
+                let text = tier + ' · ' + state;
+                if (f.ignoredFood && Object.values(f.ignoredFood).some(t => t > nowL)) text += ' · gave up';
+                if (opts.annotateAt) { const extra = opts.annotateAt(f.x, f.y); if (extra) text += ' · ' + extra; }
+                tag(f.x, f.y - (f.bodyHeight || 12) - 18, text);
+            });
+            food.forEach(fd => {
+                let text = 'food';
+                if (opts.annotateAt) { const extra = opts.annotateAt(fd.x, fd.y); if (extra) text += ' · ' + extra; }
+                tag(fd.x, fd.y - 14, text);
+            });
+            ctx.restore();
+        }
+
         // ---- Maze walls (setObstacles) ------------------------------------
         // Walls are NOT coral: fish swim close (tight, size-based standoff)
         // and can NEVER pass through (hard per-frame containment). They only
@@ -53,18 +97,27 @@
             const bw = f.bodyWidth || 20;
             const standoff = bw >= MEDIUM_THRESHOLD ? 26 : bw >= SMALL_THRESHOLD ? 16 : 9;
             const body = Math.max(6, (f.bodyHeight || 12) * 0.5);
+            const nowW = Date.now();
+            let contact = false;
+            let lastSlide = null;
             for (let i = 0; i < wallRects.length; i++) {
                 const r = wallRects[i];
 
-                // Proactive steering: if the point ahead of the nose lands in
-                // the standoff zone, ease the heading away from the wall center
+                // Proactive steering: when the point ahead of the nose enters the
+                // standoff zone, SLIDE along the wall (tangent nearest the current
+                // heading, biased slightly away) instead of a weak push-back —
+                // fish glide around barriers rather than pressing into them.
                 const lookAhead = 24 + bw * 1.2;
                 const px = f.x + Math.cos(f.heading) * lookAhead;
                 const py = f.y + Math.sin(f.heading) * lookAhead;
                 const s = standoff + body;
                 if (px > r.minX - s && px < r.maxX + s && py > r.minY - s && py < r.maxY + s) {
                     const away = Math.atan2(f.y - (r.minY + r.maxY) / 2, f.x - (r.minX + r.maxX) / 2);
-                    f.targetHeading += angleDiff(away, f.targetHeading) * 0.12;
+                    const t1 = away + Math.PI / 2, t2 = away - Math.PI / 2;
+                    const slide = Math.abs(angleDiff(t1, f.heading)) <= Math.abs(angleDiff(t2, f.heading)) ? t1 : t2;
+                    const steerTarget = slide + angleDiff(away, slide) * 0.3;
+                    lastSlide = steerTarget;
+                    f.targetHeading += angleDiff(steerTarget, f.targetHeading) * 0.16;
                 }
 
                 // Hard containment: resolve overlap along the shallowest axis
@@ -82,6 +135,31 @@
                     else if (minPush === pushRight) { f.x = r.maxX + m; if (f.vx < 0) f.vx = 0; }
                     else if (minPush === pushUp)    { f.y = r.minY - m; if (f.vy > 0) f.vy = 0; }
                     else                            { f.y = r.maxY + m; if (f.vy < 0) f.vy = 0; }
+                    contact = true;
+                }
+            }
+
+            // ---- Sustained wall press → decisive disengage --------------------
+            // Sliding handles most encounters; if a fish still leans on a wall
+            // for >1.5s (its goal is beyond the wall), break the stalemate:
+            // drop the wander target, reverse lane-cruisers, and commit the
+            // heading to the slide direction so it actually leaves.
+            if (contact) {
+                if (!f.wallContactSince || nowW - (f.lastWallContact || 0) > 600) f.wallContactSince = nowW;
+                f.lastWallContact = nowW;
+                if (nowW - f.wallContactSince > 1500) {
+                    f.wanderTarget = null;
+                    f.wanderTimer = 0;
+                    if (bw >= MEDIUM_THRESHOLD && f.cruiseAngle !== undefined) {
+                        // horizontal cruisers bounce off vertical barriers
+                        f.cruiseAngle = Math.atan2(Math.sin(f.cruiseAngle), -Math.cos(f.cruiseAngle));
+                    }
+                    if (lastSlide !== null) {
+                        f.targetHeading = lastSlide;
+                        f.committedHeading = lastSlide;
+                        f.reversalPressure = 0;
+                    }
+                    f.wallContactSince = nowW;
                 }
             }
         }
@@ -5289,6 +5367,7 @@
                 drawRipples();
                 drawParticles();
                 drawSpawnLabels();
+                drawFishInfoLabels();
                 drawCursor();
                 drawDebug();
             } catch (err) {
@@ -5792,6 +5871,8 @@
             getPos,
             startAnimation,
             setDebug(v) { debugMode = !!v; startAnimation(); },
+            setInfoLabels(v) { infoLabels = !!v; startAnimation(); },
+            get infoLabels() { return infoLabels; },
             get debugMode() { return debugMode; },
             scareFishAt: scareFishAtPoint,
             processStroke(points, allowTypes) {

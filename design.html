@@ -971,7 +971,10 @@
             transparent: true,
             renderStyle: 'blueprint',
             seedJellyfish: false,
-            palette: { fish: ['#4dc9f6', '#7dd8f7', '#b8dced', '#8cb8cc'] }
+            palette: { fish: ['#4dc9f6', '#7dd8f7', '#b8dced', '#8cb8cc'] },
+            // Labels toggle shows live behavior chips; the system annotates
+            // spatial facts it knows (insideEnclosure is declared below — hoisted)
+            annotateAt: (x, y) => insideEnclosure(x, y) ? 'enclosed' : ''
         });
         
         // ============================================
@@ -2445,8 +2448,10 @@
         document.getElementById('clearCanvas').addEventListener('click', clearCanvas);
         document.getElementById('toggleLabels').addEventListener('change', (e) => {
             showLabels = e.target.checked;
+            fishLayer.setInfoLabels(e.target.checked); // fish/food behavior chips too
             startAnimation(); // Redraw to reflect change
         });
+        fishLayer.setInfoLabels(document.getElementById('toggleLabels').checked);
 
         // Update cursor and hover state when moving over glyphs
         canvas.addEventListener('mousemove', (e) => {

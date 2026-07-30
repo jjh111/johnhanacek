@@ -121,7 +121,8 @@ which stamps every `?v=` cache-bust ref across root `*.html` **and** the `Portfo
 ### Blueprint Drawing Canvas + Fish Maze (design.html — v1.9 flagship)
 - Fullscreen blueprint canvas; shape recognition (circles, squares, triangles, arrows, lines) with morph animations, whisper labels, particle effects
 - **Fish Maze:** a transparent `#fishCanvas` above the blueprint runs the shared engine in embedded mode (`interactive:false`, `renderStyle:'blueprint'` cyan line-art). Stroke routing priority in design's `endDraw`: squiggle (≥3 sharp reversals) erases walls it covers (amber burst) → loop spawns a fish → tap feeds fish (blueprint Point when tank empty) → clean shape becomes a blueprint wall + maze obstacle → fallback stroke fades
-- Walls sync to the engine via `setObstacles()` (coral-style physics entries: avoidance + small-fish sheltering); Clear button removes walls, fish remain; maxShapes 50
+- Walls are the drawn OUTLINE (block chains along idealPoints — a rectangle is a pen, a circle a ring tank; interiors are open water). Engine wall physics: hard containment + tangent sliding + sustained-contact disengage; fish frustration abandons unreachable food. Clear button removes walls, fish remain; maxShapes 50
+- The "Labels" toggle also shows live behavior chips over fish/food (`tier · state · enclosed/gave up`) via engine `setInfoLabels` + the `annotateAt` hook
 - The original pre-maze MetaMedium whitepaper demo is snapshotted verbatim at `Archive/design-blueprint-frozen.html` — never edit that snapshot
 
 ### Site-wide AI Search (scripts/search-overlay.js + search.html)
