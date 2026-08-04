@@ -27,7 +27,9 @@ node mazetest.mjs
 
 | File | Asserts |
 |---|---|
-| `sitetest.mjs` | Every page loads: component nav + footer version, canonicals, zero console errors. Update the `v1.13` string when bumping. |
+| `humantest.mjs` | **The important one.** Human-sampled strokes (sparse ~60Hz, rounded reversals): erase matrix {2,3,4,6 passes} × {fast,slow} × {wide,tight}, non-scratch gestures that must NOT erase, and a 30s parking soak. Exits non-zero on failure. |
+| `latchtest.mjs` | The blueprint canvas must never latch itself to 0×0 (see below). Exits non-zero on failure. |
+| `sitetest.mjs` | Every page loads: component nav + footer version, canonicals, zero console errors. Reads the expected version from `scripts/jh-chrome.js`, so it needs `SITE_ROOT` set. |
 | `linkcheck.py` | Every local href/src/poster resolves (catches deleted-asset refs). Known false positives: `${r.image}`, `$2` template literals. |
 | `enginetest.mjs` | index.html: boot spawns, loop→fish, dot→food, QR easter egg, debug/scare APIs. |
 | `mazetest.mjs` | design.html: seed fish, square→wall+obstacles, loop→fish, tap→food, squiggle-erase, Clear keeps fish. |
@@ -39,10 +41,18 @@ node mazetest.mjs
 | `zigedge.mjs` | Squiggle edge cases (sharp zigzag, tiny scribble). |
 
 Notes:
-- Squiggle suites test the CURRENT gesture heuristic; per the handoff plan the erase is
-  being reworked to crossing-counting — rewrite those cases with the human-gesture
-  simulator described in `../FISH_MAZE_HANDOFF.md` §3 (sparse ~60Hz points, 2–4 wide
-  passes) rather than dense synthetic zigzags. That gap is exactly how the earlier
-  false-passes happened.
+- **Erase is crossing-based as of v1.10 of this work** (a stroke erases a wall it crosses ≥3
+  times). The old gesture heuristic and its `isSquiggle` helper are gone. Erase cases must
+  therefore *cross a wall's outline* — a scribble kept strictly inside a shape crosses nothing
+  and correctly does not erase.
+- **Draw like a hand, not like a plotter.** The original squiggle suites emitted dense,
+  perfectly sharp synthetic zigzags and passed while the feature was broken for real users,
+  whose strokes are sparse (25–35px between points at ~60Hz), wide, and only 2–4 passes.
+  `humantest.mjs` has the sampler; use it rather than hand-rolling point lists.
+- **The in-app Browser pane cannot run these.** Its tab reports
+  `document.visibilityState === "hidden"`, so requestAnimationFrame is throttled to roughly one
+  tick every two seconds, the simulation never advances, and every behaviour soak passes
+  vacuously with frozen positions. Headless Chromium only for anything time-based.
 - Two known environment-only failures in sitetest when CDNs are blocked:
   nanome2 (Three.js iframe) and onagents (unpkg). Fine on a normal connection.
+- `timeout(1)` is not available on stock macOS zsh — don't wrap these in it.

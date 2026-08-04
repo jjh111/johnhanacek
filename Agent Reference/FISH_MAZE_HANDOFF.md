@@ -1,6 +1,59 @@
 # Fish Maze (v1.9) — Continuation Handoff
 *Written August 2026, handing off from a Claude Code cloud session to a local primary instance.*
 
+---
+
+## ✅ FINISHING PLAN EXECUTED (local, site v1.14 — not merged to main)
+
+Both open problems below are fixed and verified in real headless Chromium; the branch is
+still unmerged, so the live site is unchanged. What landed:
+
+1. **Erase is now crossing-based.** `isSquiggle` and `eraseShapesUnder` are gone, replaced by
+   `ERASE_CROSSINGS = 3` + `wallOutline()` / `countCrossings()` / `eraseCrossedShapes()` in
+   `design.html`, using `ShapeDetect.segmentsIntersect` (added to design's destructuring of
+   `window.ShapeDetect`). Erase now also only *consumes* the stroke when something was actually
+   erased, so a stroke that crosses nothing falls through to the rest of the router instead of
+   being swallowed — that's the "failed squiggle spawns a fish" complaint gone too.
+   *Root cause for the record:* the failing term was never the reversal count, it was the ink
+   ratio `pathLen / (2*(w+h)+1) > 1.3`. A 3-pass scratch across a 240×170 wall scores ~0.87.
+2. **Wall contact redirects velocity instead of killing it.** `applyWallPhysics` now projects
+   velocity onto the wall tangent at full magnitude (floor `WALL_SLIDE_MIN = 0.8`) and nudges
+   `targetHeading` toward that tangent, so sliding is the floor state for every fish tier.
+   Measured: longest parked streak went **3.1s → 0.0s**.
+3. **Tested like a human.** New `maze-tests/humantest.mjs` drives sparse ~60Hz strokes
+   (25–35px gaps, rounded reversals, jitter). 16/16 erase cases pass across
+   {2,3,4,6 passes} × {fast,slow} × {wide,tight}; 5/5 non-scratch gestures preserve their walls
+   (including a fish loop straddling a wall edge, the risky false-positive); 30s parking soak
+   with 6 fish shows zero parking.
+
+**Also fixed along the way — a bug that predates this branch:** `resizeCanvas()` in
+`design.html` wrote its measured rect back as an inline `width/height`, which overrides
+shared.css's `100%`. One zero measurement (page laid out hidden or backgrounded) latched the
+blueprint canvas at 0×0 **permanently** — the fish layer kept rendering while the entire
+blueprint layer went invisible, recoverable only by reload. It reproduces 100% in a hidden tab.
+This is on `main` and in `Archive/design-blueprint-frozen.html` too. Now the canvas sizes only
+its backing store, with a `rect || parent || viewport` fallback chain, and never writes an
+inline size. Covered by `maze-tests/latchtest.mjs`, which was confirmed to fail against the old
+code and pass against the new.
+
+**Test-suite corrections** (these were passing dishonestly):
+- `zigedge.mjs` called the now-deleted `isSquiggle` directly; rewritten to assert on observed
+  erase behaviour.
+- `mazetest.mjs`'s squiggle scribbled *inside* the square, so it crossed nothing; now scrubs
+  across it.
+- `pentest.mjs` counted the seed fish — which spawns centre-screen and is therefore inside the
+  test's pen every run — as an intrusion, permanently reporting ~50%. Now only fish that
+  started outside can intrude. Result: 119 → 0.
+- `sitetest.mjs` hardcoded the footer version; it now reads it from `scripts/jh-chrome.js`.
+
+**Known, accepted limit:** a scribble kept strictly inside a wall's outline crosses it zero
+times and does not erase. Scrubbing across the shape — the natural motion — does.
+Documented as `B2_knownLimit` in `humantest.mjs`.
+
+Remaining before merge: John's own hands-on pass on real hardware, then `git merge` when happy.
+
+---
+
 ## Where things stand
 
 **`main` (the live site) has NO maze work.** It ends at v1.8 (site v1.12): shared

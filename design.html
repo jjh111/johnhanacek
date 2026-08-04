@@ -26,8 +26,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Raleway:wght@100;200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles/shared.css?v=1.13">
-    <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.13">
+    <link rel="stylesheet" href="./styles/shared.css?v=1.14">
+    <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.14">
 
     <!-- Model Viewer for 3D content -->
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
@@ -956,8 +956,8 @@
     </script>
 
     <!-- Hero Canvas Drawing Interaction -->
-    <script src="./scripts/shape-detection.js?v=1.13"></script>
-    <script src="./scripts/fish-engine.js?v=1.13"></script>
+    <script src="./scripts/shape-detection.js?v=1.14"></script>
+    <script src="./scripts/fish-engine.js?v=1.14"></script>
     <script>
         const canvas = document.getElementById('heroCanvas');
         const ctx = canvas.getContext('2d');
@@ -1043,7 +1043,7 @@
         //   lives there since v1.8 so index.html and design.html stay in sync
         // ============================================
         const { getBounds, distance, getCircleScore, getRectScore, getTriangleScore,
-                getLineScore, detectArrowHead, detectShape } = window.ShapeDetect;
+                getLineScore, detectArrowHead, detectShape, segmentsIntersect } = window.ShapeDetect;
         
         // ============================================
         // Generate Ideal Shape Points
@@ -1528,14 +1528,22 @@
         // ============================================
         // Canvas Setup
         // ============================================
+        // Size the backing store to the LAYOUT box and let the stylesheet own the
+        // CSS size. Writing the measured size back as inline width/height would
+        // override shared.css's `#heroCanvas { width:100%; height:100% }`, so a
+        // single 0-width measurement — page laid out while hidden or backgrounded —
+        // used to latch the canvas at 0×0 permanently: every later resize
+        // re-measured its own 0 and rewrote 0, and only a reload recovered it.
+        // The fallback chain means a 0 measurement can never become sticky.
         function resizeCanvas() {
             const dpr = window.devicePixelRatio || 1;
             const rect = canvas.getBoundingClientRect();
-            canvas.width = rect.width * dpr;
-            canvas.height = rect.height * dpr;
+            const w = rect.width || canvas.parentElement.clientWidth || window.innerWidth;
+            const h = rect.height || canvas.parentElement.clientHeight || window.innerHeight;
+            canvas.width = w * dpr;
+            canvas.height = h * dpr;
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
             ctx.scale(dpr, dpr);
-            canvas.style.width = rect.width + 'px';
-            canvas.style.height = rect.height + 'px';
         }
         
         resizeCanvas();
@@ -2186,74 +2194,75 @@
                 pointInPoly(px, py, s.idealPoints));
         }
 
-        // Squiggle = rapid back-and-forth scribble. Two signals must agree:
-        //  1. ≥3 sharp direction reversals (>100°) on a DISTANCE-resampled
-        //     path (~8px steps), so stroke speed / event density don't matter
-        //  2. ink ratio: pathLength ÷ bbox perimeter > 1.3 — a scribble lays
-        //     far more ink than its area. Clean shapes sit near 1.0 (square),
-        //     0.79 (circle), ~0.75 (triangle), so corners alone can't trigger.
-        function isSquiggle(points) {
-            if (points.length < 10) return false;
-            const bounds = getBounds(points);
-            const w = bounds.maxX - bounds.minX, h = bounds.maxY - bounds.minY;
-            if (Math.max(w, h) < 30) return false;
+        // ── Scratch-out erase ───────────────────────────────────────────────
+        // Erasing is RELATIONAL, not gestural: to scratch a wall out you cross
+        // it, back and forth. So we count intersections between the stroke and
+        // each wall's own outline — ≥3 crossings erases that wall.
+        //
+        // Why this replaced the old gesture heuristic (reversal-counting + ink
+        // ratio): those thresholds were tuned against dense synthetic zigzags,
+        // and real hand-drawn scratches are sparse (~60Hz sampling, 25–35px
+        // between points), wide, and only 2–4 passes. A 3-pass scratch across a
+        // 240×170 wall lays ~720px of ink against an 820px perimeter term — it
+        // scored 0.87 against a 1.3 bar and silently failed to erase.
+        //
+        // Crossing-counting has no speed, density, or size constants to tune,
+        // and it degrades honestly: a line drawn *through* a wall crosses twice
+        // and is safe, a stroke on empty canvas crosses nothing. It also says
+        // what the system already knows how to say — that two things intersect.
+        const ERASE_CROSSINGS = 3;
 
-            const res = [points[0]];
-            let last = points[0];
-            for (const pt of points) {
-                const dx = pt.x - last.x, dy = pt.y - last.y;
-                if (dx * dx + dy * dy >= 64) { res.push(pt); last = pt; }
+        // The outline a wall actually occupies: the segment for line/arrow,
+        // the closed ideal polygon for everything else. Dots aren't walls.
+        function wallOutline(s) {
+            if (s.type === 'dot') return null;
+            if ((s.type === 'line' || s.type === 'arrow') && s.start && s.end) {
+                return [s.start, s.end];
             }
-            if (res.length < 6) return false;
-
-            let pathLen = 0;
-            const dirs = [];
-            for (let i = 1; i < res.length; i++) {
-                const dx = res[i].x - res[i - 1].x, dy = res[i].y - res[i - 1].y;
-                pathLen += Math.sqrt(dx * dx + dy * dy);
-                dirs.push(Math.atan2(dy, dx));
+            if (s.idealPoints && s.idealPoints.length > 2) {
+                return s.idealPoints.concat([s.idealPoints[0]]);
             }
-            // Reversal = direction flips >126° within a 2–4 segment window, so a
-            // turn ROUNDED across several samples still reads as one flip. A circle
-            // only bends ~26° over the same window, so smooth curves never count.
-            let reversals = 0;
-            let i = 0;
-            while (i < dirs.length - 2) {
-                let flipped = false;
-                for (let j = i + 2; j <= Math.min(i + 4, dirs.length - 1); j++) {
-                    let diff = Math.abs(dirs[j] - dirs[i]);
-                    if (diff > Math.PI) diff = 2 * Math.PI - diff;
-                    if (diff > 2.2) { reversals++; i = j; flipped = true; break; }
-                }
-                if (!flipped) i++;
-            }
-            return reversals >= 3 && pathLen / (2 * (w + h) + 1) > 1.3;
+            return null;
         }
 
-        // Erase every wall the squiggle's area overlaps — amber burst feedback
-        function eraseShapesUnder(points) {
-            const sb = getBounds(points);
-            const pad = 20;
-            let erased = 0;
-            for (let i = recognizedShapes.length - 1; i >= 0; i--) {
-                const b = shapeBounds(recognizedShapes[i]);
-                if (b.minX < sb.maxX + pad && b.maxX > sb.minX - pad &&
-                    b.minY < sb.maxY + pad && b.maxY > sb.minY - pad) {
-                    const cx = (b.minX + b.maxX) / 2, cy = (b.minY + b.maxY) / 2;
-                    for (let k = 0; k < 10; k++) {
-                        const angle = (k / 10) * Math.PI * 2;
-                        particles.push({
-                            x: cx, y: cy,
-                            vx: Math.cos(angle) * (1.5 + Math.random()),
-                            vy: Math.sin(angle) * (1.5 + Math.random()),
-                            life: 1, createdAt: Date.now(), amber: true
-                        });
+        function countCrossings(stroke, outline) {
+            let n = 0;
+            for (let i = 1; i < stroke.length; i++) {
+                for (let j = 1; j < outline.length; j++) {
+                    if (segmentsIntersect(stroke[i - 1], stroke[i], outline[j - 1], outline[j])) {
+                        n++;
+                        if (n >= ERASE_CROSSINGS) return n; // early out — that's enough
                     }
-                    recognizedShapes.splice(i, 1);
-                    erased++;
                 }
             }
+            return n;
+        }
+
+        // Erase every wall this stroke scratched across — amber burst feedback
+        function eraseCrossedShapes(points) {
+            if (points.length < 3) return 0;
+            let erased = 0;
+            for (let i = recognizedShapes.length - 1; i >= 0; i--) {
+                const outline = wallOutline(recognizedShapes[i]);
+                if (!outline) continue;
+                if (countCrossings(points, outline) < ERASE_CROSSINGS) continue;
+
+                const b = shapeBounds(recognizedShapes[i]);
+                const cx = (b.minX + b.maxX) / 2, cy = (b.minY + b.maxY) / 2;
+                for (let k = 0; k < 10; k++) {
+                    const angle = (k / 10) * Math.PI * 2;
+                    particles.push({
+                        x: cx, y: cy,
+                        vx: Math.cos(angle) * (1.5 + Math.random()),
+                        vy: Math.sin(angle) * (1.5 + Math.random()),
+                        life: 1, createdAt: Date.now(), amber: true
+                    });
+                }
+                recognizedShapes.splice(i, 1);
+                erased++;
+            }
             if (erased) {
+                const sb = getBounds(points);
                 whisperLabels.push({
                     text: erased > 1 ? 'Erased ×' + erased : 'Erased',
                     x: (sb.minX + sb.maxX) / 2, y: (sb.minY + sb.maxY) / 2,
@@ -2262,18 +2271,22 @@
                 syncObstacles();
                 startAnimation();
             }
+            return erased;
         }
 
         // v1.9 maze routing — priority order per FISH_DESIGN_MERGE:
-        // 1. squiggle → erase walls   2. loop → fish   3. dot → food/point
+        // 1. scratch-out → erase walls   2. loop → fish   3. dot → food/point
         // 4. clean shape → blueprint wall   5. fallback → fading stroke
         function endDraw() {
             if (!currentStroke) { isDrawing = false; return; }
             const points = [...currentStroke.points];
 
-            // 1. Squiggle erase
-            if (isSquiggle(points)) {
-                eraseShapesUnder(points);
+            // 1. Scratch-out erase — a stroke that crosses a wall ≥3 times
+            //    removes it. Unlike the old gesture test this only consumes the
+            //    stroke when something was actually erased, so a stroke that
+            //    crosses nothing falls through to the rest of the router
+            //    instead of being swallowed as a failed squiggle.
+            if (eraseCrossedShapes(points) > 0) {
                 currentStroke.fadeStart = 0;
                 finishStroke();
                 return;
@@ -2752,8 +2765,8 @@
             resizeMetaMedium();
         })();
     </script>
-<script src="./scripts/search-overlay.js?v=1.13" defer></script>
+<script src="./scripts/search-overlay.js?v=1.14" defer></script>
 <script>document.addEventListener('DOMContentLoaded',()=>{const t=document.querySelector('.nav-title');if(t)t.dataset.short='JH';document.querySelectorAll('.nav-right a').forEach(a=>{const w=a.textContent.trim().split(/\s+/);a.dataset.short=w.length>1?w.map(x=>x[0]).join('').toUpperCase().slice(0,2):a.textContent.trim().slice(0,2).toUpperCase()})});</script>
-    <script src="./scripts/jh-chrome.js?v=1.13" defer></script>
+    <script src="./scripts/jh-chrome.js?v=1.14" defer></script>
 </body>
 </html>

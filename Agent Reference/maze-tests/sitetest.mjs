@@ -1,4 +1,15 @@
 import { chromium } from 'playwright-core';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+// Read the expected footer version from its single source of truth rather than
+// hardcoding it — scripts/jh-chrome.js is what the footer badge itself renders,
+// so this test can never drift behind a version bump again.
+const SITE_ROOT = process.env.SITE_ROOT || process.cwd();
+const chromeSrc = readFileSync(join(SITE_ROOT, 'scripts/jh-chrome.js'), 'utf8');
+const vMatch = chromeSrc.match(/version:\s*'([0-9.]+)'/);
+if (!vMatch) throw new Error("Couldn't read version from scripts/jh-chrome.js — set SITE_ROOT to the repo root");
+const EXPECTED_VERSION = 'v' + vMatch[1];
 
 const BASE = 'http://127.0.0.1:1337';
 const STANDARD = ['index.html', 'design.html', 'art.html', 'about.html', 'services.html', 'search.html', 'nanome2.html', '404.html'];
@@ -29,7 +40,7 @@ for (const p of [...STANDARD, ...OTHER]) {
       report.active = await page.$$eval('jh-nav a.active', els => els.map(e => e.getAttribute('aria-label')).join(',')).catch(() => '');
       report.canonical = await page.$eval('link[rel="canonical"]', el => el.href).catch(() => null);
     }
-    const bad = status >= 400 || jsErrors.length || report.consoleErrors.length || (STANDARD.includes(p) && (report.nav < 6 || !String(report.footer).includes('v1.13')));
+    const bad = status >= 400 || jsErrors.length || report.consoleErrors.length || (STANDARD.includes(p) && (report.nav < 6 || !String(report.footer).includes(EXPECTED_VERSION)));
     if (bad) failures++;
     console.log((bad ? 'FAIL ' : 'ok   ') + JSON.stringify(report));
   } catch (e) {

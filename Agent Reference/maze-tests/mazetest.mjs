@@ -41,9 +41,17 @@ const r = await page.evaluate(async () => {
   drawPts([{x:900,y:500},{x:902,y:501}]);
   out.food = { before: foodBefore, after: F.state.food.length, dotShapes: recognizedShapes.filter(s=>s.type==='dot').length };
 
-  // 4. squiggle over the square -> erased
+  // 4. scratch-out ACROSS the square -> erased.
+  //    Erase is crossing-based: the stroke has to cut the wall's outline ≥3
+  //    times. Passes overshoot both edges (270 → 490 spans the 300..460 square)
+  //    the way a hand does when scrubbing something out. A scribble kept
+  //    strictly inside the shape crosses nothing and deliberately does NOT erase.
   const sqg = [];
-  for (let i = 0; i < 8; i++) { sqg.push({x: 320 + (i%2)*130, y: 330 + i*12}); for (let j=1;j<=6;j++) sqg.push({x: 320 + ((i%2)? 130 - j*21 : j*21), y: 330 + i*12 + j*2}); }
+  for (let i = 0; i <= 3; i++) {
+    const y = 320 + i * 35;
+    sqg.push({ x: i % 2 === 0 ? 270 : 490, y });
+    sqg.push({ x: i % 2 === 0 ? 490 : 270, y: y + 17 });
+  }
   drawPts(sqg);
   out.squiggle = { shapesLeft: recognizedShapes.map(s=>s.type), obstacles: externals(), fishSurvived: F.state.fish.length };
 

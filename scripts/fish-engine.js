@@ -79,6 +79,9 @@
         // and can NEVER pass through (hard per-frame containment). They only
         // borrow the coral machinery for school-waypoint routing.
         let wallRects = [];
+        // Floor speed for wall sliding — a fish in contact always keeps moving
+        // along the face, so "touching a wall" can never mean "stopped".
+        const WALL_SLIDE_MIN = 0.8;
 
         function applyWallPhysics(f) {
             if (!wallRects.length) return;
@@ -120,8 +123,19 @@
                     f.targetHeading += angleDiff(steerTarget, f.targetHeading) * 0.16;
                 }
 
-                // Hard containment: resolve overlap along the shallowest axis
-                // and kill the velocity component pointing into the wall.
+                // Hard containment: resolve overlap along the shallowest axis,
+                // then REDIRECT the velocity along the wall face rather than
+                // killing the component pointing into it.
+                //
+                // Killing it is what parked fish nose-first: every behaviour
+                // layer (food-seek, schooling, territorial) rewrites
+                // targetHeading back into the wall each frame, and the velocity
+                // blend below only mixes in ~5% of the new target per frame, so
+                // a zeroed fish could not climb back out — it just sat there.
+                // Projecting at full magnitude makes sliding the FLOOR state for
+                // every fish, whatever the behaviour stack wants, so a fish in
+                // contact with a wall can never be stationary.
+                //
                 // Fish move ≤ ~5px/frame and walls are ≥ 30px thick + padding,
                 // so per-frame overlap resolution cannot tunnel.
                 const m = body + 2;
@@ -131,10 +145,25 @@
                     const pushUp    = f.y - (r.minY - m);
                     const pushDown  = (r.maxY + m) - f.y;
                     const minPush = Math.min(pushLeft, pushRight, pushUp, pushDown);
-                    if (minPush === pushLeft)       { f.x = r.minX - m; if (f.vx > 0) f.vx = 0; }
-                    else if (minPush === pushRight) { f.x = r.maxX + m; if (f.vx < 0) f.vx = 0; }
-                    else if (minPush === pushUp)    { f.y = r.minY - m; if (f.vy > 0) f.vy = 0; }
-                    else                            { f.y = r.maxY + m; if (f.vy < 0) f.vy = 0; }
+                    const speed = Math.max(Math.hypot(f.vx || 0, f.vy || 0), WALL_SLIDE_MIN);
+
+                    if (minPush === pushLeft || minPush === pushRight) {
+                        // vertical face → tangent is ±Y, sign follows current motion
+                        f.x = minPush === pushLeft ? r.minX - m : r.maxX + m;
+                        const dir = Math.abs(f.vy) > 0.05 ? Math.sign(f.vy)
+                                                          : (Math.sin(f.heading) >= 0 ? 1 : -1);
+                        f.vx = 0;
+                        f.vy = dir * speed;
+                        f.targetHeading += angleDiff(dir > 0 ? Math.PI / 2 : -Math.PI / 2, f.targetHeading) * 0.25;
+                    } else {
+                        // horizontal face → tangent is ±X
+                        f.y = minPush === pushUp ? r.minY - m : r.maxY + m;
+                        const dir = Math.abs(f.vx) > 0.05 ? Math.sign(f.vx)
+                                                          : (Math.cos(f.heading) >= 0 ? 1 : -1);
+                        f.vy = 0;
+                        f.vx = dir * speed;
+                        f.targetHeading += angleDiff(dir > 0 ? 0 : Math.PI, f.targetHeading) * 0.25;
+                    }
                     contact = true;
                 }
             }
