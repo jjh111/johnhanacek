@@ -35,6 +35,10 @@
         // from opts.annotateAt, e.g. "enclosed"). Rendered on the fish layer so
         // they never go stale when the host page's canvas loop idles.
         let infoLabels = !!opts.infoLabels;
+        // An aquarium has a seabed, so idle fish sink toward it and cruise lanes
+        // hang above the coral. A blueprint has neither — fish there should use
+        // the whole canvas. Per-page setting, not a per-page code path.
+        const FLOOR_AFFINITY = opts.floorAffinity !== false;
 
         function drawFishInfoLabels() {
             if (!infoLabels) return;
@@ -237,7 +241,8 @@
             { key: 'large',  clearance: 32 }
         ];
         let navCols = 0, navRows = 0;
-        let navFields = null;
+        let navFields = null;     // per tier: Int32Array, BFS distance to nearest food
+        let navRegions = null;    // per tier: { ids: Int32Array, list: [room, …] }
         let navDirty = true;
         let navSig = -1;
 
@@ -252,19 +257,104 @@
             return s + wallRects.length * 1e13;
         }
 
+        // Measure a room once, at build time, so idling costs nothing per frame.
+        function buildRoom(id, cells, blocked) {
+            let minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
+            const rim = [];
+            for (let i = 0; i < cells.length; i++) {
+                const c = cells[i], cx = c % navCols, cy = (c / navCols) | 0;
+                if (cx < minX) minX = cx;
+                if (cx > maxX) maxX = cx;
+                if (cy < minY) minY = cy;
+                if (cy > maxY) maxY = cy;
+                let onRim = false;
+                for (let k = 0; k < 4 && !onRim; k++) {
+                    const nx = cx + (k === 0 ? 1 : k === 1 ? -1 : 0);
+                    const ny = cy + (k === 2 ? 1 : k === 3 ? -1 : 0);
+                    if (nx < 0 || ny < 0 || nx >= navCols || ny >= navRows) onRim = true;
+                    else if (blocked[ny * navCols + nx]) onRim = true;
+                }
+                if (onRim) rim.push(c);
+            }
+            // Long axis by double sweep (the tree-diameter trick): farthest cell
+            // from an arbitrary member, then farthest from that. A bounding box
+            // would lie about L-shaped and curved rooms; this doesn't.
+            const farthestFrom = (from) => {
+                const fx = from % navCols, fy = (from / navCols) | 0;
+                let best = from, bestD = -1;
+                for (let i = 0; i < cells.length; i++) {
+                    const c = cells[i], cx = c % navCols, cy = (c / navCols) | 0;
+                    const d = (cx - fx) * (cx - fx) + (cy - fy) * (cy - fy);
+                    if (d > bestD) { bestD = d; best = c; }
+                }
+                return best;
+            };
+            const a = farthestFrom(cells[0]);
+            const b = farthestFrom(a);
+            return { id, cells, rim, minX, maxX, minY, maxY, axisA: a, axisB: b, size: cells.length };
+        }
+
+        function navCellCenter(idx) {
+            const cx = idx % navCols, cy = (idx / navCols) | 0;
+            return { x: (cx + 0.5) * NAV_CELL, y: (cy + 0.5) * NAV_CELL };
+        }
+
+        // The room this fish is in. A fish pressed against a wall sits in the
+        // clearance band, which belongs to no room, so fall back to the nearest
+        // labelled cell rather than reporting "nowhere".
+        function navRoomAt(f) {
+            if (!navRegions) return null;
+            const R = navRegions[navTierFor(f)];
+            if (!R) return null;
+            const cx = Math.floor(f.x / NAV_CELL), cy = Math.floor(f.y / NAV_CELL);
+            if (cx < 0 || cy < 0 || cx >= navCols || cy >= navRows) return null;
+            let id = R.ids[cy * navCols + cx];
+            for (let r = 1; r <= NAV_PROBE_RINGS && id < 0; r++) {
+                for (let dy = -r; dy <= r && id < 0; dy++) {
+                    for (let dx = -r; dx <= r && id < 0; dx++) {
+                        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+                        const nx = cx + dx, ny = cy + dy;
+                        if (nx < 0 || ny < 0 || nx >= navCols || ny >= navRows) continue;
+                        const v = R.ids[ny * navCols + nx];
+                        if (v >= 0) id = v;
+                    }
+                }
+            }
+            return id >= 0 ? R.list[id] : null;
+        }
+
+        // Small fish patrol the RIM of their room, so a drawn pen becomes
+        // somewhere to live along rather than something to bounce off. Sampling
+        // a handful of rim cells and taking the farthest keeps them travelling
+        // the edge instead of fidgeting around the nearest corner.
+        function navRimTarget(f, room) {
+            if (!room || !room.rim.length) return null;
+            let best = null, bestD = -1;
+            for (let i = 0; i < 12; i++) {
+                const p = navCellCenter(room.rim[(Math.random() * room.rim.length) | 0]);
+                const d = (p.x - f.x) * (p.x - f.x) + (p.y - f.y) * (p.y - f.y);
+                if (d > bestD) { bestD = d; best = p; }
+            }
+            return best;
+        }
+
         function rebuildNavField() {
             const cw = _cw || 1, ch = _ch || 1;
             navCols = Math.max(1, Math.ceil(cw / NAV_CELL));
             navRows = Math.max(1, Math.ceil(ch / NAV_CELL));
             const n = navCols * navRows;
             navFields = null;
+            navRegions = null;
             navDirty = false;
             navSig = navSignature();
-            // No walls means nothing to route around: leave the field null so
-            // seeking uses exact direct steering, exactly as it always has.
-            if (!wallRects.length || !food.length) return;
+            // No walls means nothing to route around and no rooms to speak of, so
+            // the whole apparatus stays off: seeking uses exact direct steering
+            // and idling keeps its original coral/open-water behaviour.
+            if (!wallRects.length) return;
 
-            navFields = {};
+            navRegions = {};
+            const withFood = food.length > 0;
+            if (withFood) navFields = {};
             const queue = new Int32Array(n);
             for (let t = 0; t < NAV_TIERS.length; t++) {
                 const tier = NAV_TIERS[t];
@@ -280,6 +370,40 @@
                         for (let x = c0; x <= c1; x++) blocked[row + x] = 1;
                     }
                 }
+
+                // ---- Rooms: connected open water AT THIS FISH SIZE -----------
+                // A drawn pen, a corridor, the water outside them — each is a
+                // separate room, and the split differs per size class because the
+                // grid is dilated by the fish's own clearance. This is what lets
+                // idling be shaped by the architecture instead of by the seabed:
+                // a fish patrols the room it is actually in.
+                const ids = new Int32Array(n).fill(-1);
+                const list = [];
+                for (let seed = 0; seed < n; seed++) {
+                    if (blocked[seed] || ids[seed] !== -1) continue;
+                    const rid = list.length;
+                    const cells = [];
+                    let rh = 0, rt = 0;
+                    queue[rt++] = seed; ids[seed] = rid;
+                    while (rh < rt) {
+                        const cur = queue[rh++];
+                        cells.push(cur);
+                        const cx = cur % navCols, cy = (cur / navCols) | 0;
+                        for (let k = 0; k < 4; k++) {
+                            const nx = cx + (k === 0 ? 1 : k === 1 ? -1 : 0);
+                            const ny = cy + (k === 2 ? 1 : k === 3 ? -1 : 0);
+                            if (nx < 0 || ny < 0 || nx >= navCols || ny >= navRows) continue;
+                            const ni = ny * navCols + nx;
+                            if (blocked[ni] || ids[ni] !== -1) continue;
+                            ids[ni] = rid;
+                            queue[rt++] = ni;
+                        }
+                    }
+                    list.push(buildRoom(rid, cells, blocked));
+                }
+                navRegions[tier.key] = { ids, list };
+
+                if (!withFood) continue;
                 const dist = new Int32Array(n).fill(-1);
                 let head = 0, tail = 0;
                 for (let i = 0; i < food.length; i++) {
@@ -2321,8 +2445,10 @@
                             // Assign cruise lane on first frame — based on body size
                             // Lanes are ABOVE the coral zone. Find highest coral top to set floor.
                             if (f.cruiseLaneY === undefined) {
-                                // Find coral ceiling — lanes must stay above all coral
-                                let coralCeiling = h * 0.65; // default if no coral exists
+                                // Find coral ceiling — lanes must stay above all coral.
+                                // With no seabed to hang above (blueprint), the lane
+                                // may use the full height instead of the top third.
+                                let coralCeiling = FLOOR_AFFINITY ? h * 0.65 : h * 0.88;
                                 if (coral.length > 0) {
                                     for (let ci = 0; ci < coral.length; ci++) {
                                         if (!solidCaps(coral[ci]).raisesLane) continue; // only lane-raising solids lift the ceiling
@@ -2357,11 +2483,30 @@
                                 f.cruiseTurnTimer = 0;
                             }
 
-                            // Edge detection for horizontal reversal — ONLY turn at canvas edges
-                            // Large fish swim the full width, turn around at edges, like tuna in a tank
+                            // Edge detection for horizontal reversal. In open water a
+                            // cruiser swims the full width and turns at the canvas
+                            // edge, like tuna in a tank. Inside drawn walls it turns
+                            // at the ends of its ROOM instead — which is what turns a
+                            // corridor into a patrol route rather than a thing to
+                            // bump along. The lane is pulled inside the room too, so
+                            // a cruiser in a pen doesn't hold a lane outside it.
                             const edgeMargin = Math.max(w * 0.08, bw * 0.6); // Scale margin with fish size
-                            const nearLeftEdge  = f.x < edgeMargin;
-                            const nearRightEdge = f.x > w - edgeMargin;
+                            let cruiseMinX = 0, cruiseMaxX = w;
+                            const cruiseRoom = navRoomAt(f);
+                            if (cruiseRoom) {
+                                const rx0 = cruiseRoom.minX * NAV_CELL;
+                                const rx1 = (cruiseRoom.maxX + 1) * NAV_CELL;
+                                // Only adopt the room if it's actually roomier than the
+                                // fish — a sliver would make it pivot on the spot.
+                                if (rx1 - rx0 > bw * 3) { cruiseMinX = rx0; cruiseMaxX = rx1; }
+                                const ry0 = cruiseRoom.minY * NAV_CELL, ry1 = (cruiseRoom.maxY + 1) * NAV_CELL;
+                                if (ry1 - ry0 > bw * 2 && f.cruiseLaneY !== undefined) {
+                                    f.cruiseLaneY = Math.max(ry0 + bw * 0.5, Math.min(ry1 - bw * 0.5, f.cruiseLaneY));
+                                }
+                            }
+                            const turnMargin = Math.min(edgeMargin, (cruiseMaxX - cruiseMinX) * 0.2);
+                            const nearLeftEdge  = f.x < cruiseMinX + turnMargin;
+                            const nearRightEdge = f.x > cruiseMaxX - turnMargin;
 
                             // Decrement cruise timer (used as holdoff after state changes, not for mid-tank turns)
                             f.cruiseTimer = Math.max(0, (f.cruiseTimer || 0) - deltaTime);
@@ -2910,9 +3055,27 @@
 
                                         f.debugBehavior = behaviorType;
                                     } else {
-                                        // No coral exists, wander in lower area
-                                        targetX = w * 0.2 + Math.random() * w * 0.6;
-                                        targetY = h * 0.7 + Math.random() * h * 0.2;
+                                        // No sheltering solid. If the page has drawn
+                                        // walls, idle around the rim of the room this
+                                        // fish is actually in — the architecture, not
+                                        // the seabed, decides where it hangs about.
+                                        const room = navRoomAt(f);
+                                        const rimTarget = room ? navRimTarget(f, room) : null;
+                                        if (rimTarget) {
+                                            targetX = rimTarget.x;
+                                            targetY = rimTarget.y;
+                                            behaviorType = 'rim_patrol';
+                                            f.behaviorLockTimer = 3000 + Math.random() * 2000;
+                                        } else if (FLOOR_AFFINITY) {
+                                            // Aquarium with no coral yet — hug the seabed
+                                            targetX = w * 0.2 + Math.random() * w * 0.6;
+                                            targetY = h * 0.7 + Math.random() * h * 0.2;
+                                        } else {
+                                            // Blueprint with nothing drawn — the whole canvas
+                                            targetX = w * 0.12 + Math.random() * w * 0.76;
+                                            targetY = h * 0.12 + Math.random() * h * 0.76;
+                                        }
+                                        f.debugBehavior = behaviorType;
                                     }
                                     f.wanderTarget = { x: targetX, y: targetY };
                                 }

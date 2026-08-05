@@ -27,6 +27,7 @@ node mazetest.mjs
 
 | File | Asserts |
 |---|---|
+| `idletest.mjs` | Idle must be shaped by the drawn shapes: no seabed drift on the blueprint, penned fish patrol their room without escaping, cruisers reverse at corridor ends, index.html idle untouched. Its `stalledSecs` figure is the signal for whether room-restricted idle targets need escalating to per-fish paths — it was 0.6s over 25s, so they don't. |
 | `navtest.mjs` | Fish must be guidable by food: led through a gap in a barrier, prompt abandonment of sealed-off food, and open-water seeking on index.html unaffected. Exits non-zero on failure. Keep layouts inside `DETECT_RANGE` (400px) or fish never seek at all. |
 | `humantest.mjs` | **The important one.** Human-sampled strokes (sparse ~60Hz, rounded reversals): erase matrix {2,3,4,6 passes} × {fast,slow} × {wide,tight}, non-scratch gestures that must NOT erase, and a 30s parking soak. Exits non-zero on failure. |
 | `latchtest.mjs` | The blueprint canvas must never latch itself to 0×0 (see below). Exits non-zero on failure. |
