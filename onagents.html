@@ -3,12 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>The Problems of Agent Orchestration</title>
+    <title>The Problems of Agent Orchestration — John Hanacek</title>
     <link rel="icon" type="image/png" href="./Assets/favicon-jhsigfrmpaper.png">
-    <meta name="robots" content="noindex, nofollow">
+    <meta name="description" content="Why multi-agent AI systems break in practice — and the solutions already hiding in plain sight. An illustrated essay on agent orchestration by John Hanacek.">
+    <link rel="canonical" href="https://www.johnhanacek.com/onagents.html">
+
+    <!-- Indexable but unlisted: no sitemap entry and nothing links here, so it
+         stays a page you hand out rather than one people stumble into. -->
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="John Hanacek">
+    <meta property="og:title" content="The Problems of Agent Orchestration">
+    <meta property="og:description" content="Why multi-agent AI systems break in practice — and the solutions already hiding in plain sight.">
+    <meta property="og:url" content="https://www.johnhanacek.com/onagents.html">
+    <meta property="og:image" content="https://www.johnhanacek.com/Assets/socialgraph-jhcom.webp">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="The Problems of Agent Orchestration">
+    <meta name="twitter:description" content="Why multi-agent AI systems break in practice — and the solutions already hiding in plain sight.">
+    <meta name="twitter:image" content="https://www.johnhanacek.com/Assets/socialgraph-jhcom.webp">
+
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": "The Problems of Agent Orchestration",
+        "description": "Why multi-agent AI systems break in practice — and the solutions already hiding in plain sight.",
+        "url": "https://www.johnhanacek.com/onagents.html",
+        "image": "https://www.johnhanacek.com/Assets/socialgraph-jhcom.webp",
+        "author": {
+            "@type": "Person",
+            "name": "John Hanacek",
+            "url": "https://www.johnhanacek.com/"
+        },
+        "publisher": {
+            "@type": "Person",
+            "name": "John Hanacek",
+            "url": "https://www.johnhanacek.com/"
+        },
+        "inLanguage": "en"
+    }
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@100;200;300;400;500&family=Cormorant+Garamond:wght@100;200;300;400;500&family=Raleway:wght@100;200;300;400;500&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <!-- Site chrome. Loaded BEFORE the page's own <style> so the Void Terminal
+         rules below win every conflict at equal specificity — shared.css is here
+         for <jh-nav>/<jh-footer>, not to restyle the essay. The nav and footer
+         inherit this page's --cyan/--gold, so they read as part of it. -->
+    <link rel="stylesheet" href="./styles/shared.css?v=1.15">
     <style>
         /* ============================================
            DESIGN SYSTEM — Void Terminal
@@ -392,6 +434,18 @@
             line-height: 1.2;
             transform: scaleX(1.15);
             text-shadow: 0 0 60px rgba(0,0,0,0.8);
+        }
+
+        /* scaleX(1.15) stretches the painted glyphs past the layout box, which
+           layout knows nothing about — so a long heading silently ran off the
+           side of the page ("Recursive Representations" was 1359px in a 1280px
+           viewport). Capping the box at 1/1.15 of its container makes the
+           stretched result land exactly inside it, and long headings wrap
+           instead of overflowing. Auto margins keep centred titles centred. */
+        .display-title {
+            max-width: 87%;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .display-title.xl {
@@ -1603,6 +1657,46 @@
                 transform: scaleX(1.05);
             }
         }
+
+        /* ============================================
+           MOBILE — the essay was laid out for a wide desktop canvas.
+           Three things pushed past a 390px viewport and expanded the layout
+           viewport to 545px, so the whole page scrolled sideways:
+             1. applet canvases with hard width attributes (up to 700px)
+             2. the display type — 0.35em tracking plus a 1.15x horizontal
+                stretch made the h1 617px wide on its own
+             3. the subtitle's 0.5em tracking
+           Fixed at the source; overflow-x:hidden is only a backstop.
+        ============================================ */
+
+        /* Applet canvases carry intrinsic width/height attributes. Every
+           interactive one already maps pointer coords through W / rect.width,
+           so letting CSS scale them keeps hit-testing correct. */
+        canvas { max-width: 100%; }
+
+        @media (max-width: 768px) {
+            html, body { overflow-x: hidden; }
+
+            canvas { height: auto; }
+
+            /* No stretch here, so the box can use the full column again */
+            .display-title { transform: none; letter-spacing: 0.12em; max-width: 100%; }
+            .display-title.xl { font-size: clamp(1.75rem, 8.5vw, 2.6rem); }
+            .subtitle {
+                letter-spacing: 0.18em;
+                font-size: clamp(0.8rem, 3.4vw, 1rem);
+            }
+
+            /* Slide mode is desktop-only (see narrowLayout() in the script), so
+               its rail, counter and keyboard hints have nothing to drive here. */
+            .slide-nav, .slide-counter, .key-hint, .esc-hint, .mode-toggle {
+                display: none !important;
+            }
+
+            /* Give the reading column real room back */
+            .slide { padding: var(--space-lg) var(--space-md); }
+            .glass-card { padding: var(--space-lg) var(--space-md); }
+        }
     </style>
     <script type="importmap">
     {
@@ -1636,6 +1730,28 @@
 <body>
 
     <!-- Cosmic background layers -->
+    <!-- Site chrome — shared nav, so a reader arriving on a shared link can
+         reach the rest of the site. No `current` shape: this page isn't one of
+         the five nav destinations. -->
+    <nav id="nav" role="navigation" aria-label="Main navigation">
+        <div class="nav-inner">
+            <jh-nav current=""></jh-nav>
+            <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <ul class="nav-right">
+                <li><a href="#slide-1">Hook</a></li>
+                <li><a href="#slide-3">Problems</a></li>
+                <li><a href="#slide-9">Tried</a></li>
+                <li><a href="#slide-10">Solutions</a></li>
+                <li><a href="#slide-18">Ecosystem</a></li>
+                <li><a href="#slide-21">Forest Floor</a></li>
+            </ul>
+        </div>
+    </nav>
+
     <div class="cosmic-bg"></div>
     <div class="stars"></div>
     <div class="cosmic-dust"></div>
@@ -2701,7 +2817,14 @@
             }
             window.goToSlide = goToSlide; // expose for preview/debug
 
+            // Slide mode is a desktop affordance: it's driven by arrow keys and a
+            // hover-revealed side rail, and a 25-slide deck on a phone traps the
+            // reader mid-essay with no obvious way out. Phones get the whole piece
+            // as one scrollable column instead; the toggle is hidden there too.
+            const narrowLayout = () => window.matchMedia('(max-width: 768px)').matches;
+
             function toggleMode() {
+                if (narrowLayout()) return;
                 isSlideMode = !isSlideMode;
                 document.body.classList.toggle('slide-mode', isSlideMode);
                 if (window.DemoController) window.DemoController.setSlideMode(isSlideMode);
@@ -8814,6 +8937,13 @@
         })();
 
     </script>
+
+    <footer>
+        <jh-footer></jh-footer>
+    </footer>
+
+    <script src="./scripts/shared.js?v=1.15"></script>
+    <script src="./scripts/jh-chrome.js?v=1.15" defer></script>
 
 </body>
 </html>
