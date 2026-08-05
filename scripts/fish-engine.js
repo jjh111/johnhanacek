@@ -212,6 +212,215 @@
             }
         }
 
+        // ---- Navigation field ----------------------------------------------
+        // Local steering rounds a convex obstacle fine, but it provably cannot
+        // escape a concave pocket or a drawn pen: the fish presses the wall,
+        // slides along it, and eventually abandons the food. So blockage is
+        // represented as KNOWLEDGE rather than as collision — rasterise the
+        // blocking solids into a coarse grid, flood-fill outward from every
+        // food pellet, and let each fish read the gradient in its own cell.
+        // That routes fish around walls, through gaps and out of dead ends,
+        // which is what lets you LEAD a fish through a maze by placing food.
+        //
+        // Cost is nil at rest: the field is rebuilt only when the walls or the
+        // food change, and both are user events. Food never moves once placed.
+        //
+        // It also answers "is this food reachable at all?" as a fact rather
+        // than as the old 2.5s no-progress guess.
+        const NAV_CELL = 16;
+        // One field per size class. The grid is dilated by the fish's own
+        // clearance, so a large fish is correctly told it cannot fit through a
+        // gap a small one can — a hand-drawn maze filters fish by size for free.
+        const NAV_TIERS = [
+            { key: 'small',  clearance: 10 },
+            { key: 'medium', clearance: 20 },
+            { key: 'large',  clearance: 32 }
+        ];
+        let navCols = 0, navRows = 0;
+        let navFields = null;
+        let navDirty = true;
+        let navSig = -1;
+
+        function navTierFor(f) {
+            const bw = f.bodyWidth || 20;
+            return bw >= MEDIUM_THRESHOLD ? 'large' : bw >= SMALL_THRESHOLD ? 'medium' : 'small';
+        }
+        // Cheap change-detector: count plus id sum catches add, remove and swap.
+        function navSignature() {
+            let s = food.length * 1e7;
+            for (let i = 0; i < food.length; i++) s += (+food[i].id || 0);
+            return s + wallRects.length * 1e13;
+        }
+
+        function rebuildNavField() {
+            const cw = _cw || 1, ch = _ch || 1;
+            navCols = Math.max(1, Math.ceil(cw / NAV_CELL));
+            navRows = Math.max(1, Math.ceil(ch / NAV_CELL));
+            const n = navCols * navRows;
+            navFields = null;
+            navDirty = false;
+            navSig = navSignature();
+            // No walls means nothing to route around: leave the field null so
+            // seeking uses exact direct steering, exactly as it always has.
+            if (!wallRects.length || !food.length) return;
+
+            navFields = {};
+            const queue = new Int32Array(n);
+            for (let t = 0; t < NAV_TIERS.length; t++) {
+                const tier = NAV_TIERS[t];
+                const blocked = new Uint8Array(n);
+                for (let i = 0; i < wallRects.length; i++) {
+                    const r = wallRects[i];
+                    const c0 = Math.max(0, Math.floor((r.minX - tier.clearance) / NAV_CELL));
+                    const c1 = Math.min(navCols - 1, Math.floor((r.maxX + tier.clearance) / NAV_CELL));
+                    const r0 = Math.max(0, Math.floor((r.minY - tier.clearance) / NAV_CELL));
+                    const r1 = Math.min(navRows - 1, Math.floor((r.maxY + tier.clearance) / NAV_CELL));
+                    for (let y = r0; y <= r1; y++) {
+                        const row = y * navCols;
+                        for (let x = c0; x <= c1; x++) blocked[row + x] = 1;
+                    }
+                }
+                const dist = new Int32Array(n).fill(-1);
+                let head = 0, tail = 0;
+                for (let i = 0; i < food.length; i++) {
+                    const fx = Math.floor(food[i].x / NAV_CELL);
+                    const fy = Math.floor(food[i].y / NAV_CELL);
+                    if (fx < 0 || fy < 0 || fx >= navCols || fy >= navRows) continue;
+                    const idx = fy * navCols + fx;
+                    if (dist[idx] !== -1) continue;
+                    // A pellet resting against a wall sits in a dilated cell; it
+                    // is still a valid goal, so seed it and let the flood leave
+                    // through whichever neighbours are open.
+                    dist[idx] = 0;
+                    queue[tail++] = idx;
+                }
+                while (head < tail) {
+                    const cur = queue[head++];
+                    const cx = cur % navCols, cy = (cur / navCols) | 0;
+                    const d = dist[cur] + 1;
+                    for (let k = 0; k < 4; k++) {
+                        const nx = cx + (k === 0 ? 1 : k === 1 ? -1 : 0);
+                        const ny = cy + (k === 2 ? 1 : k === 3 ? -1 : 0);
+                        if (nx < 0 || ny < 0 || nx >= navCols || ny >= navRows) continue;
+                        const ni = ny * navCols + nx;
+                        if (dist[ni] !== -1 || blocked[ni]) continue;
+                        dist[ni] = d;
+                        queue[tail++] = ni;
+                    }
+                }
+                navFields[tier.key] = dist;
+            }
+        }
+
+        function ensureNavField() {
+            if (navDirty || navSignature() !== navSig) rebuildNavField();
+        }
+        function markNavDirty() { navDirty = true; }
+
+        function navCellValue(field, cx, cy) {
+            if (cx < 0 || cy < 0 || cx >= navCols || cy >= navRows) return -1;
+            return field[cy * navCols + cx];
+        }
+
+        // Nearest routable cell in the rings around (cx,cy), or null if there is
+        // genuinely none nearby. A fish sliding along a wall sits INSIDE that
+        // wall's clearance band, where the grid has no distance of its own —
+        // without this probe that reads as "no route exists" and the fish
+        // abandons food it was about to reach.
+        const NAV_PROBE_RINGS = 3;
+        function navProbe(field, cx, cy) {
+            for (let r = 0; r <= NAV_PROBE_RINGS; r++) {
+                let bestV = -1, bx = 0, by = 0;
+                for (let dy = -r; dy <= r; dy++) {
+                    for (let dx = -r; dx <= r; dx++) {
+                        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue; // ring only
+                        const v = navCellValue(field, cx + dx, cy + dy);
+                        if (v < 0) continue;
+                        if (bestV < 0 || v < bestV) { bestV = v; bx = dx; by = dy; }
+                    }
+                }
+                if (bestV >= 0) return { value: bestV, dx: bx, dy: by, ring: r };
+            }
+            return null;
+        }
+
+        // Downhill direction toward the nearest reachable food, or null when the
+        // field has nothing to say (no walls, no food, or no route from here).
+        function navHeading(f) {
+            if (!navFields) return null;
+            const field = navFields[navTierFor(f)];
+            if (!field) return null;
+            const cx = Math.floor(f.x / NAV_CELL), cy = Math.floor(f.y / NAV_CELL);
+            const here = navCellValue(field, cx, cy);
+            if (here === 0) return null; // already on the pellet's cell — local steering finishes
+            if (here < 0) {
+                // Inside a wall's clearance band: steer to the nearest open water
+                // that has a route, rather than declaring defeat.
+                const probe = navProbe(field, cx, cy);
+                return probe ? Math.atan2(probe.dy, probe.dx) : null;
+            }
+
+            // Central differences give a smooth heading; a raw steepest-descent
+            // step would quantise steering to 45° and make the swim look robotic.
+            const l = navCellValue(field, cx - 1, cy), r = navCellValue(field, cx + 1, cy);
+            const u = navCellValue(field, cx, cy - 1), d = navCellValue(field, cx, cy + 1);
+            let gx = 0, gy = 0;
+            if (l >= 0 && r >= 0) gx = l - r; else if (l >= 0) gx = (l - here) * 2; else if (r >= 0) gx = (here - r) * 2;
+            if (u >= 0 && d >= 0) gy = u - d; else if (u >= 0) gy = (u - here) * 2; else if (d >= 0) gy = (here - d) * 2;
+            if (gx || gy) return Math.atan2(gy, gx);
+
+            // Degenerate (walled on the sampled axes) — fall back to the best
+            // of the eight neighbours.
+            let best = here, bx = 0, by = 0;
+            for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                    if (!dx && !dy) continue;
+                    const v = navCellValue(field, cx + dx, cy + dy);
+                    if (v >= 0 && v < best) { best = v; bx = dx; by = dy; }
+                }
+            }
+            return (bx || by) ? Math.atan2(by, bx) : null;
+        }
+
+        // True when the field exists and says this fish has no route to any food
+        // — the honest replacement for a no-progress timer. Probes the
+        // surrounding rings first so that merely hugging a wall, which puts the
+        // fish in a cell with no distance of its own, is never mistaken for
+        // being cut off.
+        function navStranded(f) {
+            if (!navFields) return false;
+            const field = navFields[navTierFor(f)];
+            if (!field) return false;
+            return navProbe(field, Math.floor(f.x / NAV_CELL), Math.floor(f.y / NAV_CELL)) === null;
+        }
+
+        // Does a straight swim to (tx,ty) cut through a wall? Cheap segment vs
+        // AABB slab test. Recomputed per fish a few times a second, not per frame.
+        function navLineBlocked(x0, y0, tx, ty) {
+            const dx = tx - x0, dy = ty - y0;
+            for (let i = 0; i < wallRects.length; i++) {
+                const r = wallRects[i];
+                let t0 = 0, t1 = 1;
+                let ok = true;
+                for (let a = 0; a < 2 && ok; a++) {
+                    const p = a === 0 ? dx : dy;
+                    const o = a === 0 ? x0 : y0;
+                    const lo = a === 0 ? r.minX : r.minY;
+                    const hi = a === 0 ? r.maxX : r.maxY;
+                    if (Math.abs(p) < 1e-6) { if (o < lo || o > hi) ok = false; }
+                    else {
+                        let ta = (lo - o) / p, tb = (hi - o) / p;
+                        if (ta > tb) { const tmp = ta; ta = tb; tb = tmp; }
+                        if (ta > t0) t0 = ta;
+                        if (tb < t1) t1 = tb;
+                        if (t0 > t1) ok = false;
+                    }
+                }
+                if (ok) return true;
+            }
+            return false;
+        }
+
         function emitDrawing(active) {
             if (opts.onDrawingChange) { try { opts.onDrawingChange(active); } catch (err) { console.error('onDrawingChange hook failed', err); } }
         }
@@ -903,6 +1112,8 @@
             // ---- DELTA TIME: Real elapsed ms since last frame, capped to prevent jumps ----
             const deltaTime = Math.min(now - (this._lastFrameTime || now), 50);
             this._lastFrameTime = now;
+            // Rebuilds only when the walls or the food actually changed.
+            ensureNavField();
             // Use module-level cached canvas size (updated once per frame in animate())
             const w = _cw;
             const h = _ch;
@@ -1408,9 +1619,16 @@
                 f.challengeTimer = Math.max(0, (f.challengeTimer || 0) - deltaTime);
 
                 // ---- FRUSTRATION: abandon food we can't reach ----
-                // In the maze, food can sit behind (or inside) walls. A fish that
-                // makes no progress toward its locked food for 2.5s gives up and
-                // ignores that pellet for 9s instead of grinding on a wall forever.
+                // Two ways to conclude a pellet is hopeless, in order of honesty:
+                //   1. The navigation field says no route exists from this fish's
+                //      cell at its own size. That is a fact, known immediately, so
+                //      the fish turns away at once instead of grinding a wall for
+                //      2.5s first. It is also size-aware: a gap a small fish slips
+                //      through is genuinely closed to a large one.
+                //   2. No field (no walls on this page, or none built yet) — fall
+                //      back to the no-progress timer.
+                // Either way the pellet is ignored for 9s and survives, so it can
+                // still lure a fish that CAN reach it.
                 if (f.seekFoodId !== undefined) {
                     const tgt = food.find(fd => fd.id === f.seekFoodId);
                     if (tgt) {
@@ -1419,7 +1637,8 @@
                             f.seekProgressId = f.seekFoodId; f.seekBestDist = td; f.seekProgressAt = now;
                         } else if (td < f.seekBestDist - 6) {
                             f.seekBestDist = td; f.seekProgressAt = now;
-                        } else if (now - f.seekProgressAt > 2500) {
+                        }
+                        if (navStranded(f) || now - f.seekProgressAt > 2500) {
                             if (!f.ignoredFood) f.ignoredFood = {};
                             f.ignoredFood[f.seekFoodId] = now + 9000;
                             f.seekFoodId = undefined;
@@ -1473,8 +1692,25 @@
                     const lockedDist = Math.sqrt(lockedDx * lockedDx + lockedDy * lockedDy);
                     const lockedMouthDist = Math.sqrt((lockedFood.x - mouthX) ** 2 + (lockedFood.y - mouthY) ** 2);
 
-                    // Steer body CENTER toward locked food target
-                    const foodAngle = Math.atan2(lockedFood.y - centerY, lockedFood.x - centerX);
+                    // Steer body CENTER toward locked food target.
+                    // In open water that straight line IS the answer, and it stays
+                    // exact — the field only speaks when a wall is actually in the
+                    // way, so pages with no walls behave precisely as before.
+                    const directFoodAngle = Math.atan2(lockedFood.y - centerY, lockedFood.x - centerX);
+                    let foodAngle = directFoodAngle;
+                    if (wallRects.length) {
+                        // Line of sight is a few tests against a short wall list;
+                        // recheck ~5×/s rather than every frame.
+                        if (!f.navLosUntil || now > f.navLosUntil || f.navLosFoodId !== lockedFood.id) {
+                            f.navLosUntil = now + 200;
+                            f.navLosFoodId = lockedFood.id;
+                            f.navLosBlocked = navLineBlocked(centerX, centerY, lockedFood.x, lockedFood.y);
+                        }
+                        if (f.navLosBlocked) {
+                            const routed = navHeading(f);
+                            if (routed !== null) foodAngle = routed;
+                        }
+                    }
                     const angleToFood = Math.abs(angleDiff(foodAngle, f.heading));
 
                     // ---- STAGGER: Distance-based reaction delay ----
@@ -5956,6 +6192,7 @@
                         minY: o.y - o.height,    maxY: o.y
                     });
                 });
+                markNavDirty();
                 startAnimation();
             },
             classifyStroke,

@@ -27,6 +27,7 @@ node mazetest.mjs
 
 | File | Asserts |
 |---|---|
+| `navtest.mjs` | Fish must be guidable by food: led through a gap in a barrier, prompt abandonment of sealed-off food, and open-water seeking on index.html unaffected. Exits non-zero on failure. Keep layouts inside `DETECT_RANGE` (400px) or fish never seek at all. |
 | `humantest.mjs` | **The important one.** Human-sampled strokes (sparse ~60Hz, rounded reversals): erase matrix {2,3,4,6 passes} × {fast,slow} × {wide,tight}, non-scratch gestures that must NOT erase, and a 30s parking soak. Exits non-zero on failure. |
 | `latchtest.mjs` | The blueprint canvas must never latch itself to 0×0 (see below). Exits non-zero on failure. |
 | `sitetest.mjs` | Every page loads: component nav + footer version, canonicals, zero console errors. Reads the expected version from `scripts/jh-chrome.js`, so it needs `SITE_ROOT` set. |
