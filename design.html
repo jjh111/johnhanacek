@@ -26,8 +26,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Raleway:wght@100;200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles/shared.css?v=1.16">
-    <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.16">
+    <link rel="stylesheet" href="./styles/shared.css?v=1.17">
+    <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.17">
 
     <!-- Model Viewer for 3D content -->
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
@@ -271,115 +271,7 @@
             background: rgba(77, 201, 246, 0.12);
         }
 
-        /* Maze guide card — bottom-centre, above the controls. Opens on load and
-           retires itself once you've clearly got the idea, same as the homepage. */
-        .maze-guide {
-            /* Absolute, not fixed: anchored to the hero so it scrolls away once
-               you reach the case study. Fixed made it hover over the content all
-               the way down the page. Matches how index.html's hint behaves. */
-            position: absolute;
-            bottom: 2.5rem;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 6;
-            display: flex;
-            flex-direction: column;
-            gap: 0.55rem;
-            max-width: min(92vw, 30rem);
-            background: rgba(10, 22, 40, 0.72);
-            border: 1px solid rgba(125, 216, 247, 0.15);
-            border-radius: 10px;
-            padding: 0.9rem 1.4rem;
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
-            font-family: 'JetBrains Mono', monospace;
-            transition: opacity 0.5s ease, transform 0.5s ease;
-            touch-action: pan-y; /* vertical swipes scroll the page, not the canvas */
-        }
-        .maze-guide.hidden {
-            opacity: 0;
-            pointer-events: none;
-            transform: translateX(-50%) translateY(8px);
-        }
-        .maze-guide .guide-title {
-            font-size: 0.65rem;
-            letter-spacing: 0.2em;
-            color: rgba(125, 216, 247, 0.5);
-            text-transform: uppercase;
-        }
-        .maze-guide .guide-rows {
-            display: flex;
-            flex-direction: column;
-            gap: 0.32rem;
-        }
-        .maze-guide .guide-row {
-            display: flex;
-            align-items: baseline;
-            gap: 0.6rem;
-            font-size: 0.72rem;
-            color: rgba(125, 216, 247, 0.75);
-            letter-spacing: 0.05em;
-        }
-        .maze-guide .guide-row .guide-glyph {
-            font-size: 0.9rem;
-            width: 1.3rem;
-            text-align: center;
-            flex-shrink: 0;
-            color: rgba(125, 216, 247, 0.55);
-        }
-        .maze-guide .guide-note {
-            margin-top: 0.1rem;
-            font-size: 0.62rem;
-            color: rgba(125, 216, 247, 0.45);
-            letter-spacing: 0.08em;
-            line-height: 1.5;
-        }
-        /* Tap-to-explore affordance — touch only, mirroring index.html's hint CTA.
-           The card sits over a fullscreen drawing canvas, so without this a phone
-           visitor has no visible cue that a case study exists below. */
-        .maze-guide .guide-scroll-cta {
-            display: none;
-            align-items: center;
-            justify-content: center;
-            gap: 0.4rem;
-            margin-top: 0.55rem;
-            padding: 0.5rem 0.95rem;
-            border: 1px solid rgba(125, 216, 247, 0.35);
-            border-radius: 999px;
-            background: rgba(77, 201, 246, 0.1);
-            color: rgba(125, 216, 247, 0.95);
-            font-size: 0.7rem;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            text-decoration: none;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .maze-guide .guide-scroll-cta svg {
-            width: 1rem;
-            height: 1rem;
-            animation: guide-bob 1.8s ease-in-out infinite;
-        }
-        @keyframes guide-bob {
-            0%, 100% { transform: translateY(0); }
-            50%      { transform: translateY(3px); }
-        }
-        @media (hover: none) and (pointer: coarse) {
-            .maze-guide .guide-scroll-cta { display: inline-flex; }
-        }
-        @media (prefers-reduced-motion: reduce) {
-            .maze-guide .guide-scroll-cta svg { animation: none; }
-        }
-
-        @media (max-width: 600px) {
-            .maze-guide {
-                bottom: 4.2rem;
-                padding: 0.75rem 1rem;
-            }
-            .maze-guide .guide-row { font-size: 0.66rem; }
-        }
-        @media (prefers-reduced-motion: reduce) {
-            .maze-guide { transition: none; }
-        }
+        /* Maze guide card lives in shared.css (.canvas-guide) — shared with index.html */
 
         /* Canvas button style (layout handled by shared.css) */
         .canvas-btn {
@@ -573,17 +465,19 @@
             <span class="hint-text">draw here</span>
         </div>
 
-        <!-- Maze guide — open on load, retires itself after enough strokes -->
-        <div class="maze-guide" id="mazeGuide" role="note" aria-label="How the fish maze works">
+        <!-- Maze guide — .canvas-guide is shared with index.html (shared.css).
+             Opens on load, retires itself after enough strokes. -->
+        <div class="canvas-guide" id="mazeGuide" role="note" aria-label="How the fish maze works">
+            <button class="guide-close" id="closeGuide" type="button" aria-label="Close instructions">&times;</button>
             <span class="guide-title">✎ &nbsp;draw the maze</span>
             <div class="guide-rows">
-                <span class="guide-row"><span class="guide-glyph">▢</span> draw a shape — its outline becomes a wall</span>
-                <span class="guide-row"><span class="guide-glyph">◠</span> draw a loop — a fish</span>
-                <span class="guide-row"><span class="guide-glyph">·</span> tap — drop food, and lead fish to it</span>
-                <span class="guide-row"><span class="guide-glyph">⌁</span> scribble across a wall — rub it out</span>
+                <span class="guide-row"><span class="guide-glyph">▢</span><span>draw a shape — its outline becomes a wall</span></span>
+                <span class="guide-row"><span class="guide-glyph">◠</span><span>draw a loop — a fish</span></span>
+                <span class="guide-row"><span class="guide-glyph">·</span><span>tap — drop food, and lead fish to it</span></span>
+                <span class="guide-row"><span class="guide-glyph">⌁</span><span>scribble across a wall — rub it out</span></span>
             </div>
             <span class="guide-note">Walls are the line you drew, so a rectangle is a pen and a circle a ring tank — the inside stays open water. Erasing is literal: your stroke has to cross a wall a few times to rub it out, so a line drawn straight through is safe.</span>
-            <a href="#intro" class="guide-scroll-cta">tap or swipe here to explore
+            <a href="#intro" class="guide-cta">tap or swipe here to explore
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
             </a>
         </div>
@@ -1122,8 +1016,8 @@
     </script>
 
     <!-- Hero Canvas Drawing Interaction -->
-    <script src="./scripts/shape-detection.js?v=1.16"></script>
-    <script src="./scripts/fish-engine.js?v=1.16"></script>
+    <script src="./scripts/shape-detection.js?v=1.17"></script>
+    <script src="./scripts/fish-engine.js?v=1.17"></script>
     <script>
         const canvas = document.getElementById('heroCanvas');
         const ctx = canvas.getContext('2d');
@@ -2646,13 +2540,17 @@
             const GUIDE_THRESHOLD = 8; // strokes before it retires itself
             let strokeCount = 0;
 
+            const setOpen = (open) => {
+                guide.classList.toggle('hidden', !open);
+                if (btn) btn.classList.toggle('active', open);
+            };
+
             if (btn) {
                 btn.classList.add('active'); // starts active — the card is open
-                btn.addEventListener('click', () => {
-                    guide.classList.toggle('hidden');
-                    btn.classList.toggle('active', !guide.classList.contains('hidden'));
-                });
+                btn.addEventListener('click', () => setOpen(guide.classList.contains('hidden')));
             }
+            const closeBtn = document.getElementById('closeGuide');
+            if (closeBtn) closeBtn.addEventListener('click', () => setOpen(false));
 
             // Count completed strokes, not presses, so it stays put while drawing.
             canvas.addEventListener('pointerup', () => {
@@ -2964,8 +2862,8 @@
             resizeMetaMedium();
         })();
     </script>
-<script src="./scripts/search-overlay.js?v=1.16" defer></script>
+<script src="./scripts/search-overlay.js?v=1.17" defer></script>
 <script>document.addEventListener('DOMContentLoaded',()=>{const t=document.querySelector('.nav-title');if(t)t.dataset.short='JH';document.querySelectorAll('.nav-right a').forEach(a=>{const w=a.textContent.trim().split(/\s+/);a.dataset.short=w.length>1?w.map(x=>x[0]).join('').toUpperCase().slice(0,2):a.textContent.trim().slice(0,2).toUpperCase()})});</script>
-    <script src="./scripts/jh-chrome.js?v=1.16" defer></script>
+    <script src="./scripts/jh-chrome.js?v=1.17" defer></script>
 </body>
 </html>

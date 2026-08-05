@@ -26,8 +26,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Raleway:wght@100;200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles/shared.css?v=1.16">
-    <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.16">
+    <link rel="stylesheet" href="./styles/shared.css?v=1.17">
+    <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.17">
 
     <!-- Structured Data for AI/Search -->
     <link rel="alternate" type="application/json" href="./john-hanacek.json" title="Structured data">
@@ -58,100 +58,7 @@
     </script>
 
     <style>
-        /* Override hero-hint — bottom-center, multi-line tutorial card */
-        .hero-hint {
-            bottom: 2.5rem;
-            top: auto;
-            transform: translateX(-50%);
-            flex-direction: column;
-            align-items: center;
-            gap: 0.55rem;
-            background: rgba(10, 22, 40, 0.72);
-            border: 1px solid rgba(125, 216, 247, 0.15);
-            border-radius: 10px;
-            padding: 0.9rem 1.4rem;
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
-        }
-        .hero-hint .hint-title {
-            font-size: 0.65rem;
-            letter-spacing: 0.2em;
-            color: rgba(125, 216, 247, 0.5);
-            text-transform: uppercase;
-            margin-bottom: 0.1rem;
-        }
-        .hero-hint .hint-rows {
-            display: flex;
-            flex-direction: column;
-            gap: 0.3rem;
-        }
-        .hero-hint .hint-row {
-            display: flex;
-            align-items: center;
-            gap: 0.55rem;
-            font-size: 0.72rem;
-            color: rgba(125, 216, 247, 0.75);
-            letter-spacing: 0.06em;
-            text-transform: none;
-            white-space: nowrap;
-        }
-        .hero-hint .hint-row .hint-glyph {
-            font-size: 1rem;
-            width: 1.4rem;
-            text-align: center;
-            flex-shrink: 0;
-        }
-        .hero-hint .hint-tap {
-            margin-top: 0.25rem;
-            font-size: 0.65rem;
-            color: rgba(125, 216, 247, 0.45);
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-        }
-        /* Let vertical swipes on the hint scroll the page instead of drawing on the canvas */
-        .hero-hint { touch-action: pan-y; }
-        /* Tap-to-explore affordance — hidden by default, revealed on touch devices */
-        .hint-scroll-cta {
-            display: none;
-            align-items: center;
-            justify-content: center;
-            gap: 0.4rem;
-            margin-top: 0.5rem;
-            padding: 0.5rem 0.95rem;
-            border: 1px solid rgba(125, 216, 247, 0.35);
-            border-radius: 999px;
-            background: rgba(77, 201, 246, 0.1);
-            color: rgba(125, 216, 247, 0.95);
-            font-size: 0.7rem;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            text-decoration: none;
-            -webkit-tap-highlight-color: transparent;
-            /* shared.css sets .hero-hint { pointer-events: none } so drawing works
-               through the card — which also swallowed taps on this link: the tap
-               fell through to the canvas and drew a dot instead of navigating.
-               This is the one child that has to be interactive. */
-            pointer-events: auto;
-        }
-        /* ...but not once the hint has faded out. */
-        .hero-hint.hidden .hint-scroll-cta { pointer-events: none; }
-        .hint-scroll-cta svg {
-            width: 1rem;
-            height: 1rem;
-            animation: hint-bob 1.8s ease-in-out infinite;
-        }
-        @keyframes hint-bob {
-            0%, 100% { transform: translateY(0); }
-            50%      { transform: translateY(3px); }
-        }
-        /* Touch devices (the futile-drawing crowd): show the explore CTA + bigger tap target */
-        @media (hover: none) and (pointer: coarse) {
-            .hint-scroll-cta { display: inline-flex; }
-            .hero-hint { padding-bottom: 1.1rem; }
-        }
-        @media (prefers-reduced-motion: reduce) {
-            .hint-scroll-cta svg { animation: none; }
-        }
+        /* Canvas guide card lives in shared.css (.canvas-guide) — shared with design.html */
 
         /* Debug toggle for fish minigame */
         .canvas-controls {
@@ -471,17 +378,19 @@
             </a>
         </div>
 
-        <!-- Draw hint — on canvas, fades after enough interactions -->
-        <div class="hero-hint" id="heroDrawHint" aria-hidden="true">
-            <span class="hint-title">✎ &nbsp;draw to interact</span>
-            <div class="hint-rows">
-                <span class="hint-row"><span class="hint-glyph">🎗️</span> draw a loop — small, medium, or large fish</span>
-                <span class="hint-row"><span class="hint-glyph">◻️</span> draw a square — coral (small fish love it)</span>
-                <span class="hint-row"><span class="hint-glyph">△</span> draw a triangle — jellyfish</span>
-                <span class="hint-row"><span class="hint-glyph">○</span> draw a circle — bubbles</span>
+        <!-- Draw guide — .canvas-guide is shared with design.html (shared.css) -->
+        <div class="canvas-guide" id="heroDrawHint" role="note" aria-label="How to draw on the canvas">
+            <button class="guide-close" id="closeHint" type="button" aria-label="Close instructions">&times;</button>
+            <span class="guide-title">✎ &nbsp;draw to interact</span>
+            <div class="guide-rows">
+                <span class="guide-row"><span class="guide-glyph">🎗️</span><span>draw a loop — a fish</span></span>
+                <span class="guide-row"><span class="guide-glyph">◻️</span><span>draw a square — coral</span></span>
+                <span class="guide-row"><span class="guide-glyph">△</span><span>draw a triangle — jellyfish</span></span>
+                <span class="guide-row"><span class="guide-glyph">○</span><span>draw a circle — bubbles</span></span>
+                <span class="guide-row"><span class="guide-glyph">·</span><span>tap anywhere — drop food</span></span>
             </div>
-            <span class="hint-tap">tap anywhere to drop food</span>
-            <a href="#about" class="hint-scroll-cta" tabindex="-1">tap or swipe here to explore
+            <span class="guide-note">The size of your loop sets the size of the fish — small ones shelter in coral, big ones patrol alone. Jellyfish drift, and everything scatters from them.</span>
+            <a href="#about" class="guide-cta" tabindex="-1">tap or swipe here to explore
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
             </a>
         </div>
@@ -750,8 +659,8 @@
 
     <!-- Hero Canvas Drawing Interaction -->
     <!-- Hero Canvas — fish minigame (shared engine) -->
-    <script src="./scripts/shape-detection.js?v=1.16"></script>
-    <script src="./scripts/fish-engine.js?v=1.16"></script>
+    <script src="./scripts/shape-detection.js?v=1.17"></script>
+    <script src="./scripts/fish-engine.js?v=1.17"></script>
     <script>
         // Boot the shared fish engine on the hero canvas.
         // `hero` comes from the nav script above; QR helpers are declared below (hoisted).
@@ -793,6 +702,16 @@
 
             // Count on completed strokes (pointerup), not on press — keeps hint visible while drawing
             heroFish.canvas.addEventListener('pointerup', bumpDrawHint);
+
+            // × dismisses it outright; the ℹ button brings it back
+            const closeHintBtn = document.getElementById('closeHint');
+            if (closeHintBtn) {
+                closeHintBtn.addEventListener('click', () => {
+                    heroDrawHint.classList.add('hidden');
+                    hintDismissed = true;
+                    if (hintToggleBtn) hintToggleBtn.classList.remove('active');
+                });
+            }
 
             // ℹ button toggles hint visibility manually
             if (hintToggleBtn) {
@@ -931,8 +850,8 @@
             }, 2000);
         });
     </script>
-<script src="./scripts/search-overlay.js?v=1.16" defer></script>
+<script src="./scripts/search-overlay.js?v=1.17" defer></script>
 <script>document.addEventListener('DOMContentLoaded',()=>{const t=document.querySelector('.nav-title');if(t)t.dataset.short='JH';document.querySelectorAll('.nav-right a').forEach(a=>{const w=a.textContent.trim().split(/\s+/);a.dataset.short=w.length>1?w.map(x=>x[0]).join('').toUpperCase().slice(0,2):a.textContent.trim().slice(0,2).toUpperCase()})});</script>
-    <script src="./scripts/jh-chrome.js?v=1.16" defer></script>
+    <script src="./scripts/jh-chrome.js?v=1.17" defer></script>
 </body>
 </html>
