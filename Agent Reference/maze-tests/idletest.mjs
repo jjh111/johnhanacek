@@ -83,7 +83,17 @@ const drift = await page.evaluate(async () => {
 });
 
 // ---- B + D. penned fish patrols its room and never stalls ---------------
-const penned = await page.evaluate(async () => {
+// Fresh page on purpose. `Clear` removes walls but keeps fish, so running this
+// after phase A left six fish crowded into one pen and the numbers measured
+// jostling rather than patrolling. Stall is also reported PER FISH below —
+// summing it across a crowd made the bar depend on how many fish happened to
+// be alive, which is how this first went red.
+const pageB = await b.newPage({ viewport: { width: 1280, height: 800 } });
+pageB.on('pageerror', e => errs.push(String(e).split('\n')[0]));
+await pageB.goto('http://127.0.0.1:1337/design.html', { waitUntil: 'load' });
+await pageB.waitForTimeout(1200);
+await pageB.evaluate(HELPERS);
+const penned = await pageB.evaluate(async () => {
   window.__clear();
   await new Promise(r => setTimeout(r, 300));
   const PEN = { x0: 380, x1: 780, y0: 220, y1: 600 };
@@ -117,14 +127,24 @@ const penned = await page.evaluate(async () => {
   }
   return {
     pennedFish: inside.length, escapeSamples: escapes, cellsVisited: coverage,
-    stalledSecs: +stalledSecs.toFixed(1),
+    // Per fish, so the bar doesn't move with the size of the crowd.
+    stalledSecsPerFish: inside.length ? +(stalledSecs / inside.length).toFixed(1) : 0,
+    stalledSecsTotal: +stalledSecs.toFixed(1),
     // "stabbing" metric: how much of its idle life is spent in wall contact
     wallContactFraction: allSamples ? +(touchSamples / allSamples).toFixed(2) : 0
   };
 });
+await pageB.close();
 
 // ---- C. cruiser reverses at corridor ends, not canvas edges -------------
-const corridor = await page.evaluate(async () => {
+// Own page, same reason as phase B: leftover fish change the population and
+// every figure here is per cruiser rather than a sum over however many exist.
+const pageC = await b.newPage({ viewport: { width: 1280, height: 800 } });
+pageC.on('pageerror', e => errs.push(String(e).split('\n')[0]));
+await pageC.goto('http://127.0.0.1:1337/design.html', { waitUntil: 'load' });
+await pageC.waitForTimeout(1200);
+await pageC.evaluate(HELPERS);
+const corridor = await pageC.evaluate(async () => {
   window.__clear();
   await new Promise(r => setTimeout(r, 300));
   // horizontal corridor between two long walls, spanning x 250..900
@@ -151,9 +171,11 @@ const corridor = await page.evaluate(async () => {
   }
   return {
     cruisers: ids.length, xMin: Math.round(xMin), xMax: Math.round(xMax),
-    leftCorridorSamples: outside, pxTravelled: Math.round(travelled)
+    leftCorridorSamples: outside,
+    pxTravelledPerCruiser: ids.length ? Math.round(travelled / ids.length) : 0
   };
 });
+await pageC.close();
 await page.close();
 
 // ---- E. index.html idle untouched --------------------------------------
@@ -182,10 +204,10 @@ const fails = [];
 if (drift.fractionInBottomThird > 0.6) fails.push(`A: blueprint fish still hug the seabed (${drift.fractionInBottomThird})`);
 if (penned.escapeSamples > 0) fails.push('B: penned fish left its room');
 if (penned.cellsVisited < 8) fails.push(`B: penned fish barely patrolled (${penned.cellsVisited} cells)`);
-if (penned.stalledSecs > 6) fails.push(`D: penned fish stalled ${penned.stalledSecs}s — escalate to per-fish paths`);
+if (penned.stalledSecsPerFish > 6) fails.push(`D: penned fish stalled ${penned.stalledSecsPerFish}s each — escalate to per-fish paths`);
 if (penned.wallContactFraction > 0.35) fails.push(`B: penned fish grinds the wall (${penned.wallContactFraction} of samples in contact)`);
 if (corridor.leftCorridorSamples > 0) fails.push('C: cruiser left the corridor');
-if (corridor.pxTravelled < 1500) fails.push(`C: cruiser barely patrolled (${corridor.pxTravelled}px)`);
+if (corridor.pxTravelledPerCruiser < 600) fails.push(`C: cruiser barely patrolled (${corridor.pxTravelledPerCruiser}px each)`);
 if (corridor.xMax - corridor.xMin < 200) fails.push(`C: cruiser did not traverse the corridor (${corridor.xMax - corridor.xMin}px span)`);
 
 console.log(JSON.stringify({

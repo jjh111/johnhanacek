@@ -21,7 +21,17 @@ class Application {
     
     async loadModel() {
         console.log('Creating model...');
-        this.model = await ModelLoader.loadModel('models/molecule.gltf');
+        // Points at the only model in models/. Previously it asked for
+        // 'models/molecule.gltf', which has never existed in this repo.
+        //
+        // HEADS UP: this still falls back to createFallbackModel(), because the
+        // .gltf is a bare JSON manifest whose 6900-byte buffer
+        // 'Scaffold_3_2022-08-18_00.37.12.bin' is missing from the repo (not
+        // gitignored — simply never committed). Drop that .bin in beside the
+        // .gltf and the real scaffold renders with no code change. Until then
+        // the demo shows a placeholder primitive, which is why the Nanome case
+        // study's 3D panel looks generic.
+        this.model = await ModelLoader.loadModel('models/Scaffold_3_2022-08-18_00.37.12.gltf');
         console.log('Model loaded');
     }
     
