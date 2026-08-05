@@ -29,6 +29,13 @@
         // Embedded mode (design.html maze): host page drives input + renders its
         // own world; the engine draws transparently on its own layer.
         const FISH_FILL_ALPHA = opts.renderStyle === 'blueprint' ? 0.14 : 0.65;
+        // Hue range is independent of render style. Blueprint pages default to the
+        // cyan line-art family, but a page can ask for the full spectrum and keep
+        // the translucent line-art body — colourful fish that still read as drawn
+        // rather than painted.
+        const FISH_HUE_FULL = opts.fishHue
+            ? opts.fishHue === 'full'
+            : opts.renderStyle !== 'blueprint';
 
         // ---- Behavior info labels (design.html "Labels" toggle) -----------
         // Live introspection chips over each fish/food: tier · state (· extra
@@ -1651,11 +1658,13 @@
                 // Per-fish unique color using hue shift
                 const baseColor = aquaColors.fish[f.id % aquaColors.fish.length];
                 const hueShift = f.hueShift || 0;
-                // Blueprint mode constrains every fish to the cyan line-art family —
-                // per-fish variety comes from small hue/lightness offsets, not full spectrum
-                const hsl = opts.renderStyle === 'blueprint'
-                    ? `hsl(${188 + (hueShift % 24)}, 75%, ${62 + (hueShift % 17)}%)`
-                    : `hsl(${(180 + hueShift) % 360}, 80%, 65%)`;
+                // Cool mode constrains every fish to the cyan line-art family —
+                // per-fish variety from small hue/lightness offsets. Full mode takes
+                // the whole wheel. See FISH_HUE_FULL: this is deliberately NOT tied
+                // to renderStyle, so a blueprint page can be colourful.
+                const hsl = FISH_HUE_FULL
+                    ? `hsl(${(180 + hueShift) % 360}, 80%, 65%)`
+                    : `hsl(${188 + (hueShift % 24)}, 75%, ${62 + (hueShift % 17)}%)`;
                 const color = hueShift ? hsl : baseColor;
 
                 // Per-fish randomness offset (consistent per fish)

@@ -26,8 +26,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Raleway:wght@100;200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles/shared.css?v=1.18">
-    <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.18">
+    <link rel="stylesheet" href="./styles/shared.css?v=1.19">
+    <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.19">
 
     <!-- Model Viewer for 3D content -->
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
@@ -272,6 +272,12 @@
         }
 
         /* Maze guide card lives in shared.css (.canvas-guide) — shared with index.html */
+
+        /* Nudged right of the bottom-left corner glyph. The glyphs sit 22px into
+           each corner and the info button was landing on top of the bottom-left
+           one — you couldn't read the ℹ through it. Shifting the controls clears
+           the corner without having to drop a glyph or break the symmetry. */
+        .canvas-controls { left: 3.1rem; }
 
         /* "clear —" prefix so the two buttons read as one instruction rather
            than two nouns floating next to a toggle. */
@@ -1035,8 +1041,8 @@
     </script>
 
     <!-- Hero Canvas Drawing Interaction -->
-    <script src="./scripts/shape-detection.js?v=1.18"></script>
-    <script src="./scripts/fish-engine.js?v=1.18"></script>
+    <script src="./scripts/shape-detection.js?v=1.19"></script>
+    <script src="./scripts/fish-engine.js?v=1.19"></script>
     <script>
         const canvas = document.getElementById('heroCanvas');
         const ctx = canvas.getContext('2d');
@@ -1053,7 +1059,11 @@
             // A blueprint has no seabed — fish use the whole canvas rather than
             // sinking to the bottom third the way they do in the aquarium.
             floorAffinity: false,
-            palette: { fish: ['#4dc9f6', '#7dd8f7', '#b8dced', '#8cb8cc'] },
+            // Colourful fish, blueprint bodies: the full hue wheel, but
+            // renderStyle keeps the translucent 0.14 line-art fill so they still
+            // read as drawn rather than painted. Palette left at the engine
+            // default so fish with no hue offset aren't forced to cyan either.
+            fishHue: 'full',
             // Labels toggle shows live behavior chips; the system annotates
             // spatial facts it knows (insideEnclosure is declared below — hoisted)
             annotateAt: (x, y) => insideEnclosure(x, y) ? 'enclosed' : ''
@@ -1667,7 +1677,6 @@
         }
         
         // Track hovered glyph for visual feedback (will be set by event handlers)
-        let glyphHoverIndex = -1;
 
         function drawGlyphs(w, h) {
             const now = Date.now();
@@ -1700,45 +1709,37 @@
                 glyphRotation += 0.02 * activeAmount;
             }
 
-            const corners = [[40, 40], [w - 40, 40], [40, h - 40], [w - 40, h - 40]];
+            // Tucked into the corners and small: decoration at the edge of the
+            // drawing, not furniture competing with the controls.
+            const GLYPH_INSET = 22;
+            const corners = [[GLYPH_INSET, GLYPH_INSET], [w - GLYPH_INSET, GLYPH_INSET],
+                             [GLYPH_INSET, h - GLYPH_INSET], [w - GLYPH_INSET, h - GLYPH_INSET]];
             corners.forEach(([x, y], i) => {
                 ctx.save();
                 ctx.translate(x, y);
                 ctx.rotate(glyphRotation * (i % 2 === 0 ? 1 : -1));
 
-                // Check if this glyph is hovered and there's content to clear
-                const isHovered = glyphHoverIndex === i && hasContent;
-                const hoverBoost = isHovered ? 0.5 : 0;
 
                 // Interpolate between cyan (idle) and gold (active/hovered)
                 const idleColor = [77, 201, 246];  // cyan
                 const activeColor = [212, 175, 55];  // gold
-                const hoverColor = [212, 175, 55];  // gold for clear action
 
-                let r, g, b, a;
-                if (isHovered) {
-                    r = hoverColor[0];
-                    g = hoverColor[1];
-                    b = hoverColor[2];
-                    a = 0.8;
-                } else {
-                    r = Math.round(idleColor[0] + (activeColor[0] - idleColor[0]) * activeAmount);
-                    g = Math.round(idleColor[1] + (activeColor[1] - idleColor[1]) * activeAmount);
-                    b = Math.round(idleColor[2] + (activeColor[2] - idleColor[2]) * activeAmount);
-                    a = 0.3 + 0.4 * activeAmount;
-                }
+                const r = Math.round(idleColor[0] + (activeColor[0] - idleColor[0]) * activeAmount);
+                const g = Math.round(idleColor[1] + (activeColor[1] - idleColor[1]) * activeAmount);
+                const b = Math.round(idleColor[2] + (activeColor[2] - idleColor[2]) * activeAmount);
+                const a = 0.26 + 0.34 * activeAmount;
 
                 ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${a})`;
-                ctx.globalAlpha = isHovered ? 1 : glyphPulse;
-                ctx.lineWidth = 1.5 + 0.5 * activeAmount + (isHovered ? 1 : 0);
+                ctx.globalAlpha = glyphPulse;
+                ctx.lineWidth = 1.1 + 0.4 * activeAmount;
 
                 // Art Nouveau crystalline motif - hexagonal with organic curves
                 // Central hexagon
                 ctx.beginPath();
                 for (let j = 0; j < 6; j++) {
                     const angle = (j / 6) * Math.PI * 2 - Math.PI / 2;
-                    const x = Math.cos(angle) * 8;
-                    const y = Math.sin(angle) * 8;
+                    const x = Math.cos(angle) * 5;
+                    const y = Math.sin(angle) * 5;
                     if (j === 0) ctx.moveTo(x, y);
                     else ctx.lineTo(x, y);
                 }
@@ -1750,8 +1751,8 @@
                 for (let j = 0; j < 6; j++) {
                     const angle = (j / 6) * Math.PI * 2;
                     ctx.beginPath();
-                    ctx.moveTo(Math.cos(angle) * 8, Math.sin(angle) * 8);
-                    ctx.lineTo(Math.cos(angle) * 15, Math.sin(angle) * 15);
+                    ctx.moveTo(Math.cos(angle) * 5, Math.sin(angle) * 5);
+                    ctx.lineTo(Math.cos(angle) * 9, Math.sin(angle) * 9);
                     ctx.stroke();
                 }
 
@@ -1759,9 +1760,9 @@
                 if (activeAmount > 0.2) {
                     ctx.globalAlpha = glyphPulse * activeAmount;
                     ctx.shadowColor = `rgba(${r}, ${g}, ${b}, 0.6)`;
-                    ctx.shadowBlur = 8 + 6 * activeAmount;
+                    ctx.shadowBlur = 5 + 4 * activeAmount;
                     ctx.beginPath();
-                    ctx.arc(0, 0, 12 + 2 * activeAmount, 0, Math.PI * 2);
+                    ctx.arc(0, 0, 7.5 + 1.5 * activeAmount, 0, Math.PI * 2);
                     ctx.stroke();
                     ctx.shadowBlur = 0;
                 }
@@ -2502,23 +2503,6 @@
         // ============================================
         // Corner Glyph Clear (click any corner to clear)
         // ============================================
-        const GLYPH_CLICK_RADIUS = 35; // Click detection radius around glyphs
-
-        function getGlyphPositions() {
-            const w = canvas.width;
-            const h = canvas.height;
-            return [[40, 40], [w - 40, 40], [40, h - 40], [w - 40, h - 40]];
-        }
-
-        function getClickedGlyph(x, y) {
-            const glyphs = getGlyphPositions();
-            for (let i = 0; i < glyphs.length; i++) {
-                const [gx, gy] = glyphs[i];
-                const dist = Math.sqrt((x - gx) ** 2 + (y - gy) ** 2);
-                if (dist < GLYPH_CLICK_RADIUS) return i;
-            }
-            return -1;
-        }
 
         function clearCanvas() {
             strokes = [];
@@ -2534,16 +2518,12 @@
             startAnimation();
         }
 
-        // Check for glyph clicks on mousedown/touchstart
-        canvas.addEventListener('click', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            const clickedGlyph = getClickedGlyph(x, y);
-            if (clickedGlyph !== -1 && (strokes.length > 0 || recognizedShapes.length > 0)) {
-                clearCanvas();
-            }
-        });
+        // Corner glyphs are decorative only. They used to clear the canvas on
+        // click, with a 35px hit radius — but the bottom-left one sits 17px from
+        // the info button, so that radius blanketed the whole controls row and
+        // obscured it. With explicit "clear Walls / Fish" buttons the gesture was
+        // also ambiguous: which would a corner have cleared? Removed rather than
+        // relocated.
 
         // Canvas control buttons
         document.getElementById('clearCanvas').addEventListener('click', clearCanvas);
@@ -2595,31 +2575,6 @@
             });
         })();
 
-        // Update cursor and hover state when moving over glyphs
-        canvas.addEventListener('mousemove', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            const newHovered = getClickedGlyph(x, y);
-
-            if (newHovered !== glyphHoverIndex) {
-                glyphHoverIndex = newHovered;
-                if (glyphHoverIndex !== -1 && (strokes.length > 0 || recognizedShapes.length > 0)) {
-                    canvas.style.cursor = 'pointer';
-                } else {
-                    canvas.style.cursor = 'crosshair';
-                }
-                startAnimation(); // Redraw to show hover effect
-            }
-        });
-
-        // Reset hover when leaving canvas
-        canvas.addEventListener('mouseleave', () => {
-            if (glyphHoverIndex !== -1) {
-                glyphHoverIndex = -1;
-                startAnimation();
-            }
-        });
 
         // ============================================
         // Cursor Spotlight Effect
@@ -2894,8 +2849,8 @@
             resizeMetaMedium();
         })();
     </script>
-<script src="./scripts/search-overlay.js?v=1.18" defer></script>
+<script src="./scripts/search-overlay.js?v=1.19" defer></script>
 <script>document.addEventListener('DOMContentLoaded',()=>{const t=document.querySelector('.nav-title');if(t)t.dataset.short='JH';document.querySelectorAll('.nav-right a').forEach(a=>{const w=a.textContent.trim().split(/\s+/);a.dataset.short=w.length>1?w.map(x=>x[0]).join('').toUpperCase().slice(0,2):a.textContent.trim().slice(0,2).toUpperCase()})});</script>
-    <script src="./scripts/jh-chrome.js?v=1.18" defer></script>
+    <script src="./scripts/jh-chrome.js?v=1.19" defer></script>
 </body>
 </html>
