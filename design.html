@@ -26,8 +26,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Raleway:wght@100;200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles/shared.css?v=1.17">
-    <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.17">
+    <link rel="stylesheet" href="./styles/shared.css?v=1.18">
+    <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.18">
 
     <!-- Model Viewer for 3D content -->
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
@@ -273,6 +273,17 @@
 
         /* Maze guide card lives in shared.css (.canvas-guide) — shared with index.html */
 
+        /* "clear —" prefix so the two buttons read as one instruction rather
+           than two nouns floating next to a toggle. */
+        .controls-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.62rem;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            color: rgba(125, 216, 247, 0.35);
+            margin-right: -0.35rem;
+        }
+
         /* Canvas button style (layout handled by shared.css) */
         .canvas-btn {
             font-family: 'JetBrains Mono', monospace;
@@ -485,7 +496,9 @@
         <!-- Canvas Controls -->
         <div class="canvas-controls">
             <button class="info-btn" id="toggleGuide" aria-label="Toggle maze instructions" title="How this works">i</button>
-            <button class="canvas-btn" id="clearCanvas">Clear</button>
+            <span class="controls-label" aria-hidden="true">clear</span>
+            <button class="canvas-btn" id="clearCanvas" title="Remove the walls, keep the fish">Walls</button>
+            <button class="canvas-btn" id="clearFish" title="Empty the tank, keep the walls">Fish</button>
             <label class="canvas-toggle">
                 <input type="checkbox" id="toggleLabels">
                 <span class="toggle-switch"></span>
@@ -493,21 +506,27 @@
             </label>
         </div>
 
-        <div class="hero-content">
-            <h1><span class="jh-sig"><span class="sr-only">JH</span><img src="./Assets/JHsig.svg" alt="" aria-hidden="true"></span> <span class="meta">Design</span></h1>
-            <!-- Persistent way off the fullscreen canvas. Same component as the
-                 homepage; .oval-scroll-btn already carries pointer-events:auto,
-                 which is what lets it win over `.hero-content * { none }`. -->
+        <!-- Same glass oval as the homepage. Wrapping hero-content stops
+             `.hero > .hero-content` matching, so .hero-oval's own positioning
+             takes over — identical treatment across index/design/art. -->
+        <div class="hero-oval" role="banner">
+            <div class="hero-content">
+                <h1><span class="jh-sig"><span class="sr-only">JH</span><img src="./Assets/JHsig.svg" alt="" aria-hidden="true"></span> <span class="meta">Design</span></h1>
+                <!-- TODO: Finalize tagline and byline copy before launch
+                <p class="tagline">DRAW · RECOGNIZE · EXPLORE</p>
+                <p class="byline"><span class="role">Interactive shape recognition demo</span></p>
+                -->
+            </div>
+
+            <!-- Persistent way off the fullscreen canvas. .oval-scroll-btn already
+                 carries pointer-events:auto, which is what lets it win over
+                 `.hero-content * { pointer-events: none }`. -->
             <a href="#intro" class="oval-scroll-btn" aria-label="Scroll to content">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M7 13l5 5 5-5M7 6l5 5 5-5"/>
                 </svg>
                 <span class="oval-scroll-label">view content</span>
             </a>
-            <!-- TODO: Finalize tagline and byline copy before launch
-            <p class="tagline">DRAW · RECOGNIZE · EXPLORE</p>
-            <p class="byline"><span class="role">Interactive shape recognition demo</span></p>
-            -->
         </div>
 
     </header>
@@ -1016,8 +1035,8 @@
     </script>
 
     <!-- Hero Canvas Drawing Interaction -->
-    <script src="./scripts/shape-detection.js?v=1.17"></script>
-    <script src="./scripts/fish-engine.js?v=1.17"></script>
+    <script src="./scripts/shape-detection.js?v=1.18"></script>
+    <script src="./scripts/fish-engine.js?v=1.18"></script>
     <script>
         const canvas = document.getElementById('heroCanvas');
         const ctx = canvas.getContext('2d');
@@ -1368,22 +1387,28 @@
                 
                 // Relationship-specific visuals
                 if (rel.type === 'intersects' && rel.intersections) {
-                    // Draw glowing intersection points
+                    // Intersection marks are ANNOTATION, not an entity — a small
+                    // open ring, no fill, barely any glow.
+                    //
+                    // They used to be a filled dot at r=4 with a ring at r=8 and a
+                    // 12px glow, which is pixel-for-pixel the geometry the engine
+                    // draws food with. Only the hue differed (food is green, this
+                    // amber), and on a page where everything else is cyan line-art
+                    // a filled glowing dot reads as "thing the fish want" no matter
+                    // what colour it is. An unfilled ring reads as a mark on a
+                    // drawing instead.
                     rel.intersections.forEach(pt => {
-                        ctx.shadowColor = 'rgba(251, 191, 36, 0.8)';
-                        ctx.shadowBlur = 12 * easedOpacity;
-                        ctx.fillStyle = `rgba(251, 191, 36, ${0.9 * easedOpacity})`;
-                        ctx.beginPath();
-                        ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
-                        ctx.fill();
-                        
-                        // Outer ring
-                        ctx.strokeStyle = `rgba(251, 191, 36, ${0.5 * easedOpacity})`;
+                        ctx.shadowBlur = 0;
+                        ctx.strokeStyle = `rgba(251, 191, 36, ${0.55 * easedOpacity})`;
                         ctx.lineWidth = 1;
                         ctx.beginPath();
-                        ctx.arc(pt.x, pt.y, 8, 0, Math.PI * 2);
+                        ctx.arc(pt.x, pt.y, 3, 0, Math.PI * 2);
                         ctx.stroke();
-                        ctx.shadowBlur = 0;
+                        // tiny centre tick, so it still reads as a precise point
+                        ctx.fillStyle = `rgba(251, 191, 36, ${0.45 * easedOpacity})`;
+                        ctx.beginPath();
+                        ctx.arc(pt.x, pt.y, 0.9, 0, Math.PI * 2);
+                        ctx.fill();
                     });
                     
                     // Add label near first intersection
@@ -2522,6 +2547,13 @@
 
         // Canvas control buttons
         document.getElementById('clearCanvas').addEventListener('click', clearCanvas);
+        // Empties the tank but leaves the maze standing, so you can rebuild the
+        // population against a layout you've already drawn.
+        document.getElementById('clearFish').addEventListener('click', () => {
+            fishLayer.clearFish();
+            whisperLabels.push({ text: 'Tank empty', x: canvas.width / 2, y: canvas.height / 2, createdAt: Date.now() });
+            startAnimation();
+        });
         document.getElementById('toggleLabels').addEventListener('change', (e) => {
             showLabels = e.target.checked;
             fishLayer.setInfoLabels(e.target.checked); // fish/food behavior chips too
@@ -2862,8 +2894,8 @@
             resizeMetaMedium();
         })();
     </script>
-<script src="./scripts/search-overlay.js?v=1.17" defer></script>
+<script src="./scripts/search-overlay.js?v=1.18" defer></script>
 <script>document.addEventListener('DOMContentLoaded',()=>{const t=document.querySelector('.nav-title');if(t)t.dataset.short='JH';document.querySelectorAll('.nav-right a').forEach(a=>{const w=a.textContent.trim().split(/\s+/);a.dataset.short=w.length>1?w.map(x=>x[0]).join('').toUpperCase().slice(0,2):a.textContent.trim().slice(0,2).toUpperCase()})});</script>
-    <script src="./scripts/jh-chrome.js?v=1.17" defer></script>
+    <script src="./scripts/jh-chrome.js?v=1.18" defer></script>
 </body>
 </html>

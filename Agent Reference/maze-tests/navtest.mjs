@@ -40,7 +40,7 @@ const HELPERS = () => {
     for (let a = -0.6; a <= Math.PI * 2 + 0.7; a += 0.26) l.push({ x: cx + Math.cos(a) * r0, y: cy + Math.sin(a) * r0 });
     window.__h(l, 12);
   };
-  window.__clear = () => document.querySelectorAll('button').forEach(x => { if (/clear/i.test(x.textContent)) x.click(); });
+  window.__clear = () => document.getElementById('clearCanvas').click();
 };
 
 // ---- A. led through a gap ----------------------------------------------

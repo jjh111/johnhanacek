@@ -6388,6 +6388,15 @@
                 markNavDirty();
                 startAnimation();
             },
+            // Empty the tank without touching the walls the host page owns.
+            // Clears the per-fish bookkeeping other systems key off (school
+            // slots, rivalries, food locks) so nothing holds a stale id.
+            clearFish() {
+                fish.length = 0;
+                food.length = 0;
+                markNavDirty();
+                startAnimation();
+            },
             classifyStroke,
             state: {
                 get fish() { return fish; },

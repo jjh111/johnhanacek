@@ -23,7 +23,7 @@ const r = await page.evaluate(async () => {
     pts.forEach(p => c.dispatchEvent(mk('mousemove', p.x, p.y)));
     c.dispatchEvent(mk('mouseup', pts.at(-1).x, pts.at(-1).y));
   };
-  const clear = () => document.querySelectorAll('button').forEach(x => { if (/clear/i.test(x.textContent)) x.click(); });
+  const clear = () => document.getElementById('clearCanvas').click();
   // wall: 400..700 x 300..520
   const pen = () => {
     const r2 = [], seg = (x1, y1, x2, y2) => { for (let i = 0; i <= 12; i++) r2.push({ x: x1 + (x2 - x1) * i / 12, y: y1 + (y2 - y1) * i / 12 }); };

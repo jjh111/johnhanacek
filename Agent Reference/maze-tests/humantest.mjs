@@ -56,7 +56,7 @@ const HELPERS = () => {
   };
   window.__walls = () => designFish.state.coral.filter(k => k.isExternal).length;
   window.__shapes = () => recognizedShapes.length;
-  window.__clear = () => { document.querySelectorAll('button').forEach(x => { if (/clear/i.test(x.textContent)) x.click(); }); };
+  window.__clear = () => { document.getElementById('clearCanvas').click(); };
   // Scratch-out: N passes back and forth ACROSS the pen, rounded reversals.
   // Passes overshoot the left/right edges the way a hand does when scrubbing
   // something out — that overshoot is what makes them crossings.
