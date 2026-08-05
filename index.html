@@ -127,7 +127,14 @@
             text-transform: uppercase;
             text-decoration: none;
             -webkit-tap-highlight-color: transparent;
+            /* shared.css sets .hero-hint { pointer-events: none } so drawing works
+               through the card — which also swallowed taps on this link: the tap
+               fell through to the canvas and drew a dot instead of navigating.
+               This is the one child that has to be interactive. */
+            pointer-events: auto;
         }
+        /* ...but not once the hint has faded out. */
+        .hero-hint.hidden .hint-scroll-cta { pointer-events: none; }
         .hint-scroll-cta svg {
             width: 1rem;
             height: 1rem;
