@@ -158,7 +158,13 @@ const corridor = await pageC.evaluate(async () => {
   await new Promise(r => setTimeout(r, 400));
   window.__fishAt(560, 410, 46);   // medium cruiser inside the corridor
   await new Promise(r => setTimeout(r, 900));
-  const ids = designFish.state.fish.filter(f => f.x > 250 && f.x < 900 && f.y > 300 && f.y < 520).map(f => f.id);
+  // Cruisers only. The drawn loop's size varies run to run, and a SMALL fish
+  // rim-patrols rather than cruising — including one here dragged the average
+  // under the bar about a third of the time and looked like a regression.
+  // SMALL_THRESHOLD is 35 in the engine.
+  const ids = designFish.state.fish
+    .filter(f => f.x > 250 && f.x < 900 && f.y > 300 && f.y < 520 && (f.bodyWidth || 20) >= 35)
+    .map(f => f.id);
   const seen = await window.__soak(25000);
   let xMin = 1e9, xMax = -1e9, outside = 0, travelled = 0;
   for (const id of ids) {

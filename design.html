@@ -26,11 +26,13 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Raleway:wght@100;200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles/shared.css?v=1.19">
-    <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.19">
+    <link rel="stylesheet" href="./styles/shared.css?v=1.20">
+    <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.20">
 
-    <!-- Model Viewer for 3D content -->
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
+    <!-- Model Viewer is loaded on approach, not at page load — see the
+         warm-up observer near the bottom of this file. The library is 239KB
+         and the two models it drives total ~13MB; none of it is needed above
+         the fold on a page whose hero is a drawing canvas. -->
 
     <!-- Structured Data for AI/Search -->
     <link rel="alternate" type="application/json" href="./john-hanacek.json" title="Structured data">
@@ -372,9 +374,11 @@
             z-index: 0;
             pointer-events: none; /* input goes to the blueprint canvas beneath */
         }
-        .hero-content {
-            padding-bottom: 2rem;
-        }
+        /* No padding-bottom here. It used to reserve room for the tagline and
+           byline that sit commented out in the markup, which left a 32px void
+           between "Design" and "view content" and stretched the oval to 162px
+           against art.html's 133px for the same content. The button belongs
+           directly under the title. */
         .hero-hint {
             bottom: 6rem;
         }
@@ -788,6 +792,7 @@
                     <h4>R&D Innovation Award <span class="year-badge">2022</span></h4>
                     <p><strong>Aerospace Medical Association</strong> — Programming robot arm via XR digital twin</p>
                     <model-viewer
+                        loading="eager"
                         src="./Assets/Aerospace Award.glb"
                         alt="Aerospace Innovation Award 3D model"
                         auto-rotate
@@ -808,6 +813,7 @@
                     <h4>"Most Meta" Award <span class="year-badge">2016</span></h4>
                     <p>Awarded "Black Box" trophy by Georgetown CCT peers</p>
                     <model-viewer
+                        loading="eager"
                         src="./Assets/BlackBox-Model.glb"
                         alt="BlackBox Award 3D model"
                         auto-rotate
@@ -1041,8 +1047,8 @@
     </script>
 
     <!-- Hero Canvas Drawing Interaction -->
-    <script src="./scripts/shape-detection.js?v=1.19"></script>
-    <script src="./scripts/fish-engine.js?v=1.19"></script>
+    <script src="./scripts/shape-detection.js?v=1.20"></script>
+    <script src="./scripts/fish-engine.js?v=1.20"></script>
     <script>
         const canvas = document.getElementById('heroCanvas');
         const ctx = canvas.getContext('2d');
@@ -2849,8 +2855,55 @@
             resizeMetaMedium();
         })();
     </script>
-<script src="./scripts/search-overlay.js?v=1.19" defer></script>
+<script src="./scripts/search-overlay.js?v=1.20" defer></script>
 <script>document.addEventListener('DOMContentLoaded',()=>{const t=document.querySelector('.nav-title');if(t)t.dataset.short='JH';document.querySelectorAll('.nav-right a').forEach(a=>{const w=a.textContent.trim().split(/\s+/);a.dataset.short=w.length>1?w.map(x=>x[0]).join('').toUpperCase().slice(0,2):a.textContent.trim().slice(0,2).toUpperCase()})});</script>
-    <script src="./scripts/jh-chrome.js?v=1.19" defer></script>
+    <script src="./scripts/jh-chrome.js?v=1.20" defer></script>
+
+    <!-- ============================================
+         3D warm-up — load model-viewer on approach, not at page load.
+         The library is 239KB and the two .glb models total ~13MB
+         (Aerospace Award 2MB, BlackBox 10.9MB). Previously the library was
+         fetched on every visit whether or not anyone scrolled to the awards,
+         and the models only began downloading once you'd already arrived —
+         so you sat watching an empty box.
+         Now nothing 3D is requested until the awards section is within roughly
+         1.5 viewports, at which point the library and (via loading="eager")
+         both models start together and are usually decoded before you get there.
+         On metered or slow connections we skip the head start and let them load
+         on arrival, because 13MB of prefetch on cellular is a rude thing to do.
+    ============================================ -->
+    <script>
+    (function warmUp3D() {
+        const host = document.getElementById('awards');
+        if (!host || !('IntersectionObserver' in window)) return;
+
+        const LIB = 'https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js';
+        let started = false;
+        const load = () => {
+            if (started) return;
+            started = true;
+            const s = document.createElement('script');
+            s.type = 'module';
+            s.src = LIB;
+            document.head.appendChild(s);
+        };
+
+        const conn = navigator.connection || {};
+        const frugal = conn.saveData === true || /^(slow-)?2g$/.test(conn.effectiveType || '');
+        // Explicit pixels, not '150%'. A percentage rootMargin resolved against
+        // something other than the viewport height here and fired only ~300px
+        // ahead of the section — far too late to be a head start.
+        const lead = frugal ? 0 : Math.round(window.innerHeight * 1.5);
+        const rootMargin = lead + 'px 0px';
+
+        const io = new IntersectionObserver((entries) => {
+            if (entries.some(e => e.isIntersecting)) {
+                load();
+                io.disconnect();
+            }
+        }, { rootMargin });
+        io.observe(host);
+    })();
+    </script>
 </body>
 </html>
