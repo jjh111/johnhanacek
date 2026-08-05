@@ -327,15 +327,45 @@
         // somewhere to live along rather than something to bounce off. Sampling
         // a handful of rim cells and taking the farthest keeps them travelling
         // the edge instead of fidgeting around the nearest corner.
+        //
+        // The target is nudged OFF the wall along the rim cell's outward normal.
+        // Aiming at the rim cell itself pointed the fish's nose straight at the
+        // line, so it drove in, hit the hard standoff and slid — the stabbing
+        // motion. Offset, the fish arrives in open water alongside the wall and
+        // the existing "near target, slow down and linger" rule lets it hang
+        // there, which is how small fish behave around coral.
+        const NAV_RIM_STANDOFF = 1.35; // cells clear of the wall face
+        function navRimOutward(cell) {
+            const cx = cell % navCols, cy = (cell / navCols) | 0;
+            const R = navRegions && navRegions[NAV_TIERS[0].key];
+            if (!R) return { x: 0, y: 0 };
+            let ax = 0, ay = 0;
+            for (let k = 0; k < 4; k++) {
+                const dx = (k === 0 ? 1 : k === 1 ? -1 : 0);
+                const dy = (k === 2 ? 1 : k === 3 ? -1 : 0);
+                const nx = cx + dx, ny = cy + dy;
+                const off = nx < 0 || ny < 0 || nx >= navCols || ny >= navRows;
+                // Point away from whatever is closing this cell in — a wall or
+                // the canvas edge.
+                if (off || R.ids[ny * navCols + nx] < 0) { ax -= dx; ay -= dy; }
+            }
+            const m = Math.hypot(ax, ay);
+            return m > 0 ? { x: ax / m, y: ay / m } : { x: 0, y: 0 };
+        }
         function navRimTarget(f, room) {
             if (!room || !room.rim.length) return null;
-            let best = null, bestD = -1;
+            let bestCell = -1, bestD = -1;
             for (let i = 0; i < 12; i++) {
-                const p = navCellCenter(room.rim[(Math.random() * room.rim.length) | 0]);
+                const cell = room.rim[(Math.random() * room.rim.length) | 0];
+                const p = navCellCenter(cell);
                 const d = (p.x - f.x) * (p.x - f.x) + (p.y - f.y) * (p.y - f.y);
-                if (d > bestD) { bestD = d; best = p; }
+                if (d > bestD) { bestD = d; bestCell = cell; }
             }
-            return best;
+            if (bestCell < 0) return null;
+            const p = navCellCenter(bestCell);
+            const n = navRimOutward(bestCell);
+            const off = NAV_CELL * NAV_RIM_STANDOFF;
+            return { x: p.x + n.x * off, y: p.y + n.y * off };
         }
 
         function rebuildNavField() {

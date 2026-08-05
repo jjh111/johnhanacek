@@ -45,8 +45,14 @@ const HELPERS = () => {
     const seen = {}, start = Date.now();
     while (Date.now() - start < ms) {
       await new Promise(r => setTimeout(r, 100));
+      const now = Date.now();
       for (const f of designFish.state.fish) {
-        (seen[f.id] = seen[f.id] || []).push({ x: f.x, y: f.y });
+        // touching = in hard wall contact within the last 300ms. A patrolling
+        // fish should hang NEAR the line, not grind along it.
+        (seen[f.id] = seen[f.id] || []).push({
+          x: f.x, y: f.y, bw: f.bodyWidth || 20,
+          touching: !!(f.lastWallContact && now - f.lastWallContact < 300)
+        });
       }
     }
     return seen;
@@ -103,7 +109,18 @@ const penned = await page.evaluate(async () => {
       if (Math.hypot(h[i].x - h[i - 30].x, h[i].y - h[i - 30].y) < 20) stalledSecs += 0.1;
     }
   }
-  return { pennedFish: inside.length, escapeSamples: escapes, cellsVisited: coverage, stalledSecs: +stalledSecs.toFixed(1) };
+  let touchSamples = 0, allSamples = 0;
+  for (const id of inside) {
+    const h = seen[id] || [];
+    allSamples += h.length;
+    touchSamples += h.filter(p => p.touching).length;
+  }
+  return {
+    pennedFish: inside.length, escapeSamples: escapes, cellsVisited: coverage,
+    stalledSecs: +stalledSecs.toFixed(1),
+    // "stabbing" metric: how much of its idle life is spent in wall contact
+    wallContactFraction: allSamples ? +(touchSamples / allSamples).toFixed(2) : 0
+  };
 });
 
 // ---- C. cruiser reverses at corridor ends, not canvas edges -------------
@@ -166,6 +183,7 @@ if (drift.fractionInBottomThird > 0.6) fails.push(`A: blueprint fish still hug t
 if (penned.escapeSamples > 0) fails.push('B: penned fish left its room');
 if (penned.cellsVisited < 8) fails.push(`B: penned fish barely patrolled (${penned.cellsVisited} cells)`);
 if (penned.stalledSecs > 6) fails.push(`D: penned fish stalled ${penned.stalledSecs}s — escalate to per-fish paths`);
+if (penned.wallContactFraction > 0.35) fails.push(`B: penned fish grinds the wall (${penned.wallContactFraction} of samples in contact)`);
 if (corridor.leftCorridorSamples > 0) fails.push('C: cruiser left the corridor');
 if (corridor.pxTravelled < 1500) fails.push(`C: cruiser barely patrolled (${corridor.pxTravelled}px)`);
 if (corridor.xMax - corridor.xMin < 200) fails.push(`C: cruiser did not traverse the corridor (${corridor.xMax - corridor.xMin}px span)`);

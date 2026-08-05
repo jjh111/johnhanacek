@@ -26,8 +26,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Raleway:wght@100;200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles/shared.css?v=1.14">
-    <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.14">
+    <link rel="stylesheet" href="./styles/shared.css?v=1.15">
+    <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.15">
 
     <!-- Model Viewer for 3D content -->
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
@@ -240,6 +240,108 @@
             }
         }
 
+        /* Info button — shows/hides the maze guide. Mirrors index.html's. */
+        .info-btn {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            font-weight: 500;
+            line-height: 1;
+            color: rgba(125, 216, 247, 0.5);
+            background: rgba(10, 22, 40, 0.4);
+            border: 1px solid rgba(77, 201, 246, 0.2);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 0;
+            flex-shrink: 0;
+        }
+        .info-btn:hover {
+            color: rgba(125, 216, 247, 0.9);
+            border-color: rgba(77, 201, 246, 0.5);
+            background: rgba(10, 22, 40, 0.7);
+        }
+        .info-btn.active {
+            color: rgba(125, 216, 247, 0.9);
+            border-color: rgba(77, 201, 246, 0.5);
+            background: rgba(77, 201, 246, 0.12);
+        }
+
+        /* Maze guide card — bottom-centre, above the controls. Opens on load and
+           retires itself once you've clearly got the idea, same as the homepage. */
+        .maze-guide {
+            position: fixed;
+            bottom: 2.5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 6;
+            display: flex;
+            flex-direction: column;
+            gap: 0.55rem;
+            max-width: min(92vw, 30rem);
+            background: rgba(10, 22, 40, 0.72);
+            border: 1px solid rgba(125, 216, 247, 0.15);
+            border-radius: 10px;
+            padding: 0.9rem 1.4rem;
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            font-family: 'JetBrains Mono', monospace;
+            transition: opacity 0.5s ease, transform 0.5s ease;
+            touch-action: pan-y; /* vertical swipes scroll the page, not the canvas */
+        }
+        .maze-guide.hidden {
+            opacity: 0;
+            pointer-events: none;
+            transform: translateX(-50%) translateY(8px);
+        }
+        .maze-guide .guide-title {
+            font-size: 0.65rem;
+            letter-spacing: 0.2em;
+            color: rgba(125, 216, 247, 0.5);
+            text-transform: uppercase;
+        }
+        .maze-guide .guide-rows {
+            display: flex;
+            flex-direction: column;
+            gap: 0.32rem;
+        }
+        .maze-guide .guide-row {
+            display: flex;
+            align-items: baseline;
+            gap: 0.6rem;
+            font-size: 0.72rem;
+            color: rgba(125, 216, 247, 0.75);
+            letter-spacing: 0.05em;
+        }
+        .maze-guide .guide-row .guide-glyph {
+            font-size: 0.9rem;
+            width: 1.3rem;
+            text-align: center;
+            flex-shrink: 0;
+            color: rgba(125, 216, 247, 0.55);
+        }
+        .maze-guide .guide-note {
+            margin-top: 0.1rem;
+            font-size: 0.62rem;
+            color: rgba(125, 216, 247, 0.45);
+            letter-spacing: 0.08em;
+            line-height: 1.5;
+        }
+        @media (max-width: 600px) {
+            .maze-guide {
+                bottom: 4.2rem;
+                padding: 0.75rem 1rem;
+            }
+            .maze-guide .guide-row { font-size: 0.66rem; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .maze-guide { transition: none; }
+        }
+
         /* Canvas button style (layout handled by shared.css) */
         .canvas-btn {
             font-family: 'JetBrains Mono', monospace;
@@ -432,8 +534,21 @@
             <span class="hint-text">draw here</span>
         </div>
 
+        <!-- Maze guide — open on load, retires itself after enough strokes -->
+        <div class="maze-guide" id="mazeGuide" role="note" aria-label="How the fish maze works">
+            <span class="guide-title">✎ &nbsp;draw the maze</span>
+            <div class="guide-rows">
+                <span class="guide-row"><span class="guide-glyph">▢</span> draw a shape — its outline becomes a wall</span>
+                <span class="guide-row"><span class="guide-glyph">◠</span> draw a loop — a fish</span>
+                <span class="guide-row"><span class="guide-glyph">·</span> tap — drop food, and lead fish to it</span>
+                <span class="guide-row"><span class="guide-glyph">⌁</span> scribble across a wall — rub it out</span>
+            </div>
+            <span class="guide-note">Walls are the line you drew, so a rectangle is a pen and a circle a ring tank — the inside stays open water. Erasing is literal: your stroke has to cross a wall a few times to rub it out, so a line drawn straight through is safe.</span>
+        </div>
+
         <!-- Canvas Controls -->
         <div class="canvas-controls">
+            <button class="info-btn" id="toggleGuide" aria-label="Toggle maze instructions" title="How this works">i</button>
             <button class="canvas-btn" id="clearCanvas">Clear</button>
             <label class="canvas-toggle">
                 <input type="checkbox" id="toggleLabels">
@@ -956,8 +1071,8 @@
     </script>
 
     <!-- Hero Canvas Drawing Interaction -->
-    <script src="./scripts/shape-detection.js?v=1.14"></script>
-    <script src="./scripts/fish-engine.js?v=1.14"></script>
+    <script src="./scripts/shape-detection.js?v=1.15"></script>
+    <script src="./scripts/fish-engine.js?v=1.15"></script>
     <script>
         const canvas = document.getElementById('heroCanvas');
         const ctx = canvas.getContext('2d');
@@ -2469,6 +2584,36 @@
         });
         fishLayer.setInfoLabels(document.getElementById('toggleLabels').checked);
 
+        // Maze guide — open on load, retires once you've drawn enough to have the
+        // idea. Same contract as index.html's draw hint: a pure in-memory counter,
+        // no storage, so it comes back on every visit rather than silently never
+        // appearing again for a returning visitor. The ℹ button toggles it back.
+        (function initMazeGuide() {
+            const guide = document.getElementById('mazeGuide');
+            const btn = document.getElementById('toggleGuide');
+            if (!guide) return;
+            const GUIDE_THRESHOLD = 8; // strokes before it retires itself
+            let strokeCount = 0;
+
+            if (btn) {
+                btn.classList.add('active'); // starts active — the card is open
+                btn.addEventListener('click', () => {
+                    guide.classList.toggle('hidden');
+                    btn.classList.toggle('active', !guide.classList.contains('hidden'));
+                });
+            }
+
+            // Count completed strokes, not presses, so it stays put while drawing.
+            canvas.addEventListener('pointerup', () => {
+                if (strokeCount >= GUIDE_THRESHOLD) return;
+                strokeCount++;
+                if (strokeCount >= GUIDE_THRESHOLD) {
+                    guide.classList.add('hidden');
+                    if (btn) btn.classList.remove('active');
+                }
+            });
+        })();
+
         // Update cursor and hover state when moving over glyphs
         canvas.addEventListener('mousemove', (e) => {
             const rect = canvas.getBoundingClientRect();
@@ -2768,8 +2913,8 @@
             resizeMetaMedium();
         })();
     </script>
-<script src="./scripts/search-overlay.js?v=1.14" defer></script>
+<script src="./scripts/search-overlay.js?v=1.15" defer></script>
 <script>document.addEventListener('DOMContentLoaded',()=>{const t=document.querySelector('.nav-title');if(t)t.dataset.short='JH';document.querySelectorAll('.nav-right a').forEach(a=>{const w=a.textContent.trim().split(/\s+/);a.dataset.short=w.length>1?w.map(x=>x[0]).join('').toUpperCase().slice(0,2):a.textContent.trim().slice(0,2).toUpperCase()})});</script>
-    <script src="./scripts/jh-chrome.js?v=1.14" defer></script>
+    <script src="./scripts/jh-chrome.js?v=1.15" defer></script>
 </body>
 </html>
