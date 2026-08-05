@@ -26,8 +26,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Raleway:wght@100;200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles/shared.css?v=1.15">
-    <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.15">
+    <link rel="stylesheet" href="./styles/shared.css?v=1.16">
+    <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.16">
 
     <!-- Model Viewer for 3D content -->
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
@@ -274,7 +274,10 @@
         /* Maze guide card — bottom-centre, above the controls. Opens on load and
            retires itself once you've clearly got the idea, same as the homepage. */
         .maze-guide {
-            position: fixed;
+            /* Absolute, not fixed: anchored to the hero so it scrolls away once
+               you reach the case study. Fixed made it hover over the content all
+               the way down the page. Matches how index.html's hint behaves. */
+            position: absolute;
             bottom: 2.5rem;
             left: 50%;
             transform: translateX(-50%);
@@ -331,6 +334,42 @@
             letter-spacing: 0.08em;
             line-height: 1.5;
         }
+        /* Tap-to-explore affordance — touch only, mirroring index.html's hint CTA.
+           The card sits over a fullscreen drawing canvas, so without this a phone
+           visitor has no visible cue that a case study exists below. */
+        .maze-guide .guide-scroll-cta {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            margin-top: 0.55rem;
+            padding: 0.5rem 0.95rem;
+            border: 1px solid rgba(125, 216, 247, 0.35);
+            border-radius: 999px;
+            background: rgba(77, 201, 246, 0.1);
+            color: rgba(125, 216, 247, 0.95);
+            font-size: 0.7rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            text-decoration: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .maze-guide .guide-scroll-cta svg {
+            width: 1rem;
+            height: 1rem;
+            animation: guide-bob 1.8s ease-in-out infinite;
+        }
+        @keyframes guide-bob {
+            0%, 100% { transform: translateY(0); }
+            50%      { transform: translateY(3px); }
+        }
+        @media (hover: none) and (pointer: coarse) {
+            .maze-guide .guide-scroll-cta { display: inline-flex; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .maze-guide .guide-scroll-cta svg { animation: none; }
+        }
+
         @media (max-width: 600px) {
             .maze-guide {
                 bottom: 4.2rem;
@@ -514,7 +553,7 @@
             </a>
             <a href="index.html" class="shape-link" aria-label="Home">
                 <svg class="shape triangle" viewBox="0 0 40 40"><polygon points="20,8 34,32 6,32"/></svg>
-                <img class="shape-label shape-label-img" src="./Assets/footer-JHsig.png" alt="JH">
+                <img class="shape-label shape-label-img" src="./Assets/JHsig.svg" alt="JH">
             </a>
             <a href="design.html" class="shape-link active" aria-label="Design" aria-current="page">
                 <svg class="shape rounded-square" viewBox="0 0 40 40"><rect x="6" y="6" width="28" height="28" rx="6"/></svg>
@@ -544,6 +583,9 @@
                 <span class="guide-row"><span class="guide-glyph">⌁</span> scribble across a wall — rub it out</span>
             </div>
             <span class="guide-note">Walls are the line you drew, so a rectangle is a pen and a circle a ring tank — the inside stays open water. Erasing is literal: your stroke has to cross a wall a few times to rub it out, so a line drawn straight through is safe.</span>
+            <a href="#intro" class="guide-scroll-cta">tap or swipe here to explore
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+            </a>
         </div>
 
         <!-- Canvas Controls -->
@@ -558,7 +600,16 @@
         </div>
 
         <div class="hero-content">
-            <h1><span class="jh-sig"><span class="sr-only">JH</span><img src="./Assets/footer-JHsig.png" alt="" aria-hidden="true"></span> <span class="meta">Design</span></h1>
+            <h1><span class="jh-sig"><span class="sr-only">JH</span><img src="./Assets/JHsig.svg" alt="" aria-hidden="true"></span> <span class="meta">Design</span></h1>
+            <!-- Persistent way off the fullscreen canvas. Same component as the
+                 homepage; .oval-scroll-btn already carries pointer-events:auto,
+                 which is what lets it win over `.hero-content * { none }`. -->
+            <a href="#intro" class="oval-scroll-btn" aria-label="Scroll to content">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M7 13l5 5 5-5M7 6l5 5 5-5"/>
+                </svg>
+                <span class="oval-scroll-label">view content</span>
+            </a>
             <!-- TODO: Finalize tagline and byline copy before launch
             <p class="tagline">DRAW · RECOGNIZE · EXPLORE</p>
             <p class="byline"><span class="role">Interactive shape recognition demo</span></p>
@@ -1071,8 +1122,8 @@
     </script>
 
     <!-- Hero Canvas Drawing Interaction -->
-    <script src="./scripts/shape-detection.js?v=1.15"></script>
-    <script src="./scripts/fish-engine.js?v=1.15"></script>
+    <script src="./scripts/shape-detection.js?v=1.16"></script>
+    <script src="./scripts/fish-engine.js?v=1.16"></script>
     <script>
         const canvas = document.getElementById('heroCanvas');
         const ctx = canvas.getContext('2d');
@@ -2913,8 +2964,8 @@
             resizeMetaMedium();
         })();
     </script>
-<script src="./scripts/search-overlay.js?v=1.15" defer></script>
+<script src="./scripts/search-overlay.js?v=1.16" defer></script>
 <script>document.addEventListener('DOMContentLoaded',()=>{const t=document.querySelector('.nav-title');if(t)t.dataset.short='JH';document.querySelectorAll('.nav-right a').forEach(a=>{const w=a.textContent.trim().split(/\s+/);a.dataset.short=w.length>1?w.map(x=>x[0]).join('').toUpperCase().slice(0,2):a.textContent.trim().slice(0,2).toUpperCase()})});</script>
-    <script src="./scripts/jh-chrome.js?v=1.15" defer></script>
+    <script src="./scripts/jh-chrome.js?v=1.16" defer></script>
 </body>
 </html>

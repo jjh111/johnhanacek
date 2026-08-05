@@ -169,7 +169,8 @@ CNAME                     — www.johnhanacek.com (GitHub Pages)
 Assets/
   search-chunks.json      — search index
   favicon-jhsigfrmpaper.png
-  footer-JHsig.png        — signature image used in nav + footer
+  JHsig.svg               — signature used in nav + footer + hero (vector; white fill baked in)
+  footer-JHsig.png        — superseded raster signature; still referenced by the frozen Archive/ snapshots, so it stays
   socialgraph-jhcom.webp  — OG image
   FISH_*.md               — fish system design/technical docs
   DemosPlayground/        — interactive demos loaded by playground.html + test-llm/test-vision PoCs

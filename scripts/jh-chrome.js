@@ -14,11 +14,11 @@
   const SITE = {
     year: 2026,
     org: 'JHDesign LLC',
-    version: '1.15', // ← THE site version. Footer badge, ?v= cache-bust, and README all read this (run scripts/sync-version.mjs after bumping).
+    version: '1.16', // ← THE site version. Footer badge, ?v= cache-bust, and README all read this (run scripts/sync-version.mjs after bumping).
     versionNote: 'Made with Claude Code &amp; Open Code',
     github: 'https://github.com/jjh111/johnhanacek',
     githubLabel: 'github.com/jjh111/johnhanacek',
-    sig: './Assets/footer-JHsig.png'
+    sig: './Assets/JHsig.svg'
   };
   window.JH_SITE = SITE;
 
@@ -46,7 +46,7 @@
       label: '' },
     { key: 'home', href: 'index.html', cls: 'shape-link', aria: 'Home',
       svg: '<svg class="shape triangle" viewBox="0 0 40 40"><polygon points="20,8 34,32 6,32"/></svg>',
-      label: '<img class="shape-label shape-label-img" src="./Assets/footer-JHsig.png" alt="JH">' },
+      label: '<img class="shape-label shape-label-img" src="./Assets/JHsig.svg" alt="JH">' },
     { key: 'design', href: 'design.html', cls: 'shape-link', aria: 'Design',
       svg: '<svg class="shape rounded-square" viewBox="0 0 40 40"><rect x="6" y="6" width="28" height="28" rx="6"/></svg>',
       label: '<span class="shape-label">DESIGN</span>' },
