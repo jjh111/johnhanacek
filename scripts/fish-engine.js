@@ -74,10 +74,29 @@
             ctx.restore();
         }
 
-        // ---- Maze walls (setObstacles) ------------------------------------
-        // Walls are NOT coral: fish swim close (tight, size-based standoff)
-        // and can NEVER pass through (hard per-frame containment). They only
-        // borrow the coral machinery for school-waypoint routing.
+        // ---- Solids: coral and walls, told apart by CAPABILITY not by type --
+        // Everything a fish has to reckon with lives in the `coral` array, but
+        // what a given solid *affords* is data, so a new behaviour asks "does
+        // this solid shelter?" rather than "is this a wall?". Previously every
+        // coral behaviour carried its own `if (c.isExternal) return` opt-out —
+        // seven of them — which meant any new coral behaviour silently applied
+        // itself to maze walls until someone remembered to add guard number
+        // eight. Capabilities are opt-IN, so omission fails safe.
+        //
+        // `isExternal` survives as the marker for "supplied by the host page"
+        // (design.html and the test suites filter on it) — it just no longer
+        // decides behaviour.
+        const SOLID_KINDS = {
+            // homing/haven target, lifts medium-fish cruise lanes, soft avoid
+            // buffer, drawn by the engine
+            coral: { blocks: false, shelters: true,  raisesLane: true,  softBuffer: true,  engineRenders: true  },
+            // hard barrier only: fish swim close (tight, size-based standoff)
+            // and can NEVER pass through. Host page draws it.
+            wall:  { blocks: true,  shelters: false, raisesLane: false, softBuffer: false, engineRenders: false }
+        };
+        // Solids created before kinds existed have no `kind` and are coral.
+        function solidCaps(c) { return SOLID_KINDS[c && c.kind] || SOLID_KINDS.coral; }
+
         let wallRects = [];
         // Floor speed for wall sliding — a fish in contact always keeps moving
         // along the face, so "touching a wall" can never mean "stopped".
@@ -1626,7 +1645,7 @@
                         let nearestCoral = null;
                         let nearestCoralDist = Infinity;
                         coral.forEach(c => {
-                            if (!c.settled || c.isExternal) return; // walls are not havens
+                            if (!c.settled || !solidCaps(c).shelters) return; // only sheltering solids are havens
                             const d = Math.sqrt((c.x - f.x) ** 2 + (c.y - f.y) ** 2);
                             if (d < nearestCoralDist) {
                                 nearestCoralDist = d;
@@ -1835,7 +1854,7 @@
                             if (f.cruiseLaneY !== undefined) {
                                 let coralCeil = h * 0.65;
                                 for (let ci = 0; ci < coral.length; ci++) {
-                                    if (coral[ci].isExternal) continue; // walls don't raise cruise lanes
+                                    if (!solidCaps(coral[ci]).raisesLane) continue; // only lane-raising solids lift the ceiling
                                     const cTop = coral[ci].y - (coral[ci].shape?.height || 60) * 0.5 - bw;
                                     if (cTop < coralCeil) coralCeil = cTop;
                                 }
@@ -2070,7 +2089,7 @@
                                 let coralCeiling = h * 0.65; // default if no coral exists
                                 if (coral.length > 0) {
                                     for (let ci = 0; ci < coral.length; ci++) {
-                                        if (coral[ci].isExternal) continue; // walls don't raise cruise lanes
+                                        if (!solidCaps(coral[ci]).raisesLane) continue; // only lane-raising solids lift the ceiling
                                         const cTop = coral[ci].y - (coral[ci].shape?.height || 60) * 0.5;
                                         if (cTop < coralCeiling) coralCeiling = cTop;
                                     }
@@ -2243,7 +2262,7 @@
                             let nearestCoral = null;
                             let nearestCoralDist = Infinity;
                             coral.forEach(c => {
-                                if (!c.settled || c.isExternal) return; // walls are not havens
+                                if (!c.settled || !solidCaps(c).shelters) return; // only sheltering solids are havens
                                 const d = Math.sqrt((c.x - f.x) ** 2 + (c.y - f.y) ** 2);
                                 if (d < nearestCoralDist) {
                                     nearestCoralDist = d;
@@ -2562,7 +2581,7 @@
                                     let homeCoral = null;
                                     let homeCoralDist = Infinity;
                                     coral.forEach(c => {
-                                        if (!c.settled || c.isExternal) return; // walls are not homes
+                                        if (!c.settled || !solidCaps(c).shelters) return; // only sheltering solids are homes
                                         const d = Math.sqrt((c.x - f.x) ** 2 + (c.y - f.y) ** 2);
                                         if (d < homeCoralDist) {
                                             homeCoralDist = d;
@@ -3009,7 +3028,7 @@
                 f.inCoralEmergency = false; // Reset each frame before coral loop
                 coral.forEach(c => {
                     if (!c.settled || !c.shape) return;
-                    if (c.isExternal) return; // walls use applyWallPhysics (tight standoff), not coral buffers
+                    if (!solidCaps(c).softBuffer) return; // blocking solids use applyWallPhysics, not soft buffers
                     const coralW = (c.shape.width || 50) * 0.5;
                     const coralH = c.shape.height || 60;
                     const coralTop = c.y - coralH; // Top of coral (grows upward from base)
@@ -3971,7 +3990,7 @@
 
             coral.forEach((c, ci) => {
                 if (!c.shape) return;
-                if (c.isExternal) return; // wall obstacle via setObstacles — physics only, host page renders it
+                if (!solidCaps(c).engineRenders) return; // host page draws its own solids (maze walls)
 
                 const shape = c.shape;
                 const color = aquaColors.coral[c.id % aquaColors.coral.length];
@@ -5608,6 +5627,7 @@
                     if (coral.length >= MAX_CORAL) coral.shift();
                     coral.push({
                         id,
+                        kind: 'coral',       // shelters + raises lanes + soft buffer — see SOLID_KINDS
                         shape: classified.shape,
                         x: classified.center.x,
                         y: classified.center.y,
@@ -5924,7 +5944,8 @@
                 (list || []).forEach((o, i) => {
                     coral.push({
                         id: 'ext-' + (o.id != null ? o.id : i),
-                        isExternal: true,
+                        kind: 'wall',        // blocks only — see SOLID_KINDS
+                        isExternal: true,    // marker: supplied by the host page
                         x: o.x, y: o.y,
                         settled: true,
                         shape: { width: o.width, height: o.height }
