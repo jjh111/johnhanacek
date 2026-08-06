@@ -782,7 +782,11 @@
         }
         let { MAX_JELLYFISH, MAX_LARGE_FISH, MAX_MEDIUM_FISH, MAX_SMALL_FISH,
               MAX_FISH, MAX_CORAL, MAX_BUBBLES, MAX_FOOD } = computeEntityLimits();
-        const FOOD_LIFETIME = 15000;
+        // How long a pellet lasts before fading out. Per-page setting: the maze
+        // asks fish to route around walls to reach food, which takes longer than
+        // a straight swim across open water, so design.html gives it more time.
+        // The last 3s are a fade, so this is the total including that.
+        const FOOD_LIFETIME = opts.foodLifetime || 15000;
         const LINE_DURATION = 1500;
 
         // Debug mode - toggle with UI
