@@ -1,0 +1,2100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 142 142'%3E%3Cpath d='M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z' fill='%232a2520'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenProse — Responsibilities as a Service</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@300;400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ================================================================
+   APPROACH J v2 — TUFTE PERFECTED
+   Every element measured to the grid. Sparklines woven into prose.
+   Margin notes. Small multiples. Maximum data-ink ratio.
+   Inspired by: Beautiful Evidence, Envisioning Information,
+   The Visual Display of Quantitative Information.
+   "Graphical excellence is that which gives to the viewer the
+   greatest number of ideas in the shortest time with the least
+   ink in the smallest space." — Edward Tufte
+   ================================================================ */
+
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    /* The Tufte palette: warm paper, pure ink */
+    --paper: #fffff8;
+    --paper-warm: #fdfaf5;
+    --rule: #e0d8cc;
+    --rule-light: #ece6db;
+    --ink: #111111;
+    --ink-secondary: #333333;
+    --ink-tertiary: #6b6459;
+    --ink-faint: #a09888;
+    --ink-ghost: #c8bfb2;
+
+    /* Dark sections */
+    --void: #0c0c0b;
+    --void-warm: #141310;
+    --void-rule: #262420;
+    --void-rule-light: #1e1c18;
+    --light: rgba(255, 255, 248, 0.92);
+    --light-secondary: rgba(255, 255, 248, 0.62);
+    --light-tertiary: rgba(255, 255, 248, 0.35);
+    --light-faint: rgba(255, 255, 248, 0.14);
+
+    /* Signal — one accent, used sparingly */
+    --signal: #a0522d;
+    --signal-dim: rgba(160, 82, 45, 0.55);
+
+    /* Type scale — based on 17px root, modular scale 1.2 */
+    --font-body: 'EB Garamond', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+    --font-mono: 'JetBrains Mono', 'Menlo', 'Consolas', monospace;
+    --font-ui: 'Inter', -apple-system, system-ui, sans-serif;
+
+    /* Grid: 12-column on 960px */
+    --content-max: 660px;
+    --wide-max: 960px;
+    --margin-col: 220px;
+    --gutter: 24px;
+    --baseline: 28px; /* line-height grid */
+    --half-baseline: 14px;
+}
+
+html {
+    font-size: 17px;
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font-body);
+    font-weight: 400;
+    line-height: 1.647; /* 28px baseline = 17 * 1.647 */
+    color: var(--ink);
+    background: var(--paper);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: 'kern' 1, 'liga' 1, 'onum' 1;
+    overflow-x: hidden;
+}
+
+/* ================================================================
+   GRID SYSTEM — mathematically precise
+   Content: 660px centered
+   Wide: 960px centered
+   With-margin: 660px content + 24px gutter + 220px sidenote = 904px
+   ================================================================ */
+
+.content {
+    max-width: var(--content-max);
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: var(--gutter);
+    padding-right: var(--gutter);
+}
+
+.content-wide {
+    max-width: var(--wide-max);
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: var(--gutter);
+    padding-right: var(--gutter);
+}
+
+.with-margin {
+    max-width: calc(var(--content-max) + var(--gutter) + var(--margin-col));
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: var(--gutter);
+    padding-right: var(--gutter);
+    display: grid;
+    grid-template-columns: 1fr var(--margin-col);
+    gap: var(--gutter);
+}
+
+/* ================================================================
+   TYPOGRAPHY — Tufte book style
+   ================================================================ */
+
+h1 {
+    font-family: var(--font-body);
+    font-weight: 400;
+    font-size: 2.488rem; /* ~42px */
+    line-height: 1.143; /* 48px = 2 baselines approx */
+    letter-spacing: -0.01em;
+    font-feature-settings: 'kern' 1, 'liga' 1, 'onum' 0, 'lnum' 1;
+}
+
+h2 {
+    font-family: var(--font-body);
+    font-weight: 400;
+    font-style: italic;
+    font-size: 1.44rem; /* ~24.5px */
+    line-height: 1.143;
+    letter-spacing: 0;
+    margin-bottom: var(--half-baseline);
+}
+
+h3 {
+    font-family: var(--font-ui);
+    font-weight: 500;
+    font-size: 0.706rem; /* 12px */
+    line-height: var(--baseline);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+p {
+    margin-bottom: var(--baseline);
+}
+
+p:last-child {
+    margin-bottom: 0;
+}
+
+.lead {
+    font-size: 1.2rem;
+    line-height: 1.556; /* 28px */
+}
+
+.small-text {
+    font-size: 0.824rem; /* 14px */
+    line-height: 1.429; /* 20px */
+}
+
+.data-label {
+    font-family: var(--font-mono);
+    font-size: 0.588rem; /* 10px */
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.data-value {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-feature-settings: 'tnum' 1;
+}
+
+code, .code-block {
+    font-family: var(--font-mono);
+    font-size: 0.824em;
+}
+
+.code-block {
+    font-size: 0.765rem; /* 13px */
+    line-height: 1.538; /* 20px */
+    white-space: pre;
+    overflow-x: auto;
+}
+
+/* Thin rule — the only ornament */
+.thin-rule {
+    border: none;
+    border-top: 1px solid var(--rule);
+    margin: calc(var(--baseline) * 1.5) 0;
+}
+
+.section-dark .thin-rule {
+    border-top-color: var(--void-rule);
+}
+
+/* ================================================================
+   SIDENOTES / MARGIN NOTES — Tufte's signature element
+   Numbered in the margin, aligned to reference in body text.
+   ================================================================ */
+
+.sidenote-ref {
+    font-family: var(--font-mono);
+    font-size: 0.588em; /* 10px equiv */
+    vertical-align: super;
+    line-height: 0;
+    color: var(--ink-faint);
+    cursor: default;
+}
+
+.margin-note-area {
+    position: relative;
+}
+
+.sidenote {
+    font-size: 0.824rem; /* 14px */
+    line-height: 1.429;
+    color: var(--ink-tertiary);
+    margin-bottom: calc(var(--baseline) * 0.75);
+}
+
+.sidenote .sidenote-num {
+    font-family: var(--font-mono);
+    font-size: 0.588rem;
+    color: var(--ink-faint);
+    display: block;
+    margin-bottom: 2px;
+}
+
+.sidenote canvas {
+    display: block;
+    margin-top: 6px;
+}
+
+/* ================================================================
+   SPARKLINES — word-sized data graphics
+   These are the heart of the Tufte approach. Tiny, precise,
+   embedded directly in running text or data tables.
+   ================================================================ */
+
+.sparkline-inline {
+    display: inline-block;
+    vertical-align: middle;
+    position: relative;
+    top: -1px;
+    margin: 0 3px;
+}
+
+.sparkline-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.sparkline-label .data-value {
+    font-size: 0.824rem;
+}
+
+/* ================================================================
+   SECTIONS
+   ================================================================ */
+
+.section-light {
+    background: var(--paper);
+    color: var(--ink);
+}
+
+.section-warm {
+    background: var(--paper-warm);
+    color: var(--ink);
+}
+
+.section-dark {
+    background: var(--void);
+    color: var(--light);
+}
+
+.section-pad {
+    padding-top: calc(var(--baseline) * 3); /* 84px */
+    padding-bottom: calc(var(--baseline) * 3);
+}
+
+.section-pad-lg {
+    padding-top: calc(var(--baseline) * 4); /* 112px */
+    padding-bottom: calc(var(--baseline) * 4);
+}
+
+/* ================================================================
+   HERO — quiet, authoritative
+   ================================================================ */
+
+.hero {
+    padding-top: calc(var(--baseline) * 6);
+    padding-bottom: calc(var(--baseline) * 3);
+}
+
+.hero h1 {
+    margin-bottom: var(--baseline);
+}
+
+.hero .lead {
+    color: var(--ink-secondary);
+    max-width: 520px;
+}
+
+/* Hero data table: key metrics with inline sparklines */
+.hero-data-table {
+    margin-top: calc(var(--baseline) * 2);
+    border-top: 2px solid var(--ink);
+    border-bottom: 1px solid var(--rule);
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.hero-data-table th {
+    font-family: var(--font-mono);
+    font-size: 0.588rem;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-tertiary);
+    text-align: left;
+    padding: 8px 0 6px;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: bottom;
+}
+
+.hero-data-table th:nth-child(2) { text-align: right; }
+.hero-data-table th:nth-child(3) { text-align: center; padding-left: 12px; padding-right: 12px; }
+.hero-data-table th:nth-child(4) { text-align: right; }
+
+.hero-data-table td {
+    padding: 7px 0 6px;
+    border-bottom: 1px solid var(--rule-light);
+    vertical-align: middle;
+    font-size: 0.882rem;
+}
+
+.hero-data-table td:first-child {
+    font-family: var(--font-mono);
+    font-size: 0.765rem;
+    color: var(--ink-secondary);
+    width: 38%;
+}
+
+.hero-data-table td:nth-child(2) {
+    text-align: right;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 0.882rem;
+    font-feature-settings: 'tnum' 1;
+    width: 18%;
+}
+
+.hero-data-table td:nth-child(3) {
+    text-align: center;
+    padding: 7px 12px 6px;
+    width: 26%;
+}
+
+.hero-data-table td:nth-child(4) {
+    text-align: right;
+    font-family: var(--font-mono);
+    font-size: 0.706rem;
+    color: var(--ink-tertiary);
+    font-feature-settings: 'tnum' 1;
+    width: 18%;
+}
+
+.hero-data-table tr:last-child td {
+    border-bottom: none;
+}
+
+/* ================================================================
+   PROBLEM SECTION — Small multiples grid, squared to edges
+   ================================================================ */
+
+.sm-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: var(--half-baseline);
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--void-rule);
+}
+
+.sm-section-header h2 {
+    color: var(--light);
+    font-style: italic;
+    margin-bottom: 0;
+}
+
+.sm-section-header .data-label {
+    color: var(--light-tertiary);
+}
+
+.small-multiples-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0;
+    border-top: 1px solid var(--void-rule);
+    border-left: 1px solid var(--void-rule);
+}
+
+.small-multiple {
+    border-right: 1px solid var(--void-rule);
+    border-bottom: 1px solid var(--void-rule);
+    padding: 10px 10px 8px;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+    position: relative;
+}
+
+.small-multiple.visible {
+    opacity: 1;
+    transform: none;
+}
+
+.small-multiple .data-label {
+    color: var(--light-tertiary);
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.529rem; /* 9px */
+    letter-spacing: 0.08em;
+}
+
+.small-multiple canvas {
+    display: block;
+    width: 100%;
+    height: 44px;
+}
+
+.small-multiple .sm-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-top: 5px;
+}
+
+.small-multiple .data-value {
+    font-size: 0.706rem;
+    color: var(--light-secondary);
+}
+
+.small-multiple .sm-delta {
+    font-family: var(--font-mono);
+    font-size: 0.588rem;
+    color: var(--signal-dim);
+}
+
+/* Summary row below small multiples */
+.sm-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    border-left: 1px solid var(--void-rule);
+    margin-bottom: calc(var(--baseline) * 1.5);
+}
+
+.sm-summary-cell {
+    border-right: 1px solid var(--void-rule);
+    border-bottom: 1px solid var(--void-rule);
+    padding: 10px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.sm-summary-cell .data-label {
+    color: var(--light-tertiary);
+    font-size: 0.529rem;
+}
+
+.sm-summary-cell .data-value {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 0.882rem;
+    color: var(--light);
+}
+
+/* ================================================================
+   RESPONSIBILITY DEFINITION — three-column with embedded sparklines
+   ================================================================ */
+
+.resp-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    border-top: 2px solid var(--ink);
+    border-left: 1px solid var(--rule);
+    margin-top: var(--baseline);
+}
+
+.resp-col {
+    border-right: 1px solid var(--rule);
+    padding: var(--half-baseline) var(--half-baseline) var(--half-baseline);
+}
+
+.resp-col h3 {
+    color: var(--ink-tertiary);
+    margin-bottom: var(--half-baseline);
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--rule-light);
+}
+
+.resp-col .code-block {
+    background: transparent;
+    padding: 0;
+    margin-bottom: var(--half-baseline);
+    color: var(--ink-secondary);
+}
+
+.resp-col .sparkline-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 6px;
+    border-top: 1px solid var(--rule-light);
+}
+
+.resp-col .sparkline-row .data-label {
+    color: var(--ink-faint);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.resp-col .sparkline-row .data-value {
+    font-size: 0.706rem;
+    color: var(--ink-tertiary);
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+/* ================================================================
+   MAREY DIAGRAM — the showpiece visualization
+   Perfectly squared to the grid. Fine tick marks. Stage labels
+   aligned left. Time flows right.
+   ================================================================ */
+
+.marey-container {
+    position: relative;
+}
+
+#marey-canvas {
+    display: block;
+    width: 100%;
+    height: 380px;
+}
+
+.marey-annotation {
+    margin-top: var(--half-baseline);
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0 var(--gutter);
+}
+
+.marey-legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding-top: 8px;
+    border-top: 1px solid var(--void-rule);
+}
+
+.marey-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--font-mono);
+    font-size: 0.588rem;
+    color: var(--light-tertiary);
+}
+
+.marey-legend-item .legend-swatch {
+    width: 16px;
+    height: 2px;
+    flex-shrink: 0;
+}
+
+.marey-caption {
+    font-size: 0.824rem;
+    line-height: 1.429;
+    color: var(--light-tertiary);
+    padding-top: 8px;
+    border-top: 1px solid var(--void-rule);
+}
+
+/* ================================================================
+   DATA TABLE — sparkline-enriched table (Tufte sparkline table)
+   The centerpiece: a table where every row contains a sparkline,
+   current value, range, and trend — maximum information density.
+   ================================================================ */
+
+.data-table-section {
+    padding: calc(var(--baseline) * 2.5) 0;
+    border-top: 1px solid var(--rule);
+}
+
+.sparkline-table {
+    width: 100%;
+    border-collapse: collapse;
+    border-top: 2px solid var(--ink);
+    margin-top: var(--half-baseline);
+}
+
+.sparkline-table caption {
+    text-align: left;
+    font-family: var(--font-body);
+    font-style: italic;
+    font-size: 1.2rem;
+    margin-bottom: var(--half-baseline);
+    caption-side: top;
+}
+
+.sparkline-table thead th {
+    font-family: var(--font-mono);
+    font-size: 0.588rem;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-tertiary);
+    text-align: left;
+    padding: 6px 8px 5px 0;
+    border-bottom: 1px solid var(--ink);
+    vertical-align: bottom;
+}
+
+.sparkline-table thead th.num {
+    text-align: right;
+    padding-right: 0;
+    padding-left: 8px;
+}
+
+.sparkline-table thead th.spark-col {
+    text-align: center;
+}
+
+.sparkline-table tbody td {
+    padding: 5px 8px 4px 0;
+    border-bottom: 1px solid var(--rule-light);
+    vertical-align: middle;
+    font-size: 0.882rem;
+}
+
+.sparkline-table tbody td.metric-name {
+    font-family: var(--font-mono);
+    font-size: 0.765rem;
+    color: var(--ink-secondary);
+    white-space: nowrap;
+}
+
+.sparkline-table tbody td.num {
+    text-align: right;
+    font-family: var(--font-mono);
+    font-size: 0.824rem;
+    font-feature-settings: 'tnum' 1;
+    padding-right: 0;
+    padding-left: 8px;
+    white-space: nowrap;
+}
+
+.sparkline-table tbody td.spark-cell {
+    padding: 5px 4px 4px;
+}
+
+.sparkline-table tbody td.spark-cell canvas {
+    display: block;
+}
+
+.sparkline-table tbody td.range-cell {
+    font-family: var(--font-mono);
+    font-size: 0.647rem;
+    color: var(--ink-faint);
+    text-align: right;
+    padding-right: 0;
+    padding-left: 8px;
+    white-space: nowrap;
+}
+
+.sparkline-table tbody tr:last-child td {
+    border-bottom: 1px solid var(--rule);
+}
+
+.sparkline-table tfoot td {
+    padding: 6px 8px 0 0;
+    font-family: var(--font-mono);
+    font-size: 0.647rem;
+    color: var(--ink-faint);
+}
+
+/* ================================================================
+   CASE STUDY — before/after data grid with marginal sparklines
+   ================================================================ */
+
+.case-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    border-top: 2px solid var(--ink);
+    border-left: 1px solid var(--rule);
+    margin-top: var(--half-baseline);
+}
+
+.case-cell {
+    border-right: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    padding: 10px 10px 8px;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.case-cell.visible {
+    opacity: 1;
+    transform: none;
+}
+
+.case-cell .data-label {
+    color: var(--ink-faint);
+    display: block;
+    margin-bottom: 4px;
+    font-size: 0.529rem;
+    letter-spacing: 0.08em;
+}
+
+.case-cell canvas {
+    display: block;
+    width: 100%;
+    height: 36px;
+    margin-bottom: 4px;
+}
+
+.case-before-after {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+}
+
+.case-before {
+    font-family: var(--font-mono);
+    font-size: 0.647rem;
+    color: var(--ink-ghost);
+    text-decoration: line-through;
+}
+
+.case-after {
+    font-family: var(--font-mono);
+    font-size: 0.824rem;
+    font-weight: 500;
+    color: var(--ink);
+}
+
+/* ================================================================
+   ARCHITECTURE — prose with margin notes
+   ================================================================ */
+
+.arch-section .margin-note-area p {
+    margin-bottom: var(--baseline);
+}
+
+/* ================================================================
+   CTA — Tufte would approve: just a sentence with a link
+   ================================================================ */
+
+.cta-section {
+    padding: calc(var(--baseline) * 3) 0 calc(var(--baseline) * 5);
+    text-align: center;
+}
+
+.cta-link {
+    font-family: var(--font-body);
+    font-size: 1.2rem;
+    color: var(--ink);
+    text-decoration: none;
+    border-bottom: 1px solid var(--ink-ghost);
+    padding-bottom: 2px;
+    transition: border-color 0.3s ease;
+}
+
+.cta-link:hover {
+    border-bottom-color: var(--ink);
+}
+
+/* ================================================================
+   COLOPHON — Tufte books always have one
+   ================================================================ */
+
+.colophon {
+    padding: var(--baseline) 0 calc(var(--baseline) * 2);
+    border-top: 1px solid var(--rule);
+}
+
+.colophon p {
+    font-size: 0.765rem;
+    line-height: 1.538;
+    color: var(--ink-faint);
+    max-width: 400px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+/* ================================================================
+   TOOLTIP
+   ================================================================ */
+
+.sparkline-tooltip {
+    position: fixed;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--font-mono);
+    font-size: 0.588rem;
+    padding: 2px 5px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.12s;
+    z-index: 100;
+    white-space: nowrap;
+    letter-spacing: 0.02em;
+}
+
+/* ================================================================
+   RESPONSIVE
+   ================================================================ */
+
+@media (max-width: 960px) {
+    .with-margin {
+        grid-template-columns: 1fr;
+        max-width: var(--content-max);
+    }
+    .margin-note-area .sidenote {
+        padding-left: var(--half-baseline);
+        border-left: 1px solid var(--rule);
+    }
+}
+
+@media (max-width: 768px) {
+    :root {
+        --gutter: 16px;
+    }
+    html { font-size: 16px; }
+    h1 { font-size: 1.8rem; }
+    .hero { padding-top: calc(var(--baseline) * 3); }
+
+    .small-multiples-grid { grid-template-columns: repeat(3, 1fr); }
+    .sm-summary { grid-template-columns: 1fr; }
+    .resp-grid { grid-template-columns: 1fr; }
+    .resp-col { border-bottom: 1px solid var(--rule); }
+    .case-grid { grid-template-columns: repeat(2, 1fr); }
+
+    .sparkline-table { font-size: 0.824rem; }
+    .hero-data-table td:first-child { width: auto; }
+
+    .marey-legend { gap: 10px; }
+    .marey-annotation { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+    .small-multiples-grid { grid-template-columns: repeat(2, 1fr); }
+    .case-grid { grid-template-columns: 1fr; }
+    .hero-data-table th:nth-child(4),
+    .hero-data-table td:nth-child(4) { display: none; }
+}
+
+
+
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+  table.sparkline-table { width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: auto; word-break: break-word; }
+}
+</style>
+</head>
+<body>
+
+<div class="sparkline-tooltip" id="tooltip"></div>
+
+<!-- ================================================================
+     1. HERO — Quiet authority. Data table with sparklines.
+     ================================================================ -->
+<section class="hero section-light">
+    <div class="content">
+        <h1>OpenProse</h1>
+        <p class="lead">
+            Declare responsibilities in prose. Agents execute them autonomously. No orchestration code, no imperative DAGs, no dashboards to watch. Define what needs to happen<span class="sidenote-ref">*</span> and it does.
+        </p>
+
+        <table class="hero-data-table">
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th class="num">Current</th>
+                    <th class="spark-col">52-week trend</th>
+                    <th class="num">Range</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Installations</td>
+                    <td>6,012</td>
+                    <td><canvas id="hero-spark-installs" width="120" height="20"></canvas></td>
+                    <td>340 &ndash; 6,012</td>
+                </tr>
+                <tr>
+                    <td>Responsibilities / day</td>
+                    <td>38,400</td>
+                    <td><canvas id="hero-spark-resp" width="120" height="20"></canvas></td>
+                    <td>1.2k &ndash; 38.4k</td>
+                </tr>
+                <tr>
+                    <td>Median completion</td>
+                    <td>4.2s</td>
+                    <td><canvas id="hero-spark-latency" width="120" height="20"></canvas></td>
+                    <td>3.8 &ndash; 7.1s</td>
+                </tr>
+                <tr>
+                    <td>On-schedule rate</td>
+                    <td>99.7%</td>
+                    <td><canvas id="hero-spark-rate" width="120" height="20"></canvas></td>
+                    <td>98.1 &ndash; 99.9%</td>
+                </tr>
+                <tr>
+                    <td>GitHub stars</td>
+                    <td>1,247</td>
+                    <td><canvas id="hero-spark-stars" width="120" height="20"></canvas></td>
+                    <td>0 &ndash; 1,247</td>
+                </tr>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="4">Data as of April 2026. Sparklines show 52-week history; each pixel column is one week. Vertical scale normalized per row.</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</section>
+
+
+<!-- ================================================================
+     2. THE PROBLEM, QUANTIFIED — Small multiples
+     ================================================================ -->
+<section class="section-dark section-pad">
+    <div class="content-wide">
+        <div class="sm-section-header">
+            <h2>The attention cost of operational tooling</h2>
+            <span class="data-label" style="color: var(--light-tertiary);">Weekly hours, operations teams (n=120)</span>
+        </div>
+
+        <div class="small-multiples-grid" id="small-multiples">
+            <div class="small-multiple" data-delay="0">
+                <span class="data-label">Monitoring</span>
+                <canvas id="sm-monitoring" height="44"></canvas>
+                <div class="sm-footer">
+                    <span class="data-value">6.2 hrs</span>
+                    <span class="sm-delta">+8% YoY</span>
+                </div>
+            </div>
+            <div class="small-multiple" data-delay="60">
+                <span class="data-label">Reporting</span>
+                <canvas id="sm-reporting" height="44"></canvas>
+                <div class="sm-footer">
+                    <span class="data-value">4.8 hrs</span>
+                    <span class="sm-delta">+5% YoY</span>
+                </div>
+            </div>
+            <div class="small-multiple" data-delay="120">
+                <span class="data-label">Alerting</span>
+                <canvas id="sm-alerting" height="44"></canvas>
+                <div class="sm-footer">
+                    <span class="data-value">3.9 hrs</span>
+                    <span class="sm-delta">+12% YoY</span>
+                </div>
+            </div>
+            <div class="small-multiple" data-delay="180">
+                <span class="data-label">Scheduling</span>
+                <canvas id="sm-scheduling" height="44"></canvas>
+                <div class="sm-footer">
+                    <span class="data-value">3.4 hrs</span>
+                    <span class="sm-delta">+3% YoY</span>
+                </div>
+            </div>
+            <div class="small-multiple" data-delay="240">
+                <span class="data-label">Data sync</span>
+                <canvas id="sm-datasync" height="44"></canvas>
+                <div class="sm-footer">
+                    <span class="data-value">2.8 hrs</span>
+                    <span class="sm-delta">+15% YoY</span>
+                </div>
+            </div>
+            <div class="small-multiple" data-delay="300">
+                <span class="data-label">Compliance</span>
+                <canvas id="sm-compliance" height="44"></canvas>
+                <div class="sm-footer">
+                    <span class="data-value">2.1 hrs</span>
+                    <span class="sm-delta">+6% YoY</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="sm-summary">
+            <div class="sm-summary-cell">
+                <span class="data-label">Total weekly cost</span>
+                <span class="data-value">23.2 hrs</span>
+            </div>
+            <div class="sm-summary-cell">
+                <span class="data-label">With OpenProse</span>
+                <span class="data-value" style="color: var(--signal-dim);">0 hrs</span>
+            </div>
+            <div class="sm-summary-cell">
+                <span class="data-label">Annual savings (per team)</span>
+                <span class="data-value">$148k</span>
+            </div>
+        </div>
+
+        <p class="small-text" style="color: var(--light-tertiary); max-width: 520px;">
+            Each small multiple shows 24 months of weekly data for one operational tool category. Bar height encodes hours; the overlaid line shows the 4-week moving average. All six categories trend upward. Responsibilities eliminate the category entirely: they require a definition, not attention.
+        </p>
+    </div>
+</section>
+
+
+<!-- ================================================================
+     3. HOW IT WORKS — Three-column responsibility definition
+     ================================================================ -->
+<section class="section-light section-pad">
+    <div class="content-wide">
+        <h2>Responsibilities replace workflows</h2>
+        <p class="small-text" style="color: var(--ink-secondary); max-width: 520px;">
+            A responsibility is a declarative contract: what needs to happen, what good looks like, where results go. No orchestration code. No imperative DAGs. The session is the runtime.
+        </p>
+
+        <div class="resp-grid">
+            <div class="resp-col">
+                <h3>1. Define</h3>
+                <div class="code-block">responsibility:
+  name: revenue-report
+  schedule: weekly/monday
+  deliver_to: #finance-ops
+
+source:
+  stripe: last 7 days
+  quickbooks: current period</div>
+                <div class="sparkline-row">
+                    <span class="data-label">Definitions/wk</span>
+                    <canvas id="spark-define" width="72" height="14"></canvas>
+                    <span class="data-value">42</span>
+                </div>
+            </div>
+            <div class="resp-col">
+                <h3>2. Contract</h3>
+                <div class="code-block">contract:
+  completeness: all_sources
+  accuracy: &lt;2% variance
+  freshness: &lt;15min lag
+  format: markdown_table
+
+escalate_if:
+  variance: &gt;5%
+  source_down: &gt;30min</div>
+                <div class="sparkline-row">
+                    <span class="data-label">Contract met</span>
+                    <canvas id="spark-contract" width="72" height="14"></canvas>
+                    <span class="data-value">99.4%</span>
+                </div>
+            </div>
+            <div class="resp-col">
+                <h3>3. Deliver</h3>
+                <div class="code-block">delivery:
+  monday 08:00 UTC &rarr; #finance-ops
+  &#x2713; completeness: all_sources
+  &#x2713; accuracy: 0.3% variance
+  &#x2713; freshness: 2min lag
+
+  &rarr; "Revenue report delivered.
+     See thread for details."</div>
+                <div class="sparkline-row">
+                    <span class="data-label">Deliveries/wk</span>
+                    <canvas id="spark-deliver" width="72" height="14"></canvas>
+                    <span class="data-value">38</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- ================================================================
+     4. SPARKLINE TABLE — the Tufte centerpiece
+     A data table with inline sparklines, like Tufte's financial tables.
+     Every row: metric name, sparkline, current value, low, high.
+     ================================================================ -->
+<section class="data-table-section section-warm">
+    <div class="content-wide">
+        <table class="sparkline-table">
+            <caption>Responsibility execution metrics &mdash; last 90 days</caption>
+            <thead>
+                <tr>
+                    <th style="width: 25%;">Responsibility</th>
+                    <th class="spark-col" style="width: 28%;">90-day execution profile</th>
+                    <th class="num" style="width: 11%;">Current</th>
+                    <th class="num" style="width: 10%;">Low</th>
+                    <th class="num" style="width: 10%;">High</th>
+                    <th class="num" style="width: 8%;">SLA %</th>
+                    <th class="num" style="width: 8%;">Trend</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="metric-name">revenue-report</td>
+                    <td class="spark-cell"><canvas id="tbl-revenue" width="180" height="20"></canvas></td>
+                    <td class="num">4.1s</td>
+                    <td class="num">3.2</td>
+                    <td class="num">6.8</td>
+                    <td class="num">99.8</td>
+                    <td class="num" style="color: var(--signal);">&darr;</td>
+                </tr>
+                <tr>
+                    <td class="metric-name">anomaly-detection</td>
+                    <td class="spark-cell"><canvas id="tbl-anomaly" width="180" height="20"></canvas></td>
+                    <td class="num">1.8s</td>
+                    <td class="num">0.9</td>
+                    <td class="num">4.2</td>
+                    <td class="num">99.9</td>
+                    <td class="num" style="color: var(--signal);">&darr;</td>
+                </tr>
+                <tr>
+                    <td class="metric-name">fleet-health-check</td>
+                    <td class="spark-cell"><canvas id="tbl-fleet" width="180" height="20"></canvas></td>
+                    <td class="num">12.4s</td>
+                    <td class="num">8.1</td>
+                    <td class="num">18.6</td>
+                    <td class="num">98.7</td>
+                    <td class="num">&mdash;</td>
+                </tr>
+                <tr>
+                    <td class="metric-name">compliance-audit</td>
+                    <td class="spark-cell"><canvas id="tbl-compliance" width="180" height="20"></canvas></td>
+                    <td class="num">8.3s</td>
+                    <td class="num">5.4</td>
+                    <td class="num">15.2</td>
+                    <td class="num">99.4</td>
+                    <td class="num" style="color: var(--signal);">&darr;</td>
+                </tr>
+                <tr>
+                    <td class="metric-name">data-pipeline-sync</td>
+                    <td class="spark-cell"><canvas id="tbl-pipeline" width="180" height="20"></canvas></td>
+                    <td class="num">3.6s</td>
+                    <td class="num">2.1</td>
+                    <td class="num">7.9</td>
+                    <td class="num">99.6</td>
+                    <td class="num" style="color: var(--signal);">&darr;</td>
+                </tr>
+                <tr>
+                    <td class="metric-name">user-onboarding</td>
+                    <td class="spark-cell"><canvas id="tbl-onboard" width="180" height="20"></canvas></td>
+                    <td class="num">2.2s</td>
+                    <td class="num">1.4</td>
+                    <td class="num">5.1</td>
+                    <td class="num">99.7</td>
+                    <td class="num" style="color: var(--signal);">&darr;</td>
+                </tr>
+                <tr>
+                    <td class="metric-name">cost-allocation</td>
+                    <td class="spark-cell"><canvas id="tbl-cost" width="180" height="20"></canvas></td>
+                    <td class="num">6.7s</td>
+                    <td class="num">4.8</td>
+                    <td class="num">11.3</td>
+                    <td class="num">99.1</td>
+                    <td class="num">&mdash;</td>
+                </tr>
+                <tr>
+                    <td class="metric-name">incident-response</td>
+                    <td class="spark-cell"><canvas id="tbl-incident" width="180" height="20"></canvas></td>
+                    <td class="num">0.8s</td>
+                    <td class="num">0.3</td>
+                    <td class="num">2.4</td>
+                    <td class="num">99.9</td>
+                    <td class="num" style="color: var(--signal);">&darr;</td>
+                </tr>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="7">Completion time in seconds. Each sparkline shows 90 daily observations. Vertical scale is per-row (not shared). SLA = % of executions completing within contracted time. &darr; = improving trend (faster).</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</section>
+
+
+<!-- ================================================================
+     5. MAREY DIAGRAM — time-distance, perfectly gridded
+     ================================================================ -->
+<section class="section-dark section-pad">
+    <div class="content-wide">
+        <h2 style="color: var(--light); margin-bottom: 4px;">Responsibility execution, time-distance</h2>
+        <p class="small-text" style="color: var(--light-tertiary); max-width: 540px; margin-bottom: var(--half-baseline);">
+            Each diagonal is one responsibility flowing through pipeline stages. Steeper lines complete faster. Horizontal segments indicate waiting. After E.J. Marey's graphical train schedules, Paris&ndash;Lyon, 1885.
+        </p>
+
+        <div class="marey-container">
+            <canvas id="marey-canvas"></canvas>
+        </div>
+
+        <div class="marey-annotation">
+            <div class="marey-legend">
+                <div class="marey-legend-item">
+                    <span class="legend-swatch" style="background: rgba(210, 120, 20, 0.85);"></span>
+                    <span>revenue-report</span>
+                </div>
+                <div class="marey-legend-item">
+                    <span class="legend-swatch" style="background: rgba(130, 180, 240, 0.75);"></span>
+                    <span>anomaly-detection</span>
+                </div>
+                <div class="marey-legend-item">
+                    <span class="legend-swatch" style="background: rgba(140, 210, 180, 0.65);"></span>
+                    <span>fleet-health-check</span>
+                </div>
+                <div class="marey-legend-item">
+                    <span class="legend-swatch" style="background: rgba(230, 170, 100, 0.75);"></span>
+                    <span>compliance-audit</span>
+                </div>
+                <div class="marey-legend-item">
+                    <span class="legend-swatch" style="background: rgba(180, 160, 230, 0.65);"></span>
+                    <span>data-pipeline-sync</span>
+                </div>
+            </div>
+            <div class="marey-caption">
+                Animated. 18 initial responsibilities, new ones spawning continuously. Time axis scrolls right. Stage axis (vertical) shows six pipeline phases: parse, validate, source, compute, contract, deliver.
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- ================================================================
+     6. CASE STUDY — energy monitoring, before/after grid
+     ================================================================ -->
+<section class="section-light section-pad">
+    <div class="content-wide">
+        <h2>Energy monitoring &mdash; 12 weeks with OpenProse</h2>
+        <p class="small-text" style="color: var(--ink-secondary); max-width: 520px;">
+            An energy monitoring company replaced six manual processes with responsibilities. Each cell shows the 12-week trajectory from before to after. Sparkline vertical scale is per-metric.
+        </p>
+
+        <div class="case-grid" id="case-grid">
+            <div class="case-cell" data-delay="0">
+                <span class="data-label">Anomaly detection</span>
+                <canvas id="case-anomaly" height="36"></canvas>
+                <div class="case-before-after">
+                    <span class="case-before">4 hrs</span>
+                    <span class="case-after">0 hrs</span>
+                </div>
+            </div>
+            <div class="case-cell" data-delay="50">
+                <span class="data-label">Report generation</span>
+                <canvas id="case-reports" height="36"></canvas>
+                <div class="case-before-after">
+                    <span class="case-before">6 hrs</span>
+                    <span class="case-after">0 hrs</span>
+                </div>
+            </div>
+            <div class="case-cell" data-delay="100">
+                <span class="data-label">False alert rate</span>
+                <canvas id="case-false-alerts" height="36"></canvas>
+                <div class="case-before-after">
+                    <span class="case-before">34%</span>
+                    <span class="case-after">2.1%</span>
+                </div>
+            </div>
+            <div class="case-cell" data-delay="150">
+                <span class="data-label">Response latency</span>
+                <canvas id="case-latency" height="36"></canvas>
+                <div class="case-before-after">
+                    <span class="case-before">45 min</span>
+                    <span class="case-after">12 sec</span>
+                </div>
+            </div>
+            <div class="case-cell" data-delay="200">
+                <span class="data-label">Data freshness</span>
+                <canvas id="case-freshness" height="36"></canvas>
+                <div class="case-before-after">
+                    <span class="case-before">2 hrs</span>
+                    <span class="case-after">90 sec</span>
+                </div>
+            </div>
+            <div class="case-cell" data-delay="250">
+                <span class="data-label">Escalation accuracy</span>
+                <canvas id="case-escalation" height="36"></canvas>
+                <div class="case-before-after">
+                    <span class="case-before">61%</span>
+                    <span class="case-after">97%</span>
+                </div>
+            </div>
+            <div class="case-cell" data-delay="300">
+                <span class="data-label">Analyst hours / week</span>
+                <canvas id="case-hours" height="36"></canvas>
+                <div class="case-before-after">
+                    <span class="case-before">40 hrs</span>
+                    <span class="case-after">4 hrs</span>
+                </div>
+            </div>
+            <div class="case-cell" data-delay="350">
+                <span class="data-label">Cost / responsibility</span>
+                <canvas id="case-cost" height="36"></canvas>
+                <div class="case-before-after">
+                    <span class="case-before">$2,400</span>
+                    <span class="case-after">$180</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- ================================================================
+     7. ARCHITECTURE — prose with margin notes
+     ================================================================ -->
+<section class="arch-section section-light section-pad" style="border-top: 1px solid var(--rule);">
+    <div class="with-margin">
+        <div class="margin-note-area">
+            <h2>Open source, open architecture</h2>
+
+            <p>
+                OpenProse is MIT-licensed.<span class="sidenote-ref">1</span> The runtime executes inside the agent session &mdash; no external dependencies, no library lock-in, portable across any Prose Complete system. You can self-host it, like Terraform. Most teams prefer we run it for them, because reliability at
+                <canvas class="sparkline-inline" id="prose-spark-1" width="64" height="14"></canvas>
+                99.7% on-schedule is worth paying for.
+            </p>
+
+            <p>
+                The architecture inverts the conventional agent framework model.<span class="sidenote-ref">2</span> Where LangChain, CrewAI, and AutoGen orchestrate from outside using imperative code, OpenProse runs inside the session. The session is the runtime. Responsibilities are declarative contracts, not task sequences. Execution latency has dropped
+                <canvas class="sparkline-inline" id="prose-spark-2" width="64" height="14"></canvas>
+                from 7.1s to 4.2s median over the past year.
+            </p>
+
+            <p>
+                This distinction matters because declarative systems compose.<span class="sidenote-ref">3</span> You can add a responsibility without understanding the existing ones. There is no dependency graph to manage, no execution order to reason about. Each responsibility is independently evaluated and independently delivered. Current active responsibilities across all installations:
+                <canvas class="sparkline-inline" id="prose-spark-3" width="64" height="14"></canvas>
+                38,400/day and growing.
+            </p>
+
+            <p>
+                Current traction: 6,000+ installations, 1,200+ GitHub stars, YC W26 batch.<span class="sidenote-ref">4</span> The open source community is the top of funnel. The managed service is the business. Pricing anchors to the hire you are avoiding: a junior analyst costs $6&ndash;8K/month; OpenProse runs 2&ndash;3 responsibilities for ~$2K/month.
+            </p>
+        </div>
+        <div class="margin-note-area">
+            <div class="sidenote" style="margin-top: 42px;">
+                <span class="sidenote-num">1</span>
+                github.com/openprose &mdash; MIT license. Full source including the responsibility runtime, contract evaluator, and delivery system.
+            </div>
+            <div class="sidenote">
+                <span class="sidenote-num">2</span>
+                "Intelligent inversion of control" &mdash; the session IS the runtime. A system that can simulate the VM becomes the VM.
+                <canvas id="margin-spark-arch" width="140" height="24"></canvas>
+            </div>
+            <div class="sidenote">
+                <span class="sidenote-num">3</span>
+                Declarative programming (SQL, Terraform, React) has consistently won in domains where "what" matters more than "how." Agent orchestration is the next such domain.
+            </div>
+            <div class="sidenote">
+                <span class="sidenote-num">4</span>
+                Revenue per installation over time:
+                <canvas id="margin-spark-rev" width="140" height="24"></canvas>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- ================================================================
+     8. CTA — just a sentence
+     ================================================================ -->
+<section class="cta-section section-light">
+    <div class="content">
+        <a href="#" class="cta-link">Define your first responsibility &rarr;</a>
+    </div>
+</section>
+
+<!-- ================================================================
+     9. COLOPHON
+     ================================================================ -->
+<footer class="colophon section-light">
+    <div class="content">
+        <p>
+            Set in EB Garamond and JetBrains Mono. Visualizations rendered to canvas at device pixel ratio. Design after Edward Tufte. Built by OpenProse, San Francisco.
+        </p>
+    </div>
+</footer>
+
+
+<!-- ================================================================
+     JAVASCRIPT — All visualizations
+     ================================================================ -->
+<script>
+(function() {
+    'use strict';
+
+    // ================================================================
+    // UTILITIES
+    // ================================================================
+    var dpr = window.devicePixelRatio || 1;
+
+    function setupCanvas(canvas, w, h) {
+        canvas.width = w * dpr;
+        canvas.height = h * dpr;
+        canvas.style.width = w + 'px';
+        canvas.style.height = h + 'px';
+        var ctx = canvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+        return ctx;
+    }
+
+    function seededRandom(seed) {
+        var s = seed;
+        return function() {
+            s = (s * 16807 + 0) % 2147483647;
+            return (s - 1) / 2147483646;
+        };
+    }
+
+    function generateSeries(length, base, variance, trend, seed) {
+        var rand = seededRandom(seed);
+        var data = [];
+        var val = base;
+        for (var i = 0; i < length; i++) {
+            val += (rand() - 0.5) * variance + trend;
+            val = Math.max(base * 0.1, val);
+            data.push(val);
+        }
+        return data;
+    }
+
+    function generateGrowth(length, startVal, endVal, seed) {
+        var rand = seededRandom(seed);
+        var data = [];
+        for (var i = 0; i < length; i++) {
+            var t = i / (length - 1);
+            var base = startVal + (endVal - startVal) * (1 - Math.pow(1 - t, 2.0));
+            var noise = (rand() - 0.5) * (endVal - startVal) * 0.04;
+            data.push(Math.max(startVal * 0.9, base + noise));
+        }
+        return data;
+    }
+
+    function generateDecline(length, startVal, endVal, seed) {
+        var rand = seededRandom(seed);
+        var data = [];
+        for (var i = 0; i < length; i++) {
+            var t = i / (length - 1);
+            var base = startVal * Math.pow(endVal / startVal, t);
+            var noise = (rand() - 0.5) * startVal * 0.06;
+            data.push(Math.max(endVal * 0.8, base + noise));
+        }
+        return data;
+    }
+
+    function generateIncrease(length, startVal, endVal, seed) {
+        var rand = seededRandom(seed);
+        var data = [];
+        for (var i = 0; i < length; i++) {
+            var t = i / (length - 1);
+            var base = startVal + (endVal - startVal) * (1 - Math.pow(1 - t, 2.2));
+            var noise = (rand() - 0.5) * (endVal - startVal) * 0.05;
+            data.push(Math.min(endVal * 1.02, Math.max(startVal * 0.95, base + noise)));
+        }
+        return data;
+    }
+
+    // ================================================================
+    // SPARKLINE DRAWING — pixel-perfect, subpixel rendering
+    // ================================================================
+    function drawSparkline(ctx, data, w, h, color, progress, opts) {
+        opts = opts || {};
+        var pad = opts.padding != null ? opts.padding : 1;
+        var lw = opts.lineWidth || 1;
+        var showArea = opts.showArea || false;
+        var showEndDot = opts.showEndDot !== false;
+        var showBand = opts.showBand || false;
+
+        var min = Math.min.apply(null, data);
+        var max = Math.max.apply(null, data);
+        var range = max - min || 1;
+
+        ctx.clearRect(0, 0, w, h);
+
+        var drawCount = Math.floor(data.length * progress);
+        if (drawCount < 2) return;
+
+        var stepX = (w - pad * 2) / (data.length - 1);
+
+        function yFor(val) {
+            return pad + (1 - (val - min) / range) * (h - pad * 2);
+        }
+
+        // Quartile band
+        if (showBand) {
+            var sorted = data.slice().sort(function(a, b) { return a - b; });
+            var q1 = sorted[Math.floor(sorted.length * 0.25)];
+            var q3 = sorted[Math.floor(sorted.length * 0.75)];
+            var bandColor = typeof color === 'string' ? color.replace(/[\d.]+\)$/, '0.06)') : 'rgba(0,0,0,0.04)';
+            ctx.fillStyle = bandColor;
+            ctx.fillRect(pad, yFor(q3), w - pad * 2, yFor(q1) - yFor(q3));
+        }
+
+        // Area fill
+        if (showArea) {
+            ctx.beginPath();
+            ctx.moveTo(pad, h - pad);
+            for (var i = 0; i < drawCount; i++) {
+                ctx.lineTo(pad + i * stepX, yFor(data[i]));
+            }
+            ctx.lineTo(pad + (drawCount - 1) * stepX, h - pad);
+            ctx.closePath();
+            ctx.fillStyle = typeof color === 'string' ? color.replace(/[\d.]+\)$/, '0.07)') : 'rgba(0,0,0,0.04)';
+            ctx.fill();
+        }
+
+        // Line
+        ctx.beginPath();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lw;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+
+        for (var i = 0; i < drawCount; i++) {
+            var x = pad + i * stepX;
+            var y = yFor(data[i]);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+
+        // End dot
+        if (showEndDot && progress >= 1 && drawCount > 0) {
+            var li = drawCount - 1;
+            var lx = pad + li * stepX;
+            var ly = yFor(data[li]);
+            ctx.beginPath();
+            ctx.arc(lx, ly, 1.5, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+        }
+
+        // Min/max markers — tiny horizontal ticks at extremes
+        if (opts.showMinMax && progress >= 1) {
+            var minIdx = 0, maxIdx = 0;
+            for (var i = 1; i < data.length; i++) {
+                if (data[i] < data[minIdx]) minIdx = i;
+                if (data[i] > data[maxIdx]) maxIdx = i;
+            }
+            var tickLen = 3;
+            ctx.strokeStyle = typeof color === 'string' ? color.replace(/[\d.]+\)$/, '0.4)') : 'rgba(0,0,0,0.2)';
+            ctx.lineWidth = 0.5;
+
+            // Min tick
+            var mx = pad + minIdx * stepX;
+            var my = yFor(data[minIdx]);
+            ctx.beginPath();
+            ctx.moveTo(mx - tickLen, my);
+            ctx.lineTo(mx + tickLen, my);
+            ctx.stroke();
+
+            // Max tick
+            mx = pad + maxIdx * stepX;
+            my = yFor(data[maxIdx]);
+            ctx.beginPath();
+            ctx.moveTo(mx - tickLen, my);
+            ctx.lineTo(mx + tickLen, my);
+            ctx.stroke();
+        }
+    }
+
+    // ================================================================
+    // SMALL MULTIPLE BARS + LINE
+    // ================================================================
+    function drawSmallMultiple(ctx, data, w, h, progress) {
+        var pad = 2;
+        var max = Math.max.apply(null, data);
+        var barGap = 1;
+        var barWidth = (w - pad * 2) / data.length - barGap;
+        var drawCount = Math.floor(data.length * progress);
+
+        ctx.clearRect(0, 0, w, h);
+
+        // Bars
+        for (var i = 0; i < drawCount; i++) {
+            var barH = (data[i] / max) * (h - pad * 2);
+            var x = pad + i * (barWidth + barGap);
+            var y = h - pad - barH;
+            ctx.fillStyle = 'rgba(255,255,248,0.12)';
+            ctx.fillRect(x, y, barWidth, barH);
+        }
+
+        // Line overlay — 4-week moving average
+        if (drawCount > 4) {
+            ctx.beginPath();
+            ctx.strokeStyle = 'rgba(210, 120, 20, 0.7)';
+            ctx.lineWidth = 1;
+            ctx.lineJoin = 'round';
+
+            var stepX = (w - pad * 2) / (data.length - 1);
+            for (var i = 3; i < drawCount; i++) {
+                var avg = (data[i] + data[i-1] + data[i-2] + data[i-3]) / 4;
+                var x = pad + i * stepX;
+                var y = pad + (1 - avg / max) * (h - pad * 2);
+                if (i === 3) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+        }
+
+        // Mean line — thin dashed
+        if (progress >= 1) {
+            var sum = 0;
+            for (var i = 0; i < data.length; i++) sum += data[i];
+            var mean = sum / data.length;
+            var my = pad + (1 - mean / max) * (h - pad * 2);
+            ctx.beginPath();
+            ctx.strokeStyle = 'rgba(255,255,248,0.15)';
+            ctx.lineWidth = 0.5;
+            ctx.setLineDash([2, 3]);
+            ctx.moveTo(pad, my);
+            ctx.lineTo(w - pad, my);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+    }
+
+    // ================================================================
+    // ANIMATED SPARKLINE HELPER
+    // ================================================================
+    function animateSparkline(canvasId, data, color, options) {
+        var canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+
+        var parentW = canvas.parentElement ? canvas.parentElement.offsetWidth : 0;
+        var attrW = parseInt(canvas.getAttribute('width')) || 0;
+        var w = attrW || Math.min(canvas.offsetWidth || 80, parentW || 80);
+        var h = parseInt(canvas.getAttribute('height')) || 16;
+        var ctx = setupCanvas(canvas, w, h);
+
+        var progress = 0;
+        var running = false;
+        var duration = 900;
+
+        function tick(start) {
+            return function(timestamp) {
+                if (!running) return;
+                progress = Math.min(1, (timestamp - start) / duration);
+                var eased = 1 - Math.pow(1 - progress, 3);
+                drawSparkline(ctx, data, w, h, color, eased, options);
+                if (progress < 1) requestAnimationFrame(tick(start));
+            };
+        }
+
+        // Tooltip
+        canvas.addEventListener('mousemove', function(e) {
+            var rect = canvas.getBoundingClientRect();
+            var x = e.clientX - rect.left;
+            var ratio = x / rect.width;
+            var idx = Math.round(ratio * (data.length - 1));
+            if (idx >= 0 && idx < data.length) {
+                var tooltip = document.getElementById('tooltip');
+                tooltip.textContent = data[idx].toFixed(1);
+                tooltip.style.left = (e.clientX + 8) + 'px';
+                tooltip.style.top = (e.clientY - 22) + 'px';
+                tooltip.style.opacity = '1';
+            }
+        });
+        canvas.addEventListener('mouseleave', function() {
+            document.getElementById('tooltip').style.opacity = '0';
+        });
+        canvas.style.cursor = 'crosshair';
+
+        var observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting && !running) {
+                    running = true;
+                    progress = 0;
+                    requestAnimationFrame(function(ts) {
+                        requestAnimationFrame(tick(ts));
+                    });
+                }
+            });
+        }, { threshold: 0.3 });
+        observer.observe(canvas);
+    }
+
+    // ================================================================
+    // MAREY DIAGRAM — precisely gridded
+    // ================================================================
+    var mareyStages = ['PARSE', 'VALIDATE', 'SOURCE', 'COMPUTE', 'CONTRACT', 'DELIVER'];
+
+    var mareyColors = [
+        'rgba(210, 120, 20, 0.85)',
+        'rgba(130, 180, 240, 0.75)',
+        'rgba(140, 210, 180, 0.65)',
+        'rgba(230, 170, 100, 0.75)',
+        'rgba(180, 160, 230, 0.65)'
+    ];
+
+    function MareyLine(rand, colorIndex, startTime) {
+        this.color = mareyColors[colorIndex % mareyColors.length];
+        this.startTime = startTime;
+        this.segments = [];
+        this.totalDuration = 0;
+
+        var t = 0;
+        for (var i = 0; i < mareyStages.length - 1; i++) {
+            var duration = 0.8 + rand() * 2.5;
+            var wait = rand() < 0.25 ? 0.3 + rand() * 1.0 : 0;
+            this.segments.push({ duration: duration, wait: wait });
+            t += duration + wait;
+        }
+        this.totalDuration = t;
+    }
+
+    function initMarey() {
+        var canvas = document.getElementById('marey-canvas');
+        if (!canvas) return;
+
+        var rect = canvas.parentElement.getBoundingClientRect();
+        var w = rect.width;
+        var h = 380;
+        var ctx = setupCanvas(canvas, w, h);
+
+        var mL = 64, mR = 24, mT = 16, mB = 20;
+        var pW = w - mL - mR;
+        var pH = h - mT - mB;
+
+        var stageCount = mareyStages.length;
+        var stageStep = pH / (stageCount - 1);
+
+        var rand = seededRandom(42);
+        var lines = [];
+        for (var i = 0; i < 18; i++) {
+            var ci = Math.floor(rand() * mareyColors.length);
+            var st = rand() * 14;
+            lines.push(new MareyLine(rand, ci, st));
+        }
+
+        var timeOffset = 0;
+        var timeWindow = 16;
+        var lastSpawn = 0;
+        var animating = false;
+        var lastTimestamp = 0;
+
+        function draw(timestamp) {
+            if (!animating) return;
+            if (!lastTimestamp) lastTimestamp = timestamp;
+            var dt = (timestamp - lastTimestamp) / 1000;
+            lastTimestamp = timestamp;
+            timeOffset += dt * 0.6;
+
+            if (timeOffset - lastSpawn > 1.2 + rand() * 1.5) {
+                var ci = Math.floor(rand() * mareyColors.length);
+                lines.push(new MareyLine(rand, ci, timeOffset + rand() * 2));
+                lastSpawn = timeOffset;
+                while (lines.length > 40 && lines[0].startTime + lines[0].totalDuration < timeOffset - 2) {
+                    lines.shift();
+                }
+            }
+
+            ctx.clearRect(0, 0, w, h);
+
+            // Horizontal grid — stage lines
+            for (var i = 0; i < stageCount; i++) {
+                var y = mT + i * stageStep;
+                ctx.beginPath();
+                ctx.strokeStyle = 'rgba(255,255,248,0.05)';
+                ctx.lineWidth = 0.5;
+                ctx.moveTo(mL, y);
+                ctx.lineTo(w - mR, y);
+                ctx.stroke();
+
+                ctx.fillStyle = 'rgba(255,255,248,0.28)';
+                ctx.font = '500 9px "JetBrains Mono", monospace';
+                ctx.textAlign = 'right';
+                ctx.fillText(mareyStages[i], mL - 8, y + 3);
+            }
+
+            // Vertical time grid
+            var tgStart = Math.floor(timeOffset);
+            for (var t = tgStart; t < timeOffset + timeWindow; t += 0.5) {
+                var x = mL + ((t - timeOffset) / timeWindow) * pW;
+                if (x < mL || x > w - mR) continue;
+                ctx.beginPath();
+                ctx.strokeStyle = t % 1 === 0 ? 'rgba(255,255,248,0.05)' : 'rgba(255,255,248,0.02)';
+                ctx.lineWidth = 0.5;
+                ctx.moveTo(x, mT);
+                ctx.lineTo(x, h - mB);
+                ctx.stroke();
+
+                if (t % 2 === 0) {
+                    ctx.fillStyle = 'rgba(255,255,248,0.14)';
+                    ctx.font = '300 8px "JetBrains Mono", monospace';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(t.toFixed(0) + 's', x, h - 4);
+                }
+            }
+
+            // Draw all lines
+            for (var li = 0; li < lines.length; li++) {
+                drawMareyLine(ctx, lines[li], timeOffset, timeWindow, mL, mT, pW, stageStep, stageCount);
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        function drawMareyLine(ctx, line, tOff, tWin, mx, my, pw, ss, sc) {
+            var points = [];
+            var t = line.startTime;
+            points.push({ t: t, stage: 0 });
+
+            for (var i = 0; i < line.segments.length; i++) {
+                var seg = line.segments[i];
+                if (seg.wait > 0) {
+                    t += seg.wait;
+                    points.push({ t: t, stage: i });
+                }
+                t += seg.duration;
+                points.push({ t: t, stage: i + 1 });
+            }
+
+            ctx.beginPath();
+            ctx.strokeStyle = line.color;
+            ctx.lineWidth = 1.1;
+            ctx.lineJoin = 'round';
+            var started = false;
+
+            for (var i = 0; i < points.length; i++) {
+                var p = points[i];
+                var x = mx + ((p.t - tOff) / tWin) * pw;
+                var y = my + p.stage * ss;
+
+                if (x < mx - 20 || x > mx + pw + 20) {
+                    if (started) { ctx.stroke(); started = false; }
+                    continue;
+                }
+
+                if (!started) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = line.color;
+                    ctx.lineWidth = 1.1;
+                    ctx.moveTo(x, y);
+                    started = true;
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            if (started) ctx.stroke();
+
+            // Dots at transitions
+            for (var i = 0; i < points.length; i++) {
+                var p = points[i];
+                var x = mx + ((p.t - tOff) / tWin) * pw;
+                var y = my + p.stage * ss;
+                if (x < mx || x > mx + pw) continue;
+                ctx.beginPath();
+                ctx.arc(x, y, 1.2, 0, Math.PI * 2);
+                ctx.fillStyle = line.color;
+                ctx.fill();
+            }
+        }
+
+        var observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting && !animating) {
+                    animating = true;
+                    lastTimestamp = 0;
+                    requestAnimationFrame(draw);
+                } else if (!entry.isIntersecting) {
+                    animating = false;
+                    lastTimestamp = 0;
+                }
+            });
+        }, { threshold: 0.15 });
+        observer.observe(canvas);
+
+        window.addEventListener('resize', function() {
+            var nw = canvas.parentElement.getBoundingClientRect().width;
+            w = nw;
+            pW = w - mL - mR;
+            setupCanvas(canvas, w, h);
+        });
+    }
+
+    // ================================================================
+    // SMALL MULTIPLES
+    // ================================================================
+    function initSmallMultiples() {
+        var container = document.getElementById('small-multiples');
+        if (!container) return;
+
+        var multiples = container.querySelectorAll('.small-multiple');
+        var datasets = {
+            'sm-monitoring': generateSeries(24, 6.2, 1.5, 0.05, 101),
+            'sm-reporting': generateSeries(24, 4.8, 1.2, 0.03, 202),
+            'sm-alerting': generateSeries(24, 3.9, 1.0, 0.02, 303),
+            'sm-scheduling': generateSeries(24, 3.4, 0.8, 0.01, 404),
+            'sm-datasync': generateSeries(24, 2.8, 0.7, 0.04, 505),
+            'sm-compliance': generateSeries(24, 2.1, 0.6, 0.02, 606)
+        };
+
+        var observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    multiples.forEach(function(el) {
+                        var delay = parseInt(el.getAttribute('data-delay')) || 0;
+                        setTimeout(function() {
+                            el.classList.add('visible');
+                            var canvasEl = el.querySelector('canvas');
+                            if (!canvasEl) return;
+                            var id = canvasEl.id;
+                            var data = datasets[id];
+                            if (!data) return;
+
+                            var w = canvasEl.offsetWidth;
+                            var h = 44;
+                            var ctx = setupCanvas(canvasEl, w, h);
+
+                            var prog = 0;
+                            var dur = 700;
+                            function tickSM(start) {
+                                return function(ts) {
+                                    prog = Math.min(1, (ts - start) / dur);
+                                    var eased = 1 - Math.pow(1 - prog, 2.5);
+                                    drawSmallMultiple(ctx, data, w, h, eased);
+                                    if (prog < 1) requestAnimationFrame(tickSM(start));
+                                };
+                            }
+                            requestAnimationFrame(function(ts) {
+                                requestAnimationFrame(tickSM(ts));
+                            });
+                        }, delay);
+                    });
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.2 });
+        observer.observe(container);
+    }
+
+    // ================================================================
+    // CASE STUDY
+    // ================================================================
+    function initCaseStudy() {
+        var container = document.getElementById('case-grid');
+        if (!container) return;
+
+        var cells = container.querySelectorAll('.case-cell');
+        var caseData = {
+            'case-anomaly': generateDecline(12, 4, 0.1, 701),
+            'case-reports': generateDecline(12, 6, 0.05, 702),
+            'case-false-alerts': generateDecline(12, 34, 2.1, 703),
+            'case-latency': generateDecline(12, 45, 0.2, 704),
+            'case-freshness': generateDecline(12, 120, 1.5, 705),
+            'case-escalation': generateIncrease(12, 61, 97, 706),
+            'case-hours': generateDecline(12, 40, 4, 707),
+            'case-cost': generateDecline(12, 2400, 180, 708)
+        };
+
+        var observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    cells.forEach(function(el) {
+                        var delay = parseInt(el.getAttribute('data-delay')) || 0;
+                        setTimeout(function() {
+                            el.classList.add('visible');
+                            var canvasEl = el.querySelector('canvas');
+                            if (!canvasEl) return;
+                            var id = canvasEl.id;
+                            var data = caseData[id];
+                            if (!data) return;
+
+                            var w = canvasEl.offsetWidth;
+                            var h = 36;
+                            var ctx = setupCanvas(canvasEl, w, h);
+                            var isIncrease = id === 'case-escalation';
+                            var color = isIncrease ? 'rgba(34, 160, 80, 0.65)' : 'rgba(160, 82, 45, 0.6)';
+
+                            var prog = 0;
+                            var dur = 900;
+                            function tickCase(start) {
+                                return function(ts) {
+                                    prog = Math.min(1, (ts - start) / dur);
+                                    var eased = 1 - Math.pow(1 - prog, 3);
+                                    drawSparkline(ctx, data, w, h, color, eased, { showArea: true, lineWidth: 1, showEndDot: true });
+                                    if (prog < 1) requestAnimationFrame(tickCase(start));
+                                };
+                            }
+                            requestAnimationFrame(function(ts) {
+                                requestAnimationFrame(tickCase(ts));
+                            });
+                        }, delay);
+                    });
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.15 });
+        observer.observe(container);
+    }
+
+    // ================================================================
+    // SPARKLINE TABLE
+    // ================================================================
+    function initSparklineTable() {
+        var tableData = {
+            'tbl-revenue': generateSeries(90, 4.2, 1.2, -0.008, 3001),
+            'tbl-anomaly': generateSeries(90, 2.0, 0.8, -0.005, 3002),
+            'tbl-fleet': generateSeries(90, 13.0, 3.5, -0.01, 3003),
+            'tbl-compliance': generateSeries(90, 9.0, 2.5, -0.012, 3004),
+            'tbl-pipeline': generateSeries(90, 4.0, 1.5, -0.006, 3005),
+            'tbl-onboard': generateSeries(90, 2.5, 0.9, -0.004, 3006),
+            'tbl-cost': generateSeries(90, 7.0, 2.0, -0.005, 3007),
+            'tbl-incident': generateSeries(90, 1.0, 0.5, -0.003, 3008)
+        };
+
+        var ids = Object.keys(tableData);
+        for (var k = 0; k < ids.length; k++) {
+            (function(id) {
+                var data = tableData[id];
+                animateSparkline(id, data, 'rgba(160, 82, 45, 0.55)', {
+                    lineWidth: 1,
+                    showArea: false,
+                    showEndDot: true,
+                    showMinMax: true,
+                    showBand: true,
+                    padding: 2
+                });
+            })(ids[k]);
+        }
+    }
+
+    // ================================================================
+    // INIT
+    // ================================================================
+    document.addEventListener('DOMContentLoaded', function() {
+
+        // Hero table sparklines — 52-week data
+        animateSparkline('hero-spark-installs', generateGrowth(52, 340, 6012, 1001), 'rgba(160, 82, 45, 0.6)', { lineWidth: 1, showArea: true, showEndDot: true, showMinMax: true, padding: 2 });
+        animateSparkline('hero-spark-resp', generateGrowth(52, 1200, 38400, 1002), 'rgba(160, 82, 45, 0.6)', { lineWidth: 1, showArea: true, showEndDot: true, showMinMax: true, padding: 2 });
+        animateSparkline('hero-spark-latency', generateDecline(52, 7.1, 4.2, 1003), 'rgba(160, 82, 45, 0.6)', { lineWidth: 1, showEndDot: true, showMinMax: true, padding: 2 });
+        animateSparkline('hero-spark-rate', generateSeries(52, 99.3, 0.5, 0.008, 1004), 'rgba(160, 82, 45, 0.6)', { lineWidth: 1, showEndDot: true, showMinMax: true, padding: 2 });
+        animateSparkline('hero-spark-stars', generateGrowth(52, 0, 1247, 1005), 'rgba(160, 82, 45, 0.6)', { lineWidth: 1, showArea: true, showEndDot: true, padding: 2 });
+
+        // Responsibility column sparklines
+        animateSparkline('spark-define', generateSeries(30, 42, 8, 0.3, 11), 'rgba(107, 100, 89, 0.5)', { lineWidth: 0.8, showEndDot: true, padding: 1 });
+        animateSparkline('spark-contract', generateSeries(30, 99, 1.5, 0.02, 22), 'rgba(107, 100, 89, 0.5)', { lineWidth: 0.8, showEndDot: true, padding: 1 });
+        animateSparkline('spark-deliver', generateSeries(30, 38, 5, 0.2, 33), 'rgba(107, 100, 89, 0.5)', { lineWidth: 0.8, showEndDot: true, padding: 1 });
+
+        // Inline prose sparklines
+        animateSparkline('prose-spark-1', generateSeries(40, 99.5, 0.4, 0.005, 2001), 'rgba(160, 82, 45, 0.55)', { lineWidth: 0.8, showEndDot: true, padding: 1 });
+        animateSparkline('prose-spark-2', generateDecline(40, 7.1, 4.2, 2002), 'rgba(160, 82, 45, 0.55)', { lineWidth: 0.8, showEndDot: true, padding: 1 });
+        animateSparkline('prose-spark-3', generateGrowth(40, 1200, 38400, 2003), 'rgba(160, 82, 45, 0.55)', { lineWidth: 0.8, showArea: true, showEndDot: true, padding: 1 });
+
+        // Margin note sparklines
+        animateSparkline('margin-spark-arch', generateDecline(30, 12, 4.2, 2004), 'rgba(107, 100, 89, 0.45)', { lineWidth: 0.8, showArea: true, showEndDot: true, showMinMax: true, padding: 2 });
+        animateSparkline('margin-spark-rev', generateGrowth(30, 20, 180, 2005), 'rgba(107, 100, 89, 0.45)', { lineWidth: 0.8, showArea: true, showEndDot: true, showMinMax: true, padding: 2 });
+
+        // Small multiples
+        initSmallMultiples();
+
+        // Marey diagram
+        initMarey();
+
+        // Case study
+        initCaseStudy();
+
+        // Sparkline table
+        initSparklineTable();
+    });
+
+})();
+</script>
+</body>
+</html>

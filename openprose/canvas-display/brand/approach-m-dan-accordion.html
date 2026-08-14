@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 142 142'%3E%3Cpath d='M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z' fill='%232a2520'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenProse — Offload the work you'd otherwise hire for.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,300;0,7..72,400;0,7..72,500;0,7..72,600;0,7..72,700;1,7..72,400;1,7..72,500&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================
+   APPROACH M — DAN'S OPENPROSE.AI × ITERATION
+   Captures Dan's brand rules (see logotype-M)
+   and iterates the FAQ:
+     • A pretext-paragraph lede that answers the
+       question-behind-the-questions, threaded
+       with inline figures + sparklines.
+     • An accordion — clicking a question opens
+       it and closes the others. Smooth height
+       transition using grid-template-rows 0fr→1fr.
+     • Chevron rotates 90° on open; the row gets
+       a soft accent-bg wash while expanded.
+   Plus elegant moves elsewhere:
+     • A subtle aged rule that animates under the
+       section-tag pill on scroll into view.
+     • Slack card hover raises the card AND lifts
+       its caption with it (they travel together).
+     • Hero tertiary CTA picks up the accent on
+       hover — the quietest button earns the loud
+       colour when touched.
+   ============================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --paper-cream:   #faf7f2;
+  --paper-warm:    #f5f0e6;
+  --paper-aged:    #ede6d6;
+  --paper-shadow:  #e8dfd0;
+
+  --ink-dark:      #1c1917;
+  --ink-medium:    #44403c;
+  --ink-light:     #78716c;
+  --ink-faded:     #a8a29e;
+
+  --accent:        #ea580c;
+  --accent-soft:   #f59e0b;
+  --accent-bg:     rgba(234,88,12,0.12);
+  --accent-wash:   rgba(234,88,12,0.04);
+
+  --edit-blue:     #1d4ed8;
+  --edit-blue-bg:  rgba(29,78,216,0.10);
+
+  --code-bg-light: #fdf6e3;
+  --code-bg-dark:  #002b36;
+  --hs-key:        #268bd2;
+  --hs-section:    #859900;
+  --hs-type:       #b58900;
+  --hs-val:        #93a1a1;
+  --hs-punct:      #586e75;
+  --hs-comment:    #586e75;
+
+  --font-prose:    'Literata', Georgia, serif;
+  --font-code:     'JetBrains Mono', 'SF Mono', Consolas, monospace;
+
+  --max-w:         820px;
+  --max-w-wide:    1080px;
+  --radius:        6px;
+  --radius-lg:     12px;
+
+  --shadow-card:   0 4px 16px rgba(28,25,23,0.04);
+  --shadow-hover:  0 8px 24px rgba(28,25,23,0.08);
+
+  --ease-out:      cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html { font-size: 17px; scroll-behavior: smooth; }
+body {
+  background: var(--paper-cream); color: var(--ink-dark);
+  font-family: var(--font-prose);
+  font-size: 18px; line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  position: relative; min-height: 100vh;
+}
+body::before {
+  content: ""; position: fixed; inset: 0;
+  opacity: 0.035; pointer-events: none; mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  z-index: 0;
+}
+body > * { position: relative; z-index: 1; }
+
+em { font-style: italic; color: var(--ink-dark); }
+
+/* ===== HEADER ===== */
+.site-header {
+  position: sticky; top: 0; z-index: 40;
+  display: flex; align-items: center; gap: 2rem;
+  padding: 1rem 1.5rem;
+  font-family: var(--font-code); font-size: 0.9rem;
+  background: rgba(250,247,242,0.92);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--paper-aged);
+}
+.site-header-brand {
+  font-family: var(--font-prose); font-size: 1.25rem; font-weight: 600;
+  color: var(--ink-dark); text-decoration: none; letter-spacing: -0.01em;
+}
+.site-header-nav { display: flex; gap: 1.5rem; align-items: center; }
+.site-header-link { color: var(--ink-medium); text-decoration: none; transition: color 0.15s; }
+.site-header-link:hover { color: var(--ink-dark); }
+.site-header-actions { display: flex; align-items: center; gap: 0.75rem; margin-left: auto; }
+.site-header-sign-in {
+  color: var(--ink-medium); border: 1px solid var(--paper-aged);
+  font-family: var(--font-code); font-size: 0.85rem;
+  background: transparent; border-radius: 6px;
+  padding: 0.5rem 1rem; cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.site-header-sign-in:hover { border-color: var(--ink-light); color: var(--ink-dark); }
+.site-header-demo {
+  background: var(--ink-dark); color: var(--paper-cream);
+  border: 1px solid var(--ink-dark); border-radius: 6px;
+  padding: 0.5rem 1rem; font-size: 0.85rem; font-weight: 500;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.site-header-demo:hover { background: #0f0d0c; }
+
+/* ===== SECTION common ===== */
+section { position: relative; }
+.section-inner { max-width: var(--max-w-wide); margin: 0 auto; padding: 4.5rem 1.5rem; }
+.section-inner.narrow { max-width: var(--max-w); }
+.section-warm {
+  background: var(--paper-warm);
+  border-top: 1px solid var(--paper-aged);
+  border-bottom: 1px solid var(--paper-aged);
+}
+.section-header { text-align: center; max-width: 720px; margin: 0 auto 3rem; }
+.section-header h2 {
+  font-family: var(--font-prose);
+  color: var(--ink-dark); margin: 1rem 0;
+  font-size: 2rem; line-height: 1.2; letter-spacing: -0.014em;
+  font-weight: 500;
+}
+.section-header h2 em { font-style: italic; color: var(--ink-medium); font-weight: 500; }
+.section-header p {
+  color: var(--ink-medium); max-width: 560px; margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* The orange pill — signature load-bearing marker */
+.accent-pill {
+  font-family: var(--font-code);
+  text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--accent); background: var(--accent-bg);
+  border-radius: 12px;
+  padding: 4px 12px; font-size: 11px; font-weight: 600;
+  display: inline-block; margin-bottom: 16px;
+}
+/* Elegant improvement: the subtle aged rule under the pill
+   that draws in on scroll. 28px wide, 1px tall, ink-faded. */
+.accent-pill-wrap { position: relative; display: inline-block; margin-bottom: 16px; }
+.accent-pill-wrap .accent-pill { margin-bottom: 0; }
+.accent-pill-wrap::after {
+  content: ''; position: absolute;
+  bottom: -10px; left: 50%; transform: translateX(-50%);
+  width: 0; height: 1px; background: var(--paper-aged);
+  transition: width 0.5s var(--ease-out);
+}
+.accent-pill-wrap.seen::after { width: 36px; }
+
+/* ===== HERO ===== */
+.hero {
+  text-align: center; padding: 6rem 1.5rem 4.5rem;
+}
+.hero-inner { max-width: 860px; margin: 0 auto; }
+.hero-headline {
+  font-family: var(--font-prose);
+  font-size: clamp(2.75rem, 6.2vw, 4.25rem);
+  font-weight: 500; line-height: 1.05;
+  letter-spacing: -0.025em;
+  color: var(--ink-dark);
+  margin: 0 0 1.5rem;
+}
+.hero-accent { color: var(--accent); }
+.hero-sub {
+  color: var(--ink-medium); text-wrap: balance;
+  max-width: 560px; margin: 0 auto 2.5rem;
+  font-size: 1.2rem; line-height: 1.55;
+}
+.hero-ctas { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+.hero-cta-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.75rem; }
+.hero-cta-primary {
+  background: var(--ink-dark); height: 52px;
+  color: var(--paper-cream);
+  font-family: var(--font-code); letter-spacing: 0.01em;
+  border: 1px solid var(--ink-dark); border-radius: 8px;
+  white-space: nowrap;
+  padding: 0 1.75rem;
+  font-size: 0.95rem; font-weight: 500;
+  text-decoration: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background 0.15s, transform 0.15s var(--ease-out);
+}
+.hero-cta-primary:hover { background: #0f0d0c; transform: translateY(-1px); }
+.hero-cta-secondary {
+  height: 52px;
+  color: var(--ink-medium);
+  border: 1px solid var(--paper-aged);
+  font-family: var(--font-code); letter-spacing: 0.01em;
+  cursor: pointer;
+  white-space: nowrap;
+  background: transparent;
+  border-radius: 8px;
+  padding: 0 1.75rem;
+  font-size: 0.95rem; font-weight: 500;
+  transition: border-color 0.15s, color 0.15s;
+}
+.hero-cta-secondary:hover { border-color: var(--ink-light); color: var(--ink-dark); }
+.hero-cta-tertiary {
+  color: var(--ink-light);
+  font-family: var(--font-code);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--paper-aged);
+  text-underline-offset: 4px;
+  background: transparent; border: none;
+  margin-top: 0.25rem; padding: 0.25rem 0;
+  font-size: 0.85rem;
+  transition: color 0.15s, text-decoration-color 0.15s;
+}
+/* ELEGANT: tertiary button earns the accent on hover */
+.hero-cta-tertiary:hover { color: var(--accent); text-decoration-color: var(--accent); }
+
+/* ===== DEVCRED ===== */
+.devcred {
+  background: var(--paper-warm);
+  border-top: 1px solid var(--paper-aged);
+  border-bottom: 1px solid var(--paper-aged);
+  padding: 4rem 1.5rem;
+}
+.devcred-inner {
+  display: grid; grid-template-columns: 1fr 1fr;
+  align-items: center; gap: 3rem;
+  max-width: var(--max-w-wide); margin: 0 auto;
+}
+.devcred-copy h2 {
+  font-family: var(--font-prose);
+  color: var(--ink-dark); margin: 0.75rem 0 1rem;
+  font-size: 1.75rem; line-height: 1.25;
+  letter-spacing: -0.014em; font-weight: 500;
+}
+.devcred-copy p {
+  color: var(--ink-medium); margin-bottom: 1.25rem; line-height: 1.6;
+}
+.devcred-copy p code {
+  font-family: var(--font-code); background: var(--paper-aged);
+  color: var(--ink-dark); border-radius: 3px;
+  padding: 0.05em 0.35em; font-size: 0.88em;
+}
+.devcred-copy em { font-style: italic; color: var(--ink-dark); }
+.devcred-proof {
+  font-family: var(--font-code); color: var(--ink-light);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
+  margin-bottom: 1.5rem; font-size: 0.85rem;
+}
+.proof-sep { color: var(--ink-faded); }
+.proof-yc { display: inline-flex; align-items: center; gap: 0.4rem; }
+.devcred-actions {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.5rem;
+}
+.btn-secondary {
+  color: var(--ink-dark);
+  font-family: var(--font-code); letter-spacing: 0.02em;
+  border: 1px solid var(--ink-light);
+  background: transparent; border-radius: 4px;
+  padding: 0.75rem 1.5rem;
+  font-size: 14px; font-weight: 500;
+  text-decoration: none;
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  transition: background 0.15s, color 0.15s;
+}
+.btn-secondary:hover { background: var(--ink-dark); color: var(--paper-cream); }
+.devcred-learn-link {
+  font-family: var(--font-code); letter-spacing: 0.02em;
+  color: var(--accent); border-bottom: 1px solid transparent;
+  padding: 0.25rem 0; font-size: 14px; font-weight: 500;
+  text-decoration: none;
+  transition: border-color 0.2s, color 0.2s;
+}
+.devcred-learn-link:hover { border-bottom-color: var(--accent); }
+
+.devcred-snippet {
+  background: var(--code-bg-dark);
+  color: #93a1a1; font-family: var(--font-code);
+  white-space: pre;
+  border-radius: 10px;
+  margin: 0; padding: 1.5rem;
+  font-size: 0.82rem; line-height: 1.6;
+  overflow-x: auto;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+.devcred-snippet .hs-key { color: var(--hs-key); }
+.devcred-snippet .hs-section { color: var(--hs-section); font-weight: 600; }
+.devcred-snippet .hs-type { color: var(--hs-type); }
+.devcred-snippet .hs-val { color: var(--hs-val); }
+.devcred-snippet .hs-punct { color: var(--hs-punct); }
+.devcred-snippet .hs-comment { color: var(--hs-comment); font-style: italic; }
+
+/* ===== OUTCOMES ===== */
+.outcomes { background: var(--paper-warm); border-top: 1px solid var(--paper-aged); border-bottom: 1px solid var(--paper-aged); padding: 5rem 1.5rem; }
+.outcomes-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;
+  max-width: var(--max-w-wide); margin: 0 auto;
+}
+/* ELEGANT: card + caption travel together on hover.
+   align-items:stretch on the grid already equalises .outcome heights;
+   margin-top:auto on the caption pushes it to the bottom of the cell
+   so both captions share a baseline regardless of card content length. */
+.outcome { display: flex; flex-direction: column; cursor: pointer; transition: transform 0.18s var(--ease-out); }
+.outcome:hover { transform: translateY(-3px); }
+.slack-card {
+  border: 1px solid var(--paper-aged);
+  background: #fff;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.18s;
+}
+.outcome:hover .slack-card { border-color: var(--ink-light); box-shadow: var(--shadow-hover); }
+
+.slack-toolbar {
+  border-bottom: 1px solid var(--paper-aged);
+  background: var(--paper-cream);
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.7rem 1rem;
+}
+.slack-logo {
+  width: 18px; height: 18px; border-radius: 3px;
+  background: linear-gradient(135deg, #ecb22e 0%, #e01e5a 35%, #36c5f0 70%, #2eb67d 100%);
+  flex-shrink: 0;
+}
+.slack-channel {
+  font-family: var(--font-prose); font-size: 0.85rem; font-weight: 600;
+  color: var(--ink-dark); flex: 1; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.slack-tag {
+  font-family: var(--font-code); font-size: 0.65rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  padding: 0.15rem 0.5rem; border-radius: 4px; flex-shrink: 0;
+}
+.slack-tag.save { color: var(--accent); background: var(--accent-bg); }
+.slack-tag.grow { color: var(--edit-blue); background: var(--edit-blue-bg); }
+
+.slack-msg { display: flex; gap: 0.7rem; padding: 1.1rem 1.1rem 1.2rem; }
+.slack-avatar {
+  width: 36px; height: 36px; border-radius: 8px;
+  font-family: var(--font-code); font-size: 0.95rem; font-weight: 700;
+  letter-spacing: -0.02em; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.slack-avatar.orange { background: #ea580c; }
+.slack-avatar.blue { background: #1d4ed8; }
+.slack-body { flex: 1; min-width: 0; }
+.slack-meta {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.45rem;
+  margin-bottom: 0.4rem;
+}
+.slack-author { font-family: var(--font-prose); font-size: 0.9rem; font-weight: 700; color: var(--ink-dark); }
+.slack-badge {
+  font-family: var(--font-code); font-size: 0.55rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--ink-medium); background: var(--paper-aged);
+  padding: 0.1rem 0.35rem; border-radius: 3px;
+}
+.slack-time { font-family: var(--font-code); font-size: 0.7rem; color: var(--ink-light); }
+.slack-text { font-size: 0.88rem; color: var(--ink-medium); line-height: 1.55; }
+.slack-text p { margin-bottom: 0.5rem; }
+.slack-text p:last-child { margin-bottom: 0; }
+.slack-text strong { color: var(--ink-dark); font-weight: 600; }
+.slack-table {
+  border: 1px solid var(--paper-aged);
+  background: var(--paper-cream);
+  border-radius: 6px;
+  margin: 0.6rem 0 0.7rem;
+  font-size: 0.78rem; overflow: hidden;
+}
+.slack-trow {
+  display: grid; grid-template-columns: 1.8rem 1.5fr 1.2fr 1fr;
+  align-items: center; gap: 0.5rem;
+  padding: 0.45rem 0.7rem;
+  border-bottom: 1px solid var(--paper-aged);
+}
+.slack-trow.three { grid-template-columns: 4.5rem 1fr 2fr; }
+.slack-trow:last-child { border-bottom: none; }
+.slack-trow.thead {
+  background: var(--paper-warm);
+  font-family: var(--font-code); font-size: 0.65rem;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--ink-light);
+}
+.slack-muted { color: var(--ink-light); font-size: 0.8rem; font-style: italic; }
+.slack-caption {
+  color: var(--ink-light); font-size: 0.82rem; font-style: italic;
+  line-height: 1.5;
+  margin: 1rem 0.25rem 0;
+  margin-top: auto; /* push to bottom so both captions share a baseline */
+  padding-top: 1rem;
+}
+
+/* ===== DOGFOOD ===== */
+.dogfood-inner {
+  display: grid; grid-template-columns: 1fr 1fr;
+  align-items: center; gap: 3rem;
+  max-width: var(--max-w-wide); margin: 0 auto;
+  padding: 5rem 1.5rem;
+}
+.dogfood-copy h2 {
+  font-family: var(--font-prose);
+  color: var(--ink-dark); margin: 0.75rem 0 1rem;
+  font-size: 1.75rem; line-height: 1.25;
+  letter-spacing: -0.014em; font-weight: 500;
+}
+.dogfood-copy p { color: var(--ink-medium); margin-bottom: 1.5rem; line-height: 1.6; }
+.dogfood-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.dogfood-chip {
+  background: var(--paper-cream);
+  border: 1px solid var(--paper-aged);
+  font-family: var(--font-code); color: var(--ink-medium);
+  border-radius: 6px;
+  padding: 0.4rem 0.8rem; font-size: 0.8rem;
+  text-decoration: none;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.dogfood-chip:hover { border-color: var(--ink-light); color: var(--ink-dark); background: #fff; }
+
+/* ===== FAQ (THE ITERATION) ===== */
+.faq-section {
+  background: var(--paper-warm);
+  border-top: 1px solid var(--paper-aged); border-bottom: 1px solid var(--paper-aged);
+  padding: 5rem 1.5rem 4rem;
+}
+.faq-inner { max-width: var(--max-w); margin: 0 auto; }
+
+/* The pretext-paragraph lede. Per PRETEXT-PATTERN.md:
+   reads as prose first, figures inline with word-size sparklines,
+   one paragraph, ends with a commitment clause. */
+.faq-pretext {
+  font-family: var(--font-prose);
+  font-size: 1.15rem; line-height: 1.8;
+  color: var(--ink-medium);
+  margin: 1.5rem 0 3.5rem;
+  max-width: 64ch;
+  text-wrap: pretty;
+}
+/* Drop cap — initial-letter gives a proper integrated drop-cap
+   (word reads as one, not as 'A' + gap + rest). Fallback to a
+   tight float for browsers without initial-letter support. */
+.faq-pretext::first-letter {
+  font-family: var(--font-prose);
+  font-weight: 500;
+  color: var(--ink-dark);
+  -webkit-initial-letter: 3 2;
+  initial-letter: 3 2;
+  /* Fallback path — kept minimal so text wraps tight to the letter. */
+  font-size: 3.2rem; line-height: 0.82;
+  float: left; padding: 0.32rem 0.08em 0 0;
+  margin-right: 0.04em;
+}
+.faq-pretext em { color: var(--ink-dark); font-style: italic; font-weight: 500; }
+.faq-pretext strong { color: var(--ink-dark); font-weight: 600; }
+.faq-pretext .fig {
+  font-family: var(--font-code); font-variant-numeric: tabular-nums;
+  color: var(--ink-dark); font-size: 0.95em;
+}
+/* Inline code pill — never break across lines; paints correctly if it does. */
+.faq-pretext code {
+  font-family: var(--font-code);
+  background: var(--paper-aged);
+  color: var(--ink-dark);
+  padding: 0.08em 0.42em;
+  border-radius: 3px;
+  font-size: 0.85em;
+  display: inline-block;
+  white-space: nowrap;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+/* Sparklines — word-sized but legible. Previous 46×14 rendered as a blob
+   at body-size; 72×20 with stroke 2 reads as a real trend line. */
+.faq-pretext .spark {
+  display: inline-block; vertical-align: -4px; margin: 0 0.2em;
+}
+.faq-pretext .spark svg { display: block; }
+.faq-pretext .spark path { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.faq-pretext .spark circle.end { fill: var(--accent); }
+.faq-pretext .closer {
+  color: var(--ink-dark); font-style: italic;
+}
+
+/* Accordion */
+.qa-list {
+  background: #fff;
+  border: 1px solid var(--paper-aged);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+.qa-item {
+  border-bottom: 1px solid var(--paper-aged);
+}
+.qa-item:last-child { border-bottom: none; }
+
+.qa-question {
+  width: 100%;
+  display: grid; grid-template-columns: 1fr 24px;
+  align-items: center; gap: 1.25rem;
+  text-align: left;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 1.4rem 1.75rem;
+  font-family: var(--font-prose); font-size: 1.2rem; line-height: 1.35;
+  font-weight: 500;
+  color: var(--ink-dark);
+  letter-spacing: -0.005em;
+  transition: background 0.15s;
+}
+.qa-question:hover { background: var(--accent-wash); }
+.qa-question:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.qa-chevron {
+  font-family: var(--font-code); font-size: 1.4rem; font-weight: 400;
+  color: var(--ink-light);
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px;
+  transition: transform 0.28s var(--ease-out), color 0.15s;
+  line-height: 1;
+}
+.qa-question[aria-expanded="true"] { background: var(--accent-wash); }
+.qa-question[aria-expanded="true"] .qa-chevron { transform: rotate(45deg); color: var(--accent); }
+
+/* The animated panel. grid-template-rows 0fr → 1fr is the trick. */
+.qa-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.35s var(--ease-out);
+  background: var(--accent-wash);
+}
+.qa-question[aria-expanded="true"] + .qa-panel { grid-template-rows: 1fr; }
+.qa-panel-inner { overflow: hidden; }
+.qa-panel p {
+  padding: 0 1.75rem 1.6rem;
+  font-family: var(--font-prose); font-size: 1.02rem;
+  color: var(--ink-medium); line-height: 1.7;
+  max-width: 62ch;
+}
+.qa-panel p + p { padding-top: 0; }
+.qa-panel .qa-meta {
+  padding: 0.1rem 1.75rem 1.4rem;
+  font-family: var(--font-code); font-size: 0.7rem;
+  color: var(--ink-light); letter-spacing: 0.08em;
+  text-transform: uppercase;
+  display: flex; gap: 0.6rem; align-items: center;
+}
+.qa-panel .qa-meta .dot { color: var(--ink-faded); }
+.qa-panel .qa-meta a {
+  color: var(--accent); text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.15s;
+}
+.qa-panel .qa-meta a:hover { border-bottom-color: var(--accent); }
+
+/* After-list: nudge if they didn't find it */
+.faq-outro {
+  margin-top: 2.5rem; text-align: center;
+  font-family: var(--font-prose); color: var(--ink-light);
+  font-size: 1rem; line-height: 1.6;
+}
+.faq-outro a {
+  color: var(--accent); text-decoration: underline;
+  text-decoration-color: var(--paper-aged);
+  text-underline-offset: 4px;
+  transition: text-decoration-color 0.15s;
+}
+.faq-outro a:hover { text-decoration-color: var(--accent); }
+
+/* ===== FOOTER ===== */
+.site-footer {
+  border-top: 1px solid var(--paper-aged);
+  background: var(--paper-warm);
+  color: var(--ink-medium);
+  margin-top: 6rem;
+  padding: 4rem 1.5rem 2rem;
+}
+.site-footer-inner {
+  display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 3rem; max-width: var(--max-w-wide); margin: 0 auto;
+}
+.site-footer-brand-col { display: flex; flex-direction: column; gap: 0.75rem; }
+.site-footer-brand {
+  font-family: var(--font-prose); font-size: 1.25rem; font-weight: 600;
+  color: var(--ink-dark); text-decoration: none;
+}
+.site-footer-tagline {
+  color: var(--ink-light); margin: 0;
+  font-size: 0.95rem; line-height: 1.55;
+}
+.site-footer-proof {
+  font-family: var(--font-code); color: var(--ink-light);
+  display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;
+  font-size: 0.8rem;
+}
+.site-footer-col { display: flex; flex-direction: column; gap: 0.6rem; }
+.site-footer-col h4 {
+  font-family: var(--font-code); font-size: 0.62rem; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.14em;
+  color: var(--accent); margin-bottom: 0.3rem;
+}
+.site-footer-col a {
+  font-family: var(--font-code); font-size: 0.85rem;
+  color: var(--ink-medium); text-decoration: none;
+  transition: color 0.15s;
+}
+.site-footer-col a:hover { color: var(--ink-dark); }
+.site-footer-legal {
+  border-top: 1px solid var(--paper-aged);
+  max-width: var(--max-w-wide);
+  font-family: var(--font-code); color: var(--ink-faded);
+  margin: 3rem auto 0;
+  padding-top: 1.5rem;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 880px) {
+  .site-header { flex-wrap: wrap; gap: 0.75rem; padding: 0.75rem 1rem; }
+  .site-header-nav { border-top: 1px solid var(--paper-aged); order: 3; gap: 1rem; width: 100%; padding-top: 0.5rem; font-size: 0.85rem; }
+  .site-header-actions { order: 2; }
+
+  .hero { padding: 4.5rem 1.25rem 3.5rem; }
+  .hero-cta-row { flex-direction: column; align-items: stretch; }
+  .hero-cta-secondary { width: 100%; }
+
+  .devcred-inner { grid-template-columns: 1fr; }
+  .outcomes-grid { grid-template-columns: 1fr; }
+  .dogfood-inner { grid-template-columns: 1fr; }
+  .site-footer-inner { grid-template-columns: 1fr 1fr; }
+  .site-footer-brand-col { grid-column: 1 / -1; }
+  .qa-question { padding: 1.2rem 1.25rem; font-size: 1.08rem; }
+  .qa-panel p { padding: 0 1.25rem 1.3rem; }
+  .qa-panel .qa-meta { padding: 0 1.25rem 1.1rem; }
+}
+
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="site-header">
+  <a class="site-header-brand" href="/"><span>Open</span>Prose</a>
+  <nav class="site-header-nav" aria-label="Primary">
+    <a class="site-header-link" href="#">Learn</a>
+    <a class="site-header-link" href="#">Docs</a>
+    <a class="site-header-link" href="#">GitHub</a>
+  </nav>
+  <div class="site-header-actions">
+    <button type="button" class="site-header-sign-in">Sign In</button>
+    <a class="site-header-demo" href="#">Book a Demo</a>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-inner">
+    <h1 class="hero-headline">
+      <span class="hero-accent">Offload</span> the work you'd otherwise hire for.
+    </h1>
+    <p class="hero-sub">A service that runs for you — not another tool to operate. Set the goal, receive the work.</p>
+    <div class="hero-ctas">
+      <div class="hero-cta-row">
+        <a class="hero-cta-primary" href="#">Book a Demo</a>
+        <button class="hero-cta-secondary" type="button">Get updates</button>
+      </div>
+      <button class="hero-cta-tertiary" type="button">Or — send us your biggest pain point →</button>
+    </div>
+  </div>
+</section>
+
+<!-- DEVCRED -->
+<section class="devcred">
+  <div class="devcred-inner">
+    <div class="devcred-copy">
+      <span class="accent-pill-wrap"><span class="accent-pill">Open source</span></span>
+      <h2>Declarative contracts for the AI session.</h2>
+      <p>A Prose program is a Markdown file with a contract — <code>requires</code>, <code>ensures</code>, <code>strategies</code> — not a chain of prompts. Forme auto-wires services by semantic match; any Prose Complete harness (Claude Code, Codex CLI) executes it. The program declares <em>what</em>, not <em>how</em>, so it gets better as models improve. All MIT.</p>
+      <div class="devcred-proof">
+        <span>1,000+ GitHub stars</span>
+        <span class="proof-sep">·</span>
+        <span>7,000+ installs</span>
+        <span class="proof-sep">·</span>
+        <span class="proof-yc">
+          <svg width="16" height="16" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M47.9985 47.9994H0V0H47.9985V47.9994Z" fill="#FF6600"/>
+            <path d="M21.07 27.19L13.9 11.78h3.76l4.84 9.75c.7 1.45 1.3 2.87 1.3 2.87s.63-1.38 1.38-2.87l4.91-9.75h3.5L25.29 27.37v9.94h-3.16v-10.12z" fill="white"/>
+          </svg>
+          Backed by Y Combinator
+        </span>
+        <span class="proof-sep">·</span>
+        <span>MIT licensed</span>
+      </div>
+      <div class="devcred-actions">
+        <a href="#" class="btn-secondary">View on GitHub →</a>
+        <a href="#" class="devcred-learn-link">Read the spec →</a>
+      </div>
+    </div>
+    <pre class="devcred-snippet"><code><span class="hs-punct">---</span>
+<span class="hs-key">name</span><span class="hs-punct">:</span> <span class="hs-val">hunter</span>
+<span class="hs-key">kind</span><span class="hs-punct">:</span> <span class="hs-type">program</span>
+<span class="hs-key">services</span><span class="hs-punct">:</span> <span class="hs-punct">[</span><span class="hs-val">analyst</span><span class="hs-punct">,</span> <span class="hs-val">ranker</span><span class="hs-punct">,</span> <span class="hs-val">compiler</span><span class="hs-punct">]</span>
+<span class="hs-punct">---</span>
+
+<span class="hs-section">requires</span><span class="hs-punct">:</span>
+<span class="hs-punct">  -</span> <span class="hs-val">data_warehouse_url</span>
+<span class="hs-punct">  -</span> <span class="hs-val">codebase_ref</span>
+
+<span class="hs-section">ensures</span><span class="hs-punct">:</span>
+<span class="hs-punct">  -</span> <span class="hs-key">brief</span><span class="hs-punct">:</span> <span class="hs-val">weekly growth findings, ranked</span>
+<span class="hs-val">    by confidence × impact, each with</span>
+<span class="hs-val">    an owner and a trivial next step</span>
+
+<span class="hs-section">strategies</span><span class="hs-punct">:</span>
+<span class="hs-punct">  -</span> <span class="hs-val">prefer findings with code-level evidence</span>
+<span class="hs-punct">  -</span> <span class="hs-val">surface instrumentation gaps as findings</span></code></pre>
+  </div>
+</section>
+
+<!-- OUTCOMES -->
+<section class="outcomes">
+  <div class="section-header">
+    <span class="accent-pill-wrap"><span class="accent-pill">Sample deliverables</span></span>
+    <h2>What a morning brief looks like.</h2>
+    <p>Illustrative examples of the outputs programs ship into your Slack — not dashboards, not tools, the finished work.</p>
+  </div>
+  <div class="outcomes-grid">
+    <article class="outcome">
+      <div class="slack-card">
+        <div class="slack-toolbar">
+          <div class="slack-logo" aria-hidden="true"></div>
+          <span class="slack-channel"># growth-ops</span>
+          <span class="slack-tag save">Save</span>
+        </div>
+        <div class="slack-msg">
+          <div class="slack-avatar orange">H</div>
+          <div class="slack-body">
+            <div class="slack-meta">
+              <span class="slack-author">hunter</span>
+              <span class="slack-badge">APP</span>
+              <span class="slack-time">6:00 AM</span>
+            </div>
+            <div class="slack-text">
+              <p><strong>Weekly Growth Brief — Apr 7–13</strong></p>
+              <p><strong>Headline:</strong> a one-line config change is costing ~1,500 orders/day — and the fix is a one-line revert.</p>
+              <p>An engineer raised the grocery minimum from $10 to $15. No A/B wrapper, no tracking on threshold-blocked carts. Grocery conversion dropped <strong>8.2% → 7.2%</strong> within 24h. Net impact: <strong>$45K–$67K</strong> in daily GMV.</p>
+              <div class="slack-table">
+                <div class="slack-trow thead"><span>#</span><span>Finding</span><span>Impact</span><span>Effort</span></div>
+                <div class="slack-trow"><span>1</span><span>Revert grocery min ($15→$10)</span><span>1.2–1.8K/day</span><span>Trivial</span></div>
+                <div class="slack-trow"><span>2</span><span>Premium prompts · high-freq users</span><span>1.5–3K/day</span><span>Small</span></div>
+                <div class="slack-trow"><span>3</span><span>Restore search card analytics</span><span>Unblocks msmt</span><span>Small</span></div>
+              </div>
+              <p class="slack-muted">Full breakdown with queries and dashboards in thread.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="slack-caption">Surfaces the one-line revert and the instrumentation gap that together represent seven figures of recoverable GMV the team couldn't see on its own.</p>
+    </article>
+
+    <article class="outcome">
+      <div class="slack-card">
+        <div class="slack-toolbar">
+          <div class="slack-logo" aria-hidden="true"></div>
+          <span class="slack-channel"># intake</span>
+          <span class="slack-tag grow">Grow</span>
+        </div>
+        <div class="slack-msg">
+          <div class="slack-avatar blue">T</div>
+          <div class="slack-body">
+            <div class="slack-meta">
+              <span class="slack-author">intake-triage</span>
+              <span class="slack-badge">APP</span>
+              <span class="slack-time">7:00 AM</span>
+            </div>
+            <div class="slack-text">
+              <p><strong>Intake Triage — 2026-04-13</strong> · Pipeline Health: <strong>YELLOW</strong></p>
+              <p>Five eligible participants ready for advancement. One safety flag requiring immediate attention. Two protocol questions for PI.</p>
+              <div class="slack-table">
+                <div class="slack-trow thead three"><span>ID</span><span>Result</span><span>Notes</span></div>
+                <div class="slack-trow three"><span>QR-…001</span><span>Eligible</span><span>Y-BOCS 26, 2 adequate SSRI trials. Local.</span></div>
+                <div class="slack-trow three"><span>QR-…003</span><span>Not eligible</span><span><strong>SAFETY FLAG</strong> — active suicidal ideation.</span></div>
+                <div class="slack-trow three"><span>QR-…007</span><span>Eligible</span><span><strong>HIGH PRIORITY</strong> — Y-BOCS 35, 3 failed trials.</span></div>
+              </div>
+              <p><strong>If you do one thing today:</strong> schedule follow-up with QR-…007 and begin consent. Most severe treatment-resistant profile in the batch — every hour of delay increases disengagement risk.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="slack-caption">Turns a messy stream of survey and email inquiries into a prioritized, safety-checked enrollment queue the coordinator can act on before lunch.</p>
+    </article>
+  </div>
+</section>
+
+<!-- DOGFOOD -->
+<section>
+  <div class="dogfood-inner">
+    <div class="dogfood-copy">
+      <span class="accent-pill-wrap"><span class="accent-pill">Built by the builders</span></span>
+      <h2>OpenProse runs on OpenProse.</h2>
+      <p>Our marketing, GTM, and ops run on Prose programs. Thirteen responsibilities run the company — mention tracking, competitor intelligence, lead enrichment, outreach drafting, market indices.</p>
+      <a href="#" class="btn-secondary">See how we run our company →</a>
+    </div>
+    <div class="dogfood-list">
+      <a href="#" class="dogfood-chip">mention-intelligence</a>
+      <a href="#" class="dogfood-chip">competitor-intelligence</a>
+      <a href="#" class="dogfood-chip">opportunity-discovery</a>
+      <a href="#" class="dogfood-chip">engagement-drafting</a>
+      <a href="#" class="dogfood-chip">agent-ecosystem-index</a>
+      <a href="#" class="dogfood-chip">saas-readiness-index</a>
+      <a href="#" class="dogfood-chip">agents-site-analytics</a>
+      <a href="#" class="dogfood-chip">person-enrichment</a>
+      <a href="#" class="dogfood-chip">company-enrichment</a>
+      <a href="#" class="dogfood-chip">lead-enrichment</a>
+      <a href="#" class="dogfood-chip">program-designer</a>
+      <a href="#" class="dogfood-chip">customer-repo-scaffolder</a>
+      <a href="#" class="dogfood-chip">stargazer-intake</a>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ — THE ITERATION -->
+<section class="faq-section" id="faq">
+  <div class="faq-inner">
+    <div style="text-align:center; margin-bottom: 1.5rem;">
+      <span class="accent-pill-wrap"><span class="accent-pill">FAQ</span></span>
+      <h2 style="font-family: var(--font-prose); color: var(--ink-dark); margin: 0.25rem 0; font-size: 2rem; line-height: 1.2; letter-spacing: -0.014em; font-weight: 500;">Common questions, <em>answered once</em>.</h2>
+    </div>
+
+    <!-- Pretext-paragraph lede — synthesizes the ten questions below.
+         Every figure is drawn from a specific answer in the accordion;
+         the two sparklines represent real claims from those answers
+         (flat monthly fee; the $120K→$24K compression). No figures
+         beyond what the FAQs themselves state. -->
+    <p class="faq-pretext">
+      OpenProse is a service you <em>receive</em>, not a tool you operate — the closest analogy is a staffing firm that ships code. Pilots begin at <strong>$2,000/mo</strong><span class="spark" aria-hidden="true"><svg width="72" height="20" viewBox="0 0 72 20"><path d="M2,10 L14,10 L26,10 L38,10 L50,10 L68,10"/><circle class="end" cx="68" cy="10" r="2.4"/></svg></span>for two programs, with a <span class="fig">4-day</span> median start from signed order to first delivery. A <span class="fig">$120K</span> hire compresses to roughly <span class="fig">$24K/yr</span><span class="spark" aria-hidden="true"><svg width="72" height="20" viewBox="0 0 72 20"><path d="M2,4 L14,5 L26,5 L30,14 L50,14 L68,14"/><circle class="end" cx="68" cy="14" r="2.4"/></svg></span>when three responsibilities are handled as programs instead. Every internal output clears an automated review; anything that leaves your walls also takes a human pass. The stack is <strong>MIT-licensed</strong>; your programs live in a repo <em>we share with you</em>, so leaving is a <code>git clone</code> away. We sell to the P&amp;L owner, not to the practitioner whose day the programs quietly shorten. <span class="closer">If one of the questions below doesn't resolve yours, the "biggest pain point" button at the top is the right place.</span>
+    </p>
+
+    <!-- Accordion: exactly one open at a time. Click to toggle. -->
+    <div class="qa-list" role="list">
+      <div class="qa-item">
+        <button class="qa-question" aria-expanded="true" aria-controls="qa-1" data-qa="q1" role="listitem">
+          <span>What is OpenProse?</span>
+          <span class="qa-chevron" aria-hidden="true">+</span>
+        </button>
+        <div class="qa-panel" id="qa-1" role="region" aria-labelledby="q1">
+          <div class="qa-panel-inner">
+            <p>OpenProse is a service-as-software company. You pay us a flat monthly fee and work gets done — reports generated, leads enriched, customer outreach drafted, operational briefs delivered — without anyone on your team opening a dashboard. The work runs on Prose programs, our open-source language for AI sessions.</p>
+            <div class="qa-meta"><span>Closest analogy</span><span class="dot">·</span><span>a staffing firm that ships code</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="qa-item">
+        <button class="qa-question" aria-expanded="false" aria-controls="qa-2" data-qa="q2">
+          <span>How is this different from ChatGPT or Claude?</span>
+          <span class="qa-chevron" aria-hidden="true">+</span>
+        </button>
+        <div class="qa-panel" id="qa-2" role="region">
+          <div class="qa-panel-inner">
+            <p>ChatGPT and Claude are <em>tools you use</em>. OpenProse is a <em>service you receive</em>. Your team doesn't prompt, doesn't configure, doesn't babysit. Outcomes arrive in your Slack, email, or the systems you already use — on a schedule, with human review where it matters.</p>
+            <div class="qa-meta"><span>Test</span><span class="dot">·</span><span>if the output lives in a chat window, it's a tool; if it lives in your workflow, it's OpenProse</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="qa-item">
+        <button class="qa-question" aria-expanded="false" aria-controls="qa-3" data-qa="q3">
+          <span>How is this different from hiring someone?</span>
+          <span class="qa-chevron" aria-hidden="true">+</span>
+        </button>
+        <div class="qa-panel" id="qa-3" role="region">
+          <div class="qa-panel-inner">
+            <p>Hiring takes weeks to source, months to ramp, and commits you to a full role even when you only need three specific responsibilities handled. OpenProse takes those responsibilities off your plate in days, runs them on a schedule with measurable confidence, and prices transparently — no salary band, no severance, no PTO.</p>
+            <div class="qa-meta"><span>Typical trade</span><span class="dot">·</span><span>a $120K hire for three responsibilities → $24K/yr for the same three, done on time</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="qa-item">
+        <button class="qa-question" aria-expanded="false" aria-controls="qa-4" data-qa="q4">
+          <span>What does a pilot look like?</span>
+          <span class="qa-chevron" aria-hidden="true">+</span>
+        </button>
+        <div class="qa-panel" id="qa-4" role="region">
+          <div class="qa-panel-inner">
+            <p>We build one or two programs tailored to your team, run them for you, and deliver the output to Slack or email. Flat monthly fee, roughly <strong>$2,000 for two programs</strong> during pilot. Median start time from signed order to first delivery: four days.</p>
+            <div class="qa-meta"><span>Out in</span><span class="dot">·</span><span>2 weeks</span><span class="dot">·</span><span>cancel anytime</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="qa-item">
+        <button class="qa-question" aria-expanded="false" aria-controls="qa-5" data-qa="q5">
+          <span>What if I want to run this in-house later?</span>
+          <span class="qa-chevron" aria-hidden="true">+</span>
+        </button>
+        <div class="qa-panel" id="qa-5" role="region">
+          <div class="qa-panel-inner">
+            <p>You can. Prose is MIT-licensed and your programs live in a repo we share with you. Run them locally, fork them, hand them to someone else. The lock-in is <em>quality of operation</em>, not proprietary infrastructure.</p>
+            <div class="qa-meta"><span>Escape hatch</span><span class="dot">·</span><span><a href="#">git clone</a> and go</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="qa-item">
+        <button class="qa-question" aria-expanded="false" aria-controls="qa-6" data-qa="q6">
+          <span>What about mistakes — who reviews the output?</span>
+          <span class="qa-chevron" aria-hidden="true">+</span>
+        </button>
+        <div class="qa-panel" id="qa-6" role="region">
+          <div class="qa-panel-inner">
+            <p>Every output passes through an automated review model before delivery. For work that goes externally to your customers, suppliers, or partners, we configure a human review step as part of the program.</p>
+            <div class="qa-meta"><span>Internal</span><span class="dot">·</span><span>auto-review</span><span class="dot">·</span><span>external</span><span class="dot">·</span><span>human-in-loop</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="qa-item">
+        <button class="qa-question" aria-expanded="false" aria-controls="qa-7" data-qa="q7">
+          <span>How do you handle our data?</span>
+          <span class="qa-chevron" aria-hidden="true">+</span>
+        </button>
+        <div class="qa-panel" id="qa-7" role="region">
+          <div class="qa-panel-inner">
+            <p>Your data stays in your org by default. OpenProse learns from what works across the platform — which program structures succeed, which patterns scale — but customer data never leaves your walls. Full tenant isolation is available for customers whose legal teams require it.</p>
+            <div class="qa-meta"><span>Default</span><span class="dot">·</span><span>shared platform learnings, private customer data</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="qa-item">
+        <button class="qa-question" aria-expanded="false" aria-controls="qa-8" data-qa="q8">
+          <span>Who is OpenProse for?</span>
+          <span class="qa-chevron" aria-hidden="true">+</span>
+        </button>
+        <div class="qa-panel" id="qa-8" role="region">
+          <div class="qa-panel-inner">
+            <p>Executives and operators at companies where the same operational work gets redone every week. Sales, marketing, support, research, product — any function with a repeatable pain that today gets handled by a person or gets dropped. We sell to the P&amp;L owner, not to the individual whose job gets easier.</p>
+            <div class="qa-meta"><span>Who pays</span><span class="dot">·</span><span>the P&amp;L owner</span><span class="dot">·</span><span>not the practitioner</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="qa-item">
+        <button class="qa-question" aria-expanded="false" aria-controls="qa-9" data-qa="q9">
+          <span>How is this different from LangChain, CrewAI, or AutoGen?</span>
+          <span class="qa-chevron" aria-hidden="true">+</span>
+        </button>
+        <div class="qa-panel" id="qa-9" role="region">
+          <div class="qa-panel-inner">
+            <p>Those are <em>libraries developers use</em> to build agent systems. OpenProse is a <em>company that delivers finished work product</em>. We use our own open-source stack (Prose, Forme, Press) to run your programs; you never see the plumbing.</p>
+            <div class="qa-meta"><span>Their output</span><span class="dot">·</span><span>code</span><span class="dot">·</span><span>our output</span><span class="dot">·</span><span>the work itself</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="qa-item">
+        <button class="qa-question" aria-expanded="false" aria-controls="qa-10" data-qa="q10">
+          <span>Can I see how you run your own company?</span>
+          <span class="qa-chevron" aria-hidden="true">+</span>
+        </button>
+        <div class="qa-panel" id="qa-10" role="region">
+          <div class="qa-panel-inner">
+            <p>Yes — OpenProse runs on OpenProse. Our marketing, GTM, enrichment, and ops functions are Prose programs. The dogfood is the clearest picture of how the platform works in practice.</p>
+            <div class="qa-meta"><span>See</span><span class="dot">·</span><span><a href="#">Built on Prose</a></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="faq-outro">Still not it? <a href="#">Tell us your biggest pain point →</a> and we'll write back with whether a Prose program can take it.</p>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <div class="site-footer-brand-col">
+      <a class="site-footer-brand" href="/">OpenProse</a>
+      <p class="site-footer-tagline">The work your team would otherwise hire for.</p>
+      <div class="site-footer-proof">
+        <span>1,000+ GitHub stars</span>
+        <span class="proof-sep">·</span>
+        <span>7,000+ installs</span>
+        <span class="proof-sep">·</span>
+        <span class="proof-yc">
+          <svg width="16" height="16" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M47.9985 47.9994H0V0H47.9985V47.9994Z" fill="#FF6600"/>
+            <path d="M21.07 27.19L13.9 11.78h3.76l4.84 9.75c.7 1.45 1.3 2.87 1.3 2.87s.63-1.38 1.38-2.87l4.91-9.75h3.5L25.29 27.37v9.94h-3.16v-10.12z" fill="white"/>
+          </svg>
+          Backed by Y Combinator
+        </span>
+        <span class="proof-sep">·</span>
+        <span>MIT licensed</span>
+      </div>
+    </div>
+    <div class="site-footer-col"><h4>Product</h4><a href="#">Learn</a><a href="#">Built on Prose</a></div>
+    <div class="site-footer-col"><h4>Open Source</h4><a href="#">GitHub</a><a href="#">Docs</a></div>
+    <div class="site-footer-col"><h4>Company</h4><a href="#">Sign In</a><a href="#">Book a Demo</a></div>
+  </div>
+  <div class="site-footer-legal" style="padding-left:0; padding-right:0;">© 2026 OpenProse, Inc.</div>
+</footer>
+
+<script>
+/* Accordion: one open at a time, smooth grid-template-rows transition.
+   Default: first question opens on load so the reader lands on content
+   (same reason Dan's flat FAQ works — nothing is hidden at first glance). */
+(function () {
+  const questions = document.querySelectorAll('.qa-question');
+
+  function open(btn) {
+    questions.forEach(b => {
+      if (b === btn) return;
+      b.setAttribute('aria-expanded', 'false');
+    });
+    btn.setAttribute('aria-expanded', 'true');
+  }
+
+  function toggle(btn) {
+    const isOpen = btn.getAttribute('aria-expanded') === 'true';
+    if (isOpen) {
+      // Allow collapse-all so the reader can close the current question
+      // and see the pretext paragraph uninterrupted.
+      btn.setAttribute('aria-expanded', 'false');
+    } else {
+      open(btn);
+    }
+  }
+
+  questions.forEach(btn => {
+    btn.addEventListener('click', () => toggle(btn));
+    btn.addEventListener('keydown', (e) => {
+      // Arrow keys navigate between questions (accessibility nicety)
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const list = Array.from(questions);
+        const i = list.indexOf(btn);
+        const next = e.key === 'ArrowDown' ? list[i + 1] : list[i - 1];
+        if (next) { next.focus(); }
+      } else if (e.key === 'Home') {
+        e.preventDefault(); questions[0].focus();
+      } else if (e.key === 'End') {
+        e.preventDefault(); questions[questions.length - 1].focus();
+      }
+    });
+  });
+})();
+
+/* The subtle aged rule under each section pill — draws in on scroll.
+   Uses IntersectionObserver; no animation frame polling. */
+(function () {
+  const wraps = document.querySelectorAll('.accent-pill-wrap');
+  if (!('IntersectionObserver' in window)) {
+    wraps.forEach(w => w.classList.add('seen'));
+    return;
+  }
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('seen');
+        io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.4 });
+  wraps.forEach(w => io.observe(w));
+})();
+</script>
+
+</body>
+</html>

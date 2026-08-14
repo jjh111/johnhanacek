@@ -1,0 +1,743 @@
+/* ===========================================
+   jh-chrome.css — the site chrome, on its own
+
+   The fixed <jh-nav> bar, the shape navigation, and the <jh-footer> oval,
+   plus the design tokens they need. Split out of shared.css so a page that
+   brings its OWN visual language can still wear the site's header and footer:
+   openprose.html (the OpenProse case study) loads this file alone, while
+   shared.css @imports it so every standard page is unchanged.
+
+   Two rules keep it safe to drop into a foreign page:
+     1. No bare element selectors. The nav is #nav and the footer is
+        body > footer, so a host page's own <nav>/<footer> is untouched.
+     2. Tokens a host might also define (gold, the spacing scale) are read
+        through --jh- prefixed names. The unprefixed aliases below are what
+        the rest of shared.css uses; a host page redefining --gold cannot
+        reach the chrome through them.
+=========================================== */
+
+:root {
+    /* Deep Sea Palette */
+    --sea-deep: #020a12;
+    --sea-mid: #051018;
+    --sea-panel: rgba(0, 20, 40, 0.08);
+
+    --cyan: #7dd8f7;
+    --cyan-dim: #4dc9f6;
+    --cyan-glow: rgba(77, 201, 246, 0.4);
+    --jh-gold: #d4af37;
+    --gold: var(--jh-gold);
+    --gold-glow: rgba(212, 175, 55, 0.3);
+    --green: #b6ffba;
+
+    --text-primary: #8cb8cc;
+    --text-bright: #b8dced;
+    --text-heading: #7dd8f7;
+    --text-subhead: #e8f4ff;
+
+    /* Semantic tokens */
+    --accent: var(--cyan);
+    --accent-hover: var(--gold);
+    --muted: #7a9aaa;
+    --muted-light: #8aabb8;
+    --border: rgba(77, 201, 246, 0.2);
+    --shadow: rgba(77, 201, 246, 0.15);
+    --focus: var(--cyan);
+
+    /* Typography Scale */
+    --text-xs: 0.8rem;
+    --text-sm: 0.9rem;
+    --text-base: 1.05rem;
+    --text-lg: 1.2rem;
+    --text-xl: 1.35rem;
+    --text-2xl: 1.55rem;
+    --text-3xl: 2.5rem;
+
+    /* Spacing Scale */
+    --space-xs: 0.375rem;
+    --jh-space-sm: 0.75rem;
+    --space-sm: var(--jh-space-sm);
+    --jh-space-md: 1.25rem;
+    --space-md: var(--jh-space-md);
+    --space-lg: 1.75rem;
+    --jh-space-xl: 2.5rem;
+    --space-xl: var(--jh-space-xl);
+    --jh-space-2xl: 4rem;
+    --space-2xl: var(--jh-space-2xl);
+}
+
+/* ===========================================
+   4. NAVIGATION
+=========================================== */
+/* The chrome renders in its own two faces and must not be metric-normalised
+   against the host page's. openprose.html sets `font-size-adjust: ex-height`
+   on body (it aligns Kecal against a mono); inherited into the bar, that
+   rescales the font-size:0 the compact <900px .nav-title / .nav-right rely
+   on and the full text reappears beside its own abbreviation. Reset it, and
+   opt out of mobile text autosizing for the same reason. */
+#nav, body > footer {
+    font-size-adjust: none;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+#nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    background: rgba(2, 10, 18, 0.92);
+    backdrop-filter: blur(8px);
+    z-index: 1000;
+    border-bottom: 1px solid rgba(77, 201, 246, 0.12);
+    transform: translateY(-100%);
+    transition: transform 0.25s ease;
+    height: calc(40px + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
+    overflow: visible;
+}
+#nav.visible { transform: translateY(0); }
+
+.nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 var(--jh-space-md);
+    height: 100%;
+}
+
+/* Left side: shapes + name */
+.nav-left {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    overflow: visible;
+}
+
+.nav-title {
+    font-family: 'Raleway', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 300;
+    color: var(--text-bright);
+    text-decoration: none;
+    letter-spacing: 0.1em;
+    line-height: 1;
+    margin: 0 0.4rem;
+    white-space: nowrap;
+}
+.nav-title:hover { color: var(--jh-gold); }
+
+.nav-toggle {
+    display: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+    margin-right: -0.5rem;
+}
+.nav-toggle span {
+    display: block;
+    width: 20px;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.95);
+    margin: 4px 0;
+    transition: transform 0.2s, opacity 0.2s;
+}
+.nav-toggle.active span:nth-child(1) { transform: rotate(45deg) translate(4px, 4px); }
+.nav-toggle.active span:nth-child(2) { opacity: 0; }
+.nav-toggle.active span:nth-child(3) { transform: rotate(-45deg) translate(4px, -4px); }
+
+/* Right side: section links */
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.nav-right li {
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+}
+
+.nav-right a {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-decoration: none;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0 0.625rem;
+    white-space: nowrap;
+    transition: color 0.2s;
+}
+.nav-right a:hover, .nav-right a:focus { color: var(--jh-gold); }
+
+.nav-separator {
+    color: rgba(255, 255, 255, 0.25);
+    font-size: 0.75rem;
+    padding: 0 0.5rem;
+    pointer-events: none;
+}
+
+/* ===========================================
+   5. SHAPE NAVIGATION
+=========================================== */
+
+/* --- Hero shape-nav pill base --- */
+.shape-nav {
+    position: relative;
+    display: flex;
+    width: fit-content;
+    gap: 0;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 0.35rem 0.5rem 0.4rem;
+    border-radius: 2rem;
+}
+
+/* --- Shared shape-link base (hero) --- */
+.shape-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    opacity: 0.4;
+    transition: opacity 0.3s;
+    text-decoration: none;
+    width: 44px;
+    min-height: 32px;
+    overflow: visible;
+}
+.shape-link:hover { opacity: 0.8; }
+.shape-link.active { opacity: 1; }
+
+.shape-link .shape {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    min-height: 28px;
+    fill: none;
+    stroke: var(--cyan);
+    stroke-width: 2;
+    transition: all 0.2s ease;
+}
+.shape-link.active .shape {
+    fill: rgba(77, 201, 246, 0.15);
+    filter: drop-shadow(0 0 8px var(--cyan-glow));
+}
+
+/* --- Shape labels (in flow, not absolute) --- */
+.shape-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    font-weight: 500;
+    color: var(--cyan);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.15s ease, height 0.15s ease, margin 0.15s ease;
+    margin-top: 0;
+    height: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+.shape-label-img {
+    width: auto;
+    filter: brightness(1.2);
+    opacity: 0;
+    transition: opacity 0.15s ease, height 0.15s ease, margin 0.15s ease;
+    margin-top: 0;
+    height: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+/* Ensure labels reset on non-hover (touch device fix) */
+.shape-link:not(:hover) .shape-label,
+.shape-link:not(:hover) .shape-label-img {
+    opacity: 0;
+}
+
+/* Hero: on hover, shrink shapes to top, show labels */
+.shape-nav .shape-link:hover .shape,
+.shape-nav:hover .shape-link .shape {
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    min-height: 18px;
+}
+.shape-nav .shape-link:hover .shape-label,
+.shape-nav:hover .shape-link .shape-label {
+    opacity: 1;
+    height: auto;
+    margin-top: 0.15rem;
+}
+.shape-nav .shape-link:hover .shape-label-img,
+.shape-nav:hover .shape-link .shape-label-img {
+    opacity: 1;
+    height: 0.6rem;
+    margin-top: 0.1rem;
+}
+
+/* --- Navbar shape overrides (compact) --- */
+.nav-left .shape-link {
+    width: 32px;
+    height: 34px;
+    opacity: 0.5;
+    padding: 0 0.15rem;
+    box-sizing: border-box;
+    justify-content: center;
+}
+.nav-left .shape-link:hover { opacity: 0.85; }
+.nav-left .shape-link.active { opacity: 1; }
+.nav-left .shape-link .shape {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    min-height: 22px;
+    fill: rgba(77, 201, 246, 0.1);
+}
+.nav-left .shape-link.active .shape {
+    filter: drop-shadow(0 0 4px var(--cyan-glow));
+}
+/* Navbar: shrink shapes on hover to fit labels inside nav height */
+.nav-left .shape-link:hover .shape {
+    width: 14px;
+    height: 14px;
+    min-width: 14px;
+    min-height: 14px;
+}
+.nav-left .shape-label {
+    font-size: 0.55rem;
+    margin-top: 0;
+    height: 0;
+    overflow: hidden;
+}
+.nav-left .shape-label-img {
+    height: 0;
+    margin-top: 0;
+    overflow: hidden;
+}
+.nav-left .shape-link:hover .shape-label {
+    opacity: 1;
+    height: auto;
+    margin-top: 0.1rem;
+}
+.nav-left .shape-link:hover .shape-label-img {
+    opacity: 1;
+    height: 0.45rem;
+    margin-top: 0.08rem;
+}
+
+/* --- Secondary shapes (smaller: About, Services) --- */
+.shape-link.secondary {
+    width: 36px;
+    opacity: 0.35;
+}
+.shape-link.secondary .shape {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    min-height: 22px;
+    stroke-width: 1.5;
+}
+.shape-link.secondary:hover { opacity: 0.7; }
+.shape-link.secondary.active { opacity: 0.9; }
+
+/* Hero shape-nav: search utility icon — left of page shapes, right divider */
+.shape-nav .shape-link.search-icon {
+    margin-right: 0.15rem;
+    padding-right: 0.35rem;
+    border-right: 1px solid rgba(77, 201, 246, 0.1);
+}
+
+/* Hero: secondary/search shapes shrink on hover */
+.shape-nav .shape-link.secondary:hover .shape,
+.shape-nav:hover .shape-link.secondary .shape,
+.shape-nav .shape-link.search-icon:hover .shape,
+.shape-nav:hover .shape-link.search-icon .shape {
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    min-height: 18px;
+}
+
+/* Navbar: secondary shapes (same size as primary) */
+.nav-left .shape-link.secondary {
+    width: 32px;
+    opacity: 0.5;
+}
+.nav-left .shape-link.secondary:hover { opacity: 0.85; }
+.nav-left .shape-link.secondary.active { opacity: 1; }
+.nav-left .shape-link.secondary .shape {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    min-height: 22px;
+}
+.nav-left .shape-link.secondary:hover .shape {
+    width: 14px;
+    height: 14px;
+    min-width: 14px;
+    min-height: 14px;
+}
+.nav-left .shape-link.secondary .shape-label {
+    font-size: 0.4rem;
+}
+/* Widen services shape to fit label */
+.nav-left .shape-link.secondary[aria-label="Services"] {
+    width: 38px;
+}
+/* Secondary shapes: show labels on hover (same as primary) */
+.nav-left .shape-link.secondary:hover .shape-label {
+    opacity: 1;
+}
+
+/* --- Nav search icon (inside .nav-left, first child, right divider) --- */
+.nav-left .shape-link.search-icon {
+    width: 32px;
+    margin-right: 2px;
+    padding-right: 6px;
+    border-right: 1px solid rgba(77, 201, 246, 0.08);
+}
+.nav-left .shape-link.search-icon .shape {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    min-height: 22px;
+    fill: none; /* search uses state-ring fill instead */
+}
+.nav-left .shape-link.search-icon:hover .shape {
+    width: 14px;
+    height: 14px;
+    min-width: 14px;
+    min-height: 14px;
+}
+
+/* ── Search state ring: engine indicator ── */
+.search-icon .state-ring {
+    stroke: var(--muted);
+    fill: rgba(122, 154, 170, 0.1);
+    opacity: 0.35;
+    transition: stroke 0.3s, fill 0.3s, opacity 0.3s, filter 0.3s;
+}
+body[data-search-engine="webgpu-available"] .search-icon .state-ring {
+    stroke: #4dc9f6;
+    fill: rgba(77, 201, 246, 0.6);
+    opacity: 0.7;
+    animation: search-ring-pulse 3s ease-in-out infinite;
+}
+body[data-search-engine="webgpu-active"] .search-icon .state-ring {
+    stroke: #4dc9f6;
+    fill: rgba(77, 201, 246, 0.6);
+    opacity: 1;
+    filter: drop-shadow(0 0 3px rgba(77, 201, 246, 0.5));
+}
+body[data-search-engine="lmstudio"] .search-icon .state-ring {
+    stroke: #c084fc;
+    fill: rgba(192, 132, 252, 0.6);
+    opacity: 1;
+    filter: drop-shadow(0 0 3px rgba(192, 132, 252, 0.5));
+}
+body[data-search-engine="ollama"] .search-icon .state-ring {
+    stroke: #fb923c;
+    fill: rgba(251, 146, 60, 0.6);
+    opacity: 1;
+    filter: drop-shadow(0 0 3px rgba(251, 146, 60, 0.5));
+}
+body[data-search-engine="custom"] .search-icon .state-ring {
+    stroke: #4ade80;
+    fill: rgba(74, 222, 128, 0.6);
+    opacity: 1;
+    filter: drop-shadow(0 0 3px rgba(74, 222, 128, 0.5));
+}
+@keyframes search-ring-pulse {
+    0%, 100% { filter: drop-shadow(0 0 1px rgba(77, 201, 246, 0.15)); opacity: 0.5; }
+    50% { filter: drop-shadow(0 0 6px rgba(77, 201, 246, 0.5)); opacity: 0.85; }
+}
+
+/* ===========================================
+   5a. TOUCH DEVICE OVERRIDES
+   On touch (no fine pointer), labels show always — not hover-only.
+   Must beat the .shape-link:not(:hover) rule that resets opacity to 0.
+=========================================== */
+@media (hover: none) and (pointer: coarse) {
+    /* Hero shape-nav: icons only on touch — labels hidden, pill stays compact */
+    .shape-nav .shape-link,
+    .shape-nav .shape-link.secondary,
+    .shape-nav .shape-link.search-icon {
+        height: 32px;
+        overflow: hidden;
+        min-width: 40px;
+        justify-content: center;
+    }
+
+    /* Keep shapes a clean consistent size */
+    .shape-nav .shape-link .shape,
+    .shape-nav .shape-link.secondary .shape,
+    .shape-nav .shape-link.search-icon .shape {
+        width: 20px; height: 20px;
+        min-width: 20px; min-height: 20px;
+    }
+
+    /* Labels stay hidden on touch hero nav — icons are self-explanatory */
+    .shape-nav .shape-link .shape-label,
+    .shape-nav .shape-link .shape-label-img,
+    .shape-nav .shape-link:not(:hover) .shape-label,
+    .shape-nav .shape-link:not(:hover) .shape-label-img {
+        opacity: 0 !important;
+        height: 0 !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+    }
+
+    /* Navbar: compact shapes, labels always visible */
+    .nav-left .shape-link,
+    .nav-left .shape-link.secondary,
+    .nav-left .shape-link.search-icon {
+        height: auto;
+        overflow: visible;
+        min-width: 32px;
+    }
+    .nav-left .shape-link .shape,
+    .nav-left .shape-link.secondary .shape,
+    .nav-left .shape-link.search-icon .shape {
+        width: 12px; height: 12px;
+        min-width: 12px; min-height: 12px;
+    }
+    .nav-left .shape-link .shape-label,
+    .nav-left .shape-link .shape-label-img,
+    .nav-left .shape-link.secondary .shape-label,
+    .nav-left .shape-link:not(:hover) .shape-label,
+    .nav-left .shape-link:not(:hover) .shape-label-img {
+        opacity: 1 !important;
+    }
+}
+
+/* ===========================================
+   10. FOOTER
+=========================================== */
+body > footer {
+    background: transparent; /* fixed fish canvas shows through */
+    color: var(--text-primary);
+    text-align: center;
+    padding: var(--jh-space-2xl) var(--jh-space-md) var(--jh-space-xl);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 10;
+}
+
+/* Footer glass oval — mirrors hero-oval aesthetic */
+/* Footer itself is transparent; re-enable clicks only on the oval */
+body > footer { pointer-events: none; }
+.footer-oval { pointer-events: auto; }
+
+.footer-oval {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+
+    /* Squished ellipse: wide, short — same approach as hero-oval */
+    width: fit-content;
+    min-width: 260px;
+    max-width: 420px;
+    padding: 1.2rem 3rem 1rem;
+
+    background: rgba(2, 10, 18, 0.55);
+    backdrop-filter: blur(8px) saturate(1.1);
+    -webkit-backdrop-filter: blur(8px) saturate(1.1);
+    border: 1px solid rgba(77, 201, 246, 0.18);
+    border-radius: 50%;
+    /* Safari fix: use drop-shadow instead of box-shadow for non-square border-radius */
+    filter: drop-shadow(0 0 1px rgba(77, 201, 246, 0.06)) drop-shadow(0 8px 40px rgba(0, 0, 0, 0.55));
+    position: relative;
+}
+
+/* Inset highlight via pseudo-element (can't use inset with drop-shadow) */
+.footer-oval::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: linear-gradient(to bottom, rgba(77, 201, 246, 0.08) 0%, transparent 50%);
+    pointer-events: none;
+}
+
+.footer-title {
+    font-family: 'Raleway', sans-serif;
+    font-size: var(--text-lg);
+    font-weight: 300;
+    letter-spacing: 0.1em;
+    color: var(--text-bright);
+    margin-bottom: 0.1rem;
+}
+.footer-subtitle {
+    font-size: var(--text-xs);
+    color: var(--muted);
+    margin-bottom: 0.4rem;
+    letter-spacing: 0.05em;
+}
+.footer-signature {
+    margin: 0.1rem 0 0.3rem;
+}
+.footer-signature img {
+    height: 2em;
+    opacity: 0.7;
+    filter: drop-shadow(0 1px 6px rgba(0, 0, 0, 0.7));
+}
+.footer-copyright {
+    font-size: var(--text-xs);
+    color: var(--muted);
+    margin-bottom: 0;
+    opacity: 0.8;
+}
+.footer-github {
+    font-size: var(--text-xs);
+    margin: 0.15rem 0 0;
+    opacity: 0.7;
+}
+/* Reset global p max-width inside footer oval */
+.footer-oval p {
+    max-width: 100%;
+    white-space: nowrap;
+}
+body > footer a {
+    color: var(--cyan);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-color: rgba(212, 175, 55, 0.5);
+}
+body > footer a:hover {
+    color: var(--jh-gold);
+    text-decoration-color: var(--jh-gold);
+}
+body > footer .version {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    font-weight: 400;
+    color: var(--muted);
+    opacity: 0.5;
+    margin-top: 0.25rem;
+    letter-spacing: 0.05em;
+    text-align: center;
+    line-height: 1.6;
+    white-space: normal; /* allow <br> to work */
+}
+
+/* ===========================================
+   CHROME RESPONSIVE
+   Moved here from shared.css section 12 so the chrome travels whole.
+=========================================== */
+@media (max-width: 900px) {
+    .nav-title {
+        font-size: 0;
+        line-height: 0;
+        display: inline-flex;
+        align-items: center;
+    }
+    .nav-title::after {
+        content: attr(data-short);
+        font-family: 'Raleway', sans-serif;
+        font-size: 1rem;
+        font-weight: 300;
+        letter-spacing: 0.05em;
+        line-height: 1;
+        color: var(--text-primary);
+    }
+    .nav-title:hover::after { color: var(--jh-gold); }
+
+    /* Hide full link text, show 2-char abbreviation */
+    .nav-right a {
+        font-size: 0;
+        line-height: 0;
+        padding: 0 0.4rem;
+        display: inline-flex;
+        align-items: center;
+    }
+    .nav-right a::after {
+        content: attr(data-short);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.6rem;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        line-height: 1;
+        color: var(--muted);
+    }
+    .nav-right a:hover::after,
+    .nav-right a:focus::after { color: var(--jh-gold); }
+
+    /* Hamburger hidden at tablet — abbreviated links visible */
+    .nav-toggle { display: none; }
+}
+
+@media (max-width: 768px) {
+    .nav-toggle {
+        display: block;
+        position: relative;
+        z-index: 1001;
+    }
+    .nav-right {
+        position: absolute;
+        top: 34px;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        background: rgb(2, 10, 18);
+        backdrop-filter: blur(8px);
+        flex-direction: column;
+        align-items: stretch;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid rgba(77, 201, 246, 0.1);
+        display: none;
+    }
+    .nav-right.open { display: flex; }
+    .nav-right li { height: auto; }
+    /* Show full link text in dropdown, not abbreviations */
+    .nav-right a {
+        font-size: 0.8rem;
+        line-height: 1.4;
+        padding: 0.4rem 1.25rem;
+        display: block;
+        color: var(--text-primary);
+    }
+    .nav-right a::after { content: none; }
+    .nav-right a:hover, .nav-right a:focus { color: var(--jh-gold); }
+
+    #nav { height: 36px; }
+    .nav-inner { padding: 0 var(--jh-space-sm); }
+
+    .footer-oval {
+        min-width: 0;
+        width: min(80vw, 300px);
+        padding: 1rem 1.5rem 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    #nav { height: 34px; }
+    /* Compact shapes for small screens */
+    .nav-left .shape-link { width: 24px; height: 28px; padding: 0 0.05rem; }
+    .nav-left .shape-link .shape { width: 16px; height: 16px; min-width: 16px; min-height: 16px; }
+    .nav-left .shape-link.secondary { width: 24px; }
+    .nav-left .shape-link.secondary .shape { width: 16px; height: 16px; min-width: 16px; min-height: 16px; }
+    .nav-left { gap: 0.15rem; }
+    .nav-title::after { font-size: 0.8rem; }
+    .nav-right a { padding: 0 0.25rem; }
+    .nav-right a::after { font-size: 0.5rem; }
+}
+
+@media print {
+    #nav { display: none; }
+}

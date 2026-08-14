@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 142 142'%3E%3Cpath d='M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z' fill='%232a2520'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenProse · Logotype N · Amber Terminal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700&family=VT323&display=swap" rel="stylesheet">
+<style>
+/* ============================================
+   LOGOTYPE N · AMBER TERMINAL
+   --------------------------------------------
+   Brand study: an OpenProse interface as if rendered on
+   a 1981 IBM 5151 amber phosphor monitor.  Single-hue
+   palette, monospace everywhere, ASCII box-drawing for
+   layout chrome, soft phosphor glow on bright text.
+   No serifs, no italics, no warm paper, no editorial
+   flourish — the OPPOSITE of every other study.  Designed
+   to feel less like "AI brand" and more like a tool that
+   ships in /usr/local/bin.
+   ============================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Amber CRT phosphor scale — single hue, lightness only.
+     Real P3 amber is ~590nm; sRGB approximation is #ffb000 at brightest.
+     We anchor on that and step down. */
+  --bg:         #0a0703;     /* CRT off, deep brown-black */
+  --bg-2:       #120c05;     /* surface 1 — panel */
+  --bg-3:       #1a110a;     /* surface 2 — input field */
+  --rule:       #2a1a05;     /* hairline */
+  --rule-2:     #3d2810;     /* divider, brighter rule */
+
+  --amber-faint:   #5a3a00;  /* dim chrome */
+  --amber-low:     #8a5800;  /* secondary text */
+  --amber-mid:     #c07c00;  /* tertiary — ledger figures */
+  --amber:         #e89200;  /* body text */
+  --amber-bright:  #ffb000;  /* highlights, prompts, marks */
+  --amber-glow:    #ffd060;  /* selection, active state */
+
+  /* Status (kept within the amber family, no red/green) */
+  --ok:    #ffb000;          /* same as bright — "ok" doesn't need a different hue */
+  --warn:  #e89200;
+  --fail:  #ff5040;          /* the ONLY off-palette colour, reserved for catastrophic */
+  --link:  #66c0ff;          /* phosphor blue, used sparingly for hyperlinks */
+
+  --hl-bg: rgba(255,176,0,0.18);   /* selection */
+  --hl-bg-strong: rgba(255,176,0,0.32);
+
+  /* Direct lineage to the 1981 IBM 5151 we're referencing — IBM
+     designed Plex as the family that carries the IBM voice. */
+  --mono:  'IBM Plex Mono', 'SF Mono', 'Fira Code', Consolas, monospace;
+  --tty:   'VT323', 'IBM Plex Mono', monospace;   /* for the OPENPROSE banner */
+
+  --gutter: 1280px;
+}
+
+html { font-size: 15px; scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--amber);
+  font-family: var(--mono);
+  font-weight: 400;
+  line-height: 1.55;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  text-shadow: 0 0 1px currentColor;
+}
+
+/* CRT scanlines — barely-there, only kicks in on hover for readers
+   who find them tiring; permanent at very low opacity for vibe. */
+body::before {
+  content: ''; position: fixed; inset: 0;
+  pointer-events: none; z-index: 100;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 2px,
+    rgba(0,0,0,0.10) 2px,
+    rgba(0,0,0,0.10) 3px
+  );
+  mix-blend-mode: multiply;
+  opacity: 0.55;
+}
+
+/* CRT vignette + barrel curve */
+body::after {
+  content: ''; position: fixed; inset: 0;
+  pointer-events: none; z-index: 99;
+  background:
+    radial-gradient(ellipse 100% 100% at 50% 50%, transparent 60%, rgba(0,0,0,0.55) 100%),
+    radial-gradient(ellipse 130% 60% at 50% 0%, rgba(255,176,0,0.04), transparent 60%);
+}
+
+/* Toggle scanlines off via :target trick — link in colophon */
+body.no-crt::before, body.no-crt::after { display: none; }
+
+/* Selection inherits the phosphor */
+::selection { background: var(--hl-bg-strong); color: var(--amber-bright); }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--rule-2); border-radius: 0; }
+::-webkit-scrollbar-track { background: var(--bg-2); }
+
+/* Bright text gets a phosphor glow */
+.glow,
+.tty-prompt,
+.banner,
+.section-num,
+.tty-blink,
+.hero-mark,
+.kbd,
+.tty-cmd .ok,
+.alert,
+strong { color: var(--amber-bright); text-shadow: 0 0 1px currentColor, 0 0 8px rgba(255,176,0,0.35); }
+
+a { color: var(--link); text-decoration: none; border-bottom: 1px solid currentColor; }
+a:hover { color: var(--amber-bright); }
+
+/* Cursor blink — used after live prompts and on the hero */
+.tty-blink::after,
+.cursor::after {
+  content: '\2588';                /* █ — full block */
+  animation: blink 1.05s steps(1) infinite;
+  margin-left: 2px;
+}
+@keyframes blink {
+  0%, 50%   { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* ───────── PAGE FRAME ───────── */
+.tty-screen {
+  max-width: var(--gutter);
+  margin: 0 auto;
+  padding: 1.6rem 1.6rem 4rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* Top status bar — like a tmux header */
+.statusbar {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 1.4rem;
+  padding: 0.35rem 0.75rem;
+  background: var(--amber-bright);
+  color: var(--bg);
+  text-shadow: none;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  margin-bottom: 1.6rem;
+}
+.statusbar .sb-l, .statusbar .sb-r {
+  display: inline-flex; gap: 1.1rem; align-items: baseline; white-space: nowrap;
+}
+.statusbar .sb-c {
+  text-align: center;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.statusbar .sb-tag {
+  background: var(--bg);
+  color: var(--amber-bright);
+  padding: 1px 6px;
+  text-shadow: 0 0 1px currentColor, 0 0 6px rgba(255,176,0,0.4);
+}
+
+/* ───────── HERO BOOT / BANNER ───────── */
+.hero { padding: 1.5rem 0 3rem; }
+
+.boot-line {
+  font-size: 0.78rem; color: var(--amber-low);
+  margin-bottom: 0.18rem;
+  letter-spacing: 0;
+}
+.boot-line .ok  { color: var(--amber-bright); text-shadow: 0 0 1px currentColor, 0 0 6px rgba(255,176,0,0.35); margin: 0 0.5rem; }
+.boot-line .arr { color: var(--amber-mid); }
+
+/* ASCII banner — hand-built from box-draw chars in the markup */
+.banner {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  line-height: 1.0;
+  color: var(--amber-bright);
+  white-space: pre;
+  margin: 1.2rem 0 1.4rem;
+  text-shadow: 0 0 1px currentColor, 0 0 12px rgba(255,176,0,0.45);
+}
+
+.hero-tag {
+  font-size: 0.92rem;
+  color: var(--amber);
+  margin-bottom: 0.65rem;
+  letter-spacing: 0.02em;
+}
+.hero-tag .hi { color: var(--amber-bright); text-shadow: 0 0 1px currentColor, 0 0 6px rgba(255,176,0,0.35); }
+
+.hero-meta {
+  font-size: 0.7rem; color: var(--amber-low);
+  display: flex; flex-wrap: wrap; gap: 1.2rem;
+  letter-spacing: 0.05em; margin-top: 0.4rem;
+}
+.hero-meta span { display: inline-flex; gap: 0.4rem; align-items: baseline; }
+.hero-meta .k { color: var(--amber-mid); }
+
+/* ───────── ASCII BOX HELPERS ─────────
+   .box wraps any block content with a single-line ASCII border via
+   ::before/::after corners, mimicking ncurses panels. */
+.box {
+  position: relative;
+  padding: 1.05rem 1.2rem 1.15rem;
+  margin: 1.2rem 0 1.6rem;
+  border: 1px solid var(--rule-2);
+  background: var(--bg-2);
+}
+.box::before,
+.box::after {
+  position: absolute; pointer-events: none;
+  font-family: var(--mono); font-size: 0.78rem;
+  color: var(--amber-bright);
+  text-shadow: 0 0 1px currentColor, 0 0 6px rgba(255,176,0,0.4);
+  letter-spacing: 0.18em;
+  background: var(--bg);
+  padding: 0 0.5rem;
+}
+.box::before {                /* eyebrow tab on the top edge */
+  content: attr(data-label);
+  top: -0.62rem; left: 1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.box::after {                 /* roman-numeral chip on the right */
+  content: attr(data-num);
+  top: -0.62rem; right: 1rem;
+  color: var(--amber-mid);
+  text-shadow: none;
+  font-weight: 500;
+}
+.box[data-num=""]::after,
+.box:not([data-num])::after { content: none; }
+
+/* ───────── SECTIONS ───────── */
+.section { margin-top: 2.6rem; }
+.section-head {
+  display: flex; align-items: baseline; gap: 1rem;
+  font-size: 0.78rem; color: var(--amber-mid);
+  letter-spacing: 0.18em; text-transform: uppercase;
+  margin-bottom: 0.65rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px dashed var(--rule-2);
+}
+.section-num {
+  color: var(--amber-bright);
+  font-weight: 600;
+}
+.section-title { color: var(--amber); flex: 1; }
+.section-mode {
+  color: var(--amber-low);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+}
+
+/* ───────── PALETTE GRID ───────── */
+.palette-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 0;
+  border: 1px solid var(--rule-2);
+}
+.palette-cell {
+  display: flex; flex-direction: column; gap: 0.25rem;
+  padding: 0.85rem 0.7rem 0.75rem;
+  border-right: 1px solid var(--rule-2);
+  background: var(--bg-2);
+  font-size: 0.66rem;
+}
+.palette-cell:last-child { border-right: none; }
+.palette-swatch {
+  height: 50px;
+  border: 1px solid var(--rule-2);
+  margin-bottom: 0.45rem;
+  position: relative;
+}
+.palette-swatch::after {
+  content: ''; position: absolute; inset: 0;
+  background:
+    repeating-linear-gradient(to bottom, transparent 0 1px, rgba(0,0,0,0.18) 1px 2px);
+  pointer-events: none;
+}
+.palette-name { color: var(--amber-bright); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; font-size: 0.66rem; }
+.palette-hex  { color: var(--amber-low); }
+.palette-role { color: var(--amber-mid); font-size: 0.62rem; }
+
+/* ───────── TYPE SCALE ───────── */
+.type-scale {
+  display: grid;
+  grid-template-columns: 110px 1fr auto;
+  gap: 1.2rem;
+  font-size: 0.85rem;
+  align-items: baseline;
+}
+.type-scale > div {
+  padding: 0.65rem 0;
+  border-bottom: 1px dotted var(--rule-2);
+}
+.type-scale .lab {
+  color: var(--amber-low);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.type-scale .specimen { color: var(--amber); }
+.type-scale .specimen.display    { font-size: 1.85rem; line-height: 1.05; color: var(--amber-bright); text-shadow: 0 0 1px currentColor, 0 0 8px rgba(255,176,0,0.35); }
+.type-scale .specimen.h2         { font-size: 1.35rem; color: var(--amber-bright); text-shadow: 0 0 1px currentColor, 0 0 6px rgba(255,176,0,0.3); }
+.type-scale .specimen.h3         { font-size: 1.1rem; }
+.type-scale .specimen.body       { font-size: 0.95rem; line-height: 1.55; color: var(--amber); }
+.type-scale .specimen.label      { font-size: 0.7rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--amber-mid); }
+.type-scale .specimen.value      { font-size: 0.92rem; color: var(--amber); font-variant-numeric: tabular-nums; }
+.type-scale .specimen.dim        { font-size: 0.78rem; color: var(--amber-low); }
+.type-scale .meta { color: var(--amber-faint); font-size: 0.68rem; text-align: right; white-space: nowrap; }
+
+/* ───────── LOGO VARIATIONS ───────── */
+.variations {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;
+}
+.variation {
+  background: var(--bg-2);
+  border: 1px solid var(--rule-2);
+  padding: 1.5rem 1.2rem 1.1rem;
+  text-align: center;
+  display: flex; flex-direction: column; gap: 0.6rem; align-items: center;
+}
+.variation .vt-label {
+  color: var(--amber-low);
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.variation .vt-mark {
+  font-family: var(--mono);
+  font-size: 1.55rem;
+  font-weight: 600;
+  color: var(--amber-bright);
+  text-shadow: 0 0 1px currentColor, 0 0 10px rgba(255,176,0,0.4);
+  letter-spacing: -0.005em;
+}
+.variation.signet .vt-signet {
+  font-family: var(--mono);
+  font-size: 1.0rem;
+  border: 2px solid var(--amber-bright);
+  width: 78px; height: 78px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--amber-bright);
+  text-shadow: 0 0 1px currentColor, 0 0 8px rgba(255,176,0,0.45);
+  font-weight: 700;
+  position: relative;
+}
+.variation.signet .vt-signet::before,
+.variation.signet .vt-signet::after {
+  content: ''; position: absolute;
+  background: var(--bg-2); width: 14px; height: 14px;
+}
+.variation.signet .vt-signet::before { top: -1px; left: 50%; transform: translate(-50%,-50%); }
+.variation.signet .vt-signet::after  { bottom: -1px; left: 50%; transform: translate(-50%,50%); }
+.variation.signet .vt-signet span { position: relative; }
+
+.variation.inverse {
+  background: var(--amber-bright);
+  color: var(--bg);
+}
+.variation.inverse .vt-mark { color: var(--bg); text-shadow: none; }
+.variation.inverse .vt-label { color: var(--bg); opacity: 0.7; }
+
+/* ───────── UI ELEMENTS — TERMINAL CONTROLS ───────── */
+.ui-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.2rem 1.4rem;
+}
+.ui-cell h4 {
+  color: var(--amber-mid);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-bottom: 0.65rem;
+}
+
+/* Buttons: keycap aesthetic */
+.kbd-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.kbd {
+  font-family: var(--mono);
+  font-size: 0.78rem; font-weight: 600;
+  padding: 0.35rem 0.85rem;
+  background: var(--bg-2);
+  border: 1px solid var(--amber-bright);
+  color: var(--amber-bright);
+  letter-spacing: 0.08em; text-transform: uppercase;
+  cursor: pointer;
+  position: relative;
+  box-shadow: 1px 1px 0 var(--amber-bright);
+  transition: box-shadow 0.06s ease, transform 0.06s ease;
+}
+.kbd:hover { background: var(--bg-3); }
+.kbd:active { transform: translate(1px, 1px); box-shadow: none; }
+.kbd.dim { border-color: var(--amber-low); color: var(--amber-low); box-shadow: 1px 1px 0 var(--amber-low); }
+.kbd.solid { background: var(--amber-bright); color: var(--bg); box-shadow: 1px 1px 0 var(--amber-mid); text-shadow: none; }
+.kbd.solid:hover { background: var(--amber-glow); }
+
+.kbd-glyph {
+  display: inline-flex; align-items: center; gap: 0.45rem;
+}
+.kbd-glyph::before {
+  content: attr(data-key);
+  font-size: 0.68rem;
+  padding: 1px 5px;
+  border: 1px solid currentColor;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+/* Tags / badges — bracket form */
+.tag-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.7rem; }
+.tag {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  padding: 1px 0;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+.tag::before { content: '['; color: var(--amber-low); margin-right: 0.18rem; }
+.tag::after  { content: ']'; color: var(--amber-low); margin-left: 0.18rem; }
+.tag.live { color: var(--amber-bright); text-shadow: 0 0 1px currentColor, 0 0 6px rgba(255,176,0,0.4); }
+.tag.ok   { color: var(--amber); }
+.tag.hold { color: var(--amber-low); }
+.tag.fail { color: var(--fail); animation: blink 2s steps(1) infinite; }
+
+/* Input — terminal cursor */
+.input-line {
+  display: flex; align-items: baseline; gap: 0.55rem;
+  margin-top: 0.85rem;
+  background: var(--bg-3);
+  border: 1px solid var(--rule-2);
+  padding: 0.5rem 0.7rem;
+}
+.input-line .ps { color: var(--amber-bright); text-shadow: 0 0 1px currentColor, 0 0 6px rgba(255,176,0,0.4); }
+.input-line .ps-path { color: var(--amber-mid); }
+.input-line input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--mono);
+  color: var(--amber-bright);
+  font-size: 0.92rem;
+  caret-color: var(--amber-bright);
+  text-shadow: 0 0 1px currentColor, 0 0 6px rgba(255,176,0,0.35);
+  padding: 0;
+}
+.input-line input::placeholder { color: var(--amber-low); opacity: 0.7; text-shadow: none; }
+
+/* Code surface — full session */
+.session {
+  background: var(--bg);
+  border: 1px solid var(--rule-2);
+  padding: 0.85rem 1rem;
+  font-size: 0.82rem;
+  line-height: 1.7;
+  color: var(--amber);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.session .ps,
+.session .root  { color: var(--amber-bright); text-shadow: 0 0 1px currentColor, 0 0 6px rgba(255,176,0,0.35); }
+.session .path  { color: var(--amber-mid); }
+.session .cmd   { color: var(--amber); }
+.session .arg   { color: var(--amber); }
+.session .flag  { color: var(--amber-low); }
+.session .out   { color: var(--amber-low); }
+.session .ok    { color: var(--amber-bright); text-shadow: 0 0 1px currentColor, 0 0 6px rgba(255,176,0,0.4); }
+.session .hl    { background: var(--hl-bg); }
+.session .stamp { color: var(--amber-faint); }
+.session .err   { color: var(--fail); }
+.session .com   { color: var(--amber-faint); font-style: normal; }
+
+/* ───────── SPEC PLATE / YAML VIEW ───────── */
+.spec {
+  background: var(--bg);
+  border: 1px solid var(--rule-2);
+  padding: 0.95rem 1.1rem;
+  font-size: 0.82rem;
+  line-height: 1.8;
+  white-space: pre;
+  overflow-x: auto;
+}
+.spec .k    { color: var(--amber-bright); text-shadow: 0 0 1px currentColor, 0 0 6px rgba(255,176,0,0.4); }
+.spec .v    { color: var(--amber); }
+.spec .s    { color: var(--amber-low); }       /* string */
+.spec .c    { color: var(--amber-faint); }     /* comment */
+.spec .ref  { color: var(--link); }
+
+/* Line numbers in the spec view */
+.spec.numbered {
+  counter-reset: ln;
+  padding-left: 0;
+}
+.spec.numbered .l {
+  display: block;
+  padding-left: 3rem;
+  position: relative;
+}
+.spec.numbered .l::before {
+  counter-increment: ln;
+  content: counter(ln, decimal-leading-zero);
+  position: absolute; left: 0.85rem;
+  color: var(--amber-faint);
+  font-size: 0.75rem;
+  width: 1.6rem;
+  text-align: right;
+}
+
+/* ───────── EDITORIAL → TERMINAL SESSION PAIRING ───────── */
+.session-pairing {
+  background: var(--bg-2);
+  border: 1px solid var(--rule-2);
+  padding: 1.6rem;
+  position: relative;
+}
+.session-pairing::before {
+  content: '$ man openprose · brand-voice';
+  position: absolute; top: -0.7rem; left: 1.1rem;
+  background: var(--bg); padding: 0 0.5rem;
+  font-size: 0.7rem; color: var(--amber-mid);
+  letter-spacing: 0.06em;
+}
+.session-pairing .lede {
+  font-size: 0.92rem;
+  margin-bottom: 1rem;
+  color: var(--amber);
+  max-width: 70ch;
+}
+.session-pairing .lede strong { color: var(--amber-bright); font-weight: 500; }
+
+/* ───────── APPLICATIONS ───────── */
+.apps-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.2rem;
+}
+.app-card {
+  background: var(--bg-2);
+  border: 1px solid var(--rule-2);
+  padding: 1rem 1.1rem 1.1rem;
+}
+.app-card .app-kicker {
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--amber-mid);
+  margin-bottom: 0.7rem;
+}
+
+/* Business card — terminal namecard */
+.tty-card {
+  border: 1px solid var(--amber-mid);
+  padding: 0.85rem 1.1rem;
+  background: var(--bg);
+  position: relative;
+}
+.tty-card::before {
+  content: '';
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: var(--amber-bright);
+  box-shadow: 0 0 10px rgba(255,176,0,0.4);
+}
+.tty-card .tc-mark { font-size: 1.2rem; color: var(--amber-bright); text-shadow: 0 0 1px currentColor, 0 0 8px rgba(255,176,0,0.4); margin-bottom: 0.4rem; font-weight: 600; }
+.tty-card .tc-row  { font-size: 0.78rem; color: var(--amber); }
+.tty-card .tc-row .k { color: var(--amber-low); display: inline-block; width: 7ch; }
+.tty-card .tc-row .v { color: var(--amber); }
+.tty-card .tc-row .v.hi { color: var(--amber-bright); }
+
+/* Document header — cat output style */
+.tty-doc {
+  background: var(--bg);
+  border: 1px solid var(--rule-2);
+  padding: 0.8rem 1rem 0.95rem;
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+.tty-doc .doc-shebang {
+  color: var(--amber-low);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.5rem;
+}
+.tty-doc .doc-title {
+  color: var(--amber-bright); font-weight: 600;
+  font-size: 1.1rem;
+  margin-bottom: 0.4rem;
+  text-shadow: 0 0 1px currentColor, 0 0 6px rgba(255,176,0,0.35);
+}
+.tty-doc .doc-body { color: var(--amber); margin-bottom: 0.6rem; }
+.tty-doc .doc-body .hl { background: var(--hl-bg); padding: 0 0.18em; }
+.tty-doc .doc-foot { font-size: 0.7rem; color: var(--amber-faint); }
+
+/* Voice cards */
+.voice-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.9rem;
+}
+.voice-card {
+  border: 1px solid var(--rule-2);
+  background: var(--bg-2);
+  padding: 0.95rem 1.1rem 1rem;
+}
+.voice-card .vc-tag {
+  font-size: 0.62rem; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--amber-mid);
+  margin-bottom: 0.55rem;
+}
+.voice-card blockquote {
+  font-size: 0.95rem; color: var(--amber-bright); line-height: 1.55;
+  margin-bottom: 0.6rem;
+  text-shadow: 0 0 1px currentColor, 0 0 5px rgba(255,176,0,0.25);
+}
+.voice-card blockquote::before { content: '> '; color: var(--amber-low); text-shadow: none; }
+.voice-card .vc-note {
+  font-size: 0.78rem; color: var(--amber-low); line-height: 1.55;
+}
+
+/* ───────── RULE TAGS ───────── */
+.rules {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem 1.2rem;
+  font-size: 0.84rem;
+}
+.rule-row {
+  display: grid; grid-template-columns: 12ch 1fr; gap: 0.7rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px dotted var(--rule-2);
+}
+.rule-row .rk {
+  color: var(--amber-mid);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.rule-row .rv { color: var(--amber); }
+.rule-row .rv .hi { color: var(--amber-bright); text-shadow: 0 0 1px currentColor, 0 0 5px rgba(255,176,0,0.3); }
+
+/* ───────── COLOPHON ───────── */
+.colophon {
+  margin-top: 3rem;
+  padding-top: 1.4rem;
+  border-top: 1px dashed var(--rule-2);
+  font-size: 0.74rem;
+  color: var(--amber-low);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1rem;
+  align-items: end;
+}
+.colophon .left .row { margin: 0.18rem 0; }
+.colophon .left .row .k { color: var(--amber-mid); display: inline-block; width: 12ch; }
+.colophon .right { font-size: 0.7rem; text-align: right; }
+.colophon .right a { margin-left: 1rem; }
+
+/* Footer status bar */
+.statusbar.bottom {
+  margin-top: 2rem;
+  margin-bottom: 0;
+  background: var(--amber-bright);
+}
+
+/* Responsive */
+@media (max-width: 920px) {
+  .palette-grid { grid-template-columns: repeat(4, 1fr); }
+  .palette-cell:nth-child(4n) { border-right: none; }
+  .variations  { grid-template-columns: 1fr 1fr; }
+  .ui-grid     { grid-template-columns: 1fr; }
+  .apps-grid   { grid-template-columns: 1fr; }
+  .voice-grid  { grid-template-columns: 1fr; }
+  .rules       { grid-template-columns: 1fr; }
+  .type-scale  { grid-template-columns: 90px 1fr; }
+  .type-scale .meta { display: none; }
+  .banner      { font-size: 0.55rem; }
+}
+@media (max-width: 560px) {
+  .statusbar { grid-template-columns: 1fr; gap: 0.4rem; text-align: left; }
+  .statusbar .sb-c { text-align: left; }
+  .palette-grid { grid-template-columns: repeat(2, 1fr); }
+  .palette-cell:nth-child(2n) { border-right: none; }
+  .variations  { grid-template-columns: 1fr; }
+}
+
+
+
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+  span.c { width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: auto; word-break: break-word; }
+  span.s { width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: auto; word-break: break-word; }
+  span.v { width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: auto; word-break: break-word; }
+}
+</style>
+</head>
+<body>
+
+<div class="tty-screen">
+
+<!-- TOP STATUS BAR -->
+<div class="statusbar">
+  <span class="sb-l">
+    <span class="sb-tag">OP</span>
+    <span>brand · logotype-N · amber-terminal</span>
+  </span>
+  <span class="sb-c">OpenProse / brand-study</span>
+  <span class="sb-r">
+    <span>tty/2</span>
+    <span>tmux 0:1</span>
+    <span class="tty-blink">&nbsp;</span>
+  </span>
+</div>
+
+<!-- HERO — fake boot sequence + ASCII banner -->
+<section class="hero">
+  <div class="boot-line"><span>[ <span class="ok">  OK  </span>]</span> Started OpenProse runtime <span class="arr">→</span> v1.4.2</div>
+  <div class="boot-line"><span>[ <span class="ok">  OK  </span>]</span> Mounted <span class="glow">/responsibilities</span> on /openprose</div>
+  <div class="boot-line"><span>[ <span class="ok">  OK  </span>]</span> Reached target <span class="glow">brand.identity</span></div>
+  <div class="boot-line"><span>[ <span class="ok">  OK  </span>]</span> Loaded logotype-N/amber-terminal · <span class="glow">phosphor 590nm</span></div>
+
+<pre class="banner">
+ ██████╗ ██████╗ ███████╗███╗   ██╗   ██████╗ ██████╗  ██████╗ ███████╗███████╗
+██╔═══██╗██╔══██╗██╔════╝████╗  ██║   ██╔══██╗██╔══██╗██╔═══██╗██╔════╝██╔════╝
+██║   ██║██████╔╝█████╗  ██╔██╗ ██║   ██████╔╝██████╔╝██║   ██║███████╗█████╗
+██║   ██║██╔═══╝ ██╔══╝  ██║╚██╗██║   ██╔═══╝ ██╔══██╗██║   ██║╚════██║██╔══╝
+╚██████╔╝██║     ███████╗██║ ╚████║   ██║     ██║  ██║╚██████╔╝███████║███████╗
+ ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝   ╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚══════╝
+</pre>
+
+  <div class="hero-tag">
+    <span class="hi">Responsibilities</span> as a <span class="hi">Service</span>.&nbsp;
+    Write the outcome — the daemon picks it up.<span class="cursor"></span>
+  </div>
+
+  <div class="hero-meta">
+    <span><span class="k">brand-study:</span> N · amber-terminal</span>
+    <span><span class="k">vt-mode:</span> 80x24</span>
+    <span><span class="k">phosphor:</span> P3 amber 590nm</span>
+    <span><span class="k">faces:</span> IBM Plex Mono · 300/400/500/600/700 · VT323</span>
+  </div>
+</section>
+
+<!-- I · PALETTE -->
+<section class="section">
+  <div class="section-head">
+    <span class="section-num">I</span>
+    <span class="section-title">palette</span>
+    <span class="section-mode">single-hue · amber phosphor</span>
+  </div>
+
+  <div class="box" data-label="$ openprose palette --resolve" data-num="i">
+  <div class="palette-grid">
+    <div class="palette-cell">
+      <div class="palette-swatch" style="background: var(--bg);"></div>
+      <span class="palette-name">bg</span>
+      <span class="palette-hex">#0a0703</span>
+      <span class="palette-role">tube off</span>
+    </div>
+    <div class="palette-cell">
+      <div class="palette-swatch" style="background: var(--bg-2);"></div>
+      <span class="palette-name">surface</span>
+      <span class="palette-hex">#120c05</span>
+      <span class="palette-role">panel</span>
+    </div>
+    <div class="palette-cell">
+      <div class="palette-swatch" style="background: var(--rule-2);"></div>
+      <span class="palette-name">rule</span>
+      <span class="palette-hex">#3d2810</span>
+      <span class="palette-role">divider</span>
+    </div>
+    <div class="palette-cell">
+      <div class="palette-swatch" style="background: var(--amber-low);"></div>
+      <span class="palette-name">low</span>
+      <span class="palette-hex">#8a5800</span>
+      <span class="palette-role">secondary</span>
+    </div>
+    <div class="palette-cell">
+      <div class="palette-swatch" style="background: var(--amber-mid);"></div>
+      <span class="palette-name">mid</span>
+      <span class="palette-hex">#c07c00</span>
+      <span class="palette-role">tertiary</span>
+    </div>
+    <div class="palette-cell">
+      <div class="palette-swatch" style="background: var(--amber);"></div>
+      <span class="palette-name">amber</span>
+      <span class="palette-hex">#e89200</span>
+      <span class="palette-role">body</span>
+    </div>
+    <div class="palette-cell">
+      <div class="palette-swatch" style="background: var(--amber-bright);"></div>
+      <span class="palette-name">bright</span>
+      <span class="palette-hex">#ffb000</span>
+      <span class="palette-role">highlight</span>
+    </div>
+    <div class="palette-cell">
+      <div class="palette-swatch" style="background: var(--fail);"></div>
+      <span class="palette-name">fail</span>
+      <span class="palette-hex">#ff5040</span>
+      <span class="palette-role">emergency only</span>
+    </div>
+  </div>
+  </div>
+
+  <div class="rules" style="margin-top: 0.7rem;">
+    <div class="rule-row">
+      <span class="rk">rule · hue</span>
+      <span class="rv">One hue. Lightness only — <span class="hi">never</span> introduce a second colour, not even for "decoration".</span>
+    </div>
+    <div class="rule-row">
+      <span class="rk">rule · fail</span>
+      <span class="rv"><span class="hi">#ff5040</span> is the lone exception, reserved for <span class="hi">catastrophic states</span> — never for "warn", never for "low".</span>
+    </div>
+    <div class="rule-row">
+      <span class="rk">rule · glow</span>
+      <span class="rv">Phosphor glow lives only on <span class="hi">bright</span> — body text stays flat.  Glow is the highlighter.</span>
+    </div>
+    <div class="rule-row">
+      <span class="rk">rule · link</span>
+      <span class="rv">A single phosphor <span style="color:var(--link)">cyan</span> for hyperlinks.  Used <em style="font-style:normal">sparingly</em>; underlined always.</span>
+    </div>
+  </div>
+</section>
+
+<!-- II · TYPOGRAPHY -->
+<section class="section">
+  <div class="section-head">
+    <span class="section-num">II</span>
+    <span class="section-title">type</span>
+    <span class="section-mode">monospace only · IBM Plex Mono</span>
+  </div>
+
+  <div class="box" data-label="$ openprose type --scale" data-num="ii">
+    <div class="type-scale">
+      <div class="lab">display</div>
+      <div class="specimen display">Write the outcome.</div>
+      <div class="meta">600 · 1.85rem · glow</div>
+
+      <div class="lab">h2</div>
+      <div class="specimen h2">the quiet daemon</div>
+      <div class="meta">500 · 1.35rem · glow</div>
+
+      <div class="lab">h3</div>
+      <div class="specimen h3">A specification, executed</div>
+      <div class="meta">500 · 1.10rem</div>
+
+      <div class="lab">body</div>
+      <div class="specimen body">You declare the outcome in a file.  The daemon picks it up on cadence, runs it, verifies the result, and delivers.  No one writes the report on Monday morning anymore.</div>
+      <div class="meta">400 · 0.95rem / 1.55</div>
+
+      <div class="lab">label</div>
+      <div class="specimen label">Responsibilities as a Service</div>
+      <div class="meta">500 · 0.70rem · 0.16em</div>
+
+      <div class="lab">value</div>
+      <div class="specimen value">$ 0.94 / +21% / 32 of 33</div>
+      <div class="meta">400 · 0.92rem · tabular</div>
+
+      <div class="lab">dim</div>
+      <div class="specimen dim">— attached output redirected to /var/log/openprose/run.log</div>
+      <div class="meta">400 · 0.78rem · low</div>
+    </div>
+  </div>
+
+  <div class="rules">
+    <div class="rule-row">
+      <span class="rk">rule · stack</span>
+      <span class="rv">Mono everywhere.  No serif, no sans, no <em style="font-style:normal">italic</em>.  Emphasis is <span class="hi">brightness</span> and <span style="background:var(--hl-bg);padding:0 0.18em">selection-block</span>, never weight + slant.</span>
+    </div>
+    <div class="rule-row">
+      <span class="rk">rule · case</span>
+      <span class="rv">Sentence case for prose.  ALL-CAPS only inside the status bar and label tier.</span>
+    </div>
+  </div>
+</section>
+
+<!-- III · LOGO VARIATIONS -->
+<section class="section">
+  <div class="section-head">
+    <span class="section-num">III</span>
+    <span class="section-title">mark</span>
+    <span class="section-mode">three impressions</span>
+  </div>
+
+  <div class="box" data-label="$ openprose logo --variations" data-num="iii">
+    <div class="variations">
+      <div class="variation">
+        <div class="vt-mark">openprose</div>
+        <div class="vt-label">primary · 0.95rem+</div>
+      </div>
+      <div class="variation signet">
+        <div class="vt-signet"><span>OP</span></div>
+        <div class="vt-label">signet · favicon</div>
+      </div>
+      <div class="variation inverse">
+        <div class="vt-mark">openprose</div>
+        <div class="vt-label">solid · sticker</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rules">
+    <div class="rule-row">
+      <span class="rk">rule · case</span>
+      <span class="rv">Mark is <span class="hi">all-lowercase</span>, single token, no space, no slash.  Reads as a Unix command name.</span>
+    </div>
+    <div class="rule-row">
+      <span class="rk">rule · glow</span>
+      <span class="rv">Phosphor glow on bright surfaces only.  On the inverse / sticker the glow is removed — it would print as a halo.</span>
+    </div>
+  </div>
+</section>
+
+<!-- IV · UI ELEMENTS -->
+<section class="section">
+  <div class="section-head">
+    <span class="section-num">IV</span>
+    <span class="section-title">controls</span>
+    <span class="section-mode">tty primitives</span>
+  </div>
+
+  <div class="ui-grid">
+
+    <div class="ui-cell">
+      <h4>buttons · keycap</h4>
+      <div class="kbd-row">
+        <button class="kbd solid">RUN</button>
+        <button class="kbd">VERIFY</button>
+        <button class="kbd dim">CANCEL</button>
+      </div>
+
+      <div class="kbd-row" style="margin-top: 0.6rem;">
+        <button class="kbd kbd-glyph" data-key="↵">submit</button>
+        <button class="kbd kbd-glyph" data-key="⌘K">command</button>
+        <button class="kbd kbd-glyph" data-key="⎋">close</button>
+      </div>
+
+      <div class="tag-row">
+        <span class="tag live">live</span>
+        <span class="tag ok">verified</span>
+        <span class="tag hold">held</span>
+        <span class="tag fail">stalled</span>
+      </div>
+
+      <div class="input-line">
+        <span class="ps">$</span>
+        <span class="ps-path">~/openprose</span>
+        <input type="text" placeholder="declare an outcome..." value="weekly-investor-digest">
+      </div>
+    </div>
+
+    <div class="ui-cell">
+      <h4>session · tail -f</h4>
+      <div class="session"><span class="ps">$</span> <span class="cmd">openprose</span> <span class="arg">run</span> <span class="arg">weekly-investor-digest</span>
+<span class="com"># pick up the file, parse responsibilities</span>
+<span class="out">[ <span class="ok">  OK  </span>] Resolved 6 sources         <span class="stamp">09:00:01</span></span>
+<span class="out">[ <span class="ok">  OK  </span>] Composed 1 deliverable      <span class="stamp">09:13:42</span></span>
+<span class="out">[ <span class="ok">  OK  </span>] Verified 11/11 checks       <span class="stamp">09:13:58</span></span>
+<span class="out">[ <span class="ok">  OK  </span>] Delivered to investors@     <span class="stamp">09:14:07</span></span>
+<span class="ps">$</span> <span class="cmd">openprose</span> <span class="arg">tail</span> <span class="flag">--last 1</span>
+<span class="ok hl">arr crossed $14.2M this week.  three new logos in pipeline.</span>
+<span class="ps">$</span> <span class="cursor">&nbsp;</span></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- V · SPECIFICATION PLATE -->
+<section class="section">
+  <div class="section-head">
+    <span class="section-num">V</span>
+    <span class="section-title">specification</span>
+    <span class="section-mode">a responsibility, formally</span>
+  </div>
+
+  <div class="spec numbered">
+<span class="l"><span class="c"># /etc/openprose/responsibilities/weekly-investor-digest.yaml</span></span>
+<span class="l"><span class="k">responsibility:</span> <span class="v">weekly-investor-digest</span></span>
+<span class="l"><span class="k">owner:</span>         <span class="ref">finance@company.example</span></span>
+<span class="l"><span class="k">cadence:</span>       <span class="v">mondays @ 09:00 ET</span></span>
+<span class="l"><span class="k">input:</span></span>
+<span class="l">  - <span class="ref">gmail:investors@*</span></span>
+<span class="l">  - <span class="ref">notion:portfolio/updates</span></span>
+<span class="l">  - <span class="ref">stripe:dashboards/arr</span></span>
+<span class="l"><span class="k">outcome:</span> <span class="v">|</span></span>
+<span class="l">  <span class="s">One page.  What changed, what's on track,</span></span>
+<span class="l">  <span class="s">what needs attention.  200 words.</span></span>
+<span class="l"><span class="k">deliver:</span></span>
+<span class="l">  - <span class="ref">email:investors@</span></span>
+<span class="l">  - <span class="ref">slack:#leadership</span></span>
+<span class="l"><span class="k">verify:</span>        <span class="v">[coherence, completeness, no-hallucination]</span></span>
+<span class="l"><span class="k">audit:</span>         <span class="v">retain 7 years</span></span>
+<span class="l"><span class="k">billing:</span>       <span class="v">on-delivery</span>   <span class="c"># no ship, no line</span></span>
+  </div>
+</section>
+
+<!-- VI · VOICE & TONE -->
+<section class="section">
+  <div class="section-head">
+    <span class="section-num">VI</span>
+    <span class="section-title">voice</span>
+    <span class="section-mode">three registers</span>
+  </div>
+
+  <div class="voice-grid">
+    <div class="voice-card">
+      <div class="vc-tag">short</div>
+      <blockquote>Write the outcome.  We run it.</blockquote>
+      <p class="vc-note">The tagline.  Six words.  Imperative + promise — verb + verb.  No marketing softeners.</p>
+    </div>
+    <div class="voice-card">
+      <div class="vc-tag">spec</div>
+      <blockquote>Billed by delivery.  If the outcome doesn't ship, no line.</blockquote>
+      <p class="vc-note">Terms-of-art, plainly.  Sentence-case, one full stop.  The hardest claim is left undefended.</p>
+    </div>
+    <div class="voice-card">
+      <div class="vc-tag">trace</div>
+      <blockquote>Verified 11/11 checks.  Delivered 09:14 ET.</blockquote>
+      <p class="vc-note">Operational voice.  Status, time, count.  Reads like a log line because that's what it is.</p>
+    </div>
+  </div>
+</section>
+
+<!-- VII · APPLICATIONS -->
+<section class="section">
+  <div class="section-head">
+    <span class="section-num">VII</span>
+    <span class="section-title">applications</span>
+    <span class="section-mode">three real surfaces</span>
+  </div>
+
+  <div class="apps-grid">
+
+    <div class="app-card">
+      <div class="app-kicker">vcard · maya@op</div>
+      <div class="tty-card">
+        <div class="tc-mark">openprose</div>
+        <div class="tc-row"><span class="k">name:</span><span class="v hi">Maya Chen</span></div>
+        <div class="tc-row"><span class="k">role:</span><span class="v">head of operations</span></div>
+        <div class="tc-row"><span class="k">mail:</span><span class="v hi">maya@openprose.ai</span></div>
+        <div class="tc-row"><span class="k">tel:</span><span class="v">+1 · 415 · 0113</span></div>
+        <div class="tc-row" style="margin-top:0.4rem; color:var(--amber-low); font-size:0.7rem;">$ host responsibilities · status: <span style="color:var(--amber-bright)">live</span></div>
+      </div>
+    </div>
+
+    <div class="app-card">
+      <div class="app-kicker">$ cat ./digest-wk14.txt</div>
+      <div class="tty-doc">
+        <div class="doc-shebang">#!/usr/bin/env openprose · weekly-investor-digest · wk 14</div>
+        <div class="doc-title">arr crossed $14.2m this week.</div>
+        <div class="doc-body">The new $40k Meridian contract pushed us over the line. <span class="hl">Three new logos in pipeline, two expected to close this quarter.</span></div>
+        <div class="doc-foot">generated 09:02 · verified 09:14 · delivered 09:14 · openprose v1.4.2</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Editorial → terminal-session pairing -->
+  <div class="session-pairing" style="margin-top: 1.6rem;">
+    <p class="lede">
+      The voice at length, set in mono.  Calm, specific, log-like.  Reaches for <strong>highlight</strong> only when a phrase deserves the cursor's attention; never on verbs, only on nouns and numbers.
+    </p>
+    <div class="session"><span class="com"># field-notes · 2026-04-30 · maya@</span>
+
+Once, the week began with a scramble.  Someone opened seven dashboards,
+pulled the numbers, wrote the digest, and dropped it in the 09:00
+standup.  The rotation was a line in the budget.  The standup was a
+line in the calendar.  Nobody was quite sure what either accomplished
+beyond confirming that the dashboards were fine.
+
+Then the outcome was declared in a file.  <span class="ok">Fifteen lines.</span>  Every Monday
+at 09:00 ET, the digest arrives — <span class="hl">verified, signed, archived</span>.  The
+standup happens anyway, but it is fifteen minutes shorter.  Nobody asks
+where the numbers came from.  <span class="hl">They are already in the document.</span>
+
+<span class="com"># the result is the point.</span></div>
+  </div>
+
+</section>
+
+<!-- COLOPHON -->
+<section class="colophon">
+  <div class="left">
+    <div class="row"><span class="k">brand-study:</span> N · amber-terminal</div>
+    <div class="row"><span class="k">faces:</span> IBM Plex Mono · VT323</div>
+    <div class="row"><span class="k">phosphor:</span> P3 amber · #ffb000</div>
+    <div class="row"><span class="k">references:</span> IBM 5151 · vt100 · ncurses · tmux · /usr/local/bin</div>
+  </div>
+  <div class="right">
+    <a href="logotype-N-spacemono.html">N · Space Mono →</a>
+    <a href="logotype-styleguide.html">styleguide</a>
+    <a href="#" id="toggle-crt">toggle CRT</a>
+  </div>
+</section>
+
+<!-- BOTTOM STATUS BAR -->
+<div class="statusbar bottom">
+  <span class="sb-l">
+    <span class="sb-tag">N</span>
+    <span>1 of 1 · brand-study · amber-terminal</span>
+  </span>
+  <span class="sb-c">end of file</span>
+  <span class="sb-r">
+    <span>:wq</span>
+    <span class="tty-blink">&nbsp;</span>
+  </span>
+</div>
+
+</div>
+
+<script>
+// CRT toggle — for any reader who wants the scanlines off.
+document.getElementById('toggle-crt').addEventListener('click', e => {
+  e.preventDefault();
+  document.body.classList.toggle('no-crt');
+});
+</script>
+
+</body>
+</html>

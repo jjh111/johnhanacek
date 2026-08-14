@@ -1,0 +1,1539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 142 142'%3E%3Cpath d='M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z' fill='%232a2520'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenProse — Typography Pairings · the menu · Kecal × 3 monos</title>
+<style>
+/* Canonical source: _pairings.css owns the fonts and the pairing tokens.
+   This page is the visual menu. */
+@import url('_pairings.css');
+/* ============================================
+   TYPOGRAPHY PAIRINGS · companion to logo-collection
+   ----------------------------------------------
+   Created 2026-05-26, narrowed same day to three
+   monospaces (IBM Plex Mono, JetBrains Mono, Space
+   Mono) crossed with Kecal, sweeping the major
+   role / weight / italic permutations per pair.
+   ----------------------------------------------
+   Coherence pass — 2026-06-01 (JH):
+     "the typography pairings page needs a coherence
+      pass to become a menu of all the options visible
+      together clustered with care and conserved
+      repetition highlighting difference."
+   ----------------------------------------------
+   The page is now a MENU read as small multiples.
+   Everything is held constant — the display word
+   "OpenProse", the body line "A program is a document
+   with guarantees.", the greyscale ground, and the
+   cap-height metric grid — so that the one axis under
+   study reads instantly. The spine, top to bottom:
+
+     01  The six voices — permutation logic A–F (the legend)
+     02  The menu      — all 18 pairings on one ground
+     03  The constants — cap-height grid + greyscale
+     04  Axis · italic  — 4 treatments × 3 monos
+     05  Axis · weight  — 4 weights × 3 monos
+     06  Single-family  — emphasis within one face × 3
+     07  Full specimens — A–F at size, one pair at a time
+
+   Census: 3 monos × 6 permutations = 18 unique pairings,
+   plus three 3-family axis matrices (italic 12, weight
+   12, single-family 12). Palette is pure greyscale;
+   visual register inherits from logo-collection.
+   ============================================ */
+
+/* ------- FONTS ------- */
+/* Fonts + canonical pairing tokens come from _pairings.css (imported at
+   the top of this style block). One source. */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* PAPER — warm-cream surfaces. Four steps from coolest-darkest to lightest. */
+  --paper-dk:   #e8e0d0;  /* deepest cream, used for emphasis callouts in companion pages */
+  --paper-warm: #f0e8d8;  /* mid-warm, used for sub-section grounds */
+  --paper:      #f5f0e8;  /* canonical page ground */
+  --paper-lt:   #fbf7ef;  /* lightest tile/sheet ground */
+
+  /* INK — warm-brown dark over paper. 5-stop alpha + 2 rule weights.
+     Built on a single base (rgba 42,37,32,X) so every step is the SAME hue
+     just diluted — no neutral-grey drift. */
+  --ink:        #2a2520;
+  --ink-2:      rgba(42,37,32,0.78);
+  --ink-3:      rgba(42,37,32,0.55);
+  --ink-4:      rgba(42,37,32,0.32);
+  --ink-5:      rgba(42,37,32,0.18);
+  --rule:       rgba(42,37,32,0.14);
+  --rule-mid:   rgba(42,37,32,0.06);
+
+  /* ON-DARK — the mirror of the ink scale, built on cream (rgba 251,247,239,X)
+     so the warm tone survives the dark-tile inversion instead of drifting to
+     neutral off-white. Used by .perm-tile.dark. */
+  --on-dark:        #fbf7ef;
+  --on-dark-2:      rgba(251,247,239,0.78);
+  --on-dark-3:      rgba(251,247,239,0.55);
+  --on-dark-4:      rgba(251,247,239,0.32);
+  --on-dark-5:      rgba(251,247,239,0.18);
+  --on-dark-rule:   rgba(251,247,239,0.14);
+  --on-dark-rule-mid: rgba(251,247,239,0.06);
+
+  --kecal:   'Kecal', system-ui, -apple-system, sans-serif;
+  --plex:    'IBM Plex Mono', monospace;
+  --jet:     'JetBrains Mono', monospace;
+  --space:   'Space Mono', monospace;
+
+  /* Top-height normalisation — every face renders so its cap-height equals
+     0.70 × font-size and its x-height equals 0.50 × font-size. Without this
+     Kecal sits ~9% taller than the monos at the same nominal size (measured
+     in browser canvas: Kecal cap-ratio 0.73, mono cap-ratio 0.67). The pair
+     fixed-pixel cap-height is the only way mono+Kecal share a top edge
+     across all four permutations. Browser support: Chrome 127+, Safari 17+,
+     Firefox 118+ (shipped 2023-2024). */
+  --cap-norm: 0.70;
+  --ex-norm:  0.50;
+
+  --wide: 1180px;
+}
+
+html { font-size: 17px; scroll-behavior: smooth; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--plex);
+  font-size: 0.94rem;
+  line-height: 1.7;
+  letter-spacing: 0;
+  -webkit-font-smoothing: antialiased;
+  /* default body uses x-height normalisation (lowercase-prominent) */
+  font-size-adjust: ex-height var(--ex-norm);
+}
+
+em { font-family: var(--kecal); font-style: var(--kecal-accent-posture); font-size: 1em; font-weight: 800; color: var(--ink); }
+
+/* ACCENT AXIS — posture of the Kecal accent. Upright is the default
+   (c_a965130b). The switch sets data-accent="italic" and shows the
+   historical accent. Specimens reference this variable. B's mono accent
+   and D's display face are pairing identity: they stay literal. */
+:root { --kecal-accent-posture: normal; }
+body[data-accent="italic"] { --kecal-accent-posture: italic; }
+.font-kecal.is-italic { font-style: var(--kecal-accent-posture); }
+.accent-switch {
+  position: fixed; top: 0.75rem; right: 0.75rem; z-index: 90;
+  display: flex; align-items: center; gap: 0.4rem;
+  padding: 0.35rem 0.55rem;
+  background: var(--paper-lt, var(--paper));
+  border: 1px solid var(--rule); border-radius: 6px;
+  font-family: var(--plex); font-size: 0.62rem;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3);
+}
+.accent-switch button {
+  font: inherit; letter-spacing: inherit; text-transform: inherit;
+  color: var(--ink-3); background: none; border: 1px solid var(--rule);
+  border-radius: 4px; padding: 0.15rem 0.5rem; cursor: pointer;
+}
+.accent-switch button.on { color: var(--ink); border-color: var(--ink-3); }
+
+/* Apply cap-height normalisation to display elements where caps + numerals
+   dominate the silhouette. Everything below renders with cap-height =
+   0.70 × font-size, so paired fonts share the same top edge. */
+.hero-mark, .perm-display, .sheet-display, .voice-display,
+.section-kicker, .perm-eyebrow, .tile-tag, .fam-num, .scale-lab,
+.anatomy-letter {
+  font-size-adjust: cap-height var(--cap-norm);
+}
+/* Body text uses x-height normalisation (lowercase-prominent silhouette). */
+.perm-body, .sheet-body, .hero-tagline, .colophon .line, .prose-intro,
+.voice-body {
+  font-size-adjust: ex-height var(--ex-norm);
+}
+
+/* HERO — same hero shape as logo-collection. */
+.hero {
+  padding: 2.5rem 2rem 1.75rem;
+  text-align: center;
+  max-width: var(--wide); margin: 0 auto;
+}
+.hero-eyebrow {
+  font-family: var(--kecal); font-size: 0.72rem;
+  letter-spacing: 0.24em; text-transform: uppercase;
+  color: var(--ink-3); font-weight: 500;
+  margin-bottom: 1.25rem;
+  display: inline-flex; align-items: center; gap: 0.75rem;
+}
+.hero-eyebrow::before, .hero-eyebrow::after {
+  content: ''; width: 28px; height: 1px; background: var(--ink-4);
+}
+.hero-mark {
+  font-family: var(--kecal);
+  font-size: clamp(2.4rem, 6vw, 4.5rem);
+  font-weight: 400; line-height: 0.95;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+.hero-mark em { font-size: 1em; font-style: var(--kecal-accent-posture); color: var(--ink); font-weight: 500; }
+.hero-rule { width: 64px; height: 1px; background: var(--ink-3); margin: 1.1rem auto 0.85rem; }
+.hero-tagline {
+  font-family: var(--plex);
+  font-size: 0.86rem;
+  color: var(--ink-2);
+}
+.hero-meta {
+  margin-top: 0.85rem;
+  font-family: var(--plex); font-size: 0.62rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+section.tp-section {
+  max-width: var(--wide); margin: 0 auto;
+  padding: 3rem 2rem;
+}
+.section-kicker {
+  font-family: var(--kecal); font-size: 0.7rem;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--ink-3); font-weight: 500;
+  margin-bottom: 1.25rem;
+  display: flex; align-items: center; gap: 0.85rem;
+}
+.section-kicker::after { content: ''; flex: 1; height: 1px; background: var(--ink-4); opacity: 0.4; }
+
+/* FAMILY GROUP — one per mono. Each has four permutation tiles. */
+.family-group {
+  margin-bottom: 3rem;
+  border-top: 1px solid var(--rule);
+  padding-top: 2rem;
+}
+.family-group:first-of-type { border-top: none; padding-top: 0; }
+
+.family-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 1.25rem; gap: 1rem; flex-wrap: wrap;
+}
+.family-head .fam-name {
+  font-family: var(--plex); font-size: 1.1rem;
+  font-weight: 500; color: var(--ink); letter-spacing: -0.01em;
+}
+.family-head .fam-name em { color: var(--ink); font-weight: 500; }
+.family-head .fam-num {
+  font-family: var(--kecal); font-size: 0.62rem;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--ink-3); font-weight: 600;
+}
+
+/* PERMUTATION GRID — 6 tiles in a 3×2 matrix per mono pair. Each tile is
+   one combination of role × weight × italic. */
+.perm-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+}
+@media (max-width: 1080px) {
+  .perm-grid { grid-template-columns: 1fr 1fr; }
+}
+.perm-tile {
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  min-height: 280px;
+  padding: 1.75rem 1.85rem 1.5rem;
+  position: relative;
+  display: flex; flex-direction: column;
+}
+/* Dark tile mirror — all alphas use the cream base (--on-dark-*) so the warm
+   sepia hue survives the inversion. Replaces ad-hoc rgba(255,255,248,X) values
+   that drifted to pure off-white and the lone #222 border that wasn't --ink. */
+.perm-tile.dark { background: var(--ink); color: var(--on-dark); border-color: var(--ink); }
+/* Dark-tile legibility: body pushed from --on-dark-2 (0.78) to a
+   custom 0.92 wash so paragraphs read at full contrast against the
+   ink ground.  Eyebrow + recipe lifted one step too — they were
+   hovering at 0.55 and reading as placeholder. */
+.perm-tile.dark .perm-body { color: rgba(251,247,239,0.92); }
+.perm-tile.dark .perm-display { color: var(--on-dark); }
+.perm-tile.dark .perm-eyebrow { color: rgba(251,247,239,0.74); }
+.perm-tile.dark .tile-tag { color: rgba(251,247,239,0.5); }
+.perm-tile.dark .perm-recipe { color: rgba(251,247,239,0.74); border-color: rgba(251,247,239,0.22); }
+.perm-tile.dark .perm-recipe .key { color: rgba(251,247,239,0.62); }
+/* Override for em accents inside dark tiles. The page-global
+   `em { color: var(--ink); }` bleeds through into dark tiles, making
+   the italic accent dark-on-dark.  Every em inside a dark tile
+   (display, body, eyebrow, recipe) now inherits the cream on-dark hue.
+   Display em uses full --on-dark; body em sits a step softer at
+   --on-dark-2 to match its parent. */
+.perm-tile.dark em            { color: var(--on-dark); }
+.perm-tile.dark .perm-display em { color: var(--on-dark); }
+.perm-tile.dark .perm-body em    { color: var(--on-dark); }
+.perm-tile.dark .perm-eyebrow em { color: var(--on-dark-2); }
+.perm-tile.dark .perm-recipe em  { color: var(--on-dark-2); }
+
+.perm-eyebrow {
+  font-family: var(--plex);
+  font-size: 0.6rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 0.65rem;
+}
+.perm-display {
+  font-size: clamp(2rem, 3.8vw, 2.8rem);
+  line-height: 1.02;
+  letter-spacing: -0.018em;
+  color: var(--ink);
+  margin-bottom: 0.85rem;
+}
+.perm-body {
+  font-size: 0.95rem;
+  line-height: 1.62;
+  color: var(--ink-2);
+  flex: 1;
+}
+.perm-body + .perm-body { margin-top: 0.6rem; }
+.perm-recipe {
+  margin-top: 0.85rem;
+  padding-top: 0.65rem;
+  border-top: 1px dotted var(--rule);
+  font-family: var(--plex); font-size: 0.62rem;
+  letter-spacing: 0.06em; color: var(--ink-3);
+  display: flex; flex-wrap: wrap; gap: 0.85rem;
+}
+.perm-recipe .key {
+  font-family: var(--kecal); font-size: 0.56rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink-4); font-weight: 600;
+  margin-right: 0.3rem;
+}
+.tile-tag {
+  position: absolute; bottom: 0.65rem; right: 0.85rem;
+  font-family: var(--kecal); font-size: 0.56rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--ink-4); font-weight: 600;
+}
+
+/* ----- PER-PAIR PERMUTATIONS -----
+   Three monos × four permutations.  Tile class encodes which fonts go in
+   which slots; the body content is identical across all tiles so the only
+   variable is the type setting. */
+
+/* Permutation A — Mono body + Kecal accent. The β / μ standard.
+   Posture follows the accent axis (upright default). */
+.perm-A .perm-display { font-family: var(--mono); font-weight: 500; }
+.perm-A .perm-display em { font-family: var(--kecal); font-weight: 800; font-style: var(--kecal-accent-posture); }
+.perm-A .perm-body    { font-family: var(--mono); font-weight: 400; }
+.perm-A .perm-body em { font-family: var(--kecal); font-weight: 800; font-style: var(--kecal-accent-posture); }
+.perm-A .perm-eyebrow { font-family: var(--mono); }
+
+/* Permutation B — Kecal body + Mono italic accent. Inverted role. */
+.perm-B .perm-display { font-family: var(--kecal); font-weight: 500; }
+.perm-B .perm-display em { font-family: var(--mono); font-weight: 500; font-style: italic; }
+.perm-B .perm-body    { font-family: var(--kecal); font-weight: 400; }
+.perm-B .perm-body em { font-family: var(--mono); font-weight: 500; font-style: italic; }
+.perm-B .perm-eyebrow { font-family: var(--kecal); }
+
+/* Permutation C — Mono bold display + Kecal regular body. Mono leads. */
+.perm-C .perm-display { font-family: var(--mono); font-weight: 700; }
+.perm-C .perm-display em { font-family: var(--mono); font-weight: 700; font-style: italic; }
+.perm-C .perm-body    { font-family: var(--kecal); font-weight: 400; }
+.perm-C .perm-body em { font-family: var(--kecal); font-weight: 600; font-style: var(--kecal-accent-posture); }
+.perm-C .perm-eyebrow { font-family: var(--mono); font-weight: 600; }
+
+/* Permutation D — Kecal italic 800 display + Mono body. Kecal italic leads. */
+.perm-D .perm-display { font-family: var(--kecal); font-weight: 800; font-style: italic; }
+.perm-D .perm-display em { font-family: var(--mono); font-weight: 600; font-style: normal; }
+.perm-D .perm-body    { font-family: var(--mono); font-weight: 400; }
+.perm-D .perm-body em { font-family: var(--kecal); font-weight: 800; font-style: var(--kecal-accent-posture); }
+.perm-D .perm-eyebrow { font-family: var(--kecal); font-weight: 700; }
+
+/* Permutations E and F sweep the WEIGHT axis. E is the light end
+   (mono 300 + Kecal 400 accent). F is the heavy end (mono 700 + Kecal 800
+   accent). Accent posture follows the accent axis. */
+
+/* Permutation E — light · mono 300 body + Kecal 400 accent. */
+.perm-E .perm-display { font-family: var(--mono); font-weight: 300; }
+.perm-E .perm-display em { font-family: var(--kecal); font-weight: 400; font-style: var(--kecal-accent-posture); }
+.perm-E .perm-body    { font-family: var(--mono); font-weight: 300; }
+.perm-E .perm-body em { font-family: var(--kecal); font-weight: 400; font-style: var(--kecal-accent-posture); }
+.perm-E .perm-eyebrow { font-family: var(--mono); font-weight: 300; }
+
+/* Permutation F — heavy · mono 700 body + Kecal 800 accent. */
+.perm-F .perm-display { font-family: var(--mono); font-weight: 700; }
+.perm-F .perm-display em { font-family: var(--kecal); font-weight: 800; font-style: var(--kecal-accent-posture); }
+.perm-F .perm-body    { font-family: var(--mono); font-weight: 600; }
+.perm-F .perm-body em { font-family: var(--kecal); font-weight: 800; font-style: var(--kecal-accent-posture); }
+.perm-F .perm-eyebrow { font-family: var(--mono); font-weight: 600; }
+
+/* PER-PAIR FONT VAR. Each family-group sets --mono so the .perm-A/B/C/D
+   rules above resolve to that mono. */
+.family-group.fam-plex  { --mono: var(--plex); }
+.family-group.fam-jet   { --mono: var(--jet); }
+.family-group.fam-space { --mono: var(--space); }
+
+/* SPACE MONO availability clamps — Space Mono ships only weights 400 and 700
+   (regular + bold, each in upright + italic). The generic .perm-A/B/D/E/F
+   rules ask for intermediate weights (500, 600, 300) that don't exist in
+   Space — browser fallback would render whichever is closest, making the
+   recipe "say" 500 while the actual glyph is 400. These overrides keep
+   computed style == rendered weight so the recipe text matches the pixels. */
+.fam-space .perm-A .perm-display { font-weight: 400; }
+.fam-space .perm-B .perm-display em,
+.fam-space .perm-B .perm-body em { font-weight: 400; }
+.fam-space .perm-D .perm-display em { font-weight: 700; }   /* upright counter-weight to Kecal italic */
+.fam-space .perm-E .perm-display,
+.fam-space .perm-E .perm-body { font-weight: 400; }          /* Space has no 300 → use lightest available */
+.fam-space .perm-F .perm-body { font-weight: 700; }          /* Space has no 600 → use heaviest available */
+
+/* Literal-style utility classes. Every text mention of a font, weight
+   or italic claim is wrapped in a span carrying the matching class(es),
+   so the tile literally renders the style it describes. .font-mono
+   resolves to the family-group's active --mono (Plex / JetBrains /
+   Space) so the same span in a different family swaps mono naturally. */
+.font-mono   { font-family: var(--mono); font-style: normal; }
+.font-kecal  { font-family: var(--kecal); font-style: normal; }
+.is-italic   { font-style: italic; }
+.w-300 { font-weight: 300; }
+.w-400 { font-weight: 400; }
+.w-500 { font-weight: 500; }
+.w-600 { font-weight: 600; }
+.w-700 { font-weight: 700; }
+.w-800 { font-weight: 800; }
+/* Space Mono availability clamps — recipe text mustn't claim a weight
+   Space can't draw. Same logic as the per-perm overrides above. */
+.fam-space .font-mono.w-300,
+.fam-space .font-mono.w-500,
+.fam-space .font-mono.w-600 { font-weight: 400; }
+.fam-space .font-mono.w-700 { font-weight: 700; }
+/* Dark-tile inherit fix — utility spans shouldn't fall back to a colour
+   token that clashes with the dark ground. */
+.perm-tile.dark .font-mono,
+.perm-tile.dark .font-kecal,
+.perm-tile.dark .is-italic { color: inherit; }
+
+/* SHEET — every permutation at small scale, one ground. 3 monos × 6 perms = 18 cells. */
+.sheet {
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  padding: 2.25rem;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 1.5rem 1.1rem;
+  margin-top: 1rem;
+}
+.sheet .sheet-rowlab {
+  grid-column: 1 / -1;
+  font-family: var(--kecal); font-size: 0.58rem;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--ink-3); font-weight: 600;
+  border-bottom: 1px solid var(--rule); padding-bottom: 0.4rem;
+  margin-top: 0.6rem;
+  display: flex; align-items: baseline; gap: 0.6rem;
+}
+.sheet .sheet-rowlab:first-child { margin-top: 0; }
+.sheet .sheet-rowlab span {
+  font-family: var(--plex); font-weight: 400; letter-spacing: 0.04em;
+  color: var(--ink-4); text-transform: none; font-size: 0.9em;
+}
+.sheet .sheet-cell {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0.45rem;
+  padding: 0.4rem 0;
+}
+.sheet .sheet-cell .sheet-display {
+  font-size: 1.5rem; line-height: 1; letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.sheet .sheet-cell .sheet-display em { font-style: italic; font-size: 1em; color: var(--ink); }
+.sheet .sheet-cell .sheet-body {
+  font-size: 0.66rem; line-height: 1.4; color: var(--ink-3);
+}
+.sheet .sheet-cell .sheet-label {
+  font-family: var(--kecal); font-size: 0.5rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink-3); font-weight: 600;
+  margin-top: 0.2rem;
+}
+
+/* ── EXPLANATION PANELS — anatomy + scale legend (the §03 constants).
+     1. Anatomy strip: visually demonstrates cap-height normalisation —
+        four fonts side-by-side with a horizontal cap-line + baseline
+        showing top + bottom alignment.
+     2. Scale legend: the full greyscale palette as labelled swatches —
+        light-surface inks + on-dark mirror + paper steps.
+   (The §01 six-voices directory lives in the VOICE DIRECTORY block above.) */
+
+.prose-intro {
+  font-family: var(--plex); font-size: 0.95rem; line-height: 1.72;
+  color: var(--ink-2); max-width: 64ch; margin-bottom: 1.25rem;
+}
+.prose-intro code {
+  font-family: var(--plex); font-size: 0.86em; color: var(--ink);
+  background: var(--paper-warm); padding: 1px 5px; border: 1px solid var(--rule);
+}
+
+/* VOICE DIRECTORY — §01 shows the six voices instead of describing them.
+   Each row renders a live specimen set in that voice (family held constant
+   at Plex), so the name is demonstrated, never asserted. No prose. */
+.voice-list { border-top: 1px solid var(--rule); margin-top: 0.5rem; }
+.voice-row {
+  display: grid; grid-template-columns: 132px 1fr 188px;
+  gap: 1.5rem; align-items: center;
+  padding: 1.35rem 0; border-bottom: 1px solid var(--rule);
+}
+.voice-row:last-child { border-bottom: none; }
+.voice-id { display: flex; align-items: baseline; gap: 0.6rem; }
+.voice-id .vk {
+  font-family: var(--kecal); font-style: italic; font-weight: 800;
+  font-size: 2rem; line-height: 1; color: var(--ink); letter-spacing: 0;
+}
+.voice-id .vn {
+  font-family: var(--kecal); font-weight: 600; font-size: 0.95rem;
+  color: var(--ink); letter-spacing: -0.01em;
+}
+.voice-spec { min-width: 0; }
+.voice-display {
+  display: block; font-size: clamp(1.6rem, 3vw, 2rem); line-height: 1.05;
+  letter-spacing: -0.018em; color: var(--ink);
+}
+.voice-body { font-size: 0.82rem; line-height: 1.5; color: var(--ink-2); margin-top: 0.4rem; }
+.voice-recipe {
+  font-family: var(--plex); font-size: 0.6rem; letter-spacing: 0.05em;
+  color: var(--ink-3); line-height: 1.55; font-variant-numeric: tabular-nums;
+}
+.voice-recipe .vlab {
+  display: block; font-family: var(--kecal); font-size: 0.52rem;
+  letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-4);
+  font-weight: 600; margin-bottom: 0.15rem;
+}
+@media (max-width: 820px) {
+  .voice-row { grid-template-columns: 1fr; gap: 0.55rem; padding: 1.2rem 0; }
+  .voice-recipe { padding-top: 0.2rem; }
+}
+
+/* ── Anatomy strip ── */
+.anatomy {
+  border: 1px solid var(--rule); background: var(--paper-lt);
+  padding: 1.75rem 1.5rem 1.5rem; margin: 1.5rem 0 1.75rem;
+}
+.anatomy-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 0; position: relative;
+  padding: 3rem 0 2.25rem;
+}
+/* Cap-line + baseline guides — render as 1px horizontal rules through the grid.
+   Position is fixed in rem so it intersects each cell's "H" glyph at the same
+   y-coordinate, regardless of font. The font-size-adjust on .anatomy-letter
+   guarantees every "H" actually reaches the cap-line. */
+.anatomy-grid::before,
+.anatomy-grid::after {
+  content: ''; position: absolute; left: 0; right: 0; height: 1px;
+  background: var(--ink-4); pointer-events: none;
+}
+.anatomy-grid::before { top: 3rem; }                    /* cap-line */
+.anatomy-grid::after  { top: calc(3rem + 4.5rem * 0.70); }  /* baseline (cap-line + cap-height) */
+.anatomy-cap-label, .anatomy-base-label {
+  position: absolute; right: -2px; transform: translateY(-50%);
+  font-family: var(--kecal); font-size: 0.56rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--ink-3); background: var(--paper-lt); padding: 0 0.35rem;
+  font-weight: 600;
+}
+.anatomy-cap-label  { top: 3rem; }
+.anatomy-base-label { top: calc(3rem + 4.5rem * 0.70); }
+.anatomy-cell {
+  display: flex; flex-direction: column; align-items: center; gap: 0.7rem;
+  position: relative;
+}
+.anatomy-letter {
+  font-size: 4.5rem; line-height: 1; color: var(--ink);
+  /* font-size-adjust already inherited from the .anatomy-letter rule above */
+}
+.anatomy-letter em {
+  font-family: var(--kecal); font-weight: 800; font-style: italic;
+  font-size: 1em; color: var(--ink);
+}
+.anatomy-letter.kecal { font-family: var(--kecal); font-weight: 500; }
+.anatomy-letter.plex  { font-family: var(--plex);  font-weight: 500; }
+.anatomy-letter.jet   { font-family: var(--jet);   font-weight: 500; }
+.anatomy-letter.space { font-family: var(--space); font-weight: 400; }
+.anatomy-lab {
+  font-family: var(--plex); font-size: 0.66rem;
+  letter-spacing: 0.16em; color: var(--ink-3); text-transform: uppercase;
+  margin-top: 0.3rem;
+}
+.anatomy-foot {
+  font-family: var(--plex); font-size: 0.76rem; color: var(--ink-3);
+  border-top: 1px dotted var(--rule); padding-top: 0.85rem; margin-top: 1rem;
+  line-height: 1.5;
+}
+.anatomy-foot code {
+  font-family: var(--plex); font-size: 0.92em; color: var(--ink);
+  background: var(--paper-warm); padding: 1px 5px; border: 1px solid var(--rule);
+}
+
+/* ── Italic Axis matrix — 4 italic-treatments × 3 monos = 12 specimens.
+   Demonstrates italic as its own orthogonal axis: nothing, accent only,
+   display only, both. Uses the A-role pairing (mono body + Kecal accent)
+   so every cell is otherwise identical and the only variable is italic. */
+.italic-matrix {
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  padding: 1.75rem 1.75rem 1.85rem;
+  margin-top: 1rem;
+  overflow-x: auto;
+}
+.italic-matrix-grid {
+  display: grid;
+  grid-template-columns: 130px repeat(4, 1fr);
+  gap: 1.1rem 1.25rem;
+  align-items: baseline;
+  min-width: 760px;
+}
+.italic-matrix-header {
+  font-family: var(--kecal); font-size: 0.6rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--ink-3); font-weight: 600;
+  align-self: end;
+}
+.italic-matrix-header b {
+  display: block; color: var(--ink); font-size: 0.78rem;
+  letter-spacing: 0.06em; text-transform: none; font-weight: 800;
+  font-style: italic; margin-bottom: 0.2rem;
+}
+.italic-matrix-rowlab {
+  font-family: var(--kecal); font-style: italic; font-weight: 800;
+  color: var(--ink); font-size: 1.1rem; align-self: start;
+  padding-top: 0.55rem;
+}
+.italic-matrix-rowlab span {
+  font-family: var(--plex); font-style: normal; font-weight: 400;
+  font-size: 0.7rem; color: var(--ink-3); display: block;
+  letter-spacing: 0.04em; margin-top: 0.15rem;
+}
+.italic-matrix-cell {
+  display: flex; flex-direction: column; gap: 0.3rem;
+  border-left: 1px dotted var(--rule);
+  padding: 0.55rem 0 0.4rem 1rem;
+}
+.italic-matrix-cell .im-display {
+  font-size: 1.5rem; line-height: 1.05; color: var(--ink);
+  letter-spacing: -0.012em;
+}
+.italic-matrix-cell .im-body {
+  font-size: 0.7rem; line-height: 1.5; color: var(--ink-3);
+}
+.italic-matrix-cell .im-recipe {
+  font-family: var(--plex); font-size: 0.56rem;
+  letter-spacing: 0.06em; color: var(--ink-4);
+  border-top: 1px dotted var(--rule-mid); padding-top: 0.4rem;
+  margin-top: 0.3rem; font-variant-numeric: tabular-nums;
+}
+@media (max-width: 1080px) {
+  .italic-matrix-grid { min-width: auto; grid-template-columns: 1fr; gap: 0.6rem; }
+  .italic-matrix-rowlab { border-bottom: 1px solid var(--rule); padding-bottom: 0.55rem; margin-bottom: 0.3rem; align-self: stretch; }
+  .italic-matrix-header { display: none; }
+  .italic-matrix-cell { border-left: none; padding-left: 0; }
+}
+
+/* ── Scale legend ── */
+.scale-legend {
+  display: flex; flex-direction: column; gap: 0;
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  margin: 0;
+}
+.scale-row {
+  display: flex; align-items: center; gap: 0;
+  padding: 0.55rem 1.1rem; min-height: 44px;
+  border-bottom: 1px solid var(--rule-mid);
+}
+.scale-row:last-child { border-bottom: none; }
+.scale-row.dark    { background: var(--ink); }
+.scale-row.warm    { background: var(--paper-warm); }
+.scale-lab {
+  font-family: var(--kecal); font-size: 0.62rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--ink-3); font-weight: 600;
+  flex: 0 0 178px;
+}
+.scale-row.dark .scale-lab { color: var(--on-dark-3); }
+.scale-swatch {
+  font-family: var(--plex); font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  padding: 0.4rem 0.65rem;
+  margin-right: 4px;
+  color: var(--ink);
+  min-width: 78px; text-align: center;
+  border: 1px solid var(--rule-mid);
+  font-variant-numeric: tabular-nums;
+}
+.scale-swatch.ink     { color: var(--paper-lt); border-color: transparent; }
+.scale-swatch.on-dark { color: var(--ink); border-color: var(--on-dark-rule); }
+
+/* COLOPHON. */
+.colophon {
+  text-align: center;
+  padding: 3rem 2rem 5rem;
+  max-width: var(--wide); margin: 3rem auto 0;
+  border-top: 1px solid var(--rule);
+  font-family: var(--kecal); font-size: 0.7rem;
+  color: var(--ink-3); letter-spacing: 0.06em; font-weight: 500;
+}
+.colophon .rule { width: 48px; height: 1px; background: var(--ink-3); margin: 0 auto 1.5rem; }
+.colophon .line { margin: 0.35rem 0; }
+.colophon .line.italic { font-family: var(--kecal); font-style: italic; font-size: 1rem; color: var(--ink-2); letter-spacing: 0; margin-bottom: 1rem; font-weight: 400; }
+.colophon a { color: var(--ink); text-decoration: none; margin: 0 0.6rem; transition: color 0.15s; }
+.colophon a:hover { color: var(--ink-2); }
+.jhsig {
+  display: block;
+  margin: 1.75rem auto 0;
+  height: 56px;
+  width: auto;
+  opacity: 0.55;
+  filter: grayscale(1);
+}
+
+@media (max-width: 1080px) {
+  .sheet { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 880px) {
+  .hero { padding: 4rem 1.5rem 2.5rem; }
+  section.tp-section { padding: 3rem 1.5rem; }
+  .perm-grid { grid-template-columns: 1fr; }
+  .sheet { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* mobile-safety-640 */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg, body canvas { max-width: 100% !important; height: auto !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-eyebrow">Brand &middot; Typography Pairings &middot; The Menu</div>
+  <h1 class="hero-mark">Open<em>Prose</em></h1>
+  <div class="hero-rule"></div>
+  <p class="hero-tagline"><span class="font-kecal">Kecal</span> &times; three monos. One specimen and one ground stay constant. The difference is the only thing that moves.</p>
+  <div class="hero-meta">3 monos &middot; 6 permutations &middot; 18 pairings &middot; accent axis &middot; canonical tokens: _pairings.css</div>
+</section>
+
+<!-- §01 · THE SIX VOICES — shown, not told. Each row is a live specimen set in
+     the voice it names; family held constant (Plex) so only the voice moves. -->
+<section class="tp-section" style="padding-bottom: 1.25rem;">
+  <div class="section-kicker">I The Six Voices</div>
+  <p class="prose-intro">
+    One family stays constant (Plex). The only variable down the column is the voice. Each row is the setting it names, shown at reading size. The same word and the same line, six ways.
+  </p>
+  <div class="voice-list">
+    <div class="voice-row">
+      <div class="voice-id"><span class="vk">A</span><span class="vn">workhorse</span></div>
+      <div class="voice-spec">
+        <span class="voice-display" style="font-family: var(--plex); font-weight: 500;">Open<em style="font-family: var(--kecal); font-weight: 800; font-style: var(--kecal-accent-posture);">Prose</em></span>
+        <p class="voice-body" style="font-family: var(--plex); font-weight: 400;">A program is a <em style="font-family: var(--kecal); font-weight: 800; font-style: var(--kecal-accent-posture);">document</em> with guarantees.</p>
+      </div>
+      <div class="voice-recipe"><span class="vlab">recipe</span>Plex 400 body · Kecal 800 accent</div>
+    </div>
+    <div class="voice-row">
+      <div class="voice-id"><span class="vk">B</span><span class="vn">inverted</span></div>
+      <div class="voice-spec">
+        <span class="voice-display" style="font-family: var(--kecal); font-weight: 500;">Open<em style="font-family: var(--plex); font-weight: 500; font-style: italic;">Prose</em></span>
+        <p class="voice-body" style="font-family: var(--kecal); font-weight: 400;">A program is a <em style="font-family: var(--plex); font-weight: 500; font-style: italic;">document</em> with guarantees.</p>
+      </div>
+      <div class="voice-recipe"><span class="vlab">recipe</span>Kecal 400 body · Plex 500 ital accent</div>
+    </div>
+    <div class="voice-row">
+      <div class="voice-id"><span class="vk">C</span><span class="vn">terminal</span></div>
+      <div class="voice-spec">
+        <span class="voice-display" style="font-family: var(--plex); font-weight: 700;">Open<em style="font-family: var(--plex); font-weight: 700; font-style: italic;">Prose</em></span>
+        <p class="voice-body" style="font-family: var(--kecal); font-weight: 400;">A program is a <em style="font-family: var(--kecal); font-weight: 600; font-style: var(--kecal-accent-posture);">document</em> with guarantees.</p>
+      </div>
+      <div class="voice-recipe"><span class="vlab">recipe</span>Plex 700 display · Kecal 400 body</div>
+    </div>
+    <div class="voice-row">
+      <div class="voice-id"><span class="vk">D</span><span class="vn">editorial</span></div>
+      <div class="voice-spec">
+        <span class="voice-display" style="font-family: var(--kecal); font-weight: 800; font-style: italic;">Open<em style="font-family: var(--plex); font-weight: 600; font-style: normal;">Prose</em></span>
+        <p class="voice-body" style="font-family: var(--plex); font-weight: 400;">A program is a <em style="font-family: var(--kecal); font-weight: 800; font-style: var(--kecal-accent-posture);">document</em> with guarantees.</p>
+      </div>
+      <div class="voice-recipe"><span class="vlab">recipe</span>Kecal 800 ital display · Plex 600 upright</div>
+    </div>
+    <div class="voice-row">
+      <div class="voice-id"><span class="vk">E</span><span class="vn">light</span></div>
+      <div class="voice-spec">
+        <span class="voice-display" style="font-family: var(--plex); font-weight: 300;">Open<em style="font-family: var(--kecal); font-weight: 400; font-style: var(--kecal-accent-posture);">Prose</em></span>
+        <p class="voice-body" style="font-family: var(--plex); font-weight: 300;">A program is a <em style="font-family: var(--kecal); font-weight: 400; font-style: var(--kecal-accent-posture);">document</em> with guarantees.</p>
+      </div>
+      <div class="voice-recipe"><span class="vlab">recipe</span>Plex 300 · Kecal 400 accent</div>
+    </div>
+    <div class="voice-row">
+      <div class="voice-id"><span class="vk">F</span><span class="vn">heavy</span></div>
+      <div class="voice-spec">
+        <span class="voice-display" style="font-family: var(--plex); font-weight: 700;">Open<em style="font-family: var(--kecal); font-weight: 800; font-style: var(--kecal-accent-posture);">Prose</em></span>
+        <p class="voice-body" style="font-family: var(--plex); font-weight: 600;">A program is a <em style="font-family: var(--kecal); font-weight: 800; font-style: var(--kecal-accent-posture);">document</em> with guarantees.</p>
+      </div>
+      <div class="voice-recipe"><span class="vlab">recipe</span>Plex 700 body · Kecal 800 accent</div>
+    </div>
+  </div>
+</section>
+
+<!-- §02 · THE MENU — all 18 permutations on one ground. 3 monos × 6 perms (A–F). -->
+<section class="tp-section" style="padding-top: 1.5rem;">
+  <div class="section-kicker">II The Menu</div>
+  <p class="prose-intro">
+    The whole system on one ground: three monospaces down, six permutations across. Every cell sets the same display word and the same body line. Scan here to compare. Then use the matrices and the full specimens below to isolate one axis or read one pairing at size.
+  </p>
+  <div class="sheet">
+    <div class="sheet-rowlab">Plex <span>IBM Plex Mono</span></div>
+    <div class="sheet-cell" style="font-family: var(--plex);">
+      <span class="sheet-display" style="font-weight: 500;">Open<em style="font-family: var(--kecal); font-weight: 800; font-style: var(--kecal-accent-posture);">Prose</em></span>
+      <span class="sheet-body" style="font-weight: 400;">A program is a document with guarantees.</span>
+      <span class="sheet-label">A · <span class="font-mono w-400">Plex 400</span> · <span class="font-kecal w-800">Kecal 800</span></span>
+    </div>
+    <div class="sheet-cell" style="font-family: var(--kecal);">
+      <span class="sheet-display" style="font-weight: 500;">Open<em style="font-family: var(--plex); font-style: italic; font-weight: 500;">Prose</em></span>
+      <span class="sheet-body" style="font-weight: 400;">A program is a document with guarantees.</span>
+      <span class="sheet-label">B · <span class="font-kecal w-400">Kecal 400</span> · <span class="font-mono w-500">Plex 500</span> it.</span>
+    </div>
+    <div class="sheet-cell">
+      <span class="sheet-display" style="font-family: var(--plex); font-weight: 700;">Open<em style="font-family: var(--plex); font-weight: 700; font-style: italic;">Prose</em></span>
+      <span class="sheet-body" style="font-family: var(--kecal); font-weight: 400;">A program is a document with guarantees.</span>
+      <span class="sheet-label">C · <span class="font-mono w-700">Plex 700</span> disp. · Kecal body</span>
+    </div>
+    <div class="sheet-cell">
+      <span class="sheet-display" style="font-family: var(--kecal); font-weight: 800; font-style: italic;">Open<em style="font-family: var(--plex); font-style: normal; font-weight: 600;">Prose</em></span>
+      <span class="sheet-body" style="font-family: var(--plex); font-weight: 400;">A program is a document with guarantees.</span>
+      <span class="sheet-label">D · Kecal it.800 · <span class="font-mono w-600">Plex 600</span> upr.</span>
+    </div>
+    <div class="sheet-cell" style="font-family: var(--plex);">
+      <span class="sheet-display" style="font-weight: 300;">Open<em style="font-family: var(--kecal); font-weight: 400; font-style: var(--kecal-accent-posture);">Prose</em></span>
+      <span class="sheet-body" style="font-weight: 300;">A program is a document with guarantees.</span>
+      <span class="sheet-label">E · <span class="font-mono w-300">Plex 300</span> · <span class="font-kecal w-400">Kecal 400</span></span>
+    </div>
+    <div class="sheet-cell" style="font-family: var(--plex);">
+      <span class="sheet-display" style="font-weight: 700;">Open<em style="font-family: var(--kecal); font-weight: 800; font-style: var(--kecal-accent-posture);">Prose</em></span>
+      <span class="sheet-body" style="font-weight: 600;">A program is a document with guarantees.</span>
+      <span class="sheet-label">F · <span class="font-mono w-700">Plex 700</span> · <span class="font-kecal w-800">Kecal 800</span></span>
+    </div>
+
+    <div class="sheet-rowlab">Jet <span>JetBrains Mono</span></div>
+    <div class="sheet-cell" style="font-family: var(--jet);">
+      <span class="sheet-display" style="font-weight: 500;">Open<em style="font-family: var(--kecal); font-weight: 800; font-style: var(--kecal-accent-posture);">Prose</em></span>
+      <span class="sheet-body" style="font-weight: 400;">A program is a document with guarantees.</span>
+      <span class="sheet-label">A · <span class="font-mono w-400">Jet 400</span> · <span class="font-kecal w-800">Kecal 800</span></span>
+    </div>
+    <div class="sheet-cell" style="font-family: var(--kecal);">
+      <span class="sheet-display" style="font-weight: 500;">Open<em style="font-family: var(--jet); font-style: italic; font-weight: 500;">Prose</em></span>
+      <span class="sheet-body" style="font-weight: 400;">A program is a document with guarantees.</span>
+      <span class="sheet-label">B · <span class="font-kecal w-400">Kecal 400</span> · <span class="font-mono w-500">Jet 500</span> it.</span>
+    </div>
+    <div class="sheet-cell">
+      <span class="sheet-display" style="font-family: var(--jet); font-weight: 700;">Open<em style="font-family: var(--jet); font-weight: 700; font-style: italic;">Prose</em></span>
+      <span class="sheet-body" style="font-family: var(--kecal); font-weight: 400;">A program is a document with guarantees.</span>
+      <span class="sheet-label">C · <span class="font-mono w-700">Jet 700</span> disp. · Kecal body</span>
+    </div>
+    <div class="sheet-cell">
+      <span class="sheet-display" style="font-family: var(--kecal); font-weight: 800; font-style: italic;">Open<em style="font-family: var(--jet); font-style: normal; font-weight: 600;">Prose</em></span>
+      <span class="sheet-body" style="font-family: var(--jet); font-weight: 400;">A program is a document with guarantees.</span>
+      <span class="sheet-label">D · Kecal it.800 · <span class="font-mono w-600">Jet 600</span> upr.</span>
+    </div>
+    <div class="sheet-cell" style="font-family: var(--jet);">
+      <span class="sheet-display" style="font-weight: 300;">Open<em style="font-family: var(--kecal); font-weight: 400; font-style: var(--kecal-accent-posture);">Prose</em></span>
+      <span class="sheet-body" style="font-weight: 300;">A program is a document with guarantees.</span>
+      <span class="sheet-label">E · <span class="font-mono w-300">Jet 300</span> · <span class="font-kecal w-400">Kecal 400</span></span>
+    </div>
+    <div class="sheet-cell" style="font-family: var(--jet);">
+      <span class="sheet-display" style="font-weight: 700;">Open<em style="font-family: var(--kecal); font-weight: 800; font-style: var(--kecal-accent-posture);">Prose</em></span>
+      <span class="sheet-body" style="font-weight: 600;">A program is a document with guarantees.</span>
+      <span class="sheet-label">F · <span class="font-mono w-700">Jet 700</span> · <span class="font-kecal w-800">Kecal 800</span></span>
+    </div>
+
+    <!-- Space Mono ships 400 / 700 only — A/B/E clamp to 400, D-emPr/F clamp to 700 -->
+    <div class="sheet-rowlab">Space <span>Space Mono · 400 / 700 only</span></div>
+    <div class="sheet-cell" style="font-family: var(--space);">
+      <span class="sheet-display" style="font-weight: 400;">Open<em style="font-family: var(--kecal); font-weight: 800; font-style: var(--kecal-accent-posture);">Prose</em></span>
+      <span class="sheet-body" style="font-weight: 400;">A program is a document with guarantees.</span>
+      <span class="sheet-label">A · <span class="font-mono w-400">Space 400</span> · <span class="font-kecal w-800">Kecal 800</span></span>
+    </div>
+    <div class="sheet-cell" style="font-family: var(--kecal);">
+      <span class="sheet-display" style="font-weight: 500;">Open<em style="font-family: var(--space); font-style: italic; font-weight: 400;">Prose</em></span>
+      <span class="sheet-body" style="font-weight: 400;">A program is a document with guarantees.</span>
+      <span class="sheet-label">B · <span class="font-kecal w-400">Kecal 400</span> · <span class="font-mono w-400">Space 400</span> it.</span>
+    </div>
+    <div class="sheet-cell">
+      <span class="sheet-display" style="font-family: var(--space); font-weight: 700;">Open<em style="font-family: var(--space); font-weight: 700; font-style: italic;">Prose</em></span>
+      <span class="sheet-body" style="font-family: var(--kecal); font-weight: 400;">A program is a document with guarantees.</span>
+      <span class="sheet-label">C · <span class="font-mono w-700">Space 700</span> disp. · Kecal body</span>
+    </div>
+    <div class="sheet-cell">
+      <span class="sheet-display" style="font-family: var(--kecal); font-weight: 800; font-style: italic;">Open<em style="font-family: var(--space); font-style: normal; font-weight: 700;">Prose</em></span>
+      <span class="sheet-body" style="font-family: var(--space); font-weight: 400;">A program is a document with guarantees.</span>
+      <span class="sheet-label">D · Kecal it.800 · <span class="font-mono w-700">Space 700</span> upr. *</span>
+    </div>
+    <div class="sheet-cell" style="font-family: var(--space);">
+      <span class="sheet-display" style="font-weight: 400;">Open<em style="font-family: var(--kecal); font-weight: 400; font-style: var(--kecal-accent-posture);">Prose</em></span>
+      <span class="sheet-body" style="font-weight: 400;">A program is a document with guarantees.</span>
+      <span class="sheet-label">E · <span class="font-mono w-400">Space 400</span> · <span class="font-kecal w-400">Kecal 400</span> *</span>
+    </div>
+    <div class="sheet-cell" style="font-family: var(--space);">
+      <span class="sheet-display" style="font-weight: 700;">Open<em style="font-family: var(--kecal); font-weight: 800; font-style: var(--kecal-accent-posture);">Prose</em></span>
+      <span class="sheet-body" style="font-weight: 700;">A program is a document with guarantees.</span>
+      <span class="sheet-label">F · <span class="font-mono w-700">Space 700</span> · <span class="font-kecal w-800">Kecal 800</span> *</span>
+    </div>
+  </div>
+  <p class="prose-intro" style="font-size: 0.78rem; margin-top: 0.8rem; color: var(--ink-3);">
+    * Space Mono ships only weights 400 and 700 (each in upright + <span class="is-italic">italic</span>). Where the canonical permutation calls for a weight Space doesn't have (300, 500, 600), the Space pair clamps to the nearest available: A/B/E render at 400, D's display em and F's body render at 700. The Plex and JetBrains rows render the canonical weights verbatim.
+  </p>
+</section>
+
+<!-- §03 · THE CONSTANTS — the two things held fixed: the metric grid + the greyscale. -->
+<section class="tp-section" style="padding-top: 1rem;">
+  <div class="section-kicker">III The Constants</div>
+  <p class="prose-intro">
+    Two things never change across the menu, and they are what let the difference read cleanly: the metric grid every face is aligned to, and the palette every value is drawn from. <em>Cap-height normalised.</em> Each face below renders so its cap-height equals 0.70 &times; font-size, via <code>font-size-adjust: cap-height 0.70</code>. Without this, <span class="font-kecal">Kecal</span> sits about 9% taller than the monos at the same nominal size. Measured in the browser: <span class="font-kecal">Kecal</span>'s natural cap-ratio is 0.73, the monos' is 0.67. The horizontal rules below mark the shared cap-line and the shared baseline. <em>Every "H" reaches both.</em>
+  </p>
+  <div class="anatomy">
+    <div class="anatomy-grid">
+      <span class="anatomy-cap-label">cap-line</span>
+      <span class="anatomy-base-label">baseline</span>
+      <div class="anatomy-cell"><div class="anatomy-letter kecal">H<em>x</em></div><div class="anatomy-lab">Kecal</div></div>
+      <div class="anatomy-cell"><div class="anatomy-letter plex">H<em>x</em></div><div class="anatomy-lab">IBM Plex Mono</div></div>
+      <div class="anatomy-cell"><div class="anatomy-letter jet">H<em>x</em></div><div class="anatomy-lab">JetBrains Mono</div></div>
+      <div class="anatomy-cell"><div class="anatomy-letter space">H<em>x</em></div><div class="anatomy-lab">Space Mono</div></div>
+    </div>
+    <div class="anatomy-foot">
+      The Kecal "x" inside each cell sits at the same cap-height as its sibling mono "H". This is what the pair display does on every tile below. Body text uses the same trick on x-height (<code>font-size-adjust: ex-height 0.50</code>) so lowercase letters share their waist line across families.
+    </div>
+  </div>
+
+  <div style="margin-top: 1.5rem;">
+    <p class="prose-intro" style="margin-bottom: 0.85rem;">
+      <em>Greyscale palette.</em> Every value on this page comes from one warm-brown ink (<code>#2a2520</code>) diluted to five alphas, mirrored on the dark surface by one cream tone (<code>#fbf7ef</code>) at the same five alphas. No neutral grey appears anywhere. This keeps the sepia warmth consistent under inversion.
+    </p>
+  </div>
+  <div class="scale-legend">
+    <div class="scale-row">
+      <span class="scale-lab">paper · steps</span>
+      <span class="scale-swatch" style="background:var(--paper-dk)">paper-dk · e8e0d0</span>
+      <span class="scale-swatch" style="background:var(--paper-warm)">paper-warm · f0e8d8</span>
+      <span class="scale-swatch" style="background:var(--paper)">paper · f5f0e8</span>
+      <span class="scale-swatch" style="background:var(--paper-lt)">paper-lt · fbf7ef</span>
+    </div>
+    <div class="scale-row warm">
+      <span class="scale-lab">ink · 5-stop alpha</span>
+      <span class="scale-swatch ink" style="background:var(--ink)">1.00 · ink</span>
+      <span class="scale-swatch ink" style="background:var(--ink-2)">0.78 · ink-2</span>
+      <span class="scale-swatch ink" style="background:var(--ink-3)">0.55 · ink-3</span>
+      <span class="scale-swatch ink" style="background:var(--ink-4)">0.32 · ink-4</span>
+      <span class="scale-swatch ink" style="background:var(--ink-5)">0.18 · ink-5</span>
+      <span class="scale-swatch ink" style="background:var(--rule)">0.14 · rule</span>
+      <span class="scale-swatch ink" style="background:var(--rule-mid)">0.06 · rule-mid</span>
+    </div>
+    <div class="scale-row dark">
+      <span class="scale-lab">on-dark · cream mirror</span>
+      <span class="scale-swatch on-dark" style="background:var(--on-dark)">1.00 · on-dark</span>
+      <span class="scale-swatch on-dark" style="background:var(--on-dark-2)">0.78 · on-dark-2</span>
+      <span class="scale-swatch on-dark" style="background:var(--on-dark-3)">0.55 · on-dark-3</span>
+      <span class="scale-swatch on-dark" style="background:var(--on-dark-4)">0.32 · on-dark-4</span>
+      <span class="scale-swatch on-dark" style="background:var(--on-dark-5)">0.18 · on-dark-5</span>
+      <span class="scale-swatch on-dark" style="background:var(--on-dark-rule)">0.14 · on-dark-rule</span>
+    </div>
+  </div>
+</section>
+
+<!-- ITALIC AXIS — 4 italic-treatments × 3 monos. Keeps role (A-pair) +
+     weight constant so the only visible variable is which face leans. -->
+<section class="tp-section" style="padding-top: 1.5rem;">
+  <div class="section-kicker">IV The Accent Posture Axis</div>
+  <p class="prose-intro">
+    The accent posture is its own axis. The role stays constant: <span class="font-mono">mono</span> body, <span class="font-kecal">Kecal</span> accent. The weight stays constant: 400 body, 800 accent. Four treatments exist: no italic, italic accent, italic display, both italic. <em>Upright</em> is the default (column 1, per c_a965130b). Italic is the historical option (column 2). The switch at the top right sets the whole page.
+  </p>
+  <div class="italic-matrix">
+    <div class="italic-matrix-grid">
+      <div></div>
+      <div class="italic-matrix-header"><b>upright</b> · no italic · the default (A)</div>
+      <div class="italic-matrix-header"><b>accent</b> · em italic · historical</div>
+      <div class="italic-matrix-header"><b>display</b> · base italic, em upright</div>
+      <div class="italic-matrix-header"><b>full</b> · base + em both italic</div>
+
+      <!-- ───── Plex row ───── -->
+      <div class="italic-matrix-rowlab">Plex<span>IBM Plex Mono</span></div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--plex); font-weight: 500;">Open<em style="font-family: var(--kecal); font-weight: 800; font-style: normal;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--plex); font-weight: 400;">A program is a <em style="font-family: var(--kecal); font-weight: 800; font-style: normal;">document</em>.</span>
+        <span class="im-recipe">plex 500 · kecal 800 upright</span>
+      </div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--plex); font-weight: 500;">Open<em style="font-family: var(--kecal); font-weight: 800; font-style: italic;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--plex); font-weight: 400;">A program is a <em style="font-family: var(--kecal); font-weight: 800; font-style: italic;">document</em>.</span>
+        <span class="im-recipe">plex 500 · kecal 800 italic</span>
+      </div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--plex); font-weight: 500; font-style: italic;">Open<em style="font-family: var(--kecal); font-weight: 800; font-style: normal;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--plex); font-weight: 400; font-style: italic;">A program is a <em style="font-family: var(--kecal); font-weight: 800; font-style: normal;">document</em>.</span>
+        <span class="im-recipe">plex 500 italic · kecal 800 upright</span>
+      </div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--plex); font-weight: 500; font-style: italic;">Open<em style="font-family: var(--kecal); font-weight: 800; font-style: italic;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--plex); font-weight: 400; font-style: italic;">A program is a <em style="font-family: var(--kecal); font-weight: 800; font-style: italic;">document</em>.</span>
+        <span class="im-recipe">plex 500 italic · kecal 800 italic</span>
+      </div>
+
+      <!-- ───── JetBrains row ───── -->
+      <div class="italic-matrix-rowlab">Jet<span>JetBrains Mono</span></div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--jet); font-weight: 500;">Open<em style="font-family: var(--kecal); font-weight: 800; font-style: normal;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--jet); font-weight: 400;">A program is a <em style="font-family: var(--kecal); font-weight: 800; font-style: normal;">document</em>.</span>
+        <span class="im-recipe">jet 500 · kecal 800 upright</span>
+      </div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--jet); font-weight: 500;">Open<em style="font-family: var(--kecal); font-weight: 800; font-style: italic;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--jet); font-weight: 400;">A program is a <em style="font-family: var(--kecal); font-weight: 800; font-style: italic;">document</em>.</span>
+        <span class="im-recipe">jet 500 · kecal 800 italic</span>
+      </div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--jet); font-weight: 500; font-style: italic;">Open<em style="font-family: var(--kecal); font-weight: 800; font-style: normal;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--jet); font-weight: 400; font-style: italic;">A program is a <em style="font-family: var(--kecal); font-weight: 800; font-style: normal;">document</em>.</span>
+        <span class="im-recipe">jet 500 italic · kecal 800 upright</span>
+      </div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--jet); font-weight: 500; font-style: italic;">Open<em style="font-family: var(--kecal); font-weight: 800; font-style: italic;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--jet); font-weight: 400; font-style: italic;">A program is a <em style="font-family: var(--kecal); font-weight: 800; font-style: italic;">document</em>.</span>
+        <span class="im-recipe">jet 500 italic · kecal 800 italic</span>
+      </div>
+
+      <!-- ───── Space row ───── -->
+      <div class="italic-matrix-rowlab">Space<span>Space Mono</span></div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--space); font-weight: 400;">Open<em style="font-family: var(--kecal); font-weight: 800; font-style: normal;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--space); font-weight: 400;">A program is a <em style="font-family: var(--kecal); font-weight: 800; font-style: normal;">document</em>.</span>
+        <span class="im-recipe">space 400 · kecal 800 upright</span>
+      </div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--space); font-weight: 400;">Open<em style="font-family: var(--kecal); font-weight: 800; font-style: italic;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--space); font-weight: 400;">A program is a <em style="font-family: var(--kecal); font-weight: 800; font-style: italic;">document</em>.</span>
+        <span class="im-recipe">space 400 · kecal 800 italic</span>
+      </div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--space); font-weight: 400; font-style: italic;">Open<em style="font-family: var(--kecal); font-weight: 800; font-style: normal;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--space); font-weight: 400; font-style: italic;">A program is a <em style="font-family: var(--kecal); font-weight: 800; font-style: normal;">document</em>.</span>
+        <span class="im-recipe">space 400 italic · kecal 800 upright</span>
+      </div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--space); font-weight: 400; font-style: italic;">Open<em style="font-family: var(--kecal); font-weight: 800; font-style: italic;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--space); font-weight: 400; font-style: italic;">A program is a <em style="font-family: var(--kecal); font-weight: 800; font-style: italic;">document</em>.</span>
+        <span class="im-recipe">space 400 italic · kecal 800 italic</span>
+      </div>
+    </div>
+  </div>
+  <p class="prose-intro" style="font-size: 0.82rem; margin-top: 1rem; color: var(--ink-3);">
+    Column 1 is the default: family and weight carry the pivot, Kecal 800 against mono 400. Column 2 is the historical accent. Column 3 reverses the lean; rare. Column 4 is maximum voice; a pull-quote.
+  </p>
+</section>
+
+<!-- WEIGHT AXIS · bold accent, no italic -------------------------- -->
+<section class="tp-section" style="padding-top: 1.5rem;">
+  <div class="section-kicker">V The Weight Axis</div>
+  <p class="prose-intro">
+    The accent carries emphasis on <em>weight alone</em>. The role stays constant: <span class="font-mono">mono</span> body, <span class="font-kecal">Kecal</span> accent, no italic. The accent climbs 500 &rarr; 800. The body stays at its reading weight. Read across each row: the same setting, a bolder accent, no lean. This is the default paradigm at four volumes.
+  </p>
+  <div class="italic-matrix">
+    <div class="italic-matrix-grid">
+      <div></div>
+      <div class="italic-matrix-header"><b>medium</b> · accent 500 upright</div>
+      <div class="italic-matrix-header"><b>semibold</b> · accent 600 upright</div>
+      <div class="italic-matrix-header"><b>bold</b> · accent 700 upright</div>
+      <div class="italic-matrix-header"><b>extrabold</b> · accent 800 upright</div>
+
+      <!-- ───── Plex row ───── -->
+      <div class="italic-matrix-rowlab">Plex<span>IBM Plex Mono</span></div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--plex); font-weight: 500;">Open<em style="font-family: var(--kecal); font-weight: 500; font-style: normal;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--plex); font-weight: 400;">A program is a <em style="font-family: var(--kecal); font-weight: 500; font-style: normal;">document</em>.</span>
+        <span class="im-recipe">plex 500 · kecal 500 upright</span>
+      </div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--plex); font-weight: 500;">Open<em style="font-family: var(--kecal); font-weight: 600; font-style: normal;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--plex); font-weight: 400;">A program is a <em style="font-family: var(--kecal); font-weight: 600; font-style: normal;">document</em>.</span>
+        <span class="im-recipe">plex 500 · kecal 600 upright</span>
+      </div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--plex); font-weight: 500;">Open<em style="font-family: var(--kecal); font-weight: 700; font-style: normal;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--plex); font-weight: 400;">A program is a <em style="font-family: var(--kecal); font-weight: 700; font-style: normal;">document</em>.</span>
+        <span class="im-recipe">plex 500 · kecal 700 upright</span>
+      </div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--plex); font-weight: 500;">Open<em style="font-family: var(--kecal); font-weight: 800; font-style: normal;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--plex); font-weight: 400;">A program is a <em style="font-family: var(--kecal); font-weight: 800; font-style: normal;">document</em>.</span>
+        <span class="im-recipe">plex 500 · kecal 800 upright</span>
+      </div>
+
+      <!-- ───── JetBrains row ───── -->
+      <div class="italic-matrix-rowlab">Jet<span>JetBrains Mono</span></div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--jet); font-weight: 500;">Open<em style="font-family: var(--kecal); font-weight: 500; font-style: normal;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--jet); font-weight: 400;">A program is a <em style="font-family: var(--kecal); font-weight: 500; font-style: normal;">document</em>.</span>
+        <span class="im-recipe">jet 500 · kecal 500 upright</span>
+      </div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--jet); font-weight: 500;">Open<em style="font-family: var(--kecal); font-weight: 600; font-style: normal;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--jet); font-weight: 400;">A program is a <em style="font-family: var(--kecal); font-weight: 600; font-style: normal;">document</em>.</span>
+        <span class="im-recipe">jet 500 · kecal 600 upright</span>
+      </div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--jet); font-weight: 500;">Open<em style="font-family: var(--kecal); font-weight: 700; font-style: normal;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--jet); font-weight: 400;">A program is a <em style="font-family: var(--kecal); font-weight: 700; font-style: normal;">document</em>.</span>
+        <span class="im-recipe">jet 500 · kecal 700 upright</span>
+      </div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--jet); font-weight: 500;">Open<em style="font-family: var(--kecal); font-weight: 800; font-style: normal;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--jet); font-weight: 400;">A program is a <em style="font-family: var(--kecal); font-weight: 800; font-style: normal;">document</em>.</span>
+        <span class="im-recipe">jet 500 · kecal 800 upright</span>
+      </div>
+
+      <!-- ───── Space row ───── -->
+      <div class="italic-matrix-rowlab">Space<span>Space Mono</span></div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--space); font-weight: 400;">Open<em style="font-family: var(--kecal); font-weight: 500; font-style: normal;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--space); font-weight: 400;">A program is a <em style="font-family: var(--kecal); font-weight: 500; font-style: normal;">document</em>.</span>
+        <span class="im-recipe">space 400 · kecal 500 upright</span>
+      </div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--space); font-weight: 400;">Open<em style="font-family: var(--kecal); font-weight: 600; font-style: normal;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--space); font-weight: 400;">A program is a <em style="font-family: var(--kecal); font-weight: 600; font-style: normal;">document</em>.</span>
+        <span class="im-recipe">space 400 · kecal 600 upright</span>
+      </div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--space); font-weight: 400;">Open<em style="font-family: var(--kecal); font-weight: 700; font-style: normal;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--space); font-weight: 400;">A program is a <em style="font-family: var(--kecal); font-weight: 700; font-style: normal;">document</em>.</span>
+        <span class="im-recipe">space 400 · kecal 700 upright</span>
+      </div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--space); font-weight: 400;">Open<em style="font-family: var(--kecal); font-weight: 800; font-style: normal;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--space); font-weight: 400;">A program is a <em style="font-family: var(--kecal); font-weight: 800; font-style: normal;">document</em>.</span>
+        <span class="im-recipe">space 400 · kecal 800 upright</span>
+      </div>
+    </div>
+  </div>
+  <p class="prose-intro" style="font-size: 0.82rem; margin-top: 1rem; color: var(--ink-3);">
+    Bold-only emphasis reads as <em>structural</em> rather than <em>vocal</em>. It marks the accent as a defined term, not a spoken stress. At 500 the contrast is barely there; 700 is the dependable mark; 800 is the editorial shout without the lean. Reach for this when the page should feel like a spec sheet, and reserve the italic axis above for voice.
+  </p>
+</section>
+
+<!-- MONO-ONLY · IBM Plex Mono mixtures ---------------------------- -->
+<section class="tp-section" style="padding-top: 1rem;">
+  <div class="section-kicker">VI Single-Family Emphasis</div>
+  <p class="prose-intro">
+    No second family. Each row sets the line and its accent in one monospace: Plex, JetBrains, then Space. The emphasis comes from that face's own <em>bold</em> and <em>italic</em>. Use this for surfaces that must stay monospace end to end: code panels, terminals, spec tables. The only variable is the mono.
+  </p>
+  <div class="italic-matrix">
+    <div class="italic-matrix-grid">
+      <div></div>
+      <div class="italic-matrix-header"><b>bold</b> · 700 upright accent</div>
+      <div class="italic-matrix-header"><b>italic</b> · 400 italic accent</div>
+      <div class="italic-matrix-header"><b>bold italic</b> · 700 italic accent</div>
+      <div class="italic-matrix-header"><b>italic body</b> · 400 italic + 700 accent</div>
+
+      <!-- ───── Plex row ───── -->
+      <div class="italic-matrix-rowlab">Plex<span>IBM Plex Mono</span></div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--plex); font-weight: 500;">Open<em style="font-family: var(--plex); font-weight: 700; font-style: normal;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--plex); font-weight: 400;">A program is a <em style="font-family: var(--plex); font-weight: 700; font-style: normal;">document</em>.</span>
+        <span class="im-recipe">plex 400 · plex 700 upright</span>
+      </div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--plex); font-weight: 500;">Open<em style="font-family: var(--plex); font-weight: 400; font-style: italic;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--plex); font-weight: 400;">A program is a <em style="font-family: var(--plex); font-weight: 400; font-style: italic;">document</em>.</span>
+        <span class="im-recipe">plex 400 · plex 400 italic</span>
+      </div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--plex); font-weight: 500;">Open<em style="font-family: var(--plex); font-weight: 700; font-style: italic;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--plex); font-weight: 400;">A program is a <em style="font-family: var(--plex); font-weight: 700; font-style: italic;">document</em>.</span>
+        <span class="im-recipe">plex 400 · plex 700 italic</span>
+      </div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--plex); font-weight: 500; font-style: italic;">Open<em style="font-family: var(--plex); font-weight: 700; font-style: normal;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--plex); font-weight: 400; font-style: italic;">A program is a <em style="font-family: var(--plex); font-weight: 700; font-style: normal;">document</em>.</span>
+        <span class="im-recipe">plex 400 italic · plex 700 upright</span>
+      </div>
+
+      <!-- ───── JetBrains row ───── -->
+      <div class="italic-matrix-rowlab">Jet<span>JetBrains Mono</span></div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--jet); font-weight: 500;">Open<em style="font-family: var(--jet); font-weight: 700; font-style: normal;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--jet); font-weight: 400;">A program is a <em style="font-family: var(--jet); font-weight: 700; font-style: normal;">document</em>.</span>
+        <span class="im-recipe">jet 400 · jet 700 upright</span>
+      </div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--jet); font-weight: 500;">Open<em style="font-family: var(--jet); font-weight: 400; font-style: italic;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--jet); font-weight: 400;">A program is a <em style="font-family: var(--jet); font-weight: 400; font-style: italic;">document</em>.</span>
+        <span class="im-recipe">jet 400 · jet 400 italic</span>
+      </div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--jet); font-weight: 500;">Open<em style="font-family: var(--jet); font-weight: 600; font-style: italic;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--jet); font-weight: 400;">A program is a <em style="font-family: var(--jet); font-weight: 600; font-style: italic;">document</em>.</span>
+        <span class="im-recipe">jet 400 · jet 600 italic *</span>
+      </div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--jet); font-weight: 500; font-style: italic;">Open<em style="font-family: var(--jet); font-weight: 700; font-style: normal;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--jet); font-weight: 400; font-style: italic;">A program is a <em style="font-family: var(--jet); font-weight: 700; font-style: normal;">document</em>.</span>
+        <span class="im-recipe">jet 400 italic · jet 700 upright</span>
+      </div>
+
+      <!-- ───── Space row ───── -->
+      <div class="italic-matrix-rowlab">Space<span>Space Mono · 400 / 700 only</span></div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--space); font-weight: 400;">Open<em style="font-family: var(--space); font-weight: 700; font-style: normal;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--space); font-weight: 400;">A program is a <em style="font-family: var(--space); font-weight: 700; font-style: normal;">document</em>.</span>
+        <span class="im-recipe">space 400 · space 700 upright</span>
+      </div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--space); font-weight: 400;">Open<em style="font-family: var(--space); font-weight: 400; font-style: italic;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--space); font-weight: 400;">A program is a <em style="font-family: var(--space); font-weight: 400; font-style: italic;">document</em>.</span>
+        <span class="im-recipe">space 400 · space 400 italic</span>
+      </div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--space); font-weight: 400;">Open<em style="font-family: var(--space); font-weight: 700; font-style: italic;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--space); font-weight: 400;">A program is a <em style="font-family: var(--space); font-weight: 700; font-style: italic;">document</em>.</span>
+        <span class="im-recipe">space 400 · space 700 italic</span>
+      </div>
+      <div class="italic-matrix-cell">
+        <span class="im-display" style="font-family: var(--space); font-weight: 400; font-style: italic;">Open<em style="font-family: var(--space); font-weight: 700; font-style: normal;">Prose</em></span>
+        <span class="im-body" style="font-family: var(--space); font-weight: 400; font-style: italic;">A program is a <em style="font-family: var(--space); font-weight: 700; font-style: normal;">document</em>.</span>
+        <span class="im-recipe">space 400 italic · space 700 upright</span>
+      </div>
+    </div>
+  </div>
+  <p class="prose-intro" style="font-size: 0.82rem; margin-top: 1rem; color: var(--ink-3);">
+    Plex's italic is a true cut, not a slanted roman, so the mono italic stays legible at caption size; JetBrains slabs read sharper; Space runs widest. <em>Bold</em> alone is the safest mark; <em>bold-italic</em> the loudest; an <em>italic body</em> with an upright bold accent flips the convention for a quieter, document-like stress. * JetBrains ships italics only to 600, so its bold-italic accent sits at 600 italic; Space ships 400 / 700 only, so its display rests at 400.
+  </p>
+</section>
+
+<!-- §07 · FULL SPECIMENS — the menu at size, one pair at a time (A–F × 3 monos). -->
+<section class="tp-section" style="padding-bottom: 1.25rem;">
+  <div class="section-kicker">VII Full Specimens</div>
+  <p class="prose-intro">
+    The detail view of the menu: each pair gets its six voices (A&ndash;F) at reading size. The full recipe prints under every tile. What you see is what is set. The same eighteen pairings as <em>The menu</em>, with room to read.
+  </p>
+</section>
+
+<!-- PAIR · KECAL × IBM PLEX MONO --------------------------------- -->
+<section class="tp-section" style="padding-top:0;">
+  <div class="family-group fam-plex">
+    <div class="family-head">
+      <span class="fam-name">Pair &middot; <em>Kecal</em> &times; IBM Plex Mono</span>
+      <span class="fam-num">No. 01</span>
+    </div>
+
+    <div class="perm-grid">
+      <div class="perm-tile perm-A">
+        <div class="perm-eyebrow">// A · <span class="font-mono">mono</span> body · <span class="font-kecal">kecal</span> accent</div>
+        <h2 class="perm-display">Open<em>Prose</em></h2>
+        <p class="perm-body">A program is a <em>document</em> with guarantees. The <span class="font-mono">mono</span> carries the body weight, the <span class="font-kecal w-800">Kecal 800</span> carries the editorial pivot.</p>
+        <p class="perm-body">This is the β Tufte <span class="font-mono">mono</span> shape: paragraphs read as engineered, the em reads as voice. Workhorse pair.</p>
+        <div class="perm-recipe">
+          <span><span class="key">display</span><span class="font-mono w-500">Plex 500</span></span>
+          <span><span class="key">display em</span><span class="font-kecal w-800">Kecal 800</span></span>
+          <span><span class="key">body</span><span class="font-mono w-400">Plex 400</span></span>
+          <span><span class="key">body em</span><span class="font-kecal w-800">Kecal 800</span></span>
+        </div>
+        <span class="tile-tag">A</span>
+      </div>
+      <div class="perm-tile perm-B">
+        <div class="perm-eyebrow">// B · <span class="font-kecal">kecal</span> body · <span class="font-mono">mono</span> <span class="is-italic">italic</span> accent</div>
+        <h2 class="perm-display">Open<em>Prose</em></h2>
+        <p class="perm-body">A program is a <em>document</em> with guarantees. <span class="font-kecal">Kecal</span> carries the body. The Plex <span class="is-italic">italic</span> carries the accent.</p>
+        <p class="perm-body">Roles inverted from A. Reads warmer because the humanist sans carries the paragraph; the <span class="font-mono">mono</span> <span class="is-italic">italic</span> feels like an inline citation.</p>
+        <div class="perm-recipe">
+          <span><span class="key">display</span><span class="font-kecal w-500">Kecal 500</span></span>
+          <span><span class="key">display em</span><span class="font-mono w-500 is-italic">Plex 500 italic</span></span>
+          <span><span class="key">body</span><span class="font-kecal w-400">Kecal 400</span></span>
+          <span><span class="key">body em</span><span class="font-mono w-500 is-italic">Plex 500 italic</span></span>
+        </div>
+        <span class="tile-tag">B</span>
+      </div>
+      <div class="perm-tile perm-C dark">
+        <div class="perm-eyebrow">// C · <span class="font-mono">mono</span> <span class="w-700">bold</span> display · <span class="font-kecal">kecal</span> body</div>
+        <h2 class="perm-display">Open<em>Prose</em></h2>
+        <p class="perm-body">A program is a <em>document</em> with guarantees. Plex <span class="w-700">bold</span> leads the display line. <span class="font-kecal">Kecal</span> carries the paragraph.</p>
+        <p class="perm-body">Display reads as terminal banner; the <span class="font-kecal">Kecal</span> body adds soft contrast under it. Useful for system console framings.</p>
+        <div class="perm-recipe">
+          <span><span class="key">display</span><span class="font-mono w-700">Plex 700</span></span>
+          <span><span class="key">display em</span><span class="font-mono w-700 is-italic">Plex 700 italic</span></span>
+          <span><span class="key">body</span><span class="font-kecal w-400">Kecal 400</span></span>
+          <span><span class="key">body em</span><span class="font-kecal w-600">Kecal 600</span></span>
+        </div>
+        <span class="tile-tag">C</span>
+      </div>
+      <div class="perm-tile perm-D dark">
+        <div class="perm-eyebrow">// D · <span class="font-kecal">kecal</span> <span class="is-italic">italic</span> 800 display · <span class="font-mono">mono</span> body</div>
+        <h2 class="perm-display">Open<em>Prose</em></h2>
+        <p class="perm-body">A program is a <em>document</em> with guarantees. The editorial <span class="is-italic">italic</span> owns the display. The <span class="font-mono">mono</span> carries the paragraph.</p>
+        <p class="perm-body">Reads as feature lead. The <span class="is-italic">italic</span> display is high-presence; the Plex body grounds it in the ledger.</p>
+        <div class="perm-recipe">
+          <span><span class="key">display</span><span class="font-kecal w-800 is-italic">Kecal 800 italic</span></span>
+          <span><span class="key">display em</span><span class="font-mono w-600">Plex 600</span> upright</span>
+          <span><span class="key">body</span><span class="font-mono w-400">Plex 400</span></span>
+          <span><span class="key">body em</span><span class="font-kecal w-800">Kecal 800</span></span>
+        </div>
+        <span class="tile-tag">D</span>
+      </div>
+      <div class="perm-tile perm-E">
+        <div class="perm-eyebrow">// E · weight <span class="w-300">light</span> · <span class="font-mono">mono</span> 300 body · <span class="font-kecal">kecal</span> 400 accent</div>
+        <h2 class="perm-display">Open<em>Prose</em></h2>
+        <p class="perm-body">A program is a <em>document</em> with guarantees. The lightest pair: <span class="font-mono w-300">mono 300</span>, <span class="font-kecal w-400">Kecal 400</span>.</p>
+        <p class="perm-body">Reads as lecture notes. The typography hands the page to the content. Risk: anaemic at small sizes.</p>
+        <div class="perm-recipe">
+          <span><span class="key">display</span><span class="font-mono w-300">Plex 300</span></span>
+          <span><span class="key">display em</span><span class="font-kecal w-400">Kecal 400</span></span>
+          <span><span class="key">body</span><span class="font-mono w-300">Plex 300</span></span>
+          <span><span class="key">body em</span><span class="font-kecal w-400">Kecal 400</span></span>
+        </div>
+        <span class="tile-tag">E</span>
+      </div>
+      <div class="perm-tile perm-F dark">
+        <div class="perm-eyebrow">// F · weight <span class="w-800">heavy</span> · <span class="font-mono">mono</span> 700 body · <span class="font-kecal">kecal</span> 800 accent</div>
+        <h2 class="perm-display">Open<em>Prose</em></h2>
+        <p class="perm-body">A program is a <em>document</em> with guarantees. The heaviest pair: <span class="font-mono w-700">mono 700</span> sits with <span class="font-kecal w-800">Kecal 800</span>.</p>
+        <p class="perm-body">Reads as a system banner: weight everywhere, no soft tissue. Risk: shouting. Use for splash callouts and console heroes.</p>
+        <div class="perm-recipe">
+          <span><span class="key">display</span><span class="font-mono w-700">Plex 700</span></span>
+          <span><span class="key">display em</span><span class="font-kecal w-800">Kecal 800</span></span>
+          <span><span class="key">body</span><span class="font-mono w-600">Plex 600</span></span>
+          <span><span class="key">body em</span><span class="font-kecal w-800">Kecal 800</span></span>
+        </div>
+        <span class="tile-tag">F</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PAIR · KECAL × JETBRAINS MONO -------------------------------- -->
+<section class="tp-section" style="padding-top:0;">
+  <div class="family-group fam-jet">
+    <div class="family-head">
+      <span class="fam-name">Pair &middot; <em>Kecal</em> &times; JetBrains Mono</span>
+      <span class="fam-num">No. 02</span>
+    </div>
+
+    <div class="perm-grid">
+      <div class="perm-tile perm-A">
+        <div class="perm-eyebrow">// A · <span class="font-mono">mono</span> body · <span class="font-kecal">kecal</span> accent</div>
+        <h2 class="perm-display">Open<em>Prose</em></h2>
+        <p class="perm-body">A program is a <em>document</em> with guarantees. JetBrains carries the body. <span class="font-kecal">Kecal</span> carries the pivot.</p>
+        <p class="perm-body">Sharper than the Plex variant. The JetBrains slabs read as <em>code</em> first. Best for developer-tooling directions.</p>
+        <div class="perm-recipe">
+          <span><span class="key">display</span><span class="font-mono w-500">JetBrains 500</span></span>
+          <span><span class="key">display em</span><span class="font-kecal w-800">Kecal 800</span></span>
+          <span><span class="key">body</span><span class="font-mono w-400">JetBrains 400</span></span>
+          <span><span class="key">body em</span><span class="font-kecal w-800">Kecal 800</span></span>
+        </div>
+        <span class="tile-tag">A</span>
+      </div>
+      <div class="perm-tile perm-B">
+        <div class="perm-eyebrow">// B · <span class="font-kecal">kecal</span> body · <span class="font-mono">mono</span> <span class="is-italic">italic</span> accent</div>
+        <h2 class="perm-display">Open<em>Prose</em></h2>
+        <p class="perm-body">A program is a <em>document</em> with guarantees. <span class="font-kecal">Kecal</span> carries the body. JetBrains <span class="is-italic">italic</span> carries the accent.</p>
+        <p class="perm-body">JetBrains <span class="is-italic">italic</span> is more pronounced than Plex <span class="is-italic">italic</span>, so the em reads as an active hyperlink even at body size.</p>
+        <div class="perm-recipe">
+          <span><span class="key">display</span><span class="font-kecal w-500">Kecal 500</span></span>
+          <span><span class="key">display em</span><span class="font-mono w-500 is-italic">JetBrains 500 italic</span></span>
+          <span><span class="key">body</span><span class="font-kecal w-400">Kecal 400</span></span>
+          <span><span class="key">body em</span><span class="font-mono w-500 is-italic">JetBrains 500 italic</span></span>
+        </div>
+        <span class="tile-tag">B</span>
+      </div>
+      <div class="perm-tile perm-C dark">
+        <div class="perm-eyebrow">// C · <span class="font-mono">mono</span> <span class="w-700">bold</span> display · <span class="font-kecal">kecal</span> body</div>
+        <h2 class="perm-display">Open<em>Prose</em></h2>
+        <p class="perm-body">A program is a <em>document</em> with guarantees. <span class="font-mono w-700">JetBrains 700</span> owns the display. <span class="font-kecal">Kecal</span> owns the paragraphs.</p>
+        <p class="perm-body">Heavier display than Plex C. Reads as IDE chrome; works when the page wants &iota; reference-card weight without losing readability.</p>
+        <div class="perm-recipe">
+          <span><span class="key">display</span><span class="font-mono w-700">JetBrains 700</span></span>
+          <span><span class="key">display em</span><span class="font-mono w-700 is-italic">JetBrains 700 italic</span></span>
+          <span><span class="key">body</span><span class="font-kecal w-400">Kecal 400</span></span>
+          <span><span class="key">body em</span><span class="font-kecal w-600">Kecal 600</span></span>
+        </div>
+        <span class="tile-tag">C</span>
+      </div>
+      <div class="perm-tile perm-D dark">
+        <div class="perm-eyebrow">// D · <span class="font-kecal">kecal</span> <span class="is-italic">italic</span> 800 display · <span class="font-mono">mono</span> body</div>
+        <h2 class="perm-display">Open<em>Prose</em></h2>
+        <p class="perm-body">A program is a <em>document</em> with guarantees. Editorial <span class="is-italic">italic</span> display, JetBrains paragraph.</p>
+        <p class="perm-body">JetBrains under a <span class="font-kecal is-italic">Kecal italic</span> gives the most contrast of the three pairs: one face soft and curved, the other slabbed.</p>
+        <div class="perm-recipe">
+          <span><span class="key">display</span><span class="font-kecal w-800 is-italic">Kecal 800 italic</span></span>
+          <span><span class="key">display em</span><span class="font-mono w-600">JetBrains 600</span> upright</span>
+          <span><span class="key">body</span><span class="font-mono w-400">JetBrains 400</span></span>
+          <span><span class="key">body em</span><span class="font-kecal w-800">Kecal 800</span></span>
+        </div>
+        <span class="tile-tag">D</span>
+      </div>
+      <div class="perm-tile perm-E">
+        <div class="perm-eyebrow">// E · weight <span class="w-300">light</span> · <span class="font-mono">mono</span> 300 body · <span class="font-kecal">kecal</span> 400 accent</div>
+        <h2 class="perm-display">Open<em>Prose</em></h2>
+        <p class="perm-body">A program is a <em>document</em> with guarantees. <span class="font-mono w-300">JetBrains 300</span> + <span class="font-kecal w-400">Kecal 400</span>.</p>
+        <p class="perm-body">JetBrains' geometric forms hold up at 300 better than Plex; the result reads as <em>technical journal</em>.</p>
+        <div class="perm-recipe">
+          <span><span class="key">display</span><span class="font-mono w-300">JetBrains 300</span></span>
+          <span><span class="key">display em</span><span class="font-kecal w-400">Kecal 400</span></span>
+          <span><span class="key">body</span><span class="font-mono w-300">JetBrains 300</span></span>
+          <span><span class="key">body em</span><span class="font-kecal w-400">Kecal 400</span></span>
+        </div>
+        <span class="tile-tag">E</span>
+      </div>
+      <div class="perm-tile perm-F dark">
+        <div class="perm-eyebrow">// F · weight <span class="w-800">heavy</span> · <span class="font-mono">mono</span> 700 body · <span class="font-kecal">kecal</span> 800 accent</div>
+        <h2 class="perm-display">Open<em>Prose</em></h2>
+        <p class="perm-body">A program is a <em>document</em> with guarantees. <span class="font-mono w-700">JetBrains 700</span> + <span class="font-kecal w-800">Kecal 800</span>.</p>
+        <p class="perm-body">The heaviest of the three monos at full weight. Reads as an alert state, a system error, or a release banner.</p>
+        <div class="perm-recipe">
+          <span><span class="key">display</span><span class="font-mono w-700">JetBrains 700</span></span>
+          <span><span class="key">display em</span><span class="font-kecal w-800">Kecal 800</span></span>
+          <span><span class="key">body</span><span class="font-mono w-600">JetBrains 600</span></span>
+          <span><span class="key">body em</span><span class="font-kecal w-800">Kecal 800</span></span>
+        </div>
+        <span class="tile-tag">F</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PAIR · KECAL × SPACE MONO ----------------------------------- -->
+<section class="tp-section" style="padding-top:0;">
+  <div class="family-group fam-space">
+    <div class="family-head">
+      <span class="fam-name">Pair &middot; <em>Kecal</em> &times; Space Mono</span>
+      <span class="fam-num">No. 03</span>
+    </div>
+
+    <div class="perm-grid">
+      <div class="perm-tile perm-A">
+        <div class="perm-eyebrow">// A · <span class="font-mono">mono</span> body · <span class="font-kecal">kecal</span> accent</div>
+        <h2 class="perm-display">Open<em>Prose</em></h2>
+        <p class="perm-body">A program is a <em>document</em> with guarantees. Space Mono carries the body. <span class="font-kecal">Kecal</span> carries the accent.</p>
+        <p class="perm-body">Space Mono has the widest x-height of the three monos. It reads larger at the same size. Strong for hero specimens.</p>
+        <div class="perm-recipe">
+          <span><span class="key">display</span><span class="font-mono w-400">Space 400</span></span>
+          <span><span class="key">display em</span><span class="font-kecal w-800">Kecal 800</span></span>
+          <span><span class="key">body</span><span class="font-mono w-400">Space 400</span></span>
+          <span><span class="key">body em</span><span class="font-kecal w-800">Kecal 800</span></span>
+        </div>
+        <span class="tile-tag">A</span>
+      </div>
+      <div class="perm-tile perm-B">
+        <div class="perm-eyebrow">// B · <span class="font-kecal">kecal</span> body · <span class="font-mono">mono</span> <span class="is-italic">italic</span> accent</div>
+        <h2 class="perm-display">Open<em>Prose</em></h2>
+        <p class="perm-body">A program is a <em>document</em> with guarantees. <span class="font-kecal">Kecal</span> body, Space <span class="is-italic">italic</span> accent.</p>
+        <p class="perm-body">Space <span class="is-italic">italic</span> has more flourish than Plex or JetBrains italics. The em reads as <em>quote</em>, not citation.</p>
+        <div class="perm-recipe">
+          <span><span class="key">display</span><span class="font-kecal w-500">Kecal 500</span></span>
+          <span><span class="key">display em</span><span class="font-mono w-400 is-italic">Space 400 italic</span></span>
+          <span><span class="key">body</span><span class="font-kecal w-400">Kecal 400</span></span>
+          <span><span class="key">body em</span><span class="font-mono w-400 is-italic">Space 400 italic</span></span>
+        </div>
+        <span class="tile-tag">B</span>
+      </div>
+      <div class="perm-tile perm-C dark">
+        <div class="perm-eyebrow">// C · <span class="font-mono">mono</span> <span class="w-700">bold</span> display · <span class="font-kecal">kecal</span> body</div>
+        <h2 class="perm-display">Open<em>Prose</em></h2>
+        <p class="perm-body">A program is a <em>document</em> with guarantees. Space <span class="w-700">bold</span> display, <span class="font-kecal">Kecal</span> body.</p>
+        <p class="perm-body">Display reads loudest of the three monos here. Strong for poster-style hero treatments. Risks shouting at body sizes.</p>
+        <div class="perm-recipe">
+          <span><span class="key">display</span><span class="font-mono w-700">Space 700</span></span>
+          <span><span class="key">display em</span><span class="font-mono w-700 is-italic">Space 700 italic</span></span>
+          <span><span class="key">body</span><span class="font-kecal w-400">Kecal 400</span></span>
+          <span><span class="key">body em</span><span class="font-kecal w-600">Kecal 600</span></span>
+        </div>
+        <span class="tile-tag">C</span>
+      </div>
+      <div class="perm-tile perm-D dark">
+        <div class="perm-eyebrow">// D · <span class="font-kecal">kecal</span> <span class="is-italic">italic</span> 800 display · <span class="font-mono">mono</span> body</div>
+        <h2 class="perm-display">Open<em>Prose</em></h2>
+        <p class="perm-body">A program is a <em>document</em> with guarantees. <span class="font-kecal w-800">Kecal 800</span> display, Space Mono body.</p>
+        <p class="perm-body">The wide Space x-height steadies the elegant <span class="font-kecal is-italic">Kecal italic</span> display. The most pronounced character contrast of the twelve.</p>
+        <div class="perm-recipe">
+          <span><span class="key">display</span><span class="font-kecal w-800 is-italic">Kecal 800 italic</span></span>
+          <span><span class="key">display em</span><span class="font-mono w-700">Space 700</span> upright</span>
+          <span><span class="key">body</span><span class="font-mono w-400">Space 400</span></span>
+          <span><span class="key">body em</span><span class="font-kecal w-800">Kecal 800</span></span>
+        </div>
+        <span class="tile-tag">D</span>
+      </div>
+      <div class="perm-tile perm-E">
+        <div class="perm-eyebrow">// E · weight <span class="w-300">light</span> · <span class="font-mono">mono</span> 400 body · <span class="font-kecal">kecal</span> 400 accent</div>
+        <h2 class="perm-display">Open<em>Prose</em></h2>
+        <p class="perm-body">A program is a <em>document</em> with guarantees. Space Mono ships 400 and 700 only. The lightest pair sits at 400 + <span class="font-kecal w-400">Kecal 400</span>.</p>
+        <p class="perm-body">Even at 400 Space reads heavier than <span class="font-mono w-300">Plex 300</span> — the "<span class="w-300">light</span>" Space variant still presents as a body weight.</p>
+        <div class="perm-recipe">
+          <span><span class="key">display</span><span class="font-mono w-400">Space 400</span></span>
+          <span><span class="key">display em</span><span class="font-kecal w-400">Kecal 400</span></span>
+          <span><span class="key">body</span><span class="font-mono w-400">Space 400</span></span>
+          <span><span class="key">body em</span><span class="font-kecal w-400">Kecal 400</span></span>
+        </div>
+        <span class="tile-tag">E</span>
+      </div>
+      <div class="perm-tile perm-F dark">
+        <div class="perm-eyebrow">// F · weight <span class="w-800">heavy</span> · <span class="font-mono">mono</span> 700 body · <span class="font-kecal">kecal</span> 800 accent</div>
+        <h2 class="perm-display">Open<em>Prose</em></h2>
+        <p class="perm-body">A program is a <em>document</em> with guarantees. Space Mono 700 + <span class="font-kecal w-800">Kecal 800</span>.</p>
+        <p class="perm-body">The loudest of the twelve. Use only for poster-scale type; at body sizes the <span class="font-mono w-700">Space 700</span> swallows its counters.</p>
+        <div class="perm-recipe">
+          <span><span class="key">display</span><span class="font-mono w-700">Space 700</span></span>
+          <span><span class="key">display em</span><span class="font-kecal w-800">Kecal 800</span></span>
+          <span><span class="key">body</span><span class="font-mono w-700">Space 700</span></span>
+          <span><span class="key">body em</span><span class="font-kecal w-800">Kecal 800</span></span>
+        </div>
+        <span class="tile-tag">F</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COLOPHON -->
+<section class="colophon">
+  <div class="rule"></div>
+  <div class="line italic">OpenProse &middot; Brand &middot; Typography Pairings &middot; the menu</div>
+  <div class="line">Eighteen unique pairings &middot; three 3-family axis matrices &middot; greyscale specimens</div>
+  <div class="line">Companion to logo-collection.html</div>
+  <div class="line">Kecal by <a href="https://github.com/FungiType/Kecal">FungiType</a> (Rodrigo Fuenzalida, Jordan Egstad, Ji&#345;&iacute; Krblich) &middot; OFL &middot; clearly legible, quietly esoteric</div>
+  <div class="line" style="margin-top: 1.25rem;">
+    <a href="logo-collection.html">Logo collection</a>
+    <a href="logotype-styleguide.html">Logotype styleguide</a>
+    <a href="direction-beta-tufte-mono-kecal-styleguide-teal.html">&beta; styleguide-teal</a>
+    <a href="logotype-N-spacemono.html">N &middot; spacemono</a>
+  </div>
+  <img class="jhsig" src="../Assets/JHsig.svg" alt="JH signature">
+</section>
+
+<div class="accent-switch" role="radiogroup" aria-label="Accent posture">
+  <span>accent</span>
+  <button type="button" data-acc="upright" class="on">upright</button>
+  <button type="button" data-acc="italic">italic</button>
+</div>
+<script>
+(function () {
+  'use strict';
+  // Accent posture switch. Upright is the default. The choice persists
+  // (standalone only) and honors ?accent=italic for embeds.
+  var KEY = 'tp-accent';
+  var EMBEDDED = (function () { try { return window.self !== window.top; } catch (e) { return true; } })();
+  var q = new URLSearchParams(location.search);
+  var acc = q.get('accent') || (!EMBEDDED && localStorage.getItem(KEY)) || 'upright';
+  function apply(a) {
+    if (a === 'italic') document.body.setAttribute('data-accent', 'italic');
+    else document.body.removeAttribute('data-accent');
+    document.querySelectorAll('.accent-switch button').forEach(function (b) {
+      b.classList.toggle('on', b.getAttribute('data-acc') === a);
+    });
+  }
+  apply(acc === 'italic' ? 'italic' : 'upright');
+  document.querySelectorAll('.accent-switch button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var a = b.getAttribute('data-acc');
+      apply(a);
+      if (!EMBEDDED) try { localStorage.setItem(KEY, a); } catch (e) {}
+    });
+  });
+})();
+</script>
+</body>
+</html>

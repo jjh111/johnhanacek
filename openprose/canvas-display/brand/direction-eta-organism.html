@@ -1,0 +1,1428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 142 142'%3E%3Cpath d='M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z' fill='%232a2520'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenProse — Direction η · Organism</title>
+<style>
+/* ============================================
+   DIRECTION η · ORGANISM
+   Round-3 finalist, distilled from logotype-F-generative-organism.
+   The brand identity that demonstrates itself by growing.
+
+   DNA: Cormorant Garamond italic for prose. Inter for chrome.
+   JetBrains Mono for code. Fog #f5f0e8 paper, teal #3a7a6a as
+   the primary accent, amber #c49a5c as warm complement. Glass
+   cards with backdrop-filter blur. Italic is always teal.
+
+   The defining move: a Rule-110 cellular automaton crawling
+   the left and right margins of the page, painted in teal +
+   amber. The brand grows as the reader scrolls — a literal
+   demonstration of "responsibility = system that maintains
+   itself". The same 9-section markup as the other finalists,
+   plus an additive page-bg layer with the canvas.
+   ============================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --paper:     #f5f0e8;
+  --paper-dk:  #ede7d6;
+  --paper-lt:  #faf8f3;
+  --ink:       #0f0f0f;
+  --ink-2:     #2e2e2e;
+  --ink-3:     #5a5a5a;
+  --ink-4:     #909090;
+  --red:       #c0392b;
+  --red-muted: #d4604f;
+  --red-deep:  #8e2b20;
+  --rule:      #d8d0c0;
+  --rule-mid:  #e2dcc9;
+
+  /* NEW — the highlighter palette. Two stops so the mark lands
+     as a visible stroke over paper without bleeding the whole row.
+     Yellow = the reader's marker (calm, studious).
+     Hot red = editorial emphasis (urgent, "look here"). */
+  --hl:        rgba(255, 207, 64, 0.36);
+  --hl-hot:    rgba(218, 105, 72, 0.32);
+
+  --serif: 'Palatino Linotype', 'Palatino', 'Book Antiqua', Georgia, serif;
+  --sans:  'Helvetica Neue', 'Helvetica', Arial, sans-serif;
+  --mono:  'SF Mono', 'Fira Code', 'JetBrains Mono', Consolas, monospace;
+  --wide: 1180px;
+  --measure: 860px;
+}
+
+html { font-size: 17px; scroll-behavior: smooth; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--serif);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
+}
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 15% 8%, rgba(192,57,43,0.03), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 95% 95%, rgba(192,57,43,0.02), transparent 60%);
+}
+body > * { position: relative; z-index: 1; }
+
+/* HIGHLIGHTER MARK — the reader's pen. Linear-gradient rests under the
+   baseline so it reads like a thick marker stroke, not a solid block.
+   Inline so it wraps naturally inside the prose. */
+.hl,
+.hl-hot {
+  background: var(--hl);
+  padding: 0.06em 0.18em;
+  /* Keep gilt/warmth consistent with the warm paper ground. */
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  /* Italic inside a highlighter gets harder to read; drop the italic when the
+     highlighter is applied to an <em>. Red italic is authorial voice; the
+     highlighter replaces that role with reader emphasis. */
+  font-style: inherit;
+  color: inherit;
+}
+.hl-hot { background: var(--hl-hot); }
+
+/* HERO */
+.hero {
+  padding: 5.5rem 2rem 4rem;
+  text-align: center;
+  max-width: var(--wide); margin: 0 auto;
+  position: relative;
+}
+.hero-eyebrow {
+  font-family: var(--sans); font-size: 0.72rem;
+  letter-spacing: 0.24em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 2.5rem;
+  display: inline-flex; align-items: center; gap: 0.75rem;
+}
+.hero-eyebrow::before, .hero-eyebrow::after {
+  content: ''; width: 28px; height: 1px; background: var(--red);
+}
+.hero-mark {
+  font-family: var(--serif);
+  font-size: clamp(4rem, 11vw, 8rem);
+  font-weight: 400; line-height: 0.95;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+.hero-mark em { font-style: italic; color: var(--red); }
+.hero-rule { width: 120px; height: 1px; background: var(--red); margin: 2rem auto 1.5rem; }
+.hero-tagline {
+  font-family: var(--serif);
+  font-size: clamp(1.05rem, 1.8vw, 1.25rem);
+  font-style: italic; color: var(--ink-2);
+  letter-spacing: 0.005em;
+}
+.hero-meta {
+  margin-top: 2rem;
+  font-family: var(--mono); font-size: 0.66rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* SECTIONS */
+section.logotype-section {
+  max-width: var(--wide); margin: 0 auto;
+  padding: 4.5rem 2rem;
+}
+section.logotype-section.narrow { max-width: var(--measure); }
+
+.section-kicker {
+  font-family: var(--sans); font-size: 0.7rem;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 1.25rem;
+  display: flex; align-items: center; gap: 0.85rem;
+}
+.section-kicker::after { content: ''; flex: 1; height: 1px; background: var(--red-muted); opacity: 0.5; }
+
+section.logotype-section h2 {
+  font-family: var(--serif);
+  font-size: clamp(1.8rem, 3.2vw, 2.4rem);
+  font-weight: 400; line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin-bottom: 0.5rem;
+}
+section.logotype-section h2 em { font-style: italic; color: var(--red); }
+section.logotype-section .lede {
+  font-family: var(--serif); font-size: 1.08rem;
+  color: var(--ink-2); max-width: 58ch;
+  margin-bottom: 2rem; line-height: 1.55;
+}
+section.logotype-section .lede::first-line {
+  font-variant: small-caps; letter-spacing: 0.04em;
+}
+
+/* PALETTE */
+.palette-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;
+  margin-top: 2rem;
+}
+.swatch {
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  padding: 1rem;
+  display: flex; flex-direction: column; gap: 0.25rem;
+}
+.swatch-chip {
+  width: 100%; aspect-ratio: 1.4;
+  border: 1px solid var(--rule);
+  margin-bottom: 0.75rem;
+}
+.swatch-name {
+  font-family: var(--sans); font-size: 0.66rem;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink); font-weight: 600;
+}
+.swatch-hex {
+  font-family: var(--mono); font-size: 0.76rem;
+  color: var(--ink-3);
+}
+.swatch-role {
+  font-family: var(--serif); font-style: italic;
+  font-size: 0.84rem; color: var(--ink-3); margin-top: 0.15rem;
+}
+
+/* TYPE SCALE */
+.type-specimen {
+  border: 1px solid var(--rule); background: var(--paper-lt);
+  padding: 2rem 2.25rem;
+}
+.type-row {
+  display: grid; grid-template-columns: 140px 1fr auto;
+  gap: 1.5rem; align-items: baseline;
+  padding: 0.9rem 0; border-bottom: 1px dotted var(--rule-mid);
+}
+.type-row:last-child { border-bottom: none; }
+.type-label {
+  font-family: var(--sans); font-size: 0.62rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+}
+.type-sample { color: var(--ink); line-height: 1.05; }
+.type-sample.display { font-family: var(--serif); font-size: 3rem; font-weight: 400; letter-spacing: -0.02em; }
+.type-sample.display em { font-style: italic; color: var(--red); }
+.type-sample.h2 { font-family: var(--serif); font-size: 2rem; font-weight: 400; font-style: italic; color: var(--red); }
+.type-sample.h3 { font-family: var(--serif); font-size: 1.4rem; font-weight: 400; letter-spacing: -0.01em; }
+.type-sample.body { font-family: var(--serif); font-size: 1.08rem; line-height: 1.55; color: var(--ink-2); }
+.type-sample.small-caps { font-family: var(--serif); font-size: 1rem; font-variant: small-caps; letter-spacing: 0.04em; color: var(--ink-2); }
+.type-sample.mono { font-family: var(--mono); font-size: 0.92rem; color: var(--ink-2); }
+.type-sample.hl-sample { font-family: var(--serif); font-size: 1.2rem; line-height: 1.5; color: var(--ink); }
+.type-meta {
+  font-family: var(--mono); font-size: 0.68rem;
+  color: var(--ink-4); letter-spacing: 0.02em; text-align: right;
+}
+
+/* LOGO VARIATIONS */
+.variations-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem;
+}
+.variation-tile {
+  border: 1px solid var(--rule);
+  padding: 3.25rem 2rem;
+  min-height: 240px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem;
+  text-align: center;
+}
+.variation-tile.paper { background: var(--paper-lt); }
+.variation-tile.warm  { background: var(--paper-dk); }
+.variation-tile.dark  { background: var(--ink); color: var(--paper); border-color: #222; }
+.variation-tile .vt-mark {
+  font-family: var(--serif); font-size: 2.25rem;
+  font-weight: 400; letter-spacing: -0.015em; line-height: 1;
+  color: var(--ink);
+}
+.variation-tile.dark .vt-mark { color: var(--paper); }
+.variation-tile .vt-mark em { font-style: italic; color: var(--red); }
+.variation-tile.dark .vt-mark em { color: var(--red-muted); }
+.variation-tile .vt-tag {
+  font-family: var(--sans); font-size: 0.62rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink-3); font-weight: 600;
+}
+.variation-tile.dark .vt-tag { color: rgba(245,240,232,0.5); }
+.variation-tile .vt-signet {
+  width: 84px; height: 84px;
+  border: 1.5px solid var(--ink);
+  background: var(--paper-lt);
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+.variation-tile .vt-signet::before, .variation-tile .vt-signet::after {
+  content: ''; position: absolute; background: var(--red);
+}
+.variation-tile .vt-signet::before { top: -3px; left: 50%; transform: translateX(-50%); width: 6px; height: 6px; border-radius: 50%; }
+.variation-tile .vt-signet::after  { bottom: -3px; left: 50%; transform: translateX(-50%); width: 28px; height: 1px; }
+.variation-tile .vt-signet span {
+  font-family: var(--serif); font-size: 1.7rem; font-weight: 400;
+  letter-spacing: -0.015em;
+}
+.variation-tile .vt-signet span em { font-style: italic; color: var(--red); }
+
+/* UI ELEMENTS */
+.ui-kit {
+  border: 1px solid var(--rule); background: var(--paper-lt);
+  padding: 2rem 2.25rem;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;
+}
+.ui-cell h4 {
+  font-family: var(--sans); font-size: 0.62rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 1rem;
+}
+.ui-buttons { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.ui-btn {
+  font-family: var(--sans); font-size: 0.8rem; font-weight: 600;
+  padding: 0.75rem 1.4rem;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  border: 1px solid var(--ink); cursor: pointer;
+  transition: all 0.15s;
+}
+.ui-btn.primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.ui-btn.primary:hover { background: var(--red); border-color: var(--red); }
+.ui-btn.secondary { background: var(--red); color: var(--paper); border-color: var(--red); }
+.ui-btn.secondary:hover { background: var(--red-deep); border-color: var(--red-deep); }
+.ui-btn.ghost { background: transparent; color: var(--ink); border-color: var(--ink); }
+.ui-btn.ghost:hover { background: var(--ink); color: var(--paper); }
+
+.ui-badges { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1.5rem; }
+.ui-badge {
+  font-family: var(--sans); font-size: 0.62rem;
+  padding: 0.25rem 0.6rem; border: 1px solid;
+  letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600;
+}
+.ui-badge.live { color: var(--red); border-color: var(--red); background: rgba(192,57,43,0.05); }
+.ui-badge.ok { color: #14803e; border-color: #14803e; background: rgba(20,128,62,0.04); }
+.ui-badge.hold { color: var(--ink-3); border-color: var(--ink-4); }
+
+.ui-code {
+  background: var(--ink); color: var(--paper);
+  padding: 1.25rem 1.5rem;
+  font-family: var(--mono); font-size: 0.8rem; line-height: 1.85;
+}
+.ui-code .k { color: var(--red-muted); }
+.ui-code .c { color: #7a7a7a; font-style: italic; }
+.ui-code .v { color: var(--paper); }
+
+.ui-input-wrap { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 1.5rem; }
+.ui-input {
+  font-family: var(--serif); font-size: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--paper);
+  border: 1px solid var(--rule); color: var(--ink);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.ui-input:focus {
+  outline: none; border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(192,57,43,0.1);
+}
+
+/* HIGHLIGHTER SPECIMEN — documents the new brand tool inline */
+.hl-specimen {
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  padding: 2rem 2.25rem;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem;
+}
+.hl-rule { display: flex; flex-direction: column; gap: 0.55rem; }
+.hl-rule .rule-label {
+  font-family: var(--sans); font-size: 0.62rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+}
+.hl-rule .rule-text {
+  font-family: var(--serif); font-size: 0.98rem;
+  color: var(--ink-2); line-height: 1.55;
+}
+.hl-rule .rule-text em { color: var(--ink); font-style: italic; }
+.hl-rule .rule-text .hl { background: var(--hl); }
+.hl-rule .rule-text .hl-hot { background: var(--hl-hot); }
+.hl-sample-lines {
+  display: flex; flex-direction: column; gap: 1.2rem;
+  font-family: var(--serif); font-size: 1.05rem;
+  color: var(--ink); line-height: 1.65;
+}
+.hl-sample-lines .label {
+  font-family: var(--sans); font-size: 0.58rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--red); font-weight: 600; margin-bottom: 0.25rem;
+  display: block;
+}
+
+/* EDITORIAL PAIRING */
+.pairing {
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  padding: 3rem 3.5rem;
+  position: relative;
+  max-width: var(--measure); margin: 0 auto;
+}
+.pairing::before {
+  content: 'SPECIMEN · EDITORIAL PAGE';
+  position: absolute; top: -10px; left: 2rem;
+  background: var(--paper); color: var(--red);
+  padding: 0.2rem 0.7rem;
+  font-family: var(--sans); font-size: 0.56rem;
+  letter-spacing: 0.2em; font-weight: 600;
+}
+.pairing .article-eyebrow {
+  font-family: var(--sans); font-size: 0.66rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 0.85rem;
+}
+.pairing h3 {
+  font-family: var(--serif);
+  font-size: clamp(1.7rem, 3vw, 2.1rem);
+  font-weight: 400; line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin-bottom: 1.25rem;
+}
+.pairing h3 em { font-style: italic; color: var(--red); }
+.pairing p {
+  font-family: var(--serif); font-size: 1.1rem;
+  color: var(--ink-2); line-height: 1.75;
+  margin-bottom: 1.15rem;
+}
+.pairing p:first-of-type::first-letter {
+  font-family: var(--serif); font-weight: 400;
+  float: left; font-size: 4.5rem; line-height: 0.85;
+  padding: 0.35rem 0.55rem 0 0; color: var(--red);
+}
+.pairing p:first-of-type::first-line {
+  font-variant: small-caps; letter-spacing: 0.04em;
+}
+.pairing p strong { color: var(--ink); font-weight: 500; }
+.pairing .pull-quote {
+  font-family: var(--serif); font-style: italic;
+  font-size: 1.35rem; line-height: 1.4;
+  padding: 1.25rem 0 1.25rem 1.5rem;
+  border-left: 2px solid var(--red);
+  margin: 1.5rem 0; color: var(--ink);
+}
+.pairing .byline {
+  margin-top: 1.5rem; padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+  font-family: var(--sans); font-size: 0.72rem;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-3);
+}
+.pairing .byline strong { color: var(--ink-2); font-weight: 500; }
+
+/* APPLICATIONS */
+.applications-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;
+}
+.app-card {
+  border: 1px solid var(--rule);
+  padding: 2rem;
+  background: var(--paper-lt);
+  position: relative;
+}
+.app-card .app-kicker {
+  font-family: var(--sans); font-size: 0.58rem;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 1rem;
+}
+.business-card {
+  aspect-ratio: 7 / 4;
+  background: var(--paper-lt);
+  border: 1px solid var(--rule);
+  padding: 1.5rem 1.75rem;
+  display: flex; flex-direction: column; justify-content: space-between;
+  position: relative;
+}
+.business-card::before {
+  content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 4px;
+  background: var(--red);
+}
+.business-card .bc-mark {
+  font-family: var(--serif); font-size: 1.4rem;
+  font-weight: 400; letter-spacing: -0.015em;
+}
+.business-card .bc-mark em { font-style: italic; color: var(--red); }
+.business-card .bc-rows {
+  font-family: var(--mono); font-size: 0.72rem;
+  color: var(--ink-3); line-height: 1.7;
+}
+.business-card .bc-rows strong { color: var(--ink); font-weight: 500; }
+
+.document-head {
+  background: var(--paper); border: 1px solid var(--rule);
+  padding: 1.75rem 1.85rem;
+  position: relative;
+}
+.document-head .dh-kicker {
+  font-family: var(--sans); font-size: 0.58rem;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  border-bottom: 1px solid var(--red);
+  padding-bottom: 0.35rem; margin-bottom: 1rem;
+  display: inline-block;
+}
+.document-head h4 {
+  font-family: var(--serif); font-size: 1.45rem;
+  font-weight: 400; letter-spacing: -0.015em; line-height: 1.2;
+  margin-bottom: 0.75rem;
+}
+.document-head h4 em { font-style: italic; color: var(--red); }
+.document-head h4 .hl { background: var(--hl); }
+.document-head .dh-body {
+  font-family: var(--serif); font-size: 0.95rem;
+  color: var(--ink-2); line-height: 1.55;
+}
+.document-head .dh-body::first-line {
+  font-variant: small-caps; letter-spacing: 0.04em;
+}
+.document-head .dh-body .hl { background: var(--hl); }
+.document-head .dh-colophon {
+  margin-top: 1.25rem; padding-top: 0.85rem;
+  border-top: 1px dotted var(--rule-mid);
+  font-family: var(--mono); font-size: 0.66rem;
+  color: var(--ink-3); letter-spacing: 0.04em;
+}
+
+.spec-plate {
+  background: var(--ink); color: var(--paper);
+  padding: 1.85rem 2rem;
+  font-family: var(--mono); font-size: 0.78rem;
+  line-height: 1.85;
+  position: relative;
+}
+.spec-plate::before {
+  content: 'RESPONSIBILITY · FORMAL SPEC';
+  position: absolute; top: -10px; left: 1.5rem;
+  background: var(--paper); color: var(--red);
+  padding: 0.2rem 0.6rem;
+  font-family: var(--sans); font-size: 0.56rem;
+  letter-spacing: 0.18em; font-weight: 600;
+}
+.spec-plate .k { color: var(--red-muted); }
+.spec-plate .c { color: #8a8a8a; font-style: italic; }
+.spec-plate .v { color: var(--paper); }
+
+/* VOICE & TONE */
+.voice-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem;
+}
+.voice-card {
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  padding: 1.75rem 1.5rem;
+  transition: transform 0.2s, border-color 0.2s;
+}
+.voice-card:hover { transform: translateY(-2px); border-color: var(--red); }
+.voice-card .vc-tag {
+  font-family: var(--sans); font-size: 0.6rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 0.85rem;
+}
+.voice-card blockquote {
+  font-family: var(--serif); font-style: italic;
+  font-size: 1.15rem; line-height: 1.4;
+  color: var(--ink); margin-bottom: 1rem; letter-spacing: -0.005em;
+}
+.voice-card blockquote em { color: var(--red); }
+.voice-card blockquote .hl { background: var(--hl); font-style: italic; }
+.voice-card .vc-note {
+  font-family: var(--serif); font-size: 0.9rem;
+  color: var(--ink-2); line-height: 1.55;
+}
+
+/* COLOPHON */
+.colophon {
+  text-align: center;
+  padding: 3rem 2rem 5rem;
+  max-width: var(--wide); margin: 3rem auto 0;
+  border-top: 1px solid var(--rule);
+  font-family: var(--sans); font-size: 0.7rem;
+  color: var(--ink-3); letter-spacing: 0.06em;
+}
+.colophon .rule { width: 48px; height: 1px; background: var(--red); margin: 0 auto 1.5rem; }
+.colophon .line { margin: 0.35rem 0; }
+.colophon .line.italic { font-family: var(--serif); font-style: italic; font-size: 0.9rem; color: var(--ink-2); letter-spacing: 0; margin-bottom: 1rem; }
+.colophon a { color: var(--red); text-decoration: none; margin: 0 0.75rem; transition: color 0.15s; }
+.colophon a:hover { color: var(--red-deep); }
+
+/* Responsive */
+@media (max-width: 880px) {
+  .hero { padding: 4rem 1.5rem 2.5rem; }
+  section.logotype-section { padding: 3.5rem 1.5rem; }
+  .palette-grid { grid-template-columns: repeat(2, 1fr); }
+  .variations-grid { grid-template-columns: 1fr; }
+  .ui-kit { grid-template-columns: 1fr; gap: 2rem; }
+  .hl-specimen { grid-template-columns: 1fr; gap: 1.5rem; }
+  .type-row { grid-template-columns: 1fr; gap: 0.5rem; }
+  .type-meta { text-align: left; }
+  .pairing { padding: 2.25rem 1.75rem; }
+  .applications-grid { grid-template-columns: 1fr; }
+  .voice-grid { grid-template-columns: 1fr; }
+}
+
+/* ============================================
+   ▶ ORGANISM OVERRIDE ◀
+   Cormorant Garamond italic + Inter + JetBrains Mono.
+   Fog #f5f0e8 paper, teal #3a7a6a primary, amber #c49a5c
+   complement. Glass cards with backdrop-filter blur.
+   Margin cellular automata canvas (Rule 110) on left + right.
+   ============================================ */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --paper:     #f5f0e8;
+  --paper-dk:  #e8e0d0;
+  --paper-lt:  #fbf7ef;
+  --paper-cream:#fbf7ef;
+
+  --ink:       #2a2520;
+  --ink-2:     rgba(42,37,32,0.7);
+  --ink-3:     rgba(42,37,32,0.45);
+  --ink-4:     rgba(42,37,32,0.25);
+
+  /* Teal replaces editorial red. Same role: section markers,
+     italic accents, hairline rules. Amber complement is reserved
+     for the "organism breathes" moments — second mark in the CA,
+     hot pill. */
+  --red:       #3a7a6a;
+  --red-muted: #4a8a7a;
+  --red-deep:  #2e6456;
+
+  --teal:       #3a7a6a;
+  --teal-deep:  #2e6456;
+  --teal-tint:  rgba(58,122,106,0.14);
+  --teal-faint: rgba(58,122,106,0.06);
+  --amber:      #c49a5c;
+  --amber-soft: #d4aa6c;
+
+  /* Glass surface — backdrop-blur translucent panel */
+  --glass:     rgba(255,255,255,0.52);
+  --glass-str: rgba(255,255,255,0.68);
+  --glass-b:   rgba(255,255,255,0.55);
+
+  --rule:      rgba(42,37,32,0.12);
+  --rule-mid:  rgba(42,37,32,0.06);
+
+  --shadow:    0 4px 24px rgba(42,37,32,0.06);
+  --shadow-lg: 0 16px 56px rgba(42,37,32,0.09);
+
+  /* Highlighter rendered as a teal-tint pill on a serif phrase.
+     Hot is amber-tint — the warm complement. */
+  --hl:        var(--teal-tint);
+  --hl-hot:    rgba(196,154,92,0.18);
+
+  --serif: 'Cormorant Garamond', 'Cormorant', Georgia, serif;
+  --sans:  'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --mono:  'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 1rem;
+  line-height: 1.7;
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* MARGIN CELLULAR AUTOMATA — η's defining move.
+   The canvas crawls the left + right margins of the viewport,
+   one row of cells advancing every ~14 frames. Rule 110.
+   Cells paint in teal + amber. The brand demonstrates itself
+   by growing as the reader scrolls. */
+.page-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.page-bg canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+#margin-ca { opacity: 0.34; mix-blend-mode: multiply; }
+
+body > section, body > .colophon { position: relative; z-index: 1; }
+body::before {
+  background:
+    radial-gradient(ellipse 50% 35% at 18% 12%, rgba(58,122,106,0.07), transparent 65%),
+    radial-gradient(ellipse 45% 32% at 82% 78%, rgba(196,154,92,0.06), transparent 65%);
+}
+
+/* HERO */
+.hero { position: relative; padding-top: 5.5rem; }
+.hero-eyebrow {
+  font-family: var(--sans);
+  color: var(--teal);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  font-size: 0.7rem;
+}
+.hero-eyebrow::before, .hero-eyebrow::after { background: var(--teal); }
+.hero-mark {
+  font-family: var(--serif);
+  font-weight: 300;
+  font-style: italic;
+  letter-spacing: 0.005em;
+  color: var(--ink);
+}
+.hero-mark em {
+  color: var(--teal);
+  font-style: italic;
+  font-weight: 300;
+}
+.hero-rule { background: var(--teal); width: 80px; }
+.hero-tagline {
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--ink-2);
+  font-size: 1.15rem;
+  font-weight: 400;
+}
+.hero-meta { color: var(--ink-3); font-family: var(--sans); font-weight: 500; }
+
+/* SECTIONS */
+.section-kicker {
+  color: var(--teal);
+  font-family: var(--sans);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+.section-kicker::after { background: var(--teal); opacity: 0.3; }
+
+section.logotype-section h2 {
+  font-family: var(--serif);
+  font-weight: 300;
+  font-style: italic;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+}
+section.logotype-section h2 em {
+  color: var(--teal);
+  font-style: italic;
+  font-weight: 400;
+}
+section.logotype-section .lede {
+  font-family: var(--sans);
+  color: var(--ink-2);
+  font-size: 1rem;
+  line-height: 1.7;
+  font-weight: 300;
+  max-width: 62ch;
+}
+section.logotype-section .lede::first-line { font-variant: normal; letter-spacing: 0; }
+
+/* Teal pill — replaces highlighter */
+.hl, .hl-hot {
+  background: var(--hl);
+  padding: 0.06em 0.32em;
+  border-radius: 4px;
+  color: var(--ink);
+}
+.hl-hot { background: var(--hl-hot); color: var(--ink); }
+
+/* Glass card surface — backdrop-filter blur */
+.type-specimen,
+.ui-kit,
+.hl-specimen,
+.pairing,
+.app-card,
+.variation-tile,
+.voice-card {
+  background: var(--glass-str);
+  backdrop-filter: blur(16px) saturate(130%);
+  -webkit-backdrop-filter: blur(16px) saturate(130%);
+  border: 1px solid var(--glass-b);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+}
+
+/* Type specimen */
+.type-row { border-bottom-color: var(--rule); }
+.type-label {
+  color: var(--teal);
+  font-family: var(--sans);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  font-size: 0.68rem;
+}
+.type-sample.display { font-family: var(--serif); font-weight: 300; font-style: italic; }
+.type-sample.display em { color: var(--teal); font-style: italic; font-weight: 400; }
+.type-sample.h2 { font-family: var(--serif); color: var(--teal); font-style: italic; font-weight: 400; }
+.type-sample.h3 { font-family: var(--serif); font-weight: 400; font-style: italic; color: var(--teal); }
+.type-sample.h3 em { color: var(--teal); font-style: italic; font-weight: 500; }
+.type-sample.body { font-family: var(--sans); color: var(--ink-2); font-weight: 300; }
+.type-meta { color: var(--ink-3); font-family: var(--mono); }
+
+/* Variations — glass cards */
+.variation-tile { transition: box-shadow 0.3s ease, transform 0.3s ease; }
+.variation-tile:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+.variation-tile.paper { background: var(--glass-str); }
+.variation-tile.warm { background: rgba(232,224,208,0.65); }
+.variation-tile.dark {
+  background: rgba(46,100,86,0.92);
+  border-color: var(--teal-deep);
+  color: var(--paper);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.variation-tile .vt-mark { font-family: var(--serif); font-weight: 300; font-style: italic; }
+.variation-tile .vt-mark em { color: var(--teal); font-style: italic; font-weight: 400; }
+.variation-tile.dark .vt-mark { color: var(--paper); }
+.variation-tile.dark .vt-mark em { color: var(--amber-soft); }
+.variation-tile .vt-tag { color: var(--ink-3); font-family: var(--sans); font-weight: 500; }
+.variation-tile.dark .vt-tag { color: rgba(245,240,232,0.6); }
+.variation-tile .vt-signet {
+  border-color: var(--teal);
+  border-radius: 999px;
+  background: var(--teal-tint);
+}
+.variation-tile .vt-signet::before { background: var(--teal); }
+.variation-tile .vt-signet::after { background: var(--teal); }
+.variation-tile .vt-signet span { font-family: var(--serif); font-weight: 300; font-style: italic; }
+.variation-tile .vt-signet span em { color: var(--teal); font-style: italic; font-weight: 400; }
+
+/* UI primitives */
+.ui-cell h4 { color: var(--teal); font-family: var(--sans); font-weight: 500; letter-spacing: 0.12em; font-size: 0.68rem; }
+.ui-btn {
+  font-family: var(--sans);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  border-radius: 999px;
+  padding: 0.85rem 1.75rem;
+  transition: background .2s, transform .15s, box-shadow .3s;
+}
+.ui-btn.primary {
+  background: var(--teal);
+  color: var(--paper-cream);
+  border-color: var(--teal);
+  box-shadow: 0 6px 28px rgba(58,122,106,0.20);
+}
+.ui-btn.primary:hover {
+  background: var(--teal-deep);
+  border-color: var(--teal-deep);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 36px rgba(58,122,106,0.28);
+}
+.ui-btn.secondary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.ui-btn.secondary:hover { background: var(--ink-2); border-color: var(--ink-2); }
+.ui-btn.ghost {
+  color: var(--ink);
+  border-color: var(--rule);
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.ui-btn.ghost:hover { color: var(--teal); border-color: var(--teal-tint); }
+
+.ui-badge {
+  font-family: var(--sans);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  border-radius: 999px;
+  padding: 0.25rem 0.85rem;
+  font-size: 0.7rem;
+}
+.ui-badge.live {
+  color: var(--teal);
+  border-color: var(--teal);
+  background: var(--teal-faint);
+}
+.ui-badge.live::before { content: '●'; padding-right: 0.4em; color: var(--teal); animation: pulseDot 2.4s ease-in-out infinite; }
+@keyframes pulseDot { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
+.ui-badge.ok { color: #1f8a4c; border-color: #1f8a4c; background: rgba(31,138,76,0.06); }
+.ui-badge.hold { color: var(--ink-3); border-color: var(--rule); }
+
+.ui-code {
+  background: rgba(42,37,32,0.96);
+  color: var(--paper);
+  border-radius: 12px;
+  font-size: 0.8rem;
+}
+.ui-code .k { color: var(--amber-soft); }
+.ui-code .v { color: var(--paper); }
+.ui-code .c { color: rgba(245,240,232,0.5); font-style: italic; }
+
+.ui-input {
+  font-family: var(--sans);
+  border-color: var(--rule);
+  background: var(--glass);
+  border-radius: 999px;
+  padding: 0.7rem 1.25rem;
+}
+.ui-input:focus { border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-tint); }
+
+/* Section V — The Living Margins */
+.hl-rule .rule-label { color: var(--teal); font-family: var(--sans); font-weight: 500; letter-spacing: 0.1em; font-size: 0.7rem; }
+.hl-rule .rule-text em { color: var(--teal); font-style: italic; font-weight: 500; }
+.hl-rule .rule-text { color: var(--ink-2); }
+.hl-sample-lines .label {
+  color: var(--teal);
+  font-family: var(--sans);
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  font-size: 0.7rem;
+}
+
+/* Editorial Pairing */
+.pairing::before { color: var(--teal); background: var(--paper); font-family: var(--sans); font-weight: 500; letter-spacing: 0.14em; }
+.pairing .article-eyebrow { color: var(--teal); font-family: var(--sans); font-weight: 500; letter-spacing: 0.14em; }
+.pairing h3 { font-family: var(--serif); font-weight: 300; font-style: italic; }
+.pairing h3 em { color: var(--teal); font-style: italic; font-weight: 400; }
+.pairing p { font-family: var(--sans); color: var(--ink-2); font-weight: 300; font-size: 1rem; line-height: 1.75; }
+.pairing p:first-of-type::first-letter {
+  font-family: var(--serif);
+  color: var(--teal);
+  font-weight: 300;
+  font-style: italic;
+  font-size: 4.5rem;
+}
+.pairing p:first-of-type::first-line { font-variant: normal; letter-spacing: 0; }
+.pairing p strong { color: var(--ink); font-weight: 500; }
+.pairing .pull-quote {
+  border-left: 3px solid var(--teal);
+  background: var(--teal-faint);
+  border-radius: 0 12px 12px 0;
+  padding: 1.5rem 1.75rem;
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--ink);
+  font-size: 1.25rem;
+  font-weight: 400;
+}
+.pairing .byline { color: var(--ink-3); font-family: var(--sans); font-weight: 500; border-top-color: var(--rule); }
+.pairing .byline strong { color: var(--ink-2); font-weight: 500; }
+
+/* Applications */
+.app-card .app-kicker { color: var(--teal); font-family: var(--sans); font-weight: 500; letter-spacing: 0.14em; font-size: 0.65rem; }
+.business-card { background: var(--glass-str); border-color: var(--glass-b); border-radius: 18px; box-shadow: var(--shadow); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+.business-card::before { background: var(--teal); width: 5px; }
+.business-card .bc-mark { font-family: var(--serif); font-weight: 300; font-style: italic; }
+.business-card .bc-mark em { color: var(--teal); font-style: italic; font-weight: 400; }
+.business-card .bc-rows { font-family: var(--sans); color: var(--ink-3); }
+.business-card .bc-rows strong { color: var(--ink); font-weight: 500; }
+.business-card .bc-rows div[style*="--red"] { color: var(--teal) !important; }
+
+.document-head {
+  background: var(--glass-str);
+  border-color: var(--glass-b);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.document-head .dh-kicker {
+  color: var(--teal);
+  border-bottom-color: var(--teal);
+  font-family: var(--sans);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+}
+.document-head h4 { font-family: var(--serif); font-weight: 300; font-style: italic; }
+.document-head h4 em { color: var(--teal); font-style: italic; font-weight: 400; }
+.document-head h4 .hl, .document-head .dh-body .hl { background: var(--hl); }
+.document-head .dh-body { color: var(--ink-2); font-family: var(--sans); font-weight: 300; }
+.document-head .dh-body::first-line { font-variant: normal; letter-spacing: 0; }
+.document-head .dh-colophon { color: var(--ink-3); font-family: var(--mono); border-top-color: var(--rule); }
+
+.spec-plate {
+  background: rgba(42,37,32,0.96);
+  color: var(--paper);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+.spec-plate::before { color: var(--teal); background: var(--paper); font-family: var(--sans); font-weight: 500; letter-spacing: 0.14em; }
+.spec-plate .k { color: var(--amber-soft); }
+.spec-plate .v { color: var(--paper); }
+.spec-plate .c { color: rgba(245,240,232,0.5); font-style: italic; }
+
+/* Voice */
+.voice-card { transition: box-shadow .3s ease, transform .3s ease; }
+.voice-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+.voice-card .vc-tag { color: var(--teal); font-family: var(--sans); font-weight: 500; letter-spacing: 0.12em; font-size: 0.68rem; }
+.voice-card blockquote { font-family: var(--serif); color: var(--ink); font-style: italic; font-weight: 400; }
+.voice-card blockquote em { color: var(--teal); font-style: italic; font-weight: 500; }
+.voice-card blockquote .hl, .voice-card blockquote .hl-hot { background: var(--hl); color: var(--ink); font-style: italic; }
+.voice-card blockquote .hl-hot { background: var(--hl-hot); }
+.voice-card .vc-note { color: var(--ink-2); font-family: var(--sans); font-weight: 300; }
+
+/* Swatches */
+.swatch { background: var(--glass-str); border-color: var(--glass-b); border-radius: 12px; box-shadow: var(--shadow); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.swatch-name { color: var(--ink); font-family: var(--sans); font-weight: 500; letter-spacing: 0.1em; font-size: 0.65rem; }
+.swatch-hex { color: var(--ink-3); font-family: var(--mono); }
+.swatch-role { color: var(--ink-3); font-style: italic; font-family: var(--sans); }
+
+/* Colophon */
+.colophon { font-family: var(--sans); color: var(--ink-3); border-top-color: var(--rule); font-weight: 400; }
+.colophon .rule { background: var(--teal); width: 60px; }
+.colophon .line.italic { color: var(--ink-2); font-family: var(--serif); font-style: italic; font-weight: 400; }
+.colophon a { color: var(--teal); }
+.colophon a:hover { color: var(--teal-deep); }
+
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+
+}
+</style>
+</head>
+<body>
+
+<!-- ORGANISM PAGE-BG: cellular automata crawling left + right margins -->
+<div class="page-bg">
+  <canvas id="margin-ca"></canvas>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-eyebrow">Direction &eta; &middot; Organism</div>
+  <h1 class="hero-mark">Open<em>Prose</em></h1>
+  <div class="hero-rule"></div>
+  <p class="hero-tagline">A <span class="hl">living system</span> that maintains itself.</p>
+  <div class="hero-meta">Cormorant italic &middot; teal &middot; glass &middot; the margins are alive</div>
+</section>
+
+<!-- PALETTE -->
+<section class="logotype-section" id="palette">
+  <div class="section-kicker">I &middot; Palette</div>
+  <h2>Fog and <em>ink</em>, with one breathing <em>teal</em> and a warm amber <span class="hl">complement</span>.</h2>
+  <p class="lede">A living palette. Fog #f5f0e8 carries the page; the same warm cream every classical type system has used. Ink #2a2520 reads soft on fog, never harsh. Teal #3a7a6a is the breath &mdash; the italic, the section marker, the link, the pulsing live badge, the cellular cells in the left margin. Amber #c49a5c is the warm complement &mdash; the second color in the automaton, the hot pill, the rare second voice. The whole palette feels like watching a system maintain itself: cool reliable teal with the occasional warm spark.</p>
+  <div class="palette-grid">
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--paper);"></div>
+      <span class="swatch-name">Fog</span>
+      <span class="swatch-hex">#f5f0e8</span>
+      <span class="swatch-role">the page</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--paper-dk);"></div>
+      <span class="swatch-name">Sand</span>
+      <span class="swatch-hex">#e8e0d0</span>
+      <span class="swatch-role">secondary surface</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--paper-lt);"></div>
+      <span class="swatch-name">Cream</span>
+      <span class="swatch-hex">#fbf7ef</span>
+      <span class="swatch-role">lifted surfaces</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--ink); border-color: var(--ink);"></div>
+      <span class="swatch-name">Ink</span>
+      <span class="swatch-hex">#2a2520</span>
+      <span class="swatch-role">primary copy</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--teal); border-color: var(--teal);"></div>
+      <span class="swatch-name">Teal</span>
+      <span class="swatch-hex">#3a7a6a</span>
+      <span class="swatch-role">accent &middot; italic em</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--teal-deep); border-color: var(--teal-deep);"></div>
+      <span class="swatch-name">Teal Deep</span>
+      <span class="swatch-hex">#2e6456</span>
+      <span class="swatch-role">hover &middot; pressed</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--amber); border-color: var(--amber);"></div>
+      <span class="swatch-name">Amber</span>
+      <span class="swatch-hex">#c49a5c</span>
+      <span class="swatch-role">warm complement</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--glass-str); border: 1px solid var(--glass-b);"></div>
+      <span class="swatch-name">Glass</span>
+      <span class="swatch-hex">rgba 255·.68 + blur 16</span>
+      <span class="swatch-role">card surface</span>
+    </div>
+  </div>
+</section>
+
+<!-- TYPE SCALE -->
+<section class="logotype-section" id="type">
+  <div class="section-kicker">II &middot; Type Scale</div>
+  <h2>Cormorant for <em>the breath</em>. <em>Inter</em> for the chrome.</h2>
+  <p class="lede">Cormorant Garamond carries every breath the brand draws &mdash; display, headlines, mark, and any sentence that wants to feel hand-set. Cormorant's italic is the brand's voice; you will see it everywhere there is feeling. Inter handles every label, button, and badge at small sizes &mdash; the chrome the system needs to function. JetBrains Mono is reserved for code and the spec plate. <em>Italic teal</em> is the writer's emphasis. The pill and the automaton are the system's.</p>
+  <div class="type-specimen">
+    <div class="type-row">
+      <span class="type-label">Display</span>
+      <span class="type-sample display">Write the <em>outcome</em>.</span>
+      <span class="type-meta">Cormorant 300 italic &middot; clamp 2–3rem</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">H2 italic</span>
+      <span class="type-sample h2">the quiet arrival</span>
+      <span class="type-meta">Cormorant italic 400 &middot; 2rem</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">H3</span>
+      <span class="type-sample h3">A specification, <em>recited</em></span>
+      <span class="type-meta">Cormorant italic 400 &middot; 1.4rem</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Body &middot; sans</span>
+      <span class="type-sample body">You declare the outcome in a file. The system picks it up on cadence, runs it, verifies the result, and delivers.</span>
+      <span class="type-meta">Inter 300 &middot; 1rem / 1.7</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Teal pill</span>
+      <span class="type-sample hl-sample">The standup happens anyway, but it is <span class="hl">fifteen minutes shorter</span>. Nobody asks where the numbers came from.</span>
+      <span class="type-meta">teal-tint pill &middot; 14% alpha</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Amber pill</span>
+      <span class="type-sample hl-sample">If the outcome <span class="hl-hot">doesn't ship</span>, no line.</span>
+      <span class="type-meta">amber-soft pill &middot; 18% alpha</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Label &middot; sans</span>
+      <span class="type-sample" style="font-family: var(--sans); font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--teal); font-weight: 500;">Responsibilities as a Service</span>
+      <span class="type-meta">Inter 500 &middot; 0.72rem</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Mono</span>
+      <span class="type-sample mono">responsibility: weekly-investor-digest</span>
+      <span class="type-meta">JetBrains 400 &middot; 0.92rem</span>
+    </div>
+  </div>
+</section>
+
+<!-- LOGO VARIATIONS -->
+<section class="logotype-section" id="variations">
+  <div class="section-kicker">III &middot; Logo Variations</div>
+  <h2>One mark, <em>three impressions</em>.</h2>
+  <p class="lede">Primary on fog, a fully-rounded signet with teal serifs (the only round mark in the system &mdash; the other six marks are square or rectangle), and a reversed mark for dark teal surfaces. The italic in <em>Prose</em> always carries the teal, whether on light or dark ground. The pill never touches the mark &mdash; it is a reader's tool for prose, not a brand device. The cellular automaton never touches the mark either; the brand grows around the mark, not on it.</p>
+  <div class="variations-grid">
+    <div class="variation-tile paper">
+      <div class="vt-mark">Open<em>Prose</em></div>
+      <div class="vt-tag">Primary &middot; 40px+</div>
+    </div>
+    <div class="variation-tile warm">
+      <div class="vt-signet"><span>O<em>P</em></span></div>
+      <div class="vt-tag">Signet &middot; favicon</div>
+    </div>
+    <div class="variation-tile dark">
+      <div class="vt-mark">Open<em>Prose</em></div>
+      <div class="vt-tag">Reversed &middot; dark ground</div>
+    </div>
+  </div>
+</section>
+
+<!-- UI ELEMENTS -->
+<section class="logotype-section" id="ui">
+  <div class="section-kicker">IV &middot; UI Elements</div>
+  <h2>Buttons, badges, and a <em>specification</em>.</h2>
+  <p class="lede">Interface primitives are organism-shaped: pill buttons that lift on hover with a soft teal-tinted shadow, fully-rounded badges, glass cards with backdrop-filter blur. The live badge breathes &mdash; a 2.4-second pulse, the same cadence the page-bg automaton advances at. The code surface is the only place the brand goes dark: ink on dark paper with amber-soft for keys.</p>
+  <div class="ui-kit">
+    <div class="ui-cell">
+      <h4>Buttons</h4>
+      <div class="ui-buttons">
+        <button class="ui-btn primary">Primary</button>
+        <button class="ui-btn secondary">Secondary</button>
+        <button class="ui-btn ghost">Ghost</button>
+      </div>
+      <div class="ui-badges">
+        <span class="ui-badge live">&middot; Live</span>
+        <span class="ui-badge ok">&#10003; Verified</span>
+        <span class="ui-badge hold">&middot; On hold</span>
+      </div>
+      <div class="ui-input-wrap">
+        <label style="font-family: var(--sans); font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--teal); font-weight: 500;">Declare the outcome</label>
+        <input class="ui-input" type="text" placeholder="e.g. weekly-investor-digest">
+      </div>
+    </div>
+    <div class="ui-cell">
+      <h4>Code surface</h4>
+      <div class="ui-code"><span class="c"># pick up the file</span>
+<span class="k">$</span> openprose run weekly-digest
+<span class="c"># verify, deliver, archive</span>
+<span class="v">&#10003; delivered 09:14 ET</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- THE LIVING MARGINS — η's emphasis primitive -->
+<section class="logotype-section" id="highlighter">
+  <div class="section-kicker">V &middot; The Living Margins</div>
+  <h2>Italic teal is the writer. The pill is the reader. <em>The margins are alive</em>.</h2>
+  <p class="lede">η's defining gesture is the cellular automaton crawling the left and right margins of every page &mdash; Rule 110, sixteen cells per side, advancing one row every fourteen frames in teal and amber. The brand demonstrates itself by growing. <em>Italic teal</em> is the writer's emphasis, same role italic-red plays in α. <span class="hl">The teal pill</span> is the reader's pause &mdash; soft, opt-in, easy to scan past. <span class="hl-hot">The amber pill</span> is reserved for the rare moment the brand wants the reader to look up &mdash; the same warmth that appears in the second half of the automaton's color cycle.</p>
+  <div class="hl-specimen">
+    <div class="hl-sample-lines">
+      <div>
+        <span class="label">Teal pill &middot; reader's pause</span>
+        <div>Every Monday at 09:00 ET, the digest arrives &mdash; <span class="hl">verified, signed, archived</span>. The standup happens anyway, but it is fifteen minutes shorter.</div>
+      </div>
+      <div>
+        <span class="label">Amber pill &middot; warm look-up</span>
+        <div>Billed by <span class="hl-hot">delivery</span>. If the outcome doesn't ship, no line.</div>
+      </div>
+      <div>
+        <span class="label">With italic teal author voice</span>
+        <div>The humanist computer is the insight that these two dispositions &mdash; <em>craft and machinery</em> &mdash; are not opposed. The <span class="hl">machine handles the cadence</span>. The <span class="hl">prose handles the voice</span>.</div>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+      <div class="hl-rule">
+        <span class="rule-label">Rule &middot; teal pill</span>
+        <span class="rule-text"><em>Use</em> on the nouns and numbers a busy operator would scroll back to. Teal pill is a soft 14% wash on a serif phrase. Never on verbs.</span>
+      </div>
+      <div class="hl-rule">
+        <span class="rule-label">Rule &middot; amber pill</span>
+        <span class="rule-text"><em>Use</em> sparingly on the load-bearing fact &mdash; the boundary, the SLA, the promise. The amber is the warm complement; reserve it for the moment the brand needs to break its own quiet.</span>
+      </div>
+      <div class="hl-rule">
+        <span class="rule-label">Rule &middot; the automaton</span>
+        <span class="rule-text">The Rule-110 cellular automaton is a <em>page-level ornament</em>, never embedded inside content. It crawls the left and right margins as the reader scrolls; it never crosses into the content column. Pause it on prefers-reduced-motion.</span>
+      </div>
+      <div class="hl-rule">
+        <span class="rule-label">Rule &middot; the mark</span>
+        <span class="rule-text">Never on the logotype. Never on a button. Pills and the automaton are <em>prose tools only</em> &mdash; body copy, editorial H2/H3, the page-bg layer. Not chrome.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EDITORIAL PAIRING -->
+<section class="logotype-section narrow" id="pairing">
+  <div class="section-kicker">VI &middot; Editorial Pairing</div>
+  <h2>Set in type &mdash; <em>the voice</em> at length, with the margins still <span class="hl">growing</span>.</h2>
+  <p class="lede">The organism voice is calm, specific, and unafraid of a short sentence. It names things by their nouns. It reaches for italic teal only when italic is warranted. The page reads as if the system itself is keeping you company &mdash; the margins growing slowly while you read.</p>
+  <article class="pairing">
+    <div class="article-eyebrow">From the field notes</div>
+    <h3>On the <em>quiet arrival</em> of Monday reports.</h3>
+    <p>Once, the week began with a scramble. Someone opened seven dashboards, pulled the numbers, wrote the digest, and dropped it in the 09:00 standup. The rotation was a line in the budget. The standup was a line in the calendar. Nobody was quite sure what either accomplished beyond confirming that the dashboards were fine.</p>
+    <p>Then the outcome was declared in a file. <strong>Fifteen lines.</strong> Every Monday at 09:00 ET, the digest arrives &mdash; <span class="hl">verified, signed, archived</span>. The standup happens anyway, but it is fifteen minutes shorter. Nobody asks where the numbers came from. <span class="hl">They are already in the document</span>.</p>
+    <div class="pull-quote">The first thing we noticed was what we stopped doing &mdash; the standing meetings where we'd review the dashboard to confirm the dashboard was fine.</div>
+    <p>The humanist computer is the insight that these two dispositions &mdash; craft and machinery &mdash; are not opposed. The machine handles the cadence. The prose handles the voice. The page reads the way a good analyst would have written it. <span class="hl-hot">The result is the point</span>.</p>
+    <div class="byline"><strong>Maya Chen</strong> &middot; Head of Operations &middot; Series-C payments platform</div>
+  </article>
+</section>
+
+<!-- APPLICATIONS -->
+<section class="logotype-section" id="applications">
+  <div class="section-kicker">VII &middot; Applications</div>
+  <h2>A card, a <em>masthead</em>, a plate.</h2>
+  <p class="lede">Three real surfaces the brand has to carry: a business card (glass, teal rule, no pill, no automaton), a document masthead (glass, the operator's brief, teal pill welcome), and a specification plate (the spec in dark, teal-soft for keys, no pill because the spec <em>is</em> the bookmark).</p>
+  <div class="applications-grid">
+    <div class="app-card">
+      <div class="app-kicker">Business Card</div>
+      <div class="business-card">
+        <div class="bc-mark">Open<em>Prose</em></div>
+        <div class="bc-rows">
+          <div><strong>Maya Chen</strong></div>
+          <div>Head of Operations</div>
+          <div style="margin-top: 0.5rem; color: var(--red);">maya@openprose.ai</div>
+          <div style="color: var(--red);">+1 &middot; 415 &middot; 0113</div>
+        </div>
+      </div>
+    </div>
+    <div class="app-card">
+      <div class="app-kicker">Document Header</div>
+      <div class="document-head">
+        <span class="dh-kicker">Weekly Investor Digest &middot; Wk 14</span>
+        <h4>ARR crossed <em>$14.2M</em> <span class="hl">this week</span>.</h4>
+        <p class="dh-body">The new $40K Meridian contract pushed us over the line. Three new logos in pipeline, <span class="hl">two expected to close this quarter</span>.</p>
+        <div class="dh-colophon">Generated 09:02 &middot; Verified 09:14 &middot; OpenProse</div>
+      </div>
+    </div>
+    <div class="app-card" style="grid-column: 1 / -1;">
+      <div class="app-kicker">Formal Specification</div>
+      <div class="spec-plate">
+<span class="k">responsibility:</span> <span class="v">weekly-investor-digest</span>
+<span class="k">owner:</span>         <span class="v">finance@company.example</span>
+<span class="k">cadence:</span>       <span class="v">mondays @ 09:00 ET</span>
+<span class="k">input:</span>
+  <span class="c">- gmail:investors@*</span>
+  <span class="c">- notion:portfolio/updates</span>
+<span class="k">outcome:</span> <span class="v">|</span>
+  <span class="v">One page. What changed, what's on track,</span>
+  <span class="v">what needs attention. 200 words.</span>
+<span class="k">deliver:</span>
+  <span class="c">- email:investors@</span>
+<span class="k">audit:</span>         <span class="v">retain 7 years</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- VOICE & TONE -->
+<section class="logotype-section" id="voice">
+  <div class="section-kicker">VIII &middot; Voice &amp; Tone</div>
+  <h2>Three sentences, <em>one register</em>, <span class="hl">three marks</span>.</h2>
+  <p class="lede">Three sanctioned voices the brand uses: the short declaration, the spec-sheet note, the editorial observation. Each sentence can live on its own without ornament &mdash; and each demonstrates one placement of the teal pill.</p>
+  <div class="voice-grid">
+    <div class="voice-card">
+      <div class="vc-tag">Voice &middot; short &middot; teal pill</div>
+      <blockquote>&ldquo;Write the outcome. <span class="hl">We run it.</span>&rdquo;</blockquote>
+      <p class="vc-note">The tagline. Six words. The pill lands on the second sentence &mdash; the part that shifts the burden from the operator to the system that maintains itself.</p>
+    </div>
+    <div class="voice-card">
+      <div class="vc-tag">Voice &middot; spec &middot; amber pill</div>
+      <blockquote>&ldquo;Billed by <span class="hl-hot">delivery</span>. If the outcome doesn't ship, no line.&rdquo;</blockquote>
+      <p class="vc-note">Terms of art spoken plainly. Amber pill on the one word that defines the pricing model &mdash; the warm complement carrying the boundary that the cool teal accent cannot.</p>
+    </div>
+    <div class="voice-card">
+      <div class="vc-tag">Voice &middot; editorial &middot; <em>italic</em></div>
+      <blockquote>&ldquo;Once, the week began with a scramble. <em>Then the outcome was declared in a file.</em>&rdquo;</blockquote>
+      <p class="vc-note">The long form voice. Italic teal carries the pivot. No pill here &mdash; this sentence is still the author's, not yet the system's. The automaton keeps growing in the margins regardless.</p>
+    </div>
+  </div>
+</section>
+
+<!-- COLOPHON -->
+<section class="colophon">
+  <div class="rule"></div>
+  <div class="line italic">OpenProse &middot; Round-3 finalists &middot; <span class="hl">Direction &eta; &middot; Organism</span></div>
+  <div class="line">Cormorant Garamond italic &middot; Inter &middot; JetBrains Mono</div>
+  <div class="line">Fog #f5f0e8 &middot; Ink #2a2520 &middot; Teal #3a7a6a &middot; Amber #c49a5c &middot; Rule 110</div>
+  <div class="line" style="margin-top: 1.25rem;">
+    <a href="direction-alpha-editorial.html">&alpha; Editorial</a>
+    <a href="direction-beta-tufte.html">&beta; Tufte</a>
+    <a href="direction-gamma-manuscript.html">&gamma; Manuscript</a>
+    <a href="direction-delta-machine.html">&delta; Machine</a>
+    <a href="direction-epsilon-operator.html">&epsilon; Operator</a>
+    <a href="direction-zeta-saas.html">&zeta; SaaS</a>
+    <a href="direction-theta-living-document.html">&theta; Living Doc</a>
+  <a href="direction-iota-reference-card.html">&iota; Reference Card</a>
+    <a href="direction-kappa-codex-spreads.html">&kappa; Codex</a>
+  </div>
+</section>
+
+<script>
+/* ============================================
+   MARGIN CELLULAR AUTOMATA — Rule 110
+   The brand grows as the reader scrolls.
+   Adapted from logotype-F-generative-organism.html.
+   Rule-110 1D automaton, 16 cols × N rows per margin,
+   advances one row every ~14 frames. Cells paint in
+   teal + amber. The CA is a literal demonstration of
+   "responsibility = system that maintains itself".
+   ============================================ */
+(function marginCA() {
+    var c = document.getElementById('margin-ca');
+    if (!c) return;
+    var ctx = c.getContext('2d');
+
+    var CELL = 6;
+    var COLS = 16;
+    var leftRow = null, rightRow = null;
+    var history = [];
+    var ruleBits;
+
+    function initRule(rule) {
+        ruleBits = [];
+        for (var i = 0; i < 8; i++) ruleBits[i] = (rule >> i) & 1;
+    }
+    initRule(110);
+
+    function seed() {
+        var r = new Uint8Array(COLS);
+        r[Math.floor(COLS / 2)] = 1;
+        r[1] = 1;
+        r[COLS - 2] = 1;
+        return r;
+    }
+    leftRow = seed();
+    rightRow = seed();
+
+    function resize() {
+        c.width = window.innerWidth;
+        c.height = window.innerHeight;
+        history = [];
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    function stepRow(row) {
+        var next = new Uint8Array(COLS);
+        for (var x = 0; x < COLS; x++) {
+            var left   = x > 0 ? row[x - 1] : row[COLS - 1];
+            var center = row[x];
+            var right  = x < COLS - 1 ? row[x + 1] : row[0];
+            var index  = (left << 2) | (center << 1) | right;
+            next[x] = ruleBits[index];
+        }
+        return next;
+    }
+
+    var frame = 0;
+    var colors = [
+        'rgba(58,122,106,0.9)',   // teal
+        'rgba(46,100,86,0.7)',    // teal-deep
+        'rgba(196,154,92,0.8)',   // amber
+        'rgba(212,170,108,0.6)'   // amber-soft
+    ];
+
+    function draw() {
+        frame++;
+        if (frame % 14 === 0) {
+            leftRow = stepRow(leftRow);
+            rightRow = stepRow(rightRow);
+            history.push({ l: leftRow, r: rightRow });
+            if (history.length > Math.ceil(c.height / CELL) + 4) history.shift();
+        }
+
+        var stripW = COLS * CELL;
+        ctx.clearRect(0, 0, stripW + 10, c.height);
+        ctx.clearRect(c.width - stripW - 10, 0, stripW + 10, c.height);
+
+        var yStart = c.height - history.length * CELL;
+        for (var h = 0; h < history.length; h++) {
+            var y = yStart + h * CELL;
+            var L = history[h].l;
+            var R = history[h].r;
+            for (var x = 0; x < COLS; x++) {
+                if (L[x]) {
+                    ctx.fillStyle = colors[(x + h) % colors.length];
+                    var xp = x * CELL;
+                    ctx.globalAlpha = 0.25 + 0.45 * ((h + 1) / history.length);
+                    ctx.fillRect(xp, y, CELL - 1, CELL - 1);
+                }
+                if (R[x]) {
+                    ctx.fillStyle = colors[(x + h + 2) % colors.length];
+                    var xpR = c.width - stripW + x * CELL;
+                    ctx.globalAlpha = 0.25 + 0.45 * ((h + 1) / history.length);
+                    ctx.fillRect(xpR, y, CELL - 1, CELL - 1);
+                }
+            }
+        }
+        ctx.globalAlpha = 1;
+        requestAnimationFrame(draw);
+    }
+    draw();
+})();
+</script>
+
+</body>
+</html>

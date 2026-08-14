@@ -23,6 +23,7 @@ Each page is a standalone HTML document with embedded CSS and JavaScript. All pa
 | `about.html` | Diamond | About — bio, experience, education, expertise, awards |
 | `services.html` | Star | Services — AI coaching (JH Coaching OS), Claude Code coaching, founding designer |
 | `nanome2.html` | — | Nanome 2 Redesign case study (subpage of Design) |
+| `openprose.html` | — | OpenProse founding-design case study (subpage of Design). Brings its own design language (IBM Plex + Kecal, warm paper) and loads `styles/jh-chrome.css` **instead of** `shared.css` — see below |
 | `playground.html` | — | Infinite canvas board with iframe demo cards (slated for a future rebuild on jh-deng-template) |
 | `writing.html` | — | Writing index/reader — fetches and renders the `writing/*.md` essays (EduOS + MetaMedium sets); linked from art.html |
 | `search.html` | 🔍 | AI-powered search (3-tier: BM25 / WebGPU / local LLM) |
@@ -155,7 +156,15 @@ which stamps every `?v=` cache-bust ref across root `*.html` **and** the `Portfo
 ## Shared Resources
 
 ```
-styles/shared.css         — design system (variables, nav, typography, cards, footer, responsive)
+styles/shared.css         — design system (typography, cards, hero, grids, responsive); @imports jh-chrome.css
+styles/jh-chrome.css      — the chrome alone: design tokens + #nav + shape nav + body > footer.
+                            Split out so a page with its OWN visual language can still wear the site
+                            header/footer (openprose.html loads only this). Two rules keep it portable:
+                            no bare element selectors (#nav, body > footer — never nav/footer), and
+                            tokens a host may also define (gold, spacing) are read as --jh-* so a host
+                            palette cannot reach in. Chrome also resets font-size-adjust, which
+                            openprose's body sets and which otherwise revives the font-size:0 the
+                            compact <900px nav title relies on.
 scripts/jh-chrome.js      — <jh-nav> + <jh-footer> components; JH_SITE identity + THE site version
 scripts/shared.js         — nav scroll-visibility, cursor spotlight, lightbox, responsive nav
 scripts/search-overlay.js — site-wide ⌘K search overlay (3-tier)

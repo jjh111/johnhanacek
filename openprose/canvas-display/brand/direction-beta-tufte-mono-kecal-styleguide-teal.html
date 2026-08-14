@@ -1,0 +1,2753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 142 142'%3E%3Cpath d='M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z' fill='%232a2520'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenProse Style Guide — Direction β · Tufte · Mono · Kecal · Teal</title>
+
+<!-- ============================================================
+     OPENPROSE · DIRECTION β · TUFTE · MONO · KECAL — STYLE GUIDE
+     ============================================================
+     This is a fork of direction-beta-tufte-mono-kecal.html
+     reorganised as a comprehensive style-guide template. The
+     visual identity is preserved exactly; what changes is the
+     document's intent — from a brand showcase to a documentation
+     surface that an LLM (or a human picking up the project on a
+     fresh morning) can read end-to-end and reproduce the entire
+     style from this one file alone.
+
+     STRUCTURE
+       §1  Foundation          page identity + rationale
+       §2  Color tokens        every CSS variable, both modes
+       §3  Typography          face stack, weight ladder, scale
+       §4  Spacing scale       every gap/padding/margin token
+       §5  Layout primitives   container widths, columns
+       §6  Component catalog   every semantic class
+       §7  Voice & tone        register samples
+       §8  Do / Don't          5 misused patterns
+       §9  File conventions    naming, comments, organisation
+       §10 Agent integration   tokens.yaml + agent notes
+
+     STATUS
+       Forked from   direction-beta-tufte-mono-kecal.html
+       Fork date     2026-05-18
+       Author        JH
+
+     This file is a detailed style-guide template that elucidates the
+     entire style precisely in a human-readable and agent-usable format.
+     ============================================================ -->
+
+<style>
+/* ============================================================
+   §0 RESET — universal, neutral. The page sits on the same
+   off-white as the source. Nothing here is brand-specific;
+   everything brand-specific lives below in :root and §6.
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ============================================================
+   §0.1 FONT FACES — Kecal (FungiType) hosted on jsDelivr.
+   Loaded once; ramp from 200 (extralight) to 800 (extrabold).
+   All seven weights are wired even if the page only uses a few,
+   so a downstream consumer can call e.g. font-weight: 700 with
+   confidence. The other two faces (IBM Plex Mono, Cormorant
+   Garamond) come from Google Fonts in the @import block below.
+   ============================================================ */
+@font-face { font-family: 'Kecal'; font-weight: 200; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extralight-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 300; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Light-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 400; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Regular-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 500; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Medium-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 600; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Semibold-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 700; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Bold-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 800; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extrabold-web.woff2') format('woff2'); }
+
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&display=swap');
+
+/* ============================================================
+   §0.2 DESIGN TOKENS — the single source of truth.
+   All component CSS below references these variables; never
+   inline a literal value. The dark-mode override at the end
+   of this block flips the palette while preserving every name.
+   ============================================================ */
+:root {
+  /* Teal palette per η-organism-mono-teal — fog cream paper, warm
+     brown-black ink, teal editorial accent, amber warm complement.
+     Style guide structure and type system unchanged from the Kecal
+     fork; only the color tokens swap. */
+
+  /* Paper + ink — fog cream over warm brown-black */
+  --paper:       #f5f0e8;
+  --paper-dk:    #e8e0d0;
+  --paper-lt:    #fbf7ef;
+  --paper-cream: #fbf7ef;
+  --paper-warm:  #f0e8d8;
+  --ink:         #2a2520;
+  --ink-2:       rgba(42,37,32,0.78);
+  --ink-3:       rgba(42,37,32,0.55);
+  --ink-4:       rgba(42,37,32,0.32);
+  --ink-5:       rgba(42,37,32,0.18);
+
+  /* Teal is the editorial accent (em emphasis, section markers,
+     hairline rules). Amber is the warm complement held for "look up"
+     moments. Red is the fail / needs-attention signal — drawn from
+     the η-organism-mono-teal source palette where red carries every
+     attention-flag (failed verification, broken contract, weak score).
+     The three accents are independent; never mix red with teal in the
+     same phrase. */
+  --teal:        #3a7a6a;
+  --teal-deep:   #2e6456;
+  --teal-soft:   #4a8a7a;
+  --teal-tint:   rgba(58,122,106,0.14);
+  --teal-faint:  rgba(58,122,106,0.06);
+
+  --amber:       #c49a5c;
+  --amber-deep:  #a87f44;
+  --amber-soft:  #d4aa6c;
+  --amber-tint:  rgba(196,154,92,0.18);
+
+  /* Editorial red — the canonical brand red, kept here as a real red
+     (not an alias to teal). It carries the fail / attention semantics
+     across the family: failed eval pills, broken-contract callouts,
+     the rare "this needs you" badge. Use sparingly — Tufte respect
+     the eye — but use it when something is actually wrong. */
+  --red:         #c0392b;
+  --red-muted:   #d4604f;
+  --red-deep:    #8e2b20;
+  --red-tint:    rgba(192,57,43,0.12);
+  --red-faint:   rgba(192,57,43,0.05);
+
+  /* Hairlines keyed off the warm ink so they sit in the same
+     temperature as the body type. */
+  --rule:        rgba(42,37,32,0.14);
+  --rule-mid:    rgba(42,37,32,0.06);
+
+  /* Highlighter — silenced in the Tufte direction. Legacy .hl
+     markup renders as a dotted underline so the parent guide rule
+     still parses. */
+  --hl:          transparent;
+  --hl-hot:      transparent;
+
+  /* Type faces */
+  --serif:  'Kecal', system-ui, -apple-system, sans-serif;
+  --sans:   'Kecal', system-ui, -apple-system, sans-serif;
+  --mono:   'IBM Plex Mono', 'JetBrains Mono', 'SF Mono', monospace;
+  --accent: 'Kecal', system-ui, -apple-system, sans-serif;
+
+  /* Spacing — modular scale, base 1rem (~16px). Every spacing
+     token in the document maps to one of these. */
+  --space-3xs: 0.25rem;   /* 4px  — chip padding-y */
+  --space-2xs: 0.5rem;    /* 8px  — tight inline gap */
+  --space-xs:  0.75rem;   /* 12px — button gap */
+  --space-sm:  1rem;      /* 16px — card padding minimum */
+  --space-md:  1.5rem;    /* 24px — section internal gap */
+  --space-lg:  2rem;      /* 32px — section side padding */
+  --space-xl:  3rem;      /* 48px — section vertical rhythm */
+  --space-2xl: 4.5rem;    /* 72px — section block padding */
+  --space-3xl: 5.5rem;    /* 88px — hero top padding */
+
+  /* Layout primitives */
+  --wide:    1180px;      /* outer container */
+  --measure: 860px;       /* prose container (Tufte narrow) */
+  --measure-ch: 62ch;     /* lede ideal line measure */
+
+  /* Type scale — every type token also lives here so JS / Figma
+     consumers can read them. Sized in rem; px equivalent listed
+     in §3 specimen. */
+  --fs-display: 3rem;
+  --fs-h1:      2.4rem;
+  --fs-h2:      2rem;
+  --fs-h3:      1.4rem;
+  --fs-body:    1.08rem;
+  --fs-small:   0.92rem;
+  --fs-mono:    0.92rem;
+  --fs-caption: 0.78rem;
+  --fs-label:   0.62rem;
+
+  --lh-display: 1.05;
+  --lh-heading: 1.15;
+  --lh-body:    1.55;
+  --lh-mono:    1.70;
+  --lh-label:   1.20;
+
+  --ls-display: -0.025em;
+  --ls-heading: -0.012em;
+  --ls-body:    0;
+  --ls-label:   0.16em;
+  --ls-tight:   -0.005em;
+
+  /* Borders */
+  --border-w:   1px;
+  --border-w2:  2px;
+  --radius:     0;        /* Tufte uses sharp corners only */
+
+  /* Transitions */
+  --t-fast:     0.15s;
+  --t-slow:     0.20s;
+}
+
+/* Dark mode — a single attribute on <html> flips the palette.
+   Type, scale, and spacing remain identical; only ink/paper swap.
+   This is intentionally restrained: Tufte does not invert
+   prose pages aggressively, so dark mode here is a hushed
+   reading mode rather than a maximum-contrast UI mode. */
+html[data-theme="dark"] {
+  /* Dark mode in the teal direction keeps the editorial teal as
+     the accent — only the surface and ink invert. Teal still
+     reads against the deep-cocoa paper; amber still warms the
+     occasional pill. */
+  --paper:       #161410;
+  --paper-dk:    #1d1a14;
+  --paper-lt:    #1f1c16;
+  --paper-cream: #1f1c16;
+  --paper-warm:  #221d16;
+  --ink:         #f0ece1;
+  --ink-2:       rgba(240,236,225,0.78);
+  --ink-3:       rgba(240,236,225,0.55);
+  --ink-4:       rgba(240,236,225,0.32);
+  --ink-5:       rgba(240,236,225,0.18);
+
+  /* Teal brightened a step for dark contrast; amber kept rich. */
+  --teal:        #6fb3a2;
+  --teal-deep:   #4f9385;
+  --teal-soft:   #84c0b0;
+  --teal-tint:   rgba(111,179,162,0.18);
+  --teal-faint:  rgba(111,179,162,0.08);
+
+  --amber:       #d4aa6c;
+  --amber-deep:  #b89058;
+  --amber-soft:  #e0bb7d;
+  --amber-tint:  rgba(212,170,108,0.22);
+
+  /* Editorial red — brightened a step for the deep-cocoa paper.
+     Same role as light mode (fail / needs attention). */
+  --red:         #e88675;
+  --red-muted:   #d97a68;
+  --red-deep:    #f4a18f;
+  --red-tint:    rgba(232,134,117,0.18);
+  --red-faint:   rgba(232,134,117,0.08);
+
+  --rule:        rgba(240,236,225,0.16);
+  --rule-mid:    rgba(240,236,225,0.08);
+}
+
+/* ============================================================
+   §0.3 PAGE BASE — the canvas. Body type is IBM Plex Mono per
+   the source direction's mono-as-body decision. Italic emphasis
+   is Kecal 800 (synthesised slant from upright statics).
+   ============================================================ */
+html { font-size: 17px; scroll-behavior: smooth; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 0.94rem;
+  line-height: 1.7;
+  letter-spacing: 0;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
+}
+
+/* The brand-wide em rule. Anything wrapped in <em> renders in
+   Kecal 800 upright at 1em (cap-height matched to Plex Mono).
+   Upright is the accent default (2026-08-05, c_a965130b); italic is
+   the historical option, kept live on typography-pairings.html and
+   direction-styleguide.html. This is the single most important
+   typographic rule in the direction: keep it global, never override
+   locally. */
+em,
+blockquote,
+.lede em, .deck em,
+h1 em, h2 em, h3 em, h4 em,
+.pull, .pull em,
+.sidenote em,
+.type-sample.h2 {
+  font-family: 'Kecal', system-ui, sans-serif;
+  font-style: normal;
+  font-weight: 800;
+  font-size: 1em;
+  letter-spacing: 0;
+}
+
+/* ============================================================
+   §0.4 STYLE-GUIDE SHELL — the chrome of THIS document.
+   Sections, kickers, two-column layouts (rendered + source).
+   Reuses the same vocabulary the brand itself uses, so the
+   guide demonstrates the style as it documents it.
+   ============================================================ */
+.sg-shell {
+  max-width: var(--wide);
+  margin: 0 auto;
+  padding: var(--space-lg);
+}
+
+.sg-section {
+  padding: var(--space-2xl) 0;
+  border-bottom: 1px solid var(--rule);
+}
+.sg-section:last-of-type { border-bottom: none; }
+
+.sg-section-num {
+  font-family: var(--mono);
+  font-size: var(--fs-caption);
+  letter-spacing: 0.18em;
+  color: var(--ink-3);
+  margin-bottom: 0.4rem;
+  text-transform: uppercase;
+}
+
+.sg-section h2 {
+  font-family: var(--mono);
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  font-weight: 400;
+  line-height: var(--lh-heading);
+  letter-spacing: var(--ls-heading);
+  margin-bottom: var(--space-sm);
+}
+.sg-section h2 em { color: var(--ink); }
+
+.sg-section .sg-lede {
+  font-family: var(--mono);
+  font-size: 0.98rem;
+  color: var(--ink-2);
+  max-width: var(--measure-ch);
+  line-height: 1.7;
+  margin-bottom: var(--space-md);
+}
+
+.sg-section h3 {
+  font-family: var(--mono);
+  font-size: 1.1rem;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  margin-top: var(--space-lg);
+  margin-bottom: var(--space-xs);
+  color: var(--ink);
+}
+
+/* Side-by-side render + source. Inline-flex tiles let the page
+   stay readable while making each pattern's CSS visible. */
+.sg-demo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  margin: var(--space-sm) 0 var(--space-md);
+}
+.sg-demo > .sg-demo-render {
+  padding: var(--space-md);
+  background: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: var(--space-xs);
+  min-height: 120px;
+}
+.sg-demo > .sg-demo-source {
+  padding: var(--space-md);
+  background: var(--paper-dk);
+  border-left: 1px solid var(--rule);
+  overflow-x: auto;
+}
+.sg-demo pre {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  line-height: 1.7;
+  color: var(--ink-2);
+  white-space: pre;
+  tab-size: 2;
+}
+.sg-demo pre .k { color: var(--ink); font-weight: 500; }
+.sg-demo pre .c { color: var(--ink-4); font-style: italic; }
+
+@media (max-width: 880px) {
+  .sg-demo { grid-template-columns: 1fr; }
+  .sg-demo > .sg-demo-source { border-left: none; border-top: 1px solid var(--rule); }
+}
+
+.sg-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  margin: var(--space-sm) 0 var(--space-md);
+}
+.sg-table th, .sg-table td {
+  text-align: left;
+  padding: 0.55rem 0.85rem;
+  border-bottom: 1px solid var(--rule-mid);
+  vertical-align: top;
+}
+.sg-table th {
+  font-weight: 500;
+  color: var(--ink-3);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--rule);
+}
+.sg-table td.swatch-cell {
+  width: 60px;
+}
+.sg-table td.swatch-cell .chip {
+  display: block;
+  width: 44px; height: 28px;
+  border: 1px solid var(--rule);
+}
+.sg-table td .mono { font-family: var(--mono); color: var(--ink); }
+.sg-table td .role { font-style: italic; color: var(--ink-3); }
+
+.sg-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs);
+  margin: var(--space-xs) 0 var(--space-sm);
+}
+.sg-pill {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  padding: 0.25rem 0.55rem;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  color: var(--ink-2);
+}
+
+.sg-do-dont {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
+  margin: var(--space-sm) 0 var(--space-md);
+}
+.sg-do, .sg-dont {
+  border: 1px solid var(--rule);
+  padding: var(--space-md);
+  background: var(--paper-lt);
+}
+.sg-do { border-left: 3px solid var(--ink); }
+.sg-dont { border-left: 3px solid var(--ink-4); background: var(--paper-dk); }
+.sg-do-tag, .sg-dont-tag {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: var(--space-2xs);
+}
+.sg-do-tag::before { content: '✓ '; color: var(--ink); }
+.sg-dont-tag::before { content: '✕ '; color: var(--ink-4); }
+.sg-do-body, .sg-dont-body {
+  font-family: var(--mono);
+  font-size: 0.88rem;
+  line-height: 1.65;
+  color: var(--ink-2);
+  margin: var(--space-2xs) 0;
+}
+.sg-do-why, .sg-dont-why {
+  font-family: var(--mono);
+  font-style: italic;
+  font-size: 0.82rem;
+  color: var(--ink-3);
+  margin-top: var(--space-xs);
+  padding-top: var(--space-xs);
+  border-top: 1px dotted var(--rule-mid);
+}
+
+@media (max-width: 880px) {
+  .sg-do-dont { grid-template-columns: 1fr; }
+}
+
+/* Dark-mode toggle button — sits in the page header. */
+.sg-theme-toggle {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.25rem;
+  z-index: 100;
+  font-family: 'Kecal', system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 0.66rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 0.5rem 0.9rem;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--ink);
+  cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.sg-theme-toggle:hover { background: var(--ink); color: var(--paper); }
+
+/* Page header — the foundation chapter doubles as cover */
+.sg-cover {
+  padding: var(--space-3xl) 0 var(--space-xl);
+  text-align: left;
+  border-bottom: 1px solid var(--rule);
+}
+.sg-cover-eyebrow {
+  font-family: 'Kecal', system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 0.66rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: var(--space-md);
+}
+.sg-cover-title {
+  font-family: var(--mono);
+  font-size: clamp(2.4rem, 6vw, 4.4rem);
+  font-weight: 400;
+  line-height: 1.02;
+  letter-spacing: -0.018em;
+  margin-bottom: var(--space-sm);
+  color: var(--ink);
+}
+.sg-cover-title em { font-style: normal; color: var(--ink); }
+.sg-cover-sub {
+  font-family: var(--mono);
+  font-size: 1.04rem;
+  color: var(--ink-2);
+  max-width: 64ch;
+  line-height: 1.6;
+  margin-bottom: var(--space-md);
+}
+.sg-cover-meta {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+}
+.sg-cover-meta b { color: var(--ink); font-weight: 500; }
+
+.sg-toc {
+  margin: var(--space-md) 0 0;
+  padding-top: var(--space-md);
+  border-top: 1px dotted var(--rule-mid);
+  font-family: var(--mono);
+  font-size: 0.84rem;
+  color: var(--ink-2);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.35rem 1.5rem;
+}
+.sg-toc a {
+  color: var(--ink-2);
+  text-decoration: none;
+  border-bottom: 1px dotted transparent;
+  transition: border-color var(--t-fast), color var(--t-fast);
+}
+.sg-toc a:hover { color: var(--ink); border-bottom-color: var(--ink-3); }
+.sg-toc a .num {
+  color: var(--ink-3);
+  margin-right: 0.5rem;
+}
+
+/* ============================================================
+   §0.5 SAMPLE COMPONENTS — the exact CSS from the source
+   direction, re-namespaced where helpful but otherwise
+   identical. Every component in §6 renders from this block.
+   Do not edit below for cosmetic reasons; this IS the brand.
+   ============================================================ */
+.sample-hero {
+  padding: var(--space-3xl) var(--space-lg) var(--space-xl);
+  text-align: center;
+  max-width: var(--wide); margin: 0 auto;
+  position: relative;
+}
+.sample-hero .hero-eyebrow {
+  font-family: 'Kecal', system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 0.72rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: var(--space-md);
+  display: inline-flex; align-items: center; gap: 0.75rem;
+}
+.sample-hero .hero-eyebrow::before, .sample-hero .hero-eyebrow::after {
+  content: ''; width: 28px; height: 1px; background: var(--ink-4);
+}
+.sample-hero .hero-mark {
+  font-family: var(--mono);
+  font-size: clamp(3rem, 10vw, 7rem);
+  font-weight: 400; line-height: 0.95;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+.sample-hero .hero-mark em { font-style: normal; font-weight: 500; color: var(--ink); font-size: 1em; letter-spacing: -0.005em; }
+.sample-hero .hero-rule { width: 80px; height: 1px; background: var(--ink-3); margin: var(--space-md) auto var(--space-sm); }
+.sample-hero .hero-tagline {
+  font-family: var(--mono);
+  font-size: 1.05rem;
+  color: var(--ink-2);
+  letter-spacing: 0.005em;
+}
+.sample-hero .hero-meta {
+  margin-top: var(--space-md);
+  font-family: var(--mono); font-size: 0.66rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.ui-btn {
+  font-family: 'Kecal', system-ui, sans-serif; font-size: 0.8rem; font-weight: 600;
+  padding: 0.75rem 1.4rem;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  border: 1px solid var(--ink); cursor: pointer;
+  background: transparent; color: var(--ink);
+  transition: all var(--t-fast);
+}
+.ui-btn.primary { background: var(--ink); color: var(--paper); font-weight: 700; }
+.ui-btn.primary:hover { background: var(--ink-2); border-color: var(--ink-2); }
+.ui-btn.secondary { background: var(--ink); color: var(--paper); border-color: var(--ink); font-weight: 700; }
+.ui-btn.secondary:hover { background: var(--ink-2); border-color: var(--ink-2); }
+.ui-btn.ghost { background: transparent; color: var(--ink); border-color: var(--ink); }
+.ui-btn.ghost:hover { background: var(--ink); color: var(--paper); }
+
+.ui-badge {
+  font-family: 'Kecal', system-ui, sans-serif; font-size: 0.62rem;
+  padding: 0.25rem 0.6rem; border: 1px solid;
+  letter-spacing: 0.14em; text-transform: uppercase; font-weight: 500;
+}
+.ui-badge.live { color: var(--ink); border-color: var(--ink); background: transparent; }
+.ui-badge.ok   { color: var(--ink-2); border-color: var(--ink-2); background: transparent; }
+.ui-badge.hold { color: var(--ink-3); border-color: var(--ink-4); }
+
+.ui-input {
+  font-family: var(--mono); font-size: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--paper);
+  border: 1px solid var(--rule); color: var(--ink);
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+  width: 100%;
+}
+.ui-input:focus {
+  outline: none; border-color: var(--ink);
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.06);
+}
+
+.ui-code {
+  background: var(--paper-dk); color: var(--ink);
+  border: 1px solid var(--rule);
+  padding: var(--space-sm) var(--space-md);
+  font-family: var(--mono); font-size: 0.8rem; line-height: 1.85;
+  white-space: pre;
+}
+.ui-code .k { color: var(--ink-3); }
+.ui-code .c { color: var(--ink-4); font-style: italic; }
+.ui-code .v { color: var(--ink); }
+
+/* Card surface */
+.card {
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  padding: var(--space-md);
+}
+.card .card-kicker {
+  font-family: 'Kecal', system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: var(--space-2xs);
+}
+.card .card-title {
+  font-family: var(--mono);
+  font-size: 1.15rem;
+  font-weight: 400;
+  margin-bottom: var(--space-2xs);
+}
+.card .card-body {
+  font-family: var(--mono);
+  font-size: 0.88rem;
+  color: var(--ink-2);
+  line-height: 1.6;
+}
+
+/* Section kicker — used throughout the source direction */
+.section-kicker {
+  font-family: 'Kecal', system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: var(--space-sm);
+  display: flex; align-items: center; gap: 0.85rem;
+}
+.section-kicker::after { content: ''; flex: 1; height: 1px; background: var(--ink-4); opacity: 0.4; }
+
+/* Drop cap — used at the start of editorial paragraphs */
+.dropcap-demo {
+  max-width: var(--measure-ch);
+  font-family: var(--mono);
+  font-size: 0.94rem;
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+.dropcap-demo::first-letter {
+  font-family: var(--mono);
+  font-weight: 500;
+  float: left;
+  font-size: 4.2em;
+  line-height: 0.85;
+  color: var(--ink);
+  padding: 0.06em 0.22em 0 0;
+}
+
+/* Lede — first paragraph of any section */
+.lede-demo {
+  font-family: var(--mono);
+  font-size: 1.05rem;
+  color: var(--ink);
+  max-width: var(--measure-ch);
+  line-height: 1.65;
+}
+
+/* Sidenote — the β emphasis primitive */
+.sn-demo {
+  max-width: var(--measure-ch);
+  font-family: var(--mono);
+  font-size: 0.94rem;
+  line-height: 1.7;
+  color: var(--ink);
+  position: relative;
+  padding-right: 0;
+}
+.sn-demo aside.sidenote {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--ink-3);
+  font-style: italic;
+  display: block;
+  margin: 0.5rem 0 1rem 1.5rem;
+  padding-left: 0.85rem;
+  border-left: 2px solid var(--rule);
+}
+sup.sn {
+  font-family: var(--mono);
+  font-size: 0.66em;
+  font-weight: 500;
+  color: var(--ink-2);
+  margin: 0 0.1em;
+}
+
+/* Sidenote underline markers ported from direction-beta-tufte-mono-kecal.html.
+   The skim/hot variants render on the line itself.
+     .hl       → dotted hairline (skim · sn marker)
+     .hl-hot   → dashed hairline (hot · sn ! marker)            */
+.hl, .hl-hot {
+  background: transparent;
+  padding: 0;
+  border-bottom: 1px dotted var(--ink-3);
+  text-underline-offset: 3px;
+}
+.hl-hot {
+  border-bottom-color: var(--ink-2);
+  border-bottom-style: dashed;
+}
+
+/* Pull-quote */
+.pull-quote {
+  font-family: 'Kecal', system-ui, sans-serif;
+  font-style: normal;
+  font-weight: 800;
+  font-size: 1.35rem;
+  line-height: 1.4;
+  padding: var(--space-sm) 0 var(--space-sm) var(--space-sm);
+  border-left: 2px solid var(--ink-3);
+  margin: var(--space-sm) 0;
+  color: var(--ink);
+  max-width: var(--measure-ch);
+}
+
+/* Pairing — editorial article specimen */
+.pairing-demo {
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  padding: var(--space-xl) var(--space-xl);
+  position: relative;
+  max-width: var(--measure);
+}
+.pairing-demo::before {
+  content: 'SPECIMEN · EDITORIAL';
+  position: absolute; top: -10px; left: 2rem;
+  background: var(--paper); color: var(--ink-3);
+  padding: 0.2rem 0.7rem;
+  font-family: 'Kecal', system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 0.56rem;
+  letter-spacing: 0.2em;
+}
+.pairing-demo h3.article-title {
+  font-family: var(--mono);
+  font-size: clamp(1.6rem, 2.8vw, 1.95rem);
+  font-weight: 400;
+  line-height: 1.15;
+  letter-spacing: -0.012em;
+  margin-bottom: var(--space-sm);
+}
+.pairing-demo p {
+  font-family: var(--mono);
+  font-size: 0.96rem;
+  color: var(--ink-2);
+  line-height: 1.75;
+  margin-bottom: var(--space-sm);
+}
+.pairing-demo p:first-of-type::first-letter {
+  font-family: var(--mono);
+  font-weight: 500;
+  float: left;
+  font-size: 4rem;
+  line-height: 0.85;
+  padding: 0.35rem 0.55rem 0 0;
+  color: var(--ink);
+}
+
+/* Voice cards */
+.voice-card-demo {
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  padding: var(--space-md);
+  transition: border-color var(--t-slow);
+}
+.voice-card-demo:hover { border-color: var(--ink-3); }
+.voice-card-demo .vc-tag {
+  font-family: 'Kecal', system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 0.6rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: var(--space-2xs);
+}
+.voice-card-demo blockquote {
+  font-family: 'Kecal', system-ui, sans-serif;
+  font-style: normal;
+  font-weight: 800;
+  font-size: 1.1rem;
+  line-height: 1.4;
+  color: var(--ink);
+  margin-bottom: var(--space-xs);
+}
+.voice-card-demo .vc-note {
+  font-family: var(--mono);
+  font-size: 0.86rem;
+  color: var(--ink-2);
+  line-height: 1.55;
+}
+
+/* Colophon at end of doc */
+.sg-colophon {
+  padding: var(--space-xl) 0 var(--space-2xl);
+  text-align: center;
+  font-family: 'Kecal', system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 0.7rem;
+  color: var(--ink-3);
+  letter-spacing: 0.08em;
+}
+.sg-colophon .rule { width: 48px; height: 1px; background: var(--ink-3); margin: 0 auto var(--space-sm); }
+.sg-colophon .line { margin: 0.35rem 0; }
+.sg-colophon .line.italic {
+  font-family: 'Kecal', system-ui, sans-serif;
+  font-style: normal;
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--ink-2);
+  letter-spacing: 0;
+  margin-bottom: var(--space-xs);
+}
+
+/* Token dump block */
+.sg-token-dump {
+  background: var(--paper-dk);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+  padding: var(--space-md);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  line-height: 1.65;
+  white-space: pre;
+  overflow-x: auto;
+  max-height: 32rem;
+  overflow-y: auto;
+}
+.sg-token-dump .k { color: var(--ink-3); }
+.sg-token-dump .v { color: var(--ink); font-weight: 500; }
+.sg-token-dump .c { color: var(--ink-4); font-style: italic; }
+
+/* ============================================================
+   §0.5.x PRETEXT DEMO — grabbable mark + swap row.
+   Companion to §6.15. CSS shape-outside emulates pretext for a
+   single-mark example. The mark floats with a transform-driven
+   offset so dragging just updates --px/--py; the prose flows
+   around its circle silhouette.
+   ============================================================ */
+.pretext-demo {
+  position: relative;
+  background: var(--paper-lt);
+  border: var(--border-w) solid var(--rule);
+  padding: var(--space-md);
+}
+.pretext-prose {
+  position: relative;
+  font-family: var(--mono);
+  font-size: 0.96rem;
+  line-height: 1.72;
+  color: var(--ink);
+  max-width: var(--measure);
+  margin: 0 auto;
+  /* keep room for the mark even when it is centred */
+  min-height: 12rem;
+}
+.pretext-prose p { text-align: justify; hyphens: auto; }
+.pretext-prose em { color: var(--ink); }
+.pretext-mark {
+  /* --px / --py: 0..1 normalized position. Updated by JS on drag.
+     The mark floats left and shape-outside is a circle, so the
+     surrounding prose carves a clean elliptical hole around it. */
+  --px: 0.5;
+  --py: 0.5;
+  float: left;
+  width: 140px;
+  height: 140px;
+  margin: calc(var(--py) * 1rem) var(--space-md) var(--space-sm) calc(var(--px) * 1rem);
+  shape-outside: circle(50%);
+  -webkit-shape-outside: circle(50%);
+  shape-margin: 12px;
+  cursor: grab;
+  user-select: none;
+  filter: drop-shadow(0 1px 0 var(--rule));
+  transition: filter var(--t-fast) ease;
+}
+.pretext-mark:hover { filter: drop-shadow(0 2px 4px rgba(42,37,32,0.18)); }
+.pretext-mark.dragging { cursor: grabbing; filter: drop-shadow(0 4px 10px rgba(42,37,32,0.28)); }
+.pretext-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+  padding-top: var(--space-sm);
+  border-top: var(--border-w) solid var(--rule);
+}
+.pretext-swatch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.7rem;
+  background: var(--paper);
+  border: var(--border-w) solid var(--rule);
+  border-radius: 0;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: border-color var(--t-fast), background var(--t-fast);
+}
+.pretext-swatch:hover { border-color: var(--teal); background: var(--teal-faint); }
+.pretext-swatch.active { border-color: var(--teal); background: var(--teal-tint); color: var(--ink); }
+.pretext-swatch img { width: 22px; height: 22px; display: block; }
+.pretext-swatch span { line-height: 1; }
+.pretext-meta {
+  margin-top: var(--space-sm);
+  font-size: 0.78rem;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+}
+
+/* ============================================================
+   §0.6 RESPONSIVE — collapse two-column demos and grid layouts
+   below 880px. Type stays the same size; only the layout shrinks.
+   ============================================================ */
+@media (max-width: 880px) {
+  .sg-cover { padding-top: var(--space-xl); }
+  .sg-section { padding: var(--space-xl) 0; }
+  .sg-demo { grid-template-columns: 1fr; }
+  .sg-toc { grid-template-columns: 1fr; }
+}
+
+
+
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+  table.sg-table { width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: auto; word-break: break-word; }
+  table.sg-table { width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: auto; word-break: break-word; }
+  table.sg-table { width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: auto; word-break: break-word; }
+}
+
+/* Color words in headers + body ledes render IN their own hue. Labels,
+   tables, code refs untouched. */
+.hue-teal { color: var(--teal); }
+.hue-amber { color: var(--amber); }
+.hue-red { color: var(--red); }
+
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     THEME TOGGLE — top-right fixed. Preference persists in
+     localStorage; defaults to light if no preference set.
+     ============================================================ -->
+<button class="sg-theme-toggle" id="sg-theme-toggle" aria-label="Toggle dark mode">Dark</button>
+
+<div class="sg-shell">
+
+  <!-- ========================================================
+       §1 FOUNDATION — page identity, rationale, version stamp.
+       This is the cover for the document. A reader (human or
+       agent) coming in cold should be able to read this section
+       only and know what direction this is.
+       ======================================================== -->
+  <header class="sg-cover" id="foundation">
+    <div class="sg-cover-eyebrow">§1 · Foundation</div>
+    <h1 class="sg-cover-title">Open<em>Prose</em> — Direction β · <span class="hue-teal">teal</span>.</h1>
+    <p class="sg-cover-sub">
+      Tufte, in mono, with Kecal in the accent seat, recolored from the
+      η · ORGANISM · mono · <span class="hue-teal">teal</span> palette. The reading face is
+      <em>IBM Plex Mono</em> at body weight; emphasis is <em>Kecal</em>
+      extrabold upright in <em style="color:var(--teal)">teal #3a7a6a</em>;
+      chrome labels are Kecal medium. The page sits on fog cream
+      <span class="mono">#f5f0e8</span> over warm brown-black
+      <span class="mono">#2a2520</span> ink. The warm complement
+      <em style="color:var(--amber)">golden amber #c49a5c</em>
+      is the rare "look up" accent — used at most once per page on the
+      load-bearing claim. Emphasis is the sidenote — a numbered marginal
+      note that the reader can opt into. There is no highlighter; legacy
+      <code>.hl</code> markup renders as a dotted <span class="hue-teal">teal</span> underline so older
+      pages still read.
+    </p>
+    <div class="sg-cover-meta">
+      <!-- v1.1 — audit pass added pretext logo demo in §6 and a companion
+           page (direction-beta-tufte-mono-kecal-styleguide-teal-companion.html). -->
+      <span><b>Version</b> · 1.1 · teal palette · audited</span>
+      <span><b>Source</b> · direction-beta-tufte-mono-kecal-styleguide.html</span>
+      <span><b>Palette</b> · direction-eta-organism-mono-teal.html</span>
+      <span><b>Companion</b> · <a href="direction-beta-tufte-mono-kecal-styleguide-teal-companion.html" style="color:var(--teal);text-decoration:none;border-bottom:1px dotted var(--teal)">how to use this style</a></span>
+      <span><b>Date</b> · 2026-05-18 · audited 2026-05-20</span>
+      <span><b>Author</b> · JH</span>
+      <span><b>Status</b> · template</span>
+    </div>
+
+    <!-- Table of contents — anchors into each section -->
+    <nav class="sg-toc" aria-label="Sections">
+      <a href="#foundation"><span class="num">§1</span> Foundation</a>
+      <a href="#colour"><span class="num">§2</span> Colour tokens</a>
+      <a href="#type"><span class="num">§3</span> Typography</a>
+      <a href="#spacing"><span class="num">§4</span> Spacing scale</a>
+      <a href="#layout"><span class="num">§5</span> Layout primitives</a>
+      <a href="#components"><span class="num">§6</span> Component catalog</a>
+      <a href="#voice"><span class="num">§7</span> Voice &amp; tone</a>
+      <a href="#do-dont"><span class="num">§8</span> Do / Don't</a>
+      <a href="#files"><span class="num">§9</span> File conventions</a>
+      <a href="#agent"><span class="num">§10</span> Agent integration</a>
+      <a href="direction-beta-tufte-mono-kecal-styleguide-teal-companion.html"><span class="num">↗</span> Companion</a>
+    </nav>
+  </header>
+
+  <!-- ========================================================
+       §1.1 RATIONALE — the single paragraph that justifies the
+       direction. Read it once; everything else follows.
+       ======================================================== -->
+  <section class="sg-section" id="rationale">
+    <div class="sg-section-num">§1.1 · Design Rationale</div>
+    <h2>Why <em>this</em> direction, in one paragraph.</h2>
+    <p class="sg-lede">
+      OpenProse is sold to operators who already trust documents. The β
+      direction takes Tufte's reading discipline — narrow column, off-white
+      paper, ink ramp, marginal sidenotes — and rebuilds it in monospace.
+      IBM Plex Mono is the body face because the product is half spec, half
+      essay, and the mono keeps both registers visually honest. Kecal sits
+      in the accent seat because its extrabold static carries the emphasis
+      a synthesised slant would otherwise lose. There is no accent colour:
+      colour competes with the sidenote, and the sidenote is the brand. A
+      page in this direction should look like a typewriter that read books.
+    </p>
+  </section>
+
+  <!-- ========================================================
+       §2 COLOUR TOKENS — every variable, both modes.
+       Each row: chip, name, hex, rgb, hsl, role, when to use,
+       when NOT to use.
+       ======================================================== -->
+  <section class="sg-section" id="colour">
+    <div class="sg-section-num">§2 · Colour tokens</div>
+    <h2>Fog paper, warm ink, <em><span class="hue-teal">teal</span></em>, and a <em style="color:var(--amber)">golden amber</em>.</h2>
+    <p class="sg-lede">
+      The palette is the η · ORGANISM · mono · <span class="hue-teal">teal</span> system applied to the
+      β Tufte structure. Fog cream paper <span class="mono">#f5f0e8</span>
+      carries the page; warm brown-black <span class="mono">#2a2520</span>
+      carries the ink ramp at four alpha-stops. Three accent families do
+      the editorial work: <em style="color:var(--teal)">teal</em>
+      <span class="mono" style="color:var(--teal)">#3a7a6a</span>
+      handles the writer's pivot (em emphasis, section markers,
+      hairline rules, in-prose links);
+      <em style="color:var(--amber)">golden amber</em>
+      <span class="mono" style="color:var(--amber)">#c49a5c</span>
+      is the warm complement reserved for the rare "look up" moment
+      (one phrase per page maximum); and
+      <em style="color:var(--red)">editorial red</em>
+      <span class="mono" style="color:var(--red)">#c0392b</span>
+      is the fail / needs-attention signal — failed evals, broken
+      contracts, the badge that says "this needs you." Never mix <span class="hue-red">red</span>
+      with <span class="hue-teal">teal</span> in the same phrase; they're independent registers.
+      Each accent lands with three brightness siblings (canonical /
+      deep / muted-or-soft) plus tint &amp; faint washes for backgrounds.
+      Anything not in this table is forbidden.
+    </p>
+
+    <h3>Light mode (default)</h3>
+    <table class="sg-table" aria-label="Colour tokens — light mode">
+      <thead>
+        <tr><th>Token</th><th>Chip</th><th>Hex</th><th>RGB</th><th>HSL</th><th>Role</th><th>Use</th><th>Avoid</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>--paper</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:#f5f0e8"></span></td>
+          <td class="mono">#f5f0e8</td>
+          <td class="mono">255 255 248</td>
+          <td class="mono">60 100% 99%</td>
+          <td class="role">the page</td>
+          <td>page background, card "page" surfaces, dropcap backdrop</td>
+          <td>do not use as foreground type colour against any ink</td>
+        </tr>
+        <tr>
+          <td><code>--paper-dk</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:#e8e0d0"></span></td>
+          <td class="mono">#e8e0d0</td>
+          <td class="mono">250 247 238</td>
+          <td class="mono">45 41% 96%</td>
+          <td class="role">code surface · aside</td>
+          <td>code blocks, spec plates, asides — anywhere a card needs to recede 1 step</td>
+          <td>do not use as page background; the page is <code>--paper</code></td>
+        </tr>
+        <tr>
+          <td><code>--paper-lt</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:#fbf7ef"></span></td>
+          <td class="mono">#fbf7ef</td>
+          <td class="mono">255 255 253</td>
+          <td class="mono">60 100% 100%</td>
+          <td class="role">lifted card</td>
+          <td>cards that should sit a half-step above the page (rare, usually skip)</td>
+          <td>not perceptibly different from <code>--paper</code>; use only when you need a faint differentiation</td>
+        </tr>
+        <tr>
+          <td><code>--rule</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:rgba(42,37,32,0.14)"></span></td>
+          <td class="mono">rgba(42,37,32,0.14)</td>
+          <td class="mono">216 210 196</td>
+          <td class="mono">42 26% 81%</td>
+          <td class="role">hairline · divider</td>
+          <td>1px borders on cards, table row dividers, section underlines</td>
+          <td>do not use for type; minimum contrast is too low</td>
+        </tr>
+        <tr>
+          <td><code>--rule-mid</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:rgba(42,37,32,0.06)"></span></td>
+          <td class="mono">rgba(42,37,32,0.06)</td>
+          <td class="mono">230 224 210</td>
+          <td class="mono">42 33% 86%</td>
+          <td class="role">dotted hairline</td>
+          <td>dotted-underline highlights, secondary dividers</td>
+          <td>avoid as a solid border; it disappears against paper</td>
+        </tr>
+        <tr>
+          <td><code>--ink</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:#2a2520"></span></td>
+          <td class="mono">#2a2520</td>
+          <td class="mono">17 17 17</td>
+          <td class="mono">0 0% 7%</td>
+          <td class="role">primary ink</td>
+          <td>body type, headings, primary buttons, em emphasis</td>
+          <td>not pure black — never replace with #000 (loses warmth on warm paper)</td>
+        </tr>
+        <tr>
+          <td><code>--ink-2</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:#564a40"></span></td>
+          <td class="mono">#564a40</td>
+          <td class="mono">51 51 51</td>
+          <td class="mono">0 0% 20%</td>
+          <td class="role">secondary copy</td>
+          <td>long paragraphs, lede bodies, button hover state, card body</td>
+          <td>do not use as a heading colour at large sizes (lose impact)</td>
+        </tr>
+        <tr>
+          <td><code>--ink-3</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:#807468"></span></td>
+          <td class="mono">#807468</td>
+          <td class="mono">107 100 89</td>
+          <td class="mono">37 9% 38%</td>
+          <td class="role">labels · sidenotes · captions</td>
+          <td>kickers, eyebrows, sidenote body, metadata, captions, sidenote markers</td>
+          <td>do not use for primary body type; passes AA only at large size</td>
+        </tr>
+        <tr>
+          <td><code>--ink-4</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:#9e9387"></span></td>
+          <td class="mono">#9e9387</td>
+          <td class="mono">160 152 136</td>
+          <td class="mono">40 11% 58%</td>
+          <td class="role">tertiary metadata</td>
+          <td>type-specimen meta column, hairline rules in hero, very quiet timestamps</td>
+          <td>not legible as body type at any size</td>
+        </tr>
+        <tr>
+          <td><code>--ink-5</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:#c4b9ab"></span></td>
+          <td class="mono">#c4b9ab</td>
+          <td class="mono">200 191 178</td>
+          <td class="mono">37 18% 74%</td>
+          <td class="role">ghost mark · skeleton</td>
+          <td>placeholder / skeleton states, very faint background pattern</td>
+          <td>do not use as type colour — invisible against paper at normal sizes</td>
+        </tr>
+        <tr>
+          <td><code>--teal</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:#3a7a6a"></span></td>
+          <td class="mono">#3a7a6a</td>
+          <td class="mono">58 122 106</td>
+          <td class="mono">165 36% 35%</td>
+          <td class="role">editorial accent · italic em, section markers, hairline rules</td>
+          <td>teal emphasis on the word the sentence turns on; thin section underlines; in-prose links</td>
+          <td>never on chrome (badges, buttons, nav); never on the brand mark; do not stack with the sidenote</td>
+        </tr>
+        <tr>
+          <td><code>--teal-deep</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:#2e6456"></span></td>
+          <td class="mono">#2e6456</td>
+          <td class="mono">46 100 86</td>
+          <td class="mono">165 37% 28%</td>
+          <td class="role">teal, deep · hover state on links + small-caps em</td>
+          <td>hover state on teal links, the small-caps version of the teal accent where the lighter teal would lose mass</td>
+          <td>not for primary copy; not for any chrome surface</td>
+        </tr>
+        <tr>
+          <td><code>--teal-soft</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:#4a8a7a"></span></td>
+          <td class="mono">#4a8a7a</td>
+          <td class="mono">74 138 122</td>
+          <td class="mono">165 30% 41%</td>
+          <td class="role">teal, soft · secondary accent + muted state</td>
+          <td>muted variants of teal-tinted UI (disabled emphasis, secondary tags)</td>
+          <td>do not use as the primary editorial mark — that's <code>--teal</code></td>
+        </tr>
+        <tr>
+          <td><code>--teal-tint</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:rgba(58,122,106,0.14)"></span></td>
+          <td class="mono">rgba(58,122,106,0.14)</td>
+          <td class="mono">58 122 106 · α 0.14</td>
+          <td class="mono">165 36% 35% / 14%</td>
+          <td class="role">teal wash · soft background tint</td>
+          <td>section background bands, pill chips for editorial emphasis</td>
+          <td>do not stack two tints on the same element (compounds into solid teal)</td>
+        </tr>
+        <tr>
+          <td><code>--teal-faint</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:rgba(58,122,106,0.06)"></span></td>
+          <td class="mono">rgba(58,122,106,0.06)</td>
+          <td class="mono">58 122 106 · α 0.06</td>
+          <td class="mono">165 36% 35% / 6%</td>
+          <td class="role">teal faint · the quietest wash</td>
+          <td>even softer banding, hover-state on tile rows, alternating row tint in tables</td>
+          <td>not visible in dark mode — switch to <code>--teal-tint</code> there</td>
+        </tr>
+        <tr>
+          <td><code>--gold</code> · <code>--amber</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:#c49a5c"></span></td>
+          <td class="mono">#c49a5c</td>
+          <td class="mono">196 154 92</td>
+          <td class="mono">36 47% 56%</td>
+          <td class="role">warm complement · "look up" moments</td>
+          <td>the rare load-bearing claim — the proof, the promise, the boundary; the second-half of the η-organism automaton cycle; hot-pill bg when the editorial teal would over-cool the page</td>
+          <td>never as primary copy; never on more than one phrase per page (loses urgency); not on chrome</td>
+        </tr>
+        <tr>
+          <td><code>--amber-deep</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:#a87f44"></span></td>
+          <td class="mono">#a87f44</td>
+          <td class="mono">168 127 68</td>
+          <td class="mono">35 42% 46%</td>
+          <td class="role">amber, deep · hover + outlined-button stroke</td>
+          <td>hover state on amber pills; the 1px outline on a ghost-amber button</td>
+          <td>do not use as fill — the lighter <code>--amber</code> reads warmer at the same area</td>
+        </tr>
+        <tr>
+          <td><code>--amber-soft</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:#d4aa6c"></span></td>
+          <td class="mono">#d4aa6c</td>
+          <td class="mono">212 170 108</td>
+          <td class="mono">36 53% 63%</td>
+          <td class="role">amber, soft · the lighter complement</td>
+          <td>amber-on-dark surfaces where the canonical <code>--amber</code> loses contrast</td>
+          <td>still rare — same one-phrase-per-page discipline</td>
+        </tr>
+        <tr>
+          <td><code>--amber-tint</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:rgba(196,154,92,0.18)"></span></td>
+          <td class="mono">rgba(196,154,92,0.18)</td>
+          <td class="mono">196 154 92 · α 0.18</td>
+          <td class="mono">36 47% 56% / 18%</td>
+          <td class="role">amber wash · the hot-pill background</td>
+          <td>backdrop for the load-bearing phrase; the warm-complement banding</td>
+          <td>same rarity rule — one per page</td>
+        </tr>
+        <tr>
+          <td><code>--red</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:#c0392b"></span></td>
+          <td class="mono">#c0392b</td>
+          <td class="mono">192 57 43</td>
+          <td class="mono">5 64% 46%</td>
+          <td class="role">fail · attention signal</td>
+          <td>failed eval pills, broken-contract callouts, the "this needs you" badge; the only colour the operator should read as "go investigate"</td>
+          <td>never mix with teal in the same phrase — they're independent registers; never on body type</td>
+        </tr>
+        <tr>
+          <td><code>--red-muted</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:#d4604f"></span></td>
+          <td class="mono">#d4604f</td>
+          <td class="mono">212 96 79</td>
+          <td class="mono">8 60% 57%</td>
+          <td class="role">red, muted · soft fail tint</td>
+          <td>the lighter sibling for hover-state on red pills, dotted underlines on partial-eval markup, secondary fail rows in a list</td>
+          <td>not strong enough as a fail signal on its own; pair with the canonical red label</td>
+        </tr>
+        <tr>
+          <td><code>--red-deep</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:#8e2b20"></span></td>
+          <td class="mono">#8e2b20</td>
+          <td class="mono">142 43 32</td>
+          <td class="mono">6 63% 34%</td>
+          <td class="role">red, deep · stroke on red chrome</td>
+          <td>1px outline on red ghost-buttons; the small-caps version of red where the lighter shade would lose mass</td>
+          <td>do not use as fill on small chips (reads as ink, loses urgency); not as body type</td>
+        </tr>
+        <tr>
+          <td><code>--red-tint</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:rgba(192,57,43,0.12)"></span></td>
+          <td class="mono">rgba(192,57,43,0.12)</td>
+          <td class="mono">192 57 43 · α 0.12</td>
+          <td class="mono">5 64% 46% / 12%</td>
+          <td class="role">red wash · fail backdrop</td>
+          <td>backdrop on the fail callout cell, hairline-row tint on broken rows, faint banding to flag a region as "needs review"</td>
+          <td>do not stack two tints (compounds into solid red); never as page-wide band</td>
+        </tr>
+        <tr>
+          <td><code>--red-faint</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:rgba(192,57,43,0.05)"></span></td>
+          <td class="mono">rgba(192,57,43,0.05)</td>
+          <td class="mono">192 57 43 · α 0.05</td>
+          <td class="mono">5 64% 46% / 5%</td>
+          <td class="role">red, faintest · the quietest fail wash</td>
+          <td>even softer banding behind a failed row in a long table; never used alone, always paired with the canonical red label nearby</td>
+          <td>not visible in dark mode — switch to <code>--red-tint</code> there</td>
+        </tr>
+        <tr>
+          <td><code>--hl</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:transparent"></span></td>
+          <td class="mono">transparent</td>
+          <td class="mono">—</td>
+          <td class="mono">—</td>
+          <td class="role">silenced highlighter</td>
+          <td>legacy <code>.hl</code> markup keeps rendering, but as a dotted underline rather than a yellow stroke</td>
+          <td>do not author new <code>.hl</code> markup in β — reach for <code>&lt;sup class="sn"&gt;</code></td>
+        </tr>
+        <tr>
+          <td><code>--hl-hot</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:transparent"></span></td>
+          <td class="mono">transparent</td>
+          <td class="mono">—</td>
+          <td class="mono">—</td>
+          <td class="role">silenced hot highlighter</td>
+          <td>legacy <code>.hl-hot</code> renders as a dashed underline</td>
+          <td>do not author new <code>.hl-hot</code> markup in β — reach for the bang sidenote <code>&lt;sup class="sn"&gt;!&lt;/sup&gt;</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Dark mode</h3>
+    <p class="sg-lede">
+      Set <code>data-theme="dark"</code> on <code>&lt;html&gt;</code>. Type, scale, and
+      spacing remain identical; only ink/paper swap. The intent is a hushed
+      reading mode, not a high-contrast UI mode — so the ramp inverts but
+      stays warm.
+    </p>
+    <table class="sg-table" aria-label="Colour tokens — dark mode">
+      <thead>
+        <tr><th>Token</th><th>Chip</th><th>Hex</th><th>RGB</th><th>HSL</th><th>Role</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>--paper</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:#161410"></span></td>
+          <td class="mono">#161410</td><td class="mono">22 20 16</td><td class="mono">40 16% 7%</td>
+          <td class="role">page background, dark</td>
+        </tr>
+        <tr>
+          <td><code>--paper-dk</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:#1d1a14"></span></td>
+          <td class="mono">#1d1a14</td><td class="mono">29 26 20</td><td class="mono">40 18% 10%</td>
+          <td class="role">code surface, dark</td>
+        </tr>
+        <tr>
+          <td><code>--paper-lt</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:#1f1c16"></span></td>
+          <td class="mono">#1f1c16</td><td class="mono">31 28 22</td><td class="mono">40 17% 10%</td>
+          <td class="role">lifted card, dark</td>
+        </tr>
+        <tr>
+          <td><code>--ink</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:#f0ece1"></span></td>
+          <td class="mono">#f0ece1</td><td class="mono">240 236 225</td><td class="mono">44 39% 91%</td>
+          <td class="role">primary ink, dark</td>
+        </tr>
+        <tr>
+          <td><code>--ink-2</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:#d6d1c2"></span></td>
+          <td class="mono">#d6d1c2</td><td class="mono">214 209 194</td><td class="mono">45 23% 80%</td>
+          <td class="role">secondary copy, dark</td>
+        </tr>
+        <tr>
+          <td><code>--ink-3</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:#9e9387"></span></td>
+          <td class="mono">#9e9387</td><td class="mono">160 152 136</td><td class="mono">40 11% 58%</td>
+          <td class="role">labels, dark</td>
+        </tr>
+        <tr>
+          <td><code>--ink-4</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:#807468"></span></td>
+          <td class="mono">#807468</td><td class="mono">107 100 89</td><td class="mono">37 9% 38%</td>
+          <td class="role">tertiary metadata, dark</td>
+        </tr>
+        <tr>
+          <td><code>--ink-5</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:#3a3631"></span></td>
+          <td class="mono">#3a3631</td><td class="mono">58 54 49</td><td class="mono">33 8% 21%</td>
+          <td class="role">ghost mark, dark</td>
+        </tr>
+        <tr>
+          <td><code>--rule</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:#2f2c25"></span></td>
+          <td class="mono">#2f2c25</td><td class="mono">47 44 37</td><td class="mono">42 12% 16%</td>
+          <td class="role">hairline, dark</td>
+        </tr>
+        <tr>
+          <td><code>--teal</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:#6fb3a2"></span></td>
+          <td class="mono">#6fb3a2</td><td class="mono">111 179 162</td><td class="mono">165 30% 57%</td>
+          <td class="role">editorial accent, dark · brightened a step for cocoa paper</td>
+        </tr>
+        <tr>
+          <td><code>--amber</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:#d4aa6c"></span></td>
+          <td class="mono">#d4aa6c</td><td class="mono">212 170 108</td><td class="mono">36 53% 63%</td>
+          <td class="role">warm complement, dark · same warmth, slightly lifted</td>
+        </tr>
+        <tr>
+          <td><code>--red</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:#e88675"></span></td>
+          <td class="mono">#e88675</td><td class="mono">232 134 117</td><td class="mono">9 70% 68%</td>
+          <td class="role">fail signal, dark · softened to sit against cocoa without burning</td>
+        </tr>
+        <tr>
+          <td><code>--red-muted</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:#d97a68"></span></td>
+          <td class="mono">#d97a68</td><td class="mono">217 122 104</td><td class="mono">9 60% 63%</td>
+          <td class="role">red, muted, dark</td>
+        </tr>
+        <tr>
+          <td><code>--red-deep</code></td>
+          <td class="swatch-cell"><span class="chip" style="background:#f4a18f"></span></td>
+          <td class="mono">#f4a18f</td><td class="mono">244 161 143</td><td class="mono">11 80% 76%</td>
+          <td class="role">red, "deep" (paradoxically lighter on dark) · the contrast layer for red chrome on cocoa</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ========================================================
+       §3 TYPOGRAPHY — full face stack, weight ladder, scale.
+       The single most load-bearing chapter in the document.
+       ======================================================== -->
+  <section class="sg-section" id="type">
+    <div class="sg-section-num">§3 · Typography</div>
+    <h2>Three faces, three jobs, <em>no overlap</em>.</h2>
+    <p class="sg-lede">
+      IBM Plex Mono carries every running line. Kecal sits in the accent
+      seat (extrabold static, synthesised slant) and also dresses the chrome
+      labels at medium. Cormorant Garamond is loaded for legacy reasons but
+      is unused in this direction — the Kecal override above supersedes it.
+    </p>
+
+    <h3>Face stack</h3>
+    <table class="sg-table" aria-label="Face stack">
+      <thead>
+        <tr><th>CSS var</th><th>Family</th><th>Source</th><th>Weights wired</th><th>Job</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>--mono</code></td>
+          <td class="mono">IBM Plex Mono</td>
+          <td>Google Fonts <code>@import</code></td>
+          <td class="mono">300, 400, 500, 600 + italics</td>
+          <td class="role">body, headings, ledes, prose — every running line</td>
+        </tr>
+        <tr>
+          <td><code>--serif</code><br><code>--sans</code><br><code>--accent</code></td>
+          <td class="mono">Kecal</td>
+          <td><code>@font-face</code> from jsDelivr (FungiType)</td>
+          <td class="mono">200, 300, 400, 500, 600, 700, 800</td>
+          <td class="role">upright emphasis (800), chrome labels (500), button faces (600/700)</td>
+        </tr>
+        <tr>
+          <td>(unused)</td>
+          <td class="mono">Cormorant Garamond</td>
+          <td>Google Fonts <code>@import</code></td>
+          <td class="mono">400, 500 + italics</td>
+          <td class="role">loaded as fallback but superseded by Kecal in <code>:root</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Weight ladder · Kecal</h3>
+    <div class="sg-pills">
+      <span class="sg-pill" style="font-family:'Kecal',sans-serif;font-weight:200">200 · Extralight</span>
+      <span class="sg-pill" style="font-family:'Kecal',sans-serif;font-weight:300">300 · Light</span>
+      <span class="sg-pill" style="font-family:'Kecal',sans-serif;font-weight:400">400 · Regular</span>
+      <span class="sg-pill" style="font-family:'Kecal',sans-serif;font-weight:500">500 · Medium</span>
+      <span class="sg-pill" style="font-family:'Kecal',sans-serif;font-weight:600">600 · Semibold</span>
+      <span class="sg-pill" style="font-family:'Kecal',sans-serif;font-weight:700">700 · Bold</span>
+      <span class="sg-pill" style="font-family:'Kecal',sans-serif;font-weight:800">800 · Extrabold</span>
+    </div>
+
+    <h3>Weight ladder · IBM Plex Mono</h3>
+    <div class="sg-pills">
+      <span class="sg-pill" style="font-weight:300">300 · Light</span>
+      <span class="sg-pill" style="font-weight:400">400 · Regular</span>
+      <span class="sg-pill" style="font-weight:500">500 · Medium</span>
+      <span class="sg-pill" style="font-weight:600">600 · Semibold</span>
+      <span class="sg-pill" style="font-style:italic;font-weight:400">400 italic</span>
+      <span class="sg-pill" style="font-style:italic;font-weight:500">500 italic</span>
+    </div>
+
+    <h3>Type scale</h3>
+    <p class="sg-lede">
+      Every token has a CSS variable in <code>:root</code> (see <code>--fs-*</code>,
+      <code>--lh-*</code>, <code>--ls-*</code>). Specimens render with the actual
+      brand CSS — what you see is the production output.
+    </p>
+
+    <table class="sg-table" aria-label="Type scale">
+      <thead>
+        <tr><th>Role</th><th>Size</th><th>px</th><th>Line</th><th>Tracking</th><th>Weight</th><th>Family</th><th>Use</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>--fs-display</code></td>
+          <td class="mono">3rem</td><td class="mono">51px</td>
+          <td class="mono">1.05</td><td class="mono">-0.025em</td><td class="mono">400</td>
+          <td class="mono">Plex Mono</td>
+          <td class="role">hero mark, opening display</td>
+        </tr>
+        <tr>
+          <td><code>--fs-h1</code></td>
+          <td class="mono">2.4rem</td><td class="mono">40.8px</td>
+          <td class="mono">1.15</td><td class="mono">-0.018em</td><td class="mono">400</td>
+          <td class="mono">Plex Mono</td>
+          <td class="role">section-level title</td>
+        </tr>
+        <tr>
+          <td><code>--fs-h2</code></td>
+          <td class="mono">2rem</td><td class="mono">34px</td>
+          <td class="mono">1.15</td><td class="mono">-0.012em</td><td class="mono">400 / 800 upright</td>
+          <td class="mono">Plex Mono + Kecal upright</td>
+          <td class="role">subsection title; em wraps the italic phrase</td>
+        </tr>
+        <tr>
+          <td><code>--fs-h3</code></td>
+          <td class="mono">1.4rem</td><td class="mono">23.8px</td>
+          <td class="mono">1.15</td><td class="mono">-0.012em</td><td class="mono">500</td>
+          <td class="mono">Plex Mono</td>
+          <td class="role">card title, article subhead</td>
+        </tr>
+        <tr>
+          <td><code>--fs-body</code></td>
+          <td class="mono">1.08rem</td><td class="mono">18.4px</td>
+          <td class="mono">1.55–1.7</td><td class="mono">0</td><td class="mono">400</td>
+          <td class="mono">Plex Mono</td>
+          <td class="role">paragraphs, ledes, sidenote bodies</td>
+        </tr>
+        <tr>
+          <td><code>--fs-small</code></td>
+          <td class="mono">0.92rem</td><td class="mono">15.6px</td>
+          <td class="mono">1.7</td><td class="mono">0</td><td class="mono">400</td>
+          <td class="mono">Plex Mono</td>
+          <td class="role">spec body, ui code, card body</td>
+        </tr>
+        <tr>
+          <td><code>--fs-mono</code></td>
+          <td class="mono">0.92rem</td><td class="mono">15.6px</td>
+          <td class="mono">1.85</td><td class="mono">0.02em</td><td class="mono">400</td>
+          <td class="mono">Plex Mono</td>
+          <td class="role">code surfaces, formal spec, timestamps</td>
+        </tr>
+        <tr>
+          <td><code>--fs-caption</code></td>
+          <td class="mono">0.78rem</td><td class="mono">13.3px</td>
+          <td class="mono">1.5</td><td class="mono">0.16em</td><td class="mono">500</td>
+          <td class="mono">Kecal</td>
+          <td class="role">eyebrows, kickers (longer)</td>
+        </tr>
+        <tr>
+          <td><code>--fs-label</code></td>
+          <td class="mono">0.62rem</td><td class="mono">10.5px</td>
+          <td class="mono">1.2</td><td class="mono">0.18em</td><td class="mono">500</td>
+          <td class="mono">Kecal</td>
+          <td class="role">tags, badges, vt-tag, byline</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Specimens</h3>
+
+    <div class="sg-demo">
+      <div class="sg-demo-render">
+        <span style="font-family:var(--mono);font-size:3rem;font-weight:400;letter-spacing:-0.025em;line-height:1.05;color:var(--ink)">Write the <em>outcome</em>.</span>
+      </div>
+      <div class="sg-demo-source"><pre><span class="c">/* DISPLAY */</span>
+font-family: <span class="k">var(--mono)</span>;
+font-size: <span class="k">3rem</span>;
+font-weight: <span class="k">400</span>;
+line-height: <span class="k">1.05</span>;
+letter-spacing: <span class="k">-0.025em</span>;
+<span class="c">/* em renders as Kecal 800 upright 1em (cap-height match) */</span></pre></div>
+    </div>
+
+    <div class="sg-demo">
+      <div class="sg-demo-render">
+        <span style="font-family:var(--mono);font-size:2rem;font-weight:500;letter-spacing:-0.012em;line-height:1.15;color:var(--ink)">A specification, <em>recited</em></span>
+      </div>
+      <div class="sg-demo-source"><pre><span class="c">/* H2 + em */</span>
+font-family: <span class="k">var(--mono)</span>;
+font-size: <span class="k">2rem</span>;
+font-weight: <span class="k">400</span>;
+line-height: <span class="k">1.15</span>;
+letter-spacing: <span class="k">-0.012em</span>;</pre></div>
+    </div>
+
+    <div class="sg-demo">
+      <div class="sg-demo-render">
+        <span style="font-family:var(--mono);font-size:1.4rem;font-weight:500;letter-spacing:-0.012em;line-height:1.15;color:var(--ink)">From the <em>field notes</em></span>
+      </div>
+      <div class="sg-demo-source"><pre><span class="c">/* H3 */</span>
+font-family: <span class="k">var(--mono)</span>;
+font-size: <span class="k">1.4rem</span>;
+font-weight: <span class="k">500</span>;
+line-height: <span class="k">1.15</span>;
+letter-spacing: <span class="k">-0.012em</span>;</pre></div>
+    </div>
+
+    <div class="sg-demo">
+      <div class="sg-demo-render">
+        <span style="font-family:var(--mono);font-size:1.08rem;line-height:1.55;color:var(--ink-2)">You declare the outcome in a file. The system picks it up on cadence, runs it, verifies the result, and delivers.</span>
+      </div>
+      <div class="sg-demo-source"><pre><span class="c">/* BODY */</span>
+font-family: <span class="k">var(--mono)</span>;
+font-size: <span class="k">1.08rem</span>;
+line-height: <span class="k">1.55</span>;
+color: <span class="k">var(--ink-2)</span>;</pre></div>
+    </div>
+
+    <div class="sg-demo">
+      <div class="sg-demo-render">
+        <span style="font-family:'Kecal',sans-serif;font-weight:500;font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--ink-3)">Responsibilities as a Service</span>
+      </div>
+      <div class="sg-demo-source"><pre><span class="c">/* LABEL · kecal medium */</span>
+font-family: <span class="k">'Kecal', system-ui, sans-serif</span>;
+font-weight: <span class="k">500</span>;
+font-size: <span class="k">0.62rem</span>;
+letter-spacing: <span class="k">0.18em</span>;
+text-transform: <span class="k">uppercase</span>;
+color: <span class="k">var(--ink-3)</span>;</pre></div>
+    </div>
+
+    <div class="sg-demo">
+      <div class="sg-demo-render">
+        <span style="font-family:var(--mono);font-size:0.92rem;color:var(--ink-2)">responsibility: weekly-investor-digest</span>
+      </div>
+      <div class="sg-demo-source"><pre><span class="c">/* MONO body — code, spec keys */</span>
+font-family: <span class="k">var(--mono)</span>;
+font-size: <span class="k">0.92rem</span>;
+color: <span class="k">var(--ink-2)</span>;</pre></div>
+    </div>
+
+    <div class="sg-demo">
+      <div class="sg-demo-render">
+        <span style="font-family:var(--mono);font-size:0.78rem;font-weight:500;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-3)">Caption · 0.78rem</span>
+      </div>
+      <div class="sg-demo-source"><pre><span class="c">/* CAPTION · short labels */</span>
+font-family: <span class="k">var(--mono)</span>;
+font-size: <span class="k">0.78rem</span>;
+font-weight: <span class="k">500</span>;
+letter-spacing: <span class="k">0.14em</span>;
+text-transform: <span class="k">uppercase</span>;</pre></div>
+    </div>
+  </section>
+
+  <!-- ========================================================
+       §4 SPACING SCALE — modular, base 1rem. Every gap, padding,
+       and margin in the document maps to one of these tokens.
+       ======================================================== -->
+  <section class="sg-section" id="spacing">
+    <div class="sg-section-num">§4 · Spacing scale</div>
+    <h2>One ladder, <em>nine rungs</em>.</h2>
+    <p class="sg-lede">
+      The spacing scale is a modular ladder anchored at 1rem (16–17px,
+      depending on root). Every padding, margin, and gap in production
+      CSS pulls from this list; inline literals are forbidden.
+    </p>
+    <table class="sg-table" aria-label="Spacing tokens">
+      <thead>
+        <tr><th>Token</th><th>rem</th><th>px</th><th>Use</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>--space-3xs</code></td><td class="mono">0.25rem</td><td class="mono">4px</td><td class="role">chip padding-y, smallest inline gap</td></tr>
+        <tr><td><code>--space-2xs</code></td><td class="mono">0.5rem</td><td class="mono">8px</td><td class="role">tight inline gap, badge gaps</td></tr>
+        <tr><td><code>--space-xs</code></td><td class="mono">0.75rem</td><td class="mono">12px</td><td class="role">button-to-button gap, kicker margin-bottom</td></tr>
+        <tr><td><code>--space-sm</code></td><td class="mono">1rem</td><td class="mono">16px</td><td class="role">minimum card padding, paragraph margin-bottom</td></tr>
+        <tr><td><code>--space-md</code></td><td class="mono">1.5rem</td><td class="mono">24px</td><td class="role">section-internal vertical gap</td></tr>
+        <tr><td><code>--space-lg</code></td><td class="mono">2rem</td><td class="mono">32px</td><td class="role">section side padding</td></tr>
+        <tr><td><code>--space-xl</code></td><td class="mono">3rem</td><td class="mono">48px</td><td class="role">section vertical rhythm (between sections)</td></tr>
+        <tr><td><code>--space-2xl</code></td><td class="mono">4.5rem</td><td class="mono">72px</td><td class="role">section block padding (top/bottom)</td></tr>
+        <tr><td><code>--space-3xl</code></td><td class="mono">5.5rem</td><td class="mono">88px</td><td class="role">hero top padding</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Visual ladder</h3>
+    <div style="display:flex;align-items:flex-end;gap:var(--space-md);padding:var(--space-md);border:1px solid var(--rule);background:var(--paper-lt)">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:var(--space-2xs)"><div style="width:0.25rem;height:0.25rem;background:var(--ink)"></div><span style="font-family:var(--mono);font-size:0.7rem;color:var(--ink-3)">3xs</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:var(--space-2xs)"><div style="width:0.5rem;height:0.5rem;background:var(--ink)"></div><span style="font-family:var(--mono);font-size:0.7rem;color:var(--ink-3)">2xs</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:var(--space-2xs)"><div style="width:0.75rem;height:0.75rem;background:var(--ink)"></div><span style="font-family:var(--mono);font-size:0.7rem;color:var(--ink-3)">xs</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:var(--space-2xs)"><div style="width:1rem;height:1rem;background:var(--ink)"></div><span style="font-family:var(--mono);font-size:0.7rem;color:var(--ink-3)">sm</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:var(--space-2xs)"><div style="width:1.5rem;height:1.5rem;background:var(--ink)"></div><span style="font-family:var(--mono);font-size:0.7rem;color:var(--ink-3)">md</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:var(--space-2xs)"><div style="width:2rem;height:2rem;background:var(--ink)"></div><span style="font-family:var(--mono);font-size:0.7rem;color:var(--ink-3)">lg</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:var(--space-2xs)"><div style="width:3rem;height:3rem;background:var(--ink)"></div><span style="font-family:var(--mono);font-size:0.7rem;color:var(--ink-3)">xl</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:var(--space-2xs)"><div style="width:4.5rem;height:4.5rem;background:var(--ink)"></div><span style="font-family:var(--mono);font-size:0.7rem;color:var(--ink-3)">2xl</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:var(--space-2xs)"><div style="width:5.5rem;height:5.5rem;background:var(--ink)"></div><span style="font-family:var(--mono);font-size:0.7rem;color:var(--ink-3)">3xl</span></div>
+    </div>
+  </section>
+
+  <!-- ========================================================
+       §5 LAYOUT PRIMITIVES — containers, columns, breakpoints.
+       ======================================================== -->
+  <section class="sg-section" id="layout">
+    <div class="sg-section-num">§5 · Layout primitives</div>
+    <h2>Two containers, <em>two measures</em>, one breakpoint.</h2>
+    <p class="sg-lede">
+      The page sits in one of two outer containers — <code>--wide</code> for
+      grid sections (palette, type, applications) and <code>--measure</code>
+      for prose (editorial pairing, sidenote-bearing copy). The ideal line
+      length is 62ch — set on <code>.lede</code> and any long-form paragraph.
+    </p>
+
+    <table class="sg-table" aria-label="Layout primitives">
+      <thead>
+        <tr><th>Token</th><th>Value</th><th>Use</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>--wide</code></td><td class="mono">1180px</td><td class="role">outer container — palette grids, type specimens, application galleries</td></tr>
+        <tr><td><code>--measure</code></td><td class="mono">860px</td><td class="role">narrow prose container — editorial articles, sidenoted essays</td></tr>
+        <tr><td><code>--measure-ch</code></td><td class="mono">62ch</td><td class="role">line-length cap on lede paragraphs</td></tr>
+        <tr><td>breakpoint</td><td class="mono">880px</td><td class="role">single breakpoint where grids collapse to single column and demo splits stack</td></tr>
+        <tr><td>sidenote breakpoint</td><td class="mono">1100px</td><td class="role">below this, asides fall inline as a quoted block; above, they float into the right margin</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Grid configurations</h3>
+    <table class="sg-table" aria-label="Grid configurations">
+      <thead>
+        <tr><th>Section</th><th>Columns</th><th>Gap</th><th>Collapse below 880px</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Palette</td><td class="mono">repeat(4, 1fr)</td><td class="mono">1rem</td><td>2 columns</td></tr>
+        <tr><td>Variations</td><td class="mono">repeat(3, 1fr)</td><td class="mono">1.25rem</td><td>1 column</td></tr>
+        <tr><td>Applications</td><td class="mono">repeat(2, 1fr)</td><td class="mono">1.5rem</td><td>1 column</td></tr>
+        <tr><td>Voice</td><td class="mono">repeat(3, 1fr)</td><td class="mono">1.25rem</td><td>1 column</td></tr>
+        <tr><td>UI kit</td><td class="mono">repeat(2, 1fr)</td><td class="mono">2rem</td><td>1 column</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ========================================================
+       §6 COMPONENT CATALOG — every semantic class, rendered +
+       source. This is the heart of the document.
+       ======================================================== -->
+  <section class="sg-section" id="components">
+    <div class="sg-section-num">§6 · Component catalog</div>
+    <h2>Every class, <em>rendered</em>, with its source.</h2>
+    <p class="sg-lede">
+      Each component below has its semantic class name, a working render,
+      the CSS that produces it, what it's for, and the common pitfalls.
+      Components are in production order (hero → kickers → ledes → cards
+      → buttons → badges → inputs → code → sidenotes → drop caps → pairing
+      → pull-quote → voice card).
+    </p>
+
+    <h3 id="c-hero">6.1 · .sample-hero</h3>
+    <p class="sg-lede">The page opening. One mark, one tagline, one meta line. Always centred. Centring is reserved for the hero only — section content is left-aligned.</p>
+    <div class="sg-demo">
+      <div class="sg-demo-render" style="padding:0">
+        <section class="sample-hero" style="padding:2.5rem 1rem;max-width:none;width:100%">
+          <div class="hero-eyebrow">Direction β · Tufte</div>
+          <h1 class="hero-mark">Open<em>Prose</em></h1>
+          <div class="hero-rule"></div>
+          <p class="hero-tagline">Responsibilities as a Service<sup class="sn">1</sup></p>
+          <div class="hero-meta">Plex Mono · Kecal · 2026</div>
+        </section>
+      </div>
+      <div class="sg-demo-source"><pre><span class="k">&lt;section class="sample-hero"&gt;</span>
+  <span class="k">&lt;div class="hero-eyebrow"&gt;</span>Direction β · Tufte<span class="k">&lt;/div&gt;</span>
+  <span class="k">&lt;h1 class="hero-mark"&gt;</span>Open<span class="k">&lt;em&gt;</span>Prose<span class="k">&lt;/em&gt;&lt;/h1&gt;</span>
+  <span class="k">&lt;div class="hero-rule"&gt;&lt;/div&gt;</span>
+  <span class="k">&lt;p class="hero-tagline"&gt;</span>Responsibilities as a Service<span class="k">&lt;sup class="sn"&gt;</span>1<span class="k">&lt;/sup&gt;&lt;/p&gt;</span>
+  <span class="k">&lt;div class="hero-meta"&gt;</span>…<span class="k">&lt;/div&gt;</span>
+<span class="k">&lt;/section&gt;</span>
+
+<span class="c">/* HERO */</span>
+.sample-hero { padding: var(--space-3xl) var(--space-lg) var(--space-xl); text-align: center; }
+.hero-mark { font: 400 clamp(3rem, 10vw, 7rem)/0.95 var(--mono); letter-spacing: -0.025em; }
+.hero-mark em { font-family: 'Kecal'; font-weight: 800; font-style: normal; font-size: 1em; }
+.hero-rule { width: 80px; height: 1px; background: var(--ink-3); margin: 1.5rem auto 1rem; }
+.hero-tagline { font-family: var(--mono); font-size: 1.05rem; color: var(--ink-2); }
+.hero-meta { font: 500 0.66rem var(--mono); letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-3); }</pre></div>
+    </div>
+    <p class="sg-lede"><b>Pitfall:</b> never lengthen the mark or the tagline beyond a single line. If the page needs an explanation, that's a lede in §6.4.</p>
+
+    <h3 id="c-kicker">6.2 · .section-kicker</h3>
+    <p class="sg-lede">A Roman-numbered tag with a hairline rule that extends to the right edge. Used at the start of every section in the source.</p>
+    <div class="sg-demo">
+      <div class="sg-demo-render" style="align-items:stretch">
+        <div class="section-kicker" style="width:100%">I · Palette</div>
+        <div class="section-kicker" style="width:100%">II · Type Scale</div>
+        <div class="section-kicker" style="width:100%">III · The Sidenote</div>
+      </div>
+      <div class="sg-demo-source"><pre><span class="k">&lt;div class="section-kicker"&gt;</span>I · Palette<span class="k">&lt;/div&gt;</span>
+
+<span class="c">/* KICKER */</span>
+.section-kicker {
+  font-family: <span class="k">'Kecal', sans-serif</span>;
+  font-weight: <span class="k">500</span>;
+  font-size: <span class="k">0.7rem</span>;
+  letter-spacing: <span class="k">0.18em</span>;
+  text-transform: <span class="k">uppercase</span>;
+  color: <span class="k">var(--ink-3)</span>;
+  display: <span class="k">flex</span>;
+  align-items: <span class="k">center</span>;
+  gap: <span class="k">0.85rem</span>;
+}
+.section-kicker::after {
+  content: ''; flex: 1; height: 1px;
+  background: <span class="k">var(--ink-4)</span>; opacity: 0.4;
+}</pre></div>
+    </div>
+
+    <h3 id="c-button">6.3 · .ui-btn</h3>
+    <p class="sg-lede">Three variants: primary (filled ink), secondary (same — Tufte does not differentiate primary/secondary by colour), ghost (outlined). All Kecal-faced; weights 600/700 separate ghost from filled.</p>
+    <div class="sg-demo">
+      <div class="sg-demo-render" style="flex-direction:row;gap:var(--space-xs);flex-wrap:wrap">
+        <button class="ui-btn primary">Primary</button>
+        <button class="ui-btn secondary">Secondary</button>
+        <button class="ui-btn ghost">Ghost</button>
+      </div>
+      <div class="sg-demo-source"><pre><span class="k">&lt;button class="ui-btn primary"&gt;</span>Primary<span class="k">&lt;/button&gt;</span>
+<span class="k">&lt;button class="ui-btn secondary"&gt;</span>Secondary<span class="k">&lt;/button&gt;</span>
+<span class="k">&lt;button class="ui-btn ghost"&gt;</span>Ghost<span class="k">&lt;/button&gt;</span>
+
+<span class="c">/* BUTTONS */</span>
+.ui-btn {
+  font-family: <span class="k">'Kecal', sans-serif</span>;
+  font-size: <span class="k">0.8rem</span>;
+  font-weight: <span class="k">600</span>;
+  padding: <span class="k">0.75rem 1.4rem</span>;
+  letter-spacing: <span class="k">0.08em</span>;
+  text-transform: <span class="k">uppercase</span>;
+  border: <span class="k">1px solid var(--ink)</span>;
+  cursor: pointer;
+  transition: <span class="k">all 0.15s</span>;
+}
+.ui-btn.primary, .ui-btn.secondary {
+  background: <span class="k">var(--ink)</span>;
+  color: <span class="k">var(--paper)</span>;
+  font-weight: <span class="k">700</span>;
+}
+.ui-btn.ghost {
+  background: transparent;
+  color: <span class="k">var(--ink)</span>;
+}</pre></div>
+    </div>
+    <p class="sg-lede"><b>Pitfall:</b> never give a button rounded corners. Tufte uses sharp corners only — radius is locked at 0.</p>
+
+    <h3 id="c-badge">6.4 · .ui-badge</h3>
+    <p class="sg-lede">Inline status pills. <code>.live</code>, <code>.ok</code>, <code>.hold</code>. All three use ink ramp positions only; no colour codes status.</p>
+    <div class="sg-demo">
+      <div class="sg-demo-render" style="flex-direction:row;gap:var(--space-2xs);flex-wrap:wrap">
+        <span class="ui-badge live">· Live</span>
+        <span class="ui-badge ok">✓ Verified</span>
+        <span class="ui-badge hold">· On hold</span>
+      </div>
+      <div class="sg-demo-source"><pre><span class="k">&lt;span class="ui-badge live"&gt;</span>· Live<span class="k">&lt;/span&gt;</span>
+<span class="k">&lt;span class="ui-badge ok"&gt;</span>✓ Verified<span class="k">&lt;/span&gt;</span>
+<span class="k">&lt;span class="ui-badge hold"&gt;</span>· On hold<span class="k">&lt;/span&gt;</span>
+
+<span class="c">/* BADGES */</span>
+.ui-badge {
+  font-family: <span class="k">'Kecal', sans-serif</span>;
+  font-size: <span class="k">0.62rem</span>;
+  padding: <span class="k">0.25rem 0.6rem</span>;
+  letter-spacing: <span class="k">0.14em</span>;
+  text-transform: <span class="k">uppercase</span>;
+  border: <span class="k">1px solid</span>;
+  font-weight: <span class="k">500</span>;
+}
+.ui-badge.live { color: var(--ink); border-color: var(--ink); }
+.ui-badge.ok   { color: var(--ink-2); border-color: var(--ink-2); }
+.ui-badge.hold { color: var(--ink-3); border-color: var(--ink-4); }</pre></div>
+    </div>
+
+    <h3 id="c-input">6.5 · .ui-input</h3>
+    <div class="sg-demo">
+      <div class="sg-demo-render" style="flex-direction:column;align-items:stretch;gap:0.4rem;width:100%;max-width:360px">
+        <label style="font-family:'Kecal',sans-serif;font-size:0.64rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-3);font-weight:500">Declare the outcome</label>
+        <input class="ui-input" type="text" placeholder="e.g. weekly-investor-digest">
+      </div>
+      <div class="sg-demo-source"><pre><span class="k">&lt;label&gt;</span>Declare the outcome<span class="k">&lt;/label&gt;</span>
+<span class="k">&lt;input class="ui-input" type="text"&gt;</span>
+
+.ui-input {
+  font-family: <span class="k">var(--mono)</span>;
+  font-size: <span class="k">1rem</span>;
+  padding: <span class="k">0.75rem 1rem</span>;
+  background: <span class="k">var(--paper)</span>;
+  border: <span class="k">1px solid var(--rule)</span>;
+}
+.ui-input:focus {
+  border-color: <span class="k">var(--ink)</span>;
+  box-shadow: <span class="k">0 0 0 2px rgba(0,0,0,0.06)</span>;
+}</pre></div>
+    </div>
+
+    <h3 id="c-code">6.6 · .ui-code</h3>
+    <p class="sg-lede">A code surface that recedes one tone from the page (paper-dk). Three semantic spans inside: <code>.k</code> for key, <code>.c</code> for comment, <code>.v</code> for value.</p>
+    <div class="sg-demo">
+      <div class="sg-demo-render" style="align-items:stretch">
+<div class="ui-code"><span class="c"># pick up the file</span>
+<span class="k">$</span> openprose run weekly-digest
+<span class="c"># verify, deliver, archive</span>
+<span class="v">✓ delivered 09:14 ET</span></div>
+      </div>
+      <div class="sg-demo-source"><pre><span class="k">&lt;div class="ui-code"&gt;&lt;span class="c"&gt;</span># pick up the file<span class="k">&lt;/span&gt;</span>
+<span class="k">&lt;span class="k"&gt;</span>$<span class="k">&lt;/span&gt;</span> openprose run weekly-digest
+<span class="k">&lt;span class="c"&gt;</span># verify, deliver, archive<span class="k">&lt;/span&gt;</span>
+<span class="k">&lt;span class="v"&gt;</span>✓ delivered 09:14 ET<span class="k">&lt;/span&gt;</span>
+<span class="k">&lt;/div&gt;</span>
+
+.ui-code {
+  background: <span class="k">var(--paper-dk)</span>;
+  color: <span class="k">var(--ink)</span>;
+  border: <span class="k">1px solid var(--rule)</span>;
+  padding: <span class="k">1.25rem 1.5rem</span>;
+  font-family: <span class="k">var(--mono)</span>;
+  font-size: <span class="k">0.8rem</span>;
+  line-height: <span class="k">1.85</span>;
+}
+.ui-code .k { color: <span class="k">var(--ink-3)</span>; }
+.ui-code .c { color: <span class="k">var(--ink-4)</span>; font-style: italic; }
+.ui-code .v { color: <span class="k">var(--ink)</span>; }</pre></div>
+    </div>
+
+    <h3 id="c-card">6.7 · .card</h3>
+    <p class="sg-lede">The base card surface. Kicker, title, body. Used everywhere a unit of content needs an edge.</p>
+    <div class="sg-demo">
+      <div class="sg-demo-render" style="align-items:stretch">
+        <div class="card" style="width:100%">
+          <div class="card-kicker">Weekly Investor Digest</div>
+          <div class="card-title">ARR crossed <em>$14.2M</em> this week.</div>
+          <div class="card-body">The new $40K Meridian contract pushed us over the line.</div>
+        </div>
+      </div>
+      <div class="sg-demo-source"><pre><span class="k">&lt;div class="card"&gt;</span>
+  <span class="k">&lt;div class="card-kicker"&gt;</span>Weekly Investor Digest<span class="k">&lt;/div&gt;</span>
+  <span class="k">&lt;div class="card-title"&gt;</span>ARR crossed <span class="k">&lt;em&gt;</span>$14.2M<span class="k">&lt;/em&gt;</span> this week.<span class="k">&lt;/div&gt;</span>
+  <span class="k">&lt;div class="card-body"&gt;</span>…<span class="k">&lt;/div&gt;</span>
+<span class="k">&lt;/div&gt;</span>
+
+.card { border: 1px solid var(--rule); background: var(--paper-lt); padding: 1.5rem; }
+.card-kicker { font: 500 0.62rem 'Kecal', sans-serif; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-3); }
+.card-title { font: 400 1.15rem var(--mono); }
+.card-body { font: 400 0.88rem var(--mono); color: var(--ink-2); line-height: 1.6; }</pre></div>
+    </div>
+
+    <h3 id="c-lede">6.8 · .lede (first paragraph)</h3>
+    <p class="sg-lede">The opening paragraph of any section. Sets the voice; capped at 62ch line length. In production this is usually wrapped in <code>.pretext-prose</code> for line-flow around a drop cap (see source script in original direction).</p>
+    <div class="sg-demo">
+      <div class="sg-demo-render" style="align-items:stretch">
+        <p class="lede-demo">Three faces, three jobs, no overlap. <em>IBM Plex Mono</em> carries every running paragraph, every heading, every long sentence. <em>Kecal</em>, in 500 and 800, sets the chrome labels and the emphasis.</p>
+      </div>
+      <div class="sg-demo-source"><pre><span class="k">&lt;p class="lede"&gt;</span>Three faces, three jobs<span class="k">&lt;/p&gt;</span>
+
+.lede {
+  font-family: <span class="k">var(--mono)</span>;
+  font-size: <span class="k">1.05rem</span>;
+  color: <span class="k">var(--ink)</span>;
+  max-width: <span class="k">62ch</span>;
+  line-height: <span class="k">1.65</span>;
+}</pre></div>
+    </div>
+
+    <h3 id="c-em">6.9 · em (the accent)</h3>
+    <p class="sg-lede">The brand-wide accent rule. Anything wrapped in <code>&lt;em&gt;</code> renders in Kecal 800 upright at 1em. Upright is the default (c_a965130b); italic is the historical option. This is the writer's voice. Never apply <code>&lt;em&gt;</code> to a phrase the reader supplies (a quote, an aside).</p>
+    <div class="sg-demo">
+      <div class="sg-demo-render">
+        <p style="font-family:var(--mono);font-size:1.2rem;color:var(--ink);line-height:1.55">The system is <em>calm</em>. The page does not <em>announce</em>; it <em>arrives</em>.</p>
+      </div>
+      <div class="sg-demo-source"><pre>The system is <span class="k">&lt;em&gt;</span>calm<span class="k">&lt;/em&gt;</span>.
+
+em {
+  font-family: <span class="k">'Kecal', sans-serif</span>;
+  font-style: normal;   <span class="c">/* upright accent · c_a965130b */</span>
+  font-weight: <span class="k">800</span>;
+  font-size: <span class="k">1em</span>;   <span class="c">/* cap-height match to Plex Mono */</span>
+  letter-spacing: <span class="k">0</span>;
+}</pre></div>
+    </div>
+
+    <h3 id="c-dropcap">6.10 · ::first-letter (drop cap)</h3>
+    <p class="sg-lede">Editorial paragraphs begin with a drop cap. Either via <code>::first-letter</code> (simple float) or via the full pretext layout script (per-line flow around an obstacle). The simple version below.</p>
+    <div class="sg-demo">
+      <div class="sg-demo-render" style="align-items:stretch">
+        <p class="dropcap-demo">Three faces, three jobs, no overlap. EB Garamond carries every running paragraph, every heading, every long sentence. Inter, all caps and small, sets only the labels and the chrome — eyebrows, kickers, button faces.</p>
+      </div>
+      <div class="sg-demo-source"><pre>.dropcap-demo::first-letter {
+  font-family: <span class="k">var(--mono)</span>;
+  font-weight: <span class="k">500</span>;
+  float: <span class="k">left</span>;
+  font-size: <span class="k">4.2em</span>;
+  line-height: <span class="k">0.85</span>;
+  color: <span class="k">var(--ink)</span>;
+  padding: <span class="k">0.06em 0.22em 0 0</span>;
+}</pre></div>
+    </div>
+
+    <h3 id="c-sidenote">6.11 · sup.sn + aside.sidenote</h3>
+    <p class="sg-lede">The β-defining emphasis primitive. A numeric or "!" superscript in the prose, paired with an aside that floats into a 220px right margin on wide screens, and falls inline as a left-bordered block below 1100px.</p>
+    <div class="sg-demo">
+      <div class="sg-demo-render" style="align-items:stretch">
+        <p class="sn-demo">Every Monday at 09:00 ET, the digest arrives — <em>verified, signed, archived</em><sup class="sn">3</sup>.
+          <aside class="sidenote"><sup class="sn">3</sup>&nbsp;Verification is the part that actually changed. The numbers were always automated; the trust was not.</aside>
+          The standup happens anyway, but it is fifteen minutes shorter.</p>
+      </div>
+      <div class="sg-demo-source"><pre>Every Monday at 09:00 ET<span class="k">&lt;sup class="sn"&gt;</span>3<span class="k">&lt;/sup&gt;</span>.
+<span class="k">&lt;aside class="sidenote"&gt;&lt;sup class="sn"&gt;</span>3<span class="k">&lt;/sup&gt;</span>&nbsp;Verification…<span class="k">&lt;/aside&gt;</span>
+
+sup.sn {
+  font-family: <span class="k">var(--mono)</span>;
+  font-size: <span class="k">0.66em</span>;
+  font-weight: <span class="k">500</span>;
+  color: <span class="k">var(--ink-2)</span>;
+  margin: <span class="k">0 0.1em</span>;
+}
+aside.sidenote {
+  font-family: <span class="k">var(--mono)</span>;
+  font-size: <span class="k">0.9rem</span>;
+  color: <span class="k">var(--ink-3)</span>;
+  font-style: italic;
+}
+<span class="c">/* wide screens float into right margin */</span>
+@media (min-width: 1100px) {
+  .pairing aside.sidenote {
+    float: right; clear: right;
+    width: 220px;
+    margin-right: -260px;
+    border-left: 1px solid var(--rule);
+    padding-left: 0.85rem;
+  }
+}</pre></div>
+    </div>
+    <p class="sg-lede"><b>Bang marker:</b> use <code>&lt;sup class="sn"&gt;!&lt;/sup&gt;</code> on the page's single load-bearing claim. Maximum one per page. If you find yourself reaching for a second, the first is wrong.</p>
+
+    <!-- Sidenote underline markers (skim/hot) ported from
+         direction-beta-tufte-mono-kecal.html. -->
+    <h3 id="c-sidenote-underline">6.11a · sidenote skim + hot · underline markers</h3>
+    <p class="sg-lede">When the prose can carry the sidenote on the line itself, the β direction silences the legacy highlighter into a hairline underline. Two variants: <em>skim</em> for a numbered glance, <em>hot</em> for the page's load-bearing claim.</p>
+    <div class="sg-demo">
+      <div class="sg-demo-render" style="align-items:stretch">
+        <p class="sn-demo"><span class="sg-label" style="font-family:var(--sans);font-size:0.7rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--ink-3);margin-right:0.6rem;">Sidenote skim</span> <span class="hl">The standup happens anyway, but it is fifteen minutes shorter<sup class="sn">3</sup>.</span> Nobody asks where the numbers came from.</p>
+        <p class="sn-demo" style="margin-top:1rem"><span class="sg-label" style="font-family:var(--sans);font-size:0.7rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--ink-3);margin-right:0.6rem;">Sidenote hot</span> "Billed by delivery<sup class="sn">!</sup>. <span class="hl-hot">If the outcome doesn't ship, no line.</span>"</p>
+      </div>
+      <div class="sg-demo-source"><pre><span class="c">/* skim — dotted underline, sn marker */</span>
+<span class="k">&lt;span class="hl"&gt;</span>…shorter<span class="k">&lt;sup class="sn"&gt;</span>3<span class="k">&lt;/sup&gt;</span>.<span class="k">&lt;/span&gt;</span>
+
+<span class="c">/* hot — dashed underline, sn ! marker */</span>
+<span class="k">&lt;sup class="sn"&gt;</span>!<span class="k">&lt;/sup&gt;</span>. <span class="k">&lt;span class="hl-hot"&gt;</span>If the outcome doesn't ship, no line.<span class="k">&lt;/span&gt;</span>
+
+.hl, .hl-hot {
+  background: <span class="k">transparent</span>;
+  border-bottom: <span class="k">1px dotted var(--ink-3)</span>;
+  text-underline-offset: <span class="k">3px</span>;
+}
+.hl-hot {
+  border-bottom-color: <span class="k">var(--ink-2)</span>;
+  border-bottom-style: <span class="k">dashed</span>;
+}</pre></div>
+    </div>
+
+    <h3 id="c-pullquote">6.12 · .pull-quote</h3>
+    <div class="sg-demo">
+      <div class="sg-demo-render" style="align-items:stretch">
+        <div class="pull-quote">The first thing we noticed was what we stopped doing — the standing meetings where we'd review the dashboard to confirm the dashboard was fine.</div>
+      </div>
+      <div class="sg-demo-source"><pre><span class="k">&lt;div class="pull-quote"&gt;</span>The first thing we noticed…<span class="k">&lt;/div&gt;</span>
+
+.pull-quote {
+  font-family: <span class="k">'Kecal', sans-serif</span>;
+  font-style: normal;   <span class="c">/* upright accent · c_a965130b */</span>
+  font-weight: <span class="k">800</span>;
+  font-size: <span class="k">1.35rem</span>;
+  line-height: <span class="k">1.4</span>;
+  padding: <span class="k">1.25rem 0 1.25rem 1.5rem</span>;
+  border-left: <span class="k">2px solid var(--ink-3)</span>;
+  color: <span class="k">var(--ink)</span>;
+}</pre></div>
+    </div>
+
+    <h3 id="c-pairing">6.13 · .pairing-demo (editorial article)</h3>
+    <p class="sg-lede">The full editorial article specimen. Uses <code>--measure</code> container, drop cap on first paragraph, sidenotes inline, optional pull-quote, byline at end.</p>
+    <div class="sg-demo">
+      <div class="sg-demo-render" style="align-items:stretch;padding:0">
+        <article class="pairing-demo" style="max-width:none">
+          <h3 class="article-title">On the <em>quiet arrival</em> of Monday reports.</h3>
+          <p>Once, the week began with a scramble. Someone opened seven dashboards, pulled the numbers, wrote the digest, and dropped it in the 09:00 standup.</p>
+          <p>Then the outcome was declared in a file. <em>Fifteen lines.</em></p>
+        </article>
+      </div>
+      <div class="sg-demo-source"><pre><span class="k">&lt;article class="pairing"&gt;</span>
+  <span class="k">&lt;div class="article-eyebrow"&gt;</span>From the field notes<span class="k">&lt;/div&gt;</span>
+  <span class="k">&lt;h3&gt;</span>On the <span class="k">&lt;em&gt;</span>quiet arrival<span class="k">&lt;/em&gt;</span><span class="k">&lt;/h3&gt;</span>
+  <span class="k">&lt;p&gt;</span>Once, the week began with a scramble<span class="k">&lt;sup class="sn"&gt;</span>1<span class="k">&lt;/sup&gt;</span>.
+    <span class="k">&lt;aside class="sidenote"&gt;…&lt;/aside&gt;</span>
+  <span class="k">&lt;/p&gt;</span>
+  <span class="k">&lt;div class="pull-quote"&gt;…&lt;/div&gt;</span>
+  <span class="k">&lt;div class="byline"&gt;…&lt;/div&gt;</span>
+<span class="k">&lt;/article&gt;</span></pre></div>
+    </div>
+
+    <h3 id="c-voice">6.14 · .voice-card</h3>
+    <p class="sg-lede">A voice specimen card. Used in the voice grid (§7) and any place a quote needs to be tagged by register.</p>
+    <div class="sg-demo">
+      <div class="sg-demo-render" style="align-items:stretch">
+        <div class="voice-card-demo">
+          <div class="vc-tag">Voice · editorial · accent</div>
+          <blockquote>"Once, the week began with a scramble. <em>Then the outcome was declared in a file.</em>"</blockquote>
+          <p class="vc-note">The long-form voice. Italic carries the pivot.</p>
+        </div>
+      </div>
+      <div class="sg-demo-source"><pre><span class="k">&lt;div class="voice-card"&gt;</span>
+  <span class="k">&lt;div class="vc-tag"&gt;</span>Voice · editorial · accent<span class="k">&lt;/div&gt;</span>
+  <span class="k">&lt;blockquote&gt;</span>"…"<span class="k">&lt;/blockquote&gt;</span>
+  <span class="k">&lt;p class="vc-note"&gt;</span>…<span class="k">&lt;/p&gt;</span>
+<span class="k">&lt;/div&gt;</span></pre></div>
+    </div>
+
+    <!-- ========================================================
+         §6.15 PRETEXT MARK · grabbable, swappable
+         ========================================================
+         A live pretext-wrapped logo demo. The mark is draggable (the
+         surrounding prose reflows around its position via the pretext
+         library); a row of signet swatches below swaps the mark for
+         one of the canonical OpenProse logos. The full pretext engine
+         is heavyweight — for the style-guide we ship a contained
+         CSS-shape-outside implementation that captures the behaviour
+         (drag to relocate, click swatch to swap) without pulling in
+         the layout/measurement/bidi modules.
+         For the production pretext demo see
+         direction-delta-machine-homepage-rain-infinite.html.
+         ======================================================== -->
+    <h3 id="c-pretext">6.15 · .pretext-demo (grabbable logo + swap)</h3>
+    <p class="sg-lede">A pretext-wrapped mark sits inside a paragraph; the prose reflows around its silhouette. Drag the mark to relocate it; click a swatch below to swap in another OpenProse signet. This is the same paradigm used in <em>μ-bloom-homepage</em>, <em>δ-machine-homepage-rain</em>, and <em>λ-inkwell-codex</em> — wired here against the styleguide-<span class="hue-teal">teal</span> palette so an agent can lift it into a new direction without rediscovering the contract.</p>
+    <div class="sg-demo">
+      <div class="pretext-demo">
+        <div class="pretext-prose">
+          <img class="pretext-mark" id="pretextMark" src="../Assets/openProse logos/OP-style-v2.svg" alt="OpenProse mark" draggable="false">
+          <p>OpenProse is built on a small set of beliefs. <em>Intent should be executable.</em> Contracts should be readable. A delivery should be a verified outcome — never a hopeful artifact. The runtime treats your spec as the source of truth — every run scored against it, every drift surfaced, every Monday a brief that proves itself before it ships. We don't write prompts; we write programs in <em style="color:var(--teal)">prose</em>. The mark anchored in this paragraph is grabbable — drag it to a new position and the prose reflows around its silhouette via <em>pretext</em>, our shape-aware layout library. Click a signet below to swap the mark for a different glyph; the wrap obstacle updates and the column re-paints. We bill on outcomes, not tokens. The brief that lands on Monday is the same document that ran on Sunday night, with a signature attached.</p>
+        </div>
+        <div class="pretext-swatches" aria-label="Swap mark">
+          <button class="pretext-swatch" type="button" data-src="../Assets/openProse logos/OP-style-v2.svg" aria-label="OP style v2 signet"><img src="../Assets/openProse logos/OP-style-v2.svg" alt=""><span>style v2</span></button>
+          <button class="pretext-swatch" type="button" data-src="../Assets/openProse logos/OP-infinite.svg" aria-label="OP infinite signet"><img src="../Assets/openProse logos/OP-infinite.svg" alt=""><span>infinite</span></button>
+          <button class="pretext-swatch" type="button" data-src="../Assets/openProse logos/OP-Circle.svg" aria-label="OP circle signet"><img src="../Assets/openProse logos/OP-Circle.svg" alt=""><span>circle</span></button>
+          <button class="pretext-swatch" type="button" data-src="../Assets/openProse logos/OP-cursive.svg" aria-label="OP cursive signet"><img src="../Assets/openProse logos/OP-cursive.svg" alt=""><span>cursive</span></button>
+          <button class="pretext-swatch" type="button" data-src="../Assets/openProse logos/OP-swish.svg" aria-label="OP swish signet"><img src="../Assets/openProse logos/OP-swish.svg" alt=""><span>swish</span></button>
+        </div>
+        <p class="pretext-meta mono"><span id="pretextPos">x: 50% · y: 50%</span> · drag the mark · click a swatch to swap</p>
+      </div>
+      <div class="sg-demo-source"><pre><span class="k">&lt;div class="pretext-demo"&gt;</span>
+  <span class="k">&lt;div class="pretext-prose"&gt;</span>
+    <span class="k">&lt;img class="pretext-mark" src="…signet.svg"&gt;</span>
+    <span class="k">&lt;p&gt;</span>…prose that wraps around the mark…<span class="k">&lt;/p&gt;</span>
+  <span class="k">&lt;/div&gt;</span>
+  <span class="k">&lt;div class="pretext-swatches"&gt;</span>
+    <span class="k">&lt;button data-src="…OP-infinite.svg"&gt;</span>…<span class="k">&lt;/button&gt;</span> … 5 more
+  <span class="k">&lt;/div&gt;</span>
+<span class="k">&lt;/div&gt;</span>
+<span class="c"># JS wires: drag → updates shape-outside + reports position;</span>
+<span class="c">#          click swatch → swaps mark.src + re-applies shape-outside.</span></pre></div>
+    </div>
+  </section>
+
+  <!-- ========================================================
+       §7 VOICE & TONE — three sample registers, with notes.
+       ======================================================== -->
+  <section class="sg-section" id="voice">
+    <div class="sg-section-num">§7 · Voice &amp; tone</div>
+    <h2>One register, <em>three sentences</em>, three marks.</h2>
+    <p class="sg-lede">
+      The brand voice is calm, specific, and unafraid of a short sentence.
+      It names things by their nouns. Italic carries the writer's emphasis;
+      the sidenote offers the reader's footnote. Below are the three
+      sanctioned voices and a flat list of sample sentences in each.
+    </p>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:var(--space-sm);margin-bottom:var(--space-md)">
+      <div class="voice-card-demo">
+        <div class="vc-tag">Short · declaration</div>
+        <blockquote>"Write the outcome. <em>We run it.</em>"</blockquote>
+        <p class="vc-note">Six words. The tagline register. Used on hero, primary marketing, the elevator pitch.</p>
+      </div>
+      <div class="voice-card-demo">
+        <div class="vc-tag">Spec · bang</div>
+        <blockquote>"Billed by <em>delivery</em><sup class="sn">!</sup>. If the outcome doesn't ship, no line."</blockquote>
+        <p class="vc-note">Terms of art spoken plainly. The bang marker on the one word that carries the rule. One per page.</p>
+      </div>
+      <div class="voice-card-demo">
+        <div class="vc-tag">Editorial · accent</div>
+        <blockquote>"Once, the week began with a scramble. <em>Then the outcome was declared in a file.</em>"</blockquote>
+        <p class="vc-note">Long form. Italic carries the pivot. No sidenote — the author still holds the line.</p>
+      </div>
+    </div>
+
+    <h3>More sample sentences</h3>
+    <ol style="font-family:var(--mono);font-size:0.94rem;color:var(--ink-2);line-height:1.75;padding-left:var(--space-md);max-width:var(--measure-ch)">
+      <li><b>Short.</b> "OpenProse turns the file into a routine."</li>
+      <li><b>Short.</b> "The page reads the way a good analyst would have written it."</li>
+      <li><b>Spec.</b> "<code>responsibility:</code> the unit. <code>cadence:</code> the clock. <code>outcome:</code> the deliverable."</li>
+      <li><b>Spec.</b> "Every run is verified, signed, and archived. <em>Seven years</em>, by default."</li>
+      <li><b>Editorial.</b> "The standup happens anyway, but it is fifteen minutes shorter."</li>
+      <li><b>Editorial.</b> "The humanist computer is the insight that craft and machinery were never opposed."</li>
+    </ol>
+  </section>
+
+  <!-- ========================================================
+       §8 DO / DON'T — the five most easily misused patterns,
+       paired side-by-side with the why.
+       ======================================================== -->
+  <section class="sg-section" id="do-dont">
+    <div class="sg-section-num">§8 · Do / Don't</div>
+    <h2>Five patterns, <em>five mistakes</em>.</h2>
+    <p class="sg-lede">
+      These are the patterns that go wrong most often when a new operator
+      picks up the system. For each: the correct application on the left,
+      the misuse on the right, and the reasoning underneath.
+    </p>
+
+    <h3>1 · em emphasis</h3>
+    <div class="sg-do-dont">
+      <div class="sg-do">
+        <div class="sg-do-tag">Do</div>
+        <p class="sg-do-body">"The system is <em>calm</em>. The page does not <em>announce</em>; it <em>arrives</em>."</p>
+        <p class="sg-do-why">One accent per clause, on the verb or modifier that turns the sentence. The reader's eye lands on the meaning, not the typography.</p>
+      </div>
+      <div class="sg-dont">
+        <div class="sg-dont-tag">Don't</div>
+        <p class="sg-dont-body">"The <em>system</em> is <em>calm</em>. The <em>page</em> does <em>not</em> <em>announce</em>; it <em>arrives</em>."</p>
+        <p class="sg-dont-why">Accent everywhere = accent nowhere. The eye stops tracking. Save em for the single word that, if removed, removes the sentence's pivot.</p>
+      </div>
+    </div>
+
+    <h3>2 · The bang sidenote</h3>
+    <div class="sg-do-dont">
+      <div class="sg-do">
+        <div class="sg-do-tag">Do</div>
+        <p class="sg-do-body">"Billed by delivery<sup class="sn">!</sup>. If the outcome doesn't ship, no line."</p>
+        <p class="sg-do-why">One bang per page, on the single load-bearing claim. If you find yourself reaching for a second, the first is wrong.</p>
+      </div>
+      <div class="sg-dont">
+        <div class="sg-dont-tag">Don't</div>
+        <p class="sg-dont-body">"Billed by delivery<sup class="sn">!</sup>. Verified<sup class="sn">!</sup>. Signed<sup class="sn">!</sup>. Archived<sup class="sn">!</sup>."</p>
+        <p class="sg-dont-why">Four bangs = no bang. The bang is the brand's warning shot; reuse erases its weight. Use the numbered sidenote for the rest.</p>
+      </div>
+    </div>
+
+    <h3>3 · Sidenote on chrome</h3>
+    <div class="sg-do-dont">
+      <div class="sg-do">
+        <div class="sg-do-tag">Do</div>
+        <p class="sg-do-body">"The standup happens anyway, but it is fifteen minutes shorter<sup class="sn">3</sup>."</p>
+        <p class="sg-do-why">Sidenotes attach to prose — paragraph sentences, editorial H2/H3, document preview body. The reader is reading.</p>
+      </div>
+      <div class="sg-dont">
+        <div class="sg-dont-tag">Don't</div>
+        <p class="sg-dont-body" style="text-align:center"><span class="ui-badge live">· Live<sup class="sn">3</sup></span></p>
+        <p class="sg-dont-why">Never on a badge, button, or the logotype. Chrome doesn't earn footnotes; the reader isn't reading chrome, they're scanning it.</p>
+      </div>
+    </div>
+
+    <h3>4 · Italic and sidenote sharing a phrase</h3>
+    <div class="sg-do-dont">
+      <div class="sg-do">
+        <div class="sg-do-tag">Do</div>
+        <p class="sg-do-body">"The machine handles the <em>cadence</em>. The prose handles the <em>voice</em><sup class="sn">4</sup>."</p>
+        <p class="sg-do-why">Italic on one phrase, sidenote on a different phrase. Author voice and reader margin sit side by side, never on top of each other.</p>
+      </div>
+      <div class="sg-dont">
+        <div class="sg-dont-tag">Don't</div>
+        <p class="sg-dont-body">"The machine handles the <em>cadence<sup class="sn">4</sup></em>."</p>
+        <p class="sg-dont-why">Crossing them puts the reader's voice in the writer's mouth. The accented word is the author's; the sidenote is the reader's option to disagree.</p>
+      </div>
+    </div>
+
+    <h3>5 · Colour as accent</h3>
+    <div class="sg-do-dont">
+      <div class="sg-do">
+        <div class="sg-do-tag">Do</div>
+        <p class="sg-do-body" style="font-family:var(--mono);color:var(--ink)">The page is loud only by the <em>absence</em> of colour.</p>
+        <p class="sg-do-why">Hierarchy is built from the five-step ink ramp on warm off-white. Distance from paper = importance.</p>
+      </div>
+      <div class="sg-dont">
+        <div class="sg-dont-tag">Don't</div>
+        <p class="sg-dont-body" style="color:#c0392b">"Once, the week began with a scramble."</p>
+        <p class="sg-dont-why">No editorial red. No teal. No mid-blue. Tufte trusts the page; the moment colour enters, the page no longer reads as Tufte.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================
+       §9 FILE CONVENTIONS — naming pattern, header comment,
+       JH convention, section organisation.
+       ======================================================== -->
+  <section class="sg-section" id="files">
+    <div class="sg-section-num">§9 · File conventions</div>
+    <h2>One file per direction, <em>one header</em>, one comment style.</h2>
+    <p class="sg-lede">
+      Each brand direction lives in a single self-contained HTML file. No
+      external CSS, one inline <code>&lt;style&gt;</code> block, one optional inline
+      <code>&lt;script&gt;</code> for the pretext layout. Web fonts come via
+      <code>@import</code> in CSS or <code>@font-face</code> for self-hosted faces.
+    </p>
+
+    <h3>Naming pattern</h3>
+    <p class="sg-lede">Files in <code>JHWorking/brand/</code> follow the pattern:</p>
+    <pre style="font-family:var(--mono);font-size:0.84rem;color:var(--ink-2);background:var(--paper-dk);border:1px solid var(--rule);padding:var(--space-sm);max-width:var(--measure)">direction-{greek-letter}-{slug}.html
+
+examples
+  direction-alpha-editorial.html
+  direction-beta-tufte.html
+  direction-beta-tufte-mono.html              <span style="color:var(--ink-4);font-style:italic">// fork: changed body face to mono</span>
+  direction-beta-tufte-mono-kecal.html        <span style="color:var(--ink-4);font-style:italic">// fork: replaced sans/accent with Kecal</span>
+  direction-beta-tufte-mono-kecal-styleguide.html  <span style="color:var(--ink-4);font-style:italic">// THIS FILE: documentation fork</span></pre>
+
+    <p class="sg-lede">A fork that changes one decision should add one slug segment, in order of cascade. Forks accumulate left-to-right; the latest decision is the rightmost segment.</p>
+
+    <h3>Header comment template</h3>
+    <p class="sg-lede">Every file opens with a block comment that names the direction, its DNA, and its implementation strategy. Template:</p>
+    <pre style="font-family:var(--mono);font-size:0.78rem;color:var(--ink-2);background:var(--paper-dk);border:1px solid var(--rule);padding:var(--space-sm);max-width:var(--measure);white-space:pre-wrap">/* ============================================
+   DIRECTION {GREEK} · {NAME}
+   {One-line tagline.}
+
+   DNA: {Body face} body, {Sans face} labels, {Mono face} specs.
+   {Paper hex}, {ink scale shape}, {colour policy}.
+   Emphasis is {the brand's emphasis primitive}.
+
+   Implementation: {what was inherited from a parent direction
+   and what this fork overrides}.
+   ============================================ */</pre>
+
+    <h3>JH comment-tag convention</h3>
+    <p class="sg-lede">Decisions, overrides, and revisions are tagged inline with a date-stamped JH comment. The format is:</p>
+    <pre style="font-family:var(--mono);font-size:0.84rem;color:var(--ink-2);background:var(--paper-dk);border:1px solid var(--rule);padding:var(--space-sm);max-width:var(--measure)">// JH YYYY-MM-DD — short rationale
+
+examples
+  // JH 2026-05-13 — "shrink title serif to match top of mono used for Open."
+  // JH 2026-05-07 — italic +20% drop to +14% over Tufte's narrow column
+  // JH 2026-05-18 — replace garamond and inter with styles of kecal</pre>
+
+    <p class="sg-lede">The quotation marks around a JH note mean the words inside are pulled verbatim from a review JSON. No paraphrase. If the reviewer didn't say it that way, don't say they did.</p>
+
+    <h3>Section organisation</h3>
+    <p class="sg-lede">A direction file flows in this order, with section IDs that match this style guide:</p>
+    <pre style="font-family:var(--mono);font-size:0.84rem;color:var(--ink-2);background:var(--paper-dk);border:1px solid var(--rule);padding:var(--space-sm);max-width:var(--measure)">  hero            section.hero
+  palette         section#palette
+  type            section#type
+  highlighter     section#highlighter      <span style="color:var(--ink-4);font-style:italic">// β: sidenote section</span>
+  pairing         section#pairing
+  variations      section#variations
+  ui              section#ui
+  applications    section#applications
+  voice           section#voice
+  colophon        section.colophon</pre>
+
+    <p class="sg-lede">CSS within the <code>&lt;style&gt;</code> block follows the same vertical order: reset → tokens → base → hero → sections → palette → type → … → responsive → override blocks. Each override block (parent → fork → fork) has its own banner comment.</p>
+  </section>
+
+  <!-- ========================================================
+       §10 AGENT INTEGRATION — tokens.yaml dump + agent notes.
+       This is the section an LLM should read to reproduce.
+       ======================================================== -->
+  <section class="sg-section" id="agent">
+    <div class="sg-section-num">§10 · Agent integration</div>
+    <h2>For the agent: <em>read this section first</em>.</h2>
+    <p class="sg-lede">
+      The remainder of this section is addressed to an LLM that has been
+      asked to render a page in this direction. If you are a human reader,
+      treat this as the formal spec — everything above is the prose.
+    </p>
+
+    <h3>How to use this style guide</h3>
+    <p class="sg-lede">
+      If you are an agent producing HTML in this direction, do the following.
+      One: copy the <code>:root</code> token block from §0.2 into your file
+      verbatim. Two: import the same fonts (Kecal via <code>@font-face</code>,
+      IBM Plex Mono via Google Fonts). Three: set <code>body</code> to
+      <code>--mono</code> at 0.94rem / 1.7 line-height. Four: wrap any
+      emphasis in <code>&lt;em&gt;</code> — the global rule in this guide will
+      render it correctly. Five: never introduce a colour token that is not
+      in §2. Six: never apply <code>.hl</code> markup as a new pattern; reach
+      for <code>&lt;sup class="sn"&gt;</code> instead. Seven: place a header
+      comment per §9, and tag every override with a dated <code>// JH</code>
+      comment that quotes the source review verbatim. If any of these
+      conflict with a user instruction, ask before deviating.
+    </p>
+
+    <h3>tokens.yaml — programmatic dump</h3>
+    <p class="sg-lede">A single YAML block describing every token in machine-readable form. Drop this into a build pipeline, a Figma sync, or a downstream agent's context.</p>
+<pre class="sg-token-dump"><span class="k">brand:</span>          <span class="v">openprose</span>
+<span class="k">direction:</span>      <span class="v">β · tufte · mono · kecal</span>
+<span class="k">version:</span>        <span class="v">1.0</span>
+<span class="k">updated:</span>        <span class="v">2026-05-18</span>
+<span class="k">source_file:</span>    <span class="v">direction-beta-tufte-mono-kecal.html</span>
+
+<span class="c"># JH 2026-05-20: tokens.yaml dump audited against :root in §0.2.</span>
+<span class="c"># All teal / amber / red sub-tokens now enumerated. Red is the</span>
+<span class="c"># canonical #c0392b (fail / attention) — no longer aliased to teal.</span>
+<span class="k">color:</span>
+  <span class="k">light:</span>
+    <span class="k">paper:</span>       <span class="v">'#f5f0e8'</span>   <span class="c"># the page · off-white</span>
+    <span class="k">paper-dk:</span>    <span class="v">'#e8e0d0'</span>   <span class="c"># code surface · aside</span>
+    <span class="k">paper-lt:</span>    <span class="v">'#fbf7ef'</span>   <span class="c"># lifted card</span>
+    <span class="k">paper-cream:</span> <span class="v">'#fbf7ef'</span>   <span class="c"># alias for paper-lt</span>
+    <span class="k">paper-warm:</span>  <span class="v">'#f0e8d8'</span>   <span class="c"># warmer card surface</span>
+    <span class="k">ink:</span>         <span class="v">'#2a2520'</span>   <span class="c"># primary copy</span>
+    <span class="k">ink-2:</span>       <span class="v">'rgba(42,37,32,0.78)'</span>   <span class="c"># secondary copy</span>
+    <span class="k">ink-3:</span>       <span class="v">'rgba(42,37,32,0.55)'</span>   <span class="c"># labels · sidenotes</span>
+    <span class="k">ink-4:</span>       <span class="v">'rgba(42,37,32,0.32)'</span>   <span class="c"># tertiary · metadata</span>
+    <span class="k">ink-5:</span>       <span class="v">'rgba(42,37,32,0.18)'</span>   <span class="c"># ghost · skeleton</span>
+    <span class="k">teal:</span>        <span class="v">'#3a7a6a'</span>   <span class="c"># editorial accent · italic em, section markers</span>
+    <span class="k">teal-deep:</span>   <span class="v">'#2e6456'</span>   <span class="c"># teal hover state, small-caps em</span>
+    <span class="k">teal-soft:</span>   <span class="v">'#4a8a7a'</span>   <span class="c"># secondary accent · muted state</span>
+    <span class="k">teal-tint:</span>   <span class="v">'rgba(58,122,106,0.14)'</span>   <span class="c"># soft background tint</span>
+    <span class="k">teal-faint:</span>  <span class="v">'rgba(58,122,106,0.06)'</span>   <span class="c"># quietest wash</span>
+    <span class="k">amber:</span>       <span class="v">'#c49a5c'</span>   <span class="c"># warm complement · "look up" moments</span>
+    <span class="k">amber-deep:</span>  <span class="v">'#a87f44'</span>   <span class="c"># amber hover, outlined-button stroke</span>
+    <span class="k">amber-soft:</span>  <span class="v">'#d4aa6c'</span>   <span class="c"># amber on dark surfaces</span>
+    <span class="k">amber-tint:</span>  <span class="v">'rgba(196,154,92,0.18)'</span>   <span class="c"># hot-pill background</span>
+    <span class="k">red:</span>         <span class="v">'#c0392b'</span>   <span class="c"># fail · attention signal (canonical)</span>
+    <span class="k">red-muted:</span>   <span class="v">'#d4604f'</span>   <span class="c"># soft fail tint · hover</span>
+    <span class="k">red-deep:</span>    <span class="v">'#8e2b20'</span>   <span class="c"># stroke on red chrome</span>
+    <span class="k">red-tint:</span>    <span class="v">'rgba(192,57,43,0.12)'</span>   <span class="c"># fail backdrop</span>
+    <span class="k">red-faint:</span>   <span class="v">'rgba(192,57,43,0.05)'</span>   <span class="c"># quietest fail wash</span>
+    <span class="k">rule:</span>        <span class="v">'rgba(42,37,32,0.14)'</span>   <span class="c"># hairline · divider</span>
+    <span class="k">rule-mid:</span>    <span class="v">'rgba(42,37,32,0.06)'</span>   <span class="c"># dotted hairline</span>
+    <span class="k">hl:</span>          <span class="v">transparent</span>  <span class="c"># silenced; renders as dotted underline</span>
+    <span class="k">hl-hot:</span>      <span class="v">transparent</span>  <span class="c"># silenced; renders as dashed underline</span>
+  <span class="k">dark:</span>
+    <span class="k">paper:</span>       <span class="v">'#161410'</span>
+    <span class="k">paper-dk:</span>    <span class="v">'#1d1a14'</span>
+    <span class="k">paper-lt:</span>    <span class="v">'#1f1c16'</span>
+    <span class="k">ink:</span>         <span class="v">'#f0ece1'</span>
+    <span class="k">ink-2:</span>       <span class="v">'#d6d1c2'</span>
+    <span class="k">ink-3:</span>       <span class="v">'#9e9387'</span>
+    <span class="k">ink-4:</span>       <span class="v">'#807468'</span>
+    <span class="k">ink-5:</span>       <span class="v">'#3a3631'</span>
+    <span class="k">teal:</span>        <span class="v">'#5a9c8c'</span>   <span class="c"># slightly lifted for dark backdrop</span>
+    <span class="k">teal-deep:</span>   <span class="v">'#4a8a7a'</span>
+    <span class="k">teal-soft:</span>   <span class="v">'#6aaa9c'</span>
+    <span class="k">amber:</span>       <span class="v">'#d4aa6c'</span>   <span class="c"># dark-mode amber sibling</span>
+    <span class="k">amber-deep:</span>  <span class="v">'#b89055'</span>
+    <span class="k">red:</span>         <span class="v">'#e88675'</span>   <span class="c"># dark-mode red — softer for hushed reading</span>
+    <span class="k">red-muted:</span>   <span class="v">'#d97a68'</span>
+    <span class="k">red-deep:</span>    <span class="v">'#f4a18f'</span>
+    <span class="k">red-tint:</span>    <span class="v">'rgba(232,134,117,0.18)'</span>
+    <span class="k">red-faint:</span>   <span class="v">'rgba(232,134,117,0.08)'</span>
+    <span class="k">rule:</span>        <span class="v">'#2f2c25'</span>
+    <span class="k">rule-mid:</span>    <span class="v">'#25221c'</span>
+
+<span class="k">type:</span>
+  <span class="k">faces:</span>
+    <span class="k">mono:</span>
+      <span class="k">family:</span>    <span class="v">'IBM Plex Mono'</span>
+      <span class="k">source:</span>    <span class="v">google-fonts</span>
+      <span class="k">weights:</span>   <span class="v">[300, 400, 500, 600]</span>
+      <span class="k">italics:</span>   <span class="v">[400, 500]</span>
+      <span class="k">role:</span>      <span class="v">body · headings · ledes · all running prose</span>
+    <span class="k">accent:</span>
+      <span class="k">family:</span>    <span class="v">'Kecal'</span>
+      <span class="k">source:</span>    <span class="v">'jsdelivr.net/gh/FungiType/Kecal'</span>
+      <span class="k">weights:</span>   <span class="v">[200, 300, 400, 500, 600, 700, 800]</span>
+      <span class="k">italics:</span>   <span class="v">synthesised</span>
+      <span class="k">role:</span>      <span class="v">upright emphasis (800), chrome labels (500), buttons (600/700)</span>
+  <span class="k">scale:</span>
+    <span class="k">display:</span>     <span class="v">{ size: '3rem',    px: 51,   line: 1.05, track: '-0.025em', weight: 400 }</span>
+    <span class="k">h1:</span>          <span class="v">{ size: '2.4rem',  px: 41,   line: 1.15, track: '-0.018em', weight: 400 }</span>
+    <span class="k">h2:</span>          <span class="v">{ size: '2rem',    px: 34,   line: 1.15, track: '-0.012em', weight: 400 }</span>
+    <span class="k">h3:</span>          <span class="v">{ size: '1.4rem',  px: 24,   line: 1.15, track: '-0.012em', weight: 500 }</span>
+    <span class="k">body:</span>        <span class="v">{ size: '1.08rem', px: 18,   line: 1.55, track: '0',        weight: 400 }</span>
+    <span class="k">small:</span>       <span class="v">{ size: '0.92rem', px: 16,   line: 1.70, track: '0',        weight: 400 }</span>
+    <span class="k">mono:</span>        <span class="v">{ size: '0.92rem', px: 16,   line: 1.85, track: '0.02em',   weight: 400 }</span>
+    <span class="k">caption:</span>     <span class="v">{ size: '0.78rem', px: 13,   line: 1.50, track: '0.16em',   weight: 500 }</span>
+    <span class="k">label:</span>       <span class="v">{ size: '0.62rem', px: 10.5, line: 1.20, track: '0.18em',   weight: 500 }</span>
+  <span class="k">rules:</span>
+    <span class="k">em_global:</span>   <span class="v">"em wraps with Kecal upright 800 at 1em, cap-height matched to Plex Mono"</span>
+    <span class="k">em_letter:</span>   <span class="v">letter-spacing: 0</span>
+    <span class="k">italic_voice:</span> <span class="v">"italic is the author; sidenote is the reader; never share a phrase"</span>
+
+<span class="k">space:</span>
+  <span class="k">3xs:</span> <span class="v">{ rem: 0.25, px: 4 }</span>
+  <span class="k">2xs:</span> <span class="v">{ rem: 0.50, px: 8 }</span>
+  <span class="k">xs:</span>  <span class="v">{ rem: 0.75, px: 12 }</span>
+  <span class="k">sm:</span>  <span class="v">{ rem: 1.00, px: 16 }</span>
+  <span class="k">md:</span>  <span class="v">{ rem: 1.50, px: 24 }</span>
+  <span class="k">lg:</span>  <span class="v">{ rem: 2.00, px: 32 }</span>
+  <span class="k">xl:</span>  <span class="v">{ rem: 3.00, px: 48 }</span>
+  <span class="k">2xl:</span> <span class="v">{ rem: 4.50, px: 72 }</span>
+  <span class="k">3xl:</span> <span class="v">{ rem: 5.50, px: 88 }</span>
+
+<span class="k">layout:</span>
+  <span class="k">wide:</span>      <span class="v">'1180px'</span>
+  <span class="k">measure:</span>   <span class="v">'860px'</span>
+  <span class="k">measure_ch:</span> <span class="v">'62ch'</span>
+  <span class="k">breakpoint:</span> <span class="v">'880px'</span>
+  <span class="k">sidenote_breakpoint:</span> <span class="v">'1100px'</span>
+
+<span class="k">border:</span>
+  <span class="k">width:</span>   <span class="v">'1px'</span>
+  <span class="k">width2:</span>  <span class="v">'2px'</span>
+  <span class="k">radius:</span>  <span class="v">'0'</span>   <span class="c"># Tufte uses sharp corners only</span>
+
+<span class="k">motion:</span>
+  <span class="k">fast:</span>    <span class="v">'0.15s'</span>
+  <span class="k">slow:</span>    <span class="v">'0.20s'</span>
+
+<span class="k">components:</span>
+  <span class="k">hero:</span>            <span class="v">{ class: '.sample-hero',     id: 'c-hero',     centred: true,  required: ['hero-eyebrow', 'hero-mark', 'hero-rule', 'hero-tagline', 'hero-meta'] }</span>
+  <span class="k">section_kicker:</span>  <span class="v">{ class: '.section-kicker', id: 'c-kicker',   variants: ['I·', 'II·', '...'] }</span>
+  <span class="k">button:</span>          <span class="v">{ class: '.ui-btn',         id: 'c-button',   variants: ['.primary', '.secondary', '.ghost'] }</span>
+  <span class="k">badge:</span>           <span class="v">{ class: '.ui-badge',       id: 'c-badge',    variants: ['.live', '.ok', '.hold'] }</span>
+  <span class="k">input:</span>           <span class="v">{ class: '.ui-input',       id: 'c-input' }</span>
+  <span class="k">code:</span>            <span class="v">{ class: '.ui-code',        id: 'c-code',     spans: ['.k', '.c', '.v'] }</span>
+  <span class="k">card:</span>            <span class="v">{ class: '.card',           id: 'c-card',     parts: ['.card-kicker', '.card-title', '.card-body'] }</span>
+  <span class="k">lede:</span>            <span class="v">{ class: '.lede',           id: 'c-lede',     measure: '62ch' }</span>
+  <span class="k">em:</span>              <span class="v">{ tag: 'em',                id: 'c-em',       rule: 'global; Kecal 800 upright 1em' }</span>
+  <span class="k">dropcap:</span>         <span class="v">{ selector: '::first-letter', id: 'c-dropcap', size: '4.2em' }</span>
+  <span class="k">sidenote:</span>        <span class="v">{ markers: ['1..n', '!'],   id: 'c-sidenote', max_bangs_per_page: 1 }</span>
+  <span class="k">pull_quote:</span>      <span class="v">{ class: '.pull-quote',     id: 'c-pullquote' }</span>
+  <span class="k">pairing:</span>         <span class="v">{ class: '.pairing',        id: 'c-pairing',  container: 'measure' }</span>
+  <span class="k">voice_card:</span>      <span class="v">{ class: '.voice-card',     id: 'c-voice' }</span>
+
+<span class="k">voice:</span>
+  <span class="k">registers:</span>
+    <span class="k">short:</span>      <span class="v">"6-word declarations; tagline cadence"</span>
+    <span class="k">spec:</span>       <span class="v">"terms of art spoken plainly; one bang max"</span>
+    <span class="k">editorial:</span>  <span class="v">"long form; italic carries the pivot"</span>
+
+<span class="k">rules:</span>
+  <span class="k">color:</span>
+    - <span class="v">"three independent accents: teal (writer's pivot), amber (look-up), red (fail)"</span>
+    - <span class="v">"never mix red with teal in the same phrase — they're independent registers"</span>
+    - <span class="v">"amber is rare — one phrase per page maximum"</span>
+    - <span class="v">"hierarchy is built from the five-step ink ramp on warm off-white"</span>
+    - <span class="v">"never replace --ink (#2a2520) with pure black (#000)"</span>
+  <span class="k">emphasis:</span>
+    - <span class="v">"italic is the writer; sidenote is the reader"</span>
+    - <span class="v">"italic and sidenote never share a phrase"</span>
+    - <span class="v">"one bang per page; if you want a second, the first is wrong"</span>
+    - <span class="v">"sidenotes on prose only — never on chrome, badge, button, or logotype"</span>
+  <span class="k">corners:</span>
+    - <span class="v">"all corners sharp; border-radius is 0 everywhere"</span>
+  <span class="k">files:</span>
+    - <span class="v">"direction-{greek}-{slug}.html; forks append slug segments left-to-right"</span>
+    - <span class="v">"single inline &lt;style&gt; block; web fonts via @import or @font-face"</span>
+    - <span class="v">"every override tagged // JH YYYY-MM-DD with verbatim reviewer quote"</span>
+
+<span class="k">parent_chain:</span>
+  - <span class="v">direction-alpha-editorial.html</span>
+  - <span class="v">direction-beta-tufte.html</span>
+  - <span class="v">direction-beta-tufte-mono.html</span>
+  - <span class="v">direction-beta-tufte-mono-kecal.html</span>
+  - <span class="v">direction-beta-tufte-mono-kecal-styleguide.html  # this file</span>
+</pre>
+  </section>
+
+  <!-- ========================================================
+       COLOPHON — closes the document in the brand's own voice.
+       ======================================================== -->
+  <section class="sg-colophon">
+    <div class="rule"></div>
+    <div class="line italic">OpenProse · Direction β · Tufte · Mono · Kecal · Teal · style-guide template</div>
+    <!-- Colophon — three accents (teal, amber, red), not "no accent". -->
+    <div class="line">Paper <span class="mono">#f5f0e8</span> · Ink <span class="mono">#2a2520</span> · Teal <span class="mono" style="color:var(--teal)">#3a7a6a</span> · Amber <span class="mono" style="color:var(--amber)">#c49a5c</span> · Red <span class="mono" style="color:var(--red)">#c0392b</span></div>
+    <div class="line">Sidenote is the brand · italic is the writer · sidenote is the reader</div>
+    <div class="line">JH 2026-05-18 · audited 2026-05-20 · v1.1</div>
+  </section>
+
+</div><!-- /.sg-shell -->
+
+<script>
+// ============================================================
+// THEME TOGGLE — persists in localStorage, defaults to light.
+// Minimal single-button toggle; dark mode is a hushed reading mode.
+// The button label flips between "Dark" and "Light" to indicate the
+// *target* state.
+// ============================================================
+(function() {
+  const btn = document.getElementById('sg-theme-toggle');
+  const root = document.documentElement;
+  const stored = (function() {
+    try { return localStorage.getItem('sg-theme'); } catch (e) { return null; }
+  })();
+  if (stored === 'dark') {
+    root.setAttribute('data-theme', 'dark');
+    btn.textContent = 'Light';
+  } else {
+    btn.textContent = 'Dark';
+  }
+  btn.addEventListener('click', function() {
+    const current = root.getAttribute('data-theme');
+    if (current === 'dark') {
+      root.removeAttribute('data-theme');
+      btn.textContent = 'Dark';
+      try { localStorage.setItem('sg-theme', 'light'); } catch (e) {}
+    } else {
+      root.setAttribute('data-theme', 'dark');
+      btn.textContent = 'Light';
+      try { localStorage.setItem('sg-theme', 'dark'); } catch (e) {}
+    }
+  });
+})();
+
+// ============================================================
+// PRETEXT DEMO — drag the mark, swap via swatch row.
+//
+// This is the contained styleguide-friendly emulation of the
+// pretext layout library. For the full library see
+// direction-delta-machine-homepage-rain.html which imports the
+// pretext modules from JHWorking/brand/pretext/.
+// ============================================================
+(function() {
+  const mark = document.getElementById('pretextMark');
+  const posReadout = document.getElementById('pretextPos');
+  const swatches = document.querySelectorAll('.pretext-swatch');
+  if (!mark || !swatches.length) return;
+
+  // Mark the initial swatch active.
+  swatches.forEach(s => {
+    if (s.dataset.src === mark.getAttribute('src')) s.classList.add('active');
+  });
+
+  // --- Drag-to-relocate ----------------------------------------
+  // Position is normalised 0..1 over the prose container so the
+  // mark stays inside the column when the page reflows.
+  let dragging = false;
+  let startX = 0, startY = 0, startPx = 0, startPy = 0;
+  const setPosFromNormalized = (px, py) => {
+    px = Math.max(0, Math.min(1, px));
+    py = Math.max(0, Math.min(1, py));
+    mark.style.setProperty('--px', String(px));
+    mark.style.setProperty('--py', String(py));
+    // The float-based mark uses margin to offset; rem ranges keep
+    // the displacement visible without breaking the column.
+    mark.style.marginLeft = (px * 6) + 'rem';
+    mark.style.marginTop = (py * 4) + 'rem';
+    if (posReadout) posReadout.textContent = `x: ${Math.round(px*100)}% · y: ${Math.round(py*100)}%`;
+  };
+  setPosFromNormalized(0.1, 0.1);
+
+  mark.addEventListener('pointerdown', e => {
+    dragging = true;
+    mark.setPointerCapture(e.pointerId);
+    mark.classList.add('dragging');
+    const cs = getComputedStyle(mark);
+    startPx = parseFloat(cs.getPropertyValue('--px')) || 0;
+    startPy = parseFloat(cs.getPropertyValue('--py')) || 0;
+    startX = e.clientX;
+    startY = e.clientY;
+    e.preventDefault();
+  });
+  mark.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    // 360px of drag spans 1.0 normalized — feels responsive without
+    // letting the user fling the mark out of the column.
+    const dx = (e.clientX - startX) / 360;
+    const dy = (e.clientY - startY) / 360;
+    setPosFromNormalized(startPx + dx, startPy + dy);
+  });
+  mark.addEventListener('pointerup', e => {
+    dragging = false;
+    mark.classList.remove('dragging');
+    try { mark.releasePointerCapture(e.pointerId); } catch (_) {}
+  });
+  mark.addEventListener('pointercancel', () => {
+    dragging = false;
+    mark.classList.remove('dragging');
+  });
+
+  // --- Swap via swatch row -------------------------------------
+  swatches.forEach(sw => {
+    sw.addEventListener('click', () => {
+      const src = sw.dataset.src;
+      if (!src) return;
+      mark.setAttribute('src', src);
+      swatches.forEach(o => o.classList.remove('active'));
+      sw.classList.add('active');
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

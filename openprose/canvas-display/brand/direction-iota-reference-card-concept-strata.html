@@ -1,0 +1,1624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 142 142'%3E%3Cpath d='M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z' fill='%232a2520'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenProse — ι Reference Card · strata · 3D</title>
+<style>
+/* ============================================
+   ι REFERENCE CARD · STRATA · 3D
+   The broadside, now a stacked 3D index.
+   Each token is a translucent slab in a Three.js
+   scene; the broadside chrome wraps the canvas.
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,700&family=Crimson+Pro:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@400;500&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --paper:     #f4ede0;
+  --paper-dk:  #ece4d2;
+  --paper-lt:  #faf5ea;
+  --ink:       #1a1612;
+  --ink-2:     #4a4338;
+  --ink-3:     #7a7263;
+  --ink-4:     #b3a892;
+  --violet:    #5b3aa0;
+  --violet-deep:#3d2570;
+  --violet-soft:#7a5cc0;
+  --violet-faint:rgba(91,58,160,0.08);
+  --orange:    #d2691e;
+  --orange-soft:#e88a44;
+  --rule:      rgba(26,22,18,0.18);
+  --rule-mid:  rgba(26,22,18,0.10);
+  --hi:        rgba(91,58,160,0.16);
+  --serif: 'Playfair Display', Bodoni, Georgia, serif;
+  --sans:  'Crimson Pro', Georgia, serif;
+  --mono:  'JetBrains Mono', 'SF Mono', monospace;
+}
+
+html[data-theme="dark"] {
+  --paper:     #18140f;
+  --paper-dk:  #211c16;
+  --paper-lt:  #1f1a14;
+  --ink:       #f4ede0;
+  --ink-2:     #d2c9b7;
+  --ink-3:     #9d937f;
+  --ink-4:     #5d5547;
+  --violet:    #a587e6;
+  --violet-deep:#c2a9f4;
+  --violet-soft:#8466c7;
+  --violet-faint:rgba(165,135,230,0.14);
+  --orange:    #f08a3c;
+  --orange-soft:#f5a560;
+  --rule:      rgba(244,237,224,0.22);
+  --rule-mid:  rgba(244,237,224,0.12);
+  --hi:        rgba(165,135,230,0.22);
+}
+
+body {
+  background:
+    radial-gradient(circle at 25% 30%, rgba(26,22,18,0.014) 0%, transparent 50%),
+    radial-gradient(circle at 75% 70%, rgba(26,22,18,0.014) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 35% at 18% 12%, rgba(91,58,160,0.04), transparent 65%),
+    radial-gradient(ellipse 45% 32% at 85% 78%, rgba(210,105,30,0.04), transparent 65%),
+    var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 1rem;
+  line-height: 1.6;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  padding: 1.5rem 1.5rem 9rem;
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+}
+html[data-theme="dark"] body {
+  background:
+    radial-gradient(ellipse 50% 35% at 18% 12%, rgba(165,135,230,0.08), transparent 65%),
+    radial-gradient(ellipse 45% 32% at 85% 78%, rgba(240,138,60,0.06), transparent 65%),
+    var(--paper);
+}
+
+/* THE BROADSIDE */
+.broadside {
+  width: 100%;
+  max-width: 1280px;
+  background: var(--paper-lt);
+  border: 1px solid var(--rule);
+  padding: 2.25rem 3rem 2.25rem 4rem;
+  position: relative;
+  box-shadow: 0 12px 56px rgba(26,22,18,0.10);
+}
+@media (max-width: 720px) { .broadside { padding: 2rem 1.25rem; } }
+
+.broadside::before, .broadside::after {
+  content: '';
+  position: absolute;
+  width: 16px; height: 16px;
+  border: 1.5px solid var(--ink);
+}
+.broadside::before { top: 0.85rem; left: 0.85rem; border-right: none; border-bottom: none; }
+.broadside::after  { bottom: 0.85rem; right: 0.85rem; border-left: none; border-top: none; }
+.crn-tr, .crn-bl {
+  position: absolute;
+  width: 16px; height: 16px;
+  border: 1.5px solid var(--ink);
+}
+.crn-tr { top: 0.85rem; right: 0.85rem; border-left: none; border-bottom: none; }
+.crn-bl { bottom: 0.85rem; left: 0.85rem; border-right: none; border-top: none; }
+
+.edge {
+  position: absolute;
+  left: 1.45rem;
+  top: 50%;
+  transform: translateY(-50%) rotate(180deg);
+  writing-mode: vertical-rl;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--violet);
+  font-weight: 500;
+  white-space: nowrap;
+}
+@media (max-width: 880px) { .edge { display: none; } }
+
+/* HEAD */
+.bs-head {
+  border-bottom: 1.5px solid var(--ink);
+  padding-bottom: 1rem;
+  margin-bottom: 1.25rem;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 1.5rem;
+  align-items: end;
+}
+.h-eyebrow {
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--violet);
+  font-weight: 500;
+  border: 1px solid var(--violet);
+  padding: 0.3rem 0.6rem;
+  border-radius: 1px;
+  white-space: nowrap;
+}
+.h-title {
+  font-family: var(--serif);
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: clamp(2.6rem, 5.2vw, 4.4rem);
+  line-height: 0.92;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-align: center;
+}
+.h-title em { color: var(--violet); font-style: italic; font-weight: 800; }
+.h-meta {
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  color: var(--ink-3);
+  letter-spacing: 0.06em;
+  line-height: 1.6;
+  text-align: right;
+  white-space: nowrap;
+}
+.h-meta strong { color: var(--ink); font-weight: 500; }
+
+.bs-subhead {
+  text-align: center;
+  margin-bottom: 1.25rem;
+  font-family: var(--serif);
+  font-size: 1rem;
+  font-style: italic;
+  font-weight: 400;
+  color: var(--ink-2);
+  letter-spacing: 0.02em;
+}
+.bs-subhead em { color: var(--violet); font-weight: 500; }
+.bs-subhead .sep { color: var(--violet); margin: 0 0.5rem; }
+
+/* CONTROL BAR */
+.controls {
+  background: var(--paper-lt);
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 0.65rem 0;
+  margin-bottom: 1rem;
+  display: grid;
+  grid-template-columns: 1fr auto auto auto auto;
+  gap: 0.75rem;
+  align-items: center;
+}
+@media (max-width: 720px) {
+  .controls { grid-template-columns: 1fr 1fr; }
+}
+.search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.search-wrap .kbd {
+  position: absolute;
+  right: 0.45rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  border: 1px solid var(--rule);
+  padding: 0.1rem 0.3rem;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+  pointer-events: none;
+  background: var(--paper);
+}
+.search {
+  width: 100%;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  color: var(--ink);
+  padding: 0.45rem 3rem 0.45rem 0.65rem;
+  letter-spacing: 0.04em;
+  border-radius: 1px;
+  outline: none;
+}
+.search:focus { border-color: var(--violet); box-shadow: 0 0 0 1px var(--violet) inset; }
+
+.ctl-group {
+  display: inline-flex;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+}
+.ctl-group button {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: transparent;
+  color: var(--ink-3);
+  border: none;
+  padding: 0.45rem 0.6rem;
+  cursor: pointer;
+  border-right: 1px solid var(--rule);
+  white-space: nowrap;
+}
+.ctl-group button:last-child { border-right: none; }
+.ctl-group button:hover { color: var(--ink); background: var(--violet-faint); }
+.ctl-group button[aria-pressed="true"] {
+  background: var(--violet);
+  color: var(--paper-lt);
+}
+
+.ctl-label {
+  font-family: var(--mono);
+  font-size: 0.56rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  align-self: center;
+}
+.count {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+  text-align: right;
+  white-space: nowrap;
+}
+.count .n { color: var(--violet); font-weight: 500; }
+
+/* STAGE — 3D canvas + side detail */
+.stage {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 0.8rem;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  min-height: 640px;
+  position: relative;
+}
+@media (max-width: 980px) {
+  .stage { grid-template-columns: 1fr; }
+}
+
+.canvas-wrap {
+  position: relative;
+  min-height: 640px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(91,58,160,0.05), transparent 60%),
+    radial-gradient(ellipse at 80% 80%, rgba(210,105,30,0.04), transparent 60%),
+    var(--paper);
+}
+html[data-theme="dark"] .canvas-wrap {
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(165,135,230,0.10), transparent 60%),
+    radial-gradient(ellipse at 80% 80%, rgba(240,138,60,0.06), transparent 60%),
+    var(--paper);
+}
+#scene { position: absolute; inset: 0; display: block; cursor: grab; }
+#scene:active { cursor: grabbing; }
+
+.axis-label {
+  position: absolute;
+  font-family: var(--mono);
+  font-size: 0.56rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  pointer-events: none;
+  z-index: 4;
+}
+.axis-label.left {
+  left: 0.6rem; top: 50%;
+  transform: translateY(-50%) rotate(-90deg);
+  transform-origin: left center;
+}
+.axis-label.bottom {
+  bottom: 0.55rem; left: 50%;
+  transform: translateX(-50%);
+}
+.axis-label.top {
+  top: 0.55rem; left: 0.8rem;
+  color: var(--violet);
+}
+
+.hint {
+  position: absolute;
+  bottom: 0.6rem; right: 0.7rem;
+  font-family: var(--mono);
+  font-size: 0.54rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  pointer-events: none;
+  z-index: 4;
+}
+.hint .kbd {
+  font-family: var(--mono);
+  font-size: 0.54rem;
+  border: 1px solid var(--rule);
+  padding: 0.05rem 0.25rem;
+  color: var(--ink-2);
+  background: var(--paper-lt);
+  letter-spacing: 0.04em;
+}
+
+#tooltip {
+  position: absolute;
+  pointer-events: none;
+  z-index: 20;
+  background: var(--ink);
+  color: var(--paper-lt);
+  padding: 0.45rem 0.65rem;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+  max-width: 240px;
+  border: 1px solid var(--violet);
+  opacity: 0;
+  transition: opacity 0.1s;
+  white-space: nowrap;
+}
+#tooltip.show { opacity: 1; }
+#tooltip .tt-cat {
+  font-size: 0.5rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0.6;
+  margin-bottom: 0.15rem;
+}
+#tooltip .tt-val {
+  font-size: 0.58rem;
+  opacity: 0.85;
+  margin-top: 0.1rem;
+  color: var(--orange-soft);
+}
+
+/* DETAIL PANE — replaces inline expand */
+.detail {
+  border-left: 1px solid var(--rule);
+  background: var(--paper-lt);
+  padding: 0.85rem 0.95rem;
+  font-family: var(--sans);
+  font-size: 0.84rem;
+  color: var(--ink-2);
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  overflow-y: auto;
+  max-height: 720px;
+}
+@media (max-width: 980px) {
+  .detail { border-left: none; border-top: 1px solid var(--rule); max-height: none; }
+}
+.detail-empty {
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--ink-3);
+  text-align: center;
+  padding: 1.5rem 0.5rem;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+.detail-empty .kbd {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  border: 1px solid var(--rule);
+  padding: 0.05rem 0.3rem;
+  color: var(--ink-3);
+  font-style: normal;
+  margin: 0 0.15rem;
+}
+
+.detail-head {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  border-bottom: 1px solid var(--rule-mid);
+  padding-bottom: 0.45rem;
+}
+.detail-swatch {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  border: 1px solid var(--rule);
+  border-radius: 1px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--serif);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--violet);
+  background: var(--paper);
+}
+.detail-swatch.mono { font-family: var(--mono); font-size: 0.85rem; font-weight: 500; }
+.detail-swatch.sans { font-family: var(--sans); font-style: italic; font-size: 0.95rem; }
+.detail-name {
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  color: var(--ink);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.detail-cat {
+  font-family: var(--mono);
+  font-size: 0.52rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  gap: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+  align-items: baseline;
+}
+.row .k {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--violet);
+}
+.row .v {
+  color: var(--ink-2);
+  word-break: break-all;
+}
+.copy-row {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  margin-top: 0.15rem;
+}
+.copy-chip {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  color: var(--ink-2);
+  padding: 0.18rem 0.45rem;
+  cursor: pointer;
+  border-radius: 1px;
+  transition: background 0.08s, color 0.08s, border-color 0.08s;
+}
+.copy-chip:hover { border-color: var(--violet); color: var(--violet); }
+.copy-chip.flashed {
+  background: var(--violet);
+  color: var(--paper-lt);
+  border-color: var(--violet);
+}
+.note {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 0.86rem;
+  color: var(--ink-2);
+  line-height: 1.5;
+  margin-top: 0.1rem;
+}
+.note em { color: var(--violet); font-style: italic; font-weight: 500; }
+
+.type-preview {
+  margin-top: 0.3rem;
+  padding: 0.5rem 0.7rem;
+  border-left: 2px solid var(--violet);
+  background: var(--paper);
+}
+.type-preview .specimen {
+  color: var(--ink);
+  line-height: 1.1;
+}
+.type-preview .specimen-meta {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  color: var(--ink-3);
+  margin-top: 0.2rem;
+  text-transform: uppercase;
+}
+
+/* TOAST */
+.toast {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--ink);
+  color: var(--paper-lt);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--violet);
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.08s, transform 0.12s;
+  white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* TAGLINE STRAP */
+.tagline-strap {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1.5px solid var(--ink);
+  font-family: var(--serif);
+  font-size: clamp(1.2rem, 2.4vw, 1.9rem);
+  font-weight: 400;
+  font-style: italic;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  letter-spacing: 0.01em;
+  text-align: center;
+}
+.tagline-strap .ts-word { padding: 0 0.4rem; }
+.tagline-strap .ts-word.accent { color: var(--violet); font-weight: 500; }
+.tagline-strap .ts-rule { flex: 1; height: 1px; background: var(--ink-4); max-width: 80px; }
+
+.bs-foot {
+  margin-top: 1rem;
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  color: var(--ink-3);
+  letter-spacing: 0.06em;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.bs-foot a {
+  color: var(--violet);
+  text-decoration: none;
+  margin-left: 0.85rem;
+  border-bottom: 1px dotted transparent;
+}
+.bs-foot a:hover { border-bottom-color: var(--violet); }
+.bs-foot .stamp {
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--ink-2);
+  font-size: 0.78rem;
+  letter-spacing: 0;
+}
+
+.help-strip {
+  margin-top: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.56rem;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+}
+.help-strip .kbd {
+  font-family: var(--mono);
+  font-size: 0.56rem;
+  border: 1px solid var(--rule);
+  padding: 0.05rem 0.3rem;
+  color: var(--ink-2);
+  background: var(--paper);
+  margin-right: 0.25rem;
+}
+
+/* Legend overlay */
+.legend {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  z-index: 4;
+  font-family: var(--mono);
+  font-size: 0.52rem;
+  letter-spacing: 0.1em;
+  color: var(--ink-3);
+  background: var(--paper-lt);
+  border: 1px solid var(--rule);
+  padding: 0.4rem 0.55rem;
+  pointer-events: none;
+  max-width: 180px;
+  line-height: 1.7;
+}
+.legend .lg-title {
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--violet);
+  margin-bottom: 0.2rem;
+  font-size: 0.5rem;
+}
+.legend .lg-row { display: flex; align-items: center; gap: 0.35rem; }
+.legend .lg-chip {
+  width: 0.7rem; height: 0.42rem;
+  border: 1px solid var(--rule);
+  flex-shrink: 0;
+}
+
+
+
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+  div.h-eyebrow { width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: auto; word-break: break-word; }
+  h1.h-title { width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: auto; word-break: break-word; }
+  div.h-meta { width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: auto; word-break: break-word; }
+}
+</style>
+</head>
+<body>
+
+<div class="broadside">
+  <span class="crn-tr"></span>
+  <span class="crn-bl"></span>
+  <span class="edge">THE OPEN·PROSE REFERENCE · TOKENS / TYPE / METHOD · STRATA</span>
+
+  <div class="bs-head">
+    <div class="h-eyebrow">Direction ι · Reference № 4 · strata 3D</div>
+    <h1 class="h-title">OPEN<em>PROSE</em></h1>
+    <div class="h-meta">
+      <div><strong>spatial reference</strong></div>
+      <div>stack · orbit · zoom</div>
+      <div>v0.42 · MMXXVI</div>
+    </div>
+  </div>
+
+  <div class="bs-subhead">
+    <em>The literary computer</em><span class="sep">·</span>tokens as strata<span class="sep">·</span>a card index, <em>stacked</em>.
+  </div>
+
+  <div class="controls" id="controls">
+    <div class="search-wrap">
+      <input class="search" id="search" type="text" placeholder="filter — name, value, category, alias" autocomplete="off" spellcheck="false" />
+      <span class="kbd">/</span>
+    </div>
+
+    <span class="ctl-label">sort</span>
+    <div class="ctl-group" id="sort-group" role="group">
+      <button data-sort="alpha" aria-pressed="false">alpha</button>
+      <button data-sort="usage" aria-pressed="false">usage</button>
+      <button data-sort="cat"   aria-pressed="true">category</button>
+    </div>
+
+    <div class="ctl-group" id="theme-toggle">
+      <button data-theme-toggle aria-pressed="false" title="toggle theme">◐ theme</button>
+    </div>
+
+    <span class="count" id="count"><span class="n">0</span>/<span id="total">0</span> slabs</span>
+  </div>
+
+  <!-- STAGE: canvas + detail -->
+  <div class="stage">
+    <div class="canvas-wrap">
+      <canvas id="scene"></canvas>
+      <span class="axis-label top">STACK · z↑ ascending</span>
+      <span class="axis-label left">DEPTH · category groups</span>
+      <span class="axis-label bottom">USAGE · slab width</span>
+      <div id="tooltip">
+        <div class="tt-cat"></div>
+        <div class="tt-label"></div>
+        <div class="tt-val"></div>
+      </div>
+      <div class="legend" id="legend">
+        <div class="lg-title">strata</div>
+      </div>
+      <span class="hint">
+        <span class="kbd">drag</span> orbit
+        <span class="kbd">wheel</span> zoom
+        <span class="kbd">↑↓</span> step
+      </span>
+    </div>
+    <aside class="detail" id="detail">
+      <div class="detail-empty" id="detail-empty">
+        Hover a slab to preview · click to lock detail. Use <span class="kbd">/</span> to filter, <span class="kbd">↑↓</span> to step through, <span class="kbd">C</span> to copy, <span class="kbd">T</span> to toggle theme.
+      </div>
+    </aside>
+  </div>
+
+  <div class="tagline-strap">
+    <span class="ts-rule"></span>
+    <span class="ts-word">Declare.</span>
+    <span class="ts-word accent">Verify.</span>
+    <span class="ts-word">Deliver.</span>
+    <span class="ts-rule"></span>
+  </div>
+
+  <div class="bs-foot">
+    <span class="stamp">Set in Playfair Display, Crimson Pro, JetBrains Mono · printed in Brooklyn · MMXXVI</span>
+    <span>
+      <a href="direction-iota-reference-card-concept.html">ι interactive</a>
+      <a href="direction-iota-reference-card.html">ι template</a>
+      <a href="direction-alpha-editorial-concept.html">α</a>
+      <a href="direction-beta-tufte-concept.html">β</a>
+      <a href="direction-gamma-manuscript-concept.html">γ</a>
+      <a href="direction-delta-machine-concept.html">δ</a>
+      <a href="direction-epsilon-operator-concept.html">ε</a>
+      <a href="direction-zeta-saas-concept.html">ζ</a>
+      <a href="direction-eta-organism-concept.html">η</a>
+      <a href="direction-theta-living-document-concept.html">θ</a>
+      <a href="direction-kappa-codex-spreads-concept.html">κ</a>
+    </span>
+  </div>
+
+  <div class="help-strip">
+    <span><span class="kbd">/</span>focus filter</span>
+    <span><span class="kbd">↑</span><span class="kbd">↓</span>step slab</span>
+    <span><span class="kbd">Enter</span>lock detail</span>
+    <span><span class="kbd">C</span>copy primary</span>
+    <span><span class="kbd">T</span>theme</span>
+    <span><span class="kbd">R</span>reset view</span>
+    <span><span class="kbd">Esc</span>clear</span>
+  </div>
+</div>
+
+<div class="toast" id="toast">copied</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* ============================================
+   DATA — lifted wholesale from the interactive
+   reference card. Same 33 entries.
+   ============================================ */
+const ENTRIES = [
+  // ── PALETTE ───────────────────────────────
+  { id:'paper',      cat:'palette', name:'--paper',      value:'#f4ede0', usage:0.96, kind:'color', note:'Base paper. The broadside background; the warm cream that holds the figure.', aliases:'cream off-white background' },
+  { id:'paper-lt',   cat:'palette', name:'--paper-lt',   value:'#faf5ea', usage:0.78, kind:'color', note:'Card stock. Lifted from the page for the broadside surface itself.', aliases:'card surface' },
+  { id:'paper-dk',   cat:'palette', name:'--paper-dk',   value:'#ece4d2', usage:0.42, kind:'color', note:'Hover and pressed states. One step deeper into the warm.', aliases:'depressed' },
+  { id:'ink',        cat:'palette', name:'--ink',        value:'#1a1612', usage:0.93, kind:'color', note:'Primary ink. The text body; the heavy rules.', aliases:'black text body' },
+  { id:'ink-2',      cat:'palette', name:'--ink-2',      value:'#4a4338', usage:0.71, kind:'color', note:'Secondary ink. Captions, italics, supporting prose.', aliases:'medium grey' },
+  { id:'ink-3',      cat:'palette', name:'--ink-3',      value:'#7a7263', usage:0.58, kind:'color', note:'Tertiary ink. Mono metadata, refs, labels.', aliases:'mute grey meta' },
+  { id:'ink-4',      cat:'palette', name:'--ink-4',      value:'#b3a892', usage:0.28, kind:'color', note:'Quaternary. Hairline rules, watermarks.', aliases:'pale rule' },
+  { id:'violet',     cat:'palette', name:'--violet',     value:'#5b3aa0', usage:0.95, kind:'color', note:'The brand accent. Used for emphasis, links, eyebrows, the method number badges.', aliases:'brand primary accent' },
+  { id:'violet-deep',cat:'palette', name:'--violet-deep',value:'#3d2570', usage:0.18, kind:'color', note:'Pressed and code-tag accent. Sits inside the violet-faint chip background.', aliases:'deep purple' },
+  { id:'violet-soft',cat:'palette', name:'--violet-soft',value:'#7a5cc0', usage:0.12, kind:'color', note:'A lift of the brand violet for subtle gradients and lighter accents.', aliases:'light purple' },
+  { id:'orange',     cat:'palette', name:'--orange',     value:'#d2691e', usage:0.62, kind:'color', note:'The trajectory. Used only for live values and the orange line on the figure.', aliases:'amber accent trajectory' },
+  { id:'orange-soft',cat:'palette', name:'--orange-soft',value:'#e88a44', usage:0.16, kind:'color', note:'Soft amber. Hover and lifted variants of the trajectory.', aliases:'soft amber' },
+
+  // ── TYPE ──────────────────────────────────
+  { id:'serif',      cat:'type', name:'--serif',  value:"'Playfair Display', Bodoni, Georgia, serif", kind:'type-serif', preview:'Open Prose', size:'clamp(2.6rem, 5.2vw, 4.4rem)', weight:800, usage:0.88, note:'Display serif. The masthead, the tagline, the figure captions.' },
+  { id:'sans',       cat:'type', name:'--sans',   value:"'Crimson Pro', Georgia, serif",              kind:'type-sans',  preview:'a literary computer', size:'1rem', weight:400, usage:0.91, note:'Body text. Crimson Pro is treated as a literary sans — pairs with the display serif without competition.' },
+  { id:'mono',       cat:'type', name:'--mono',   value:"'JetBrains Mono', 'SF Mono', monospace",      kind:'type-mono',  preview:'brief.prose · v0.42', size:'0.78rem', weight:500, usage:0.84, note:'Code, metadata, the eyebrow chips, axis labels. Tight and technical.' },
+  { id:'scale-title',cat:'type', name:'h-title',     value:'clamp(2.6rem, 5.2vw, 4.4rem)', kind:'type-serif', preview:'OPENPROSE', size:'clamp(2.6rem, 5.2vw, 4.4rem)', weight:800, lh:'0.92', tracking:'-0.02em', usage:0.55, note:'Masthead scale. Uppercase, tight tracking, 0.92 leading.' },
+  { id:'scale-strap',cat:'type', name:'tagline',     value:'clamp(1.4rem, 2.6vw, 2.1rem)', kind:'type-serif', preview:'Declare. Verify. Deliver.', size:'clamp(1.4rem, 2.6vw, 2.1rem)', weight:400, italic:true, usage:0.48, note:'Tagline strap. Italic, calm, generous tracking.' },
+  { id:'scale-body', cat:'type', name:'body',        value:'1rem', kind:'type-sans', preview:'Each run is a step along the contract\'s gradient.', size:'1rem', weight:400, lh:'1.6', usage:0.96, note:'Body prose. Designed for slow reading.' },
+  { id:'scale-cap',  cat:'type', name:'fig-caption', value:'0.84rem', kind:'type-serif', preview:'the trajectory of weekly-energy-digest', size:'0.84rem', weight:400, italic:true, usage:0.45, note:'Figure caption. Italic serif at small size.' },
+  { id:'scale-eye',  cat:'type', name:'h-eyebrow',   value:'0.64rem', kind:'type-mono', preview:'DIRECTION ι · BROADSIDE № 4', size:'0.64rem', weight:500, tracking:'0.18em', upper:true, usage:0.66, note:'The eyebrow chip and small-caps labels. Mono, generously tracked, uppercase.' },
+
+  // ── METHOD ────────────────────────────────
+  { id:'declare', cat:'method', name:'1 · Declare', value:'.prose contract', kind:'method', usage:1.0, note:'Write the responsibility as a .prose file — requires, ensures, cadence. Plain language, version-controlled. The first move, and the only one a human must sign.', aliases:'spec brief requires ensures' },
+  { id:'resolve', cat:'method', name:'2 · Resolve', value:'bind & verify inputs', kind:'method', usage:1.0, note:'The runtime fetches inputs — APIs, files, refs — binds them, and verifies the binding before any work runs. No silent missing inputs.', aliases:'fetch bind inputs' },
+  { id:'verify',  cat:'method', name:'3 · Verify',  value:'score vs ensures', kind:'method', usage:1.0, note:'Each draft is scored against the ensures block. Below threshold, the runtime holds. No silent failures.', aliases:'score evaluate hold' },
+  { id:'deliver', cat:'method', name:'4 · Deliver', value:'sign · bill on pass', kind:'method', usage:1.0, note:'Pass once, deliver. Sign the result. Bill by delivery — failed and held runs are free.', aliases:'sign ship bill' },
+
+  // ── FORMULA / SYMBOLS ─────────────────────
+  { id:'iter',      cat:'formula', name:'P_{n+1}',     value:'P_n + η · ∇verify(P_n)', kind:'formula', usage:0.7, note:'The iteration equation: each run takes a step along the verify-gradient from the prior responsibility.' },
+  { id:'mono-prop', cat:'formula', name:'score',       value:'score_{n+1} ≥ score_n',  kind:'formula', usage:0.5, note:'Monotonic property. The eval pass rate never regresses, run over run.' },
+  { id:'sym-Pn',    cat:'formula', name:'P_n',         value:'responsibility, run n',  kind:'symbol', usage:0.42, note:'The current contracted responsibility, at iteration n.' },
+  { id:'sym-grad',  cat:'formula', name:'∇verify',     value:'contract gradient',      kind:'symbol', usage:0.38, note:'The direction in spec-space that most increases verified pass rate.' },
+  { id:'sym-eta',   cat:'formula', name:'η',           value:'refinement rate',        kind:'symbol', usage:0.32, note:'The step size — how aggressively the program is revised per run.' },
+  { id:'sym-score', cat:'formula', name:'score',       value:'eval pass rate ∈ [0,1]', kind:'symbol', usage:0.55, note:'The eval pass rate. A real number; 1.0 means all ensures clauses passed.' },
+  { id:'sym-v',     cat:'formula', name:'v',           value:'version · run number',   kind:'symbol', usage:0.48, note:'Tag for a run. v42 = the forty-second run of the program.' },
+  { id:'sym-x',     cat:'formula', name:'×',           value:'held run · contract not met', kind:'symbol', usage:0.22, note:'A held run. Failed the ensures block; not billed; not delivered.' },
+
+  // ── PROPERTIES ────────────────────────────
+  { id:'prop-mono', cat:'property', name:'monotonic',          value:'score never regresses', kind:'property', usage:0.7, note:'A delivered run only ever raises the floor on quality. Earlier runs are not undone.' },
+  { id:'prop-bound',cat:'property', name:'contract-bounded',   value:'no silent failures',     kind:'property', usage:0.65, note:'Every output is checked against the contract. Failures are loud.' },
+  { id:'prop-hold', cat:'property', name:'hold-on-regression', value:'fails closed',           kind:'property', usage:0.5, note:'If a run would lower the score, the runtime holds. Nothing ships.' },
+  { id:'prop-sign', cat:'property', name:'signed',             value:'every delivery',         kind:'property', usage:0.6, note:'Each delivered run is signed — provenance, version, score — recorded.' },
+
+  // ── FIGURE / AXES ─────────────────────────
+  { id:'axis-x', cat:'figure', name:'x-axis', value:'RESPONSIBILITY · SPEC SPACE → VERIFIED', kind:'figure', usage:0.4, note:'Horizontal axis of the trajectory figure. Left is unbound responsibility; right is verified.' },
+  { id:'axis-y', cat:'figure', name:'y-axis', value:'EVAL ↑',                                   kind:'figure', usage:0.4, note:'Vertical axis. Higher is better. The pass rate.' },
+  { id:'fig-traj', cat:'figure', name:'trajectory', value:'v1 → v42 · orange line', kind:'figure', usage:0.55, note:'The actual program trajectory across runs, from spec-space toward the verified basin.' },
+  { id:'fig-held', cat:'figure', name:'held marks', value:'× crosses · held runs',    kind:'figure', usage:0.3, note:'X marks on the figure denote runs that were held — failed the ensures block, not delivered.' }
+];
+
+const GROUPS = [
+  { id:'palette',  title:'Palette',     desc:'Brand color tokens — ink, paper, accent.', tint:0x5b3aa0 },
+  { id:'type',     title:'Type',        desc:'The three faces and the working scale.',   tint:0xd2691e },
+  { id:'method',   title:'Method',      desc:'The four moves: declare, resolve, verify, deliver.', tint:0x3d2570 },
+  { id:'formula',  title:'Formula',     desc:'Iteration equation and symbols.',         tint:0x7a5cc0 },
+  { id:'property', title:'Properties',  desc:'Invariants the runtime promises.',        tint:0x4a4338 },
+  { id:'figure',   title:'Figure',      desc:'Axes and marks from the trajectory plot.', tint:0xb3a892 }
+];
+
+/* ============================================
+   STATE
+   ============================================ */
+const state = {
+  query: '',
+  sort: 'cat',
+  selectedIdx: 0,
+  lockedId: null,
+  hoveredId: null,
+  visibleIds: [],
+  theme: 'light',
+};
+
+/* ============================================
+   DOM REFS
+   ============================================ */
+const canvas      = document.getElementById('scene');
+const wrap        = canvas.parentElement;
+const searchInput = document.getElementById('search');
+const countEl     = document.getElementById('count').querySelector('.n');
+const totalEl     = document.getElementById('total');
+const detailEl    = document.getElementById('detail');
+const detailEmpty = document.getElementById('detail-empty');
+const tooltipEl   = document.getElementById('tooltip');
+const ttCat       = tooltipEl.querySelector('.tt-cat');
+const ttLabel     = tooltipEl.querySelector('.tt-label');
+const ttVal       = tooltipEl.querySelector('.tt-val');
+const toastEl     = document.getElementById('toast');
+const themeToggle = document.querySelector('[data-theme-toggle]');
+const sortGroup   = document.getElementById('sort-group');
+const legendEl    = document.getElementById('legend');
+totalEl.textContent = ENTRIES.length;
+
+/* ============================================
+   THREE.JS — scene
+   ============================================ */
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setClearColor(0x000000, 0);
+canvas.replaceWith(renderer.domElement);
+renderer.domElement.id = 'scene';
+const sceneEl = renderer.domElement;
+
+function resize() {
+  const r = wrap.getBoundingClientRect();
+  renderer.setSize(r.width, r.height, false);
+  camera.aspect = r.width / r.height;
+  camera.updateProjectionMatrix();
+}
+
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 400);
+camera.position.set(28, 18, 32);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 8;
+controls.maxDistance = 80;
+controls.target.set(0, 0, 0);
+controls.update();
+
+const lightDir = new THREE.DirectionalLight(0xffffff, 0.55);
+lightDir.position.set(6, 14, 8);
+scene.add(lightDir);
+scene.add(new THREE.AmbientLight(0xffffff, 0.85));
+
+/* ============================================
+   GEOMETRY — one slab per entry
+   ============================================ */
+const SLAB_THICKNESS = 0.18;
+const SLAB_GAP       = 0.42;
+const GROUP_GAP      = 0.95;
+const SLAB_DEPTH     = 10;        // along z (depth into camera)
+const SLAB_MAX_W     = 16;        // along x; scales with usage
+const SLAB_MIN_W     = 5.2;
+
+const slabsRoot = new THREE.Group();
+scene.add(slabsRoot);
+
+const slabIndex = new Map();      // id -> slab record
+
+function disposeSlabs() {
+  while (slabsRoot.children.length) {
+    const m = slabsRoot.children.pop();
+    m.traverse(o => {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) {
+        if (Array.isArray(o.material)) o.material.forEach(mm => mm.dispose());
+        else o.material.dispose();
+      }
+    });
+  }
+  slabIndex.clear();
+}
+
+function hexNum(hex) {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!m) return 0xcccccc;
+  return parseInt(m[1] + m[2] + m[3], 16);
+}
+function hexToRgb(hex) {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!m) return null;
+  return { r: parseInt(m[1],16), g: parseInt(m[2],16), b: parseInt(m[3],16) };
+}
+function contrastInk(hex) {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return '#1a1612';
+  const lum = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+  return lum > 0.55 ? '#1a1612' : '#faf5ea';
+}
+
+function slabColor(e) {
+  if (e.kind === 'color') return hexNum(e.value);
+  const g = GROUPS.find(g => g.id === e.cat);
+  return g ? g.tint : 0xb3a892;
+}
+
+/* canvas texture for the slab face — slab label + value */
+function buildSlabTexture(e) {
+  const w = 1024, h = 512;
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d');
+
+  const dark = state.theme === 'dark';
+  const bg   = dark ? '#1f1a14' : '#faf5ea';
+  const ink  = dark ? '#f4ede0' : '#1a1612';
+  const ink2 = dark ? '#9d937f' : '#7a7263';
+  const violet = dark ? '#a587e6' : '#5b3aa0';
+
+  if (e.kind === 'color') {
+    ctx.fillStyle = e.value;
+    ctx.fillRect(0, 0, w, h);
+    // ink overlay strip for legibility
+    const overlayCol = contrastInk(e.value);
+    ctx.fillStyle = overlayCol === '#1a1612'
+      ? 'rgba(26,22,18,0.06)'
+      : 'rgba(244,237,224,0.10)';
+    ctx.fillRect(0, h * 0.55, w, h * 0.45);
+    ctx.fillStyle = overlayCol;
+  } else {
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = ink2;
+    ctx.lineWidth = 4;
+    ctx.strokeRect(8, 8, w - 16, h - 16);
+    ctx.fillStyle = ink;
+  }
+
+  // Category eyebrow chip
+  ctx.font = '500 36px JetBrains Mono, monospace';
+  ctx.fillStyle = e.kind === 'color' ? contrastInk(e.value) : violet;
+  ctx.textBaseline = 'top';
+  ctx.fillText(e.cat.toUpperCase(), 56, 56);
+
+  // Name (mono)
+  ctx.font = '500 96px JetBrains Mono, monospace';
+  ctx.fillStyle = e.kind === 'color' ? contrastInk(e.value) : ink;
+  ctx.fillText(e.name, 56, 130);
+
+  // Value (smaller, mono, lower)
+  ctx.font = '400 60px JetBrains Mono, monospace';
+  const vCol = e.kind === 'color' ? contrastInk(e.value) : ink2;
+  ctx.fillStyle = vCol;
+  let val = e.value;
+  if (val && val.length > 48) val = val.slice(0, 45) + '…';
+  ctx.fillText(val || '', 56, 260);
+
+  // Type specimens — render the actual face on the slab
+  if (e.kind === 'type-serif' || e.kind === 'type-sans' || e.kind === 'type-mono') {
+    const fam = e.kind === 'type-mono' ? 'JetBrains Mono, monospace'
+              : e.kind === 'type-sans' ? 'Crimson Pro, Georgia, serif'
+              : 'Playfair Display, Georgia, serif';
+    let weight = e.weight || 400;
+    let style = e.italic ? 'italic' : 'normal';
+    ctx.font = `${style} ${weight} 100px ${fam}`;
+    ctx.fillStyle = ink;
+    let preview = e.preview || 'AaBbCc 0123';
+    if (e.upper) preview = preview.toUpperCase();
+    ctx.fillText(preview, 56, 360);
+  } else if (e.kind === 'method') {
+    const n = e.id === 'declare' ? '1' : e.id === 'resolve' ? '2' : e.id === 'verify' ? '3' : '4';
+    ctx.font = '700 130px Playfair Display, serif';
+    ctx.fillStyle = violet;
+    ctx.textAlign = 'right';
+    ctx.fillText(n, w - 80, 130);
+    ctx.textAlign = 'left';
+  } else if (e.kind === 'formula' || e.kind === 'symbol') {
+    ctx.font = 'italic 86px Playfair Display, serif';
+    ctx.fillStyle = violet;
+    ctx.textAlign = 'right';
+    const sym = e.kind === 'formula' ? '∑' : '∂';
+    ctx.fillText(sym, w - 80, 130);
+    ctx.textAlign = 'left';
+  }
+
+  // Right side: usage bar
+  const ux = w - 280, uy = 360, uw = 220, uh = 16;
+  ctx.fillStyle = e.kind === 'color'
+    ? 'rgba(0,0,0,0.10)'
+    : (dark ? 'rgba(244,237,224,0.10)' : 'rgba(26,22,18,0.08)');
+  ctx.fillRect(ux, uy, uw, uh);
+  const usagePct = Math.max(0, Math.min(1, e.usage || 0));
+  ctx.fillStyle = e.kind === 'color' ? contrastInk(e.value) : violet;
+  ctx.fillRect(ux, uy, uw * usagePct, uh);
+  ctx.font = '500 32px JetBrains Mono, monospace';
+  ctx.fillStyle = vCol;
+  ctx.fillText(`usage · ${Math.round(usagePct * 100).toString().padStart(2,'0')}`, ux, uy + 30);
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.anisotropy = renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 4;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+function buildEdgeMaterial() {
+  return new THREE.LineBasicMaterial({
+    color: state.theme === 'dark' ? 0xf4ede0 : 0x1a1612,
+    transparent: true,
+    opacity: 0.55,
+    depthWrite: false,
+  });
+}
+
+function buildSlabs(filtered) {
+  disposeSlabs();
+
+  let y = 0;
+  let prevCat = null;
+
+  // sort categories per state.sort
+  const ordered = [...filtered].sort(sortFn);
+
+  // Walk and build, stacking upward.
+  // For 'cat' sort we space groups slightly.
+  ordered.forEach((e, i) => {
+    if (state.sort === 'cat' && prevCat && e.cat !== prevCat) {
+      y += GROUP_GAP;
+    }
+    prevCat = e.cat;
+
+    const color = slabColor(e);
+    const usage = Math.max(0.15, e.usage || 0.2);
+    const width = SLAB_MIN_W + (SLAB_MAX_W - SLAB_MIN_W) * usage;
+
+    const slabGroup = new THREE.Group();
+    slabGroup.position.set(0, y + SLAB_THICKNESS / 2, 0);
+
+    // depth offset based on category to spatially separate
+    const catIdx = GROUPS.findIndex(g => g.id === e.cat);
+    slabGroup.position.z = (catIdx - (GROUPS.length - 1) / 2) * 0.35;
+
+    // Top face uses canvas texture
+    const tex = buildSlabTexture(e);
+
+    // Mesh: box geometry with materials per face
+    const geo = new THREE.BoxGeometry(width, SLAB_THICKNESS, SLAB_DEPTH);
+    const opacity = 0.78;
+    const sideMat = new THREE.MeshLambertMaterial({
+      color, transparent: true, opacity, depthWrite: false,
+    });
+    const topMat = new THREE.MeshBasicMaterial({
+      map: tex, transparent: true, opacity: 0.98, depthWrite: false,
+    });
+    const bottomMat = new THREE.MeshLambertMaterial({
+      color, transparent: true, opacity: 0.4, depthWrite: false,
+    });
+    // BoxGeometry face order: +X, -X, +Y (top), -Y (bottom), +Z, -Z
+    const materials = [sideMat, sideMat.clone(), topMat, bottomMat, sideMat.clone(), sideMat.clone()];
+    const mesh = new THREE.Mesh(geo, materials);
+    mesh.userData.entryId = e.id;
+    slabGroup.add(mesh);
+
+    // Edge outline
+    const eg = new THREE.EdgesGeometry(geo);
+    const eline = new THREE.LineSegments(eg, buildEdgeMaterial());
+    eline.renderOrder = 2;
+    slabGroup.add(eline);
+
+    slabsRoot.add(slabGroup);
+
+    slabIndex.set(e.id, {
+      entry: e,
+      group: slabGroup,
+      mesh,
+      edges: eline,
+      texture: tex,
+      baseY: y + SLAB_THICKNESS / 2,
+      baseZ: slabGroup.position.z,
+      baseOpacity: opacity,
+      materials,
+      width,
+    });
+
+    y += SLAB_THICKNESS + SLAB_GAP;
+  });
+
+  // Center the stack vertically around origin
+  const totalH = y;
+  slabsRoot.position.y = -totalH / 2 + SLAB_THICKNESS;
+}
+
+/* ============================================
+   FILTER + SORT (mirrors source)
+   ============================================ */
+function matchesQuery(e, q) {
+  if (!q) return true;
+  q = q.toLowerCase();
+  const hay = [e.name, e.value, e.cat, e.kind, e.note, e.aliases, e.id].filter(Boolean).join(' ').toLowerCase();
+  return hay.includes(q);
+}
+
+function sortFn(a, b) {
+  if (state.sort === 'alpha') return a.name.localeCompare(b.name);
+  if (state.sort === 'usage') return (b.usage||0) - (a.usage||0);
+  const gA = GROUPS.findIndex(g => g.id === a.cat);
+  const gB = GROUPS.findIndex(g => g.id === b.cat);
+  if (gA !== gB) return gA - gB;
+  return a.name.localeCompare(b.name);
+}
+
+function render() {
+  const q = state.query.trim();
+  const filtered = ENTRIES.filter(e => matchesQuery(e, q));
+  const ordered  = [...filtered].sort(sortFn);
+  state.visibleIds = ordered.map(e => e.id);
+  countEl.textContent = ordered.length;
+
+  buildSlabs(ordered);
+  buildLegend(ordered);
+
+  // Clamp selection
+  if (state.selectedIdx >= state.visibleIds.length) state.selectedIdx = state.visibleIds.length - 1;
+  if (state.selectedIdx < 0) state.selectedIdx = 0;
+
+  // Re-fit camera target on stack center
+  controls.target.set(0, 0, 0);
+
+  applySelection();
+  renderDetail();
+}
+
+function buildLegend(ordered) {
+  const counts = {};
+  ordered.forEach(e => { counts[e.cat] = (counts[e.cat]||0) + 1; });
+  legendEl.innerHTML = '<div class="lg-title">strata · ' + ordered.length + '</div>' + GROUPS.map(g => {
+    const n = counts[g.id] || 0;
+    if (n === 0) return '';
+    const hex = '#' + g.tint.toString(16).padStart(6,'0');
+    return `<div class="lg-row"><span class="lg-chip" style="background:${hex}"></span>${g.title} · ${n}</div>`;
+  }).join('');
+}
+
+/* ============================================
+   SELECTION + DETAIL PANE
+   ============================================ */
+function applySelection() {
+  // dim or fade non-matching nothing-to-do here; matching handled by filter.
+  // emphasize selected slab via z-lift + opacity.
+  const selectedId = state.lockedId || state.visibleIds[state.selectedIdx];
+  const hoverId = state.hoveredId;
+  slabIndex.forEach((rec, id) => {
+    const isSel = id === selectedId;
+    const isHover = id === hoverId;
+    // target positions
+    rec.group.userData.targetLift = isSel ? 0.9 : (isHover ? 0.35 : 0);
+    rec.group.userData.targetScale = isSel ? 1.05 : (isHover ? 1.02 : 1);
+    // outline opacity boost on select
+    rec.edges.material.opacity = isSel ? 0.95 : (isHover ? 0.75 : 0.45);
+  });
+}
+
+function renderDetail() {
+  const id = state.lockedId || state.visibleIds[state.selectedIdx];
+  const e = id ? ENTRIES.find(x => x.id === id) : null;
+  if (!e) {
+    detailEl.innerHTML = '';
+    detailEl.appendChild(detailEmpty);
+    return;
+  }
+  detailEl.innerHTML = renderDetailHTML(e, state.lockedId === id);
+  detailEl.querySelectorAll('.copy-chip').forEach(chip => {
+    chip.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      copyToClipboard(chip.dataset.copy, chip);
+    });
+  });
+}
+
+function renderDetailHTML(e, locked) {
+  const rgb = e.kind === 'color' ? hexToRgb(e.value) : null;
+
+  let swatchHTML = '';
+  if (e.kind === 'color') {
+    swatchHTML = `<span class="detail-swatch" style="background:${e.value}; border-color:${contrastInk(e.value)}"></span>`;
+  } else if (e.kind === 'type-serif') {
+    swatchHTML = `<span class="detail-swatch">A</span>`;
+  } else if (e.kind === 'type-sans') {
+    swatchHTML = `<span class="detail-swatch sans">a</span>`;
+  } else if (e.kind === 'type-mono') {
+    swatchHTML = `<span class="detail-swatch mono">{ }</span>`;
+  } else if (e.kind === 'method') {
+    const n = e.id === 'declare' ? '1' : e.id === 'resolve' ? '2' : e.id === 'verify' ? '3' : '4';
+    swatchHTML = `<span class="detail-swatch">${n}</span>`;
+  } else if (e.kind === 'formula') {
+    swatchHTML = `<span class="detail-swatch">∑</span>`;
+  } else if (e.kind === 'symbol') {
+    swatchHTML = `<span class="detail-swatch">∂</span>`;
+  } else if (e.kind === 'property') {
+    swatchHTML = `<span class="detail-swatch">¶</span>`;
+  } else if (e.kind === 'figure') {
+    swatchHTML = `<span class="detail-swatch">⊞</span>`;
+  } else {
+    swatchHTML = `<span class="detail-swatch"></span>`;
+  }
+
+  const rows = [];
+  rows.push(`<div class="row"><span class="k">id</span><span class="v">${escapeHtml(e.id)}</span></div>`);
+  rows.push(`<div class="row"><span class="k">category</span><span class="v">${escapeHtml(e.cat)}</span></div>`);
+  rows.push(`<div class="row"><span class="k">value</span><span class="v">${escapeHtml(e.value)}</span></div>`);
+  if (rgb) rows.push(`<div class="row"><span class="k">rgb</span><span class="v">rgb(${rgb.r}, ${rgb.g}, ${rgb.b})</span></div>`);
+  if (e.lh) rows.push(`<div class="row"><span class="k">leading</span><span class="v">${e.lh}</span></div>`);
+  if (e.tracking) rows.push(`<div class="row"><span class="k">tracking</span><span class="v">${e.tracking}</span></div>`);
+  if (e.weight) rows.push(`<div class="row"><span class="k">weight</span><span class="v">${e.weight}${e.italic ? ' · italic' : ''}${e.upper ? ' · uppercase' : ''}</span></div>`);
+  if (e.size) rows.push(`<div class="row"><span class="k">size</span><span class="v">${e.size}</span></div>`);
+  rows.push(`<div class="row"><span class="k">usage</span><span class="v">${Math.round((e.usage||0)*100)}%</span></div>`);
+
+  const chips = [];
+  chips.push(`<button class="copy-chip" data-copy="${escapeAttr(e.value)}">copy value</button>`);
+  if (e.name.startsWith('--')) chips.push(`<button class="copy-chip" data-copy="var(${e.name})">copy var()</button>`);
+  if (e.kind === 'color') {
+    chips.push(`<button class="copy-chip" data-copy="${e.value.toUpperCase()}">copy hex</button>`);
+    if (rgb) chips.push(`<button class="copy-chip" data-copy="rgb(${rgb.r}, ${rgb.g}, ${rgb.b})">copy rgb</button>`);
+  }
+  if (e.kind === 'formula') chips.push(`<button class="copy-chip" data-copy="${escapeAttr(e.value)}">copy eq</button>`);
+
+  let preview = '';
+  if (e.kind === 'type-serif' || e.kind === 'type-sans' || e.kind === 'type-mono') {
+    const fam = e.kind === 'type-mono' ? 'var(--mono)' : (e.kind === 'type-sans' ? 'var(--sans)' : 'var(--serif)');
+    const style = `font-family:${fam}; font-size:${e.size||'1.4rem'}; font-weight:${e.weight||400}; ${e.italic ? 'font-style:italic;' : ''} ${e.tracking ? 'letter-spacing:'+e.tracking+';' : ''} ${e.lh ? 'line-height:'+e.lh+';' : ''} ${e.upper ? 'text-transform:uppercase;' : ''}`;
+    preview = `<div class="type-preview"><div class="specimen" style="${style}">${escapeHtml(e.preview || 'AaBbCc 0123')}</div><div class="specimen-meta">${escapeHtml(e.name)} · ${escapeHtml(e.size||'')}</div></div>`;
+  }
+
+  const note = e.note ? `<div class="note">${escapeHtml(e.note)}</div>` : '';
+  const lockNote = locked ? `<div style="font-family:var(--mono); font-size:0.52rem; letter-spacing:0.16em; text-transform:uppercase; color:var(--violet); border-top:1px dashed var(--rule); padding-top:0.3rem; margin-top:0.1rem;">▣ locked · click slab or Esc to release</div>` : '';
+
+  return `
+    <div class="detail-head">
+      ${swatchHTML}
+      <span class="detail-name">${escapeHtml(e.name)}</span>
+      <span class="detail-cat">${escapeHtml(e.cat)}</span>
+    </div>
+    ${rows.join('')}
+    <div class="copy-row">${chips.join('')}</div>
+    ${preview}
+    ${note}
+    ${lockNote}
+  `;
+}
+
+/* ============================================
+   RAYCAST + INTERACTION
+   ============================================ */
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2(-10, -10);
+
+function pickSlab() {
+  raycaster.setFromCamera(mouse, camera);
+  const meshes = [];
+  slabIndex.forEach(rec => meshes.push(rec.mesh));
+  const hits = raycaster.intersectObjects(meshes, false);
+  if (hits.length) return hits[0].object.userData.entryId;
+  return null;
+}
+
+renderer.domElement.addEventListener('mousemove', (ev) => {
+  const r = renderer.domElement.getBoundingClientRect();
+  mouse.x =  ((ev.clientX - r.left) / r.width)  * 2 - 1;
+  mouse.y = -((ev.clientY - r.top)  / r.height) * 2 + 1;
+});
+
+renderer.domElement.addEventListener('mouseleave', () => {
+  mouse.set(-10, -10);
+  state.hoveredId = null;
+  tooltipEl.classList.remove('show');
+  applySelection();
+});
+
+renderer.domElement.addEventListener('click', () => {
+  const id = state.hoveredId;
+  if (id) {
+    if (state.lockedId === id) {
+      state.lockedId = null;
+    } else {
+      state.lockedId = id;
+      state.selectedIdx = state.visibleIds.indexOf(id);
+    }
+    applySelection();
+    renderDetail();
+  }
+});
+
+/* ============================================
+   TOOLTIP
+   ============================================ */
+function showTooltip(entry, sx, sy) {
+  ttCat.textContent = entry.cat.toUpperCase();
+  ttLabel.textContent = entry.name;
+  const truncated = entry.value && entry.value.length > 36 ? entry.value.slice(0, 33) + '…' : (entry.value || '');
+  ttVal.textContent = truncated;
+  const r = renderer.domElement.getBoundingClientRect();
+  const tx = Math.min(sx + 14, r.width - 240);
+  const ty = Math.max(sy - 4, 4);
+  tooltipEl.style.left = tx + 'px';
+  tooltipEl.style.top = ty + 'px';
+  tooltipEl.classList.add('show');
+}
+
+/* ============================================
+   CLIPBOARD + TOAST
+   ============================================ */
+let toastTimer = null;
+function showToast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1100);
+}
+
+async function copyToClipboard(text, chipEl) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (err) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+  const truncated = text && text.length > 36 ? text.slice(0, 33) + '…' : (text || '');
+  showToast(`copied · ${truncated}`);
+  if (chipEl) {
+    chipEl.classList.add('flashed');
+    setTimeout(() => chipEl.classList.remove('flashed'), 280);
+  }
+}
+
+function escapeHtml(s) {
+  if (s === undefined || s === null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+  }[c]));
+}
+function escapeAttr(s) { return escapeHtml(s); }
+
+/* ============================================
+   ANIMATION LOOP
+   ============================================ */
+function animateLoop() {
+  requestAnimationFrame(animateLoop);
+
+  // Pick under mouse
+  const hoveredId = pickSlab();
+  if (hoveredId !== state.hoveredId) {
+    state.hoveredId = hoveredId;
+    if (hoveredId) {
+      const r = renderer.domElement.getBoundingClientRect();
+      const sx = ((mouse.x + 1) / 2) * r.width;
+      const sy = ((-mouse.y + 1) / 2) * r.height;
+      showTooltip(ENTRIES.find(x => x.id === hoveredId), sx, sy);
+      renderer.domElement.style.cursor = 'pointer';
+    } else {
+      tooltipEl.classList.remove('show');
+      renderer.domElement.style.cursor = 'grab';
+    }
+    applySelection();
+  } else if (hoveredId) {
+    // Tooltip follows mouse position
+    const r = renderer.domElement.getBoundingClientRect();
+    const sx = ((mouse.x + 1) / 2) * r.width;
+    const sy = ((-mouse.y + 1) / 2) * r.height;
+    tooltipEl.style.left = Math.min(sx + 14, r.width - 240) + 'px';
+    tooltipEl.style.top = Math.max(sy - 4, 4) + 'px';
+  }
+
+  // Lerp slab lifts / scales
+  slabIndex.forEach(rec => {
+    const targetLift = rec.group.userData.targetLift || 0;
+    const targetScale = rec.group.userData.targetScale || 1;
+    // z lift (toward camera)
+    const curZ = rec.group.position.z;
+    const wantZ = rec.baseZ + targetLift * 1.6;
+    rec.group.position.z = curZ + (wantZ - curZ) * 0.15;
+    // scale
+    const cs = rec.group.scale.x;
+    const ns = cs + (targetScale - cs) * 0.18;
+    rec.group.scale.set(ns, 1, ns);
+  });
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+/* ============================================
+   CONTROLS — UI
+   ============================================ */
+searchInput.addEventListener('input', (e) => {
+  state.query = e.target.value;
+  state.selectedIdx = 0;
+  state.lockedId = null;
+  render();
+});
+searchInput.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape') {
+    searchInput.value = '';
+    state.query = '';
+    state.selectedIdx = 0;
+    state.lockedId = null;
+    render();
+    searchInput.blur();
+  } else if (ev.key === 'Enter' || ev.key === 'ArrowDown') {
+    ev.preventDefault();
+    searchInput.blur();
+    applySelection();
+  }
+});
+
+sortGroup.querySelectorAll('button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    state.sort = btn.dataset.sort;
+    sortGroup.querySelectorAll('button').forEach(b =>
+      b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'));
+    state.selectedIdx = 0;
+    state.lockedId = null;
+    render();
+  });
+});
+
+themeToggle.addEventListener('click', () => {
+  const cur = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+  const next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  state.theme = next;
+  themeToggle.setAttribute('aria-pressed', next === 'dark' ? 'true' : 'false');
+  try { localStorage.setItem('ι-theme', next); } catch (e) {}
+  // Rebuild textures + edge materials for theme
+  render();
+});
+
+function resetView() {
+  controls.reset();
+  camera.position.set(28, 18, 32);
+  controls.target.set(0, 0, 0);
+  controls.update();
+}
+
+window.addEventListener('keydown', (ev) => {
+  if (ev.target.tagName === 'INPUT' || ev.target.tagName === 'TEXTAREA') return;
+
+  if (ev.key === '/') {
+    ev.preventDefault();
+    searchInput.focus();
+    searchInput.select();
+    return;
+  }
+  if (ev.key === 't' || ev.key === 'T') {
+    themeToggle.click();
+    return;
+  }
+  if (ev.key === 'r' || ev.key === 'R') {
+    resetView();
+    return;
+  }
+  if (ev.key === 'Escape') {
+    if (state.lockedId) { state.lockedId = null; applySelection(); renderDetail(); return; }
+    if (state.query) {
+      searchInput.value = '';
+      state.query = '';
+      state.selectedIdx = 0;
+      render();
+    }
+    return;
+  }
+  if (ev.key === 'Enter') {
+    ev.preventDefault();
+    const id = state.visibleIds[state.selectedIdx];
+    if (id) {
+      state.lockedId = state.lockedId === id ? null : id;
+      applySelection();
+      renderDetail();
+    }
+    return;
+  }
+  if (ev.key === 'ArrowDown' || ev.key === 'ArrowRight') {
+    ev.preventDefault();
+    if (!state.visibleIds.length) return;
+    state.selectedIdx = Math.min(state.visibleIds.length - 1, state.selectedIdx + 1);
+    applySelection();
+    renderDetail();
+    // gently nudge camera target to follow selection
+    const rec = slabIndex.get(state.visibleIds[state.selectedIdx]);
+    if (rec) controls.target.set(0, rec.baseY + slabsRoot.position.y, 0);
+    return;
+  }
+  if (ev.key === 'ArrowUp' || ev.key === 'ArrowLeft') {
+    ev.preventDefault();
+    if (!state.visibleIds.length) return;
+    state.selectedIdx = Math.max(0, state.selectedIdx - 1);
+    applySelection();
+    renderDetail();
+    const rec = slabIndex.get(state.visibleIds[state.selectedIdx]);
+    if (rec) controls.target.set(0, rec.baseY + slabsRoot.position.y, 0);
+    return;
+  }
+  if (ev.key === 'c' || ev.key === 'C') {
+    const id = state.lockedId || state.visibleIds[state.selectedIdx];
+    if (id) {
+      const e = ENTRIES.find(x => x.id === id);
+      if (e) copyToClipboard(e.value);
+    }
+    return;
+  }
+});
+
+/* ============================================
+   RESIZE
+   ============================================ */
+let resizeRaf = null;
+const ro = new ResizeObserver(() => {
+  if (resizeRaf) cancelAnimationFrame(resizeRaf);
+  resizeRaf = requestAnimationFrame(resize);
+});
+ro.observe(wrap);
+window.addEventListener('resize', resize);
+
+/* ============================================
+   BOOT
+   ============================================ */
+try {
+  const saved = localStorage.getItem('ι-theme');
+  if (saved === 'dark') {
+    document.documentElement.dataset.theme = 'dark';
+    state.theme = 'dark';
+    themeToggle.setAttribute('aria-pressed', 'true');
+  }
+} catch (e) {}
+
+resize();
+render();
+animateLoop();
+
+</script>
+</body>
+</html>

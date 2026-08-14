@@ -1,0 +1,1511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 142 142'%3E%3Cpath d='M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z' fill='%232a2520'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenProse — Direction ι · Reference Card</title>
+<style>
+/* ============================================
+   DIRECTION ι · REFERENCE CARD
+   Distilled from the Nesterov-Momentum / Hessian-Free /
+   CMA-ES scientific reference posters in the inspiration
+   folder. The brand is a piece of scientific apparatus —
+   a reference broadside fit for a research-lab wall.
+
+   DNA: Cream paper #f4ede0. Heavy display serif (Playfair
+   Display) for the wordmark + section titles. Crimson Pro
+   for body. JetBrains Mono for spec/keys. Single deep
+   violet #5b3aa0 as the only chromatic accent (replaces
+   editorial red); a second warm orange #d2691e held back
+   for the trajectory line in the central figure.
+
+   Defining moves:
+   - Vertical-rotated kicker label on the left edge of every
+     section (the poster's signature)
+   - A central data-ink figure as the hero artifact (a 3D
+     loss-landscape-style optimization trajectory rendered
+     in pure SVG)
+   - Numbered method cards as the elaboration unit
+   - Three-word tagline strap at colophon (the poster's
+     "Sample. Adapt. Evolve." pattern)
+
+   Same 9-section markup as α–θ. See INSPIRATION-NOTES.md.
+   ============================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --paper:     #f5f0e8;
+  --paper-dk:  #ede7d6;
+  --paper-lt:  #faf8f3;
+  --ink:       #0f0f0f;
+  --ink-2:     #2e2e2e;
+  --ink-3:     #5a5a5a;
+  --ink-4:     #909090;
+  --red:       #c0392b;
+  --red-muted: #d4604f;
+  --red-deep:  #8e2b20;
+  --rule:      #d8d0c0;
+  --rule-mid:  #e2dcc9;
+
+  /* NEW — the highlighter palette. Two stops so the mark lands
+     as a visible stroke over paper without bleeding the whole row.
+     Yellow = the reader's marker (calm, studious).
+     Hot red = editorial emphasis (urgent, "look here"). */
+  --hl:        rgba(255, 207, 64, 0.36);
+  --hl-hot:    rgba(218, 105, 72, 0.32);
+
+  /* Cinzel as the display serif — Roman inscriptional capitals,
+     sharp engineered serifs, reads both ancient and futuristic.
+     Cormorant Unicase + Marcellus carry the lowercase positions.
+     The mono is Cutive Mono — a typewriter face with antique
+     character, distinctly rare next to the IBM Plex / JetBrains /
+     Source Code Pro mainstream. Pairs with Cinzel as "manuscript
+     mono" — both feel like artifacts from different eras of writing
+     while staying highly legible on screen. */
+  --serif: 'Cinzel', 'Cormorant Unicase', 'Marcellus', Georgia, serif;
+  --sans:  'Helvetica Neue', 'Helvetica', Arial, sans-serif;
+  --mono:  'Cutive Mono', 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+  --wide: 1180px;
+  --measure: 860px;
+}
+
+html { font-size: 17px; scroll-behavior: smooth; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--serif);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
+}
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 15% 8%, rgba(192,57,43,0.03), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 95% 95%, rgba(192,57,43,0.02), transparent 60%);
+}
+body > * { position: relative; z-index: 1; }
+
+/* HIGHLIGHTER MARK — the reader's pen. Linear-gradient rests under the
+   baseline so it reads like a thick marker stroke, not a solid block.
+   Inline so it wraps naturally inside the prose. */
+.hl,
+.hl-hot {
+  background: var(--hl);
+  padding: 0.06em 0.18em;
+  /* Keep gilt/warmth consistent with the warm paper ground. */
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  /* Italic inside a highlighter gets harder to read; drop the italic when the
+     highlighter is applied to an <em>. Red italic is authorial voice; the
+     highlighter replaces that role with reader emphasis. */
+  font-style: inherit;
+  color: inherit;
+}
+.hl-hot { background: var(--hl-hot); }
+
+/* HERO */
+.hero {
+  padding: 5.5rem 2rem 4rem;
+  text-align: center;
+  max-width: var(--wide); margin: 0 auto;
+  position: relative;
+}
+.hero-eyebrow {
+  font-family: var(--sans); font-size: 0.72rem;
+  letter-spacing: 0.24em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 2.5rem;
+  display: inline-flex; align-items: center; gap: 0.75rem;
+}
+.hero-eyebrow::before, .hero-eyebrow::after {
+  content: ''; width: 28px; height: 1px; background: var(--red);
+}
+.hero-mark {
+  font-family: var(--serif);
+  font-size: clamp(4rem, 11vw, 8rem);
+  font-weight: 400; line-height: 0.95;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+.hero-mark em { font-style: italic; color: var(--red); }
+.hero-rule { width: 120px; height: 1px; background: var(--red); margin: 2rem auto 1.5rem; }
+.hero-tagline {
+  font-family: var(--serif);
+  font-size: clamp(1.05rem, 1.8vw, 1.25rem);
+  font-style: italic; color: var(--ink-2);
+  letter-spacing: 0.005em;
+}
+.hero-meta {
+  margin-top: 2rem;
+  font-family: var(--mono); font-size: 0.66rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* SECTIONS */
+section.logotype-section {
+  max-width: var(--wide); margin: 0 auto;
+  padding: 4.5rem 2rem;
+}
+section.logotype-section.narrow { max-width: var(--measure); }
+
+.section-kicker {
+  font-family: var(--sans); font-size: 0.7rem;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 1.25rem;
+  display: flex; align-items: center; gap: 0.85rem;
+}
+.section-kicker::after { content: ''; flex: 1; height: 1px; background: var(--red-muted); opacity: 0.5; }
+
+section.logotype-section h2 {
+  font-family: var(--serif);
+  font-size: clamp(1.8rem, 3.2vw, 2.4rem);
+  font-weight: 400; line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin-bottom: 0.5rem;
+}
+section.logotype-section h2 em { font-style: italic; color: var(--red); }
+section.logotype-section .lede {
+  font-family: var(--serif); font-size: 1.08rem;
+  color: var(--ink-2); max-width: 58ch;
+  margin-bottom: 2rem; line-height: 1.55;
+}
+section.logotype-section .lede::first-line {
+  font-variant: small-caps; letter-spacing: 0.04em;
+}
+
+/* PALETTE */
+.palette-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;
+  margin-top: 2rem;
+}
+.swatch {
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  padding: 1rem;
+  display: flex; flex-direction: column; gap: 0.25rem;
+}
+.swatch-chip {
+  width: 100%; aspect-ratio: 1.4;
+  border: 1px solid var(--rule);
+  margin-bottom: 0.75rem;
+}
+.swatch-name {
+  font-family: var(--sans); font-size: 0.66rem;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink); font-weight: 600;
+}
+.swatch-hex {
+  font-family: var(--mono); font-size: 0.76rem;
+  color: var(--ink-3);
+}
+.swatch-role {
+  font-family: var(--serif); font-style: italic;
+  font-size: 0.84rem; color: var(--ink-3); margin-top: 0.15rem;
+}
+
+/* TYPE SCALE */
+.type-specimen {
+  border: 1px solid var(--rule); background: var(--paper-lt);
+  padding: 2rem 2.25rem;
+}
+.type-row {
+  display: grid; grid-template-columns: 140px 1fr auto;
+  gap: 1.5rem; align-items: baseline;
+  padding: 0.9rem 0; border-bottom: 1px dotted var(--rule-mid);
+}
+.type-row:last-child { border-bottom: none; }
+.type-label {
+  font-family: var(--sans); font-size: 0.62rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+}
+.type-sample { color: var(--ink); line-height: 1.05; }
+.type-sample.display { font-family: var(--serif); font-size: 3rem; font-weight: 400; letter-spacing: -0.02em; }
+.type-sample.display em { font-style: italic; color: var(--red); }
+.type-sample.h2 { font-family: var(--serif); font-size: 2rem; font-weight: 400; font-style: italic; color: var(--red); }
+.type-sample.h3 { font-family: var(--serif); font-size: 1.4rem; font-weight: 400; letter-spacing: -0.01em; }
+.type-sample.body { font-family: var(--serif); font-size: 1.08rem; line-height: 1.55; color: var(--ink-2); }
+.type-sample.small-caps { font-family: var(--serif); font-size: 1rem; font-variant: small-caps; letter-spacing: 0.04em; color: var(--ink-2); }
+.type-sample.mono { font-family: var(--mono); font-size: 0.92rem; color: var(--ink-2); }
+.type-sample.hl-sample { font-family: var(--serif); font-size: 1.2rem; line-height: 1.5; color: var(--ink); }
+.type-meta {
+  font-family: var(--mono); font-size: 0.68rem;
+  color: var(--ink-4); letter-spacing: 0.02em; text-align: right;
+}
+
+/* LOGO VARIATIONS */
+.variations-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem;
+}
+.variation-tile {
+  border: 1px solid var(--rule);
+  padding: 3.25rem 2rem;
+  min-height: 240px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem;
+  text-align: center;
+}
+.variation-tile.paper { background: var(--paper-lt); }
+.variation-tile.warm  { background: var(--paper-dk); }
+.variation-tile.dark  { background: var(--ink); color: var(--paper); border-color: #222; }
+.variation-tile .vt-mark {
+  font-family: var(--serif); font-size: 2.25rem;
+  font-weight: 400; letter-spacing: -0.015em; line-height: 1;
+  color: var(--ink);
+}
+.variation-tile.dark .vt-mark { color: var(--paper); }
+.variation-tile .vt-mark em { font-style: italic; color: var(--red); }
+.variation-tile.dark .vt-mark em { color: var(--red-muted); }
+.variation-tile .vt-tag {
+  font-family: var(--sans); font-size: 0.62rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink-3); font-weight: 600;
+}
+.variation-tile.dark .vt-tag { color: rgba(245,240,232,0.5); }
+.variation-tile .vt-signet {
+  width: 84px; height: 84px;
+  border: 1.5px solid var(--ink);
+  background: var(--paper-lt);
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+.variation-tile .vt-signet::before, .variation-tile .vt-signet::after {
+  content: ''; position: absolute; background: var(--red);
+}
+.variation-tile .vt-signet::before { top: -3px; left: 50%; transform: translateX(-50%); width: 6px; height: 6px; border-radius: 50%; }
+.variation-tile .vt-signet::after  { bottom: -3px; left: 50%; transform: translateX(-50%); width: 28px; height: 1px; }
+.variation-tile .vt-signet span {
+  font-family: var(--serif); font-size: 1.7rem; font-weight: 400;
+  letter-spacing: -0.015em;
+}
+.variation-tile .vt-signet span em { font-style: italic; color: var(--red); }
+
+/* UI ELEMENTS */
+.ui-kit {
+  border: 1px solid var(--rule); background: var(--paper-lt);
+  padding: 2rem 2.25rem;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;
+}
+.ui-cell h4 {
+  font-family: var(--sans); font-size: 0.62rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 1rem;
+}
+.ui-buttons { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.ui-btn {
+  font-family: var(--sans); font-size: 0.8rem; font-weight: 600;
+  padding: 0.75rem 1.4rem;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  border: 1px solid var(--ink); cursor: pointer;
+  transition: all 0.15s;
+}
+.ui-btn.primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.ui-btn.primary:hover { background: var(--red); border-color: var(--red); }
+.ui-btn.secondary { background: var(--red); color: var(--paper); border-color: var(--red); }
+.ui-btn.secondary:hover { background: var(--red-deep); border-color: var(--red-deep); }
+.ui-btn.ghost { background: transparent; color: var(--ink); border-color: var(--ink); }
+.ui-btn.ghost:hover { background: var(--ink); color: var(--paper); }
+
+.ui-badges { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1.5rem; }
+.ui-badge {
+  font-family: var(--sans); font-size: 0.62rem;
+  padding: 0.25rem 0.6rem; border: 1px solid;
+  letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600;
+}
+.ui-badge.live { color: var(--red); border-color: var(--red); background: rgba(192,57,43,0.05); }
+.ui-badge.ok { color: #14803e; border-color: #14803e; background: rgba(20,128,62,0.04); }
+.ui-badge.hold { color: var(--ink-3); border-color: var(--ink-4); }
+
+.ui-code {
+  background: var(--ink); color: var(--paper);
+  padding: 1.25rem 1.5rem;
+  font-family: var(--mono); font-size: 0.8rem; line-height: 1.85;
+}
+.ui-code .k { color: var(--red-muted); }
+.ui-code .c { color: #7a7a7a; font-style: italic; }
+.ui-code .v { color: var(--paper); }
+
+.ui-input-wrap { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 1.5rem; }
+.ui-input {
+  font-family: var(--serif); font-size: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--paper);
+  border: 1px solid var(--rule); color: var(--ink);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.ui-input:focus {
+  outline: none; border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(192,57,43,0.1);
+}
+
+/* HIGHLIGHTER SPECIMEN — documents the new brand tool inline */
+.hl-specimen {
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  padding: 2rem 2.25rem;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem;
+}
+.hl-rule { display: flex; flex-direction: column; gap: 0.55rem; }
+.hl-rule .rule-label {
+  font-family: var(--sans); font-size: 0.62rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+}
+.hl-rule .rule-text {
+  font-family: var(--serif); font-size: 0.98rem;
+  color: var(--ink-2); line-height: 1.55;
+}
+.hl-rule .rule-text em { color: var(--ink); font-style: italic; }
+.hl-rule .rule-text .hl { background: var(--hl); }
+.hl-rule .rule-text .hl-hot { background: var(--hl-hot); }
+.hl-sample-lines {
+  display: flex; flex-direction: column; gap: 1.2rem;
+  font-family: var(--serif); font-size: 1.05rem;
+  color: var(--ink); line-height: 1.65;
+}
+.hl-sample-lines .label {
+  font-family: var(--sans); font-size: 0.58rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--red); font-weight: 600; margin-bottom: 0.25rem;
+  display: block;
+}
+
+/* EDITORIAL PAIRING */
+.pairing {
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  padding: 3rem 3.5rem;
+  position: relative;
+  max-width: var(--measure); margin: 0 auto;
+}
+.pairing::before {
+  content: 'SPECIMEN · EDITORIAL PAGE';
+  position: absolute; top: -10px; left: 2rem;
+  background: var(--paper); color: var(--red);
+  padding: 0.2rem 0.7rem;
+  font-family: var(--sans); font-size: 0.56rem;
+  letter-spacing: 0.2em; font-weight: 600;
+}
+.pairing .article-eyebrow {
+  font-family: var(--sans); font-size: 0.66rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 0.85rem;
+}
+.pairing h3 {
+  font-family: var(--serif);
+  font-size: clamp(1.7rem, 3vw, 2.1rem);
+  font-weight: 400; line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin-bottom: 1.25rem;
+}
+.pairing h3 em { font-style: italic; color: var(--red); }
+.pairing p {
+  font-family: var(--serif); font-size: 1.1rem;
+  color: var(--ink-2); line-height: 1.75;
+  margin-bottom: 1.15rem;
+}
+.pairing p:first-of-type::first-letter {
+  font-family: var(--serif); font-weight: 400;
+  float: left; font-size: 4.5rem; line-height: 0.85;
+  padding: 0.35rem 0.55rem 0 0; color: var(--red);
+}
+.pairing p:first-of-type::first-line {
+  font-variant: small-caps; letter-spacing: 0.04em;
+}
+.pairing p strong { color: var(--ink); font-weight: 500; }
+.pairing .pull-quote {
+  font-family: var(--serif); font-style: italic;
+  font-size: 1.35rem; line-height: 1.4;
+  padding: 1.25rem 0 1.25rem 1.5rem;
+  border-left: 2px solid var(--red);
+  margin: 1.5rem 0; color: var(--ink);
+}
+.pairing .byline {
+  margin-top: 1.5rem; padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+  font-family: var(--sans); font-size: 0.72rem;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-3);
+}
+.pairing .byline strong { color: var(--ink-2); font-weight: 500; }
+
+/* APPLICATIONS */
+.applications-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;
+}
+.app-card {
+  border: 1px solid var(--rule);
+  padding: 2rem;
+  background: var(--paper-lt);
+  position: relative;
+}
+.app-card .app-kicker {
+  font-family: var(--sans); font-size: 0.58rem;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 1rem;
+}
+.business-card {
+  aspect-ratio: 7 / 4;
+  background: var(--paper-lt);
+  border: 1px solid var(--rule);
+  padding: 1.5rem 1.75rem;
+  display: flex; flex-direction: column; justify-content: space-between;
+  position: relative;
+}
+.business-card::before {
+  content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 4px;
+  background: var(--red);
+}
+.business-card .bc-mark {
+  font-family: var(--serif); font-size: 1.4rem;
+  font-weight: 400; letter-spacing: -0.015em;
+}
+.business-card .bc-mark em { font-style: italic; color: var(--red); }
+.business-card .bc-rows {
+  font-family: var(--mono); font-size: 0.72rem;
+  color: var(--ink-3); line-height: 1.7;
+}
+.business-card .bc-rows strong { color: var(--ink); font-weight: 500; }
+
+.document-head {
+  background: var(--paper); border: 1px solid var(--rule);
+  padding: 1.75rem 1.85rem;
+  position: relative;
+}
+.document-head .dh-kicker {
+  font-family: var(--sans); font-size: 0.58rem;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  border-bottom: 1px solid var(--red);
+  padding-bottom: 0.35rem; margin-bottom: 1rem;
+  display: inline-block;
+}
+.document-head h4 {
+  font-family: var(--serif); font-size: 1.45rem;
+  font-weight: 400; letter-spacing: -0.015em; line-height: 1.2;
+  margin-bottom: 0.75rem;
+}
+.document-head h4 em { font-style: italic; color: var(--red); }
+.document-head h4 .hl { background: var(--hl); }
+.document-head .dh-body {
+  font-family: var(--serif); font-size: 0.95rem;
+  color: var(--ink-2); line-height: 1.55;
+}
+.document-head .dh-body::first-line {
+  font-variant: small-caps; letter-spacing: 0.04em;
+}
+.document-head .dh-body .hl { background: var(--hl); }
+.document-head .dh-colophon {
+  margin-top: 1.25rem; padding-top: 0.85rem;
+  border-top: 1px dotted var(--rule-mid);
+  font-family: var(--mono); font-size: 0.66rem;
+  color: var(--ink-3); letter-spacing: 0.04em;
+}
+
+.spec-plate {
+  background: var(--ink); color: var(--paper);
+  padding: 1.85rem 2rem;
+  font-family: var(--mono); font-size: 0.78rem;
+  line-height: 1.85;
+  position: relative;
+}
+.spec-plate::before {
+  content: 'RESPONSIBILITY · FORMAL SPEC';
+  position: absolute; top: -10px; left: 1.5rem;
+  background: var(--paper); color: var(--red);
+  padding: 0.2rem 0.6rem;
+  font-family: var(--sans); font-size: 0.56rem;
+  letter-spacing: 0.18em; font-weight: 600;
+}
+.spec-plate .k { color: var(--red-muted); }
+.spec-plate .c { color: #8a8a8a; font-style: italic; }
+.spec-plate .v { color: var(--paper); }
+
+/* VOICE & TONE */
+.voice-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem;
+}
+.voice-card {
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  padding: 1.75rem 1.5rem;
+  transition: transform 0.2s, border-color 0.2s;
+}
+.voice-card:hover { transform: translateY(-2px); border-color: var(--red); }
+.voice-card .vc-tag {
+  font-family: var(--sans); font-size: 0.6rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 0.85rem;
+}
+.voice-card blockquote {
+  font-family: var(--serif); font-style: italic;
+  font-size: 1.15rem; line-height: 1.4;
+  color: var(--ink); margin-bottom: 1rem; letter-spacing: -0.005em;
+}
+.voice-card blockquote em { color: var(--red); }
+.voice-card blockquote .hl { background: var(--hl); font-style: italic; }
+.voice-card .vc-note {
+  font-family: var(--serif); font-size: 0.9rem;
+  color: var(--ink-2); line-height: 1.55;
+}
+
+/* COLOPHON */
+.colophon {
+  text-align: center;
+  padding: 3rem 2rem 5rem;
+  max-width: var(--wide); margin: 3rem auto 0;
+  border-top: 1px solid var(--rule);
+  font-family: var(--sans); font-size: 0.7rem;
+  color: var(--ink-3); letter-spacing: 0.06em;
+}
+.colophon .rule { width: 48px; height: 1px; background: var(--red); margin: 0 auto 1.5rem; }
+.colophon .line { margin: 0.35rem 0; }
+.colophon .line.italic { font-family: var(--serif); font-style: italic; font-size: 0.9rem; color: var(--ink-2); letter-spacing: 0; margin-bottom: 1rem; }
+.colophon a { color: var(--red); text-decoration: none; margin: 0 0.75rem; transition: color 0.15s; }
+.colophon a:hover { color: var(--red-deep); }
+
+/* Responsive */
+@media (max-width: 880px) {
+  .hero { padding: 4rem 1.5rem 2.5rem; }
+  section.logotype-section { padding: 3.5rem 1.5rem; }
+  .palette-grid { grid-template-columns: repeat(2, 1fr); }
+  .variations-grid { grid-template-columns: 1fr; }
+  .ui-kit { grid-template-columns: 1fr; gap: 2rem; }
+  .hl-specimen { grid-template-columns: 1fr; gap: 1.5rem; }
+  .type-row { grid-template-columns: 1fr; gap: 0.5rem; }
+  .type-meta { text-align: left; }
+  .pairing { padding: 2.25rem 1.75rem; }
+  .applications-grid { grid-template-columns: 1fr; }
+  .voice-grid { grid-template-columns: 1fr; }
+}
+
+/* ============================================
+   ▶ REFERENCE CARD OVERRIDE ◀
+   Heavy display serif + body serif + mono on cream paper.
+   Single deep violet accent. Vertical-rotated section
+   kickers. Central data-ink figure as hero artifact.
+   ============================================ */
+/* Loaded Cinzel (Roman inscriptional, 400–900),
+   Cormorant Unicase (arcane unicase fallback for lowercase
+   positions), and Marcellus (clean Roman fallback). Playfair +
+   Crimson Pro dropped from this fork — they were specimen samples
+   for the prior Palatino-based style. */
+<!-- Cutive Mono added as the rare mono. Typewriter face with antique
+     character — paired with Cinzel's inscriptional Roman feel they
+     read as manuscript + mono from different eras of writing. -->
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Cormorant+Unicase:wght@300;400;500;600;700&family=Marcellus&family=Cutive+Mono&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  /* Cream paper warmer + more saturated than α — like the
+     posters' off-cream broadside stock. */
+  --paper:     #f4ede0;
+  --paper-dk:  #ece4d2;
+  --paper-lt:  #faf5ea;
+  --paper-elev:#fffaf0;
+  --paper-deep:#1a1612;
+
+  /* Ink slightly warm — closer to oil-print black than pure black */
+  --ink:       #1a1612;
+  --ink-2:     #4a4338;
+  --ink-3:     #7a7263;
+  --ink-4:     #b3a892;
+
+  /* Deep violet replaces editorial red. Same role:
+     section markers, italic accents, hairline rules.
+     Trajectory orange held back for the central figure
+     and "hot" emphasis only. */
+  --red:       #5b3aa0;
+  --red-muted: #7a5cc0;
+  --red-deep:  #3d2570;
+
+  --violet:      #5b3aa0;
+  --violet-deep: #3d2570;
+  --violet-soft: #7a5cc0;
+  --violet-faint:rgba(91,58,160,0.10);
+  --orange:      #d2691e;
+  --orange-soft: #e88a44;
+
+  --rule:      rgba(26,22,18,0.16);
+  --rule-mid:  rgba(26,22,18,0.08);
+
+  /* Highlighter rendered as faint violet wash (skim) and
+     warm-orange wash (hot). The two complement each other. */
+  --hl:        rgba(91,58,160,0.12);
+  --hl-hot:    rgba(210,105,30,0.18);
+
+  /* This second :root block was clobbering the Cutive Mono swap
+     from the first :root because :root,:root have equal
+     specificity and source order wins, so the later block's
+     `--mono: 'JetBrains Mono'` overrode `--mono: 'Cutive Mono'`.
+     Unified now: both --serif and --mono match the first :root
+     exactly. --sans drops Marcellus (felt redundant against
+     Cinzel) and lands on a clean Helvetica fallback so the brief
+     reads as inscription + body without competing serifs. */
+  --serif: 'Cinzel', 'Cormorant Unicase', 'Marcellus', Georgia, serif;
+  --sans:  'Helvetica Neue', 'Helvetica', Arial, sans-serif;
+  --mono:  'Cutive Mono', 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 1.06rem;
+  line-height: 1.7;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+}
+body::before {
+  background:
+    radial-gradient(ellipse 50% 35% at 18% 12%, rgba(91,58,160,0.04), transparent 65%),
+    radial-gradient(ellipse 45% 32% at 85% 78%, rgba(210,105,30,0.04), transparent 65%);
+}
+
+/* HERO — the wordmark + central figure + tagline strap.
+   Centered like a poster broadside. */
+.hero {
+  padding: 5rem 2rem 3rem;
+  position: relative;
+}
+.hero-eyebrow {
+  font-family: var(--mono);
+  color: var(--violet);
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  font-size: 0.66rem;
+}
+.hero-eyebrow::before, .hero-eyebrow::after { background: var(--violet); }
+.hero-mark {
+  font-family: var(--serif);
+  font-weight: 800;
+  font-style: normal;
+  letter-spacing: -0.018em;
+  color: var(--ink);
+  text-transform: uppercase;
+  line-height: 0.95;
+}
+.hero-mark em {
+  color: var(--violet);
+  font-style: italic;
+  font-weight: 800;
+}
+.hero-rule { background: var(--violet); width: 90px; height: 2px; }
+.hero-tagline {
+  font-family: var(--sans);
+  font-style: italic;
+  color: var(--ink-2);
+  font-size: 1.15rem;
+  font-weight: 400;
+  max-width: 38ch;
+  margin: 0 auto;
+}
+.hero-meta {
+  color: var(--ink-3);
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.18em;
+}
+
+/* The central figure — a stylized loss-landscape with
+   a trajectory in orange, formula equations on the right.
+   This is ι's hero artifact. */
+.ref-figure {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  gap: 2.5rem;
+  align-items: center;
+  max-width: 920px;
+  margin: 3rem auto 1rem;
+  padding: 1.5rem;
+  background: var(--paper-lt);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+}
+.ref-figure-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.ref-figure-formulae {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  line-height: 1.9;
+  color: var(--ink-2);
+}
+.ref-figure-formulae .ff-eq {
+  color: var(--ink);
+  font-weight: 500;
+  margin-bottom: 0.85rem;
+  display: block;
+}
+.ref-figure-formulae .ff-key { color: var(--violet); }
+.ref-figure-formulae .ff-row {
+  display: grid;
+  grid-template-columns: 5ch 1fr;
+  gap: 0.5rem;
+  font-size: 0.72rem;
+  color: var(--ink-3);
+}
+.ref-figure-formulae .ff-row .ff-sym {
+  color: var(--violet);
+  font-style: italic;
+}
+
+/* The tagline strap at the foot — three words with rules */
+.tagline-strap {
+  text-align: center;
+  margin: 3rem auto 0;
+  max-width: 720px;
+  font-family: var(--serif);
+  font-size: 1.4rem;
+  font-weight: 400;
+  font-style: italic;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  letter-spacing: 0.01em;
+}
+.tagline-strap .ts-word { padding: 0 0.5rem; }
+.tagline-strap .ts-word.accent { color: var(--violet); font-weight: 500; }
+.tagline-strap .ts-rule { flex: 1; height: 1px; background: var(--ink-4); max-width: 80px; }
+
+/* SECTIONS — vertical rotated kicker on the left edge */
+section.logotype-section {
+  position: relative;
+}
+section.logotype-section::before {
+  content: attr(data-section);
+  position: absolute;
+  left: 0.4rem;
+  top: 4.5rem;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--violet);
+  white-space: nowrap;
+}
+@media (max-width: 1100px) {
+  section.logotype-section::before { display: none; }
+}
+
+.section-kicker {
+  color: var(--violet);
+  font-family: var(--mono);
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+}
+.section-kicker::after { background: var(--violet); opacity: 0.4; }
+
+section.logotype-section h2 {
+  font-family: var(--serif);
+  font-weight: 700;
+  letter-spacing: -0.018em;
+  color: var(--ink);
+  text-transform: uppercase;
+}
+section.logotype-section h2 em {
+  color: var(--violet);
+  font-style: italic;
+  font-weight: 700;
+}
+section.logotype-section .lede {
+  font-family: var(--sans);
+  color: var(--ink-2);
+  font-size: 1.08rem;
+  line-height: 1.7;
+  font-weight: 400;
+  max-width: 60ch;
+}
+section.logotype-section .lede::first-line { font-variant: normal; letter-spacing: 0; }
+
+/* Highlighter — violet pill (skim) and orange pill (hot) */
+.hl, .hl-hot {
+  background: var(--hl);
+  padding: 0.06em 0.32em;
+  border-radius: 2px;
+  color: var(--ink);
+}
+.hl-hot { background: var(--hl-hot); color: var(--ink); }
+
+/* Type specimen */
+.type-specimen { background: var(--paper-lt); border-color: var(--rule); border-radius: 4px; }
+.type-row { border-bottom-color: var(--rule); }
+.type-label {
+  color: var(--violet);
+  font-family: var(--mono);
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  font-size: 0.62rem;
+}
+.type-sample.display { font-family: var(--serif); font-weight: 800; text-transform: uppercase; letter-spacing: -0.01em; }
+.type-sample.display em { color: var(--violet); font-style: italic; font-weight: 800; }
+.type-sample.h2 { font-family: var(--serif); color: var(--violet); font-style: italic; font-weight: 700; text-transform: uppercase; }
+.type-sample.h3 { font-family: var(--serif); font-weight: 700; text-transform: uppercase; }
+.type-sample.h3 em { color: var(--violet); font-style: italic; font-weight: 700; }
+.type-sample.body { font-family: var(--sans); color: var(--ink-2); font-weight: 400; }
+.type-meta { color: var(--ink-3); font-family: var(--mono); }
+
+/* Variations — three states / three impressions */
+.variation-tile { background: var(--paper-lt); border-color: var(--rule); border-radius: 4px; }
+.variation-tile.paper { background: var(--paper-lt); }
+.variation-tile.warm { background: var(--paper-dk); }
+.variation-tile.dark { background: var(--paper-deep); border-color: var(--violet); color: var(--paper); }
+.variation-tile .vt-mark { font-family: var(--serif); font-weight: 800; text-transform: uppercase; }
+.variation-tile .vt-mark em { color: var(--violet); font-style: italic; font-weight: 800; }
+.variation-tile.dark .vt-mark { color: var(--paper); }
+.variation-tile.dark .vt-mark em { color: var(--violet-soft); }
+.variation-tile .vt-tag { color: var(--ink-3); font-family: var(--mono); font-weight: 500; }
+.variation-tile.dark .vt-tag { color: rgba(244,237,224,0.6); }
+.variation-tile .vt-signet { border-color: var(--violet); border-radius: 2px; background: var(--paper); }
+.variation-tile .vt-signet::before { background: var(--violet); }
+.variation-tile .vt-signet::after { background: var(--violet); }
+.variation-tile .vt-signet span { font-family: var(--serif); font-weight: 800; text-transform: uppercase; }
+.variation-tile .vt-signet span em { color: var(--violet); font-style: italic; font-weight: 800; }
+
+/* UI primitives */
+.ui-kit { background: var(--paper-lt); border-color: var(--rule); border-radius: 4px; }
+.ui-cell h4 { color: var(--violet); font-family: var(--mono); font-weight: 500; letter-spacing: 0.16em; font-size: 0.62rem; }
+.ui-btn { font-family: var(--mono); font-weight: 500; letter-spacing: 0.04em; text-transform: none; border-radius: 2px; }
+.ui-btn.primary { background: var(--violet); color: var(--paper); border-color: var(--violet); }
+.ui-btn.primary:hover { background: var(--violet-deep); border-color: var(--violet-deep); }
+.ui-btn.secondary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.ui-btn.secondary:hover { background: var(--ink-2); border-color: var(--ink-2); }
+.ui-btn.ghost { color: var(--ink); border-color: var(--ink); background: transparent; }
+.ui-btn.ghost:hover { color: var(--violet); border-color: var(--violet); }
+
+.ui-badge { font-family: var(--mono); font-weight: 500; letter-spacing: 0.06em; text-transform: none; border-radius: 2px; }
+.ui-badge.live { color: var(--orange); border-color: var(--orange); background: rgba(210,105,30,0.06); }
+.ui-badge.ok { color: var(--violet); border-color: var(--violet); background: var(--violet-faint); }
+.ui-badge.hold { color: var(--ink-3); border-color: var(--rule); }
+
+.ui-code {
+  background: var(--paper-deep); color: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+}
+.ui-code .k { color: var(--violet-soft); }
+.ui-code .v { color: var(--paper); }
+.ui-code .c { color: rgba(244,237,224,0.5); font-style: italic; }
+
+.ui-input {
+  font-family: var(--sans); border-color: var(--rule);
+  background: var(--paper); color: var(--ink);
+  border-radius: 2px;
+}
+.ui-input:focus { border-color: var(--violet); box-shadow: 0 0 0 3px var(--violet-faint); }
+
+/* The Method Card — ι's emphasis primitive.
+   Numbered card with a small inline diagram + brief. */
+.method-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+  margin-top: 2rem;
+}
+.method-card {
+  background: var(--paper-lt);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 1.25rem 1.4rem;
+  position: relative;
+}
+.method-card .mc-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem; height: 1.5rem;
+  border: 1px solid var(--violet);
+  border-radius: 50%;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--violet);
+  margin-bottom: 0.85rem;
+}
+.method-card .mc-title {
+  font-family: var(--serif);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--violet);
+  margin-bottom: 0.4rem;
+}
+.method-card .mc-body {
+  font-family: var(--sans);
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+.method-card .mc-diagram {
+  width: 100%;
+  height: 60px;
+  margin-top: 0.85rem;
+  display: block;
+}
+
+/* Section V container */
+.hl-specimen { background: var(--paper-lt); border-color: var(--rule); border-radius: 4px; }
+.hl-rule .rule-label { color: var(--violet); font-family: var(--mono); font-weight: 500; letter-spacing: 0.14em; font-size: 0.65rem; }
+.hl-rule .rule-text em { color: var(--violet); font-style: italic; font-weight: 500; }
+.hl-rule .rule-text { color: var(--ink-2); }
+.hl-sample-lines .label { color: var(--violet); font-family: var(--mono); font-weight: 500; letter-spacing: 0.14em; font-size: 0.65rem; }
+
+/* Editorial Pairing */
+.pairing { background: var(--paper-lt); border-color: var(--rule); border-radius: 4px; }
+.pairing::before { color: var(--violet); background: var(--paper); font-family: var(--mono); font-weight: 500; letter-spacing: 0.18em; }
+.pairing .article-eyebrow { color: var(--violet); font-family: var(--mono); font-weight: 500; letter-spacing: 0.18em; }
+.pairing h3 { font-family: var(--serif); font-weight: 700; text-transform: uppercase; }
+.pairing h3 em { color: var(--violet); font-style: italic; font-weight: 700; }
+.pairing p { font-family: var(--sans); color: var(--ink-2); font-weight: 400; font-size: 1.05rem; line-height: 1.75; }
+.pairing p:first-of-type::first-letter {
+  font-family: var(--serif);
+  color: var(--violet);
+  font-weight: 800;
+  font-size: 4.5rem;
+}
+.pairing p:first-of-type::first-line { font-variant: normal; letter-spacing: 0; }
+.pairing p strong { color: var(--ink); font-weight: 600; }
+.pairing .pull-quote {
+  border-left: 2px solid var(--violet);
+  background: var(--violet-faint);
+  border-radius: 0 4px 4px 0;
+  padding: 1.2rem 1.5rem;
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--ink);
+  font-size: 1.3rem;
+  font-weight: 500;
+}
+.pairing .byline { color: var(--ink-3); font-family: var(--mono); font-weight: 500; border-top-color: var(--rule); letter-spacing: 0.1em; font-size: 0.66rem; }
+.pairing .byline strong { color: var(--ink-2); font-weight: 500; }
+
+/* Applications */
+.app-card { background: var(--paper-lt); border-color: var(--rule); border-radius: 4px; }
+.app-card .app-kicker { color: var(--violet); font-family: var(--mono); font-weight: 500; letter-spacing: 0.18em; font-size: 0.62rem; }
+.business-card { background: var(--paper); border-color: var(--rule); border-radius: 4px; }
+.business-card::before { background: var(--violet); width: 5px; }
+.business-card .bc-mark { font-family: var(--serif); font-weight: 800; text-transform: uppercase; }
+.business-card .bc-mark em { color: var(--violet); font-style: italic; font-weight: 800; }
+.business-card .bc-rows { font-family: var(--mono); color: var(--ink-3); }
+.business-card .bc-rows strong { color: var(--ink); font-weight: 500; }
+.business-card .bc-rows div[style*="--red"] { color: var(--violet) !important; }
+
+.document-head { background: var(--paper); border-color: var(--rule); border-radius: 4px; }
+.document-head .dh-kicker { color: var(--violet); border-bottom-color: var(--violet); font-family: var(--mono); font-weight: 500; letter-spacing: 0.18em; }
+.document-head h4 { font-family: var(--serif); font-weight: 700; text-transform: uppercase; }
+.document-head h4 em { color: var(--violet); font-style: italic; font-weight: 700; }
+.document-head h4 .hl, .document-head .dh-body .hl { background: var(--hl); color: var(--ink); }
+.document-head .dh-body { color: var(--ink-2); font-family: var(--sans); }
+.document-head .dh-body::first-line { font-variant: normal; letter-spacing: 0; }
+.document-head .dh-colophon { color: var(--ink-3); font-family: var(--mono); border-top-color: var(--rule); letter-spacing: 0.06em; }
+
+.spec-plate {
+  background: var(--paper-deep); color: var(--paper);
+  border: 1px solid var(--violet);
+  border-radius: 2px;
+}
+.spec-plate::before { color: var(--violet); background: var(--paper); font-family: var(--mono); font-weight: 500; letter-spacing: 0.18em; }
+.spec-plate .k { color: var(--violet-soft); }
+.spec-plate .v { color: var(--paper); }
+.spec-plate .c { color: rgba(244,237,224,0.5); font-style: italic; }
+
+/* Voice */
+.voice-card { background: var(--paper-lt); border-color: var(--rule); border-radius: 4px; }
+.voice-card:hover { border-color: var(--violet); }
+.voice-card .vc-tag { color: var(--violet); font-family: var(--mono); font-weight: 500; letter-spacing: 0.16em; font-size: 0.62rem; }
+.voice-card blockquote { font-family: var(--serif); color: var(--ink); font-style: italic; font-weight: 500; }
+.voice-card blockquote em { color: var(--violet); font-style: italic; font-weight: 700; }
+.voice-card blockquote .hl, .voice-card blockquote .hl-hot { background: var(--hl); color: var(--ink); font-style: italic; }
+.voice-card blockquote .hl-hot { background: var(--hl-hot); }
+.voice-card .vc-note { color: var(--ink-2); font-family: var(--sans); font-weight: 400; }
+
+/* Swatches */
+.swatch { background: var(--paper-lt); border-color: var(--rule); border-radius: 4px; }
+.swatch-name { color: var(--ink); font-family: var(--mono); font-weight: 500; letter-spacing: 0.14em; font-size: 0.62rem; }
+.swatch-hex { color: var(--ink-3); font-family: var(--mono); }
+.swatch-role { color: var(--ink-3); font-family: var(--sans); font-style: italic; }
+
+/* Colophon — with the three-word tagline strap */
+.colophon { font-family: var(--mono); color: var(--ink-3); border-top-color: var(--rule); font-weight: 400; letter-spacing: 0.06em; }
+.colophon .rule { background: var(--violet); width: 60px; height: 2px; }
+.colophon .line.italic { color: var(--ink-2); font-family: var(--serif); font-style: italic; font-weight: 500; letter-spacing: 0; font-size: 1rem; }
+.colophon a { color: var(--violet); }
+.colophon a:hover { color: var(--violet-deep); }
+
+
+
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+
+}
+</style>
+</head>
+<body>
+
+<!-- HERO — wordmark + central data-ink figure + tagline strap -->
+<section class="hero">
+  <div class="hero-eyebrow">Direction &iota; &middot; Reference Card &middot; MMXXVI</div>
+  <h1 class="hero-mark">OPEN<em>PROSE</em></h1>
+  <div class="hero-rule"></div>
+  <p class="hero-tagline">Declarative outcomes for the AI session. Read the brief; the runtime keeps the contract.</p>
+
+  <!-- Central data-ink figure: a stylized loss-landscape with
+       optimization trajectory, formulas on the right. The hero
+       artifact in this direction. -->
+  <div class="ref-figure">
+    <svg class="ref-figure-svg" viewBox="0 0 480 280" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <linearGradient id="iota-surface" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#3d2570" stop-opacity="0.15"/>
+          <stop offset="1" stop-color="#1a1612" stop-opacity="0.05"/>
+        </linearGradient>
+      </defs>
+
+      <!-- Wireframe contour ellipses (loss landscape contours) -->
+      <g fill="none" stroke="#5b3aa0" stroke-width="0.8" opacity="0.55">
+        <ellipse cx="320" cy="180" rx="140" ry="70"/>
+        <ellipse cx="320" cy="180" rx="115" ry="58"/>
+        <ellipse cx="320" cy="180" rx="92" ry="46"/>
+        <ellipse cx="320" cy="180" rx="68" ry="34"/>
+        <ellipse cx="320" cy="180" rx="46" ry="23"/>
+        <ellipse cx="320" cy="180" rx="26" ry="13"/>
+      </g>
+
+      <!-- Crossing wireframe — the depth lines -->
+      <g fill="none" stroke="#5b3aa0" stroke-width="0.6" opacity="0.32">
+        <path d="M 180,130 Q 320,165 460,130"/>
+        <path d="M 180,160 Q 320,195 460,160"/>
+        <path d="M 180,200 Q 320,235 460,200"/>
+        <path d="M 240,110 L 240,250"/>
+        <path d="M 320,100 L 320,260"/>
+        <path d="M 400,110 L 400,250"/>
+      </g>
+
+      <!-- Trajectory line — the OpenProse program improving over runs -->
+      <g>
+        <path d="M 60,80 Q 130,55 200,90 Q 260,120 290,150 Q 310,170 320,180"
+              fill="none" stroke="#d2691e" stroke-width="2.2" stroke-linecap="round"/>
+        <!-- Trajectory waypoints -->
+        <circle cx="60" cy="80" r="4" fill="#d2691e"/>
+        <circle cx="60" cy="80" r="9" fill="none" stroke="#d2691e" stroke-width="1"/>
+        <text x="42" y="68" font-family="JetBrains Mono, monospace" font-size="9" fill="#1a1612">v1</text>
+
+        <circle cx="200" cy="90" r="3.5" fill="#d2691e"/>
+        <text x="190" y="78" font-family="JetBrains Mono, monospace" font-size="8" fill="#4a4338">v12</text>
+
+        <circle cx="290" cy="150" r="3.5" fill="#d2691e"/>
+        <text x="278" y="142" font-family="JetBrains Mono, monospace" font-size="8" fill="#4a4338">v28</text>
+
+        <circle cx="320" cy="180" r="5" fill="#d2691e"/>
+        <circle cx="320" cy="180" r="11" fill="none" stroke="#d2691e" stroke-width="1.2"/>
+        <text x="332" y="184" font-family="JetBrains Mono, monospace" font-size="10" font-weight="500" fill="#d2691e">v42 · 0.97</text>
+      </g>
+
+      <!-- Axis labels -->
+      <text x="60" y="265" font-family="JetBrains Mono, monospace" font-size="7" fill="#7a7263" letter-spacing="0.1em">RESPONSIBILITY SPACE</text>
+      <text x="380" y="265" font-family="JetBrains Mono, monospace" font-size="7" fill="#7a7263" letter-spacing="0.1em">VERIFIED</text>
+
+      <!-- Frame -->
+      <rect x="18" y="14" width="444" height="252" fill="none" stroke="#1a1612" stroke-width="0.8" opacity="0.4"/>
+    </svg>
+
+    <div class="ref-figure-formulae">
+      <span class="ff-eq">P<sub>n+1</sub> = P<sub>n</sub> + η · ∇<span class="ff-key">verify</span>(P<sub>n</sub>)</span>
+      <span class="ff-eq">score<sub>n+1</sub> ≥ score<sub>n</sub></span>
+
+      <div style="margin-top: 1.4rem; padding-top: 1rem; border-top: 1px solid var(--rule);">
+        <div class="ff-row"><span class="ff-sym">P<sub>n</sub></span><span>responsibility, run n</span></div>
+        <div class="ff-row"><span class="ff-sym">∇verify</span><span>contract gradient</span></div>
+        <div class="ff-row"><span class="ff-sym">η</span><span>refinement rate</span></div>
+        <div class="ff-row"><span class="ff-sym">v</span><span>version &middot; run number</span></div>
+        <div class="ff-row"><span class="ff-sym">score</span><span>eval pass-rate ∈ [0,1]</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Three-word tagline strap — the poster's signature -->
+  <div class="tagline-strap">
+    <span class="ts-rule"></span>
+    <span class="ts-word">Declare.</span>
+    <span class="ts-word accent">Verify.</span>
+    <span class="ts-word">Deliver.</span>
+    <span class="ts-rule"></span>
+  </div>
+
+  <div class="hero-meta" style="margin-top: 2rem;">
+    Playfair Display 800 &middot; Crimson Pro &middot; JetBrains Mono &middot; cream &middot; deep violet
+  </div>
+</section>
+
+<!-- PALETTE -->
+<section class="logotype-section" id="palette" data-section="I · Palette">
+  <div class="section-kicker">I &middot; Palette</div>
+  <h2>Cream, ink, and a single thread of <em>violet</em>.</h2>
+  <p class="lede">Two materials and one thread. Cream paper #f4ede0 carries the broadside. Oil-print ink #1a1612 reads warm, not harsh. A deep violet #5b3aa0 does the work of an accent &mdash; section markers, italic emphasis, the inner radius of the contour figure. A second color &mdash; warm orange #d2691e &mdash; is reserved for the trajectory line in the central figure and for the rare "hot" pill. The discipline is the brand: one accent, one secondary, no other colors anywhere on the page.</p>
+  <div class="palette-grid">
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--paper);"></div>
+      <span class="swatch-name">Cream</span>
+      <span class="swatch-hex">#f4ede0</span>
+      <span class="swatch-role">the page</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--paper-dk);"></div>
+      <span class="swatch-name">Cream Warm</span>
+      <span class="swatch-hex">#ece4d2</span>
+      <span class="swatch-role">secondary surface</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--paper-lt);"></div>
+      <span class="swatch-name">Cream Light</span>
+      <span class="swatch-hex">#faf5ea</span>
+      <span class="swatch-role">lifted surfaces</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--paper-deep); border-color: var(--paper-deep);"></div>
+      <span class="swatch-name">Ink Deep</span>
+      <span class="swatch-hex">#1a1612</span>
+      <span class="swatch-role">dark inversion</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--ink); border-color: var(--ink);"></div>
+      <span class="swatch-name">Ink</span>
+      <span class="swatch-hex">#1a1612</span>
+      <span class="swatch-role">primary copy</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--violet); border-color: var(--violet);"></div>
+      <span class="swatch-name">Violet</span>
+      <span class="swatch-hex">#5b3aa0</span>
+      <span class="swatch-role">accent &middot; italic em</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--violet-deep); border-color: var(--violet-deep);"></div>
+      <span class="swatch-name">Violet Deep</span>
+      <span class="swatch-hex">#3d2570</span>
+      <span class="swatch-role">hover &middot; pressed</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--orange); border-color: var(--orange);"></div>
+      <span class="swatch-name">Orange</span>
+      <span class="swatch-hex">#d2691e</span>
+      <span class="swatch-role">trajectory &middot; hot</span>
+    </div>
+  </div>
+</section>
+
+<!-- TYPE SCALE -->
+<section class="logotype-section" id="type" data-section="II · Type">
+  <div class="section-kicker">II &middot; Type Scale</div>
+  <h2>Cinzel for the <em>title</em>. Cinzel for the brief. Cutive Mono for the keys.</h2>
+  <p class="lede">A poster needs three voices. Cinzel at its heavier weights is the broadside title &mdash; inscriptional Roman shapes, all caps by default, the kind of letter cut into stone that reads from across a room. Cinzel at its lighter weights also carries the running brief &mdash; the same lapidary skeleton, just relaxed. Cutive Mono is the rare-monospace voice reserved for the spec keys, the version numbers, the formula symbols, the timestamp at the foot &mdash; a typewriter ribbon laid over the inscription. Italic violet is the writer's only emphasis; orange is held back for the trajectory line.</p>
+  <div class="type-specimen">
+    <div class="type-row">
+      <span class="type-label">Display</span>
+      <span class="type-sample display">Write the <em>outcome</em>.</span>
+      <span class="type-meta">Cinzel 400 &middot; clamp 2–3rem</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">H2 italic</span>
+      <span class="type-sample h2">the quiet arrival</span>
+      <span class="type-meta">Cinzel italic 400 &middot; 2rem</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">H3</span>
+      <span class="type-sample h3">A specification, <em>recited</em></span>
+      <span class="type-meta">Cinzel 400 &middot; 1.4rem</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Body</span>
+      <span class="type-sample body">You declare the outcome in a file. The system picks it up on cadence, runs it, verifies the result, and delivers.</span>
+      <span class="type-meta">Cinzel 400 &middot; 1.08rem / 1.55</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Highlight skim</span>
+      <span class="type-sample hl-sample">The standup happens anyway, but it is <span class="hl">fifteen minutes shorter</span>. Nobody asks where the numbers came from.</span>
+      <span class="type-meta">hl on phrase &middot; 58% baseline</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Highlight hot</span>
+      <span class="type-sample hl-sample">If the outcome <span class="hl-hot">doesn't ship</span>, no line.</span>
+      <span class="type-meta">hl-hot on claim &middot; 58%</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Label · sans</span>
+      <span class="type-sample" style="font-family: var(--sans); font-size: 0.78rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--red); font-weight: 600;">Responsibilities as a Service</span>
+      <span class="type-meta">Helvetica 600 &middot; 0.78rem</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Mono</span>
+      <span class="type-sample mono">responsibility: weekly-investor-digest</span>
+      <span class="type-meta">Cutive Mono 400 &middot; 0.92rem</span>
+    </div>
+  </div>
+</section>
+
+<!-- LOGO VARIATIONS -->
+<section class="logotype-section" id="variations" data-section="III · Logo Variations">
+  <div class="section-kicker">III &middot; Logo Variations</div>
+  <h2>One mark, <em>three impressions</em>.</h2>
+  <p class="lede">Primary on cream, a compact signet with violet serifs, and a reversed mark for dark surfaces. The italic <em>Prose</em> always carries the violet, whether on light or dark ground. The pill never touches the mark &mdash; it is a reader's tool for prose, not a brand device. The mark itself is set in Playfair 800 all-caps; the trajectory orange never appears anywhere except in the central figure.</p>
+  <div class="variations-grid">
+    <div class="variation-tile paper">
+      <div class="vt-mark">Open<em>Prose</em></div>
+      <div class="vt-tag">Primary &middot; 40px+</div>
+    </div>
+    <div class="variation-tile warm">
+      <div class="vt-signet"><span>O<em>P</em></span></div>
+      <div class="vt-tag">Signet &middot; favicon</div>
+    </div>
+    <div class="variation-tile dark">
+      <div class="vt-mark">Open<em>Prose</em></div>
+      <div class="vt-tag">Reversed &middot; dark ground</div>
+    </div>
+  </div>
+</section>
+
+<!-- UI ELEMENTS -->
+<section class="logotype-section" id="ui" data-section="IV · UI Elements">
+  <div class="section-kicker">IV &middot; UI Elements</div>
+  <h2>Buttons, badges, and a <em>specification</em>.</h2>
+  <p class="lede">Interface primitives are the broadside's printed labels. Primary buttons are violet on cream, marked in mono caps. Badges are bordered violet (verified) or orange (live). The code surface is the same dark inversion the spec plate uses &mdash; ink-deep ground, violet-soft for keys. Italic violet runs through every label that wants emphasis.</p>
+  <div class="ui-kit">
+    <div class="ui-cell">
+      <h4>Buttons</h4>
+      <div class="ui-buttons">
+        <button class="ui-btn primary">Primary</button>
+        <button class="ui-btn secondary">Secondary</button>
+        <button class="ui-btn ghost">Ghost</button>
+      </div>
+      <div class="ui-badges">
+        <span class="ui-badge live">&middot; Live</span>
+        <span class="ui-badge ok">&#10003; Verified</span>
+        <span class="ui-badge hold">&middot; On hold</span>
+      </div>
+      <div class="ui-input-wrap">
+        <label style="font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--violet); font-weight: 500;">Declare the outcome</label>
+        <input class="ui-input" type="text" placeholder="e.g. weekly-investor-digest.prose">
+      </div>
+    </div>
+    <div class="ui-cell">
+      <h4>Code surface</h4>
+      <div class="ui-code"><span class="c"># pick up the file</span>
+<span class="k">$</span> openprose run weekly-digest
+<span class="c"># verify, deliver, archive</span>
+<span class="v">&#10003; delivered 09:14 ET</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- THE METHOD CARD — ι's emphasis primitive -->
+<section class="logotype-section" id="highlighter" data-section="V · The Method Card">
+  <div class="section-kicker">V &middot; The Method Card</div>
+  <h2>Every concept gets a numbered <em>card</em>, every card gets a small diagram.</h2>
+  <p class="lede">ι borrows its defining gesture from the optimization-method poster: every concept the brand introduces gets its own numbered method card &mdash; a small numbered roundel, an all-caps title, a one-paragraph brief, and a tiny inline diagram. Concepts that need more space get more cards, never longer prose. The reader is invited to scan the cards; the body paragraphs above are there for those who want the connective tissue.</p>
+
+  <div class="method-cards">
+    <div class="method-card">
+      <span class="mc-num">1</span>
+      <div class="mc-title">Declare the outcome</div>
+      <div class="mc-body">A responsibility is a <code>.prose</code> file with <code>requires</code> and <code>ensures</code>. Plain language, version-controlled, reviewable in any pull request.</div>
+      <svg class="mc-diagram" viewBox="0 0 200 60" aria-hidden="true">
+        <rect x="10" y="14" width="60" height="32" fill="none" stroke="#5b3aa0" stroke-width="1"/>
+        <text x="40" y="34" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#5b3aa0">brief.prose</text>
+        <path d="M 75,30 L 110,30" stroke="#1a1612" stroke-width="0.8" stroke-dasharray="3,2"/>
+        <polygon points="108,27 115,30 108,33" fill="#1a1612"/>
+        <text x="155" y="28" text-anchor="middle" font-family="Crimson Pro" font-size="11" font-style="italic" fill="#1a1612">contract</text>
+        <text x="155" y="44" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#7a7263">v0 · pending</text>
+      </svg>
+    </div>
+
+    <div class="method-card">
+      <span class="mc-num">2</span>
+      <div class="mc-title">Resolve the requires</div>
+      <div class="mc-body">The runtime fetches inputs &mdash; APIs, files, references &mdash; binds them, and verifies the binding before any work runs. The contract starts here.</div>
+      <svg class="mc-diagram" viewBox="0 0 200 60" aria-hidden="true">
+        <circle cx="30" cy="30" r="6" fill="none" stroke="#5b3aa0" stroke-width="1"/>
+        <circle cx="30" cy="30" r="2" fill="#5b3aa0"/>
+        <path d="M 38,30 L 80,18" stroke="#1a1612" stroke-width="0.6"/>
+        <path d="M 38,30 L 80,30" stroke="#1a1612" stroke-width="0.6"/>
+        <path d="M 38,30 L 80,42" stroke="#1a1612" stroke-width="0.6"/>
+        <rect x="80" y="13" width="38" height="10" fill="none" stroke="#1a1612" stroke-width="0.6"/>
+        <rect x="80" y="25" width="38" height="10" fill="none" stroke="#1a1612" stroke-width="0.6"/>
+        <rect x="80" y="37" width="38" height="10" fill="none" stroke="#1a1612" stroke-width="0.6"/>
+        <text x="160" y="34" text-anchor="middle" font-family="Crimson Pro" font-size="11" font-style="italic" fill="#5b3aa0">bound</text>
+      </svg>
+    </div>
+
+    <div class="method-card">
+      <span class="mc-num">3</span>
+      <div class="mc-title">Run on cadence</div>
+      <div class="mc-body">Every Monday at 09:00, the runtime executes the program. Eval scores are recorded. The trajectory line you see in the central figure is the page of every run plotted over time.</div>
+      <svg class="mc-diagram" viewBox="0 0 200 60" aria-hidden="true">
+        <path d="M 10,45 L 40,40 L 70,38 L 100,30 L 130,24 L 160,18 L 190,14"
+              fill="none" stroke="#d2691e" stroke-width="1.4" stroke-linecap="round"/>
+        <circle cx="10" cy="45" r="2" fill="#d2691e"/>
+        <circle cx="100" cy="30" r="2" fill="#d2691e"/>
+        <circle cx="190" cy="14" r="3" fill="#d2691e"/>
+        <text x="10" y="58" font-family="JetBrains Mono" font-size="7" fill="#7a7263">v1</text>
+        <text x="184" y="58" font-family="JetBrains Mono" font-size="7" fill="#d2691e">v42</text>
+      </svg>
+    </div>
+
+    <div class="method-card">
+      <span class="mc-num">4</span>
+      <div class="mc-title">Verify against contract</div>
+      <div class="mc-body">Each result is scored against the <code>ensures</code> block. If the score falls below threshold, the runtime declines to deliver and surfaces the gap. No silent failures.</div>
+      <svg class="mc-diagram" viewBox="0 0 200 60" aria-hidden="true">
+        <rect x="14" y="14" width="60" height="32" fill="none" stroke="#5b3aa0" stroke-width="1"/>
+        <path d="M 26,30 L 32,38 L 50,22" fill="none" stroke="#5b3aa0" stroke-width="1.6" stroke-linecap="round"/>
+        <text x="44" y="56" font-family="JetBrains Mono" font-size="7" fill="#5b3aa0" text-anchor="middle">PASS</text>
+
+        <text x="100" y="34" text-anchor="middle" font-family="Crimson Pro" font-size="11" font-style="italic" fill="#1a1612">or</text>
+
+        <rect x="126" y="14" width="60" height="32" fill="none" stroke="#d2691e" stroke-width="1"/>
+        <path d="M 138,22 L 162,38 M 162,22 L 138,38" stroke="#d2691e" stroke-width="1.6" stroke-linecap="round"/>
+        <text x="156" y="56" font-family="JetBrains Mono" font-size="7" fill="#d2691e" text-anchor="middle">HOLD</text>
+      </svg>
+    </div>
+  </div>
+
+  <p class="lede" style="margin-top: 2rem;">A method card is the brand's atomic unit of explanation. Six cards explain a layer; twelve cards explain the entire system. Cards never carry the wordmark, never carry the trajectory orange except inside their diagrams. The numbered roundel is the only ornament.</p>
+</section>
+
+<!-- EDITORIAL PAIRING -->
+<section class="logotype-section narrow" id="pairing" data-section="VI · Editorial Pairing">
+  <div class="section-kicker">VI &middot; Editorial Pairing</div>
+  <h2>Set in type &mdash; <em>the brief</em> at length, with cards alongside.</h2>
+  <p class="lede">The Reference Card voice is calm, specific, and willing to be cut into numbered cards. It explains, gives context, then trusts the reader to scan the diagrams alongside. The body paragraphs are connective tissue between method cards; the cards carry the load.</p>
+  <article class="pairing">
+    <div class="article-eyebrow">From the field notes</div>
+    <h3>On the <em>quiet arrival</em> of Monday reports.</h3>
+    <p>Once, the week began with a scramble. Someone opened seven dashboards, pulled the numbers, wrote the digest, and dropped it in the 09:00 standup. The rotation was a line in the budget. The standup was a line in the calendar. Nobody was quite sure what either accomplished beyond confirming that the dashboards were fine.</p>
+    <p>Then the outcome was declared in a file. <strong>Fifteen lines.</strong> Every Monday at 09:00 ET, the digest arrives &mdash; <span class="hl">verified, signed, archived</span>. The standup happens anyway, but it is fifteen minutes shorter. Nobody asks where the numbers came from. <span class="hl">They are already in the document</span>.</p>
+    <div class="pull-quote">The first thing we noticed was what we stopped doing &mdash; the standing meetings where we'd review the dashboard to confirm the dashboard was fine.</div>
+    <p>The humanist computer is the insight that these two dispositions &mdash; craft and machinery &mdash; are not opposed. The machine handles the cadence. The prose handles the voice. The page reads the way a good analyst would have written it. <span class="hl-hot">The result is the point</span>.</p>
+    <div class="byline"><strong>Maya Chen</strong> &middot; Head of Operations &middot; Series-C payments platform</div>
+  </article>
+</section>
+
+<!-- APPLICATIONS -->
+<section class="logotype-section" id="applications" data-section="VII · Applications">
+  <div class="section-kicker">VII &middot; Applications</div>
+  <h2>A card, a <em>masthead</em>, a plate.</h2>
+  <p class="lede">Three real surfaces the brand has to carry: a business card (formal, violet rule, no pill), a document masthead (operator's brief, violet pill welcome), and a specification plate (the spec in dark inversion, violet-soft for keys).</p>
+  <div class="applications-grid">
+    <div class="app-card">
+      <div class="app-kicker">Business Card</div>
+      <div class="business-card">
+        <div class="bc-mark">Open<em>Prose</em></div>
+        <div class="bc-rows">
+          <div><strong>Maya Chen</strong></div>
+          <div>Head of Operations</div>
+          <div style="margin-top: 0.5rem; color: var(--red);">maya@openprose.ai</div>
+          <div style="color: var(--red);">+1 &middot; 415 &middot; 0113</div>
+        </div>
+      </div>
+    </div>
+    <div class="app-card">
+      <div class="app-kicker">Document Header</div>
+      <div class="document-head">
+        <span class="dh-kicker">Weekly Investor Digest &middot; Wk 14</span>
+        <h4>ARR crossed <em>$14.2M</em> <span class="hl">this week</span>.</h4>
+        <p class="dh-body">The new $40K Meridian contract pushed us over the line. Three new logos in pipeline, <span class="hl">two expected to close this quarter</span>.</p>
+        <div class="dh-colophon">Generated 09:02 &middot; Verified 09:14 &middot; OpenProse</div>
+      </div>
+    </div>
+    <div class="app-card" style="grid-column: 1 / -1;">
+      <div class="app-kicker">Formal Specification</div>
+      <div class="spec-plate">
+<span class="k">responsibility:</span> <span class="v">weekly-investor-digest</span>
+<span class="k">owner:</span>         <span class="v">finance@company.example</span>
+<span class="k">cadence:</span>       <span class="v">mondays @ 09:00 ET</span>
+<span class="k">input:</span>
+  <span class="c">- gmail:investors@*</span>
+  <span class="c">- notion:portfolio/updates</span>
+<span class="k">outcome:</span> <span class="v">|</span>
+  <span class="v">One page. What changed, what's on track,</span>
+  <span class="v">what needs attention. 200 words.</span>
+<span class="k">deliver:</span>
+  <span class="c">- email:investors@</span>
+<span class="k">audit:</span>         <span class="v">retain 7 years</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- VOICE & TONE -->
+<section class="logotype-section" id="voice" data-section="VIII · Voice & Tone">
+  <div class="section-kicker">VIII &middot; Voice &amp; Tone</div>
+  <h2>Three sentences, <em>one register</em>, three placements.</h2>
+  <p class="lede">Three sanctioned voices the brand uses: the short declaration, the spec-sheet note, the editorial observation. Each sentence can live on its own without ornament &mdash; and each demonstrates one placement of italic violet.</p>
+  <div class="voice-grid">
+    <div class="voice-card">
+      <div class="vc-tag">Voice &middot; short · <span class="hl">yellow</span></div>
+      <blockquote>&ldquo;Write the outcome. <span class="hl">We run it.</span>&rdquo;</blockquote>
+      <p class="vc-note">The tagline. Six words. The highlighter lands on the second sentence &mdash; the part that shifts the burden from the reader to the service.</p>
+    </div>
+    <div class="voice-card">
+      <div class="vc-tag">Voice &middot; spec · <span class="hl-hot" style="background: var(--hl-hot);">hot</span></div>
+      <blockquote>&ldquo;Billed by <span class="hl-hot" style="background: var(--hl-hot); font-style: italic;">delivery</span>. If the outcome doesn't ship, no line.&rdquo;</blockquote>
+      <p class="vc-note">Terms of art spoken plainly. Hot mark on the one word that defines the pricing model &mdash; the claim a reader cannot skim past.</p>
+    </div>
+    <div class="voice-card">
+      <div class="vc-tag">Voice &middot; editorial · <em>italic</em></div>
+      <blockquote>&ldquo;Once, the week began with a scramble. <em>Then the outcome was declared in a file.</em>&rdquo;</blockquote>
+      <p class="vc-note">The long form voice. Italic carries the pivot. No highlighter here &mdash; this sentence is still the author's, not yet the reader's.</p>
+    </div>
+  </div>
+</section>
+
+<!-- COLOPHON -->
+<section class="colophon">
+  <div class="rule"></div>
+  <div class="line italic">Declare. Verify. Deliver. &mdash; Direction &iota; &middot; Reference Card &middot; MMXXVI</div>
+  <div class="line">Playfair Display &middot; Crimson Pro &middot; JetBrains Mono</div>
+  <div class="line">Cream #f4ede0 &middot; Ink #1a1612 &middot; Violet #5b3aa0 &middot; Orange #d2691e</div>
+  <div class="line" style="margin-top: 1.25rem;">
+    <a href="direction-alpha-editorial.html">&alpha; Editorial</a>
+    <a href="direction-beta-tufte.html">&beta; Tufte</a>
+    <a href="direction-gamma-manuscript.html">&gamma; Manuscript</a>
+    <a href="direction-delta-machine.html">&delta; Machine</a>
+    <a href="direction-epsilon-operator.html">&epsilon; Operator</a>
+    <a href="direction-zeta-saas.html">&zeta; SaaS</a>
+    <a href="direction-eta-organism.html">&eta; Organism</a>
+    <a href="direction-theta-living-document.html">&theta; Living Doc</a>
+    <a href="direction-kappa-codex-spreads.html">&kappa; Codex</a>
+  </div>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 142 142'%3E%3Cpath d='M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z' fill='%232a2520'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenProse · Style + RLM — Companion to the β · Teal Style Guide</title>
+
+<!-- ============================================================
+     OPENPROSE · STYLE GUIDE COMPANION
+     ============================================================
+     This page is the companion to
+     direction-beta-tufte-mono-kecal-styleguide-teal.html — a
+     human-readable walkthrough of HOW TO USE the β · teal
+     direction in production, told as the OpenProse story and
+     pinned to the unique values that emerge when the style is
+     paired with RLM (Reliable Language Modeling).
+
+     STATUS
+       Companion to   direction-beta-tufte-mono-kecal-styleguide-teal.html
+       Created        2026-05-20
+       Author         JH
+
+     This companion page explains how to use the β · teal style by
+     telling the story of OpenProse and the unique values it carries
+     when combined with RLM.
+
+     STRUCTURE
+       §1  The OpenProse story         what we sell, in one breath
+       §2  Why the β · teal direction  the form that fits the function
+       §3  How to use it in production six pattern recipes
+       §4  Pairing the style with RLM  what each side gains
+       §5  Voice playbook              the registers, by use case
+       §6  Anti-patterns               the mistakes that read as wrong
+       §7  Picking up the style cold   minimum to ship a new direction page
+
+     This file lifts its CSS variables, type system, and component
+     classes directly from the source styleguide so an agent can
+     consume both files together and reproduce the entire surface
+     from the pair alone.
+     ============================================================ -->
+
+<style>
+/* RESET */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* FONT FACES — Kecal seven-weight ramp from FungiType via jsDelivr.
+   Identical to the source styleguide so the companion reads as one
+   document with the guide. The `-web.woff2` suffix is required (the
+   non-suffixed URLs return 404; see commit 7c7acdd). */
+@font-face { font-family: 'Kecal'; font-weight: 200; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extralight-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 300; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Light-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 400; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Regular-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 500; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Medium-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 600; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Semibold-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 700; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Bold-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 800; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extrabold-web.woff2') format('woff2'); }
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&display=swap');
+
+/* DESIGN TOKENS — lifted verbatim from the source styleguide so
+   the two pages render with the same paper, ink, and accents. */
+:root {
+  --paper:       #f5f0e8;
+  --paper-dk:    #e8e0d0;
+  --paper-lt:    #fbf7ef;
+  --paper-warm:  #f0e8d8;
+  --ink:         #2a2520;
+  --ink-2:       rgba(42,37,32,0.78);
+  --ink-3:       rgba(42,37,32,0.55);
+  --ink-4:       rgba(42,37,32,0.32);
+  --ink-5:       rgba(42,37,32,0.18);
+  --teal:        #3a7a6a;
+  --teal-deep:   #2e6456;
+  --teal-soft:   #4a8a7a;
+  --teal-tint:   rgba(58,122,106,0.14);
+  --teal-faint:  rgba(58,122,106,0.06);
+  --amber:       #c49a5c;
+  --amber-deep:  #a87f44;
+  --amber-soft:  #d4aa6c;
+  --amber-tint:  rgba(196,154,92,0.18);
+  --red:         #c0392b;
+  --red-muted:   #d4604f;
+  --red-deep:    #8e2b20;
+  --red-tint:    rgba(192,57,43,0.12);
+  --rule:        rgba(42,37,32,0.14);
+  --rule-mid:    rgba(42,37,32,0.06);
+
+  --serif:  'Kecal', system-ui, -apple-system, sans-serif;
+  --sans:   'Kecal', system-ui, -apple-system, sans-serif;
+  --mono:   'IBM Plex Mono', 'JetBrains Mono', 'SF Mono', monospace;
+
+  --space-2xs: 0.5rem;
+  --space-xs:  0.75rem;
+  --space-sm:  1rem;
+  --space-md:  1.5rem;
+  --space-lg:  2rem;
+  --space-xl:  3rem;
+  --space-2xl: 4.5rem;
+  --space-3xl: 5.5rem;
+
+  --wide:    1180px;
+  --measure: 760px;
+  --measure-ch: 62ch;
+
+  --fs-display: 3rem;
+  --fs-h1:      2.4rem;
+  --fs-h2:      2rem;
+  --fs-h3:      1.4rem;
+  --fs-body:    1.08rem;
+  --fs-small:   0.92rem;
+  --fs-mono:    0.92rem;
+  --fs-caption: 0.78rem;
+  --fs-label:   0.62rem;
+}
+[data-theme="dark"] {
+  --paper:    #161410;
+  --paper-dk: #1d1a14;
+  --paper-lt: #1f1c16;
+  --paper-warm: #1f1c16;
+  --ink:      #f0ece1;
+  --ink-2:    #d6d1c2;
+  --ink-3:    #9e9387;
+  --ink-4:    #807468;
+  --ink-5:    #3a3631;
+  --teal:     #5a9c8c;
+  --teal-deep: #4a8a7a;
+  --teal-soft: #6aaa9c;
+  --teal-tint: rgba(90,156,140,0.20);
+  --teal-faint: rgba(90,156,140,0.08);
+  --amber:    #d4aa6c;
+  --amber-deep: #b89055;
+  --red:      #e88675;
+  --red-muted: #d97a68;
+  --red-deep: #f4a18f;
+  --red-tint: rgba(232,134,117,0.20);
+  --rule:     #2f2c25;
+  --rule-mid: #25221c;
+}
+
+html, body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: var(--fs-body);
+  line-height: 1.7;
+  font-feature-settings: "kern" 1, "liga" 1, "ss01" 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+em { font-family: var(--accent, var(--serif)); font-weight: 800; font-style: normal; color: var(--teal); letter-spacing: 0; /* upright accent · c_a965130b */ }
+strong { font-weight: 600; }
+a { color: var(--teal); text-decoration: none; border-bottom: 1px dotted var(--teal); }
+a:hover { border-bottom-style: solid; color: var(--teal-deep); }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--paper-dk); padding: 0.1rem 0.35rem; }
+
+/* SHELL */
+.shell {
+  max-width: var(--wide);
+  margin: 0 auto;
+  padding: var(--space-2xl) var(--space-lg) var(--space-3xl);
+}
+
+.theme-toggle {
+  position: fixed; top: var(--space-md); right: var(--space-md);
+  font-family: var(--mono); font-size: var(--fs-caption);
+  letter-spacing: 0.16em; text-transform: uppercase;
+  background: var(--paper); border: 1px solid var(--rule); color: var(--ink-2);
+  padding: 0.4rem 0.8rem; cursor: pointer; z-index: 10;
+}
+.theme-toggle:hover { border-color: var(--ink-3); color: var(--ink); }
+
+.cover-eyebrow {
+  font-family: var(--mono); font-size: var(--fs-label);
+  letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-3);
+  margin-bottom: var(--space-sm);
+}
+.cover-title {
+  font-family: var(--serif); font-size: var(--fs-display);
+  line-height: 1.05; letter-spacing: -0.018em;
+  margin-bottom: var(--space-md); max-width: 16ch;
+}
+.cover-sub {
+  max-width: var(--measure-ch); color: var(--ink-2);
+  font-size: 1.04rem; line-height: 1.7;
+  margin-bottom: var(--space-md);
+}
+.cover-meta {
+  display: flex; flex-wrap: wrap; gap: var(--space-md);
+  font-family: var(--mono); font-size: var(--fs-caption);
+  color: var(--ink-3); letter-spacing: 0.04em;
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--rule);
+}
+
+.toc {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-2xs) var(--space-lg);
+  margin-top: var(--space-xl); padding-top: var(--space-md);
+  border-top: 1px dotted var(--rule);
+  font-family: var(--mono); font-size: var(--fs-small);
+}
+.toc a { color: var(--ink-2); border-bottom: none; padding: 0.25rem 0; }
+.toc a .num { color: var(--ink-4); margin-right: 0.5rem; }
+.toc a:hover { color: var(--teal); }
+
+.section {
+  padding: var(--space-2xl) 0 var(--space-md);
+  border-top: 1px dotted var(--rule);
+  margin-top: var(--space-xl);
+}
+.section-num {
+  font-family: var(--mono); font-size: var(--fs-label);
+  letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-3);
+  margin-bottom: var(--space-xs);
+}
+.section h2 {
+  font-family: var(--serif); font-size: var(--fs-h1);
+  line-height: 1.12; letter-spacing: -0.012em;
+  margin-bottom: var(--space-md); max-width: 22ch;
+}
+.section h3 {
+  font-family: var(--serif); font-size: var(--fs-h3); font-weight: 500;
+  margin: var(--space-lg) 0 var(--space-xs);
+}
+.section p {
+  max-width: var(--measure-ch);
+  color: var(--ink-2); margin-bottom: var(--space-sm);
+}
+.lede {
+  max-width: var(--measure-ch);
+  font-size: 1.04rem;
+  color: var(--ink);
+  margin-bottom: var(--space-md);
+}
+
+/* Sidenote — the brand */
+.sn {
+  font-family: var(--mono); font-size: 0.7em;
+  color: var(--teal); cursor: help;
+  margin-left: 0.1em;
+}
+
+/* Sidenote underline markers ported from direction-beta-tufte-mono-kecal.html.
+   Skim/hot variants that render on the line itself.
+     .hl     → dotted hairline (skim · sn marker)
+     .hl-hot → dashed hairline (hot · sn ! marker)            */
+.hl, .hl-hot {
+  background: transparent;
+  padding: 0;
+  border-bottom: 1px dotted var(--ink-3);
+  text-underline-offset: 3px;
+}
+.hl-hot {
+  border-bottom-color: var(--ink-2);
+  border-bottom-style: dashed;
+}
+
+/* Three-up pattern blocks */
+.pattern-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-md); margin-top: var(--space-md);
+}
+.pattern {
+  background: var(--paper-lt);
+  border: 1px solid var(--rule);
+  padding: var(--space-md);
+}
+.pattern-tag {
+  font-family: var(--mono); font-size: var(--fs-label);
+  letter-spacing: 0.18em; text-transform: uppercase; color: var(--teal-deep);
+  margin-bottom: var(--space-xs);
+}
+.pattern h4 {
+  font-family: var(--serif); font-size: 1.2rem; font-weight: 500;
+  margin-bottom: var(--space-2xs);
+}
+.pattern p { font-size: var(--fs-small); margin-bottom: 0; }
+
+/* Two-up compare */
+.compare {
+  display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md);
+  margin: var(--space-md) 0;
+}
+.compare > div {
+  padding: var(--space-md);
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+}
+.compare > .good { border-left: 2px solid var(--teal); }
+.compare > .bad  { border-left: 2px solid var(--red); }
+.compare-label {
+  font-family: var(--mono); font-size: var(--fs-label);
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--teal-deep);
+  margin-bottom: var(--space-xs);
+}
+.compare > .bad .compare-label { color: var(--red); }
+
+/* Voice play card */
+.voice {
+  border-left: 2px solid var(--teal);
+  padding: var(--space-xs) var(--space-md);
+  margin: var(--space-md) 0;
+  background: var(--teal-faint);
+}
+.voice-tag {
+  font-family: var(--mono); font-size: var(--fs-label);
+  letter-spacing: 0.18em; text-transform: uppercase; color: var(--teal-deep);
+  margin-bottom: var(--space-xs);
+}
+.voice blockquote {
+  font-family: var(--serif); font-size: 1.2rem; line-height: 1.55; font-weight: 400;
+  color: var(--ink);
+  margin-bottom: var(--space-xs);
+}
+.voice .meta {
+  font-family: var(--mono); font-size: var(--fs-small); color: var(--ink-3);
+}
+
+/* Editorial pull quote */
+.pull {
+  margin: var(--space-xl) auto;
+  max-width: var(--measure-ch);
+  font-family: var(--serif); font-size: 1.7rem; line-height: 1.35;
+  text-align: center; color: var(--ink);
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: var(--space-md) 0;
+}
+.pull em { color: var(--teal); }
+.pull-attr {
+  display: block; margin-top: var(--space-sm);
+  font-family: var(--mono); font-size: var(--fs-caption);
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3);
+}
+
+/* RLM diptych */
+.diptych {
+  display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-lg);
+  margin: var(--space-md) 0;
+}
+.diptych > div {
+  padding: var(--space-md);
+  border: 1px solid var(--rule);
+}
+.diptych .head {
+  font-family: var(--mono); font-size: var(--fs-label);
+  letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-3);
+  margin-bottom: var(--space-xs);
+}
+.diptych .style { background: var(--paper-lt); border-left: 2px solid var(--teal); }
+.diptych .rlm   { background: var(--paper-warm); border-left: 2px solid var(--amber); }
+.diptych .rlm .head { color: var(--amber-deep); }
+
+/* tokens.yaml-style code block */
+.recipe {
+  font-family: var(--mono); font-size: var(--fs-small);
+  background: var(--paper-dk);
+  padding: var(--space-md);
+  border: 1px solid var(--rule);
+  margin: var(--space-md) 0;
+  white-space: pre;
+  overflow-x: auto;
+  color: var(--ink);
+}
+.recipe .k { color: var(--ink-3); }
+.recipe .v { color: var(--ink); font-weight: 500; }
+.recipe .c { color: var(--ink-4); font-style: italic; }
+.recipe .accent { color: var(--teal); }
+
+/* Cross-link footer */
+.colophon {
+  margin-top: var(--space-3xl);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--rule);
+  font-family: var(--mono); font-size: var(--fs-caption);
+  color: var(--ink-3); letter-spacing: 0.04em;
+  display: grid; gap: var(--space-2xs);
+}
+.colophon .italic { font-family: var(--serif); font-style: italic; color: var(--ink-2); }
+.colophon a { color: var(--teal); }
+
+@media (max-width: 880px) {
+  .compare, .diptych, .toc { grid-template-columns: 1fr; }
+  .cover-title { font-size: 2.2rem; }
+  .pull { font-size: 1.3rem; }
+}
+
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+
+}
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">Dark</button>
+
+<div class="shell">
+
+  <!-- §1 — the OpenProse story -->
+  <header id="story">
+    <div class="cover-eyebrow">Companion · β · Tufte · Mono · Kecal · Teal</div>
+    <h1 class="cover-title">Open<em>Prose</em>, in this voice.</h1>
+    <p class="cover-sub">
+      A walkthrough of the <em>β · teal</em> direction in production — told as the OpenProse story
+      and pinned to the <em style="color:var(--amber)">unique values</em> that emerge when this
+      style is paired with <em>RLM</em><sup class="sn">!</sup>. Read it once before
+      shipping a new page in this direction. The page renders with the exact tokens and
+      faces of <a href="direction-beta-tufte-mono-kecal-styleguide-teal.html">its parent guide</a>
+      so you can hold both files open and reproduce the surface from the pair alone.
+    </p>
+    <div class="cover-meta">
+      <span><b>Companion to</b> · direction-beta-tufte-mono-kecal-styleguide-teal.html</span>
+      <span><b>Created</b> · 2026-05-20</span>
+      <span><b>Author</b> · JH</span>
+      <span><b>Status</b> · template</span>
+    </div>
+
+    <nav class="toc" aria-label="Sections">
+      <a href="#story"><span class="num">§1</span> The OpenProse story</a>
+      <a href="#why"><span class="num">§2</span> Why β · teal</a>
+      <a href="#how"><span class="num">§3</span> How to use it</a>
+      <a href="#rlm"><span class="num">§4</span> The style + RLM</a>
+      <a href="#voice"><span class="num">§5</span> Voice playbook</a>
+      <a href="#anti"><span class="num">§6</span> Anti-patterns</a>
+      <a href="#cold"><span class="num">§7</span> Pick up cold</a>
+      <a href="direction-beta-tufte-mono-kecal-styleguide-teal.html"><span class="num">↗</span> Style guide</a>
+    </nav>
+  </header>
+
+  <!-- §1.1 The OpenProse pitch (in this voice) -->
+  <section class="section" id="story-pitch" style="border-top:none;margin-top:var(--space-lg)">
+    <div class="section-num">§1.1 · The pitch</div>
+    <h2>One spec on Sunday, one signed brief on <em>Monday</em>.</h2>
+    <p class="lede">
+      OpenProse is sold to operators who already trust documents. We take the brief
+      you wrote on Sunday night and turn it into a routine that runs against your data,
+      scored against the spec you signed, and signed back with the evidence of what
+      ran. The deliverable is a <em>verified outcome</em>, not a hopeful artifact.
+      Every Monday lands with a paper trail attached.
+    </p>
+    <p>
+      The product has three pieces. <em>Prose</em>: the spec the operator signs — written
+      in this direction, in this voice. <em>Runtime</em>: the engine that reads the spec
+      and produces the outcome. <em>Receipt</em>: the signed PDF that arrives in your
+      inbox with the spec it ran against, the data it touched, and the score it
+      reached. The style guide builds the first piece. RLM<sup class="sn">!</sup>
+      builds the second. The receipt is the third — half style, half RLM. This
+      companion is about how those three meet on the page.
+    </p>
+
+    <div class="pull">
+      A <em>brief</em> the model can run, signed by the operator who can read it.
+      <span class="pull-attr">OpenProse · the elevator pitch</span>
+    </div>
+  </section>
+
+  <!-- §2 Why β · teal -->
+  <section class="section" id="why">
+    <div class="section-num">§2 · Why this direction</div>
+    <h2>Tufte, in mono, with Kecal in the <em>accent seat</em>.</h2>
+    <p class="lede">
+      The product is half spec, half essay. The reading face has to honour both. We use
+      <em>IBM Plex Mono</em> for the body because the mono keeps spec and essay visually
+      honest — a column number in a paragraph reads the same as in a code block.
+      <em>Kecal</em> sits in the accent seat because its extrabold static carries the
+      emphasis a synthesised slant would lose. The page sits on warm fog cream over a
+      cocoa brown-black ink — generous, calm, and unafraid of a short sentence.
+    </p>
+    <p>
+      Three accents do the editorial work. <em style="color:var(--teal)">Teal #3a7a6a</em>
+      handles the writer's pivot: the word in Kecal where the sentence turns.
+      <em style="color:var(--amber)">Golden amber #c49a5c</em> is the warm complement
+      held for the rare "look up" moment — the proof, the promise, the boundary.
+      <em style="color:var(--red)">Editorial red #c0392b</em> is the fail signal —
+      failed evals, broken contracts, the badge that says <em style="color:var(--red)">this needs you</em>.
+      Never mix red with teal in the same phrase; they're independent registers.
+    </p>
+
+    <h3>The form fits the function</h3>
+    <p>
+      A spec needs measurement. Tufte's narrow column gives the eye a fixed line length —
+       62 characters, no more. The five-step ink ramp tells the reader which line is
+     load-bearing without colour. The sidenote (the marginal numbered footnote) is the
+      brand — it lets the writer say "this matters; the body did not need it" without
+     interrupting the column.
+    </p>
+  </section>
+
+  <!-- §3 How to use it in production -->
+  <section class="section" id="how">
+    <div class="section-num">§3 · How to use the style</div>
+    <h2>Six recipes for landing a page in this direction.</h2>
+    <p class="lede">
+      Each recipe is a one-page pattern with the shape, the tokens, and the voice
+      decided. Drop one into a new file, fill the slots, and you have a page that reads
+      as part of the same document family.
+    </p>
+
+    <div class="pattern-grid">
+      <div class="pattern">
+        <div class="pattern-tag">Recipe · I</div>
+        <h4>The hero spec page</h4>
+        <p>A single ledger-page hero: name, tagline, and the load-bearing claim. Teal carries the accent pivot. One bang sidenote on the line you'd shake on. Use for the front of any new direction.</p>
+      </div>
+      <div class="pattern">
+        <div class="pattern-tag">Recipe · II</div>
+        <h4>The contract spread</h4>
+        <p>Two columns: terms on the left in mono small-caps, the prose explanation on the right. Teal underlines the term. Red flags a clause that still needs the operator's signature.</p>
+      </div>
+      <div class="pattern">
+        <div class="pattern-tag">Recipe · III</div>
+        <h4>The runtime brief</h4>
+        <p>A Monday-morning page. Lede paragraph, sidenote-rich body, amber on the one outcome that landed early. Footer carries the spec hash and signature.</p>
+      </div>
+      <div class="pattern">
+        <div class="pattern-tag">Recipe · IV</div>
+        <h4>The evaluation card</h4>
+        <p>A single card per evaluation. Pass-rate in mono; teal hairline; red badge on any failed contract. The card stacks 4-up on the dashboard or sits alone on the page.</p>
+      </div>
+      <div class="pattern">
+        <div class="pattern-tag">Recipe · V</div>
+        <h4>The style demo</h4>
+        <p>A live component. Pretext-grabbable mark with a swatch row below — the same pattern wired in <a href="direction-beta-tufte-mono-kecal-styleguide-teal.html#c-pretext">§6.15</a>. Use to show off interaction without a full hero.</p>
+      </div>
+      <div class="pattern">
+        <div class="pattern-tag">Recipe · VI</div>
+        <h4>The voice specimen</h4>
+        <p>One sentence per register: short, spec, editorial. Used in onboarding pages or as a footer on a long document, to remind the writer of the cadence.</p>
+      </div>
+    </div>
+
+    <h3>A minimum page — eight lines</h3>
+    <p>The smallest page that reads as in-direction. Lift this verbatim and replace the slots.</p>
+    <pre class="recipe"><span class="c">&lt;!-- token block from §0.2 of the style guide --&gt;</span>
+&lt;<span class="k">link rel="stylesheet" href="…"</span>&gt;
+
+&lt;<span class="k">main</span> class="<span class="v">measure</span>"&gt;
+  &lt;<span class="k">h1</span>&gt;Open<em class="accent">Prose</em> — <span class="v">{your title}</span>&lt;/<span class="k">h1</span>&gt;
+  &lt;<span class="k">p</span> class="<span class="v">lede</span>"&gt;<span class="v">{one-paragraph lede in this voice}</span>&lt;/<span class="k">p</span>&gt;
+  &lt;<span class="k">p</span>&gt;<span class="v">{body, 3 paragraphs, accent on pivots}</span>&lt;/<span class="k">p</span>&gt;
+  &lt;<span class="k">aside</span> class="<span class="v">sidenote</span>"&gt;<span class="v">{the marginal note that is the brand}</span>&lt;/<span class="k">aside</span>&gt;
+&lt;/<span class="k">main</span>&gt;</pre>
+  </section>
+
+  <!-- §4 The style + RLM -->
+  <section class="section" id="rlm">
+    <div class="section-num">§4 · The style + RLM · what each side gains</div>
+    <h2>Style is what the operator reads. RLM is what runs against it.</h2>
+    <p class="lede">
+      OpenProse pairs a human surface (this direction) with a machine surface
+      (Reliable Language Modeling). The pairing matters: this style was designed
+      with RLM in the room. The two surfaces gain different things from the pair.
+    </p>
+
+    <div class="diptych">
+      <div class="style">
+        <div class="head">Style · the operator gains</div>
+        <p><strong>Readability under load.</strong> Mono body lets a number-heavy paragraph read as cleanly as a marketing line.</p>
+        <p><strong>A signature surface.</strong> Tufte's column + the Kecal accent feel like a document you'd put your name on — which is exactly what a signed brief should feel like.</p>
+        <p><strong>A vocabulary for emphasis.</strong> Accent / sidenote / bang / amber / red give the writer five ways to say "look here" without resorting to weight or colour competition.</p>
+      </div>
+      <div class="rlm">
+        <div class="head">RLM · the runtime gains</div>
+        <p><strong>A spec the model can parse.</strong> Tokenized typography (mono terms, accent pivots, sidenotes) maps cleanly into a structured contract the runtime can verify.</p>
+        <p><strong>Failure semantics in the design.</strong> Red is the colour of a broken contract — the same colour the runtime emits in the receipt. Operator and machine speak the same colour.</p>
+        <p><strong>An audit trail in the page.</strong> Every fragment carries a marginal anchor (sidenote / class hook / spec hash). The runtime can dereference any of them after the fact.</p>
+      </div>
+    </div>
+
+    <h3>The shared surface — the receipt</h3>
+    <p>
+      Where the two halves meet: the Monday-morning receipt. It is rendered in
+      this direction (paper-cream, mono body, teal pivots) but every fragment
+      maps to an entry the runtime emitted — a verified outcome, a passed
+      eval, a failed contract. The receipt is the proof that <em>the brief that
+      ran on Sunday is the brief that arrived on Monday</em>. The style makes it
+      readable; RLM makes it true.
+    </p>
+
+    <div class="pull">
+      We don't ask the model. <em>We contract the model.</em>
+      <span class="pull-attr">OpenProse · the unique value, in eight words</span>
+    </div>
+
+    <h3>Three values unique to the pair</h3>
+    <div class="pattern-grid">
+      <div class="pattern">
+        <div class="pattern-tag">Value · I</div>
+        <h4>Spec-grade legibility</h4>
+        <p>The page reads the way a good analyst would have written it. The model produces against the same surface, so reviewer and runtime see one document.</p>
+      </div>
+      <div class="pattern">
+        <div class="pattern-tag">Value · II</div>
+        <h4>A shared failure colour</h4>
+        <p>Red on the page is red in the receipt is red in the eval log. A failed contract has one face across all three surfaces.</p>
+      </div>
+      <div class="pattern">
+        <div class="pattern-tag">Value · III</div>
+        <h4>Audit-by-construction</h4>
+        <p>Every sidenote in a brief is an anchor in the verified-outcome graph. The reader can follow any "look up" mark back to the run that produced it.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- §5 Voice playbook -->
+  <section class="section" id="voice">
+    <div class="section-num">§5 · Voice playbook</div>
+    <h2>Three registers, <em>one cadence</em>.</h2>
+    <p class="lede">
+      The brand voice is calm, specific, and unafraid of a short sentence. The same
+      writer holds all three registers; the difference is the cadence and the punctuation.
+    </p>
+
+    <div class="voice">
+      <div class="voice-tag">Short · declaration · the hero seat</div>
+      <blockquote>"Write the <em>outcome</em>. We run it."</blockquote>
+      <div class="meta">Six words. The tagline cadence. One verb on each side of the line. Use on hero, elevator, the front of any brief.</div>
+    </div>
+
+    <div class="voice">
+      <div class="voice-tag">Spec · bang · the contract seat</div>
+      <blockquote>"Billed by <em>delivery</em><sup class="sn">!</sup>. If the outcome doesn't ship, no line."</blockquote>
+      <div class="meta">Terms of art spoken plainly. The bang on the one word that carries the rule. One bang per page. The brand's rare register.</div>
+    </div>
+
+    <div class="voice">
+      <div class="voice-tag">Editorial · accent · the long-form seat</div>
+      <blockquote>"Once, the week began with a scramble. <em>Then the outcome was declared in a file.</em>"</blockquote>
+      <div class="meta">The narrative register. The accent carries the pivot. Sidenotes optional but welcomed. Use for the lede of a brief and the colophon.</div>
+    </div>
+
+    <!-- Skim/hot underline variants, ported from the parent
+         (direction-beta-tufte-mono-kecal.html). -->
+    <div class="voice">
+      <div class="voice-tag">Sidenote skim · dotted · sn marker</div>
+      <blockquote><span class="hl">The standup happens anyway, but it is fifteen minutes shorter<sup class="sn">3</sup>.</span> Nobody asks where the numbers came from.</blockquote>
+      <div class="meta">When the sidenote can live on the line: a dotted hairline under the clause + a numeric <code>&lt;sup class="sn"&gt;n&lt;/sup&gt;</code>. The "skim" register — many per page is fine.</div>
+    </div>
+
+    <div class="voice">
+      <div class="voice-tag">Sidenote hot · dashed · sn ! marker</div>
+      <blockquote>"Billed by delivery<sup class="sn">!</sup>. <span class="hl-hot">If the outcome doesn't ship, no line.</span>"</blockquote>
+      <div class="meta">The page's single load-bearing claim. Dashed hairline + a bang sidenote. One per page; if you reach for a second, the first is wrong.</div>
+    </div>
+
+    <h3>The three rules of register</h3>
+    <p>
+      One: the accent is the writer; the sidenote is the reader. Two: accent and sidenote never
+      share a phrase. Three: one bang per page — if you reach for a second, the first is
+      wrong. Tufte respected the eye; we respect the operator.
+    </p>
+  </section>
+
+  <!-- §6 Anti-patterns -->
+  <section class="section" id="anti">
+    <div class="section-num">§6 · Anti-patterns</div>
+    <h2>The mistakes that read as <em style="color:var(--red)">wrong</em>.</h2>
+    <p class="lede">
+      Five patterns that go wrong most often when a new operator picks up the
+      direction. Each is paired with the corrected version.
+    </p>
+
+    <div class="compare">
+      <div class="bad">
+        <div class="compare-label">Don't · loud emphasis</div>
+        <p style="font-weight:700">EVERY OUTCOME IS SIGNED AND VERIFIED. NO EXCEPTIONS.</p>
+      </div>
+      <div class="good">
+        <div class="compare-label">Do · accent pivot</div>
+        <p>Every outcome is <em>signed</em> and verified. No exceptions.</p>
+      </div>
+    </div>
+
+    <div class="compare">
+      <div class="bad">
+        <div class="compare-label">Don't · mixed red + teal</div>
+        <p><em style="color:var(--red)">An accent in red</em> sits in a paragraph that already has a <em>teal pivot</em>.</p>
+      </div>
+      <div class="good">
+        <div class="compare-label">Do · one register per phrase</div>
+        <p>A failed clause stands alone in a row with a <em style="color:var(--red)">red badge</em>. The body sentence holds its <em>teal pivot</em> elsewhere.</p>
+      </div>
+    </div>
+
+    <div class="compare">
+      <div class="bad">
+        <div class="compare-label">Don't · two bangs</div>
+        <p>Billed by <em>delivery</em><sup class="sn">!</sup>. <em>Hold</em><sup class="sn">!</sup> a brief that misses contract.</p>
+      </div>
+      <div class="good">
+        <div class="compare-label">Do · one bang, the one that matters</div>
+        <p>Billed by <em>delivery</em><sup class="sn">!</sup>. Hold a brief that misses contract.</p>
+      </div>
+    </div>
+
+    <div class="compare">
+      <div class="bad">
+        <div class="compare-label">Don't · amber as decoration</div>
+        <p>Three <em style="color:var(--amber)">amber</em> phrases in the same paragraph turn the page into a holiday card.</p>
+      </div>
+      <div class="good">
+        <div class="compare-label">Do · amber on the load-bearing claim only</div>
+        <p>The brief is signed. <em style="color:var(--amber)">Seven years</em>, by default. The clause is the page.</p>
+      </div>
+    </div>
+
+    <div class="compare">
+      <div class="bad">
+        <div class="compare-label">Don't · pure black</div>
+        <p style="color:#000">Body type set in pure <code>#000</code> over warm cream — reads as plastic, breaks the temperature of the page.</p>
+      </div>
+      <div class="good">
+        <div class="compare-label">Do · warm cocoa ink</div>
+        <p>Body type set in <code>#2a2520</code> — the ink stays warm against the cream, the eye stays calm.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- §7 Pick up cold -->
+  <section class="section" id="cold">
+    <div class="section-num">§7 · Picking up the style cold</div>
+    <h2>The minimum to ship a new page in this direction.</h2>
+    <p class="lede">
+      An agent or a teammate landing on the project fresh should be able to produce
+      a publishable page in this direction without re-deriving the system. The list
+      below is the shortest ramp.
+    </p>
+
+    <pre class="recipe"><span class="c"># Pick up cold — seven moves.</span>
+
+<span class="k">1.</span> <span class="v">Read the parent style guide end-to-end (one pass)</span> <span class="c"># direction-beta-tufte-mono-kecal-styleguide-teal.html</span>
+<span class="k">2.</span> <span class="v">Copy the :root token block from §0.2 verbatim into your new file</span>
+<span class="k">3.</span> <span class="v">Wire the seven-weight Kecal @font-face block + IBM Plex Mono @import</span>
+<span class="k">4.</span> <span class="v">Set body to var(--mono) at 1.08rem / 1.7 line-height</span>
+<span class="k">5.</span> <span class="v">Wrap every emphasis in &lt;em&gt;; the global rule renders it in teal italic</span>
+<span class="k">6.</span> <span class="v">Reach for &lt;sup class="sn"&gt; before .hl — the sidenote is the brand</span>
+<span class="k">7.</span> <span class="v">Tag every override // JH YYYY-MM-DD with the verbatim review quote</span>
+
+<span class="c"># If any rule conflicts with a user instruction, ask before deviating.</span>
+<span class="c"># See §6 anti-patterns for the five mistakes the system catches early.</span></pre>
+
+    <h3>Two questions to ask before you ship</h3>
+    <ol style="font-family:var(--mono);color:var(--ink-2);max-width:var(--measure-ch);padding-left:var(--space-md);line-height:1.85">
+      <li><strong>Is there <em>one</em> bang on the page?</strong> If yes, is it on the right phrase? If two, the first one is wrong.</li>
+      <li><strong>Is amber load-bearing?</strong> If amber lands on something the reader could skip, the page is using it as decoration. Move it or drop it.</li>
+    </ol>
+
+    <p style="margin-top:var(--space-lg)">
+      Both files — this companion and its <a href="direction-beta-tufte-mono-kecal-styleguide-teal.html">parent guide</a> —
+      are versioned together. If the direction shifts, update them in lockstep. Tag the
+      change with the verbatim review quote. The guide is the contract; this companion is
+      the rehearsal.
+    </p>
+  </section>
+
+  <div class="colophon">
+    <div class="italic">OpenProse · Direction β · Tufte · Mono · Kecal · Teal · companion</div>
+    <div>Paper <span style="font-family:var(--mono)">#f5f0e8</span> · Ink <span style="font-family:var(--mono)">#2a2520</span> · Teal <span style="font-family:var(--mono);color:var(--teal)">#3a7a6a</span> · Amber <span style="font-family:var(--mono);color:var(--amber)">#c49a5c</span> · Red <span style="font-family:var(--mono);color:var(--red)">#c0392b</span></div>
+    <div>Companion to <a href="direction-beta-tufte-mono-kecal-styleguide-teal.html">direction-beta-tufte-mono-kecal-styleguide-teal.html</a></div>
+    <div>JH 2026-05-20 · v1.0</div>
+  </div>
+
+</div><!-- /.shell -->
+
+<script>
+// Theme toggle — mirrors the parent guide so both pages flip together
+// per localStorage.
+(function() {
+  const btn = document.getElementById('themeToggle');
+  const root = document.documentElement;
+  const stored = (() => { try { return localStorage.getItem('sg-theme'); } catch { return null; } })();
+  if (stored === 'dark') { root.setAttribute('data-theme', 'dark'); btn.textContent = 'Light'; }
+  else { btn.textContent = 'Dark'; }
+  btn.addEventListener('click', () => {
+    const current = root.getAttribute('data-theme');
+    if (current === 'dark') { root.removeAttribute('data-theme'); btn.textContent = 'Dark'; try { localStorage.setItem('sg-theme', 'light'); } catch {} }
+    else { root.setAttribute('data-theme', 'dark'); btn.textContent = 'Light'; try { localStorage.setItem('sg-theme', 'dark'); } catch {} }
+  });
+})();
+</script>
+
+</body>
+</html>

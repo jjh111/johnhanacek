@@ -1,0 +1,1935 @@
+<!DOCTYPE html>
+<html lang="en" data-mode="light">
+<head>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 142 142'%3E%3Cpath d='M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z' fill='%232a2520'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenProse — Homepage (μ · Symmetry · TOP/Under mask)</title>
+<link rel="stylesheet" href="_tokens.css">
+<link rel="stylesheet" href="_pairings.css">
+
+<style>
+/* ============================================
+   DIRECTION μ · SYMMETRY · TOP/UNDER MASK
+   Reflection homepage. The hero is a landscape photograph split into
+   a still upper half + a WebGL-rippled lower half, with a frosted
+   center oval carrying the logotype + tagline.
+
+   DNA: IBM Plex Mono body, Kecal italic accent (equal-bodied to mono),
+   delta-machine cream paper (#f4f1e8) over ink (#1a1814), amber accent
+   for "look up" moments. Emphasis is the click-spawned ripple.
+
+   Implementation: two WebP textures (Symmetry_TOP + Symmetry_Under)
+   composited in a fragment shader — TOP masks Under so where TOP is
+   opaque it occludes the rippling water beneath. Click → transient
+   ripple uniform (max 24 active). Ambient turbulence keeps the water
+   never perfectly still.
+
+   Parent chain:
+   alpha-editorial → mu-bloom → mu-bloom-homepage-landscape-tufte-kecal
+   → mu-bloom-homepage-symmetry-ripple → -topmask  (this file)
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ===== Palette (delta-machine cream baseline — Tufte override below) ===== */
+:root {
+  --paper:     #f4f1e8;
+  --paper-dk:  #ece8db;
+  --paper-lt:  #faf7ee;
+  --paper-elev:#fdfbf4;
+  --paper-deep:#0e0e10;
+
+  --ink:       #1a1814;
+  --ink-2:     #44403a;
+  --ink-3:     #8a8478;
+  --ink-4:     #b0a896;
+
+  --amber:     #b8862e;
+  --amber-deep:#8c5e1c;
+  --amber-soft:#d4a64f;
+  --amber-faint:rgba(184,134,46,0.10);
+
+  --good:      #4a8c44;
+  --warn:      #b8442e;
+
+  --rule:      #d8d2c4;
+  --rule-mid:  #ebe5d4;
+
+  --shadow:    0 1px 2px rgba(26,24,20,0.04);
+  --shadow-md: 0 8px 32px rgba(26,24,20,0.08);
+  --shadow-lg: 0 24px 64px rgba(26,24,20,0.12);
+
+  --mono: 'IBM Plex Mono', 'JetBrains Mono', 'SF Mono', monospace;
+  --sans: 'IBM Plex Sans', -apple-system, system-ui, sans-serif;
+  --accent: 'Cormorant Garamond', 'Cormorant', Georgia, serif;
+
+  /* Bloom canvas tones still carried for use elsewhere in the page
+     (we don't paint colored cells in the hero anymore, but the vars
+     stay so anything that reads them remains valid). */
+  --bloom-warm: 200, 156, 42;
+  --bloom-cool: 106, 85, 56;
+  --bloom-stable: 58, 138, 110;
+  --bloom-fade: 247, 241, 227;
+  --bloom-fade-alpha: 0.16;
+}
+
+html[data-mode="dark"] {
+  --paper:     #0e0e10;
+  --paper-dk:  #16161a;
+  --paper-lt:  #1d1d22;
+  --paper-elev:#222226;
+  --paper-deep:#08080a;
+
+  --ink:       #e8e4dc;
+  --ink-2:     #c8c4bc;
+  --ink-3:     #888880;
+  --ink-4:     #5a5a55;
+
+  --amber:     #d4a64f;
+  --amber-deep:#b8862e;
+  --amber-soft:#e0bf68;
+  --amber-faint:rgba(212,166,79,0.16);
+
+  --good:      #6ee87a;
+  --warn:      #d4604f;
+
+  --rule:      #2a2a30;
+  --rule-mid:  #1f1f24;
+
+  --shadow:    0 1px 2px rgba(0,0,0,0.4);
+  --shadow-md: 0 8px 32px rgba(0,0,0,0.4);
+  --shadow-lg: 0 24px 64px rgba(0,0,0,0.5);
+
+  --bloom-warm: 224, 191, 104;
+  --bloom-cool: 148, 122, 76;
+  --bloom-stable: 110, 232, 162;
+  --bloom-fade: 14, 14, 16;
+  --bloom-fade-alpha: 0.20;
+}
+
+/* ===== Page chrome ===== */
+html, body {
+  height: 100%;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 16px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.25s ease, color 0.25s ease;
+}
+body { display: flex; flex-direction: column; min-height: 100vh; }
+
+em {
+  font-family: var(--accent);
+  font-style: italic;
+  /* Kecal italic stays at 1em (equal-bodied to surrounding mono). */
+  font-size: 1em;
+  font-weight: 500;
+  letter-spacing: 0;
+  /* Accent color: teal — subtitle em words read in the canonical accent. */
+  color: var(--teal);
+}
+
+/* Global override: pin all em-inside-chrome to 1em so Kecal never grows
+   beside its mono neighbour. */
+.hero h1 em,
+.hero-byline em,
+.section-kicker em,
+section h2 em,
+section h3 em,
+section h4 em,
+.lede em,
+.paradigm-card em,
+.feature-row em,
+.pc-claim em,
+.pc-note em,
+.hero-deck em,
+.hero-eyebrow em,
+.cta em,
+.cta-section em,
+.foot em {
+  font-size: 1em;
+}
+
+a { color: var(--amber); text-decoration: none; }
+a:hover { color: var(--amber-deep); }
+
+/* ===== Nav — TOP/Under mask fork: logo-only, fixed corner anchor ===== */
+nav {
+  /* Invisible chrome — a positioning hook for the logo. Ripple canvas
+     receives clicks except where .logo opts back in. */
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%;
+  z-index: 50;
+  pointer-events: none;
+  background: transparent;
+  backdrop-filter: none;
+  border-bottom: none;
+}
+html[data-mode="dark"] nav { background: transparent; }
+nav .inner {
+  position: relative;
+  padding: 1.5rem 2rem 0;
+  display: inline-flex;
+  pointer-events: auto;
+}
+/* Frosted-glass disc — ::before pseudo on .logo so they move together. */
+nav .logo {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  /* Tight padding so the disc hugs the mark. */
+  padding: 0.5rem 0.6rem;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-weight: 500;
+  isolation: isolate;                               /* so the ::before sits behind */
+}
+nav .logo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  /* Tint is paper at 60% — enough to legibilify the dark logo over a
+     dark image, while still showing the lake through. backdrop-filter
+     does the actual frosted-glass blur; the rgba is the wash. */
+  background: rgba(244, 241, 232, 0.42);
+  border: 1px solid rgba(255, 255, 248, 0.55);
+  border-radius: 999px;                             /* circular oval */
+  backdrop-filter: blur(14px) saturate(1.15);
+  -webkit-backdrop-filter: blur(14px) saturate(1.15);
+  /* Inset highlight on the top edge — sells the glass-pane feel. */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 4px 18px rgba(20, 18, 16, 0.18);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+html[data-mode="dark"] nav .logo::before {
+  background: rgba(20, 18, 16, 0.45);
+  border-color: rgba(255, 255, 248, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    0 4px 18px rgba(0, 0, 0, 0.45);
+}
+nav .logo:hover::before {
+  background: rgba(244, 241, 232, 0.58);
+}
+html[data-mode="dark"] nav .logo:hover::before {
+  background: rgba(20, 18, 16, 0.62);
+}
+/* SVG logo size — kept compact since the frosted glass already gives
+   it presence. No wordmark in this fork. */
+nav .logo svg {
+  width: 36px; height: 36px;
+  fill: var(--ink);
+  display: block;
+}
+/* In dark mode --paper flips dark — fill the signet with --ink (the
+   light foreground in dark mode) so it stays visible. */
+html[data-mode="dark"] nav .logo svg { fill: var(--ink); }
+nav .logo .wordmark { display: none; }              /* fork: logo only */
+
+/* The old nav links + nav-cta are gone in this fork; keeping the
+   selectors as dead code so site-wide rules don't choke. */
+nav .links { display: none; }
+nav .right { display: flex; align-items: center; gap: 0.85rem; pointer-events: auto;
+  /* Pinned to top-right, mirroring the upper-left logo at top: 1.5rem. */
+  position: absolute; top: 1.5rem; right: 2rem; }
+.mode-toggle {
+  width: 32px; height: 32px;
+  background: rgba(244, 241, 232, 0.42);
+  border: 1px solid rgba(255, 255, 248, 0.55);
+  color: var(--ink-2);
+  cursor: pointer;
+  border-radius: 50%;
+  font-size: 1rem; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(14px) saturate(1.15);
+  -webkit-backdrop-filter: blur(14px) saturate(1.15);
+  transition: border-color 0.15s, color 0.15s, background 0.2s;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 4px 18px rgba(20, 18, 16, 0.18);
+}
+html[data-mode="dark"] .mode-toggle {
+  background: rgba(20, 18, 16, 0.45);
+  border-color: rgba(255, 255, 248, 0.18);
+  color: var(--paper-2);
+}
+.mode-toggle:hover { color: var(--ink); background: rgba(244, 241, 232, 0.58); }
+.nav-cta { display: none; }                          /* fork: no CTA */
+
+/* Mobile — keep logo and toggle pinned to the top corners. */
+@media (max-width: 640px) {
+  nav .inner { padding: 1.1rem 1.25rem 0; }
+  /* Override mobile-safety's full-width to keep .right as a corner pill. */
+  nav .right {
+    top: 1.1rem; right: 1.25rem;
+    width: auto !important; max-width: none !important;
+  }
+  nav .logo svg { width: 30px; height: 30px; }
+  nav .logo { padding: 0.55rem 0.78rem; }
+}
+
+/* Match the mobile-safety !important so the corner pill stays fit-content
+   on desktop too. */
+nav > .right { width: auto !important; max-width: none !important; }
+
+/* ===== Hero — symmetry-photo with rippled bottom half ===== */
+.hero {
+  position: relative;
+  flex: 0 0 auto;
+  width: 100%;
+  /* Full viewport. Paradigms lives below the fold. */
+  min-height: 100vh;
+  height: 100vh;
+  display: flex; align-items: flex-start;
+  overflow: hidden;
+  /* No `isolation: isolate` — the fixed canvas sits at body level so the
+     simulation reads through hero AND paradigms. Hero paints above the
+     canvas at z-index 1; clicks fall through. */
+  z-index: 1;
+  pointer-events: none;
+  background-color: var(--paper-lt);
+  /* TOP mask layered over Under photograph; JS swaps the urls to the
+     viewport-appropriate resolution once known. */
+  background-image: var(--symmetry-top-url), var(--symmetry-under-url);
+  background-size: cover, cover;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
+}
+:root {
+  /* Defaults assume a desktop tier (1600w covers most laptop DPR=2);
+     a tiny JS bumper in <script> below upgrades to 2400 for wide HiDPI
+     and downgrades to 1000 on mobile to keep first-paint quick. */
+  --symmetry-top-url:   url('../Assets/symmetry-web/symmetry_top-1600.webp');
+  --symmetry-under-url: url('../Assets/symmetry-web/symmetry_under-1600.webp');
+}
+/* Once the WebGL canvas signals ready (data-symmetry-ready), drop the
+   still-photo fallback so the live lake shows through. */
+body[data-symmetry-ready] .hero {
+  background-image: none;
+  background-color: transparent;
+}
+/* Symmetry canvas — full-viewport WebGL surface, z-index:0 behind all
+   content. Lives at body level (not inside .hero) so the simulation
+   reads through paradigms too. */
+.symmetry-canvas {
+  position: fixed; inset: 0;
+  width: 100vw; height: 100vh;
+  z-index: 0;
+  touch-action: none;
+  display: block;
+  pointer-events: auto;
+}
+/* Water-line hairline at 50vh — the visual seam between the still
+   upper half and the rippled lower half. Fades on hero hover. */
+.water-line {
+  position: fixed;
+  left: 0; right: 0;
+  top: 50vh;
+  height: 1px;
+  z-index: 1;
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,248,0) 0%,
+    rgba(255,255,248,0.55) 18%,
+    rgba(255,255,248,0.7) 50%,
+    rgba(255,255,248,0.55) 82%,
+    rgba(255,255,248,0) 100%
+  );
+  pointer-events: none;
+  opacity: 0.55;
+  transition: opacity 0.4s ease;
+}
+.hero:hover .water-line { opacity: 0.18; }
+html[data-mode="dark"] .water-line {
+  background: linear-gradient(
+    90deg,
+    rgba(20,17,13,0) 0%,
+    rgba(20,17,13,0.45) 18%,
+    rgba(20,17,13,0.65) 50%,
+    rgba(20,17,13,0.45) 82%,
+    rgba(20,17,13,0) 100%
+  );
+}
+/* The overlay keeps the prose readable against the photo. A quiet
+   gradient that darkens the top edge slightly so the eyebrow + h1
+   sit against ink rather than fighting the sky. */
+.hero-overlay {
+  position: absolute; inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  /* Tight top scrim only — the rest of the image breathes. */
+  background:
+    linear-gradient(180deg,
+      rgba(244,241,232,0.62) 0%,
+      rgba(244,241,232,0.18) 8%,
+      rgba(244,241,232,0.00) 16%,
+      rgba(244,241,232,0.00) 100%);
+}
+html[data-mode="dark"] .hero-overlay {
+  background:
+    linear-gradient(180deg,
+      rgba(14,14,16,0.62) 0%,
+      rgba(14,14,16,0.18) 8%,
+      rgba(14,14,16,0.00) 16%,
+      rgba(14,14,16,0.00) 100%);
+}
+
+/* Hero-content pinned to top half so the lower half stays clickable
+   for ripples. max-height: 50% prevents overflow into the water-line. */
+.hero-content {
+  position: relative; z-index: 3;
+  max-width: 1480px; margin: 0 auto;
+  padding: 3.25rem 2rem 1.25rem;
+  width: 100%;
+  max-height: 50%;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 4rem;
+  align-items: start;
+  pointer-events: none; /* clicks fall through to the canvas */
+}
+
+/* Center oval — frosted-glass pill at top: 42% carrying logotype +
+   byline. Pointer-events off so clicks fall through to the ripple
+   canvas. */
+.hero-content.as-minimal {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1rem;
+  /* c_20150874 — sized so every byline corner sits INSIDE the pill
+     curve. At byline 398w × 26h, the geometric constraint solves to
+     vertical >= 1.4rem AND horizontal >= 2rem given a stadium
+     (border-radius:999px). */
+  width: fit-content;
+  padding: 1.4rem 2rem;
+  background: rgba(244, 241, 232, 0.22);
+  border: 1px solid rgba(255, 255, 248, 0.35);
+  border-radius: 999px;
+  backdrop-filter: blur(18px) saturate(1.10);
+  -webkit-backdrop-filter: blur(18px) saturate(1.10);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),
+    0 14px 64px rgba(20, 18, 16, 0.22);
+  /* Cap so the byline can't push the oval wider than the eye wants;
+     above 540 it would feel banner-y. */
+  max-width: min(92vw, 540px);
+  pointer-events: none;
+}
+html[data-mode="dark"] .hero-content.as-minimal {
+  background: rgba(20, 18, 16, 0.28);
+  border-color: rgba(255, 255, 248, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 14px 64px rgba(0, 0, 0, 0.45);
+}
+.hero-content.as-minimal .hero-logotype {
+  display: block;
+  width: clamp(220px, 32vw, 380px);
+  height: auto;
+  fill: var(--ink);
+}
+/* Same --ink fill in dark mode (--paper flips dark; --ink stays the foreground). */
+html[data-mode="dark"] .hero-content.as-minimal .hero-logotype { fill: var(--ink); }
+.hero-content.as-minimal .hero-byline {
+  font-family: var(--mono);
+  font-size: clamp(0.92rem, 1.4vw, 1.1rem);
+  line-height: 1.5;
+  color: var(--ink-2);
+  letter-spacing: 0;
+  margin: 0;
+  /* One line at desktop. On narrow viewports the &nbsp;-joined HTML
+     forces the only legal break to land before "with". */
+  text-wrap: balance;
+  max-width: none;
+  white-space: normal;
+}
+html[data-mode="dark"] .hero-content.as-minimal .hero-byline { color: var(--paper-2, rgba(255,255,255,0.78)); }
+.hero-content.as-minimal .hero-byline em {
+  font-size: 1em;
+  letter-spacing: 0;
+  /* Italic carries the emphasis — no color shift. */
+  color: var(--ink-2);
+}
+html[data-mode="dark"] .hero-content.as-minimal .hero-byline em { color: var(--paper-2, rgba(255,255,255,0.78)); }
+/* Mobile hero — pin to small-viewport-height units so iOS Safari's
+   address-bar collapse doesn't clip the canvas. */
+@media (max-width: 640px) {
+  /* Match desktop oval hug at mobile widths. */
+  .hero-content.as-minimal { padding: 0.7rem 0.85rem; gap: 0.5rem; max-width: 92vw; top: 44%; }
+  .hero-content.as-minimal .hero-logotype { width: clamp(160px, 56vw, 280px); }
+  .hero-content.as-minimal .hero-byline { font-size: 0.86rem; line-height: 1.5; }
+  .hero { min-height: 100svh; height: 100svh; min-height: 100dvh; height: 100dvh; }
+  .symmetry-canvas { height: 100svh; height: 100dvh; }
+}
+.hero-content > * { pointer-events: auto; }
+.hero-left { max-width: 32rem; }
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 0.65rem;
+  font-family: var(--sans); font-size: 0.72rem;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--amber); font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+.hero-eyebrow::before {
+  content: ''; width: 28px; height: 1px; background: var(--amber);
+}
+.hero h1 {
+  font-family: var(--mono);
+  font-size: clamp(2.4rem, 5vw, 4rem);
+  font-weight: 500;
+  line-height: 1.02;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+  margin-bottom: 1.5rem;
+  max-width: 16ch;
+}
+.hero h1 em {
+  font-size: 1em;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+}
+.hero-deck {
+  font-family: var(--mono);
+  font-size: 1.02rem;
+  line-height: 1.65;
+  color: var(--ink-2);
+  margin-bottom: 2rem;
+  max-width: 38ch;
+}
+.cta-row {
+  display: flex; gap: 0.85rem; flex-wrap: wrap;
+  margin-bottom: 0;
+}
+.cta-primary {
+  display: inline-flex; align-items: center; gap: 0.65rem;
+  background: var(--ink); color: var(--paper);
+  font-family: var(--mono); font-size: 0.9rem; font-weight: 500;
+  padding: 0.85rem 1.25rem;
+  border-radius: 4px;
+  border: none; cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.cta-primary:hover { background: var(--amber-deep); }
+.cta-primary:active { transform: translateY(1px); }
+.cta-primary .arrow {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px;
+  background: var(--paper); color: var(--ink);
+  border-radius: 3px;
+  font-size: 12px;
+}
+.cta-ghost {
+  display: inline-flex; align-items: center; gap: 0.65rem;
+  background: transparent; color: var(--ink-2);
+  font-family: var(--mono); font-size: 0.9rem; font-weight: 500;
+  padding: 0.85rem 1.25rem;
+  border: 1px solid var(--rule); border-radius: 4px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.cta-ghost:hover { border-color: var(--amber); color: var(--amber); }
+
+/* align-self: start keeps stamp + hint in the top half so the
+   bottom-half lake stays fully clickable. */
+.hero-right {
+  text-align: right;
+  align-self: start;
+  font-family: var(--mono); font-size: 0.78rem;
+  color: var(--ink-3);
+}
+.hero-right .stamp-mark {
+  display: block;
+  width: 96px; height: 96px;
+  margin-left: auto;
+  margin-bottom: 1rem;
+  fill: var(--ink);
+  opacity: 0.86;
+}
+.hero-right .stamp-caption {
+  margin-bottom: 0.25rem;
+}
+.hero-right .stamp-caption em { color: var(--ink-2); }
+.hero-right .stamp-hint {
+  color: var(--ink-4); font-size: 0.7rem;
+  letter-spacing: 0.06em;
+}
+/* Corner labels — small annotations: "symmetry · the reflection." */
+.hero-label {
+  position: absolute;
+  z-index: 3;
+  font-family: var(--mono); font-size: 0.66rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--ink-3);
+  pointer-events: none;
+}
+.hero-label.tl { top: 1.25rem; left: 2rem; }
+.hero-label.br { bottom: 1.25rem; right: 2rem; }
+.hero-label em {
+  font-size: 1em; color: var(--ink-2);
+  letter-spacing: 0;
+}
+
+/* ============================================
+   PHOTO-BACKED SECTIONS — preserved verbatim from parent.
+   Paradigms / features / cta / footer keep their landscape
+   backgrounds and the cream-paper wash.
+   ============================================ */
+:root {
+  --photo-wash: rgba(244, 241, 232, 0.74);
+}
+html[data-mode="dark"] {
+  --photo-wash: rgba(14, 14, 16, 0.74);
+}
+.photo-section {
+  position: relative;
+  /* z-index above the fixed canvas (z-index:0). */
+  z-index: 1;
+  background-color: var(--paper-lt);
+  background-image:
+    linear-gradient(var(--photo-wash), var(--photo-wash)),
+    var(--photo-url, none);
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+@media (max-width: 980px), (pointer: coarse) {
+  .photo-section { background-attachment: scroll; }
+}
+
+/* ===== Paradigms — translucent wash so the LIVE WebGL lake reads
+   through; cards still need the wash for legibility. ===== */
+.paradigms {
+  background-color: transparent;
+  background-image:
+    linear-gradient(var(--photo-wash), var(--photo-wash));
+  background-attachment: fixed;
+  /* Clicks pass through to the fixed canvas (spawn ripples);
+     cards opt back in below. */
+  pointer-events: none;
+}
+.paradigms .paradigm-card,
+.paradigms a,
+.paradigms button {
+  pointer-events: auto;
+}
+.paradigms .inner {
+  max-width: 1480px; margin: 0 auto;
+  padding: 5rem 2rem;
+}
+.section-kicker {
+  font-family: var(--sans); font-size: 0.72rem;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--amber); font-weight: 600;
+  margin-bottom: 1.25rem;
+  display: flex; align-items: center; gap: 0.85rem;
+}
+.section-kicker::after {
+  content: ''; flex: 1; height: 1px; background: var(--rule); opacity: 0.7;
+}
+.paradigms h2 {
+  font-family: var(--mono);
+  font-size: clamp(1.8rem, 3.4vw, 2.6rem);
+  font-weight: 500; line-height: 1.15;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  margin-bottom: 0.75rem;
+  max-width: 22ch;
+}
+.paradigms h2 em { color: var(--ink); }
+.paradigms .lede {
+  font-family: var(--mono); font-size: 0.98rem;
+  color: var(--ink-2); max-width: 62ch;
+  margin-bottom: 3rem; line-height: 1.7;
+}
+
+.paradigm-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+}
+.paradigm-card {
+  background: var(--paper-elev);
+  border: 1px solid var(--rule);
+  padding: 2rem 1.75rem;
+  display: flex; flex-direction: column;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.paradigm-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--amber);
+  box-shadow: var(--shadow-md);
+}
+.paradigm-card .num {
+  font-family: var(--mono); font-size: 0.72rem; font-weight: 500;
+  letter-spacing: 0.16em; color: var(--amber);
+  margin-bottom: 1.25rem;
+}
+.paradigm-card h3 {
+  font-family: var(--mono);
+  font-size: 1.4rem; font-weight: 500;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  margin-bottom: 0.85rem;
+}
+.paradigm-card h3 em { color: var(--ink); }
+.paradigm-card .pc-claim {
+  font-family: var(--accent); font-style: italic;
+  font-size: 1.2rem; line-height: 1.35;
+  color: var(--ink); margin-bottom: 1rem;
+  letter-spacing: -0.005em;
+}
+.paradigm-card .pc-note {
+  font-family: var(--mono); font-size: 0.88rem;
+  color: var(--ink-2); line-height: 1.7;
+  margin-bottom: 1.5rem;
+  flex: 1;
+}
+.paradigm-card .pc-foot {
+  border-top: 1px dotted var(--rule-mid);
+  padding-top: 0.85rem;
+  font-family: var(--sans); font-size: 0.62rem;
+  color: var(--ink-3); letter-spacing: 0.14em;
+  text-transform: uppercase;
+  display: flex; justify-content: space-between; gap: 0.5rem;
+}
+
+/* ===== Features ===== */
+.features {
+  --photo-url: url('./assets/landscape-web/just-the-light.jpg');
+}
+.features .inner {
+  max-width: 1480px; margin: 0 auto;
+  padding: 5rem 2rem;
+}
+.features h2 {
+  font-family: var(--mono);
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  font-weight: 500; line-height: 1.2;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  margin-bottom: 0.75rem;
+  max-width: 22ch;
+}
+.features h2 em { color: var(--ink); }
+.features .lede {
+  font-family: var(--mono); font-size: 0.94rem;
+  color: var(--ink-2); max-width: 60ch;
+  margin-bottom: 3rem; line-height: 1.7;
+}
+.feature-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.85rem;
+}
+.feature-row {
+  border-top: 1px solid var(--rule);
+  padding: 1.5rem 0;
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+.feature-row .glyph {
+  font-family: var(--mono); font-weight: 600;
+  color: var(--amber); font-size: 1rem; line-height: 1;
+}
+.feature-row h4 {
+  font-family: var(--mono); font-size: 0.95rem; font-weight: 500;
+  color: var(--ink); margin-bottom: 0.35rem;
+  letter-spacing: -0.005em;
+}
+.feature-row p {
+  font-family: var(--mono); font-size: 0.84rem;
+  color: var(--ink-2); line-height: 1.65;
+}
+.feature-row p em { color: var(--ink); font-size: 1em; }
+
+/* ===== Closing CTA ===== */
+.cta-section {
+  --photo-url: url('./assets/landscape-web/like-dust.jpg');
+  border-top: 1px solid var(--rule);
+}
+.cta-section .inner {
+  max-width: 1480px; margin: 0 auto;
+  padding: 5rem 2rem;
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 3rem;
+  align-items: center;
+}
+.cta-section .cta-block { max-width: 40rem; }
+.cta-section h2 {
+  font-family: var(--mono);
+  font-size: clamp(1.8rem, 3.2vw, 2.4rem);
+  font-weight: 500; line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin-bottom: 1rem;
+  max-width: 20ch;
+}
+.cta-section h2 em { color: var(--ink); }
+.cta-section .cta-deck {
+  font-family: var(--mono); font-size: 0.96rem;
+  color: var(--ink-2); line-height: 1.7;
+  margin-bottom: 1.75rem;
+}
+.cta-section .spec-card {
+  background: var(--ink); color: var(--paper);
+  border: 1px solid var(--ink);
+  padding: 1.5rem 1.65rem;
+  font-family: var(--mono); font-size: 0.78rem;
+  line-height: 1.85;
+  border-radius: 4px;
+  box-shadow: var(--shadow-md);
+}
+/* c_c886f8d6 — explicit mode-aware syntax colors. In light mode the card
+   sits dark-bg/cream-fg; in dark mode it inverts to cream-bg/dark-fg.
+   Using palette tokens here would route through the β-tufte amber→gray
+   override and drop .k contrast to ~2:1 on cream. Hardcoded colors keep
+   the YAML readable in both modes. */
+.cta-section .spec-card .k { color: #d4a64f; }                /* amber on dark */
+.cta-section .spec-card .v { color: var(--paper); }
+.cta-section .spec-card .c { color: rgba(244,241,232,0.62); font-style: italic; }
+html[data-mode="dark"] .cta-section .spec-card .k { color: #7a5a20; }  /* deep amber on cream */
+html[data-mode="dark"] .cta-section .spec-card .c { color: rgba(20,17,13,0.65); }
+
+/* ===== Footer ===== */
+.page-foot {
+  --photo-url: url('./assets/landscape-web/select-sep11-2011_26.jpg');
+  border-top: 1px solid var(--rule);
+}
+.page-foot .inner {
+  max-width: 1480px; margin: 0 auto;
+  padding: 1.5rem 2rem;
+  display: flex; justify-content: space-between;
+  flex-wrap: wrap; gap: 1rem;
+  font-family: var(--mono); font-size: 0.72rem;
+  color: var(--ink-3);
+}
+.page-foot .channels { display: flex; gap: 1.5rem; }
+.page-foot .channels a {
+  color: var(--ink-3);
+  display: inline-flex; align-items: center; gap: 0.4rem;
+}
+.page-foot .channels a::before {
+  content: ''; display: inline-block;
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--ink-4);
+}
+.page-foot .channels a:hover { color: var(--amber); }
+.page-foot .channels a:hover::before { background: var(--amber); }
+.page-foot .crosslinks a {
+  color: var(--amber); margin-left: 0.85rem;
+}
+.page-foot .crosslinks a:hover { color: var(--amber-deep); }
+
+/* ===== Responsive ===== */
+@media (max-width: 980px) {
+  .hero-content { grid-template-columns: 1fr; gap: 2rem; }
+  .hero-right { text-align: left; align-self: start; }
+  .hero-right .stamp-mark { margin-left: 0; }
+  .paradigm-grid { grid-template-columns: 1fr; }
+  .feature-list { grid-template-columns: 1fr; }
+  .cta-section .inner { grid-template-columns: 1fr; }
+  nav .links { display: none; }
+  .hero-label.tl, .hero-label.br { display: none; }
+}
+
+/* ============================================
+   ▶ β-TUFTE PALETTE + KECAL OVERRIDE ◀
+   Same override block as the parent. Palette flips to off-white +
+   true-black + neutral ink scale; Kecal replaces Cormorant/Inter.
+   ============================================ */
+:root {
+  --paper:     #fffff8;
+  --paper-dk:  #faf7ee;
+  --paper-lt:  #fffffd;
+  --paper-elev:#fffffd;
+  --paper-deep:#0f0f0f;
+
+  --ink:       #111111;
+  --ink-2:     #333333;
+  --ink-3:     #6b6459;
+  --ink-4:     #a09888;
+
+  --amber:      #1a1a1a;
+  --amber-deep: #000000;
+  --amber-soft: #444444;
+  --amber-faint: rgba(26,26,26,0.06);
+
+  --good:      #4a8c44;
+  --warn:      #b8442e;
+
+  --rule:      #d8d2c4;
+  --rule-mid:  #e6e0d2;
+
+  --bloom-warm:   78, 68, 56;
+  --bloom-cool:   106, 100, 92;
+  --bloom-stable: 76, 92, 90;
+  --bloom-fade:   255, 255, 248;
+  --bloom-fade-alpha: 0.22;
+
+  --photo-wash: rgba(255, 255, 248, 0.74);
+}
+html[data-mode="dark"] {
+  --paper:     #14110d;
+  --paper-dk:  #1c1814;
+  --paper-lt:  #1f1b15;
+  --paper-elev:#1f1b15;
+  --paper-deep:#08080a;
+
+  --ink:       #f5f0e0;
+  --ink-2:     #d6cfba;
+  --ink-3:     #a39a85;
+  --ink-4:     #6e6657;
+
+  --amber:      #f5f0e0;
+  --amber-deep: #d6cfba;
+  --amber-soft: #a39a85;
+  --amber-faint: rgba(245,240,224,0.10);
+
+  --rule:      #2d2820;
+  --rule-mid:  #221d17;
+
+  --bloom-warm:   232, 220, 200;
+  --bloom-cool:   180, 178, 172;
+  --bloom-stable: 160, 196, 192;
+  --bloom-fade:   20, 17, 13;
+  --bloom-fade-alpha: 0.26;
+
+  --photo-wash: rgba(20, 17, 13, 0.74);
+}
+
+/* ---- Kecal ---- */
+@font-face { font-family: 'Kecal'; font-weight: 200; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extralight-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 300; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Light-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 400; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Regular-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 500; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Medium-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 600; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Semibold-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 700; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Bold-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 800; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extrabold-web.woff2') format('woff2'); }
+
+:root, html[data-mode="dark"] {
+  --accent: 'Kecal', system-ui, -apple-system, sans-serif;
+  --sans:   'Kecal', system-ui, -apple-system, sans-serif;
+}
+
+em, blockquote,
+.hero h1 em,
+.paradigm-card .pc-claim,
+.feature-row p em,
+.cta-section h2 em,
+.paradigms h2 em,
+.features h2 em,
+.hero-label em {
+  font-family: 'Kecal', sans-serif;
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+.hero h1 em { font-size: 1em; }
+
+.hero-eyebrow,
+.section-kicker,
+.paradigm-card .num,
+.paradigm-card .pc-foot,
+.page-foot .channels,
+.page-foot .crosslinks,
+nav .links,
+nav .nav-cta,
+.mode-toggle,
+.feature-row .glyph,
+.hero-label {
+  font-family: 'Kecal', sans-serif;
+  font-weight: 500;
+}
+
+        /* Logo-set swap: click any .swap-logo to cycle all logos on page. */
+        .swap-logo { cursor: pointer; }
+        
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+  div.right { width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: auto; word-break: break-word; }
+}
+
+/* Override mobile-safety's `div.right { width: 100% }` so the corner
+   mode-toggle pill stays anchored to the upper-right. */
+nav > .right { width: auto !important; max-width: none !important; overflow-x: visible !important; }
+
+/* Override mobile-safety's `canvas { height: auto !important }` — the
+   symmetry canvas must fill the viewport. 100dvh gives the iOS Safari
+   address-bar-aware viewport. */
+body canvas.symmetry-canvas { height: 100vh !important; height: 100dvh !important; max-width: 100vw !important; }
+</style>
+<script src="_styleguide.js" defer></script>
+</head>
+<body>
+
+<!-- Canonical oP marks (signet + wordmark). Reused verbatim. -->
+<svg width="0" height="0" style="position: absolute;" aria-hidden="true">
+    <!-- INFINITE — wide flowing oP-infinite -->
+    <symbol id="opInfinite" viewBox="0 0 497 329">
+      <g transform="matrix(1.16677,0,0,0.997644,2.62326,-48.0333)">
+        <g transform="matrix(4.15,0,0,4.17651,2.48827,4.04285)">
+          <path d="M84.9,12.6C82.7,12.6 80.2,12.9 77.6,14.7C70.5,19.3 67,28.3 64.8,35.5C61.1,47.9 58.4,61 51.5,71.1C46.7,77.8 40.2,83.509 30.5,83.4C16.524,83.242 4.9,70.5 4.9,50.8C4.9,35.9 12.3,16.5 32.3,16.5C45.2,16.5 53.9,24.6 58.8,44L61,36C56.6,23.2 47.9,12.6 32.4,12.6C12.1,12.6 1.3,30.1 1.3,50.8C1.3,69.9 12.105,87.223 30.5,87.4C36.4,87.457 41.7,85.8 46.1,82.9C57.2,75.5 62.3,62.3 65.7,50C68.9,38.8 72.4,20.3 81.6,17.2C83.6,16.5 86.6,16.3 89,17.7C91.6,19.3 95.3,23.3 95.3,29.9C95.3,37.8 89.5,46.1 79.8,49.1C77.1,49.7 73.7,50.1 70,49.5L70,85.5C70,86.4 70.7,87.4 71.8,87.4C72.9,87.4 73.7,86.7 73.7,85.5L73.7,53.7C87.9,53.7 98.9,44.2 98.9,29.9C98.7,22.7 93.9,12.8 84.9,12.6Z"/>
+        </g>
+      </g>
+    </symbol>
+    <symbol id="opInfiniteType" viewBox="0 0 3549 1107">
+      <!-- Full 9-glyph "OpenProse" wordmark per OP-infinite-type.svg -->
+      <g transform="matrix(0.924174,0,0,0.512368,0,0)"><g transform="matrix(13.3273,0,0,21.4868,1380,-277.463)"><path d="M84.994,15.687C82.794,15.687 80.294,15.987 77.694,17.787C70.594,22.387 66.139,35.248 63.358,42.992C61.626,47.816 59.859,52.08 59.859,52.08C59.859,52.08 65.364,48.692 65.7,47.517C68.9,36.317 72.494,23.387 81.694,20.287C83.694,19.587 86.694,19.387 89.094,20.787C92.421,22.728 97.421,26.391 97.239,32.987C96.783,49.599 73.072,47.617 69.372,47.017L69.463,86.872C69.463,86.872 69.569,88.772 71.788,88.772C73.823,88.772 73.84,86.872 73.84,86.872L73.7,51.217C87.9,51.217 100.839,47.287 100.839,32.987C100.639,25.787 95.428,15.687 84.994,15.687Z" style="fill-rule:nonzero;"/><path d="M85.301,15.69C87.154,15.722 92.171,16.087 96.349,21.117C99.232,24.589 100.724,29.132 100.85,32.902C100.851,32.93 100.877,34.078 100.714,35.474C99.35,47.224 88.075,51.152 74.199,51.251L73.733,51.253C73.885,86.393 73.928,86.394 73.883,86.959C73.851,87.357 73.666,88.042 73.097,88.452C72.294,89.03 71.186,88.797 70.882,88.701C70.751,88.66 69.762,88.384 69.461,87.167C69.426,87.024 69.412,86.892 69.412,86.875C69.403,83.685 69.304,47.036 69.309,47.004C69.314,46.971 69.343,46.94 69.381,46.945C69.384,46.946 70.472,47.132 72.411,47.25C77.667,47.57 96.717,47.828 97.166,33.033C97.322,27.909 94.399,23.938 89.034,20.84C86.892,19.604 84.067,19.553 81.714,20.359C79.56,21.097 76.09,22.82 72.768,28.52C69.608,33.941 67.641,40.93 65.748,47.534C65.696,47.715 65.475,48.425 61.767,50.908C60.819,51.542 59.885,52.126 59.867,52.13C59.832,52.136 59.803,52.097 59.818,52.059C59.862,51.95 59.867,51.953 60.372,50.699C62.462,45.507 63.53,42.368 64.526,39.653C67.34,31.978 71.505,21.808 77.648,17.805C78.185,17.455 79.743,16.319 82.346,15.883C83.448,15.698 84.434,15.687 84.993,15.687C84.993,15.687 85.065,15.687 85.103,15.688L85.177,15.688C85.218,15.689 85.26,15.689 85.301,15.69Z"/></g><g transform="matrix(37.0768,0,0,56.5284,-38.6165,41.4661)"><path d="M38.971,22.698C39.006,20.794 38.659,19.281 38.121,18.206C36.83,15.623 34.908,15.225 33.551,15.139C29.553,14.883 27.67,17.15 26.516,21.328C25.31,25.689 23.5,34.3 14.7,34.3C8,34.2 3.7,28.1 3.7,20C3.4,10.6 8.5,2.6 14.8,2.6C21.3,2.3 25,7.2 27.1,16.5L28.719,13.674C26.719,7.774 22.3,0.3 14.8,0.3C7.3,0.3 1.5,7.7 1.6,18.9C1.5,27.8 6.2,36.4 14.7,36.4C23.6,36.7 26.116,31.728 28.116,24.428L28.838,21.384C29.709,17.307 31.193,16.933 33.074,16.992C34.811,17.046 35.803,17.588 36.622,19.063C37.075,19.877 37.31,21.015 37.365,22.326C37.593,27.77 29.653,26.04 29.653,26.04L29.525,35.529C29.525,35.529 29.435,36.206 30.335,36.206C31.035,36.206 31.085,35.512 31.085,35.512L31.098,27.854C38.46,28.325 38.921,25.449 38.971,22.698Z" style="fill-rule:nonzero;"/></g><g transform="matrix(26.5034,0,0,47.8049,294.868,160.59)"><path d="M50.7,15.5C46.7,15.7 43.1,18.5 43.1,23.2C43.1,26.9 45.5,30.7 50.7,30.7C52.9,30.7 55.1,29.9 56.5,28.5C56.9,28.1 57,27.8 57,27.5C57,26.9 56.4,26.4 55.8,26.4C55.5,26.4 55.3,26.6 55,26.8C54,27.9 52.7,28.6 50.8,28.6C48,28.6 45.8,26.8 45.4,23.8L56.2,23.8C57.2,23.8 57.6,23.4 57.6,22.6C57.6,18.9 55.3,15.5 50.7,15.5ZM45.4,21.9C45.8,19.5 47.6,17.7 50.5,17.7C53.3,17.7 55.1,19.5 55.2,21.9L45.4,21.9Z" style="fill-rule:nonzero;"/></g><g transform="matrix(6.36081,0,0,11.5486,307.59,152.335)"><path d="M303.204,127.796C292.691,126.817 286.282,119.92 286.282,108.75L286.282,89.583C286.282,80.833 281.699,73.75 271.282,73.75C261.699,73.75 253.365,82.5 253.365,95L253.365,122.5C253.365,125.833 250.865,127.5 247.949,127.5C245.032,127.5 242.949,126.25 242.949,122.917L242.949,70.417C242.949,67.083 245.032,65.417 247.949,65.417C250.449,65.417 252.532,67.083 252.532,70.417L252.532,76.25C256.282,68.75 263.365,65 272.949,65C287.115,65 295.865,74.583 295.865,89.583L295.865,108.333C295.865,114.401 298.312,118.023 303.204,118.937C303.204,118.937 306.369,120.117 306.151,123.666C305.945,127.04 303.204,127.796 303.204,127.796Z"/></g><g transform="matrix(26.5034,0,0,50.3225,-86.6137,116.293)"><path d="M102.9,15.5C101.2,15.7 99.5,16.6 98.5,18.5L98.5,16.9C98.5,16.1 98,15.6 97.3,15.6C96.6,15.6 96.1,16.1 96.1,16.8L95.906,29.335C95.906,29.335 96.201,30.045 97.143,30.044C98.167,30.043 98.391,29.393 98.391,29.393L98.5,23.2C98.5,20.2 100.2,17.9 102.5,17.9C103.4,17.8 103.8,18.2 104.2,18.2C104.8,18.2 105,17.8 105,17.2C105.3,16.1 104.1,15.5 102.9,15.5Z" style="fill-rule:nonzero;"/></g><g transform="matrix(26.5034,0,0,47.8049,-105.087,160.59)"><path d="M113.3,15.5C109,15.7 105.2,18.5 105.2,23.2C105.2,26.9 107.8,30.7 113.1,30.7C117.5,30.7 120.6,27.6 120.6,23.2C120.6,19.1 117.6,15.5 113.3,15.5ZM113.2,28.6C110.3,28.6 107.6,26.5 107.6,23.2C107.6,19.9 109.9,17.7 113.1,17.7C115.8,17.7 118.3,19.7 118.3,23.2C118.3,26.1 116.1,28.6 113.2,28.6Z" style="fill-rule:nonzero;"/></g><g transform="matrix(26.5034,0,0,47.8049,-117.723,160.59)"><path d="M128,21.8C128,21.8 125.1,21.1 125.1,19.8C125.1,18.5 126.4,17.7 128.1,17.7C130.5,17.7 131,19.1 132.1,19.2C132.6,19.2 133.2,18.7 133.3,18.3C133.4,17.3 131.4,15.6 128.4,15.5C125.5,15.5 122.7,16.7 122.7,19.8C122.7,22.7 125.3,23.4 128,24C129.8,24.4 131.5,25 131.5,26.5C131.5,27.9 130.3,28.7 128.4,28.7C125.1,28.7 124.7,26.5 123.5,26.4C123,26.4 122.2,26.9 122.2,27.6C122.2,28.6 124.2,30.7 128.1,30.7C131.4,30.7 133.8,29.3 133.8,26.4C133.8,23.2 131.4,22.6 128,21.8Z" style="fill-rule:nonzero;"/></g><g transform="matrix(26.5034,0,0,47.8049,-130.016,160.59)"><path d="M142.2,15.5C138.2,15.5 135.4,18.2 135.4,22.9C135.4,26.6 137.8,30.7 142.5,30.7C144.9,30.7 147,29.9 147.9,28.9C148.4,28.5 148.4,28.2 148.4,27.7C148.4,27.2 147.8,26.5 147.1,26.5C146.9,26.5 146.6,26.7 146.3,26.9C145.3,28 144,28.7 142.3,28.7C139.5,28.7 137.7,26.9 137.4,23.9L147.4,23.9C148,23.9 148.4,23.5 148.4,22.8C148.4,19.1 146.3,15.6 142.2,15.5ZM137.6,21.9C138,19.5 139.8,17.7 142.2,17.7C144.7,17.6 146.5,19.4 146.5,21.9L137.6,21.9Z" style="fill-rule:nonzero;"/></g></g>
+    </symbol>
+
+    <!-- STYLE — v2 standalone signet + lockup (canonical brand mark) -->
+    <symbol id="opStyle" viewBox="0 0 142 142">
+      <g transform="translate(4.4 4.45) scale(0.94)">
+        <path d="M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z"/>
+      </g>
+    </symbol>
+    <!-- Legacy alias — keep so any stale #opMark references still resolve -->
+    <symbol id="opMark" viewBox="0 0 142 142"><use href="#opStyle"/></symbol>
+    <symbol id="opStyleType" viewBox="0 0 3840 998">
+      <g transform="matrix(1,0,0,0.461843,0,0)"><g transform="matrix(9.67009,0,0,20.9381,46.3437,-426.712)"><path d="M84.1,83.4C85.206,79.362 96.732,71.983 96.732,71.983C96.732,71.983 95.683,77.806 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.32,59.25 95.117,62.595 91.927,64.086C88.649,65.618 87.58,63.568 86,61.4C83.953,58.591 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4Z" style="fill-rule:nonzero;"/></g><g transform="matrix(20.8204,0,0,45.081,376.732,587.069)"><path d="M47.6,19.2C47.6,23.6 45.2,28.5 39.5,28.5C36.7,28.5 34.4,27.4 33,25L33,33.071C33,33.071 32.758,33.891 32.027,34.219C31.452,34.477 29.5,34.5 29.5,34.5L29.5,10.9L30.3,10.9C31.9,10.9 32.7,12.6 32.8,14.1C34,11.8 36.2,10.2 39.3,10.2C44.4,10.2 47.6,14 47.6,19.2ZM44,19.4C44,16.3 42.3,12.9 38.5,12.9C35.1,12.9 32.9,15.6 32.9,19.4C32.9,22.5 34.8,25.7 38.5,25.7C41.7,25.7 44,23 44,19.4Z" style="fill-rule:nonzero;"/></g><g transform="matrix(21.5033,0,0,46.5599,334.885,571.985)"><path d="M66.5,23.7C65.9,25.9 63.4,28.5 58.9,28.5C53.5,28.5 50.2,25 49.2,20.6C48.6,14.5 52.3,10.2 58.4,10.2C62.1,10.2 66.4,12 66.4,15.8C66.4,18.4 64.1,19.8 59.2,20.4C56.7,20.7 54.8,21.3 54.8,23.1C54.8,25.1 57.2,26 59.6,26C61.9,26.1 64.6,25.3 66.5,23.7ZM53.3,22.7C54.2,17.1 61.7,19.1 61.7,15.5C61.7,13.8 60.2,12.7 58.1,12.7C55.5,12.7 52.6,15 52.6,19.1C52.6,20.4 52.9,21.8 53.3,22.7Z" style="fill-rule:nonzero;"/></g><g transform="matrix(21.3153,0,0,46.1527,2366.82,576.138)"><path d="M66.5,23.7C65.9,25.9 63.4,28.5 58.9,28.5C53.5,28.5 50.2,25 49.2,20.6C48.6,14.5 52.3,10.2 58.4,10.2C62.1,10.2 66.4,12 66.4,15.8C66.4,18.4 64.1,19.8 59.2,20.4C56.7,20.7 54.8,21.3 54.8,23.1C54.8,25.1 57.2,26 59.6,26C61.9,26.1 64.6,25.3 66.5,23.7ZM53.3,22.7C54.2,17.1 61.7,19.1 61.7,15.5C61.7,13.8 60.2,12.7 58.1,12.7C55.5,12.7 52.6,15 52.6,19.1C52.6,20.4 52.9,21.8 53.3,22.7Z" style="fill-rule:nonzero;"/></g><g transform="matrix(20.8204,0,0,47.1462,359.825,566.004)"><path d="M83.9,28.2C81.9,28.2 80.5,27.7 80.5,24.8L80.5,17.9C80.5,14.6 79.2,12.8 76.6,12.8C74.1,12.8 72,14.6 72,19.1L72,28.2L68.6,28.2L68.6,10.8L69,10.8C70.6,10.8 71.6,12.3 71.7,14.1C72.7,11.9 74.6,10.2 77.7,10.2C81.9,10.2 83.9,12.9 83.9,17.4L83.9,28.2Z" style="fill-rule:nonzero;"/></g><g transform="matrix(21.747,0,0,47.0874,150.341,566.604)"><path d="M117.8,10.5C118.4,11.9 117.2,13.3 115.3,13.3C112.1,13.1 110.1,15.2 110.1,19.3L110.1,28.2L106.6,28.2L106.6,10.9L107.3,10.9C108.9,10.9 109.7,12.4 109.8,14.4C110.8,11.9 112.8,10.2 115.4,10.2C116.1,10.2 117,10.3 117.8,10.5Z" style="fill-rule:nonzero;"/></g><g transform="matrix(21.4007,0,0,46.3376,179.308,574.252)"><path d="M135.6,19.4C135.6,23.8 132.7,28.5 126.4,28.5C120.6,28.5 117.1,24.5 117.1,19.4C117.1,14.8 120.3,10.2 126.3,10.2C131.8,10.2 135.6,14 135.6,19.4ZM132.1,19.4C132.1,15.9 129.9,12.9 126.4,12.9C122.9,12.9 120.5,15.6 120.5,19.4C120.5,22.7 122.7,25.7 126.3,25.7C129.7,25.8 132.1,23 132.1,19.4Z" style="fill-rule:nonzero;"/></g><g transform="matrix(26.9157,0,0,71.5109,-151.465,-124.38)"><path d="M86,2.4C83.4,2.7 81.1,3.6 82,5.9C82.5,7.2 85.4,8.5 87.5,12.9C88.6,15.2 89.463,15.088 88.663,12.588C86.263,6.788 83.477,6.006 84.477,4.406C84.977,3.606 99.303,3.255 99.1,9.9C99.018,12.599 96.5,13.8 93.3,14.6C91.4,15.1 88.4,16.7 88.1,19.9C87.9,22.4 88,24.1 86,28.2C87.7,28.4 89.6,27.9 90.5,26.7C91.8,25.1 91.6,21.1 91.7,19.5C91.9,17.6 93.6,16.9 95.4,16.6C99.9,15.7 104.9,14.7 104.9,10C104.9,4.4 96.9,1.4 86,2.4Z" style="fill-rule:nonzero;"/></g><g transform="matrix(20.4887,0,0,44.3629,217.988,633.895)"><path d="M144.6,14.2C144.6,12.9 146,11.7 147.9,11.7C151.2,11.7 152.1,14.4 153.9,14.4C154.6,14.4 155.2,13.6 155,13C154.6,11.1 151.5,9.3 148.5,9.3C145.5,9.3 141,10.4 141,14.4C141,20.9 152.3,18.6 152.3,23.1C152.3,25.3 149.6,25.9 148.1,25.8C144,25.6 140.266,22.027 140.266,22.027C140.266,22.027 140.3,23.55 140.3,23.9C140.3,25.6 143.1,28.4 148.3,28.4C152.1,28.4 155.6,27 155.6,23.1C155.6,16.7 144.6,18.4 144.6,14.2Z" style="fill-rule:nonzero;"/></g></g>
+    </symbol>
+
+    <!-- CIRCLE — open-ring oP-Circle.  Signet id is opCircleMark (not
+         opCircle) for backwards compat with the existing pages. -->
+    <symbol id="opCircleMark" viewBox="0 0 2843 2160" style="fill-rule:evenodd;clip-rule:evenodd;">
+      <g transform="matrix(0.740161,0,0,1,0,0)"><g transform="matrix(8.20113,0,0,6.07016,-20128.8,-3833.05)"><path d="M2759.78,927.845C2728.1,963.836 2681.7,986.56 2630.04,986.56C2534.66,986.56 2457.23,909.13 2457.23,813.757C2457.23,718.385 2534.66,640.955 2630.04,640.955C2680.01,640.955 2725.07,662.217 2756.63,696.182C2756.2,671.45 2755.82,654.804 2755.51,652.896C2754.22,644.866 2822.66,611.87 2882.41,659.592C2923.76,692.617 2930.35,758.088 2890.17,789.415C2850.95,819.988 2803.14,819.667 2804.19,819.748C2805.24,819.829 2801.73,938.55 2802.47,964.197C2802.72,973.044 2793.7,984.446 2782.33,984.728C2771.95,984.985 2760.81,980.336 2760.39,964.176C2760.24,958.249 2760.03,945.28 2759.78,927.845ZM2826.55,687.102C2805.05,687.102 2787.59,704.56 2787.59,726.064C2787.59,747.567 2805.05,765.026 2826.55,765.026C2848.05,765.026 2865.51,747.567 2865.51,726.064C2865.51,704.56 2848.05,687.102 2826.55,687.102ZM2630.04,734.651C2586.38,734.651 2550.93,770.097 2550.93,813.757C2550.93,857.418 2586.38,892.864 2630.04,892.864C2673.7,892.864 2709.14,857.418 2709.14,813.757C2709.14,770.097 2673.7,734.651 2630.04,734.651Z"/></g></g>
+    </symbol>
+    <symbol id="opCircleType" viewBox="0 0 3905 1443" style="fill-rule:evenodd;clip-rule:evenodd;">
+      <g transform="matrix(1.01681,0,0,0.667932,0,0)"><g transform="matrix(2.21727,0,0,3.37541,-2648.74,-2066.57)"><path d="M2498.63,890.329C2523.7,890.329 2544.05,910.677 2544.05,935.74C2544.05,960.803 2523.7,981.151 2498.63,981.151C2473.57,981.151 2453.22,960.803 2453.22,935.74C2453.22,910.677 2473.57,890.329 2498.63,890.329ZM2498.63,836.542C2553.38,836.542 2597.83,880.991 2597.83,935.74C2597.83,990.488 2553.38,1034.94 2498.63,1034.94C2443.89,1034.94 2399.44,990.488 2399.44,935.74C2399.44,880.991 2443.89,836.542 2498.63,836.542Z"/></g><g transform="matrix(3.80252,0,0,5.78869,-8704.03,-6459.53)"><path d="M2502.77,1325.17C2480.57,1349.47 2448.63,1364.73 2413.15,1364.73C2346.18,1364.73 2291.8,1310.36 2291.8,1243.38C2291.8,1176.41 2346.18,1122.04 2413.15,1122.04C2476.86,1122.04 2529.78,1171 2534.12,1244.84C2550.61,1243.52 2571.13,1241.2 2590.37,1256.57C2619.41,1279.76 2624.04,1320.36 2595.82,1342.36C2568.28,1363.83 2534.71,1363.6 2535.45,1363.66C2536.19,1363.71 2533.72,1447.08 2534.24,1465.09C2534.42,1471.31 2528.08,1479.31 2520.1,1479.51C2512.81,1479.69 2504.98,1476.43 2504.69,1465.08C2504.33,1451.17 2503.54,1382.04 2502.77,1325.17ZM2527.46,1289.56C2526.55,1292.1 2525.56,1294.6 2524.49,1297.06C2524.03,1299.05 2523.79,1301.12 2523.79,1303.25C2523.79,1318.35 2536.05,1330.61 2551.15,1330.61C2566.25,1330.61 2578.51,1318.35 2578.51,1303.25C2578.51,1288.15 2566.25,1275.89 2551.15,1275.89C2541.03,1275.89 2532.2,1281.39 2527.46,1289.56ZM2524.49,1297.06L2527.46,1289.56C2526.12,1291.87 2525.11,1294.39 2524.49,1297.06ZM2413.15,1187.83C2382.49,1187.83 2357.6,1212.73 2357.6,1243.38C2357.6,1274.04 2382.49,1298.94 2413.15,1298.94C2443.81,1298.94 2468.7,1274.04 2468.7,1243.38C2468.7,1212.73 2443.81,1187.83 2413.15,1187.83Z"/></g><g transform="matrix(3.80252,0,0,5.78869,-9021.99,-7865.74)"><path d="M3000.9,1398.29C3016,1398.29 3028.26,1410.55 3028.26,1425.65C3028.26,1440.75 3016,1453.01 3000.9,1453.01C2985.8,1453.01 2973.54,1440.75 2973.54,1425.65C2973.54,1410.55 2985.8,1398.29 3000.9,1398.29ZM2951.01,1374.27C2951.92,1379.9 2953.82,1568.82 2954.44,1592.86C2954.73,1604.2 2962.56,1607.47 2969.85,1607.29C2977.83,1607.09 2984.17,1599.08 2983.99,1592.87C2983.47,1574.86 2985.94,1491.49 2985.2,1491.43C2984.46,1491.38 3018.03,1491.6 3045.57,1470.13C3073.79,1448.13 3069.16,1402.16 3040.12,1378.97C2998.16,1345.46 2950.11,1368.63 2951.01,1374.27Z"/></g><g transform="matrix(25.9135,0,0,39.4489,148.648,165.716)"><path d="M50.7,15.369C55.386,15.369 57.731,18.831 57.731,22.6C57.731,23.045 57.612,23.376 57.362,23.598C57.118,23.815 56.742,23.931 56.2,23.931L45.551,23.931C45.994,26.77 48.113,28.469 50.8,28.469C52.656,28.469 53.926,27.786 54.903,26.712C54.91,26.704 54.918,26.697 54.927,26.691C55.079,26.59 55.206,26.489 55.333,26.413C55.478,26.325 55.625,26.269 55.8,26.269C56.468,26.269 57.131,26.832 57.131,27.5C57.131,27.827 57.029,28.157 56.593,28.593C55.17,30.015 52.936,30.831 50.7,30.831C45.41,30.831 42.969,26.964 42.969,23.2C42.969,18.422 46.627,15.572 50.693,15.369C50.696,15.369 50.698,15.369 50.7,15.369ZM45.557,21.769L55.061,21.769C54.903,19.507 53.166,17.831 50.5,17.831C47.736,17.831 45.996,19.507 45.557,21.769Z" style="fill-rule:nonzero;"/></g><g transform="matrix(3.13203,0,0,4.76799,-7162.23,-6236.36)"><path d="M2964.4,1579.23L2964.4,1596.67C2964.4,1597.25 2963.94,1597.73 2963.37,1597.75C2962.53,1597.79 2961.68,1597.81 2960.83,1597.81C2948.51,1597.81 2938.53,1594.16 2931.63,1587.47C2924.72,1580.77 2920.85,1571 2920.85,1558.66L2920.85,1520.61C2920.85,1510.54 2917.74,1501.6 2910.89,1496.07C2906.33,1492.39 2900.13,1490.25 2892.15,1490.25C2873.65,1490.25 2857.66,1507.23 2857.66,1531.36L2857.66,1585.97C2857.66,1593.28 2852.22,1596.98 2845.82,1596.98C2841.97,1596.98 2838.81,1595.92 2836.88,1593.54C2835.58,1591.95 2834.81,1589.75 2834.81,1586.79L2834.81,1482.55C2834.81,1478.88 2835.99,1476.14 2837.94,1474.31C2839.89,1472.48 2842.62,1471.53 2845.82,1471.53C2848.6,1471.53 2851.14,1472.48 2853,1474.33C2854.83,1476.16 2856.01,1478.89 2856.01,1482.55L2856.01,1489.98C2864.02,1477.15 2877.6,1470.7 2895.46,1470.7C2909.87,1470.7 2921.51,1475.61 2929.56,1484.29C2937.59,1492.95 2942.05,1505.4 2942.05,1520.61L2942.05,1557.84C2942.05,1564.54 2943.58,1569.68 2946.73,1573.13C2949.86,1576.56 2954.57,1578.26 2960.83,1578.26C2961.65,1578.26 2962.44,1578.23 2963.21,1578.15C2963.51,1578.12 2963.82,1578.22 2964.05,1578.43C2964.27,1578.63 2964.4,1578.92 2964.4,1579.23Z"/></g><g transform="matrix(25.9135,0,0,39.4489,-44.8323,169.661)"><path d="M102.9,15.369C103.528,15.369 104.156,15.529 104.587,15.83C105.042,16.147 105.289,16.614 105.131,17.217C105.128,17.613 105.037,17.926 104.83,18.117C104.684,18.252 104.48,18.331 104.2,18.331C104.026,18.331 103.851,18.265 103.643,18.189C103.369,18.088 103.027,17.973 102.514,18.03C102.51,18.031 102.505,18.031 102.5,18.031C100.264,18.031 98.631,20.283 98.631,23.2L98.631,29.5C98.631,29.893 98.488,30.2 98.249,30.411C98.015,30.617 97.686,30.731 97.3,30.731C96.913,30.731 96.583,30.617 96.348,30.395C96.112,30.174 95.969,29.843 95.969,29.4L95.969,16.8C95.969,16.024 96.524,15.469 97.3,15.469C98.073,15.469 98.631,16.016 98.631,16.9L98.631,18.011C99.673,16.359 101.279,15.559 102.885,15.37C102.89,15.369 102.895,15.369 102.9,15.369Z" style="fill-rule:nonzero;"/></g><g transform="matrix(25.9135,0,0,39.4489,-33.2184,165.716)"><path d="M128.029,21.772C128.029,21.772 130.14,22.246 131.829,23.323C132.981,24.058 133.931,25.075 133.931,26.4C133.931,29.375 131.485,30.831 128.1,30.831C125.318,30.831 123.488,29.775 122.638,28.797C122.255,28.354 122.069,27.922 122.069,27.6C122.069,27.21 122.287,26.873 122.58,26.636C122.868,26.403 123.226,26.269 123.5,26.269C123.504,26.269 123.507,26.269 123.511,26.269C123.775,26.291 124.006,26.403 124.232,26.573C124.441,26.729 124.648,26.935 124.883,27.158C125.557,27.797 126.469,28.569 128.4,28.569C130.209,28.569 131.369,27.833 131.369,26.5C131.369,25.799 130.965,25.312 130.358,24.95C129.718,24.569 128.857,24.325 127.972,24.128C126.882,23.886 125.809,23.627 124.913,23.217C123.534,22.586 122.569,21.602 122.569,19.8C122.569,16.62 125.425,15.369 128.4,15.369L128.404,15.369C130.55,15.441 132.193,16.319 132.951,17.187C133.299,17.584 133.463,17.985 133.43,18.313C133.43,18.319 133.429,18.326 133.427,18.332C133.371,18.555 133.181,18.809 132.93,19.003C132.682,19.197 132.376,19.331 132.1,19.331C132.096,19.331 132.092,19.331 132.088,19.331C131.626,19.289 131.262,19.034 130.833,18.736C130.237,18.323 129.502,17.831 128.1,17.831C126.485,17.831 125.231,18.565 125.231,19.8C125.231,20.522 125.603,20.941 126.257,21.243C126.72,21.458 127.319,21.614 128.028,21.772L128.029,21.772Z" style="fill-rule:nonzero;"/></g><g transform="matrix(25.9135,0,0,39.4489,-33.2184,165.716)"><path d="M148.365,28.513L148.362,28.529C148.352,28.557 148.288,28.659 148.177,28.791L148.204,28.825L147.99,28.996C147.07,30.011 144.938,30.831 142.5,30.831C137.717,30.831 135.269,26.665 135.269,22.9C135.269,20.511 135.985,18.631 137.205,17.347C138.429,16.06 140.161,15.369 142.2,15.369L142.203,15.369C146.381,15.471 148.531,19.029 148.531,22.8C148.531,23.189 148.415,23.493 148.221,23.702C148.022,23.915 147.74,24.031 147.4,24.031L137.546,24.031C137.711,25.429 138.213,26.552 139.004,27.332C139.819,28.134 140.938,28.569 142.3,28.569C143.959,28.569 145.227,27.885 146.203,26.812C146.21,26.804 146.218,26.797 146.227,26.791C146.413,26.667 146.598,26.544 146.761,26.465C146.888,26.404 147.004,26.369 147.1,26.369C147.561,26.369 147.984,26.642 148.248,26.981C148.427,27.213 148.531,27.475 148.531,27.7C148.531,28.026 148.492,28.273 148.365,28.513ZM137.757,21.769L146.367,21.769C146.305,19.416 144.583,17.736 142.205,17.831L142.2,17.831C139.916,17.831 138.195,19.511 137.757,21.769Z" style="fill-rule:nonzero;"/></g></g></symbol>
+
+    <!-- SWISH — two-stroke flow -->
+    <symbol id="opSwish" viewBox="0 0 152 107">
+      <g transform="matrix(0.981452,0,0,0.878406,2.4868,-8.28354)"><rect x="-2.534" y="9.43" width="154.346" height="121.268" style="fill:none;"/><g transform="matrix(1.0189,0,0,1.13843,-1.51112,-15.5823)"><path d="M76.7,25.1C82.9,29 95.6,39.3 102,50C105.2,55.5 106.3,60.3 106.3,67C105.4,68.4 101.1,71.3 99.6,72.1C101.1,72.7 104.7,73.8 106.9,74.3C107.8,93.9 96.6,111.2 76.5,125.1L82.6,122.7C94.1,115.8 110.9,97.6 110.9,74.2C117.6,74.2 148.6,72.9 148.6,53.7C148.3,43.7 132.2,29 107.6,25.3C97.1,23.8 85.4,24.2 76.7,25.1ZM109.9,33.6C117.8,36.9 128.2,43 128.2,53.3C128.2,59.4 120.9,64.6 110.8,66.4C111.1,51.8 101.9,30.1 89.1,28.1L86.7,27.5C94.3,28.3 104.1,31.2 109.9,33.6Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(1.0189,0,0,1.13843,-1.51112,-15.5823)"><path d="M95,72.3C96.7,71.3 99.3,69.1 100.7,67.3C97.9,50.9 84.3,23.5 50.4,23.5C23.3,23.5 1.2,43.7 1.2,74.7C1.2,97.8 16.3,126.5 50.7,126.5C78.2,126.5 101.5,109.2 101.5,76.8C100.2,75.7 97.3,73.6 94.7,72.3L95,72.3ZM50.5,116.3C28.7,116.3 10,100.8 10,75.1C10,55.1 25.1,34.2 49.9,34.2C68.3,34.2 89.9,48.5 90.8,74.5C91.3,98.4 74.3,116.3 50.5,116.3Z" style="fill:currentColor;fill-rule:nonzero;"/></g></g>
+    </symbol>
+    <symbol id="opSwishType" viewBox="0 0 3025 752">
+      <!-- Full 9-glyph "OpenProse" wordmark per OP-swish-type.svg.  Every fill
+           is currentColor so the wordmark inherits text color (light + dark). -->
+      <g transform="matrix(0.787745,0,0,0.347708,0,0)"><rect x="0" y="0" width="3840" height="2160" style="fill:none;"/><g transform="matrix(25.3499,0,0,57.4311,21.758,43.1089)"><path d="M34.5,15.8C33.7,8.6 27.6,0.4 17.2,0.4C8.2,0.4 1.1,7.9 1,17.6C0.9,25.8 5.9,35.1 16.7,35.1C25.8,35.1 34.6,29.8 34.7,19L32.4,17.6L34.5,15.8ZM16.7,31.5C9.4,31.5 4.5,25.6 4.5,18.2C4.5,11.7 9.4,4.5 16.9,4.5C24.7,4.3 29.9,10.4 30.4,17.1C30.7,23.2 27,31.5 16.7,31.5Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(15.8933,0,0,34.9068,473.082,978.691)"><path d="M25.02,1.827C36.105,6.18 33.244,16.433 33.244,16.433C33.15,19.81 27.02,27.194 19.012,30.939C22.712,29.839 34.322,27.652 37.813,18.162C41.913,18.062 49.9,17.3 51.3,13.3C53.8,7.2 34.081,-4.802 25.02,1.827ZM38.1,15.4C37.9,9.6 35,5.2 33.5,3.7C32.3,2.6 31.2,2.2 29.9,1.9C34.2,2.2 39.8,4.3 42.1,6.3C44.3,8.1 46,11.9 42.3,14C41.4,14.6 39.9,15.1 38.1,15.4Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(25.3499,0,0,57.4311,155.653,74.403)"><path d="M57.978,20.23C58.351,24.744 47.3,24.9 47.3,24.9L49.5,24.3C49.9,21.9 51.808,18.502 54.4,18.3C56.533,18.134 57.879,19.035 57.978,20.23ZM49.25,25.822C50.05,25.922 50.8,26 52.4,26C56.7,26 61.1,24.3 61.1,20.4C61.1,18.6 59.5,15.9 55.5,15.9C50.4,15.9 45.5,20.5 45.5,26.4C45.5,29.4 47.1,33.3 52.3,33.3C55.6,33.3 58.9,31.4 61.1,27.8C59.5,29.4 56.7,30.9 54.2,30.9C51.7,30.9 49.25,28.922 49.25,25.822Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(25.3499,0,0,57.4311,2217.17,74.403)"><path d="M57.978,20.23C58.351,24.744 47.3,24.9 47.3,24.9L49.5,24.3C49.9,21.9 51.808,18.502 54.4,18.3C56.533,18.134 57.879,19.035 57.978,20.23ZM49.25,25.822C50.05,25.922 50.8,26 52.4,26C56.7,26 61.1,24.3 61.1,20.4C61.1,18.6 59.5,15.9 55.5,15.9C50.4,15.9 45.5,20.5 45.5,26.4C45.5,29.4 47.1,33.3 52.3,33.3C55.6,33.3 58.9,31.4 61.1,27.8C59.5,29.4 56.7,30.9 54.2,30.9C51.7,30.9 49.25,28.922 49.25,25.822Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(25.3499,0,0,57.4311,155.653,74.403)"><path d="M61.3,15.6C62.5,17 63.1,20.1 63.1,22.5C63.1,26.1 62,29.9 58.9,33.2C61.4,32.7 64.3,30.9 65.6,25.6C66.2,23 67.5,20.1 70.1,20.1C72.3,20.1 73.6,22.6 73.6,26.3C73.6,28.6 73,31.1 71.7,33.7C74.6,31.9 76.8,27.9 76.8,23.7C76.8,18.9 74.4,15.9 71.2,15.9C68.6,15.9 66.4,17.9 65.2,21.6C64.9,19.5 63.6,16.9 61.3,15.6Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(25.3499,0,0,57.4311,155.653,74.403)"><path d="M70.8,0.9C75,4 79.4,9.1 80.2,16.4L76.8,17.2C77.9,17.6 79.1,17.8 80.3,18C80.7,23.4 78.7,30.5 72.6,34.9C76.2,33.6 82.5,28.8 82.6,18.2C86.6,18.2 95.9,17.4 95.9,11.2C96,7.2 88.6,-1.4 70.8,0.9ZM82.6,15.8C82.3,10.6 79.8,3.1 74.6,1.8C78.4,2.3 88.7,4.6 88.7,10.6C88.7,13.6 85.2,14.7 82.6,15.8Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(25.3499,0,0,57.4311,155.653,74.403)"><path d="M89.4,18.6C89.6,19.5 89.6,20.4 89.6,21.5C89.6,25 88.6,29.4 86.1,33.2C89.4,32.6 91.9,29.9 92.8,25.6C93.6,22.1 95.1,19.9 97.2,19.9C97.9,19.9 98.4,20.1 99,20.5C99.9,18.9 101.1,17.6 102.1,16.8C101.1,16.2 100.1,15.9 98.7,15.9C96.1,15.9 93.7,18.3 92.2,22.6C92.3,21.3 92.3,19.7 92.1,17.8L89.4,18.6Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(25.3499,0,0,57.4311,155.653,74.403)"><path d="M108.8,15.9C103.9,16.1 98.7,20.6 98.7,26.4C98.7,30.4 101.1,33.3 105.5,33.3C110.6,33.4 115.5,29.4 115.5,23.2C115.5,18.9 112.6,15.8 108.8,15.9ZM106.1,31C103.9,30.9 102.4,28.6 102.6,25.5C102.9,21.7 105,18.3 108.1,18.2C110.4,18.2 111.8,20.1 111.7,23.2C111.6,26.9 109.6,31 106.1,31Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(25.3499,0,0,57.4311,155.653,74.403)"><path d="M127.8,16.6C126.7,16.1 125.5,15.8 123.9,15.8C120.4,15.8 116.4,17.5 116.4,21.1C116.4,25 121.4,25.6 121.4,28.4C121.4,30.5 118.6,32.4 112.6,32.2C113.7,32.9 115.5,33.3 117.7,33.3C122.1,33.3 125.5,31.2 125.5,27.9C125.5,23.4 120.5,23.2 120.5,20.7C120.5,18.2 123.6,16.6 127.8,16.6Z" style="fill:currentColor;fill-rule:nonzero;"/></g></g>
+    </symbol>
+
+    <!-- CURSIVE — handwritten variant -->
+    <symbol id="opCursive" viewBox="0 0 1737 1846">
+      <g transform="matrix(0.452146,0,0,0.85439,0,0)"><g transform="matrix(72.3922,0,0,34.915,-0.537438,-12.8456)"><path d="M38.5,24C38.5,17.3 33.3,1.2 19.4,1.2C10.8,1.2 1.7,8.3 1.7,26.1C1.7,36.5 6.9,51.8 19.8,51.8C29.5,51.9 38.5,44.5 38.7,33.4L38.9,30C39,28.6 41.4,28.2 43.1,28.2C45,28.2 47.9,28.7 49,29.8C50.6,31.1 51.2,34.5 49.3,36.3C47.4,38 43.9,38.9 40,38.9C38.9,38.9 38.3,38.7 38.3,40L38.5,59.7C38.5,61.7 39.2,62.2 39.3,60L39.7,41C42.4,41 47.8,40.5 49.8,38.4C52.6,35.9 52.3,30.1 48.7,27.8C46.2,26.2 40.4,25.5 37.8,28C36.9,28.9 36.8,30.7 36.7,31.4C35.1,39.9 29.7,47.5 20,47.5C11.7,47.5 3.5,40.6 3.5,26.7C3.7,14.6 10.9,5.2 19.6,5.2C29.5,5.1 36.3,13.8 37.5,23.9C37.6,25.2 38.5,25.1 38.5,24" style="fill-rule:nonzero;"/></g></g>
+    </symbol>
+    <symbol id="opCursiveType" viewBox="0 0 3776 1586">
+      <g transform="matrix(0.983178,0,0,0.734075,0,0)"><g transform="matrix(25.7809,0,0,34.5295,-62.4849,105.595)"><path d="M147.9,31.7C145.9,33 143.5,34.1 141.4,34.1C139.9,34.3 138.9,33.9 138.5,33.5C138.2,33.4 138.5,33.5 138.5,33.5L138.4,33.4C138.2,33.3 138.2,33.1 138.6,33C140.9,31.1 146.1,28.155 146.1,23.755C146,22.655 145.2,21.555 143.6,21.555C139.8,21.555 135.9,25.6 136.1,30.5C136.1,31 136.2,32.1 136.2,33C135.4,33.5 133.6,34.5 132.5,35.1C134.2,31.9 131,29.9 129.1,27.9C130.5,26.5 132.6,25.352 132.5,22.952C132.4,21.952 131.5,21.352 130.5,21.452C128.4,21.452 125.6,23.4 125.7,25.7C125.7,26.9 126.2,27.6 126.6,28.1C124.6,29.9 121.5,31.4 118.2,32.5C119.9,31.1 121.7,28.1 121.7,25.4C121.7,23.1 120,21.6 117.9,21.6C113.2,21.6 108.5,26.6 108.5,31.4C108.5,32.1 108.7,33.584 109.1,34.184C106.5,36.484 104,35.7 104,32.4C104,29.9 106.5,24.9 107.7,22.6C108.1,21.9 107.7,21.4 107.1,21.6C104.2,22.9 100.9,23.9 96,23.1C95.5,23.1 94.8,23.4 94.6,24C93.6,27.9 91.5,34 87.9,36.2C87.4,36.5 87.4,37.4 88.2,37.1C90.4,36.1 94.4,32.1 96.2,25.4C99.1,25.6 101.9,25.4 105,24.1C103.9,26.1 101.9,29.9 101.9,32.4C101.9,35.9 104,36.6 105.4,36.5C107,36.5 108.9,35.984 109.8,35.084C110.5,35.584 111.764,35.965 112.6,35.984C114.885,36.036 116.81,34.936 117.942,34.489C123.107,32.45 124.037,32.109 127.4,29.1C129,30.7 131.4,32.1 131.2,34.1C131,36.1 127.6,37 124.4,35.6C122.1,34.6 122.255,33.99 121.255,34.49C120.755,34.69 119.5,35 120,35.5C121.1,37 123.9,38.1 126.6,38.1C129.5,38.1 132.6,36.5 136.6,34C137.4,35.4 138.9,35.9 140.5,35.9C144,35.9 147.9,33.5 148.2,32.9C148.9,32.1 148.2,31.6 147.9,31.7ZM113.4,33.984C112,33.684 110.9,32.4 111,29.9C111.4,26.9 114,23.4 117.1,23.3C119.1,23.3 120.1,24.4 120.1,26.1C120.1,29.5 116.4,33.984 113.4,33.984ZM128.2,26.9C127.7,26.5 127.5,25.9 127.5,24.9C127.5,23.4 128.6,23.252 129.9,23.252C131.6,23.452 130.2,25.4 128.2,26.9ZM137.9,31.7C137.6,31.9 137.6,31.6 137.6,31.5C137.5,31 137.5,30.6 137.5,30C137.6,27.1 140.4,23.655 143.1,23.555C143.9,23.555 144.4,24.055 144,25.255C143.1,28.155 140.1,30 137.9,31.7Z" style="fill-rule:nonzero;"/></g><g transform="matrix(25.7809,0,0,31.489,-30.4318,111.774)"><path d="M92,0.2C89.5,0.2 87.1,0.5 84.6,1.8C82.5,3 80.9,5.1 80.8,7.4C80.6,12.6 86.9,13.5 87.6,17.9C87.9,18.5 88.5,18.1 88.4,17.6C88.2,13.4 82.9,12 82.7,8.6C82.6,5.4 85.6,2.6 91.1,2.6C97.7,2.5 107.9,6.6 107.9,12.5C107.6,16.5 102.1,18 99,18.5C96.5,19 90.026,19.999 88.4,22.6C86.9,25 86.4,26.5 85.9,29.1C84.4,36.1 82.1,44.1 78.6,44.1C76.5,44 75.4,41.9 75.5,43.5C75.6,45.1 76.6,46 78.1,46C82.1,46 84.9,40.4 87,31.5C88.9,23.4 90.2,22.6 96.1,21.5C100,20.6 109.5,19.4 109.6,12.1C109.6,6.4 100,0.4 92,0.2Z" style="fill-rule:evenodd;"/></g><g transform="matrix(25.7809,0,0,34.5295,-0.400543,7.77857)"><path d="M38.5,24C38.5,17.3 33.3,1.2 19.4,1.2C10.8,1.2 1.7,8.3 1.7,26.1C1.7,36.5 6.9,51.8 19.8,51.8C29.5,51.9 38.5,44.5 38.7,33.4L38.9,30C39,28.6 41.4,28.2 43.1,28.2C45,28.2 47.9,28.7 49,29.8C50.6,31.1 51.2,34.5 49.3,36.3C47.4,38 43.9,38.9 40,38.9C38.9,38.9 38.3,38.7 38.3,40L38.5,59.7C38.5,61.7 39.2,62.2 39.3,60L39.7,41C42.4,41 47.8,40.5 49.8,38.4C52.6,35.9 52.3,30.1 48.7,27.8C46.2,26.2 40.4,25.5 37.8,28C36.9,28.9 36.8,30.7 36.7,31.4C35.1,39.9 29.7,47.5 20,47.5C11.7,47.5 3.5,40.6 3.5,26.7C3.7,14.6 10.9,5.2 19.6,5.2C29.5,5.1 36.3,13.8 37.5,23.9C37.6,25.2 38.5,25.1 38.5,24" style="fill-rule:nonzero;"/></g><g transform="matrix(21.351,0,0,36.3137,231.726,-39.8604)"><path d="M55.8,32.4C55.7,33 55.9,33.4 56.5,33.6C58.3,34.3 60.5,34.4 62.3,34.4C66,34.4 68.1,33.9 68.1,30.9C68.1,27.8 64.6,26.7 60.9,26.7C56.2,26.7 52.4,28.1 52.4,33.2C52.4,36.6 54.7,39.8 60.8,39.8C63.2,39.8 69.9,39 70,36.6C70,36.3 69.7,35.7 69.3,35.9C67.8,36.9 64.3,37.7 61,37.7C58.3,37.7 53.8,36.9 53.8,33.2C53.8,30.1 57.1,28.7 60.9,28.7C64.4,28.7 66.9,29.3 66.9,30.8C66.9,32.3 63.4,32.4 61.2,32.4C57.6,32.4 56.5,31.7 55.8,31.7L55.8,32.4" style="fill-rule:nonzero;"/></g><g transform="matrix(25.7809,0,0,34.5295,-77.5894,28.3524)"><path d="M71.4,26.6C71.4,27.8 70.9,38.4 71,39C71.1,39.6 71.8,40 72.1,39C72.8,34.7 72.4,27.8 76.5,27.8C79.5,27.8 78.8,32.9 78.6,35.4C78.4,39 79.6,39.5 80.3,39.3C80.8,39.3 81.2,37.8 80.4,37.8C79.1,37.4 80.8,33.2 79.6,29C78.4,25.2 74.3,25.1 72.6,28.8L72.5,28.8L72.5,26.7C72.4,25.5 71.4,25.7 71.4,26.6" style="fill-rule:nonzero;"/></g></g>
+    </symbol>
+  </svg>
+
+<!-- ===== NAV — floating logo (upper-left) + mode toggle (upper-right) ===== -->
+<nav>
+  <div class="inner">
+    <a class="logo" href="#" aria-label="OpenProse — home">
+      <svg class="swap-logo" data-kind="signet" viewBox="0 0 142 142" aria-hidden="true"><use href="#opStyle"/></svg>
+    </a>
+  </div>
+  <div class="right">
+    <button class="mode-toggle" id="mode-toggle" type="button" aria-label="Toggle dark mode">◐</button>
+  </div>
+</nav>
+
+<!-- The ripple canvas is a body-level sibling (escapes .hero's stacking
+     context) so the live lake reads through hero AND paradigms. -->
+<canvas class="symmetry-canvas" id="symmetry"></canvas>
+
+<!-- ===== HERO — symmetry photo with rippled bottom half ===== -->
+<section class="hero">
+  <div class="hero-overlay"></div>
+  <!-- Center oval: logotype + tagline, slightly above center. -->
+  <div class="hero-content as-minimal">
+    <svg class="hero-logotype swap-logo" data-kind="wordmark" viewBox="0 0 3840 998" role="img" aria-label="OpenProse"><use href="#opStyleType"/></svg>
+    <!-- &nbsp; glue keeps the byline on one line at desktop and forces
+         the only legal break to land before "with" on narrow viewports.
+         Accent words: program · document · guarantees (teal italic). -->
+    <p class="hero-byline">A&nbsp;<em>program</em>&nbsp;is&nbsp;a&nbsp;<em>document</em> with&nbsp;<em>guarantees</em>.</p>
+  </div>
+</section>
+
+<!-- ===== PARADIGMS ===== -->
+<section class="paradigms photo-section" id="paradigms">
+  <div class="inner">
+    <div class="section-kicker">I &middot; Paradigms</div>
+    <h2>Three <em>shifts</em> in how software is shipped.</h2>
+    <p class="lede">OpenProse is built on a small set of beliefs about what software <em>is</em> and how it should be promised. Three paradigms: a program is a document; a delivery is a verified outcome; the model is contracted, not asked.</p>
+    <div class="paradigm-grid">
+      <article class="paradigm-card">
+        <div class="num">01 / declare</div>
+        <h3>A program is a <em>document</em>.</h3>
+        <div class="pc-claim">"Write the outcome. We run it."</div>
+        <p class="pc-note">Intent is executable. The spec is the source of truth — written, reviewed, version-controlled, signed. Every run is scored against it; every drift is surfaced. The page reads the way a careful analyst would have written it, and the runtime makes that page real.</p>
+        <div class="pc-foot"><span>· declare</span><span>spec.yml</span></div>
+      </article>
+      <article class="paradigm-card">
+        <div class="num">02 / verify</div>
+        <h3>A delivery is a <em>verified outcome</em>.</h3>
+        <div class="pc-claim">"Every artifact carries the spec it was generated against."</div>
+        <p class="pc-note">Verification is the part that actually changed. Numbers were always automated; trust was not. OpenProse signs every delivery with the contract it satisfied — a year from now you'll know what was promised, what was produced, and what evidence was kept.</p>
+        <div class="pc-foot"><span>· verify</span><span>contract.sig</span></div>
+      </article>
+      <article class="paradigm-card">
+        <div class="num">03 / contract</div>
+        <h3>The model is <em>contracted</em>, not asked.</h3>
+        <div class="pc-claim">"Billed by delivery. If the outcome doesn't ship, no line."</div>
+        <p class="pc-note">A prompt is a request. A contract is a commitment. The runtime holds delivery when the spec isn't met; the operator gets the artifact only after the eval passes. The model carries weight inside the page — it doesn't get to set the page's purpose.</p>
+        <div class="pc-foot"><span>· contract</span><span>delivery.proof</span></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FEATURES (runtime capabilities) ===== -->
+<section class="features photo-section" id="features">
+  <div class="inner">
+    <div class="section-kicker">II &middot; Runtime</div>
+    <h2>The runtime is the <em>quiet</em> half of the page.</h2>
+    <p class="lede">A small set of moving parts — picked up on cadence, evaluated against the spec, signed for the audit log. The operator writes prose. The runtime keeps its end of the contract.</p>
+    <div class="feature-list">
+      <div class="feature-row">
+        <span class="glyph">→</span>
+        <div>
+          <h4>Pickup &middot; cadence</h4>
+          <p>Programs run on a schedule the document declares. <em>Cron is a cadence</em>, not a deployment. Manual runs hit the same path.</p>
+        </div>
+      </div>
+      <div class="feature-row">
+        <span class="glyph">✓</span>
+        <div>
+          <h4>Eval &middot; threshold</h4>
+          <p>Each run is scored against the spec's success criteria. <em>Below threshold holds the artifact</em>; above, signs and ships.</p>
+        </div>
+      </div>
+      <div class="feature-row">
+        <span class="glyph">⊕</span>
+        <div>
+          <h4>Sign &middot; audit</h4>
+          <p>Every delivery carries the spec it satisfied. <em>Reproducible by reading the artifact</em>. Audit-grade retention configurable per program.</p>
+        </div>
+      </div>
+      <div class="feature-row">
+        <span class="glyph">⤴</span>
+        <div>
+          <h4>Improve &middot; diff</h4>
+          <p>Refinements land as a diff against the previous spec. <em>The contract is versioned</em>; every change is a reviewable PR.</p>
+        </div>
+      </div>
+      <div class="feature-row">
+        <span class="glyph">≋</span>
+        <div>
+          <h4>Trace &middot; visible</h4>
+          <p>Each run produces a trace: input, prompt, evidence, eval. <em>Open the trace to read what the runtime saw</em>.</p>
+        </div>
+      </div>
+      <div class="feature-row">
+        <span class="glyph">$</span>
+        <div>
+          <h4>Bill &middot; outcome</h4>
+          <p>Billed by delivery, not by token. <em>If the outcome doesn't ship, no line</em>. The pricing matches the contract.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CLOSING CTA ===== -->
+<section class="cta-section photo-section" id="cta">
+  <div class="inner">
+    <div class="cta-block">
+      <div class="section-kicker">III &middot; Contract</div>
+      <h2>Write your first <em>program</em>.</h2>
+      <p class="cta-deck">Fifteen lines of YAML. Pick it up on cadence. Verify against the spec. Sign the delivery. The runtime keeps the rest of the schedule out of your week.</p>
+      <div class="cta-row">
+        <button class="cta-primary" type="button">
+          <span class="arrow">→</span>
+          <span>start a program</span>
+        </button>
+        <button class="cta-ghost" type="button">
+          <span>read the spec format</span>
+        </button>
+      </div>
+    </div>
+    <div class="spec-card" aria-label="Example responsibility spec">
+<span class="k">responsibility:</span> <span class="v">weekly-investor-digest</span>
+<span class="k">owner:</span>         <span class="v">finance@</span>
+<span class="k">cadence:</span>       <span class="v">mondays @ 09:00 ET</span>
+<span class="k">input:</span>
+  <span class="c">- gmail:investors@*</span>
+  <span class="c">- notion:portfolio/updates</span>
+<span class="k">outcome:</span> <span class="v">|</span>
+  <span class="v">One page. What changed,</span>
+  <span class="v">what's on track, what needs</span>
+  <span class="v">attention. 200 words.</span>
+<span class="k">deliver:</span>
+  <span class="c">- email:investors@</span>
+<span class="k">audit:</span>         <span class="v">retain 7 years</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer class="page-foot photo-section">
+  <div class="inner">
+    <div class="channels">
+      <a href="#">language</a>
+      <a href="#">runtime</a>
+      <a href="#">community</a>
+    </div>
+    <div class="crosslinks">
+      // see also:
+      <a href="direction-mu-bloom-homepage-landscape-tufte-kecal.html">μ landscape parent</a>
+      <a href="direction-mu-bloom-homepage.html">μ homepage v1</a>
+      <a href="direction-mu-bloom.html">μ source</a>
+      <a href="direction-beta-tufte-mono-homepage.html">β homepage</a>
+    </div>
+  </div>
+</footer>
+
+<!-- ============================================
+     μ · SYMMETRY — WebGL ripple shader.
+
+     Pipeline: one fullscreen triangle, fragment-shader-driven
+     image deformation. The shader composites a TOP mask over an
+     Under photograph, sums up to 24 click-spawned radial ripples
+     in surface-space, applies a perspective warp so circular
+     ripples read as ellipses on the tilted lake plane, and masks
+     the still upper half via a smoothstep across v = 0.5.
+
+     Graceful fallback: if WebGL is unavailable the canvas stays
+     transparent and the CSS background-image shows through.
+     ============================================ -->
+<script>
+(function () {
+  'use strict';
+
+  /* ========================================================
+     SYMMETRY-RIPPLE — WebGL ripple shader.
+
+     Each frame: prune expired ripples → pack uniforms → bind
+     Under + TOP samplers → draw a fullscreen triangle. The
+     fragment shader warps surface-UVs through perspective +
+     ripple displacement + ambient noise, masks the top half,
+     then samples both textures and composites TOP over Under.
+     ======================================================== */
+
+  // ---- cfg — ripple physics in normalized UV (lake is v in [0.5, 1]) ----
+  var cfg = {
+    MAX_RIPPLES:       24,      // hard cap; oldest gets shifted out
+    RIPPLE_LIFETIME_S: 2.4,     // seconds — decay envelope
+    RIPPLE_VELOCITY:   0.32,    // surface-UV per second (front speed)
+    RIPPLE_WAVELENGTH: 0.085,   // surface-UV between sin crests
+    RIPPLE_SIGMA:      0.075,   // gaussian envelope width
+    RIPPLE_AMP:        0.040,   // peak surface-UV displacement
+    DRAG_EMIT_DIST:    0.060,   // surface-UV between drag-emitted ripples
+
+    // Ambient value-noise drift so the lake is never glassy-still.
+    AMBIENT_AMP:       0.0035,
+    AMBIENT_FREQ:      4.0,
+    AMBIENT_SPEED:     0.10,
+
+    // Lake-plane perspective. Higher POW = steeper recession toward
+    // the horizon at v = 0.5.
+    HORIZON_POW:       2.2
+  };
+
+  // ---- DOM / WebGL acquisition ----
+  var canvas = document.getElementById('symmetry');
+  if (!canvas) return;
+
+  var gl = null;
+  try {
+    gl = canvas.getContext('webgl', { premultipliedAlpha: false, antialias: false, alpha: true })
+       || canvas.getContext('experimental-webgl', { premultipliedAlpha: false, antialias: false, alpha: true });
+  } catch (e) { gl = null; }
+  if (!gl) {
+    // WebGL unavailable: hide the canvas; the still photo on .hero
+    // takes over via CSS background-image.
+    canvas.style.display = 'none';
+    return;
+  }
+
+  var DPR = Math.min(window.devicePixelRatio || 1, 1.5);
+  var W = 0, H = 0;
+
+  // ---- Shaders ----
+
+  // Fullscreen-triangle vertex shader. v_uv has y=0 at the TOP and y=1
+  // at the BOTTOM so it matches the JS click-coord convention (clientY
+  // grows downward). The texture upload disables UNPACK_FLIP_Y_WEBGL so
+  // the image still displays right-side-up under this convention.
+  var VS = [
+    'attribute vec2 a_pos;',
+    'varying vec2 v_uv;',
+    'void main() {',
+    '  v_uv = vec2(a_pos.x * 0.5 + 0.5, 0.5 - a_pos.y * 0.5);',  // y=0 top, y=1 bottom
+    '  gl_Position = vec4(a_pos, 0.0, 1.0);',
+    '}'
+  ].join('\n');
+
+  // Fragment shader: cover-fit sampling, surface-UV perspective warp,
+  // ambient noise drift, per-click ripple displacement, top-half mask.
+  // u_ripples[i] = (originUV.x, originUV.y, ageInSeconds, amplitude);
+  // u_rippleCount caps the loop. Bound is compile-time-constant
+  // (MAX_RIPPLES) for driver portability.
+  var FS = [
+    'precision highp float;',
+    'varying vec2 v_uv;',
+    /* Two samplers: u_tex is the Under photograph (gets rippled in the
+       lower half); u_tex_top is the static TOP mask painted over Under
+       using its own alpha. Both share the cover-fit transform. */
+    'uniform sampler2D u_tex;',
+    'uniform sampler2D u_tex_top;',
+    'uniform vec2 u_texCoverScale;',   // image cover-fit scale
+    'uniform vec2 u_texCoverOffset;',  // image cover-fit offset
+    'uniform float u_time;',           // seconds since start
+    'uniform float u_horizonPow;',     // perspective steepness
+    'uniform float u_ambientAmp;',
+    'uniform float u_ambientFreq;',
+    'uniform float u_ambientSpeed;',
+    'uniform float u_rippleLifetime;',
+    'uniform float u_rippleVelocity;',
+    'uniform float u_rippleWavelength;',
+    'uniform float u_rippleSigma;',
+    'uniform int   u_rippleCount;',
+    'uniform vec4  u_ripples[' + cfg.MAX_RIPPLES + '];',
+    '',
+    '// Hash & value-noise — cheap, deterministic, good enough for ambient.',
+    'float hash(vec2 p) {',
+    '  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);',
+    '}',
+    'float vnoise(vec2 p) {',
+    '  vec2 i = floor(p);',
+    '  vec2 f = fract(p);',
+    '  float a = hash(i);',
+    '  float b = hash(i + vec2(1.0, 0.0));',
+    '  float c = hash(i + vec2(0.0, 1.0));',
+    '  float d = hash(i + vec2(1.0, 1.0));',
+    '  vec2 u = f * f * (3.0 - 2.0 * f);',
+    '  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);',
+    '}',
+    '',
+    '// Screen v in [0,1] → surface v_s in [0,1] (1 == near viewer,',
+    '// 0 == at the horizon).  Only the bottom half (v >= 0.5) maps.',
+    'float v_to_surface(float v) {',
+    '  // map [0.5, 1.0] → [0, 1] with a horizon-pow curve',
+    '  float t = clamp((v - 0.5) / 0.5, 0.0, 1.0);',
+    '  return pow(t, 1.0 / u_horizonPow);',
+    '}',
+    '// Inverse: surface v_s → screen v.',
+    'float surface_to_v(float s) {',
+    '  float t = pow(clamp(s, 0.0, 1.0), u_horizonPow);',
+    '  return 0.5 + 0.5 * t;',
+    '}',
+    '',
+    'void main() {',
+    '  // Texture cover-fit sampling.  We sample the image at the',
+    '  // canvas UV after cover-fit, so the texture fills the canvas',
+    '  // without aspect distortion.',
+    '  vec2 base_uv = v_uv * u_texCoverScale + u_texCoverOffset;',
+    '',
+    '  // Top-half mask: 1 below the water-line, 0 ABOVE the water-line.',
+    '  // Feather pulled fully BELOW 0.5: the smoothstep starts AT y=0.50',
+    '  //   so anything above the water-line is identically zero — no',
+    '  //   feather creep above the horizon line.',
+    '  float lake_mask = smoothstep(0.500, 0.514, v_uv.y);',
+    '',
+    '  if (lake_mask < 0.001) {',
+    '    // Above the water-line — no ripple work. Sample Under directly,',
+    '    // then composite the TOP mask over it using TOP\'s own alpha.',
+    '    // TOP is the mask over Under: where TOP has alpha=1 it fully',
+    '    // replaces Under; where TOP alpha=0 the Under photograph shows through.',
+    '    vec4 under_top = texture2D(u_tex, base_uv);',
+    '    vec4 top_top   = texture2D(u_tex_top, base_uv);',
+    '    gl_FragColor = vec4(mix(under_top.rgb, top_top.rgb, top_top.a), 1.0);',
+    '    return;',
+    '  }',
+    '',
+    '  // ---- Surface-space coords for this fragment ----',
+    '  // Surface u_s mirrors the canvas u so a circle stays a circle',
+    '  // horizontally; surface v_s comes from the horizon-pow warp so',
+    '  // a unit step in v_s near the horizon corresponds to a much',
+    '  // smaller screen step.  This is the lake-plane perspective.',
+    '  float vs = v_to_surface(v_uv.y);',
+    '  vec2  surface_uv = vec2(v_uv.x, vs);',
+    '',
+    '  // ---- Ambient turbulence ----',
+    '  // Two noise samples offset → a smooth 2D drift vector.',
+    '  float n1 = vnoise(surface_uv * u_ambientFreq + vec2(u_time * u_ambientSpeed,  0.0));',
+    '  float n2 = vnoise(surface_uv * u_ambientFreq + vec2(0.0, u_time * u_ambientSpeed + 17.3));',
+    '  vec2  ambient = (vec2(n1, n2) - 0.5) * 2.0 * u_ambientAmp;',
+    '',
+    '  // ---- Click ripples ----',
+    '  vec2  ripple_disp = vec2(0.0);',
+    '  for (int i = 0; i < ' + cfg.MAX_RIPPLES + '; i++) {',
+    '    if (i >= u_rippleCount) break;',
+    '    vec4  R   = u_ripples[i];',
+    '    vec2  org = R.xy;',
+    '    float age = R.z;',
+    '    float amp = R.w;',
+    '    float life = age / u_rippleLifetime;',
+    '    if (life >= 1.0) continue;',
+    '    vec2  d   = surface_uv - org;',
+    '    float dist = length(d);',
+    '    if (dist < 1e-5) continue;',
+    '    float r    = age * u_rippleVelocity;',
+    '    float d2r  = dist - r;',
+    '    float env  = exp(-(d2r * d2r) / (2.0 * u_rippleSigma * u_rippleSigma));',
+    '    float wave = sin(d2r * 6.2831853 / u_rippleWavelength);',
+    '    float fall = 1.0 - life;',
+    '    float a    = wave * env * fall * amp;',
+    '    ripple_disp += (d / dist) * a;',
+    '  }',
+    '',
+    '  // Total surface displacement.  Mask by lake_mask so the still',
+    '  // half is untouched and the seam is feathered.',
+    '  vec2 surf_disp = (ambient + ripple_disp) * lake_mask;',
+    '',
+    '  // Displaced surface coord → screen v via inverse perspective.',
+    '  vec2 disp_surface = surface_uv + surf_disp;',
+    '  // HARD CLAMP — disp_surface.y is in surface-UV',
+    '  //   units where 0 = water-line and 1 = horizon. Clamping it',
+    '  //   to [0, 1] guarantees the bottom-half sampling never reaches',
+    '  //   above the water-line into the top-half texture region.',
+    '  //   Without this clamp, a strong ripple near the seam would pull',
+    '  //   in pixels from above the water-line and the user would',
+    '  //   perceive the "top moving" because top-image content was',
+    '  //   appearing inside the rippled bottom half.',
+    '  disp_surface.y = clamp(disp_surface.y, 0.0, 1.0);',
+    '  float dv = surface_to_v(disp_surface.y);',
+    '  vec2  disp_canvas = vec2(disp_surface.x, dv);',
+    '  // Hard-floor the sampled canvas-v to 0.5 as a second guard —',
+    '  // even if surface_to_v over-shoots due to perspective table',
+    '  // interpolation, the final tex sample stays in the bottom half.',
+    '  disp_canvas.y = max(disp_canvas.y, 0.5);',
+    '',
+    '  // Back to texture UV via cover-fit transform.',
+    '  vec2 tex_uv = disp_canvas * u_texCoverScale + u_texCoverOffset;',
+    /* Bottom-half composite: sample the rippled Under at the displaced
+       tex_uv, then composite the TOP mask over it at the ORIGINAL
+       (un-rippled) base_uv. The TOP layer stays still while the Under
+       photograph ripples beneath it. */
+    '  vec4 under_pix = texture2D(u_tex, tex_uv);',
+    '  vec4 top_pix   = texture2D(u_tex_top, base_uv);',
+    '  gl_FragColor = vec4(mix(under_pix.rgb, top_pix.rgb, top_pix.a), 1.0);',
+    '}'
+  ].join('\n');
+
+  function compile(type, src) {
+    var s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+      // Surface the GLSL error for debugging but don't throw — fall
+      // back gracefully to a blank canvas + CSS background.
+      // eslint-disable-next-line no-console
+      console.warn('shader compile error:', gl.getShaderInfoLog(s), src);
+      gl.deleteShader(s);
+      return null;
+    }
+    return s;
+  }
+
+  var vs = compile(gl.VERTEX_SHADER,   VS);
+  var fs = compile(gl.FRAGMENT_SHADER, FS);
+  if (!vs || !fs) { canvas.style.display = 'none'; return; }
+  var prog = gl.createProgram();
+  gl.attachShader(prog, vs);
+  gl.attachShader(prog, fs);
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+    console.warn('program link error:', gl.getProgramInfoLog(prog));
+    canvas.style.display = 'none';
+    return;
+  }
+  gl.useProgram(prog);
+
+  // ---- Fullscreen triangle geometry ----
+  // One oversized triangle covers the viewport with no scissor work.
+  var posBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+    -1, -1,
+     3, -1,
+    -1,  3
+  ]), gl.STATIC_DRAW);
+  var aPos = gl.getAttribLocation(prog, 'a_pos');
+  gl.enableVertexAttribArray(aPos);
+  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+  // ---- Uniform locations ----
+  var uTex            = gl.getUniformLocation(prog, 'u_tex');
+  // Second sampler for the TOP mask.
+  var uTexTop         = gl.getUniformLocation(prog, 'u_tex_top');
+  var uTexCoverScale  = gl.getUniformLocation(prog, 'u_texCoverScale');
+  var uTexCoverOffset = gl.getUniformLocation(prog, 'u_texCoverOffset');
+  var uTime           = gl.getUniformLocation(prog, 'u_time');
+  var uHorizonPow     = gl.getUniformLocation(prog, 'u_horizonPow');
+  var uAmbientAmp     = gl.getUniformLocation(prog, 'u_ambientAmp');
+  var uAmbientFreq    = gl.getUniformLocation(prog, 'u_ambientFreq');
+  var uAmbientSpeed   = gl.getUniformLocation(prog, 'u_ambientSpeed');
+  var uRippleLifetime = gl.getUniformLocation(prog, 'u_rippleLifetime');
+  var uRippleVelocity = gl.getUniformLocation(prog, 'u_rippleVelocity');
+  var uRippleWaveLen  = gl.getUniformLocation(prog, 'u_rippleWavelength');
+  var uRippleSigma    = gl.getUniformLocation(prog, 'u_rippleSigma');
+  var uRippleCount    = gl.getUniformLocation(prog, 'u_rippleCount');
+  var uRipples        = gl.getUniformLocation(prog, 'u_ripples[0]');
+
+  // Static uniforms — pushed once.
+  gl.uniform1i(uTex, 0);
+  gl.uniform1i(uTexTop, 1);                          // TOP mask on TEXTURE1
+  gl.uniform1f(uHorizonPow,     cfg.HORIZON_POW);
+  gl.uniform1f(uAmbientAmp,     cfg.AMBIENT_AMP);
+  gl.uniform1f(uAmbientFreq,    cfg.AMBIENT_FREQ);
+  gl.uniform1f(uAmbientSpeed,   cfg.AMBIENT_SPEED);
+  gl.uniform1f(uRippleLifetime, cfg.RIPPLE_LIFETIME_S);
+  gl.uniform1f(uRippleVelocity, cfg.RIPPLE_VELOCITY);
+  gl.uniform1f(uRippleWaveLen,  cfg.RIPPLE_WAVELENGTH);
+  gl.uniform1f(uRippleSigma,    cfg.RIPPLE_SIGMA);
+
+  /* ---- Textures (TWO: Under + TOP mask) ----
+     Resolution tier picked from viewport CSS-px width × DPR. We choose
+     the smallest tier that still exceeds the device target so first
+     paint stays quick on phones (1000w) while desktops get the 1600w
+     and HiDPI displays the 2400w. */
+  function pickAssetTier() {
+    var targetW = (window.innerWidth || 1280) * (window.devicePixelRatio || 1);
+    if (targetW <= 1100) return 1000;
+    if (targetW <= 1800) return 1600;
+    return 2400;
+  }
+  var tier = pickAssetTier();
+  var ASSET_BASE = '../Assets/symmetry-web/';
+  var underSrc = ASSET_BASE + 'symmetry_under-' + tier + '.webp';
+  var topSrc   = ASSET_BASE + 'symmetry_top-'   + tier + '.webp';
+  // Also flip the matching CSS background tier so the still-photo
+  // fallback (used until WebGL upload completes) matches the runtime.
+  var root = document.documentElement;
+  root.style.setProperty('--symmetry-top-url',   "url('" + topSrc   + "')");
+  root.style.setProperty('--symmetry-under-url', "url('" + underSrc + "')");
+
+  function makeTexture() {
+    var t = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 0]));
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    return t;
+  }
+  var tex    = makeTexture();   // Under
+  var texTop = makeTexture();   // TOP mask
+
+  var imgReady = false;
+  var topReady = false;
+  var imgAR = 1;
+  function tryReadyFlag() {
+    if (imgReady && topReady) {
+      document.body.setAttribute('data-symmetry-ready', '');
+    }
+  }
+  function uploadInto(t, img) {
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+  }
+  // Under image — drives imgAR + the cover-fit math, fires updateCoverFit on load.
+  var underImg = new Image();
+  underImg.crossOrigin = 'anonymous';
+  underImg.onload = function () {
+    imgAR = underImg.naturalWidth / underImg.naturalHeight;
+    try { uploadInto(tex, underImg); }
+    catch (e) { console.warn('Under upload failed:', e); canvas.style.display = 'none'; return; }
+    imgReady = true;
+    updateCoverFit();
+    tryReadyFlag();
+  };
+  underImg.onerror = function () { canvas.style.display = 'none'; };
+  underImg.src = underSrc;
+  // TOP mask image — separate load, uploads to TEXTURE1. The two images
+  // are framed identically (same source aspect) so they share imgAR.
+  var topImg = new Image();
+  topImg.crossOrigin = 'anonymous';
+  topImg.onload = function () {
+    try { uploadInto(texTop, topImg); }
+    catch (e) { console.warn('TOP upload failed:', e); return; }
+    topReady = true;
+    tryReadyFlag();
+  };
+  topImg.onerror = function () {
+    // TOP missing isn't fatal — render with Under-only.
+    console.warn('TOP asset failed to load:', topSrc);
+    topReady = true;
+    tryReadyFlag();
+  };
+  topImg.src = topSrc;
+
+  // ---- Cover-fit transform ----
+  // The fragment shader samples tex_uv = canvas_uv * scale + offset.
+  // To get CSS object-fit:cover, we pick scale + offset so the
+  // shorter texture axis fills the canvas and the longer is centered.
+  function updateCoverFit() {
+    if (!W || !H || !imgReady) {
+      // safe identity until ready
+      gl.uniform2f(uTexCoverScale, 1, 1);
+      gl.uniform2f(uTexCoverOffset, 0, 0);
+      return;
+    }
+    var canvasAR = W / H;
+    var sx = 1, sy = 1, ox = 0, oy = 0;
+    if (imgAR > canvasAR) {
+      // image wider than canvas — crop horizontally
+      sx = canvasAR / imgAR;
+      ox = (1 - sx) * 0.5;
+    } else {
+      // image taller than canvas — crop vertically
+      sy = imgAR / canvasAR;
+      oy = (1 - sy) * 0.5;
+    }
+    gl.uniform2f(uTexCoverScale, sx, sy);
+    gl.uniform2f(uTexCoverOffset, ox, oy);
+  }
+
+  // ---- Sizing ----
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 1.5);
+    var rect = canvas.getBoundingClientRect();
+    W = Math.max(1, Math.floor(rect.width  * DPR));
+    H = Math.max(1, Math.floor(rect.height * DPR));
+    canvas.width  = W;
+    canvas.height = H;
+    gl.viewport(0, 0, W, H);
+    updateCoverFit();
+  }
+  window.addEventListener('resize', function () {
+    var rect = canvas.getBoundingClientRect();
+    var newW = Math.floor(rect.width * (window.devicePixelRatio || 1));
+    if (Math.abs(newW - W) > 30) resize();
+  });
+  resize();
+
+  // ---- Ripple state ----
+  // Each ripple = {ux, uy, t0Ms, amp} in CANVAS UV space (0..1, 1==bottom).
+  // The shader sees them in SURFACE-UV via the same v_to_surface map;
+  // we precompute the surface uy at spawn so the shader has it directly.
+  var ripples = [];
+  var startMs = performance.now();
+  var rippleBuf = new Float32Array(cfg.MAX_RIPPLES * 4);
+
+  function spawnRipple(canvasUVx, canvasUVy, ampOverride) {
+    if (canvasUVy < 0.5) return; // only the lake
+    // Convert canvas v to surface v with the same curve the shader uses.
+    var t  = (canvasUVy - 0.5) / 0.5;
+    if (t < 0) t = 0; else if (t > 1) t = 1;
+    var vs = Math.pow(t, 1 / cfg.HORIZON_POW);
+    var now = performance.now();
+    if (ripples.length >= cfg.MAX_RIPPLES) ripples.shift();
+    ripples.push({
+      ux:  canvasUVx,
+      uy:  vs,
+      t0:  now,
+      amp: ampOverride != null ? ampOverride : cfg.RIPPLE_AMP
+    });
+  }
+
+  // c_c886f8d6 — variable-period raindrop ripples on the water area.
+  // A second autonomous spawner that drops tiny ripples at random
+  // points in the lake half on long, varied intervals. Smaller than
+  // click ripples and bursts in clusters so the surface reads alive
+  // without competing with the click affordance.
+  var raindropTimer = null;
+  function scheduleRaindrop() {
+    // Period mix: most drops are slow (4-12s); occasionally a short
+    // burst of two close-together drops (300-900ms gap) so the rhythm
+    // is irregular, not metronomic. Tab visibility pauses the loop.
+    var delay;
+    var burstChance = Math.random();
+    if (burstChance < 0.18) {
+      delay = 300 + Math.random() * 600;
+    } else {
+      delay = 4000 + Math.random() * 8000;
+    }
+    raindropTimer = setTimeout(function () {
+      if (document.visibilityState !== 'hidden') {
+        // Pick a random point in the lower half; favour center 60%
+        // so drops cluster naturally in the foreground reflection.
+        var x = 0.20 + Math.random() * 0.60;
+        var y = 0.52 + Math.random() * 0.46;     // skip the seam at v=0.5
+        // Amplitude jitter: most drops are ~35-50% of click; rare
+        // larger drops up to 70% so the surface gets occasional swells.
+        var ampRoll = Math.random();
+        var amp;
+        if (ampRoll < 0.08)      amp = cfg.RIPPLE_AMP * 0.70;
+        else if (ampRoll < 0.30) amp = cfg.RIPPLE_AMP * 0.50;
+        else                     amp = cfg.RIPPLE_AMP * (0.30 + Math.random() * 0.15);
+        spawnRipple(x, y, amp);
+      }
+      scheduleRaindrop();
+    }, delay);
+  }
+  scheduleRaindrop();
+  // Don't pile up drops while the tab is hidden; resume on focus.
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden') {
+      if (raindropTimer) { clearTimeout(raindropTimer); raindropTimer = null; }
+    } else if (!raindropTimer) {
+      scheduleRaindrop();
+    }
+  });
+
+  // ---- Interaction ----
+  // The hero canvas covers the whole hero so clicks above the
+  // water-line are ignored at spawn time (let CTAs in the overlay
+  // get them via pointer-events).  Below the water-line: spawn a
+  // ripple; while dragging, spawn fresh ones every DRAG_EMIT_DIST
+  // surface-UV units so a drag reads as a stream.
+  var holding = false;
+  var holdUV = { x: 0, y: 0 };
+  var lastEmit = { x: 0, y: 0 };
+
+  function eventCanvasUV(e) {
+    var rect = canvas.getBoundingClientRect();
+    var pt = (e.touches && e.touches[0]) ? e.touches[0] : e;
+    var x = (pt.clientX - rect.left) / rect.width;
+    var y = (pt.clientY - rect.top)  / rect.height;
+    return { x: x, y: y };
+  }
+
+  function onPress(e) {
+    var p = eventCanvasUV(e);
+    if (p.y < 0.5) return; // top half — let CTAs handle it
+    e.preventDefault();
+    holding = true;
+    holdUV.x = p.x; holdUV.y = p.y;
+    lastEmit.x = p.x; lastEmit.y = p.y;
+    spawnRipple(p.x, p.y);
+  }
+  function onMove(e) {
+    if (!holding) return;
+    var p = eventCanvasUV(e);
+    holdUV.x = p.x; holdUV.y = p.y;
+  }
+  function onRelease() { holding = false; }
+
+  canvas.addEventListener('mousedown',  onPress);
+  canvas.addEventListener('touchstart', onPress, { passive: false });
+  canvas.addEventListener('mousemove',  onMove);
+  canvas.addEventListener('touchmove',  function (e) {
+    if (!holding) return;
+    e.preventDefault();
+    var p = eventCanvasUV(e);
+    holdUV.x = p.x; holdUV.y = p.y;
+  }, { passive: false });
+  window.addEventListener('mouseup',  onRelease);
+  window.addEventListener('touchend', onRelease);
+
+  // Cursor — crosshair on the rippleable bottom half.
+  canvas.addEventListener('mousemove', function (e) {
+    var p = eventCanvasUV(e);
+    canvas.style.cursor = p.y >= 0.5 ? 'crosshair' : 'default';
+  });
+
+  // ---- Frame ----
+  function frame() {
+    var nowMs = performance.now();
+    var timeS = (nowMs - startMs) * 0.001;
+
+    // Drag emit: while held, drop a ripple every DRAG_EMIT_DIST
+    // surface-UV units (measured between the last emit point and
+    // the current hold point, in canvas-UV space scaled to roughly
+    // match surface-UV).
+    if (holding && holdUV.y >= 0.5) {
+      var ddx = holdUV.x - lastEmit.x;
+      var ddy = holdUV.y - lastEmit.y;
+      var d2  = ddx * ddx + ddy * ddy;
+      if (d2 >= cfg.DRAG_EMIT_DIST * cfg.DRAG_EMIT_DIST) {
+        spawnRipple(holdUV.x, holdUV.y);
+        lastEmit.x = holdUV.x;
+        lastEmit.y = holdUV.y;
+      }
+    }
+
+    // Prune + pack ripples for the shader.
+    var live = 0;
+    for (var i = 0; i < ripples.length; i++) {
+      var rp = ripples[i];
+      var age = (nowMs - rp.t0) * 0.001;
+      if (age >= cfg.RIPPLE_LIFETIME_S) continue;
+      var base = live * 4;
+      rippleBuf[base    ] = rp.ux;
+      rippleBuf[base + 1] = rp.uy;
+      rippleBuf[base + 2] = age;
+      rippleBuf[base + 3] = rp.amp;
+      // keep the live ones in-place for the JS list so prune is O(n)
+      ripples[live] = rp;
+      live++;
+    }
+    ripples.length = live;
+    // Zero out the unused slots so we don't carry stale data.
+    for (var k = live * 4; k < rippleBuf.length; k++) rippleBuf[k] = 0;
+
+    // Push uniforms.
+    gl.uniform1f(uTime, timeS);
+    gl.uniform1i(uRippleCount, live);
+    gl.uniform4fv(uRipples, rippleBuf);
+
+    // Render. Bind BOTH samplers each frame:
+    // TEXTURE0 = Under (rippled in bottom half), TEXTURE1 = TOP mask.
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, texTop);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    // Don't gate on topReady — TOP failure falls through to Under-only
+    // via the alpha=0 placeholder texture, so we can still render.
+    if (imgReady) {
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    }
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+
+<!-- ============================================
+     MODE TOGGLE — light/dark via data-mode on <html>.
+     Verbatim from parent. The symmetry canvas doesn't read any
+     light/dark vars (it's only ever the image), so no observer
+     is needed here.
+     ============================================ -->
+<script>
+(function () {
+  var btn = document.getElementById('mode-toggle');
+  if (!btn) return;
+  function applyMode(m) {
+    document.documentElement.setAttribute('data-mode', m);
+    btn.textContent = m === 'dark' ? '◑' : '◐';
+    try { localStorage.setItem('openprose-mu-symmetry-mode', m); } catch(e){}
+  }
+  var saved = 'light';
+  try { saved = localStorage.getItem('openprose-mu-symmetry-mode') || 'light'; } catch(e){}
+  applyMode(saved);
+  btn.addEventListener('click', function () {
+    var c = document.documentElement.getAttribute('data-mode') || 'light';
+    applyMode(c === 'light' ? 'dark' : 'light');
+  });
+})();
+</script>
+
+
+<script>
+  (function () {
+    const LOGOS = [
+      { id: 'infinite', signet: { sym: 'opInfinite',   vb: '0 0 497 329'   }, type: { sym: 'opInfiniteType', vb: '0 0 3549 1107' } },
+      { id: 'style',    signet: { sym: 'opStyle',      vb: '0 0 142 142'   }, type: { sym: 'opStyleType',    vb: '0 0 3840 998'  } },
+      { id: 'circle',   signet: { sym: 'opCircleMark', vb: '0 0 2843 2160' }, type: { sym: 'opCircleType',   vb: '0 0 3905 1443' } },
+      { id: 'swish',    signet: { sym: 'opSwish',      vb: '0 0 152 107'   }, type: { sym: 'opSwishType',    vb: '0 0 3025 752'  } },
+      { id: 'cursive',  signet: { sym: 'opCursive',    vb: '0 0 1737 1846' }, type: { sym: 'opCursiveType',  vb: '0 0 3776 1586' } }
+    ];
+    // PER-PAGE: change idx to match the family this page starts on.
+    //   0=infinite  1=style  2=circle  3=swish  4=cursive
+    let idx = 1;
+
+    function applyLogo() {
+      const set = LOGOS[idx];
+      document.querySelectorAll('.swap-logo').forEach(svg => {
+        const kind = svg.dataset.kind === 'wordmark' ? 'type' : 'signet';
+        const target = set[kind];
+        svg.setAttribute('viewBox', target.vb);
+        const useEl = svg.querySelector('use');
+        if (useEl) {
+          useEl.setAttribute('href', '#' + target.sym);
+          // Older browsers fall back to xlink:href; keep both in sync.
+          try { useEl.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '#' + target.sym); } catch (e) {}
+        }
+      });
+      try { window.dispatchEvent(new CustomEvent('swap-logo-changed', { detail: { id: set.id } })); } catch (e) {}
+    }
+
+    /* Apply initial logo at script boot — otherwise the page paints with the
+       broken hardcoded #opType href and the hero stays invisible until first click. */
+    applyLogo();
+
+    // Drag-aware click detection — measure pointer travel between down
+    // and up.  Below the threshold (small move) → treat as click → toggle.
+    // Above → it was a drag.  Lets a draggable .swap-logo coexist with
+    // the cycle gesture.
+    const DRAG_THRESHOLD = 6; // px
+    let downX = 0, downY = 0, downTarget = null;
+    function onPointerDown(e) {
+      const t = e.target.closest('.swap-logo');
+      if (!t) { downTarget = null; return; }
+      downTarget = t;
+      const p = (e.touches && e.touches[0]) ? e.touches[0] : e;
+      downX = p.clientX; downY = p.clientY;
+    }
+    function onPointerUp(e) {
+      if (!downTarget) return;
+      const t = e.target.closest('.swap-logo');
+      if (!t || t !== downTarget) { downTarget = null; return; }
+      const p = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : e;
+      const dx = p.clientX - downX;
+      const dy = p.clientY - downY;
+      downTarget = null;
+      if (Math.hypot(dx, dy) > DRAG_THRESHOLD) return; // it was a drag, not a click
+      idx = (idx + 1) % LOGOS.length;
+      applyLogo();
+    }
+    // Suppress the default <a href="#"> when the click actually toggles
+    // a swap-logo.
+    function onClickCapture(e) {
+      if (e.target.closest('.swap-logo')) e.preventDefault();
+    }
+    document.addEventListener('mousedown',  onPointerDown, true);
+    document.addEventListener('mouseup',    onPointerUp,   true);
+    document.addEventListener('touchstart', onPointerDown, { capture: true, passive: true });
+    document.addEventListener('touchend',   onPointerUp,   true);
+    document.addEventListener('click',      onClickCapture, true);
+  })();
+  </script>
+
+</body>
+</html>

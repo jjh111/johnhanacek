@@ -1,0 +1,3225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenProse · The Styleguide — canonical defaults (β · teal)</title>
+<!-- ============================================================
+     DIRECTION STYLEGUIDE — consolidated, multi-mode (2026-05-26 JH)
+     ----------------------------------------------------------------
+     This file is the SINGLE rigorous styleguide replacing five
+     prior styleguide forks (β-styleguide{,-teal{,-companion}},
+     λ-codex-styleguide-teal, μ-bloom-{landscape,symmetry}-styleguide-teal).
+
+     Sources:
+       · _tokens.css      — 7 palette + global tokens
+       · _pairings.css    — Kecal × {Plex,Jet,Space} × 6 recipes (A–F)
+       · _styleguide.js   — mode-panel + tokens dump
+
+     Axes (set via body[data-*]):
+       direction  = β γ δ ζ η θ λ μ ν ρ
+       palette    = light-{cool-default, warm-teal, warm-rust,
+                          manuscript-cream, saas-neutral},
+                    dark-{machine, livingdoc}
+       pairing    = A B C D E F
+       mono       = plex jet space
+       layout     = styleguide homepage concept landscape codex poster
+       mark       = static swap-cycle rain bloom ripple physics 3d blackhole
+
+     Default body state: direction=β, palette=light-warm-teal, pairing=A,
+     mono=plex, layout=styleguide, mark=swap-cycle.
+
+     Companion sheets (kept separate per user 2026-05-26 review):
+       · logo-collection.html         (mark spec)
+       · typography-pairings.html     (full 18-tile pairings sheet)
+     ============================================================ -->
+
+<!-- Inline SVG favicon (matches β styleguide) -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 142 142'%3E%3Ccircle cx='71' cy='71' r='62' fill='none' stroke='%232a2520' stroke-width='10'/%3E%3Ccircle cx='102' cy='40' r='14' fill='%232a2520'/%3E%3C/svg%3E">
+
+<link rel="stylesheet" href="_tokens.css">
+<link rel="stylesheet" href="_pairings.css">
+
+<style>
+/* ============================================================
+   PAGE CHROME — shell layout, cover, section frame, mode panel
+   Component CSS that's specific to the styleguide page itself.
+   Anything reusable across direction pages lives in _components.css
+   (to be extracted in a later iteration).
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 17px; scroll-behavior: smooth; }
+
+body {
+  min-height: 100vh;
+  padding: 1.5rem 0 4rem;
+}
+
+.sg-shell {
+  max-width: var(--wide);
+  margin: 0 auto;
+  padding: 0 var(--space-lg);
+}
+
+/* ---- COVER ---- */
+.sg-cover {
+  padding: var(--space-3xl) 0 var(--space-2xl);
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+}
+.sg-cover-eyebrow {
+  font-size: var(--fs-caption);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: var(--space-md);
+}
+.sg-cover-title {
+  font-size: clamp(2rem, 5vw, var(--fs-display));
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  max-width: 22ch;
+}
+.sg-cover-sub {
+  margin-top: var(--space-md);
+  font-size: var(--fs-h3);
+  color: var(--ink-2);
+  max-width: 50ch;
+  line-height: 1.5;
+}
+.sg-cover-meta {
+  margin-top: var(--space-xl);
+  font-size: var(--fs-caption);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  display: flex; flex-wrap: wrap; gap: var(--space-lg);
+}
+.sg-cover-meta b { color: var(--ink); font-weight: 600; }
+.sg-cover-mark-row {
+  display: flex; align-items: center; gap: var(--space-md);
+  margin: var(--space-md) 0;
+}
+.sg-cover-mark {
+  width: 86px; height: 86px;
+  color: var(--ink);
+  cursor: pointer;
+  transition: transform var(--t-fast);
+}
+.sg-cover-mark:hover { transform: scale(1.04); }
+.sg-cover-mark:active { transform: scale(0.98); }
+/* The OpenProse marks loaded via <img> carry a baked-in dark fill
+   (rgb(29,29,27)), so `color: var(--ink)` can't reach them — on a dark
+   palette they'd render dark-on-dark. Invert them to read as the light
+   ink in any dark palette. Inline-SVG fallbacks use var(--ink) directly
+   and are intentionally left out (img.swap-* only matches the img form). */
+body[data-palette^="dark"] .sg-cover-mark,
+body[data-palette^="dark"] .pretext-mark,
+body[data-palette^="dark"] .pretext-swatch img,
+body[data-palette^="dark"] img.swap-signet,
+body[data-palette^="dark"] img.swap-wordmark { filter: invert(1); }
+.sg-cover-mark-hint {
+  font-family: var(--type-mono);
+  font-size: var(--fs-caption);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* ---- ACTIVE MODE CARD (cover) ---- */
+.active-mode-card {
+  margin-top: var(--space-xl);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--paper-elev);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+}
+.active-mode-label {
+  font-family: var(--type-mono);
+  font-size: var(--fs-caption);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: var(--space-xs);
+}
+.active-mode-status {
+  font-family: var(--type-mono);
+  font-size: var(--fs-small);
+  color: var(--ink);
+  margin-bottom: var(--space-sm);
+}
+.active-mode-status b { font-weight: 700; color: var(--ink); }
+.active-mode-mono-specimen {
+  font-family: var(--type-mono);
+  font-weight: var(--w-body);
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  color: var(--ink-2);
+  max-width: 64ch;
+}
+.active-mode-mono-specimen em {
+  font-family: var(--type-kecal);
+  font-weight: 800;
+  font-style: var(--i-body-em);
+  color: var(--ink);
+}
+
+/* ---- SECTION FRAME ---- */
+.sg-section {
+  padding: var(--space-3xl) 0 var(--space-2xl);
+  border-bottom: 1px solid var(--rule);
+}
+.sg-section:last-of-type { border-bottom: none; }
+.sg-section-num {
+  font-size: var(--fs-caption);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: var(--space-sm);
+}
+.sg-section h2 {
+  font-size: clamp(1.6rem, 3vw, var(--fs-h1));
+  line-height: 1.12;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  margin-bottom: var(--space-lg);
+  /* 38ch + text-wrap: balance so headlines break at clause boundaries
+     instead of mid-clause. [c_7605a363] */
+  max-width: 38ch;
+  text-wrap: balance;
+}
+.sg-section .sg-lede {
+  font-size: var(--fs-h3);
+  color: var(--ink-2);
+  max-width: var(--measure);
+  line-height: 1.55;
+  margin-bottom: var(--space-2xl);
+}
+.sg-section h3 {
+  font-size: var(--fs-h3);
+  color: var(--ink);
+  margin: var(--space-xl) 0 var(--space-md);
+  letter-spacing: -0.005em;
+}
+
+/* ---- PALETTE TILES (I) ---- */
+.palette-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-md);
+  margin: var(--space-md) 0 var(--space-2xl);
+}
+.pal-tile {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  font-size: var(--fs-caption);
+  cursor: pointer;
+  transition: all var(--t-fast);
+  position: relative;
+}
+.pal-tile:hover { border-color: var(--ink-3); transform: translateY(-1px); }
+.pal-tile.active {
+  border-color: var(--ink);
+  border-width: 2px;
+  box-shadow: var(--shadow);
+}
+.pal-tile.active::after {
+  content: '✓ active';
+  position: absolute;
+  top: var(--space-xs); right: var(--space-xs);
+  background: var(--ink); color: var(--paper);
+  font-family: var(--type-mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.18rem 0.4rem;
+  border-radius: 2px;
+}
+.pal-tile-swatches {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  height: 110px;
+}
+.pal-tile-swatches > div { width: 100%; height: 100%; }
+.pal-tile-info {
+  padding: var(--space-sm);
+  background: var(--paper);
+}
+.pal-tile-name {
+  font-weight: 600;
+  color: var(--ink);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: var(--fs-caption);
+}
+.pal-tile-id {
+  color: var(--ink-3);
+  font-family: var(--type-mono);
+  margin-top: 0.2rem;
+  font-size: 0.6rem;
+}
+
+/* ---- PAIRINGS GRID (II.1) — per Q6, default greyscale ---- */
+.pair-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-md);
+  margin: var(--space-md) 0 var(--space-2xl);
+}
+.pair-tile {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  /* Greyscale by default: override surface colour to neutral cream */
+  background: var(--paper-lt);
+  position: relative;
+}
+.pair-tile.preview-palette { background: var(--paper); }
+.pair-tile.dark {
+  background: #1a1814; color: var(--on-dark, #fbf7ef);
+  border-color: rgba(251,247,239,0.18);
+}
+.pair-tile.dark .pair-eyebrow,
+.pair-tile.dark .pair-recipe { color: rgba(251,247,239,0.74); }
+.pair-tile.dark .pair-display { color: var(--on-dark, #fbf7ef); }
+.pair-tile.dark .pair-body  { color: rgba(251,247,239,0.92); }
+.pair-tile.dark .pair-toggle { color: rgba(251,247,239,0.74); border-color: rgba(251,247,239,0.22); }
+
+.pair-eyebrow {
+  font-family: var(--type-mono);
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+  letter-spacing: 0.1em;
+  margin-bottom: var(--space-sm);
+}
+.pair-display {
+  /* Override role tokens for this scoped pair */
+  font-family: var(--pair-display-family, var(--type-display));
+  font-weight: var(--pair-display-weight, var(--w-display));
+  font-style: var(--pair-display-style, var(--i-display));
+  font-size: 2.2rem;
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+  margin-bottom: var(--space-md);
+}
+.pair-display em {
+  font-family: var(--pair-display-em-family, var(--type-display-em));
+  font-weight: var(--pair-display-em-weight, var(--w-display-em));
+  font-style: var(--pair-display-em-style, var(--i-display-em));
+}
+.pair-body {
+  font-family: var(--pair-body-family, var(--type-body));
+  font-weight: var(--pair-body-weight, var(--w-body));
+  font-style: var(--pair-body-style, var(--i-body));
+  font-size: 0.88rem;
+  line-height: 1.65;
+  color: var(--ink-2);
+  margin-bottom: var(--space-sm);
+}
+.pair-body em {
+  font-family: var(--pair-body-em-family, var(--type-body-em));
+  font-weight: var(--pair-body-em-weight, var(--w-body-em));
+  font-style: var(--pair-body-em-style, var(--i-body-em));
+}
+.pair-recipe {
+  font-family: var(--type-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+  border-top: 1px solid var(--rule-mid);
+  padding-top: var(--space-sm);
+  margin-top: var(--space-sm);
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0.2rem 0.6rem;
+}
+.pair-recipe .key {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-4);
+  display: inline-block;
+  width: 5.5em;
+}
+.pair-toggle {
+  position: absolute;
+  top: var(--space-sm); right: var(--space-sm);
+  background: transparent;
+  border: 1px solid var(--rule);
+  color: var(--ink-3);
+  font-family: var(--type-mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  padding: 0.2rem 0.4rem;
+  border-radius: 2px;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+.pair-toggle:hover { color: var(--ink); border-color: var(--ink-3); }
+
+/* ---- COMPONENT CATALOG (V) ---- */
+.comp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-lg);
+  margin: var(--space-md) 0 var(--space-2xl);
+}
+@media (max-width: 720px) { .comp-grid { grid-template-columns: 1fr; } }
+.comp-card {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.comp-card-render {
+  padding: var(--space-lg);
+  background: var(--paper);
+  min-height: 8rem;
+  display: flex; flex-direction: column; gap: var(--space-sm);
+  align-items: flex-start; justify-content: center;
+}
+.comp-card-source {
+  background: var(--paper-warm);
+  padding: var(--space-sm) var(--space-md);
+  font-family: var(--type-mono);
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+  border-top: 1px solid var(--rule-mid);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ---- UI components (V.x) ---- */
+.ui-btn {
+  display: inline-block;
+  padding: 0.55rem 1.1rem;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--type-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all var(--t-fast);
+}
+.ui-btn:hover { background: var(--ink); color: var(--paper); }
+.ui-btn.primary { background: var(--ink); color: var(--paper); }
+.ui-btn.primary:hover { background: var(--ink-2); border-color: var(--ink-2); }
+.ui-btn.ghost { background: transparent; }
+
+.ui-badge {
+  display: inline-block;
+  padding: 0.18rem 0.5rem;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  font-family: var(--type-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  background: var(--paper-warm);
+}
+
+.ui-input {
+  width: 100%; max-width: 22rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--type-body);
+  font-size: var(--fs-body);
+  border-radius: 2px;
+}
+
+.ui-code {
+  font-family: var(--type-mono);
+  font-size: var(--fs-mono);
+  background: var(--paper-warm);
+  border: 1px solid var(--rule-mid);
+  border-radius: 2px;
+  padding: 0.1em 0.4em;
+}
+
+.card-block {
+  padding: var(--space-md);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  background: var(--paper-elev);
+  box-shadow: var(--shadow);
+  max-width: 22rem;
+}
+.card-block .title { font-weight: 600; margin-bottom: var(--space-xs); }
+.card-block .body { color: var(--ink-2); font-size: var(--fs-small); line-height: 1.55; }
+
+/* ---- WEIGHT LADDERS (II.3) ---- */
+.weight-ladders {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-xl);
+  margin: var(--space-md) 0 var(--space-2xl);
+}
+@media (max-width: 720px) { .weight-ladders { grid-template-columns: 1fr; } }
+.weight-col-label {
+  font-family: var(--type-mono);
+  font-size: var(--fs-caption);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: var(--space-sm);
+}
+.weight-row {
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: var(--ink);
+  padding: 0.2rem 0;
+}
+.weight-row em { color: var(--ink-2); }
+
+
+/* ---- PRETEXT DEMO (V.15) — grabbable mark + shape-outside wrap ---- */
+.pretext-demo {
+  position: relative;
+  background: var(--paper-lt);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  margin: var(--space-md) 0 var(--space-2xl);
+}
+.pretext-prose {
+  position: relative;
+  font-family: var(--type-mono);
+  font-size: 0.96rem;
+  line-height: 1.72;
+  color: var(--ink);
+  max-width: var(--measure);
+  margin: 0 auto;
+  min-height: 12rem;
+}
+.pretext-prose p { text-align: justify; hyphens: auto; }
+.pretext-prose em {
+  color: var(--ink);
+  font-family: var(--type-kecal);
+  font-weight: 800;
+  font-style: var(--i-body-em);
+}
+.pretext-mark {
+  --px: 0.5; --py: 0.5;
+  float: left;
+  width: 140px; height: 140px;
+  margin: calc(var(--py) * 1rem) var(--space-md) var(--space-sm) calc(var(--px) * 1rem);
+  shape-outside: circle(50%);
+  -webkit-shape-outside: circle(50%);
+  shape-margin: 12px;
+  cursor: grab;
+  user-select: none;
+  filter: drop-shadow(0 1px 0 var(--rule));
+  transition: filter var(--t-fast) ease;
+}
+@media (max-width: 640px) {
+  .pretext-mark { width: 96px; height: 96px; }
+  .pretext-demo { padding: var(--space-md); }
+  .pretext-prose { font-size: 0.88rem; line-height: 1.6; min-height: 8rem; }
+  /* The mode panel covers a lot of the page at this width — let the
+     section above and below it still breathe. */
+  .sg-section { padding: var(--space-xl) 0 var(--space-lg); }
+  .sg-cover { padding: var(--space-xl) 0; }
+  .sg-cover-title { font-size: clamp(1.8rem, 8vw, 2.4rem); line-height: 1.05; }
+  .sg-section h2 { font-size: clamp(1.4rem, 6vw, 1.8rem); }
+  .pair-display { font-size: 1.65rem; }
+  .swap-demo { padding: var(--space-lg) var(--space-md); }
+  .swap-signet { width: 80px; height: 80px; }
+}
+.pretext-mark:hover { filter: drop-shadow(0 2px 4px rgba(42,37,32,0.18)); }
+.pretext-mark.dragging { cursor: grabbing; filter: drop-shadow(0 4px 10px rgba(42,37,32,0.28)); }
+.pretext-swatches {
+  display: flex; flex-wrap: wrap; gap: var(--space-sm);
+  margin-top: var(--space-md); padding-top: var(--space-sm);
+  border-top: 1px solid var(--rule);
+}
+.pretext-swatch {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.45rem 0.7rem;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  font-family: var(--type-mono); font-size: 0.78rem;
+  letter-spacing: 0.04em; color: var(--ink-2);
+  cursor: pointer;
+  transition: border-color var(--t-fast), background var(--t-fast);
+}
+.pretext-swatch:hover { border-color: var(--teal, var(--ink)); background: var(--teal-faint, var(--paper-warm)); }
+.pretext-swatch.active { border-color: var(--teal, var(--ink)); background: var(--teal-tint, var(--paper-warm)); color: var(--ink); }
+.pretext-swatch img { width: 22px; height: 22px; display: block; }
+.pretext-meta {
+  margin-top: var(--space-sm);
+  font-family: var(--type-mono);
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+}
+
+/* ---- SWAP-CYCLE LOGO WIDGET (V.16) — canonical 5-family rotator ---- */
+.swap-demo {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  padding: var(--space-xl) var(--space-lg);
+  margin: var(--space-md) 0 var(--space-2xl);
+  background: var(--paper-elev);
+  text-align: center;
+}
+.swap-stage {
+  display: flex; flex-direction: column; align-items: center; gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+.swap-signet {
+  width: 96px; height: 96px;
+  color: var(--ink);
+  cursor: pointer;
+  transition: transform var(--t-fast);
+}
+.swap-signet:hover { transform: scale(1.04); }
+.swap-wordmark {
+  height: 28px;
+  color: var(--ink);
+  cursor: pointer;
+}
+.swap-row {
+  display: flex; justify-content: center; flex-wrap: wrap; gap: var(--space-sm);
+}
+.swap-pill {
+  font-family: var(--type-mono);
+  font-size: var(--fs-caption);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  color: var(--ink-3);
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all var(--t-fast);
+}
+.swap-pill:hover { border-color: var(--ink-3); color: var(--ink); }
+.swap-pill.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.swap-caption {
+  margin-top: var(--space-sm);
+  font-family: var(--type-mono);
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
+
+/* ---- DIRECTION CATALOG (X) ---- */
+/* (.dir-grid / .dir-tile removed — the direction catalog moved to
+   direction-experiments.html, which renders it with pick-tiles.) */
+
+/* ---- LAYOUT MODE CATALOG (IV) ---- */
+.layout-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-md);
+  margin: var(--space-md) 0 var(--space-2xl);
+}
+.layout-tile {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  background: var(--paper);
+  font-family: var(--type-mono);
+  font-size: var(--fs-caption);
+}
+.layout-tile .miniature {
+  height: 100px;
+  background: var(--paper-warm);
+  border: 1px solid var(--rule-mid);
+  border-radius: 2px;
+  margin-bottom: var(--space-sm);
+  position: relative;
+  overflow: hidden;
+}
+.layout-tile .name {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ink);
+  margin-bottom: 0.2rem;
+}
+.layout-tile .note {
+  font-size: 0.62rem;
+  color: var(--ink-3);
+}
+
+/* ---- LINKS to companions ---- */
+.companion-row {
+  display: flex; flex-wrap: wrap; gap: var(--space-md);
+  margin-top: var(--space-md);
+}
+.companion-link {
+  flex: 1; min-width: 220px;
+  display: block;
+  padding: var(--space-md);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: var(--ink);
+  background: var(--paper);
+  transition: all var(--t-fast);
+}
+.companion-link:hover { background: var(--paper-warm); border-color: var(--ink-3); }
+.companion-link .lbl {
+  font-family: var(--type-mono);
+  font-size: var(--fs-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--ink-3);
+  margin-bottom: var(--space-xs);
+}
+.companion-link .ttl {
+  font-size: var(--fs-h3);
+  color: var(--ink);
+}
+
+/* ---- Spacing scale visual (III) ---- */
+.space-scale {
+  display: flex; align-items: flex-end;
+  gap: var(--space-md);
+  padding: var(--space-md) 0;
+  flex-wrap: wrap;
+}
+.space-rung {
+  display: flex; flex-direction: column; align-items: center;
+  gap: var(--space-xs);
+}
+.space-rung .bar {
+  background: var(--ink);
+  width: 24px;
+}
+.space-rung .lbl {
+  font-family: var(--type-mono);
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
+
+
+/* ============================================================
+   RIGOROUS-PARITY EXPANSION
+   ----------------------------------------------------------------
+   Components and chrome ported from
+   direction-beta-tufte-mono-kecal-styleguide-teal.html so this file
+   serves as the canonical reference. AUGMENTATIVE — nothing above
+   this banner is removed; the multi-mode panel and axes still drive
+   the page.
+
+   Sections added by this block:
+     · TOC chrome (.sg-toc)
+     · Theme toggle (.sg-theme-toggle)
+     · Reference tables (.sg-table)
+     · Render-+-source demos (.sg-demo)
+     · Do / Don't pairs (.sg-do-dont)
+     · Editorial primitives (.section-kicker, .lede-demo, .dropcap-demo,
+       .sn-demo + sup.sn + aside.sidenote, .hl, .hl-hot, .pull-quote,
+       .pairing-demo, .voice-card-demo)
+     · Token dump (.sg-token-dump)
+     · Colophon (.sg-colophon)
+     · Internal :root fallbacks for rigorous-named tokens not defined
+       upstream in _tokens.css.
+   ============================================================ */
+
+/* Internal fallbacks for rigorous-named tokens not in _tokens.css.
+   These are aliases only — they NEVER override an upstream value. */
+:root {
+  --paper-dk: var(--paper-warm, #e8e0d0);   /* code surface · code aside */
+  --border-w:  1px;
+  --border-w2: 2px;
+  --radius:    var(--radius-md, 6px);
+}
+
+/* ---- TOC (inside the cover) ---- */
+.sg-toc {
+  margin: var(--space-md) 0 0;
+  padding-top: var(--space-md);
+  border-top: 1px dotted var(--rule-mid);
+  font-family: var(--type-mono);
+  font-size: 0.84rem;
+  color: var(--ink-2);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.35rem 1.5rem;
+}
+.sg-toc a {
+  color: var(--ink-2);
+  text-decoration: none;
+  border-bottom: 1px dotted transparent;
+  transition: border-color var(--t-fast), color var(--t-fast);
+}
+.sg-toc a:hover { color: var(--ink); border-bottom-color: var(--ink-3); }
+.sg-toc a .num {
+  color: var(--ink-3);
+  margin-right: 0.5rem;
+}
+
+/* ---- Theme toggle (top-LEFT fixed; the floating mode panel claims
+   the top-right corner) ----
+   On the canonical, "Dark" = swap to dark-machine palette,
+   "Light" = swap back to light-warm-teal. The button reflects
+   the *target* state. Preference persists in localStorage. */
+.sg-surface-switch {
+  position: fixed; top: 0.9rem; left: 0.9rem; z-index: 9999;
+  display: flex; align-items: center; gap: 0.35rem;
+  padding: 0.3rem 0.5rem;
+  background: var(--paper-elev, var(--paper));
+  border: 1px solid var(--rule); border-radius: 6px;
+  font-family: var(--type-mono); font-size: 0.62rem;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3);
+}
+.sg-surface-switch button {
+  font: inherit; letter-spacing: inherit; text-transform: inherit;
+  color: var(--ink-3); background: var(--paper);
+  border: 1px solid var(--rule); border-radius: 3px;
+  padding: 0.25rem 0.55rem; cursor: pointer;
+}
+.sg-surface-switch button:hover { color: var(--ink); border-color: var(--ink-3); }
+.sg-surface-switch button.active { color: var(--paper); background: var(--ink); border-color: var(--ink); }
+/* On narrow screens, fold both the mode panel and the theme toggle
+   so the cover reads cleanly — both reappear when scrolled. */
+@media (max-width: 720px) {
+  .sg-surface-switch { top: 0.6rem; left: 0.6rem; }
+}
+
+/* ---- Reference tables (.sg-table) ---- */
+.sg-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--type-mono);
+  font-size: 0.82rem;
+  margin: var(--space-sm) 0 var(--space-lg);
+}
+.sg-table th, .sg-table td {
+  text-align: left;
+  padding: 0.55rem 0.85rem;
+  border-bottom: 1px solid var(--rule-mid);
+  vertical-align: top;
+}
+.sg-table th {
+  font-weight: 500;
+  color: var(--ink-3);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--rule);
+}
+.sg-table td.swatch-cell { width: 60px; }
+.sg-table td.swatch-cell .chip {
+  display: block;
+  width: 44px; height: 28px;
+  border: 1px solid var(--rule);
+}
+.sg-table td .mono { font-family: var(--type-mono); color: var(--ink); }
+.sg-table td .role { font-style: italic; color: var(--ink-3); }
+.sg-table code {
+  font-family: var(--type-mono);
+  font-size: 0.92em;
+  background: var(--paper-warm);
+  padding: 0.04em 0.32em;
+  border-radius: 2px;
+}
+
+/* ---- Render-first demo, source folded beneath (WYSIWYG: the component
+   is the content; markup is on demand) ---- */
+.sg-demo {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  margin: var(--space-sm) 0 var(--space-md);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.sg-demo > .sg-demo-render {
+  padding: var(--space-md);
+  background: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: var(--space-xs);
+  min-height: 120px;
+}
+.sg-demo > .sg-demo-source {
+  background: var(--paper-dk);
+  border-top: 1px solid var(--rule);
+  overflow-x: auto;
+}
+.sg-demo-source summary {
+  cursor: pointer;
+  padding: var(--space-2xs) var(--space-md);
+  font-family: var(--type-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  list-style-position: inside;
+}
+.sg-demo-source summary:hover { color: var(--ink-2); }
+.sg-demo-source details[open] summary { border-bottom: 1px dotted var(--rule); }
+.sg-demo-source details[open] pre { padding: var(--space-sm) var(--space-md); }
+.sg-dump-details summary {
+  cursor: pointer;
+  font-family: var(--type-mono);
+  font-size: 0.78rem;
+  color: var(--ink-3);
+  padding: var(--space-2xs) 0;
+}
+.sg-dump-details summary:hover { color: var(--ink); }
+.sg-demo pre {
+  font-family: var(--type-mono);
+  font-size: 0.82rem; /* one step up for legibility (JH) */
+  line-height: 1.7;
+  color: var(--ink-2);
+  white-space: pre;
+  tab-size: 2;
+  margin: 0;
+}
+.sg-demo pre .k { color: var(--ink); font-weight: 500; }
+.sg-demo pre .c { color: var(--ink-4); font-style: italic; }
+.sg-demo pre .v { color: var(--ink); }
+
+
+/* ---- Do / Don't pair ---- */
+.sg-do-dont {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
+  margin: var(--space-sm) 0 var(--space-md);
+}
+.sg-do, .sg-dont {
+  border: 1px solid var(--rule);
+  padding: var(--space-md);
+  background: var(--paper-lt);
+  border-radius: var(--radius-md);
+}
+.sg-do { background: var(--paper-lt); }
+.sg-dont { background: var(--paper-warm); }
+.sg-do-tag, .sg-dont-tag {
+  font-family: var(--type-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: var(--space-2xs);
+}
+.sg-do-tag::before { content: '✓ '; color: var(--ink); }
+.sg-dont-tag::before { content: '✕ '; color: var(--ink-4); }
+.sg-do-body, .sg-dont-body {
+  font-family: var(--type-mono);
+  font-size: 0.92rem;
+  line-height: 1.65;
+  color: var(--ink);
+  margin: var(--space-2xs) 0;
+}
+.sg-do-body em, .sg-dont-body em {
+  font-family: var(--type-kecal, 'Kecal');
+  font-weight: 800;
+  font-style: var(--i-body-em);
+}
+.sg-do-why, .sg-dont-why {
+  font-family: var(--type-mono);
+  font-style: italic;
+  font-size: 0.78rem;
+  color: var(--ink-3);
+  margin-top: var(--space-xs);
+  padding-top: var(--space-xs);
+  border-top: 1px dotted var(--rule-mid);
+}
+@media (max-width: 880px) {
+  .sg-do-dont { grid-template-columns: 1fr; }
+}
+
+/* ============================================================
+   V.2 — .section-kicker
+   ============================================================ */
+.section-kicker {
+  font-family: var(--type-kecal, 'Kecal', system-ui, sans-serif);
+  font-weight: 500;
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: var(--space-sm);
+  display: flex; align-items: center; gap: 0.85rem;
+}
+.section-kicker::after {
+  content: '';
+  flex: 1; height: 1px;
+  background: var(--ink-4);
+  opacity: 0.4;
+}
+
+/* ============================================================
+   V.8 — .lede-demo (first paragraph)
+   ============================================================ */
+.lede-demo {
+  font-family: var(--type-mono);
+  font-size: 1.05rem;
+  color: var(--ink);
+  max-width: var(--measure-ch);
+  line-height: 1.65;
+}
+.lede-demo em {
+  font-family: var(--type-kecal, 'Kecal');
+  font-weight: 800;
+  font-style: var(--i-body-em);
+}
+
+/* ============================================================
+   V.10 — ::first-letter drop cap (demo-scoped only — never
+   apply globally; reserve for editorial paragraphs)
+   ============================================================ */
+.dropcap-demo {
+  max-width: var(--measure-ch);
+  font-family: var(--type-mono);
+  font-size: 0.96rem;
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+.dropcap-demo::first-letter {
+  font-family: var(--type-mono);
+  font-weight: 500;
+  float: left;
+  font-size: 4.2em;
+  line-height: 0.85;
+  color: var(--ink);
+  padding: 0.06em 0.22em 0 0;
+}
+
+/* ============================================================
+   V.11 — sup.sn + aside.sidenote (THE β emphasis primitive)
+   On wide screens, asides float into a 220px right margin.
+   Below 1100px they fall inline as a left-bordered block.
+   ============================================================ */
+.sn-demo {
+  max-width: var(--measure-ch);
+  font-family: var(--type-mono);
+  font-size: 0.96rem;
+  line-height: 1.7;
+  color: var(--ink);
+  position: relative;
+  padding-right: 0;
+}
+/* NOTE: `aside` is block-level; browsers auto-close a <p class="sn-demo">
+   when an <aside> appears inside it. That means the aside ends up as a
+   SIBLING of .sn-demo, not a descendant — `.sn-demo aside.sidenote`
+   doesn't match. Cover three cases: direct descendant (div wrapper),
+   sibling that follows, and inside a .pairing-demo article. */
+.sn-demo aside.sidenote,
+.sn-demo ~ aside.sidenote,
+.sn-demo + aside.sidenote,
+.pairing-demo aside.sidenote {
+  font-family: var(--type-mono);
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--ink-3);
+  font-style: italic;
+  display: block;
+  margin: 0.5rem 0 1rem 1.5rem;
+  padding-left: 0.85rem;
+  border-left: 2px solid var(--rule);
+}
+sup.sn {
+  font-family: var(--type-mono);
+  font-size: 0.66em;
+  font-weight: 500;
+  color: var(--ink-2);
+  margin: 0 0.1em;
+}
+@media (min-width: 1100px) {
+  .pairing-demo aside.sidenote {
+    float: right; clear: right;
+    width: 220px;
+    margin-right: -260px;
+    margin-left: 0;
+    padding-left: 0.85rem;
+    border-left: 1px solid var(--rule);
+  }
+}
+
+/* ============================================================
+   V.11a — .hl / .hl-hot (sidenote skim · sidenote hot underlines)
+   Silenced highlighter; renders as hairline underline.
+     .hl       → dotted hairline (skim · sn marker)
+     .hl-hot   → dashed hairline (hot · sn ! marker)
+   ============================================================ */
+.hl, .hl-hot {
+  background: transparent;
+  padding: 0;
+  border-bottom: 1px dotted var(--ink-3);
+  text-underline-offset: 3px;
+}
+.hl-hot {
+  border-bottom-color: var(--ink-2);
+  border-bottom-style: dashed;
+}
+
+/* ============================================================
+   V.12 — .pull-quote (editorial pull quote)
+   ============================================================ */
+.pull-quote {
+  font-family: var(--type-kecal, 'Kecal', system-ui, sans-serif);
+  font-style: var(--i-display-em);
+  font-weight: 800;
+  font-size: 1.35rem;
+  line-height: 1.4;
+  padding: 1.25rem 0 1.25rem 1.5rem;
+  border-left: 2px solid var(--ink-3);
+  margin: var(--space-sm) 0;
+  color: var(--ink);
+  max-width: var(--measure-ch);
+}
+
+/* ============================================================
+   V.13 — .pairing-demo (full editorial article specimen)
+   ============================================================ */
+.pairing-demo {
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  padding: var(--space-xl) var(--space-xl);
+  position: relative;
+  max-width: var(--measure);
+  border-radius: var(--radius-md);
+}
+.pairing-demo::before {
+  content: 'SPECIMEN · EDITORIAL';
+  position: absolute; top: -10px; left: 2rem;
+  background: var(--paper); color: var(--ink-3);
+  padding: 0.2rem 0.7rem;
+  font-family: var(--type-kecal, 'Kecal', system-ui, sans-serif);
+  font-weight: 500;
+  font-size: 0.56rem;
+  letter-spacing: 0.2em;
+}
+.pairing-demo .article-eyebrow {
+  font-family: var(--type-kecal, 'Kecal', system-ui, sans-serif);
+  font-weight: 500;
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: var(--space-sm);
+}
+.pairing-demo .article-title {
+  font-family: var(--type-mono);
+  font-size: clamp(1.6rem, 2.8vw, 1.95rem);
+  font-weight: 400;
+  line-height: 1.15;
+  letter-spacing: -0.012em;
+  margin-bottom: var(--space-sm);
+  color: var(--ink);
+}
+.pairing-demo .article-title em {
+  font-family: var(--type-kecal, 'Kecal');
+  font-weight: 800;
+  font-style: var(--i-display-em);
+}
+.pairing-demo p {
+  font-family: var(--type-mono);
+  font-size: 0.96rem;
+  color: var(--ink-2);
+  line-height: 1.75;
+  margin-bottom: var(--space-sm);
+}
+.pairing-demo p em {
+  font-family: var(--type-kecal, 'Kecal');
+  font-weight: 800;
+  font-style: var(--i-body-em);
+  color: var(--ink);
+}
+.pairing-demo p:first-of-type::first-letter {
+  font-family: var(--type-mono);
+  font-weight: 500;
+  float: left;
+  font-size: 4rem;
+  line-height: 0.85;
+  padding: 0.35rem 0.55rem 0 0;
+  color: var(--ink);
+}
+.pairing-demo .byline {
+  margin-top: var(--space-md);
+  font-family: var(--type-kecal, 'Kecal', system-ui, sans-serif);
+  font-weight: 500;
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* ============================================================
+   V.14 — .voice-card-demo (voice register specimen)
+   ============================================================ */
+.voice-card-demo {
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  padding: var(--space-md);
+  transition: border-color var(--t-slow);
+  border-radius: var(--radius-md);
+}
+.voice-card-demo:hover { border-color: var(--ink-3); }
+.voice-card-demo .vc-tag {
+  font-family: var(--type-kecal, 'Kecal', system-ui, sans-serif);
+  font-weight: 500;
+  font-size: 0.6rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: var(--space-2xs);
+}
+.voice-card-demo blockquote {
+  font-family: var(--type-kecal, 'Kecal', system-ui, sans-serif);
+  font-style: var(--i-display-em);
+  font-weight: 800;
+  font-size: 1.1rem;
+  line-height: 1.4;
+  color: var(--ink);
+  margin: var(--space-2xs) 0 var(--space-xs);
+}
+.voice-card-demo blockquote em {
+  font-style: inherit;  /* follow the container's posture (accent axis) */
+}
+.voice-card-demo .vc-note {
+  font-family: var(--type-mono);
+  font-size: 0.86rem;
+  color: var(--ink-2);
+  line-height: 1.55;
+  margin-top: var(--space-2xs);
+}
+
+/* ============================================================
+   Expanded .ui-btn variants (secondary)
+   ============================================================ */
+.ui-btn.secondary {
+  background: var(--paper-warm);
+  color: var(--ink);
+  border-color: var(--ink-3);
+}
+.ui-btn.secondary:hover {
+  background: var(--ink-3);
+  color: var(--paper);
+}
+
+/* ============================================================
+   Expanded .ui-badge variants (.live / .ok / .hold)
+   Ink-ramp only — colour does NOT code status in the β voice.
+   ============================================================ */
+.ui-badge.live { color: var(--ink);    border-color: var(--ink);   background: var(--paper-elev); }
+.ui-badge.ok   { color: var(--ink-2);  border-color: var(--ink-2); background: var(--paper); }
+.ui-badge.hold { color: var(--ink-3);  border-color: var(--ink-4); background: var(--paper-warm); }
+
+/* ============================================================
+   Expanded .ui-code semantic spans (.k key · .c comment · .v value)
+   .ui-code.block — multi-line code surface (the rigorous variant)
+   ============================================================ */
+.ui-code.block {
+  display: block;
+  padding: 1.1rem 1.3rem;
+  font-size: 0.84rem;
+  line-height: 1.85;
+  background: var(--paper-dk);
+  border: 1px solid var(--rule);
+  white-space: pre;
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+}
+.ui-code .k { color: var(--ink-3); }
+.ui-code .c { color: var(--ink-4); font-style: italic; }
+.ui-code .v { color: var(--ink); font-weight: 500; }
+
+/* ============================================================
+   Expanded .card-block sub-parts (card-kicker / card-title / card-body)
+   Backwards-compatible: existing .title and .body still render.
+   ============================================================ */
+.card-block .card-kicker {
+  font-family: var(--type-kecal, 'Kecal', system-ui, sans-serif);
+  font-weight: 500;
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: var(--space-2xs);
+}
+.card-block .card-title {
+  font-family: var(--type-mono);
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: var(--ink);
+  margin-bottom: var(--space-xs);
+}
+.card-block .card-title em {
+  font-family: var(--type-kecal, 'Kecal');
+  font-weight: 800;
+  font-style: var(--i-display-em);
+}
+.card-block .card-body {
+  font-family: var(--type-mono);
+  font-size: 0.88rem;
+  color: var(--ink-2);
+  line-height: 1.6;
+}
+
+/* ============================================================
+   .ui-input — labelled pattern + focus state
+   ============================================================ */
+.ui-input-group {
+  display: flex; flex-direction: column;
+  gap: 0.4rem;
+  width: 100%; max-width: 360px;
+}
+.ui-input-label {
+  font-family: var(--type-kecal, 'Kecal', system-ui, sans-serif);
+  font-weight: 500;
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.ui-input:focus {
+  outline: none;
+  border-color: var(--ink);
+  box-shadow: 0 0 0 2px rgba(42,37,32,0.06);
+}
+
+/* ============================================================
+   Token dump block (.sg-token-dump) — YAML programmatic export
+   ============================================================ */
+.sg-token-dump {
+  background: var(--paper-dk);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+  padding: var(--space-md);
+  font-family: var(--type-mono);
+  font-size: 0.76rem;
+  line-height: 1.75;
+  white-space: pre;
+  overflow-x: auto;
+  max-height: 36rem;
+  overflow-y: auto;
+  border-radius: var(--radius-md);
+  margin: var(--space-sm) 0 var(--space-md);
+}
+.sg-token-dump .k { color: var(--ink-3); }
+.sg-token-dump .v { color: var(--ink); font-weight: 500; }
+.sg-token-dump .c { color: var(--ink-4); font-style: italic; }
+
+/* ============================================================
+   Colophon — closes the document in the brand's voice
+   ============================================================ */
+.sg-colophon {
+  padding: var(--space-xl) 0 var(--space-2xl);
+  text-align: center;
+  font-family: var(--type-kecal, 'Kecal', system-ui, sans-serif);
+  font-weight: 500;
+  font-size: 0.7rem;
+  color: var(--ink-3);
+  letter-spacing: 0.08em;
+  border-top: 1px solid var(--rule);
+  margin-top: var(--space-2xl);
+}
+.sg-colophon .rule {
+  width: 48px; height: 1px;
+  background: var(--ink-3);
+  margin: 0 auto var(--space-sm);
+}
+.sg-colophon .line { margin: 0.35rem 0; }
+.sg-colophon .line.italic {
+  font-family: var(--type-kecal, 'Kecal');
+  font-style: var(--i-display-em);
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--ink-2);
+  letter-spacing: 0;
+  margin-bottom: var(--space-xs);
+}
+.sg-colophon .line.italic em { font-style: inherit; font-weight: 800; }
+.sg-colophon .mono { font-family: var(--type-mono); color: var(--ink-2); }
+
+/* ============================================================
+   .sg-section enhancements — h3 mono variant
+   ============================================================ */
+.sg-section h3 code {
+  font-family: var(--type-mono);
+  font-size: 0.86em;
+  background: var(--paper-warm);
+  padding: 0.04em 0.32em;
+  border-radius: 2px;
+  font-weight: 400;
+}
+
+/* ============================================================
+   mobile-safety-640 — overflow guards mirroring the convention
+   documented in VIII.5; matches direction-beta-tufte-mono-kecal-
+   styleguide-teal.html.
+   ============================================================ */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .toolbar, .topbar, .controls, .filter-group, .actions, .hero-actions, .swap-row, .pretext-swatches, .pretext, .axis-bar, .sg-cover-meta, .companion-row { flex-wrap: wrap !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .swap-wordmark, .swap-signet, .sg-cover-mark, .swap-wordmark *, .swap-signet *, .sg-cover-mark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .sg-cover-title em, .sg-cover-title span { word-break: normal !important; overflow-wrap: normal !important; }
+  table.sg-table { width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: auto; word-break: break-word; }
+  .sg-token-dump { font-size: 0.7rem; }
+}
+
+</style>
+
+</head>
+<body data-direction="β"
+      data-palette="light-warm-teal"
+      data-pairing="A"
+      data-mono="plex"
+      data-layout="styleguide"
+      data-mark="swap-cycle"
+      data-accent="upright">
+<!-- No mode panel here: this document IS the canonical resolved state
+     (β · light-warm-teal · pairing A · upright · plex). Permutations live
+     on direction-experiments.html (the aspect catalog). -->
+
+<!-- Surface switch — the one control this document keeps. Light is the
+     canonical teal paper; Dark is the canonical dark-machine surface.
+     Both states render the same spec. Persists in localStorage. -->
+<div class="sg-surface-switch" role="radiogroup" aria-label="Surface">
+  <span class="sss-label">surface</span>
+  <button type="button" id="sss-light" data-surface="light" class="active">Light</button>
+  <button type="button" id="sss-dark" data-surface="dark">Dark</button>
+</div>
+
+<div class="sg-shell">
+
+  <!-- ============================================================
+       COVER
+       ============================================================ -->
+  <header class="sg-cover">
+    <div class="sg-cover-eyebrow">OpenProse · The Styleguide · canonical defaults</div>
+    <div class="sg-cover-mark-row">
+      <img class="sg-cover-mark" id="coverMark"
+           src="../Assets/openProse logos/OP-style-v2.svg"
+           alt="OpenProse mark — click to cycle">
+      <span class="sg-cover-mark-hint">click&nbsp;to&nbsp;cycle</span>
+    </div>
+    <h1 class="sg-cover-title">The canonical <em>spec</em>.</h1>
+    <p class="sg-cover-sub">This document is the resolved default: direction <b>β</b> · teal palette · pairing <b>A</b> · <b>upright</b> accent · <b>Plex</b>. The Surface switch (top left) previews the canonical dark. Nothing else on this page changes. Every permutation lives in the <a href="direction-experiments.html">aspect catalog</a>.</p>
+    <!-- Current resolved mode -->
+    <div class="active-mode-card">
+      <div class="active-mode-label">Canonical configuration</div>
+      <div class="active-mode-status" id="active-mode-status">
+        <b>β</b> · light-warm-teal · pairing <b>A</b> · accent <b>upright</b> · mono <b>plex</b> · layout <b>styleguide</b> · mark <b>swap-cycle</b>
+      </div>
+      <p class="active-mode-mono-specimen">
+        This paragraph is set in the canonical mono (the <code class="ui-code">--type-mono</code> token, family <span id="active-mono-name" style="font-weight:600">IBM Plex Mono</span>). Its <em>accents</em> are Kecal 800 upright.
+      </p>
+    </div>
+
+    <!-- Table of contents — anchors into every section. -->
+    <nav class="sg-toc" aria-label="Sections">
+      <a href="#palettes"><span class="num">I</span> Palette Tokens</a>
+      <a href="#typography"><span class="num">II</span> Typography</a>
+      <a href="#spacing"><span class="num">III</span> Spacing Scale</a>
+      <a href="#layouts"><span class="num">IV</span> Layout Primitives</a>
+      <a href="#components"><span class="num">V</span> Component Catalog</a>
+      <a href="#voice"><span class="num">VI</span> Voice &amp; Tone</a>
+      <a href="#do-dont"><span class="num">VII</span> Do / Don't</a>
+      <a href="#conventions"><span class="num">VIII</span> File Conventions</a>
+      <a href="#agent"><span class="num">IX</span> Agent Integration</a>
+      <a href="#directions"><span class="num">X</span> Directions</a>
+      <a href="#colophon"><span class="num">↗</span> Colophon</a>
+    </nav>
+  </header>
+
+
+
+
+
+  <!-- ============================================================
+       I PALETTES  (7 canonical)
+       ============================================================ -->
+  <section class="sg-section" id="palettes">
+    <div class="sg-section-num">I Palette Tokens</div>
+    <h2>One role scale, <em>seven</em> palettes.</h2>
+    <p class="sg-lede">
+      Every palette declares the same role tokens: the ink scale (<code class="ui-code">--ink</code>, <code class="ui-code">--ink-2..5</code>), the rule weights (<code class="ui-code">--rule</code>, <code class="ui-code">--rule-mid</code>), and the accent slots (<code class="ui-code">--teal/--amber/--rust/--gold/--warn/--good</code> as appropriate). The tables below are the reference for the canonical light and dark values. To compare and apply all seven, use the aspect catalog; this document stays on the canonical values, with the Surface switch previewing the canonical dark.
+    </p>
+
+    <!-- The seven-palette click-to-apply catalog moved to
+         direction-experiments.html (the aspect catalog). This page keeps
+         the token REFERENCE: role names, canonical values, use/avoid. -->
+
+    <!-- I.1 — Canonical token reference (light-warm-teal · the default).
+         Documents every role token at its β-canonical value. Other
+         palettes redefine the same role names; switch palette to see
+         the cascade in action. -->
+    <h3 id="palette-canonical">I.1 Light · warm · teal — canonical token reference</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">
+      The teal palette is the canonical default. Every other palette redefines the
+      same role tokens; this table is the bar each palette must meet for parity.
+    </p>
+    <table class="sg-table" aria-label="Light · warm · teal — token reference">
+      <thead>
+        <tr><th></th><th>Token</th><th>Hex / RGBA</th><th>Role</th><th>Use</th><th>Avoid</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="swatch-cell"><span class="chip" style="background:#f5f0e8"></span></td><td><code>--paper</code></td><td class="mono">#f5f0e8</td><td class="role">page surface · off-white</td><td>body background, hero, section paper</td><td>not white (#fff) — it reads cold against the warm ink</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:#f0e8d8"></span></td><td><code>--paper-warm</code></td><td class="mono">#f0e8d8</td><td class="role">warmer card surface · code aside</td><td>code blocks, recessed surfaces, dont-tile background</td><td>not for primary body — too warm at full-section scale</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:#fbf7ef"></span></td><td><code>--paper-lt</code></td><td class="mono">#fbf7ef</td><td class="role">lifted card</td><td>tile backgrounds, do-tile lift, cover meta</td><td>not for inline pills — too close to paper</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:#f9f5ed"></span></td><td><code>--paper-elev</code></td><td class="mono">#f9f5ed</td><td class="role">slight elevation card</td><td>cards with shadow, hover lift</td><td>do not stack with paper-lt — pick one elevation tier</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:#2a2520"></span></td><td><code>--ink</code></td><td class="mono">#2a2520</td><td class="role">primary copy · max contrast</td><td>headings, body, primary buttons (filled)</td><td>never replace with pure black (#000) — too cold</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:rgba(42,37,32,0.78)"></span></td><td><code>--ink-2</code></td><td class="mono">rgba(42,37,32,0.78)</td><td class="role">secondary copy · ledes</td><td>section ledes, body emphasis, captions</td><td>not for headings — too soft on top</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:rgba(42,37,32,0.55)"></span></td><td><code>--ink-3</code></td><td class="mono">rgba(42,37,32,0.55)</td><td class="role">labels · eyebrows · metadata</td><td>kickers, badges, footer chrome, sidenote text</td><td>not for paragraph copy — drops below readable contrast at body sizes</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:rgba(42,37,32,0.32)"></span></td><td><code>--ink-4</code></td><td class="mono">rgba(42,37,32,0.32)</td><td class="role">tertiary · skeleton</td><td>disabled state, dont-tile chrome, do-dont rule borders</td><td>never carry meaning — purely decorative</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:rgba(42,37,32,0.18)"></span></td><td><code>--ink-5</code></td><td class="mono">rgba(42,37,32,0.18)</td><td class="role">ghost · faintest mark</td><td>section dividers, skeleton placeholders</td><td>never as copy — invisible at small sizes</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:#3a7a6a"></span></td><td><code>--teal</code></td><td class="mono">#3a7a6a</td><td class="role">editorial accent · writer's pivot</td><td>italic emphasis when set in teal, link underline, section markers</td><td>never on chrome (badge, button outlines) — accent is for the text</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:#2e6456"></span></td><td><code>--teal-deep</code></td><td class="mono">#2e6456</td><td class="role">teal hover · pressed state</td><td>hover/active link, pressed teal button</td><td>never as the rest state — only on interaction</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:#5ea08e"></span></td><td><code>--teal-soft</code></td><td class="mono">#5ea08e</td><td class="role">muted teal · secondary state</td><td>dim teal text on hover-out, secondary accent</td><td>never as the primary teal — washes out</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:rgba(58,122,106,0.14)"></span></td><td><code>--teal-tint</code></td><td class="mono">rgba(58,122,106,0.14)</td><td class="role">soft background tint</td><td>swatch hover background, active tile fill</td><td>not as a section background — too quiet to read against</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:rgba(58,122,106,0.06)"></span></td><td><code>--teal-faint</code></td><td class="mono">rgba(58,122,106,0.06)</td><td class="role">quietest wash</td><td>hover bands, subtle section tinting</td><td>do not stack with teal-tint — invisible</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:#c49a5c"></span></td><td><code>--amber</code></td><td class="mono">#c49a5c</td><td class="role">warm complement · "look up" moment</td><td>load-bearing CTA per page, one rare accent</td><td>more than one per page — amber loses weight by repetition</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:#a87f44"></span></td><td><code>--amber-deep</code></td><td class="mono">#a87f44</td><td class="role">amber hover · outlined-button stroke</td><td>amber button hover, outlined warning</td><td>never as default — only on interaction or in stroke</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:#d4aa6c"></span></td><td><code>--amber-soft</code></td><td class="mono">#d4aa6c</td><td class="role">amber on dark surfaces</td><td>amber against ink, dark-mode amber sibling</td><td>not on light surfaces — washes</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:rgba(196,154,92,0.18)"></span></td><td><code>--amber-tint</code></td><td class="mono">rgba(196,154,92,0.18)</td><td class="role">hot-pill background</td><td>amber pill background, status hot wash</td><td>not as a paragraph background — too warm at scale</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:#c0392b"></span></td><td><code>--red</code></td><td class="mono">#c0392b</td><td class="role">fail · attention signal</td><td>error state, fail badge, broken assert mark</td><td>never as editorial emphasis — red is for failure only</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:#8e2b20"></span></td><td><code>--red-deep</code></td><td class="mono">#8e2b20</td><td class="role">red stroke · pressed fail</td><td>red outlined input, pressed delete</td><td>never as the only signal — pair with text "Failed"</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:#d4604f"></span></td><td><code>--red-muted</code></td><td class="mono">#d4604f</td><td class="role">soft fail · warn-light</td><td>warning chips, hover red</td><td>not for assertions — soft signal only</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:rgba(192,57,43,0.10)"></span></td><td><code>--red-tint</code></td><td class="mono">rgba(192,57,43,0.10)</td><td class="role">fail backdrop</td><td>error toast background, fail row wash</td><td>do not pair with --red on copy — overwhelms</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:rgba(42,37,32,0.14)"></span></td><td><code>--rule</code></td><td class="mono">rgba(42,37,32,0.14)</td><td class="role">hairline · divider</td><td>section dividers, table row borders, card outlines</td><td>do not stack two rules — pick one</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:rgba(42,37,32,0.06)"></span></td><td><code>--rule-mid</code></td><td class="mono">rgba(42,37,32,0.06)</td><td class="role">dotted hairline</td><td>dotted dividers, secondary table borders</td><td>not for primary divides — disappears on dark paper</td></tr>
+      </tbody>
+    </table>
+
+    <!-- I.2 — Dark-machine palette reference. The canonical "dark mode"
+         is a palette switch, not a theme toggle: the same role tokens
+         take new values inside body[data-palette="dark-machine"]. -->
+    <h3 id="palette-dark">I.2 Dark · machine — dark palette reference</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">
+      The δ "machine" palette is the canonical dark surface — inks lift to cream,
+      paper drops to charcoal, amber becomes the warmest accent.
+      Same role names, different values. Use the
+      <b>Surface</b> switch (top left) to preview.
+    </p>
+    <table class="sg-table" aria-label="Dark · machine — token reference">
+      <thead>
+        <tr><th></th><th>Token</th><th>Hex / RGBA</th><th>Role</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="swatch-cell"><span class="chip" style="background:#0e0e10"></span></td><td><code>--paper</code></td><td class="mono">#0e0e10</td><td class="role">page surface · charcoal</td><td>matches δ-machine canonical paper</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:#16161a"></span></td><td><code>--paper-warm</code></td><td class="mono">#16161a</td><td class="role">warm card surface</td><td>recessed code area, slight ink-warmth</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:#1c1c20"></span></td><td><code>--paper-lt</code></td><td class="mono">#1c1c20</td><td class="role">lifted card</td><td>cards, tile backgrounds</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:#1a1a1e"></span></td><td><code>--paper-elev</code></td><td class="mono">#1a1a1e</td><td class="role">elevated card</td><td>modals, hover-lift surfaces</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:#e8e4dc"></span></td><td><code>--ink</code></td><td class="mono">#e8e4dc</td><td class="role">primary copy · cream</td><td>headings, body text on dark paper</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:#c8c4bc"></span></td><td><code>--ink-2</code></td><td class="mono">#c8c4bc</td><td class="role">secondary copy</td><td>ledes, secondary paragraphs</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:rgba(232,228,220,0.55)"></span></td><td><code>--ink-3</code></td><td class="mono">rgba(232,228,220,0.55)</td><td class="role">labels · eyebrows</td><td>chrome metadata, kickers</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:rgba(232,228,220,0.32)"></span></td><td><code>--ink-4</code></td><td class="mono">rgba(232,228,220,0.32)</td><td class="role">tertiary</td><td>disabled, skeleton</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:rgba(232,228,220,0.18)"></span></td><td><code>--ink-5</code></td><td class="mono">rgba(232,228,220,0.18)</td><td class="role">ghost</td><td>faintest mark</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:#d4a64f"></span></td><td><code>--amber</code></td><td class="mono">#d4a64f</td><td class="role">primary accent (dark)</td><td>δ-machine's signature gold — replaces teal at this palette</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:#b8862e"></span></td><td><code>--amber-deep</code></td><td class="mono">#b8862e</td><td class="role">amber hover</td><td>amber pressed state on dark</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:#e0bf68"></span></td><td><code>--amber-soft</code></td><td class="mono">#e0bf68</td><td class="role">soft amber</td><td>quiet amber wash</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:#c0392b"></span></td><td><code>--red</code></td><td class="mono">#c0392b</td><td class="role">fail signal</td><td>retained across all palettes — fail is fail</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:#6ee87a"></span></td><td><code>--good</code></td><td class="mono">#6ee87a</td><td class="role">success / live signal</td><td>terminal-green, dark-palette only</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:rgba(232,228,220,0.10)"></span></td><td><code>--rule</code></td><td class="mono">rgba(232,228,220,0.10)</td><td class="role">hairline · divider</td><td>inverted from light · ink-based</td></tr>
+        <tr><td class="swatch-cell"><span class="chip" style="background:rgba(232,228,220,0.06)"></span></td><td><code>--rule-mid</code></td><td class="mono">rgba(232,228,220,0.06)</td><td class="role">faint divider</td><td>secondary table borders</td></tr>
+      </tbody>
+    </table>
+    <p class="sg-lede" style="font-size:0.94rem; max-width:60ch; color:var(--ink-3); font-style:italic;">
+      Note: the other five palettes (cool-default, warm-rust, manuscript-cream, saas-neutral, dark-livingdoc) each redefine the same role tokens to their own values. The full per-palette dump appears in <a href="#agent">IX's tokens.yaml</a>.
+    </p>
+  </section>
+
+  <!-- ============================================================
+       II TYPOGRAPHY
+       ============================================================ -->
+  <section class="sg-section" id="typography">
+    <div class="sg-section-num">II Typography</div>
+    <h2>Two families, <em>six recipes</em>, three monos.</h2>
+    <p class="sg-lede">
+      The canonical type system is <em>Kecal × mono</em>. Six recipes (A–F) assign roles — display, body, eyebrow, em — to either Kecal or the active mono at specific weights and italics. Pick a mono via <code class="ui-code">body[data-mono]</code>, pick a recipe via <code class="ui-code">body[data-pairing]</code>. The full 18-tile matrix lives in typography-pairings.html.
+    </p>
+
+    <h3>II.0 Face inventory</h3>
+    <ul style="list-style:none; padding-left:0; line-height:1.8;">
+      <li><span class="ui-badge">Kecal</span> &nbsp; 8 weights (200–800), italic via fauxitalic. FungiType CDN.</li>
+      <li><span class="ui-badge">IBM Plex Mono</span> &nbsp; 300–700 + italic 400/500/600. Default mono.</li>
+      <li><span class="ui-badge">JetBrains Mono</span> &nbsp; 300–700 + italic 400/500/600.</li>
+      <li><span class="ui-badge">Space Mono</span> &nbsp; 400/700 + italic 400/700.</li>
+    </ul>
+
+    <h3>II.1 Pairings A–F catalog</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">
+      Each tile renders against the canonical mono (Plex). The Kecal accents follow the <span class="ui-code">data-accent</span> axis: upright is the default, italic is the historical option. Compare live in the aspect catalog. B's mono-italic accent and D's Kecal-italic display are pairing identity; they do not change. Toggle each tile to preview in the active palette instead of greyscale.
+    </p>
+
+    <div class="pair-grid">
+      <!-- A · workhorse -->
+      <div class="pair-tile" data-pair-id="A"
+           style="--pair-display-family: var(--type-mono); --pair-display-weight:500; --pair-display-style:normal;
+                  --pair-display-em-family: var(--type-kecal); --pair-display-em-weight:800; --pair-display-em-style:var(--i-display-em);
+                  --pair-body-family: var(--type-mono); --pair-body-weight:400; --pair-body-style:normal;
+                  --pair-body-em-family: var(--type-kecal); --pair-body-em-weight:800; --pair-body-em-style:var(--i-body-em);">
+        <button class="pair-toggle" data-toggle-pair>palette</button>
+        <div class="pair-eyebrow">// A &middot;
+          <span style="font-family:var(--type-mono);font-weight:400;">mono body</span>
+          &middot;
+          <span style="font-family:var(--type-kecal);font-weight:800;font-style:var(--i-display-em);">Kecal accent</span>
+        </div>
+        <h3 class="pair-display">Open<em>Prose</em></h3>
+        <p class="pair-body">A program is a <em>document</em> with guarantees. The mono carries the body weight. The Kecal 800 carries the editorial pivot. Posture follows the accent axis; upright is the default.</p>
+        <div class="pair-recipe">
+          <span><span class="key">display</span><span style="font-family:var(--type-mono);font-weight:500;">mono 500</span></span>
+          <span><span class="key">display em</span><span style="font-family:var(--type-kecal);font-weight:800;font-style:var(--i-display-em);">Kecal 800</span></span>
+          <span><span class="key">body</span><span style="font-family:var(--type-mono);font-weight:400;">mono 400</span></span>
+          <span><span class="key">body em</span><span style="font-family:var(--type-kecal);font-weight:800;font-style:var(--i-body-em);">Kecal 800</span></span>
+        </div>
+      </div>
+
+      <!-- B · inverted -->
+      <div class="pair-tile" data-pair-id="B"
+           style="--pair-display-family: var(--type-kecal); --pair-display-weight:500; --pair-display-style:normal;
+                  --pair-display-em-family: var(--type-mono); --pair-display-em-weight:500; --pair-display-em-style:italic;
+                  --pair-body-family: var(--type-kecal); --pair-body-weight:400; --pair-body-style:normal;
+                  --pair-body-em-family: var(--type-mono); --pair-body-em-weight:500; --pair-body-em-style:italic;">
+        <button class="pair-toggle" data-toggle-pair>palette</button>
+        <div class="pair-eyebrow">// B &middot;
+          <span style="font-family:var(--type-kecal);font-weight:400;">Kecal body</span>
+          &middot;
+          <span style="font-family:var(--type-mono);font-weight:500;font-style:italic;">mono italic accent</span>
+        </div>
+        <h3 class="pair-display">Open<em>Prose</em></h3>
+        <p class="pair-body">Roles inverted from A. Reads warmer because the humanist sans carries the paragraph; the mono italic feels like an <em>inline citation</em>.</p>
+        <div class="pair-recipe">
+          <span><span class="key">display</span><span style="font-family:var(--type-kecal);font-weight:500;">Kecal 500</span></span>
+          <span><span class="key">display em</span><span style="font-family:var(--type-mono);font-weight:500;font-style:italic;">mono 500 italic</span></span>
+          <span><span class="key">body</span><span style="font-family:var(--type-kecal);font-weight:400;">Kecal 400</span></span>
+          <span><span class="key">body em</span><span style="font-family:var(--type-mono);font-weight:500;font-style:italic;">mono 500 italic</span></span>
+        </div>
+      </div>
+
+      <!-- C · mono-leads (dark default) -->
+      <div class="pair-tile dark" data-pair-id="C"
+           style="--pair-display-family: var(--type-mono); --pair-display-weight:700; --pair-display-style:normal;
+                  --pair-display-em-family: var(--type-mono); --pair-display-em-weight:700; --pair-display-em-style:var(--i-display-em);
+                  --pair-body-family: var(--type-kecal); --pair-body-weight:400; --pair-body-style:normal;
+                  --pair-body-em-family: var(--type-kecal); --pair-body-em-weight:600; --pair-body-em-style:var(--i-body-em);">
+        <button class="pair-toggle" data-toggle-pair>palette</button>
+        <div class="pair-eyebrow">// C &middot;
+          <span style="font-family:var(--type-mono);font-weight:700;">mono bold display</span>
+          &middot;
+          <span style="font-family:var(--type-kecal);font-weight:400;">Kecal body</span>
+        </div>
+        <h3 class="pair-display">Open<em>Prose</em></h3>
+        <p class="pair-body">Mono leads with weight 700; Kecal carries the body. Works <em>only on dark</em>. At light bias the bold mono reads as ASCII.</p>
+        <div class="pair-recipe">
+          <span><span class="key">display</span><span style="font-family:var(--type-mono);font-weight:700;">mono 700</span></span>
+          <span><span class="key">display em</span><span style="font-family:var(--type-mono);font-weight:700;font-style:var(--i-display-em);">mono 700</span></span>
+          <span><span class="key">body</span><span style="font-family:var(--type-kecal);font-weight:400;">Kecal 400</span></span>
+          <span><span class="key">body em</span><span style="font-family:var(--type-kecal);font-weight:600;font-style:var(--i-body-em);">Kecal 600</span></span>
+        </div>
+      </div>
+
+      <!-- D · Kecal-leads -->
+      <div class="pair-tile dark" data-pair-id="D"
+           style="--pair-display-family: var(--type-kecal); --pair-display-weight:800; --pair-display-style:italic;
+                  --pair-display-em-family: var(--type-mono); --pair-display-em-weight:600; --pair-display-em-style:normal;
+                  --pair-body-family: var(--type-mono); --pair-body-weight:400; --pair-body-style:normal;
+                  --pair-body-em-family: var(--type-kecal); --pair-body-em-weight:800; --pair-body-em-style:var(--i-body-em);">
+        <button class="pair-toggle" data-toggle-pair>palette</button>
+        <div class="pair-eyebrow">// D &middot;
+          <span style="font-family:var(--type-kecal);font-weight:800;font-style:italic;">Kecal italic 800 display</span>
+          &middot;
+          <span style="font-family:var(--type-mono);font-weight:400;">mono body</span>
+        </div>
+        <h3 class="pair-display">Open<em>Prose</em></h3>
+        <p class="pair-body">Kecal leads italic; mono carries the body. The display em <em>upshifts to upright</em> to set off the brand-name run. λ codex spreads.</p>
+        <div class="pair-recipe">
+          <span><span class="key">display</span><span style="font-family:var(--type-kecal);font-weight:800;font-style:italic;">Kecal 800 italic</span></span>
+          <span><span class="key">display em</span><span style="font-family:var(--type-mono);font-weight:600;">mono 600 upright</span></span>
+          <span><span class="key">body</span><span style="font-family:var(--type-mono);font-weight:400;">mono 400</span></span>
+          <span><span class="key">body em</span><span style="font-family:var(--type-kecal);font-weight:800;font-style:var(--i-body-em);">Kecal 800</span></span>
+        </div>
+      </div>
+
+      <!-- E · whisper -->
+      <div class="pair-tile" data-pair-id="E"
+           style="--pair-display-family: var(--type-mono); --pair-display-weight:300; --pair-display-style:normal;
+                  --pair-display-em-family: var(--type-kecal); --pair-display-em-weight:400; --pair-display-em-style:var(--i-display-em);
+                  --pair-body-family: var(--type-mono); --pair-body-weight:300; --pair-body-style:normal;
+                  --pair-body-em-family: var(--type-kecal); --pair-body-em-weight:400; --pair-body-em-style:var(--i-body-em);">
+        <button class="pair-toggle" data-toggle-pair>palette</button>
+        <div class="pair-eyebrow">// E &middot;
+          <span style="font-family:var(--type-mono);font-weight:300;">weight light</span>
+          &middot;
+          <span style="font-family:var(--type-mono);font-weight:300;">mono 300 body</span>
+          &middot;
+          <span style="font-family:var(--type-kecal);font-weight:400;font-style:var(--i-display-em);">Kecal 400 accent</span>
+        </div>
+        <h3 class="pair-display">Open<em>Prose</em></h3>
+        <p class="pair-body">The whisper. Mono 300 across display and body. <em>Kecal 400</em> carries the editorial pivot. ν tideline &middot; pull-formula reading.</p>
+        <div class="pair-recipe">
+          <span><span class="key">display</span><span style="font-family:var(--type-mono);font-weight:300;">mono 300</span></span>
+          <span><span class="key">display em</span><span style="font-family:var(--type-kecal);font-weight:400;font-style:var(--i-display-em);">Kecal 400</span></span>
+          <span><span class="key">body</span><span style="font-family:var(--type-mono);font-weight:300;">mono 300</span></span>
+          <span><span class="key">body em</span><span style="font-family:var(--type-kecal);font-weight:400;font-style:var(--i-body-em);">Kecal 400</span></span>
+        </div>
+      </div>
+
+      <!-- F · shout -->
+      <div class="pair-tile dark" data-pair-id="F"
+           style="--pair-display-family: var(--type-mono); --pair-display-weight:700; --pair-display-style:normal;
+                  --pair-display-em-family: var(--type-kecal); --pair-display-em-weight:800; --pair-display-em-style:var(--i-display-em);
+                  --pair-body-family: var(--type-mono); --pair-body-weight:700; --pair-body-style:normal;
+                  --pair-body-em-family: var(--type-kecal); --pair-body-em-weight:800; --pair-body-em-style:var(--i-body-em);">
+        <button class="pair-toggle" data-toggle-pair>palette</button>
+        <div class="pair-eyebrow">// F &middot;
+          <span style="font-family:var(--type-mono);font-weight:700;">weight heavy</span>
+          &middot;
+          <span style="font-family:var(--type-mono);font-weight:700;">mono 700 body</span>
+          &middot;
+          <span style="font-family:var(--type-kecal);font-weight:800;font-style:var(--i-display-em);">Kecal 800 accent</span>
+        </div>
+        <h3 class="pair-display">Open<em>Prose</em></h3>
+        <p class="pair-body">The shout. Mono 700 throughout. <em>Kecal 800</em> carries the pivot. δ machine, θ living-doc, ρ blackhole.</p>
+        <div class="pair-recipe">
+          <span><span class="key">display</span><span style="font-family:var(--type-mono);font-weight:700;">mono 700</span></span>
+          <span><span class="key">display em</span><span style="font-family:var(--type-kecal);font-weight:800;font-style:var(--i-display-em);">Kecal 800</span></span>
+          <span><span class="key">body</span><span style="font-family:var(--type-mono);font-weight:700;">mono 700</span></span>
+          <span><span class="key">body em</span><span style="font-family:var(--type-kecal);font-weight:800;font-style:var(--i-body-em);">Kecal 800</span></span>
+        </div>
+      </div>
+    </div>
+
+    <h3>II.2 Cap-height normalisation</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">
+      Kecal sits ~9% taller than the monos at the same nominal size. Use <code class="ui-code">font-size-adjust: cap-height var(--cap-norm);</code> on display elements (<code class="ui-code">--cap-norm</code> = <b>0.70</b>) and <code class="ui-code">font-size-adjust: ex-height var(--ex-norm);</code> on body elements (<code class="ui-code">--ex-norm</code> = <b>0.50</b>) to align top edges. Browser support: Chrome 127+, Safari 17+, Firefox 118+.
+    </p>
+
+    <h3>II.3 Weight ladders</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">
+      Kecal carries 7 weights (200&ndash;800); each canonical mono carries 4&ndash;6. Picking a pairing fixes specific rungs. The full ladder is below for reference. The aspect catalog compares the ladders across the three monos.
+    </p>
+    <div class="weight-ladders">
+      <div class="weight-col">
+        <div class="weight-col-label">Kecal</div>
+        <div class="weight-row" style="font-family:var(--type-kecal);font-weight:200;">200 · Extralight &middot; <em style="font-weight:200;font-style:italic;">italics from synthesis</em></div>
+        <div class="weight-row" style="font-family:var(--type-kecal);font-weight:300;">300 · Light &middot; <em style="font-weight:300;font-style:italic;">italics from synthesis</em></div>
+        <div class="weight-row" style="font-family:var(--type-kecal);font-weight:400;">400 · Regular &middot; <em style="font-weight:400;font-style:italic;">italics from synthesis</em></div>
+        <div class="weight-row" style="font-family:var(--type-kecal);font-weight:500;">500 · Medium &middot; <em style="font-weight:500;font-style:italic;">italics from synthesis</em></div>
+        <div class="weight-row" style="font-family:var(--type-kecal);font-weight:600;">600 · Semibold &middot; <em style="font-weight:600;font-style:italic;">italics from synthesis</em></div>
+        <div class="weight-row" style="font-family:var(--type-kecal);font-weight:700;">700 · Bold &middot; <em style="font-weight:700;font-style:italic;">italics from synthesis</em></div>
+        <div class="weight-row" style="font-family:var(--type-kecal);font-weight:800;">800 · Extrabold &middot; <em style="font-weight:800;font-style:italic;">italics from synthesis</em></div>
+      </div>
+      <div class="weight-col">
+        <div class="weight-col-label">Mono (active: <span id="active-mono-label-2">plex</span>)</div>
+        <div class="weight-row" style="font-family:var(--type-mono);font-weight:300;">300 · Light &middot; <em style="font-weight:300;font-style:italic;">true italic</em></div>
+        <div class="weight-row" style="font-family:var(--type-mono);font-weight:400;">400 · Regular &middot; <em style="font-weight:400;font-style:italic;">true italic</em></div>
+        <div class="weight-row" style="font-family:var(--type-mono);font-weight:500;">500 · Medium &middot; <em style="font-weight:500;font-style:italic;">true italic</em></div>
+        <div class="weight-row" style="font-family:var(--type-mono);font-weight:600;">600 · Semibold &middot; <em style="font-weight:600;font-style:italic;">true italic</em></div>
+        <div class="weight-row" style="font-family:var(--type-mono);font-weight:700;">700 · Bold &middot; <em style="font-weight:700;font-style:italic;">true italic</em></div>
+      </div>
+    </div>
+
+    <h3 id="type-faces">II.4 Face stack reference</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">
+      Three font-family role tokens drive every page: <code class="ui-code">--type-display</code>, <code class="ui-code">--type-body</code>, <code class="ui-code">--type-mono</code> — plus their <code class="ui-code">--type-*-em</code> counterparts. The active mono is selected by <code class="ui-code">body[data-mono]</code> and resolved into <code class="ui-code">--type-mono</code> in <code class="ui-code">_pairings.css</code>.
+    </p>
+    <table class="sg-table" aria-label="Face stack">
+      <thead>
+        <tr><th>Token</th><th>Family</th><th>Source</th><th>Weights</th><th>Italics</th><th>Role</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>--type-kecal</code></td><td class="mono">Kecal</td><td class="role">jsdelivr.net/gh/FungiType/Kecal</td><td class="mono">200, 300, 400, 500, 600, 700, 800</td><td class="mono">synthesised</td><td class="role">italic emphasis (800), chrome (500), display in B/D</td></tr>
+        <tr><td><code>--type-mono (plex)</code></td><td class="mono">IBM Plex Mono</td><td class="role">Google Fonts</td><td class="mono">300, 400, 500, 600, 700</td><td class="mono">400, 500, 600</td><td class="role">default mono — body, headings, ledes</td></tr>
+        <tr><td><code>--type-mono (jet)</code></td><td class="mono">JetBrains Mono</td><td class="role">Google Fonts</td><td class="mono">300, 400, 500, 600, 700</td><td class="mono">400, 500, 600</td><td class="role">alt mono — humanist forms, more spacious</td></tr>
+        <tr><td><code>--type-mono (space)</code></td><td class="mono">Space Mono</td><td class="role">Google Fonts</td><td class="mono">400, 700</td><td class="mono">400, 700</td><td class="role">alt mono — wider grid, slab-style</td></tr>
+        <tr><td><code>SERIF-legacy</code></td><td class="mono">Cormorant Garamond / EB Garamond</td><td class="role">Google Fonts</td><td class="mono">400, 500, 600, 700</td><td class="mono">true</td><td class="role">retired — see II.5</td></tr>
+        <tr><td><code>SANS-legacy</code></td><td class="mono">Inter / IBM Plex Sans</td><td class="role">Google Fonts</td><td class="mono">300–700</td><td class="mono">400, 500, 600</td><td class="role">retired — see II.5</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="type-scale">II.5 Type scale table</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">
+      Nine role tokens drive every text element. Sizes derive from a 17px root; tracking is negative for display ranges, positive for caption/label registers. The <em>Weight</em> column shows the value rendered under the canonical default (<code class="ui-code">light-warm-teal</code> · pairing <b>A</b>); the underlying token is <code class="ui-code">--w-*</code> resolved by <code class="ui-code">_pairings.css</code> — switch pairing to see weights change.
+    </p>
+    <table class="sg-table" aria-label="Type scale">
+      <thead>
+        <tr><th>Role</th><th>Token</th><th>rem</th><th>px</th><th>Line</th><th>Tracking</th><th>Weight (pair A)</th><th>Family role</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Display</td><td><code>--fs-display</code></td><td class="mono">4rem</td><td class="mono">68</td><td class="mono">1.05</td><td class="mono">-0.025em</td><td class="mono">500</td><td class="role">--type-display (mono)</td></tr>
+        <tr><td>H1</td><td><code>--fs-h1</code></td><td class="mono">2.5rem</td><td class="mono">42</td><td class="mono">1.10</td><td class="mono">-0.018em</td><td class="mono">400</td><td class="role">--type-display (mono)</td></tr>
+        <tr><td>H2</td><td><code>--fs-h2</code></td><td class="mono">1.75rem</td><td class="mono">30</td><td class="mono">1.15</td><td class="mono">-0.012em</td><td class="mono">400</td><td class="role">--type-display (mono)</td></tr>
+        <tr><td>H3</td><td><code>--fs-h3</code></td><td class="mono">1.25rem</td><td class="mono">21</td><td class="mono">1.30</td><td class="mono">-0.005em</td><td class="mono">500</td><td class="role">--type-display (mono)</td></tr>
+        <tr><td>Body</td><td><code>--fs-body</code></td><td class="mono">1rem</td><td class="mono">17</td><td class="mono">1.55</td><td class="mono">0</td><td class="mono">400</td><td class="role">--type-body (mono)</td></tr>
+        <tr><td>Small</td><td><code>--fs-small</code></td><td class="mono">0.82rem</td><td class="mono">14</td><td class="mono">1.65</td><td class="mono">0</td><td class="mono">400</td><td class="role">--type-body (mono)</td></tr>
+        <tr><td>Label</td><td><code>--fs-label</code></td><td class="mono">0.72rem</td><td class="mono">12</td><td class="mono">1.40</td><td class="mono">0.14em</td><td class="mono">500</td><td class="role">--type-kecal · uppercased</td></tr>
+        <tr><td>Caption</td><td><code>--fs-caption</code></td><td class="mono">0.62rem</td><td class="mono">10.5</td><td class="mono">1.40</td><td class="mono">0.18em</td><td class="mono">500</td><td class="role">--type-kecal · uppercased</td></tr>
+        <tr><td>Mono</td><td><code>--fs-mono</code></td><td class="mono">0.92em</td><td class="mono">≈16</td><td class="mono">1.65</td><td class="mono">0.02em</td><td class="mono">400</td><td class="role">--type-mono · inline runs</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="type-specimens">II.6 Type-scale specimens</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">
+      Each role rendered at its canonical token, with the source. These specimens are the bar a direction file should match — change palette + pairing to see how the same scale carries across modes.
+    </p>
+
+    <!-- Display -->
+    <div class="sg-demo">
+      <div class="sg-demo-render" style="align-items:flex-start">
+        <div style="font-family:var(--type-display); font-size:var(--fs-display); font-weight:var(--w-display); line-height:1.05; letter-spacing:-0.025em; color:var(--ink);">Open<em style="font-family:var(--type-display-em); font-weight:var(--w-display-em); font-style:var(--i-display-em);">Prose</em></div>
+      </div>
+      <div class="sg-demo-source"><details><summary>source</summary><pre><span class="c">/* DISPLAY */</span>
+.display {
+  font-family: <span class="k">var(--type-display)</span>;
+  font-size:   <span class="k">var(--fs-display)</span>;   <span class="c">/* 4rem · 68px */</span>
+  font-weight: <span class="k">var(--w-display)</span>;
+  line-height: <span class="k">1.05</span>;
+  letter-spacing: <span class="k">-0.025em</span>;
+}</pre></details></div>
+    </div>
+
+    <!-- H1 -->
+    <div class="sg-demo">
+      <div class="sg-demo-render" style="align-items:flex-start">
+        <h1 style="font-family:var(--type-display); font-size:var(--fs-h1); font-weight:400; line-height:1.1; letter-spacing:-0.018em; color:var(--ink); margin:0;">A program is a <em style="font-family:var(--type-display-em); font-weight:var(--w-display-em); font-style:var(--i-display-em);">document</em> with guarantees.</h1>
+      </div>
+      <div class="sg-demo-source"><details><summary>source</summary><pre><span class="c">/* H1 */</span>
+h1 {
+  font-family: <span class="k">var(--type-display)</span>;
+  font-size:   <span class="k">var(--fs-h1)</span>;   <span class="c">/* 2.5rem · 42px */</span>
+  line-height: <span class="k">1.10</span>;
+  letter-spacing: <span class="k">-0.018em</span>;
+}</pre></details></div>
+    </div>
+
+    <!-- H2 -->
+    <div class="sg-demo">
+      <div class="sg-demo-render" style="align-items:flex-start">
+        <h2 style="font-family:var(--type-display); font-size:var(--fs-h2); font-weight:400; line-height:1.15; letter-spacing:-0.012em; color:var(--ink); margin:0;">Every <em style="font-family:var(--type-display-em); font-weight:var(--w-display-em); font-style:var(--i-display-em);">direction</em>, one spec.</h2>
+      </div>
+      <div class="sg-demo-source"><details><summary>source</summary><pre><span class="c">/* H2 + em rule */</span>
+h2 {
+  font-family: <span class="k">var(--type-display)</span>;
+  font-size:   <span class="k">var(--fs-h2)</span>;   <span class="c">/* 1.75rem · 30px */</span>
+}
+h2 em {
+  font-family: <span class="k">var(--type-display-em)</span>;
+  font-weight: <span class="k">var(--w-display-em)</span>;
+  font-style: <span class="k">var(--i-display-em)</span>;  /* upright by default; data-accent flips it */
+}</pre></details></div>
+    </div>
+
+    <!-- H3 -->
+    <div class="sg-demo">
+      <div class="sg-demo-render" style="align-items:flex-start">
+        <h3 style="font-family:var(--type-display); font-size:var(--fs-h3); font-weight:500; line-height:1.3; letter-spacing:-0.005em; color:var(--ink); margin:0;">On the quiet arrival of Monday reports</h3>
+      </div>
+      <div class="sg-demo-source"><details><summary>source</summary><pre><span class="c">/* H3 */</span>
+h3 {
+  font-family: <span class="k">var(--type-display)</span>;
+  font-size:   <span class="k">var(--fs-h3)</span>;   <span class="c">/* 1.25rem · 21px */</span>
+  font-weight: <span class="k">500</span>;
+  line-height: <span class="k">1.30</span>;
+}</pre></details></div>
+    </div>
+
+    <!-- Body -->
+    <div class="sg-demo">
+      <div class="sg-demo-render" style="align-items:flex-start">
+        <p style="font-family:var(--type-body); font-size:var(--fs-body); line-height:1.55; color:var(--ink-2); margin:0; max-width:62ch;">Every Monday at 09:00 ET, the digest arrives: <em style="font-family:var(--type-body-em); font-weight:var(--w-body-em); font-style:var(--i-body-em); color:var(--ink);">verified, signed, archived</em>. The standup happens anyway, but it is fifteen minutes shorter. Nobody asks where the numbers came from.</p>
+      </div>
+      <div class="sg-demo-source"><details><summary>source</summary><pre><span class="c">/* BODY */</span>
+body, p {
+  font-family: <span class="k">var(--type-body)</span>;
+  font-size:   <span class="k">var(--fs-body)</span>;   <span class="c">/* 1rem · 17px */</span>
+  line-height: <span class="k">1.55</span>;
+  color:       <span class="k">var(--ink-2)</span>;
+}</pre></details></div>
+    </div>
+
+    <!-- Small -->
+    <div class="sg-demo">
+      <div class="sg-demo-render" style="align-items:flex-start">
+        <p style="font-family:var(--type-body); font-size:var(--fs-small); line-height:1.65; color:var(--ink-3); margin:0; max-width:62ch;">A footnote sits in this register — the standup happens anyway, but it is fifteen minutes shorter.</p>
+      </div>
+      <div class="sg-demo-source"><details><summary>source</summary><pre><span class="c">/* SMALL · footnote · meta-paragraph */</span>
+.small {
+  font-size:   <span class="k">var(--fs-small)</span>;   <span class="c">/* 0.82rem · 14px */</span>
+  line-height: <span class="k">1.65</span>;
+  color:       <span class="k">var(--ink-3)</span>;
+}</pre></details></div>
+    </div>
+
+    <!-- Label -->
+    <div class="sg-demo">
+      <div class="sg-demo-render">
+        <div style="font-family:var(--type-kecal); font-weight:500; font-size:var(--fs-label); letter-spacing:0.14em; text-transform:uppercase; color:var(--ink-3);">Section · label</div>
+      </div>
+      <div class="sg-demo-source"><details><summary>source</summary><pre><span class="c">/* LABEL · kicker · inline tag */</span>
+.label {
+  font-family: <span class="k">var(--type-kecal)</span>;
+  font-weight: <span class="k">500</span>;
+  font-size:   <span class="k">var(--fs-label)</span>;   <span class="c">/* 0.72rem · 12px */</span>
+  letter-spacing: <span class="k">0.14em</span>;
+  text-transform: uppercase;
+  color: <span class="k">var(--ink-3)</span>;
+}</pre></details></div>
+    </div>
+
+    <!-- Caption -->
+    <div class="sg-demo">
+      <div class="sg-demo-render">
+        <div style="font-family:var(--type-kecal); font-weight:500; font-size:var(--fs-caption); letter-spacing:0.18em; text-transform:uppercase; color:var(--ink-3);">Caption · meta · eyebrow</div>
+      </div>
+      <div class="sg-demo-source"><details><summary>source</summary><pre><span class="c">/* CAPTION · meta · eyebrow */</span>
+.caption {
+  font-family: <span class="k">var(--type-kecal)</span>;
+  font-weight: <span class="k">500</span>;
+  font-size:   <span class="k">var(--fs-caption)</span>;   <span class="c">/* 0.62rem · 10.5px */</span>
+  letter-spacing: <span class="k">0.18em</span>;
+  text-transform: uppercase;
+  color: <span class="k">var(--ink-3)</span>;
+}</pre></details></div>
+    </div>
+
+    <!-- Mono inline -->
+    <div class="sg-demo">
+      <div class="sg-demo-render" style="align-items:flex-start">
+        <p style="font-family:var(--type-body); font-size:var(--fs-body); line-height:1.55; color:var(--ink-2); margin:0; max-width:62ch;">Set <code class="ui-code">body[data-palette]</code> to switch palette. Each token in <code class="ui-code">_tokens.css</code> is scoped by palette attribute.</p>
+      </div>
+      <div class="sg-demo-source"><details><summary>source</summary><pre><span class="c">/* MONO · inline code · token names */</span>
+code, .ui-code {
+  font-family: <span class="k">var(--type-mono)</span>;
+  font-size:   <span class="k">var(--fs-mono)</span>;   <span class="c">/* 0.92em · ≈16px */</span>
+  letter-spacing: <span class="k">0.02em</span>;
+  background:  <span class="k">var(--paper-warm)</span>;
+  padding:     <span class="k">0.1em 0.4em</span>;
+}</pre></details></div>
+    </div>
+
+    <h3>II.7 Legacy stacks (deprecated — being retired)</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">
+      Two older type stacks remain on disk but are being migrated to A–F:
+    </p>
+    <ul style="list-style:none; padding-left:0; line-height:2;">
+      <li><span class="ui-badge">SERIF+SANS-legacy</span> Cormorant Garamond / EB Garamond + Inter / IBM Plex Sans — used by 5 files (β-tufte-mono-homepage-kecal, γ-manuscript-concept-kecal, ν-tideline, ρ-blackhole-hero, λ-inkwell-concept-kecal). All will migrate to A or B.</li>
+      <li><span class="ui-badge">SYSTEM-FALLBACK-legacy</span> Palatino Linotype + Helvetica Neue + SF Mono — used by 4 files (β-tufte-mono-kecal, δ-machine, δ-machine-kecal, ζ-saas-kecal). All will migrate to A.</li>
+    </ul>
+  </section>
+
+  <!-- ============================================================
+       III SPACING SCALE
+       ============================================================ -->
+  <section class="sg-section" id="spacing">
+    <div class="sg-section-num">III Spacing Scale</div>
+    <h2>One ladder, <em>nine rungs</em>.</h2>
+    <p class="sg-lede">
+      The <code class="ui-code">--space-*</code> ladder runs <code class="ui-code">3xs</code> → <code class="ui-code">3xl</code>. Every margin, padding, and gap in production CSS pulls from this list; inline literals are forbidden.
+    </p>
+
+    <h3 id="spacing-table">III.1 Spacing tokens reference</h3>
+    <p class="sg-lede" style="font-size:0.94rem; max-width:60ch; color:var(--ink-3); font-style:italic;">
+      Canonical root <code class="ui-code">html { font-size: 17px }</code>, so <code class="ui-code">1rem ≈ 17px</code>. The px column below reflects that root.
+    </p>
+    <table class="sg-table" aria-label="Spacing tokens">
+      <thead>
+        <tr><th>Token</th><th>rem</th><th>px (17pt root)</th><th>Use</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>--space-3xs</code></td><td class="mono">0.125rem</td><td class="mono">~2</td><td class="role">hairline padding · chip y-padding</td></tr>
+        <tr><td><code>--space-2xs</code></td><td class="mono">0.25rem</td><td class="mono">~4</td><td class="role">smallest inline gap · badge inner</td></tr>
+        <tr><td><code>--space-xs</code></td><td class="mono">0.5rem</td><td class="mono">~9</td><td class="role">tight inline gap · button-to-button</td></tr>
+        <tr><td><code>--space-sm</code></td><td class="mono">0.75rem</td><td class="mono">~13</td><td class="role">paragraph margin-bottom · card title-to-body</td></tr>
+        <tr><td><code>--space-md</code></td><td class="mono">1rem</td><td class="mono">17</td><td class="role">card padding · section-internal gap</td></tr>
+        <tr><td><code>--space-lg</code></td><td class="mono">1.5rem</td><td class="mono">~26</td><td class="role">section side padding · gap between blocks</td></tr>
+        <tr><td><code>--space-xl</code></td><td class="mono">2.25rem</td><td class="mono">~38</td><td class="role">section vertical rhythm (between sub-sections)</td></tr>
+        <tr><td><code>--space-2xl</code></td><td class="mono">3.5rem</td><td class="mono">~60</td><td class="role">section block padding (top/bottom)</td></tr>
+        <tr><td><code>--space-3xl</code></td><td class="mono">5.5rem</td><td class="mono">~94</td><td class="role">hero top padding · cover top</td></tr>
+      </tbody>
+    </table>
+
+    <h3>III.2 Visual ladder</h3>
+    <div class="space-scale">
+      <div class="space-rung"><div class="bar" style="height:2px"></div><div class="lbl">3xs · 2px</div></div>
+      <div class="space-rung"><div class="bar" style="height:4px"></div><div class="lbl">2xs · 4px</div></div>
+      <div class="space-rung"><div class="bar" style="height:8px"></div><div class="lbl">xs · 8px</div></div>
+      <div class="space-rung"><div class="bar" style="height:12px"></div><div class="lbl">sm · 12px</div></div>
+      <div class="space-rung"><div class="bar" style="height:16px"></div><div class="lbl">md · 16px</div></div>
+      <div class="space-rung"><div class="bar" style="height:24px"></div><div class="lbl">lg · 24px</div></div>
+      <div class="space-rung"><div class="bar" style="height:36px"></div><div class="lbl">xl · 36px</div></div>
+      <div class="space-rung"><div class="bar" style="height:56px"></div><div class="lbl">2xl · 56px</div></div>
+      <div class="space-rung"><div class="bar" style="height:88px"></div><div class="lbl">3xl · 88px</div></div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       IV LAYOUT MODES
+       ============================================================ -->
+  <section class="sg-section" id="layouts">
+    <div class="sg-section-num">IV Layout Primitives</div>
+    <h2>Two containers, <em>three breakpoints</em>, six layout modes.</h2>
+    <p class="sg-lede">
+      Layout is selected via <code class="ui-code">body[data-layout]</code>. Container widths use <code class="ui-code">--measure</code> (66ch reading column) and <code class="ui-code">--wide</code> (1180px page).
+      The single canonical mobile breakpoint is <code class="ui-code">640px</code> (set by the mobile-safety patch, see VIII).
+    </p>
+
+    <h3 id="layout-tokens">IV.1 Layout primitives reference</h3>
+    <table class="sg-table" aria-label="Layout primitives">
+      <thead>
+        <tr><th>Token</th><th>Value</th><th>Use</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>--wide</code></td><td class="mono">1180px</td><td class="role">outer container — palette grids, type specimens, application galleries</td></tr>
+        <tr><td><code>--measure</code></td><td class="mono">66ch</td><td class="role">narrow prose container — editorial articles, sidenoted essays</td></tr>
+        <tr><td><code>--measure-ch</code></td><td class="mono">66ch</td><td class="role">line-length cap on <code>.lede</code> paragraphs and editorial copy</td></tr>
+        <tr><td>mobile breakpoint</td><td class="mono">640px</td><td class="role">grids collapse to single column; demo splits stack; wordmarks protected (see VIII)</td></tr>
+        <tr><td>sidenote breakpoint</td><td class="mono">1100px</td><td class="role">below: asides fall inline as left-bordered block; above: asides float into right margin (220px column)</td></tr>
+        <tr><td>demo breakpoint</td><td class="mono">880px</td><td class="role">render/source demos and do/don't pairs collapse from two columns to one</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="grid-configs">IV.2 Grid configurations by section</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">Each section uses its own grid recipe — the table is the cheat-sheet for porting layouts between direction pages.</p>
+    <table class="sg-table" aria-label="Grid configurations">
+      <thead>
+        <tr><th>Section</th><th>Columns</th><th>Gap</th><th>Collapse below 880px</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Palette tiles</td><td class="mono">repeat(auto-fit, minmax(220px, 1fr))</td><td class="mono">1rem</td><td>auto — 2 col at &lt; 700px</td></tr>
+        <tr><td>Pairing tiles (A–F)</td><td class="mono">repeat(auto-fit, minmax(280px, 1fr))</td><td class="mono">1rem</td><td>auto — 1 col at &lt; 600px</td></tr>
+        <tr><td>Direction catalog</td><td class="mono">repeat(auto-fit, minmax(220px, 1fr))</td><td class="mono">1rem</td><td>auto — 2 col at &lt; 700px</td></tr>
+        <tr><td>Component grid</td><td class="mono">1fr 1fr</td><td class="mono">1.5rem</td><td>1 column at &lt; 720px</td></tr>
+        <tr><td>Voice cards (VI)</td><td class="mono">repeat(auto-fill, minmax(260px, 1fr))</td><td class="mono">0.75rem</td><td>1 column at &lt; 600px</td></tr>
+        <tr><td>Do / Don't pair</td><td class="mono">1fr 1fr</td><td class="mono">0.75rem</td><td>1 column at &lt; 880px</td></tr>
+        <tr><td>Mark catalog</td><td class="mono">repeat(auto-fit, minmax(180px, 1fr))</td><td class="mono">1rem</td><td>auto</td></tr>
+        <tr><td>Weight ladders (II.3)</td><td class="mono">1fr 1fr</td><td class="mono">2.25rem</td><td>1 column at &lt; 720px</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="layout-modes">IV.3 Layout modes catalog</h3>
+    <div class="layout-grid">
+      <div class="layout-tile">
+        <div class="miniature" style="background: linear-gradient(180deg, var(--paper-warm) 0 14%, var(--paper) 14% 80%, var(--paper-warm) 80%);"></div>
+        <div class="name">styleguide</div>
+        <div class="note">this page — section frame + ToC</div>
+      </div>
+      <div class="layout-tile">
+        <div class="miniature" style="background: linear-gradient(180deg, var(--paper-warm) 0 12%, var(--paper) 12% 60%, var(--paper-warm) 60% 70%, var(--paper) 70%);"></div>
+        <div class="name">homepage</div>
+        <div class="note">sticky nav + hero + stacked sections</div>
+      </div>
+      <div class="layout-tile">
+        <div class="miniature" style="background: var(--paper-warm);"></div>
+        <div class="name">concept</div>
+        <div class="note">single-screen demo (no chrome)</div>
+      </div>
+      <div class="layout-tile">
+        <div class="miniature" style="background: linear-gradient(90deg, var(--paper) 60%, var(--paper-warm) 60%);"></div>
+        <div class="name">landscape</div>
+        <div class="note">wide-aspect hero (μ-bloom)</div>
+      </div>
+      <div class="layout-tile">
+        <div class="miniature" style="background: var(--paper); position:relative; overflow:hidden;">
+          <div style="position:absolute; inset:8% 12% 12% 8%; background:var(--paper-warm); border:1px solid var(--rule);"></div>
+          <div style="position:absolute; inset:14% 8% 8% 12%; background:var(--paper-lt); border:1px solid var(--rule);"></div>
+        </div>
+        <div class="name">codex</div>
+        <div class="note">3D card spreads (λ-inkwell)</div>
+      </div>
+      <div class="layout-tile">
+        <div class="miniature" style="background: var(--paper-warm); display:flex; align-items:center; justify-content:center; font-family:var(--type-kecal); font-size:1.8rem;">oP</div>
+        <div class="name">poster</div>
+        <div class="note">signature-card mark sheet</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       V COMPONENT CATALOG
+       ============================================================ -->
+  <section class="sg-section" id="components">
+    <div class="sg-section-num">V Component Catalog</div>
+    <h2>Every class, <em>rendered</em>, with its source.</h2>
+    <p class="sg-lede">
+      Each card shows a live component against the current palette + pairing, with the class name and minimal HTML.
+    </p>
+
+    <div class="comp-grid">
+
+      <!-- 6.1 — .sample-hero (compact tile · full demo lives below in V.1a) -->
+      <div class="comp-card">
+        <div class="comp-card-render">
+          <div class="sg-cover-eyebrow">// brand · openprose</div>
+          <h3 class="sg-cover-title" style="font-size:1.6rem">Open<em>Prose</em></h3>
+          <div style="width:48px; height:1px; background:var(--ink-3)"></div>
+          <p style="font-size:var(--fs-small); color:var(--ink-2)">A program is a document with guarantees.</p>
+        </div>
+        <div class="comp-card-source">.sample-hero · eyebrow · title em · rule · tagline</div>
+      </div>
+
+      <!-- 6.3 — .ui-btn -->
+      <div class="comp-card">
+        <div class="comp-card-render">
+          <button class="ui-btn primary">Begin →</button>
+          <button class="ui-btn secondary">Secondary</button>
+          <button class="ui-btn">See how</button>
+          <button class="ui-btn ghost">Cancel</button>
+        </div>
+        <div class="comp-card-source">.ui-btn[.primary | .secondary | .ghost]</div>
+      </div>
+
+      <!-- 6.4 — .ui-badge with status variants -->
+      <div class="comp-card">
+        <div class="comp-card-render">
+          <span class="ui-badge live">· Live</span>
+          <span class="ui-badge ok">✓ Verified</span>
+          <span class="ui-badge hold">· On hold</span>
+          <span class="ui-badge">v λ.codex.0</span>
+        </div>
+        <div class="comp-card-source">.ui-badge[.live | .ok | .hold]</div>
+      </div>
+
+      <!-- 6.5 — .ui-input with label pattern -->
+      <div class="comp-card">
+        <div class="comp-card-render">
+          <div class="ui-input-group">
+            <label class="ui-input-label">Declare the outcome</label>
+            <input class="ui-input" type="text" placeholder="weekly-energy-digest.prose">
+          </div>
+        </div>
+        <div class="comp-card-source">.ui-input-group · label + .ui-input · focus-state shadow</div>
+      </div>
+
+      <!-- 6.6 — .ui-code inline + block with .k .c .v spans -->
+      <div class="comp-card">
+        <div class="comp-card-render" style="align-items:stretch">
+          <p style="font-size:var(--fs-small); color:var(--ink-2); margin-bottom: var(--space-sm)">
+            Set the body to <code class="ui-code">data-palette="warm-teal"</code> to use the canonical palette.
+          </p>
+          <div class="ui-code block"><span class="c"># pick up the file</span>
+<span class="k">$</span> openprose run weekly-digest
+<span class="c"># verify, deliver, archive</span>
+<span class="v">✓ delivered 09:14 ET</span></div>
+        </div>
+        <div class="comp-card-source">.ui-code (inline) · .ui-code.block + .k .c .v spans</div>
+      </div>
+
+      <!-- 6.7 — .card-block with card-kicker · card-title · card-body parts -->
+      <div class="comp-card">
+        <div class="comp-card-render">
+          <div class="card-block">
+            <div class="card-kicker">Weekly Investor Digest</div>
+            <div class="card-title">ARR crossed <em>$14.2M</em> this week.</div>
+            <div class="card-body">The new $40K Meridian contract pushed us over the line. Cursor · due-diligence memo · 14.2m runtime.</div>
+          </div>
+        </div>
+        <div class="comp-card-source">.card-block · .card-kicker · .card-title em · .card-body</div>
+      </div>
+
+    </div>
+
+    <!-- ============================================================
+         V.2 — .section-kicker
+         The chrome label that opens every section in the source
+         direction.
+         ============================================================ -->
+    <h3 id="c-kicker">V.2 <code class="ui-code">.section-kicker</code> · the section's first word</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">A Kecal 500 label paired with a hairline rule that extends to the right edge. Sits above every <code>&lt;h2&gt;</code> as a Roman-numbered tag.</p>
+    <div class="sg-demo">
+      <div class="sg-demo-render" style="align-items:stretch; gap:var(--space-sm)">
+        <div class="section-kicker" style="width:100%">I Palette</div>
+        <div class="section-kicker" style="width:100%">II Type Scale</div>
+        <div class="section-kicker" style="width:100%">III The Sidenote</div>
+      </div>
+      <div class="sg-demo-source"><details><summary>source</summary><pre><span class="k">&lt;div class="section-kicker"&gt;</span>I Palette<span class="k">&lt;/div&gt;</span>
+
+<span class="c">/* SECTION KICKER */</span>
+.section-kicker {
+  font-family: <span class="k">var(--type-kecal)</span>;
+  font-weight: <span class="k">500</span>;
+  font-size:   <span class="k">0.7rem</span>;
+  letter-spacing: <span class="k">0.18em</span>;
+  text-transform: uppercase;
+  color: <span class="k">var(--ink-3)</span>;
+  display: flex; align-items: center; gap: <span class="k">0.85rem</span>;
+}
+.section-kicker::after {
+  content: ''; flex: 1; height: 1px;
+  background: <span class="k">var(--ink-4)</span>; opacity: 0.4;
+}</pre></details></div>
+    </div>
+
+    <!-- ============================================================
+         V.8 — .lede (first paragraph · 62ch measure)
+         ============================================================ -->
+    <h3 id="c-lede">V.8 <code class="ui-code">.lede</code> · the opening paragraph</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">The first paragraph of any section. Sets the voice; capped at 62ch line length. In editorial pairings this is usually wrapped in <code>.pretext-prose</code> for line-flow around a drop cap.</p>
+    <div class="sg-demo">
+      <div class="sg-demo-render" style="align-items:stretch">
+        <p class="lede-demo">Three faces, three jobs, no overlap. <em>The active mono</em> carries every running paragraph, every heading, every long sentence. <em>Kecal</em>, in 500 and 800, sets the chrome labels and italic emphasis.</p>
+      </div>
+      <div class="sg-demo-source"><details><summary>source</summary><pre><span class="k">&lt;p class="lede"&gt;</span>Three faces, three jobs<span class="k">&lt;/p&gt;</span>
+
+.lede {
+  font-family: <span class="k">var(--type-mono)</span>;
+  font-size:   <span class="k">1.05rem</span>;
+  color:       <span class="k">var(--ink)</span>;
+  max-width:   <span class="k">62ch</span>;
+  line-height: <span class="k">1.65</span>;
+}</pre></details></div>
+    </div>
+
+    <!-- ============================================================
+         V.9 — em global italic rule
+         The brand's most quietly load-bearing rule. Anything in
+         &lt;em&gt; renders Kecal 800 italic. The writer's pivot.
+         ============================================================ -->
+    <h3 id="c-em">V.9 <code class="ui-code">em</code> · the accent (global rule)</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">Anything wrapped in <code>&lt;em&gt;</code> renders in Kecal 800 at 1em. Posture follows the <code>data-accent</code> axis: upright is the default, italic is the historical option. This is the writer's voice. Never apply <code>&lt;em&gt;</code> to a phrase the reader supplies (a quote, an aside). Pair with <a href="#do-dont">VII.1's do/don't</a> before reaching for it.</p>
+    <div class="sg-demo">
+      <div class="sg-demo-render" style="align-items:stretch">
+        <p style="font-family:var(--type-mono); font-size:1.2rem; color:var(--ink); line-height:1.55; margin:0;">The system is <em>calm</em>. The page does not <em>announce</em>; it <em>arrives</em>.</p>
+      </div>
+      <div class="sg-demo-source"><details><summary>source</summary><pre>The system is <span class="k">&lt;em&gt;</span>calm<span class="k">&lt;/em&gt;</span>.
+
+em {
+  font-family: <span class="k">var(--type-kecal)</span>;
+  font-style:  <span class="k">var(--i-body-em)</span>;  <span class="c">/* upright default · data-accent axis */</span>
+  font-weight: <span class="k">800</span>;
+  font-size:   <span class="k">1em</span>;   <span class="c">/* cap-height match — see II.2 */</span>
+  letter-spacing: <span class="k">0</span>;
+}</pre></details></div>
+    </div>
+
+    <!-- ============================================================
+         V.10 — ::first-letter drop cap (editorial paragraphs only)
+         ============================================================ -->
+    <h3 id="c-dropcap">V.10 <code class="ui-code">::first-letter</code> · drop cap</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">Editorial paragraphs begin with a drop cap. Either via <code>::first-letter</code> (simple float, below) or via the full pretext layout script (per-line flow around an obstacle — see V.15). Reserve for editorial pairings; never on chrome paragraphs or marketing copy.</p>
+    <div class="sg-demo">
+      <div class="sg-demo-render" style="align-items:stretch">
+        <p class="dropcap-demo">Three faces, three jobs, no overlap. EB Garamond carries every running paragraph, every heading, every long sentence. Inter, all caps and small, sets only the labels and the chrome — eyebrows, kickers, button faces.</p>
+      </div>
+      <div class="sg-demo-source"><details><summary>source</summary><pre><span class="k">&lt;p class="dropcap-demo"&gt;</span>Three faces…<span class="k">&lt;/p&gt;</span>
+
+.dropcap-demo::first-letter {
+  font-family: <span class="k">var(--type-mono)</span>;
+  font-weight: <span class="k">500</span>;
+  float:       <span class="k">left</span>;
+  font-size:   <span class="k">4.2em</span>;
+  line-height: <span class="k">0.85</span>;
+  color:       <span class="k">var(--ink)</span>;
+  padding:     <span class="k">0.06em 0.22em 0 0</span>;
+}</pre></details></div>
+    </div>
+
+    <!-- ============================================================
+         V.11 — sup.sn + aside.sidenote
+         THE β emphasis primitive. The defining piece of brand DNA.
+         ============================================================ -->
+    <h3 id="c-sidenote">V.11 <code class="ui-code">sup.sn</code> + <code class="ui-code">aside.sidenote</code> · the brand-defining sidenote</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">The β-defining emphasis primitive. A numeric or "<b>!</b>" superscript in the prose, paired with an aside that floats into a 220px right margin on wide screens (≥ 1100px), and falls inline as a left-bordered block below 1100px. This component is <b>the brand</b> — every direction inherits it.</p>
+    <div class="sg-demo">
+      <div class="sg-demo-render" style="align-items:stretch">
+        <p class="sn-demo">Every Monday at 09:00 ET, the digest arrives — <em>verified, signed, archived</em><sup class="sn">3</sup>.
+          <aside class="sidenote"><sup class="sn">3</sup>&nbsp;Verification is the part that actually changed. The numbers were always automated; the trust was not.</aside>
+          The standup happens anyway, but it is fifteen minutes shorter.</p>
+      </div>
+      <div class="sg-demo-source"><details><summary>source</summary><pre>Every Monday at 09:00 ET<span class="k">&lt;sup class="sn"&gt;</span>3<span class="k">&lt;/sup&gt;</span>.
+<span class="k">&lt;aside class="sidenote"&gt;&lt;sup class="sn"&gt;</span>3<span class="k">&lt;/sup&gt;</span>&nbsp;Verification…<span class="k">&lt;/aside&gt;</span>
+
+sup.sn {
+  font-family: <span class="k">var(--type-mono)</span>;
+  font-size:   <span class="k">0.66em</span>;
+  font-weight: <span class="k">500</span>;
+  color:       <span class="k">var(--ink-2)</span>;
+}
+aside.sidenote {
+  font-family: <span class="k">var(--type-mono)</span>;
+  font-size:   <span class="k">0.86rem</span>;
+  color:       <span class="k">var(--ink-3)</span>;
+  font-style:  italic;
+}
+<span class="c">/* wide screens float into right margin */</span>
+@media (min-width: 1100px) {
+  .pairing aside.sidenote {
+    float:        right; clear: right;
+    width:        <span class="k">220px</span>;
+    margin-right: <span class="k">-260px</span>;
+    border-left:  <span class="k">1px solid var(--rule)</span>;
+    padding-left: <span class="k">0.85rem</span>;
+  }
+}</pre></details></div>
+    </div>
+    <p class="sg-lede" style="font-size:0.96rem; max-width:60ch; color:var(--ink-2); padding-left:var(--space-md); border-left:1px solid var(--rule);">
+      <b>Bang marker:</b> use <code class="ui-code">&lt;sup class="sn"&gt;!&lt;/sup&gt;</code> on the page's single load-bearing claim.
+      <em>Maximum one per page.</em> If you find yourself reaching for a second, the first is wrong.
+    </p>
+
+    <!-- ============================================================
+         V.11a — .hl / .hl-hot sidenote underline markers
+         Skim/hot variants for inline emphasis on the line itself.
+         ============================================================ -->
+    <h3 id="c-sidenote-underline">V.11a · <code class="ui-code">.hl</code> + <code class="ui-code">.hl-hot</code> · sidenote skim · hot underlines</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">When the prose can carry the sidenote on the line itself, the silenced highlighter renders as a hairline underline. Two variants: <em>skim</em> for a numbered glance, <em>hot</em> for the page's load-bearing claim.</p>
+    <div class="sg-demo">
+      <div class="sg-demo-render" style="align-items:stretch">
+        <p class="sn-demo"><span style="font-family:var(--type-kecal); font-size:0.62rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--ink-3); margin-right:0.6rem;">Sidenote skim</span> <span class="hl">The standup happens anyway, but it is fifteen minutes shorter<sup class="sn">3</sup>.</span> Nobody asks where the numbers came from.</p>
+        <p class="sn-demo" style="margin-top:1rem"><span style="font-family:var(--type-kecal); font-size:0.62rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--ink-3); margin-right:0.6rem;">Sidenote hot</span> "Billed by delivery<sup class="sn">!</sup>. <span class="hl-hot">If the outcome doesn't ship, no line.</span>"</p>
+      </div>
+      <div class="sg-demo-source"><details><summary>source</summary><pre><span class="c">/* skim — dotted underline, sn marker */</span>
+<span class="k">&lt;span class="hl"&gt;</span>…shorter<span class="k">&lt;sup class="sn"&gt;</span>3<span class="k">&lt;/sup&gt;</span>.<span class="k">&lt;/span&gt;</span>
+
+<span class="c">/* hot — dashed underline, sn ! marker */</span>
+<span class="k">&lt;sup class="sn"&gt;</span>!<span class="k">&lt;/sup&gt;</span>. <span class="k">&lt;span class="hl-hot"&gt;</span>If the outcome doesn't ship, no line.<span class="k">&lt;/span&gt;</span>
+
+.hl, .hl-hot {
+  background: transparent;
+  border-bottom: <span class="k">1px dotted var(--ink-3)</span>;
+  text-underline-offset: <span class="k">3px</span>;
+}
+.hl-hot {
+  border-bottom-color: <span class="k">var(--ink-2)</span>;
+  border-bottom-style: <span class="k">dashed</span>;
+}</pre></details></div>
+    </div>
+
+    <!-- ============================================================
+         V.12 — .pull-quote
+         ============================================================ -->
+    <h3 id="c-pullquote">V.12 <code class="ui-code">.pull-quote</code> · the editorial pull quote</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">A Kecal 800 italic block with a left rule, sized 1.35rem. Reserve for the moment in an editorial pairing where the author wants the reader to slow down — typically one per article.</p>
+    <div class="sg-demo">
+      <div class="sg-demo-render" style="align-items:stretch">
+        <div class="pull-quote">The first thing we noticed was what we stopped doing — the standing meetings where we'd review the dashboard to confirm the dashboard was fine.</div>
+      </div>
+      <div class="sg-demo-source"><details><summary>source</summary><pre><span class="k">&lt;div class="pull-quote"&gt;</span>The first thing we noticed…<span class="k">&lt;/div&gt;</span>
+
+.pull-quote {
+  font-family: <span class="k">var(--type-kecal)</span>;
+  font-style:  italic;
+  font-weight: <span class="k">800</span>;
+  font-size:   <span class="k">1.35rem</span>;
+  line-height: <span class="k">1.40</span>;
+  padding:     <span class="k">1.25rem 0 1.25rem 1.5rem</span>;
+  border-left: <span class="k">2px solid var(--ink-3)</span>;
+  color:       <span class="k">var(--ink)</span>;
+}</pre></details></div>
+    </div>
+
+    <!-- ============================================================
+         V.13 — .pairing-demo (editorial article specimen)
+         Full article surface — proves the parts compose.
+         ============================================================ -->
+    <h3 id="c-pairing">V.13 <code class="ui-code">.pairing</code> · editorial article specimen</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">The full editorial article surface. Uses <code>--measure</code> container, drop cap on the first paragraph, sidenotes inline (floating right on wide screens), optional pull-quote, byline at end. This is the form a "from the field notes" piece takes.</p>
+    <div class="sg-demo">
+      <div class="sg-demo-render" style="align-items:stretch; padding:var(--space-md)">
+        <article class="pairing-demo" style="max-width:none">
+          <div class="article-eyebrow">From the field notes</div>
+          <h3 class="article-title">On the <em>quiet arrival</em> of Monday reports.</h3>
+          <p>Once, the week began with a scramble. Someone opened seven dashboards, pulled the numbers, wrote the digest, and dropped it in the 09:00 standup<sup class="sn">1</sup>.
+            <aside class="sidenote"><sup class="sn">1</sup>&nbsp;The dashboards were not, by themselves, the problem. Someone had to read them and write what they meant.</aside>
+            Then the outcome was declared in a file. <em>Fifteen lines.</em></p>
+          <p>The standup happens anyway, but it is fifteen minutes shorter.</p>
+          <div class="pull-quote">The first thing we noticed was what we stopped doing.</div>
+          <div class="byline">JH · 2026-05-26 · Direction styleguide · V.13</div>
+        </article>
+      </div>
+      <div class="sg-demo-source"><details><summary>source</summary><pre><span class="k">&lt;article class="pairing"&gt;</span>
+  <span class="k">&lt;div class="article-eyebrow"&gt;</span>From the field notes<span class="k">&lt;/div&gt;</span>
+  <span class="k">&lt;h3 class="article-title"&gt;</span>On the <span class="k">&lt;em&gt;</span>quiet arrival<span class="k">&lt;/em&gt;</span><span class="k">&lt;/h3&gt;</span>
+  <span class="k">&lt;p&gt;</span>Once, the week began with a scramble<span class="k">&lt;sup class="sn"&gt;</span>1<span class="k">&lt;/sup&gt;</span>.
+    <span class="k">&lt;aside class="sidenote"&gt;</span>…<span class="k">&lt;/aside&gt;</span>
+  <span class="k">&lt;/p&gt;</span>
+  <span class="k">&lt;div class="pull-quote"&gt;</span>…<span class="k">&lt;/div&gt;</span>
+  <span class="k">&lt;div class="byline"&gt;</span>JH · 2026 · …<span class="k">&lt;/div&gt;</span>
+<span class="k">&lt;/article&gt;</span></pre></details></div>
+    </div>
+
+    <!-- ============================================================
+         V.14 — .voice-card (voice register specimen)
+         ============================================================ -->
+    <h3 id="c-voice">V.14 <code class="ui-code">.voice-card</code> · voice register specimen</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">A specimen card for tagging a quote by voice register. Used in the voice grid (<a href="#voice">VI</a>) and any place a quote needs to be marked as <em>short</em>, <em>spec</em>, or <em>editorial</em>.</p>
+    <div class="sg-demo">
+      <div class="sg-demo-render" style="align-items:stretch">
+        <div class="voice-card-demo">
+          <div class="vc-tag">Voice · editorial · italic</div>
+          <blockquote>"Once, the week began with a scramble. <em>Then the outcome was declared in a file.</em>"</blockquote>
+          <p class="vc-note">The long-form voice. Italic carries the pivot. No sidenote — the author still holds the line.</p>
+        </div>
+      </div>
+      <div class="sg-demo-source"><details><summary>source</summary><pre><span class="k">&lt;div class="voice-card"&gt;</span>
+  <span class="k">&lt;div class="vc-tag"&gt;</span>Voice · editorial · italic<span class="k">&lt;/div&gt;</span>
+  <span class="k">&lt;blockquote&gt;</span>"… <span class="k">&lt;em&gt;</span>declared in a file<span class="k">&lt;/em&gt;</span>"<span class="k">&lt;/blockquote&gt;</span>
+  <span class="k">&lt;p class="vc-note"&gt;</span>The long-form voice…<span class="k">&lt;/p&gt;</span>
+<span class="k">&lt;/div&gt;</span></pre></details></div>
+    </div>
+
+    <!-- V.15 Pretext demo (grabbable mark + shape-outside wrap) -->
+    <h3 id="c-pretext">V.15 <code class="ui-code">.pretext-demo</code> · grabbable mark + swap row</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">
+      A pretext-wrapped mark sits inside a paragraph; the prose reflows around its silhouette via CSS <code class="ui-code">shape-outside</code>. Drag the mark to relocate it; click a swatch below to swap in another OpenProse signet. This is the same paradigm used in <em>μ-bloom-homepage</em>, <em>δ-machine-homepage-rain</em>, and <em>λ-inkwell-codex</em>. The heavy <code class="ui-code">brand/pretext/</code> library (canvas-text measurement, BiDi, line-break) provides the production engine; this CSS-only demo captures the visible behaviour without the bundle weight.
+    </p>
+    <p class="sg-lede" style="font-size:0.84rem; max-width:60ch; color: var(--ink-3); margin-top:-0.6rem;">
+      Production use: the trace experiments consume pretext; the heavy library lives at <code class="ui-code">brand/pretext/</code>.
+    </p>
+    <div class="pretext-demo">
+      <div class="pretext-prose">
+        <img class="pretext-mark" id="pretextMark"
+             src="../Assets/openProse logos/OP-style-v2.svg"
+             alt="OpenProse mark" draggable="false">
+        <p>OpenProse is built on a small set of beliefs. <em>Intent should be executable.</em> Contracts should be readable. A delivery should be a verified outcome, never a hopeful artifact. The runtime treats your spec as the source of truth: every run scored against it, every drift surfaced, every Monday a brief that proves itself before it ships. We don't write prompts; we write programs in <em>prose</em>. The mark anchored in this paragraph is grabbable: drag it to a new position and the prose reflows around its silhouette via <em>pretext</em>, our shape-aware layout library. Click a signet below to swap the mark for a different glyph; the wrap obstacle updates and the column re-paints. We bill on <em>outcomes</em>, not tokens. The brief that lands on Monday is the same document that ran on Sunday night, with a signature attached.</p>
+      </div>
+      <div class="pretext-swatches" aria-label="Swap mark">
+        <button class="pretext-swatch active" type="button" data-src="../Assets/openProse logos/OP-style-v2.svg" aria-label="OP style v2 signet"><img src="../Assets/openProse logos/OP-style-v2.svg" alt=""><span>style v2</span></button>
+        <button class="pretext-swatch" type="button" data-src="../Assets/openProse logos/OP-infinite.svg" aria-label="OP infinite signet"><img src="../Assets/openProse logos/OP-infinite.svg" alt=""><span>infinite</span></button>
+        <button class="pretext-swatch" type="button" data-src="../Assets/openProse logos/OP-Circle.svg" aria-label="OP circle signet"><img src="../Assets/openProse logos/OP-Circle.svg" alt=""><span>circle</span></button>
+        <button class="pretext-swatch" type="button" data-src="../Assets/openProse logos/OP-cursive.svg" aria-label="OP cursive signet"><img src="../Assets/openProse logos/OP-cursive.svg" alt=""><span>cursive</span></button>
+        <button class="pretext-swatch" type="button" data-src="../Assets/openProse logos/OP-swish.svg" aria-label="OP swish signet"><img src="../Assets/openProse logos/OP-swish.svg" alt=""><span>swish</span></button>
+      </div>
+      <p class="pretext-meta"><span id="pretextPos">x: 50% &middot; y: 50%</span> &middot; drag the mark &middot; click a swatch to swap</p>
+    </div>
+
+    <h3 id="c-swap">V.16 Swap-cycle widget · <em>five families, one click</em></h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">
+      The canonical drop-in mark rotator. Click the signet or wordmark to cycle through the five OpenProse logo families (style v2, infinite, circle, swish, cursive). Each click fires a <code class="ui-code">swap-logo-changed</code> custom event so layout-sensitive pages can re-flow on aspect-ratio change. Source snippet lives in <code class="ui-code">Assets/openProse logos/_logoset-snippet.html</code>.
+    </p>
+    <div class="swap-demo" id="swapDemo">
+      <div class="swap-stage">
+        <svg class="swap-signet" id="swapSignet" viewBox="0 0 142 142"
+             role="img" aria-label="OpenProse signet (click to cycle)">
+          <!-- Static fallback that gets replaced on cycle -->
+          <circle cx="71" cy="71" r="62" fill="none" stroke="currentColor" stroke-width="10"/>
+          <circle cx="102" cy="40" r="14" fill="currentColor"/>
+        </svg>
+        <svg class="swap-wordmark" id="swapWordmark" viewBox="0 0 3840 998"
+             role="img" aria-label="OpenProse wordmark (click to cycle)">
+          <text x="0" y="700" font-family="Kecal" font-size="800" fill="currentColor"
+                font-weight="500">OpenProse</text>
+        </svg>
+        <p class="swap-caption" id="swapCaption"><strong>style v2</strong> &middot; click to cycle &middot; 1 / 5</p>
+      </div>
+      <div class="swap-row">
+        <button class="swap-pill active" data-family="style">style v2</button>
+        <button class="swap-pill" data-family="infinite">infinite</button>
+        <button class="swap-pill" data-family="circle">circle</button>
+        <button class="swap-pill" data-family="swish">swish</button>
+        <button class="swap-pill" data-family="cursive">cursive</button>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ============================================================
+       VI VOICE & TONE — three sample registers, with notes.
+       ============================================================ -->
+  <section class="sg-section" id="voice">
+    <div class="sg-section-num">VI Voice &amp; Tone</div>
+    <h2>One register, <em>three sentences</em>, three marks.</h2>
+    <p class="sg-lede">
+      The brand voice is calm, specific, and unafraid of a short sentence.
+      It names things by their nouns. Italic carries the writer's emphasis;
+      the sidenote offers the reader's footnote. Below are the three
+      sanctioned registers and a flat list of sample sentences in each.
+    </p>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:var(--space-sm); margin-bottom:var(--space-md);">
+      <div class="voice-card-demo">
+        <div class="vc-tag">Short · declaration</div>
+        <blockquote>"Write the outcome. <em>We run it.</em>"</blockquote>
+        <p class="vc-note">Six words. The tagline register. Used on hero, primary marketing, the elevator pitch.</p>
+      </div>
+      <div class="voice-card-demo">
+        <div class="vc-tag">Spec · bang</div>
+        <blockquote>"Billed by <em>delivery</em><sup class="sn">!</sup>. If the outcome doesn't ship, no line."</blockquote>
+        <p class="vc-note">Terms of art spoken plainly. The bang marker on the one word that carries the rule. One per page.</p>
+      </div>
+      <div class="voice-card-demo">
+        <div class="vc-tag">Editorial · italic</div>
+        <blockquote>"Once, the week began with a scramble. <em>Then the outcome was declared in a file.</em>"</blockquote>
+        <p class="vc-note">Long form. Italic carries the pivot. No sidenote — the author still holds the line.</p>
+      </div>
+    </div>
+
+    <h3 id="voice-samples">VI.1 More sample sentences</h3>
+    <ol style="font-family:var(--type-mono); font-size:0.94rem; color:var(--ink-2); line-height:1.75; padding-left:var(--space-md); max-width:var(--measure-ch); list-style:decimal-leading-zero;">
+      <li><b>Short.</b> "OpenProse turns the file into a routine."</li>
+      <li><b>Short.</b> "The page reads the way a good analyst would have written it."</li>
+      <li><b>Spec.</b> "<code class="ui-code">responsibility:</code> the unit. <code class="ui-code">cadence:</code> the clock. <code class="ui-code">outcome:</code> the deliverable."</li>
+      <li><b>Spec.</b> "Every run is verified, signed, and archived. <em>Seven years</em>, by default."</li>
+      <li><b>Editorial.</b> "The standup happens anyway, but it is fifteen minutes shorter."</li>
+      <li><b>Editorial.</b> "The humanist computer is the insight that craft and machinery were never opposed."</li>
+    </ol>
+
+    <h3 id="voice-rules">VI.2 Voice rules</h3>
+    <ul style="font-family:var(--type-mono); font-size:0.94rem; color:var(--ink-2); line-height:1.8; padding-left:var(--space-md); max-width:var(--measure-ch);">
+      <li>Italic is the <em>writer</em>; sidenote is the <em>reader</em>. They never share a phrase.</li>
+      <li>Maximum one bang (<code class="ui-code">&lt;sup class="sn"&gt;!&lt;/sup&gt;</code>) per page. If you reach for a second, the first is wrong.</li>
+      <li>Name things by their nouns. "Outcome", "delivery", "spec", "run", "brief" — not "thing", "stuff", "deliverable".</li>
+      <li>Short sentences earn long ones. If three sentences in a row are over 20 words, one must drop to under 8.</li>
+      <li>Never end a paragraph on chrome (badge, button, code-fragment) — only on prose.</li>
+    </ul>
+  </section>
+
+  <!-- ============================================================
+       VII DO / DON'T — the five most easily misused patterns,
+       paired side-by-side with the why.
+       ============================================================ -->
+  <section class="sg-section" id="do-dont">
+    <div class="sg-section-num">VII Do / Don't</div>
+    <h2>Five patterns, <em>five mistakes</em>.</h2>
+    <p class="sg-lede">
+      These are the patterns that go wrong most often when a new operator
+      picks up the system. For each: the correct application on the left,
+      the misuse on the right, the reasoning underneath.
+    </p>
+
+    <h3 id="do-em">VII.1 em emphasis</h3>
+    <div class="sg-do-dont">
+      <div class="sg-do">
+        <div class="sg-do-tag">Do</div>
+        <p class="sg-do-body">"The system is <em>calm</em>. The page does not <em>announce</em>; it <em>arrives</em>."</p>
+        <p class="sg-do-why">One italic per clause, on the verb or modifier that turns the sentence. The reader's eye lands on the meaning, not the typography.</p>
+      </div>
+      <div class="sg-dont">
+        <div class="sg-dont-tag">Don't</div>
+        <p class="sg-dont-body">"The <em>system</em> is <em>calm</em>. The <em>page</em> does <em>not</em> <em>announce</em>; it <em>arrives</em>."</p>
+        <p class="sg-dont-why">Italic everywhere = italic nowhere. The eye stops tracking. Save em for the single word that, if removed, removes the sentence's pivot.</p>
+      </div>
+    </div>
+
+    <h3 id="do-bang">VII.2 The bang sidenote</h3>
+    <div class="sg-do-dont">
+      <div class="sg-do">
+        <div class="sg-do-tag">Do</div>
+        <p class="sg-do-body">"Billed by delivery<sup class="sn">!</sup>. If the outcome doesn't ship, no line."</p>
+        <p class="sg-do-why">One bang per page, on the single load-bearing claim. If you find yourself reaching for a second, the first is wrong.</p>
+      </div>
+      <div class="sg-dont">
+        <div class="sg-dont-tag">Don't</div>
+        <p class="sg-dont-body">"Billed by delivery<sup class="sn">!</sup>. Verified<sup class="sn">!</sup>. Signed<sup class="sn">!</sup>. Archived<sup class="sn">!</sup>."</p>
+        <p class="sg-dont-why">Four bangs = no bang. The bang is the brand's warning shot; reuse erases its weight. Use the numbered sidenote for the rest.</p>
+      </div>
+    </div>
+
+    <h3 id="do-sn-chrome">VII.3 Sidenote on chrome</h3>
+    <div class="sg-do-dont">
+      <div class="sg-do">
+        <div class="sg-do-tag">Do</div>
+        <p class="sg-do-body">"The standup happens anyway, but it is fifteen minutes shorter<sup class="sn">3</sup>."</p>
+        <p class="sg-do-why">Sidenotes attach to prose — paragraph sentences, editorial H2/H3, document preview body. The reader is reading.</p>
+      </div>
+      <div class="sg-dont">
+        <div class="sg-dont-tag">Don't</div>
+        <p class="sg-dont-body" style="text-align:center"><span class="ui-badge live">· Live<sup class="sn">3</sup></span></p>
+        <p class="sg-dont-why">Never on a badge, button, or the logotype. Chrome doesn't earn footnotes; the reader isn't reading chrome, they're scanning it.</p>
+      </div>
+    </div>
+
+    <h3 id="do-italic-sn">VII.4 Italic and sidenote sharing a phrase</h3>
+    <div class="sg-do-dont">
+      <div class="sg-do">
+        <div class="sg-do-tag">Do</div>
+        <p class="sg-do-body">"The machine handles the <em>cadence</em>. The prose handles the <em>voice</em><sup class="sn">4</sup>."</p>
+        <p class="sg-do-why">Italic on one phrase, sidenote on a different phrase. Author voice and reader margin sit side by side, never on top of each other.</p>
+      </div>
+      <div class="sg-dont">
+        <div class="sg-dont-tag">Don't</div>
+        <p class="sg-dont-body">"The machine handles the <em>cadence<sup class="sn">4</sup></em>."</p>
+        <p class="sg-dont-why">Crossing them puts the reader's voice in the writer's mouth. The italic word is the author's; the sidenote is the reader's option to disagree.</p>
+      </div>
+    </div>
+
+    <h3 id="do-color">VII.5 Colour as accent</h3>
+    <div class="sg-do-dont">
+      <div class="sg-do">
+        <div class="sg-do-tag">Do</div>
+        <p class="sg-do-body" style="font-family:var(--type-mono); color:var(--ink);">The page is loud only by the <em>absence</em> of colour.</p>
+        <p class="sg-do-why">Hierarchy is built from the five-step ink ramp on warm off-white. Distance from paper = importance. Teal is the writer's pivot, amber the rare "look up" — never both on the same phrase.</p>
+      </div>
+      <div class="sg-dont">
+        <div class="sg-dont-tag">Don't</div>
+        <p class="sg-dont-body" style="color:#c0392b">"Once, the <em style="color:var(--teal)">week</em> began with a <em style="color:var(--amber)">scramble</em>."</p>
+        <p class="sg-dont-why">Three accents in one sentence = no accent. Red is for failure; teal is for the writer's pivot; amber is for one moment per page. Mixing them on the same phrase erases all three.</p>
+      </div>
+    </div>
+
+    <h3 id="do-radius">VII.6 Corner radius</h3>
+    <div class="sg-do-dont">
+      <div class="sg-do">
+        <div class="sg-do-tag">Do</div>
+        <p class="sg-do-body" style="margin:0;"><span class="ui-badge" style="border-radius:0">v λ.codex.0</span> <button class="ui-btn primary" style="border-radius:0">Begin →</button></p>
+        <p class="sg-do-why">Chrome (badge, button, code-fragment) uses sharp corners. The page reads as a document, not an app shell.</p>
+      </div>
+      <div class="sg-dont">
+        <div class="sg-dont-tag">Don't</div>
+        <p class="sg-dont-body" style="margin:0;"><span class="ui-badge" style="border-radius:14px">v λ.codex.0</span> <button class="ui-btn primary" style="border-radius:14px">Begin →</button></p>
+        <p class="sg-dont-why">Pill chrome reads as SaaS. The brand sits in the line between editorial and engineering; rounded corners pull it away from both.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       VIII File conventions  (expanded 2026-05-26 with naming
+       pattern, header template, JH comment convention, section
+       organisation. X direction catalog moved to follow IX.)
+       ============================================================ -->
+  <section class="sg-section" id="conventions">
+    <div class="sg-section-num">VIII File Conventions</div>
+    <h2>One file per direction, <em>one header</em>, six body attrs.</h2>
+    <p class="sg-lede">Every direction page declares its mode via six <code class="ui-code">data-*</code> attributes on <code class="ui-code">&lt;body&gt;</code>:</p>
+    <pre style="background:var(--paper-warm); border:1px solid var(--rule-mid); padding:var(--space-md); border-radius:var(--radius-md); overflow-x:auto; font-size:var(--fs-caption); line-height:1.6;">
+&lt;link rel="stylesheet" href="_tokens.css"&gt;
+&lt;link rel="stylesheet" href="_pairings.css"&gt;
+&lt;script src="_styleguide.js" defer&gt;&lt;/script&gt;
+
+&lt;body data-direction="μ"
+      data-palette="light-warm-teal"
+      data-pairing="A"
+      data-mono="plex"
+      data-layout="homepage"
+      data-mark="bloom"
+      data-styleguide-autoinit&gt;
+    </pre>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">
+      The <code class="ui-code">data-styleguide-autoinit</code> attribute is optional. When present, the floating switchboard panel mounts automatically (the aspect catalog uses it). This document and live direction pages omit it.
+    </p>
+
+    <h3 id="files-naming">VIII.1 Naming pattern</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">
+      Files in <code class="ui-code">JHWorking/brand/</code> follow the pattern <code class="ui-code">direction-{greek}-{slug}.html</code>. A fork that changes one decision adds one slug segment, in order of cascade — left-to-right, latest-rightmost.
+    </p>
+    <pre style="font-family:var(--type-mono); font-size:0.92rem; color:var(--ink-2); background:var(--paper-warm); border:1px solid var(--rule); padding:var(--space-md); max-width:var(--measure); border-radius:var(--radius-md); overflow-x:auto;">direction-{greek-letter}-{slug}.html
+
+examples
+  direction-alpha-editorial.html
+  direction-beta-tufte.html
+  direction-beta-tufte-mono.html               <span style="color:var(--ink-4); font-style:italic;">// fork: changed body face to mono</span>
+  direction-beta-tufte-mono-kecal.html         <span style="color:var(--ink-4); font-style:italic;">// fork: replaced sans/accent with Kecal</span>
+  direction-mu-bloom.html                      <span style="color:var(--ink-4); font-style:italic;">// new direction</span>
+  direction-mu-bloom-homepage-landscape.html   <span style="color:var(--ink-4); font-style:italic;">// fork: chose landscape layout</span></pre>
+
+    <h3 id="files-header">VIII.2 Header comment template</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">
+      Every direction file opens with a block comment that names the direction, its DNA, and its implementation strategy. The header is the file's TL;DR — a reader (human or agent) coming in cold reads this and knows what they're working with.
+    </p>
+    <pre style="font-family:var(--type-mono); font-size:0.78rem; color:var(--ink-2); background:var(--paper-warm); border:1px solid var(--rule); padding:var(--space-md); max-width:var(--measure); border-radius:var(--radius-md); overflow-x:auto; white-space:pre-wrap;">/* ============================================
+   DIRECTION {GREEK} · {NAME}
+   {One-line tagline.}
+
+   DNA: {Body face} body, {Display face} chrome, {Mono face} specs.
+   {Paper hex}, {ink scale shape}, {colour policy}.
+   Emphasis is {the brand's emphasis primitive — sidenote, italic, etc.}.
+
+   Implementation: {what was inherited from a parent direction
+   and what this fork overrides — tokens, components, layout}.
+
+   Parent chain: {alpha → beta → … → this file}
+   ============================================ */</pre>
+
+    <h3 id="files-jh">VIII.3 JH comment-tag convention</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">
+      Decisions, overrides, and revisions are tagged inline with a date-stamped JH comment. Quotation marks around the rationale mean the words are pulled <em>verbatim</em> from a review JSON. No paraphrase. If the reviewer didn't say it that way, don't say they did.
+    </p>
+    <pre style="font-family:var(--type-mono); font-size:0.92rem; color:var(--ink-2); background:var(--paper-warm); border:1px solid var(--rule); padding:var(--space-md); max-width:var(--measure); border-radius:var(--radius-md); overflow-x:auto;">// JH YYYY-MM-DD — short rationale
+
+examples
+  // JH YYYY-MM-DD — shrink title serif to match top of mono used for Open.
+  // JH YYYY-MM-DD — italic +20% drop to +14% over Tufte's narrow column.
+  // JH YYYY-MM-DD — replace garamond and inter with styles of kecal.
+  // JH YYYY-MM-DD — make the canonical maximally rigorous.</pre>
+
+    <h3 id="files-section-order">VIII.4 Section organisation order</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">
+      A direction file flows in this order. CSS within the <code class="ui-code">&lt;style&gt;</code> block follows the same vertical order: reset → tokens → base → cover → sections → palette → type → components → responsive → override blocks. Each override block (parent → fork → fork) gets its own banner comment.
+    </p>
+    <pre style="font-family:var(--type-mono); font-size:0.92rem; color:var(--ink-2); background:var(--paper-warm); border:1px solid var(--rule); padding:var(--space-md); max-width:var(--measure); border-radius:var(--radius-md); overflow-x:auto;">  hero            section.hero
+  palette         section#palette
+  type            section#type
+  emphasis        section#emphasis        <span style="color:var(--ink-4); font-style:italic;">// β: sidenote primitive</span>
+  pairing         section#pairing
+  variations      section#variations
+  ui              section#ui              <span style="color:var(--ink-4); font-style:italic;">// component catalog</span>
+  applications    section#applications
+  voice           section#voice
+  do-dont         section#do-dont
+  colophon        section.colophon</pre>
+
+    <h3 id="files-mobile">VIII.5 Mobile safety</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">
+      Every page carries a <code class="ui-code">/* mobile-safety-640 */</code> block before <code class="ui-code">&lt;/style&gt;</code> applying <code class="ui-code">html, body { overflow-x: hidden }</code>, <code class="ui-code">flex-wrap: wrap</code> on common bars, and wordmark-preservation rules. Auto-applied by <code class="ui-code">/tmp/mobile-audit/patch.py</code>. Don't author this by hand; let the patch regenerate it on save.
+    </p>
+  </section>
+
+  <!-- ============================================================
+       IX AGENT INTEGRATION
+       Expanded 2026-05-26: 7-step skeleton + tokens.yaml programmatic
+       dump. The dump is the machine-readable replica of every token
+       in the canonical (light-warm-teal default + the dark-machine
+       pair). For other palettes, see _tokens.css directly.
+       ============================================================ -->
+  <section class="sg-section" id="agent">
+    <div class="sg-section-num">IX Agent Integration</div>
+    <h2>For the agent: <em>read this section first</em>.</h2>
+    <p class="sg-lede">
+      The remainder of this section is addressed to an LLM that has been asked to render a page in any of the ten directions. If you are a human reader, treat this as the formal spec — everything above is the prose.
+    </p>
+
+    <h3 id="agent-skeleton">IX.1 How to produce a direction page</h3>
+    <ol style="padding-left:1.2em; line-height:1.85; font-family:var(--type-mono); font-size:0.94rem; color:var(--ink-2); max-width:var(--measure-ch);">
+      <li>Pick a direction (β γ δ ζ η θ λ μ ν ρ) from the aspect catalog and use its canonical recipe (palette/pairing/accent/mono/layout/mark) unless instructed otherwise.</li>
+      <li>Link <code class="ui-code">_tokens.css</code> + <code class="ui-code">_pairings.css</code>. <em>Never</em> redefine palette or font-family in inline CSS — that breaks the cascade and the page can't be re-themed.</li>
+      <li>Set the six <code class="ui-code">data-*</code> attributes on <code class="ui-code">&lt;body&gt;</code> (direction, palette, pairing, mono, layout, mark) — see <a href="#conventions">VIII</a>.</li>
+      <li>Use role tokens (<code class="ui-code">var(--type-display)</code>, <code class="ui-code">var(--type-body)</code>, <code class="ui-code">var(--ink)</code>, <code class="ui-code">var(--paper)</code>, …) — <em>never</em> literal hex or font-family strings.</li>
+      <li>Wrap any emphasis in <code class="ui-code">&lt;em&gt;</code>. The global rule from <a href="#c-em">V.9</a> renders it correctly across every palette.</li>
+      <li>For mark treatment (bloom / rain / ripple / physics / 3d / blackhole), include the appropriate snippet from <code class="ui-code">_marks/&lt;treatment&gt;.html</code>.</li>
+      <li>Place a header comment per <a href="#files-header">VIII.2</a> and tag every override with a dated <code class="ui-code">// JH</code> comment that quotes the source review verbatim. If any rule conflicts with a user instruction, <em>ask before deviating</em>.</li>
+    </ol>
+
+    <h3 id="agent-tokens-yaml">IX.2 tokens.yaml · programmatic dump</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">
+      A single YAML block describing every token in machine-readable form. Drop this into a build pipeline, a Figma sync, or a downstream agent's context. The block documents the <em>canonical</em> default (light-warm-teal) and its dark sibling (dark-machine); for the other five palettes, read <code class="ui-code">_tokens.css</code>.
+    </p>
+<details class="sg-dump-details"><summary>tokens.yaml · expand the full dump</summary>
+<pre class="sg-token-dump"><span class="k">brand:</span>          <span class="v">openprose</span>
+<span class="k">document:</span>       <span class="v">direction-styleguide.html</span>
+<span class="k">role:</span>           <span class="v">canonical · multi-mode · consolidated</span>
+<span class="k">version:</span>        <span class="v">0.2</span>
+<span class="k">supersedes:</span>     <span class="v">direction-beta-tufte-mono-kecal-styleguide{,-teal,-teal-companion}.html</span>
+<span class="k">axes:</span>
+  <span class="k">direction:</span> <span class="v">[β, γ, δ, ζ, η, θ, λ, μ, ν, ρ]</span>
+  <span class="k">palette:</span>   <span class="v">[light-cool-default, light-warm-teal, light-warm-rust, light-manuscript-cream, light-saas-neutral, dark-machine, dark-livingdoc]</span>
+  <span class="k">pairing:</span>   <span class="v">[A, B, C, D, E, F]</span>
+  <span class="k">mono:</span>      <span class="v">[plex, jet, space]</span>
+  <span class="k">layout:</span>    <span class="v">[styleguide, homepage, concept, landscape, codex, poster]</span>
+  <span class="k">mark:</span>      <span class="v">[static, swap-cycle, rain, bloom, ripple, physics, 3d, blackhole]</span>
+
+<span class="c"># ============================================================
+# COLOR TOKENS · LIGHT-WARM-TEAL (canonical default)
+# Source: _tokens.css palette 2
+# ============================================================</span>
+<span class="k">color:</span>
+  <span class="k">light-warm-teal:</span>
+    <span class="k">paper:</span>        <span class="v">'#f5f0e8'</span>   <span class="c"># the page · off-white</span>
+    <span class="k">paper-warm:</span>   <span class="v">'#f0e8d8'</span>   <span class="c"># warmer card / code aside</span>
+    <span class="k">paper-lt:</span>     <span class="v">'#fbf7ef'</span>   <span class="c"># lifted card</span>
+    <span class="k">paper-elev:</span>   <span class="v">'#f9f5ed'</span>   <span class="c"># slight elevation card</span>
+    <span class="k">paper-cream:</span>  <span class="v">'#fbf7ef'</span>   <span class="c"># alias for paper-lt</span>
+    <span class="k">paper-dk:</span>     <span class="v">'#e8e0d0'</span>   <span class="c"># code surface · alias paper-warm</span>
+    <span class="k">ink:</span>          <span class="v">'#2a2520'</span>   <span class="c"># primary copy</span>
+    <span class="k">ink-2:</span>        <span class="v">'rgba(42,37,32,0.78)'</span>   <span class="c"># secondary copy</span>
+    <span class="k">ink-3:</span>        <span class="v">'rgba(42,37,32,0.55)'</span>   <span class="c"># labels · eyebrows · sidenote copy</span>
+    <span class="k">ink-4:</span>        <span class="v">'rgba(42,37,32,0.32)'</span>   <span class="c"># tertiary · skeleton</span>
+    <span class="k">ink-5:</span>        <span class="v">'rgba(42,37,32,0.18)'</span>   <span class="c"># ghost · faintest mark</span>
+    <span class="k">teal:</span>         <span class="v">'#3a7a6a'</span>   <span class="c"># editorial accent · writer's pivot</span>
+    <span class="k">teal-deep:</span>    <span class="v">'#2e6456'</span>   <span class="c"># teal hover / pressed</span>
+    <span class="k">teal-soft:</span>    <span class="v">'#5ea08e'</span>   <span class="c"># muted teal</span>
+    <span class="k">teal-tint:</span>    <span class="v">'rgba(58,122,106,0.14)'</span>
+    <span class="k">teal-faint:</span>   <span class="v">'rgba(58,122,106,0.06)'</span>
+    <span class="k">amber:</span>        <span class="v">'#c49a5c'</span>   <span class="c"># rare "look up" accent</span>
+    <span class="k">amber-deep:</span>   <span class="v">'#a87f44'</span>
+    <span class="k">amber-soft:</span>   <span class="v">'#d4aa6c'</span>
+    <span class="k">amber-tint:</span>   <span class="v">'rgba(196,154,92,0.18)'</span>
+    <span class="k">red:</span>          <span class="v">'#c0392b'</span>   <span class="c"># fail / attention</span>
+    <span class="k">red-deep:</span>     <span class="v">'#8e2b20'</span>
+    <span class="k">red-muted:</span>    <span class="v">'#d4604f'</span>
+    <span class="k">red-tint:</span>     <span class="v">'rgba(192,57,43,0.10)'</span>
+    <span class="k">rule:</span>         <span class="v">'rgba(42,37,32,0.14)'</span>
+    <span class="k">rule-mid:</span>     <span class="v">'rgba(42,37,32,0.06)'</span>
+    <span class="k">hl:</span>           <span class="v">transparent</span>   <span class="c"># silenced; renders as dotted underline</span>
+    <span class="k">hl-hot:</span>       <span class="v">transparent</span>   <span class="c"># silenced; renders as dashed underline</span>
+    <span class="k">on-dark:</span>      <span class="v">'#fbf7ef'</span>   <span class="c"># cream on dark surfaces (cards-in-light)</span>
+
+<span class="c"># ============================================================
+# COLOR TOKENS · DARK-MACHINE (canonical dark sibling)
+# Source: _tokens.css palette 6
+# ============================================================</span>
+  <span class="k">dark-machine:</span>
+    <span class="k">paper:</span>        <span class="v">'#0e0e10'</span>
+    <span class="k">paper-warm:</span>   <span class="v">'#16161a'</span>
+    <span class="k">paper-lt:</span>     <span class="v">'#1c1c20'</span>
+    <span class="k">paper-elev:</span>   <span class="v">'#1a1a1e'</span>
+    <span class="k">ink:</span>          <span class="v">'#e8e4dc'</span>
+    <span class="k">ink-2:</span>        <span class="v">'#c8c4bc'</span>
+    <span class="k">ink-3:</span>        <span class="v">'rgba(232,228,220,0.55)'</span>
+    <span class="k">ink-4:</span>        <span class="v">'rgba(232,228,220,0.32)'</span>
+    <span class="k">ink-5:</span>        <span class="v">'rgba(232,228,220,0.18)'</span>
+    <span class="k">amber:</span>        <span class="v">'#d4a64f'</span>   <span class="c"># primary accent on dark</span>
+    <span class="k">amber-deep:</span>   <span class="v">'#b8862e'</span>
+    <span class="k">amber-soft:</span>   <span class="v">'#e0bf68'</span>
+    <span class="k">red:</span>          <span class="v">'#c0392b'</span>   <span class="c"># fail retains across palettes</span>
+    <span class="k">good:</span>         <span class="v">'#6ee87a'</span>   <span class="c"># terminal-green · dark-only</span>
+    <span class="k">rule:</span>         <span class="v">'rgba(232,228,220,0.10)'</span>
+    <span class="k">rule-mid:</span>     <span class="v">'rgba(232,228,220,0.06)'</span>
+
+<span class="c"># Other five palettes documented in _tokens.css (palettes 1, 3, 4, 5, 7).</span>
+
+<span class="c"># ============================================================
+# TYPOGRAPHY
+# ============================================================</span>
+<span class="k">type:</span>
+  <span class="k">faces:</span>
+    <span class="k">kecal:</span>
+      <span class="k">family:</span>    <span class="v">'Kecal'</span>
+      <span class="k">source:</span>    <span class="v">'jsdelivr.net/gh/FungiType/Kecal'</span>
+      <span class="k">weights:</span>   <span class="v">[200, 300, 400, 500, 600, 700, 800]</span>
+      <span class="k">italics:</span>   <span class="v">synthesised</span>
+      <span class="k">role:</span>      <span class="v">italic emphasis (800) · chrome labels (500) · display in pairings B/D</span>
+    <span class="k">mono-plex:</span>
+      <span class="k">family:</span>    <span class="v">'IBM Plex Mono'</span>
+      <span class="k">source:</span>    <span class="v">google-fonts</span>
+      <span class="k">weights:</span>   <span class="v">[300, 400, 500, 600, 700]</span>
+      <span class="k">italics:</span>   <span class="v">[400, 500, 600]</span>
+      <span class="k">role:</span>      <span class="v">default mono · body · headings</span>
+    <span class="k">mono-jet:</span>
+      <span class="k">family:</span>    <span class="v">'JetBrains Mono'</span>
+      <span class="k">source:</span>    <span class="v">google-fonts</span>
+      <span class="k">weights:</span>   <span class="v">[300, 400, 500, 600, 700]</span>
+      <span class="k">italics:</span>   <span class="v">[400, 500, 600]</span>
+      <span class="k">role:</span>      <span class="v">alt mono · humanist · γ manuscript default</span>
+    <span class="k">mono-space:</span>
+      <span class="k">family:</span>    <span class="v">'Space Mono'</span>
+      <span class="k">source:</span>    <span class="v">google-fonts</span>
+      <span class="k">weights:</span>   <span class="v">[400, 700]</span>
+      <span class="k">italics:</span>   <span class="v">[400, 700]</span>
+      <span class="k">role:</span>      <span class="v">alt mono · wider grid · slab register</span>
+  <span class="k">scale:</span>
+    <span class="c"># weights below are the rendered values under pairing A (canonical default);</span>
+    <span class="c"># switch data-pairing to remap weight via --w-display / --w-body in _pairings.css.</span>
+    <span class="k">display:</span>  <span class="v">{ size: '4rem',    px: 68,  line: 1.05, track: '-0.025em', weight: 500 }</span>
+    <span class="k">h1:</span>       <span class="v">{ size: '2.5rem',  px: 42,  line: 1.10, track: '-0.018em', weight: 400 }</span>
+    <span class="k">h2:</span>       <span class="v">{ size: '1.75rem', px: 30,  line: 1.15, track: '-0.012em', weight: 400 }</span>
+    <span class="k">h3:</span>       <span class="v">{ size: '1.25rem', px: 21,  line: 1.30, track: '-0.005em', weight: 500 }</span>
+    <span class="k">body:</span>     <span class="v">{ size: '1rem',    px: 17,  line: 1.55, track: '0',        weight: 400 }</span>
+    <span class="k">small:</span>    <span class="v">{ size: '0.82rem', px: 14,  line: 1.65, track: '0',        weight: 400 }</span>
+    <span class="k">label:</span>    <span class="v">{ size: '0.72rem', px: 12,  line: 1.40, track: '0.14em',   weight: 500 }</span>
+    <span class="k">caption:</span>  <span class="v">{ size: '0.62rem', px: 10.5, line: 1.40, track: '0.18em',  weight: 500 }</span>
+    <span class="k">mono:</span>     <span class="v">{ size: '0.92em',  px: ~16, line: 1.65, track: '0.02em',   weight: 400 }</span>
+  <span class="k">cap_height_norm:</span>  <span class="v">0.70</span>   <span class="c"># font-size-adjust: cap-height var(--cap-norm)</span>
+  <span class="k">ex_height_norm:</span>   <span class="v">0.50</span>   <span class="c"># font-size-adjust: ex-height  var(--ex-norm)</span>
+  <span class="k">rules:</span>
+    <span class="k">em_global:</span>    <span class="v">"em wraps with Kecal italic 800 at 1em — cap-height matched to active mono"</span>
+    <span class="k">em_letter:</span>    <span class="v">letter-spacing: 0</span>
+    <span class="k">italic_voice:</span> <span class="v">"italic is the author; sidenote is the reader; never share a phrase"</span>
+
+<span class="c"># ============================================================
+# PAIRINGS A–F — six display × body × em recipes
+# Selected via body[data-pairing]; resolved via _pairings.css.
+# ============================================================</span>
+<span class="k">pairings:</span>
+  <span class="k">A:</span>  <span class="v">{ display: 'mono 500',    display_em: 'Kecal 800 italic', body: 'mono 400', body_em: 'Kecal 800 italic',  note: 'workhorse — every direction default' }</span>
+  <span class="k">B:</span>  <span class="v">{ display: 'Kecal 500',   display_em: 'mono 500 italic',  body: 'Kecal 400', body_em: 'mono 500 italic',  note: 'inverted — warmer body, mono accent' }</span>
+  <span class="k">C:</span>  <span class="v">{ display: 'mono 700',    display_em: 'mono 700 italic',  body: 'Kecal 400', body_em: 'Kecal 600 italic', note: 'dark-only — bold mono display' }</span>
+  <span class="k">D:</span>  <span class="v">{ display: 'Kecal 800 it', display_em: 'mono 600 upright', body: 'mono 400', body_em: 'Kecal 800 italic', note: 'λ codex spreads' }</span>
+  <span class="k">E:</span>  <span class="v">{ display: 'mono 300',    display_em: 'Kecal 400 italic', body: 'mono 300', body_em: 'Kecal 400 italic', note: 'whisper — ν tideline · pull-formula reading' }</span>
+  <span class="k">F:</span>  <span class="v">{ display: 'mono 700',    display_em: 'Kecal 800 italic', body: 'mono 700', body_em: 'Kecal 800 italic', note: 'shout — δ machine · θ living-doc · ρ blackhole' }</span>
+
+<span class="c"># ============================================================
+# SPACING / LAYOUT / BORDER / MOTION
+# ============================================================</span>
+<span class="c"># root font-size is 17px (set on html in canonical); px values below assume that root.</span>
+<span class="k">space:</span>
+  <span class="k">root_px:</span> <span class="v">17</span>
+  <span class="k">3xs:</span> <span class="v">{ rem: 0.125, px: 2.13 }</span>
+  <span class="k">2xs:</span> <span class="v">{ rem: 0.25,  px: 4.25 }</span>
+  <span class="k">xs:</span>  <span class="v">{ rem: 0.5,   px: 8.5 }</span>
+  <span class="k">sm:</span>  <span class="v">{ rem: 0.75,  px: 12.75 }</span>
+  <span class="k">md:</span>  <span class="v">{ rem: 1,     px: 17 }</span>
+  <span class="k">lg:</span>  <span class="v">{ rem: 1.5,   px: 25.5 }</span>
+  <span class="k">xl:</span>  <span class="v">{ rem: 2.25,  px: 38.25 }</span>
+  <span class="k">2xl:</span> <span class="v">{ rem: 3.5,   px: 59.5 }</span>
+  <span class="k">3xl:</span> <span class="v">{ rem: 5.5,   px: 93.5 }</span>
+
+<span class="k">layout:</span>
+  <span class="k">wide:</span>       <span class="v">'1180px'</span>
+  <span class="k">measure:</span>    <span class="v">'66ch'</span>
+  <span class="k">measure_ch:</span> <span class="v">'66ch'</span>
+  <span class="k">mobile_breakpoint:</span>   <span class="v">'640px'</span>   <span class="c"># mobile-safety patch</span>
+  <span class="k">demo_breakpoint:</span>     <span class="v">'880px'</span>   <span class="c"># two-col demos collapse</span>
+  <span class="k">sidenote_breakpoint:</span> <span class="v">'1100px'</span>  <span class="c"># asides float into right margin above</span>
+
+<span class="k">border:</span>
+  <span class="k">width:</span>   <span class="v">'1px'</span>
+  <span class="k">width2:</span>  <span class="v">'2px'</span>
+  <span class="k">radius:</span>  <span class="v">'6px'</span>    <span class="c"># --radius-md · canonical multi-direction</span>
+  <span class="k">radius_sharp:</span> <span class="v">'0'</span>    <span class="c"># β (Tufte) override · sharp corners only</span>
+
+<span class="k">motion:</span>
+  <span class="k">fast:</span>    <span class="v">'120ms'</span>
+  <span class="k">med:</span>     <span class="v">'240ms'</span>
+  <span class="k">slow:</span>    <span class="v">'480ms'</span>
+
+<span class="c"># ============================================================
+# COMPONENT INVENTORY — every catalog entry's selector + parts
+# ============================================================</span>
+<span class="k">components:</span>
+  <span class="k">hero:</span>            <span class="v">{ class: '.sample-hero',  id: 'c-hero',     centred: true,  required: ['eyebrow', 'mark', 'rule', 'tagline', 'meta'] }</span>
+  <span class="k">section_kicker:</span>  <span class="v">{ class: '.section-kicker', id: 'c-kicker', variants: ['I·', 'I·', 'II·', '...'] }</span>
+  <span class="k">button:</span>          <span class="v">{ class: '.ui-btn',       id: 'c-button',   variants: ['.primary', '.secondary', '.ghost'] }</span>
+  <span class="k">badge:</span>           <span class="v">{ class: '.ui-badge',     id: 'c-badge',    variants: ['.live', '.ok', '.hold'] }</span>
+  <span class="k">input:</span>           <span class="v">{ class: '.ui-input',     id: 'c-input',    parts: ['.ui-input-group', '.ui-input-label', ':focus'] }</span>
+  <span class="k">code:</span>            <span class="v">{ class: '.ui-code',      id: 'c-code',     variants: ['inline', '.block'], spans: ['.k', '.c', '.v'] }</span>
+  <span class="k">card:</span>            <span class="v">{ class: '.card-block',   id: 'c-card',     parts: ['.card-kicker', '.card-title', '.card-body'] }</span>
+  <span class="k">lede:</span>            <span class="v">{ class: '.lede',         id: 'c-lede',     measure: '62ch' }</span>
+  <span class="k">em:</span>              <span class="v">{ tag: 'em',              id: 'c-em',       rule: 'global · Kecal 800 italic 1em' }</span>
+  <span class="k">dropcap:</span>         <span class="v">{ selector: '::first-letter', id: 'c-dropcap', size: '4.2em' }</span>
+  <span class="k">sidenote:</span>        <span class="v">{ markers: ['1..n', '!'],  id: 'c-sidenote', max_bangs_per_page: 1, float_above: '1100px' }</span>
+  <span class="k">sidenote_underline:</span> <span class="v">{ classes: ['.hl', '.hl-hot'], id: 'c-sidenote-underline' }</span>
+  <span class="k">pull_quote:</span>      <span class="v">{ class: '.pull-quote',   id: 'c-pullquote' }</span>
+  <span class="k">pairing:</span>         <span class="v">{ class: '.pairing',      id: 'c-pairing',  container: 'measure' }</span>
+  <span class="k">voice_card:</span>      <span class="v">{ class: '.voice-card',   id: 'c-voice' }</span>
+  <span class="k">pretext_demo:</span>    <span class="v">{ class: '.pretext-demo', id: 'c-pretext' }</span>
+  <span class="k">swap_cycle:</span>      <span class="v">{ class: '.swap-demo',    id: 'c-swap',     families: ['style-v2', 'infinite', 'circle', 'swish', 'cursive'] }</span>
+
+<span class="c"># ============================================================
+# VOICE REGISTERS
+# ============================================================</span>
+<span class="k">voice:</span>
+  <span class="k">registers:</span>
+    <span class="k">short:</span>      <span class="v">"6-word declarations · tagline cadence · hero · marketing"</span>
+    <span class="k">spec:</span>       <span class="v">"terms of art spoken plainly · one bang max · contracts · briefs"</span>
+    <span class="k">editorial:</span>  <span class="v">"long form · italic carries the pivot · field notes · pull-quote pieces"</span>
+
+<span class="c"># ============================================================
+# DESIGN RULES — the bright lines
+# ============================================================</span>
+<span class="k">rules:</span>
+  <span class="k">color:</span>
+    - <span class="v">"three independent accents per palette: teal (writer's pivot), amber (look-up), red (fail)"</span>
+    - <span class="v">"never mix red with teal in the same phrase — they're independent registers"</span>
+    - <span class="v">"amber is rare — one phrase per page maximum"</span>
+    - <span class="v">"hierarchy is built from the five-step ink ramp on warm off-white"</span>
+    - <span class="v">"never replace --ink (#2a2520) with pure black (#000) — too cold against the warm paper"</span>
+  <span class="k">emphasis:</span>
+    - <span class="v">"italic is the writer; sidenote is the reader"</span>
+    - <span class="v">"italic and sidenote never share a phrase"</span>
+    - <span class="v">"one bang per page; if you want a second, the first is wrong"</span>
+    - <span class="v">"sidenotes on prose only — never on chrome, badge, button, or logotype"</span>
+  <span class="k">corners:</span>
+    - <span class="v">"β direction: all corners sharp; border-radius is 0 everywhere"</span>
+    - <span class="v">"non-β directions: --radius-md (6px) on cards · sharp on chrome (badge, button)"</span>
+  <span class="k">files:</span>
+    - <span class="v">"direction-{greek}-{slug}.html; forks append slug segments left-to-right"</span>
+    - <span class="v">"link _tokens.css + _pairings.css; never redefine palette or font-family inline"</span>
+    - <span class="v">"every override tagged // JH YYYY-MM-DD with verbatim reviewer quote"</span>
+
+<span class="c"># ============================================================
+# PARENT CHAIN — the lineage this canonical consolidates
+# ============================================================</span>
+<span class="k">parent_chain:</span>
+  - <span class="v">direction-alpha-editorial.html</span>
+  - <span class="v">direction-beta-tufte.html</span>
+  - <span class="v">direction-beta-tufte-mono.html</span>
+  - <span class="v">direction-beta-tufte-mono-kecal.html</span>
+  - <span class="v">direction-beta-tufte-mono-kecal-styleguide.html</span>
+  - <span class="v">direction-beta-tufte-mono-kecal-styleguide-teal.html         # palette fork</span>
+  - <span class="v">direction-beta-tufte-mono-kecal-styleguide-teal-companion.html # voice fork</span>
+  - <span class="v">direction-styleguide.html                                   # THIS FILE · canonical consolidation</span>
+</pre>
+</details>
+
+    <h3 id="agent-dump">IX.3 Live token dump (resolved)</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">
+      The switchboard on the aspect catalog has a <b>Dump tokens</b> button: it prints the resolved token set for any axis combination. The dump above is the static spec; the catalog switchboard is the runtime.
+    </p>
+  </section>
+
+  <!-- ============================================================
+       X DIRECTION CATALOG (relocated 2026-05-26 to its proper
+       position after IX agent integration. Was previously
+       sandwiched between V and VIII; now bookends the spec.)
+       ============================================================ -->
+  <section class="sg-section" id="directions">
+    <div class="sg-section-num">X Directions</div>
+    <h2>Ten directions, <em>one</em> catalog.</h2>
+    <p class="sg-lede">
+      A direction is a canonical composition of the axes: palette + pairing + accent + mono + layout + mark. The click-to-apply catalog of all ten lives on the aspect catalog page. This document renders the canonical one: β · teal · pairing A · upright · Plex.
+    </p>
+    <table class="sg-table" aria-label="The ten direction recipes">
+      <thead><tr><th>Direction</th><th>Palette</th><th>Pairing</th><th>Accent</th><th>Mono</th><th>Layout</th><th>Mark</th></tr></thead>
+      <tbody>
+        <tr><td class="mono" style="font-size:1rem">β</td><td class="mono">light-warm-teal</td><td class="mono">A</td><td class="mono">upright</td><td class="mono">plex</td><td class="mono">styleguide</td><td class="mono">swap-cycle</td></tr>
+        <tr><td class="mono" style="font-size:1rem">γ</td><td class="mono">light-manuscript-cream</td><td class="mono">B</td><td class="mono">upright</td><td class="mono">jet</td><td class="mono">concept</td><td class="mono">static</td></tr>
+        <tr><td class="mono" style="font-size:1rem">δ</td><td class="mono">dark-machine</td><td class="mono">C</td><td class="mono">upright</td><td class="mono">plex</td><td class="mono">homepage</td><td class="mono">rain</td></tr>
+        <tr><td class="mono" style="font-size:1rem">ζ</td><td class="mono">light-saas-neutral</td><td class="mono">B</td><td class="mono">upright</td><td class="mono">jet</td><td class="mono">homepage</td><td class="mono">swap-cycle</td></tr>
+        <tr><td class="mono" style="font-size:1rem">η</td><td class="mono">light-warm-rust</td><td class="mono">A</td><td class="mono">upright</td><td class="mono">plex</td><td class="mono">homepage</td><td class="mono">swap-cycle</td></tr>
+        <tr><td class="mono" style="font-size:1rem">θ</td><td class="mono">dark-livingdoc</td><td class="mono">F</td><td class="mono">upright</td><td class="mono">jet</td><td class="mono">concept</td><td class="mono">static</td></tr>
+        <tr><td class="mono" style="font-size:1rem">λ</td><td class="mono">light-warm-teal</td><td class="mono">D</td><td class="mono">upright</td><td class="mono">plex</td><td class="mono">codex</td><td class="mono">static</td></tr>
+        <tr><td class="mono" style="font-size:1rem">μ</td><td class="mono">light-warm-teal</td><td class="mono">A</td><td class="mono">upright</td><td class="mono">plex</td><td class="mono">homepage</td><td class="mono">bloom</td></tr>
+        <tr><td class="mono" style="font-size:1rem">ν</td><td class="mono">light-warm-teal</td><td class="mono">E</td><td class="mono">upright</td><td class="mono">plex</td><td class="mono">concept</td><td class="mono">static</td></tr>
+        <tr><td class="mono" style="font-size:1rem">ρ</td><td class="mono">light-warm-rust</td><td class="mono">F</td><td class="mono">upright</td><td class="mono">plex</td><td class="mono">concept</td><td class="mono">3d</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============================================================
+       COLOPHON — closes the document in the brand's voice. The
+       bottom of the spec is where the brand says its own name.
+       ============================================================ -->
+  <section class="sg-colophon" id="colophon">
+    <div class="rule"></div>
+    <div class="line italic">OpenProse · Direction styleguide · <em>every direction, one spec</em></div>
+    <div class="line">Paper <span class="mono">#f5f0e8</span> · Ink <span class="mono">#2a2520</span> · Teal <span class="mono" style="color:var(--teal)">#3a7a6a</span> · Amber <span class="mono" style="color:var(--amber)">#c49a5c</span> · Red <span class="mono" style="color:var(--red)">#c0392b</span></div>
+    <div class="line">The accent is the writer · the sidenote is the reader · they never share a phrase</div>
+    <div class="line">Accent face: <a href="https://github.com/FungiType/Kecal">Kecal</a> · FungiType · OFL · legible first, esoteric second</div>
+    <div class="line">JH 2026-05-26 · v0.2 · rigorous-parity · consolidates β-styleguide{,-teal,-teal-companion}</div>
+  </section>
+
+</div><!-- /sg-shell -->
+
+<script src="_styleguide.js" defer></script>
+<script>
+  /* Page wiring (fixed canonical state; the switchboard lives on the catalog). */
+  document.addEventListener('DOMContentLoaded', () => {
+    function setVia(axis, value) {
+      if (window.SG && window.SG.setAxis) {
+        window.SG.setAxis(axis, value);
+      } else {
+        document.body.setAttribute('data-' + axis, value);
+      }
+    }
+
+    (function initSurfaceSwitch() {
+      // The one control this document keeps: canonical light (teal) or
+      // canonical dark (machine). Both render the same fixed spec.
+      const LIGHT = 'light-warm-teal';
+      const DARK  = 'dark-machine';
+      const btns = document.querySelectorAll('.sg-surface-switch button');
+      if (!btns.length) return;
+      function apply(surface) {
+        document.body.setAttribute('data-palette', surface === 'dark' ? DARK : LIGHT);
+        btns.forEach(b => b.classList.toggle('active', b.dataset.surface === surface));
+        try { localStorage.setItem('sg-theme', surface); } catch (e) {}
+      }
+      let stored = 'light';
+      try { stored = localStorage.getItem('sg-theme') === 'dark' ? 'dark' : 'light'; } catch (e) {}
+      apply(stored);
+      btns.forEach(b => b.addEventListener('click', () => apply(b.dataset.surface)));
+    })();
+    document.querySelectorAll('[data-set-palette]').forEach(el => {
+      el.addEventListener('click', () => setVia('palette', el.dataset.setPalette));
+    });
+    /* Highlight active tiles whenever the mode changes. */
+    function syncActiveTiles() {
+      const ds = document.body.dataset;
+      document.querySelectorAll('[data-set-palette]').forEach(el => {
+        el.classList.toggle('active', el.dataset.setPalette === ds.palette);
+      });
+      // Update the "current state" status line if present
+      const status = document.getElementById('active-mode-status');
+      if (status) {
+        status.innerHTML =
+          '<b>' + (ds.direction || '–') + '</b>' +
+          ' · ' + (ds.palette || '–') +
+          ' · pairing <b>' + (ds.pairing || '–') + '</b>' +
+          ' · accent <b>' + (ds.accent || 'upright') + '</b>' +
+          ' · mono <b>' + (ds.mono || '–') + '</b>' +
+          ' · layout <b>' + (ds.layout || '–') + '</b>' +
+          ' · mark <b>' + (ds.mark || '–') + '</b>';
+      }
+    }
+    document.addEventListener('sg:mode-change', syncActiveTiles);
+    syncActiveTiles();
+
+    /* Pair-tile palette toggle (II.1 — greyscale ↔ active palette) */
+    document.querySelectorAll('[data-toggle-pair]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const tile = btn.closest('.pair-tile');
+        tile.classList.toggle('preview-palette');
+        btn.textContent = tile.classList.contains('preview-palette') ? 'greyscale' : 'palette';
+      });
+    });
+
+    /* Update mono labels when data-mono changes */
+    const MONO_NAMES = { plex: 'IBM Plex Mono', jet: 'JetBrains Mono', space: 'Space Mono' };
+    document.addEventListener('sg:mode-change', e => {
+      ['active-mono-label', 'active-mono-label-2'].forEach(id => {
+        const lbl = document.getElementById(id);
+        if (lbl && e.detail.mono) lbl.textContent = e.detail.mono;
+      });
+      // Update the human-readable mono name in the cover specimen
+      const nameEl = document.getElementById('active-mono-name');
+      if (nameEl && e.detail.mono) nameEl.textContent = MONO_NAMES[e.detail.mono] || e.detail.mono;
+    });
+
+    /* ============================================================
+       COVER MARK · click to cycle through 5 families (mirrors V.16)
+       ============================================================ */
+    (function initCoverMark() {
+      const mark = document.getElementById('coverMark');
+      if (!mark) return;
+      const FAMILIES = [
+        '../Assets/openProse logos/OP-style-v2.svg',
+        '../Assets/openProse logos/OP-infinite.svg',
+        '../Assets/openProse logos/OP-Circle.svg',
+        '../Assets/openProse logos/OP-swish.svg',
+        '../Assets/openProse logos/OP-cursive.svg',
+      ];
+      let i = 0;
+      mark.addEventListener('click', () => {
+        i = (i + 1) % FAMILIES.length;
+        mark.src = FAMILIES[i];
+      });
+    })();
+
+    /* ============================================================
+       V.15 PRETEXT DEMO — pointer-driven drag + swatch swap
+       ============================================================ */
+    (function initPretext() {
+      const mark = document.getElementById('pretextMark');
+      const posEl = document.getElementById('pretextPos');
+      const swatches = document.querySelectorAll('.pretext-swatch');
+      if (!mark) return;
+
+      let dragging = false, startX = 0, startY = 0, startPx = 0.5, startPy = 0.5;
+
+      function setPos(px, py) {
+        // Clamp to a wider range so the user feels the float-margin shifting,
+        // but not so wide that the mark escapes the column entirely.
+        px = Math.max(-1.2, Math.min(2.4, px));
+        py = Math.max(-0.6, Math.min(3.0, py));
+        mark.style.setProperty('--px', px.toFixed(3));
+        mark.style.setProperty('--py', py.toFixed(3));
+        if (posEl) {
+          posEl.textContent =
+            'x: ' + Math.round(px * 100) + '% · y: ' + Math.round(py * 100) + '%';
+        }
+      }
+
+      mark.addEventListener('pointerdown', e => {
+        dragging = true;
+        mark.setPointerCapture(e.pointerId);
+        mark.classList.add('dragging');
+        const cs = getComputedStyle(mark);
+        startPx = parseFloat(cs.getPropertyValue('--px')) || 0.5;
+        startPy = parseFloat(cs.getPropertyValue('--py')) || 0.5;
+        startX = e.clientX; startY = e.clientY;
+        e.preventDefault();
+      });
+      mark.addEventListener('pointermove', e => {
+        if (!dragging) return;
+        const dx = (e.clientX - startX) / 360;
+        const dy = (e.clientY - startY) / 360;
+        setPos(startPx + dx, startPy + dy);
+      });
+      ['pointerup','pointercancel'].forEach(evt =>
+        mark.addEventListener(evt, e => {
+          dragging = false;
+          mark.classList.remove('dragging');
+          try { mark.releasePointerCapture(e.pointerId); } catch(_) {}
+        })
+      );
+
+      swatches.forEach(sw => {
+        sw.addEventListener('click', () => {
+          const src = sw.dataset.src;
+          if (!src) return;
+          mark.src = src;
+          swatches.forEach(s => s.classList.toggle('active', s === sw));
+        });
+      });
+    })();
+
+    /* ============================================================
+       V.16 SWAP-CYCLE LOGO WIDGET — 5-family rotator
+       ============================================================ */
+    (function initSwapCycle() {
+      let signet = document.getElementById('swapSignet');
+      let wordmark = document.getElementById('swapWordmark');
+      const caption = document.getElementById('swapCaption');
+      const pills = document.querySelectorAll('.swap-pill');
+      if (!signet) return;
+
+      // Each family's signet + wordmark spec. Path data uses Assets/openProse logos/*.svg
+      // as image sources to keep the widget light; clicking cycles through them.
+      const LOGOS = [
+        { id: 'style',    label: 'style v2',
+          signet:   '../Assets/openProse logos/OP-style-v2.svg',
+          wordmark: '../Assets/openProse logos/OP-style-type.svg' },
+        { id: 'infinite', label: 'infinite',
+          signet:   '../Assets/openProse logos/OP-infinite.svg',
+          wordmark: '../Assets/openProse logos/OP-infinite-type.svg' },
+        { id: 'circle',   label: 'circle',
+          signet:   '../Assets/openProse logos/OP-Circle.svg',
+          wordmark: '../Assets/openProse logos/OP-Circle-type.svg' },
+        { id: 'swish',    label: 'swish',
+          signet:   '../Assets/openProse logos/OP-swish.svg',
+          wordmark: '../Assets/openProse logos/OP-swish-type.svg' },
+        { id: 'cursive',  label: 'cursive',
+          signet:   '../Assets/openProse logos/OP-cursive.svg',
+          wordmark: '../Assets/openProse logos/OP-cursive-type.svg' },
+      ];
+      let idx = 0;
+
+      function apply(i) {
+        idx = ((i % LOGOS.length) + LOGOS.length) % LOGOS.length;
+        const L = LOGOS[idx];
+
+        // If we already have <img> elements, just update src (cheaper, no flicker).
+        // The very first render may have SVG fallback elements — in that case
+        // replace once with <img> then never replace again.
+        if (signet && signet.tagName === 'IMG') {
+          signet.src = L.signet;
+          signet.alt = 'OP ' + L.label + ' signet';
+        } else {
+          const newSig = document.createElement('img');
+          newSig.src = L.signet;
+          newSig.alt = 'OP ' + L.label + ' signet';
+          newSig.className = 'swap-signet';
+          newSig.id = 'swapSignet';
+          newSig.style.cursor = 'pointer';
+          signet.replaceWith(newSig);
+          signet = newSig;            // reassign closure ref to live element
+          signet.addEventListener('click', () => apply(idx + 1));
+        }
+
+        if (wordmark && wordmark.tagName === 'IMG') {
+          wordmark.src = L.wordmark;
+          wordmark.alt = 'OP ' + L.label + ' wordmark';
+        } else {
+          const newWm = document.createElement('img');
+          newWm.src = L.wordmark;
+          newWm.alt = 'OP ' + L.label + ' wordmark';
+          newWm.className = 'swap-wordmark';
+          newWm.id = 'swapWordmark';
+          newWm.style.cursor = 'pointer';
+          wordmark.replaceWith(newWm);
+          wordmark = newWm;
+          wordmark.addEventListener('click', () => apply(idx + 1));
+        }
+
+        caption.innerHTML = '<strong>' + L.label + '</strong> · click to cycle · '
+                            + (idx + 1) + ' / ' + LOGOS.length;
+        pills.forEach(p => p.classList.toggle('active', p.dataset.family === L.id));
+
+        document.dispatchEvent(new CustomEvent('swap-logo-changed', {
+          detail: { id: L.id, label: L.label, signet: L.signet, wordmark: L.wordmark }
+        }));
+      }
+
+      // Wire pill clicks
+      pills.forEach(p => {
+        p.addEventListener('click', () => apply(LOGOS.findIndex(l => l.id === p.dataset.family)));
+      });
+
+      // Initialize with the first family rendered as actual asset
+      apply(0);
+    })();
+  });
+</script>
+
+</body>
+</html>

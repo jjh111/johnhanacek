@@ -1,0 +1,1542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 142 142'%3E%3Cpath d='M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z' fill='%232a2520'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenProse — Direction θ · Living Document</title>
+<style>
+/* ============================================
+   DIRECTION θ · LIVING DOCUMENT
+   Round-3 finalist, response to GPT's "design a document
+   that proves it can think" critique and the inspiration-
+   folder ChatGPT mock that JH had been carrying.
+
+   DNA: a printed page that happens to be running. Warm
+   dark cocoa #1a1410 surface (not black, never black —
+   like an old book under tungsten). Cormorant Garamond
+   italic for human intent. JetBrains Mono for the machine
+   contract. A single warm-cream ink #f0e8d8 carries every
+   glyph; the only chromatic accent is ember-amber #d4a064
+   used for live indicators (eval scores, breathing dots,
+   sparkline strokes) — the warmth of "currently running".
+
+   The defining move: the page CONTAINS its own running
+   program. requires/ensures spec blocks sit directly under
+   the manifesto sentence. One ensures clause sharpens
+   itself in front of the reader. An eval score climbs.
+   Time appears as accumulating content, not animation flair.
+
+   Same 9-section markup as α–η so it compares directly.
+   See INSPIRATION-NOTES.md and MOTIFS-ANALYSIS.md.
+   ============================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --paper:     #f5f0e8;
+  --paper-dk:  #ede7d6;
+  --paper-lt:  #faf8f3;
+  --ink:       #0f0f0f;
+  --ink-2:     #2e2e2e;
+  --ink-3:     #5a5a5a;
+  --ink-4:     #909090;
+  --red:       #c0392b;
+  --red-muted: #d4604f;
+  --red-deep:  #8e2b20;
+  --rule:      #d8d0c0;
+  --rule-mid:  #e2dcc9;
+
+  /* NEW — the highlighter palette. Two stops so the mark lands
+     as a visible stroke over paper without bleeding the whole row.
+     Yellow = the reader's marker (calm, studious).
+     Hot red = editorial emphasis (urgent, "look here"). */
+  --hl:        rgba(255, 207, 64, 0.36);
+  --hl-hot:    rgba(218, 105, 72, 0.32);
+
+  --serif: 'Palatino Linotype', 'Palatino', 'Book Antiqua', Georgia, serif;
+  --sans:  'Helvetica Neue', 'Helvetica', Arial, sans-serif;
+  --mono:  'SF Mono', 'Fira Code', 'JetBrains Mono', Consolas, monospace;
+  --wide: 1180px;
+  --measure: 860px;
+}
+
+html { font-size: 17px; scroll-behavior: smooth; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--serif);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
+}
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 15% 8%, rgba(192,57,43,0.03), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 95% 95%, rgba(192,57,43,0.02), transparent 60%);
+}
+body > * { position: relative; z-index: 1; }
+
+/* HIGHLIGHTER MARK — the reader's pen. Linear-gradient rests under the
+   baseline so it reads like a thick marker stroke, not a solid block.
+   Inline so it wraps naturally inside the prose. */
+.hl,
+.hl-hot {
+  background: var(--hl);
+  padding: 0.06em 0.18em;
+  /* Keep gilt/warmth consistent with the warm paper ground. */
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  /* Italic inside a highlighter gets harder to read; drop the italic when the
+     highlighter is applied to an <em>. Red italic is authorial voice; the
+     highlighter replaces that role with reader emphasis. */
+  font-style: inherit;
+  color: inherit;
+}
+.hl-hot { background: var(--hl-hot); }
+
+/* HERO */
+.hero {
+  padding: 5.5rem 2rem 4rem;
+  text-align: center;
+  max-width: var(--wide); margin: 0 auto;
+  position: relative;
+}
+.hero-eyebrow {
+  font-family: var(--sans); font-size: 0.72rem;
+  letter-spacing: 0.24em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 2.5rem;
+  display: inline-flex; align-items: center; gap: 0.75rem;
+}
+.hero-eyebrow::before, .hero-eyebrow::after {
+  content: ''; width: 28px; height: 1px; background: var(--red);
+}
+.hero-mark {
+  font-family: var(--serif);
+  font-size: clamp(4rem, 11vw, 8rem);
+  font-weight: 400; line-height: 0.95;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+.hero-mark em { font-style: italic; color: var(--red); }
+.hero-rule { width: 120px; height: 1px; background: var(--red); margin: 2rem auto 1.5rem; }
+.hero-tagline {
+  font-family: var(--serif);
+  font-size: clamp(1.05rem, 1.8vw, 1.25rem);
+  font-style: italic; color: var(--ink-2);
+  letter-spacing: 0.005em;
+}
+.hero-meta {
+  margin-top: 2rem;
+  font-family: var(--mono); font-size: 0.66rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* SECTIONS */
+section.logotype-section {
+  max-width: var(--wide); margin: 0 auto;
+  padding: 4.5rem 2rem;
+}
+section.logotype-section.narrow { max-width: var(--measure); }
+
+.section-kicker {
+  font-family: var(--sans); font-size: 0.7rem;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 1.25rem;
+  display: flex; align-items: center; gap: 0.85rem;
+}
+.section-kicker::after { content: ''; flex: 1; height: 1px; background: var(--red-muted); opacity: 0.5; }
+
+section.logotype-section h2 {
+  font-family: var(--serif);
+  font-size: clamp(1.8rem, 3.2vw, 2.4rem);
+  font-weight: 400; line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin-bottom: 0.5rem;
+}
+section.logotype-section h2 em { font-style: italic; color: var(--red); }
+section.logotype-section .lede {
+  font-family: var(--serif); font-size: 1.08rem;
+  color: var(--ink-2); max-width: 58ch;
+  margin-bottom: 2rem; line-height: 1.55;
+}
+section.logotype-section .lede::first-line {
+  font-variant: small-caps; letter-spacing: 0.04em;
+}
+
+/* PALETTE */
+.palette-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;
+  margin-top: 2rem;
+}
+.swatch {
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  padding: 1rem;
+  display: flex; flex-direction: column; gap: 0.25rem;
+}
+.swatch-chip {
+  width: 100%; aspect-ratio: 1.4;
+  border: 1px solid var(--rule);
+  margin-bottom: 0.75rem;
+}
+.swatch-name {
+  font-family: var(--sans); font-size: 0.66rem;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink); font-weight: 600;
+}
+.swatch-hex {
+  font-family: var(--mono); font-size: 0.76rem;
+  color: var(--ink-3);
+}
+.swatch-role {
+  font-family: var(--serif); font-style: italic;
+  font-size: 0.84rem; color: var(--ink-3); margin-top: 0.15rem;
+}
+
+/* TYPE SCALE */
+.type-specimen {
+  border: 1px solid var(--rule); background: var(--paper-lt);
+  padding: 2rem 2.25rem;
+}
+.type-row {
+  display: grid; grid-template-columns: 140px 1fr auto;
+  gap: 1.5rem; align-items: baseline;
+  padding: 0.9rem 0; border-bottom: 1px dotted var(--rule-mid);
+}
+.type-row:last-child { border-bottom: none; }
+.type-label {
+  font-family: var(--sans); font-size: 0.62rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+}
+.type-sample { color: var(--ink); line-height: 1.05; }
+.type-sample.display { font-family: var(--serif); font-size: 3rem; font-weight: 400; letter-spacing: -0.02em; }
+.type-sample.display em { font-style: italic; color: var(--red); }
+.type-sample.h2 { font-family: var(--serif); font-size: 2rem; font-weight: 400; font-style: italic; color: var(--red); }
+.type-sample.h3 { font-family: var(--serif); font-size: 1.4rem; font-weight: 400; letter-spacing: -0.01em; }
+.type-sample.body { font-family: var(--serif); font-size: 1.08rem; line-height: 1.55; color: var(--ink-2); }
+.type-sample.small-caps { font-family: var(--serif); font-size: 1rem; font-variant: small-caps; letter-spacing: 0.04em; color: var(--ink-2); }
+.type-sample.mono { font-family: var(--mono); font-size: 0.92rem; color: var(--ink-2); }
+.type-sample.hl-sample { font-family: var(--serif); font-size: 1.2rem; line-height: 1.5; color: var(--ink); }
+.type-meta {
+  font-family: var(--mono); font-size: 0.68rem;
+  color: var(--ink-4); letter-spacing: 0.02em; text-align: right;
+}
+
+/* LOGO VARIATIONS */
+.variations-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem;
+}
+.variation-tile {
+  border: 1px solid var(--rule);
+  padding: 3.25rem 2rem;
+  min-height: 240px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem;
+  text-align: center;
+}
+.variation-tile.paper { background: var(--paper-lt); }
+.variation-tile.warm  { background: var(--paper-dk); }
+.variation-tile.dark  { background: var(--ink); color: var(--paper); border-color: #222; }
+.variation-tile .vt-mark {
+  font-family: var(--serif); font-size: 2.25rem;
+  font-weight: 400; letter-spacing: -0.015em; line-height: 1;
+  color: var(--ink);
+}
+.variation-tile.dark .vt-mark { color: var(--paper); }
+.variation-tile .vt-mark em { font-style: italic; color: var(--red); }
+.variation-tile.dark .vt-mark em { color: var(--red-muted); }
+.variation-tile .vt-tag {
+  font-family: var(--sans); font-size: 0.62rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink-3); font-weight: 600;
+}
+.variation-tile.dark .vt-tag { color: rgba(245,240,232,0.5); }
+.variation-tile .vt-signet {
+  width: 84px; height: 84px;
+  border: 1.5px solid var(--ink);
+  background: var(--paper-lt);
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+.variation-tile .vt-signet::before, .variation-tile .vt-signet::after {
+  content: ''; position: absolute; background: var(--red);
+}
+.variation-tile .vt-signet::before { top: -3px; left: 50%; transform: translateX(-50%); width: 6px; height: 6px; border-radius: 50%; }
+.variation-tile .vt-signet::after  { bottom: -3px; left: 50%; transform: translateX(-50%); width: 28px; height: 1px; }
+.variation-tile .vt-signet span {
+  font-family: var(--serif); font-size: 1.7rem; font-weight: 400;
+  letter-spacing: -0.015em;
+}
+.variation-tile .vt-signet span em { font-style: italic; color: var(--red); }
+
+/* UI ELEMENTS */
+.ui-kit {
+  border: 1px solid var(--rule); background: var(--paper-lt);
+  padding: 2rem 2.25rem;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;
+}
+.ui-cell h4 {
+  font-family: var(--sans); font-size: 0.62rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 1rem;
+}
+.ui-buttons { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.ui-btn {
+  font-family: var(--sans); font-size: 0.8rem; font-weight: 600;
+  padding: 0.75rem 1.4rem;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  border: 1px solid var(--ink); cursor: pointer;
+  transition: all 0.15s;
+}
+.ui-btn.primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.ui-btn.primary:hover { background: var(--red); border-color: var(--red); }
+.ui-btn.secondary { background: var(--red); color: var(--paper); border-color: var(--red); }
+.ui-btn.secondary:hover { background: var(--red-deep); border-color: var(--red-deep); }
+.ui-btn.ghost { background: transparent; color: var(--ink); border-color: var(--ink); }
+.ui-btn.ghost:hover { background: var(--ink); color: var(--paper); }
+
+.ui-badges { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1.5rem; }
+.ui-badge {
+  font-family: var(--sans); font-size: 0.62rem;
+  padding: 0.25rem 0.6rem; border: 1px solid;
+  letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600;
+}
+.ui-badge.live { color: var(--red); border-color: var(--red); background: rgba(192,57,43,0.05); }
+.ui-badge.ok { color: #14803e; border-color: #14803e; background: rgba(20,128,62,0.04); }
+.ui-badge.hold { color: var(--ink-3); border-color: var(--ink-4); }
+
+.ui-code {
+  background: var(--ink); color: var(--paper);
+  padding: 1.25rem 1.5rem;
+  font-family: var(--mono); font-size: 0.8rem; line-height: 1.85;
+}
+.ui-code .k { color: var(--red-muted); }
+.ui-code .c { color: #7a7a7a; font-style: italic; }
+.ui-code .v { color: var(--paper); }
+
+.ui-input-wrap { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 1.5rem; }
+.ui-input {
+  font-family: var(--serif); font-size: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--paper);
+  border: 1px solid var(--rule); color: var(--ink);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.ui-input:focus {
+  outline: none; border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(192,57,43,0.1);
+}
+
+/* HIGHLIGHTER SPECIMEN — documents the new brand tool inline */
+.hl-specimen {
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  padding: 2rem 2.25rem;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem;
+}
+.hl-rule { display: flex; flex-direction: column; gap: 0.55rem; }
+.hl-rule .rule-label {
+  font-family: var(--sans); font-size: 0.62rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+}
+.hl-rule .rule-text {
+  font-family: var(--serif); font-size: 0.98rem;
+  color: var(--ink-2); line-height: 1.55;
+}
+.hl-rule .rule-text em { color: var(--ink); font-style: italic; }
+.hl-rule .rule-text .hl { background: var(--hl); }
+.hl-rule .rule-text .hl-hot { background: var(--hl-hot); }
+.hl-sample-lines {
+  display: flex; flex-direction: column; gap: 1.2rem;
+  font-family: var(--serif); font-size: 1.05rem;
+  color: var(--ink); line-height: 1.65;
+}
+.hl-sample-lines .label {
+  font-family: var(--sans); font-size: 0.58rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--red); font-weight: 600; margin-bottom: 0.25rem;
+  display: block;
+}
+
+/* EDITORIAL PAIRING */
+.pairing {
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  padding: 3rem 3.5rem;
+  position: relative;
+  max-width: var(--measure); margin: 0 auto;
+}
+.pairing::before {
+  content: 'SPECIMEN · EDITORIAL PAGE';
+  position: absolute; top: -10px; left: 2rem;
+  background: var(--paper); color: var(--red);
+  padding: 0.2rem 0.7rem;
+  font-family: var(--sans); font-size: 0.56rem;
+  letter-spacing: 0.2em; font-weight: 600;
+}
+.pairing .article-eyebrow {
+  font-family: var(--sans); font-size: 0.66rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 0.85rem;
+}
+.pairing h3 {
+  font-family: var(--serif);
+  font-size: clamp(1.7rem, 3vw, 2.1rem);
+  font-weight: 400; line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin-bottom: 1.25rem;
+}
+.pairing h3 em { font-style: italic; color: var(--red); }
+.pairing p {
+  font-family: var(--serif); font-size: 1.1rem;
+  color: var(--ink-2); line-height: 1.75;
+  margin-bottom: 1.15rem;
+}
+.pairing p:first-of-type::first-letter {
+  font-family: var(--serif); font-weight: 400;
+  float: left; font-size: 4.5rem; line-height: 0.85;
+  padding: 0.35rem 0.55rem 0 0; color: var(--red);
+}
+.pairing p:first-of-type::first-line {
+  font-variant: small-caps; letter-spacing: 0.04em;
+}
+.pairing p strong { color: var(--ink); font-weight: 500; }
+.pairing .pull-quote {
+  font-family: var(--serif); font-style: italic;
+  font-size: 1.35rem; line-height: 1.4;
+  padding: 1.25rem 0 1.25rem 1.5rem;
+  border-left: 2px solid var(--red);
+  margin: 1.5rem 0; color: var(--ink);
+}
+.pairing .byline {
+  margin-top: 1.5rem; padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+  font-family: var(--sans); font-size: 0.72rem;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-3);
+}
+.pairing .byline strong { color: var(--ink-2); font-weight: 500; }
+
+/* APPLICATIONS */
+.applications-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;
+}
+.app-card {
+  border: 1px solid var(--rule);
+  padding: 2rem;
+  background: var(--paper-lt);
+  position: relative;
+}
+.app-card .app-kicker {
+  font-family: var(--sans); font-size: 0.58rem;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 1rem;
+}
+.business-card {
+  aspect-ratio: 7 / 4;
+  background: var(--paper-lt);
+  border: 1px solid var(--rule);
+  padding: 1.5rem 1.75rem;
+  display: flex; flex-direction: column; justify-content: space-between;
+  position: relative;
+}
+.business-card::before {
+  content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 4px;
+  background: var(--red);
+}
+.business-card .bc-mark {
+  font-family: var(--serif); font-size: 1.4rem;
+  font-weight: 400; letter-spacing: -0.015em;
+}
+.business-card .bc-mark em { font-style: italic; color: var(--red); }
+.business-card .bc-rows {
+  font-family: var(--mono); font-size: 0.72rem;
+  color: var(--ink-3); line-height: 1.7;
+}
+.business-card .bc-rows strong { color: var(--ink); font-weight: 500; }
+
+.document-head {
+  background: var(--paper); border: 1px solid var(--rule);
+  padding: 1.75rem 1.85rem;
+  position: relative;
+}
+.document-head .dh-kicker {
+  font-family: var(--sans); font-size: 0.58rem;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  border-bottom: 1px solid var(--red);
+  padding-bottom: 0.35rem; margin-bottom: 1rem;
+  display: inline-block;
+}
+.document-head h4 {
+  font-family: var(--serif); font-size: 1.45rem;
+  font-weight: 400; letter-spacing: -0.015em; line-height: 1.2;
+  margin-bottom: 0.75rem;
+}
+.document-head h4 em { font-style: italic; color: var(--red); }
+.document-head h4 .hl { background: var(--hl); }
+.document-head .dh-body {
+  font-family: var(--serif); font-size: 0.95rem;
+  color: var(--ink-2); line-height: 1.55;
+}
+.document-head .dh-body::first-line {
+  font-variant: small-caps; letter-spacing: 0.04em;
+}
+.document-head .dh-body .hl { background: var(--hl); }
+.document-head .dh-colophon {
+  margin-top: 1.25rem; padding-top: 0.85rem;
+  border-top: 1px dotted var(--rule-mid);
+  font-family: var(--mono); font-size: 0.66rem;
+  color: var(--ink-3); letter-spacing: 0.04em;
+}
+
+.spec-plate {
+  background: var(--ink); color: var(--paper);
+  padding: 1.85rem 2rem;
+  font-family: var(--mono); font-size: 0.78rem;
+  line-height: 1.85;
+  position: relative;
+}
+.spec-plate::before {
+  content: 'RESPONSIBILITY · FORMAL SPEC';
+  position: absolute; top: -10px; left: 1.5rem;
+  background: var(--paper); color: var(--red);
+  padding: 0.2rem 0.6rem;
+  font-family: var(--sans); font-size: 0.56rem;
+  letter-spacing: 0.18em; font-weight: 600;
+}
+.spec-plate .k { color: var(--red-muted); }
+.spec-plate .c { color: #8a8a8a; font-style: italic; }
+.spec-plate .v { color: var(--paper); }
+
+/* VOICE & TONE */
+.voice-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem;
+}
+.voice-card {
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  padding: 1.75rem 1.5rem;
+  transition: transform 0.2s, border-color 0.2s;
+}
+.voice-card:hover { transform: translateY(-2px); border-color: var(--red); }
+.voice-card .vc-tag {
+  font-family: var(--sans); font-size: 0.6rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 0.85rem;
+}
+.voice-card blockquote {
+  font-family: var(--serif); font-style: italic;
+  font-size: 1.15rem; line-height: 1.4;
+  color: var(--ink); margin-bottom: 1rem; letter-spacing: -0.005em;
+}
+.voice-card blockquote em { color: var(--red); }
+.voice-card blockquote .hl { background: var(--hl); font-style: italic; }
+.voice-card .vc-note {
+  font-family: var(--serif); font-size: 0.9rem;
+  color: var(--ink-2); line-height: 1.55;
+}
+
+/* COLOPHON */
+.colophon {
+  text-align: center;
+  padding: 3rem 2rem 5rem;
+  max-width: var(--wide); margin: 3rem auto 0;
+  border-top: 1px solid var(--rule);
+  font-family: var(--sans); font-size: 0.7rem;
+  color: var(--ink-3); letter-spacing: 0.06em;
+}
+.colophon .rule { width: 48px; height: 1px; background: var(--red); margin: 0 auto 1.5rem; }
+.colophon .line { margin: 0.35rem 0; }
+.colophon .line.italic { font-family: var(--serif); font-style: italic; font-size: 0.9rem; color: var(--ink-2); letter-spacing: 0; margin-bottom: 1rem; }
+.colophon a { color: var(--red); text-decoration: none; margin: 0 0.75rem; transition: color 0.15s; }
+.colophon a:hover { color: var(--red-deep); }
+
+/* Responsive */
+@media (max-width: 880px) {
+  .hero { padding: 4rem 1.5rem 2.5rem; }
+  section.logotype-section { padding: 3.5rem 1.5rem; }
+  .palette-grid { grid-template-columns: repeat(2, 1fr); }
+  .variations-grid { grid-template-columns: 1fr; }
+  .ui-kit { grid-template-columns: 1fr; gap: 2rem; }
+  .hl-specimen { grid-template-columns: 1fr; gap: 1.5rem; }
+  .type-row { grid-template-columns: 1fr; gap: 0.5rem; }
+  .type-meta { text-align: left; }
+  .pairing { padding: 2.25rem 1.75rem; }
+  .applications-grid { grid-template-columns: 1fr; }
+  .voice-grid { grid-template-columns: 1fr; }
+}
+
+/* ============================================
+   ▶ LIVING DOCUMENT OVERRIDE ◀
+   Cocoa #1a1410 surface, warm-cream #f0e8d8 ink,
+   ember-amber #d4a064 the only accent. Per JH
+   2026-05-07, the typography now adopts the β-tufte
+   paradigm — Palatino body, Helvetica sidenote
+   labels, SF Mono code — keeping θ's exact light
+   and dark palettes intact. The page reads as a
+   tufte specimen with θ's living-document colors.
+   ============================================ */
+
+:root {
+  /* Surface — warm cocoa, like aged paper photographed under
+     tungsten. Multiple steps for nesting/elevation. */
+  --paper:     #1a1410;
+  --paper-dk:  #120c08;
+  --paper-lt:  #221a14;
+  --paper-elev:#28201a;
+
+  /* Ink — warm cream, never bright white. Three steps for
+     primary copy, secondary copy, and faint marginalia. */
+  --ink:       #f0e8d8;
+  --ink-2:     #c8bfae;
+  --ink-3:     #8a8275;
+  --ink-4:     #5a5448;
+
+  /* The only chromatic accent. Ember-amber for live indicators —
+     eval scores, breathing dots, sparkline strokes. The warmth
+     of "currently running". */
+  --red:       #d4a064;
+  --red-muted: #e0b878;
+  --red-deep:  #b88444;
+
+  --ember:     #d4a064;
+  --ember-deep:#b88444;
+  --ember-soft:#e0b878;
+  --ember-faint:rgba(212,160,100,0.18);
+
+  --rule:      rgba(240,232,216,0.10);
+  --rule-mid:  rgba(240,232,216,0.06);
+
+  /* The "highlighter" becomes a faint underline. The document
+     is so spec-saturated that the reader doesn't need a pen —
+     emphasis comes from the spec blocks themselves. */
+  --hl:        rgba(212,160,100,0.14);
+  --hl-hot:    rgba(212,160,100,0.28);
+
+  /* β-tufte typography adopted in full: Palatino as the body
+     reading face, Helvetica for sidenote labels and small chrome,
+     SF Mono for code/spec blocks. System fonts — no remote import
+     required for the type stack itself. */
+  --serif: 'Palatino Linotype', 'Palatino', 'Book Antiqua', Georgia, serif;
+  --sans:  'Helvetica Neue', 'Helvetica', Arial, sans-serif;
+  --mono:  'SF Mono', 'Fira Code', 'JetBrains Mono', Consolas, monospace;
+  --measure: 860px;
+}
+
+/* ============================================
+   LIGHT MODE — complementary palette
+   The page defaults to dark cocoa. Light flips it
+   to warm parchment while keeping the ember accent
+   and the same editorial structure.
+   ============================================ */
+[data-theme="light"] {
+  --paper:     #f5f0e8;
+  --paper-dk:  #ede7d6;
+  --paper-lt:  #faf8f3;
+  --paper-elev:#fbf6e9;
+
+  --ink:       #221408;
+  --ink-2:     #3a2614;
+  --ink-3:     #6a5538;
+  --ink-4:     #a89880;
+
+  --red:       #b06820;
+  --red-muted: #c47a30;
+  --red-deep:  #8e5418;
+
+  --ember:     #b06820;
+  --ember-deep:#8e5418;
+  --ember-soft:#c47a30;
+  --ember-faint:rgba(176,104,32,0.14);
+
+  --rule:      rgba(34,20,8,0.14);
+  --rule-mid:  rgba(34,20,8,0.06);
+
+  --hl:        rgba(176,104,32,0.14);
+  --hl-hot:    rgba(176,104,32,0.28);
+}
+
+/* THEME TOGGLE — small mono pill, fixed top-right */
+.theme-toggle {
+  position: fixed;
+  top: 1.1rem;
+  right: 1.1rem;
+  z-index: 50;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ember);
+  background: var(--paper-lt);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 0.45rem 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  display: inline-flex; align-items: center; gap: 0.4rem;
+}
+.theme-toggle:hover { border-color: var(--ember); color: var(--ink); }
+.theme-toggle .t-glyph { opacity: 0.65; }
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 1.08rem;
+  line-height: 1.7;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+}
+body::before {
+  background:
+    radial-gradient(ellipse 60% 40% at 18% 12%, rgba(212,160,100,0.05), transparent 65%),
+    radial-gradient(ellipse 50% 35% at 85% 80%, rgba(212,160,100,0.04), transparent 65%);
+}
+
+/* ── HERO — the load-bearing visual ─────────────────────
+   The hero is the document's first page. Wordmark, single
+   manifesto sentence, the spec block, and a tiny live-state
+   line that ticks forward.
+*/
+.hero {
+  padding-top: 5rem;
+  padding-bottom: 4rem;
+}
+.hero-eyebrow {
+  font-family: var(--mono);
+  color: var(--ember);
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  font-size: 0.66rem;
+}
+.hero-eyebrow::before, .hero-eyebrow::after { background: var(--ember); }
+.hero-mark {
+  font-family: var(--serif);
+  font-weight: 300;
+  font-style: italic;
+  letter-spacing: 0.005em;
+  color: var(--ink);
+}
+.hero-mark em { color: var(--ember); font-style: italic; font-weight: 300; }
+.hero-rule { background: var(--ember); width: 60px; }
+.hero-tagline {
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--ink-2);
+  font-size: 1.2rem;
+  font-weight: 400;
+  max-width: 32ch;
+  margin: 0 auto;
+}
+.hero-meta {
+  color: var(--ink-3);
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+}
+
+/* The spec block under the hero — the brand's load-bearing artifact */
+.living-spec {
+  max-width: 540px;
+  margin: 2.75rem auto 0;
+  font-family: var(--mono);
+  font-size: 0.86rem;
+  line-height: 1.85;
+  color: var(--ink-2);
+  text-align: left;
+  position: relative;
+}
+.living-spec .ls-key { color: var(--ember); }
+.living-spec .ls-val { color: var(--ink); }
+.living-spec .ls-note { color: var(--ink-3); font-style: italic; }
+.living-spec .ls-line { display: block; }
+.living-spec .ls-indent { padding-left: 2ch; }
+.living-spec .ls-clause { transition: color 0.6s ease; }
+.living-spec .ls-clause.refining { color: var(--ember-soft); }
+.living-spec .ls-clause.refined { color: var(--ink); }
+
+/* The live state line — the small ticker that announces the page is running */
+.live-state {
+  margin: 2rem auto 0;
+  max-width: 540px;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+.live-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--ember);
+  animation: livePulse 2.4s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes livePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(212,160,100,0.55); transform: scale(1); }
+  50%      { box-shadow: 0 0 0 8px rgba(212,160,100,0); transform: scale(1.18); }
+}
+.live-state .ls-stat { color: var(--ink); }
+.live-state .ls-stat .num { color: var(--ember); font-weight: 500; }
+.live-state .sep { color: var(--ink-4); }
+.live-state .ls-spark {
+  display: inline-block;
+  width: 60px; height: 14px;
+  vertical-align: middle;
+}
+
+/* ── SECTIONS ─────────────────────────────────────────── */
+.section-kicker {
+  color: var(--ember);
+  font-family: var(--mono);
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+}
+.section-kicker::after { background: var(--ember); opacity: 0.3; }
+
+section.logotype-section h2 {
+  font-family: var(--serif);
+  font-weight: 300;
+  font-style: italic;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+}
+section.logotype-section h2 em { color: var(--ember); font-style: italic; font-weight: 400; }
+section.logotype-section .lede {
+  font-family: var(--serif);
+  color: var(--ink-2);
+  font-size: 1.08rem;
+  line-height: 1.7;
+  max-width: 60ch;
+}
+section.logotype-section .lede::first-line { font-variant: normal; letter-spacing: 0; }
+
+/* The "highlighter" rendered as faint amber wash on a serif phrase */
+.hl, .hl-hot {
+  background: var(--hl);
+  padding: 0.06em 0.32em;
+  border-radius: 2px;
+  color: var(--ink);
+}
+.hl-hot { background: var(--hl-hot); color: var(--ink); }
+
+/* Type specimen */
+.type-specimen {
+  background: var(--paper-lt);
+  border-color: var(--rule);
+  border-radius: 4px;
+}
+.type-row { border-bottom-color: var(--rule); }
+.type-label {
+  color: var(--ember);
+  font-family: var(--mono);
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  font-size: 0.62rem;
+}
+.type-sample.display { font-family: var(--serif); font-weight: 300; font-style: italic; }
+.type-sample.display em { color: var(--ember); font-style: italic; font-weight: 300; }
+.type-sample.h2 { font-family: var(--serif); color: var(--ember); font-style: italic; font-weight: 400; }
+.type-sample.h3 { font-family: var(--serif); font-weight: 400; font-style: italic; }
+.type-sample.h3 em { color: var(--ember); font-style: italic; font-weight: 500; }
+.type-sample.body { font-family: var(--serif); color: var(--ink-2); font-weight: 400; }
+.type-meta { color: var(--ink-3); font-family: var(--mono); }
+
+/* Variations — the wordmark in three states */
+.variation-tile {
+  background: var(--paper-lt);
+  border-color: var(--rule);
+  border-radius: 4px;
+}
+.variation-tile.paper { background: var(--paper-lt); }
+.variation-tile.warm { background: var(--paper-elev); }
+.variation-tile.dark { background: var(--paper-dk); border-color: var(--ember); }
+.variation-tile .vt-mark { font-family: var(--serif); font-weight: 300; font-style: italic; }
+.variation-tile .vt-mark em { color: var(--ember); font-style: italic; font-weight: 300; }
+.variation-tile.dark .vt-mark { color: var(--ink); }
+.variation-tile.dark .vt-mark em { color: var(--ember); }
+.variation-tile .vt-tag { color: var(--ink-3); font-family: var(--mono); font-weight: 400; }
+.variation-tile.dark .vt-tag { color: rgba(212,160,100,0.6); }
+.variation-tile .vt-signet {
+  border-color: var(--ember);
+  border-radius: 2px;
+  background: var(--paper);
+}
+.variation-tile .vt-signet::before { background: var(--ember); }
+.variation-tile .vt-signet::after { background: var(--ember); }
+.variation-tile .vt-signet span { font-family: var(--serif); font-weight: 300; font-style: italic; }
+.variation-tile .vt-signet span em { color: var(--ember); font-style: italic; font-weight: 300; }
+
+/* UI primitives — buttons read as run controls */
+.ui-kit { background: var(--paper-lt); border-color: var(--rule); border-radius: 4px; }
+.ui-cell h4 {
+  color: var(--ember);
+  font-family: var(--mono);
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  font-size: 0.62rem;
+}
+.ui-btn {
+  font-family: var(--mono);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  border-radius: 2px;
+}
+.ui-btn.primary { background: var(--ember); color: var(--paper); border-color: var(--ember); }
+.ui-btn.primary:hover { background: var(--ember-soft); border-color: var(--ember-soft); }
+.ui-btn.secondary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.ui-btn.secondary:hover { background: var(--ink-2); border-color: var(--ink-2); }
+.ui-btn.ghost { color: var(--ink); border-color: var(--rule); background: transparent; }
+.ui-btn.ghost:hover { color: var(--ember); border-color: var(--ember); }
+
+.ui-badge {
+  font-family: var(--mono);
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: none;
+  border-radius: 2px;
+  font-size: 0.66rem;
+}
+.ui-badge.live { color: var(--ember); border-color: var(--ember); background: var(--ember-faint); }
+.ui-badge.live::before { content: '●'; padding-right: 0.4em; color: var(--ember); animation: livePulse 2.4s ease-in-out infinite; }
+.ui-badge.ok { color: var(--ink); border-color: var(--ink); background: rgba(240,232,216,0.06); }
+.ui-badge.hold { color: var(--ink-3); border-color: var(--rule); }
+
+.ui-code {
+  background: var(--paper-dk);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+}
+.ui-code .k { color: var(--ember); }
+.ui-code .v { color: var(--ink); }
+.ui-code .c { color: var(--ink-3); font-style: italic; }
+
+.ui-input {
+  font-family: var(--mono);
+  border-color: var(--rule);
+  background: var(--paper-dk);
+  color: var(--ink);
+  border-radius: 2px;
+}
+.ui-input:focus { border-color: var(--ember); box-shadow: 0 0 0 2px rgba(212,160,100,0.15); }
+
+/* Section V — The Living Page */
+.hl-specimen { background: var(--paper-lt); border-color: var(--rule); border-radius: 4px; }
+.hl-rule .rule-label { color: var(--ember); font-family: var(--mono); font-weight: 400; letter-spacing: 0.14em; font-size: 0.65rem; }
+.hl-rule .rule-text em { color: var(--ember); font-style: italic; font-weight: 500; }
+.hl-rule .rule-text { color: var(--ink-2); }
+.hl-sample-lines .label { color: var(--ember); font-family: var(--mono); font-weight: 400; letter-spacing: 0.14em; font-size: 0.65rem; }
+
+/* Editorial Pairing — paragraph + spec interleave */
+.pairing { background: var(--paper-lt); border-color: var(--rule); border-radius: 4px; }
+.pairing::before { color: var(--ember); background: var(--paper); font-family: var(--mono); font-weight: 400; letter-spacing: 0.18em; }
+.pairing .article-eyebrow { color: var(--ember); font-family: var(--mono); font-weight: 400; letter-spacing: 0.18em; }
+.pairing h3 { font-family: var(--serif); font-weight: 300; font-style: italic; }
+.pairing h3 em { color: var(--ember); font-style: italic; font-weight: 400; }
+.pairing p { font-family: var(--serif); color: var(--ink-2); font-size: 1.05rem; line-height: 1.75; }
+.pairing p:first-of-type::first-letter {
+  font-family: var(--serif);
+  color: var(--ember);
+  font-weight: 300;
+  font-style: italic;
+  font-size: 4rem;
+}
+.pairing p:first-of-type::first-line { font-variant: normal; letter-spacing: 0; }
+.pairing p strong { color: var(--ink); font-weight: 500; }
+.pairing .pull-quote {
+  border-left: 2px solid var(--ember);
+  background: rgba(212,160,100,0.04);
+  border-radius: 0 4px 4px 0;
+  padding: 1.2rem 1.5rem;
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--ink);
+  font-size: 1.2rem;
+  font-weight: 400;
+}
+.pairing .byline { color: var(--ink-3); font-family: var(--mono); font-weight: 400; border-top-color: var(--rule); letter-spacing: 0.1em; font-size: 0.66rem; }
+.pairing .byline strong { color: var(--ink-2); font-weight: 500; }
+
+/* Inline spec annotation — Tufte-style figure inside prose */
+.inline-spec {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.78em;
+  background: var(--paper-elev);
+  border: 1px solid var(--rule);
+  padding: 0.04em 0.42em;
+  border-radius: 2px;
+  color: var(--ember);
+  vertical-align: baseline;
+}
+
+/* Applications */
+.app-card { background: var(--paper-lt); border-color: var(--rule); border-radius: 4px; }
+.app-card .app-kicker { color: var(--ember); font-family: var(--mono); font-weight: 400; letter-spacing: 0.18em; font-size: 0.62rem; }
+
+.business-card {
+  background: var(--paper-elev);
+  border-color: var(--rule);
+  border-radius: 4px;
+  color: var(--ink);
+}
+.business-card::before { background: var(--ember); width: 4px; }
+.business-card .bc-mark { font-family: var(--serif); font-weight: 300; font-style: italic; }
+.business-card .bc-mark em { color: var(--ember); font-style: italic; font-weight: 300; }
+.business-card .bc-rows { font-family: var(--mono); color: var(--ink-3); }
+.business-card .bc-rows strong { color: var(--ink); font-weight: 500; }
+.business-card .bc-rows div[style*="--red"] { color: var(--ember) !important; }
+
+.document-head { background: var(--paper-elev); border-color: var(--rule); border-radius: 4px; }
+.document-head .dh-kicker { color: var(--ember); border-bottom-color: var(--ember); font-family: var(--mono); font-weight: 400; letter-spacing: 0.18em; }
+.document-head h4 { font-family: var(--serif); font-weight: 300; font-style: italic; }
+.document-head h4 em { color: var(--ember); font-style: italic; font-weight: 400; }
+.document-head h4 .hl, .document-head .dh-body .hl { background: var(--hl); color: var(--ink); }
+.document-head .dh-body { color: var(--ink-2); font-family: var(--serif); }
+.document-head .dh-body::first-line { font-variant: normal; letter-spacing: 0; }
+.document-head .dh-colophon { color: var(--ink-3); font-family: var(--mono); border-top-color: var(--rule); letter-spacing: 0.06em; font-size: 0.62rem; }
+
+.spec-plate {
+  background: var(--paper-dk); color: var(--ink);
+  border: 1px solid var(--ember);
+  border-radius: 2px;
+}
+.spec-plate::before { color: var(--ember); background: var(--paper); font-family: var(--mono); font-weight: 400; letter-spacing: 0.18em; }
+.spec-plate .k { color: var(--ember); }
+.spec-plate .v { color: var(--ink); }
+.spec-plate .c { color: var(--ink-3); font-style: italic; }
+
+/* Voice cards — each is a .prose file */
+.voice-card { background: var(--paper-lt); border-color: var(--rule); border-radius: 4px; }
+.voice-card:hover { border-color: var(--ember); }
+.voice-card .vc-tag { color: var(--ember); font-family: var(--mono); font-weight: 400; letter-spacing: 0.16em; font-size: 0.62rem; }
+.voice-card blockquote { font-family: var(--serif); color: var(--ink); font-style: italic; font-weight: 400; }
+.voice-card blockquote em { color: var(--ember); font-style: italic; font-weight: 500; }
+.voice-card blockquote .hl, .voice-card blockquote .hl-hot { background: var(--hl); color: var(--ink); font-style: italic; }
+.voice-card blockquote .hl-hot { background: var(--hl-hot); }
+.voice-card .vc-note { color: var(--ink-2); font-family: var(--serif); }
+.voice-card .vc-spec {
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  background: var(--paper-dk);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+.voice-card .vc-spec .k { color: var(--ember); }
+.voice-card .vc-spec .v { color: var(--ink); }
+
+/* Swatches */
+.swatch { background: var(--paper-lt); border-color: var(--rule); border-radius: 4px; }
+.swatch-name { color: var(--ink); font-family: var(--mono); font-weight: 400; letter-spacing: 0.14em; font-size: 0.62rem; }
+.swatch-hex { color: var(--ink-3); font-family: var(--mono); }
+.swatch-role { color: var(--ink-3); font-family: var(--serif); font-style: italic; }
+.swatch-chip { border-color: var(--rule); }
+
+/* Colophon — the run-log */
+.colophon {
+  font-family: var(--mono);
+  color: var(--ink-3);
+  border-top-color: var(--rule);
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  font-size: 0.7rem;
+}
+.colophon .rule { background: var(--ember); width: 40px; }
+.colophon .line.italic { color: var(--ink-2); font-family: var(--serif); font-style: italic; font-weight: 400; letter-spacing: 0; font-size: 0.92rem; }
+.colophon a { color: var(--ember); }
+.colophon a:hover { color: var(--ember-soft); }
+
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+
+}
+</style>
+</head>
+<body>
+
+<!-- THEME TOGGLE -->
+<button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light/dark mode">
+  <span class="t-glyph">◐</span><span class="t-mode">light mode</span>
+</button>
+
+<!-- HERO — the load-bearing artifact: a running document -->
+<section class="hero">
+  <div class="hero-eyebrow">Direction &theta; &middot; Living Document</div>
+  <h1 class="hero-mark">Open<em>Prose</em></h1>
+  <div class="hero-rule"></div>
+  <p class="hero-tagline">A program is a <em>document</em> with guarantees.</p>
+
+  <!-- The spec block IS the brand artifact. requires/ensures sit
+       directly under the manifesto sentence. One ensures clause
+       sharpens itself in front of the reader (see JS below). -->
+  <div class="living-spec">
+<span class="ls-line"><span class="ls-key">requires:</span></span>
+<span class="ls-line ls-indent"><span class="ls-val">data_warehouse_url</span>   <span class="ls-note"># resolved 09:14 ET</span></span>
+<span class="ls-line ls-indent"><span class="ls-val">codebase_ref</span>         <span class="ls-note"># commit 3a8f29c · verified</span></span>
+<span class="ls-line">&nbsp;</span>
+<span class="ls-line"><span class="ls-key">ensures:</span></span>
+<span class="ls-line ls-indent ls-clause" id="ensures-1"><span class="ls-val">weekly growth findings</span></span>
+<span class="ls-line ls-indent ls-clause" id="ensures-2"><span class="ls-val">anomaly notes &lt;&lt; 2% false-positive</span></span>
+<span class="ls-line ls-indent ls-clause" id="ensures-3"><span class="ls-val">delivered Mondays at 09:00 ET</span></span>
+  </div>
+
+  <div class="live-state">
+    <span class="live-dot"></span>
+    <span class="ls-stat">run <span class="num" id="run-num">42</span></span>
+    <span class="sep">·</span>
+    <span class="ls-stat">score <span class="num" id="run-score">0.94</span></span>
+    <span class="sep">·</span>
+    <svg class="ls-spark" viewBox="0 0 60 14" id="run-spark" aria-hidden="true">
+      <polyline fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" points="0,10 8,9 16,11 24,8 32,7 40,5 48,6 56,4 60,3" style="color: var(--ember);" />
+    </svg>
+    <span class="sep">·</span>
+    <span class="ls-stat" id="run-status">passing</span>
+  </div>
+
+  <div class="hero-meta" style="margin-top: 1.85rem;">
+    Cormorant Garamond italic &middot; JetBrains Mono &middot; cocoa &middot; ember-amber &middot; the page is running
+  </div>
+</section>
+
+<!-- PALETTE -->
+<section class="logotype-section" id="palette">
+  <div class="section-kicker">I &middot; Palette</div>
+  <h2>Cocoa, cream, and a single ember of <em>warmth</em>.</h2>
+  <p class="lede">Two materials and one indicator. Cocoa #1a1410 carries the page &mdash; not pure black, never pure black, because pure black on a screen is an absence; cocoa is a pause. Warm-cream #f0e8d8 sets every word, both the human prose and the machine spec. A single ember-amber #d4a064 is reserved for live indicators &mdash; the breathing dot, the eval score, the sparkline stroke. The amber says only one thing: <em>this is the part that's running</em>. There is no other accent. The discipline is the brand.</p>
+  <div class="palette-grid">
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--paper);"></div>
+      <span class="swatch-name">Cocoa</span>
+      <span class="swatch-hex">#1a1410</span>
+      <span class="swatch-role">the page</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--paper-dk);"></div>
+      <span class="swatch-name">Cocoa Deep</span>
+      <span class="swatch-hex">#120c08</span>
+      <span class="swatch-role">code surface</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--paper-lt); border-color: var(--rule);"></div>
+      <span class="swatch-name">Cocoa Lift</span>
+      <span class="swatch-hex">#221a14</span>
+      <span class="swatch-role">specimen surfaces</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--paper-elev); border-color: var(--rule);"></div>
+      <span class="swatch-name">Cocoa Elev</span>
+      <span class="swatch-hex">#28201a</span>
+      <span class="swatch-role">cards &middot; tiles</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--ink); border-color: var(--ink);"></div>
+      <span class="swatch-name">Cream</span>
+      <span class="swatch-hex">#f0e8d8</span>
+      <span class="swatch-role">primary copy &middot; spec</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--ink-2); border-color: var(--ink-2);"></div>
+      <span class="swatch-name">Cream Soft</span>
+      <span class="swatch-hex">#c8bfae</span>
+      <span class="swatch-role">secondary copy</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--ember); border-color: var(--ember);"></div>
+      <span class="swatch-name">Ember</span>
+      <span class="swatch-hex">#d4a064</span>
+      <span class="swatch-role">live &middot; running</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--ember-deep); border-color: var(--ember-deep);"></div>
+      <span class="swatch-name">Ember Deep</span>
+      <span class="swatch-hex">#b88444</span>
+      <span class="swatch-role">verified &middot; signed</span>
+    </div>
+  </div>
+</section>
+
+<!-- TYPE SCALE -->
+<section class="logotype-section" id="type">
+  <div class="section-kicker">II &middot; Type Scale</div>
+  <h2><em>Cormorant italic</em> is the human intent. <em>JetBrains Mono</em> is the machine contract.</h2>
+  <p class="lede">Two faces, two semantic layers. Cormorant Garamond italic carries every breath of human meaning &mdash; the wordmark, the manifesto sentence, the running paragraphs, the pull-quotes. JetBrains Mono carries the contract &mdash; the <code>requires</code>, the <code>ensures</code>, the eval scores, the run numbers, the timestamps. The two are not styled the same; they are not _meant_ to be styled the same. Italic prose says what the operator wants. Mono says what the runtime will guarantee. Read together they make a sentence that runs.</p>
+  <div class="type-specimen">
+    <div class="type-row">
+      <span class="type-label">Display</span>
+      <span class="type-sample display">Write the <em>outcome</em>.</span>
+      <span class="type-meta">Cormorant italic 300 &middot; clamp 2–3rem</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">H2 italic</span>
+      <span class="type-sample h2">the quiet arrival</span>
+      <span class="type-meta">Cormorant italic 400 &middot; 2rem</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">H3</span>
+      <span class="type-sample h3">A specification, <em>recited</em></span>
+      <span class="type-meta">Cormorant italic 400 &middot; 1.4rem</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Body</span>
+      <span class="type-sample body">You declare the outcome in a file. The system picks it up on cadence, runs it, verifies the result, and delivers.</span>
+      <span class="type-meta">Cormorant 400 &middot; 1.08rem / 1.7</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Inline spec</span>
+      <span class="type-sample hl-sample">The standup is <span class="inline-spec">delivered: yes</span> the moment the digest arrives — fifteen minutes shorter.</span>
+      <span class="type-meta">JetBrains inline &middot; ember</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Spec key &middot; mono</span>
+      <span class="type-sample" style="font-family: var(--mono); font-size: 0.92rem; color: var(--ember);">requires:</span>
+      <span class="type-meta">JetBrains 400 &middot; ember</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Spec val &middot; mono</span>
+      <span class="type-sample" style="font-family: var(--mono); font-size: 0.92rem; color: var(--ink);">data_warehouse_url</span>
+      <span class="type-meta">JetBrains 400 &middot; cream</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Run-state &middot; mono</span>
+      <span class="type-sample mono">run 42 &middot; score <span style="color: var(--ember); font-weight: 500;">0.94</span> &middot; passing</span>
+      <span class="type-meta">JetBrains 500 &middot; ember on num</span>
+    </div>
+  </div>
+</section>
+
+<!-- LOGO VARIATIONS -->
+<section class="logotype-section" id="variations">
+  <div class="section-kicker">III &middot; Logo Variations</div>
+  <h2>One mark, <em>three states</em>.</h2>
+  <p class="lede">The wordmark exists in three states the way the program does: <em>dormant</em> (italic on cocoa, no indicator), <em>running</em> (italic on lifted cocoa, breathing dot beside it), and <em>verified</em> (italic on cocoa-deep, ember-deep underline). The italic P always carries the ember, whether on light or dark ground. The wordmark itself never carries the eval score &mdash; the mark is what the system <em>is</em>, not what it's <em>doing</em>.</p>
+  <div class="variations-grid">
+    <div class="variation-tile paper">
+      <div class="vt-mark">Open<em>Prose</em></div>
+      <div class="vt-tag">Primary &middot; 40px+</div>
+    </div>
+    <div class="variation-tile warm">
+      <div class="vt-signet"><span>O<em>P</em></span></div>
+      <div class="vt-tag">Signet &middot; favicon</div>
+    </div>
+    <div class="variation-tile dark">
+      <div class="vt-mark">Open<em>Prose</em></div>
+      <div class="vt-tag">Reversed &middot; dark ground</div>
+    </div>
+  </div>
+</section>
+
+<!-- UI ELEMENTS -->
+<section class="logotype-section" id="ui">
+  <div class="section-kicker">IV &middot; UI Elements</div>
+  <h2>Buttons, badges, and the <em>spec plate</em>.</h2>
+  <p class="lede">The interface is mostly absent — a Living Document doesn't need much chrome. The primary button is amber on cocoa, marked <code>$ run</code>; secondary is cream on cocoa, marked <code>$ verify</code>; ghost is for everything else. Badges carry a breathing ember dot for "live" and a cream check for "verified." The code surface is the same surface as the spec plate; in this brand they are siblings.</p>
+  <div class="ui-kit">
+    <div class="ui-cell">
+      <h4>Buttons</h4>
+      <div class="ui-buttons">
+        <button class="ui-btn primary">Primary</button>
+        <button class="ui-btn secondary">Secondary</button>
+        <button class="ui-btn ghost">Ghost</button>
+      </div>
+      <div class="ui-badges">
+        <span class="ui-badge live">&middot; Live</span>
+        <span class="ui-badge ok">&#10003; Verified</span>
+        <span class="ui-badge hold">&middot; On hold</span>
+      </div>
+      <div class="ui-input-wrap">
+        <label style="font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.14em; text-transform: lowercase; color: var(--ember); font-weight: 400;">// declare the outcome</label>
+        <input class="ui-input" type="text" placeholder="weekly-investor-digest.prose">
+      </div>
+    </div>
+    <div class="ui-cell">
+      <h4>Code surface</h4>
+      <div class="ui-code"><span class="c"># pick up the file</span>
+<span class="k">$</span> openprose run weekly-digest
+<span class="c"># verify, deliver, archive</span>
+<span class="v">&#10003; delivered 09:14 ET</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- THE LIVING PAGE — θ's defining mechanic -->
+<section class="logotype-section" id="highlighter">
+  <div class="section-kicker">V &middot; The Living Page</div>
+  <h2>Italic is the human intent. <em>The spec block</em> is the machine contract. <em>The page</em> is the running program.</h2>
+  <p class="lede">θ's defining mechanic isn't a mark on a phrase &mdash; it's that the page itself is the artifact. A <span class="inline-spec">.prose</span> file isn't a code sample tucked into a section; it sits directly under the manifesto sentence. An ensures clause sharpens its wording in front of the reader, the way a good editor would refine a draft on a second pass. The eval score climbs because the program ran again. Time enters the page as accumulating content, not as animation flair. There is no separate "demo." The page <em>is</em> the demo.</p>
+  <div class="hl-specimen">
+    <div class="hl-sample-lines">
+      <div>
+        <span class="label">// state &middot; refining</span>
+        <div>The third <code>ensures</code> clause begins as <span class="inline-spec">delivered Mondays at 09:00 ET</span> and, after eight seconds, <em>sharpens</em> to <span class="inline-spec" style="color: var(--ink);">delivered Mondays @ 09:00 ET · verified · signed</span>. The reader sees the system add to its own contract.</div>
+      </div>
+      <div>
+        <span class="label">// state &middot; climbing</span>
+        <div>The score in the run-state line ticks from <code style="color: var(--ember);">0.94</code> upward by 0.01 every twelve seconds. The run number ticks with it. Nothing else changes — but a page that climbs is alive in a way that a page that stays still is not.</div>
+      </div>
+      <div>
+        <span class="label">// state &middot; signed</span>
+        <div>The colophon at the foot is a real run-log: <span class="inline-spec">generated_at: 2026-05-04T13:18Z</span>, <span class="inline-spec">signed: openprose-runtime-v0.42</span>. The page declares its own provenance. The footer is the proof.</div>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+      <div class="hl-rule">
+        <span class="rule-label">Rule &middot; the spec</span>
+        <span class="rule-text">The <code>requires</code>/<code>ensures</code> block lives <em>directly under</em> the manifesto sentence, not in a separate "code sample" panel. They are the same page; treating them otherwise is the brand's first lie.</span>
+      </div>
+      <div class="hl-rule">
+        <span class="rule-label">Rule &middot; the refinement</span>
+        <span class="rule-text">Exactly <em>one</em> ensures clause refines itself per page. More than one becomes flair; zero becomes a screenshot. The single refinement is what makes the page legible as a draft being improved.</span>
+      </div>
+      <div class="hl-rule">
+        <span class="rule-label">Rule &middot; the climb</span>
+        <span class="rule-text">Eval scores only ever <em>climb</em> &mdash; never reset to a number worse than the page started at. The brand promises improvement; the page must keep that promise even at idle.</span>
+      </div>
+      <div class="hl-rule">
+        <span class="rule-label">Rule &middot; reduced motion</span>
+        <span class="rule-text">All three mechanics &mdash; refinement, climb, and sparkline &mdash; respect <code>prefers-reduced-motion: reduce</code>. The page stays alive in spirit; it just doesn't move when the reader has asked it not to.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EDITORIAL PAIRING -->
+<section class="logotype-section narrow" id="pairing">
+  <div class="section-kicker">VI &middot; Editorial Pairing</div>
+  <h2>Set in type &mdash; <em>the voice</em> at length, with the spec running through it.</h2>
+  <p class="lede">The Living Document voice is calm, specific, and unafraid of an inline spec annotation. It names things by their nouns. It reaches for italic only when italic carries a pivot. The whole page reads as if the system itself dictated this paragraph after running the brief one more time.</p>
+  <article class="pairing">
+    <div class="article-eyebrow"># field-note · run 41 · score 0.93</div>
+    <h3>On the <em>quiet arrival</em> of Monday reports.</h3>
+    <p>Once, the week began with a scramble. Someone opened seven dashboards, pulled the numbers, wrote the digest, and dropped it in the 09:00 standup. The rotation was a line in the budget <span class="inline-spec">cost: 40 op-hours/quarter</span>. The standup was a line in the calendar. Nobody was quite sure what either accomplished beyond confirming that the dashboards were fine.</p>
+    <p>Then the outcome was declared in a file. <strong>Fifteen lines.</strong> Every Monday at 09:00 ET, the digest arrives &mdash; <span class="inline-spec">verified · signed · archived</span>. The standup happens anyway, but it is fifteen minutes shorter. Nobody asks where the numbers came from. They are already in the document.</p>
+    <div class="pull-quote">The first thing we noticed was what we stopped doing &mdash; the standing meetings where we'd review the dashboard to confirm the dashboard was fine.</div>
+    <p>The literary computer is the insight that these two dispositions &mdash; <em>craft and machinery</em> &mdash; are not opposed. The machine handles the cadence <span class="inline-spec">cadence: weekly</span>. The prose handles the voice <span class="inline-spec">tone: executive-friendly</span>. The page reads the way a good analyst would have written it. <span class="hl-hot">The result is the point</span>.</p>
+    <div class="byline"><strong>Maya Chen</strong> &middot; Head of Operations &middot; signed: maya@ridgeline.example</div>
+  </article>
+</section>
+
+<!-- APPLICATIONS -->
+<section class="logotype-section" id="applications">
+  <div class="section-kicker">VII &middot; Applications</div>
+  <h2>A card, a <em>masthead</em>, a plate.</h2>
+  <p class="lede">Three real surfaces the brand has to carry: a business card (formal, ember rule, no live indicators), a document masthead (operator's brief, inline spec annotations welcome), and a specification plate (the spec is the brand's load-bearing artifact &mdash; ember on cocoa, framed by an ember border).</p>
+  <div class="applications-grid">
+    <div class="app-card">
+      <div class="app-kicker">Business Card</div>
+      <div class="business-card">
+        <div class="bc-mark">Open<em>Prose</em></div>
+        <div class="bc-rows">
+          <div><strong>Maya Chen</strong></div>
+          <div>Head of Operations</div>
+          <div style="margin-top: 0.5rem; color: var(--red);">maya@openprose.ai</div>
+          <div style="color: var(--red);">+1 &middot; 415 &middot; 0113</div>
+        </div>
+      </div>
+    </div>
+    <div class="app-card">
+      <div class="app-kicker">Document Header</div>
+      <div class="document-head">
+        <span class="dh-kicker">Weekly Investor Digest &middot; Wk 14</span>
+        <h4>ARR crossed <em>$14.2M</em> this week <span class="inline-spec">delta: +$0.4M</span>.</h4>
+        <p class="dh-body">The new $40K Meridian contract pushed us over the line. Three new logos in pipeline, <span class="inline-spec">close-prob: 0.71</span> two expected to close this quarter.</p>
+        <div class="dh-colophon"># generated_at: 09:02 ET &middot; verified: 09:14 &middot; signed: openprose-runtime</div>
+      </div>
+    </div>
+    <div class="app-card" style="grid-column: 1 / -1;">
+      <div class="app-kicker">Formal Specification</div>
+      <div class="spec-plate">
+<span class="k">responsibility:</span> <span class="v">weekly-investor-digest</span>
+<span class="k">owner:</span>         <span class="v">finance@company.example</span>
+<span class="k">cadence:</span>       <span class="v">mondays @ 09:00 ET</span>
+<span class="k">input:</span>
+  <span class="c">- gmail:investors@*</span>
+  <span class="c">- notion:portfolio/updates</span>
+<span class="k">outcome:</span> <span class="v">|</span>
+  <span class="v">One page. What changed, what's on track,</span>
+  <span class="v">what needs attention. 200 words.</span>
+<span class="k">deliver:</span>
+  <span class="c">- email:investors@</span>
+<span class="k">audit:</span>         <span class="v">retain 7 years</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- VOICE & TONE -->
+<section class="logotype-section" id="voice">
+  <div class="section-kicker">VIII &middot; Voice &amp; Tone</div>
+  <h2>Three sentences, <em>one register</em>, three <code>.prose</code> files.</h2>
+  <p class="lede">Three sanctioned voices the brand uses: the short declaration, the spec-sheet note, the editorial observation. Each one is shown twice &mdash; first as a sentence, then as the <code>.prose</code> file that produced it. The brand reads as the artifact and as the program at once.</p>
+  <div class="voice-grid">
+    <div class="voice-card">
+      <div class="vc-tag">Voice &middot; short</div>
+      <blockquote>&ldquo;Write the outcome. <em>We run it.</em>&rdquo;</blockquote>
+      <p class="vc-note">The tagline. Six words. The italic carries the pivot &mdash; the part that shifts the burden from the reader to the runtime.</p>
+      <div class="vc-spec"><span class="k">tone:</span> <span class="v">declarative</span><br><span class="k">length:</span> <span class="v">6 words max</span><br><span class="k">use:</span> <span class="v">hero, one-liner</span></div>
+    </div>
+    <div class="voice-card">
+      <div class="vc-tag">Voice &middot; spec</div>
+      <blockquote>&ldquo;Billed by <em>delivery</em>. If the outcome doesn't ship, no line.&rdquo;</blockquote>
+      <p class="vc-note">Terms of art spoken plainly. Italic on the one word that defines the pricing model &mdash; the boundary a reader cannot skim past.</p>
+      <div class="vc-spec"><span class="k">tone:</span> <span class="v">spec-sheet · plain</span><br><span class="k">length:</span> <span class="v">12 words</span><br><span class="k">use:</span> <span class="v">pricing, SLA</span></div>
+    </div>
+    <div class="voice-card">
+      <div class="vc-tag">Voice &middot; editorial</div>
+      <blockquote>&ldquo;Once, the week began with a scramble. <em>Then the outcome was declared in a file.</em>&rdquo;</blockquote>
+      <p class="vc-note">The long form voice. Italic carries the pivot. The page that follows usually opens with a <code>requires/ensures</code> block on the second paragraph.</p>
+      <div class="vc-spec"><span class="k">tone:</span> <span class="v">editorial · narrative</span><br><span class="k">length:</span> <span class="v">2–4 paragraphs</span><br><span class="k">use:</span> <span class="v">field notes, case</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- COLOPHON -->
+<section class="colophon">
+  <div class="rule"></div>
+  <div class="line italic">A literary computer. For programs you can read, scroll, and prove.</div>
+  <div class="line">Cormorant Garamond italic &middot; JetBrains Mono &middot; cocoa &middot; ember-amber</div>
+  <div class="line"># generated_at: 2026-05-04T13:18Z &middot; signed: openprose-runtime-v0.42 &middot; Direction &theta;</div>
+  <div class="line" style="margin-top: 1.25rem;">
+    <a href="direction-alpha-editorial.html">&alpha; Editorial</a>
+    <a href="direction-beta-tufte.html">&beta; Tufte</a>
+    <a href="direction-gamma-manuscript.html">&gamma; Manuscript</a>
+    <a href="direction-delta-machine.html">&delta; Machine</a>
+    <a href="direction-epsilon-operator.html">&epsilon; Operator</a>
+    <a href="direction-zeta-saas.html">&zeta; SaaS</a>
+    <a href="direction-eta-organism.html">&eta; Organism</a>
+    <a href="direction-iota-reference-card.html">&iota; Reference Card</a>
+    <a href="direction-kappa-codex-spreads.html">&kappa; Codex</a>
+  </div>
+</section>
+
+<script>
+/* ============================================
+   LIVING DOCUMENT MECHANICS
+
+   Three small things tick forward in front of the
+   reader, demonstrating that the page is itself a
+   running program:
+
+   1. Eval score climbs by 0.01 every ~12 seconds
+      (capped at 0.99) and the run number ticks up.
+   2. The third ensures clause "sharpens" once after
+      ~8s — it rewrites from a vague v1 to a sharper
+      v2 wording, with a visible amber transition.
+   3. The hero sparkline gets one new point every ~16s,
+      shifting the existing line left and drawing a new
+      tail that climbs slightly.
+
+   Time appears as accumulating content, not animation
+   flair. Respects prefers-reduced-motion.
+   ============================================ */
+(function livingDocument() {
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  /* 1. Run number + eval score climb */
+  var scoreEl = document.getElementById('run-score');
+  var runEl   = document.getElementById('run-num');
+  var statusEl = document.getElementById('run-status');
+  var run = 42;
+  var score = 0.94;
+  setInterval(function () {
+    if (score < 0.99) {
+      score = Math.min(0.99, score + 0.01);
+      run++;
+      if (scoreEl) scoreEl.textContent = score.toFixed(2);
+      if (runEl)   runEl.textContent = run;
+      if (statusEl) statusEl.textContent = 'passing';
+    }
+  }, 12000);
+
+  /* 2. The third ensures clause sharpens its wording. */
+  var clause = document.getElementById('ensures-3');
+  if (clause) {
+    setTimeout(function () {
+      clause.classList.add('refining');
+      setTimeout(function () {
+        var val = clause.querySelector('.ls-val');
+        if (val) val.textContent = 'delivered Mondays @ 09:00 ET · verified · signed';
+        clause.classList.remove('refining');
+        clause.classList.add('refined');
+      }, 600);
+    }, 8000);
+  }
+
+  /* 3. Sparkline gains a new point every 16s. */
+  var spark = document.getElementById('run-spark');
+  if (spark) {
+    var poly = spark.querySelector('polyline');
+    var pts = [10, 9, 11, 8, 7, 5, 6, 4, 3];
+    setInterval(function () {
+      pts.shift();
+      var last = pts[pts.length - 1];
+      var next = Math.max(2, Math.min(11, last + (Math.random() - 0.55) * 2));
+      pts.push(next);
+      var pointStr = pts.map(function (y, i) { return (i * (60 / (pts.length - 1))) + ',' + y.toFixed(1); }).join(' ');
+      poly.setAttribute('points', pointStr);
+    }, 16000);
+  }
+})();
+</script>
+
+<script>
+  // Theme toggle — defaults to dark, persists per-page in localStorage
+  (function () {
+    const KEY = 'op-theta-template-theme';
+    const root = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    const label = btn ? btn.querySelector('.t-mode') : null;
+    function setTheme(t) {
+      root.setAttribute('data-theme', t);
+      if (label) label.textContent = t === 'light' ? 'dark mode' : 'light mode';
+      try { localStorage.setItem(KEY, t); } catch (e) {}
+    }
+    let saved = null;
+    try { saved = localStorage.getItem(KEY); } catch (e) {}
+    setTheme(saved || 'dark');
+    if (btn) {
+      btn.addEventListener('click', function () {
+        const cur = root.getAttribute('data-theme') || 'dark';
+        setTheme(cur === 'dark' ? 'light' : 'dark');
+      });
+    }
+  })();
+</script>
+
+</body>
+</html>

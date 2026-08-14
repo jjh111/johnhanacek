@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 142 142'%3E%3Cpath d='M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z' fill='%232a2520'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenProse — Direction δ · Machine</title>
+<link rel="stylesheet" href="_tokens.css">
+<link rel="stylesheet" href="_pairings.css">
+
+<style>
+/* ============================================
+   DIRECTION δ · MACHINE
+   Round-3 finalist, distilled from logotype-C-v2-mono
+   (the all-IBM-Plex-Mono study). The clean opposite
+   of the three editorial directions: all-mono,
+   computer-voice, terminal palette.
+
+   DNA: IBM Plex Mono carries every glyph — display,
+   body, UI, code. There is no proportional type. Dark
+   surface #0e0e10. Ink #e8e4dc on dark. Terminal amber
+   #d4a64f as the keyword color; a desat red #d4604f
+   for "hot" warnings. Section markers are hex
+   prefixes (0x01, 0x02, …) instead of roman numerals.
+
+   Implementation: kept α's stylesheet intact; appended
+   MACHINE OVERRIDE block. Hex prefixes in section kickers.
+   ============================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --paper:     #f5f0e8;
+  --paper-dk:  #ede7d6;
+  --paper-lt:  #faf8f3;
+  --ink:       #0f0f0f;
+  --ink-2:     #2e2e2e;
+  --ink-3:     #5a5a5a;
+  --ink-4:     #909090;
+  --red:       #c0392b;
+  --red-muted: #d4604f;
+  --red-deep:  #8e2b20;
+  --rule:      #d8d0c0;
+  --rule-mid:  #e2dcc9;
+
+  /* NEW — the highlighter palette. Two stops so the mark lands
+     as a visible stroke over paper without bleeding the whole row.
+     Yellow = the reader's marker (calm, studious).
+     Hot red = editorial emphasis (urgent, "look here"). */
+  --hl:        rgba(255, 207, 64, 0.36);
+  --hl-hot:    rgba(218, 105, 72, 0.32);
+
+  --serif: 'Palatino Linotype', 'Palatino', 'Book Antiqua', Georgia, serif;
+  --sans:  'Helvetica Neue', 'Helvetica', Arial, sans-serif;
+  --mono:  'SF Mono', 'Fira Code', 'JetBrains Mono', Consolas, monospace;
+  --wide: 1180px;
+  --measure: 860px;
+}
+
+html { font-size: 17px; scroll-behavior: smooth; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--serif);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
+}
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 15% 8%, rgba(192,57,43,0.03), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 95% 95%, rgba(192,57,43,0.02), transparent 60%);
+}
+body > * { position: relative; z-index: 1; }
+
+/* HIGHLIGHTER MARK — the reader's pen. Linear-gradient rests under the
+   baseline so it reads like a thick marker stroke, not a solid block.
+   Inline so it wraps naturally inside the prose. */
+.hl,
+.hl-hot {
+  background: var(--hl);
+  padding: 0.06em 0.18em;
+  /* Keep gilt/warmth consistent with the warm paper ground. */
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  /* Italic inside a highlighter gets harder to read; drop the italic when the
+     highlighter is applied to an <em>. Red italic is authorial voice; the
+     highlighter replaces that role with reader emphasis. */
+  font-style: inherit;
+  color: inherit;
+}
+.hl-hot { background: var(--hl-hot); }
+
+/* HERO */
+.hero {
+  padding: 5.5rem 2rem 4rem;
+  text-align: center;
+  max-width: var(--wide); margin: 0 auto;
+  position: relative;
+}
+.hero-eyebrow {
+  font-family: var(--sans); font-size: 0.72rem;
+  letter-spacing: 0.24em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 2.5rem;
+  display: inline-flex; align-items: center; gap: 0.75rem;
+}
+.hero-eyebrow::before, .hero-eyebrow::after {
+  content: ''; width: 28px; height: 1px; background: var(--red);
+}
+.hero-mark {
+  font-family: var(--serif);
+  font-size: clamp(4rem, 11vw, 8rem);
+  font-weight: 400; line-height: 0.95;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+.hero-mark em { font-style: italic; color: var(--red); }
+.hero-rule { width: 120px; height: 1px; background: var(--red); margin: 2rem auto 1.5rem; }
+.hero-tagline {
+  font-family: var(--serif);
+  font-size: clamp(1.05rem, 1.8vw, 1.25rem);
+  font-style: italic; color: var(--ink-2);
+  letter-spacing: 0.005em;
+}
+.hero-meta {
+  margin-top: 2rem;
+  font-family: var(--mono); font-size: 0.66rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* SECTIONS */
+section.logotype-section {
+  max-width: var(--wide); margin: 0 auto;
+  padding: 4.5rem 2rem;
+}
+section.logotype-section.narrow { max-width: var(--measure); }
+
+.section-kicker {
+  font-family: var(--sans); font-size: 0.7rem;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 1.25rem;
+  display: flex; align-items: center; gap: 0.85rem;
+}
+.section-kicker::after { content: ''; flex: 1; height: 1px; background: var(--red-muted); opacity: 0.5; }
+
+section.logotype-section h2 {
+  font-family: var(--serif);
+  font-size: clamp(1.8rem, 3.2vw, 2.4rem);
+  font-weight: 400; line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin-bottom: 0.5rem;
+}
+section.logotype-section h2 em { font-style: italic; color: var(--red); }
+section.logotype-section .lede {
+  font-family: var(--serif); font-size: 1.08rem;
+  color: var(--ink-2); max-width: 58ch;
+  margin-bottom: 2rem; line-height: 1.55;
+}
+section.logotype-section .lede::first-line {
+  font-variant: small-caps; letter-spacing: 0.04em;
+}
+
+/* PALETTE */
+.palette-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;
+  margin-top: 2rem;
+}
+.swatch {
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  padding: 1rem;
+  display: flex; flex-direction: column; gap: 0.25rem;
+}
+.swatch-chip {
+  width: 100%; aspect-ratio: 1.4;
+  border: 1px solid var(--rule);
+  margin-bottom: 0.75rem;
+}
+.swatch-name {
+  font-family: var(--sans); font-size: 0.66rem;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink); font-weight: 600;
+}
+.swatch-hex {
+  font-family: var(--mono); font-size: 0.76rem;
+  color: var(--ink-3);
+}
+.swatch-role {
+  font-family: var(--serif); font-style: italic;
+  font-size: 0.84rem; color: var(--ink-3); margin-top: 0.15rem;
+}
+
+/* TYPE SCALE */
+.type-specimen {
+  border: 1px solid var(--rule); background: var(--paper-lt);
+  padding: 2rem 2.25rem;
+}
+.type-row {
+  display: grid; grid-template-columns: 140px 1fr auto;
+  gap: 1.5rem; align-items: baseline;
+  padding: 0.9rem 0; border-bottom: 1px dotted var(--rule-mid);
+}
+.type-row:last-child { border-bottom: none; }
+.type-label {
+  font-family: var(--sans); font-size: 0.62rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+}
+.type-sample { color: var(--ink); line-height: 1.05; }
+.type-sample.display { font-family: var(--serif); font-size: 3rem; font-weight: 400; letter-spacing: -0.02em; }
+.type-sample.display em { font-style: italic; color: var(--red); }
+.type-sample.h2 { font-family: var(--serif); font-size: 2rem; font-weight: 400; font-style: italic; color: var(--red); }
+.type-sample.h3 { font-family: var(--serif); font-size: 1.4rem; font-weight: 400; letter-spacing: -0.01em; }
+.type-sample.body { font-family: var(--serif); font-size: 1.08rem; line-height: 1.55; color: var(--ink-2); }
+.type-sample.small-caps { font-family: var(--serif); font-size: 1rem; font-variant: small-caps; letter-spacing: 0.04em; color: var(--ink-2); }
+.type-sample.mono { font-family: var(--mono); font-size: 0.92rem; color: var(--ink-2); }
+.type-sample.hl-sample { font-family: var(--serif); font-size: 1.2rem; line-height: 1.5; color: var(--ink); }
+.type-meta {
+  font-family: var(--mono); font-size: 0.68rem;
+  color: var(--ink-4); letter-spacing: 0.02em; text-align: right;
+}
+
+/* LOGO VARIATIONS */
+.variations-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem;
+}
+.variation-tile {
+  border: 1px solid var(--rule);
+  padding: 3.25rem 2rem;
+  min-height: 240px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem;
+  text-align: center;
+}
+.variation-tile.paper { background: var(--paper-lt); }
+.variation-tile.warm  { background: var(--paper-dk); }
+.variation-tile.dark  { background: var(--ink); color: var(--paper); border-color: #222; }
+.variation-tile .vt-mark {
+  font-family: var(--serif); font-size: 2.25rem;
+  font-weight: 400; letter-spacing: -0.015em; line-height: 1;
+  color: var(--ink);
+}
+.variation-tile.dark .vt-mark { color: var(--paper); }
+.variation-tile .vt-mark em { font-style: italic; color: var(--red); }
+.variation-tile.dark .vt-mark em { color: var(--red-muted); }
+.variation-tile .vt-tag {
+  font-family: var(--sans); font-size: 0.62rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink-3); font-weight: 600;
+}
+.variation-tile.dark .vt-tag { color: rgba(245,240,232,0.5); }
+.variation-tile .vt-signet {
+  width: 84px; height: 84px;
+  border: 1.5px solid var(--ink);
+  background: var(--paper-lt);
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+.variation-tile .vt-signet::before, .variation-tile .vt-signet::after {
+  content: ''; position: absolute; background: var(--red);
+}
+.variation-tile .vt-signet::before { top: -3px; left: 50%; transform: translateX(-50%); width: 6px; height: 6px; border-radius: 50%; }
+.variation-tile .vt-signet::after  { bottom: -3px; left: 50%; transform: translateX(-50%); width: 28px; height: 1px; }
+.variation-tile .vt-signet span {
+  font-family: var(--serif); font-size: 1.7rem; font-weight: 400;
+  letter-spacing: -0.015em;
+}
+.variation-tile .vt-signet span em { font-style: italic; color: var(--red); }
+
+/* UI ELEMENTS */
+.ui-kit {
+  border: 1px solid var(--rule); background: var(--paper-lt);
+  padding: 2rem 2.25rem;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;
+}
+.ui-cell h4 {
+  font-family: var(--sans); font-size: 0.62rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 1rem;
+}
+.ui-buttons { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.ui-btn {
+  font-family: var(--sans); font-size: 0.8rem; font-weight: 600;
+  padding: 0.75rem 1.4rem;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  border: 1px solid var(--ink); cursor: pointer;
+  transition: all 0.15s;
+}
+.ui-btn.primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.ui-btn.primary:hover { background: var(--red); border-color: var(--red); }
+.ui-btn.secondary { background: var(--red); color: var(--paper); border-color: var(--red); }
+.ui-btn.secondary:hover { background: var(--red-deep); border-color: var(--red-deep); }
+.ui-btn.ghost { background: transparent; color: var(--ink); border-color: var(--ink); }
+.ui-btn.ghost:hover { background: var(--ink); color: var(--paper); }
+
+.ui-badges { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1.5rem; }
+.ui-badge {
+  font-family: var(--sans); font-size: 0.62rem;
+  padding: 0.25rem 0.6rem; border: 1px solid;
+  letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600;
+}
+.ui-badge.live { color: var(--red); border-color: var(--red); background: rgba(192,57,43,0.05); }
+.ui-badge.ok { color: #14803e; border-color: #14803e; background: rgba(20,128,62,0.04); }
+.ui-badge.hold { color: var(--ink-3); border-color: var(--ink-4); }
+
+.ui-code {
+  background: var(--ink); color: var(--paper);
+  padding: 1.25rem 1.5rem;
+  font-family: var(--mono); font-size: 0.8rem; line-height: 1.85;
+}
+.ui-code .k { color: var(--red-muted); }
+.ui-code .c { color: #7a7a7a; font-style: italic; }
+.ui-code .v { color: var(--paper); }
+
+.ui-input-wrap { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 1.5rem; }
+.ui-input {
+  font-family: var(--serif); font-size: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--paper);
+  border: 1px solid var(--rule); color: var(--ink);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.ui-input:focus {
+  outline: none; border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(192,57,43,0.1);
+}
+
+/* HIGHLIGHTER SPECIMEN — documents the new brand tool inline */
+.hl-specimen {
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  padding: 2rem 2.25rem;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem;
+}
+.hl-rule { display: flex; flex-direction: column; gap: 0.55rem; }
+.hl-rule .rule-label {
+  font-family: var(--sans); font-size: 0.62rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+}
+.hl-rule .rule-text {
+  font-family: var(--serif); font-size: 0.98rem;
+  color: var(--ink-2); line-height: 1.55;
+}
+.hl-rule .rule-text em { color: var(--ink); font-style: italic; }
+.hl-rule .rule-text .hl { background: var(--hl); }
+.hl-rule .rule-text .hl-hot { background: var(--hl-hot); }
+.hl-sample-lines {
+  display: flex; flex-direction: column; gap: 1.2rem;
+  font-family: var(--serif); font-size: 1.05rem;
+  color: var(--ink); line-height: 1.65;
+}
+.hl-sample-lines .label {
+  font-family: var(--sans); font-size: 0.58rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--red); font-weight: 600; margin-bottom: 0.25rem;
+  display: block;
+}
+
+/* EDITORIAL PAIRING */
+.pairing {
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  padding: 3rem 3.5rem;
+  position: relative;
+  max-width: var(--measure); margin: 0 auto;
+}
+.pairing::before {
+  content: 'SPECIMEN · EDITORIAL PAGE';
+  position: absolute; top: -10px; left: 2rem;
+  background: var(--paper); color: var(--red);
+  padding: 0.2rem 0.7rem;
+  font-family: var(--sans); font-size: 0.56rem;
+  letter-spacing: 0.2em; font-weight: 600;
+}
+.pairing .article-eyebrow {
+  font-family: var(--sans); font-size: 0.66rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 0.85rem;
+}
+.pairing h3 {
+  font-family: var(--serif);
+  font-size: clamp(1.7rem, 3vw, 2.1rem);
+  font-weight: 400; line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin-bottom: 1.25rem;
+}
+.pairing h3 em { font-style: italic; color: var(--red); }
+.pairing p {
+  font-family: var(--serif); font-size: 1.1rem;
+  color: var(--ink-2); line-height: 1.75;
+  margin-bottom: 1.15rem;
+}
+.pairing p:first-of-type::first-letter {
+  font-family: var(--serif); font-weight: 400;
+  float: left; font-size: 4.5rem; line-height: 0.85;
+  padding: 0.35rem 0.55rem 0 0; color: var(--red);
+}
+.pairing p:first-of-type::first-line {
+  font-variant: small-caps; letter-spacing: 0.04em;
+}
+.pairing p strong { color: var(--ink); font-weight: 500; }
+.pairing .pull-quote {
+  font-family: var(--serif); font-style: italic;
+  font-size: 1.35rem; line-height: 1.4;
+  padding: 1.25rem 0 1.25rem 1.5rem;
+  border-left: 2px solid var(--red);
+  margin: 1.5rem 0; color: var(--ink);
+}
+.pairing .byline {
+  margin-top: 1.5rem; padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+  font-family: var(--sans); font-size: 0.72rem;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-3);
+}
+.pairing .byline strong { color: var(--ink-2); font-weight: 500; }
+
+/* APPLICATIONS */
+.applications-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;
+}
+.app-card {
+  border: 1px solid var(--rule);
+  padding: 2rem;
+  background: var(--paper-lt);
+  position: relative;
+}
+.app-card .app-kicker {
+  font-family: var(--sans); font-size: 0.58rem;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 1rem;
+}
+.business-card {
+  aspect-ratio: 7 / 4;
+  background: var(--paper-lt);
+  border: 1px solid var(--rule);
+  padding: 1.5rem 1.75rem;
+  display: flex; flex-direction: column; justify-content: space-between;
+  position: relative;
+}
+.business-card::before {
+  content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 4px;
+  background: var(--red);
+}
+.business-card .bc-mark {
+  font-family: var(--serif); font-size: 1.4rem;
+  font-weight: 400; letter-spacing: -0.015em;
+}
+.business-card .bc-mark em { font-style: italic; color: var(--red); }
+.business-card .bc-rows {
+  font-family: var(--mono); font-size: 0.72rem;
+  color: var(--ink-3); line-height: 1.7;
+}
+.business-card .bc-rows strong { color: var(--ink); font-weight: 500; }
+
+.document-head {
+  background: var(--paper); border: 1px solid var(--rule);
+  padding: 1.75rem 1.85rem;
+  position: relative;
+}
+.document-head .dh-kicker {
+  font-family: var(--sans); font-size: 0.58rem;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  border-bottom: 1px solid var(--red);
+  padding-bottom: 0.35rem; margin-bottom: 1rem;
+  display: inline-block;
+}
+.document-head h4 {
+  font-family: var(--serif); font-size: 1.45rem;
+  font-weight: 400; letter-spacing: -0.015em; line-height: 1.2;
+  margin-bottom: 0.75rem;
+}
+.document-head h4 em { font-style: italic; color: var(--red); }
+.document-head h4 .hl { background: var(--hl); }
+.document-head .dh-body {
+  font-family: var(--serif); font-size: 0.95rem;
+  color: var(--ink-2); line-height: 1.55;
+}
+.document-head .dh-body::first-line {
+  font-variant: small-caps; letter-spacing: 0.04em;
+}
+.document-head .dh-body .hl { background: var(--hl); }
+.document-head .dh-colophon {
+  margin-top: 1.25rem; padding-top: 0.85rem;
+  border-top: 1px dotted var(--rule-mid);
+  font-family: var(--mono); font-size: 0.66rem;
+  color: var(--ink-3); letter-spacing: 0.04em;
+}
+
+.spec-plate {
+  background: var(--ink); color: var(--paper);
+  padding: 1.85rem 2rem;
+  font-family: var(--mono); font-size: 0.78rem;
+  line-height: 1.85;
+  position: relative;
+}
+.spec-plate::before {
+  content: 'RESPONSIBILITY · FORMAL SPEC';
+  position: absolute; top: -10px; left: 1.5rem;
+  background: var(--paper); color: var(--red);
+  padding: 0.2rem 0.6rem;
+  font-family: var(--sans); font-size: 0.56rem;
+  letter-spacing: 0.18em; font-weight: 600;
+}
+.spec-plate .k { color: var(--red-muted); }
+.spec-plate .c { color: #8a8a8a; font-style: italic; }
+.spec-plate .v { color: var(--paper); }
+
+/* VOICE & TONE */
+.voice-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem;
+}
+.voice-card {
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  padding: 1.75rem 1.5rem;
+  transition: transform 0.2s, border-color 0.2s;
+}
+.voice-card:hover { transform: translateY(-2px); border-color: var(--red); }
+.voice-card .vc-tag {
+  font-family: var(--sans); font-size: 0.6rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 0.85rem;
+}
+.voice-card blockquote {
+  font-family: var(--serif); font-style: italic;
+  font-size: 1.15rem; line-height: 1.4;
+  color: var(--ink); margin-bottom: 1rem; letter-spacing: -0.005em;
+}
+.voice-card blockquote em { color: var(--red); }
+.voice-card blockquote .hl { background: var(--hl); font-style: italic; }
+.voice-card .vc-note {
+  font-family: var(--serif); font-size: 0.9rem;
+  color: var(--ink-2); line-height: 1.55;
+}
+
+/* COLOPHON */
+.colophon {
+  text-align: center;
+  padding: 3rem 2rem 5rem;
+  max-width: var(--wide); margin: 3rem auto 0;
+  border-top: 1px solid var(--rule);
+  font-family: var(--sans); font-size: 0.7rem;
+  color: var(--ink-3); letter-spacing: 0.06em;
+}
+.colophon .rule { width: 48px; height: 1px; background: var(--red); margin: 0 auto 1.5rem; }
+.colophon .line { margin: 0.35rem 0; }
+.colophon .line.italic { font-family: var(--serif); font-style: italic; font-size: 0.9rem; color: var(--ink-2); letter-spacing: 0; margin-bottom: 1rem; }
+.colophon a { color: var(--red); text-decoration: none; margin: 0 0.75rem; transition: color 0.15s; }
+.colophon a:hover { color: var(--red-deep); }
+
+/* Responsive */
+@media (max-width: 880px) {
+  .hero { padding: 4rem 1.5rem 2.5rem; }
+  section.logotype-section { padding: 3.5rem 1.5rem; }
+  .palette-grid { grid-template-columns: repeat(2, 1fr); }
+  .variations-grid { grid-template-columns: 1fr; }
+  .ui-kit { grid-template-columns: 1fr; gap: 2rem; }
+  .hl-specimen { grid-template-columns: 1fr; gap: 1.5rem; }
+  .type-row { grid-template-columns: 1fr; gap: 0.5rem; }
+  .type-meta { text-align: left; }
+  .pairing { padding: 2.25rem 1.75rem; }
+  .applications-grid { grid-template-columns: 1fr; }
+  .voice-grid { grid-template-columns: 1fr; }
+}
+
+/* ============================================
+   ▶ MACHINE OVERRIDE ◀
+   IBM Plex Mono everywhere. Dark surface as default.
+   Terminal amber as keyword. ASCII glyphs in place of
+   ornament. Section sigils are hex prefixes.
+   ============================================ */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&display=swap');
+
+:root {
+  --paper:     #0e0e10;
+  --paper-dk:  #07070a;
+  --paper-lt:  #16161a;
+  --paper-elev:#1d1d22;
+
+  --ink:       #e8e4dc;
+  --ink-2:     #c8c4bc;
+  --ink-3:     #888880;
+  --ink-4:     #5a5a55;
+
+  /* Terminal amber replaces editorial red. The "red" var stays
+     defined so legacy α markup using var(--red) still renders;
+     it is repurposed to amber. A desaturated warning-red is
+     kept for the "hot" highlight. */
+  --red:       #d4a64f;
+  --red-muted: #e0bf68;
+  --red-deep:  #b8862e;
+
+  --amber:     #d4a64f;
+  --amber-deep:#b8862e;
+  --amber-soft:#e0bf68;
+  --warn:      #d4604f;
+
+  --rule:      #2a2a30;
+  --rule-mid:  #1f1f24;
+
+  /* Highlighter rendered as a syntax-color span. Same markup,
+     different gesture: the writer's mark becomes a syntax
+     highlight in machine voice. */
+  --hl:        rgba(212, 166, 79, 0.22);
+  --hl-hot:    rgba(212, 96, 79, 0.22);
+
+  --serif: 'IBM Plex Mono', 'SF Mono', 'Fira Code', Consolas, monospace;
+  --sans:  'IBM Plex Mono', 'SF Mono', 'Fira Code', Consolas, monospace;
+  --mono:  'IBM Plex Mono', 'SF Mono', 'Fira Code', Consolas, monospace;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  font-weight: 400;
+}
+body::before {
+  background:
+    radial-gradient(ellipse 60% 40% at 15% 8%, rgba(212, 166, 79, 0.04), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 95% 95%, rgba(212, 166, 79, 0.03), transparent 60%);
+}
+
+/* HERO — δ's hero is a centered terminal masthead. */
+.hero { padding-top: 5.5rem; }
+.hero-eyebrow { color: var(--amber); font-family: var(--mono); font-weight: 500; letter-spacing: 0.18em; }
+.hero-eyebrow::before, .hero-eyebrow::after { background: var(--amber); }
+.hero-mark {
+  font-family: var(--mono);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  font-size: clamp(3.4rem, 9vw, 6.5rem);
+}
+.hero-mark em { color: var(--amber); font-style: normal; font-weight: 500; }
+.hero-rule { background: var(--amber); width: 60px; }
+.hero-tagline { color: var(--ink-2); font-family: var(--mono); font-style: normal; }
+.hero-meta { color: var(--ink-3); font-family: var(--mono); }
+
+/* SECTIONS */
+.section-kicker { color: var(--amber); font-family: var(--mono); font-weight: 500; letter-spacing: 0.16em; }
+.section-kicker::after { background: var(--amber); opacity: 0.4; }
+
+section.logotype-section h2 {
+  font-family: var(--mono);
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  color: var(--ink);
+}
+section.logotype-section h2 em { color: var(--amber); font-style: normal; font-weight: 500; }
+section.logotype-section .lede {
+  font-family: var(--mono);
+  color: var(--ink-2);
+  font-size: 0.96rem;
+  line-height: 1.6;
+}
+section.logotype-section .lede::first-line { font-variant: normal; letter-spacing: 0; }
+
+/* Highlighter — a syntax-colored span in δ */
+.hl, .hl-hot {
+  background: var(--hl);
+  padding: 0.06em 0.3em;
+  color: var(--amber);
+  border-radius: 2px;
+}
+.hl-hot { background: var(--hl-hot); color: var(--warn); }
+
+/* Type specimen */
+.type-specimen { background: var(--paper-lt); border-color: var(--rule); }
+.type-row { border-bottom-color: var(--rule); border-bottom-style: dotted; }
+.type-label { color: var(--amber); font-family: var(--mono); font-weight: 500; }
+.type-sample { color: var(--ink); font-family: var(--mono); }
+.type-sample.h2 { color: var(--amber); font-style: normal; font-weight: 500; }
+.type-sample.display em { color: var(--amber); font-style: normal; font-weight: 500; }
+.type-sample.body { color: var(--ink-2); }
+.type-sample.mono { color: var(--ink); }
+.type-meta { color: var(--ink-3); font-family: var(--mono); }
+
+/* Variations */
+.variation-tile { background: var(--paper-elev); border-color: var(--rule); color: var(--ink); }
+.variation-tile.paper { background: var(--paper-elev); }
+.variation-tile.warm { background: var(--paper-lt); }
+.variation-tile.dark { background: var(--paper-dk); border-color: var(--amber); }
+.variation-tile .vt-mark { color: var(--ink); font-family: var(--mono); font-weight: 500; }
+.variation-tile .vt-mark em { color: var(--amber); font-style: normal; font-weight: 500; }
+.variation-tile.dark .vt-mark { color: var(--ink); }
+.variation-tile.dark .vt-mark em { color: var(--amber); }
+.variation-tile .vt-tag { color: var(--ink-3); font-family: var(--mono); font-weight: 500; }
+.variation-tile.dark .vt-tag { color: rgba(212, 166, 79, 0.6); }
+.variation-tile .vt-signet {
+  border-color: var(--amber);
+  background: var(--paper);
+  border-radius: 2px;
+}
+.variation-tile .vt-signet::before { background: var(--amber); }
+.variation-tile .vt-signet::after { background: var(--amber); }
+.variation-tile .vt-signet span em { color: var(--amber); font-style: normal; font-weight: 500; }
+
+/* UI primitives — terminal-flavored */
+.ui-kit { background: var(--paper-lt); border-color: var(--rule); }
+.ui-cell h4 { color: var(--amber); font-family: var(--mono); font-weight: 500; }
+.ui-btn {
+  font-family: var(--mono); font-weight: 500;
+  letter-spacing: 0.04em; text-transform: none;
+  border-radius: 2px;
+}
+.ui-btn::before { content: '$ '; opacity: 0.7; }
+.ui-btn.primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.ui-btn.primary:hover { background: var(--amber); border-color: var(--amber); color: var(--paper); }
+.ui-btn.secondary { background: var(--amber); color: var(--paper); border-color: var(--amber); }
+.ui-btn.secondary:hover { background: var(--amber-deep); border-color: var(--amber-deep); }
+.ui-btn.ghost { color: var(--amber); border-color: var(--amber); background: transparent; }
+.ui-btn.ghost:hover { background: var(--amber); color: var(--paper); }
+
+.ui-badge {
+  font-family: var(--mono); font-weight: 500; letter-spacing: 0.06em;
+  text-transform: none; border-radius: 2px;
+}
+.ui-badge.live { color: var(--warn); border-color: var(--warn); background: rgba(212, 96, 79, 0.06); }
+.ui-badge.ok { color: var(--amber); border-color: var(--amber); background: rgba(212, 166, 79, 0.06); }
+.ui-badge.hold { color: var(--ink-3); border-color: var(--ink-4); }
+
+.ui-code {
+  background: var(--paper-dk); color: var(--ink);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+}
+.ui-code .k { color: var(--amber); }
+.ui-code .v { color: var(--ink); }
+.ui-code .c { color: var(--ink-3); font-style: normal; }
+
+.ui-input {
+  font-family: var(--mono); border-color: var(--rule);
+  background: var(--paper-dk); color: var(--ink);
+  border-radius: 2px;
+}
+.ui-input:focus { border-color: var(--amber); box-shadow: 0 0 0 2px rgba(212, 166, 79, 0.1); }
+
+/* The Hex Sigil section */
+.hl-specimen { background: var(--paper-lt); border-color: var(--rule); }
+.hl-rule .rule-label { color: var(--amber); font-family: var(--mono); font-weight: 500; }
+.hl-rule .rule-text { color: var(--ink-2); font-family: var(--mono); }
+.hl-rule .rule-text em { color: var(--amber); font-style: normal; font-weight: 500; }
+.hl-sample-lines { color: var(--ink); font-family: var(--mono); }
+.hl-sample-lines .label { color: var(--amber); font-family: var(--mono); font-weight: 500; }
+
+/* Editorial Pairing */
+.pairing { background: var(--paper-lt); border-color: var(--rule); color: var(--ink); }
+.pairing::before { color: var(--amber); background: var(--paper); font-family: var(--mono); font-weight: 500; }
+.pairing .article-eyebrow { color: var(--amber); font-family: var(--mono); font-weight: 500; }
+.pairing h3 { font-family: var(--mono); color: var(--ink); font-weight: 500; }
+.pairing h3 em { color: var(--amber); font-style: normal; font-weight: 500; }
+.pairing p { font-family: var(--mono); color: var(--ink-2); font-size: 0.95rem; line-height: 1.7; }
+.pairing p:first-of-type::first-letter { font-family: var(--mono); color: var(--amber); font-weight: 500; font-size: 3.5rem; }
+.pairing p:first-of-type::first-line { font-variant: normal; letter-spacing: 0; }
+.pairing p strong { color: var(--ink); font-weight: 500; }
+.pairing .pull-quote {
+  font-family: var(--mono);
+  font-style: normal;
+  border-left-color: var(--amber);
+  color: var(--ink);
+}
+.pairing .pull-quote::before { content: '> '; color: var(--amber); }
+.pairing .byline { color: var(--ink-3); font-family: var(--mono); font-weight: 500; border-top-color: var(--rule); }
+.pairing .byline strong { color: var(--ink-2); font-weight: 500; }
+
+/* Applications */
+.app-card { background: var(--paper-lt); border-color: var(--rule); color: var(--ink); }
+.app-card .app-kicker { color: var(--amber); font-family: var(--mono); font-weight: 500; }
+.business-card { background: var(--paper-elev); border-color: var(--rule); color: var(--ink); }
+.business-card::before { background: var(--amber); width: 4px; }
+.business-card .bc-mark { font-family: var(--mono); color: var(--ink); font-weight: 500; }
+.business-card .bc-mark em { color: var(--amber); font-style: normal; font-weight: 500; }
+.business-card .bc-rows { color: var(--ink-3); font-family: var(--mono); }
+.business-card .bc-rows strong { color: var(--ink); font-weight: 500; }
+.business-card .bc-rows div[style*="--red"] { color: var(--amber) !important; }
+
+.document-head { background: var(--paper-elev); border-color: var(--rule); color: var(--ink); }
+.document-head .dh-kicker { color: var(--amber); border-bottom-color: var(--amber); font-family: var(--mono); font-weight: 500; }
+.document-head h4 { font-family: var(--mono); color: var(--ink); font-weight: 500; }
+.document-head h4 em { color: var(--amber); font-style: normal; font-weight: 500; }
+.document-head .dh-body { color: var(--ink-2); font-family: var(--mono); }
+.document-head .dh-body::first-line { font-variant: normal; letter-spacing: 0; }
+.document-head .dh-colophon { color: var(--ink-3); font-family: var(--mono); border-top-color: var(--rule); }
+
+.spec-plate {
+  background: var(--paper-dk); color: var(--ink);
+  border: 1px solid var(--amber);
+  border-radius: 2px;
+}
+.spec-plate::before { color: var(--amber); background: var(--paper); font-family: var(--mono); font-weight: 500; }
+.spec-plate .k { color: var(--amber); }
+.spec-plate .v { color: var(--ink); }
+.spec-plate .c { color: var(--ink-3); font-style: normal; }
+
+/* Voice */
+.voice-card { background: var(--paper-elev); border-color: var(--rule); color: var(--ink); }
+.voice-card:hover { border-color: var(--amber); }
+.voice-card .vc-tag { color: var(--amber); font-family: var(--mono); font-weight: 500; }
+.voice-card blockquote { font-family: var(--mono); font-style: normal; color: var(--ink); }
+.voice-card blockquote::before { content: '> '; color: var(--amber); }
+.voice-card blockquote em { color: var(--amber); font-style: normal; font-weight: 500; }
+.voice-card .vc-note { color: var(--ink-2); font-family: var(--mono); }
+
+/* Swatches */
+.swatch { background: var(--paper-lt); border-color: var(--rule); }
+.swatch-name { color: var(--ink); font-family: var(--mono); font-weight: 500; }
+.swatch-hex { color: var(--ink-3); font-family: var(--mono); }
+.swatch-role { color: var(--ink-3); font-family: var(--mono); font-style: normal; }
+
+/* Colophon */
+.colophon {
+  font-family: var(--mono); color: var(--ink-3); font-weight: 400;
+  border-top-color: var(--rule);
+}
+.colophon .rule { background: var(--amber); width: 40px; }
+.colophon .line.italic { color: var(--ink-2); font-family: var(--mono); font-style: normal; }
+.colophon a { color: var(--amber); }
+.colophon a:hover { color: var(--amber-soft); }
+
+/* ============================================
+   ▶ LIGHT MODE OVERRIDE ◀
+   When [data-mode="light"] is set on <html>, the surface
+   and ink invert: cream paper, warm-cocoa-tinted dark ink.
+   Code surface and spec plate stay dark — convention is
+   "code is always inverted from the page". Amber + warn
+   carry through unchanged.
+   ============================================ */
+html[data-mode="light"] {
+  --paper:     #f4f1e8;
+  --paper-dk:  #ece8db;
+  --paper-lt:  #faf8f0;
+  --paper-elev:#fdfbf4;
+
+  --ink:       #1a1814;
+  --ink-2:     #44403a;
+  --ink-3:     #8a8478;
+  --ink-4:     #c0b9a8;
+
+  --rule:      #d8d2c4;
+  --rule-mid:  #e6e0d2;
+}
+/* Code surface + spec plate stay dark in light mode */
+html[data-mode="light"] .ui-code,
+html[data-mode="light"] .spec-plate {
+  background: #0e0e10;
+  color: #e8e4dc;
+}
+html[data-mode="light"] .ui-code .v,
+html[data-mode="light"] .spec-plate .v { color: #e8e4dc; }
+html[data-mode="light"] .ui-code .c,
+html[data-mode="light"] .spec-plate .c { color: rgba(232,228,220,0.5); }
+/* Variation tile dark stays dark */
+html[data-mode="light"] .variation-tile.dark {
+  background: #0e0e10;
+  color: #e8e4dc;
+}
+html[data-mode="light"] .variation-tile.dark .vt-mark { color: #e8e4dc; }
+
+/* The toggle button — fixed top-right, mono caps, two states */
+.mode-toggle {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.25rem;
+  z-index: 100;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--amber);
+  background: var(--paper-elev);
+  border: 1px solid var(--amber);
+  border-radius: 2px;
+  padding: 0.45rem 0.75rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.mode-toggle:hover { background: var(--amber); color: var(--paper); }
+.mode-toggle .mt-dot {
+  display: inline-block;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--amber);
+}
+.mode-toggle:hover .mt-dot { background: var(--paper); }
+
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+
+}
+</style>
+<script src="_styleguide.js" defer></script>
+</head>
+<body data-direction="δ" data-palette="dark-machine" data-pairing="C" data-mono="plex" data-layout="homepage" data-mark="rain">
+
+<!-- Mode toggle (light/dark) — single page, two states -->
+<button class="mode-toggle" id="mode-toggle" type="button">
+  <span class="mt-dot"></span>
+  <span id="mt-label">$ mode --light</span>
+</button>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-eyebrow">Direction &delta; &middot; Machine &middot; 0x00</div>
+  <h1 class="hero-mark">Open<em>Prose</em></h1>
+  <div class="hero-rule"></div>
+  <p class="hero-tagline">responsibility = service(outcome)</p>
+  <div class="hero-meta">IBM Plex Mono &middot; amber #d4a64f &middot; ink on cocoa &middot; hex sigils</div>
+</section>
+
+<!-- PALETTE -->
+<section class="logotype-section" id="palette">
+  <div class="section-kicker">0x01 &middot; Palette</div>
+  <h2>Cocoa, ink, amber. <em>That's it.</em></h2>
+  <p class="lede">Two surfaces and one keyword color. The page is cocoa #0e0e10 &mdash; not pure black, never pure black, because pure black on a CRT or modern OLED is hostile. Ink is a slightly desaturated cream #e8e4dc that reads at terminal contrast without burning. Amber #d4a64f handles every keyword, every accent, every link &mdash; the same color a syntax highlighter uses for "constant". A second color, warn-red #d4604f, is held back for the single hot mark that means "this is the line that fails closed".</p>
+  <div class="palette-grid">
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--paper);"></div>
+      <span class="swatch-name">Cocoa</span>
+      <span class="swatch-hex">#0e0e10</span>
+      <span class="swatch-role">the page</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--paper-dk); border-color: var(--rule);"></div>
+      <span class="swatch-name">Cocoa Deep</span>
+      <span class="swatch-hex">#07070a</span>
+      <span class="swatch-role">code surface</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--paper-lt); border-color: var(--rule);"></div>
+      <span class="swatch-name">Elev 1</span>
+      <span class="swatch-hex">#16161a</span>
+      <span class="swatch-role">specimen surfaces</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--paper-elev); border-color: var(--rule);"></div>
+      <span class="swatch-name">Elev 2</span>
+      <span class="swatch-hex">#1d1d22</span>
+      <span class="swatch-role">cards &middot; tiles</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--ink); border-color: var(--ink);"></div>
+      <span class="swatch-name">Ink</span>
+      <span class="swatch-hex">#e8e4dc</span>
+      <span class="swatch-role">primary copy</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--amber); border-color: var(--amber);"></div>
+      <span class="swatch-name">Amber</span>
+      <span class="swatch-hex">#d4a64f</span>
+      <span class="swatch-role">keyword &middot; em</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--amber-deep); border-color: var(--amber-deep);"></div>
+      <span class="swatch-name">Amber Deep</span>
+      <span class="swatch-hex">#b8862e</span>
+      <span class="swatch-role">hover &middot; pressed</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--warn); border-color: var(--warn);"></div>
+      <span class="swatch-name">Warn</span>
+      <span class="swatch-hex">#d4604f</span>
+      <span class="swatch-role">hot mark &middot; fail-closed</span>
+    </div>
+  </div>
+</section>
+
+<!-- TYPE SCALE -->
+<section class="logotype-section" id="type">
+  <div class="section-kicker">0x02 &middot; Type Scale</div>
+  <h2>One face. <em>IBM Plex Mono.</em> Everywhere.</h2>
+  <p class="lede">No proportional type appears anywhere on the page. IBM Plex Mono carries display, body, UI, and code at five weights. Italic exists, but it is reserved for <em>the keyword</em> &mdash; the word the sentence turns on &mdash; and it is always rendered upright with amber color, because a slanted glyph in a monospace grid breaks the grid. The brand voice is the terminal's voice: every glyph occupies the same cell, every line aligns to the same column.</p>
+  <div class="type-specimen">
+    <div class="type-row">
+      <span class="type-label">Display</span>
+      <span class="type-sample display">Write the <em>outcome</em>.</span>
+      <span class="type-meta">Plex Mono 500 &middot; clamp 2–3rem</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">H2 keyword</span>
+      <span class="type-sample h2">the quiet arrival</span>
+      <span class="type-meta">Plex Mono 500 &middot; amber &middot; 2rem</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">H3</span>
+      <span class="type-sample h3">A specification, <em>recited</em></span>
+      <span class="type-meta">Plex Mono 500 &middot; 1.4rem</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Body</span>
+      <span class="type-sample body">You declare the outcome in a file. The system picks it up on cadence, runs it, verifies the result, and delivers.</span>
+      <span class="type-meta">Plex Mono 400 &middot; 0.95rem / 1.6</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Keyword skim</span>
+      <span class="type-sample hl-sample">The standup happens anyway, but it is <span class="hl">fifteen minutes shorter</span>. Nobody asks where the numbers came from.</span>
+      <span class="type-meta">amber bg &middot; 22% alpha</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Keyword hot</span>
+      <span class="type-sample hl-sample">If the outcome <span class="hl-hot">doesn't ship</span>, no line.</span>
+      <span class="type-meta">warn bg &middot; 22% alpha</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Label</span>
+      <span class="type-sample" style="font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.12em; text-transform: none; color: var(--amber); font-weight: 500;">// responsibilities-as-a-service</span>
+      <span class="type-meta">Plex Mono 500 &middot; 0.78rem</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Code</span>
+      <span class="type-sample mono">responsibility: weekly-investor-digest</span>
+      <span class="type-meta">Plex Mono 400 &middot; 0.92rem</span>
+    </div>
+  </div>
+</section>
+
+<!-- LOGO VARIATIONS -->
+<section class="logotype-section" id="variations">
+  <div class="section-kicker">0x03 &middot; Logo Variations</div>
+  <h2>One mark, <em>three surfaces</em>.</h2>
+  <p class="lede">Primary on cocoa, a compact signet with amber serifs, and an inverted mark with full amber. The "Prose" half always carries amber instead of italic, because italic monospace breaks the grid. The keyword highlight never touches the mark &mdash; it is a syntax tool for prose, not a brand device.</p>
+  <div class="variations-grid">
+    <div class="variation-tile paper">
+      <div class="vt-mark">Open<em>Prose</em></div>
+      <div class="vt-tag">Primary &middot; 40px+</div>
+    </div>
+    <div class="variation-tile warm">
+      <div class="vt-signet"><span>O<em>P</em></span></div>
+      <div class="vt-tag">Signet &middot; favicon</div>
+    </div>
+    <div class="variation-tile dark">
+      <div class="vt-mark">Open<em>Prose</em></div>
+      <div class="vt-tag">Reversed &middot; dark ground</div>
+    </div>
+  </div>
+</section>
+
+<!-- UI ELEMENTS -->
+<section class="logotype-section" id="ui">
+  <div class="section-kicker">0x04 &middot; UI Elements</div>
+  <h2>Buttons, badges, and a <em>specification</em>.</h2>
+  <p class="lede">Interface primitives are typed commands. Buttons take a <code>$</code> sigil. Badges take a <code>!</code> for live and <code>0</code> for verified. There is no uppercase chrome &mdash; the type stays cased the way a programmer would type it. The code surface is the same surface as everything else: this is the only direction where prose and code share a face.</p>
+  <div class="ui-kit">
+    <div class="ui-cell">
+      <h4>Buttons</h4>
+      <div class="ui-buttons">
+        <button class="ui-btn primary">Primary</button>
+        <button class="ui-btn secondary">Secondary</button>
+        <button class="ui-btn ghost">Ghost</button>
+      </div>
+      <div class="ui-badges">
+        <span class="ui-badge live">&middot; Live</span>
+        <span class="ui-badge ok">&#10003; Verified</span>
+        <span class="ui-badge hold">&middot; On hold</span>
+      </div>
+      <div class="ui-input-wrap">
+        <label style="font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.06em; text-transform: none; color: var(--amber); font-weight: 500;">// declare the outcome</label>
+        <input class="ui-input" type="text" placeholder="weekly-investor-digest">
+      </div>
+    </div>
+    <div class="ui-cell">
+      <h4>Code surface</h4>
+      <div class="ui-code"><span class="c"># pick up the file</span>
+<span class="k">$</span> openprose run weekly-digest
+<span class="c"># verify, deliver, archive</span>
+<span class="v">&#10003; delivered 09:14 ET</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- THE KEYWORD — δ's emphasis primitive -->
+<section class="logotype-section" id="highlighter">
+  <div class="section-kicker">0x05 &middot; The Keyword</div>
+  <h2>The em is <em>amber</em>. The hot is <span class="hl-hot">warn-red</span>.</h2>
+  <p class="lede">δ's emphasis is the syntax highlight. Where α used italic-red, δ uses an upright amber word with a faint amber background &mdash; the same gesture an editor renders for a language keyword. Where α's "hot" was a warm-red highlighter, δ's hot is a desaturated red on a small slab background &mdash; the visual language of a compiler warning. The two are stylistically of a piece: this whole brand thinks like a syntax tree.</p>
+  <div class="hl-specimen">
+    <div class="hl-sample-lines">
+      <div>
+        <span class="label">// keyword</span>
+        <div>Every Monday at 09:00 ET, the digest arrives &mdash; <span class="hl">verified, signed, archived</span>. The standup happens anyway, but it is fifteen minutes shorter.</div>
+      </div>
+      <div>
+        <span class="label">// warn</span>
+        <div>Billed by <span class="hl-hot">delivery</span>. If the outcome doesn't ship, no line.</div>
+      </div>
+      <div>
+        <span class="label">// keyword + em</span>
+        <div>The humanist computer is the insight that these two dispositions &mdash; <em>craft and machinery</em> &mdash; are not opposed. The <span class="hl">machine handles the cadence</span>. The <span class="hl">prose handles the voice</span>.</div>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+      <div class="hl-rule">
+        <span class="rule-label">Rule &middot; keyword</span>
+        <span class="rule-text"><em>Use</em> on the nouns and numbers a programmer would copy out of the prose if they were taking notes. <span class="hl">Never on verbs</span>, always on what the sentence is naming.</span>
+      </div>
+      <div class="hl-rule">
+        <span class="rule-label">Rule &middot; warn</span>
+        <span class="rule-text"><em>Use</em> on the single fail-closed claim per page &mdash; the proof, the promise, the boundary. Two warns on one page <span class="hl-hot">desensitizes the warning</span>.</span>
+      </div>
+      <div class="hl-rule">
+        <span class="rule-label">Rule &middot; layering</span>
+        <span class="rule-text">Em (italic, upright amber) and keyword (amber slab) <em>never</em> share a phrase. The writer's emphasis and the syntax tree's emphasis stay on separate layers.</span>
+      </div>
+      <div class="hl-rule">
+        <span class="rule-label">Rule &middot; the mark</span>
+        <span class="rule-text">Never on the logotype. Never on a button. The keyword highlight is a <em>prose tool only</em> &mdash; body copy, h2/h3, document body. Buttons get the <code>$</code> sigil; badges get <code>!</code> or <code>0</code>; the brand mark gets nothing.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EDITORIAL PAIRING -->
+<section class="logotype-section narrow" id="pairing">
+  <div class="section-kicker">0x06 &middot; Editorial Pairing</div>
+  <h2>Set in mono &mdash; <em>the voice</em> at length, with <span class="hl">syntax</span>.</h2>
+  <p class="lede">The machine voice is calm, specific, and unafraid of a short sentence. It names things by their nouns. It reaches for the keyword highlight only when a programmer would copy that word into a note. The whole thing reads as if a careful operator wrote it in their own editor.</p>
+  <article class="pairing">
+    <div class="article-eyebrow">From the field notes</div>
+    <h3>On the <em>quiet arrival</em> of Monday reports.</h3>
+    <p>Once, the week began with a scramble. Someone opened seven dashboards, pulled the numbers, wrote the digest, and dropped it in the 09:00 standup. The rotation was a line in the budget. The standup was a line in the calendar. Nobody was quite sure what either accomplished beyond confirming that the dashboards were fine.</p>
+    <p>Then the outcome was declared in a file. <strong>Fifteen lines.</strong> Every Monday at 09:00 ET, the digest arrives &mdash; <span class="hl">verified, signed, archived</span>. The standup happens anyway, but it is fifteen minutes shorter. Nobody asks where the numbers came from. <span class="hl">They are already in the document</span>.</p>
+    <div class="pull-quote">The first thing we noticed was what we stopped doing &mdash; the standing meetings where we'd review the dashboard to confirm the dashboard was fine.</div>
+    <p>The humanist computer is the insight that these two dispositions &mdash; craft and machinery &mdash; are not opposed. The machine handles the cadence. The prose handles the voice. The page reads the way a good analyst would have written it. <span class="hl-hot">The result is the point</span>.</p>
+    <div class="byline"><strong>Maya Chen</strong> &middot; Head of Operations &middot; Series-C payments platform</div>
+  </article>
+</section>
+
+<!-- APPLICATIONS -->
+<section class="logotype-section" id="applications">
+  <div class="section-kicker">0x07 &middot; Applications</div>
+  <h2>A card, a <em>masthead</em>, a plate.</h2>
+  <p class="lede">Three real surfaces the brand has to carry: a business card (formal, amber rule, no keyword), a document header (operator's brief, keyword welcome), and a specification plate (the spec, amber on cocoa, keyword forbidden because the spec <em>is</em> the keyword).</p>
+  <div class="applications-grid">
+    <div class="app-card">
+      <div class="app-kicker">Business Card</div>
+      <div class="business-card">
+        <div class="bc-mark">Open<em>Prose</em></div>
+        <div class="bc-rows">
+          <div><strong>Maya Chen</strong></div>
+          <div>Head of Operations</div>
+          <div style="margin-top: 0.5rem; color: var(--red);">maya@openprose.ai</div>
+          <div style="color: var(--red);">+1 &middot; 415 &middot; 0113</div>
+        </div>
+      </div>
+    </div>
+    <div class="app-card">
+      <div class="app-kicker">Document Header</div>
+      <div class="document-head">
+        <span class="dh-kicker">Weekly Investor Digest &middot; Wk 14</span>
+        <h4>ARR crossed <em>$14.2M</em> <span class="hl">this week</span>.</h4>
+        <p class="dh-body">The new $40K Meridian contract pushed us over the line. Three new logos in pipeline, <span class="hl">two expected to close this quarter</span>.</p>
+        <div class="dh-colophon">Generated 09:02 &middot; Verified 09:14 &middot; OpenProse</div>
+      </div>
+    </div>
+    <div class="app-card" style="grid-column: 1 / -1;">
+      <div class="app-kicker">Formal Specification</div>
+      <div class="spec-plate">
+<span class="k">responsibility:</span> <span class="v">weekly-investor-digest</span>
+<span class="k">owner:</span>         <span class="v">finance@company.example</span>
+<span class="k">cadence:</span>       <span class="v">mondays @ 09:00 ET</span>
+<span class="k">input:</span>
+  <span class="c">- gmail:investors@*</span>
+  <span class="c">- notion:portfolio/updates</span>
+<span class="k">outcome:</span> <span class="v">|</span>
+  <span class="v">One page. What changed, what's on track,</span>
+  <span class="v">what needs attention. 200 words.</span>
+<span class="k">deliver:</span>
+  <span class="c">- email:investors@</span>
+<span class="k">audit:</span>         <span class="v">retain 7 years</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- VOICE & TONE -->
+<section class="logotype-section" id="voice">
+  <div class="section-kicker">0x08 &middot; Voice &amp; Tone</div>
+  <h2>Three sentences, <em>one register</em>, three syntax modes.</h2>
+  <p class="lede">Three sanctioned voices the brand uses: the short declaration, the spec-sheet note, the editorial observation. Each sentence can live on its own without ornament &mdash; and each demonstrates one mode of the syntax highlighter.</p>
+  <div class="voice-grid">
+    <div class="voice-card">
+      <div class="vc-tag">Voice &middot; short &middot; keyword</div>
+      <blockquote>&ldquo;Write the outcome. <span class="hl">We run it.</span>&rdquo;</blockquote>
+      <p class="vc-note">The tagline. Six words. The keyword lands on the second sentence &mdash; the part that shifts the burden from the operator to the runtime.</p>
+    </div>
+    <div class="voice-card">
+      <div class="vc-tag">Voice &middot; spec &middot; warn</div>
+      <blockquote>&ldquo;Billed by <span class="hl-hot">delivery</span>. If the outcome doesn't ship, no line.&rdquo;</blockquote>
+      <p class="vc-note">Terms of art spoken plainly. Warn-red on the one word that defines the pricing model &mdash; the boundary a reader cannot skim past.</p>
+    </div>
+    <div class="voice-card">
+      <div class="vc-tag">Voice &middot; editorial &middot; em</div>
+      <blockquote>&ldquo;Once, the week began with a scramble. <em>Then the outcome was declared in a file.</em>&rdquo;</blockquote>
+      <p class="vc-note">The long form voice. The em (upright amber) carries the pivot. No keyword highlight here &mdash; this sentence is still the author's, not the syntax tree's.</p>
+    </div>
+  </div>
+</section>
+
+<!-- COLOPHON -->
+<section class="colophon">
+  <div class="rule"></div>
+  <div class="line italic">// OpenProse &middot; Round-3 finalists &middot; Direction &delta; &middot; Machine</div>
+  <div class="line">IBM Plex Mono &middot; one face for everything</div>
+  <div class="line">Surface #0e0e10 &middot; Ink #e8e4dc &middot; Amber #d4a64f &middot; Warn #d4604f</div>
+  <div class="line" style="margin-top: 1.25rem;">
+    <a href="direction-alpha-editorial.html">&alpha; Editorial</a>
+    <a href="direction-beta-tufte.html">&beta; Tufte</a>
+    <a href="direction-gamma-manuscript.html">&gamma; Manuscript</a>
+    <a href="direction-epsilon-operator.html">&epsilon; Operator</a>
+  <a href="direction-zeta-saas.html">&zeta; SaaS</a>
+  <a href="direction-eta-organism.html">&eta; Organism</a>
+  <a href="direction-theta-living-document.html">&theta; Living Doc</a>
+  <a href="direction-iota-reference-card.html">&iota; Reference Card</a>
+    <a href="direction-kappa-codex-spreads.html">&kappa; Codex</a>
+  </div>
+</section>
+
+<script>
+/* ============================================
+   LIGHT/DARK MODE TOGGLE
+   Single page, two states. Persists in localStorage.
+   data-mode="light" | "dark" (default)
+   ============================================ */
+(function(){
+  var btn = document.getElementById('mode-toggle');
+  var lbl = document.getElementById('mt-label');
+  if (!btn) return;
+
+  function applyMode(mode) {
+    document.documentElement.setAttribute('data-mode', mode);
+    if (lbl) lbl.textContent = mode === 'light' ? '$ mode --dark' : '$ mode --light';
+    try { localStorage.setItem('openprose-delta-mode', mode); } catch(e){}
+  }
+
+  // Initial mode from localStorage (default dark)
+  var saved = 'dark';
+  try { saved = localStorage.getItem('openprose-delta-mode') || 'dark'; } catch(e){}
+  applyMode(saved);
+
+  btn.addEventListener('click', function() {
+    var current = document.documentElement.getAttribute('data-mode') || 'dark';
+    applyMode(current === 'light' ? 'dark' : 'light');
+  });
+})();
+</script>
+
+</body>
+</html>

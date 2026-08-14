@@ -1,0 +1,2958 @@
+<!DOCTYPE html>
+<html lang="en" data-mode="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Theme bootstrap — resolve light/dark BEFORE first paint so a dark-device
+     visitor never sees a light flash on load. Same key + order as the toggle
+     script (bottom of body): explicit localStorage choice → device
+     prefers-color-scheme → light fallback. The toggle stays authoritative for
+     clicks + persistence. -->
+<script>
+  (function () {
+    try {
+      var stored = localStorage.getItem('openprose-canonical-mode');
+      var m = stored || (window.matchMedia &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-mode', m);
+    } catch (e) {}
+  })();
+</script>
+<title>OpenProse · Author Outcomes</title>
+<meta name="description" content="Author outcomes. Write the future as a Markdown contract: requires, maintains, strategies. Agents run, review, and maintain it on cadence. Not a chain of prompts.">
+
+<!-- Mobile browser chrome + iOS phone-detection suppression -->
+<meta name="theme-color" content="#f5f0e8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14110d" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<meta name="format-detection" content="telephone=no">
+
+<!-- Canonical (production URL — adjust on deploy) -->
+<link rel="canonical" href="https://prose.md/">
+
+<!-- OpenGraph -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="OpenProse · Programs as documents with guarantees">
+<meta property="og:description" content="OpenProse runs your responsibilities on cadence. A program is a document. A delivery is a verified outcome. The model is contracted, not asked.">
+<meta property="og:image" content="https://prose.md/og-canonical.png">
+<meta property="og:url" content="https://prose.md/">
+<meta property="og:site_name" content="OpenProse">
+
+<!-- Twitter / X card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="OpenProse · Programs as documents with guarantees">
+<meta name="twitter:description" content="OpenProse runs your responsibilities on cadence. A program is a document. A delivery is a verified outcome. The model is contracted, not asked.">
+<meta name="twitter:image" content="https://prose.md/og-canonical.png">
+
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 142 142'%3E%3Cpath d='M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z' fill='%232a2520'/%3E%3C/svg%3E">
+
+<!-- Preconnect to Google Fonts host (used by _pairings.css @import) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Preconnect to the Kecal CDN so the preloaded accent face connects fast. -->
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+
+<!-- Preload the symmetry hero photographs so they fetch in parallel with CSS.
+     Tier selection (1000/1600/2400) happens in JS once viewport is measured —
+     this preload primes the 1600 desktop tier; HiDPI swaps to 2400 on demand.
+     TOP asset is split: v1 TOP is the CSS fallback (visible during GL boot +
+     when WebGL unavailable + when v2 fetch fails); v2 TOP is the WebGL texture
+     (transparent sky for the cloud field).  Both are preloaded so neither path
+     stalls. -->
+<link rel="preload" as="image"
+      href="../Assets/symmetry-web/symmetry_under-1600.webp"
+      imagesrcset="../Assets/symmetry-web/symmetry_under-1000.webp 1000w, ../Assets/symmetry-web/symmetry_under-1600.webp 1600w, ../Assets/symmetry-web/symmetry_under-2400.webp 2400w"
+      imagesizes="100vw">
+<link rel="preload" as="image"
+      href="../Assets/symmetry-web/symmetry_top-1600.webp"
+      imagesrcset="../Assets/symmetry-web/symmetry_top-1000.webp 1000w, ../Assets/symmetry-web/symmetry_top-1600.webp 1600w, ../Assets/symmetry-web/symmetry_top-2400.webp 2400w"
+      imagesizes="100vw">
+<link rel="preload" as="image"
+      href="../Assets/symmetry-web/symmetry_top_v2-1600.webp"
+      imagesrcset="../Assets/symmetry-web/symmetry_top_v2-1000.webp 1000w, ../Assets/symmetry-web/symmetry_top_v2-1600.webp 1600w, ../Assets/symmetry-web/symmetry_top_v2-2400.webp 2400w"
+      imagesizes="100vw">
+
+<!-- Preload the Kecal Extrabold (800) accent face — the lyrical <em> on the hero
+     byline + section heads — so it paints without a swap-in flash. -->
+<link rel="preload" as="font" type="font/woff2" crossorigin
+      href="https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extrabold-web.woff2">
+<link rel="stylesheet" href="_tokens.css">
+<link rel="stylesheet" href="_pairings.css">
+
+<!-- Structured data (Organization + WebSite + SoftwareApplication) for SEO / knowledge-panel surfacing. URLs are production placeholders — verify on deploy. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://prose.md/#org",
+      "name": "OpenProse",
+      "url": "https://prose.md/",
+      "logo": "https://prose.md/op-style-v2.svg",
+      "description": "OpenProse runs your responsibilities on cadence. A program is a document. A delivery is a verified outcome. The model is contracted, not asked.",
+      "sameAs": ["https://github.com/openprose"]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://prose.md/#website",
+      "url": "https://prose.md/",
+      "name": "OpenProse",
+      "publisher": { "@id": "https://prose.md/#org" }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "name": "OpenProse",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Any",
+      "url": "https://prose.md/",
+      "downloadUrl": "https://github.com/openprose/prose",
+      "softwareHelp": "https://docs.prose.md/",
+      "description": "Write the future as a Markdown contract: requires, maintains, strategies. Agents run, review, and maintain it on cadence.",
+      "license": "https://opensource.org/licenses/MIT",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "publisher": { "@id": "https://prose.md/#org" }
+    }
+  ]
+}
+</script>
+
+<style>
+/* ============================================================
+   PAGE-SPECIFIC LAYOUT
+   Palette + type come from _tokens.css (light-warm-teal) +
+   _pairings.css (Pairing A: mono body + upright Kecal 800 em).
+   Only layout shapes + section chrome live here.
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* Page-scoped tokens (palette + type come from _tokens.css). */
+:root { --content-max: 1400px; } /* shared max-width for the section / cta / footer inners */
+
+html, body {
+  height: 100%;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--type-body);
+  /* No hardcoded font-size so user browser-scale preferences are honored.
+     All other sizes are rem-relative. */
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+/* SR-only utility. The visible OpenProse mark is an SVG logotype with no
+   accessible heading, so this `<h1>` lives in the hero for assistive-tech +
+   SEO outline. Keep collapsed-but-readable. */
+.skip-link {
+  position: absolute;
+  top: 0; left: 0;
+  z-index: 1000;
+  padding: 0.6rem 1rem;
+  font-family: var(--type-mono);
+  font-size: 0.85rem;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-bottom-right-radius: 6px;
+  transform: translateY(-130%);
+  transition: transform 0.16s ease;
+}
+.skip-link:focus { transform: translateY(0); outline: 2px solid var(--amber); }
+#main-content:focus { outline: none; }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ============================================================
+   DARK MODE — html[data-mode="dark"]
+   body[data-palette="light-warm-teal"] in _tokens.css overrides the
+   html-level tokens at higher specificity, so var(--ink) / var(--paper)
+   would otherwise still resolve to the light palette values. The dark
+   tokens are scoped at html[data-mode="dark"] body, body[data-palette]
+   so the palette default loses on dark mode.
+
+   The --amber ramp is redeclared here so it flips to the ink-ramp tones
+   on dark; without it, the muted-tan light-palette value bleeds through
+   (e.g. the footer-right link hover binds to var(--amber)). Redeclaring
+   the ramp keeps footer link-hover parity and flips every other --amber
+   binding on the page cleanly.
+   ============================================================ */
+html[data-mode="dark"],
+html[data-mode="dark"] body,
+html[data-mode="dark"] body[data-palette] {
+  --paper:      #14110d;
+  --paper-warm: #1c1814;
+  --paper-lt:   #1f1b15;
+  --paper-deep: #08080a;
+  --paper-elev: #1f1b15;
+
+  --ink:        #f5f0e0;
+  --ink-2:      #d6cfba;
+  --ink-3:      #a39a85;
+  --ink-4:      #6e6657;
+
+  --rule:       #2d2820;
+  --rule-mid:   #221d17;
+
+  --amber:       #f5f0e0;
+  --amber-deep:  #d6cfba;
+  --amber-soft:  #a39a85;
+  --amber-faint: rgba(245, 240, 224, 0.10);
+  --amber-tint:  rgba(245, 240, 224, 0.18);
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Production em rule — upright Kecal 800 across all surfaces (c_a965130b) */
+em {
+  font-family: var(--type-display-em);
+  font-style: var(--i-display-em);
+  font-weight: var(--w-display-em);
+  font-size: 1em;
+  letter-spacing: 0;
+  color: var(--ink);
+}
+/* Production strong rule — the technical/structural emphasis tier: mono 700,
+   ink. Counterpart to the lyrical Kecal-italic <em> above — <em> carries
+   concepts/voice, <strong> carries literal terms (metrics, commands, the
+   contract parts, hard claims). */
+strong {
+  font-family: var(--type-mono, inherit);
+  font-style: normal;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+a { color: var(--amber); text-decoration: none; transition: color 0.15s ease; }
+a:hover { color: var(--amber-deep, var(--ink)); }
+
+/* ============================================================
+   NAV — fixed logo top-left + mode-toggle top-right
+   Invisible chrome container; the two corner pills opt back in
+   to pointer events. The hero ripple receives clicks everywhere
+   except the two pills.
+   ============================================================ */
+
+.brand-nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 50;
+  pointer-events: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1.5rem 2rem 0;
+}
+
+/* Scroll-progress bar — fills with --amber as the document scrolls; sits
+   above the brand-nav (z-index 60) so it tracks regardless of section
+   overlay. transform: scaleX is GPU-friendly and avoids reflow. */
+.scroll-progress {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%;
+  height: 2px;
+  background: transparent;
+  z-index: 60;
+  pointer-events: none;
+}
+.scroll-progress::before {
+  content: '';
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--amber);
+  transform-origin: left center;
+  transform: scaleX(var(--p, 0));
+  transition: transform 0.05s linear;
+}
+
+/* Frosted-glass disc carrying the OP signet — upper-left anchor.
+   An explicit 52×52 circle with the SVG centred (not a pill). The
+   mode-toggle is sized the same below. */
+.brand-logo {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  color: var(--ink);
+  pointer-events: auto;
+  isolation: isolate;
+  border-radius: 50%;
+  text-decoration: none;
+  transition: transform 0.2s ease;
+  /* Element is a <button>; reset the browser-default chrome so only the
+     ::before frosted disc reads. */
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.brand-logo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: rgba(245, 240, 232, 0.42);
+  border: 1px solid rgba(255, 255, 248, 0.55);
+  border-radius: 999px;
+  backdrop-filter: blur(14px) saturate(1.15);
+  -webkit-backdrop-filter: blur(14px) saturate(1.15);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 4px 18px rgba(20, 18, 16, 0.18);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+html[data-mode="dark"] .brand-logo::before {
+  background: rgba(20, 18, 16, 0.45);
+  border-color: rgba(255, 255, 248, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    0 4px 18px rgba(0, 0, 0, 0.45);
+}
+.brand-logo:hover::before,
+.brand-logo:active::before { background: rgba(245, 240, 232, 0.58); }
+html[data-mode="dark"] .brand-logo:hover::before,
+html[data-mode="dark"] .brand-logo:active::before { background: rgba(20, 18, 16, 0.62); }
+.brand-logo svg {
+  /* SVG sized to fit centered in the 52px circle with a 12px breathing
+     margin; fill flips with --ink under dark mode now that
+     body[data-palette] no longer overrides. */
+  width: 28px;
+  height: 28px;
+  fill: var(--ink);
+  display: block;
+}
+
+/* Mode toggle — upper-right anchor, same glass DNA + same size as the
+   .brand-logo circle. */
+.mode-toggle {
+  width: 52px;
+  height: 52px;
+  background: rgba(245, 240, 232, 0.42);
+  border: 1px solid rgba(255, 255, 248, 0.55);
+  color: var(--ink-2);
+  cursor: pointer;
+  border-radius: 50%;
+  font-size: 1rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(14px) saturate(1.15);
+  -webkit-backdrop-filter: blur(14px) saturate(1.15);
+  transition: border-color 0.15s, color 0.15s, background 0.2s;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 4px 18px rgba(20, 18, 16, 0.18);
+  pointer-events: auto;
+  padding: 0;
+}
+html[data-mode="dark"] .mode-toggle {
+  background: rgba(20, 18, 16, 0.45);
+  border-color: rgba(255, 255, 248, 0.18);
+  color: var(--ink-2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    0 4px 18px rgba(0, 0, 0, 0.45);
+}
+.mode-toggle:hover,
+.mode-toggle:active { color: var(--ink); background: rgba(245, 240, 232, 0.58); }
+html[data-mode="dark"] .mode-toggle:hover,
+html[data-mode="dark"] .mode-toggle:active { background: rgba(20, 18, 16, 0.62); }
+
+@media (max-width: 640px) {
+  /* Keep the logo + toggle at matching circular size on mobile too;
+     44px is comfortably tappable. */
+  .brand-nav { padding: 1.1rem 1.25rem 0; }
+  .brand-logo { width: 44px; height: 44px; padding: 0; }
+  .brand-logo svg { width: 24px; height: 24px; }
+  .mode-toggle { width: 44px; height: 44px; }
+}
+
+/* ============================================================
+   HERO — symmetry photo with WebGL-rippled bottom half
+   ============================================================ */
+:root {
+  /* Tier-bumped by JS once viewport is measured. Defaults to 1600w
+     desktop tier; JS bumps to 2400 for HiDPI, 1000 for mobile. */
+  --symmetry-top-url:   url('../Assets/symmetry-web/symmetry_top-1600.webp');
+  --symmetry-under-url: url('../Assets/symmetry-web/symmetry_under-1600.webp');
+}
+
+.hero {
+  position: relative;
+  flex: 0 0 auto;
+  width: 100%;
+  min-height: 100vh;
+  height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  overflow: hidden;
+  /* z-index removed so .hero no longer creates its own stacking context.
+     Its positioned children (.hero-overlay z=2, .hero-content z=3) and the
+     canvas (.symmetry-canvas z=1) now all participate in the body's stacking
+     context, so the canvas paints OVER the v1 photo backdrop while the
+     overlay scrim + OpenProse pill still paint over the canvas. */
+  pointer-events: none;
+  background-color: var(--paper-lt);
+  background-image: var(--symmetry-top-url), var(--symmetry-under-url);
+  background-size: cover, cover;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
+}
+
+/* v1 photo is sampled INSIDE the shader (texture unit 2) as the sky
+   backbone.  The CSS bg-image is a pure boot-window/no-WebGL fallback that
+   disappears once the canvas is ready — the shader is the single source of
+   truth for hero pixels.  This also eliminates the scrollbar-gutter alignment
+   issue between canvas (100vw) and .hero (100% of body): both v1 and v2 are
+   sampled with the same cover-fit UVs inside the shader. */
+body[data-symmetry-ready] .hero {
+  background-image: none;
+  background-color: transparent;
+}
+
+/* Full-viewport WebGL surface — body-level sibling so it can be
+   clicked through the hero and the sections below.
+   touch-action: pan-y lets vertical scroll pass through to the browser
+   natively. The IIFE only calls preventDefault on touchmove once the user
+   clearly intends to draw (horizontal motion dominates vertical). Tapping the
+   lake to plop a ripple no longer blocks page scrolling. */
+.symmetry-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  /* z-index 1 so the canvas paints over the v1 photo backdrop on .hero.
+     Sits below the hero-overlay scrim (z=2) and the OpenProse pill (z=3). */
+  z-index: 1;
+  touch-action: pan-y;
+  display: block;
+  pointer-events: auto;
+}
+
+/* Quiet top scrim so the oval reads against ink, not sky.
+   Dark-mode scrim flips to an ink-based gradient so the dark hero darkens
+   at the top edge rather than brightens. */
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(180deg,
+    rgba(245,240,232,0.62) 0%,
+    rgba(245,240,232,0.18) 3.4%,
+    rgba(245,240,232,0.00) 7.65%,
+    rgba(245,240,232,0.00) 100%);
+  transition: background 0.25s ease;
+}
+html[data-mode="dark"] .hero-overlay {
+  background: linear-gradient(180deg,
+    rgba(20,17,13,0.62) 0%,
+    rgba(20,17,13,0.18) 3.4%,
+    rgba(20,17,13,0.00) 7.65%,
+    rgba(20,17,13,0.00) 100%);
+}
+
+/* Center oval — frosted-glass pill carrying logotype + tagline.
+   Pointer-events off so clicks fall through to the ripple canvas.
+   The oval hugs the content (width: fit-content, no hard cap) and horizontal
+   padding scales with the wordmark rather than a fixed pixel value. */
+.hero-content {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.85rem;
+  width: fit-content;
+  max-width: 92vw;
+  /* Fixed rem horizontal padding so the oval hugs the content the same on
+     every viewport width. A `%` value would resolve against the viewport,
+     inflating to ~115px on a 2560-wide screen. 1.7rem gives a touch of
+     breathing room beside the logo + byline. */
+  padding: 1.35rem 1.7rem 0.75rem;
+  /* Heavier blur + saturation + a bit more wash so the glass reads as a
+     real frosted-glass element, not a thin scrim against the photograph. */
+  background: rgba(245, 240, 232, 0.34);
+  border: 1px solid rgba(255, 255, 248, 0.42);
+  border-radius: 999px;
+  backdrop-filter: blur(32px) saturate(1.40);
+  -webkit-backdrop-filter: blur(32px) saturate(1.40);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1px 0 rgba(34, 20, 8, 0.05),
+    0 18px 72px rgba(34, 28, 16, 0.25);
+  pointer-events: none;
+  transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+html[data-mode="dark"] .hero-content {
+  background: rgba(20, 18, 16, 0.36);
+  border-color: rgba(255, 255, 248, 0.16);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.20),
+    0 18px 72px rgba(0, 0, 0, 0.45);
+}
+
+.hero-logotype {
+  display: block;
+  /* Width tuned so the logotype visually matches the byline width inside
+     the oval. Max capped at 410 so the logo tracks the byline rather than
+     overshooting it. */
+  width: clamp(260px, 34vw, 410px);
+  height: auto;
+  fill: var(--ink);
+}
+
+.hero-byline {
+  font-family: var(--type-body);
+  font-weight: var(--w-body);
+  font-size: clamp(1.15rem, 1.75vw, 1.375rem); /* "Author Outcomes" subtitle +25% (c_c395c18b) */
+  line-height: 1.5;
+  color: var(--ink-2);
+  text-wrap: balance;
+  white-space: normal;
+}
+.hero-byline em {
+  color: var(--ink);
+}
+
+/* ============================================================
+   SECTION FRAME — applies to paradigms + features
+   The fixed symmetry canvas reads through these sections; the
+   photo-wash gives copy enough legibility without occluding it.
+   ============================================================ */
+
+.section {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* §I + §II share one continuous frosted-glass panel via the
+   .sections-frosted wrapper.  Moving the backdrop-filter up one level
+   eliminates the per-section seam at the §I/§II boundary; the symmetry
+   shader behind is blurred as one piece. */
+.sections-frosted {
+  position: relative;
+  z-index: 1;
+  background-color: rgba(245, 240, 232, 0.34);
+  backdrop-filter: blur(22px) saturate(1.25);
+  -webkit-backdrop-filter: blur(22px) saturate(1.25);
+  transition: background-color 0.25s ease;
+  /* Click-through to the fixed symmetry canvas behind §I/§II: the frosted
+     panel and its prose let ripple clicks pass to the hero; only the cards
+     (which carry hover) and any links stay interactive. */
+  pointer-events: none;
+}
+.sections-frosted .paradigm-card,
+.sections-frosted .feature-row,
+.sections-frosted a,
+.sections-frosted button { pointer-events: auto; }
+html[data-mode="dark"] .sections-frosted {
+  background-color: rgba(20, 18, 16, 0.42);
+}
+/* Built on Prose — proof band */
+.built-on-prose .bop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1.5rem 2rem;
+  margin-top: 2rem;
+}
+.built-on-prose .bop-group h4 {
+  font-family: var(--type-mono);
+  font-size: 0.79rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink-3); margin: 0 0 0.65rem;
+}
+.built-on-prose .bop-group ul { list-style: none; margin: 0; padding: 0; }
+.built-on-prose .bop-group li {
+  font-family: var(--type-mono); font-size: 0.94rem;
+  color: var(--ink-2); line-height: 1.75;
+}
+.built-on-prose .bop-foot {
+  margin-top: 2rem; font-family: var(--type-mono); font-size: 0.94rem;
+  color: var(--ink-2);
+}
+.built-on-prose .bop-foot a { color: var(--amber); }
+.built-on-prose .bop-foot a:hover { color: var(--amber-deep, var(--ink)); }
+.section .inner {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: 5rem 2rem;
+}
+.section .paradigm-card,
+.section .feature-row,
+.section a,
+.section button,
+.section .ui-btn,
+.section .cta-row { pointer-events: auto; }
+
+/* No decorative rule between sections — the kicker's former pseudo-element
+   flex spacer was retired in favor of inline-flex (the kicker is a label,
+   not a row). */
+.section-kicker {
+  font-family: var(--type-mono);
+  font-size: 0.79rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--amber);
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.section h2 {
+  font-family: var(--type-display);
+  font-weight: var(--w-display);
+  font-size: clamp(1.8rem, 3.4vw, 2.6rem);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  margin-bottom: 0.75rem;
+  max-width: 22ch;
+  text-wrap: balance; /* even, orphan-free heading lines, font-accurate across the inline <em> runs */
+}
+
+.section .lede {
+  font-family: var(--type-body);
+  font-size: 1.08rem;
+  color: var(--ink-2);
+  max-width: 62ch;
+  margin-bottom: 3rem;
+  line-height: 1.7;
+  text-wrap: pretty; /* no orphan last word on the lede */
+}
+
+/* ============================================================
+   §1 · PARADIGMS — three cards
+   ============================================================ */
+
+.paradigm-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+}
+.paradigm-card {
+  /* Cards ~20% transparent in both modes (10% more see-through than the prior 90%, c_7d25fbf5). */
+  background: color-mix(in srgb, var(--paper-elev) 80%, transparent);
+  border: 1px solid var(--rule);
+  padding: 2rem 1.75rem;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.paradigm-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--amber);
+  box-shadow: var(--shadow-md);
+}
+.paradigm-card .num {
+  font-family: var(--type-mono);
+  font-size: 0.79rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  color: var(--amber);
+  margin-bottom: 1.25rem;
+}
+.paradigm-card h3 {
+  font-family: var(--type-display);
+  font-weight: var(--w-display);
+  font-size: 1.4rem;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  margin-bottom: 0.85rem;
+}
+/* Claims use the mono-bold <strong> tier (not Kecal-italic), so each card
+   reads: italic accent (h3) + bold claim + mono note. */
+.paradigm-card .pc-claim {
+  font-family: var(--type-mono);
+  font-style: normal;
+  font-weight: 700;
+  font-size: 1.12rem;
+  line-height: 1.4;
+  color: var(--ink);
+  margin-bottom: 1rem;
+  letter-spacing: 0;
+}
+.paradigm-card .pc-note {
+  font-family: var(--type-body);
+  font-size: 0.97rem;
+  color: var(--ink-2);
+  line-height: 1.7;
+  margin-bottom: 1.5rem;
+  flex: 1;
+}
+.paradigm-card .pc-foot {
+  border-top: 1px dotted var(--rule-mid);
+  padding-top: 0.85rem;
+  font-family: var(--type-mono);
+  font-size: 0.68rem;
+  color: var(--ink-3);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  display: flex;
+  justify-content: flex-start;
+  gap: 0.5rem;
+}
+
+/* ============================================================
+   §2 · RUNTIME — six feature rows
+   ============================================================ */
+
+.feature-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  /* Equal gap to match .paradigm-grid */
+  gap: 1.25rem;
+}
+.feature-row {
+  /* Each runtime cell is a card matching .paradigm-card chrome (paper-elev
+     bg, rule border, padding, lift-on-hover). §II reads as a bento of six
+     cards like §I.
+     Cards are ~20% transparent in both modes; align-items:start anchors the
+     glyph + title to a shared top, and the glyph's margin-top nudge lands its
+     top edge on the title cap-top. */
+  background: color-mix(in srgb, var(--paper-elev) 80%, transparent);
+  border: 1px solid var(--rule);
+  padding: 1.5rem 1.5rem;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 0.72rem;
+  align-items: start;
+}
+.feature-row:hover {
+  transform: translateY(-2px);
+  border-color: var(--amber);
+  box-shadow: var(--shadow-md);
+}
+.feature-row .glyph {
+  font-family: var(--type-mono);
+  font-weight: 600;
+  color: var(--amber);
+  font-size: 1.21rem;
+  line-height: 1;
+  /* Push the symbol down to the h4 cap-top: the title carries ~5px of leading
+     above its caps while the glyph (line-height:1) sits at its cell top, so the
+     symbol read ~6px high. 0.375rem zeroes that so symbol + title share a top
+     edge across all six rows (c_7d25fbf5). */
+  margin-top: 0.375rem;
+}
+.feature-row h4 {
+  font-family: var(--type-mono);
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: var(--ink);
+  margin-bottom: 0.35rem;
+  letter-spacing: -0.005em;
+}
+.feature-row p {
+  font-family: var(--type-body);
+  /* 0.97rem so the body + italic em pair reads cleanly at mobile sizes
+     without crowding. */
+  font-size: 0.97rem;
+  color: var(--ink-2);
+  line-height: 1.65;
+}
+
+/* ============================================================
+   §III · DELIVERABLES — bloom canvas + morphing mark.
+   The section is SEE-THROUGH (no opaque paper background); the bloom
+   canvas is the dominant surface and reads through the entire band
+   including the footer area nested at the bottom of .cta-inner. The
+   .section class on the wrapper picks up the existing h2 / .lede /
+   .section-kicker typography from §I/§II, but the frosted background
+   is overridden so the bloom can paint directly over the symmetry shader.
+   ============================================================ */
+.cta-bloom {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  /* §III is a decisive closing band of ~half the viewport. The symmetry
+     shader remains visible above it; the bloom paints its quiet field
+     inside the shorter section. */
+  min-height: 56vh;
+  overflow: hidden;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+}
+.cta-bloom.section {
+  /* Override the §I/§II frosted-glass treatment — §III is transparent
+     so the bloom canvas + symmetry shader behind read through entirely. */
+  background-color: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.bloom-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  cursor: crosshair;
+  /* pan-y so vertical scroll works when dragging on §III; taps still spawn
+     bloom pulses. Matches the hero canvas. */
+  touch-action: pan-y;
+  pointer-events: auto;
+  /* Opaque paper background on the canvas itself so the symmetry shader
+     behind §III does NOT bleed through the bare canvas before the bloom
+     wave equation activates. The wave equation paints over this base when
+     active; before then, the §III area reads as a clean paper closing band
+     (not a window onto the still-running hero shader). */
+  background: var(--paper);
+  transition: background 0.25s ease;
+}
+
+/* Inner wrapper — owns padding + max-width like .section .inner; holds
+   the kicker → h2 (with the inline signet↔wordmark mark) → lede →
+   cta-content → footer stack. */
+.cta-inner {
+  position: relative;
+  z-index: 3;
+  max-width: var(--content-max);
+  width: 100%;
+  margin: 0 auto;
+  padding: 5rem 2rem 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 auto;
+}
+.cta-inner > * { pointer-events: auto; }
+/* Direct children of the flex column are .cta-top and .page-foot. cta-top
+   is stretched; the footer uses its own align-self. */
+.cta-inner > .cta-top { align-self: stretch; }
+
+/* §III is a single consolidated column. The .cta-copy container passes
+   pointer events through to the bloom canvas behind, so clicking the copy
+   area paints ripples too; the install card, buttons + email opt back in. */
+.cta-top {
+  position: relative;
+  z-index: 3;
+  pointer-events: none;
+  display: grid;
+  grid-template-columns: 1fr; /* consolidated single column */
+  gap: 2.5rem;
+  align-items: start;
+  margin-bottom: 2.5rem;
+}
+.cta-copy {
+  min-width: 0;
+  max-width: 38rem; /* keep a comfortable reading measure */
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  pointer-events: none;
+}
+.cta-copy .section-kicker { margin-bottom: 1rem; }
+.cta-copy h2 { margin-bottom: 0.85rem; }
+.cta-copy .lede { margin-bottom: 1.5rem; }
+.cta-copy .install-card { margin-bottom: 1.1rem; } /* install + email sit above the buttons, tight to the email area */
+.cta-copy .cta-row {
+  margin-top: 0.5rem;
+  pointer-events: auto;
+}
+
+
+/* ============================================================
+   §III INLINE MORPH
+   The signet↔wordmark morph lives INLINE inside the headline. Sized in
+   em so it tracks the h2; no oval, shadow, or border. The morph JS
+   (#centerMark) flips data-phase on hover/focus; width + opacity
+   transition so "outcome" reflows as the wordmark expands/collapses.
+   ============================================================ */
+.op-inline {
+  display: inline-flex;
+  /* §III mark enlarged (~1.35x) + teal, MIDDLE-aligned to the headline line so
+     the signet↔wordmark morph shares a vertical center and the "O" holds its
+     position across both phases (c_c395c18b). The headline wraps so "Author
+     your" + the mark sit on line 1 and "first outcome" on line 2. */
+  align-items: center;
+  vertical-align: middle;
+  height: 1.3em;
+  margin: 0 0.16em 0 0;
+  color: var(--teal);
+  cursor: default;
+  -webkit-user-select: none; user-select: none;
+  pointer-events: auto;
+}
+.op-inline svg {
+  display: block;
+  height: 1.3em; width: auto;
+  fill: currentColor;
+  transition: opacity 0.4s cubic-bezier(0.4,0,0.2,1),
+              width 0.5s cubic-bezier(0.4,0,0.2,1);
+}
+.op-inline .mark-signet  { height: 1.3em; }
+.op-inline .mark-wordmark { height: 0.9em; }
+.op-inline[data-phase="signet"]   .mark-signet  { opacity: 1; width: 1.3em; }
+.op-inline[data-phase="signet"]   .mark-wordmark { opacity: 0; width: 0; }
+.op-inline[data-phase="wordmark"] .mark-signet  { opacity: 0; width: 0; }
+.op-inline[data-phase="wordmark"] .mark-wordmark { opacity: 1; width: 3.5em; }
+
+/* §III install-the-skill + request-access card (replaces the YAML specimen) */
+.install-card { display: flex; flex-direction: column; pointer-events: auto; }
+.install-cmd {
+  display: flex; align-items: center; gap: 0.6rem;
+  font-family: var(--type-mono); font-size: 1rem;
+  background: rgba(20, 18, 16, 0.06);
+  border: 1px solid var(--rule); border-radius: 6px;
+  padding: 0.85rem 1rem; color: var(--ink);
+  white-space: nowrap; overflow-x: auto;
+  /* Breathing room after the code block. */
+  margin-bottom: 1.3rem;
+}
+html[data-mode="dark"] .install-cmd { background: rgba(245, 240, 232, 0.06); }
+.install-cmd .ic-prompt { color: var(--amber, var(--ink-3)); font-weight: 700; }
+.install-cmd code { color: inherit; }
+.access-form { display: flex; gap: 0.6rem; flex-wrap: wrap; pointer-events: auto; margin-bottom: 0.3rem; }
+.access-email {
+  flex: 1 1 12rem; min-width: 0;
+  font-family: var(--type-mono); font-size: 0.9rem;
+  padding: 0.75rem 0.9rem; color: var(--ink);
+  /* WCAG 2.5.5 minimum 44px tap target. */
+  min-height: 44px;
+  background: var(--paper-elev, transparent);
+  border: 1px solid var(--rule); border-radius: 6px;
+}
+.access-email::placeholder { color: var(--ink-3); }
+.access-email:focus-visible { outline: 2px solid var(--amber, var(--ink)); outline-offset: 1px; }
+.access-note { font-family: var(--type-mono); font-size: 0.78rem; min-height: 1em; color: var(--ink-2); margin: 0; }
+.access-note[data-state="err"] { color: #b54a3a; }
+
+/* §III trust strip */
+.trust-strip {
+  margin-top: 1.4rem;
+  font-family: var(--type-mono); font-size: 0.86rem; letter-spacing: 0.02em;
+  color: var(--ink-3); pointer-events: auto;
+}
+.trust-strip strong { color: var(--ink); font-weight: 700; }
+/* Heading + lede live in .cta-inner so they inherit the §I/§II section h2
+   + .lede typography automatically. */
+.cta-row {
+  display: flex;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.ui-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: var(--type-mono);
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 0.85rem 1.25rem;
+  border-radius: 4px;
+  text-decoration: none;
+  border: 1px solid;
+  cursor: pointer;
+  /* No double-tap-zoom / 300ms tap delay on touch. */
+  touch-action: manipulation;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+.ui-btn.primary {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+.ui-btn.primary:hover { background: var(--amber); color: var(--paper); border-color: var(--amber); }
+.ui-btn.primary:active { transform: translateY(1px); }
+.ui-btn.ghost {
+  background: transparent;
+  color: var(--ink-2);
+  border-color: var(--rule);
+}
+.ui-btn.ghost:hover { color: var(--amber); border-color: var(--amber); }
+
+
+/* ============================================================
+   FOOT — minimal: signet + colophon line
+   ============================================================ */
+
+/* Transparent footer so the canvas reads through. The footer is nested
+   INSIDE .cta-inner so the bloom canvas (inset:0 within .cta-bloom) naturally
+   extends behind the colophon. The full §III is one continuous shader surface
+   with copy floating on top. Footer pinned to the bottom of the flex column. */
+.page-foot {
+  position: relative;
+  z-index: 3;
+  background: transparent;
+  padding: 1.6rem 0 1.8rem;
+  margin-top: auto;
+  /* Click-through to the bloom canvas behind §III: the colophon row lets
+     ripple clicks reach the background simulation; links + the signet mark
+     re-enable interactivity below. */
+  pointer-events: none;
+}
+.page-foot a,
+.page-foot .foot-mark { pointer-events: auto; }
+.page-foot .inner {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  /* Nested in the already-padded .cta-inner, so it must not ALSO inherit
+     .section .inner's 2rem sides — zero the horizontal padding so the logo +
+     text sit flush-left with the §III content column (c_e62cf1b9). */
+  padding-left: 0; padding-right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.25rem 2rem;
+  flex-wrap: wrap;
+  font-family: var(--type-mono);
+  font-size: 0.79rem;
+  line-height: 1.5;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+}
+.page-foot .foot-mark {
+  width: 28px;
+  height: 28px;
+  /* Match the footer text grey. */
+  fill: var(--ink-3);
+}
+.page-foot .foot-sig {
+  /* JH signature, tiny beside the year; hover grows it back to its prior 13px (c_817410d7).
+     pointer-events:auto re-enables the hover (the footer itself is pointer-events:none). */
+  height: 9px; width: auto; opacity: 0.5; flex: 0 0 auto;
+  pointer-events: auto; cursor: default;
+  transition: height 0.25s ease, opacity 0.25s ease;
+}
+.page-foot .foot-sig:hover { height: 13px; opacity: 0.72; }
+html[data-mode="dark"] .page-foot .foot-sig { filter: invert(1); opacity: 0.55; }
+html[data-mode="dark"] .page-foot .foot-sig:hover { opacity: 0.8; }
+.page-foot .foot-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.page-foot .foot-right {
+  display: flex;
+  gap: 1.25rem;
+}
+/* WCAG 2.5.5 minimum 44×44 tap target. Negative margin keeps the visual
+   rhythm identical while inflating the hit area for touch users. */
+.page-foot .foot-right a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.55rem 0.4rem;
+  margin: -0.55rem -0.4rem;
+  color: var(--ink-3);
+}
+.page-foot .foot-right a:hover,
+.page-foot .foot-right a:active { color: var(--amber); }
+
+/* ============================================================
+   FOCUS-VISIBLE
+   Keyboard navigation produces an explicit amber outline on every
+   interactive surface. Round chrome (brand-logo, mode-toggle) gets a
+   box-shadow ring instead of an outline so the circular silhouette is
+   preserved.
+   ============================================================ */
+:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+.brand-logo:focus-visible,
+.mode-toggle:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 3px var(--amber),
+    0 4px 18px rgba(20, 18, 16, 0.18);
+}
+html[data-mode="dark"] .brand-logo:focus-visible,
+html[data-mode="dark"] .mode-toggle:focus-visible {
+  box-shadow:
+    0 0 0 3px var(--amber),
+    0 4px 18px rgba(0, 0, 0, 0.45);
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 980px) {
+  /* Intermediate padding tier so 5rem 2rem (desktop) does not snap directly
+     to 3.5rem 1.5rem (≤640) — tablet sits at 4.5rem 1.75rem. */
+  .section .inner,
+  .cta-inner { padding: 4.5rem 1.75rem 0; }
+  .paradigm-grid { grid-template-columns: 1fr; }
+  .feature-list { grid-template-columns: 1fr; gap: 1.25rem; }
+  .cta-top {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  .cta-bloom { min-height: auto; }
+}
+
+@media (max-width: 640px) {
+  .hero { min-height: 100svh; height: 100svh; min-height: 100dvh; height: 100dvh; }
+  .symmetry-canvas { height: 100svh; height: 100dvh; }
+  .hero-content {
+    padding: 1.1rem 1.5rem;
+    gap: 0.65rem;
+    max-width: 94vw;
+    top: 44%;
+  }
+  /* Mobile clamp widens proportionally */
+  .hero-logotype { width: clamp(200px, 64vw, 320px); }
+  .hero-byline { font-size: 1.08rem; line-height: 1.5; }
+  .section .inner { padding: 3.5rem 1.5rem; }
+  .cta-inner { padding: 2.5rem 1.25rem 0; }
+  /* 16px input font stops iOS Safari from auto-zooming the page when the
+     email field is focused. */
+  .access-email { font-size: 16px; }
+  /* Left-align the colophon on mobile so the OpenProse mark + year + JH sig
+     + nav read flush-left as a single stacked band. */
+  .page-foot .inner {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    gap: 0.85rem;
+  }
+  .page-foot .foot-left { justify-content: flex-start; }
+  .page-foot .foot-right { gap: 0.5rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .op-inline svg {
+    transition: opacity 0.2s linear;
+  }
+}
+</style>
+</head>
+
+<body data-direction="μ"
+      data-palette="light-warm-teal"
+      data-pairing="A"
+      data-mono="plex"
+      data-layout="homepage"
+      data-mark="bloom">
+
+<a class="skip-link" href="#main-content">Skip to content</a>
+
+<!-- ============================================================
+     SVG SYMBOLS — signet + wordmark only (canonical mark family)
+     ============================================================ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="opStyle" viewBox="0 0 142 142">
+    <g transform="translate(4.4 4.45) scale(0.94)">
+      <path d="M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z"/>
+    </g>
+  </symbol>
+  <symbol id="opStyleType" viewBox="0 0 3840 998">
+    <g transform="matrix(1,0,0,0.461843,0,0)"><g transform="matrix(9.67009,0,0,20.9381,46.3437,-426.712)"><path d="M84.1,83.4C85.206,79.362 96.732,71.983 96.732,71.983C96.732,71.983 95.683,77.806 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.32,59.25 95.117,62.595 91.927,64.086C88.649,65.618 87.58,63.568 86,61.4C83.953,58.591 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4Z" style="fill-rule:nonzero;"/></g><g transform="matrix(20.8204,0,0,45.081,376.732,587.069)"><path d="M47.6,19.2C47.6,23.6 45.2,28.5 39.5,28.5C36.7,28.5 34.4,27.4 33,25L33,33.071C33,33.071 32.758,33.891 32.027,34.219C31.452,34.477 29.5,34.5 29.5,34.5L29.5,10.9L30.3,10.9C31.9,10.9 32.7,12.6 32.8,14.1C34,11.8 36.2,10.2 39.3,10.2C44.4,10.2 47.6,14 47.6,19.2ZM44,19.4C44,16.3 42.3,12.9 38.5,12.9C35.1,12.9 32.9,15.6 32.9,19.4C32.9,22.5 34.8,25.7 38.5,25.7C41.7,25.7 44,23 44,19.4Z" style="fill-rule:nonzero;"/></g><g transform="matrix(21.5033,0,0,46.5599,334.885,571.985)"><path d="M66.5,23.7C65.9,25.9 63.4,28.5 58.9,28.5C53.5,28.5 50.2,25 49.2,20.6C48.6,14.5 52.3,10.2 58.4,10.2C62.1,10.2 66.4,12 66.4,15.8C66.4,18.4 64.1,19.8 59.2,20.4C56.7,20.7 54.8,21.3 54.8,23.1C54.8,25.1 57.2,26 59.6,26C61.9,26.1 64.6,25.3 66.5,23.7ZM53.3,22.7C54.2,17.1 61.7,19.1 61.7,15.5C61.7,13.8 60.2,12.7 58.1,12.7C55.5,12.7 52.6,15 52.6,19.1C52.6,20.4 52.9,21.8 53.3,22.7Z" style="fill-rule:nonzero;"/></g><g transform="matrix(21.3153,0,0,46.1527,2366.82,576.138)"><path d="M66.5,23.7C65.9,25.9 63.4,28.5 58.9,28.5C53.5,28.5 50.2,25 49.2,20.6C48.6,14.5 52.3,10.2 58.4,10.2C62.1,10.2 66.4,12 66.4,15.8C66.4,18.4 64.1,19.8 59.2,20.4C56.7,20.7 54.8,21.3 54.8,23.1C54.8,25.1 57.2,26 59.6,26C61.9,26.1 64.6,25.3 66.5,23.7ZM53.3,22.7C54.2,17.1 61.7,19.1 61.7,15.5C61.7,13.8 60.2,12.7 58.1,12.7C55.5,12.7 52.6,15 52.6,19.1C52.6,20.4 52.9,21.8 53.3,22.7Z" style="fill-rule:nonzero;"/></g><g transform="matrix(20.8204,0,0,47.1462,359.825,566.004)"><path d="M83.9,28.2C81.9,28.2 80.5,27.7 80.5,24.8L80.5,17.9C80.5,14.6 79.2,12.8 76.6,12.8C74.1,12.8 72,14.6 72,19.1L72,28.2L68.6,28.2L68.6,10.8L69,10.8C70.6,10.8 71.6,12.3 71.7,14.1C72.7,11.9 74.6,10.2 77.7,10.2C81.9,10.2 83.9,12.9 83.9,17.4L83.9,28.2Z" style="fill-rule:nonzero;"/></g><g transform="matrix(21.747,0,0,47.0874,150.341,566.604)"><path d="M117.8,10.5C118.4,11.9 117.2,13.3 115.3,13.3C112.1,13.1 110.1,15.2 110.1,19.3L110.1,28.2L106.6,28.2L106.6,10.9L107.3,10.9C108.9,10.9 109.7,12.4 109.8,14.4C110.8,11.9 112.8,10.2 115.4,10.2C116.1,10.2 117,10.3 117.8,10.5Z" style="fill-rule:nonzero;"/></g><g transform="matrix(21.4007,0,0,46.3376,179.308,574.252)"><path d="M135.6,19.4C135.6,23.8 132.7,28.5 126.4,28.5C120.6,28.5 117.1,24.5 117.1,19.4C117.1,14.8 120.3,10.2 126.3,10.2C131.8,10.2 135.6,14 135.6,19.4ZM132.1,19.4C132.1,15.9 129.9,12.9 126.4,12.9C122.9,12.9 120.5,15.6 120.5,19.4C120.5,22.7 122.7,25.7 126.3,25.7C129.7,25.8 132.1,23 132.1,19.4Z" style="fill-rule:nonzero;"/></g><g transform="matrix(26.9157,0,0,71.5109,-151.465,-124.38)"><path d="M86,2.4C83.4,2.7 81.1,3.6 82,5.9C82.5,7.2 85.4,8.5 87.5,12.9C88.6,15.2 89.463,15.088 88.663,12.588C86.263,6.788 83.477,6.006 84.477,4.406C84.977,3.606 99.303,3.255 99.1,9.9C99.018,12.599 96.5,13.8 93.3,14.6C91.4,15.1 88.4,16.7 88.1,19.9C87.9,22.4 88,24.1 86,28.2C87.7,28.4 89.6,27.9 90.5,26.7C91.8,25.1 91.6,21.1 91.7,19.5C91.9,17.6 93.6,16.9 95.4,16.6C99.9,15.7 104.9,14.7 104.9,10C104.9,4.4 96.9,1.4 86,2.4Z" style="fill-rule:nonzero;"/></g><g transform="matrix(20.4887,0,0,44.3629,217.988,633.895)"><path d="M144.6,14.2C144.6,12.9 146,11.7 147.9,11.7C151.2,11.7 152.1,14.4 153.9,14.4C154.6,14.4 155.2,13.6 155,13C154.6,11.1 151.5,9.3 148.5,9.3C145.5,9.3 141,10.4 141,14.4C141,20.9 152.3,18.6 152.3,23.1C152.3,25.3 149.6,25.9 148.1,25.8C144,25.6 140.266,22.027 140.266,22.027C140.266,22.027 140.3,23.55 140.3,23.9C140.3,25.6 143.1,28.4 148.3,28.4C152.1,28.4 155.6,27 155.6,23.1C155.6,16.7 144.6,18.4 144.6,14.2Z" style="fill-rule:nonzero;"/></g></g>
+  </symbol>
+</svg>
+
+<!-- Scroll-progress indicator -->
+<div class="scroll-progress" aria-hidden="true"></div>
+
+<!-- ============================================================
+     NAV — fixed corner pills: brand mark (top-left) + mode toggle (top-right)
+     The brand-logo (top-left) is a second light/dark toggle, mirroring the
+     right-hand mode-toggle (both call the same applyMode flip in the theme
+     script below). The mode-toggle glyph is wrapped in an aria-hidden span so
+     screen readers use the aria-label rather than announcing the half-circle
+     Unicode glyph.
+     ============================================================ -->
+<nav class="brand-nav" aria-label="Brand">
+  <button class="brand-logo" id="brand-logo" type="button" aria-label="Switch to dark mode">
+    <svg viewBox="0 0 142 142" role="img" aria-hidden="true"><use href="#opStyle"/></svg>
+  </button>
+  <button class="mode-toggle" id="mode-toggle" type="button" aria-label="Toggle dark mode">
+    <span aria-hidden="true">◐</span>
+  </button>
+</nav>
+
+<!-- ============================================================
+     SYMMETRY CANVAS — WebGL ripple, body-level (escapes hero stacking)
+     ============================================================ -->
+<canvas class="symmetry-canvas" id="symmetry"></canvas>
+
+<!-- Primary content landmark — hero + sections + CTA. -->
+<main id="main-content" tabindex="-1">
+
+<!-- ============================================================
+     HERO — center oval carrying logotype + tagline.
+     The sr-only <h1> gives the document an accessible outline root + a real
+     SEO h1 without changing the visible composition (the SVG wordmark stays
+     as the visible mark).
+     ============================================================ -->
+<section class="hero">
+  <h1 class="sr-only">OpenProse · Author Outcomes</h1>
+  <div class="hero-overlay"></div>
+  <div class="hero-content">
+    <svg class="hero-logotype" viewBox="0 0 3840 998" role="img" aria-label="OpenProse">
+      <use href="#opStyleType"/>
+    </svg>
+    <p class="hero-byline"><em>Author </em><em>Outcomes</em></p>
+  </div>
+</section>
+
+<!-- ============================================================
+     §I + §II FROSTED PANEL
+     §I and §II are wrapped in a shared .sections-frosted container
+     so they read as one continuous frosted-glass panel (no per-section
+     seam from an element-level backdrop-filter).
+     ============================================================ -->
+<div class="sections-frosted">
+
+<!-- ============================================================
+     §1 · PARADIGMS — three shifts in how software is shipped
+     ============================================================ -->
+<section class="section" id="paradigms">
+  <div class="inner">
+    <div class="section-kicker">I Responsibilities</div>
+    <h2>A responsibility is a <em>contract</em>, not a prompt.</h2>
+    <p class="lede">Write the future as a <em>Markdown contract</em> agents can run, review, and maintain. <em>Not a chain of prompts</em>.</p>
+    <div class="paradigm-grid">
+      <article class="paradigm-card">
+        <div class="num">01 / requires</div>
+        <h3>It states what it <em>requires</em>.</h3>
+        <div class="pc-claim">Preconditions, up front.</div>
+        <p class="pc-note">What must hold before it runs: inputs, access, state. Nothing fires against an unmet world.</p>
+        <div class="pc-foot"><span>· preconditions</span></div>
+      </article>
+      <article class="paradigm-card">
+        <div class="num">02 / maintains</div>
+        <h3>It's judged on what it <em>maintains</em>.</h3>
+        <div class="pc-claim">The truth, kept current.</div>
+        <p class="pc-note">What must stay true while it runs. Each run is scored against it. Below the bar, the run holds; at or above, it ships.</p>
+        <div class="pc-foot"><span>· eval</span></div>
+      </article>
+      <article class="paradigm-card">
+        <div class="num">03 / strategies</div>
+        <h3>It's free in its <em>strategies</em>.</h3>
+        <div class="pc-claim">How it works, in prose, versioned.</div>
+        <p class="pc-note">The approaches an agent may take to meet the contract, declared in the source and reviewable as a diff.</p>
+        <div class="pc-foot"><span>· source.md</span></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     §2 · RUNTIME — six capabilities of the runtime
+     ============================================================ -->
+<section class="section" id="runtime">
+  <div class="inner">
+    <div class="section-kicker">II Runtime</div>
+    <h2>The runtime is the <em>quiet</em> half of the contract.</h2>
+    <p class="lede">A small set of moving parts: picked up on cadence, scored against the contract, signed for the audit log. You write the responsibility; the runtime keeps its end.</p>
+    <div class="feature-list">
+      <div class="feature-row">
+        <span class="glyph">→</span>
+        <div>
+          <h4>Pickup · cadence</h4>
+          <p><strong>Picked up</strong> on the schedule the responsibility declares. <em>Cron is a cadence, not a deployment.</em> Manual runs hit the same path.</p>
+        </div>
+      </div>
+      <div class="feature-row">
+        <span class="glyph">✓</span>
+        <div>
+          <h4>Eval · threshold</h4>
+          <p><strong>Scored</strong> against the contract's success criteria. The bar is the responsibility's own, not a vendor default.</p>
+        </div>
+      </div>
+      <div class="feature-row">
+        <span class="glyph">⊕</span>
+        <div>
+          <h4>Sign · audit</h4>
+          <p><strong>Signed</strong> with the contract it satisfied. Anyone can reproduce it by reading the artifact. Retention is audit-grade, set per responsibility.</p>
+        </div>
+      </div>
+      <div class="feature-row">
+        <span class="glyph">⤴</span>
+        <div>
+          <h4>Improve · diff</h4>
+          <p><strong>Versioned</strong> as a diff against the last contract. Every change is a reviewable PR.</p>
+        </div>
+      </div>
+      <div class="feature-row">
+        <span class="glyph">≋</span>
+        <div>
+          <h4>Trace · visible</h4>
+          <p><strong>Traced</strong> end to end: input, prompt, evidence, eval. Open the trace to read what the runtime saw.</p>
+        </div>
+      </div>
+      <div class="feature-row">
+        <span class="glyph">$</span>
+        <div>
+          <h4>Bill · outcome</h4>
+          <p><strong>Billed</strong> by delivery, not by token. <em>If the outcome doesn't ship, no line.</em></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     BUILT ON PROSE — proof band: OpenProse runs its own company on Prose.
+     Content ported from openprose.ai/built-on-prose.
+     ============================================================ -->
+<section class="section built-on-prose" id="built-on-prose">
+  <div class="inner">
+    <div class="section-kicker">Built on Prose</div>
+    <h2>We run our <em>own company</em> on Prose.</h2>
+    <p class="lede">Marketing, GTM, enrichment, and community all run as Prose responsibilities, in the same language we ship to customers. Service-as-software: <em>outcomes on a schedule</em>, not a tool you operate.</p>
+    <div class="bop-grid">
+      <div class="bop-group">
+        <h4>Marketing intelligence</h4>
+        <ul><li>mention-intelligence</li><li>competitor-intelligence</li><li>opportunity-discovery</li><li>engagement-drafting</li></ul>
+      </div>
+      <div class="bop-group">
+        <h4>Public indices</h4>
+        <ul><li>agent-ecosystem-index</li><li>saas-readiness-index</li><li>agents-site-analytics</li></ul>
+      </div>
+      <div class="bop-group">
+        <h4>Enrichment</h4>
+        <ul><li>person-enrichment</li><li>company-enrichment</li></ul>
+      </div>
+      <div class="bop-group">
+        <h4>GTM</h4>
+        <ul><li>lead-enrichment</li><li>program-designer</li><li>customer-repo-scaffolder</li></ul>
+      </div>
+      <div class="bop-group">
+        <h4>Community</h4>
+        <ul><li>stargazer-intake</li></ul>
+      </div>
+    </div>
+    <p class="bop-foot"><strong>13</strong>&nbsp;responsibilities in production · <a href="https://prose.md/built-on-prose" target="_blank" rel="noopener noreferrer">see how we run our company on Prose&nbsp;→</a></p>
+  </div>
+</section>
+
+</div><!-- /.sections-frosted -->
+
+<!-- ============================================================
+     §3 · DELIVERABLES — bloom canvas + morphing mark.
+     §III mirrors the §I/§II structure: kicker → h2 (with the inline
+     signet↔wordmark mark) → lede → content row → nested footer.
+     The whole section is transparent so the bloom canvas reads through
+     the entire surface including the footer area.
+     ============================================================ -->
+<section class="cta-bloom section" id="cta">
+  <canvas class="bloom-canvas" id="bloom"></canvas>
+
+  <div class="cta-inner">
+    <div class="cta-top">
+      <div class="cta-copy">
+        <div class="section-kicker">III Get Started</div>
+        <h2><span class="op-inline" id="centerMark" data-phase="signet" role="img" aria-label="OpenProse"><svg class="mark-signet" viewBox="0 0 142 142" aria-hidden="true"><use href="#opStyle"/></svg><svg class="mark-wordmark" viewBox="0 0 3840 998" aria-hidden="true"><use href="#opStyleType"/></svg></span> Author your<br>first outcome</h2>
+        <p class="lede">Install the skill, then write the contract: <em>requires</em>, <em>maintains</em>, <em>strategies</em>. The runtime picks it up on cadence and keeps the schedule out of your week.</p>
+        <!-- Install command + request-access email sit ABOVE the action
+             buttons. The install line is the real onboarding command; the
+             email is a placeholder capture (no live endpoint wired). -->
+        <div class="install-card" aria-label="Install OpenProse and request access">
+          <div class="install-cmd"><span class="ic-prompt" aria-hidden="true">$</span><code>npx skills add <strong>openprose/prose</strong></code></div>
+          <form class="access-form" id="access-form" novalidate>
+            <input class="access-email" type="email" name="email" placeholder="you@company.com" aria-label="Work email for access" autocomplete="email" required>
+            <button class="ui-btn primary" type="submit"><span>Request access</span></button>
+          </form>
+          <p class="access-note" id="access-note" role="status" aria-live="polite"></p>
+        </div>
+        <div class="cta-row">
+          <a class="ui-btn ghost" href="https://docs.prose.md/start/what-is-openprose" target="_blank" rel="noopener noreferrer"><span>Read the docs</span></a>
+          <a class="ui-btn ghost" href="https://cal.com/irl-danb/openprose-intro" target="_blank" rel="noopener noreferrer"><span>Talk to us</span></a>
+          <a class="ui-btn ghost" href="https://github.com/openprose/prose" target="_blank" rel="noopener noreferrer"><span>View on GitHub</span></a>
+        </div>
+        <p class="trust-strip"><strong>1,000+</strong>&nbsp;stars · Backed&nbsp;by&nbsp;Y&nbsp;Combinator · MIT&nbsp;licensed</p>
+      </div>
+    </div>
+
+    <!-- The signet↔wordmark morph lives INLINE inside the §III headline
+         (.op-inline #centerMark) — morph in the sentence, no oval/drop-shadow. -->
+
+    <!-- ============================================================
+         FOOT — minimal colophon, nested INSIDE §III.
+         The bloom canvas (inset:0 within .cta-bloom) reads through the
+         footer area so the closing band of the page is one continuous
+         shader surface with the colophon floating on top.
+         ============================================================ -->
+    <footer class="page-foot">
+      <div class="inner">
+        <div class="foot-left">
+          <svg class="foot-mark" viewBox="0 0 142 142" aria-hidden="true"><use href="#opStyle"/></svg>
+          <span>OpenProse · <time id="foot-year">2026</time></span>
+          <img class="foot-sig" src="../Assets/JHsig.svg" alt="" aria-hidden="true" decoding="async">
+        </div>
+        <div class="foot-right">
+          <a href="#paradigms">Responsibilities</a>
+          <a href="#runtime">Runtime</a>
+          <a href="#cta">Get started</a>
+        </div>
+      </div>
+    </footer>
+  </div>
+</section>
+</main>
+
+<!-- ============================================================
+     SYMMETRY-RIPPLE — WebGL ripple shader (hero canvas)
+     One fullscreen triangle, fragment-shader-driven image
+     deformation. Composites a TOP mask over an Under photograph,
+     sums up to 24 click-spawned radial ripples in surface-space,
+     applies a perspective warp so circular ripples read as
+     ellipses on the tilted lake plane, masks the still upper half.
+     Graceful fallback: if WebGL is unavailable the canvas hides
+     and the CSS background-image shows the still photograph.
+     ============================================================ -->
+<script>
+(function () {
+  'use strict';
+
+  var cfg = {
+    MAX_RIPPLES:       24,
+    RIPPLE_LIFETIME_S: 2.4,
+    RIPPLE_VELOCITY:   0.32,
+    RIPPLE_WAVELENGTH: 0.085,
+    RIPPLE_SIGMA:      0.075,
+    RIPPLE_AMP:        0.040,
+    DRAG_EMIT_DIST:    0.060,
+    AMBIENT_AMP:       0.0035,
+    AMBIENT_FREQ:      4.0,
+    AMBIENT_SPEED:     0.10,
+    HORIZON_POW:       2.2,
+    // Cloud-clear on sky click — clicking the sky dissolves clouds in a
+    // radius around the cursor, then they ease back over LIFETIME.
+    CLEAR_MASK_RES:    96,
+    CLEAR_RADIUS:      0.13,
+    CLEAR_STRENGTH:    0.55,
+    CLEAR_RETURN_S:    7.0
+  };
+
+  var canvas = document.getElementById('symmetry');
+  if (!canvas) return;
+
+  var gl = null;
+  try {
+    gl = canvas.getContext('webgl', { premultipliedAlpha: false, antialias: false, alpha: true })
+       || canvas.getContext('experimental-webgl', { premultipliedAlpha: false, antialias: false, alpha: true });
+  } catch (e) { gl = null; }
+  if (!gl) { canvas.style.display = 'none'; return; }
+
+  var DPR = Math.min(window.devicePixelRatio || 1, 1.5);
+  var W = 0, H = 0;
+
+  var VS = [
+    'attribute vec2 a_pos;',
+    'varying vec2 v_uv;',
+    'void main() {',
+    '  v_uv = vec2(a_pos.x * 0.5 + 0.5, 0.5 - a_pos.y * 0.5);',
+    '  gl_Position = vec4(a_pos, 0.0, 1.0);',
+    '}'
+  ].join('\n');
+
+  var FS = [
+    /* mediump is sufficient for this shader (normalized UVs in [0,1], small
+       displacements ≤0.04). Saves a small amount of mobile GPU power; visual
+       output is identical. */
+    'precision mediump float;',
+    'varying vec2 v_uv;',
+    'uniform sampler2D u_tex;',
+    'uniform sampler2D u_tex_top;',
+    /* v1 opaque-sky photo is sampled inside the shader as the sky backdrop,
+       so the shader is the single source of truth for hero pixels.  Eliminates
+       the scrollbar-gutter alignment issue (CSS bg is no longer used once the
+       canvas is ready) AND lets the lake band sample the same "sky composite"
+       at a mirrored UV so clouds + mountain reflect live into the rippling
+       water. */
+    'uniform sampler2D u_tex_top_v1;',
+    'uniform vec2 u_texCoverScale;',
+    'uniform vec2 u_texCoverOffset;',
+    'uniform float u_time;',
+    'uniform float u_horizonPow;',
+    'uniform float u_ambientAmp;',
+    'uniform float u_ambientFreq;',
+    'uniform float u_ambientSpeed;',
+    'uniform float u_rippleLifetime;',
+    'uniform float u_rippleVelocity;',
+    'uniform float u_rippleWavelength;',
+    'uniform float u_rippleSigma;',
+    'uniform int   u_rippleCount;',
+    'uniform vec4  u_ripples[' + cfg.MAX_RIPPLES + '];',
+    // Cloud-clear events — xy = cloud-uv point, z = strength (1→0).
+    'uniform sampler2D u_clearMask;',   // persistent cloud-clear brush (CPU-painted)
+    'uniform float u_clearStrength;',
+    /* Dawn cloud field for the transparent sky region of Symmetry_TOP-v2.
+       FBM port (hash → vnoise → fbm → cloudColorAt) lifted verbatim from
+       Like-Every-Cloud/public/brief.html with the dawn preset hard-baked
+       into the uniforms below. */
+    'uniform float u_cloudTime;',
+    'uniform float u_cloudDensity;',
+    'uniform float u_cloudSpeed;',
+    'uniform float u_cloudMix;',
+    'uniform vec3  u_cloudSkyTop;',
+    'uniform vec3  u_cloudSkyBottom;',
+    'uniform vec3  u_cloudColor;',
+    'uniform vec2  u_cloudWind;',
+    /* Reflection registration controls.
+       u_reflAxis  = texture-y of the reflection mirror axis (waterline);
+       u_reflShorten = foreshorten factor (reflected depth / sky height).
+       Tuned so the mirrored mountain-mask edge lands exactly on the
+       photo's baked reflected silhouette (see JS for measured values). */
+    'uniform float u_reflAxis;',
+    'uniform float u_reflShorten;',
+    'uniform float u_reflShiftX;',   // horizontal offset of the reflected mask (texture space)
+    'uniform float u_reflScaleX;',   // horizontal scale of the reflected mask about image center
+    'uniform float u_reflTilt;',      // shear: x-shift per unit reflection depth (~rotation, fixes edge skew)
+    'uniform float u_reflAxisTilt;',  // waterline slope: axis-y shift per unit (under_tx-0.5) — fixes one-side-off
+    'uniform float u_reflKeystone;',  // horizontal perspective: scaleX change per unit reflection depth (trapezoid)
+
+    'float hash(vec2 p) {',
+    '  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);',
+    '}',
+    'float vnoise(vec2 p) {',
+    '  vec2 i = floor(p);',
+    '  vec2 f = fract(p);',
+    '  float a = hash(i);',
+    '  float b = hash(i + vec2(1.0, 0.0));',
+    '  float c = hash(i + vec2(0.0, 1.0));',
+    '  float d = hash(i + vec2(1.0, 1.0));',
+    '  vec2 u = f * f * (3.0 - 2.0 * f);',
+    '  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);',
+    '}',
+    'float fbm(vec2 p) {',
+    '  float v = 0.0;',
+    '  float a = 0.5;',
+    '  for (int i = 0; i < 5; i++) {',
+    '    v += a * vnoise(p);',
+    '    p = p * 2.07 + vec2(11.3, 7.9);',
+    '    a *= 0.5;',
+    '  }',
+    '  return v;',
+    '}',
+    /* Continuous puffy cloud field with directional lighting from upper-left.
+       cloudFieldFBM returns the raw 0..1 noise sum (called twice per
+       pixel: once for the current point, once back-traced along the
+       light direction for shading).  cloudDensityAt converts to an
+       alpha curve.  u_cloudSkyTop is re-purposed as the shadow color
+       (skyBottom remains nominal — kept for JS binding cleanliness). */
+    'float cloudFieldFBM(vec2 fragUV) {',
+    '  vec2 p = (fragUV - 0.5) * 2.5;',
+    '  p += u_cloudWind * u_cloudTime * u_cloudSpeed * 0.06;',
+    '  float c1 = fbm(p);',
+    '  float c2 = fbm(p * 1.7 + vec2(u_cloudTime * u_cloudSpeed * 0.03, 0.0));',
+    '  return mix(c1, c2, 0.5);',
+    '}',
+    /* Diffuse clouds with gaps between puffs.
+       Lower bound 0.32 sends low-FBM regions to zero (clear-sky gaps),
+       upper bound 0.62 keeps peaks fully solid.  Combined with the
+       reduced density multiplier (see JS uniform setup) the field
+       reads as discrete puffs separated by visible sky, not a
+       continuous sheet. */
+    'float cloudDensityAt(vec2 fragUV) {',
+    '  return smoothstep(0.32, 0.62, cloudFieldFBM(fragUV) * (0.7 + u_cloudDensity));',
+    '}',
+    // Cloud-clear multiplier — clouds keep-multiplier sampled from the
+    // persistent clear-mask texture (a brush painted along the cursor path on
+    // the CPU). One sample, no per-pixel loop; sampled in the same cloud_uv
+    // space the brush paints into, so already-cleared sky stays cleared.
+    'float cloudClearMul(vec2 uv) {',
+    '  float m = texture2D(u_clearMask, uv).r;',
+    '  return 1.0 - m * u_clearStrength;',
+    '}',
+    /* Lit color: back-trace one step along the light direction (toward
+       the source).  If density there is LOWER than here, we are on the
+       face that receives the light (highlight); if HIGHER, we are in
+       the shadow of a denser puff between us and the sun. */
+    'vec3 cloudLitRGB(vec2 fragUV) {',
+    '  vec2 lightDir = vec2(-0.78, 0.62);',          // FROM upper-left
+    '  float fHere   = cloudFieldFBM(fragUV);',
+    '  float fSrc    = cloudFieldFBM(fragUV + lightDir * 0.035);',
+    '  float shade   = clamp(0.50 + (fHere - fSrc) * 5.5, 0.20, 1.0);',
+    '  return mix(u_cloudSkyTop, u_cloudColor, shade);',  // sky_top is repurposed shadow
+    '}',
+    /* Sky composite.  Takes a base UV (for texture sampling) and a cloud UV
+       (y-flipped).  Returns the opaque RGB for "sky at this position": v1 sky
+       photo, with drifting cloud puffs blended over it, with v2's mountain
+       silhouette painted on top via its alpha.  Called from both the sky band
+       (with v_uv directly) and the lake band (with the mirror UV across the
+       horizon — yields the live reflection). */
+    'vec3 skyComposite(vec2 base, vec2 cloud_uv) {',
+    '  vec3 v1_sky    = texture2D(u_tex_top_v1, base).rgb;',
+    '  float cloudA   = cloudDensityAt(cloud_uv) * u_cloudMix * cloudClearMul(cloud_uv);',
+    '  vec3 cloudRGB  = cloudLitRGB(cloud_uv);',
+    '  vec3 sky       = mix(v1_sky, cloudRGB, cloudA);',
+    '  vec4 mountain  = texture2D(u_tex_top, base);',
+    '  return mix(sky, mountain.rgb, mountain.a);',
+    '}',
+    'float v_to_surface(float v) {',
+    '  float t = clamp((v - 0.5) / 0.5, 0.0, 1.0);',
+    '  return pow(t, 1.0 / u_horizonPow);',
+    '}',
+    'float surface_to_v(float s) {',
+    '  float t = pow(clamp(s, 0.0, 1.0), u_horizonPow);',
+    '  return 0.5 + 0.5 * t;',
+    '}',
+    'void main() {',
+    '  vec2 base_uv = v_uv * u_texCoverScale + u_texCoverOffset;',
+    /* The visible horizon seam at v=0.5 came from a sharp smoothstep band
+       (0.500, 0.514); it is widened here to feather the transition. The lower
+       bound is held at 0.48 so ambient noise no longer leaks above the
+       horizon. Keeps the seamless transition while keeping the upper-half
+       still. */
+    '  float lake_mask = smoothstep(0.480, 0.580, v_uv.y);',
+    '  if (lake_mask < 0.001) {',
+    /* Sky band is fully opaque (v1 photo backbone + clouds + mountain).
+       No transparency, no CSS composite — the canvas alone is the source
+       of truth. */
+    '    vec2 cloud_uv = vec2(v_uv.x, 1.0 - v_uv.y);',
+    '    gl_FragColor  = vec4(skyComposite(base_uv, cloud_uv), 1.0);',
+    '    return;',
+    '  }',
+    '  float vs = v_to_surface(v_uv.y);',
+    '  vec2  surface_uv = vec2(v_uv.x, vs);',
+    '  float n1 = vnoise(surface_uv * u_ambientFreq + vec2(u_time * u_ambientSpeed,  0.0));',
+    '  float n2 = vnoise(surface_uv * u_ambientFreq + vec2(0.0, u_time * u_ambientSpeed + 17.3));',
+    '  vec2  ambient = (vec2(n1, n2) - 0.5) * 2.0 * u_ambientAmp;',
+    '  vec2  ripple_disp = vec2(0.0);',
+    '  for (int i = 0; i < ' + cfg.MAX_RIPPLES + '; i++) {',
+    '    if (i >= u_rippleCount) break;',
+    '    vec4  R   = u_ripples[i];',
+    '    vec2  org = R.xy;',
+    '    float age = R.z;',
+    '    float amp = R.w;',
+    '    float life = age / u_rippleLifetime;',
+    '    if (life >= 1.0) continue;',
+    '    vec2  d   = surface_uv - org;',
+    '    float dist = length(d);',
+    '    if (dist < 1e-5) continue;',
+    '    float r    = age * u_rippleVelocity;',
+    '    float d2r  = dist - r;',
+    '    float env  = exp(-(d2r * d2r) / (2.0 * u_rippleSigma * u_rippleSigma));',
+    '    float wave = sin(d2r * 6.2831853 / u_rippleWavelength);',
+    '    float fall = 1.0 - life;',
+    '    float a    = wave * env * fall * amp;',
+    '    ripple_disp += (d / dist) * a;',
+    '  }',
+    '  vec2 surf_disp = (ambient + ripple_disp) * lake_mask;',
+    '  vec2 disp_surface = surface_uv + surf_disp;',
+    '  disp_surface.y = clamp(disp_surface.y, 0.0, 1.0);',
+    '  float dv = surface_to_v(disp_surface.y);',
+    '  vec2  disp_canvas = vec2(disp_surface.x, dv);',
+    '  disp_canvas.y = max(disp_canvas.y, 0.5);',
+    '  vec2 tex_uv = disp_canvas * u_texCoverScale + u_texCoverOffset;',
+    '  vec4 under_pix = texture2D(u_tex, tex_uv);',
+    /* Reflection.  The UNDER photo is a symmetry shot: its lower half
+       ALREADY carries the mountain reflection at the correct photographic
+       perspective, and the ripple warp above was designed for exactly that
+       texture — so under_pix is the perspective-correct, rippling water.  We
+       do NOT mirror a fresh sky composite (that fought the perspective warp →
+       stretched pixels at the horizon + reflection sitting too high).
+       Instead we ADD the drifting cloud puffs into the water:
+         disp_canvas.y already spans the lake half [0.5,1] and equals the
+         cloud-noise band that the sky samples at the MIRRORED row
+         (sky row a uses cloud_uv.y = 1-a; the lake row b reflecting it
+         is at disp_canvas.y = b, and 1-a = b → same noise input), so
+         feeding disp_canvas straight into the cloud field yields clouds
+         that mirror the sky exactly and ripple with the water for free.
+       Reflection strength 0.5 so the water reads dimmer than the sky. */
+    '  vec2  refl_cloud_uv = disp_canvas;',
+    '  float reflCloudA    = cloudDensityAt(refl_cloud_uv) * u_cloudMix * 0.5 * cloudClearMul(refl_cloud_uv);',  // mirror the cloud-clear brush into the reflection (refl_cloud_uv is the same cloud-uv space as the sky, and rippled, so the cleared patch mirrors + ripples for free)
+    '  vec3  reflCloudRGB  = cloudLitRGB(refl_cloud_uv);',
+    /* Occlude the cloud reflection behind the REFLECTED mountain by sampling
+       the hand-authored v2 mountain mask ONCE, mirrored across the horizon
+       (1 - disp_canvas.y) — the same precise alpha edge the sky band
+       composites over the clouds.  No spatial feather: the mask's own
+       authored edge IS the clean transition.  (Averaging multiple taps of the
+       near-binary alpha quantizes into ~6 discrete levels = visible bands; a
+       single bilinear sample removes the bands entirely.)  disp_canvas
+       (rippled) keeps the mask tracking the ripple; cover-fit always centers
+       the horizon at canvas 0.5, so the mirror is resolution-independent. */
+    '  float under_ty   = disp_canvas.y * u_texCoverScale.y + u_texCoverOffset.y;',
+    '  float under_tx   = disp_canvas.x * u_texCoverScale.x + u_texCoverOffset.x;',
+    // Perspective registration.  axisTilt slopes the mirror axis across width
+    // (tilted waterline); keystone varies the horizontal scale with reflection
+    // depth (trapezoid).  Both terms are decoupled so each tuner slider has an
+    // isolated effect.
+    '  float axisEff    = u_reflAxis + u_reflAxisTilt * (under_tx - 0.5);',
+    '  float mask_ty    = axisEff - (under_ty - axisEff) / u_reflShorten;',
+    '  float reflDepth  = under_ty - u_reflAxis;',
+    '  float scaleXEff  = u_reflScaleX + u_reflKeystone * reflDepth;',
+    '  float mask_tx    = 0.5 + (under_tx - 0.5) * scaleXEff + u_reflShiftX + u_reflTilt * reflDepth;',
+    '  vec2  mtnRefl_uv = vec2(mask_tx, mask_ty);',
+    '  float mtnReflA   = texture2D(u_tex_top, mtnRefl_uv).a;',
+    '  reflCloudA      *= (1.0 - mtnReflA);',
+    '  vec3  water         = mix(under_pix.rgb, reflCloudRGB, reflCloudA);',
+    /* Composite the STABLE foreground (left-side trees + rocks) from the
+       v2 TOP layer over the rippling water via its own alpha, so the
+       ripple only ever distorts the water — the foreground stays crisp. */
+    '  vec4  top_pix       = texture2D(u_tex_top, base_uv);',
+    '  gl_FragColor = vec4(mix(water, top_pix.rgb, top_pix.a), 1.0);',
+    '}'
+  ].join('\n');
+
+  function compile(type, src) {
+    var s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+      gl.deleteShader(s);
+      return null;
+    }
+    return s;
+  }
+
+  var vs = compile(gl.VERTEX_SHADER, VS);
+  var fs = compile(gl.FRAGMENT_SHADER, FS);
+  if (!vs || !fs) { canvas.style.display = 'none'; return; }
+  var prog = gl.createProgram();
+  gl.attachShader(prog, vs);
+  gl.attachShader(prog, fs);
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+    canvas.style.display = 'none';
+    return;
+  }
+  gl.useProgram(prog);
+
+  /* Pre-warm clear is fully transparent so the v1 CSS fallback (still photo
+     composite of the existing hero) shows through cleanly during the GL boot
+     window.  When the first real frame draws, the canvas paints over the
+     fallback; when `data-symmetry-ready` flips, the CSS rule on .hero drops
+     the background-image so the canvas is the sole source. */
+  gl.clearColor(0.0, 0.0, 0.0, 0.0);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+
+  var posBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  var aPos = gl.getAttribLocation(prog, 'a_pos');
+  gl.enableVertexAttribArray(aPos);
+  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+  var uTex            = gl.getUniformLocation(prog, 'u_tex');
+  var uTexTop         = gl.getUniformLocation(prog, 'u_tex_top');
+  /* v1 opaque-sky photo as third texture (sampler u_tex_top_v1, texture
+     unit 2).  Sky band uses it as the sky backbone; lake band samples the
+     mirror sky composite for reflection. */
+  var uTexTopV1       = gl.getUniformLocation(prog, 'u_tex_top_v1');
+  var uTexCoverScale  = gl.getUniformLocation(prog, 'u_texCoverScale');
+  var uTexCoverOffset = gl.getUniformLocation(prog, 'u_texCoverOffset');
+  var uTime           = gl.getUniformLocation(prog, 'u_time');
+  var uHorizonPow     = gl.getUniformLocation(prog, 'u_horizonPow');
+  var uAmbientAmp     = gl.getUniformLocation(prog, 'u_ambientAmp');
+  var uAmbientFreq    = gl.getUniformLocation(prog, 'u_ambientFreq');
+  var uAmbientSpeed   = gl.getUniformLocation(prog, 'u_ambientSpeed');
+  var uRippleLifetime = gl.getUniformLocation(prog, 'u_rippleLifetime');
+  var uRippleVelocity = gl.getUniformLocation(prog, 'u_rippleVelocity');
+  var uRippleWaveLen  = gl.getUniformLocation(prog, 'u_rippleWavelength');
+  var uRippleSigma    = gl.getUniformLocation(prog, 'u_rippleSigma');
+  var uRippleCount    = gl.getUniformLocation(prog, 'u_rippleCount');
+  var uRipples        = gl.getUniformLocation(prog, 'u_ripples[0]');
+  var uClearMask      = gl.getUniformLocation(prog, 'u_clearMask');
+  var uClearStrength  = gl.getUniformLocation(prog, 'u_clearStrength');
+  /* Uniform locations for the dawn cloud field.  Constants below are tuned
+     for a "blowing" feel: speed 0.55, wind reshaped to a dominant horizontal
+     axis. */
+  var uCloudTime      = gl.getUniformLocation(prog, 'u_cloudTime');
+  var uCloudDensity   = gl.getUniformLocation(prog, 'u_cloudDensity');
+  var uCloudSpeed     = gl.getUniformLocation(prog, 'u_cloudSpeed');
+  var uCloudMix       = gl.getUniformLocation(prog, 'u_cloudMix');
+  var uCloudSkyTop    = gl.getUniformLocation(prog, 'u_cloudSkyTop');
+  var uCloudSkyBottom = gl.getUniformLocation(prog, 'u_cloudSkyBottom');
+  var uCloudColor     = gl.getUniformLocation(prog, 'u_cloudColor');
+  var uCloudWind      = gl.getUniformLocation(prog, 'u_cloudWind');
+  var uReflAxis       = gl.getUniformLocation(prog, 'u_reflAxis');
+  var uReflShorten    = gl.getUniformLocation(prog, 'u_reflShorten');
+  var uReflShiftX     = gl.getUniformLocation(prog, 'u_reflShiftX');
+  var uReflScaleX     = gl.getUniformLocation(prog, 'u_reflScaleX');
+  var uReflTilt       = gl.getUniformLocation(prog, 'u_reflTilt');
+  var uReflAxisTilt   = gl.getUniformLocation(prog, 'u_reflAxisTilt');
+  var uReflKeystone   = gl.getUniformLocation(prog, 'u_reflKeystone');
+
+  gl.uniform1i(uTex, 0);
+  gl.uniform1i(uTexTop, 1);
+  gl.uniform1i(uTexTopV1, 2);
+  // Clear-mask brush on texture unit 3 (0/1/2 are the photos).
+  var clearMaskRes   = cfg.CLEAR_MASK_RES;
+  var clearMask      = new Float32Array(clearMaskRes * clearMaskRes); // 0..1 coverage
+  var clearMaskBytes = new Uint8Array(clearMaskRes * clearMaskRes);
+  var clearMaskTex   = gl.createTexture();
+  var clearMaskDirty = false;     // re-upload when painted or decayed
+  var clearMaskActive= false;     // any non-zero texel? (gates decay/upload)
+  var clearLastStamp = null;      // {x,y} cloud-uv — for stroke interpolation
+  var clearLastMs    = performance.now();
+  gl.activeTexture(gl.TEXTURE3);
+  gl.bindTexture(gl.TEXTURE_2D, clearMaskTex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, clearMaskRes, clearMaskRes, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, clearMaskBytes);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.uniform1i(uClearMask, 3);
+  gl.uniform1f(uClearStrength, cfg.CLEAR_STRENGTH);
+  gl.uniform1f(uHorizonPow,     cfg.HORIZON_POW);
+  gl.uniform1f(uAmbientAmp,     cfg.AMBIENT_AMP);
+  gl.uniform1f(uAmbientFreq,    cfg.AMBIENT_FREQ);
+  gl.uniform1f(uAmbientSpeed,   cfg.AMBIENT_SPEED);
+  gl.uniform1f(uRippleLifetime, cfg.RIPPLE_LIFETIME_S);
+  gl.uniform1f(uRippleVelocity, cfg.RIPPLE_VELOCITY);
+  gl.uniform1f(uRippleWaveLen,  cfg.RIPPLE_WAVELENGTH);
+  gl.uniform1f(uRippleSigma,    cfg.RIPPLE_SIGMA);
+  // Dawn cloud preset — set once; only u_cloudTime updates per-frame.
+  // Diffuse puffs with gaps.  Density 0.30 makes the FBM-multiplier 1.00,
+  // which (combined with the smoothstep threshold of 0.32/0.62 in the shader)
+  // leaves FBM valleys at alpha=0 = clear sky, and only FBM peaks reach full
+  // opacity.  Result: discrete puffs separated by visible sky, not a
+  // continuous sheet.
+  gl.uniform1f(uCloudDensity,   0.30);
+  gl.uniform1f(uCloudSpeed,     0.55);
+  gl.uniform1f(uCloudMix,       1.00);
+  gl.uniform3f(uCloudSkyTop,    0.55, 0.45, 0.46);  // SHADOW (warm-cool dusk)
+  gl.uniform3f(uCloudSkyBottom, 0.0,  0.0,  0.0);   // unused
+  gl.uniform3f(uCloudColor,     1.00, 0.93, 0.78);  // HIGHLIGHT (warm dawn light)
+  gl.uniform2f(uCloudWind,     -0.50, -0.30);
+  // Reflection registration — values dialed via the live tuner.  axisTilt +
+  // keystone correct the perspective skew a pure affine map can't (one edge
+  // aligns, the other drifts off).
+  //   axisEff   = axis + axisTilt · (under_tx − 0.5)     // tilted waterline
+  //   mask_ty   = axisEff − (under_ty − axisEff) / shorten
+  //   reflDepth = under_ty − axis
+  //   scaleXEff = scaleX + keystone · reflDepth          // trapezoid perspective
+  //   mask_tx   = 0.5 + (under_tx − 0.5) · scaleXEff + shiftX + tilt · reflDepth
+  gl.uniform1f(uReflAxis,      0.505);
+  gl.uniform1f(uReflShorten,   1.012);
+  gl.uniform1f(uReflShiftX,    0.000);
+  gl.uniform1f(uReflScaleX,    0.990);
+  gl.uniform1f(uReflTilt,     -0.004);
+  gl.uniform1f(uReflAxisTilt, -0.009);
+  gl.uniform1f(uReflKeystone,  0.000);
+
+  function pickAssetTier() {
+    var targetW = (window.innerWidth || 1280) * (window.devicePixelRatio || 1);
+    if (targetW <= 1100) return 1000;
+    if (targetW <= 1800) return 1600;
+    return 2400;
+  }
+  var tier = pickAssetTier();
+  var ASSET_BASE = '../Assets/symmetry-web/';
+  var underSrc        = ASSET_BASE + 'symmetry_under-'   + tier + '.webp';
+  /* Split asset paths.
+       topFallbackSrc → v1 opaque-sky TOP, written to --symmetry-top-url so
+         the CSS .hero background-image shows the existing shipped composite
+         during the GL boot window and persists if WebGL is unavailable.
+       topSrc         → v2 transparent-sky TOP, uploaded to the WebGL texture
+         only.  If v2 fails to load, topImg.onerror hides the canvas and the
+         v1 CSS fallback remains visible. */
+  var topFallbackSrc  = ASSET_BASE + 'symmetry_top-'     + tier + '.webp';
+  var topSrc          = ASSET_BASE + 'symmetry_top_v2-'  + tier + '.webp';
+  var root = document.documentElement;
+  root.style.setProperty('--symmetry-top-url',   "url('" + topFallbackSrc + "')");
+  root.style.setProperty('--symmetry-under-url', "url('" + underSrc + "')");
+
+  function makeTexture() {
+    var t = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 0]));
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    return t;
+  }
+  var tex      = makeTexture();
+  var texTop   = makeTexture();
+  var texTopV1 = makeTexture();
+
+  var imgReady    = false;
+  var topReady    = false;
+  var topV1Ready  = false;
+  var imgAR = 1;
+  function tryReadyFlag() {
+    if (imgReady && topReady && topV1Ready) {
+      document.body.setAttribute('data-symmetry-ready', '');
+    }
+  }
+  function uploadInto(t, img) {
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+  }
+  var underImg = new Image();
+  underImg.crossOrigin = 'anonymous';
+  underImg.onload = function () {
+    imgAR = underImg.naturalWidth / underImg.naturalHeight;
+    try { uploadInto(tex, underImg); }
+    catch (e) { canvas.style.display = 'none'; return; }
+    imgReady = true;
+    updateCoverFit();
+    tryReadyFlag();
+  };
+  underImg.onerror = function () { canvas.style.display = 'none'; };
+  underImg.src = underSrc;
+  var topImg = new Image();
+  topImg.crossOrigin = 'anonymous';
+  topImg.onload = function () {
+    try { uploadInto(texTop, topImg); }
+    catch (e) { return; }
+    topReady = true;
+    tryReadyFlag();
+  };
+  topImg.onerror = function () {
+    /* If v2 fails to load, hide the canvas so the v1 CSS fallback (still
+       photo composite) remains visible. */
+    canvas.style.display = 'none';
+  };
+  topImg.src = topSrc;
+  /* v1 opaque-sky photo loader.  Uploaded to texture unit 2 (u_tex_top_v1).
+     If it fails to load we also hide the canvas and fall back to the v1 CSS
+     bg, same as v2 fail. */
+  var topV1Img = new Image();
+  topV1Img.crossOrigin = 'anonymous';
+  topV1Img.onload = function () {
+    try {
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, texTopV1);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, topV1Img);
+    } catch (e) { return; }
+    topV1Ready = true;
+    tryReadyFlag();
+  };
+  topV1Img.onerror = function () {
+    canvas.style.display = 'none';
+  };
+  topV1Img.src = topFallbackSrc;
+
+  function updateCoverFit() {
+    if (!W || !H || !imgReady) {
+      gl.uniform2f(uTexCoverScale, 1, 1);
+      gl.uniform2f(uTexCoverOffset, 0, 0);
+      return;
+    }
+    var canvasAR = W / H;
+    var sx = 1, sy = 1, ox = 0, oy = 0;
+    if (imgAR > canvasAR) {
+      sx = canvasAR / imgAR;
+      ox = (1 - sx) * 0.5;
+    } else {
+      sy = imgAR / canvasAR;
+      oy = (1 - sy) * 0.5;
+    }
+    gl.uniform2f(uTexCoverScale, sx, sy);
+    gl.uniform2f(uTexCoverOffset, ox, oy);
+  }
+
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 1.5);
+    var rect = canvas.getBoundingClientRect();
+    W = Math.max(1, Math.floor(rect.width  * DPR));
+    H = Math.max(1, Math.floor(rect.height * DPR));
+    canvas.width  = W;
+    canvas.height = H;
+    gl.viewport(0, 0, W, H);
+    updateCoverFit();
+  }
+  window.addEventListener('resize', function () {
+    var rect = canvas.getBoundingClientRect();
+    var newW = Math.floor(rect.width * (window.devicePixelRatio || 1));
+    if (Math.abs(newW - W) > 30) resize();
+  });
+  resize();
+
+  var ripples = [];
+  var startMs = performance.now();
+  var rippleBuf = new Float32Array(cfg.MAX_RIPPLES * 4);
+  // (cloud-clear brush state lives with the mask setup, near the samplers)
+
+  function spawnRipple(canvasUVx, canvasUVy) {
+    if (canvasUVy < 0.5) return;
+    var t  = (canvasUVy - 0.5) / 0.5;
+    if (t < 0) t = 0; else if (t > 1) t = 1;
+    var vs = Math.pow(t, 1 / cfg.HORIZON_POW);
+    var now = performance.now();
+    if (ripples.length >= cfg.MAX_RIPPLES) ripples.shift();
+    ripples.push({ ux: canvasUVx, uy: vs, t0: now, amp: cfg.RIPPLE_AMP });
+  }
+
+  // Cloud-clear brush. Paints into the persistent clear-mask in cloud_uv
+  // space (x, 1-y) — the space skyComposite samples. A stroke interpolates
+  // from the previous stamp so a drag is one continuous wipe and already-
+  // cleared sky stays cleared (no re-expose behind the cursor); the mask
+  // returns slowly on its own over CLEAR_RETURN_S.
+  function stampClearDot(ux, uy) {
+    var aspect = (H > 0 ? W / H : 1.0);      // keep the brush round on a wide canvas
+    var rx = cfg.CLEAR_RADIUS / aspect;      // narrower in x (UV units)
+    var ry = cfg.CLEAR_RADIUS;
+    var res = clearMaskRes;
+    var x0 = Math.max(0, Math.floor((ux - rx) * res));
+    var x1 = Math.min(res - 1, Math.ceil((ux + rx) * res));
+    var y0 = Math.max(0, Math.floor((uy - ry) * res));
+    var y1 = Math.min(res - 1, Math.ceil((uy + ry) * res));
+    for (var ty = y0; ty <= y1; ty++) {
+      var fy = (ty + 0.5) / res - uy;
+      for (var tx = x0; tx <= x1; tx++) {
+        var fx = ((tx + 0.5) / res - ux) * aspect;
+        var dist = Math.sqrt(fx * fx + fy * fy) / cfg.CLEAR_RADIUS; // 0 center → 1 edge
+        if (dist >= 1) continue;
+        var v = 1 - dist; v = v * v * (3 - 2 * v);                  // smoothstep falloff
+        var idx = ty * res + tx;
+        if (v > clearMask[idx]) clearMask[idx] = v;                 // max → uniform stroke
+      }
+    }
+  }
+  function spawnCloudClear(canvasUVx, canvasUVy) {
+    if (canvasUVy >= 0.5) return;            // sky only (upper half)
+    var ux = canvasUVx, uy = 1.0 - canvasUVy;
+    if (clearLastStamp) {                    // continuous stroke — fill the gap since last stamp
+      var dx = ux - clearLastStamp.x, dy = uy - clearLastStamp.y;
+      var d  = Math.sqrt(dx * dx + dy * dy);
+      var step = cfg.CLEAR_RADIUS * 0.4;
+      var n  = Math.max(1, Math.ceil(d / step));
+      for (var s = 1; s <= n; s++) stampClearDot(clearLastStamp.x + dx * (s / n), clearLastStamp.y + dy * (s / n));
+    } else {
+      stampClearDot(ux, uy);
+    }
+    clearLastStamp = { x: ux, y: uy };
+    clearMaskDirty = true;
+    clearMaskActive = true;
+    kickHero();
+  }
+
+  var holding = false;
+  var holdUV = { x: 0, y: 0 };
+  var lastEmit = { x: 0, y: 0 };
+
+  /* Touch-intent state. Mobile mode tracks whether the user is drawing
+     (horizontal-dominant drag on lake half) vs scrolling (vertical-dominant).
+     preventDefault is deferred until drawing-intent is confirmed so the page
+     scrolls naturally on a vertical swipe that began on the canvas. */
+  var touchStarted = false;
+  var touchStartUV = { x: 0, y: 0 };
+  var touchDrawing = false;       // true once user clearly intends to draw
+  var TOUCH_INTENT_DELTA = 0.012; // ~12px on 1000px-tall canvas
+  // Sky press/drag state so cloud-clear works on click-AND-drag
+  var skyHolding = false;   // mouse pressed in the sky
+  var skyTouching = false;  // finger pressed in the sky
+
+  function eventCanvasUV(e) {
+    var rect = canvas.getBoundingClientRect();
+    var pt = (e.touches && e.touches[0]) ? e.touches[0] : e;
+    var x = (pt.clientX - rect.left) / rect.width;
+    var y = (pt.clientY - rect.top)  / rect.height;
+    return { x: x, y: y };
+  }
+  function onMouseDown(e) {
+    var p = eventCanvasUV(e);
+    if (p.y < 0.5) { skyHolding = true; clearLastStamp = null; spawnCloudClear(p.x, p.y); return; }   // sky click/drag → clear clouds
+    e.preventDefault();
+    holding = true;
+    holdUV.x = p.x; holdUV.y = p.y;
+    lastEmit.x = p.x; lastEmit.y = p.y;
+    spawnRipple(p.x, p.y);
+  }
+  function onTouchStart(e) {
+    var p = eventCanvasUV(e);
+    if (p.y < 0.5) { skyTouching = true; clearLastStamp = null; touchStartUV.x = p.x; touchStartUV.y = p.y; spawnCloudClear(p.x, p.y); return; }   // sky tap/drag → clear clouds
+    touchStarted = true;
+    touchDrawing = false;
+    touchStartUV.x = p.x; touchStartUV.y = p.y;
+    holdUV.x = p.x; holdUV.y = p.y;
+    lastEmit.x = p.x; lastEmit.y = p.y;
+    // Spawn the ripple optimistically — tapping the lake should feel
+    // immediate even on a quick press-release. If the user then drags
+    // vertically (scroll), no preventDefault is called and the page
+    // scrolls; touchDrawing stays false and we don't trap subsequent moves.
+    spawnRipple(p.x, p.y);
+    holding = true;
+  }
+  function onMove(e) {
+    if (skyHolding) { // dragging across the sky keeps clearing clouds
+      var ps = eventCanvasUV(e);
+      if (ps.y < 0.5) spawnCloudClear(ps.x, ps.y);
+      return;
+    }
+    if (!holding) return;
+    var p = eventCanvasUV(e);
+    holdUV.x = p.x; holdUV.y = p.y;
+  }
+  function onTouchMove(e) {
+    if (skyTouching) { // horizontal sky drag clears clouds; vertical still scrolls
+      var pt = eventCanvasUV(e);
+      var dxt = Math.abs(pt.x - touchStartUV.x), dyt = Math.abs(pt.y - touchStartUV.y);
+      if (dxt > TOUCH_INTENT_DELTA && dxt > dyt) { e.preventDefault(); if (pt.y < 0.5) spawnCloudClear(pt.x, pt.y); }
+      else if (dyt > TOUCH_INTENT_DELTA) { skyTouching = false; }
+      return;
+    }
+    if (!touchStarted) return;
+    var p = eventCanvasUV(e);
+    if (!touchDrawing) {
+      var dx = Math.abs(p.x - touchStartUV.x);
+      var dy = Math.abs(p.y - touchStartUV.y);
+      // Drawing intent: horizontal-dominant motion past threshold
+      if (dx > TOUCH_INTENT_DELTA && dx > dy) {
+        touchDrawing = true;
+      } else if (dy > TOUCH_INTENT_DELTA) {
+        // Vertical motion → user is scrolling. Bail out of holding so
+        // the browser handles the rest of the gesture natively.
+        touchStarted = false;
+        holding = false;
+        return;
+      } else {
+        return;
+      }
+    }
+    e.preventDefault();
+    holdUV.x = p.x; holdUV.y = p.y;
+  }
+  function onRelease() {
+    holding = false;
+    touchStarted = false;
+    touchDrawing = false;
+    skyHolding = false;
+    skyTouching = false;
+    clearLastStamp = null; // end the brush stroke
+  }
+
+  canvas.addEventListener('mousedown',  onMouseDown);
+  canvas.addEventListener('touchstart', onTouchStart, { passive: true });
+  canvas.addEventListener('mousemove',  onMove);
+  canvas.addEventListener('touchmove',  onTouchMove, { passive: false });
+  window.addEventListener('mouseup',  onRelease);
+  window.addEventListener('touchend', onRelease);
+  window.addEventListener('touchcancel', onRelease);
+
+  canvas.addEventListener('mousemove', function (e) {
+    var p = eventCanvasUV(e);
+    canvas.style.cursor = p.y >= 0.5 ? 'crosshair' : 'default';
+  });
+
+  // Perf gate — only render while the hero water can actually be seen.
+  // IntersectionObserver flips visible on/off; the frame loop self-suspends
+  // when off-screen and re-kicks on entry. Saves CPU/GPU/battery once the
+  // user reaches the opaque bloom section (§III) and the footer.
+  // `heroFrameId` guards against double-rAF on rapid IO transitions (e.g.,
+  // fast scroll across the boundary), and is cleared inside the frame so a
+  // single in-flight request is always known. visibilitychange suspends +
+  // resumes the loop so backgrounded tabs don't burn cycles.
+  var heroVisible = true;
+  var heroFrameId = 0;
+  function kickHero() {
+    if (heroFrameId) return;
+    if (!heroVisible) return;
+    if (document.visibilityState === 'hidden') return;
+    heroFrameId = requestAnimationFrame(function tick() {
+      heroFrameId = 0;
+      frame();
+      if (heroVisible && document.visibilityState !== 'hidden') {
+        heroFrameId = requestAnimationFrame(tick);
+      }
+    });
+  }
+  function frame() {
+    var nowMs = performance.now();
+    var timeS = (nowMs - startMs) * 0.001;
+
+    if (holding && holdUV.y >= 0.5) {
+      var ddx = holdUV.x - lastEmit.x;
+      var ddy = holdUV.y - lastEmit.y;
+      var d2  = ddx * ddx + ddy * ddy;
+      if (d2 >= cfg.DRAG_EMIT_DIST * cfg.DRAG_EMIT_DIST) {
+        spawnRipple(holdUV.x, holdUV.y);
+        lastEmit.x = holdUV.x;
+        lastEmit.y = holdUV.y;
+      }
+    }
+
+    var live = 0;
+    for (var i = 0; i < ripples.length; i++) {
+      var rp = ripples[i];
+      var age = (nowMs - rp.t0) * 0.001;
+      if (age >= cfg.RIPPLE_LIFETIME_S) continue;
+      var base = live * 4;
+      rippleBuf[base    ] = rp.ux;
+      rippleBuf[base + 1] = rp.uy;
+      rippleBuf[base + 2] = age;
+      rippleBuf[base + 3] = rp.amp;
+      ripples[live] = rp;
+      live++;
+    }
+    ripples.length = live;
+    for (var k = live * 4; k < rippleBuf.length; k++) rippleBuf[k] = 0;
+
+    gl.uniform1f(uTime, timeS);
+    gl.uniform1f(uCloudTime, timeS); // dawn cloud drift
+    gl.uniform1i(uRippleCount, live);
+    gl.uniform4fv(uRipples, rippleBuf);
+
+    // Cloud-clear mask — persistent brush that returns slowly. Decay every
+    // live texel toward 0 over CLEAR_RETURN_S, then re-upload only when
+    // something changed (paint or decay). dt is clamped so a backgrounded tab
+    // resuming doesn't snap the whole mask away in one step.
+    var dtm = (nowMs - clearLastMs) * 0.001; clearLastMs = nowMs;
+    if (dtm > 0.05) dtm = 0.05; else if (dtm < 0) dtm = 0;
+    if (clearMaskActive) {
+      var dec = dtm / cfg.CLEAR_RETURN_S;
+      var anyLive = false;
+      for (var mi = 0; mi < clearMask.length; mi++) {
+        var mv = clearMask[mi];
+        if (mv > 0) { mv -= dec; if (mv <= 0) { mv = 0; } else { anyLive = true; } clearMask[mi] = mv; }
+      }
+      clearMaskActive = anyLive;
+      clearMaskDirty = true;
+    }
+    if (clearMaskDirty) {
+      for (var mb = 0; mb < clearMask.length; mb++) clearMaskBytes[mb] = (clearMask[mb] * 255) | 0;
+      gl.activeTexture(gl.TEXTURE3);
+      gl.bindTexture(gl.TEXTURE_2D, clearMaskTex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, clearMaskRes, clearMaskRes, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, clearMaskBytes);
+      clearMaskDirty = false;
+    }
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, texTop);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, texTopV1);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    if (imgReady) {
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    }
+    // Continuation handled by kickHero's tick — `frame` is now pure.
+  }
+
+  if ('IntersectionObserver' in window) {
+    // Keep the sim running while the hero water is actually visible. The water
+    // shows through every frosted section BEFORE the bloom section (§I
+    // #paradigms, §II #runtime, and #built-on-prose are all translucent), so
+    // we observe those plus the hero and stay "visible" while ANY of them is on
+    // screen. Observing only `.hero` would freeze the loop the instant the hero
+    // scrolled off — roughly halfway between §I and §II — and clicks on the
+    // water behind the sections would do nothing because frame() had stopped.
+    // We only freeze once the user is fully into #cta, whose opaque bloom
+    // canvas covers the hero anyway.
+    var heroGateEls = [
+      document.querySelector('.hero'),
+      document.getElementById('paradigms'),
+      document.getElementById('runtime'),
+      document.getElementById('built-on-prose')
+    ].filter(Boolean);
+    if (heroGateEls.length) {
+      var heroGateVis = new WeakMap();
+      var heroIO = new IntersectionObserver(function (entries) {
+        var was = heroVisible;
+        for (var i = 0; i < entries.length; i++) {
+          heroGateVis.set(entries[i].target, entries[i].isIntersecting);
+        }
+        var any = false;
+        for (var j = 0; j < heroGateEls.length; j++) {
+          if (heroGateVis.get(heroGateEls[j])) { any = true; break; }
+        }
+        heroVisible = any;
+        if (heroVisible && !was) kickHero();
+        // When heroVisible flips false the tick exits naturally.
+      }, { threshold: 0 });
+      for (var g = 0; g < heroGateEls.length; g++) heroIO.observe(heroGateEls[g]);
+    }
+  }
+  // Tab-switch lifecycle: pause when hidden, resume when visible.
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible' && heroVisible) {
+      kickHero();
+    }
+  });
+  kickHero();
+
+  // ============================================================
+  // AUTO RAIN — subtle ambient raindrops on the lake half
+  // Spawns a small ripple at a random UV (y >= 0.5) every 3-7s
+  // while the hero is visible. Gated on heroVisible to save work
+  // when the user has scrolled past the hero. It keeps the lake
+  // gently alive on initial load even before the user interacts.
+  //
+  // The timer is paused while the document is hidden so backgrounded
+  // tabs don't accumulate pending timeouts that fire in a burst on
+  // return.
+  // ============================================================
+  var RAIN_MIN_MS = 3000;
+  var RAIN_VAR_MS = 4000;
+  var RAIN_AMP_SCALE = 0.42;   // 42% of click amplitude — subtle
+  var rainTimer = 0;
+  function scheduleRain() {
+    if (rainTimer) clearTimeout(rainTimer);
+    var delay = RAIN_MIN_MS + Math.random() * RAIN_VAR_MS;
+    rainTimer = setTimeout(function () {
+      rainTimer = 0;
+      if (heroVisible && imgReady && document.visibilityState !== 'hidden') {
+        // Random position on the lake (v in [0.55, 0.95] keeps drops
+        // off the water-line seam and off the bottom edge).
+        var ux = 0.08 + Math.random() * 0.84;
+        var uy = 0.55 + Math.random() * 0.40;
+        // Manually push a smaller-amp ripple — reuse spawn but tweak
+        // amp on the most recent entry.
+        spawnRipple(ux, uy);
+        var last = ripples[ripples.length - 1];
+        if (last) last.amp = cfg.RIPPLE_AMP * RAIN_AMP_SCALE;
+      }
+      scheduleRain();
+    }, delay);
+  }
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') {
+      // Re-kick the chain (no-op if a timer is already pending).
+      if (!rainTimer) scheduleRain();
+    } else {
+      // Clear pending so it doesn't fire while backgrounded.
+      if (rainTimer) { clearTimeout(rainTimer); rainTimer = 0; }
+    }
+  });
+  scheduleRain();
+})();
+</script>
+
+<!-- ============================================================
+     BLOOM CTA — wave-equation CA in the §3 section
+     User clicks within the bloom canvas spawn pulses that
+     propagate and reflect off the section edges. Held-cursor
+     emits a continuous stream. Auto-raindrops keep the field
+     gently alive at long intervals.
+     ============================================================ -->
+<script>
+(function () {
+  var canvas = document.getElementById('bloom');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  var W = 0, H = 0;
+  var DPR = Math.min(window.devicePixelRatio || 1, 1.5);
+  var cellPx = 0;
+  var cols = 0, rows = 0;
+
+  var u_curr = null;
+  var u_prev = null;
+  var u_next = null;
+
+  var cfg = {
+    CELL:         8,
+    C2:           0.24,
+    DAMP_PREV:    0.995,
+    DECAY:        0.9864,
+    DEAD:         0.0006,
+    ANTISTRIPE:   0.0001,
+    SEED_THR:     0.40,
+    SEED_PROB:    0.0006,
+    SEED_RADIUS:  8,
+    SEED_AMP:     1.00,
+    CLICK_RADIUS: 40,
+    CLICK_PEAK:   1.6,
+    DRAG_PULSE_DIST: 48,
+    DROP_INTERVAL_MIN:  5000,
+    DROP_INTERVAL_VAR:  7500,
+    DROP_RADIUS_MIN:    3,
+    DROP_RADIUS_VAR:    13,
+    DROP_PEAK_MIN:      0.38,
+    DROP_PEAK_VAR:      0.44,
+    STABLE_AMP:        0.30,
+    STABLE_LAP:        0.012,
+    STABLE_CLICK_MULT: 2.5
+  };
+
+  var activated = false;
+  var holding = false;
+  var holdX = 0, holdY = 0;
+  var lastEmitX = 0, lastEmitY = 0;
+  var DRAG_PULSE_DIST_SQ = 0;
+
+  // Palette derived from light-warm-teal tokens — read once at startup.
+  var WARM, COOL, FADE, STABLE;
+  function readPaletteColors() {
+    var cs = getComputedStyle(document.documentElement);
+    function rgbOf(varName, fallback) {
+      var v = cs.getPropertyValue(varName).trim();
+      if (!v) return fallback;
+      // Accept #rrggbb hex
+      if (v.charAt(0) === '#') {
+        var h = v.replace('#', '');
+        if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+        return [parseInt(h.substr(0,2),16)|0, parseInt(h.substr(2,2),16)|0, parseInt(h.substr(4,2),16)|0];
+      }
+      return fallback;
+    }
+    var w = rgbOf('--teal',  [58, 122, 106]);     // crest — canonical teal
+    var c = rgbOf('--ink-3', [106, 100, 92]);     // trough — quiet ink
+    var s = rgbOf('--teal',  [58, 138, 110]);     // stable inside
+    var f = rgbOf('--paper', [245, 240, 232]);    // fade wash
+    WARM   = 'rgba(' + w[0] + ', ' + w[1] + ', ' + w[2] + ', ';
+    COOL   = 'rgba(' + c[0] + ', ' + c[1] + ', ' + c[2] + ', ';
+    STABLE = 'rgba(' + s[0] + ', ' + s[1] + ', ' + s[2] + ', ';
+    FADE   = 'rgba(' + f[0] + ', ' + f[1] + ', ' + f[2] + ', 0.16)';
+  }
+  readPaletteColors();
+
+  /* End-section dark-mode stickiness fix.
+     The bloom canvas paints a per-frame FADE wash derived from var(--paper).
+     Without re-reading on mode flip, the canvas keeps washing light-cream
+     over the dark-paper section, so toggling to dark "doesn't take" on the
+     cta-bloom surface.  Observe data-mode on <html> and re-derive on flip. */
+  if (typeof MutationObserver === 'function') {
+    new MutationObserver(function (muts) {
+      for (var mi = 0; mi < muts.length; mi++) {
+        if (muts[mi].attributeName === 'data-mode') {
+          readPaletteColors();
+          // force a fresh clear so the prior light wash doesn't ghost
+          if (ctx && W && H) {
+            ctx.fillStyle = FADE;
+            ctx.fillRect(0, 0, W, H);
+          }
+          break;
+        }
+      }
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-mode'] });
+  }
+
+  function alloc() {
+    var n = cols * rows;
+    u_curr = new Float32Array(n);
+    u_prev = new Float32Array(n);
+    u_next = new Float32Array(n);
+  }
+
+  function step() {
+    if (!u_curr) return;
+    var c = cols, r = rows;
+    var u = u_curr, p = u_prev, nxBuf = u_next;
+    var c2 = cfg.C2, dampPrev = cfg.DAMP_PREV, decay = cfg.DECAY, dead = cfg.DEAD;
+    var antistripe = cfg.ANTISTRIPE;
+    var seedThr = cfg.SEED_THR, seedProb = cfg.SEED_PROB;
+    var seedR = cfg.SEED_RADIUS, seedAmp = cfg.SEED_AMP;
+
+    for (var ry = 0; ry < r; ry++) {
+      var rowBase = ry * c;
+      var rowUp = (ry === 0)     ? rowBase : rowBase - c;
+      var rowDn = (ry === r - 1) ? rowBase : rowBase + c;
+      for (var cx = 0; cx < c; cx++) {
+        var iL = (cx === 0)     ? rowBase + cx : rowBase + cx - 1;
+        var iR = (cx === c - 1) ? rowBase + cx : rowBase + cx + 1;
+        var i  = rowBase + cx;
+        var lap = u[rowUp + cx] + u[rowDn + cx] + u[iL] + u[iR] - 4 * u[i];
+        var nx = (2 * u[i] - dampPrev * p[i] + c2 * lap) * decay;
+        if (antistripe > 0) {
+          nx += (Math.random() - 0.5) * antistripe;
+        }
+        if (nx > 1) nx = 1; else if (nx < -1) nx = -1;
+        if (nx > -dead && nx < dead) nx = 0;
+        nxBuf[i] = nx;
+
+        var absV = nx < 0 ? -nx : nx;
+        if (absV >= seedThr && Math.random() < seedProb) {
+          var dxs = (Math.random() * (seedR * 2 + 1) | 0) - seedR;
+          var dys = (Math.random() * (seedR * 2 + 1) | 0) - seedR;
+          var sx = cx + dxs, sy = ry + dys;
+          if (sx >= 0 && sx < c && sy >= 0 && sy < r) {
+            var si = sy * c + sx;
+            var sign = nx < 0 ? -1 : 1;
+            var amp = seedAmp * (0.6 + Math.random() * 0.8);
+            nxBuf[si] += sign * amp;
+          }
+        }
+      }
+    }
+
+    var tmp = u_prev;
+    u_prev = u_curr;
+    u_curr = u_next;
+    u_next = tmp;
+  }
+
+  function render() {
+    if (!u_curr) return;
+    ctx.fillStyle = FADE;
+    ctx.fillRect(0, 0, W, H);
+    var u = u_curr, c = cols, r = rows;
+    var cur = '';
+    var stableAmp = cfg.STABLE_AMP;
+    var stableLap = cfg.STABLE_LAP;
+    for (var ry = 0; ry < r; ry++) {
+      var rowBase = ry * c;
+      var py = ry * cellPx;
+      var rowUp = (ry === 0)     ? rowBase : rowBase - c;
+      var rowDn = (ry === r - 1) ? rowBase : rowBase + c;
+      for (var cx = 0; cx < c; cx++) {
+        var i = rowBase + cx;
+        var v = u[i];
+        var absV = v < 0 ? -v : v;
+        if (absV < 0.05) continue;
+        var px = cx * cellPx;
+        var alpha;
+        var style;
+
+        var iL = (cx === 0)     ? i : i - 1;
+        var iR = (cx === c - 1) ? i : i + 1;
+        var lap = u[rowUp + cx] + u[rowDn + cx] + u[iL] + u[iR] - 4 * v;
+        var absLap = lap < 0 ? -lap : lap;
+        var stable = absV >= stableAmp && absLap < stableLap;
+
+        if (stable) {
+          alpha = 0.45 + (absV - stableAmp) * 0.85;
+          if (alpha > 0.92) alpha = 0.92;
+          style = STABLE + alpha + ')';
+        } else if (absV < cfg.SEED_THR) {
+          alpha = absV * 0.55;
+          style = COOL + alpha + ')';
+        } else {
+          alpha = 0.42 + (absV - cfg.SEED_THR) * 0.95;
+          if (alpha > 0.95) alpha = 0.95;
+          style = WARM + alpha + ')';
+        }
+        if (style !== cur) { ctx.fillStyle = style; cur = style; }
+        ctx.fillRect(px, py, cellPx, cellPx);
+      }
+    }
+  }
+
+  function isStableAt(x, y) {
+    if (!u_curr) return false;
+    var cx = Math.floor(x / cellPx);
+    var cy = Math.floor(y / cellPx);
+    if (cx < 1 || cy < 1 || cx >= cols - 1 || cy >= rows - 1) return false;
+    var i = cy * cols + cx;
+    var v = u_curr[i];
+    var absV = v < 0 ? -v : v;
+    if (absV < cfg.STABLE_AMP) return false;
+    var lap = u_curr[(cy - 1) * cols + cx] + u_curr[(cy + 1) * cols + cx]
+            + u_curr[cy * cols + cx - 1] + u_curr[cy * cols + cx + 1]
+            - 4 * v;
+    return Math.abs(lap) < cfg.STABLE_LAP;
+  }
+
+  function pluck(x, y, radius, peak, force) {
+    if (!u_curr) return;
+    var cx = Math.floor(x / cellPx);
+    var cy = Math.floor(y / cellPx);
+    var rr = Math.max(2, Math.floor(radius / cellPx));
+    var rr2 = rr * rr;
+    for (var dy = -rr; dy <= rr; dy++) {
+      for (var dx = -rr; dx <= rr; dx++) {
+        var d2 = dx * dx + dy * dy;
+        if (d2 > rr2) continue;
+        var ny = cy + dy, nx = cx + dx;
+        if (ny < 0 || ny >= rows || nx < 0 || nx >= cols) continue;
+        var i = ny * cols + nx;
+        var falloff = 1 - Math.sqrt(d2) / rr;
+        if (force) {
+          u_curr[i] = peak * falloff;
+          u_prev[i] = 0;
+        } else {
+          u_curr[i] += peak * falloff;
+          u_prev[i] = u_curr[i] * 0.55;
+        }
+      }
+    }
+  }
+
+  function autoRipple() {
+    if (!u_curr || !activated) return;
+    var x = Math.random() * W;
+    var y = Math.random() * H;
+    pluck(
+      x, y,
+      (cfg.DROP_RADIUS_MIN + Math.random() * cfg.DROP_RADIUS_VAR) * DPR,
+      cfg.DROP_PEAK_MIN + Math.random() * cfg.DROP_PEAK_VAR,
+      false
+    );
+  }
+
+  function getPos(e) {
+    var rect = canvas.getBoundingClientRect();
+    var pt = (e.touches && e.touches[0]) ? e.touches[0] : e;
+    return {
+      x: (pt.clientX - rect.left) * DPR,
+      y: (pt.clientY - rect.top) * DPR
+    };
+  }
+  function onPress(e) {
+    e.preventDefault();
+    activated = true;
+    holding = true;
+    var p = getPos(e);
+    holdX = p.x; holdY = p.y;
+    lastEmitX = p.x; lastEmitY = p.y;
+    var stableHere = isStableAt(p.x, p.y);
+    var radius = cfg.CLICK_RADIUS * (stableHere ? cfg.STABLE_CLICK_MULT : 1) * DPR;
+    pluck(p.x, p.y, radius, cfg.CLICK_PEAK, true);
+  }
+  function onMove(e) {
+    if (!holding) return;
+    var p = getPos(e);
+    holdX = p.x; holdY = p.y;
+  }
+  function onRelease() { holding = false; }
+
+  canvas.addEventListener('mousedown',  onPress);
+  canvas.addEventListener('touchstart', onPress, { passive: false });
+  canvas.addEventListener('mousemove',  onMove);
+  canvas.addEventListener('touchmove',  function (e) {
+    if (!holding) return;
+    e.preventDefault();
+    var p = getPos(e);
+    holdX = p.x; holdY = p.y;
+  }, { passive: false });
+  window.addEventListener('mouseup',  onRelease);
+  window.addEventListener('touchend', onRelease);
+
+  // Perf gate — the bloom only paints while the CTA section is on screen.
+  // bloomFrameId guards against double-rAF on rapid IO transitions, and the
+  // loop is paused when the document visibility flips to hidden so
+  // backgrounded tabs don't burn cycles.
+  var ctaVisible = false;
+  var bloomFrameId = 0;
+  function kickBloom() {
+    if (bloomFrameId) return;
+    if (!ctaVisible) return;
+    if (document.visibilityState === 'hidden') return;
+    bloomFrameId = requestAnimationFrame(function tick() {
+      bloomFrameId = 0;
+      loop();
+      if (ctaVisible && document.visibilityState !== 'hidden') {
+        bloomFrameId = requestAnimationFrame(tick);
+      }
+    });
+  }
+  function loop() {
+    if (activated) {
+      if (holding) {
+        var dxe = holdX - lastEmitX;
+        var dye = holdY - lastEmitY;
+        if (dxe * dxe + dye * dye >= DRAG_PULSE_DIST_SQ) {
+          var stableHere = isStableAt(holdX, holdY);
+          var dRadius = cfg.CLICK_RADIUS * (stableHere ? cfg.STABLE_CLICK_MULT : 1) * DPR;
+          pluck(holdX, holdY, dRadius, cfg.CLICK_PEAK, true);
+          lastEmitX = holdX; lastEmitY = holdY;
+        }
+      }
+      step();
+      render();
+    }
+    // Continuation handled by kickBloom's tick — `loop` is now pure.
+  }
+
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 1.5);
+    var rect = canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+    var newW = Math.floor(rect.width * DPR);
+    var newH = Math.floor(rect.height * DPR);
+    // Skip the buffer-clear flash when dimensions haven't actually changed
+    // (e.g., re-entering §III after scrolling away without resizing the
+    // viewport).
+    if (newW === W && newH === H && u_curr) return;
+    W = newW;
+    H = newH;
+    canvas.width = W; canvas.height = H;
+    cellPx = cfg.CELL * DPR;
+    cols = Math.ceil(W / cellPx) + 1;
+    rows = Math.ceil(H / cellPx) + 1;
+    alloc();
+    var dragD = cfg.DRAG_PULSE_DIST * DPR;
+    DRAG_PULSE_DIST_SQ = dragD * dragD;
+    ctx.clearRect(0, 0, W, H);
+  }
+  window.addEventListener('resize', function () {
+    var rect = canvas.getBoundingClientRect();
+    var nW = Math.floor(rect.width * (window.devicePixelRatio || 1));
+    if (Math.abs(nW - W) > 30) resize();
+  });
+  resize();
+
+  /* Seed initial ripples on first §III entry so the bloom field reads as a
+     live ambient surface from the first frame, not a dormant empty canvas
+     waiting for user click. */
+  var hasSeeded = false;
+  function seedInitial() {
+    if (hasSeeded) return;
+    if (!u_curr) return;
+    hasSeeded = true;
+    activated = true;
+    for (var s = 0; s < 8; s++) {
+      var x = Math.random() * W;
+      var y = Math.random() * H;
+      pluck(
+        x, y,
+        (cfg.DROP_RADIUS_MIN + Math.random() * cfg.DROP_RADIUS_VAR) * DPR,
+        cfg.DROP_PEAK_MIN + Math.random() * cfg.DROP_PEAK_VAR,
+        false
+      );
+    }
+  }
+
+  if ('IntersectionObserver' in window) {
+    var ctaEl = document.getElementById('cta');
+    if (ctaEl) {
+      var ctaIO = new IntersectionObserver(function (entries) {
+        var was = ctaVisible;
+        ctaVisible = entries[0].isIntersecting;
+        if (ctaVisible && !was) {
+          // Re-measure on enter — viewport may have changed (mobile rotate, etc.)
+          resize();
+          seedInitial();
+          kickBloom();
+        }
+      }, { threshold: 0 });
+      ctaIO.observe(ctaEl);
+    } else {
+      ctaVisible = true;
+      seedInitial();
+      kickBloom();
+    }
+  } else {
+    ctaVisible = true;
+    seedInitial();
+    kickBloom();
+  }
+
+  // Tab-switch lifecycle: pause when hidden, resume when visible + visible.
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible' && ctaVisible) {
+      kickBloom();
+    }
+  });
+
+  // Auto-ripple chain — gated on ctaVisible + document.visibilityState so
+  // backgrounded tabs don't accumulate pending timeouts that fire in a
+  // burst on return.
+  var autoTimer = 0;
+  function scheduleAuto() {
+    if (autoTimer) clearTimeout(autoTimer);
+    var delay = cfg.DROP_INTERVAL_MIN + Math.random() * cfg.DROP_INTERVAL_VAR;
+    autoTimer = setTimeout(function () {
+      autoTimer = 0;
+      if (ctaVisible && document.visibilityState !== 'hidden') autoRipple();
+      scheduleAuto();
+    }, delay);
+  }
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') {
+      if (!autoTimer) scheduleAuto();
+    } else {
+      if (autoTimer) { clearTimeout(autoTimer); autoTimer = 0; }
+    }
+  });
+  scheduleAuto();
+})();
+</script>
+
+<!-- ============================================================
+     MARK MORPH — inline signet ⟷ wordmark (#centerMark)
+     Hover reveals the wordmark; click locks the current phase.
+     Deliberate, not ambient.
+
+     Keyboard + touch parity:
+       · focus  → wordmark (mirrors hover for keyboard users)
+       · blur   → signet
+       · touchstart → wordmark (mobile press-and-hold preview)
+       · touchend   → signet (release returns to signet)
+       · Enter / Space → lock toggle (browser click fallback)
+     Aria-label updates per phase so screen readers narrate the action.
+     ============================================================ -->
+<script>
+(function () {
+  var mark = document.getElementById('centerMark');
+  if (!mark) return;
+  var locked = false;
+  var LABEL_SIGNET   = 'OpenProse mark · show wordmark';
+  var LABEL_WORDMARK = 'OpenProse wordmark · show signet';
+
+  function setPhase(p) {
+    mark.setAttribute('data-phase', p);
+    mark.setAttribute('aria-label', p === 'wordmark' ? LABEL_WORDMARK : LABEL_SIGNET);
+  }
+  setPhase('signet');
+
+  // Hover (mouse)
+  mark.addEventListener('mouseenter', function () {
+    if (locked) return;
+    setPhase('wordmark');
+  });
+  mark.addEventListener('mouseleave', function () {
+    if (locked) return;
+    setPhase('signet');
+  });
+
+  // Keyboard (focus/blur mirror hover)
+  mark.addEventListener('focus', function () {
+    if (locked) return;
+    setPhase('wordmark');
+  });
+  mark.addEventListener('blur', function () {
+    if (locked) return;
+    setPhase('signet');
+  });
+
+  // Touch (press-and-hold preview, release returns)
+  mark.addEventListener('touchstart', function () {
+    if (locked) return;
+    setPhase('wordmark');
+  }, { passive: true });
+  mark.addEventListener('touchend', function () {
+    if (locked) return;
+    setPhase('signet');
+  });
+  mark.addEventListener('touchcancel', function () {
+    if (locked) return;
+    setPhase('signet');
+  });
+
+  // Click locks the current phase (Enter/Space fire click on a <button>)
+  mark.addEventListener('click', function () {
+    if (locked) {
+      locked = false;
+      setPhase('signet');
+    } else {
+      locked = true;
+      setPhase('wordmark');
+    }
+  });
+})();
+</script>
+
+<!-- ============================================================
+     MODE TOGGLE — light/dark via data-mode on <html>
+     Persists to localStorage; defaults to prefers-color-scheme on
+     first visit. The button glyph reflects the *target* state.
+
+     The glyph is inside an aria-hidden <span> so screen readers always
+     announce the aria-label rather than the half-circle Unicode glyph. The
+     glyph swap targets the span's textContent so the aria-hidden wrapper is
+     preserved.
+     ============================================================ -->
+<script>
+(function () {
+  var KEY = 'openprose-canonical-mode';
+  var btn  = document.getElementById('mode-toggle');
+  var logo = document.getElementById('brand-logo'); // top-left logo = 2nd toggle
+  if (!btn && !logo) return;
+  var glyph = btn && (btn.querySelector('span[aria-hidden="true"]') || btn);
+  // persist=true ONLY on an explicit user toggle, so an auto-detected device
+  // preference is never frozen into storage — the page keeps following the OS
+  // setting on every load until the visitor actually picks a side.
+  function applyMode(m, persist) {
+    document.documentElement.setAttribute('data-mode', m);
+    var label = m === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+    if (glyph) glyph.textContent = m === 'dark' ? '◑' : '◐';
+    if (btn)  btn.setAttribute('aria-label', label);
+    if (logo) logo.setAttribute('aria-label', label); // keep both in sync
+    if (persist) { try { localStorage.setItem(KEY, m); } catch (e) {} }
+  }
+  // The <head> bootstrap already resolved + applied data-mode before first
+  // paint (stored choice → device pref → light). Mirror that into the glyph
+  // + aria here without re-resolving or persisting.
+  var current = document.documentElement.getAttribute('data-mode') === 'dark' ? 'dark' : 'light';
+  applyMode(current, false);
+  function flip() {
+    var cur = document.documentElement.getAttribute('data-mode') === 'dark' ? 'dark' : 'light';
+    applyMode(cur === 'dark' ? 'light' : 'dark', true);
+  }
+  if (btn)  btn.addEventListener('click', flip);
+  if (logo) logo.addEventListener('click', flip); // left logo toggles too
+})();
+</script>
+
+<!-- ============================================================
+     §III REQUEST-ACCESS FORM
+     Placeholder capture only: no live endpoint is wired, so the
+     submit is intercepted and acknowledged inline. Swap in the real
+     request-access endpoint (or wire to the openprose.ai flow) later.
+     ============================================================ -->
+<script>
+(function () {
+  var form = document.getElementById('access-form');
+  if (!form) return;
+  var note  = document.getElementById('access-note');
+  var email = form.querySelector('.access-email');
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!email.value || !email.checkValidity()) {
+      if (note) { note.textContent = 'Enter a valid email.'; note.setAttribute('data-state', 'err'); }
+      email.focus();
+      return;
+    }
+    if (note) { note.textContent = 'Thanks. We’ll be in touch about access.'; note.setAttribute('data-state', 'ok'); }
+    form.reset();
+  });
+})();
+</script>
+
+<!-- ============================================================
+     YEAR AUTO-UPDATE
+     Colophon year reflects the current year on every visit so the
+     page doesn't read as stale on 2027-01-01.
+     ============================================================ -->
+<script>
+(function () {
+  var y = document.getElementById('foot-year');
+  if (y) y.textContent = String(new Date().getFullYear());
+})();
+</script>
+
+<!-- ============================================================
+     SCROLL-PROGRESS
+     A tiny rAF-throttled scroll listener updates --p on the progress
+     bar element. transform: scaleX(var(--p)) reads as a left-anchored
+     fill from 0 (top) to 1 (bottom of document).
+     ============================================================ -->
+<script>
+(function () {
+  var bar = document.querySelector('.scroll-progress');
+  if (!bar) return;
+  var ticking = false;
+  function update() {
+    var doc = document.documentElement;
+    var scrolled = window.scrollY || doc.scrollTop || 0;
+    var max = (doc.scrollHeight - window.innerHeight) || 1;
+    var p = scrolled / max;
+    if (p < 0) p = 0; else if (p > 1) p = 1;
+    bar.style.setProperty('--p', p.toFixed(4));
+    ticking = false;
+  }
+  function onScroll() {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(update);
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll, { passive: true });
+  update();
+})();
+</script>
+
+
+</body>
+</html>

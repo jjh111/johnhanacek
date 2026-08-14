@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 142 142'%3E%3Cpath d='M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z' fill='%232a2520'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenProse — ι Reference Card · interactive</title>
+<style>
+/* ============================================
+   ι REFERENCE CARD · INTERACTIVE
+   The broadside, now a working reference instrument.
+   Dense card grid. Live filter. Inline expansion.
+   Clipboard copy. Sort/group. Floating scratchpad.
+   Keyboard nav. Light/dark.
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,700&family=Crimson+Pro:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@400;500&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --paper:     #f4ede0;
+  --paper-dk:  #ece4d2;
+  --paper-lt:  #faf5ea;
+  --ink:       #1a1612;
+  --ink-2:     #4a4338;
+  --ink-3:     #7a7263;
+  --ink-4:     #b3a892;
+  --violet:    #5b3aa0;
+  --violet-deep:#3d2570;
+  --violet-soft:#7a5cc0;
+  --violet-faint:rgba(91,58,160,0.08);
+  --orange:    #d2691e;
+  --orange-soft:#e88a44;
+  --rule:      rgba(26,22,18,0.18);
+  --rule-mid:  rgba(26,22,18,0.10);
+  --hi:        rgba(91,58,160,0.16);
+  --serif: 'Playfair Display', Bodoni, Georgia, serif;
+  --sans:  'Crimson Pro', Georgia, serif;
+  --mono:  'JetBrains Mono', 'SF Mono', monospace;
+}
+
+html[data-theme="dark"] {
+  --paper:     #18140f;
+  --paper-dk:  #211c16;
+  --paper-lt:  #1f1a14;
+  --ink:       #f4ede0;
+  --ink-2:     #d2c9b7;
+  --ink-3:     #9d937f;
+  --ink-4:     #5d5547;
+  --violet:    #a587e6;
+  --violet-deep:#c2a9f4;
+  --violet-soft:#8466c7;
+  --violet-faint:rgba(165,135,230,0.14);
+  --orange:    #f08a3c;
+  --orange-soft:#f5a560;
+  --rule:      rgba(244,237,224,0.22);
+  --rule-mid:  rgba(244,237,224,0.12);
+  --hi:        rgba(165,135,230,0.22);
+}
+
+body {
+  background:
+    radial-gradient(circle at 25% 30%, rgba(26,22,18,0.014) 0%, transparent 50%),
+    radial-gradient(circle at 75% 70%, rgba(26,22,18,0.014) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 35% at 18% 12%, rgba(91,58,160,0.04), transparent 65%),
+    radial-gradient(ellipse 45% 32% at 85% 78%, rgba(210,105,30,0.04), transparent 65%),
+    var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 1rem;
+  line-height: 1.6;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  padding: 1.5rem 1.5rem 9rem;
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+html[data-theme="dark"] body {
+  background:
+    radial-gradient(ellipse 50% 35% at 18% 12%, rgba(165,135,230,0.08), transparent 65%),
+    radial-gradient(ellipse 45% 32% at 85% 78%, rgba(240,138,60,0.06), transparent 65%),
+    var(--paper);
+}
+
+/* THE BROADSIDE */
+.broadside {
+  width: 100%;
+  max-width: 1180px;
+  background: var(--paper-lt);
+  border: 1px solid var(--rule);
+  padding: 2.25rem 3rem 2.25rem 4rem;
+  position: relative;
+  box-shadow: 0 12px 56px rgba(26,22,18,0.10);
+}
+@media (max-width: 720px) { .broadside { padding: 2rem 1.25rem; } }
+
+/* CORNER REGISTRATION MARKS */
+.broadside::before, .broadside::after {
+  content: '';
+  position: absolute;
+  width: 16px; height: 16px;
+  border: 1.5px solid var(--ink);
+}
+.broadside::before { top: 0.85rem; left: 0.85rem; border-right: none; border-bottom: none; }
+.broadside::after  { bottom: 0.85rem; right: 0.85rem; border-left: none; border-top: none; }
+.crn-tr, .crn-bl {
+  position: absolute;
+  width: 16px; height: 16px;
+  border: 1.5px solid var(--ink);
+}
+.crn-tr { top: 0.85rem; right: 0.85rem; border-left: none; border-bottom: none; }
+.crn-bl { bottom: 0.85rem; left: 0.85rem; border-right: none; border-top: none; }
+
+/* VERTICAL EDGE LABEL */
+.edge {
+  position: absolute;
+  left: 1.45rem;
+  top: 50%;
+  transform: translateY(-50%) rotate(180deg);
+  writing-mode: vertical-rl;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--violet);
+  font-weight: 500;
+  white-space: nowrap;
+}
+@media (max-width: 880px) { .edge { display: none; } }
+
+/* HEAD */
+.bs-head {
+  border-bottom: 1.5px solid var(--ink);
+  padding-bottom: 1rem;
+  margin-bottom: 1.25rem;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 1.5rem;
+  align-items: end;
+}
+.h-eyebrow {
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--violet);
+  font-weight: 500;
+  border: 1px solid var(--violet);
+  padding: 0.3rem 0.6rem;
+  border-radius: 1px;
+  white-space: nowrap;
+}
+.h-title {
+  font-family: var(--serif);
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: clamp(2.6rem, 5.2vw, 4.4rem);
+  line-height: 0.92;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-align: center;
+}
+.h-title em { color: var(--violet); font-style: italic; font-weight: 800; }
+.h-meta {
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  color: var(--ink-3);
+  letter-spacing: 0.06em;
+  line-height: 1.6;
+  text-align: right;
+  white-space: nowrap;
+}
+.h-meta strong { color: var(--ink); font-weight: 500; }
+
+.bs-subhead {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  font-family: var(--serif);
+  font-size: 1rem;
+  font-style: italic;
+  font-weight: 400;
+  color: var(--ink-2);
+  letter-spacing: 0.02em;
+}
+.bs-subhead em { color: var(--violet); font-weight: 500; }
+.bs-subhead .sep { color: var(--violet); margin: 0 0.5rem; }
+
+/* CONTROL BAR — sticky inside the broadside */
+.controls {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--paper-lt);
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 0.65rem 0;
+  margin-bottom: 1rem;
+  display: grid;
+  grid-template-columns: 1fr auto auto auto auto;
+  gap: 0.75rem;
+  align-items: center;
+}
+@media (max-width: 720px) {
+  .controls { grid-template-columns: 1fr 1fr; }
+}
+.search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.search-wrap .kbd {
+  position: absolute;
+  right: 0.45rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  border: 1px solid var(--rule);
+  padding: 0.1rem 0.3rem;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+  pointer-events: none;
+  background: var(--paper);
+}
+.search {
+  width: 100%;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  color: var(--ink);
+  padding: 0.45rem 3rem 0.45rem 0.65rem;
+  letter-spacing: 0.04em;
+  border-radius: 1px;
+  outline: none;
+}
+.search:focus { border-color: var(--violet); box-shadow: 0 0 0 1px var(--violet) inset; }
+
+.ctl-group {
+  display: inline-flex;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+}
+.ctl-group button {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: transparent;
+  color: var(--ink-3);
+  border: none;
+  padding: 0.45rem 0.6rem;
+  cursor: pointer;
+  border-right: 1px solid var(--rule);
+  white-space: nowrap;
+}
+.ctl-group button:last-child { border-right: none; }
+.ctl-group button:hover { color: var(--ink); background: var(--violet-faint); }
+.ctl-group button[aria-pressed="true"] {
+  background: var(--violet);
+  color: var(--paper-lt);
+}
+
+.ctl-label {
+  font-family: var(--mono);
+  font-size: 0.56rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  align-self: center;
+}
+
+.count {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+  text-align: right;
+  white-space: nowrap;
+}
+.count .n { color: var(--violet); font-weight: 500; }
+
+/* GROUPS */
+.group {
+  margin-bottom: 1.5rem;
+}
+.group-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+  border-bottom: 1px solid var(--rule-mid);
+  padding-bottom: 0.3rem;
+}
+.group-title {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--violet);
+  font-weight: 500;
+}
+.group-count {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+}
+.group-desc {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 0.78rem;
+  color: var(--ink-2);
+  margin-left: auto;
+}
+
+/* CARD GRID */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.55rem;
+}
+
+/* CARDS — compact reference */
+.card {
+  position: relative;
+  font-family: var(--sans);
+  background: var(--paper);
+  border: 1px solid var(--rule-mid);
+  padding: 0.55rem 0.7rem;
+  cursor: pointer;
+  user-select: none;
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 0.2rem;
+  transition: border-color 0.08s, background 0.08s;
+}
+.card:hover {
+  border-color: var(--violet);
+  background: var(--paper-dk);
+}
+.card.is-selected {
+  border-color: var(--violet);
+  background: var(--paper-dk);
+  box-shadow: inset 0 0 0 1px var(--violet);
+}
+.card.is-expanded {
+  grid-column: span 2;
+  grid-template-rows: auto auto auto;
+}
+@media (max-width: 720px) {
+  .card.is-expanded { grid-column: span 1; }
+}
+
+.card-row1 {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+.swatch {
+  width: 1.3rem;
+  height: 1.3rem;
+  flex-shrink: 0;
+  border: 1px solid var(--rule);
+  border-radius: 1px;
+  position: relative;
+}
+.swatch.swatch-type {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--serif);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--violet);
+  background: var(--paper-lt);
+}
+.swatch.swatch-type.mono { font-family: var(--mono); font-size: 0.8rem; font-weight: 500; }
+.swatch.swatch-type.sans { font-family: var(--sans); font-style: italic; font-size: 0.9rem; }
+
+.card-name {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--ink);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+.card-cat {
+  font-family: var(--mono);
+  font-size: 0.52rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.card-row2 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.card-value {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  color: var(--ink-2);
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+.card-usage {
+  font-family: var(--mono);
+  font-size: 0.56rem;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.card-usage .bar {
+  display: inline-block;
+  width: 24px;
+  height: 4px;
+  background: var(--rule-mid);
+  margin-left: 0.25rem;
+  vertical-align: middle;
+  position: relative;
+  overflow: hidden;
+}
+.card-usage .bar::after {
+  content: '';
+  position: absolute;
+  inset: 0 var(--neg) 0 0;
+  background: var(--violet);
+}
+
+/* EXPANDED PANEL */
+.card-detail {
+  grid-column: 1 / -1;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--rule);
+  font-family: var(--sans);
+  font-size: 0.84rem;
+  color: var(--ink-2);
+  display: none;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.card.is-expanded .card-detail { display: flex; }
+.card-detail .row {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  gap: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+  align-items: baseline;
+}
+.card-detail .row .k {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--violet);
+}
+.card-detail .row .v {
+  color: var(--ink-2);
+  word-break: break-all;
+}
+.card-detail .copy-row {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  margin-top: 0.15rem;
+}
+.copy-chip {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  color: var(--ink-2);
+  padding: 0.18rem 0.45rem;
+  cursor: pointer;
+  border-radius: 1px;
+  transition: background 0.08s, color 0.08s, border-color 0.08s;
+}
+.copy-chip:hover { border-color: var(--violet); color: var(--violet); }
+.copy-chip.flashed {
+  background: var(--violet);
+  color: var(--paper-lt);
+  border-color: var(--violet);
+}
+.card-detail .note {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 0.84rem;
+  color: var(--ink-2);
+  line-height: 1.45;
+}
+.card-detail .note em { color: var(--violet); font-style: italic; font-weight: 500; }
+
+/* TYPE PREVIEW INSIDE DETAIL */
+.type-preview {
+  margin-top: 0.3rem;
+  padding: 0.5rem 0.7rem;
+  border-left: 2px solid var(--violet);
+  background: var(--paper-lt);
+}
+.type-preview .specimen {
+  color: var(--ink);
+  line-height: 1.1;
+}
+.type-preview .specimen-meta {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  color: var(--ink-3);
+  margin-top: 0.2rem;
+  text-transform: uppercase;
+}
+
+/* No results */
+.empty {
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--ink-3);
+  text-align: center;
+  padding: 2rem;
+  border: 1px dashed var(--rule);
+  background: var(--paper);
+}
+
+/* FLOATING SCRATCHPAD */
+.scratch {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  width: 360px;
+  max-width: calc(100vw - 2rem);
+  background: var(--paper-lt);
+  border: 1px solid var(--ink);
+  box-shadow: 0 12px 32px rgba(26,22,18,0.18);
+  z-index: 100;
+  font-family: var(--sans);
+}
+html[data-theme="dark"] .scratch { box-shadow: 0 12px 32px rgba(0,0,0,0.5); }
+.scratch-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--rule);
+  padding: 0.4rem 0.6rem;
+  background: var(--paper);
+}
+.scratch-title {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--violet);
+  font-weight: 500;
+}
+.scratch-actions { display: inline-flex; gap: 0.25rem; }
+.scratch-btn {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid var(--rule);
+  color: var(--ink-3);
+  padding: 0.18rem 0.4rem;
+  cursor: pointer;
+}
+.scratch-btn:hover { color: var(--ink); border-color: var(--violet); }
+
+.scratch-body {
+  padding: 0.7rem 0.75rem 0.8rem;
+  min-height: 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.scratch-empty {
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--ink-3);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+.scratch-empty .kbd {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  border: 1px solid var(--rule);
+  padding: 0.1rem 0.3rem;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+  font-style: normal;
+  margin: 0 0.15rem;
+}
+.scratch-demo { display: contents; }
+.scratch-demo .demo-head {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+.scratch-demo .demo-name {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--ink);
+  font-weight: 500;
+}
+.scratch-demo .demo-cat {
+  font-family: var(--mono);
+  font-size: 0.5rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-left: auto;
+}
+.scratch-demo .demo-stage {
+  border: 1px dashed var(--rule);
+  padding: 0.7rem 0.75rem;
+  background: var(--paper);
+  min-height: 5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.scratch-demo .demo-stage .specimen {
+  font-family: var(--serif);
+  font-size: 1.4rem;
+  color: var(--ink);
+  text-align: center;
+  line-height: 1.1;
+}
+.scratch-demo .demo-foot {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* TOAST */
+.toast {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--ink);
+  color: var(--paper-lt);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--violet);
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.08s, transform 0.12s;
+  white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* TAGLINE STRAP */
+.tagline-strap {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1.5px solid var(--ink);
+  font-family: var(--serif);
+  font-size: clamp(1.2rem, 2.4vw, 1.9rem);
+  font-weight: 400;
+  font-style: italic;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  letter-spacing: 0.01em;
+  text-align: center;
+}
+.tagline-strap .ts-word { padding: 0 0.4rem; }
+.tagline-strap .ts-word.accent { color: var(--violet); font-weight: 500; }
+.tagline-strap .ts-rule { flex: 1; height: 1px; background: var(--ink-4); max-width: 80px; }
+
+/* FOOT */
+.bs-foot {
+  margin-top: 1rem;
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  color: var(--ink-3);
+  letter-spacing: 0.06em;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.bs-foot a {
+  color: var(--violet);
+  text-decoration: none;
+  margin-left: 0.85rem;
+  border-bottom: 1px dotted transparent;
+}
+.bs-foot a:hover { border-bottom-color: var(--violet); }
+.bs-foot .stamp {
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--ink-2);
+  font-size: 0.78rem;
+  letter-spacing: 0;
+}
+
+/* HELP STRIP — small footnote of shortcuts */
+.help-strip {
+  margin-top: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.56rem;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+}
+.help-strip .kbd {
+  font-family: var(--mono);
+  font-size: 0.56rem;
+  border: 1px solid var(--rule);
+  padding: 0.05rem 0.3rem;
+  color: var(--ink-2);
+  background: var(--paper);
+  margin-right: 0.25rem;
+}
+
+
+
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+  div.h-eyebrow { width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: auto; word-break: break-word; }
+  h1.h-title { width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: auto; word-break: break-word; }
+  div.h-meta { width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: auto; word-break: break-word; }
+}
+</style>
+</head>
+<body>
+
+<div class="broadside">
+  <span class="crn-tr"></span>
+  <span class="crn-bl"></span>
+  <span class="edge">THE OPEN·PROSE REFERENCE · TOKENS / TYPE / METHOD · INTERACTIVE</span>
+
+  <!-- HEAD -->
+  <div class="bs-head">
+    <div class="h-eyebrow">Direction ι · Reference № 4 · interactive</div>
+    <h1 class="h-title">OPEN<em>PROSE</em></h1>
+    <div class="h-meta">
+      <div><strong>working reference</strong></div>
+      <div>filter · copy · preview</div>
+      <div>v0.42 · MMXXVI</div>
+    </div>
+  </div>
+
+  <div class="bs-subhead">
+    <em>The literary computer</em><span class="sep">·</span>tokens, type, and method<span class="sep">·</span>a card index you can <em>work</em>.
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="controls" id="controls">
+    <div class="search-wrap">
+      <input class="search" id="search" type="text" placeholder="filter — name, value, category, alias" autocomplete="off" spellcheck="false" />
+      <span class="kbd">/</span>
+    </div>
+
+    <span class="ctl-label">sort</span>
+    <div class="ctl-group" id="sort-group" role="group">
+      <button data-sort="alpha" aria-pressed="false">alpha</button>
+      <button data-sort="usage" aria-pressed="false">usage</button>
+      <button data-sort="cat"   aria-pressed="true">category</button>
+    </div>
+
+    <div class="ctl-group" id="theme-toggle">
+      <button data-theme-toggle aria-pressed="false" title="toggle theme">◐ theme</button>
+    </div>
+
+    <span class="count" id="count"><span class="n">0</span>/<span id="total">0</span> entries</span>
+  </div>
+
+  <!-- CARD INDEX -->
+  <div id="index"></div>
+
+  <!-- TAGLINE STRAP -->
+  <div class="tagline-strap">
+    <span class="ts-rule"></span>
+    <span class="ts-word">Declare.</span>
+    <span class="ts-word accent">Verify.</span>
+    <span class="ts-word">Deliver.</span>
+    <span class="ts-rule"></span>
+  </div>
+
+  <!-- FOOT -->
+  <div class="bs-foot">
+    <span class="stamp">Set in Playfair Display, Crimson Pro, JetBrains Mono · printed in Brooklyn · MMXXVI</span>
+    <span>
+      <a href="direction-iota-reference-card.html">ι template</a>
+      <a href="direction-alpha-editorial-concept.html">α</a>
+      <a href="direction-beta-tufte-concept.html">β</a>
+      <a href="direction-gamma-manuscript-concept.html">γ</a>
+      <a href="direction-delta-machine-concept.html">δ</a>
+      <a href="direction-epsilon-operator-concept.html">ε</a>
+      <a href="direction-zeta-saas-concept.html">ζ</a>
+      <a href="direction-eta-organism-concept.html">η</a>
+      <a href="direction-theta-living-document-concept.html">θ</a>
+      <a href="direction-kappa-codex-spreads-concept.html">κ</a>
+    </span>
+  </div>
+
+  <div class="help-strip">
+    <span><span class="kbd">/</span>focus filter</span>
+    <span><span class="kbd">↑</span><span class="kbd">↓</span><span class="kbd">←</span><span class="kbd">→</span>move</span>
+    <span><span class="kbd">Enter</span>expand</span>
+    <span><span class="kbd">C</span>copy primary</span>
+    <span><span class="kbd">T</span>theme</span>
+    <span><span class="kbd">Esc</span>clear</span>
+  </div>
+
+</div>
+
+<!-- SCRATCHPAD -->
+<aside class="scratch" id="scratch" aria-label="scratchpad">
+  <div class="scratch-head">
+    <span class="scratch-title">scratchpad · live preview</span>
+    <span class="scratch-actions">
+      <button class="scratch-btn" id="scratch-clear" title="clear">clear</button>
+    </span>
+  </div>
+  <div class="scratch-body" id="scratch-body">
+    <div class="scratch-empty" id="scratch-empty">
+      Select a card with <span class="kbd">Enter</span> or click to preview here. Use <span class="kbd">/</span> to filter, <span class="kbd">C</span> to copy.
+    </div>
+  </div>
+</aside>
+
+<!-- TOAST -->
+<div class="toast" id="toast">copied</div>
+
+<script>
+'use strict';
+
+/* ============================================
+   DATA — the reference content. Tokens, type,
+   methods, and figure axes — all drawn from
+   the existing broadside.
+   ============================================ */
+const ENTRIES = [
+  // ── PALETTE ───────────────────────────────
+  { id:'paper',      cat:'palette', name:'--paper',      value:'#f4ede0', usage:0.96, kind:'color', note:'Base paper. The broadside background; the warm cream that holds the figure.', aliases:'cream off-white background' },
+  { id:'paper-lt',   cat:'palette', name:'--paper-lt',   value:'#faf5ea', usage:0.78, kind:'color', note:'Card stock. Lifted from the page for the broadside surface itself.', aliases:'card surface' },
+  { id:'paper-dk',   cat:'palette', name:'--paper-dk',   value:'#ece4d2', usage:0.42, kind:'color', note:'Hover and pressed states. One step deeper into the warm.', aliases:'depressed' },
+  { id:'ink',        cat:'palette', name:'--ink',        value:'#1a1612', usage:0.93, kind:'color', note:'Primary ink. The text body; the heavy rules.', aliases:'black text body' },
+  { id:'ink-2',      cat:'palette', name:'--ink-2',      value:'#4a4338', usage:0.71, kind:'color', note:'Secondary ink. Captions, italics, supporting prose.', aliases:'medium grey' },
+  { id:'ink-3',      cat:'palette', name:'--ink-3',      value:'#7a7263', usage:0.58, kind:'color', note:'Tertiary ink. Mono metadata, refs, labels.', aliases:'mute grey meta' },
+  { id:'ink-4',      cat:'palette', name:'--ink-4',      value:'#b3a892', usage:0.28, kind:'color', note:'Quaternary. Hairline rules, watermarks.', aliases:'pale rule' },
+  { id:'violet',     cat:'palette', name:'--violet',     value:'#5b3aa0', usage:0.95, kind:'color', note:'The brand accent. Used for emphasis, links, eyebrows, the method number badges.', aliases:'brand primary accent' },
+  { id:'violet-deep',cat:'palette', name:'--violet-deep',value:'#3d2570', usage:0.18, kind:'color', note:'Pressed and code-tag accent. Sits inside the violet-faint chip background.', aliases:'deep purple' },
+  { id:'violet-soft',cat:'palette', name:'--violet-soft',value:'#7a5cc0', usage:0.12, kind:'color', note:'A lift of the brand violet for subtle gradients and lighter accents.', aliases:'light purple' },
+  { id:'orange',     cat:'palette', name:'--orange',     value:'#d2691e', usage:0.62, kind:'color', note:'The trajectory. Used only for live values and the orange line on the figure.', aliases:'amber accent trajectory' },
+  { id:'orange-soft',cat:'palette', name:'--orange-soft',value:'#e88a44', usage:0.16, kind:'color', note:'Soft amber. Hover and lifted variants of the trajectory.', aliases:'soft amber' },
+
+  // ── TYPE ──────────────────────────────────
+  { id:'serif',      cat:'type', name:'--serif',  value:"'Playfair Display', Bodoni, Georgia, serif", kind:'type-serif', preview:'Open Prose', size:'clamp(2.6rem, 5.2vw, 4.4rem)', weight:800, usage:0.88, note:'Display serif. The masthead, the tagline, the figure captions.' },
+  { id:'sans',       cat:'type', name:'--sans',   value:"'Crimson Pro', Georgia, serif",              kind:'type-sans',  preview:'a literary computer', size:'1rem', weight:400, usage:0.91, note:'Body text. Crimson Pro is treated as a literary sans — pairs with the display serif without competition.' },
+  { id:'mono',       cat:'type', name:'--mono',   value:"'JetBrains Mono', 'SF Mono', monospace",      kind:'type-mono',  preview:'brief.prose · v0.42', size:'0.78rem', weight:500, usage:0.84, note:'Code, metadata, the eyebrow chips, axis labels. Tight and technical.' },
+  { id:'scale-title',cat:'type', name:'h-title',     value:'clamp(2.6rem, 5.2vw, 4.4rem)', kind:'type-serif', preview:'OPENPROSE', size:'clamp(2.6rem, 5.2vw, 4.4rem)', weight:800, lh:'0.92', tracking:'-0.02em', usage:0.55, note:'Masthead scale. Uppercase, tight tracking, 0.92 leading.' },
+  { id:'scale-strap',cat:'type', name:'tagline',     value:'clamp(1.4rem, 2.6vw, 2.1rem)', kind:'type-serif', preview:'Declare. Verify. Deliver.', size:'clamp(1.4rem, 2.6vw, 2.1rem)', weight:400, italic:true, usage:0.48, note:'Tagline strap. Italic, calm, generous tracking.' },
+  { id:'scale-body', cat:'type', name:'body',        value:'1rem', kind:'type-sans', preview:'Each run is a step along the contract\'s gradient.', size:'1rem', weight:400, lh:'1.6', usage:0.96, note:'Body prose. Designed for slow reading.' },
+  { id:'scale-cap',  cat:'type', name:'fig-caption', value:'0.84rem', kind:'type-serif', preview:'the trajectory of weekly-energy-digest', size:'0.84rem', weight:400, italic:true, usage:0.45, note:'Figure caption. Italic serif at small size.' },
+  { id:'scale-eye',  cat:'type', name:'h-eyebrow',   value:'0.64rem', kind:'type-mono', preview:'DIRECTION ι · BROADSIDE № 4', size:'0.64rem', weight:500, tracking:'0.18em', upper:true, usage:0.66, note:'The eyebrow chip and small-caps labels. Mono, generously tracked, uppercase.' },
+
+  // ── METHOD ────────────────────────────────
+  { id:'declare', cat:'method', name:'1 · Declare', value:'.prose contract', kind:'method', usage:1.0, note:'Write the responsibility as a .prose file — requires, ensures, cadence. Plain language, version-controlled. The first move, and the only one a human must sign.', aliases:'spec brief requires ensures' },
+  { id:'resolve', cat:'method', name:'2 · Resolve', value:'bind & verify inputs', kind:'method', usage:1.0, note:'The runtime fetches inputs — APIs, files, refs — binds them, and verifies the binding before any work runs. No silent missing inputs.', aliases:'fetch bind inputs' },
+  { id:'verify',  cat:'method', name:'3 · Verify',  value:'score vs ensures', kind:'method', usage:1.0, note:'Each draft is scored against the ensures block. Below threshold, the runtime holds. No silent failures.', aliases:'score evaluate hold' },
+  { id:'deliver', cat:'method', name:'4 · Deliver', value:'sign · bill on pass', kind:'method', usage:1.0, note:'Pass once, deliver. Sign the result. Bill by delivery — failed and held runs are free.', aliases:'sign ship bill' },
+
+  // ── FORMULA / SYMBOLS ─────────────────────
+  { id:'iter',      cat:'formula', name:'P_{n+1}',     value:'P_n + η · ∇verify(P_n)', kind:'formula', usage:0.7, note:'The iteration equation: each run takes a step along the verify-gradient from the prior responsibility.' },
+  { id:'mono-prop', cat:'formula', name:'score',       value:'score_{n+1} ≥ score_n',  kind:'formula', usage:0.5, note:'Monotonic property. The eval pass rate never regresses, run over run.' },
+  { id:'sym-Pn',    cat:'formula', name:'P_n',         value:'responsibility, run n',  kind:'symbol', usage:0.42, note:'The current contracted responsibility, at iteration n.' },
+  { id:'sym-grad',  cat:'formula', name:'∇verify',     value:'contract gradient',      kind:'symbol', usage:0.38, note:'The direction in spec-space that most increases verified pass rate.' },
+  { id:'sym-eta',   cat:'formula', name:'η',           value:'refinement rate',        kind:'symbol', usage:0.32, note:'The step size — how aggressively the program is revised per run.' },
+  { id:'sym-score', cat:'formula', name:'score',       value:'eval pass rate ∈ [0,1]', kind:'symbol', usage:0.55, note:'The eval pass rate. A real number; 1.0 means all ensures clauses passed.' },
+  { id:'sym-v',     cat:'formula', name:'v',           value:'version · run number',   kind:'symbol', usage:0.48, note:'Tag for a run. v42 = the forty-second run of the program.' },
+  { id:'sym-x',     cat:'formula', name:'×',           value:'held run · contract not met', kind:'symbol', usage:0.22, note:'A held run. Failed the ensures block; not billed; not delivered.' },
+
+  // ── PROPERTIES ────────────────────────────
+  { id:'prop-mono', cat:'property', name:'monotonic',          value:'score never regresses', kind:'property', usage:0.7, note:'A delivered run only ever raises the floor on quality. Earlier runs are not undone.' },
+  { id:'prop-bound',cat:'property', name:'contract-bounded',   value:'no silent failures',     kind:'property', usage:0.65, note:'Every output is checked against the contract. Failures are loud.' },
+  { id:'prop-hold', cat:'property', name:'hold-on-regression', value:'fails closed',           kind:'property', usage:0.5, note:'If a run would lower the score, the runtime holds. Nothing ships.' },
+  { id:'prop-sign', cat:'property', name:'signed',             value:'every delivery',         kind:'property', usage:0.6, note:'Each delivered run is signed — provenance, version, score — recorded.' },
+
+  // ── FIGURE / AXES ─────────────────────────
+  { id:'axis-x', cat:'figure', name:'x-axis', value:'RESPONSIBILITY · SPEC SPACE → VERIFIED', kind:'figure', usage:0.4, note:'Horizontal axis of the trajectory figure. Left is unbound responsibility; right is verified.' },
+  { id:'axis-y', cat:'figure', name:'y-axis', value:'EVAL ↑',                                   kind:'figure', usage:0.4, note:'Vertical axis. Higher is better. The pass rate.' },
+  { id:'fig-traj', cat:'figure', name:'trajectory', value:'v1 → v42 · orange line', kind:'figure', usage:0.55, note:'The actual program trajectory across runs, from spec-space toward the verified basin.' },
+  { id:'fig-held', cat:'figure', name:'held marks', value:'× crosses · held runs',    kind:'figure', usage:0.3, note:'X marks on the figure denote runs that were held — failed the ensures block, not delivered.' }
+];
+
+/* group meta */
+const GROUPS = [
+  { id:'palette',  title:'Palette',     desc:'Brand color tokens — ink, paper, accent.' },
+  { id:'type',     title:'Type',        desc:'The three faces and the working scale.' },
+  { id:'method',   title:'Method',      desc:'The four moves: declare, resolve, verify, deliver.' },
+  { id:'formula',  title:'Formula',     desc:'Iteration equation and symbols.' },
+  { id:'property', title:'Properties',  desc:'Invariants the runtime promises.' },
+  { id:'figure',   title:'Figure',      desc:'Axes and marks from the trajectory plot.' }
+];
+
+/* ============================================
+   STATE
+   ============================================ */
+const state = {
+  query: '',
+  sort: 'cat',
+  expanded: new Set(),
+  selectedIdx: 0,
+  visible: []  // flat list of currently visible entry ids in render order
+};
+
+/* ============================================
+   RENDER
+   ============================================ */
+const indexEl = document.getElementById('index');
+const countEl = document.getElementById('count').querySelector('.n');
+const totalEl = document.getElementById('total');
+totalEl.textContent = ENTRIES.length;
+
+function matchesQuery(e, q) {
+  if (!q) return true;
+  q = q.toLowerCase();
+  const hay = [e.name, e.value, e.cat, e.kind, e.note, e.aliases, e.id].filter(Boolean).join(' ').toLowerCase();
+  return hay.includes(q);
+}
+
+function sortFn(a, b) {
+  if (state.sort === 'alpha') return a.name.localeCompare(b.name);
+  if (state.sort === 'usage') return (b.usage||0) - (a.usage||0);
+  // category: keep group order, then alpha within
+  const gA = GROUPS.findIndex(g => g.id === a.cat);
+  const gB = GROUPS.findIndex(g => g.id === b.cat);
+  if (gA !== gB) return gA - gB;
+  return a.name.localeCompare(b.name);
+}
+
+function render() {
+  const q = state.query.trim();
+  let filtered = ENTRIES.filter(e => matchesQuery(e, q)).sort(sortFn);
+
+  state.visible = filtered.map(e => e.id);
+  countEl.textContent = filtered.length;
+
+  indexEl.innerHTML = '';
+
+  if (filtered.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.textContent = 'No matches. Press Esc to clear.';
+    indexEl.appendChild(empty);
+    return;
+  }
+
+  if (state.sort === 'cat') {
+    // group rendering
+    for (const g of GROUPS) {
+      const items = filtered.filter(e => e.cat === g.id);
+      if (items.length === 0) continue;
+      indexEl.appendChild(renderGroup(g, items));
+    }
+  } else {
+    // flat rendering, single grid
+    const grid = document.createElement('div');
+    grid.className = 'card-grid';
+    for (const e of filtered) {
+      grid.appendChild(renderCard(e));
+    }
+    indexEl.appendChild(grid);
+  }
+
+  applySelection();
+}
+
+function renderGroup(g, items) {
+  const wrap = document.createElement('section');
+  wrap.className = 'group';
+  wrap.dataset.group = g.id;
+
+  const head = document.createElement('div');
+  head.className = 'group-head';
+  head.innerHTML = `
+    <span class="group-title">${g.title}</span>
+    <span class="group-count">${items.length} ${items.length === 1 ? 'entry' : 'entries'}</span>
+    <span class="group-desc">${g.desc}</span>
+  `;
+  wrap.appendChild(head);
+
+  const grid = document.createElement('div');
+  grid.className = 'card-grid';
+  for (const e of items) grid.appendChild(renderCard(e));
+  wrap.appendChild(grid);
+  return wrap;
+}
+
+function renderCard(e) {
+  const card = document.createElement('article');
+  card.className = 'card';
+  card.dataset.id = e.id;
+  card.tabIndex = -1;
+  if (state.expanded.has(e.id)) card.classList.add('is-expanded');
+
+  // Swatch
+  let swatch = '';
+  if (e.kind === 'color') {
+    swatch = `<span class="swatch" style="background:${e.value}"></span>`;
+  } else if (e.kind === 'type-serif') {
+    swatch = `<span class="swatch swatch-type">A</span>`;
+  } else if (e.kind === 'type-sans') {
+    swatch = `<span class="swatch swatch-type sans">a</span>`;
+  } else if (e.kind === 'type-mono') {
+    swatch = `<span class="swatch swatch-type mono">{ }</span>`;
+  } else if (e.kind === 'method') {
+    swatch = `<span class="swatch swatch-type">${e.id === 'declare' ? '1' : e.id === 'resolve' ? '2' : e.id === 'verify' ? '3' : '4'}</span>`;
+  } else if (e.kind === 'formula') {
+    swatch = `<span class="swatch swatch-type">∑</span>`;
+  } else if (e.kind === 'symbol') {
+    swatch = `<span class="swatch swatch-type">∂</span>`;
+  } else if (e.kind === 'property') {
+    swatch = `<span class="swatch swatch-type">¶</span>`;
+  } else if (e.kind === 'figure') {
+    swatch = `<span class="swatch swatch-type">⊞</span>`;
+  } else {
+    swatch = `<span class="swatch"></span>`;
+  }
+
+  // Usage bar
+  const u = e.usage || 0;
+  const usagePct = Math.round(u * 100);
+  const neg = `${100 - usagePct}%`;
+  const usageNum = usagePct.toString().padStart(2,'0');
+
+  card.innerHTML = `
+    <div class="card-row1">
+      ${swatch}
+      <span class="card-name">${escapeHtml(e.name)}</span>
+      <span class="card-cat">${e.cat}</span>
+    </div>
+    <div class="card-row2">
+      <span class="card-value">${escapeHtml(truncateValue(e.value))}</span>
+      <span class="card-usage" title="usage weight">
+        ${usageNum}<span class="bar" style="--neg:${neg}"></span>
+      </span>
+    </div>
+    <div class="card-detail">
+      ${renderDetail(e)}
+    </div>
+  `;
+
+  card.addEventListener('click', (ev) => {
+    if (ev.target.closest('.copy-chip')) return;
+    toggleExpand(e.id);
+    selectById(e.id);
+    setScratch(e);
+  });
+  card.addEventListener('mouseenter', () => { /* hover preview off by default */ });
+
+  // wire copy chips
+  card.querySelectorAll('.copy-chip').forEach(chip => {
+    chip.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      const txt = chip.dataset.copy;
+      copyToClipboard(txt, chip);
+    });
+  });
+
+  return card;
+}
+
+function renderDetail(e) {
+  const rows = [];
+  rows.push(`<div class="row"><span class="k">id</span><span class="v">${escapeHtml(e.id)}</span></div>`);
+  rows.push(`<div class="row"><span class="k">category</span><span class="v">${escapeHtml(e.cat)}</span></div>`);
+  rows.push(`<div class="row"><span class="k">value</span><span class="v">${escapeHtml(e.value)}</span></div>`);
+  if (e.kind === 'color') {
+    const rgb = hexToRgb(e.value);
+    if (rgb) rows.push(`<div class="row"><span class="k">rgb</span><span class="v">rgb(${rgb.r}, ${rgb.g}, ${rgb.b})</span></div>`);
+  }
+  if (e.lh) rows.push(`<div class="row"><span class="k">leading</span><span class="v">${e.lh}</span></div>`);
+  if (e.tracking) rows.push(`<div class="row"><span class="k">tracking</span><span class="v">${e.tracking}</span></div>`);
+  if (e.weight) rows.push(`<div class="row"><span class="k">weight</span><span class="v">${e.weight}${e.italic ? ' · italic' : ''}${e.upper ? ' · uppercase' : ''}</span></div>`);
+  if (e.size) rows.push(`<div class="row"><span class="k">size</span><span class="v">${e.size}</span></div>`);
+
+  const note = e.note ? `<div class="note">${escapeHtml(e.note)}</div>` : '';
+
+  // Type preview specimen
+  let preview = '';
+  if (e.kind === 'type-serif' || e.kind === 'type-sans' || e.kind === 'type-mono') {
+    const fam = e.kind === 'type-mono' ? 'var(--mono)' : (e.kind === 'type-sans' ? 'var(--sans)' : 'var(--serif)');
+    const style = `font-family:${fam}; font-size:${e.size||'1.4rem'}; font-weight:${e.weight||400}; ${e.italic ? 'font-style:italic;' : ''} ${e.tracking ? 'letter-spacing:'+e.tracking+';' : ''} ${e.lh ? 'line-height:'+e.lh+';' : ''} ${e.upper ? 'text-transform:uppercase;' : ''}`;
+    preview = `<div class="type-preview"><div class="specimen" style="${style}">${escapeHtml(e.preview || 'AaBbCc 0123')}</div><div class="specimen-meta">${escapeHtml(e.name)} · ${escapeHtml(e.size||'')}</div></div>`;
+  }
+
+  // Copy chips — primary value first, then alts
+  const chips = [];
+  chips.push(`<button class="copy-chip" data-copy="${escapeAttr(e.value)}" data-primary="1">copy value</button>`);
+  if (e.name.startsWith('--')) {
+    chips.push(`<button class="copy-chip" data-copy="var(${e.name})">copy var()</button>`);
+  }
+  if (e.kind === 'color') {
+    chips.push(`<button class="copy-chip" data-copy="${e.value.toUpperCase()}">copy hex</button>`);
+    const rgb = hexToRgb(e.value);
+    if (rgb) chips.push(`<button class="copy-chip" data-copy="rgb(${rgb.r}, ${rgb.g}, ${rgb.b})">copy rgb</button>`);
+  }
+  if (e.kind === 'formula') {
+    chips.push(`<button class="copy-chip" data-copy="${escapeAttr(e.value)}">copy eq</button>`);
+  }
+
+  return `${rows.join('')}<div class="copy-row">${chips.join('')}</div>${preview}${note}`;
+}
+
+function truncateValue(v) {
+  if (!v) return '';
+  if (v.length > 36) return v.slice(0, 33) + '…';
+  return v;
+}
+
+function escapeHtml(s) {
+  if (s === undefined || s === null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+  }[c]));
+}
+function escapeAttr(s) { return escapeHtml(s); }
+
+function hexToRgb(hex) {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!m) return null;
+  return { r: parseInt(m[1],16), g: parseInt(m[2],16), b: parseInt(m[3],16) };
+}
+
+/* ============================================
+   INTERACTION
+   ============================================ */
+function toggleExpand(id) {
+  if (state.expanded.has(id)) state.expanded.delete(id);
+  else state.expanded.add(id);
+  // re-render only that card's expand state
+  const el = indexEl.querySelector(`.card[data-id="${id}"]`);
+  if (el) el.classList.toggle('is-expanded', state.expanded.has(id));
+}
+
+function selectById(id) {
+  const idx = state.visible.indexOf(id);
+  if (idx >= 0) state.selectedIdx = idx;
+  applySelection();
+}
+
+function applySelection() {
+  indexEl.querySelectorAll('.card.is-selected').forEach(c => c.classList.remove('is-selected'));
+  const id = state.visible[state.selectedIdx];
+  if (!id) return;
+  const el = indexEl.querySelector(`.card[data-id="${id}"]`);
+  if (el) {
+    el.classList.add('is-selected');
+    el.focus({ preventScroll: true });
+    // scroll into view if needed
+    const rect = el.getBoundingClientRect();
+    if (rect.top < 80 || rect.bottom > window.innerHeight - 80) {
+      el.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+    }
+  }
+}
+
+function moveSelection(dir) {
+  if (state.visible.length === 0) return;
+  // Try spatial movement for left/right vs up/down
+  if (dir === 1 || dir === -1) {
+    state.selectedIdx = Math.max(0, Math.min(state.visible.length - 1, state.selectedIdx + dir));
+    applySelection();
+    setScratchById(state.visible[state.selectedIdx]);
+    return;
+  }
+  // up/down — find card in next row at similar x
+  const cur = indexEl.querySelector('.card.is-selected') || indexEl.querySelector('.card');
+  if (!cur) return;
+  const curRect = cur.getBoundingClientRect();
+  const cards = Array.from(indexEl.querySelectorAll('.card'));
+  let best = -1, bestDist = Infinity;
+  for (let i = 0; i < cards.length; i++) {
+    const r = cards[i].getBoundingClientRect();
+    if (dir === 'down' && r.top <= curRect.top + 2) continue;
+    if (dir === 'up'   && r.bottom >= curRect.bottom - 2) continue;
+    const dx = Math.abs(r.left - curRect.left);
+    const dy = Math.abs(r.top - curRect.top);
+    const dist = dx + dy * 0.5;
+    if (dist < bestDist) { bestDist = dist; best = i; }
+  }
+  if (best >= 0) {
+    const id = cards[best].dataset.id;
+    state.selectedIdx = state.visible.indexOf(id);
+    applySelection();
+    setScratchById(id);
+  }
+}
+
+/* ============================================
+   CLIPBOARD + TOAST
+   ============================================ */
+const toastEl = document.getElementById('toast');
+let toastTimer = null;
+function showToast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1100);
+}
+
+async function copyToClipboard(text, chipEl) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (err) {
+    // fallback
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+  showToast(`copied · ${truncateValue(text)}`);
+  if (chipEl) {
+    chipEl.classList.add('flashed');
+    setTimeout(() => chipEl.classList.remove('flashed'), 280);
+  }
+}
+
+/* ============================================
+   SCRATCHPAD
+   ============================================ */
+const scratchBody = document.getElementById('scratch-body');
+const scratchEmpty = document.getElementById('scratch-empty');
+
+function setScratchById(id) {
+  const e = ENTRIES.find(x => x.id === id);
+  if (e) setScratch(e);
+}
+
+function setScratch(e) {
+  let stage = '';
+  if (e.kind === 'color') {
+    stage = `
+      <div class="demo-stage" style="background:${e.value};">
+        <span style="font-family:var(--mono); font-size:0.7rem; color:${contrastInk(e.value)}; letter-spacing:0.08em;">${escapeHtml(e.value.toUpperCase())}</span>
+      </div>
+    `;
+  } else if (e.kind === 'type-serif' || e.kind === 'type-sans' || e.kind === 'type-mono') {
+    const fam = e.kind === 'type-mono' ? 'var(--mono)' : (e.kind === 'type-sans' ? 'var(--sans)' : 'var(--serif)');
+    const style = `font-family:${fam}; font-size:1.6rem; font-weight:${e.weight||400}; ${e.italic ? 'font-style:italic;' : ''}`;
+    stage = `<div class="demo-stage"><div class="specimen" style="${style}">${escapeHtml(e.preview || 'AaBbCc')}</div></div>`;
+  } else if (e.kind === 'method') {
+    const n = e.id === 'declare' ? 1 : e.id === 'resolve' ? 2 : e.id === 'verify' ? 3 : 4;
+    stage = `
+      <div class="demo-stage" style="flex-direction:column; gap:0.4rem;">
+        <span style="display:inline-flex; align-items:center; justify-content:center; width:2.2rem; height:2.2rem; border:1.5px solid var(--violet); border-radius:50%; font-family:var(--mono); font-size:1rem; color:var(--violet); font-weight:500;">${n}</span>
+        <span style="font-family:var(--serif); font-size:0.86rem; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; color:var(--violet);">${escapeHtml(e.name.split(' · ').pop())}</span>
+      </div>
+    `;
+  } else if (e.kind === 'formula') {
+    stage = `<div class="demo-stage"><span style="font-family:var(--mono); font-size:0.9rem; color:var(--ink); font-weight:500; letter-spacing:0.04em;">${escapeHtml(e.value)}</span></div>`;
+  } else if (e.kind === 'symbol') {
+    stage = `<div class="demo-stage" style="flex-direction:column; gap:0.3rem;"><span style="font-family:var(--mono); font-size:1.6rem; color:var(--violet); font-style:italic;">${escapeHtml(e.name)}</span><span style="font-family:var(--serif); font-style:italic; font-size:0.78rem; color:var(--ink-2);">${escapeHtml(e.value)}</span></div>`;
+  } else if (e.kind === 'property') {
+    stage = `<div class="demo-stage" style="flex-direction:column;"><span style="font-family:var(--mono); font-size:0.7rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--violet); margin-bottom:0.3rem;">${escapeHtml(e.name)}</span><span style="font-family:var(--serif); font-style:italic; font-size:0.86rem; color:var(--ink-2);">${escapeHtml(e.value)}</span></div>`;
+  } else if (e.kind === 'figure') {
+    stage = `<div class="demo-stage" style="flex-direction:column;"><span style="font-family:var(--mono); font-size:0.68rem; letter-spacing:0.1em; color:var(--ink-3); text-transform:uppercase;">${escapeHtml(e.name)}</span><span style="font-family:var(--serif); font-style:italic; font-size:0.84rem; color:var(--ink-2); margin-top:0.2rem; text-align:center;">${escapeHtml(e.value)}</span></div>`;
+  } else {
+    stage = `<div class="demo-stage"><span style="font-family:var(--mono); font-size:0.8rem;">${escapeHtml(e.value)}</span></div>`;
+  }
+
+  scratchBody.innerHTML = `
+    <div class="scratch-demo">
+      <div class="demo-head">
+        <span class="demo-name">${escapeHtml(e.name)}</span>
+        <span class="demo-cat">${escapeHtml(e.cat)}</span>
+      </div>
+      ${stage}
+      <div class="demo-foot">
+        <span>${escapeHtml(truncateValue(e.value))}</span>
+        <span>usage · ${Math.round((e.usage||0)*100)}%</span>
+      </div>
+    </div>
+  `;
+}
+
+function clearScratch() {
+  scratchBody.innerHTML = '';
+  scratchBody.appendChild(scratchEmpty);
+}
+
+function contrastInk(hex) {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return '#1a1612';
+  const lum = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+  return lum > 0.55 ? '#1a1612' : '#faf5ea';
+}
+
+/* ============================================
+   CONTROLS
+   ============================================ */
+const searchInput = document.getElementById('search');
+searchInput.addEventListener('input', (e) => {
+  state.query = e.target.value;
+  state.selectedIdx = 0;
+  render();
+});
+searchInput.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape') {
+    searchInput.value = '';
+    state.query = '';
+    state.selectedIdx = 0;
+    render();
+    searchInput.blur();
+  } else if (ev.key === 'ArrowDown' || ev.key === 'Enter') {
+    ev.preventDefault();
+    searchInput.blur();
+    applySelection();
+    if (ev.key === 'Enter' && state.visible[state.selectedIdx]) {
+      toggleExpand(state.visible[state.selectedIdx]);
+      setScratchById(state.visible[state.selectedIdx]);
+    }
+  }
+});
+
+const sortGroup = document.getElementById('sort-group');
+sortGroup.querySelectorAll('button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    state.sort = btn.dataset.sort;
+    sortGroup.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'));
+    state.selectedIdx = 0;
+    render();
+  });
+});
+
+const themeToggle = document.querySelector('[data-theme-toggle]');
+themeToggle.addEventListener('click', () => {
+  const cur = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+  const next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  themeToggle.setAttribute('aria-pressed', next === 'dark' ? 'true' : 'false');
+  try { localStorage.setItem('ι-theme', next); } catch (e) {}
+});
+
+document.getElementById('scratch-clear').addEventListener('click', clearScratch);
+
+/* ============================================
+   GLOBAL KEYBINDS
+   ============================================ */
+window.addEventListener('keydown', (ev) => {
+  if (ev.target.tagName === 'INPUT' || ev.target.tagName === 'TEXTAREA') {
+    // already handled inline; let escape escape
+    return;
+  }
+  // / focuses filter
+  if (ev.key === '/') {
+    ev.preventDefault();
+    searchInput.focus();
+    searchInput.select();
+    return;
+  }
+  // T toggles theme
+  if (ev.key === 't' || ev.key === 'T') {
+    themeToggle.click();
+    return;
+  }
+  if (ev.key === 'Escape') {
+    if (state.query) {
+      searchInput.value = '';
+      state.query = '';
+      state.selectedIdx = 0;
+      render();
+    } else if (state.expanded.size > 0) {
+      state.expanded.clear();
+      render();
+    } else {
+      clearScratch();
+    }
+    return;
+  }
+  if (ev.key === 'Enter') {
+    ev.preventDefault();
+    const id = state.visible[state.selectedIdx];
+    if (id) {
+      toggleExpand(id);
+      setScratchById(id);
+    }
+    return;
+  }
+  if (ev.key === 'ArrowDown') { ev.preventDefault(); moveSelection('down'); return; }
+  if (ev.key === 'ArrowUp')   { ev.preventDefault(); moveSelection('up'); return; }
+  if (ev.key === 'ArrowRight'){ ev.preventDefault(); moveSelection(1); return; }
+  if (ev.key === 'ArrowLeft') { ev.preventDefault(); moveSelection(-1); return; }
+  if (ev.key === 'c' || ev.key === 'C') {
+    const id = state.visible[state.selectedIdx];
+    if (id) {
+      const e = ENTRIES.find(x => x.id === id);
+      if (e) copyToClipboard(e.value);
+    }
+    return;
+  }
+});
+
+/* ============================================
+   BOOT
+   ============================================ */
+try {
+  const saved = localStorage.getItem('ι-theme');
+  if (saved === 'dark') {
+    document.documentElement.dataset.theme = 'dark';
+    themeToggle.setAttribute('aria-pressed', 'true');
+  }
+} catch (e) {}
+
+render();
+
+</script>
+</body>
+</html>

@@ -12,7 +12,7 @@ if (!vMatch) throw new Error("Couldn't read version from scripts/jh-chrome.js â€
 const EXPECTED_VERSION = 'v' + vMatch[1];
 
 const BASE = 'http://127.0.0.1:1337';
-const STANDARD = ['index.html', 'design.html', 'art.html', 'about.html', 'services.html', 'search.html', 'nanome2.html', '404.html'];
+const STANDARD = ['index.html', 'design.html', 'art.html', 'about.html', 'services.html', 'search.html', 'nanome2.html', 'openprose.html', '404.html'];
 const OTHER = ['playground.html', 'writing.html', 'tidepool.html', 'beach-beers.html', 'onagents.html', 'fish-demo/index.html'];
 
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });

@@ -1,0 +1,1648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 142 142'%3E%3Cpath d='M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z' fill='%232a2520'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenProse — μ Bloom · Styleguide Teal</title>
+<meta name="description" content="A living splash. A wave-equation cellular automaton sits in steady state, ripples on click, occasional raindrops break the calm. Teal-and-amber over fog cream, Kecal + IBM Plex Mono.">
+<style>
+/* ============================================
+   μ BLOOM — STYLEGUIDE-TEAL fork
+   Forked    2026-05-20
+   Author    JH
+   Source    direction-mu-bloom.html
+   Tokens    direction-beta-tufte-mono-kecal-styleguide-teal.html
+   Quote     "Do a fork with fonts and colors of
+              direction-beta-tufte-mono-kecal-styleguide-teal.html"
+
+   The splash, the wave-equation cellular automaton,
+   the click/drag/raindrop mechanics, the steady-state
+   reset, and the full color-controls panel are all
+   preserved verbatim. Only the type stack and the
+   color palette swap:
+
+     · type     Kecal (both serif + sans roles) +
+                IBM Plex Mono (mono). Cormorant
+                Garamond removed.
+     · palette  fog-cream paper #f5f0e8 over warm
+                brown-black ink #2a2520. Teal #3a7a6a
+                as editorial accent (the wave-front
+                glow, secondary inside tint, corner-UI
+                pulse dots). Amber #c49a5c as warm
+                complement (high-amplitude crest tone,
+                replacing the honey-gold WARM default).
+                Red #c0392b held in reserve as a brand
+                token for future "broken state" pills
+                but not wired into the sim — the bloom
+                stays a calm system.
+
+   The mu-bloom click-stable-multiplier, anti-stripe
+   jitter, and per-aspect color pickers (closed
+   feedback from 2026-05-18) are all retained — the
+   palette only changes the DEFAULTS the panel opens
+   with. Reset still snaps back to these new defaults.
+   ============================================ */
+
+/* Kecal — FungiType via jsDelivr. Same seven-weight
+   ramp as the styleguide-teal source so any downstream
+   selector that asks for a particular weight resolves. */
+@font-face { font-family: 'Kecal'; font-weight: 200; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extralight-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 300; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Light-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 400; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Regular-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 500; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Medium-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 600; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Semibold-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 700; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Bold-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 800; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extrabold-web.woff2') format('woff2'); }
+
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Tokens from direction-beta-tufte-mono-kecal-styleguide-teal.html.
+     Paper / ink temperatures move from the
+     ivory-sepia mu-bloom defaults onto the fog-cream + warm-cocoa
+     pair the styleguide canonical-ised. The legacy --rust* aliases
+     are retained so every selector that still says var(--rust) (the
+     corner-UI accent, the foot CTAs, the live-dot, etc.) automatically
+     adopts teal — no per-selector edits needed. */
+
+  /* Paper + ink — fog cream over warm brown-black */
+  --paper:      #f5f0e8;
+  --paper-dk:   #e8e0d0;
+  --paper-lt:   #fbf7ef;
+  --paper-warm: #f0e8d8;
+
+  --ink:        #2a2520;
+  --ink-2:      rgba(42,37,32,0.78);
+  --ink-3:      rgba(42,37,32,0.55);
+  --ink-4:      rgba(42,37,32,0.32);
+
+  /* Teal — editorial accent (waves, pulse halos, corner-UI dots).
+     This is the role the mu-bloom source called "rust"; aliasing the
+     full --rust* family onto teal keeps every existing selector and
+     keyframe wired with no further surgery. */
+  --teal:        #3a7a6a;
+  --teal-deep:   #2e6456;
+  --teal-soft:   #4a8a7a;
+  --teal-tint:   rgba(58,122,106,0.14);
+  --teal-faint:  rgba(58,122,106,0.06);
+  --rust:        var(--teal);
+  --rust-deep:   var(--teal-deep);
+  --rust-soft:   var(--teal-soft);
+  --rust-faint:  var(--teal-faint);
+
+  /* Amber — warm complement, the sparkle/highlight role. Carried for
+     selectors that want a warm second accent next to teal (foot
+     eyebrow, future warm pills). The simulation reads amber as the
+     WARM crest tone — see cfg.colors.WARM below. */
+  --amber:       #c49a5c;
+  --amber-deep:  #a87f44;
+  --amber-soft:  #d4aa6c;
+  --amber-tint:  rgba(196,154,92,0.18);
+
+  /* Editorial red — reserved for any "broken state" surface. The
+     bloom itself stays calm, so red is not wired into the sim or the
+     ambient corner UI; it's available for future fail-state pills. */
+  --red:         #c0392b;
+  --red-muted:   #d4604f;
+  --red-deep:    #8e2b20;
+  --red-tint:    rgba(192,57,43,0.12);
+
+  --rule:      rgba(42,37,32,0.14);
+  --rule-mid:  rgba(42,37,32,0.06);
+
+  /* Type — Kecal in both display + body roles per the styleguide-teal
+     direction, IBM Plex Mono for monospace. Cormorant Garamond is
+     out of the stack; any italic emphasis falls back to Kecal italic. */
+  --serif: 'Kecal', Georgia, serif;
+  --sans:  'Kecal', system-ui, -apple-system, sans-serif;
+  --mono:  'IBM Plex Mono', 'JetBrains Mono', 'SF Mono', monospace;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.65;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* ============================================
+   SPLASH — the full first screen
+   ============================================ */
+.splash {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  min-height: 640px;
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 50%, rgba(245,240,232,0.0) 0%, rgba(245,240,232,0.55) 70%, var(--paper) 100%),
+    var(--paper);
+}
+
+/* The DLA canvas fills the splash; we paint sepia particles
+   on top of the cream paper. Lighter blend keeps the
+   structure crisp without burning the corners. */
+.bloom-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+/* ============================================
+   CORNER UI — minimalist labels and indicators
+   pinned to the four corners and bottom-center.
+   ============================================ */
+.corners {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+.corners > * { pointer-events: auto; }
+
+/* Top-left status badge */
+.tl-badge {
+  position: absolute;
+  top: 1.5rem;
+  left: 1.5rem;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  background: rgba(245,240,232,0.74);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 0.45rem 0.85rem 0.45rem 0.7rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+.tl-badge .dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--rust);
+  /* Halo retuned to teal rgba(58,122,106,...) so it matches the new
+     accent rather than the old rust pulse. */
+  box-shadow: 0 0 0 3px rgba(58,122,106,0.18);
+  animation: pulse 2.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(58,122,106,0.55); }
+  50%     { box-shadow: 0 0 0 8px rgba(58,122,106,0); }
+}
+.tl-badge .sep { color: var(--ink-4); margin: 0 0.1rem; }
+.tl-badge .acc { color: var(--rust); }
+
+/* Top-right info pill */
+.tr-info {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: rgba(245,240,232,0.74);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 0.55rem 1rem;
+  cursor: pointer;
+  font-weight: 500;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.tr-info:hover { color: var(--rust); border-color: var(--rust); }
+.tr-info::after {
+  content: '→';
+  display: inline-block;
+  font-family: var(--sans);
+  font-size: 0.95rem;
+  letter-spacing: 0;
+}
+
+/* Bottom-left "draw to influence" caption */
+.bl-caption {
+  position: absolute;
+  bottom: 1.85rem;
+  left: 1.5rem;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  max-width: 22ch;
+  line-height: 1.55;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  background: rgba(245,240,232,0.62);
+  backdrop-filter: blur(12px) saturate(135%);
+  -webkit-backdrop-filter: blur(12px) saturate(135%);
+  border-left: 2px solid var(--rust);
+  padding: 0.7rem 0.9rem 0.7rem 1rem;
+  border-radius: 0 4px 4px 0;
+}
+.bl-caption .head {
+  font-weight: 600;
+  color: var(--rust);
+  letter-spacing: 0.22em;
+}
+.bl-caption .body {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 0.86rem;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink-2);
+  line-height: 1.45;
+  font-weight: 400;
+}
+
+/* Bottom-right LIVE TUNABLES PANEL — replaces the old .br-status
+   badge. Header carries the live node count + a pulsing activity
+   dot; body holds sliders. Reset + log buttons sit in the foot.
+   Collapsible via the header click. */
+.controls {
+  position: absolute;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 5;
+  width: 290px;
+  max-height: calc(100% - 3rem);
+  display: flex;
+  flex-direction: column;
+  background: rgba(245,240,232,0.78);
+  border: 1px solid var(--rule);
+  backdrop-filter: blur(20px) saturate(135%);
+  -webkit-backdrop-filter: blur(20px) saturate(135%);
+  border-radius: 10px;
+  font-family: var(--mono);
+  color: var(--ink-2);
+  font-size: 0.66rem;
+  box-shadow: 0 12px 40px rgba(42,37,32,0.10);
+  overflow: hidden;
+  pointer-events: auto;
+}
+.controls-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 0.85rem 0.5rem;
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  cursor: pointer;
+  user-select: none;
+}
+.controls-head .live-dot {
+  display: inline-block;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--rust);
+  margin-right: 0.45rem;
+  animation: pulse 2.4s ease-in-out infinite;
+  vertical-align: middle;
+}
+.controls-head .num {
+  color: var(--ink);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.controls-head .toggle {
+  font-size: 0.7rem;
+  color: var(--ink-3);
+  transition: transform 0.2s ease;
+}
+.controls.collapsed .controls-head .toggle { transform: rotate(-90deg); }
+.controls.collapsed .controls-body,
+.controls.collapsed .controls-foot { display: none; }
+.controls-body {
+  padding: 0.5rem 0.85rem 0.7rem;
+  overflow-y: auto;
+}
+.controls-section {
+  margin: 0.65rem 0 0.25rem;
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--rust);
+}
+.controls-section:first-child { margin-top: 0.1rem; }
+.controls-row { margin: 0.2rem 0 0.45rem; }
+.controls-row .label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.1rem;
+}
+.controls-row label {
+  font-size: 0.66rem;
+  color: var(--ink-2);
+  letter-spacing: 0.04em;
+}
+.controls-row .val {
+  color: var(--rust);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.66rem;
+  letter-spacing: 0.02em;
+}
+.controls-row input[type="range"] {
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: var(--rule);
+  border-radius: 999px;
+  outline: none;
+}
+.controls-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--rust);
+  cursor: pointer;
+}
+.controls-row input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: none;
+  border-radius: 50%;
+  background: var(--rust);
+  cursor: pointer;
+}
+/* Color pickers — style the native <input type="color"> so it slots
+   cleanly into the slider row: full-width, fixed height, rounded
+   corners, no chrome. Used for WARM/COOL/STABLE/FADE. */
+.controls-row input[type="color"].color-picker {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 22px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.controls-row input[type="color"].color-picker::-webkit-color-swatch-wrapper { padding: 0; }
+.controls-row input[type="color"].color-picker::-webkit-color-swatch {
+  border: none; border-radius: 3px;
+}
+.controls-row input[type="color"].color-picker::-moz-color-swatch {
+  border: none; border-radius: 3px;
+}
+
+/* Inline slider descriptions — small italic captions under each
+   control so JH can see what every knob does without guessing. */
+.controls-row .controls-desc {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 0.66rem;
+  line-height: 1.45;
+  color: var(--ink-3);
+  margin-top: 0.2rem;
+  padding-bottom: 0.05rem;
+}
+.controls-row:hover .controls-desc { color: var(--ink-2); }
+.controls-row:hover label { color: var(--rust); }
+.controls-foot {
+  padding: 0.45rem 0.85rem 0.55rem;
+  border-top: 1px solid var(--rule);
+  display: flex;
+  gap: 0.4rem;
+}
+.controls-foot button {
+  flex: 1;
+  background: transparent;
+  border: 1px solid var(--rule);
+  color: var(--ink-2);
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.32rem 0.5rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.controls-foot button:hover { color: var(--rust); border-color: var(--rust); }
+@media (max-width: 720px) { .controls { width: 240px; right: 0.75rem; bottom: 0.75rem; } }
+
+/* Bottom-center scroll hint */
+.scroll-hint {
+  position: absolute;
+  bottom: 1.85rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  font-weight: 500;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.scroll-hint:hover { color: var(--rust); }
+.scroll-hint .arr {
+  display: block;
+  font-size: 1.1rem;
+  letter-spacing: 0;
+  animation: bounce 2.4s ease-in-out infinite;
+}
+@keyframes bounce {
+  0%,100% { transform: translateY(0); opacity: 0.65; }
+  50%     { transform: translateY(4px); opacity: 1; }
+}
+@media (max-width: 720px) {
+  .scroll-hint { display: none; }
+  .bl-caption { max-width: 60vw; bottom: 1rem; left: 1rem; padding: 0.55rem 0.7rem 0.55rem 0.85rem; }
+  /* .br-status removed — see .controls panel above. */
+  .tl-badge, .tr-info { top: 1rem; }
+  .tl-badge { left: 1rem; padding: 0.4rem 0.7rem; }
+  .tr-info { right: 1rem; }
+}
+
+/* ============================================
+   CENTER GLASS — frosted pill that holds the
+   morphing mark. The pill itself crossfades
+   between a tighter signet aspect and a wider
+   wordmark aspect; inside, the SVGs are tweened
+   via real CSS transforms (scaleX, skewX) so
+   the signet visibly STRETCHES into the wordmark
+   and back, not just crossfades.
+   ============================================ */
+.center-glass {
+  position: absolute;
+  top: 50%; left: 50%;
+  /* The element-level translate(-50%,-50%) keeps the GLASS centered;
+     the SVGs inside use their own absolute positioning so they don't
+     push the glass layout when their transforms scale them up/down. */
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  background: rgba(245,240,232,0.42);
+  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  border: 1px solid rgba(255,255,255,0.55);
+  /* Use 50% instead of 999px so the glass is a true ELLIPSE (top +
+     bottom curve too), not a stadium pill with flat top + bottom
+     edges. */
+  border-radius: 50%;
+  box-shadow:
+    0 18px 72px rgba(42,37,32,0.18),
+    inset 0 1px 0 rgba(255,255,255,0.55),
+    inset 0 -1px 0 rgba(42,37,32,0.04);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  border: 1px solid rgba(255,255,255,0.55);
+  background-clip: padding-box;
+  transition:
+    width 0.95s cubic-bezier(0.4,0,0.2,1),
+    height 0.95s cubic-bezier(0.4,0,0.2,1),
+    box-shadow 0.4s ease;
+}
+/* Keep the middle hero area an OVAL in BOTH phases — signet
+   collapses to a smaller oval (not a circle), and the wordmark
+   phase widens it. The aspect-ratio is preserved as a horizontal
+   lozenge rather than a round well, so the glass reads as one
+   shape morphing in scale rather than circle ⇄ pill. */
+.center-glass[data-phase="signet"] {
+  width: clamp(320px, 34vw, 460px);
+  height: clamp(200px, 21vw, 290px);
+}
+.center-glass[data-phase="wordmark"] {
+  width: clamp(480px, 60vw, 860px);
+  height: clamp(180px, 20vw, 270px);
+}
+.center-glass:hover { box-shadow: 0 22px 84px rgba(42,37,32,0.22), inset 0 1px 0 rgba(255,255,255,0.65); }
+
+/* Stack the SVGs absolutely centered inside the glass.
+   They no longer drive the glass's layout — the glass has
+   explicit dimensions per phase, and the SVGs scale within. */
+.center-glass svg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: block;
+  fill: var(--ink);
+  transform-origin: center;
+  transition:
+    opacity 0.9s cubic-bezier(0.4,0,0.2,1),
+    transform 0.9s cubic-bezier(0.4,0,0.2,1);
+  filter: drop-shadow(0 4px 18px rgba(245,240,232,0.45));
+  pointer-events: none;
+}
+
+/* Sizes — natural for each mark, both centered via translate(-50%,-50%) */
+.center-glass .mark-signet   { width: clamp(160px, 22vw, 300px); height: auto; aspect-ratio: 1 / 1; }
+.center-glass .mark-wordmark { width: clamp(380px, 50vw, 720px); height: auto; aspect-ratio: 3840 / 998; }
+
+/* Phase: SIGNET. */
+.center-glass[data-phase="signet"] .mark-signet {
+  opacity: 1;
+  transform: translate(-50%, -50%) scaleX(1) skewX(0deg);
+}
+.center-glass[data-phase="signet"] .mark-wordmark {
+  opacity: 0;
+  transform: translate(-50%, -50%) scaleX(0.18) skewX(14deg);
+}
+
+/* Phase: WORDMARK. */
+.center-glass[data-phase="wordmark"] .mark-signet {
+  opacity: 0;
+  transform: translate(-50%, -50%) scaleX(2.6) skewX(-14deg);
+}
+.center-glass[data-phase="wordmark"] .mark-wordmark {
+  opacity: 1;
+  transform: translate(-50%, -50%) scaleX(1) skewX(0deg);
+}
+
+.center-glass:hover svg { fill: var(--rust); }
+/* Removed the "click to morph" affordance label below the glass —
+   the morph reads on its own once the page is alive. */
+
+@media (prefers-reduced-motion: reduce) {
+  .center-glass, .center-glass svg { transition: opacity 0.2s linear; }
+}
+
+/* ============================================
+   FOOT — a brief intro section below the splash
+   Reachable via the scroll hint. Sets up the
+   reading once the bloom has earned attention.
+   ============================================ */
+.foot {
+  position: relative;
+  background: var(--paper);
+  border-top: 1px solid var(--rule);
+  padding: 5rem 2rem 5rem;
+}
+.foot-inner {
+  max-width: 880px;
+  margin: 0 auto;
+  text-align: center;
+}
+.foot-eyebrow {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--rust);
+  margin-bottom: 1.25rem;
+}
+.foot h2 {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(1.85rem, 4vw, 2.85rem);
+  line-height: 1.18;
+  color: var(--ink);
+  margin-bottom: 1.5rem;
+  letter-spacing: -0.005em;
+}
+.foot h2 em { color: var(--rust); font-style: italic; font-weight: 500; }
+.foot p {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.18rem;
+  line-height: 1.55;
+  color: var(--ink-2);
+  max-width: 56ch;
+  margin: 0 auto 2rem;
+}
+.foot p em { color: var(--rust); font-style: italic; font-weight: 500; }
+.foot .ctas {
+  display: flex;
+  gap: 0.85rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.foot .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: var(--sans);
+  font-size: 0.92rem;
+  font-weight: 500;
+  padding: 0.85rem 1.5rem;
+  border-radius: 999px;
+  text-decoration: none;
+  border: 1px solid;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.foot .btn.primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.foot .btn.primary:hover { background: var(--rust); border-color: var(--rust); transform: translateY(-1px); }
+.foot .btn.ghost { background: transparent; color: var(--ink); border-color: var(--rule); }
+.foot .btn.ghost:hover { color: var(--rust); border-color: var(--rust); }
+
+.foot-meta {
+  margin-top: 3.5rem;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+  text-align: center;
+}
+.foot-meta a { color: var(--rust); text-decoration: none; margin: 0 0.5rem; border-bottom: 1px dotted transparent; }
+.foot-meta a:hover { border-bottom-color: var(--rust); }
+
+        /* Logo-set swap: click any .swap-logo to cycle all logos on page. */
+        .swap-logo { cursor: pointer; }
+        
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+
+}
+</style>
+</head>
+<body>
+
+<!-- Canonical oP marks (signet + wordmark) — v2 paths.
+     opMark uses the standalone OP-style-v2.svg signet (full P-cap loop
+     intact). opType uses the OP-style-type-v2.svg wordmark at native
+     3840×998 viewBox so it stays crisp at any size. -->
+<svg width="0" height="0" style="position: absolute;" aria-hidden="true">
+    <!-- INFINITE — wide flowing oP-infinite -->
+    <symbol id="opInfinite" viewBox="0 0 497 329">
+      <g transform="matrix(1.16677,0,0,0.997644,2.62326,-48.0333)">
+        <g transform="matrix(4.15,0,0,4.17651,2.48827,4.04285)">
+          <path d="M84.9,12.6C82.7,12.6 80.2,12.9 77.6,14.7C70.5,19.3 67,28.3 64.8,35.5C61.1,47.9 58.4,61 51.5,71.1C46.7,77.8 40.2,83.509 30.5,83.4C16.524,83.242 4.9,70.5 4.9,50.8C4.9,35.9 12.3,16.5 32.3,16.5C45.2,16.5 53.9,24.6 58.8,44L61,36C56.6,23.2 47.9,12.6 32.4,12.6C12.1,12.6 1.3,30.1 1.3,50.8C1.3,69.9 12.105,87.223 30.5,87.4C36.4,87.457 41.7,85.8 46.1,82.9C57.2,75.5 62.3,62.3 65.7,50C68.9,38.8 72.4,20.3 81.6,17.2C83.6,16.5 86.6,16.3 89,17.7C91.6,19.3 95.3,23.3 95.3,29.9C95.3,37.8 89.5,46.1 79.8,49.1C77.1,49.7 73.7,50.1 70,49.5L70,85.5C70,86.4 70.7,87.4 71.8,87.4C72.9,87.4 73.7,86.7 73.7,85.5L73.7,53.7C87.9,53.7 98.9,44.2 98.9,29.9C98.7,22.7 93.9,12.8 84.9,12.6Z"/>
+        </g>
+      </g>
+    </symbol>
+    <symbol id="opInfiniteType" viewBox="0 0 3549 1107">
+      <!-- Full 9-glyph "OpenProse" wordmark per OP-infinite-type.svg -->
+      <g transform="matrix(0.924174,0,0,0.512368,0,0)"><g transform="matrix(13.3273,0,0,21.4868,1380,-277.463)"><path d="M84.994,15.687C82.794,15.687 80.294,15.987 77.694,17.787C70.594,22.387 66.139,35.248 63.358,42.992C61.626,47.816 59.859,52.08 59.859,52.08C59.859,52.08 65.364,48.692 65.7,47.517C68.9,36.317 72.494,23.387 81.694,20.287C83.694,19.587 86.694,19.387 89.094,20.787C92.421,22.728 97.421,26.391 97.239,32.987C96.783,49.599 73.072,47.617 69.372,47.017L69.463,86.872C69.463,86.872 69.569,88.772 71.788,88.772C73.823,88.772 73.84,86.872 73.84,86.872L73.7,51.217C87.9,51.217 100.839,47.287 100.839,32.987C100.639,25.787 95.428,15.687 84.994,15.687Z" style="fill-rule:nonzero;"/><path d="M85.301,15.69C87.154,15.722 92.171,16.087 96.349,21.117C99.232,24.589 100.724,29.132 100.85,32.902C100.851,32.93 100.877,34.078 100.714,35.474C99.35,47.224 88.075,51.152 74.199,51.251L73.733,51.253C73.885,86.393 73.928,86.394 73.883,86.959C73.851,87.357 73.666,88.042 73.097,88.452C72.294,89.03 71.186,88.797 70.882,88.701C70.751,88.66 69.762,88.384 69.461,87.167C69.426,87.024 69.412,86.892 69.412,86.875C69.403,83.685 69.304,47.036 69.309,47.004C69.314,46.971 69.343,46.94 69.381,46.945C69.384,46.946 70.472,47.132 72.411,47.25C77.667,47.57 96.717,47.828 97.166,33.033C97.322,27.909 94.399,23.938 89.034,20.84C86.892,19.604 84.067,19.553 81.714,20.359C79.56,21.097 76.09,22.82 72.768,28.52C69.608,33.941 67.641,40.93 65.748,47.534C65.696,47.715 65.475,48.425 61.767,50.908C60.819,51.542 59.885,52.126 59.867,52.13C59.832,52.136 59.803,52.097 59.818,52.059C59.862,51.95 59.867,51.953 60.372,50.699C62.462,45.507 63.53,42.368 64.526,39.653C67.34,31.978 71.505,21.808 77.648,17.805C78.185,17.455 79.743,16.319 82.346,15.883C83.448,15.698 84.434,15.687 84.993,15.687C84.993,15.687 85.065,15.687 85.103,15.688L85.177,15.688C85.218,15.689 85.26,15.689 85.301,15.69Z"/></g><g transform="matrix(37.0768,0,0,56.5284,-38.6165,41.4661)"><path d="M38.971,22.698C39.006,20.794 38.659,19.281 38.121,18.206C36.83,15.623 34.908,15.225 33.551,15.139C29.553,14.883 27.67,17.15 26.516,21.328C25.31,25.689 23.5,34.3 14.7,34.3C8,34.2 3.7,28.1 3.7,20C3.4,10.6 8.5,2.6 14.8,2.6C21.3,2.3 25,7.2 27.1,16.5L28.719,13.674C26.719,7.774 22.3,0.3 14.8,0.3C7.3,0.3 1.5,7.7 1.6,18.9C1.5,27.8 6.2,36.4 14.7,36.4C23.6,36.7 26.116,31.728 28.116,24.428L28.838,21.384C29.709,17.307 31.193,16.933 33.074,16.992C34.811,17.046 35.803,17.588 36.622,19.063C37.075,19.877 37.31,21.015 37.365,22.326C37.593,27.77 29.653,26.04 29.653,26.04L29.525,35.529C29.525,35.529 29.435,36.206 30.335,36.206C31.035,36.206 31.085,35.512 31.085,35.512L31.098,27.854C38.46,28.325 38.921,25.449 38.971,22.698Z" style="fill-rule:nonzero;"/></g><g transform="matrix(26.5034,0,0,47.8049,294.868,160.59)"><path d="M50.7,15.5C46.7,15.7 43.1,18.5 43.1,23.2C43.1,26.9 45.5,30.7 50.7,30.7C52.9,30.7 55.1,29.9 56.5,28.5C56.9,28.1 57,27.8 57,27.5C57,26.9 56.4,26.4 55.8,26.4C55.5,26.4 55.3,26.6 55,26.8C54,27.9 52.7,28.6 50.8,28.6C48,28.6 45.8,26.8 45.4,23.8L56.2,23.8C57.2,23.8 57.6,23.4 57.6,22.6C57.6,18.9 55.3,15.5 50.7,15.5ZM45.4,21.9C45.8,19.5 47.6,17.7 50.5,17.7C53.3,17.7 55.1,19.5 55.2,21.9L45.4,21.9Z" style="fill-rule:nonzero;"/></g><g transform="matrix(6.36081,0,0,11.5486,307.59,152.335)"><path d="M303.204,127.796C292.691,126.817 286.282,119.92 286.282,108.75L286.282,89.583C286.282,80.833 281.699,73.75 271.282,73.75C261.699,73.75 253.365,82.5 253.365,95L253.365,122.5C253.365,125.833 250.865,127.5 247.949,127.5C245.032,127.5 242.949,126.25 242.949,122.917L242.949,70.417C242.949,67.083 245.032,65.417 247.949,65.417C250.449,65.417 252.532,67.083 252.532,70.417L252.532,76.25C256.282,68.75 263.365,65 272.949,65C287.115,65 295.865,74.583 295.865,89.583L295.865,108.333C295.865,114.401 298.312,118.023 303.204,118.937C303.204,118.937 306.369,120.117 306.151,123.666C305.945,127.04 303.204,127.796 303.204,127.796Z"/></g><g transform="matrix(26.5034,0,0,50.3225,-86.6137,116.293)"><path d="M102.9,15.5C101.2,15.7 99.5,16.6 98.5,18.5L98.5,16.9C98.5,16.1 98,15.6 97.3,15.6C96.6,15.6 96.1,16.1 96.1,16.8L95.906,29.335C95.906,29.335 96.201,30.045 97.143,30.044C98.167,30.043 98.391,29.393 98.391,29.393L98.5,23.2C98.5,20.2 100.2,17.9 102.5,17.9C103.4,17.8 103.8,18.2 104.2,18.2C104.8,18.2 105,17.8 105,17.2C105.3,16.1 104.1,15.5 102.9,15.5Z" style="fill-rule:nonzero;"/></g><g transform="matrix(26.5034,0,0,47.8049,-105.087,160.59)"><path d="M113.3,15.5C109,15.7 105.2,18.5 105.2,23.2C105.2,26.9 107.8,30.7 113.1,30.7C117.5,30.7 120.6,27.6 120.6,23.2C120.6,19.1 117.6,15.5 113.3,15.5ZM113.2,28.6C110.3,28.6 107.6,26.5 107.6,23.2C107.6,19.9 109.9,17.7 113.1,17.7C115.8,17.7 118.3,19.7 118.3,23.2C118.3,26.1 116.1,28.6 113.2,28.6Z" style="fill-rule:nonzero;"/></g><g transform="matrix(26.5034,0,0,47.8049,-117.723,160.59)"><path d="M128,21.8C128,21.8 125.1,21.1 125.1,19.8C125.1,18.5 126.4,17.7 128.1,17.7C130.5,17.7 131,19.1 132.1,19.2C132.6,19.2 133.2,18.7 133.3,18.3C133.4,17.3 131.4,15.6 128.4,15.5C125.5,15.5 122.7,16.7 122.7,19.8C122.7,22.7 125.3,23.4 128,24C129.8,24.4 131.5,25 131.5,26.5C131.5,27.9 130.3,28.7 128.4,28.7C125.1,28.7 124.7,26.5 123.5,26.4C123,26.4 122.2,26.9 122.2,27.6C122.2,28.6 124.2,30.7 128.1,30.7C131.4,30.7 133.8,29.3 133.8,26.4C133.8,23.2 131.4,22.6 128,21.8Z" style="fill-rule:nonzero;"/></g><g transform="matrix(26.5034,0,0,47.8049,-130.016,160.59)"><path d="M142.2,15.5C138.2,15.5 135.4,18.2 135.4,22.9C135.4,26.6 137.8,30.7 142.5,30.7C144.9,30.7 147,29.9 147.9,28.9C148.4,28.5 148.4,28.2 148.4,27.7C148.4,27.2 147.8,26.5 147.1,26.5C146.9,26.5 146.6,26.7 146.3,26.9C145.3,28 144,28.7 142.3,28.7C139.5,28.7 137.7,26.9 137.4,23.9L147.4,23.9C148,23.9 148.4,23.5 148.4,22.8C148.4,19.1 146.3,15.6 142.2,15.5ZM137.6,21.9C138,19.5 139.8,17.7 142.2,17.7C144.7,17.6 146.5,19.4 146.5,21.9L137.6,21.9Z" style="fill-rule:nonzero;"/></g></g>
+    </symbol>
+
+    <!-- STYLE — v2 standalone signet + lockup (canonical brand mark) -->
+    <symbol id="opStyle" viewBox="0 0 142 142">
+      <g transform="translate(4.4 4.45) scale(0.94)">
+        <path d="M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z"/>
+      </g>
+    </symbol>
+    <!-- Legacy alias — keep so any stale #opMark references still resolve -->
+    <symbol id="opMark" viewBox="0 0 142 142"><use href="#opStyle"/></symbol>
+    <symbol id="opStyleType" viewBox="0 0 3840 998">
+      <g transform="matrix(1,0,0,0.461843,0,0)"><g transform="matrix(9.67009,0,0,20.9381,46.3437,-426.712)"><path d="M84.1,83.4C85.206,79.362 96.732,71.983 96.732,71.983C96.732,71.983 95.683,77.806 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.32,59.25 95.117,62.595 91.927,64.086C88.649,65.618 87.58,63.568 86,61.4C83.953,58.591 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4Z" style="fill-rule:nonzero;"/></g><g transform="matrix(20.8204,0,0,45.081,376.732,587.069)"><path d="M47.6,19.2C47.6,23.6 45.2,28.5 39.5,28.5C36.7,28.5 34.4,27.4 33,25L33,33.071C33,33.071 32.758,33.891 32.027,34.219C31.452,34.477 29.5,34.5 29.5,34.5L29.5,10.9L30.3,10.9C31.9,10.9 32.7,12.6 32.8,14.1C34,11.8 36.2,10.2 39.3,10.2C44.4,10.2 47.6,14 47.6,19.2ZM44,19.4C44,16.3 42.3,12.9 38.5,12.9C35.1,12.9 32.9,15.6 32.9,19.4C32.9,22.5 34.8,25.7 38.5,25.7C41.7,25.7 44,23 44,19.4Z" style="fill-rule:nonzero;"/></g><g transform="matrix(21.5033,0,0,46.5599,334.885,571.985)"><path d="M66.5,23.7C65.9,25.9 63.4,28.5 58.9,28.5C53.5,28.5 50.2,25 49.2,20.6C48.6,14.5 52.3,10.2 58.4,10.2C62.1,10.2 66.4,12 66.4,15.8C66.4,18.4 64.1,19.8 59.2,20.4C56.7,20.7 54.8,21.3 54.8,23.1C54.8,25.1 57.2,26 59.6,26C61.9,26.1 64.6,25.3 66.5,23.7ZM53.3,22.7C54.2,17.1 61.7,19.1 61.7,15.5C61.7,13.8 60.2,12.7 58.1,12.7C55.5,12.7 52.6,15 52.6,19.1C52.6,20.4 52.9,21.8 53.3,22.7Z" style="fill-rule:nonzero;"/></g><g transform="matrix(21.3153,0,0,46.1527,2366.82,576.138)"><path d="M66.5,23.7C65.9,25.9 63.4,28.5 58.9,28.5C53.5,28.5 50.2,25 49.2,20.6C48.6,14.5 52.3,10.2 58.4,10.2C62.1,10.2 66.4,12 66.4,15.8C66.4,18.4 64.1,19.8 59.2,20.4C56.7,20.7 54.8,21.3 54.8,23.1C54.8,25.1 57.2,26 59.6,26C61.9,26.1 64.6,25.3 66.5,23.7ZM53.3,22.7C54.2,17.1 61.7,19.1 61.7,15.5C61.7,13.8 60.2,12.7 58.1,12.7C55.5,12.7 52.6,15 52.6,19.1C52.6,20.4 52.9,21.8 53.3,22.7Z" style="fill-rule:nonzero;"/></g><g transform="matrix(20.8204,0,0,47.1462,359.825,566.004)"><path d="M83.9,28.2C81.9,28.2 80.5,27.7 80.5,24.8L80.5,17.9C80.5,14.6 79.2,12.8 76.6,12.8C74.1,12.8 72,14.6 72,19.1L72,28.2L68.6,28.2L68.6,10.8L69,10.8C70.6,10.8 71.6,12.3 71.7,14.1C72.7,11.9 74.6,10.2 77.7,10.2C81.9,10.2 83.9,12.9 83.9,17.4L83.9,28.2Z" style="fill-rule:nonzero;"/></g><g transform="matrix(21.747,0,0,47.0874,150.341,566.604)"><path d="M117.8,10.5C118.4,11.9 117.2,13.3 115.3,13.3C112.1,13.1 110.1,15.2 110.1,19.3L110.1,28.2L106.6,28.2L106.6,10.9L107.3,10.9C108.9,10.9 109.7,12.4 109.8,14.4C110.8,11.9 112.8,10.2 115.4,10.2C116.1,10.2 117,10.3 117.8,10.5Z" style="fill-rule:nonzero;"/></g><g transform="matrix(21.4007,0,0,46.3376,179.308,574.252)"><path d="M135.6,19.4C135.6,23.8 132.7,28.5 126.4,28.5C120.6,28.5 117.1,24.5 117.1,19.4C117.1,14.8 120.3,10.2 126.3,10.2C131.8,10.2 135.6,14 135.6,19.4ZM132.1,19.4C132.1,15.9 129.9,12.9 126.4,12.9C122.9,12.9 120.5,15.6 120.5,19.4C120.5,22.7 122.7,25.7 126.3,25.7C129.7,25.8 132.1,23 132.1,19.4Z" style="fill-rule:nonzero;"/></g><g transform="matrix(26.9157,0,0,71.5109,-151.465,-124.38)"><path d="M86,2.4C83.4,2.7 81.1,3.6 82,5.9C82.5,7.2 85.4,8.5 87.5,12.9C88.6,15.2 89.463,15.088 88.663,12.588C86.263,6.788 83.477,6.006 84.477,4.406C84.977,3.606 99.303,3.255 99.1,9.9C99.018,12.599 96.5,13.8 93.3,14.6C91.4,15.1 88.4,16.7 88.1,19.9C87.9,22.4 88,24.1 86,28.2C87.7,28.4 89.6,27.9 90.5,26.7C91.8,25.1 91.6,21.1 91.7,19.5C91.9,17.6 93.6,16.9 95.4,16.6C99.9,15.7 104.9,14.7 104.9,10C104.9,4.4 96.9,1.4 86,2.4Z" style="fill-rule:nonzero;"/></g><g transform="matrix(20.4887,0,0,44.3629,217.988,633.895)"><path d="M144.6,14.2C144.6,12.9 146,11.7 147.9,11.7C151.2,11.7 152.1,14.4 153.9,14.4C154.6,14.4 155.2,13.6 155,13C154.6,11.1 151.5,9.3 148.5,9.3C145.5,9.3 141,10.4 141,14.4C141,20.9 152.3,18.6 152.3,23.1C152.3,25.3 149.6,25.9 148.1,25.8C144,25.6 140.266,22.027 140.266,22.027C140.266,22.027 140.3,23.55 140.3,23.9C140.3,25.6 143.1,28.4 148.3,28.4C152.1,28.4 155.6,27 155.6,23.1C155.6,16.7 144.6,18.4 144.6,14.2Z" style="fill-rule:nonzero;"/></g></g>
+    </symbol>
+
+    <!-- CIRCLE — open-ring oP-Circle.  Signet id is opCircleMark (not
+         opCircle) for backwards compat with the existing pages. -->
+    <symbol id="opCircleMark" viewBox="0 0 2843 2160" style="fill-rule:evenodd;clip-rule:evenodd;">
+      <g transform="matrix(0.740161,0,0,1,0,0)"><g transform="matrix(8.20113,0,0,6.07016,-20128.8,-3833.05)"><path d="M2759.78,927.845C2728.1,963.836 2681.7,986.56 2630.04,986.56C2534.66,986.56 2457.23,909.13 2457.23,813.757C2457.23,718.385 2534.66,640.955 2630.04,640.955C2680.01,640.955 2725.07,662.217 2756.63,696.182C2756.2,671.45 2755.82,654.804 2755.51,652.896C2754.22,644.866 2822.66,611.87 2882.41,659.592C2923.76,692.617 2930.35,758.088 2890.17,789.415C2850.95,819.988 2803.14,819.667 2804.19,819.748C2805.24,819.829 2801.73,938.55 2802.47,964.197C2802.72,973.044 2793.7,984.446 2782.33,984.728C2771.95,984.985 2760.81,980.336 2760.39,964.176C2760.24,958.249 2760.03,945.28 2759.78,927.845ZM2826.55,687.102C2805.05,687.102 2787.59,704.56 2787.59,726.064C2787.59,747.567 2805.05,765.026 2826.55,765.026C2848.05,765.026 2865.51,747.567 2865.51,726.064C2865.51,704.56 2848.05,687.102 2826.55,687.102ZM2630.04,734.651C2586.38,734.651 2550.93,770.097 2550.93,813.757C2550.93,857.418 2586.38,892.864 2630.04,892.864C2673.7,892.864 2709.14,857.418 2709.14,813.757C2709.14,770.097 2673.7,734.651 2630.04,734.651Z"/></g></g>
+    </symbol>
+    <symbol id="opCircleType" viewBox="0 0 3905 1443" style="fill-rule:evenodd;clip-rule:evenodd;">
+      <g transform="matrix(1.01681,0,0,0.667932,0,0)"><g transform="matrix(2.21727,0,0,3.37541,-2648.74,-2066.57)"><path d="M2498.63,890.329C2523.7,890.329 2544.05,910.677 2544.05,935.74C2544.05,960.803 2523.7,981.151 2498.63,981.151C2473.57,981.151 2453.22,960.803 2453.22,935.74C2453.22,910.677 2473.57,890.329 2498.63,890.329ZM2498.63,836.542C2553.38,836.542 2597.83,880.991 2597.83,935.74C2597.83,990.488 2553.38,1034.94 2498.63,1034.94C2443.89,1034.94 2399.44,990.488 2399.44,935.74C2399.44,880.991 2443.89,836.542 2498.63,836.542Z"/></g><g transform="matrix(3.80252,0,0,5.78869,-8704.03,-6459.53)"><path d="M2502.77,1325.17C2480.57,1349.47 2448.63,1364.73 2413.15,1364.73C2346.18,1364.73 2291.8,1310.36 2291.8,1243.38C2291.8,1176.41 2346.18,1122.04 2413.15,1122.04C2476.86,1122.04 2529.78,1171 2534.12,1244.84C2550.61,1243.52 2571.13,1241.2 2590.37,1256.57C2619.41,1279.76 2624.04,1320.36 2595.82,1342.36C2568.28,1363.83 2534.71,1363.6 2535.45,1363.66C2536.19,1363.71 2533.72,1447.08 2534.24,1465.09C2534.42,1471.31 2528.08,1479.31 2520.1,1479.51C2512.81,1479.69 2504.98,1476.43 2504.69,1465.08C2504.33,1451.17 2503.54,1382.04 2502.77,1325.17ZM2527.46,1289.56C2526.55,1292.1 2525.56,1294.6 2524.49,1297.06C2524.03,1299.05 2523.79,1301.12 2523.79,1303.25C2523.79,1318.35 2536.05,1330.61 2551.15,1330.61C2566.25,1330.61 2578.51,1318.35 2578.51,1303.25C2578.51,1288.15 2566.25,1275.89 2551.15,1275.89C2541.03,1275.89 2532.2,1281.39 2527.46,1289.56ZM2524.49,1297.06L2527.46,1289.56C2526.12,1291.87 2525.11,1294.39 2524.49,1297.06ZM2413.15,1187.83C2382.49,1187.83 2357.6,1212.73 2357.6,1243.38C2357.6,1274.04 2382.49,1298.94 2413.15,1298.94C2443.81,1298.94 2468.7,1274.04 2468.7,1243.38C2468.7,1212.73 2443.81,1187.83 2413.15,1187.83Z"/></g><g transform="matrix(3.80252,0,0,5.78869,-9021.99,-7865.74)"><path d="M3000.9,1398.29C3016,1398.29 3028.26,1410.55 3028.26,1425.65C3028.26,1440.75 3016,1453.01 3000.9,1453.01C2985.8,1453.01 2973.54,1440.75 2973.54,1425.65C2973.54,1410.55 2985.8,1398.29 3000.9,1398.29ZM2951.01,1374.27C2951.92,1379.9 2953.82,1568.82 2954.44,1592.86C2954.73,1604.2 2962.56,1607.47 2969.85,1607.29C2977.83,1607.09 2984.17,1599.08 2983.99,1592.87C2983.47,1574.86 2985.94,1491.49 2985.2,1491.43C2984.46,1491.38 3018.03,1491.6 3045.57,1470.13C3073.79,1448.13 3069.16,1402.16 3040.12,1378.97C2998.16,1345.46 2950.11,1368.63 2951.01,1374.27Z"/></g><g transform="matrix(25.9135,0,0,39.4489,148.648,165.716)"><path d="M50.7,15.369C55.386,15.369 57.731,18.831 57.731,22.6C57.731,23.045 57.612,23.376 57.362,23.598C57.118,23.815 56.742,23.931 56.2,23.931L45.551,23.931C45.994,26.77 48.113,28.469 50.8,28.469C52.656,28.469 53.926,27.786 54.903,26.712C54.91,26.704 54.918,26.697 54.927,26.691C55.079,26.59 55.206,26.489 55.333,26.413C55.478,26.325 55.625,26.269 55.8,26.269C56.468,26.269 57.131,26.832 57.131,27.5C57.131,27.827 57.029,28.157 56.593,28.593C55.17,30.015 52.936,30.831 50.7,30.831C45.41,30.831 42.969,26.964 42.969,23.2C42.969,18.422 46.627,15.572 50.693,15.369C50.696,15.369 50.698,15.369 50.7,15.369ZM45.557,21.769L55.061,21.769C54.903,19.507 53.166,17.831 50.5,17.831C47.736,17.831 45.996,19.507 45.557,21.769Z" style="fill-rule:nonzero;"/></g><g transform="matrix(3.13203,0,0,4.76799,-7162.23,-6236.36)"><path d="M2964.4,1579.23L2964.4,1596.67C2964.4,1597.25 2963.94,1597.73 2963.37,1597.75C2962.53,1597.79 2961.68,1597.81 2960.83,1597.81C2948.51,1597.81 2938.53,1594.16 2931.63,1587.47C2924.72,1580.77 2920.85,1571 2920.85,1558.66L2920.85,1520.61C2920.85,1510.54 2917.74,1501.6 2910.89,1496.07C2906.33,1492.39 2900.13,1490.25 2892.15,1490.25C2873.65,1490.25 2857.66,1507.23 2857.66,1531.36L2857.66,1585.97C2857.66,1593.28 2852.22,1596.98 2845.82,1596.98C2841.97,1596.98 2838.81,1595.92 2836.88,1593.54C2835.58,1591.95 2834.81,1589.75 2834.81,1586.79L2834.81,1482.55C2834.81,1478.88 2835.99,1476.14 2837.94,1474.31C2839.89,1472.48 2842.62,1471.53 2845.82,1471.53C2848.6,1471.53 2851.14,1472.48 2853,1474.33C2854.83,1476.16 2856.01,1478.89 2856.01,1482.55L2856.01,1489.98C2864.02,1477.15 2877.6,1470.7 2895.46,1470.7C2909.87,1470.7 2921.51,1475.61 2929.56,1484.29C2937.59,1492.95 2942.05,1505.4 2942.05,1520.61L2942.05,1557.84C2942.05,1564.54 2943.58,1569.68 2946.73,1573.13C2949.86,1576.56 2954.57,1578.26 2960.83,1578.26C2961.65,1578.26 2962.44,1578.23 2963.21,1578.15C2963.51,1578.12 2963.82,1578.22 2964.05,1578.43C2964.27,1578.63 2964.4,1578.92 2964.4,1579.23Z"/></g><g transform="matrix(25.9135,0,0,39.4489,-44.8323,169.661)"><path d="M102.9,15.369C103.528,15.369 104.156,15.529 104.587,15.83C105.042,16.147 105.289,16.614 105.131,17.217C105.128,17.613 105.037,17.926 104.83,18.117C104.684,18.252 104.48,18.331 104.2,18.331C104.026,18.331 103.851,18.265 103.643,18.189C103.369,18.088 103.027,17.973 102.514,18.03C102.51,18.031 102.505,18.031 102.5,18.031C100.264,18.031 98.631,20.283 98.631,23.2L98.631,29.5C98.631,29.893 98.488,30.2 98.249,30.411C98.015,30.617 97.686,30.731 97.3,30.731C96.913,30.731 96.583,30.617 96.348,30.395C96.112,30.174 95.969,29.843 95.969,29.4L95.969,16.8C95.969,16.024 96.524,15.469 97.3,15.469C98.073,15.469 98.631,16.016 98.631,16.9L98.631,18.011C99.673,16.359 101.279,15.559 102.885,15.37C102.89,15.369 102.895,15.369 102.9,15.369Z" style="fill-rule:nonzero;"/></g><g transform="matrix(25.9135,0,0,39.4489,-33.2184,165.716)"><path d="M128.029,21.772C128.029,21.772 130.14,22.246 131.829,23.323C132.981,24.058 133.931,25.075 133.931,26.4C133.931,29.375 131.485,30.831 128.1,30.831C125.318,30.831 123.488,29.775 122.638,28.797C122.255,28.354 122.069,27.922 122.069,27.6C122.069,27.21 122.287,26.873 122.58,26.636C122.868,26.403 123.226,26.269 123.5,26.269C123.504,26.269 123.507,26.269 123.511,26.269C123.775,26.291 124.006,26.403 124.232,26.573C124.441,26.729 124.648,26.935 124.883,27.158C125.557,27.797 126.469,28.569 128.4,28.569C130.209,28.569 131.369,27.833 131.369,26.5C131.369,25.799 130.965,25.312 130.358,24.95C129.718,24.569 128.857,24.325 127.972,24.128C126.882,23.886 125.809,23.627 124.913,23.217C123.534,22.586 122.569,21.602 122.569,19.8C122.569,16.62 125.425,15.369 128.4,15.369L128.404,15.369C130.55,15.441 132.193,16.319 132.951,17.187C133.299,17.584 133.463,17.985 133.43,18.313C133.43,18.319 133.429,18.326 133.427,18.332C133.371,18.555 133.181,18.809 132.93,19.003C132.682,19.197 132.376,19.331 132.1,19.331C132.096,19.331 132.092,19.331 132.088,19.331C131.626,19.289 131.262,19.034 130.833,18.736C130.237,18.323 129.502,17.831 128.1,17.831C126.485,17.831 125.231,18.565 125.231,19.8C125.231,20.522 125.603,20.941 126.257,21.243C126.72,21.458 127.319,21.614 128.028,21.772L128.029,21.772Z" style="fill-rule:nonzero;"/></g><g transform="matrix(25.9135,0,0,39.4489,-33.2184,165.716)"><path d="M148.365,28.513L148.362,28.529C148.352,28.557 148.288,28.659 148.177,28.791L148.204,28.825L147.99,28.996C147.07,30.011 144.938,30.831 142.5,30.831C137.717,30.831 135.269,26.665 135.269,22.9C135.269,20.511 135.985,18.631 137.205,17.347C138.429,16.06 140.161,15.369 142.2,15.369L142.203,15.369C146.381,15.471 148.531,19.029 148.531,22.8C148.531,23.189 148.415,23.493 148.221,23.702C148.022,23.915 147.74,24.031 147.4,24.031L137.546,24.031C137.711,25.429 138.213,26.552 139.004,27.332C139.819,28.134 140.938,28.569 142.3,28.569C143.959,28.569 145.227,27.885 146.203,26.812C146.21,26.804 146.218,26.797 146.227,26.791C146.413,26.667 146.598,26.544 146.761,26.465C146.888,26.404 147.004,26.369 147.1,26.369C147.561,26.369 147.984,26.642 148.248,26.981C148.427,27.213 148.531,27.475 148.531,27.7C148.531,28.026 148.492,28.273 148.365,28.513ZM137.757,21.769L146.367,21.769C146.305,19.416 144.583,17.736 142.205,17.831L142.2,17.831C139.916,17.831 138.195,19.511 137.757,21.769Z" style="fill-rule:nonzero;"/></g></g></symbol>
+
+    <!-- SWISH — two-stroke flow -->
+    <symbol id="opSwish" viewBox="0 0 152 107">
+      <g transform="matrix(0.981452,0,0,0.878406,2.4868,-8.28354)"><rect x="-2.534" y="9.43" width="154.346" height="121.268" style="fill:none;"/><g transform="matrix(1.0189,0,0,1.13843,-1.51112,-15.5823)"><path d="M76.7,25.1C82.9,29 95.6,39.3 102,50C105.2,55.5 106.3,60.3 106.3,67C105.4,68.4 101.1,71.3 99.6,72.1C101.1,72.7 104.7,73.8 106.9,74.3C107.8,93.9 96.6,111.2 76.5,125.1L82.6,122.7C94.1,115.8 110.9,97.6 110.9,74.2C117.6,74.2 148.6,72.9 148.6,53.7C148.3,43.7 132.2,29 107.6,25.3C97.1,23.8 85.4,24.2 76.7,25.1ZM109.9,33.6C117.8,36.9 128.2,43 128.2,53.3C128.2,59.4 120.9,64.6 110.8,66.4C111.1,51.8 101.9,30.1 89.1,28.1L86.7,27.5C94.3,28.3 104.1,31.2 109.9,33.6Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(1.0189,0,0,1.13843,-1.51112,-15.5823)"><path d="M95,72.3C96.7,71.3 99.3,69.1 100.7,67.3C97.9,50.9 84.3,23.5 50.4,23.5C23.3,23.5 1.2,43.7 1.2,74.7C1.2,97.8 16.3,126.5 50.7,126.5C78.2,126.5 101.5,109.2 101.5,76.8C100.2,75.7 97.3,73.6 94.7,72.3L95,72.3ZM50.5,116.3C28.7,116.3 10,100.8 10,75.1C10,55.1 25.1,34.2 49.9,34.2C68.3,34.2 89.9,48.5 90.8,74.5C91.3,98.4 74.3,116.3 50.5,116.3Z" style="fill:currentColor;fill-rule:nonzero;"/></g></g>
+    </symbol>
+    <symbol id="opSwishType" viewBox="0 0 3025 752">
+      <!-- Full 9-glyph "OpenProse" wordmark per OP-swish-type.svg.  Every fill
+           is currentColor so the wordmark inherits text color (light + dark). -->
+      <g transform="matrix(0.787745,0,0,0.347708,0,0)"><rect x="0" y="0" width="3840" height="2160" style="fill:none;"/><g transform="matrix(25.3499,0,0,57.4311,21.758,43.1089)"><path d="M34.5,15.8C33.7,8.6 27.6,0.4 17.2,0.4C8.2,0.4 1.1,7.9 1,17.6C0.9,25.8 5.9,35.1 16.7,35.1C25.8,35.1 34.6,29.8 34.7,19L32.4,17.6L34.5,15.8ZM16.7,31.5C9.4,31.5 4.5,25.6 4.5,18.2C4.5,11.7 9.4,4.5 16.9,4.5C24.7,4.3 29.9,10.4 30.4,17.1C30.7,23.2 27,31.5 16.7,31.5Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(15.8933,0,0,34.9068,473.082,978.691)"><path d="M25.02,1.827C36.105,6.18 33.244,16.433 33.244,16.433C33.15,19.81 27.02,27.194 19.012,30.939C22.712,29.839 34.322,27.652 37.813,18.162C41.913,18.062 49.9,17.3 51.3,13.3C53.8,7.2 34.081,-4.802 25.02,1.827ZM38.1,15.4C37.9,9.6 35,5.2 33.5,3.7C32.3,2.6 31.2,2.2 29.9,1.9C34.2,2.2 39.8,4.3 42.1,6.3C44.3,8.1 46,11.9 42.3,14C41.4,14.6 39.9,15.1 38.1,15.4Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(25.3499,0,0,57.4311,155.653,74.403)"><path d="M57.978,20.23C58.351,24.744 47.3,24.9 47.3,24.9L49.5,24.3C49.9,21.9 51.808,18.502 54.4,18.3C56.533,18.134 57.879,19.035 57.978,20.23ZM49.25,25.822C50.05,25.922 50.8,26 52.4,26C56.7,26 61.1,24.3 61.1,20.4C61.1,18.6 59.5,15.9 55.5,15.9C50.4,15.9 45.5,20.5 45.5,26.4C45.5,29.4 47.1,33.3 52.3,33.3C55.6,33.3 58.9,31.4 61.1,27.8C59.5,29.4 56.7,30.9 54.2,30.9C51.7,30.9 49.25,28.922 49.25,25.822Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(25.3499,0,0,57.4311,2217.17,74.403)"><path d="M57.978,20.23C58.351,24.744 47.3,24.9 47.3,24.9L49.5,24.3C49.9,21.9 51.808,18.502 54.4,18.3C56.533,18.134 57.879,19.035 57.978,20.23ZM49.25,25.822C50.05,25.922 50.8,26 52.4,26C56.7,26 61.1,24.3 61.1,20.4C61.1,18.6 59.5,15.9 55.5,15.9C50.4,15.9 45.5,20.5 45.5,26.4C45.5,29.4 47.1,33.3 52.3,33.3C55.6,33.3 58.9,31.4 61.1,27.8C59.5,29.4 56.7,30.9 54.2,30.9C51.7,30.9 49.25,28.922 49.25,25.822Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(25.3499,0,0,57.4311,155.653,74.403)"><path d="M61.3,15.6C62.5,17 63.1,20.1 63.1,22.5C63.1,26.1 62,29.9 58.9,33.2C61.4,32.7 64.3,30.9 65.6,25.6C66.2,23 67.5,20.1 70.1,20.1C72.3,20.1 73.6,22.6 73.6,26.3C73.6,28.6 73,31.1 71.7,33.7C74.6,31.9 76.8,27.9 76.8,23.7C76.8,18.9 74.4,15.9 71.2,15.9C68.6,15.9 66.4,17.9 65.2,21.6C64.9,19.5 63.6,16.9 61.3,15.6Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(25.3499,0,0,57.4311,155.653,74.403)"><path d="M70.8,0.9C75,4 79.4,9.1 80.2,16.4L76.8,17.2C77.9,17.6 79.1,17.8 80.3,18C80.7,23.4 78.7,30.5 72.6,34.9C76.2,33.6 82.5,28.8 82.6,18.2C86.6,18.2 95.9,17.4 95.9,11.2C96,7.2 88.6,-1.4 70.8,0.9ZM82.6,15.8C82.3,10.6 79.8,3.1 74.6,1.8C78.4,2.3 88.7,4.6 88.7,10.6C88.7,13.6 85.2,14.7 82.6,15.8Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(25.3499,0,0,57.4311,155.653,74.403)"><path d="M89.4,18.6C89.6,19.5 89.6,20.4 89.6,21.5C89.6,25 88.6,29.4 86.1,33.2C89.4,32.6 91.9,29.9 92.8,25.6C93.6,22.1 95.1,19.9 97.2,19.9C97.9,19.9 98.4,20.1 99,20.5C99.9,18.9 101.1,17.6 102.1,16.8C101.1,16.2 100.1,15.9 98.7,15.9C96.1,15.9 93.7,18.3 92.2,22.6C92.3,21.3 92.3,19.7 92.1,17.8L89.4,18.6Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(25.3499,0,0,57.4311,155.653,74.403)"><path d="M108.8,15.9C103.9,16.1 98.7,20.6 98.7,26.4C98.7,30.4 101.1,33.3 105.5,33.3C110.6,33.4 115.5,29.4 115.5,23.2C115.5,18.9 112.6,15.8 108.8,15.9ZM106.1,31C103.9,30.9 102.4,28.6 102.6,25.5C102.9,21.7 105,18.3 108.1,18.2C110.4,18.2 111.8,20.1 111.7,23.2C111.6,26.9 109.6,31 106.1,31Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(25.3499,0,0,57.4311,155.653,74.403)"><path d="M127.8,16.6C126.7,16.1 125.5,15.8 123.9,15.8C120.4,15.8 116.4,17.5 116.4,21.1C116.4,25 121.4,25.6 121.4,28.4C121.4,30.5 118.6,32.4 112.6,32.2C113.7,32.9 115.5,33.3 117.7,33.3C122.1,33.3 125.5,31.2 125.5,27.9C125.5,23.4 120.5,23.2 120.5,20.7C120.5,18.2 123.6,16.6 127.8,16.6Z" style="fill:currentColor;fill-rule:nonzero;"/></g></g>
+    </symbol>
+
+    <!-- CURSIVE — handwritten variant -->
+    <symbol id="opCursive" viewBox="0 0 1737 1846">
+      <g transform="matrix(0.452146,0,0,0.85439,0,0)"><g transform="matrix(72.3922,0,0,34.915,-0.537438,-12.8456)"><path d="M38.5,24C38.5,17.3 33.3,1.2 19.4,1.2C10.8,1.2 1.7,8.3 1.7,26.1C1.7,36.5 6.9,51.8 19.8,51.8C29.5,51.9 38.5,44.5 38.7,33.4L38.9,30C39,28.6 41.4,28.2 43.1,28.2C45,28.2 47.9,28.7 49,29.8C50.6,31.1 51.2,34.5 49.3,36.3C47.4,38 43.9,38.9 40,38.9C38.9,38.9 38.3,38.7 38.3,40L38.5,59.7C38.5,61.7 39.2,62.2 39.3,60L39.7,41C42.4,41 47.8,40.5 49.8,38.4C52.6,35.9 52.3,30.1 48.7,27.8C46.2,26.2 40.4,25.5 37.8,28C36.9,28.9 36.8,30.7 36.7,31.4C35.1,39.9 29.7,47.5 20,47.5C11.7,47.5 3.5,40.6 3.5,26.7C3.7,14.6 10.9,5.2 19.6,5.2C29.5,5.1 36.3,13.8 37.5,23.9C37.6,25.2 38.5,25.1 38.5,24" style="fill-rule:nonzero;"/></g></g>
+    </symbol>
+    <symbol id="opCursiveType" viewBox="0 0 3776 1586">
+      <g transform="matrix(0.983178,0,0,0.734075,0,0)"><g transform="matrix(25.7809,0,0,34.5295,-62.4849,105.595)"><path d="M147.9,31.7C145.9,33 143.5,34.1 141.4,34.1C139.9,34.3 138.9,33.9 138.5,33.5C138.2,33.4 138.5,33.5 138.5,33.5L138.4,33.4C138.2,33.3 138.2,33.1 138.6,33C140.9,31.1 146.1,28.155 146.1,23.755C146,22.655 145.2,21.555 143.6,21.555C139.8,21.555 135.9,25.6 136.1,30.5C136.1,31 136.2,32.1 136.2,33C135.4,33.5 133.6,34.5 132.5,35.1C134.2,31.9 131,29.9 129.1,27.9C130.5,26.5 132.6,25.352 132.5,22.952C132.4,21.952 131.5,21.352 130.5,21.452C128.4,21.452 125.6,23.4 125.7,25.7C125.7,26.9 126.2,27.6 126.6,28.1C124.6,29.9 121.5,31.4 118.2,32.5C119.9,31.1 121.7,28.1 121.7,25.4C121.7,23.1 120,21.6 117.9,21.6C113.2,21.6 108.5,26.6 108.5,31.4C108.5,32.1 108.7,33.584 109.1,34.184C106.5,36.484 104,35.7 104,32.4C104,29.9 106.5,24.9 107.7,22.6C108.1,21.9 107.7,21.4 107.1,21.6C104.2,22.9 100.9,23.9 96,23.1C95.5,23.1 94.8,23.4 94.6,24C93.6,27.9 91.5,34 87.9,36.2C87.4,36.5 87.4,37.4 88.2,37.1C90.4,36.1 94.4,32.1 96.2,25.4C99.1,25.6 101.9,25.4 105,24.1C103.9,26.1 101.9,29.9 101.9,32.4C101.9,35.9 104,36.6 105.4,36.5C107,36.5 108.9,35.984 109.8,35.084C110.5,35.584 111.764,35.965 112.6,35.984C114.885,36.036 116.81,34.936 117.942,34.489C123.107,32.45 124.037,32.109 127.4,29.1C129,30.7 131.4,32.1 131.2,34.1C131,36.1 127.6,37 124.4,35.6C122.1,34.6 122.255,33.99 121.255,34.49C120.755,34.69 119.5,35 120,35.5C121.1,37 123.9,38.1 126.6,38.1C129.5,38.1 132.6,36.5 136.6,34C137.4,35.4 138.9,35.9 140.5,35.9C144,35.9 147.9,33.5 148.2,32.9C148.9,32.1 148.2,31.6 147.9,31.7ZM113.4,33.984C112,33.684 110.9,32.4 111,29.9C111.4,26.9 114,23.4 117.1,23.3C119.1,23.3 120.1,24.4 120.1,26.1C120.1,29.5 116.4,33.984 113.4,33.984ZM128.2,26.9C127.7,26.5 127.5,25.9 127.5,24.9C127.5,23.4 128.6,23.252 129.9,23.252C131.6,23.452 130.2,25.4 128.2,26.9ZM137.9,31.7C137.6,31.9 137.6,31.6 137.6,31.5C137.5,31 137.5,30.6 137.5,30C137.6,27.1 140.4,23.655 143.1,23.555C143.9,23.555 144.4,24.055 144,25.255C143.1,28.155 140.1,30 137.9,31.7Z" style="fill-rule:nonzero;"/></g><g transform="matrix(25.7809,0,0,31.489,-30.4318,111.774)"><path d="M92,0.2C89.5,0.2 87.1,0.5 84.6,1.8C82.5,3 80.9,5.1 80.8,7.4C80.6,12.6 86.9,13.5 87.6,17.9C87.9,18.5 88.5,18.1 88.4,17.6C88.2,13.4 82.9,12 82.7,8.6C82.6,5.4 85.6,2.6 91.1,2.6C97.7,2.5 107.9,6.6 107.9,12.5C107.6,16.5 102.1,18 99,18.5C96.5,19 90.026,19.999 88.4,22.6C86.9,25 86.4,26.5 85.9,29.1C84.4,36.1 82.1,44.1 78.6,44.1C76.5,44 75.4,41.9 75.5,43.5C75.6,45.1 76.6,46 78.1,46C82.1,46 84.9,40.4 87,31.5C88.9,23.4 90.2,22.6 96.1,21.5C100,20.6 109.5,19.4 109.6,12.1C109.6,6.4 100,0.4 92,0.2Z" style="fill-rule:evenodd;"/></g><g transform="matrix(25.7809,0,0,34.5295,-0.400543,7.77857)"><path d="M38.5,24C38.5,17.3 33.3,1.2 19.4,1.2C10.8,1.2 1.7,8.3 1.7,26.1C1.7,36.5 6.9,51.8 19.8,51.8C29.5,51.9 38.5,44.5 38.7,33.4L38.9,30C39,28.6 41.4,28.2 43.1,28.2C45,28.2 47.9,28.7 49,29.8C50.6,31.1 51.2,34.5 49.3,36.3C47.4,38 43.9,38.9 40,38.9C38.9,38.9 38.3,38.7 38.3,40L38.5,59.7C38.5,61.7 39.2,62.2 39.3,60L39.7,41C42.4,41 47.8,40.5 49.8,38.4C52.6,35.9 52.3,30.1 48.7,27.8C46.2,26.2 40.4,25.5 37.8,28C36.9,28.9 36.8,30.7 36.7,31.4C35.1,39.9 29.7,47.5 20,47.5C11.7,47.5 3.5,40.6 3.5,26.7C3.7,14.6 10.9,5.2 19.6,5.2C29.5,5.1 36.3,13.8 37.5,23.9C37.6,25.2 38.5,25.1 38.5,24" style="fill-rule:nonzero;"/></g><g transform="matrix(21.351,0,0,36.3137,231.726,-39.8604)"><path d="M55.8,32.4C55.7,33 55.9,33.4 56.5,33.6C58.3,34.3 60.5,34.4 62.3,34.4C66,34.4 68.1,33.9 68.1,30.9C68.1,27.8 64.6,26.7 60.9,26.7C56.2,26.7 52.4,28.1 52.4,33.2C52.4,36.6 54.7,39.8 60.8,39.8C63.2,39.8 69.9,39 70,36.6C70,36.3 69.7,35.7 69.3,35.9C67.8,36.9 64.3,37.7 61,37.7C58.3,37.7 53.8,36.9 53.8,33.2C53.8,30.1 57.1,28.7 60.9,28.7C64.4,28.7 66.9,29.3 66.9,30.8C66.9,32.3 63.4,32.4 61.2,32.4C57.6,32.4 56.5,31.7 55.8,31.7L55.8,32.4" style="fill-rule:nonzero;"/></g><g transform="matrix(25.7809,0,0,34.5295,-77.5894,28.3524)"><path d="M71.4,26.6C71.4,27.8 70.9,38.4 71,39C71.1,39.6 71.8,40 72.1,39C72.8,34.7 72.4,27.8 76.5,27.8C79.5,27.8 78.8,32.9 78.6,35.4C78.4,39 79.6,39.5 80.3,39.3C80.8,39.3 81.2,37.8 80.4,37.8C79.1,37.4 80.8,33.2 79.6,29C78.4,25.2 74.3,25.1 72.6,28.8L72.5,28.8L72.5,26.7C72.4,25.5 71.4,25.7 71.4,26.6" style="fill-rule:nonzero;"/></g></g>
+    </symbol>
+  </svg>
+
+<!-- ===== SPLASH ===== -->
+<main class="splash" id="splash">
+
+  <!-- DLA growth canvas — fills the viewport behind everything -->
+  <canvas class="bloom-canvas" id="bloom"></canvas>
+
+  <!-- Center morphing mark inside a glass card.
+       Real SVG transform morph: signet stretches wide
+       and skews as it fades out; wordmark un-squeezes
+       from a narrow skew as it fades in. The glass
+       pill itself widens/narrows to match. -->
+  <button class="center-glass" id="centerMark" data-phase="signet" type="button" aria-label="OpenProse mark">
+    <svg class="mark-signet swap-logo" viewBox="0 0 142 142" aria-hidden="true" data-kind="signet"><use href="#opStyle"/></svg>
+    <svg class="mark-wordmark swap-logo" viewBox="0 0 3840 998" aria-hidden="true" data-kind="wordmark"><use href="#opStyleType"/></svg>
+  </button>
+
+  <!-- Corner UI -->
+  <div class="corners">
+
+    <!-- Top-left status -->
+    <div class="tl-badge">
+      <span class="dot"></span>
+      <span>LIVE</span>
+      <span class="sep">·</span>
+      <span class="acc">μ.0 ALPHA</span>
+    </div>
+
+    <!-- Top-right info -->
+    <a class="tr-info" href="#foot">INFO</a>
+
+    <!-- Bottom-left draw caption -->
+    <div class="bl-caption">
+      <span class="head">Draw to influence</span>
+      <span class="body">Drag anywhere on the bloom to seed new growth. The pattern is alive — your strokes feed it.</span>
+    </div>
+
+    <!-- Bottom-right controls panel — replaces the old static
+         "growing · N nodes" badge. The header carries the live node
+         count + activity state; the body holds sliders for the
+         simulation, click pulse, secondary seeding, anti-stripe,
+         and auto-raindrop tunables. Click the header to collapse. -->
+    <div class="controls" id="controls"></div>
+
+    <!-- Bottom-center scroll hint -->
+    <a class="scroll-hint" href="#foot">
+      <span>scroll</span>
+      <span class="arr">↓</span>
+    </a>
+
+  </div>
+
+</main>
+
+<!-- ===== FOOT — brief intro under the splash ===== -->
+<section class="foot" id="foot">
+  <div class="foot-inner">
+    <div class="foot-eyebrow">// μ Bloom — styleguide teal</div>
+    <h2>A program is a <em>living document</em>.</h2>
+    <p>The mark above is one identity in two voices — signet and logotype, the same gesture at two scales. The bloom around it is a small simulation of how OpenProse <em>actually feels</em>: a quiet system, growing on cadence, accepting your input and continuing on its own.</p>
+    <div class="ctas">
+      <a class="btn primary" href="direction-eta-organism-homepage.html">Read the homepage <span>→</span></a>
+      <a class="btn ghost" href="direction-lambda-inkwell.html">See the brand bible</a>
+    </div>
+    <div class="foot-meta">
+      // see also:
+      <a href="direction-eta-organism-concept.html">η Organism</a>
+      <a href="direction-lambda-inkwell-concept.html">λ Inkwell</a>
+      <a href="direction-delta-machine-homepage.html">δ Machine</a>
+      <a href="direction-theta-living-document-concept.html">θ Living Document</a>
+    </div>
+  </div>
+</section>
+
+<script>
+/* ============================================
+   μ BLOOM — wave-equation CA, reflecting edges,
+   first-click-triggered growth, held-cursor mode.
+
+   The canvas sits empty until the user's FIRST click. After that:
+     · CLICK = a big pulse that propagates and
+       reflects off all four edges of the canvas,
+       persisting and overlapping with previous
+       waves like a fluid.
+     · HOLD DOWN cursor = a continuous emitter at
+       the cursor position — paints a trail of
+       small pluckers as the user drags.
+     · AUTO RAINDROPS = small random pulses, but
+       MORE SUBTLE now (every ~22–40 s, lower
+       amplitude, smaller radius) so they read
+       as gentle ambient texture, not weather.
+     · High-amplitude wavefronts still spawn
+       SECONDARY pulses probabilistically, so
+       ripples seed more ripples as they collide.
+
+   PERFORMANCE NOTES:
+     · CELL is 8, DPR capped at 1.5. On a 2× retina display this is
+       roughly 3.5× fewer cells per frame to integrate AND paint —
+       the look is preserved, the lag is gone.
+     · Buffers u_curr / u_prev / u_next are now
+       PRE-ALLOCATED once at resize() — the per-step
+       `new Float32Array(len)` is gone. Step rotates
+       references instead of allocating, so the GC
+       no longer has to chase the simulation.
+     · Secondary-pulse seeding is INLINED into the
+       main step loop — saves a full second pass
+       over the buffer every frame.
+     · Render bails earlier (absV < 0.05) and we
+       cache the current fillStyle so we only set it
+       when the alpha bucket actually changes.
+
+   Buffers u_curr + u_prev are Float32Array;
+   u(t+1) = (2·u(t) − damp·u(t-1) + c²·∇²u) · decay.
+   Boundaries are REFLECTING (zero-Neumann): the
+   Laplacian uses the cell itself as the out-of-
+   bounds neighbor, so wavefronts mirror cleanly
+   off all four edges and keep interfering across
+   the canvas instead of wrapping to the opposite
+   side.
+   ============================================ */
+(function () {
+  var canvas = document.getElementById('bloom');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  // nodeCountEl is captured later, after buildControls() creates the header.
+
+  var W = 0, H = 0;
+  // DPR cap reduced 2.0 → 1.5 — on retina we render at 75% of native
+  // resolution. Visually almost indistinguishable; cells per axis drop
+  // by 25% which is a 56% reduction in total cell count.
+  var DPR = Math.min(window.devicePixelRatio || 1, 1.5);
+  // CELL is now part of cfg (see below) so the resolution slider can
+  // change the wave-grid block size live. The slider's onChange calls
+  // resize() to realloc the Float32 buffers at the new resolution.
+  // CSS-px default 8 (was 7 in earlier rounds) — coarser grid, fewer
+  // cells, wave still reads as a fluid surface.
+  var cellPx = 0;
+  var cols = 0, rows = 0;
+
+  // Three pre-allocated Float32 buffers, rotated each step. NOTHING is
+  // allocated inside step() so GC stays out of the hot loop.
+  var u_curr = null;
+  var u_prev = null;
+  var u_next = null;
+
+  // ===== TUNABLES (live-tweakable via the controls panel) ========
+  // Every wave / seed / drop / click value is exposed as a slider in
+  // the bottom-right panel so the simulation can be tuned in real
+  // time. The loop reads cfg.X every frame.
+  var cfg = {
+    // Grid resolution — block size in CSS px (× DPR for canvas px).
+    // Live via the "resolution" slider; onChange triggers resize().
+    CELL:         8,
+
+    // Wave equation
+    C2:           0.24,     // wave speed²
+    DAMP_PREV:    0.995,    // momentum damping (per-frame multiplier on u_prev)
+    DECAY:        0.9864,   // overall decay (per-frame multiplier on u_next)
+    DEAD:         0.0006,   // amplitude floor below which cells snap to zero
+    ANTISTRIPE:   0.0001,   // jitter per cell per step that breaks standing-wave attractors
+
+    // Secondary-pulse seeding (high-amplitude crests spawn ripples)
+    SEED_THR:     0.40,
+    SEED_PROB:    0.0006,
+    SEED_RADIUS:  8,
+    SEED_AMP:     1.00,
+
+    // User click pulse
+    CLICK_RADIUS: 40,    // CSS px (multiplied by DPR)
+    CLICK_PEAK:   1.6,
+    DRAG_PULSE_DIST: 48, // CSS px between drag-emitted click pulses
+
+    // Auto raindrop
+    DROP_INTERVAL_MIN:  5000,  // ms
+    DROP_INTERVAL_VAR:  7500,  // ms — drop fires at min + rand·var
+    DROP_RADIUS_MIN:    3,     // CSS px
+    DROP_RADIUS_VAR:    13,    // CSS px
+    DROP_PEAK_MIN:      0.38,
+    DROP_PEAK_VAR:      0.44,
+
+    // INSIDE / STABLE detection — cells at high amplitude with
+    // near-zero Laplacian are part of a standing wave's "inside".
+    // They render teal-green and trigger extra scrambling on click.
+    // Only visible coloring and the click-stable-multiplier remain;
+    // the auto-agitate burst was removed because the drops became
+    // too aggressive.
+    STABLE_AMP:        0.30,    // |u| above which a cell can be considered stable
+    STABLE_LAP:        0.012,   // |lap| below which a cell is "inside" the pattern
+    STABLE_CLICK_MULT: 2.5      // click radius is multiplied by this when landing in a stable region
+  };
+  var defaults = {};
+  for (var _k in cfg) defaults[_k] = cfg[_k];
+
+  // Activation gate: nothing simulates or animates until the user
+  // makes the first interaction. Steady state until then = empty.
+  var activated = false;
+  // Active count for the readout
+  var activeCount = 0;
+
+  // Held-cursor mode: while the user is pressing, we emit a small
+  // pluck each frame at the held position so the surface paints
+  // a trail behind the cursor.
+  var holding = false;
+  var holdX = 0, holdY = 0;
+  // Last position where a drag-pulse was emitted. The user's
+  // CLICK-AND-DRAG fires off the SAME size click pulse every time
+  // they've moved DRAG_PULSE_DIST pixels from the last emission —
+  // so faster drags fire more pulses, slower drags fire fewer, and
+  // each one is the full reflecting click pulse (not a tiny pluck).
+  var lastEmitX = 0, lastEmitY = 0;
+  var DRAG_PULSE_DIST    = 64;          // CSS px between pulses (× DPR below)
+  var DRAG_PULSE_DIST_SQ = 0;           // recomputed in resize() with DPR
+
+  // Each sim color is a {hex} record stored on cfg.colors so the
+  // control panel can offer per-aspect color pickers. WARM/COOL/STABLE
+  // prefixes ("rgba(R, G, B, ") and FADE (full color with hard-coded
+  // alpha) are derived from these via rebuildColors() and re-built
+  // whenever a picker changes.
+  //
+  // styleguide-teal fork: defaults pre-loaded onto the styleguide-teal
+  // palette so the panel opens on-brand, but every picker is still
+  // live-editable at runtime — Reset returns to these values, not the
+  // original mu-bloom honey/brown defaults.
+  //
+  //   WARM    — high-amplitude crest tone. AMBER #c49a5c, the warm
+  //             complement from the styleguide-teal palette. This
+  //             is what reads as the wave's "glow" frame to frame.
+  //   COOL    — low-amplitude trough trail. The styleguide --ink-3
+  //             at full opacity, a muted warm-cocoa that sits
+  //             beneath the amber crests without competing.
+  //   STABLE  — standing-wave "inside" tint. TEAL #3a7a6a — the
+  //             editorial accent. Cells that settle into a
+  //             non-propagating standing pattern (high |u|,
+  //             near-zero |∇²|) render teal so the "inside" of the
+  //             attractor reads as the brand colour. This honours
+  //             the older inside-stays-teal feedback note in the
+  //             original mu-bloom comments.
+  //   FADE    — per-frame paper wash. Tinted to the new paper
+  //             #f5f0e8 so the fade reads as the same surface the
+  //             page sits on. Alpha pinned at 0.16 inside rebuild.
+  //
+  // (Red #c0392b is deliberately NOT a default — see palette note in
+  // the header. The token is loaded in :root but the sim stays calm.)
+  cfg.colors = {
+    WARM:   { hex: '#c49a5c' },   // amber — warm complement / crest glow
+    COOL:   { hex: '#6e655c' },   // muted warm cocoa — trough trail
+    STABLE: { hex: '#3a7a6a' },   // teal — editorial accent / inside tint
+    FADE:   { hex: '#f5f0e8' }    // fog cream paper wash (alpha pinned 0.16)
+  };
+  var colorDefaults = {};
+  for (var _ck in cfg.colors) colorDefaults[_ck] = cfg.colors[_ck].hex;
+  var WARM, COOL, FADE, STABLE;
+  function hexToRgb(hex) {
+    var h = (hex || '').replace('#', '');
+    if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+    return [parseInt(h.substr(0,2),16)|0, parseInt(h.substr(2,2),16)|0, parseInt(h.substr(4,2),16)|0];
+  }
+  function rebuildColors() {
+    var w = hexToRgb(cfg.colors.WARM.hex);
+    var c = hexToRgb(cfg.colors.COOL.hex);
+    var s = hexToRgb(cfg.colors.STABLE.hex);
+    var f = hexToRgb(cfg.colors.FADE.hex);
+    WARM   = 'rgba(' + w[0] + ', ' + w[1] + ', ' + w[2] + ', ';
+    COOL   = 'rgba(' + c[0] + ', ' + c[1] + ', ' + c[2] + ', ';
+    STABLE = 'rgba(' + s[0] + ', ' + s[1] + ', ' + s[2] + ', ';
+    FADE   = 'rgba(' + f[0] + ', ' + f[1] + ', ' + f[2] + ', 0.16)';
+  }
+  rebuildColors();
+
+  function alloc() {
+    var n = cols * rows;
+    u_curr = new Float32Array(n);
+    u_prev = new Float32Array(n);
+    u_next = new Float32Array(n);
+  }
+
+  // Wave step with REFLECTING (zero-Neumann) boundaries + inlined
+  // secondary-pulse seeding. Rotates buffer references at the end
+  // instead of allocating a fresh Float32Array.
+  function step() {
+    if (!u_curr) return;
+    var c = cols, r = rows;
+    var u = u_curr, p = u_prev, nxBuf = u_next;
+    var cnt = 0;
+    // Snapshot cfg values into locals for the inner loops (V8 likes
+    // it when hot-path math reads from locals, not object props).
+    var c2 = cfg.C2, dampPrev = cfg.DAMP_PREV, decay = cfg.DECAY, dead = cfg.DEAD;
+    var antistripe = cfg.ANTISTRIPE;
+    var seedThr = cfg.SEED_THR, seedProb = cfg.SEED_PROB;
+    var seedR = cfg.SEED_RADIUS, seedAmp = cfg.SEED_AMP;
+
+    for (var ry = 0; ry < r; ry++) {
+      var rowBase = ry * c;
+      var rowUp   = (ry === 0)     ? rowBase : rowBase - c;
+      var rowDn   = (ry === r - 1) ? rowBase : rowBase + c;
+      for (var cx = 0; cx < c; cx++) {
+        var iL = (cx === 0)     ? rowBase + cx : rowBase + cx - 1;
+        var iR = (cx === c - 1) ? rowBase + cx : rowBase + cx + 1;
+        var i  = rowBase + cx;
+        var lap = u[rowUp + cx] + u[rowDn + cx] + u[iL] + u[iR] - 4 * u[i];
+        var nx = (2 * u[i] - dampPrev * p[i] + c2 * lap) * decay;
+        // Anti-stripe term — the wave eqn under perfect reflecting
+        // boundaries can settle into stripe-shaped standing waves
+        // where the centre becomes "inside" the pattern and user
+        // clicks get absorbed back into the attractor. A tiny amount
+        // of per-cell jitter breaks the symmetry every step, so any
+        // standing pattern erodes within a few seconds and user input
+        // always lands fresh.
+        if (antistripe > 0) {
+          nx += (Math.random() - 0.5) * antistripe;
+        }
+        if (nx > 1) nx = 1; else if (nx < -1) nx = -1;
+        if (nx > -dead && nx < dead) nx = 0;
+        nxBuf[i] = nx;
+        if (nx !== 0) cnt++;
+
+        // Inline secondary-pulse seeding: when this cell crests above
+        // the threshold, occasionally drop a small secondary pulse
+        // nearby. Replaces the previous full-buffer seeding pass.
+        var absV = nx < 0 ? -nx : nx;
+        if (absV >= seedThr && Math.random() < seedProb) {
+          var dxs = (Math.random() * (seedR * 2 + 1) | 0) - seedR;
+          var dys = (Math.random() * (seedR * 2 + 1) | 0) - seedR;
+          var sx = cx + dxs, sy = ry + dys;
+          if (sx >= 0 && sx < c && sy >= 0 && sy < r) {
+            var si = sy * c + sx;
+            var sign = nx < 0 ? -1 : 1;
+            var amp = seedAmp * (0.6 + Math.random() * 0.8);
+            nxBuf[si] += sign * amp;
+          }
+        }
+      }
+    }
+
+    activeCount = cnt;
+    // Rotate buffer references — no allocation. Old u_prev becomes
+    // the working scratch for the next step (overwritten in full).
+    var tmp = u_prev;
+    u_prev = u_curr;
+    u_curr = u_next;
+    u_next = tmp;
+  }
+
+  // Stable-cell counter — read by the auto-agitate timer to know
+  // when the field has crystallised enough to need a stir.
+  var stableCount = 0;
+
+  function render() {
+    if (!u_curr) return;
+    ctx.fillStyle = FADE;
+    ctx.fillRect(0, 0, W, H);
+    var u = u_curr, c = cols, r = rows;
+    var cur = '';
+    var sCnt = 0;
+    var stableAmp = cfg.STABLE_AMP;
+    var stableLap = cfg.STABLE_LAP;
+    for (var ry = 0; ry < r; ry++) {
+      var rowBase = ry * c;
+      var py = ry * cellPx;
+      // Pre-compute neighbouring row offsets for the laplacian.
+      var rowUp = (ry === 0)     ? rowBase : rowBase - c;
+      var rowDn = (ry === r - 1) ? rowBase : rowBase + c;
+      for (var cx = 0; cx < c; cx++) {
+        var i = rowBase + cx;
+        var v = u[i];
+        var absV = v < 0 ? -v : v;
+        if (absV < 0.05) continue;
+        var px = cx * cellPx;
+        var alpha;
+        var style;
+
+        // Cheap laplacian: a cell is "inside the pattern" if its
+        // amplitude is high but its 4-neighbour laplacian is small
+        // (everyone around it is at the same phase). Renders
+        // teal-green so JH can see the standing-wave region.
+        var iL = (cx === 0)     ? i : i - 1;
+        var iR = (cx === c - 1) ? i : i + 1;
+        var lap = u[rowUp + cx] + u[rowDn + cx] + u[iL] + u[iR] - 4 * v;
+        var absLap = lap < 0 ? -lap : lap;
+        var stable = absV >= stableAmp && absLap < stableLap;
+
+        if (stable) {
+          sCnt++;
+          alpha = 0.45 + (absV - stableAmp) * 0.85;
+          if (alpha > 0.92) alpha = 0.92;
+          style = STABLE + alpha + ')';
+        } else if (absV < cfg.SEED_THR) {
+          alpha = absV * 0.55;
+          style = COOL + alpha + ')';
+        } else {
+          alpha = 0.42 + (absV - cfg.SEED_THR) * 0.95;
+          if (alpha > 0.95) alpha = 0.95;
+          style = WARM + alpha + ')';
+        }
+        if (style !== cur) { ctx.fillStyle = style; cur = style; }
+        ctx.fillRect(px, py, cellPx, cellPx);
+      }
+    }
+    stableCount = sCnt;
+  }
+
+  // Sample whether a click position lands in the "inside" region.
+  // Used to pick an enlarged pluck radius for clicks that hit a
+  // stable area — the user's click should DEMOLISH the standing
+  // pattern locally, not just nudge it.
+  function isStableAt(x, y) {
+    if (!u_curr) return false;
+    var cx = Math.floor(x / cellPx);
+    var cy = Math.floor(y / cellPx);
+    if (cx < 1 || cy < 1 || cx >= cols - 1 || cy >= rows - 1) return false;
+    var i = cy * cols + cx;
+    var v = u_curr[i];
+    var absV = v < 0 ? -v : v;
+    if (absV < cfg.STABLE_AMP) return false;
+    var lap = u_curr[(cy - 1) * cols + cx] + u_curr[(cy + 1) * cols + cx]
+            + u_curr[cy * cols + cx - 1] + u_curr[cy * cols + cx + 1]
+            - 4 * v;
+    return Math.abs(lap) < cfg.STABLE_LAP;
+  }
+
+  // Pluck: raise u_curr in a circular gaussian, give it momentum on
+  // u_prev so the pulse propagates outward as a real wave.
+  // FORCE mode — when the user clicks, we OVERRIDE the local field
+  // instead of adding to it: u_curr is set to
+  // peak·falloff (not added) and u_prev is zeroed in the same
+  // neighborhood. Result: the click destroys whatever standing
+  // pattern was in that region and lands fresh energy. Auto-drops
+  // keep the additive behavior so they blend in with whatever's
+  // already happening.
+  function pluck(x, y, radius, peak, force) {
+    if (!u_curr) return;
+    var cx = Math.floor(x / cellPx);
+    var cy = Math.floor(y / cellPx);
+    var rr = Math.max(2, Math.floor(radius / cellPx));
+    var rr2 = rr * rr;
+    for (var dy = -rr; dy <= rr; dy++) {
+      for (var dx = -rr; dx <= rr; dx++) {
+        var d2 = dx * dx + dy * dy;
+        if (d2 > rr2) continue;
+        var ny = cy + dy, nx = cx + dx;
+        if (ny < 0 || ny >= rows || nx < 0 || nx >= cols) continue;
+        var i = ny * cols + nx;
+        var falloff = 1 - Math.sqrt(d2) / rr;
+        if (force) {
+          u_curr[i] = peak * falloff;
+          u_prev[i] = 0;
+        } else {
+          u_curr[i] += peak * falloff;
+          u_prev[i] = u_curr[i] * 0.55;
+        }
+      }
+    }
+  }
+
+  function autoRipple() {
+    if (!u_curr || !activated) return;
+    var x = Math.random() * W;
+    var y = Math.random() * H;
+    // Auto raindrops are additive and gentle — they BLEND into
+    // whatever's happening on the surface rather than dominating it.
+    pluck(
+      x, y,
+      (cfg.DROP_RADIUS_MIN + Math.random() * cfg.DROP_RADIUS_VAR) * DPR,
+      cfg.DROP_PEAK_MIN + Math.random() * cfg.DROP_PEAK_VAR,
+      false
+    );
+  }
+
+  function getPos(e) {
+    var rect = canvas.getBoundingClientRect();
+    var pt = (e.touches && e.touches[0]) ? e.touches[0] : e;
+    return {
+      x: (pt.clientX - rect.left) * DPR,
+      y: (pt.clientY - rect.top) * DPR
+    };
+  }
+  function onPress(e) {
+    e.preventDefault();
+    activated = true;
+    holding = true;
+    var p = getPos(e);
+    holdX = p.x; holdY = p.y;
+    // Initialize the drag-pulse emitter at the press location so the
+    // next drag-pulse only fires after the cursor has actually moved.
+    lastEmitX = p.x; lastEmitY = p.y;
+    // When the click lands in the "inside" of a standing-wave region
+    // (the teal-green zone), the radius is multiplied by
+    // STABLE_CLICK_MULT. This guarantees the click demolishes the
+    // local stable pattern instead of being absorbed back into it —
+    // the white edge can re-form from your input.
+    var stableHere = isStableAt(p.x, p.y);
+    var radius = cfg.CLICK_RADIUS * (stableHere ? cfg.STABLE_CLICK_MULT : 1) * DPR;
+    pluck(p.x, p.y, radius, cfg.CLICK_PEAK, true);
+  }
+  function onMove(e) {
+    if (!holding) return;
+    var p = getPos(e);
+    holdX = p.x; holdY = p.y;
+    // Don't pluck on every move event; the drag-pulse emitter
+    // runs in the main loop where it can rate-limit by distance.
+  }
+  function onRelease() { holding = false; }
+
+  canvas.addEventListener('mousedown',  onPress);
+  canvas.addEventListener('touchstart', onPress, { passive: false });
+  canvas.addEventListener('mousemove',  onMove);
+  canvas.addEventListener('touchmove',  function (e) {
+    e.preventDefault();
+    if (!holding) return;
+    var p = getPos(e);
+    holdX = p.x; holdY = p.y;
+  }, { passive: false });
+  window.addEventListener('mouseup',  onRelease);
+  window.addEventListener('touchend', onRelease);
+
+  function loop() {
+    var now = performance.now();
+    if (activated) {
+      // Velocity-based drag emitter: while pressed, fire the SAME
+      // big click pulse used by single clicks, but only once the
+      // cursor has moved DRAG_PULSE_DIST_SQ since the last emission.
+      // Drag-emitted pulses also auto-amplify when they land in
+      // a stable region.
+      if (holding) {
+        var dxe = holdX - lastEmitX;
+        var dye = holdY - lastEmitY;
+        if (dxe * dxe + dye * dye >= DRAG_PULSE_DIST_SQ) {
+          var stableHere = isStableAt(holdX, holdY);
+          var dRadius = cfg.CLICK_RADIUS * (stableHere ? cfg.STABLE_CLICK_MULT : 1) * DPR;
+          pluck(holdX, holdY, dRadius, cfg.CLICK_PEAK, true);
+          lastEmitX = holdX; lastEmitY = holdY;
+        }
+      }
+      step();
+      render();
+    }
+    requestAnimationFrame(loop);
+  }
+
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 1.5);
+    var rect = canvas.getBoundingClientRect();
+    W = Math.floor(rect.width * DPR);
+    H = Math.floor(rect.height * DPR);
+    canvas.width = W; canvas.height = H;
+    cellPx = cfg.CELL * DPR;
+    cols = Math.ceil(W / cellPx) + 1;
+    rows = Math.ceil(H / cellPx) + 1;
+    alloc();
+    recomputeDragDist();
+    ctx.clearRect(0, 0, W, H);
+    activeCount = 0;
+  }
+
+  // Drag-pulse threshold scales with both cfg.DRAG_PULSE_DIST AND DPR
+  // so a slider change applies immediately without waiting for resize.
+  function recomputeDragDist() {
+    var dragD = cfg.DRAG_PULSE_DIST * DPR;
+    DRAG_PULSE_DIST_SQ = dragD * dragD;
+  }
+
+  window.addEventListener('resize', function () {
+    var rect = canvas.getBoundingClientRect();
+    var newW = Math.floor(rect.width * (window.devicePixelRatio || 1));
+    if (Math.abs(newW - W) > 30) resize();
+  });
+
+  resize();
+  requestAnimationFrame(loop);
+
+  // Auto raindrop — interval is live-tweakable from cfg so a slider
+  // change applies on the very next firing.
+  function scheduleAuto() {
+    var delay = cfg.DROP_INTERVAL_MIN + Math.random() * cfg.DROP_INTERVAL_VAR;
+    setTimeout(function () { autoRipple(); scheduleAuto(); }, delay);
+  }
+  scheduleAuto();
+
+  // (Auto-agitate burst removed — too aggressive. The teal-green
+  // "inside" rendering and the click-stable-multiplier are still in
+  // place; relying on the user's own clicks + drag-pulses +
+  // anti-stripe noise to keep the field exploring new stable states.)
+
+  // ===== controls panel ========================================
+  // Compact bottom-right card with sliders for every cfg knob.
+  // The header carries the live node count + activity dot.
+  var ctrlEl = document.getElementById('controls');
+  var ctrlInputs = {};
+  var ctrlValSpans = {};
+  var headerNumEl = null;
+
+  var CONTROL_LIST = [
+    { section: 'grid' },
+    { id: 'CELL',        label: 'resolution',  min: 4,      max: 16,    step: 1,     fmt: function(v){ return v.toFixed(0) + ' px block'; }, onChange: function(){ resize(); }, desc: 'Wave-grid cell size (CSS px, × DPR for canvas px). Smaller = finer wave, more cells, more work. Larger = chunky / pixel-art feel. Reallocates buffers on change.' },
+    { section: 'wave equation' },
+    { id: 'C2',          label: 'wave c²',     min: 0.05,   max: 0.45,  step: 0.005, fmt: function(v){ return v.toFixed(3); }, desc: 'Wave propagation speed squared. Higher = faster ripples / shorter wavelength.' },
+    { id: 'DAMP_PREV',   label: 'momentum',    min: 0.96,   max: 1.0,   step: 0.001, fmt: function(v){ return v.toFixed(3); }, desc: 'Carry-over of last-step amplitude. 1.0 = perfect memory (rings forever); lower = friction.' },
+    { id: 'DECAY',       label: 'decay',       min: 0.985,  max: 1.0,   step: 0.0001,fmt: function(v){ return v.toFixed(4); }, desc: 'Per-step amplitude multiplier. Closer to 1 = fluid persistence; lower = quick fade.' },
+    { id: 'DEAD',        label: 'dead floor',  min: 0,      max: 0.02,  step: 0.0002,fmt: function(v){ return v.toFixed(4); }, desc: 'Amplitudes below this snap to zero. Higher = cleaner edge but loses tiny ripples.' },
+    { id: 'ANTISTRIPE',  label: 'anti-stripe', min: 0,      max: 0.005, step: 0.0001,fmt: function(v){ return v.toFixed(4); }, desc: 'Per-cell jitter that erodes vertical-stripe standing waves. 0 = none; small values keep the field alive.' },
+    { section: 'seeding' },
+    { id: 'SEED_THR',    label: 'seed thr',    min: 0.05,   max: 0.9,   step: 0.01,  fmt: function(v){ return v.toFixed(2); }, desc: 'Amplitude crests above this threshold can spawn secondary pulses. Also the warm/cool color split.' },
+    { id: 'SEED_PROB',   label: 'seed prob',   min: 0,      max: 0.005, step: 0.0001,fmt: function(v){ return v.toFixed(4); }, desc: 'Per-cell per-frame chance to spawn a secondary pulse when above the threshold.' },
+    { id: 'SEED_RADIUS', label: 'seed r',      min: 1,      max: 14,    step: 1,     fmt: function(v){ return v.toFixed(0) + ' c'; }, desc: 'Distance (in CELLS, not pixels) a secondary pulse can land from the parent.' },
+    { id: 'SEED_AMP',    label: 'seed amp',    min: 0,      max: 1.5,   step: 0.05,  fmt: function(v){ return v.toFixed(2); }, desc: 'Amplitude of secondary pulses. Lower = subtle echoes; higher = ripples that spawn ripples.' },
+    { section: 'click pulse' },
+    { id: 'CLICK_RADIUS',    label: 'radius',  min: 12,     max: 140,   step: 2,     fmt: function(v){ return v.toFixed(0) + ' px'; }, desc: 'Pluck radius for user clicks (CSS px). Multiplied by STABLE_CLICK_MULT inside teal-green zones.' },
+    { id: 'CLICK_PEAK',      label: 'peak',    min: 0.2,    max: 3.0,   step: 0.05,  fmt: function(v){ return v.toFixed(2); }, desc: 'Peak amplitude at click center. Above 1 the wave clamps; tail still propagates.' },
+    { id: 'DRAG_PULSE_DIST', label: 'drag spc',min: 12,     max: 200,   step: 4,     fmt: function(v){ return v.toFixed(0) + ' px'; }, onChange: function(){ recomputeDragDist(); }, desc: 'Cursor travel between drag-emitted click pulses. Smaller = denser trail.' },
+    { section: 'rain' },
+    { id: 'DROP_INTERVAL_MIN', label: 'min int',min: 1000, max: 60000, step: 500,   fmt: function(v){ return (v/1000).toFixed(1) + ' s'; }, desc: 'Minimum time between automatic ambient raindrops.' },
+    { id: 'DROP_INTERVAL_VAR', label: 'jitter', min: 0,    max: 60000, step: 500,   fmt: function(v){ return (v/1000).toFixed(1) + ' s'; }, desc: 'Random extra delay added to the min interval each fire.' },
+    { id: 'DROP_RADIUS_MIN',   label: 'min r',  min: 1,    max: 30,    step: 1,     fmt: function(v){ return v.toFixed(0) + ' px'; }, desc: 'Minimum raindrop radius (CSS px).' },
+    { id: 'DROP_RADIUS_VAR',   label: 'r var',  min: 0,    max: 30,    step: 1,     fmt: function(v){ return v.toFixed(0) + ' px'; }, desc: 'Random extra radius added to each raindrop.' },
+    { id: 'DROP_PEAK_MIN',     label: 'min amp',min: 0,    max: 1.0,   step: 0.02,  fmt: function(v){ return v.toFixed(2); }, desc: 'Minimum raindrop peak amplitude (0–1).' },
+    { id: 'DROP_PEAK_VAR',     label: 'amp var',min: 0,    max: 1.0,   step: 0.02,  fmt: function(v){ return v.toFixed(2); }, desc: 'Random extra amplitude per drop.' },
+    { section: 'stable / inside' },
+    { id: 'STABLE_AMP',        label: 'stable |u|', min: 0.1,  max: 0.7, step: 0.02, fmt: function(v){ return v.toFixed(2); }, desc: 'Min |amplitude| for a cell to count as inside the standing pattern. Lower = more cells render teal-green.' },
+    { id: 'STABLE_LAP',        label: 'stable |∇²|', min: 0,    max: 0.05, step: 0.002, fmt: function(v){ return v.toFixed(3); }, desc: 'Max |Laplacian| for the same. Smaller = stricter (only deep insides count).' },
+    { id: 'STABLE_CLICK_MULT', label: 'click mult', min: 1.0,  max: 4.0, step: 0.1,  fmt: function(v){ return v.toFixed(1) + '×'; }, desc: 'Click radius multiplier when landing inside a teal-green zone. Higher = the click demolishes more of the standing pattern.' },
+
+    // Color pickers — one per render aspect. Each picker writes back
+    // to cfg.colors[KEY].hex and triggers rebuildColors() so the next
+    // frame paints with the new tone. Use `type: 'color'` and the
+    // buildControls() loop branches on it.
+    { section: 'colors' },
+    { id: 'WARM',   label: 'warm crest',   type: 'color', desc: 'High-amplitude crest tone (above seed threshold). The dominant glow of the bloom.' },
+    { id: 'COOL',   label: 'cool trough',  type: 'color', desc: 'Low-amplitude trail tone (below seed threshold). The dim residue behind the wavefront.' },
+    { id: 'STABLE', label: 'stable inside', type: 'color', desc: 'Standing-wave "inside" tint. Cells with high |u| and near-zero Laplacian render in this colour to show the simulation has settled.' },
+    { id: 'FADE',   label: 'fade wash',    type: 'color', desc: 'Per-frame paper wash that fades old cells out. Alpha is pinned at 0.16 — only the hue changes here.' }
+  ];
+
+  function buildControls() {
+    if (!ctrlEl) return;
+    ctrlEl.innerHTML = '';
+
+    var head = document.createElement('div');
+    head.className = 'controls-head';
+    head.innerHTML =
+      '<span><span class="live-dot"></span><span class="num" id="nodeCount">0</span> NODES</span>' +
+      '<span class="toggle">▾</span>';
+    head.addEventListener('click', function(){ ctrlEl.classList.toggle('collapsed'); });
+    ctrlEl.appendChild(head);
+    headerNumEl = head.querySelector('#nodeCount');
+
+    var body = document.createElement('div');
+    body.className = 'controls-body';
+    ctrlEl.appendChild(body);
+
+    for (var i = 0; i < CONTROL_LIST.length; i++) {
+      var c = CONTROL_LIST[i];
+      if (c.section) {
+        var sec = document.createElement('div');
+        sec.className = 'controls-section';
+        sec.textContent = '// ' + c.section;
+        body.appendChild(sec);
+        continue;
+      }
+      var row = document.createElement('div');
+      row.className = 'controls-row';
+      if (c.desc) row.title = c.desc;
+      var labelRow = document.createElement('div');
+      labelRow.className = 'label-row';
+      var lbl = document.createElement('label');
+      lbl.textContent = c.label;
+      var val = document.createElement('span');
+      val.className = 'val';
+      if (c.type === 'color') {
+        // Color controls: show the current hex in the val span, and
+        // render a <input type="color"> instead of a range slider.
+        val.textContent = cfg.colors[c.id].hex;
+      } else {
+        val.textContent = c.fmt(cfg[c.id]);
+      }
+      labelRow.appendChild(lbl); labelRow.appendChild(val);
+      row.appendChild(labelRow);
+      var inp = document.createElement('input');
+      if (c.type === 'color') {
+        inp.type = 'color';
+        inp.value = cfg.colors[c.id].hex;
+        inp.className = 'color-picker';
+        (function(c, val){
+          inp.addEventListener('input', function(e){
+            var hex = e.target.value;
+            cfg.colors[c.id].hex = hex;
+            val.textContent = hex;
+            rebuildColors();
+            if (typeof c.onChange === 'function') c.onChange();
+          });
+        })(c, val);
+      } else {
+        inp.type = 'range';
+        inp.min = c.min; inp.max = c.max; inp.step = c.step;
+        inp.value = cfg[c.id];
+        (function(c, val){
+          inp.addEventListener('input', function(e){
+            var v = parseFloat(e.target.value);
+            cfg[c.id] = v;
+            val.textContent = c.fmt(v);
+            if (typeof c.onChange === 'function') c.onChange();
+          });
+        })(c, val);
+      }
+      row.appendChild(inp);
+      // Inline description below the slider — small italic caption
+      // so the user knows what each control does without hovering.
+      if (c.desc) {
+        var descEl = document.createElement('div');
+        descEl.className = 'controls-desc';
+        descEl.textContent = c.desc;
+        row.appendChild(descEl);
+      }
+      body.appendChild(row);
+      ctrlInputs[c.id] = inp;
+      ctrlValSpans[c.id] = val;
+    }
+
+    var foot = document.createElement('div');
+    foot.className = 'controls-foot';
+    var resetBtn = document.createElement('button');
+    resetBtn.type = 'button';
+    resetBtn.textContent = 'reset';
+    resetBtn.addEventListener('click', function(){
+      // Numeric / scalar defaults
+      for (var k in defaults) {
+        if (k === 'colors') continue; // handled below
+        cfg[k] = defaults[k];
+        if (ctrlInputs[k]) ctrlInputs[k].value = cfg[k];
+        if (ctrlValSpans[k]) {
+          var ctl = CONTROL_LIST.filter(function(x){ return x.id === k; })[0];
+          if (ctl) ctrlValSpans[k].textContent = ctl.fmt(cfg[k]);
+        }
+      }
+      // Color defaults — restore each picker's hex and re-derive the
+      // rgba prefixes the renderer reads.
+      for (var ck in colorDefaults) {
+        cfg.colors[ck].hex = colorDefaults[ck];
+        if (ctrlInputs[ck]) ctrlInputs[ck].value = colorDefaults[ck];
+        if (ctrlValSpans[ck]) ctrlValSpans[ck].textContent = colorDefaults[ck];
+      }
+      rebuildColors();
+      recomputeDragDist();
+    });
+    foot.appendChild(resetBtn);
+    var copyBtn = document.createElement('button');
+    copyBtn.type = 'button';
+    copyBtn.textContent = 'log values';
+    copyBtn.addEventListener('click', function(){
+      var s = 'cfg = ' + JSON.stringify(cfg, null, 2);
+      try { console.log(s); } catch (e) {}
+      try { navigator.clipboard && navigator.clipboard.writeText(s); } catch (e) {}
+    });
+    foot.appendChild(copyBtn);
+    ctrlEl.appendChild(foot);
+  }
+  buildControls();
+
+  // Live node-count update — drives the panel header readout.
+  setInterval(function () {
+    if (headerNumEl) headerNumEl.textContent = activeCount.toLocaleString();
+  }, 360);
+})();
+
+/* ============================================
+   MORPH — signet ⟷ wordmark
+   No auto-cycle. Hover momentarily reveals the
+   wordmark; mouseleave reverts to signet. Click
+   LOCKS the current phase (so clicking on the
+   wordmark keeps it there until clicked again).
+   This makes the morph deliberate, not ambient.
+   ============================================ */
+(function () {
+  var mark = document.getElementById('centerMark');
+  if (!mark) return;
+  var locked = false;        // click toggles this
+  var lockedPhase = 'signet';
+
+  function setPhase(p) { mark.setAttribute('data-phase', p); }
+  setPhase('signet');
+
+  mark.addEventListener('mouseenter', function () {
+    if (locked) return;
+    setPhase('wordmark');
+  });
+  mark.addEventListener('mouseleave', function () {
+    if (locked) return;
+    setPhase('signet');
+  });
+  mark.addEventListener('click', function () {
+    mark.classList.add('touched');
+    // Toggle the locked state. If we were unlocked and hovering, lock
+    // into wordmark; if we were locked, unlock back to signet.
+    if (locked) {
+      locked = false;
+      lockedPhase = 'signet';
+      setPhase('signet');
+    } else {
+      locked = true;
+      lockedPhase = 'wordmark';
+      setPhase('wordmark');
+    }
+  });
+})();
+</script>
+
+
+<script>
+  (function () {
+    const LOGOS = [
+      { id: 'infinite', signet: { sym: 'opInfinite',   vb: '0 0 497 329'   }, type: { sym: 'opInfiniteType', vb: '0 0 3549 1107' } },
+      { id: 'style',    signet: { sym: 'opStyle',      vb: '0 0 142 142'   }, type: { sym: 'opStyleType',    vb: '0 0 3840 998'  } },
+      { id: 'circle',   signet: { sym: 'opCircleMark', vb: '0 0 2843 2160' }, type: { sym: 'opCircleType',   vb: '0 0 3905 1443' } },
+      { id: 'swish',    signet: { sym: 'opSwish',      vb: '0 0 152 107'   }, type: { sym: 'opSwishType',    vb: '0 0 3025 752'  } },
+      { id: 'cursive',  signet: { sym: 'opCursive',    vb: '0 0 1737 1846' }, type: { sym: 'opCursiveType',  vb: '0 0 3776 1586' } }
+    ];
+    // PER-PAGE: change idx to match the family this page starts on.
+    //   0=infinite  1=style  2=circle  3=swish  4=cursive
+    let idx = 1;
+
+    function applyLogo() {
+      const set = LOGOS[idx];
+      document.querySelectorAll('.swap-logo').forEach(svg => {
+        const kind = svg.dataset.kind === 'wordmark' ? 'type' : 'signet';
+        const target = set[kind];
+        svg.setAttribute('viewBox', target.vb);
+        const useEl = svg.querySelector('use');
+        if (useEl) {
+          useEl.setAttribute('href', '#' + target.sym);
+          // Older browsers fall back to xlink:href; keep both in sync.
+          try { useEl.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '#' + target.sym); } catch (e) {}
+        }
+      });
+      try { window.dispatchEvent(new CustomEvent('swap-logo-changed', { detail: { id: set.id } })); } catch (e) {}
+    }
+
+    /* Apply initial logo at script boot — otherwise the page paints with the
+       broken hardcoded #opType href and the hero stays invisible until first click. */
+    applyLogo();
+
+    // Drag-aware click detection — measure pointer travel between down
+    // and up.  Below the threshold (small move) → treat as click → toggle.
+    // Above → it was a drag.  Lets a draggable .swap-logo coexist with
+    // the cycle gesture.
+    const DRAG_THRESHOLD = 6; // px
+    let downX = 0, downY = 0, downTarget = null;
+    function onPointerDown(e) {
+      const t = e.target.closest('.swap-logo');
+      if (!t) { downTarget = null; return; }
+      downTarget = t;
+      const p = (e.touches && e.touches[0]) ? e.touches[0] : e;
+      downX = p.clientX; downY = p.clientY;
+    }
+    function onPointerUp(e) {
+      if (!downTarget) return;
+      const t = e.target.closest('.swap-logo');
+      if (!t || t !== downTarget) { downTarget = null; return; }
+      const p = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : e;
+      const dx = p.clientX - downX;
+      const dy = p.clientY - downY;
+      downTarget = null;
+      if (Math.hypot(dx, dy) > DRAG_THRESHOLD) return; // it was a drag, not a click
+      idx = (idx + 1) % LOGOS.length;
+      applyLogo();
+    }
+    // Suppress the default <a href="#"> when the click actually toggles
+    // a swap-logo.
+    function onClickCapture(e) {
+      if (e.target.closest('.swap-logo')) e.preventDefault();
+    }
+    document.addEventListener('mousedown',  onPointerDown, true);
+    document.addEventListener('mouseup',    onPointerUp,   true);
+    document.addEventListener('touchstart', onPointerDown, { capture: true, passive: true });
+    document.addEventListener('touchend',   onPointerUp,   true);
+    document.addEventListener('click',      onClickCapture, true);
+  })();
+  </script>
+
+</body>
+</html>

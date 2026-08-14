@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 142 142'%3E%3Cpath d='M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z' fill='%232a2520'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>OpenProse — Write the outcome. We run it.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,300;0,7..72,400;0,7..72,500;0,7..72,600;0,7..72,700;1,7..72,400&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================
+   APPROACH H — WARM EDITORIAL
+   Faithful to the OpenProse.ai brand:
+   warm academic minimalism, paper palette,
+   serif-dominant, corner bracket accents
+============================================ */
+
+:root {
+    --bg:             #faf7f2;
+    --bg-warm:        #f5f0e6;
+    --bg-code:        #f0ead8;
+    --surface-hover:  #f5f0e6;
+
+    --text:           #1c1917;
+    --text-secondary: #44403c;
+    --text-muted:     #78716c;
+    --text-ghost:     #a8a29e;
+
+    --border-light:   #e8dfd0;
+    --border-mid:     #ede6d6;
+
+    --green:          #16a34a;
+    --green-soft:     rgba(22,163,74,0.1);
+    --blue:           #3b82f6;
+    --blue-soft:      rgba(59,130,246,0.08);
+    --red-soft:       rgba(251,44,54,0.08);
+    --red:            #fb2c36;
+
+    --serif:          'Literata', Georgia, serif;
+    --mono:           'JetBrains Mono', 'Courier New', monospace;
+
+    --space-xs:  0.5rem;
+    --space-sm:  1rem;
+    --space-md:  1.75rem;
+    --space-lg:  3rem;
+    --space-xl:  5rem;
+    --space-2xl: 8rem;
+
+    --max-w:     860px;
+    --radius:    8px;
+    --radius-lg: 16px;
+}
+
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--serif);
+    font-size: 18px;
+    line-height: 1.75;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================
+   PAPER TEXTURE
+============================================ */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.3;
+    background-image:
+        url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 256px 256px;
+}
+
+/* Warm grain overlay */
+body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    background:
+        radial-gradient(ellipse at 20% 0%, rgba(217,119,6,0.03) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 100%, rgba(120,113,108,0.04) 0%, transparent 60%);
+}
+
+/* ============================================
+   LAYOUT
+============================================ */
+.page-content {
+    position: relative;
+    z-index: 1;
+}
+
+section {
+    padding: var(--space-xl) var(--space-md);
+}
+
+.container {
+    max-width: var(--max-w);
+    margin: 0 auto;
+}
+
+/* ============================================
+   TYPOGRAPHY
+============================================ */
+h1 {
+    font-family: var(--serif);
+    font-size: clamp(2.4rem, 5vw, 3.6rem);
+    font-weight: 400;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    color: var(--text);
+}
+
+h2 {
+    font-family: var(--serif);
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    font-weight: 400;
+    line-height: 1.3;
+    color: var(--text);
+    margin-bottom: var(--space-md);
+}
+
+h3 {
+    font-family: var(--serif);
+    font-size: 1.15rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--text);
+    margin-bottom: var(--space-xs);
+}
+
+p {
+    color: var(--text-secondary);
+    max-width: 600px;
+}
+
+.label {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+/* ============================================
+   SCROLL REVEAL
+============================================ */
+.reveal {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+}
+
+.reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ============================================
+   NAV
+============================================ */
+nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: var(--space-sm) var(--space-md);
+    background: rgba(250,247,242,0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-mid);
+    transition: box-shadow 0.3s ease;
+}
+
+nav.scrolled {
+    box-shadow: 0 1px 8px rgba(28,25,23,0.06);
+}
+
+nav .nav-inner {
+    max-width: var(--max-w);
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.nav-logo {
+    font-family: var(--serif);
+    font-size: 1.15rem;
+    font-weight: 400;
+    color: var(--text);
+    text-decoration: none;
+}
+
+.nav-links {
+    display: flex;
+    gap: var(--space-md);
+    align-items: center;
+}
+
+.nav-links a {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.nav-links a:hover {
+    color: var(--text);
+}
+
+/* ============================================
+   BUTTONS
+============================================ */
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.75rem;
+    background: var(--text);
+    color: var(--bg);
+    font-family: var(--serif);
+    font-size: 0.95rem;
+    font-weight: 400;
+    border: none;
+    border-radius: 100px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.btn-primary:hover {
+    background: var(--text-secondary);
+    transform: translateY(-1px);
+}
+
+.btn-primary .chevron {
+    transition: transform 0.2s ease;
+    font-size: 0.85em;
+}
+
+.btn-primary:hover .chevron {
+    transform: translateX(3px);
+}
+
+.btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.75rem;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: var(--serif);
+    font-size: 0.95rem;
+    font-weight: 400;
+    border: 1px solid var(--border-light);
+    border-radius: 100px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.btn-ghost:hover {
+    border-color: var(--text-muted);
+    color: var(--text);
+    background: var(--surface-hover);
+}
+
+/* ============================================
+   CORNER BRACKET FRAME
+============================================ */
+.bracket-frame {
+    position: relative;
+    padding: var(--space-lg);
+}
+
+.bracket-frame::before,
+.bracket-frame::after,
+.bracket-frame .corner-bl,
+.bracket-frame .corner-br {
+    content: '';
+    position: absolute;
+    width: 28px;
+    height: 28px;
+    opacity: 0;
+    transition: opacity 0.8s ease 0.2s;
+}
+
+.bracket-frame.visible::before,
+.bracket-frame.visible::after,
+.bracket-frame.visible .corner-bl,
+.bracket-frame.visible .corner-br {
+    opacity: 1;
+}
+
+/* Top-left */
+.bracket-frame::before {
+    top: 0; left: 0;
+    border-top: 1.5px solid var(--border-light);
+    border-left: 1.5px solid var(--border-light);
+}
+
+/* Top-right */
+.bracket-frame::after {
+    top: 0; right: 0;
+    border-top: 1.5px solid var(--border-light);
+    border-right: 1.5px solid var(--border-light);
+}
+
+/* Bottom-left */
+.bracket-frame .corner-bl {
+    bottom: 0; left: 0;
+    border-bottom: 1.5px solid var(--border-light);
+    border-left: 1.5px solid var(--border-light);
+}
+
+/* Bottom-right */
+.bracket-frame .corner-br {
+    bottom: 0; right: 0;
+    border-bottom: 1.5px solid var(--border-light);
+    border-right: 1.5px solid var(--border-light);
+}
+
+/* ============================================
+   HERO
+============================================ */
+.hero {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-top: calc(var(--space-2xl) + 60px);
+    padding-bottom: var(--space-2xl);
+}
+
+.hero .container {
+    text-align: center;
+}
+
+.hero .bracket-frame {
+    display: inline-block;
+    padding: var(--space-lg) var(--space-xl);
+}
+
+.hero-tagline {
+    font-family: var(--serif);
+    font-size: clamp(1.05rem, 2vw, 1.25rem);
+    font-weight: 400;
+    color: var(--text-secondary);
+    margin-top: var(--space-sm);
+    font-style: italic;
+}
+
+.hero-subtitle {
+    font-size: 1rem;
+    color: var(--text-muted);
+    margin-top: var(--space-sm);
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.65;
+}
+
+.hero-ctas {
+    display: flex;
+    gap: var(--space-sm);
+    justify-content: center;
+    margin-top: var(--space-lg);
+    flex-wrap: wrap;
+}
+
+/* ============================================
+   SECTION DIVIDER
+============================================ */
+.divider {
+    width: 100%;
+    max-width: var(--max-w);
+    margin: 0 auto;
+    height: 1px;
+    background: var(--border-mid);
+}
+
+/* ============================================
+   WHAT IS OPENPROSE
+============================================ */
+.what-section {
+    padding-top: var(--space-xl);
+    padding-bottom: var(--space-xl);
+}
+
+.what-section .label {
+    margin-bottom: var(--space-sm);
+}
+
+.what-section p {
+    font-size: 1.05rem;
+    line-height: 1.8;
+    margin-bottom: var(--space-lg);
+}
+
+.code-block {
+    background: var(--bg-code);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius);
+    padding: var(--space-md);
+    overflow-x: auto;
+    position: relative;
+}
+
+.code-block .code-label {
+    position: absolute;
+    top: var(--space-xs);
+    right: var(--space-sm);
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    color: var(--text-ghost);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.code-block pre {
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    line-height: 1.85;
+    color: var(--text-secondary);
+    tab-size: 2;
+}
+
+/* Warm syntax highlighting */
+.code-block .kw    { color: #1c1917; font-weight: 500; }
+.code-block .str   { color: #92400e; }
+.code-block .cmt   { color: var(--text-ghost); font-style: italic; }
+.code-block .prop  { color: #78716c; }
+.code-block .val   { color: #166534; }
+.code-block .punct { color: var(--border-light); }
+
+/* ============================================
+   THREE LAYERS
+============================================ */
+.layers-section {
+    padding-top: var(--space-xl);
+    padding-bottom: var(--space-xl);
+}
+
+.layers-section .label {
+    margin-bottom: var(--space-sm);
+}
+
+.layers-section > .container > p {
+    margin-bottom: var(--space-lg);
+}
+
+.layers-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-md);
+}
+
+.layer-card {
+    background: var(--bg);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius);
+    padding: var(--space-md);
+    transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.layer-card:hover {
+    background: var(--surface-hover);
+    border-color: var(--border-light);
+    box-shadow: 0 2px 12px rgba(28,25,23,0.04);
+}
+
+.layer-card .layer-number {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--text-ghost);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: var(--space-xs);
+}
+
+.layer-card h3 {
+    font-size: 1.1rem;
+}
+
+.layer-card p {
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: var(--text-muted);
+}
+
+/* ============================================
+   BEFORE/AFTER
+============================================ */
+.compare-section {
+    padding-top: var(--space-xl);
+    padding-bottom: var(--space-xl);
+}
+
+.compare-section .label {
+    margin-bottom: var(--space-sm);
+}
+
+.compare-grid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: var(--space-md);
+    align-items: start;
+    margin-top: var(--space-lg);
+}
+
+.compare-card {
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius);
+    padding: var(--space-md);
+}
+
+.compare-card.before {
+    background: var(--red-soft);
+    border-color: rgba(251,44,54,0.12);
+}
+
+.compare-card.after {
+    background: var(--green-soft);
+    border-color: rgba(22,163,74,0.12);
+}
+
+.compare-card .compare-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: var(--space-sm);
+}
+
+.compare-card.before .compare-label { color: var(--red); }
+.compare-card.after .compare-label  { color: var(--green); }
+
+.compare-card ul {
+    list-style: none;
+    padding: 0;
+}
+
+.compare-card ul li {
+    font-size: 0.92rem;
+    color: var(--text-secondary);
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--border-mid);
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+}
+
+.compare-card ul li:last-child {
+    border-bottom: none;
+}
+
+.compare-card ul li .icon {
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+.compare-card.before .icon { color: var(--red); }
+.compare-card.after .icon  { color: var(--green); }
+
+.compare-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-ghost);
+    font-size: 1.5rem;
+    padding-top: 2.5rem;
+}
+
+/* ============================================
+   CASE STUDY
+============================================ */
+.case-section {
+    padding-top: var(--space-xl);
+    padding-bottom: var(--space-xl);
+    background: var(--bg-warm);
+}
+
+.case-section .label {
+    margin-bottom: var(--space-sm);
+}
+
+.case-card {
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    background: var(--bg);
+    padding: var(--space-lg);
+    margin-top: var(--space-md);
+}
+
+.case-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    margin-bottom: var(--space-md);
+    padding-bottom: var(--space-md);
+    border-bottom: 1px solid var(--border-mid);
+}
+
+.case-company {
+    font-family: var(--serif);
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: var(--text);
+}
+
+.case-industry {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    background: var(--bg-warm);
+    padding: 0.25rem 0.75rem;
+    border-radius: 100px;
+    text-transform: uppercase;
+}
+
+.case-body p {
+    font-size: 1rem;
+    line-height: 1.8;
+    margin-bottom: var(--space-md);
+}
+
+.case-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-sm);
+    margin-top: var(--space-md);
+}
+
+.metric {
+    text-align: center;
+    padding: var(--space-sm);
+}
+
+.metric-value {
+    font-family: var(--serif);
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: var(--green);
+    line-height: 1.2;
+}
+
+.metric-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 0.25rem;
+}
+
+/* Sparkline */
+.sparkline-wrap {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-top: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--bg-warm);
+    border-radius: var(--radius);
+    border: 1px solid var(--border-mid);
+}
+
+.sparkline-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.sparkline svg {
+    flex: 1;
+    height: 32px;
+}
+
+/* ============================================
+   OPEN SOURCE
+============================================ */
+.oss-section {
+    padding-top: var(--space-xl);
+    padding-bottom: var(--space-xl);
+}
+
+.oss-section .label {
+    margin-bottom: var(--space-sm);
+}
+
+.oss-section > .container > p {
+    margin-bottom: var(--space-lg);
+}
+
+.oss-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-sm);
+    margin-bottom: var(--space-lg);
+}
+
+.stat {
+    text-align: center;
+    padding: var(--space-md) var(--space-sm);
+    border: 1px solid var(--border-mid);
+    border-radius: var(--radius);
+    transition: background 0.2s ease;
+}
+
+.stat:hover {
+    background: var(--surface-hover);
+}
+
+.stat-value {
+    font-family: var(--serif);
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.2;
+}
+
+.stat-label {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 0.25rem;
+}
+
+.oss-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+}
+
+.oss-option {
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius);
+    padding: var(--space-md);
+    transition: background 0.2s ease;
+}
+
+.oss-option:hover {
+    background: var(--surface-hover);
+}
+
+.oss-option h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.oss-option p {
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: var(--text-muted);
+}
+
+/* ============================================
+   FINAL CTA
+============================================ */
+.cta-section {
+    padding-top: var(--space-2xl);
+    padding-bottom: var(--space-2xl);
+    text-align: center;
+}
+
+.cta-section .bracket-frame {
+    display: inline-block;
+    padding: var(--space-xl);
+}
+
+.cta-section h2 {
+    margin-bottom: var(--space-sm);
+}
+
+.cta-section p {
+    margin: 0 auto var(--space-lg);
+    text-align: center;
+    font-size: 1rem;
+}
+
+/* ============================================
+   FOOTER
+============================================ */
+footer {
+    border-top: 1px solid var(--border-mid);
+    padding: var(--space-md);
+    text-align: center;
+}
+
+footer p {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--text-ghost);
+    letter-spacing: 0.06em;
+    margin: 0 auto;
+}
+
+footer a {
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+footer a:hover {
+    color: var(--text);
+}
+
+/* ============================================
+   RESPONSIVE
+============================================ */
+@media (max-width: 768px) {
+    section {
+        padding: var(--space-lg) var(--space-sm);
+    }
+
+    .layers-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .compare-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .compare-arrow {
+        transform: rotate(90deg);
+        padding: 0;
+    }
+
+    .case-metrics {
+        grid-template-columns: 1fr;
+    }
+
+    .oss-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .oss-options {
+        grid-template-columns: 1fr;
+    }
+
+    .hero .bracket-frame {
+        padding: var(--space-md) var(--space-sm);
+    }
+
+    .nav-links {
+        gap: var(--space-sm);
+    }
+}
+
+@media (max-width: 480px) {
+    .hero-ctas {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .oss-stats {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+
+
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+  span.str { width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: auto; word-break: break-word; }
+  span.str { width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: auto; word-break: break-word; }
+  div.sparkline { width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: auto; word-break: break-word; }
+}
+</style>
+</head>
+<body>
+
+<div class="page-content">
+
+<!-- NAV -->
+<nav>
+    <div class="nav-inner">
+        <a href="#" class="nav-logo">OpenProse</a>
+        <div class="nav-links">
+            <a href="#what">About</a>
+            <a href="#layers">Stack</a>
+            <a href="#case-study">Case Study</a>
+            <a href="#open-source">Open Source</a>
+        </div>
+    </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+    <div class="container">
+        <div class="bracket-frame reveal">
+            <span class="corner-bl"></span>
+            <span class="corner-br"></span>
+            <h1>OpenProse</h1>
+            <p class="hero-tagline">Write the outcome. We run it.</p>
+        </div>
+        <p class="hero-subtitle reveal">
+            Declarative agent orchestration for teams that want results, not workflows.
+            Define responsibilities in plain language. Agents handle execution autonomously.
+        </p>
+        <div class="hero-ctas reveal">
+            <a href="#cta" class="btn-primary">
+                Define your first responsibility
+                <span class="chevron">&#8594;</span>
+            </a>
+            <a href="#what" class="btn-ghost">
+                See how responsibilities work
+            </a>
+        </div>
+    </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- WHAT IS OPENPROSE -->
+<section class="what-section" id="what">
+    <div class="container">
+        <span class="label reveal">How it works</span>
+        <h2 class="reveal">What is OpenProse?</h2>
+        <p class="reveal">
+            You write responsibilities in plain language. Each responsibility describes
+            an outcome you care about, not the steps to achieve it. Agents read your
+            <code>.prose</code> files, coordinate with each other, and deliver results
+            on the cadence you set.
+        </p>
+        <p class="reveal">
+            No imperative scripts. No brittle pipelines. Just a clear statement of what
+            should be true, and a runtime that makes it so.
+        </p>
+
+        <div class="code-block reveal">
+            <span class="code-label">.prose file</span>
+<pre><span class="cmt"># team-health.prose</span>
+
+<span class="kw">responsibility</span> <span class="str">"Weekly team pulse"</span>
+  <span class="prop">owner:</span>     <span class="val">engineering-ops</span>
+  <span class="prop">cadence:</span>   <span class="val">every Monday at 9am</span>
+  <span class="prop">outcome:</span>   <span class="str">"Collect sentiment from each team member,
+             flag any scores below 6, and post a
+             summary to #eng-health with trends."</span>
+
+<span class="kw">responsibility</span> <span class="str">"Dependency audit"</span>
+  <span class="prop">owner:</span>     <span class="val">security</span>
+  <span class="prop">cadence:</span>   <span class="val">daily</span>
+  <span class="prop">outcome:</span>   <span class="str">"Scan all repos for outdated or vulnerable
+             dependencies. Open PRs for safe updates.
+             Escalate critical CVEs to #security."</span></pre>
+        </div>
+    </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- THREE LAYERS -->
+<section class="layers-section" id="layers">
+    <div class="container">
+        <span class="label reveal">The open source stack</span>
+        <h2 class="reveal">Three layers, one system</h2>
+        <p class="reveal">
+            OpenProse is a complete stack for responsibility-driven orchestration.
+            Each layer is independently useful, and together they form a coherent whole.
+        </p>
+
+        <div class="layers-grid">
+            <div class="layer-card reveal">
+                <span class="layer-number">Layer 01</span>
+                <h3>Language</h3>
+                <p>
+                    How you describe work. A structured format for declaring responsibilities,
+                    owners, cadences, and expected outcomes. Human-readable, machine-executable.
+                </p>
+            </div>
+            <div class="layer-card reveal">
+                <span class="layer-number">Layer 02</span>
+                <h3>Framework</h3>
+                <p>
+                    How agents coordinate. The orchestration layer that reads your responsibility
+                    files, assigns work to capable agents, and manages handoffs between them.
+                </p>
+            </div>
+            <div class="layer-card reveal">
+                <span class="layer-number">Layer 03</span>
+                <h3>Runtime</h3>
+                <p>
+                    Where work executes. A sandboxed environment that runs agent tasks,
+                    enforces permissions, tracks progress, and delivers results back
+                    to the people who care.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- BEFORE / AFTER -->
+<section class="compare-section" id="compare">
+    <div class="container">
+        <span class="label reveal">The shift</span>
+        <h2 class="reveal">From managing tools to defining outcomes</h2>
+
+        <div class="compare-grid reveal">
+            <div class="compare-card before">
+                <div class="compare-label">Before</div>
+                <ul>
+                    <li><span class="icon">&#x2715;</span> 4 monitoring tools with separate dashboards</li>
+                    <li><span class="icon">&#x2715;</span> 3 integration platforms to maintain</li>
+                    <li><span class="icon">&#x2715;</span> Weekly check-in meetings to review status</li>
+                    <li><span class="icon">&#x2715;</span> Manual triage when something breaks</li>
+                </ul>
+            </div>
+
+            <div class="compare-arrow">&#8594;</div>
+
+            <div class="compare-card after">
+                <div class="compare-label">After</div>
+                <ul>
+                    <li><span class="icon">&#x2713;</span> One responsibility file per concern</li>
+                    <li><span class="icon">&#x2713;</span> Results delivered on cadence, automatically</li>
+                    <li><span class="icon">&#x2713;</span> Escalations routed to the right person</li>
+                    <li><span class="icon">&#x2713;</span> Audit trail for every action taken</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- CASE STUDY -->
+<section class="case-section" id="case-study">
+    <div class="container">
+        <span class="label reveal">Case study</span>
+        <h2 class="reveal">Meridian Energy Systems</h2>
+
+        <div class="case-card reveal">
+            <div class="case-header">
+                <div>
+                    <div class="case-company">Anomaly detection across 14,000 sensors</div>
+                    <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.25rem;">
+                        Industrial IoT monitoring for distributed power infrastructure
+                    </p>
+                </div>
+                <span class="case-industry">Energy &amp; Infrastructure</span>
+            </div>
+
+            <div class="case-body">
+                <p>
+                    Meridian's reliability team spent 20 hours per week manually reviewing
+                    sensor data, triaging alerts, and coordinating responses across regional offices.
+                    Most of that time went to context-switching between dashboards and writing
+                    incident summaries.
+                </p>
+                <p>
+                    With OpenProse, they defined three responsibilities: anomaly detection,
+                    threshold alerting, and weekly reliability reporting. The agents now monitor
+                    all 14,000 sensors continuously, flag deviations in real time, and deliver
+                    formatted reports every Monday.
+                </p>
+            </div>
+
+            <div class="case-metrics">
+                <div class="metric">
+                    <div class="metric-value">20 hrs</div>
+                    <div class="metric-label">Weekly time recovered</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value">14K</div>
+                    <div class="metric-label">Sensors monitored</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value">94%</div>
+                    <div class="metric-label">Faster anomaly response</div>
+                </div>
+            </div>
+
+            <div class="sparkline-wrap">
+                <span class="sparkline-label">Anomalies detected (12 wk)</span>
+                <div class="sparkline">
+                    <svg viewBox="0 0 200 32" preserveAspectRatio="none" fill="none">
+                        <polyline
+                            points="0,28 16,24 32,26 48,18 64,22 80,14 96,16 112,8 128,12 144,6 160,10 176,4 192,6 200,2"
+                            stroke="#16a34a"
+                            stroke-width="1.5"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            fill="none"
+                        />
+                        <linearGradient id="spark-fill" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#16a34a" stop-opacity="0.15"/>
+                            <stop offset="100%" stop-color="#16a34a" stop-opacity="0"/>
+                        </linearGradient>
+                        <polygon
+                            points="0,32 0,28 16,24 32,26 48,18 64,22 80,14 96,16 112,8 128,12 144,6 160,10 176,4 192,6 200,2 200,32"
+                            fill="url(#spark-fill)"
+                        />
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- OPEN SOURCE -->
+<section class="oss-section" id="open-source">
+    <div class="container">
+        <span class="label reveal">Open source</span>
+        <h2 class="reveal">Built in the open, backed by YC</h2>
+        <p class="reveal">
+            OpenProse is MIT licensed. Run it on your own infrastructure or let us host it.
+            The community decides where this goes next.
+        </p>
+
+        <div class="oss-stats reveal">
+            <div class="stat">
+                <div class="stat-value">MIT</div>
+                <div class="stat-label">License</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">6K+</div>
+                <div class="stat-label">Installs</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">1K+</div>
+                <div class="stat-label">GitHub Stars</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">YC</div>
+                <div class="stat-label">Backed</div>
+            </div>
+        </div>
+
+        <div class="oss-options reveal">
+            <div class="oss-option">
+                <h3>&#9632; Self-hosted</h3>
+                <p>
+                    Deploy on your infrastructure. Full control over data,
+                    networking, and agent permissions. Docker or bare metal.
+                </p>
+            </div>
+            <div class="oss-option">
+                <h3>&#9679; Managed</h3>
+                <p>
+                    We handle hosting, scaling, and updates. You define
+                    responsibilities and review results. Free tier available.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- FINAL CTA -->
+<section class="cta-section" id="cta">
+    <div class="container">
+        <div class="bracket-frame reveal">
+            <span class="corner-bl"></span>
+            <span class="corner-br"></span>
+            <h2>Define your first responsibility</h2>
+            <p>
+                Start with one outcome that matters to your team.
+                OpenProse handles the rest.
+            </p>
+            <a href="#" class="btn-primary">
+                Get started
+                <span class="chevron">&#8594;</span>
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+    <p>
+        OpenProse &middot; MIT License &middot;
+        <a href="#">GitHub</a> &middot;
+        <a href="#">Docs</a> &middot;
+        <a href="#">Discord</a>
+    </p>
+</footer>
+
+</div><!-- .page-content -->
+
+<script>
+/* ============================================
+   SCROLL REVEAL + BRACKET ANIMATION
+============================================ */
+(function() {
+    const reveals = document.querySelectorAll('.reveal');
+
+    const observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+            }
+        });
+    }, {
+        threshold: 0.15,
+        rootMargin: '0px 0px -40px 0px'
+    });
+
+    reveals.forEach(function(el) {
+        observer.observe(el);
+    });
+})();
+
+/* ============================================
+   NAV SCROLL SHADOW
+============================================ */
+(function() {
+    var nav = document.querySelector('nav');
+    window.addEventListener('scroll', function() {
+        if (window.scrollY > 20) {
+            nav.classList.add('scrolled');
+        } else {
+            nav.classList.remove('scrolled');
+        }
+    });
+})();
+
+/* ============================================
+   SMOOTH SCROLL FOR ANCHOR LINKS
+============================================ */
+(function() {
+    document.querySelectorAll('a[href^="#"]').forEach(function(anchor) {
+        anchor.addEventListener('click', function(e) {
+            var targetId = this.getAttribute('href');
+            if (targetId === '#') return;
+            var target = document.querySelector(targetId);
+            if (target) {
+                e.preventDefault();
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+    });
+})();
+</script>
+</body>
+</html>

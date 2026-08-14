@@ -1,0 +1,1449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 142 142'%3E%3Cpath d='M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z' fill='%232a2520'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenProse — Direction κ · Codex Spreads</title>
+<style>
+/* ============================================
+   DIRECTION κ · CODEX SPREADS
+   The literal reading of JH's inspiration-folder ChatGPT
+   mock: four book spreads showing the same OpenProse
+   program at four states of execution, side-by-side.
+
+   Where θ Living Document is ONE self-improving page,
+   κ shows FOUR states co-existing on the same page —
+   like a graphic novel of a program executing. The
+   reader sees the system smarter at each panel.
+
+   DNA: warm parchment cream #f3ead4 with sepia ink
+   #3a2618. Old-style serif (Crimson Pro) for prose,
+   Cormorant for display, JetBrains Mono for spec. A
+   single warm rust accent #b35a30 (different from
+   θ's ember-amber and γ's gold). Subtle paper grain
+   on body::before to feel like an actual printed manual.
+
+   The defining move (Section V): a four-spread layout
+   showing the SAME program at runs 1, 12, 28, and 42 —
+   visible all at once, reading left-to-right top-to-
+   bottom. Each spread has a slightly more elaborated
+   spec block, a sparkline that grows, an eval score
+   that climbs. The page IS the storyboard.
+
+   Same 9-section markup as α–θ.
+   ============================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --paper:     #f5f0e8;
+  --paper-dk:  #ede7d6;
+  --paper-lt:  #faf8f3;
+  --ink:       #0f0f0f;
+  --ink-2:     #2e2e2e;
+  --ink-3:     #5a5a5a;
+  --ink-4:     #909090;
+  --red:       #c0392b;
+  --red-muted: #d4604f;
+  --red-deep:  #8e2b20;
+  --rule:      #d8d0c0;
+  --rule-mid:  #e2dcc9;
+
+  /* NEW — the highlighter palette. Two stops so the mark lands
+     as a visible stroke over paper without bleeding the whole row.
+     Yellow = the reader's marker (calm, studious).
+     Hot red = editorial emphasis (urgent, "look here"). */
+  --hl:        rgba(255, 207, 64, 0.36);
+  --hl-hot:    rgba(218, 105, 72, 0.32);
+
+  --serif: 'Palatino Linotype', 'Palatino', 'Book Antiqua', Georgia, serif;
+  --sans:  'Helvetica Neue', 'Helvetica', Arial, sans-serif;
+  --mono:  'SF Mono', 'Fira Code', 'JetBrains Mono', Consolas, monospace;
+  --wide: 1180px;
+  --measure: 860px;
+}
+
+html { font-size: 17px; scroll-behavior: smooth; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--serif);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
+}
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 15% 8%, rgba(192,57,43,0.03), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 95% 95%, rgba(192,57,43,0.02), transparent 60%);
+}
+body > * { position: relative; z-index: 1; }
+
+/* HIGHLIGHTER MARK — the reader's pen. Linear-gradient rests under the
+   baseline so it reads like a thick marker stroke, not a solid block.
+   Inline so it wraps naturally inside the prose. */
+.hl,
+.hl-hot {
+  background: var(--hl);
+  padding: 0.06em 0.18em;
+  /* Keep gilt/warmth consistent with the warm paper ground. */
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  /* Italic inside a highlighter gets harder to read; drop the italic when the
+     highlighter is applied to an <em>. Red italic is authorial voice; the
+     highlighter replaces that role with reader emphasis. */
+  font-style: inherit;
+  color: inherit;
+}
+.hl-hot { background: var(--hl-hot); }
+
+/* HERO */
+.hero {
+  padding: 5.5rem 2rem 4rem;
+  text-align: center;
+  max-width: var(--wide); margin: 0 auto;
+  position: relative;
+}
+.hero-eyebrow {
+  font-family: var(--sans); font-size: 0.72rem;
+  letter-spacing: 0.24em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 2.5rem;
+  display: inline-flex; align-items: center; gap: 0.75rem;
+}
+.hero-eyebrow::before, .hero-eyebrow::after {
+  content: ''; width: 28px; height: 1px; background: var(--red);
+}
+.hero-mark {
+  font-family: var(--serif);
+  font-size: clamp(4rem, 11vw, 8rem);
+  font-weight: 400; line-height: 0.95;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+.hero-mark em { font-style: italic; color: var(--red); }
+.hero-rule { width: 120px; height: 1px; background: var(--red); margin: 2rem auto 1.5rem; }
+.hero-tagline {
+  font-family: var(--serif);
+  font-size: clamp(1.05rem, 1.8vw, 1.25rem);
+  font-style: italic; color: var(--ink-2);
+  letter-spacing: 0.005em;
+}
+.hero-meta {
+  margin-top: 2rem;
+  font-family: var(--mono); font-size: 0.66rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* SECTIONS */
+section.logotype-section {
+  max-width: var(--wide); margin: 0 auto;
+  padding: 4.5rem 2rem;
+}
+section.logotype-section.narrow { max-width: var(--measure); }
+
+.section-kicker {
+  font-family: var(--sans); font-size: 0.7rem;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 1.25rem;
+  display: flex; align-items: center; gap: 0.85rem;
+}
+.section-kicker::after { content: ''; flex: 1; height: 1px; background: var(--red-muted); opacity: 0.5; }
+
+section.logotype-section h2 {
+  font-family: var(--serif);
+  font-size: clamp(1.8rem, 3.2vw, 2.4rem);
+  font-weight: 400; line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin-bottom: 0.5rem;
+}
+section.logotype-section h2 em { font-style: italic; color: var(--red); }
+section.logotype-section .lede {
+  font-family: var(--serif); font-size: 1.08rem;
+  color: var(--ink-2); max-width: 58ch;
+  margin-bottom: 2rem; line-height: 1.55;
+}
+section.logotype-section .lede::first-line {
+  font-variant: small-caps; letter-spacing: 0.04em;
+}
+
+/* PALETTE */
+.palette-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;
+  margin-top: 2rem;
+}
+.swatch {
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  padding: 1rem;
+  display: flex; flex-direction: column; gap: 0.25rem;
+}
+.swatch-chip {
+  width: 100%; aspect-ratio: 1.4;
+  border: 1px solid var(--rule);
+  margin-bottom: 0.75rem;
+}
+.swatch-name {
+  font-family: var(--sans); font-size: 0.66rem;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink); font-weight: 600;
+}
+.swatch-hex {
+  font-family: var(--mono); font-size: 0.76rem;
+  color: var(--ink-3);
+}
+.swatch-role {
+  font-family: var(--serif); font-style: italic;
+  font-size: 0.84rem; color: var(--ink-3); margin-top: 0.15rem;
+}
+
+/* TYPE SCALE */
+.type-specimen {
+  border: 1px solid var(--rule); background: var(--paper-lt);
+  padding: 2rem 2.25rem;
+}
+.type-row {
+  display: grid; grid-template-columns: 140px 1fr auto;
+  gap: 1.5rem; align-items: baseline;
+  padding: 0.9rem 0; border-bottom: 1px dotted var(--rule-mid);
+}
+.type-row:last-child { border-bottom: none; }
+.type-label {
+  font-family: var(--sans); font-size: 0.62rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+}
+.type-sample { color: var(--ink); line-height: 1.05; }
+.type-sample.display { font-family: var(--serif); font-size: 3rem; font-weight: 400; letter-spacing: -0.02em; }
+.type-sample.display em { font-style: italic; color: var(--red); }
+.type-sample.h2 { font-family: var(--serif); font-size: 2rem; font-weight: 400; font-style: italic; color: var(--red); }
+.type-sample.h3 { font-family: var(--serif); font-size: 1.4rem; font-weight: 400; letter-spacing: -0.01em; }
+.type-sample.body { font-family: var(--serif); font-size: 1.08rem; line-height: 1.55; color: var(--ink-2); }
+.type-sample.small-caps { font-family: var(--serif); font-size: 1rem; font-variant: small-caps; letter-spacing: 0.04em; color: var(--ink-2); }
+.type-sample.mono { font-family: var(--mono); font-size: 0.92rem; color: var(--ink-2); }
+.type-sample.hl-sample { font-family: var(--serif); font-size: 1.2rem; line-height: 1.5; color: var(--ink); }
+.type-meta {
+  font-family: var(--mono); font-size: 0.68rem;
+  color: var(--ink-4); letter-spacing: 0.02em; text-align: right;
+}
+
+/* LOGO VARIATIONS */
+.variations-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem;
+}
+.variation-tile {
+  border: 1px solid var(--rule);
+  padding: 3.25rem 2rem;
+  min-height: 240px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem;
+  text-align: center;
+}
+.variation-tile.paper { background: var(--paper-lt); }
+.variation-tile.warm  { background: var(--paper-dk); }
+.variation-tile.dark  { background: var(--ink); color: var(--paper); border-color: #222; }
+.variation-tile .vt-mark {
+  font-family: var(--serif); font-size: 2.25rem;
+  font-weight: 400; letter-spacing: -0.015em; line-height: 1;
+  color: var(--ink);
+}
+.variation-tile.dark .vt-mark { color: var(--paper); }
+.variation-tile .vt-mark em { font-style: italic; color: var(--red); }
+.variation-tile.dark .vt-mark em { color: var(--red-muted); }
+.variation-tile .vt-tag {
+  font-family: var(--sans); font-size: 0.62rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink-3); font-weight: 600;
+}
+.variation-tile.dark .vt-tag { color: rgba(245,240,232,0.5); }
+.variation-tile .vt-signet {
+  width: 84px; height: 84px;
+  border: 1.5px solid var(--ink);
+  background: var(--paper-lt);
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+.variation-tile .vt-signet::before, .variation-tile .vt-signet::after {
+  content: ''; position: absolute; background: var(--red);
+}
+.variation-tile .vt-signet::before { top: -3px; left: 50%; transform: translateX(-50%); width: 6px; height: 6px; border-radius: 50%; }
+.variation-tile .vt-signet::after  { bottom: -3px; left: 50%; transform: translateX(-50%); width: 28px; height: 1px; }
+.variation-tile .vt-signet span {
+  font-family: var(--serif); font-size: 1.7rem; font-weight: 400;
+  letter-spacing: -0.015em;
+}
+.variation-tile .vt-signet span em { font-style: italic; color: var(--red); }
+
+/* UI ELEMENTS */
+.ui-kit {
+  border: 1px solid var(--rule); background: var(--paper-lt);
+  padding: 2rem 2.25rem;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;
+}
+.ui-cell h4 {
+  font-family: var(--sans); font-size: 0.62rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 1rem;
+}
+.ui-buttons { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.ui-btn {
+  font-family: var(--sans); font-size: 0.8rem; font-weight: 600;
+  padding: 0.75rem 1.4rem;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  border: 1px solid var(--ink); cursor: pointer;
+  transition: all 0.15s;
+}
+.ui-btn.primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.ui-btn.primary:hover { background: var(--red); border-color: var(--red); }
+.ui-btn.secondary { background: var(--red); color: var(--paper); border-color: var(--red); }
+.ui-btn.secondary:hover { background: var(--red-deep); border-color: var(--red-deep); }
+.ui-btn.ghost { background: transparent; color: var(--ink); border-color: var(--ink); }
+.ui-btn.ghost:hover { background: var(--ink); color: var(--paper); }
+
+.ui-badges { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1.5rem; }
+.ui-badge {
+  font-family: var(--sans); font-size: 0.62rem;
+  padding: 0.25rem 0.6rem; border: 1px solid;
+  letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600;
+}
+.ui-badge.live { color: var(--red); border-color: var(--red); background: rgba(192,57,43,0.05); }
+.ui-badge.ok { color: #14803e; border-color: #14803e; background: rgba(20,128,62,0.04); }
+.ui-badge.hold { color: var(--ink-3); border-color: var(--ink-4); }
+
+.ui-code {
+  background: var(--ink); color: var(--paper);
+  padding: 1.25rem 1.5rem;
+  font-family: var(--mono); font-size: 0.8rem; line-height: 1.85;
+}
+.ui-code .k { color: var(--red-muted); }
+.ui-code .c { color: #7a7a7a; font-style: italic; }
+.ui-code .v { color: var(--paper); }
+
+.ui-input-wrap { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 1.5rem; }
+.ui-input {
+  font-family: var(--serif); font-size: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--paper);
+  border: 1px solid var(--rule); color: var(--ink);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.ui-input:focus {
+  outline: none; border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(192,57,43,0.1);
+}
+
+/* HIGHLIGHTER SPECIMEN — documents the new brand tool inline */
+.hl-specimen {
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  padding: 2rem 2.25rem;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem;
+}
+.hl-rule { display: flex; flex-direction: column; gap: 0.55rem; }
+.hl-rule .rule-label {
+  font-family: var(--sans); font-size: 0.62rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+}
+.hl-rule .rule-text {
+  font-family: var(--serif); font-size: 0.98rem;
+  color: var(--ink-2); line-height: 1.55;
+}
+.hl-rule .rule-text em { color: var(--ink); font-style: italic; }
+.hl-rule .rule-text .hl { background: var(--hl); }
+.hl-rule .rule-text .hl-hot { background: var(--hl-hot); }
+.hl-sample-lines {
+  display: flex; flex-direction: column; gap: 1.2rem;
+  font-family: var(--serif); font-size: 1.05rem;
+  color: var(--ink); line-height: 1.65;
+}
+.hl-sample-lines .label {
+  font-family: var(--sans); font-size: 0.58rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--red); font-weight: 600; margin-bottom: 0.25rem;
+  display: block;
+}
+
+/* EDITORIAL PAIRING */
+.pairing {
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  padding: 3rem 3.5rem;
+  position: relative;
+  max-width: var(--measure); margin: 0 auto;
+}
+.pairing::before {
+  content: 'SPECIMEN · EDITORIAL PAGE';
+  position: absolute; top: -10px; left: 2rem;
+  background: var(--paper); color: var(--red);
+  padding: 0.2rem 0.7rem;
+  font-family: var(--sans); font-size: 0.56rem;
+  letter-spacing: 0.2em; font-weight: 600;
+}
+.pairing .article-eyebrow {
+  font-family: var(--sans); font-size: 0.66rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 0.85rem;
+}
+.pairing h3 {
+  font-family: var(--serif);
+  font-size: clamp(1.7rem, 3vw, 2.1rem);
+  font-weight: 400; line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin-bottom: 1.25rem;
+}
+.pairing h3 em { font-style: italic; color: var(--red); }
+.pairing p {
+  font-family: var(--serif); font-size: 1.1rem;
+  color: var(--ink-2); line-height: 1.75;
+  margin-bottom: 1.15rem;
+}
+.pairing p:first-of-type::first-letter {
+  font-family: var(--serif); font-weight: 400;
+  float: left; font-size: 4.5rem; line-height: 0.85;
+  padding: 0.35rem 0.55rem 0 0; color: var(--red);
+}
+.pairing p:first-of-type::first-line {
+  font-variant: small-caps; letter-spacing: 0.04em;
+}
+.pairing p strong { color: var(--ink); font-weight: 500; }
+.pairing .pull-quote {
+  font-family: var(--serif); font-style: italic;
+  font-size: 1.35rem; line-height: 1.4;
+  padding: 1.25rem 0 1.25rem 1.5rem;
+  border-left: 2px solid var(--red);
+  margin: 1.5rem 0; color: var(--ink);
+}
+.pairing .byline {
+  margin-top: 1.5rem; padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+  font-family: var(--sans); font-size: 0.72rem;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-3);
+}
+.pairing .byline strong { color: var(--ink-2); font-weight: 500; }
+
+/* APPLICATIONS */
+.applications-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;
+}
+.app-card {
+  border: 1px solid var(--rule);
+  padding: 2rem;
+  background: var(--paper-lt);
+  position: relative;
+}
+.app-card .app-kicker {
+  font-family: var(--sans); font-size: 0.58rem;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 1rem;
+}
+.business-card {
+  aspect-ratio: 7 / 4;
+  background: var(--paper-lt);
+  border: 1px solid var(--rule);
+  padding: 1.5rem 1.75rem;
+  display: flex; flex-direction: column; justify-content: space-between;
+  position: relative;
+}
+.business-card::before {
+  content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 4px;
+  background: var(--red);
+}
+.business-card .bc-mark {
+  font-family: var(--serif); font-size: 1.4rem;
+  font-weight: 400; letter-spacing: -0.015em;
+}
+.business-card .bc-mark em { font-style: italic; color: var(--red); }
+.business-card .bc-rows {
+  font-family: var(--mono); font-size: 0.72rem;
+  color: var(--ink-3); line-height: 1.7;
+}
+.business-card .bc-rows strong { color: var(--ink); font-weight: 500; }
+
+.document-head {
+  background: var(--paper); border: 1px solid var(--rule);
+  padding: 1.75rem 1.85rem;
+  position: relative;
+}
+.document-head .dh-kicker {
+  font-family: var(--sans); font-size: 0.58rem;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  border-bottom: 1px solid var(--red);
+  padding-bottom: 0.35rem; margin-bottom: 1rem;
+  display: inline-block;
+}
+.document-head h4 {
+  font-family: var(--serif); font-size: 1.45rem;
+  font-weight: 400; letter-spacing: -0.015em; line-height: 1.2;
+  margin-bottom: 0.75rem;
+}
+.document-head h4 em { font-style: italic; color: var(--red); }
+.document-head h4 .hl { background: var(--hl); }
+.document-head .dh-body {
+  font-family: var(--serif); font-size: 0.95rem;
+  color: var(--ink-2); line-height: 1.55;
+}
+.document-head .dh-body::first-line {
+  font-variant: small-caps; letter-spacing: 0.04em;
+}
+.document-head .dh-body .hl { background: var(--hl); }
+.document-head .dh-colophon {
+  margin-top: 1.25rem; padding-top: 0.85rem;
+  border-top: 1px dotted var(--rule-mid);
+  font-family: var(--mono); font-size: 0.66rem;
+  color: var(--ink-3); letter-spacing: 0.04em;
+}
+
+.spec-plate {
+  background: var(--ink); color: var(--paper);
+  padding: 1.85rem 2rem;
+  font-family: var(--mono); font-size: 0.78rem;
+  line-height: 1.85;
+  position: relative;
+}
+.spec-plate::before {
+  content: 'RESPONSIBILITY · FORMAL SPEC';
+  position: absolute; top: -10px; left: 1.5rem;
+  background: var(--paper); color: var(--red);
+  padding: 0.2rem 0.6rem;
+  font-family: var(--sans); font-size: 0.56rem;
+  letter-spacing: 0.18em; font-weight: 600;
+}
+.spec-plate .k { color: var(--red-muted); }
+.spec-plate .c { color: #8a8a8a; font-style: italic; }
+.spec-plate .v { color: var(--paper); }
+
+/* VOICE & TONE */
+.voice-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem;
+}
+.voice-card {
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  padding: 1.75rem 1.5rem;
+  transition: transform 0.2s, border-color 0.2s;
+}
+.voice-card:hover { transform: translateY(-2px); border-color: var(--red); }
+.voice-card .vc-tag {
+  font-family: var(--sans); font-size: 0.6rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 0.85rem;
+}
+.voice-card blockquote {
+  font-family: var(--serif); font-style: italic;
+  font-size: 1.15rem; line-height: 1.4;
+  color: var(--ink); margin-bottom: 1rem; letter-spacing: -0.005em;
+}
+.voice-card blockquote em { color: var(--red); }
+.voice-card blockquote .hl { background: var(--hl); font-style: italic; }
+.voice-card .vc-note {
+  font-family: var(--serif); font-size: 0.9rem;
+  color: var(--ink-2); line-height: 1.55;
+}
+
+/* COLOPHON */
+.colophon {
+  text-align: center;
+  padding: 3rem 2rem 5rem;
+  max-width: var(--wide); margin: 3rem auto 0;
+  border-top: 1px solid var(--rule);
+  font-family: var(--sans); font-size: 0.7rem;
+  color: var(--ink-3); letter-spacing: 0.06em;
+}
+.colophon .rule { width: 48px; height: 1px; background: var(--red); margin: 0 auto 1.5rem; }
+.colophon .line { margin: 0.35rem 0; }
+.colophon .line.italic { font-family: var(--serif); font-style: italic; font-size: 0.9rem; color: var(--ink-2); letter-spacing: 0; margin-bottom: 1rem; }
+.colophon a { color: var(--red); text-decoration: none; margin: 0 0.75rem; transition: color 0.15s; }
+.colophon a:hover { color: var(--red-deep); }
+
+/* Responsive */
+@media (max-width: 880px) {
+  .hero { padding: 4rem 1.5rem 2.5rem; }
+  section.logotype-section { padding: 3.5rem 1.5rem; }
+  .palette-grid { grid-template-columns: repeat(2, 1fr); }
+  .variations-grid { grid-template-columns: 1fr; }
+  .ui-kit { grid-template-columns: 1fr; gap: 2rem; }
+  .hl-specimen { grid-template-columns: 1fr; gap: 1.5rem; }
+  .type-row { grid-template-columns: 1fr; gap: 0.5rem; }
+  .type-meta { text-align: left; }
+  .pairing { padding: 2.25rem 1.75rem; }
+  .applications-grid { grid-template-columns: 1fr; }
+  .voice-grid { grid-template-columns: 1fr; }
+}
+
+/* ============================================
+   ▶ CODEX SPREADS OVERRIDE ◀
+   Warm parchment + sepia ink + warm rust accent.
+   Old-style serif body, Cormorant display, JetBrains
+   Mono for spec. Subtle paper-grain on body::before.
+   The defining move: the four-spread layout in section V.
+   ============================================ */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&display=swap');
+
+:root {
+  /* Parchment cream — warmer + slightly more red than α's cream,
+     to feel like aged book paper. */
+  --paper:     #f3ead4;
+  --paper-dk:  #ebe0c2;
+  --paper-lt:  #f9f3e0;
+  --paper-elev:#fdf8e8;
+  --paper-deep:#2a1b10;
+
+  /* Sepia ink — never pure black on this paper; reads as printed */
+  --ink:       #3a2618;
+  --ink-2:     #5a4530;
+  --ink-3:     #8a7558;
+  --ink-4:     #b3a07d;
+
+  /* Warm rust replaces editorial red. Different enough from
+     ε orange (saturated) and γ gold (yellow) to feel new. */
+  --red:       #b35a30;
+  --red-muted: #c47045;
+  --red-deep:  #8c4220;
+
+  --rust:      #b35a30;
+  --rust-deep: #8c4220;
+  --rust-soft: #c47045;
+  --rust-faint:rgba(179,90,48,0.10);
+
+  --rule:      rgba(58,38,24,0.16);
+  --rule-mid:  rgba(58,38,24,0.08);
+
+  /* Highlighter is a faint rust wash — the reader's pen on a
+     printed page. Hot version is more saturated. */
+  --hl:        rgba(179,90,48,0.12);
+  --hl-hot:    rgba(179,90,48,0.24);
+
+  --serif: 'Cormorant Garamond', 'Cormorant', Georgia, serif;
+  --sans:  'Crimson Pro', 'EB Garamond', 'Crimson Text', Georgia, serif;
+  --mono:  'IBM Plex Mono', 'JetBrains Mono', 'SF Mono', monospace;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 0.92rem;
+  line-height: 1.7;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* WORDMARK — "Open" in mono, "Prose" in Cormorant italic.
+   Two voices in one mark: programmable surface + literary core. */
+.wm-open {
+  font-family: var(--mono);
+  font-weight: 500;
+  font-style: normal;
+  letter-spacing: -0.01em;
+}
+.wm-prose,
+em.wm-prose {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+  color: var(--rust);
+  letter-spacing: 0;
+}
+
+/* Subtle paper-grain on body::before — gives the surface a
+   printed-manual feel without using a raster texture. */
+body::before {
+  background:
+    /* Faint grain pattern using two overlapping radial seeds */
+    radial-gradient(circle at 25% 30%, rgba(58,38,24,0.014) 0%, transparent 50%),
+    radial-gradient(circle at 75% 70%, rgba(58,38,24,0.014) 0%, transparent 50%),
+    /* Warm corners */
+    radial-gradient(ellipse 60% 40% at 15% 8%, rgba(179,90,48,0.05), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 85% 92%, rgba(179,90,48,0.04), transparent 60%);
+}
+
+/* HERO */
+.hero { padding: 5rem 2rem 3.5rem; }
+.hero-eyebrow {
+  font-family: var(--mono);
+  color: var(--rust);
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  font-size: 0.66rem;
+}
+.hero-eyebrow::before, .hero-eyebrow::after { background: var(--rust); }
+.hero-mark {
+  font-family: var(--mono);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.hero-mark em { color: var(--rust); font-family: var(--serif); font-style: italic; font-weight: 400; letter-spacing: 0; }
+.hero-rule { background: var(--rust); width: 80px; }
+.hero-tagline {
+  font-family: var(--mono);
+  font-weight: 400;
+  color: var(--ink-2);
+  font-size: 1.02rem;
+  letter-spacing: -0.005em;
+  max-width: 60ch;
+  margin: 0 auto;
+}
+.hero-tagline em {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 500;
+  color: var(--rust);
+}
+.hero-meta { color: var(--ink-3); font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.18em; }
+
+/* SECTIONS */
+.section-kicker {
+  color: var(--rust);
+  font-family: var(--mono);
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+}
+.section-kicker::after { background: var(--rust); opacity: 0.4; }
+
+section.logotype-section h2 {
+  font-family: var(--mono);
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+}
+section.logotype-section h2 em { color: var(--rust); font-family: var(--serif); font-style: italic; font-weight: 400; letter-spacing: 0; }
+section.logotype-section .lede {
+  font-family: var(--mono);
+  color: var(--ink-2);
+  font-size: 0.94rem;
+  line-height: 1.7;
+  font-weight: 400;
+  max-width: 70ch;
+}
+section.logotype-section .lede em { font-family: var(--serif); font-style: italic; color: var(--rust); }
+section.logotype-section .lede::first-line { font-variant: normal; letter-spacing: 0; }
+
+/* Highlighter — rust pill */
+.hl, .hl-hot {
+  background: var(--hl);
+  padding: 0.06em 0.32em;
+  border-radius: 1px;
+  color: var(--ink);
+}
+.hl-hot { background: var(--hl-hot); color: var(--ink); }
+
+/* Paper-printed surfaces — slight emboss-like inner shadow */
+.type-specimen,
+.ui-kit,
+.hl-specimen,
+.pairing,
+.app-card,
+.variation-tile,
+.voice-card {
+  background: var(--paper-elev);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 1px rgba(255,250,232,0.5), 0 1px 2px rgba(58,38,24,0.04);
+}
+
+/* Type specimen */
+.type-row { border-bottom-color: var(--rule); }
+.type-label {
+  color: var(--rust);
+  font-family: var(--mono);
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  font-size: 0.62rem;
+}
+.type-sample.display { font-family: var(--mono); font-weight: 500; letter-spacing: -0.01em; }
+.type-sample.display em { color: var(--rust); font-family: var(--serif); font-style: italic; font-weight: 400; letter-spacing: 0; }
+.type-sample.h2 { font-family: var(--mono); color: var(--ink); font-weight: 500; letter-spacing: -0.005em; }
+.type-sample.h2 em { font-family: var(--serif); font-style: italic; color: var(--rust); font-weight: 400; }
+.type-sample.h3 { font-family: var(--mono); font-weight: 400; }
+.type-sample.h3 em { font-family: var(--serif); color: var(--rust); font-style: italic; font-weight: 400; }
+.type-sample.body { font-family: var(--mono); color: var(--ink-2); font-weight: 400; font-size: 0.92rem; line-height: 1.7; }
+.type-sample.body em { font-family: var(--serif); font-style: italic; color: var(--rust); }
+.type-meta { color: var(--ink-3); font-family: var(--mono); }
+
+/* Variations */
+.variation-tile.paper { background: var(--paper-elev); }
+.variation-tile.warm { background: var(--paper-dk); }
+.variation-tile.dark { background: var(--paper-deep); border-color: var(--rust); color: var(--paper); }
+.variation-tile .vt-mark { font-family: var(--mono); font-weight: 500; letter-spacing: -0.01em; }
+.variation-tile .vt-mark em { color: var(--rust); font-family: var(--serif); font-style: italic; font-weight: 400; letter-spacing: 0; }
+.variation-tile.dark .vt-mark { color: var(--paper); }
+.variation-tile.dark .vt-mark em { color: var(--rust-soft); }
+.variation-tile .vt-tag { color: var(--ink-3); font-family: var(--mono); font-weight: 400; }
+.variation-tile.dark .vt-tag { color: rgba(243,234,212,0.6); }
+.variation-tile .vt-signet { border-color: var(--rust); border-radius: 2px; background: var(--paper); }
+.variation-tile .vt-signet::before { background: var(--rust); }
+.variation-tile .vt-signet::after { background: var(--rust); }
+.variation-tile .vt-signet span { font-family: var(--mono); font-weight: 500; letter-spacing: -0.01em; }
+.variation-tile .vt-signet span em { color: var(--rust); font-family: var(--serif); font-style: italic; font-weight: 400; letter-spacing: 0; }
+
+/* UI primitives */
+.ui-cell h4 { color: var(--rust); font-family: var(--mono); font-weight: 400; letter-spacing: 0.16em; font-size: 0.62rem; }
+.ui-btn { font-family: var(--mono); font-weight: 400; letter-spacing: 0.04em; text-transform: none; border-radius: 1px; }
+.ui-btn.primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.ui-btn.primary:hover { background: var(--rust); border-color: var(--rust); }
+.ui-btn.secondary { background: var(--rust); color: var(--paper); border-color: var(--rust); }
+.ui-btn.secondary:hover { background: var(--rust-deep); border-color: var(--rust-deep); }
+.ui-btn.ghost { color: var(--ink); border-color: var(--ink); background: transparent; }
+.ui-btn.ghost:hover { color: var(--rust); border-color: var(--rust); }
+
+.ui-badge { font-family: var(--mono); font-weight: 400; letter-spacing: 0.06em; text-transform: none; border-radius: 1px; }
+.ui-badge.live { color: var(--rust); border-color: var(--rust); background: var(--rust-faint); }
+.ui-badge.ok { color: var(--ink); border-color: var(--ink); background: rgba(58,38,24,0.04); }
+.ui-badge.hold { color: var(--ink-3); border-color: var(--rule); }
+
+.ui-code {
+  background: var(--paper-deep); color: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+}
+.ui-code .k { color: var(--rust-soft); }
+.ui-code .v { color: var(--paper); }
+.ui-code .c { color: rgba(243,234,212,0.5); font-style: italic; }
+
+.ui-input { font-family: var(--sans); border-color: var(--rule); background: var(--paper); color: var(--ink); border-radius: 2px; }
+.ui-input:focus { border-color: var(--rust); box-shadow: 0 0 0 3px var(--rust-faint); }
+
+/* THE FOUR-SPREAD LAYOUT — κ's defining move.
+   Section V renders four "book spreads" of the same OpenProse
+   program at runs 1, 12, 28, and 42. Each spread is a small
+   parchment card showing the same wordmark + manifesto + spec
+   block + state ticker, but at a more elaborated state.
+*/
+.spread-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+  margin-top: 2rem;
+}
+@media (max-width: 1100px) { .spread-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { .spread-grid { grid-template-columns: 1fr; } }
+
+.spread {
+  background: var(--paper-elev);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  padding: 1.5rem 1.25rem 1.25rem;
+  position: relative;
+  box-shadow: inset 0 0 0 1px rgba(255,250,232,0.5), 0 2px 8px rgba(58,38,24,0.06);
+  display: flex;
+  flex-direction: column;
+  min-height: 320px;
+}
+/* Page-edge effect — slight curl on the right edge */
+.spread::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 8px;
+  background: linear-gradient(90deg, transparent, rgba(58,38,24,0.06));
+  pointer-events: none;
+}
+.spread .spread-num {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.16em;
+  color: var(--rust);
+  margin-bottom: 0.85rem;
+}
+.spread .spread-mark {
+  font-family: var(--mono);
+  font-weight: 500;
+  font-size: 1.25rem;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  margin-bottom: 0.4rem;
+}
+.spread .spread-mark em { color: var(--rust); font-family: var(--serif); font-style: italic; font-weight: 400; letter-spacing: 0; }
+.spread .spread-tag {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--ink-2);
+  margin-bottom: 1rem;
+  line-height: 1.55;
+}
+.spread .spread-tag em { font-family: var(--serif); font-style: italic; color: var(--rust); }
+.spread .spread-spec {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  line-height: 1.85;
+  color: var(--ink-2);
+  margin-bottom: 1rem;
+  flex: 1;
+}
+.spread .spread-spec .k { color: var(--rust); }
+.spread .spread-spec .v { color: var(--ink); }
+.spread .spread-spec .c { color: var(--ink-3); font-style: italic; }
+.spread .spread-spec .empty { color: var(--ink-4); font-style: italic; }
+.spread .spread-state {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+  border-top: 1px solid var(--rule);
+  padding-top: 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.spread .spread-state .num { color: var(--rust); font-weight: 500; }
+.spread .spread-spark {
+  display: inline-block;
+  width: 38px; height: 10px;
+  vertical-align: middle;
+}
+
+/* Section V container override */
+.hl-specimen { background: var(--paper-elev); border-color: var(--rule); border-radius: 2px; padding: 2rem 2.25rem; }
+.hl-rule .rule-label { color: var(--rust); font-family: var(--mono); font-weight: 400; letter-spacing: 0.14em; font-size: 0.65rem; }
+.hl-rule .rule-text em { color: var(--rust); font-style: italic; font-weight: 500; }
+.hl-rule .rule-text { color: var(--ink-2); }
+.hl-sample-lines .label { color: var(--rust); font-family: var(--mono); font-weight: 400; letter-spacing: 0.14em; font-size: 0.65rem; }
+
+/* Editorial Pairing */
+.pairing::before { color: var(--rust); background: var(--paper); font-family: var(--mono); font-weight: 400; letter-spacing: 0.18em; }
+.pairing .article-eyebrow { color: var(--rust); font-family: var(--mono); font-weight: 400; letter-spacing: 0.18em; }
+.pairing h3 { font-family: var(--serif); font-weight: 300; font-style: italic; }
+.pairing h3 em { color: var(--rust); font-style: italic; font-weight: 400; }
+.pairing p { font-family: var(--sans); color: var(--ink-2); font-weight: 400; font-size: 1.04rem; line-height: 1.75; }
+.pairing p:first-of-type::first-letter {
+  font-family: var(--serif);
+  color: var(--rust);
+  font-weight: 300;
+  font-style: italic;
+  font-size: 4.5rem;
+}
+.pairing p:first-of-type::first-line { font-variant: normal; letter-spacing: 0; }
+.pairing p strong { color: var(--ink); font-weight: 500; }
+.pairing .pull-quote {
+  border-left: 2px solid var(--rust);
+  background: var(--rust-faint);
+  border-radius: 0 2px 2px 0;
+  padding: 1.2rem 1.5rem;
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--ink);
+  font-size: 1.25rem;
+  font-weight: 400;
+}
+.pairing .byline { color: var(--ink-3); font-family: var(--mono); font-weight: 400; border-top-color: var(--rule); letter-spacing: 0.1em; font-size: 0.66rem; }
+.pairing .byline strong { color: var(--ink-2); font-weight: 500; }
+
+/* Applications */
+.app-card .app-kicker { color: var(--rust); font-family: var(--mono); font-weight: 400; letter-spacing: 0.18em; font-size: 0.62rem; }
+.business-card { background: var(--paper); border-color: var(--rule); border-radius: 2px; }
+.business-card::before { background: var(--rust); width: 5px; }
+.business-card .bc-mark { font-family: var(--mono); font-weight: 500; letter-spacing: -0.01em; }
+.business-card .bc-mark em { color: var(--rust); font-family: var(--serif); font-style: italic; font-weight: 400; letter-spacing: 0; }
+.business-card .bc-rows { font-family: var(--mono); color: var(--ink-3); }
+.business-card .bc-rows strong { color: var(--ink); font-weight: 500; }
+.business-card .bc-rows div[style*="--red"] { color: var(--rust) !important; }
+
+.document-head { background: var(--paper); border-color: var(--rule); border-radius: 2px; }
+.document-head .dh-kicker { color: var(--rust); border-bottom-color: var(--rust); font-family: var(--mono); font-weight: 400; letter-spacing: 0.18em; }
+.document-head h4 { font-family: var(--serif); font-weight: 300; font-style: italic; }
+.document-head h4 em { color: var(--rust); font-style: italic; font-weight: 400; }
+.document-head h4 .hl, .document-head .dh-body .hl { background: var(--hl); color: var(--ink); }
+.document-head .dh-body { color: var(--ink-2); font-family: var(--mono); font-size: 0.92rem; line-height: 1.7; }
+.document-head .dh-body em { font-family: var(--serif); font-style: italic; color: var(--rust); }
+.document-head .dh-body::first-line { font-variant: normal; letter-spacing: 0; }
+.document-head .dh-colophon { color: var(--ink-3); font-family: var(--mono); border-top-color: var(--rule); letter-spacing: 0.06em; }
+
+.spec-plate {
+  background: var(--paper-deep); color: var(--paper);
+  border: 1px solid var(--rust);
+  border-radius: 2px;
+}
+.spec-plate::before { color: var(--rust); background: var(--paper); font-family: var(--mono); font-weight: 400; letter-spacing: 0.18em; }
+.spec-plate .k { color: var(--rust-soft); }
+.spec-plate .v { color: var(--paper); }
+.spec-plate .c { color: rgba(243,234,212,0.5); font-style: italic; }
+
+/* Voice */
+.voice-card:hover { border-color: var(--rust); }
+.voice-card .vc-tag { color: var(--rust); font-family: var(--mono); font-weight: 400; letter-spacing: 0.16em; font-size: 0.62rem; }
+.voice-card blockquote { font-family: var(--serif); color: var(--ink); font-style: italic; font-weight: 400; }
+.voice-card blockquote em { color: var(--rust); font-style: italic; font-weight: 500; }
+.voice-card blockquote .hl, .voice-card blockquote .hl-hot { background: var(--hl); color: var(--ink); font-style: italic; }
+.voice-card blockquote .hl-hot { background: var(--hl-hot); }
+.voice-card .vc-note { color: var(--ink-2); font-family: var(--sans); font-weight: 400; }
+
+/* Swatches */
+.swatch-name { color: var(--ink); font-family: var(--mono); font-weight: 400; letter-spacing: 0.14em; font-size: 0.62rem; }
+.swatch-hex { color: var(--ink-3); font-family: var(--mono); }
+.swatch-role { color: var(--ink-3); font-family: var(--serif); font-style: italic; }
+
+/* Colophon */
+.colophon { font-family: var(--mono); color: var(--ink-3); border-top-color: var(--rule); font-weight: 400; letter-spacing: 0.06em; }
+.colophon .rule { background: var(--rust); width: 60px; }
+.colophon .line.italic { color: var(--ink-2); font-family: var(--serif); font-style: italic; font-weight: 400; letter-spacing: 0; font-size: 0.95rem; }
+.colophon a { color: var(--rust); }
+.colophon a:hover { color: var(--rust-deep); }
+
+/* ============================================
+   CORMORANT +15% BUMP
+   The literary italic should pull slightly more visual weight than
+   the surrounding monospace. Cormorant is always introduced via <em>
+   inside a mono parent in this direction, so scale every serif/
+   italic use ~15% without disturbing the mono baseline. Line-height
+   stays inherited so the inline glyphs grow up, not the entire row.
+   ============================================ */
+.hero-mark em,
+.hero-tagline em,
+.wm-prose,
+em.wm-prose,
+section.logotype-section h2 em,
+section.logotype-section .lede em,
+.type-sample.display em,
+.type-sample.h2 em,
+.type-sample.h3 em,
+.type-sample.body em,
+.type-sample.hl-sample em,
+.variation-tile .vt-mark em,
+.variation-tile .vt-signet span em,
+.voice-card em,
+.voice-card blockquote em,
+.swatch-role,
+.colophon .line.italic {
+  font-size: 1.15em;
+}
+
+
+
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+
+}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-eyebrow">Direction &kappa; &middot; Codex Spreads</div>
+  <h1 class="hero-mark">Open<em>Prose</em></h1>
+  <div class="hero-rule"></div>
+  <p class="hero-tagline">A literary computer. <em>For programs you can read, scroll, and prove.</em></p>
+  <div class="hero-meta">IBM Plex Mono &middot; Cormorant italic accent &middot; sepia &middot; rust &middot; the same program at four times</div>
+</section>
+
+<!-- PALETTE -->
+<section class="logotype-section" id="palette">
+  <div class="section-kicker">I &middot; Palette</div>
+  <h2>Parchment, sepia, and a thread of <em>warm rust</em>.</h2>
+  <p class="lede">An old book photographed under tungsten. Parchment cream #f3ead4 carries the page &mdash; warmer and slightly more red than α's cream, to read as aged stock. Sepia ink #3a2618 reads as printed, never harsh. A warm rust #b35a30 is the only chromatic accent &mdash; section markers, italic emphasis, the score numerals on the spreads. The palette is two materials, one accent, no shortcuts.</p>
+  <div class="palette-grid">
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--paper);"></div>
+      <span class="swatch-name">Parchment</span>
+      <span class="swatch-hex">#f3ead4</span>
+      <span class="swatch-role">the page</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--paper-dk);"></div>
+      <span class="swatch-name">Parchment Warm</span>
+      <span class="swatch-hex">#ebe0c2</span>
+      <span class="swatch-role">aged folio</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--paper-lt);"></div>
+      <span class="swatch-name">Parchment Light</span>
+      <span class="swatch-hex">#f9f3e0</span>
+      <span class="swatch-role">lifted surfaces</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--paper-deep); border-color: var(--paper-deep);"></div>
+      <span class="swatch-name">Sepia Deep</span>
+      <span class="swatch-hex">#2a1b10</span>
+      <span class="swatch-role">dark inversion</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--ink); border-color: var(--ink);"></div>
+      <span class="swatch-name">Sepia</span>
+      <span class="swatch-hex">#3a2618</span>
+      <span class="swatch-role">primary copy</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--rust); border-color: var(--rust);"></div>
+      <span class="swatch-name">Rust</span>
+      <span class="swatch-hex">#b35a30</span>
+      <span class="swatch-role">accent &middot; italic em</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--rust-deep); border-color: var(--rust-deep);"></div>
+      <span class="swatch-name">Rust Deep</span>
+      <span class="swatch-hex">#8c4220</span>
+      <span class="swatch-role">hover &middot; pressed</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--rust-soft); border-color: var(--rust-soft);"></div>
+      <span class="swatch-name">Rust Soft</span>
+      <span class="swatch-hex">#c47045</span>
+      <span class="swatch-role">code keyword</span>
+    </div>
+  </div>
+</section>
+
+<!-- TYPE SCALE -->
+<section class="logotype-section" id="type">
+  <div class="section-kicker">II &middot; Type Scale</div>
+  <h2>IBM Plex for the page. Cormorant <em>italic</em> for the literary half.</h2>
+  <p class="lede">The κ direction speaks in two voices: <em>monospace</em> as the working surface and Cormorant Garamond italic as the literary core. IBM Plex Mono carries the body, the headings, the labels, the spec — everything you read most. Cormorant italic appears only at the moments that matter: the second half of the wordmark (<em>Prose</em>), the rust-italic emphasis on a sentence, the contemplative pull-quote. The mark stays the constant: <em>Open</em> in mono, <em>Prose</em> in Cormorant. Two voices, one signature.</p>
+  <div class="type-specimen">
+    <div class="type-row">
+      <span class="type-label">Display</span>
+      <span class="type-sample display">Write the <em>outcome</em>.</span>
+      <span class="type-meta">IBM Plex Mono 500 &middot; 3rem &middot; <em>em</em>: Cormorant italic 400 (115%)</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">H2</span>
+      <span class="type-sample h2">the quiet <em>arrival</em></span>
+      <span class="type-meta">IBM Plex Mono 500 &middot; 2rem &middot; <em>em</em>: Cormorant italic 400 (115%)</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">H3</span>
+      <span class="type-sample h3">A specification, <em>recited</em></span>
+      <span class="type-meta">IBM Plex Mono 400 &middot; 1.4rem &middot; <em>em</em>: Cormorant italic 400 (115%)</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Body</span>
+      <span class="type-sample body">You declare the outcome in a file. The system picks it up on cadence, runs it, verifies the result, and <em>delivers</em>.</span>
+      <span class="type-meta">IBM Plex Mono 400 &middot; 0.92rem / 1.7 &middot; <em>em</em>: Cormorant (115%)</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Spread title</span>
+      <span class="type-sample" style="font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--rust); font-weight: 400;">SPREAD III &middot; v28 &middot; refining</span>
+      <span class="type-meta">IBM Plex Mono 400 &middot; 0.7rem &middot; tracked +160</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Rust pill</span>
+      <span class="type-sample hl-sample">The standup is <span class="hl">fifteen minutes shorter</span>. Nobody asks where the numbers came from.</span>
+      <span class="type-meta">rust wash &middot; 12% alpha &middot; on IBM Plex Mono</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Hot pill</span>
+      <span class="type-sample hl-sample">If the outcome <span class="hl-hot">doesn't ship</span>, no line.</span>
+      <span class="type-meta">rust wash &middot; 24% alpha &middot; on IBM Plex Mono</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Mono &middot; spec</span>
+      <span class="type-sample mono">requires: data_warehouse_url</span>
+      <span class="type-meta">IBM Plex Mono 400 &middot; 0.92rem &middot; spec body</span>
+    </div>
+  </div>
+</section>
+
+<!-- LOGO VARIATIONS -->
+<section class="logotype-section" id="variations">
+  <div class="section-kicker">III &middot; Logo Variations</div>
+  <h2>One mark, <em>three impressions</em>.</h2>
+  <p class="lede">Primary on parchment, a compact signet with rust serifs, and a reversed mark for dark sepia. The italic <em>Prose</em> always carries the rust, whether on light or dark ground. The wordmark stays the constant on every spread &mdash; if it shifts position between spreads, the reader stops reading the page as a sequence.</p>
+  <div class="variations-grid">
+    <div class="variation-tile paper">
+      <div class="vt-mark">Open<em>Prose</em></div>
+      <div class="vt-tag">Primary &middot; 40px+</div>
+    </div>
+    <div class="variation-tile warm">
+      <div class="vt-signet"><span>O<em>P</em></span></div>
+      <div class="vt-tag">Signet &middot; favicon</div>
+    </div>
+    <div class="variation-tile dark">
+      <div class="vt-mark">Open<em>Prose</em></div>
+      <div class="vt-tag">Reversed &middot; dark ground</div>
+    </div>
+  </div>
+</section>
+
+<!-- UI ELEMENTS -->
+<section class="logotype-section" id="ui">
+  <div class="section-kicker">IV &middot; UI Elements</div>
+  <h2>Buttons, badges, and a <em>specification</em>.</h2>
+  <p class="lede">Interface primitives are printed labels &mdash; never glossy, never raised. Primary buttons are sepia ink on parchment with a 1px ink border (no fill, no shadow). Secondary buttons swap to rust. Badges are bordered rust (live) or sepia (verified). The code surface is the same dark inversion the spec plate uses, ink-deep ground with rust-soft for keys.</p>
+  <div class="ui-kit">
+    <div class="ui-cell">
+      <h4>Buttons</h4>
+      <div class="ui-buttons">
+        <button class="ui-btn primary">Primary</button>
+        <button class="ui-btn secondary">Secondary</button>
+        <button class="ui-btn ghost">Ghost</button>
+      </div>
+      <div class="ui-badges">
+        <span class="ui-badge live">&middot; Live</span>
+        <span class="ui-badge ok">&#10003; Verified</span>
+        <span class="ui-badge hold">&middot; On hold</span>
+      </div>
+      <div class="ui-input-wrap">
+        <label style="font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--rust); font-weight: 400;">Declare the outcome</label>
+        <input class="ui-input" type="text" placeholder="e.g. weekly-investor-digest.prose">
+      </div>
+    </div>
+    <div class="ui-cell">
+      <h4>Code surface</h4>
+      <div class="ui-code"><span class="c"># pick up the file</span>
+<span class="k">$</span> openprose run weekly-digest
+<span class="c"># verify, deliver, archive</span>
+<span class="v">&#10003; delivered 09:14 ET</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- THE FOUR SPREADS — κ's emphasis primitive -->
+<section class="logotype-section" id="highlighter">
+  <div class="section-kicker">V &middot; The Four Spreads</div>
+  <h2>The same program, <em>shown four times</em>. The page is the storyboard.</h2>
+  <p class="lede">κ's defining gesture is the four-spread layout. The same OpenProse program is shown at four different runs &mdash; v1 (the dormant brief), v12 (after first run), v28 (mid-improvement), v42 (verified and signed). The reader sees, at a glance, what an OpenProse program <em>is</em>: an artifact that gets smarter every Monday morning. No animation, no live mechanic — just four printed states sitting beside each other on the page.</p>
+
+  <div class="spread-grid">
+
+    <!-- SPREAD 1 — v1 dormant -->
+    <div class="spread">
+      <div class="spread-num">SPREAD I &middot; v1 &middot; declared</div>
+      <div class="spread-mark">Open<em>Prose</em></div>
+      <div class="spread-tag">A program is a document with guarantees.</div>
+      <div class="spread-spec">
+<span class="k">requires:</span><br>
+<span class="empty">  &mdash; (pending)</span><br>
+<br>
+<span class="k">ensures:</span><br>
+<span class="empty">  &mdash; (pending)</span>
+      </div>
+      <div class="spread-state">v1 &middot; <span class="num">pending</span></div>
+    </div>
+
+    <!-- SPREAD 2 — v12 first runs -->
+    <div class="spread">
+      <div class="spread-num">SPREAD II &middot; v12 &middot; bound</div>
+      <div class="spread-mark">Open<em>Prose</em></div>
+      <div class="spread-tag">A program is a document with guarantees.</div>
+      <div class="spread-spec">
+<span class="k">requires:</span><br>
+&nbsp;&nbsp;<span class="v">data_warehouse_url</span><br>
+&nbsp;&nbsp;<span class="v">codebase_ref</span><br>
+<br>
+<span class="k">ensures:</span><br>
+&nbsp;&nbsp;<span class="v">weekly growth findings</span>
+      </div>
+      <div class="spread-state">v12 &middot; <span class="num">0.78</span> &middot;
+        <svg class="spread-spark" viewBox="0 0 38 10" aria-hidden="true">
+          <polyline fill="none" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" points="0,8 6,7.5 12,7 18,6.5 24,6 30,5.5 38,5" style="color: var(--rust);" />
+        </svg>
+      </div>
+    </div>
+
+    <!-- SPREAD 3 — v28 mid-improvement -->
+    <div class="spread">
+      <div class="spread-num">SPREAD III &middot; v28 &middot; refining</div>
+      <div class="spread-mark">Open<em>Prose</em></div>
+      <div class="spread-tag">A program is a document with guarantees.</div>
+      <div class="spread-spec">
+<span class="k">requires:</span><br>
+&nbsp;&nbsp;<span class="v">data_warehouse_url</span> <span class="c"># resolved</span><br>
+&nbsp;&nbsp;<span class="v">codebase_ref</span> <span class="c"># 3a8f29c</span><br>
+<br>
+<span class="k">ensures:</span><br>
+&nbsp;&nbsp;<span class="v">weekly growth findings</span><br>
+&nbsp;&nbsp;<span class="v">anomaly notes</span>
+      </div>
+      <div class="spread-state">v28 &middot; <span class="num">0.91</span> &middot;
+        <svg class="spread-spark" viewBox="0 0 38 10" aria-hidden="true">
+          <polyline fill="none" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" points="0,8 6,7 12,6 18,5 24,4.5 30,4 38,3.5" style="color: var(--rust);" />
+        </svg>
+      </div>
+    </div>
+
+    <!-- SPREAD 4 — v42 verified -->
+    <div class="spread">
+      <div class="spread-num">SPREAD IV &middot; v42 &middot; verified</div>
+      <div class="spread-mark">Open<em>Prose</em></div>
+      <div class="spread-tag">A program is a document with guarantees.</div>
+      <div class="spread-spec">
+<span class="k">requires:</span><br>
+&nbsp;&nbsp;<span class="v">data_warehouse_url</span> <span class="c"># resolved</span><br>
+&nbsp;&nbsp;<span class="v">codebase_ref</span> <span class="c"># 3a8f29c · ✓</span><br>
+<br>
+<span class="k">ensures:</span><br>
+&nbsp;&nbsp;<span class="v">weekly growth findings</span><br>
+&nbsp;&nbsp;<span class="v">anomaly notes &lt;&lt; 2% FP</span><br>
+&nbsp;&nbsp;<span class="v">delivered Mon @ 09:00 ET</span><br>
+<br>
+<span class="k">signed:</span> <span class="v">runtime-v0.42</span>
+      </div>
+      <div class="spread-state">v42 &middot; <span class="num">0.97</span> &middot;
+        <svg class="spread-spark" viewBox="0 0 38 10" aria-hidden="true">
+          <polyline fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" points="0,8 6,7 12,6 18,5 24,4 30,3 38,2" style="color: var(--rust);" />
+        </svg>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- The reading guide for the four-spread pattern, similar to α's hl-rule cards -->
+  <div class="hl-specimen" style="margin-top: 2.5rem;">
+    <div class="hl-sample-lines">
+      <div>
+        <span class="label">Why four</span>
+        <div>Three is too few to read as a sequence; five is too many to fit on one row. Four spreads compose like a graphic novel: each panel adds one detail, the score climbs once per panel, the mark stays constant. The constant is the brand; the variable is the system improving itself.</div>
+      </div>
+      <div>
+        <span class="label">What stays constant</span>
+        <div>The wordmark, the tagline (&ldquo;A program is a document with guarantees&rdquo;), and the spread number. These never change. They tell the reader this is the same artifact at a different time, not four different artifacts.</div>
+      </div>
+      <div>
+        <span class="label">What evolves</span>
+        <div>The spec block accumulates clauses. The state line gains a score and a sparkline. Spread IV picks up a <code>signed:</code> line that earlier spreads don't have. Read left to right, the program assembles itself.</div>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+      <div class="hl-rule">
+        <span class="rule-label">Rule &middot; the constant</span>
+        <span class="rule-text"><em>Always</em> the same wordmark, the same tagline, the same column width on every spread. If a spread shifts position or crops the mark, the reader stops reading the page as a sequence.</span>
+      </div>
+      <div class="hl-rule">
+        <span class="rule-label">Rule &middot; the score climb</span>
+        <span class="rule-text"><em>Always</em> a higher score on each spread &mdash; never a regression, never a tie. The brand promises improvement; the storyboard must keep that promise even at idle.</span>
+      </div>
+      <div class="hl-rule">
+        <span class="rule-label">Rule &middot; the spec accumulation</span>
+        <span class="rule-text">Each spread should add at least <em>one</em> line to the spec block. Lines never disappear between spreads. Lines never reorder. The brief grows the way an outline does on a careful editor's pass.</span>
+      </div>
+      <div class="hl-rule">
+        <span class="rule-label">Rule &middot; the page-edge</span>
+        <span class="rule-text">A spread carries a faint right-edge gradient that suggests page curl &mdash; the brand reads as printed, not screen-rendered. Never use a hard drop-shadow; the reference is a manual, not a card.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EDITORIAL PAIRING -->
+<section class="logotype-section narrow" id="pairing">
+  <div class="section-kicker">VI &middot; Editorial Pairing</div>
+  <h2>Set in type &mdash; <em>the brief</em> at length, on a single spread.</h2>
+  <p class="lede">A spread can also be a long-form artifact &mdash; not just one of four storyboard panels but a full document set in type. When κ shows the voice at length, it sets the page like a book chapter: a drop, sepia body, italic-rust pivots, a sparse pull-quote. Specs sit in the margins or at the foot, never inline. The reader is meant to read this spread, not skim it.</p>
+  <article class="pairing">
+    <div class="article-eyebrow">From the field notes</div>
+    <h3>On the <em>quiet arrival</em> of Monday reports.</h3>
+    <p>Once, the week began with a scramble. Someone opened seven dashboards, pulled the numbers, wrote the digest, and dropped it in the 09:00 standup. The rotation was a line in the budget. The standup was a line in the calendar. Nobody was quite sure what either accomplished beyond confirming that the dashboards were fine.</p>
+    <p>Then the outcome was declared in a file. <strong>Fifteen lines.</strong> Every Monday at 09:00 ET, the digest arrives &mdash; <span class="hl">verified, signed, archived</span>. The standup happens anyway, but it is fifteen minutes shorter. Nobody asks where the numbers came from. <span class="hl">They are already in the document</span>.</p>
+    <div class="pull-quote">The first thing we noticed was what we stopped doing &mdash; the standing meetings where we'd review the dashboard to confirm the dashboard was fine.</div>
+    <p>The humanist computer is the insight that these two dispositions &mdash; craft and machinery &mdash; are not opposed. The machine handles the cadence. The prose handles the voice. The page reads the way a good analyst would have written it. <span class="hl-hot">The result is the point</span>.</p>
+    <div class="byline"><strong>Maya Chen</strong> &middot; Head of Operations &middot; Series-C payments platform</div>
+  </article>
+</section>
+
+<!-- APPLICATIONS -->
+<section class="logotype-section" id="applications">
+  <div class="section-kicker">VII &middot; Applications</div>
+  <h2>A card, a <em>masthead</em>, a plate.</h2>
+  <p class="lede">Three real surfaces the brand has to carry: a business card (formal, material, no highlighter), a document header (editorial, human, highlighter welcome), and a specification plate (machine, precise, highlighter forbidden).</p>
+  <div class="applications-grid">
+    <div class="app-card">
+      <div class="app-kicker">Business Card</div>
+      <div class="business-card">
+        <div class="bc-mark">Open<em>Prose</em></div>
+        <div class="bc-rows">
+          <div><strong>Maya Chen</strong></div>
+          <div>Head of Operations</div>
+          <div style="margin-top: 0.5rem; color: var(--red);">maya@openprose.ai</div>
+          <div style="color: var(--red);">+1 &middot; 415 &middot; 0113</div>
+        </div>
+      </div>
+    </div>
+    <div class="app-card">
+      <div class="app-kicker">Document Header</div>
+      <div class="document-head">
+        <span class="dh-kicker">Weekly Investor Digest &middot; Wk 14</span>
+        <h4>ARR crossed <em>$14.2M</em> <span class="hl">this week</span>.</h4>
+        <p class="dh-body">The new $40K Meridian contract pushed us over the line. Three new logos in pipeline, <span class="hl">two expected to close this quarter</span>.</p>
+        <div class="dh-colophon">Generated 09:02 &middot; Verified 09:14 &middot; OpenProse</div>
+      </div>
+    </div>
+    <div class="app-card" style="grid-column: 1 / -1;">
+      <div class="app-kicker">Formal Specification</div>
+      <div class="spec-plate">
+<span class="k">responsibility:</span> <span class="v">weekly-investor-digest</span>
+<span class="k">owner:</span>         <span class="v">finance@company.example</span>
+<span class="k">cadence:</span>       <span class="v">mondays @ 09:00 ET</span>
+<span class="k">input:</span>
+  <span class="c">- gmail:investors@*</span>
+  <span class="c">- notion:portfolio/updates</span>
+<span class="k">outcome:</span> <span class="v">|</span>
+  <span class="v">One page. What changed, what's on track,</span>
+  <span class="v">what needs attention. 200 words.</span>
+<span class="k">deliver:</span>
+  <span class="c">- email:investors@</span>
+<span class="k">audit:</span>         <span class="v">retain 7 years</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- VOICE & TONE -->
+<section class="logotype-section" id="voice">
+  <div class="section-kicker">VIII &middot; Voice &amp; Tone</div>
+  <h2>Three sentences, <em>one register</em>, three placements.</h2>
+  <p class="lede">Three sanctioned voices the brand uses: the short declaration, the spec-sheet note, the editorial observation. Each sentence can live on its own without ornament &mdash; and each demonstrates one placement of italic rust.</p>
+  <div class="voice-grid">
+    <div class="voice-card">
+      <div class="vc-tag">Voice &middot; short · <span class="hl">yellow</span></div>
+      <blockquote>&ldquo;Write the outcome. <span class="hl">We run it.</span>&rdquo;</blockquote>
+      <p class="vc-note">The tagline. Six words. The highlighter lands on the second sentence &mdash; the part that shifts the burden from the reader to the service.</p>
+    </div>
+    <div class="voice-card">
+      <div class="vc-tag">Voice &middot; spec · <span class="hl-hot" style="background: var(--hl-hot);">hot</span></div>
+      <blockquote>&ldquo;Billed by <span class="hl-hot" style="background: var(--hl-hot); font-style: italic;">delivery</span>. If the outcome doesn't ship, no line.&rdquo;</blockquote>
+      <p class="vc-note">Terms of art spoken plainly. Hot mark on the one word that defines the pricing model &mdash; the claim a reader cannot skim past.</p>
+    </div>
+    <div class="voice-card">
+      <div class="vc-tag">Voice &middot; editorial · <em>italic</em></div>
+      <blockquote>&ldquo;Once, the week began with a scramble. <em>Then the outcome was declared in a file.</em>&rdquo;</blockquote>
+      <p class="vc-note">The long form voice. Italic carries the pivot. No highlighter here &mdash; this sentence is still the author's, not yet the reader's.</p>
+    </div>
+  </div>
+</section>
+
+<!-- COLOPHON -->
+<section class="colophon">
+  <div class="rule"></div>
+  <div class="line italic">A literary computer. We don't prompt — we program in prose. &mdash; Direction &kappa;</div>
+  <div class="line">IBM Plex Mono (page baseline) &middot; Cormorant Garamond italic accent (+15%)</div>
+  <div class="line">Parchment #f3ead4 &middot; Sepia #3a2618 &middot; Rust #b35a30</div>
+  <div class="line" style="margin-top: 1.25rem;">
+    <a href="direction-alpha-editorial.html">&alpha; Editorial</a>
+    <a href="direction-beta-tufte.html">&beta; Tufte</a>
+    <a href="direction-gamma-manuscript.html">&gamma; Manuscript</a>
+    <a href="direction-delta-machine.html">&delta; Machine</a>
+    <a href="direction-epsilon-operator.html">&epsilon; Operator</a>
+    <a href="direction-zeta-saas.html">&zeta; SaaS</a>
+    <a href="direction-eta-organism.html">&eta; Organism</a>
+    <a href="direction-theta-living-document.html">&theta; Living Doc</a>
+    <a href="direction-iota-reference-card.html">&iota; Reference Card</a>
+  </div>
+</section>
+
+</body>
+</html>

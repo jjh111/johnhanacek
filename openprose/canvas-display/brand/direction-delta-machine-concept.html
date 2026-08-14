@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en" data-mode="dark">
+<head>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 142 142'%3E%3Cpath d='M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z' fill='%232a2520'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenProse — δ Machine · the operator's terminal</title>
+<link rel="stylesheet" href="_tokens.css">
+<link rel="stylesheet" href="_pairings.css">
+
+<style>
+/* ============================================
+   δ MACHINE · CONCEPT PAGE
+   The brand on the command line, explained as a
+   short documentation post: web-prose sections,
+   each followed by a focused terminal window
+   showing the moment that matters. Light and dark
+   modes propagate fully — terminals included.
+   ============================================ */
+
+<!-- Serif replaced with Kecal Regular (not italic).
+     Source Serif 4 dropped; Kecal seven-weight loaded; italic styling
+     stripped from --serif call-sites so the emphasis reads as Kecal
+     Regular with the amber colour cue. -->
+@font-face { font-family: 'Kecal'; font-weight: 200; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extralight-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 300; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Light-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 400; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Regular-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 500; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Medium-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 600; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Semibold-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 700; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Bold-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 800; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extrabold-web.woff2') format('woff2'); }
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Default = DARK MODE */
+  --paper:     #0e0e10;
+  --paper-dk:  #07070a;
+  --paper-lt:  #16161a;
+  --paper-elev:#1d1d22;
+  --ink:       #e8e4dc;
+  --ink-2:     #c8c4bc;
+  --ink-3:     #888880;
+  --ink-4:     #5a5a55;
+  --amber:     #d4a64f;
+  --amber-deep:#b8862e;
+  --amber-soft:#e0bf68;
+  --warn:      #d4604f;
+  --good:      #6ee87a;
+  --rule:      #2a2a30;
+  --rule-soft: #1f1f24;
+
+  /* Terminal palette — independently themable */
+  --term-bg:        #0e0e10;
+  --term-bg-tb:     #1d1d22;
+  --term-ink:       #e8e4dc;
+  --term-ink-2:     #c8c4bc;
+  --term-ink-3:     #888880;
+  --term-ink-4:     #5a5a55;
+  --term-amber:     #d4a64f;
+  --term-amber-soft:#e0bf68;
+  --term-warn:      #d4604f;
+  --term-good:      #6ee87a;
+  --term-blue:      #7eb8da;
+  --term-rule:      #2a2a30;
+
+  --mono:  'IBM Plex Mono', 'SF Mono', Consolas, monospace;
+  --sans:  'Inter', -apple-system, system-ui, sans-serif;
+  /* Source Serif 4 → Kecal Regular. */
+  --serif: 'Kecal', Georgia, serif;
+}
+
+html[data-mode="light"] {
+  --paper:     #f4f1e8;
+  --paper-dk:  #ece8db;
+  --paper-lt:  #faf8f0;
+  --paper-elev:#fdfbf4;
+  --ink:       #1a1814;
+  --ink-2:     #44403a;
+  --ink-3:     #8a8478;
+  --ink-4:     #b0a896;
+  --amber:     #b8862e;
+  --amber-deep:#8c5e1c;
+  --amber-soft:#d4a64f;
+  --warn:      #b8442e;
+  --good:      #4a8c44;
+  --rule:      #d8d2c4;
+  --rule-soft: #ebe5d4;
+
+  /* Terminal palette — light variant (Solarized-ish warm) */
+  --term-bg:        #faf6e8;
+  --term-bg-tb:     #ede5cf;
+  --term-ink:       #2a241a;
+  --term-ink-2:     #4a4138;
+  --term-ink-3:     #8a7d68;
+  --term-ink-4:     #b0a48c;
+  --term-amber:     #8c5e1c;
+  --term-amber-soft:#a8742a;
+  --term-warn:      #b8442e;
+  --term-good:      #4a8c44;
+  --term-blue:      #2c6d96;
+  --term-rule:      #d4c8aa;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.65;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+/* MODE TOGGLE */
+.mode-toggle {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 100;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--amber);
+  background: var(--paper-elev);
+  border: 1px solid var(--amber);
+  border-radius: 2px;
+  padding: 0.45rem 0.75rem;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.mode-toggle:hover { background: var(--amber); color: var(--paper); }
+
+/* PAGE STRUCTURE — narrow column, web-prose-y */
+.wrap {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 4rem;
+}
+
+/* HEAD — title block */
+.head {
+  margin-bottom: 3rem;
+  padding-bottom: 1.75rem;
+  border-bottom: 1px solid var(--rule);
+}
+.head .eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 1rem;
+}
+.head h1 {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(1.85rem, 3.6vw, 2.7rem);
+  line-height: 1.15;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  margin-bottom: 0.75rem;
+}
+.head h1 em { color: var(--amber); font-style: normal; font-weight: 500; }
+.head .deck {
+  font-family: var(--serif);
+  font-size: 1.12rem;
+  color: var(--ink-2);
+  max-width: 56ch;
+  line-height: 1.5;
+}
+.head .meta {
+  margin-top: 1rem;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+}
+.head .meta .key { color: var(--amber); margin-right: 0.4rem; }
+
+/* SECTION — a chapter of the post */
+.section {
+  margin-top: 3rem;
+}
+.section .num {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 0.55rem;
+  display: block;
+}
+.section h2 {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: 1.55rem;
+  line-height: 1.25;
+  color: var(--ink);
+  letter-spacing: -0.005em;
+  margin-bottom: 0.85rem;
+}
+.section h2 em { color: var(--amber); font-style: normal; font-weight: 600; }
+.section p {
+  font-family: var(--sans);
+  font-size: 1rem;
+  color: var(--ink-2);
+  line-height: 1.65;
+  margin-bottom: 1rem;
+}
+.section p code {
+  font-family: var(--mono);
+  font-size: 0.86em;
+  color: var(--amber);
+  background: var(--paper-elev);
+  border: 1px solid var(--rule-soft);
+  padding: 0.05em 0.35em;
+  border-radius: 2px;
+  font-weight: 500;
+}
+.section p strong { color: var(--ink); font-weight: 600; }
+.section p em { color: var(--amber); font-style: normal; font-weight: 500; }
+
+/* PULL — a small pull-line, no big quote treatment.
+   Italic dropped, kecal regular. */
+.pull {
+  font-family: var(--serif);
+  font-style: normal;
+  font-size: 1.18rem;
+  color: var(--ink);
+  line-height: 1.45;
+  margin: 1.5rem 0 1.5rem;
+  padding: 0.25rem 0 0.25rem 1.25rem;
+  border-left: 2px solid var(--amber);
+  max-width: 56ch;
+}
+.pull em { color: var(--amber); font-style: normal; font-weight: 600; }
+.pull cite {
+  display: block;
+  margin-top: 0.45rem;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-style: normal;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+}
+
+/* TERMINAL WINDOW — used multiple times, themed by --term-* */
+.terminal {
+  margin: 1.25rem 0 1.5rem;
+  background: var(--term-bg);
+  color: var(--term-ink);
+  border: 1px solid var(--term-rule);
+  border-radius: 8px 8px 4px 4px;
+  overflow: hidden;
+  box-shadow: 0 6px 28px rgba(0,0,0,0.16);
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+.terminal .tb {
+  background: var(--term-bg-tb);
+  padding: 0.4rem 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-bottom: 1px solid var(--term-rule);
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--term-ink-3);
+}
+.terminal .tb-dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+.terminal .tb-dot.r { background: #ff5f57; }
+.terminal .tb-dot.y { background: #ffbd2e; }
+.terminal .tb-dot.g { background: #28ca42; }
+.terminal .tb-title {
+  flex: 1;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--term-ink-3);
+  letter-spacing: 0.04em;
+}
+.terminal .body {
+  padding: 1rem 1.25rem 1.25rem;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: normal;
+  overflow-x: auto;
+}
+
+/* terminal text styles */
+.terminal .banner {
+  color: var(--term-amber);
+  font-weight: 500;
+  font-size: 11.5px;
+  line-height: 1.2;
+  margin-bottom: 0.5rem;
+}
+.terminal .boot { color: var(--term-ink-3); }
+.terminal .boot .ok { color: var(--term-good); }
+.terminal .boot .warn { color: var(--term-warn); }
+
+.terminal .prompt { color: var(--term-ink-3); margin-top: 0.35rem; }
+.terminal .prompt .user { color: var(--term-amber); font-weight: 500; }
+.terminal .prompt .at { color: var(--term-ink-4); }
+.terminal .prompt .host { color: var(--term-amber-soft); }
+.terminal .prompt .cwd { color: var(--term-ink-2); }
+.terminal .prompt .sigil { color: var(--term-good); font-weight: 500; }
+
+.terminal .cmd { color: var(--term-ink); font-weight: 500; }
+
+.terminal .out { color: var(--term-ink-2); margin-bottom: 0.3rem; }
+.terminal .out .k { color: var(--term-amber); }
+.terminal .out .v { color: var(--term-ink); }
+.terminal .out .c { color: var(--term-ink-3); }
+.terminal .out .ok { color: var(--term-good); }
+.terminal .out .warn { color: var(--term-warn); }
+.terminal .out .num { color: var(--term-amber-soft); font-weight: 500; }
+.terminal .out .file { color: var(--term-blue); }
+
+.terminal .spec-out { color: var(--term-ink-2); padding: 0.2rem 0; margin-bottom: 0.3rem; }
+.terminal .spec-out .k { color: var(--term-amber); }
+.terminal .spec-out .v { color: var(--term-ink); }
+.terminal .spec-out .c { color: var(--term-ink-3); font-style: italic; }
+.terminal .spec-out .grump { color: var(--term-warn); font-style: italic; }
+
+.terminal .cursor {
+  display: inline-block;
+  width: 0.55em;
+  height: 1em;
+  background: var(--term-amber);
+  vertical-align: text-bottom;
+  margin-left: 0.15em;
+  animation: blink 1.05s steps(2) infinite;
+}
+@keyframes blink { to { background: transparent; } }
+
+/* CALLOUT — a captioned terminal frame, a small "exhibit-N" line */
+.exhibit-cap {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 0.55rem;
+}
+.exhibit-cap .num { color: var(--amber); margin-right: 0.4rem; font-weight: 500; }
+.terminal-after-cap {
+  font-family: var(--serif);
+  font-style: normal;
+  font-size: 0.94rem;
+  color: var(--ink-3);
+  margin-top: -0.45rem;
+  margin-bottom: 1.5rem;
+}
+
+/* COLOPHON */
+.colophon {
+  margin-top: 3.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--rule);
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  letter-spacing: 0.06em;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.colophon .stamp {
+  font-family: var(--serif);
+  font-style: normal;
+  font-size: 0.86rem;
+  color: var(--ink-2);
+  letter-spacing: 0;
+}
+.colophon a {
+  color: var(--amber);
+  text-decoration: none;
+  margin-left: 0.85rem;
+  border-bottom: 1px dotted transparent;
+}
+.colophon a:hover { border-bottom-color: var(--amber); }
+
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+
+}
+</style>
+<script src="_styleguide.js" defer></script>
+</head>
+<body data-direction="δ" data-palette="dark-machine" data-pairing="C" data-mono="plex" data-layout="concept" data-mark="rain">
+
+<button class="mode-toggle" id="mode-toggle" type="button">$ mode --light</button>
+
+<div class="wrap">
+
+  <!-- HEAD -->
+  <div class="head">
+    <div class="eyebrow">δ Machine · concept</div>
+    <h1>OpenProse, on the <em>command line</em>.</h1>
+    <p class="deck">A walk through what an operator actually sees: the boot banner, the contract, a single run end-to-end, what happens when something fails, and what rolls up at the end of the day.</p>
+    <div class="meta"><span class="key">SHELL</span>zsh · <span class="key">RUNTIME</span>openprose-v0.42 · <span class="key">HOST</span>ridgeline-ops</div>
+  </div>
+
+  <!-- SECTION 1 — Boot -->
+  <div class="section">
+    <span class="num">§ 01</span>
+    <h2>The runtime, on boot.</h2>
+    <p>When the OpenProse runtime starts, it does three things in order: resolves the manifest at <code>~/responsibilities/openprose.lock</code>, binds the inputs each responsibility declares it requires, and tells you which responsibilities are running, which are holding, and which are quietly archived. Boot is informational. Nothing has been delivered yet.</p>
+
+    <div class="exhibit-cap"><span class="num">Exhibit 1</span>boot · ridgeline-ops · 06:00 ET</div>
+    <div class="terminal">
+      <div class="tb">
+        <span class="tb-dot r"></span><span class="tb-dot y"></span><span class="tb-dot g"></span>
+        <span class="tb-title">sarah@ridgeline-ops · openprose boot</span>
+      </div>
+      <div class="body"><div class="banner">  ┌─────────────────────────────────────────────────────────────┐
+  │   OpenProse runtime · v0.42.0 · openprose.ai/runtime         │
+  │   <span style="color: var(--term-ink-3);">a literary computer · for programs you can read &amp; prove</span>   │
+  └─────────────────────────────────────────────────────────────┘</div>
+<div class="boot">[<span class="ok">  ok  </span>] resolving manifest at ~/responsibilities/openprose.lock</div><div class="boot">[<span class="ok">  ok  </span>] 12 responsibilities loaded · 8 active · 2 holding · 2 archived</div><div class="boot">[<span class="ok">  ok  </span>] connecting to data warehouse … bound (3a8f29c)</div><div class="boot">[<span class="ok">  ok  </span>] connecting to weather API … bound (rate-limited, 0.94 of cap)</div><div class="boot">[<span class="warn"> warn </span>] tenant-anomaly-watch: precision regressed wk 16→18, holding delivery</div><div class="boot">[<span class="ok">  ok  </span>] runtime ready · listening on cadence · Mon 09:00:00 ET</div></div>
+    </div>
+    <p class="terminal-after-cap">— twelve responsibilities, two of them holding. The held ones get explained later.</p>
+  </div>
+
+  <!-- SECTION 2 — Contract -->
+  <div class="section">
+    <span class="num">§ 02</span>
+    <h2>The contract.</h2>
+    <p>Every responsibility is a single <code>.prose</code> file. The whole spec — what it requires, what it ensures, who it's signed by, where it delivers — fits in fifteen lines. There is no template. There is no DSL. The file is plain language; the runtime is what makes it operate.</p>
+
+    <p class="pull">A program is a document with guarantees. <em>weekly-energy-digest.prose</em>, the file you're about to read, is one of those documents.</p>
+
+    <div class="exhibit-cap"><span class="num">Exhibit 2</span>cat · weekly-energy-digest.prose · v42</div>
+    <div class="terminal">
+      <div class="tb">
+        <span class="tb-dot r"></span><span class="tb-dot y"></span><span class="tb-dot g"></span>
+        <span class="tb-title">~/responsibilities/weekly-energy-digest.prose</span>
+      </div>
+      <div class="body"><div class="prompt"><span class="user">sarah</span><span class="at">@</span><span class="host">ridgeline-ops</span><span class="cwd"> ~/responsibilities</span> <span class="sigil">$</span> <span class="cmd">cat weekly-energy-digest.prose</span></div>
+<div class="spec-out"><span class="k">responsibility:</span> <span class="v">weekly-energy-digest</span>
+<span class="k">owner:</span>         <span class="v">sarah.k @ ridgeline-ops</span>
+<span class="k">cadence:</span>       <span class="v">mondays @ 09:00 ET</span>
+
+<span class="k">requires:</span>
+  - <span class="v">data_warehouse_url</span>     <span class="c"># the meter records, all 40 buildings</span>
+  - <span class="v">codebase_ref</span>           <span class="c"># commit 3a8f29c · verified</span>
+  - <span class="v">weather_api</span>            <span class="c"># for HDD/CDD normalization</span>
+
+<span class="k">ensures:</span>
+  - <span class="v">weekly growth findings</span>
+  - <span class="v">anomaly notes &lt;&lt; 2% false-positive</span>
+  - <span class="v">delivered Mondays @ 09:00 ET · verified · signed</span>
+
+<span class="k">tone:</span>          <span class="v">"executive-friendly. flag anomalies. no jargon."</span>
+                <span class="grump"># weather API: this fails closed every other Wednesday</span>
+                <span class="grump"># last edit: maya bumped the threshold from 0.05 → 0.02 after</span>
+                <span class="grump">#            the building 14 false alarm. she was right.</span>
+
+<span class="k">deliver:</span>
+  - <span class="v">slack #ops-energy</span>
+  - <span class="v">email digest@ridgeline.example</span>
+
+<span class="k">audit:</span>         <span class="v">retain 7 years · sign every delivery</span></div></div>
+    </div>
+    <p class="terminal-after-cap">— the comment lines beginning with <code>#</code> are Sarah's actual notes, kept in the file.</p>
+  </div>
+
+  <!-- SECTION 3 — A run -->
+  <div class="section">
+    <span class="num">§ 03</span>
+    <h2>A run, end-to-end.</h2>
+    <p>Each Monday at 09:00 ET, the runtime resolves the requires-clauses, executes the work, and verifies the result against each ensures-clause. If the score crosses threshold, the brief delivers; if not, the runtime holds. <code>--dry-run</code> is the same flow, with no delivery sent — useful for inspecting the trajectory before going live.</p>
+
+    <div class="exhibit-cap"><span class="num">Exhibit 3</span>op run --dry-run · v42</div>
+    <div class="terminal">
+      <div class="tb">
+        <span class="tb-dot r"></span><span class="tb-dot y"></span><span class="tb-dot g"></span>
+        <span class="tb-title">op run weekly-energy-digest --dry-run</span>
+      </div>
+      <div class="body"><div class="prompt"><span class="user">sarah</span><span class="at">@</span><span class="host">ridgeline-ops</span><span class="cwd"> ~/responsibilities</span> <span class="sigil">$</span> <span class="cmd">op run weekly-energy-digest --dry-run</span></div>
+<div class="out"><span class="c">→ resolving requires …</span>
+  <span class="c">→</span> data_warehouse_url     <span class="ok">ok</span>  <span class="c">(40 buildings · 7,238 records)</span>
+  <span class="c">→</span> codebase_ref           <span class="ok">ok</span>  <span class="c">(3a8f29c · verified)</span>
+  <span class="c">→</span> weather_api            <span class="ok">ok</span>  <span class="c">(HDD = 142, CDD = 0)</span>
+
+<span class="c">→ executing …</span>
+  <span class="c">→</span> gathered:    7,238 meter records · 39 weather samples
+  <span class="c">→</span> normalized:  $/sqft against HDD baseline
+  <span class="c">→</span> anomalies:   <span class="num">3</span> flagged <span class="c">(building 12, 14, 31)</span>
+  <span class="c">→</span> drafted:     247-word brief · 3 callouts · 1 chart
+
+<span class="c">→ verifying against contract …</span>
+  <span class="c">→</span> weekly growth findings              <span class="ok">✓ pass</span>
+  <span class="c">→</span> anomaly FP rate &lt;&lt; 2%               <span class="ok">✓ pass (0.7%)</span>
+  <span class="c">→</span> tone: "executive-friendly"          <span class="ok">✓ pass (eval 0.97)</span>
+
+<span class="c">→ score:</span> <span class="num">0.97</span> <span class="c">(+0.01 from v41)</span>
+<span class="c">→ would deliver to:</span> #ops-energy, digest@ridgeline.example
+<span class="c">→ <strong style="color: var(--term-amber);">[dry-run only · no delivery sent]</strong></span></div></div>
+    </div>
+    <p class="terminal-after-cap">— each ensures-clause is checked individually. The runtime never quietly aggregates passes.</p>
+  </div>
+
+  <!-- SECTION 4 — Failure -->
+  <div class="section">
+    <span class="num">§ 04</span>
+    <h2>When something <em>fails</em>.</h2>
+    <p>The runtime never fails silently. If a contract clause regresses, it pages the on-call and writes the regression into the run log with as much causal detail as it can construct. <code>op why</code> is the operator's tool for asking, "what happened, and what's the recommended patch?" The answer is always specific: which clause, which run, which suggested edit.</p>
+
+    <div class="exhibit-cap"><span class="num">Exhibit 4</span>op why · tenant-anomaly-watch · held v18</div>
+    <div class="terminal">
+      <div class="tb">
+        <span class="tb-dot r"></span><span class="tb-dot y"></span><span class="tb-dot g"></span>
+        <span class="tb-title">op why tenant-anomaly-watch</span>
+      </div>
+      <div class="body"><div class="prompt"><span class="user">sarah</span><span class="at">@</span><span class="host">ridgeline-ops</span><span class="cwd"> ~/responsibilities</span> <span class="sigil">$</span> <span class="cmd">op why tenant-anomaly-watch</span></div>
+<div class="out"><span class="warn">holding · v18 · last 3 runs:</span>
+  <span class="c">→</span> v16 · score 0.91 · <span class="ok">delivered</span>
+  <span class="c">→</span> v17 · score 0.83 · <span class="ok">delivered</span>  <span class="c">(eval barely over threshold)</span>
+  <span class="c">→</span> v18 · score 0.74 · <span class="warn">held</span>       <span class="c">(threshold was 0.80)</span>
+
+<span class="c">root cause likely:</span>
+  utility API rate-limited Tue 22:14, returned a partial dataset.
+  the contract didn't specify what to do with a partial fetch.
+
+<span class="c">suggested spec patch:</span>
+  <span class="k">requires:</span>
+    - <span class="v">utility_api</span>
+      <span class="c"># add: on partial fetch, hold delivery · don't extrapolate</span>
+
+<span class="c">// jamie, this is a spec issue, not a model issue. sit with me Tue?</span>
+<span class="c">//   — sk</span></div></div>
+    </div>
+    <p class="terminal-after-cap">— the personal asides at the bottom are the operator's notes back to her team. They live with the run.</p>
+  </div>
+
+  <!-- SECTION 5 — Rollup -->
+  <div class="section">
+    <span class="num">§ 05</span>
+    <h2>What rolls up at the end of the day.</h2>
+    <p>By 09:01 ET on a Monday, the day's deliveries are decided. <code>op log --tail 5</code> is a one-screen rollup: which responsibilities ran, what they scored, where they delivered, which one held. Nothing else needs to be opened. If you wanted, you could leave it at that.</p>
+
+    <div class="exhibit-cap"><span class="num">Exhibit 5</span>op log --tail 5 · 2026-05-04</div>
+    <div class="terminal">
+      <div class="tb">
+        <span class="tb-dot r"></span><span class="tb-dot y"></span><span class="tb-dot g"></span>
+        <span class="tb-title">op log --tail 5</span>
+      </div>
+      <div class="body"><div class="prompt"><span class="user">sarah</span><span class="at">@</span><span class="host">ridgeline-ops</span><span class="cwd"> ~/responsibilities</span> <span class="sigil">$</span> <span class="cmd">op log --tail 5</span></div>
+<div class="out">  <span class="c">2026-05-04 09:00:42</span>  <span class="ok">delivered</span>  weekly-energy-digest               <span class="num">v42 0.97</span>  <span class="c">→ #ops-energy</span>
+  <span class="c">2026-05-04 09:00:14</span>  <span class="ok">delivered</span>  on-call-rotation-brief             <span class="num">v52 0.99</span>  <span class="c">→ #ops</span>
+  <span class="c">2026-05-04 08:58:33</span>  <span class="warn">holding  </span>  tenant-anomaly-watch (precision)   <span class="num">v18 0.74</span>  <span class="c">→ paged on-call</span>
+  <span class="c">2026-05-04 08:55:01</span>  <span class="ok">delivered</span>  end-of-week-anomalies              <span class="num">v18 0.92</span>  <span class="c">→ #ops</span>
+  <span class="c">2026-05-03 17:14:08</span>  <span class="ok">delivered</span>  vendor-payment-summary             <span class="num">v33 0.95</span>  <span class="c">→ accounting</span>
+<div class="prompt" style="margin-top: 0.5rem;"><span class="user">sarah</span><span class="at">@</span><span class="host">ridgeline-ops</span><span class="cwd"> ~/responsibilities</span> <span class="sigil">$</span> <span class="cmd">_</span><span class="cursor"></span></div></div></div>
+    </div>
+  </div>
+
+  <!-- CLOSING -->
+  <div class="section">
+    <span class="num">§ end</span>
+    <h2>That's the whole interface.</h2>
+    <p>Five commands cover the day-to-day: <code>op status</code>, <code>op run</code>, <code>op why</code>, <code>op log</code>, <code>op patch</code>. The contract sits on disk, version-controlled. The runtime ships briefs on cadence. The held ones get a page; the delivered ones get signed. Sarah is in Building 14 looking at a boiler when the brief lands. She doesn't open it until lunchtime. <em>That is the point.</em></p>
+  </div>
+
+  <!-- COLOPHON -->
+  <div class="colophon">
+    <span class="stamp">IBM Plex Mono · Inter · Source Serif 4 · light & dark, terminals included</span>
+    <span>
+      <a href="direction-delta-machine.html">δ template</a>
+      <a href="direction-alpha-editorial-concept.html">α</a>
+      <a href="direction-beta-tufte-concept.html">β</a>
+      <a href="direction-gamma-manuscript-concept.html">γ</a>
+      <a href="direction-epsilon-operator-concept.html">ε</a>
+      <a href="direction-zeta-saas-concept.html">ζ</a>
+      <a href="direction-eta-organism-concept.html">η</a>
+      <a href="direction-theta-living-document-concept.html">θ</a>
+      <a href="direction-iota-reference-card-concept.html">ι</a>
+      <a href="direction-kappa-codex-spreads-concept.html">κ</a>
+    </span>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var btn = document.getElementById('mode-toggle');
+  if (!btn) return;
+  function applyMode(m) {
+    document.documentElement.setAttribute('data-mode', m);
+    // Surface tokens come from body[data-palette] in _tokens.css; swap the
+    // palette too or the dark-machine surface wins and light never applies.
+    document.body.setAttribute('data-palette', m === 'light' ? 'light-warm-teal' : 'dark-machine');
+    btn.textContent = m === 'light' ? '$ mode --dark' : '$ mode --light';
+    try { localStorage.setItem('openprose-delta-mode', m); } catch(e){}
+  }
+  var saved = 'dark';
+  try { saved = localStorage.getItem('openprose-delta-mode') || 'dark'; } catch(e){}
+  applyMode(saved);
+  btn.addEventListener('click', function(){
+    var c = document.documentElement.getAttribute('data-mode') || 'dark';
+    applyMode(c === 'light' ? 'dark' : 'light');
+  });
+})();
+</script>
+
+</body>
+</html>

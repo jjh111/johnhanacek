@@ -1,0 +1,2724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 142 142'%3E%3Cpath d='M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z' fill='%232a2520'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenProse — ρ Black Hole · the fall (physics fork)</title>
+<link rel="stylesheet" href="_tokens.css">
+<link rel="stylesheet" href="_pairings.css">
+
+<meta name="description" content="A tunable interactive hero, physics fork. Click anywhere to spawn a black hole and fall into it. The black hole and accretion disk are rendered with a Schwarzschild geodesic raytracer (RK4-tabulated deflection α(b)) and a Shakura-Sunyaev disk texture with Doppler and gravitational redshift — Interstellar/DNGR-style instead of layered 2D arcs.">
+
+<!-- ============================================================
+     ρ BLACK HOLE — the fall · PHYSICS FORK
+     ============================================================
+     This fork REPLACES the layered 2D rendering pipeline of the
+     parent (lens halo → back-wrap arcs → EH disc → orbiting
+     particle disk → photon ring) with a single ray-marched
+     gravitational-lensing pipeline, modelled after the Double
+     Negative Gravitational Renderer (DNGR) that produced the
+     Gargantua images for Interstellar:
+
+       James, von Tunzelmann, Franklin & Thorne (2015),
+       "Gravitational lensing by spinning black holes in
+        astrophysics, and in the movie Interstellar"
+       https://arxiv.org/abs/1502.03808
+
+     PHYSICS PIPELINE
+       1. GEODESIC LOOKUP TABLE
+          At boot we numerically integrate the Schwarzschild
+          null-geodesic equation
+             d²u/dφ² + u = (3/2) · rs · u²
+          with u = 1/r, using RK4 over φ.  For each impact
+          parameter b in [b_photon · 1.0001 … bMax] we record
+          the total deflection angle α(b) experienced by a ray
+          coming in from infinity and either escaping to
+          infinity again or plunging through the photon sphere
+          and being captured by the black hole.  b_photon =
+          3√3/2 · rs ≈ 2.598 rs is the critical impact
+          parameter; rays with b < b_photon are flagged as
+          CAPTURED (they fall into the shadow).
+
+          References:
+            · Misner, Thorne, Wheeler "Gravitation" Ch. 25
+            · b_photon = 3√3/2 · rs  (photon sphere at r=1.5rs)
+
+       2. PER-PIXEL RAY TRACE
+          For each pixel in a downsampled raster (PHYSICS_SCALE,
+          default 0.42×) we compute its angular offset from the
+          BH centre on screen and project that to an impact
+          parameter b in units of rs (using a small-angle
+          approximation tuned by OBSERVER_DISTANCE).  We look
+          up α(b) and the capture flag.  Rays flagged as
+          captured paint the EH shadow (pure black).  Otherwise
+          we rotate the incoming ray direction by α(b) about
+          the BH-perpendicular axis and intersect the bent ray
+          with the accretion-disk plane (a thin annulus at z=0
+          between DISK_INNER_RATIO and DISK_OUTER_RATIO).  On
+          a hit we sample the disk texture; on a miss the pixel
+          falls through to background.
+
+       3. DISK TEXTURE
+          Procedural Shakura-Sunyaev profile:
+             T(r) ∝ r^-3/4     (thin-disk effective temperature)
+          The temperature is mapped to a blackbody-style colour
+          ramp (white-hot at the ISCO → amber → deep orange at
+          the outer edge).  A hash-noise stripe pattern in disk
+          azimuth adds organic structure (turbulent eddies in
+          the synchrotron emission).
+
+          Relativistic effects baked in per sample:
+             · Doppler factor δ = 1 / (γ · (1 - β·n̂))
+               approximated as δ ≈ 1 / (1 - β·cos(ψ)) for the
+               weakly-relativistic-orbit regime — brightens the
+               approaching side of the disk, dims the receding
+               side, and shifts hue toward blue/red respectively.
+             · Gravitational redshift  ω_obs/ω_emit = √(1 - rs/r)
+               applied as a colour-temperature drop for photons
+               emitted near the inner edge.
+
+       4. PERFORMANCE
+          The ray-trace runs into an OffscreenCanvas at
+          PHYSICS_SCALE × DPR resolution; the result is blitted
+          to the main canvas via drawImage() which gives a free
+          smooth upscale.  Target ≤ 100 ms / frame on a modern
+          laptop at 0.42 scale.  PHYSICS_SCALE is a controls
+          knob so the user can trade quality for FPS.
+
+       5. LIFECYCLE
+          The same GROWING → DISSOLVING → idle pattern from the
+          parent is preserved exactly so the chrome / phase
+          indicator / cycle escalator continue to work.  The
+          disk appears with the EH and fades with it; rs is
+          slaved to the live EH radius so the entire bent-ray
+          image scales identically to the parent's EH-disc-led
+          envelope.
+
+     APPROXIMATIONS vs the full DNGR pipeline
+       · Schwarzschild (non-spinning) instead of Kerr.  No
+         frame-dragging, no equatorial-asymmetric photon ring.
+       · Polar deflection table — single deflection angle α(b)
+         per impact parameter, applied as a rotation in the
+         ray-BH plane.  This is exact for in-plane rays from
+         infinity; for our small-angle observer geometry it is
+         a tight approximation of the full 3D photon worldline.
+       · Single disk-plane intersection.  No multi-loop "higher
+         order" image (the disk's back side imaged twice over
+         the EH); secondary images need re-firing the bent ray
+         after the first intersection and we skip that for
+         performance.  The primary lensed image still produces
+         the iconic disk-over-top wrap because rays with
+         b > b_photon bend through > π/2 and graze the disk
+         from the far side.
+       · Procedural disk colour ramp, not a true Planck
+         spectrum integrated over the band-pass.
+       · Doppler approximated as 1/(1 - β·cos ψ) instead of the
+         full special-relativistic δ — adequate at β ≲ 0.5.
+
+     EVERYTHING ELSE (chrome, palette, starfield, lifecycle,
+     interaction, controls panel skeleton, cycle escalator) is
+     inherited UNCHANGED from the parent.
+
+     ============================================================ -->
+
+<!-- ============================================================
+     ρ BLACK HOLE — the fall  (original header from parent)
+     ============================================================
+     CHROME PARADIGM — inherited from direction-mu-bloom.html:
+       Full-viewport canvas, center glass-card logo (signet ↔
+       wordmark morph), corner UI in cream/gold over a
+       blurred-glass backdrop:
+         · top-left   LIVE status badge
+         · top-right  INFO pill linking to the footer
+         · bottom-left "click to fall in" caption
+         · bottom-right collapsible controls panel
+         · bottom-center scroll hint
+       The chrome stays paper-cream / honey-gold so it floats
+       legibly above the dark void below.
+
+     PALETTE INVERSION — μ-bloom is ivory-on-sepia; ρ Black Hole
+     is the same palette inverted to dark-mode. Cream-warm chrome
+     elements sit on a near-black void; the gold accent rises in
+     temperature (#c89c2a → #e5b94a) to read against deep space.
+
+     RENDERING APPROACH — canvas 2D, art-first.
+       Reasoning: a true ray-traced Schwarzschild metric requires
+       per-pixel integration of null geodesics (very expensive in
+       JS). Real-time accuracy comes at the cost of either WebGL
+       shaders or aggressive downsampling — both of which add
+       complexity that fights the brief ("art is primary").
+
+       Instead the scene is layered geometrically — each layer
+       captures one observable effect of strong gravity:
+
+         · Starfield (background)
+           ~600 procedural stars at deterministic positions;
+           streamed radially outward from the black hole as
+           the camera "falls in" (proper motion of background
+           sources as you approach the BH).
+
+         · Lensing halo
+           Soft radial gradient just outside the photon sphere
+           that brightens the rim of the event horizon. This
+           captures the fact that light grazing the BH gets
+           focused into a thin bright ring (the photon ring).
+
+         · Back-side accretion disk arc
+           A thin bright crescent drawn ABOVE the event horizon
+           (along the disk's projected minor axis) that
+           represents the lensed image of the disk's far side.
+           Photons from the back of the disk bend around the
+           BH and reach the camera, so the disk appears to
+           wrap over the top of the shadow (the Interstellar
+           / M87 silhouette).
+
+         · Event horizon
+           A solid black disc — the "shadow" of the BH at the
+           Schwarzschild radius. Plain fill, sharp edge.
+
+         · Photon ring
+           A thin, sharply bright ring at ~1.5× the event
+           horizon (the photon sphere radius for a non-rotating
+           BH). Brightness peaks here because photons can
+           orbit several times before escaping.
+
+         · Front-side accretion disk
+           The visible front rim of the disk, drawn as a
+           gradient-filled ellipse half (bottom half of the
+           tilted ellipse). Doppler asymmetry: the side
+           rotating toward the viewer is brighter and shifted
+           blue; the receding side is dimmer and shifted red.
+
+         · Dissolve at peak (no contraction)
+           Once the EH has grown past the viewport corners the
+           radius is HELD at peak while alpha fades to 0 over a
+           brief window.  The BH dissipates rather than shrinks
+           back, so the starfield is "revealed" underneath. No
+           visible contraction. Clicks become accepted again
+           immediately after the dissolve completes.
+
+       Disk tilt is driven by the click position. The vector
+       from screen center to the click point gives the disk's
+       projected minor-axis direction; the click's distance
+       from center controls the inclination (0° face-on at the
+       very center, up to ~78° at the corners). Clicking close
+       to the centre gives a near face-on disk (you see all of
+       it); clicking near the edge gives an edge-on look (the
+       disk slices the BH horizontally).
+
+     PERFORMANCE — at 1440×900 this is ~30 path/fill ops per
+     frame plus the starfield. Comfortable 60fps on any
+     reasonable laptop; degrades gracefully on mobile (the
+     canvas can be backed off to 0.75× pixel ratio via the
+     controls).
+
+     STATUS — direction ρ; experimental hero. Not load-bearing
+     for the brand; a craft demo.
+     ============================================================ -->
+
+<style>
+/* Kecal loaded from the FungiType GH CDN at the canonical -web.woff2 URLs
+   (matches the styleguide-teal reference). Cormorant Garamond is dropped
+   from the @import below; the --serif token now points at Kecal so every
+   existing serif call-site (.bl-caption .body, .controls-desc, .foot h2,
+   .foot p) renders in Kecal without further per-rule edits. */
+@font-face { font-family: 'Kecal'; font-weight: 200; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extralight-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 300; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Light-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 400; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Regular-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 500; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Medium-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 600; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Semibold-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 700; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Bold-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 800; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extrabold-web.woff2') format('woff2'); }
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;1,400&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* === Void palette ===
+     Inverted μ-bloom: ivory paper becomes a near-black void;
+     sepia ink becomes warm cream type; rust-gold rises a step
+     so it reads against deep space.  Chrome surfaces inherit
+     the cream-on-glass treatment so the corner UI looks like
+     paper folded into the void. */
+  --void:        #060409;
+  --void-deep:   #02010a;
+  --void-warm:   #0c0a13;
+  --paper:       #f7f1e3;
+  --paper-dk:    #ede6d2;
+  --paper-lt:    #fbf6e9;
+  --paper-warm:  #f3ead4;
+
+  --ink:         #f7f1e3;          /* primary type = cream */
+  --ink-2:       #d8cdb0;          /* lifted type */
+  --ink-3:       #8e8068;          /* tertiary labels */
+  --ink-4:       #5a4f3c;          /* hairline / faded */
+
+  /* Gold — μ-bloom's #c89c2a brightened one step for legibility
+     against the void.  Retains the same warm temperature; reads
+     as "honey-gold under firelight" rather than "rust on paper". */
+  --gold:        #e5b94a;
+  --gold-deep:   #c89c2a;
+  --gold-soft:   #f0ce80;
+  --gold-faint:  rgba(229,185,74,0.14);
+
+  /* Cool complement — used sparingly for the blueshifted side of
+     the disk readout, the lensing halo accents, and the photon
+     ring micro-detail.  Never on chrome (the chrome stays warm). */
+  --cyan:        #6fb4d8;
+  --cyan-deep:   #4a8eb2;
+  --cyan-faint:  rgba(111,180,216,0.18);
+
+  --rule:        rgba(247,241,227,0.16);
+  --rule-mid:    rgba(247,241,227,0.08);
+
+  /* --serif repointed at Kecal so all four serif call-sites
+     (.bl-caption .body, .controls-desc, .foot h2, .foot p) inherit it.
+     Georgia kept as the fallback so the cascade still degrades to a serif
+     if Kecal fails to load. */
+  --serif: 'Kecal', Georgia, serif;
+  --sans:  'Inter', -apple-system, system-ui, sans-serif;
+  --mono:  'IBM Plex Mono', 'JetBrains Mono', 'SF Mono', monospace;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  background: var(--void);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.65;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* ============================================================
+   SPLASH — the full first screen
+   ============================================================ */
+.splash {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  min-height: 640px;
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 50%, rgba(6,4,9,0.0) 0%, rgba(2,1,10,0.6) 70%, var(--void-deep) 100%),
+    var(--void);
+}
+
+/* The BH canvas fills the splash; everything else floats on top
+   in z-stacked corner UI. */
+.bh-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  cursor: crosshair;
+  background: transparent;
+  /* Slight contrast lift via mix-blend; keeps the cream chrome
+     readable when the disk edge brushes the corners. */
+  mix-blend-mode: normal;
+}
+
+/* ============================================================
+   CENTER GLASS — the OpenProse mark.
+   Same morph (signet ↔ wordmark) as μ-bloom, but the glass card
+   is recoloured for the dark void: cream-tinted glass over deep
+   shadow, gold border.
+   ============================================================ */
+/* ----------------------------------------------------------------
+   Port of μ-bloom's logo morph implementation.
+   The glass card has explicit width/height for each phase and
+   morphs as a single OVAL (border-radius 50%, true ellipse — not
+   a stadium pill).  SVGs inside are absolutely positioned and
+   scale/skew within the morphing glass, so the signet visibly
+   STRETCHES into the wordmark on the same cubic-bezier curve as
+   the glass itself resizes — a smooth ovular morph rather than a
+   crossfade. */
+.center-glass {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  /* Element-level translate(-50%,-50%) keeps the glass centred;
+     inner SVGs use their own translate so they don't push the
+     layout when their transforms scale them up/down. */
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  background: rgba(247,241,227,0.06);
+  backdrop-filter: blur(18px) saturate(135%);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
+  border: 1px solid rgba(247,241,227,0.18);
+  /* 50% — true ellipse, top + bottom curve too.  No flat edges. */
+  border-radius: 50%;
+  box-shadow:
+    0 14px 64px rgba(0,0,0,0.55),
+    inset 0 1px 0 rgba(247,241,227,0.18);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  background-clip: padding-box;
+  color: var(--gold);
+  outline: none;
+  appearance: none;
+  border-style: solid;
+  font-family: inherit;
+  /* Logo stays fully visible throughout — the BH grows behind it
+     and dissolves at peak without ever touching the mark's opacity. */
+  opacity: 0.96;
+  transition:
+    width 0.95s cubic-bezier(0.4,0,0.2,1),
+    height 0.95s cubic-bezier(0.4,0,0.2,1),
+    box-shadow 0.4s ease,
+    border-color 0.3s ease,
+    background 0.3s ease;
+}
+/* Per-phase glass dimensions — both phases are OVAL (horizontal
+   lozenge), the wordmark phase is just much wider.  This way the
+   glass reads as one shape morphing in scale rather than a circle
+   ⇄ pill toggle. */
+.center-glass[data-phase="signet"] {
+  width: clamp(280px, 30vw, 400px);
+  height: clamp(180px, 18vw, 250px);
+}
+.center-glass[data-phase="wordmark"] {
+  width: clamp(440px, 56vw, 780px);
+  height: clamp(160px, 17vw, 230px);
+}
+.center-glass:hover {
+  border-color: rgba(229,185,74,0.42);
+  background: rgba(247,241,227,0.10);
+  box-shadow:
+    0 18px 78px rgba(0,0,0,0.62),
+    inset 0 1px 0 rgba(247,241,227,0.24);
+}
+
+/* Stack the SVGs absolutely centred inside the glass.  They no
+   longer drive the glass's layout — the glass has explicit
+   dimensions per phase, and the SVGs scale within. */
+.center-glass svg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: block;
+  fill: currentColor;
+  transform-origin: center;
+  transition:
+    opacity 0.9s cubic-bezier(0.4,0,0.2,1),
+    transform 0.9s cubic-bezier(0.4,0,0.2,1);
+  filter: drop-shadow(0 4px 18px rgba(229,185,74,0.32));
+  pointer-events: none;
+}
+
+/* Natural mark sizes; both centred via translate(-50%,-50%) */
+.center-glass .mark-signet   { width: clamp(140px, 18vw, 240px); height: auto; aspect-ratio: 1 / 1; }
+.center-glass .mark-wordmark { width: clamp(360px, 48vw, 680px); height: auto; aspect-ratio: 3840 / 998; }
+
+/* Phase: SIGNET. */
+.center-glass[data-phase="signet"] .mark-signet {
+  opacity: 1;
+  transform: translate(-50%, -50%) scaleX(1) skewX(0deg);
+}
+.center-glass[data-phase="signet"] .mark-wordmark {
+  opacity: 0;
+  transform: translate(-50%, -50%) scaleX(0.18) skewX(14deg);
+}
+/* Phase: WORDMARK. */
+.center-glass[data-phase="wordmark"] .mark-signet {
+  opacity: 0;
+  transform: translate(-50%, -50%) scaleX(2.6) skewX(-14deg);
+}
+.center-glass[data-phase="wordmark"] .mark-wordmark {
+  opacity: 1;
+  transform: translate(-50%, -50%) scaleX(1) skewX(0deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .center-glass, .center-glass svg { transition: opacity 0.2s linear; }
+}
+
+/* ============================================================
+   CORNERS — TL/TR/BL/BR + scroll hint.
+   Direct port of μ-bloom corner UI, recoloured for the void.
+   ============================================================ */
+.corners {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+.corners > * { pointer-events: auto; }
+
+/* TL — status badge */
+.tl-badge {
+  position: absolute;
+  top: 1.5rem;
+  left: 1.5rem;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  background: rgba(12,10,19,0.72);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 0.45rem 0.85rem 0.45rem 0.7rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+.tl-badge .dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 0 3px rgba(229,185,74,0.18);
+  animation: pulse 2.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(229,185,74,0.55); }
+  50%     { box-shadow: 0 0 0 8px rgba(229,185,74,0); }
+}
+.tl-badge .sep { color: var(--ink-4); margin: 0 0.1rem; }
+.tl-badge .acc { color: var(--gold); }
+
+/* TR — info pill */
+.tr-info {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: rgba(12,10,19,0.72);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 0.55rem 1rem;
+  cursor: pointer;
+  font-weight: 500;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.tr-info:hover { color: var(--gold); border-color: var(--gold); }
+.tr-info::after {
+  content: '→';
+  display: inline-block;
+  font-family: var(--sans);
+  font-size: 0.95rem;
+  letter-spacing: 0;
+}
+
+/* BL — "click to fall in" caption */
+.bl-caption {
+  position: absolute;
+  bottom: 1.85rem;
+  left: 1.5rem;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  max-width: 22ch;
+  line-height: 1.55;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  background: rgba(12,10,19,0.58);
+  backdrop-filter: blur(12px) saturate(135%);
+  -webkit-backdrop-filter: blur(12px) saturate(135%);
+  border-left: 2px solid var(--gold);
+  padding: 0.7rem 0.9rem 0.7rem 1rem;
+  border-radius: 0 4px 4px 0;
+}
+.bl-caption .head {
+  font-weight: 600;
+  color: var(--gold);
+  letter-spacing: 0.22em;
+}
+.bl-caption .body {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 0.92rem;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink-2);
+  line-height: 1.45;
+  font-weight: 400;
+}
+
+/* BR — controls panel.  Same recipe as μ-bloom, retinted void. */
+.controls {
+  position: absolute;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 5;
+  width: 320px;
+  max-height: calc(100% - 3rem);
+  display: flex;
+  flex-direction: column;
+  background: rgba(12,10,19,0.78);
+  border: 1px solid var(--rule);
+  backdrop-filter: blur(20px) saturate(135%);
+  -webkit-backdrop-filter: blur(20px) saturate(135%);
+  border-radius: 10px;
+  font-family: var(--mono);
+  color: var(--ink-2);
+  font-size: 0.66rem;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.55);
+  overflow: hidden;
+  pointer-events: auto;
+}
+.controls-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 0.85rem 0.5rem;
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  cursor: pointer;
+  user-select: none;
+}
+.controls-head .live-dot {
+  display: inline-block;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--gold);
+  margin-right: 0.45rem;
+  animation: pulse 2.4s ease-in-out infinite;
+  vertical-align: middle;
+}
+.controls-head .num {
+  color: var(--ink);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.controls-head .toggle {
+  font-size: 0.7rem;
+  color: var(--ink-3);
+  transition: transform 0.2s ease;
+}
+.controls.collapsed .controls-head .toggle { transform: rotate(-90deg); }
+.controls.collapsed .controls-body,
+.controls.collapsed .controls-foot { display: none; }
+.controls-body {
+  padding: 0.5rem 0.85rem 0.7rem;
+  overflow-y: auto;
+}
+.controls-section {
+  /* Group titles inherit mono from .controls above, but the family is
+     declared explicitly here so the intent is locked at the call-site
+     and a future serif/sans rebind on the parent can't drift them.
+     Section headers brightened + weight bumped so they don't get
+     out-shadowed by the brighter labels under them. [c_4ac0a3e2] */
+  font-family: var(--mono);
+  margin: 0.65rem 0 0.25rem;
+  font-size: 0.66rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gold);
+  font-weight: 700;
+}
+.controls-section:first-child { margin-top: 0.1rem; }
+.controls-row { margin: 0.2rem 0 0.55rem; }
+.controls-row .label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.1rem;
+}
+.controls-row label {
+  /* Slider / knob labels pinned to the mono stack explicitly so the
+     directorial panel reads as one technical surface.
+     Row labels in pure #fff so they read crisp against the dark glass;
+     section headers and value readouts stay gold by design (brand accent
+     on the surface). [c_b854bc6f] */
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #ffffff;
+  letter-spacing: 0.04em;
+}
+.controls-row .val {
+  /* Numeric readout sits alongside the label in the same row; keep it
+     on the same mono stack (it already gets tabular-nums) so the pair
+     reads as a single technical readout. */
+  font-family: var(--mono);
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.66rem;
+  letter-spacing: 0.02em;
+}
+.controls-row input[type="range"] {
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: var(--rule);
+  border-radius: 999px;
+  outline: none;
+}
+.controls-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--gold);
+  cursor: pointer;
+  box-shadow: 0 0 0 4px rgba(229,185,74,0.15);
+}
+.controls-row input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: none;
+  border-radius: 50%;
+  background: var(--gold);
+  cursor: pointer;
+}
+.controls-row input[type="color"].color-picker {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 22px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.controls-row input[type="color"].color-picker::-webkit-color-swatch-wrapper { padding: 0; }
+.controls-row input[type="color"].color-picker::-webkit-color-swatch { border: none; border-radius: 3px; }
+.controls-row input[type="color"].color-picker::-moz-color-swatch { border: none; border-radius: 3px; }
+
+.controls-row .controls-desc {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--ink-3);
+  margin-top: 0.2rem;
+  padding-bottom: 0.05rem;
+}
+.controls-row:hover .controls-desc { color: var(--ink-2); }
+
+.controls-foot {
+  padding: 0.5rem 0.85rem 0.7rem;
+  border-top: 1px solid var(--rule);
+  display: flex;
+  gap: 0.5rem;
+}
+.controls-foot button {
+  flex: 1;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 0.45rem 0.6rem;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.controls-foot button:hover { color: var(--gold); border-color: var(--gold); }
+
+/* Bottom-center scroll hint */
+.scroll-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 1.4rem;
+  transform: translateX(-50%);
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  text-decoration: none;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  transition: color 0.15s ease;
+}
+.scroll-hint:hover { color: var(--gold); }
+.scroll-hint .arr { font-size: 0.9rem; opacity: 0.6; }
+
+/* ============================================================
+   FOOTER — brief intro under the splash
+   ============================================================ */
+.foot {
+  background: var(--void-deep);
+  color: var(--ink);
+  padding: 4rem 2rem 6rem;
+  position: relative;
+}
+.foot-inner {
+  max-width: 760px;
+  margin: 0 auto;
+}
+.foot-eyebrow {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 1rem;
+}
+.foot h2 {
+  font-family: var(--serif);
+  font-size: clamp(1.85rem, 3.8vw, 2.6rem);
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+  margin-bottom: 1.2rem;
+}
+.foot h2 em { font-style: italic; color: var(--gold); }
+.foot p {
+  font-family: var(--serif);
+  font-size: 1.18rem;
+  line-height: 1.7;
+  color: var(--ink-2);
+  margin-bottom: 1.4rem;
+  max-width: 60ch;
+}
+.foot p em { color: var(--gold); font-style: italic; }
+.ctas {
+  display: flex;
+  gap: 0.8rem;
+  margin: 1.6rem 0 2rem;
+  flex-wrap: wrap;
+}
+.btn {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 0.85rem 1.25rem;
+  border-radius: 999px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+.btn.primary {
+  background: var(--gold);
+  color: var(--void);
+  border: 1px solid var(--gold);
+}
+.btn.primary:hover { transform: translateY(-1px); background: var(--gold-soft); }
+.btn.ghost {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--rule);
+}
+.btn.ghost:hover { color: var(--gold); border-color: var(--gold); }
+.foot-meta {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-top: 2rem;
+  border-top: 1px solid var(--rule);
+  padding-top: 1.4rem;
+}
+.foot-meta a {
+  color: var(--ink-2);
+  text-decoration: none;
+  margin-left: 0.8rem;
+  border-bottom: 1px dotted var(--rule);
+  transition: color 0.15s ease;
+}
+.foot-meta a:hover { color: var(--gold); border-bottom-color: var(--gold); }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 720px) {
+  .center-glass[data-phase="signet"] {
+    width: clamp(220px, 56vw, 320px);
+    height: clamp(150px, 32vw, 200px);
+  }
+  .center-glass[data-phase="wordmark"] {
+    width: clamp(320px, 84vw, 540px);
+    height: clamp(130px, 28vw, 200px);
+  }
+  .center-glass .mark-signet   { width: clamp(110px, 28vw, 200px); }
+  .center-glass .mark-wordmark { width: clamp(260px, 66vw, 480px); }
+  .controls { width: calc(100% - 3rem); max-width: 380px; }
+  .bl-caption { max-width: 18ch; }
+}
+
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+
+}
+</style>
+<script src="_styleguide.js" defer></script>
+</head>
+<body data-direction="ρ" data-palette="light-warm-rust" data-pairing="F" data-mono="plex" data-layout="concept" data-mark="physics">
+
+<!-- Canonical oP marks (signet + wordmark) — same v2 paths the
+     μ-bloom uses, fills inherit currentColor so the glass card's
+     gold text colour drives them. -->
+<svg width="0" height="0" style="position: absolute;" aria-hidden="true">
+    <!-- INFINITE — wide flowing oP-infinite -->
+    <symbol id="opInfinite" viewBox="0 0 497 329">
+      <g transform="matrix(1.16677,0,0,0.997644,2.62326,-48.0333)">
+        <g transform="matrix(4.15,0,0,4.17651,2.48827,4.04285)">
+          <path d="M84.9,12.6C82.7,12.6 80.2,12.9 77.6,14.7C70.5,19.3 67,28.3 64.8,35.5C61.1,47.9 58.4,61 51.5,71.1C46.7,77.8 40.2,83.509 30.5,83.4C16.524,83.242 4.9,70.5 4.9,50.8C4.9,35.9 12.3,16.5 32.3,16.5C45.2,16.5 53.9,24.6 58.8,44L61,36C56.6,23.2 47.9,12.6 32.4,12.6C12.1,12.6 1.3,30.1 1.3,50.8C1.3,69.9 12.105,87.223 30.5,87.4C36.4,87.457 41.7,85.8 46.1,82.9C57.2,75.5 62.3,62.3 65.7,50C68.9,38.8 72.4,20.3 81.6,17.2C83.6,16.5 86.6,16.3 89,17.7C91.6,19.3 95.3,23.3 95.3,29.9C95.3,37.8 89.5,46.1 79.8,49.1C77.1,49.7 73.7,50.1 70,49.5L70,85.5C70,86.4 70.7,87.4 71.8,87.4C72.9,87.4 73.7,86.7 73.7,85.5L73.7,53.7C87.9,53.7 98.9,44.2 98.9,29.9C98.7,22.7 93.9,12.8 84.9,12.6Z"/>
+        </g>
+      </g>
+    </symbol>
+    <symbol id="opInfiniteType" viewBox="0 0 3549 1107">
+      <!-- Full 9-glyph "OpenProse" wordmark per OP-infinite-type.svg -->
+      <g transform="matrix(0.924174,0,0,0.512368,0,0)"><g transform="matrix(13.3273,0,0,21.4868,1380,-277.463)"><path d="M84.994,15.687C82.794,15.687 80.294,15.987 77.694,17.787C70.594,22.387 66.139,35.248 63.358,42.992C61.626,47.816 59.859,52.08 59.859,52.08C59.859,52.08 65.364,48.692 65.7,47.517C68.9,36.317 72.494,23.387 81.694,20.287C83.694,19.587 86.694,19.387 89.094,20.787C92.421,22.728 97.421,26.391 97.239,32.987C96.783,49.599 73.072,47.617 69.372,47.017L69.463,86.872C69.463,86.872 69.569,88.772 71.788,88.772C73.823,88.772 73.84,86.872 73.84,86.872L73.7,51.217C87.9,51.217 100.839,47.287 100.839,32.987C100.639,25.787 95.428,15.687 84.994,15.687Z" style="fill-rule:nonzero;"/><path d="M85.301,15.69C87.154,15.722 92.171,16.087 96.349,21.117C99.232,24.589 100.724,29.132 100.85,32.902C100.851,32.93 100.877,34.078 100.714,35.474C99.35,47.224 88.075,51.152 74.199,51.251L73.733,51.253C73.885,86.393 73.928,86.394 73.883,86.959C73.851,87.357 73.666,88.042 73.097,88.452C72.294,89.03 71.186,88.797 70.882,88.701C70.751,88.66 69.762,88.384 69.461,87.167C69.426,87.024 69.412,86.892 69.412,86.875C69.403,83.685 69.304,47.036 69.309,47.004C69.314,46.971 69.343,46.94 69.381,46.945C69.384,46.946 70.472,47.132 72.411,47.25C77.667,47.57 96.717,47.828 97.166,33.033C97.322,27.909 94.399,23.938 89.034,20.84C86.892,19.604 84.067,19.553 81.714,20.359C79.56,21.097 76.09,22.82 72.768,28.52C69.608,33.941 67.641,40.93 65.748,47.534C65.696,47.715 65.475,48.425 61.767,50.908C60.819,51.542 59.885,52.126 59.867,52.13C59.832,52.136 59.803,52.097 59.818,52.059C59.862,51.95 59.867,51.953 60.372,50.699C62.462,45.507 63.53,42.368 64.526,39.653C67.34,31.978 71.505,21.808 77.648,17.805C78.185,17.455 79.743,16.319 82.346,15.883C83.448,15.698 84.434,15.687 84.993,15.687C84.993,15.687 85.065,15.687 85.103,15.688L85.177,15.688C85.218,15.689 85.26,15.689 85.301,15.69Z"/></g><g transform="matrix(37.0768,0,0,56.5284,-38.6165,41.4661)"><path d="M38.971,22.698C39.006,20.794 38.659,19.281 38.121,18.206C36.83,15.623 34.908,15.225 33.551,15.139C29.553,14.883 27.67,17.15 26.516,21.328C25.31,25.689 23.5,34.3 14.7,34.3C8,34.2 3.7,28.1 3.7,20C3.4,10.6 8.5,2.6 14.8,2.6C21.3,2.3 25,7.2 27.1,16.5L28.719,13.674C26.719,7.774 22.3,0.3 14.8,0.3C7.3,0.3 1.5,7.7 1.6,18.9C1.5,27.8 6.2,36.4 14.7,36.4C23.6,36.7 26.116,31.728 28.116,24.428L28.838,21.384C29.709,17.307 31.193,16.933 33.074,16.992C34.811,17.046 35.803,17.588 36.622,19.063C37.075,19.877 37.31,21.015 37.365,22.326C37.593,27.77 29.653,26.04 29.653,26.04L29.525,35.529C29.525,35.529 29.435,36.206 30.335,36.206C31.035,36.206 31.085,35.512 31.085,35.512L31.098,27.854C38.46,28.325 38.921,25.449 38.971,22.698Z" style="fill-rule:nonzero;"/></g><g transform="matrix(26.5034,0,0,47.8049,294.868,160.59)"><path d="M50.7,15.5C46.7,15.7 43.1,18.5 43.1,23.2C43.1,26.9 45.5,30.7 50.7,30.7C52.9,30.7 55.1,29.9 56.5,28.5C56.9,28.1 57,27.8 57,27.5C57,26.9 56.4,26.4 55.8,26.4C55.5,26.4 55.3,26.6 55,26.8C54,27.9 52.7,28.6 50.8,28.6C48,28.6 45.8,26.8 45.4,23.8L56.2,23.8C57.2,23.8 57.6,23.4 57.6,22.6C57.6,18.9 55.3,15.5 50.7,15.5ZM45.4,21.9C45.8,19.5 47.6,17.7 50.5,17.7C53.3,17.7 55.1,19.5 55.2,21.9L45.4,21.9Z" style="fill-rule:nonzero;"/></g><g transform="matrix(6.36081,0,0,11.5486,307.59,152.335)"><path d="M303.204,127.796C292.691,126.817 286.282,119.92 286.282,108.75L286.282,89.583C286.282,80.833 281.699,73.75 271.282,73.75C261.699,73.75 253.365,82.5 253.365,95L253.365,122.5C253.365,125.833 250.865,127.5 247.949,127.5C245.032,127.5 242.949,126.25 242.949,122.917L242.949,70.417C242.949,67.083 245.032,65.417 247.949,65.417C250.449,65.417 252.532,67.083 252.532,70.417L252.532,76.25C256.282,68.75 263.365,65 272.949,65C287.115,65 295.865,74.583 295.865,89.583L295.865,108.333C295.865,114.401 298.312,118.023 303.204,118.937C303.204,118.937 306.369,120.117 306.151,123.666C305.945,127.04 303.204,127.796 303.204,127.796Z"/></g><g transform="matrix(26.5034,0,0,50.3225,-86.6137,116.293)"><path d="M102.9,15.5C101.2,15.7 99.5,16.6 98.5,18.5L98.5,16.9C98.5,16.1 98,15.6 97.3,15.6C96.6,15.6 96.1,16.1 96.1,16.8L95.906,29.335C95.906,29.335 96.201,30.045 97.143,30.044C98.167,30.043 98.391,29.393 98.391,29.393L98.5,23.2C98.5,20.2 100.2,17.9 102.5,17.9C103.4,17.8 103.8,18.2 104.2,18.2C104.8,18.2 105,17.8 105,17.2C105.3,16.1 104.1,15.5 102.9,15.5Z" style="fill-rule:nonzero;"/></g><g transform="matrix(26.5034,0,0,47.8049,-105.087,160.59)"><path d="M113.3,15.5C109,15.7 105.2,18.5 105.2,23.2C105.2,26.9 107.8,30.7 113.1,30.7C117.5,30.7 120.6,27.6 120.6,23.2C120.6,19.1 117.6,15.5 113.3,15.5ZM113.2,28.6C110.3,28.6 107.6,26.5 107.6,23.2C107.6,19.9 109.9,17.7 113.1,17.7C115.8,17.7 118.3,19.7 118.3,23.2C118.3,26.1 116.1,28.6 113.2,28.6Z" style="fill-rule:nonzero;"/></g><g transform="matrix(26.5034,0,0,47.8049,-117.723,160.59)"><path d="M128,21.8C128,21.8 125.1,21.1 125.1,19.8C125.1,18.5 126.4,17.7 128.1,17.7C130.5,17.7 131,19.1 132.1,19.2C132.6,19.2 133.2,18.7 133.3,18.3C133.4,17.3 131.4,15.6 128.4,15.5C125.5,15.5 122.7,16.7 122.7,19.8C122.7,22.7 125.3,23.4 128,24C129.8,24.4 131.5,25 131.5,26.5C131.5,27.9 130.3,28.7 128.4,28.7C125.1,28.7 124.7,26.5 123.5,26.4C123,26.4 122.2,26.9 122.2,27.6C122.2,28.6 124.2,30.7 128.1,30.7C131.4,30.7 133.8,29.3 133.8,26.4C133.8,23.2 131.4,22.6 128,21.8Z" style="fill-rule:nonzero;"/></g><g transform="matrix(26.5034,0,0,47.8049,-130.016,160.59)"><path d="M142.2,15.5C138.2,15.5 135.4,18.2 135.4,22.9C135.4,26.6 137.8,30.7 142.5,30.7C144.9,30.7 147,29.9 147.9,28.9C148.4,28.5 148.4,28.2 148.4,27.7C148.4,27.2 147.8,26.5 147.1,26.5C146.9,26.5 146.6,26.7 146.3,26.9C145.3,28 144,28.7 142.3,28.7C139.5,28.7 137.7,26.9 137.4,23.9L147.4,23.9C148,23.9 148.4,23.5 148.4,22.8C148.4,19.1 146.3,15.6 142.2,15.5ZM137.6,21.9C138,19.5 139.8,17.7 142.2,17.7C144.7,17.6 146.5,19.4 146.5,21.9L137.6,21.9Z" style="fill-rule:nonzero;"/></g></g>
+    </symbol>
+
+    <!-- STYLE — v2 standalone signet + lockup (canonical brand mark) -->
+    <symbol id="opStyle" viewBox="0 0 142 142">
+      <g transform="translate(4.4 4.45) scale(0.94)">
+        <path d="M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z"/>
+      </g>
+    </symbol>
+    <!-- Legacy alias — keep so any stale #opMark references still resolve -->
+    <symbol id="opMark" viewBox="0 0 142 142"><use href="#opStyle"/></symbol>
+    <symbol id="opStyleType" viewBox="0 0 3840 998">
+      <g transform="matrix(1,0,0,0.461843,0,0)"><g transform="matrix(9.67009,0,0,20.9381,46.3437,-426.712)"><path d="M84.1,83.4C85.206,79.362 96.732,71.983 96.732,71.983C96.732,71.983 95.683,77.806 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.32,59.25 95.117,62.595 91.927,64.086C88.649,65.618 87.58,63.568 86,61.4C83.953,58.591 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4Z" style="fill-rule:nonzero;"/></g><g transform="matrix(20.8204,0,0,45.081,376.732,587.069)"><path d="M47.6,19.2C47.6,23.6 45.2,28.5 39.5,28.5C36.7,28.5 34.4,27.4 33,25L33,33.071C33,33.071 32.758,33.891 32.027,34.219C31.452,34.477 29.5,34.5 29.5,34.5L29.5,10.9L30.3,10.9C31.9,10.9 32.7,12.6 32.8,14.1C34,11.8 36.2,10.2 39.3,10.2C44.4,10.2 47.6,14 47.6,19.2ZM44,19.4C44,16.3 42.3,12.9 38.5,12.9C35.1,12.9 32.9,15.6 32.9,19.4C32.9,22.5 34.8,25.7 38.5,25.7C41.7,25.7 44,23 44,19.4Z" style="fill-rule:nonzero;"/></g><g transform="matrix(21.5033,0,0,46.5599,334.885,571.985)"><path d="M66.5,23.7C65.9,25.9 63.4,28.5 58.9,28.5C53.5,28.5 50.2,25 49.2,20.6C48.6,14.5 52.3,10.2 58.4,10.2C62.1,10.2 66.4,12 66.4,15.8C66.4,18.4 64.1,19.8 59.2,20.4C56.7,20.7 54.8,21.3 54.8,23.1C54.8,25.1 57.2,26 59.6,26C61.9,26.1 64.6,25.3 66.5,23.7ZM53.3,22.7C54.2,17.1 61.7,19.1 61.7,15.5C61.7,13.8 60.2,12.7 58.1,12.7C55.5,12.7 52.6,15 52.6,19.1C52.6,20.4 52.9,21.8 53.3,22.7Z" style="fill-rule:nonzero;"/></g><g transform="matrix(21.3153,0,0,46.1527,2366.82,576.138)"><path d="M66.5,23.7C65.9,25.9 63.4,28.5 58.9,28.5C53.5,28.5 50.2,25 49.2,20.6C48.6,14.5 52.3,10.2 58.4,10.2C62.1,10.2 66.4,12 66.4,15.8C66.4,18.4 64.1,19.8 59.2,20.4C56.7,20.7 54.8,21.3 54.8,23.1C54.8,25.1 57.2,26 59.6,26C61.9,26.1 64.6,25.3 66.5,23.7ZM53.3,22.7C54.2,17.1 61.7,19.1 61.7,15.5C61.7,13.8 60.2,12.7 58.1,12.7C55.5,12.7 52.6,15 52.6,19.1C52.6,20.4 52.9,21.8 53.3,22.7Z" style="fill-rule:nonzero;"/></g><g transform="matrix(20.8204,0,0,47.1462,359.825,566.004)"><path d="M83.9,28.2C81.9,28.2 80.5,27.7 80.5,24.8L80.5,17.9C80.5,14.6 79.2,12.8 76.6,12.8C74.1,12.8 72,14.6 72,19.1L72,28.2L68.6,28.2L68.6,10.8L69,10.8C70.6,10.8 71.6,12.3 71.7,14.1C72.7,11.9 74.6,10.2 77.7,10.2C81.9,10.2 83.9,12.9 83.9,17.4L83.9,28.2Z" style="fill-rule:nonzero;"/></g><g transform="matrix(21.747,0,0,47.0874,150.341,566.604)"><path d="M117.8,10.5C118.4,11.9 117.2,13.3 115.3,13.3C112.1,13.1 110.1,15.2 110.1,19.3L110.1,28.2L106.6,28.2L106.6,10.9L107.3,10.9C108.9,10.9 109.7,12.4 109.8,14.4C110.8,11.9 112.8,10.2 115.4,10.2C116.1,10.2 117,10.3 117.8,10.5Z" style="fill-rule:nonzero;"/></g><g transform="matrix(21.4007,0,0,46.3376,179.308,574.252)"><path d="M135.6,19.4C135.6,23.8 132.7,28.5 126.4,28.5C120.6,28.5 117.1,24.5 117.1,19.4C117.1,14.8 120.3,10.2 126.3,10.2C131.8,10.2 135.6,14 135.6,19.4ZM132.1,19.4C132.1,15.9 129.9,12.9 126.4,12.9C122.9,12.9 120.5,15.6 120.5,19.4C120.5,22.7 122.7,25.7 126.3,25.7C129.7,25.8 132.1,23 132.1,19.4Z" style="fill-rule:nonzero;"/></g><g transform="matrix(26.9157,0,0,71.5109,-151.465,-124.38)"><path d="M86,2.4C83.4,2.7 81.1,3.6 82,5.9C82.5,7.2 85.4,8.5 87.5,12.9C88.6,15.2 89.463,15.088 88.663,12.588C86.263,6.788 83.477,6.006 84.477,4.406C84.977,3.606 99.303,3.255 99.1,9.9C99.018,12.599 96.5,13.8 93.3,14.6C91.4,15.1 88.4,16.7 88.1,19.9C87.9,22.4 88,24.1 86,28.2C87.7,28.4 89.6,27.9 90.5,26.7C91.8,25.1 91.6,21.1 91.7,19.5C91.9,17.6 93.6,16.9 95.4,16.6C99.9,15.7 104.9,14.7 104.9,10C104.9,4.4 96.9,1.4 86,2.4Z" style="fill-rule:nonzero;"/></g><g transform="matrix(20.4887,0,0,44.3629,217.988,633.895)"><path d="M144.6,14.2C144.6,12.9 146,11.7 147.9,11.7C151.2,11.7 152.1,14.4 153.9,14.4C154.6,14.4 155.2,13.6 155,13C154.6,11.1 151.5,9.3 148.5,9.3C145.5,9.3 141,10.4 141,14.4C141,20.9 152.3,18.6 152.3,23.1C152.3,25.3 149.6,25.9 148.1,25.8C144,25.6 140.266,22.027 140.266,22.027C140.266,22.027 140.3,23.55 140.3,23.9C140.3,25.6 143.1,28.4 148.3,28.4C152.1,28.4 155.6,27 155.6,23.1C155.6,16.7 144.6,18.4 144.6,14.2Z" style="fill-rule:nonzero;"/></g></g>
+    </symbol>
+
+    <!-- CIRCLE — open-ring oP-Circle.  Signet id is opCircleMark (not
+         opCircle) for backwards compat with the existing pages. -->
+    <symbol id="opCircleMark" viewBox="0 0 2843 2160" style="fill-rule:evenodd;clip-rule:evenodd;">
+      <g transform="matrix(0.740161,0,0,1,0,0)"><g transform="matrix(8.20113,0,0,6.07016,-20128.8,-3833.05)"><path d="M2759.78,927.845C2728.1,963.836 2681.7,986.56 2630.04,986.56C2534.66,986.56 2457.23,909.13 2457.23,813.757C2457.23,718.385 2534.66,640.955 2630.04,640.955C2680.01,640.955 2725.07,662.217 2756.63,696.182C2756.2,671.45 2755.82,654.804 2755.51,652.896C2754.22,644.866 2822.66,611.87 2882.41,659.592C2923.76,692.617 2930.35,758.088 2890.17,789.415C2850.95,819.988 2803.14,819.667 2804.19,819.748C2805.24,819.829 2801.73,938.55 2802.47,964.197C2802.72,973.044 2793.7,984.446 2782.33,984.728C2771.95,984.985 2760.81,980.336 2760.39,964.176C2760.24,958.249 2760.03,945.28 2759.78,927.845ZM2826.55,687.102C2805.05,687.102 2787.59,704.56 2787.59,726.064C2787.59,747.567 2805.05,765.026 2826.55,765.026C2848.05,765.026 2865.51,747.567 2865.51,726.064C2865.51,704.56 2848.05,687.102 2826.55,687.102ZM2630.04,734.651C2586.38,734.651 2550.93,770.097 2550.93,813.757C2550.93,857.418 2586.38,892.864 2630.04,892.864C2673.7,892.864 2709.14,857.418 2709.14,813.757C2709.14,770.097 2673.7,734.651 2630.04,734.651Z"/></g></g>
+    </symbol>
+    <symbol id="opCircleType" viewBox="0 0 3905 1443" style="fill-rule:evenodd;clip-rule:evenodd;">
+      <g transform="matrix(1.01681,0,0,0.667932,0,0)"><g transform="matrix(2.21727,0,0,3.37541,-2648.74,-2066.57)"><path d="M2498.63,890.329C2523.7,890.329 2544.05,910.677 2544.05,935.74C2544.05,960.803 2523.7,981.151 2498.63,981.151C2473.57,981.151 2453.22,960.803 2453.22,935.74C2453.22,910.677 2473.57,890.329 2498.63,890.329ZM2498.63,836.542C2553.38,836.542 2597.83,880.991 2597.83,935.74C2597.83,990.488 2553.38,1034.94 2498.63,1034.94C2443.89,1034.94 2399.44,990.488 2399.44,935.74C2399.44,880.991 2443.89,836.542 2498.63,836.542Z"/></g><g transform="matrix(3.80252,0,0,5.78869,-8704.03,-6459.53)"><path d="M2502.77,1325.17C2480.57,1349.47 2448.63,1364.73 2413.15,1364.73C2346.18,1364.73 2291.8,1310.36 2291.8,1243.38C2291.8,1176.41 2346.18,1122.04 2413.15,1122.04C2476.86,1122.04 2529.78,1171 2534.12,1244.84C2550.61,1243.52 2571.13,1241.2 2590.37,1256.57C2619.41,1279.76 2624.04,1320.36 2595.82,1342.36C2568.28,1363.83 2534.71,1363.6 2535.45,1363.66C2536.19,1363.71 2533.72,1447.08 2534.24,1465.09C2534.42,1471.31 2528.08,1479.31 2520.1,1479.51C2512.81,1479.69 2504.98,1476.43 2504.69,1465.08C2504.33,1451.17 2503.54,1382.04 2502.77,1325.17ZM2527.46,1289.56C2526.55,1292.1 2525.56,1294.6 2524.49,1297.06C2524.03,1299.05 2523.79,1301.12 2523.79,1303.25C2523.79,1318.35 2536.05,1330.61 2551.15,1330.61C2566.25,1330.61 2578.51,1318.35 2578.51,1303.25C2578.51,1288.15 2566.25,1275.89 2551.15,1275.89C2541.03,1275.89 2532.2,1281.39 2527.46,1289.56ZM2524.49,1297.06L2527.46,1289.56C2526.12,1291.87 2525.11,1294.39 2524.49,1297.06ZM2413.15,1187.83C2382.49,1187.83 2357.6,1212.73 2357.6,1243.38C2357.6,1274.04 2382.49,1298.94 2413.15,1298.94C2443.81,1298.94 2468.7,1274.04 2468.7,1243.38C2468.7,1212.73 2443.81,1187.83 2413.15,1187.83Z"/></g><g transform="matrix(3.80252,0,0,5.78869,-9021.99,-7865.74)"><path d="M3000.9,1398.29C3016,1398.29 3028.26,1410.55 3028.26,1425.65C3028.26,1440.75 3016,1453.01 3000.9,1453.01C2985.8,1453.01 2973.54,1440.75 2973.54,1425.65C2973.54,1410.55 2985.8,1398.29 3000.9,1398.29ZM2951.01,1374.27C2951.92,1379.9 2953.82,1568.82 2954.44,1592.86C2954.73,1604.2 2962.56,1607.47 2969.85,1607.29C2977.83,1607.09 2984.17,1599.08 2983.99,1592.87C2983.47,1574.86 2985.94,1491.49 2985.2,1491.43C2984.46,1491.38 3018.03,1491.6 3045.57,1470.13C3073.79,1448.13 3069.16,1402.16 3040.12,1378.97C2998.16,1345.46 2950.11,1368.63 2951.01,1374.27Z"/></g><g transform="matrix(25.9135,0,0,39.4489,148.648,165.716)"><path d="M50.7,15.369C55.386,15.369 57.731,18.831 57.731,22.6C57.731,23.045 57.612,23.376 57.362,23.598C57.118,23.815 56.742,23.931 56.2,23.931L45.551,23.931C45.994,26.77 48.113,28.469 50.8,28.469C52.656,28.469 53.926,27.786 54.903,26.712C54.91,26.704 54.918,26.697 54.927,26.691C55.079,26.59 55.206,26.489 55.333,26.413C55.478,26.325 55.625,26.269 55.8,26.269C56.468,26.269 57.131,26.832 57.131,27.5C57.131,27.827 57.029,28.157 56.593,28.593C55.17,30.015 52.936,30.831 50.7,30.831C45.41,30.831 42.969,26.964 42.969,23.2C42.969,18.422 46.627,15.572 50.693,15.369C50.696,15.369 50.698,15.369 50.7,15.369ZM45.557,21.769L55.061,21.769C54.903,19.507 53.166,17.831 50.5,17.831C47.736,17.831 45.996,19.507 45.557,21.769Z" style="fill-rule:nonzero;"/></g><g transform="matrix(3.13203,0,0,4.76799,-7162.23,-6236.36)"><path d="M2964.4,1579.23L2964.4,1596.67C2964.4,1597.25 2963.94,1597.73 2963.37,1597.75C2962.53,1597.79 2961.68,1597.81 2960.83,1597.81C2948.51,1597.81 2938.53,1594.16 2931.63,1587.47C2924.72,1580.77 2920.85,1571 2920.85,1558.66L2920.85,1520.61C2920.85,1510.54 2917.74,1501.6 2910.89,1496.07C2906.33,1492.39 2900.13,1490.25 2892.15,1490.25C2873.65,1490.25 2857.66,1507.23 2857.66,1531.36L2857.66,1585.97C2857.66,1593.28 2852.22,1596.98 2845.82,1596.98C2841.97,1596.98 2838.81,1595.92 2836.88,1593.54C2835.58,1591.95 2834.81,1589.75 2834.81,1586.79L2834.81,1482.55C2834.81,1478.88 2835.99,1476.14 2837.94,1474.31C2839.89,1472.48 2842.62,1471.53 2845.82,1471.53C2848.6,1471.53 2851.14,1472.48 2853,1474.33C2854.83,1476.16 2856.01,1478.89 2856.01,1482.55L2856.01,1489.98C2864.02,1477.15 2877.6,1470.7 2895.46,1470.7C2909.87,1470.7 2921.51,1475.61 2929.56,1484.29C2937.59,1492.95 2942.05,1505.4 2942.05,1520.61L2942.05,1557.84C2942.05,1564.54 2943.58,1569.68 2946.73,1573.13C2949.86,1576.56 2954.57,1578.26 2960.83,1578.26C2961.65,1578.26 2962.44,1578.23 2963.21,1578.15C2963.51,1578.12 2963.82,1578.22 2964.05,1578.43C2964.27,1578.63 2964.4,1578.92 2964.4,1579.23Z"/></g><g transform="matrix(25.9135,0,0,39.4489,-44.8323,169.661)"><path d="M102.9,15.369C103.528,15.369 104.156,15.529 104.587,15.83C105.042,16.147 105.289,16.614 105.131,17.217C105.128,17.613 105.037,17.926 104.83,18.117C104.684,18.252 104.48,18.331 104.2,18.331C104.026,18.331 103.851,18.265 103.643,18.189C103.369,18.088 103.027,17.973 102.514,18.03C102.51,18.031 102.505,18.031 102.5,18.031C100.264,18.031 98.631,20.283 98.631,23.2L98.631,29.5C98.631,29.893 98.488,30.2 98.249,30.411C98.015,30.617 97.686,30.731 97.3,30.731C96.913,30.731 96.583,30.617 96.348,30.395C96.112,30.174 95.969,29.843 95.969,29.4L95.969,16.8C95.969,16.024 96.524,15.469 97.3,15.469C98.073,15.469 98.631,16.016 98.631,16.9L98.631,18.011C99.673,16.359 101.279,15.559 102.885,15.37C102.89,15.369 102.895,15.369 102.9,15.369Z" style="fill-rule:nonzero;"/></g><g transform="matrix(25.9135,0,0,39.4489,-33.2184,165.716)"><path d="M128.029,21.772C128.029,21.772 130.14,22.246 131.829,23.323C132.981,24.058 133.931,25.075 133.931,26.4C133.931,29.375 131.485,30.831 128.1,30.831C125.318,30.831 123.488,29.775 122.638,28.797C122.255,28.354 122.069,27.922 122.069,27.6C122.069,27.21 122.287,26.873 122.58,26.636C122.868,26.403 123.226,26.269 123.5,26.269C123.504,26.269 123.507,26.269 123.511,26.269C123.775,26.291 124.006,26.403 124.232,26.573C124.441,26.729 124.648,26.935 124.883,27.158C125.557,27.797 126.469,28.569 128.4,28.569C130.209,28.569 131.369,27.833 131.369,26.5C131.369,25.799 130.965,25.312 130.358,24.95C129.718,24.569 128.857,24.325 127.972,24.128C126.882,23.886 125.809,23.627 124.913,23.217C123.534,22.586 122.569,21.602 122.569,19.8C122.569,16.62 125.425,15.369 128.4,15.369L128.404,15.369C130.55,15.441 132.193,16.319 132.951,17.187C133.299,17.584 133.463,17.985 133.43,18.313C133.43,18.319 133.429,18.326 133.427,18.332C133.371,18.555 133.181,18.809 132.93,19.003C132.682,19.197 132.376,19.331 132.1,19.331C132.096,19.331 132.092,19.331 132.088,19.331C131.626,19.289 131.262,19.034 130.833,18.736C130.237,18.323 129.502,17.831 128.1,17.831C126.485,17.831 125.231,18.565 125.231,19.8C125.231,20.522 125.603,20.941 126.257,21.243C126.72,21.458 127.319,21.614 128.028,21.772L128.029,21.772Z" style="fill-rule:nonzero;"/></g><g transform="matrix(25.9135,0,0,39.4489,-33.2184,165.716)"><path d="M148.365,28.513L148.362,28.529C148.352,28.557 148.288,28.659 148.177,28.791L148.204,28.825L147.99,28.996C147.07,30.011 144.938,30.831 142.5,30.831C137.717,30.831 135.269,26.665 135.269,22.9C135.269,20.511 135.985,18.631 137.205,17.347C138.429,16.06 140.161,15.369 142.2,15.369L142.203,15.369C146.381,15.471 148.531,19.029 148.531,22.8C148.531,23.189 148.415,23.493 148.221,23.702C148.022,23.915 147.74,24.031 147.4,24.031L137.546,24.031C137.711,25.429 138.213,26.552 139.004,27.332C139.819,28.134 140.938,28.569 142.3,28.569C143.959,28.569 145.227,27.885 146.203,26.812C146.21,26.804 146.218,26.797 146.227,26.791C146.413,26.667 146.598,26.544 146.761,26.465C146.888,26.404 147.004,26.369 147.1,26.369C147.561,26.369 147.984,26.642 148.248,26.981C148.427,27.213 148.531,27.475 148.531,27.7C148.531,28.026 148.492,28.273 148.365,28.513ZM137.757,21.769L146.367,21.769C146.305,19.416 144.583,17.736 142.205,17.831L142.2,17.831C139.916,17.831 138.195,19.511 137.757,21.769Z" style="fill-rule:nonzero;"/></g></g></symbol>
+
+    <!-- SWISH — two-stroke flow -->
+    <symbol id="opSwish" viewBox="0 0 152 107">
+      <g transform="matrix(0.981452,0,0,0.878406,2.4868,-8.28354)"><rect x="-2.534" y="9.43" width="154.346" height="121.268" style="fill:none;"/><g transform="matrix(1.0189,0,0,1.13843,-1.51112,-15.5823)"><path d="M76.7,25.1C82.9,29 95.6,39.3 102,50C105.2,55.5 106.3,60.3 106.3,67C105.4,68.4 101.1,71.3 99.6,72.1C101.1,72.7 104.7,73.8 106.9,74.3C107.8,93.9 96.6,111.2 76.5,125.1L82.6,122.7C94.1,115.8 110.9,97.6 110.9,74.2C117.6,74.2 148.6,72.9 148.6,53.7C148.3,43.7 132.2,29 107.6,25.3C97.1,23.8 85.4,24.2 76.7,25.1ZM109.9,33.6C117.8,36.9 128.2,43 128.2,53.3C128.2,59.4 120.9,64.6 110.8,66.4C111.1,51.8 101.9,30.1 89.1,28.1L86.7,27.5C94.3,28.3 104.1,31.2 109.9,33.6Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(1.0189,0,0,1.13843,-1.51112,-15.5823)"><path d="M95,72.3C96.7,71.3 99.3,69.1 100.7,67.3C97.9,50.9 84.3,23.5 50.4,23.5C23.3,23.5 1.2,43.7 1.2,74.7C1.2,97.8 16.3,126.5 50.7,126.5C78.2,126.5 101.5,109.2 101.5,76.8C100.2,75.7 97.3,73.6 94.7,72.3L95,72.3ZM50.5,116.3C28.7,116.3 10,100.8 10,75.1C10,55.1 25.1,34.2 49.9,34.2C68.3,34.2 89.9,48.5 90.8,74.5C91.3,98.4 74.3,116.3 50.5,116.3Z" style="fill:currentColor;fill-rule:nonzero;"/></g></g>
+    </symbol>
+    <symbol id="opSwishType" viewBox="0 0 3025 752">
+      <!-- Full 9-glyph "OpenProse" wordmark per OP-swish-type.svg.  Every fill
+           is currentColor so the wordmark inherits text color (light + dark). -->
+      <g transform="matrix(0.787745,0,0,0.347708,0,0)"><rect x="0" y="0" width="3840" height="2160" style="fill:none;"/><g transform="matrix(25.3499,0,0,57.4311,21.758,43.1089)"><path d="M34.5,15.8C33.7,8.6 27.6,0.4 17.2,0.4C8.2,0.4 1.1,7.9 1,17.6C0.9,25.8 5.9,35.1 16.7,35.1C25.8,35.1 34.6,29.8 34.7,19L32.4,17.6L34.5,15.8ZM16.7,31.5C9.4,31.5 4.5,25.6 4.5,18.2C4.5,11.7 9.4,4.5 16.9,4.5C24.7,4.3 29.9,10.4 30.4,17.1C30.7,23.2 27,31.5 16.7,31.5Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(15.8933,0,0,34.9068,473.082,978.691)"><path d="M25.02,1.827C36.105,6.18 33.244,16.433 33.244,16.433C33.15,19.81 27.02,27.194 19.012,30.939C22.712,29.839 34.322,27.652 37.813,18.162C41.913,18.062 49.9,17.3 51.3,13.3C53.8,7.2 34.081,-4.802 25.02,1.827ZM38.1,15.4C37.9,9.6 35,5.2 33.5,3.7C32.3,2.6 31.2,2.2 29.9,1.9C34.2,2.2 39.8,4.3 42.1,6.3C44.3,8.1 46,11.9 42.3,14C41.4,14.6 39.9,15.1 38.1,15.4Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(25.3499,0,0,57.4311,155.653,74.403)"><path d="M57.978,20.23C58.351,24.744 47.3,24.9 47.3,24.9L49.5,24.3C49.9,21.9 51.808,18.502 54.4,18.3C56.533,18.134 57.879,19.035 57.978,20.23ZM49.25,25.822C50.05,25.922 50.8,26 52.4,26C56.7,26 61.1,24.3 61.1,20.4C61.1,18.6 59.5,15.9 55.5,15.9C50.4,15.9 45.5,20.5 45.5,26.4C45.5,29.4 47.1,33.3 52.3,33.3C55.6,33.3 58.9,31.4 61.1,27.8C59.5,29.4 56.7,30.9 54.2,30.9C51.7,30.9 49.25,28.922 49.25,25.822Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(25.3499,0,0,57.4311,2217.17,74.403)"><path d="M57.978,20.23C58.351,24.744 47.3,24.9 47.3,24.9L49.5,24.3C49.9,21.9 51.808,18.502 54.4,18.3C56.533,18.134 57.879,19.035 57.978,20.23ZM49.25,25.822C50.05,25.922 50.8,26 52.4,26C56.7,26 61.1,24.3 61.1,20.4C61.1,18.6 59.5,15.9 55.5,15.9C50.4,15.9 45.5,20.5 45.5,26.4C45.5,29.4 47.1,33.3 52.3,33.3C55.6,33.3 58.9,31.4 61.1,27.8C59.5,29.4 56.7,30.9 54.2,30.9C51.7,30.9 49.25,28.922 49.25,25.822Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(25.3499,0,0,57.4311,155.653,74.403)"><path d="M61.3,15.6C62.5,17 63.1,20.1 63.1,22.5C63.1,26.1 62,29.9 58.9,33.2C61.4,32.7 64.3,30.9 65.6,25.6C66.2,23 67.5,20.1 70.1,20.1C72.3,20.1 73.6,22.6 73.6,26.3C73.6,28.6 73,31.1 71.7,33.7C74.6,31.9 76.8,27.9 76.8,23.7C76.8,18.9 74.4,15.9 71.2,15.9C68.6,15.9 66.4,17.9 65.2,21.6C64.9,19.5 63.6,16.9 61.3,15.6Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(25.3499,0,0,57.4311,155.653,74.403)"><path d="M70.8,0.9C75,4 79.4,9.1 80.2,16.4L76.8,17.2C77.9,17.6 79.1,17.8 80.3,18C80.7,23.4 78.7,30.5 72.6,34.9C76.2,33.6 82.5,28.8 82.6,18.2C86.6,18.2 95.9,17.4 95.9,11.2C96,7.2 88.6,-1.4 70.8,0.9ZM82.6,15.8C82.3,10.6 79.8,3.1 74.6,1.8C78.4,2.3 88.7,4.6 88.7,10.6C88.7,13.6 85.2,14.7 82.6,15.8Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(25.3499,0,0,57.4311,155.653,74.403)"><path d="M89.4,18.6C89.6,19.5 89.6,20.4 89.6,21.5C89.6,25 88.6,29.4 86.1,33.2C89.4,32.6 91.9,29.9 92.8,25.6C93.6,22.1 95.1,19.9 97.2,19.9C97.9,19.9 98.4,20.1 99,20.5C99.9,18.9 101.1,17.6 102.1,16.8C101.1,16.2 100.1,15.9 98.7,15.9C96.1,15.9 93.7,18.3 92.2,22.6C92.3,21.3 92.3,19.7 92.1,17.8L89.4,18.6Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(25.3499,0,0,57.4311,155.653,74.403)"><path d="M108.8,15.9C103.9,16.1 98.7,20.6 98.7,26.4C98.7,30.4 101.1,33.3 105.5,33.3C110.6,33.4 115.5,29.4 115.5,23.2C115.5,18.9 112.6,15.8 108.8,15.9ZM106.1,31C103.9,30.9 102.4,28.6 102.6,25.5C102.9,21.7 105,18.3 108.1,18.2C110.4,18.2 111.8,20.1 111.7,23.2C111.6,26.9 109.6,31 106.1,31Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(25.3499,0,0,57.4311,155.653,74.403)"><path d="M127.8,16.6C126.7,16.1 125.5,15.8 123.9,15.8C120.4,15.8 116.4,17.5 116.4,21.1C116.4,25 121.4,25.6 121.4,28.4C121.4,30.5 118.6,32.4 112.6,32.2C113.7,32.9 115.5,33.3 117.7,33.3C122.1,33.3 125.5,31.2 125.5,27.9C125.5,23.4 120.5,23.2 120.5,20.7C120.5,18.2 123.6,16.6 127.8,16.6Z" style="fill:currentColor;fill-rule:nonzero;"/></g></g>
+    </symbol>
+
+    <!-- CURSIVE — handwritten variant -->
+    <symbol id="opCursive" viewBox="0 0 1737 1846">
+      <g transform="matrix(0.452146,0,0,0.85439,0,0)"><g transform="matrix(72.3922,0,0,34.915,-0.537438,-12.8456)"><path d="M38.5,24C38.5,17.3 33.3,1.2 19.4,1.2C10.8,1.2 1.7,8.3 1.7,26.1C1.7,36.5 6.9,51.8 19.8,51.8C29.5,51.9 38.5,44.5 38.7,33.4L38.9,30C39,28.6 41.4,28.2 43.1,28.2C45,28.2 47.9,28.7 49,29.8C50.6,31.1 51.2,34.5 49.3,36.3C47.4,38 43.9,38.9 40,38.9C38.9,38.9 38.3,38.7 38.3,40L38.5,59.7C38.5,61.7 39.2,62.2 39.3,60L39.7,41C42.4,41 47.8,40.5 49.8,38.4C52.6,35.9 52.3,30.1 48.7,27.8C46.2,26.2 40.4,25.5 37.8,28C36.9,28.9 36.8,30.7 36.7,31.4C35.1,39.9 29.7,47.5 20,47.5C11.7,47.5 3.5,40.6 3.5,26.7C3.7,14.6 10.9,5.2 19.6,5.2C29.5,5.1 36.3,13.8 37.5,23.9C37.6,25.2 38.5,25.1 38.5,24" style="fill-rule:nonzero;"/></g></g>
+    </symbol>
+    <symbol id="opCursiveType" viewBox="0 0 3776 1586">
+      <g transform="matrix(0.983178,0,0,0.734075,0,0)"><g transform="matrix(25.7809,0,0,34.5295,-62.4849,105.595)"><path d="M147.9,31.7C145.9,33 143.5,34.1 141.4,34.1C139.9,34.3 138.9,33.9 138.5,33.5C138.2,33.4 138.5,33.5 138.5,33.5L138.4,33.4C138.2,33.3 138.2,33.1 138.6,33C140.9,31.1 146.1,28.155 146.1,23.755C146,22.655 145.2,21.555 143.6,21.555C139.8,21.555 135.9,25.6 136.1,30.5C136.1,31 136.2,32.1 136.2,33C135.4,33.5 133.6,34.5 132.5,35.1C134.2,31.9 131,29.9 129.1,27.9C130.5,26.5 132.6,25.352 132.5,22.952C132.4,21.952 131.5,21.352 130.5,21.452C128.4,21.452 125.6,23.4 125.7,25.7C125.7,26.9 126.2,27.6 126.6,28.1C124.6,29.9 121.5,31.4 118.2,32.5C119.9,31.1 121.7,28.1 121.7,25.4C121.7,23.1 120,21.6 117.9,21.6C113.2,21.6 108.5,26.6 108.5,31.4C108.5,32.1 108.7,33.584 109.1,34.184C106.5,36.484 104,35.7 104,32.4C104,29.9 106.5,24.9 107.7,22.6C108.1,21.9 107.7,21.4 107.1,21.6C104.2,22.9 100.9,23.9 96,23.1C95.5,23.1 94.8,23.4 94.6,24C93.6,27.9 91.5,34 87.9,36.2C87.4,36.5 87.4,37.4 88.2,37.1C90.4,36.1 94.4,32.1 96.2,25.4C99.1,25.6 101.9,25.4 105,24.1C103.9,26.1 101.9,29.9 101.9,32.4C101.9,35.9 104,36.6 105.4,36.5C107,36.5 108.9,35.984 109.8,35.084C110.5,35.584 111.764,35.965 112.6,35.984C114.885,36.036 116.81,34.936 117.942,34.489C123.107,32.45 124.037,32.109 127.4,29.1C129,30.7 131.4,32.1 131.2,34.1C131,36.1 127.6,37 124.4,35.6C122.1,34.6 122.255,33.99 121.255,34.49C120.755,34.69 119.5,35 120,35.5C121.1,37 123.9,38.1 126.6,38.1C129.5,38.1 132.6,36.5 136.6,34C137.4,35.4 138.9,35.9 140.5,35.9C144,35.9 147.9,33.5 148.2,32.9C148.9,32.1 148.2,31.6 147.9,31.7ZM113.4,33.984C112,33.684 110.9,32.4 111,29.9C111.4,26.9 114,23.4 117.1,23.3C119.1,23.3 120.1,24.4 120.1,26.1C120.1,29.5 116.4,33.984 113.4,33.984ZM128.2,26.9C127.7,26.5 127.5,25.9 127.5,24.9C127.5,23.4 128.6,23.252 129.9,23.252C131.6,23.452 130.2,25.4 128.2,26.9ZM137.9,31.7C137.6,31.9 137.6,31.6 137.6,31.5C137.5,31 137.5,30.6 137.5,30C137.6,27.1 140.4,23.655 143.1,23.555C143.9,23.555 144.4,24.055 144,25.255C143.1,28.155 140.1,30 137.9,31.7Z" style="fill-rule:nonzero;"/></g><g transform="matrix(25.7809,0,0,31.489,-30.4318,111.774)"><path d="M92,0.2C89.5,0.2 87.1,0.5 84.6,1.8C82.5,3 80.9,5.1 80.8,7.4C80.6,12.6 86.9,13.5 87.6,17.9C87.9,18.5 88.5,18.1 88.4,17.6C88.2,13.4 82.9,12 82.7,8.6C82.6,5.4 85.6,2.6 91.1,2.6C97.7,2.5 107.9,6.6 107.9,12.5C107.6,16.5 102.1,18 99,18.5C96.5,19 90.026,19.999 88.4,22.6C86.9,25 86.4,26.5 85.9,29.1C84.4,36.1 82.1,44.1 78.6,44.1C76.5,44 75.4,41.9 75.5,43.5C75.6,45.1 76.6,46 78.1,46C82.1,46 84.9,40.4 87,31.5C88.9,23.4 90.2,22.6 96.1,21.5C100,20.6 109.5,19.4 109.6,12.1C109.6,6.4 100,0.4 92,0.2Z" style="fill-rule:evenodd;"/></g><g transform="matrix(25.7809,0,0,34.5295,-0.400543,7.77857)"><path d="M38.5,24C38.5,17.3 33.3,1.2 19.4,1.2C10.8,1.2 1.7,8.3 1.7,26.1C1.7,36.5 6.9,51.8 19.8,51.8C29.5,51.9 38.5,44.5 38.7,33.4L38.9,30C39,28.6 41.4,28.2 43.1,28.2C45,28.2 47.9,28.7 49,29.8C50.6,31.1 51.2,34.5 49.3,36.3C47.4,38 43.9,38.9 40,38.9C38.9,38.9 38.3,38.7 38.3,40L38.5,59.7C38.5,61.7 39.2,62.2 39.3,60L39.7,41C42.4,41 47.8,40.5 49.8,38.4C52.6,35.9 52.3,30.1 48.7,27.8C46.2,26.2 40.4,25.5 37.8,28C36.9,28.9 36.8,30.7 36.7,31.4C35.1,39.9 29.7,47.5 20,47.5C11.7,47.5 3.5,40.6 3.5,26.7C3.7,14.6 10.9,5.2 19.6,5.2C29.5,5.1 36.3,13.8 37.5,23.9C37.6,25.2 38.5,25.1 38.5,24" style="fill-rule:nonzero;"/></g><g transform="matrix(21.351,0,0,36.3137,231.726,-39.8604)"><path d="M55.8,32.4C55.7,33 55.9,33.4 56.5,33.6C58.3,34.3 60.5,34.4 62.3,34.4C66,34.4 68.1,33.9 68.1,30.9C68.1,27.8 64.6,26.7 60.9,26.7C56.2,26.7 52.4,28.1 52.4,33.2C52.4,36.6 54.7,39.8 60.8,39.8C63.2,39.8 69.9,39 70,36.6C70,36.3 69.7,35.7 69.3,35.9C67.8,36.9 64.3,37.7 61,37.7C58.3,37.7 53.8,36.9 53.8,33.2C53.8,30.1 57.1,28.7 60.9,28.7C64.4,28.7 66.9,29.3 66.9,30.8C66.9,32.3 63.4,32.4 61.2,32.4C57.6,32.4 56.5,31.7 55.8,31.7L55.8,32.4" style="fill-rule:nonzero;"/></g><g transform="matrix(25.7809,0,0,34.5295,-77.5894,28.3524)"><path d="M71.4,26.6C71.4,27.8 70.9,38.4 71,39C71.1,39.6 71.8,40 72.1,39C72.8,34.7 72.4,27.8 76.5,27.8C79.5,27.8 78.8,32.9 78.6,35.4C78.4,39 79.6,39.5 80.3,39.3C80.8,39.3 81.2,37.8 80.4,37.8C79.1,37.4 80.8,33.2 79.6,29C78.4,25.2 74.3,25.1 72.6,28.8L72.5,28.8L72.5,26.7C72.4,25.5 71.4,25.7 71.4,26.6" style="fill-rule:nonzero;"/></g></g>
+    </symbol>
+  </svg>
+
+<!-- ===== SPLASH ===== -->
+<main class="splash" id="splash">
+
+  <!-- Black-hole canvas — fills the viewport behind everything -->
+  <canvas class="bh-canvas" id="bh-canvas"></canvas>
+
+  <!-- Center morphing mark inside a glass card -->
+  <button class="center-glass" id="centerMark" data-phase="signet" type="button" aria-label="OpenProse mark">
+    <svg data-kind="signet" class="mark-signet swap-logo" viewBox="0 0 142 142" aria-hidden="true"><use href="#opMark"/></svg>
+    <svg data-kind="wordmark" class="mark-wordmark swap-logo" viewBox="0 0 3840 998" aria-hidden="true"><use href="#opType"/></svg>
+  </button>
+
+  <!-- Corner UI -->
+  <div class="corners">
+
+    <div class="tl-badge">
+      <span class="dot"></span>
+      <span>LIVE</span>
+      <span class="sep">·</span>
+      <span class="acc">ρ.0 ALPHA</span>
+    </div>
+
+    <a class="tr-info" href="#foot">INFO</a>
+
+    <!-- "click to fall in" caption removed; the page reads as a quiet
+         hero with no instructional chrome.  The interaction itself
+         (click → spawn) is discoverable; we don't narrate it.
+         [c_4ac0a3e2] -->
+
+
+    <!-- Tunable controls panel — full directorial surface -->
+    <div class="controls" id="controls"></div>
+
+    <a class="scroll-hint" href="#foot">
+      <span>scroll</span>
+      <span class="arr">↓</span>
+    </a>
+
+  </div>
+
+</main>
+
+<!-- ===== FOOT ===== -->
+<section class="foot" id="foot">
+  <div class="foot-inner">
+    <div class="foot-eyebrow">// ρ Black Hole — direction seventeen</div>
+    <h2>A program is a <em>boundary</em>.</h2>
+    <p>The shadow above is one identity in two voices — signet inside the glass, the canvas underneath. Click the void; let the hole open. Watch the disk wrap over the top of the shadow as you fall in (the back of the disk lensed around the photon sphere); listen for the silence past the horizon. The fall always ends in stillness, and the stillness always ends in another click.</p>
+    <p>Every aspect of the rendering is on a slider — event-horizon radius, photon ring sharpness, disk colour balance, blueshift, lensing strength, fall duration, starfield density, post-black hold. The chrome paradigm is borrowed from <em>μ Bloom</em>; the palette is its inversion. The art is primary; the physics is a guide, not a chain.</p>
+    <div class="ctas">
+      <a class="btn primary" href="direction-mu-bloom.html">μ Bloom — the parent <span>→</span></a>
+      <a class="btn ghost" href="direction-eta-organism-homepage.html">η Organism homepage</a>
+    </div>
+    <div class="foot-meta">
+      // see also:
+      <a href="direction-mu-bloom-homepage-symmetry-ripple.html">μ Symmetry Ripple</a>
+      <a href="direction-iota-reference-card-concept-strata.html">ι Strata</a>
+      <a href="direction-delta-machine-homepage-rain-infinite.html">δ Rain Infinite</a>
+    </div>
+  </div>
+</section>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ============================================================
+     ρ BLACK HOLE — runtime
+     ============================================================
+     State machine:
+       'idle'       — accepting clicks; logo + chrome visible.
+       'growing'    — a BH exists and is growing past the viewport.
+                      Clicks ignored; logo is NOT affected.
+       'dissolving' — the BH has reached its full peak (covering
+                      the viewport).  The disc is held at peak
+                      radius while its alpha fades to 0 over a
+                      brief window, revealing the starfield it
+                      was occluding.  No visible shrinking.
+
+     Each click in 'idle' captures (clickX, clickY) and starts
+     a new growth.  The click position determines:
+       · BH initial centre on the canvas (so the hole opens
+         where you clicked)
+       · Disk inclination (radius-from-centre maps to tilt)
+       · Disk orientation (angle-from-centre maps to phi)
+
+     The cycle is two time-parameterised phases driven by cfg
+     keys GROWING_MS + DISSOLVING_MS.  In GROWING the EH radius
+     grows TRUE-EXPONENTIALLY from EH_START_PX up to bh.ehPeak
+     (= longest click-to-corner distance × EH_TARGET_OVERSHOOT):
+         ehR(t) = ehStart · (ehPeak/ehStart)^(t^GROWTH_CURVE)
+     where GROWTH_CURVE = 1 is a pure exponential and >1 holds
+     the start flatter and accelerates harder at the end —
+     matching the free-fall geometry where the apparent size of
+     the EH diverges as r → r_s.  Once t reaches 1 the BH has
+     visibly passed the viewport corners and the DISSOLVING
+     phase holds the peak radius while alpha fades to 0.  No
+     contraction; no fade-to-black; no camera lock-on; no logo
+     morph.  Clicks during DISSOLVING interrupt the fade and
+     spawn a fresh BH at the new click point so chained clicks
+     always feel responsive.  The growth itself is the cinematic;
+     the dissolve is just the clean reset.
+     ============================================================ */
+
+  // ---- Config ----------------------------------------------------
+  // Every tunable knob lives in cfg; the controls panel binds
+  // sliders directly to keys here.
+  //
+  // Fast re-click + true exponential growth.
+  //
+  // The BH grows EXPONENTIALLY from ehStart → ehPeak, matching
+  // the free-fall geometry of approaching an event horizon (the
+  // apparent size of the EH accelerates without bound as the
+  // observer's distance r → r_s).  Mathematically:
+  //
+  //     ehR(t) = ehStart · (ehPeak/ehStart)^(t^GROWTH_CURVE)
+  //
+  // which is a pure exponential interpolation when GROWTH_CURVE
+  // = 1, and gives an even slower start + sharper late-phase
+  // explosion when GROWTH_CURVE > 1.  Replaces the previous
+  // additive-power-law model (ehStart + Δ·t^k) which under-shot
+  // the late acceleration.
+  //
+  // Lifecycle is also halved so the user can click again within
+  // ~2.5s, and clicks during the brief dissolve phase interrupt
+  // and start a fresh BH so chained clicks always feel responsive.
+  var cfg = {
+    // ── Lifecycle (ms) ──────────────────────────────────────────
+    // Each click runs: GROWING → DISSOLVING → idle.  Tuned for
+    // a snappy re-click cadence (~2.5s end-to-end).  Clicks
+    // during DISSOLVING are accepted and start a new BH.
+    GROWING_MS:         2200,     // grow from click to viewport-peak
+    DISSOLVING_MS:       380,     // alpha-fade at peak (no radius change)
+
+    // ── Black-hole geometry ────────────────────────────────────
+    // The growth target is dynamic: at peak (just before the
+    // collapse), the EH radius equals the distance from the
+    // CLICK POINT to the farthest viewport corner, multiplied
+    // by EH_TARGET_OVERSHOOT.  This guarantees the BH has
+    // visibly "passed the screen area" before the cycle resets.
+    EH_START_PX:        6,        // initial event-horizon radius
+    EH_TARGET_OVERSHOOT:1.05,     // EH peak as a multiple of the
+                                  // longest click-to-corner distance
+    GROWTH_CURVE:       1.65,     // exponent on t inside the
+                                  // exponential interpolation:
+                                  //   ehR = ehStart · ratio^(t^k)
+                                  // 1 = pure exponential; >1 holds
+                                  // the curve flatter at the start
+                                  // and accelerates harder at the
+                                  // end (free-fall feel)
+    EH_PEAK_OPACITY:    1.00,     // alpha multiplier on the EH disc
+
+    // ── Accretion disk ──────────────────────────────────────────
+    DISK_INNER_RATIO:   1.50,     // disk inner edge / EH (ISCO-ish)
+    DISK_OUTER_RATIO:   6.00,     // disk outer edge / EH
+    DISK_BRIGHTNESS:    1.00,     // master disk multiplier
+    DISK_BLUESHIFT:     0.85,     // 0..1 doppler asymmetry strength
+    DISK_HUE_HOT:       42,       // hot inner / approaching: warm gold-amber
+    DISK_HUE_COLD:      18,       // cold outer / receding: deeper orange
+    DISK_OPACITY:       0.92,     // particle alpha envelope
+    DISK_MAX_TILT_DEG:  74,       // max tilt at corner clicks
+    DISK_ROTATION_SPEED:1.30,     // rad/sec at outer edge (visible swirl)
+
+    // Particle system in the disk.  Each particle is a tiny puff
+    // of plasma orbiting the BH (Keplerian-ish: angular velocity
+    // ω ∝ r^-1.5).  Particles spiral inward and "plunge" at the
+    // inner edge, respawning at the outer edge.
+    PARTICLE_COUNT:     360,      // total active particles at peak
+    PARTICLE_SIZE_MIN:  0.6,      // CSS px
+    PARTICLE_SIZE_MAX:  2.6,
+    PARTICLE_INFLOW:    0.16,     // radial inflow rate (fraction of
+                                  // (rOut - rIn) per second)
+    PARTICLE_GLOW:      1.40,     // soft-glow multiplier for each
+                                  // particle (compositing intensity)
+
+    // Hot spots — a few extra-bright clumps that orbit visibly,
+    // adding cinematic motion ("knot" features in the disk).
+    HOTSPOT_COUNT:      5,
+    HOTSPOT_BRIGHT:     1.85,
+    HOTSPOT_SIZE_MULT:  2.1,
+
+    // ── Lensing wrap ────────────────────────────────────────────
+    // The lensed back-arcs above + below the EH (the bit that
+    // makes a black hole LOOK like a black hole in 2D).
+    WRAP_BRIGHTNESS:    0.95,     // peak alpha at the wrap apex
+    WRAP_WIDTH:         0.85,     // radial width as fraction of EH
+    WRAP_VERTICAL:      1.55,     // vertical extent in EH units
+                                  // (how high the back wraps)
+
+    // ── Photon ring + lensing halo ─────────────────────────────
+    PHOTON_RING_WIDTH:  1.8,      // CSS px stroke width
+    PHOTON_RING_BRIGHT: 1.00,     // brightness multiplier
+    PHOTON_RING_HUE:    44,       // honey-gold to match brand
+    LENS_HALO_WIDTH:    0.65,     // halo extent in EH units
+    LENS_HALO_STRENGTH: 0.78,     // halo brightness
+
+    // ── Starfield ───────────────────────────────────────────────
+    // The field is STILL — positions are fixed at seed time, only
+    // per-star brightness twinkles.
+    STAR_COUNT:         1400,    // many more stars at launch (520 → 1400) [c_4ac0a3e2]
+    STAR_BRIGHTNESS:    1.00,
+    STAR_BG_BRIGHTNESS: 0.42,     // background haze
+    /* Base twinkle amount lifted 0.45→0.55 so the starting state already
+       has a livelier shimmer, making the per-cycle ramp
+       (CYCLE_SPARKLE_PER_CYCLE) read clearly cycle-over-cycle. [c_88889ebf] */
+    STAR_TWINKLE_AMOUNT:0.55,     // 0 = frozen field, 1 = strong pulse
+    STAR_TWINKLE_SPEED: 1.00,     // master frequency multiplier
+
+    // ── Cycle escalator ─────────────────────────────────────────
+    // Each BH dissolve→idle transition increments bhCycleCount.
+    // Up to CYCLE_ESCALATE_MAX cycles, every cycle adds
+    //   · +CYCLE_BRIGHTNESS_PER_CYCLE to the star brightness mult
+    //   · +CYCLE_SPARKLE_PER_CYCLE to the twinkle amplitude mult
+    // After the cap, every further cycle adds CYCLE_HUE_PER_CYCLE
+    // degrees of hue drift (clamped to CYCLE_HUE_MAX) so the field
+    // begins to take on a subtle colour shift without the brightness
+    // running away.  Reset BH zeros the counter.
+    /* Twinkle ramp boosted from +5%/cycle to +18%/cycle (→ ~2.8× at cap)
+       and a new SPEED ramp added so post-dissolve the field is unambiguously
+       livelier than before. [c_88889ebf] */
+    CYCLE_ESCALATE_MAX:        10,    // cap on brightness/sparkle ramp
+    CYCLE_BRIGHTNESS_PER_CYCLE:0.08,  // +8% star brightness per cycle (→ 1.8× at cap)
+    CYCLE_SPARKLE_PER_CYCLE:   0.18,  // +18% twinkle amp per cycle (→ 2.8× at cap, clamped to 1.0 amp)
+    CYCLE_SPEED_PER_CYCLE:     0.06,  // +6% twinkle frequency per cycle (→ 1.6× at cap)
+    CYCLE_HUE_PER_CYCLE:       8.0,   // hue degrees per post-cap cycle
+    CYCLE_HUE_MAX:             60.0,  // total hue drift clamp (degrees)
+
+    // ── Performance ─────────────────────────────────────────────
+    PIXEL_RATIO_CAP:    1.25,     // cap DPR for cheaper draws
+
+    // ── Aesthetic ───────────────────────────────────────────────
+    BG_COLOUR:          '#060409', // canvas wash colour (void)
+
+    // ── PHYSICS PIPELINE ────────────────────────────────────────
+    // Tunables for the Schwarzschild ray-tracer.  See top-of-file
+    // doc block for theory.  These knobs are the directorial
+    // controls for the physics pipeline; they don't break the
+    // parent's lifecycle / chrome / starfield.
+    PHYSICS_ENABLE:        true,  // master switch — false = parent path
+    PHYSICS_SCALE:         0.42,  // raster scale (per axis).  0.42 ≈
+                                  //   17.5% of full pixels.  Drops to
+                                  //   ~40-60 ms / frame on a laptop.
+    GEODESIC_TABLE_SIZE:   512,   // sample count along b-axis
+    GEODESIC_B_MAX:        18.0,  // max impact parameter in rs units
+    // Reversed the earlier edge-on push (was 82° → almost Interstellar).
+    // At 82° the disk plane was a thin sliver and the wrap above the EH
+    // was the only visible structure (read as "no front-facing disk").
+    // Dropped to 28° so the disk plane tilts toward the viewer the way
+    // the EHT M87 image does (~17–30°): a clear bright annulus surrounds
+    // the EH shadow, with the near side foreshortened below and the far
+    // side gravitationally lensed up and over the shadow as a brighter
+    // crescent.  The photon ring still wraps because lensing is a
+    // function of impact parameter, not inclination.  Brightness and
+    // noise contrast retained from prior tune so the disk reads as
+    // textured plasma, not a flat ring.
+    PHOTON_CAPTURE_OFFSET: 1.0001,// b_min = b_photon × this; pad
+                                  //   above the photon sphere so the
+                                  //   ODE doesn't blow up at capture.
+    OBSERVER_DISTANCE:     32.0,  // viewer→BH distance in rs units;
+                                  //   sets the angular→b mapping
+    DISK_INCLINATION_DEG:  28,    // disk tilt in deg from face-on;
+                                  //   EHT M87 ≈ 17°, Interstellar ≈ 80°.
+                                  //   28° = front-facing read (you see
+                                  //   the disk's face) with enough tilt
+                                  //   that the lensed far-side wrap is
+                                  //   visible above the shadow.
+    DISK_INNER_RS:         3.0,   // disk inner radius (rs units).
+                                  //   ISCO for Schwarzschild = 3 rs.
+    DISK_OUTER_RS:         12.0,  // disk outer radius (rs units)
+    DOPPLER_STRENGTH:      0.80,  // 0 = no Doppler, 1 = full
+                                  //   1/(1-β·cosψ) with β=BETA_MAX at
+                                  //   ISCO falling as r^-1/2.
+    DOPPLER_BETA_MAX:      0.45,  // orbital velocity at ISCO (β=v/c)
+    REDSHIFT_STRENGTH:     0.85,  // 0..1, multiplier on √(1-rs/r)
+                                  //   colour-temperature drop
+    DISK_NOISE_AMOUNT:     0.78,  // 0..1, hash-stripe contrast on disk
+    DISK_BRIGHTNESS_PHYS:  1.85,  // master brightness for physics disk
+    DISK_HUE_INNER:        46,    // hot-inner hue (warm gold)
+    DISK_HUE_OUTER:        22,    // cool-outer hue (deep orange)
+    DISK_HOTSPOT_COUNT:    6,     // bright knots that orbit visibly
+    DISK_HOTSPOT_BOOST:    1.6,   // multiplier on hotspot luminance
+    PHOTON_RING_BOOST:     1.40,  // additive boost for rays grazing b_photon
+    PHOTON_RING_BAND:      1.45,  // photon-ring band ratio b_high/b_low
+                                  //   the photon sphere (b near
+                                  //   b_photon) — re-creates the
+                                  //   bright ring without a separate
+                                  //   stroke pass.
+  };
+
+  // Non-exposed values
+  var STAR_SEED = 0x4f1e7d3a;     // deterministic star positions
+
+  // ---- Canvas + sizing -------------------------------------------
+  var canvas = document.getElementById('bh-canvas');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = 0, H = 0;
+  var DPR = Math.min(window.devicePixelRatio || 1, cfg.PIXEL_RATIO_CAP);
+
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, cfg.PIXEL_RATIO_CAP);
+    var rect = canvas.getBoundingClientRect();
+    W = Math.floor(rect.width  * DPR);
+    H = Math.floor(rect.height * DPR);
+    canvas.width = W;  canvas.height = H;
+    // Reseed the starfield to fill the new viewport.
+    seedStars();
+  }
+  window.addEventListener('resize', function () {
+    var rect = canvas.getBoundingClientRect();
+    var nw = Math.floor(rect.width * (window.devicePixelRatio || 1));
+    if (Math.abs(nw - W) > 30) resize();
+  });
+
+  // ---- Deterministic RNG -----------------------------------------
+  // xorshift32 seeded from STAR_SEED so the starfield is stable
+  // across reloads (cinematic — the same sky each visit).
+  function makeRng(seed) {
+    var s = seed | 0;
+    if (s === 0) s = 1;
+    return function () {
+      s ^= s << 13; s ^= s >>> 17; s ^= s << 5;
+      return ((s >>> 0) / 4294967296);
+    };
+  }
+
+  // ---- Starfield --------------------------------------------------
+  // Each star carries a fixed angular position around the canvas
+  // centre + a radial distance.  During the fall, stars stream
+  // outward (radius grows) and brighten near the screen edges.
+  // When a star leaves the canvas it respawns near the BH.
+  var stars = [];
+  function seedStars() {
+    var rng = makeRng(STAR_SEED);
+    stars.length = 0;
+    var n = cfg.STAR_COUNT;
+    var maxR = Math.max(W, H);
+    for (var i = 0; i < n; i++) {
+      // Polar coordinates around the canvas centre.  Positions are
+      // FIXED at seed time — the field is still, only brightness
+      // twinkles.
+      var ang = rng() * Math.PI * 2;
+      var r   = Math.sqrt(rng()) * maxR * 0.55;  // bias inward
+      var x   = W * 0.5 + Math.cos(ang) * r;
+      var y   = H * 0.5 + Math.sin(ang) * r;
+      // Random base brightness biased toward dim so a few bright
+      // stars pop against the void.
+      var b = Math.pow(rng(), 2.5) * 0.9 + 0.1;
+      var size = 0.4 + rng() * 1.5;
+      // Faint colour wiggle so the sky isn't uniformly white.
+      var hue = 200 + (rng() - 0.5) * 100;        // 150..250 (cool)
+      var sat = rng() < 0.18 ? 0.55 : 0.06;       // most stars white
+      // Per-star twinkle: a unique frequency + phase + depth so the
+      // field shimmers organically instead of pulsing in unison.
+      // Depth biased low so most stars are nearly steady and a few
+      // stand-outs do the visible twinkling.
+      var tFreq  = 0.4 + rng() * 1.8;             // 0.4..2.2 Hz at speed=1
+      var tPhase = rng() * Math.PI * 2;
+      var tAmp   = Math.pow(rng(), 1.6);          // 0..1, biased low
+      stars.push({
+        x: x, y: y, b: b, size: size,
+        hue: hue, sat: sat,
+        tFreq: tFreq, tPhase: tPhase, tAmp: tAmp
+      });
+    }
+  }
+
+  // ---- State machine ---------------------------------------------
+  // Lifecycle: idle → growing → dissolving → idle.  Pure expansion;
+  // no contraction, no symmetric breath.
+  //   · idle       — no BH, accepting clicks.
+  //   · growing    — EH radius eases from EH_START_PX → EH peak.
+  //                  Peak = longest click-to-corner distance ×
+  //                  EH_TARGET_OVERSHOOT, so the BH has visibly
+  //                  passed the viewport before the cycle ends.
+  //   · dissolving — EH radius is HELD at peak; alpha fades from
+  //                  1 → 0 over a brief window so the BH
+  //                  dissipates and reveals the starfield
+  //                  underneath.  No visible shrinking.
+  // No fade-to-black, no logo fade, no camera lock-on.  The BH
+  // sits at the click point throughout.
+  var STATE = {
+    phase: 'idle',    // 'idle' | 'growing' | 'dissolving'
+    bh:    null,
+    t0:    0,
+    lifeT: 0
+  };
+
+  // Cycle counter driving the starfield escalator.
+  // Incremented once per completed BH (on dissolving→idle).  Read
+  // by renderStars() to scale brightness, twinkle amplitude, and
+  // (post-cap) hue drift.  Reset BH zeros the counter so a fresh
+  // session starts from the unboosted field.
+  var bhCycleCount = 0;
+
+  // Compute the longest distance from (cx, cy) to any viewport
+  // corner.  That's the EH radius required to fully "pass the
+  // screen" from that click point.
+  function maxCornerDist(cx, cy) {
+    var d1 = Math.sqrt(cx * cx + cy * cy);
+    var d2 = Math.sqrt((W - cx) * (W - cx) + cy * cy);
+    var d3 = Math.sqrt(cx * cx + (H - cy) * (H - cy));
+    var d4 = Math.sqrt((W - cx) * (W - cx) + (H - cy) * (H - cy));
+    return Math.max(d1, d2, d3, d4);
+  }
+
+  // Build a new BH from a click position.
+  function spawnBH(clickX, clickY) {
+    var rect = canvas.getBoundingClientRect();
+    var cx = (clickX - rect.left) * DPR;
+    var cy = (clickY - rect.top)  * DPR;
+    // Tilt from click position relative to canvas centre.
+    var midX = W / 2, midY = H / 2;
+    var dx = cx - midX, dy = cy - midY;
+    var diagH = Math.sqrt(midX * midX + midY * midY);
+    var distFromCentre = Math.sqrt(dx * dx + dy * dy);
+    var distFrac = Math.min(1, distFromCentre / diagH);
+    var tilt = (cfg.DISK_MAX_TILT_DEG * Math.PI / 180) * distFrac;
+    var phi  = (distFromCentre > 0.5) ? Math.atan2(dy, dx) : 0;
+    // Per-click peak EH radius: just past the farthest corner so
+    // the BH definitely covers the visible viewport at climax.
+    var peak = maxCornerDist(cx, cy) * cfg.EH_TARGET_OVERSHOOT;
+    return {
+      cx: cx, cy: cy,
+      tilt: tilt,
+      phi: phi,
+      spinSign: Math.random() < 0.5 ? -1 : 1,
+      ehStart: cfg.EH_START_PX * DPR,
+      ehPeak:  peak,
+      particles: [],
+      hotspots:  []
+    };
+  }
+
+  // ---- Particle system -------------------------------------------
+  // Each particle: { rFrac (normalised radius in [0..1] mapping
+  // to the live disk inner→outer span), theta, size, hueShift }.
+  // The particle's CURRENT canvas-px radius is computed each
+  // frame as r = rIn + rFrac · (rOut - rIn), which lets the disk
+  // grow with the EH while the population stays stable.
+  //
+  // Update rule per frame:
+  //   ω(r) = K · (r/EH_live)^-1.5     // Keplerian angular vel
+  //   rFrac -= INFLOW · dt            // radial inflow (in frac)
+  //   theta += ω(r) · dt · spinSign
+  // When rFrac ≤ 0 the particle "plunges" — respawn at rFrac ≈ 1
+  // with a fresh angle.
+  function seedParticles(bh) {
+    bh.particles.length = 0;
+    var n = cfg.PARTICLE_COUNT;
+    for (var i = 0; i < n; i++) {
+      // Bias toward the inner edge (synchrotron emission peaks
+      // near the ISCO).
+      var u = Math.random();
+      var rFrac = Math.pow(u, 1.6);   // 0 inner, 1 outer
+      bh.particles.push({
+        rFrac: rFrac,
+        theta: Math.random() * Math.PI * 2,
+        size: cfg.PARTICLE_SIZE_MIN +
+              Math.random() * (cfg.PARTICLE_SIZE_MAX - cfg.PARTICLE_SIZE_MIN),
+        hueShift: (Math.random() - 0.5) * 14
+      });
+    }
+    bh.hotspots.length = 0;
+    for (var h = 0; h < cfg.HOTSPOT_COUNT; h++) {
+      bh.hotspots.push({
+        rFrac: 0.10 + Math.random() * 0.45,
+        theta: Math.random() * Math.PI * 2,
+        size: cfg.PARTICLE_SIZE_MAX * cfg.HOTSPOT_SIZE_MULT *
+              (0.8 + Math.random() * 0.5)
+      });
+    }
+  }
+
+  // Advance the particle system by dt (seconds).  Particles use
+  // a normalised rFrac so the disk's apparent extent scales with
+  // the growing EH while the population stays stable.
+  function stepParticles(bh, ehLive, dt) {
+    if (ehLive <= 0) return;
+    var K = 1.6;  // Keplerian normalisation (chosen for dynamics)
+    var spin = bh.spinSign;
+    var inflowPerSec = cfg.PARTICLE_INFLOW; // in rFrac units / sec
+    var rotMul = cfg.DISK_ROTATION_SPEED;
+
+    function update(p, sizeRespawn) {
+      // Current canvas-px radius corresponds to:
+      //   r = ehLive · (DISK_INNER_RATIO + rFrac · (OUTER-INNER))
+      // Angular velocity uses (r/EH) so the Keplerian profile
+      // depends only on rFrac.
+      var rPosNorm = cfg.DISK_INNER_RATIO + p.rFrac *
+                     (cfg.DISK_OUTER_RATIO - cfg.DISK_INNER_RATIO);
+      var omega = K / Math.pow(rPosNorm, 1.5);
+      p.theta += omega * dt * spin * rotMul;
+      p.rFrac -= inflowPerSec * dt;
+      if (p.rFrac < 0) {
+        // Plunge — recycle at the outer edge.
+        p.rFrac = 0.92 + Math.random() * 0.08;
+        p.theta = Math.random() * Math.PI * 2;
+        p.size = sizeRespawn();
+      }
+    }
+
+    var i;
+    for (i = 0; i < bh.particles.length; i++) {
+      update(bh.particles[i], function () {
+        return cfg.PARTICLE_SIZE_MIN +
+               Math.random() * (cfg.PARTICLE_SIZE_MAX - cfg.PARTICLE_SIZE_MIN);
+      });
+    }
+    for (i = 0; i < bh.hotspots.length; i++) {
+      update(bh.hotspots[i], function () {
+        return cfg.PARTICLE_SIZE_MAX * cfg.HOTSPOT_SIZE_MULT *
+               (0.8 + Math.random() * 0.5);
+      });
+    }
+  }
+
+  // ---- Easing -----------------------------------------------------
+  function easeInQuad(t)  { return t * t; }
+  function easeOutQuad(t) { return 1 - (1 - t) * (1 - t); }
+  function easeInPow(t, p){ return Math.pow(t, p); }
+  function clamp(x, a, b) { return x < a ? a : (x > b ? b : x); }
+
+  // ---- HSL → CSS string ------------------------------------------
+  function hsl(h, s, l, a) {
+    return 'hsla(' + h.toFixed(1) + ',' + (s * 100).toFixed(1) + '%,' +
+           (l * 100).toFixed(1) + '%,' + (a == null ? 1 : a.toFixed(3)) + ')';
+  }
+
+  // ---- Render: starfield -----------------------------------------
+  // STILL field, only TWINKLING.  Star
+  // positions are fixed at seed time; each star carries its own
+  // sinusoidal twinkle (freq, phase, depth) so the field shimmers
+  // organically without any rotational or radial motion.
+  //
+  // Brightness model per frame:
+  //   tw   = 0.5 + 0.5 · sin(now·0.001·STAR_TWINKLE_SPEED·tFreq + tPhase)
+  //   amp  = STAR_TWINKLE_AMOUNT · tAmp     // per-star scaled depth
+  //   br   = base · (1 - amp + 2·amp·tw)    // ranges [base(1-amp) … base(1+amp)]
+  // STAR_TWINKLE_AMOUNT = 0 freezes the field; 1 makes the bright
+  // stars pulse strongly from dim to over-bright.
+  function renderStars(now) {
+    // Cycle escalator.  Up to CYCLE_ESCALATE_MAX
+    // cycles, every completed BH brightens the field and deepens
+    // the twinkle.  Past the cap, a hue drift accumulates instead
+    // (clamped to CYCLE_HUE_MAX) — the field starts to take on a
+    // subtle colour shift without the brightness running away.
+    var cap = Math.max(0, cfg.CYCLE_ESCALATE_MAX);
+    var capped = Math.min(bhCycleCount, cap);
+    var cycleBrightMul  = 1 + capped * cfg.CYCLE_BRIGHTNESS_PER_CYCLE;
+    var cycleSparkleMul = 1 + capped * cfg.CYCLE_SPARKLE_PER_CYCLE;
+    var postCap = Math.max(0, bhCycleCount - cap);
+    var cycleHueShift = Math.min(cfg.CYCLE_HUE_MAX, postCap * cfg.CYCLE_HUE_PER_CYCLE);
+
+    /* Twinkle SPEED also escalates with cycles.
+       cycleSpeedMul scales the master frequency so post-dissolve the field
+       not only twinkles deeper but also faster, giving the visible
+       "more sparkling" effect across cycles. [c_88889ebf] */
+    var cycleSpeedMul = 1 + capped * (cfg.CYCLE_SPEED_PER_CYCLE || 0);
+    var bgBright = cfg.STAR_BG_BRIGHTNESS * cfg.STAR_BRIGHTNESS * cycleBrightMul;
+    var twAmt = Math.min(1, cfg.STAR_TWINKLE_AMOUNT * cycleSparkleMul);
+    var twSpeed = cfg.STAR_TWINKLE_SPEED * cycleSpeedMul * 0.001;
+    var nowTw = now * twSpeed;
+    var starBright = cfg.STAR_BRIGHTNESS * cycleBrightMul;
+    for (var i = 0; i < stars.length; i++) {
+      var st = stars[i];
+      // Per-star sinusoidal twinkle factor in [0..1].
+      var tw = 0.5 + 0.5 * Math.sin(nowTw * st.tFreq + st.tPhase);
+      var amp = twAmt * st.tAmp;
+      // Lerp brightness around base by ±amp.
+      var brMul = (1 - amp) + 2 * amp * tw;
+      var br = st.b * starBright * brMul;
+      // Subtle hue drift kicks in after the brightness cap.
+      var hue = st.hue + cycleHueShift;
+      ctx.fillStyle = hsl(hue, st.sat, 0.85, br * (0.5 + bgBright));
+      ctx.beginPath();
+      ctx.arc(st.x, st.y, st.size * DPR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // ---- Render: lensing halo --------------------------------------
+  // A soft radial gradient just outside the photon sphere.  Reads
+  // as a faint warm rim around the shadow.  Scaled by alpha so the
+  // halo opens with the BH and closes with it.
+  function renderLensHalo(bh, ehR, alpha) {
+    var hx = bh.cx, hy = bh.cy;
+    var rOuter = ehR * (1 + cfg.LENS_HALO_WIDTH);
+    if (rOuter <= 1) return;
+    var grad = ctx.createRadialGradient(hx, hy, ehR * 0.96, hx, hy, rOuter);
+    var s = cfg.LENS_HALO_STRENGTH * alpha;
+    grad.addColorStop(0.00, hsl(40, 0.20, 0.06, 0));
+    grad.addColorStop(0.04, hsl(cfg.PHOTON_RING_HUE, 0.62, 0.72, 0.85 * s));
+    grad.addColorStop(0.22, hsl(cfg.PHOTON_RING_HUE, 0.42, 0.48, 0.42 * s));
+    grad.addColorStop(0.60, hsl(cfg.PHOTON_RING_HUE, 0.30, 0.28, 0.16 * s));
+    grad.addColorStop(1.00, hsl(cfg.PHOTON_RING_HUE, 0.20, 0.20, 0));
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(hx, hy, rOuter, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // ---- Render: accretion disk ------------------------------------
+  // Particle-based dynamic disk.  Pass order is the key to the
+  // iconic "wrap" look — the back of the disk appears ABOVE and
+  // BELOW the event horizon shadow, because photons emitted from
+  // the disk's far side travel around the BH and reach the
+  // viewer's eye from those positions.
+  //
+  // Pass 1 — back-wrap arcs (top + bottom) — drawn FIRST so the
+  //          EH disc occludes the central bit later.
+  // Pass 2 — back HALF of the orbiting disk (particles whose
+  //          theta corresponds to the far side relative to viewer)
+  // Pass 3 — event horizon (solid black disc)
+  // Pass 4 — front HALF of the orbiting disk (the near-side
+  //          particles, drawn over the EH)
+  // Pass 5 — photon ring crisply on top
+  //
+  // Doppler beaming + colour shift apply per particle: brightness
+  // scales with the cosine of (theta - approach_angle), and the
+  // hue lerps between HOT and COLD based on the same sign.
+  function renderDisk(bh, ehR, alpha, now) {
+    if (ehR < 1) return;
+    var hx = bh.cx, hy = bh.cy;
+    var rIn  = ehR * cfg.DISK_INNER_RATIO;
+    var rOut = ehR * cfg.DISK_OUTER_RATIO;
+    var tilt = bh.tilt;
+    var k = Math.cos(tilt);              // 1 face-on, 0 edge-on
+    var spreadFull = rOut - rIn;
+    if (spreadFull <= 0) return;
+
+    ctx.save();
+    ctx.translate(hx, hy);
+    ctx.rotate(bh.phi);
+
+    var bs = clamp(cfg.DISK_BLUESHIFT, 0, 1);
+    var hotHue  = cfg.DISK_HUE_HOT;
+    var coldHue = cfg.DISK_HUE_COLD;
+    var alphaBase = cfg.DISK_OPACITY * cfg.DISK_BRIGHTNESS * alpha;
+
+    // Helper — project a particle (r, theta) to screen.  In the
+    // rotated frame:
+    //   x = r·cos(theta)
+    //   y = r·sin(theta) · k    (tilt-squashed)
+    // The "front" of the disk is theta ≈ ±π/2 (the half where
+    // sin(theta) > 0 in the rotated frame means closer-to-viewer
+    // for our chosen disk-axis convention).
+    function project(p) {
+      var x = p.r * Math.cos(p.theta);
+      var y = p.r * Math.sin(p.theta) * k;
+      return [x, y];
+    }
+    // Doppler factor: theta = 0 is the approaching side (max blueshift).
+    // We choose the approach axis to be the +X side in the rotated
+    // frame so it lines up with the visible "left" of the disk.
+    function doppler(theta) {
+      // cos(theta) > 0 = approaching, < 0 = receding.
+      var c = Math.cos(theta);
+      return c;
+    }
+
+    // ── Pass 1: back-wrap arcs (top + bottom) ────────────────────
+    // The lensed image of the disk's far side curves up over the
+    // top of the EH and down under the bottom.  We fake this with
+    // two soft elliptical gradients placed above and below the EH
+    // shadow.  Width + brightness driven by WRAP_* cfg keys.
+    var wrapBright = cfg.WRAP_BRIGHTNESS * alpha;
+    var wrapR  = ehR * (1 + cfg.WRAP_WIDTH);
+    var wrapV  = ehR * cfg.WRAP_VERTICAL;
+    // Top arc (above EH, peaking at -ehR vertical)
+    drawWrapArc(0, -ehR * 1.10, wrapR, wrapV, wrapBright, hotHue, coldHue);
+    // Bottom arc (below EH, peaking at +ehR vertical)
+    drawWrapArc(0, +ehR * 1.10, wrapR, wrapV, wrapBright * 0.78, hotHue, coldHue);
+
+    // ── Pass 2: back HALF of orbiting particles ──────────────────
+    // "Back" half: sin(theta_in_rotated_frame) < 0 — i.e. above
+    // the disk plane in screen coords.  These are normally occluded
+    // by the EH but lensing brings them around; we just draw them
+    // and let the EH disc mask the bit it actually covers.
+    drawParticles(bh, /* backHalf */ true, k, hotHue, coldHue, bs, alphaBase, rIn, rOut);
+
+    // ── Pass 3: event horizon ────────────────────────────────────
+    ctx.fillStyle = 'rgba(0,0,0,' + (cfg.EH_PEAK_OPACITY * alpha).toFixed(3) + ')';
+    ctx.beginPath();
+    ctx.arc(0, 0, ehR, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ── Pass 4: front HALF of orbiting particles ─────────────────
+    drawParticles(bh, /* backHalf */ false, k, hotHue, coldHue, bs, alphaBase, rIn, rOut);
+
+    /* Thicker distortion edge as the BH gets closer.  Three strokes:
+       a wide warm halo (2.5x PHOTON_RING_WIDTH), the existing outer-
+       soft-glow ring, and a new "edge of distortion" stroke at 1.5x
+       width slightly outside the photon ring.  All three scale with
+       PHOTON_RING_BRIGHT so the existing knob still controls overall
+       intensity. [c_4ac0a3e2] */
+    // ── Pass 5: photon ring + thick distortion edge ──────────────
+    var pRingR = ehR * 1.035;
+    var pRingW = cfg.PHOTON_RING_WIDTH * DPR;
+    var pulse  = 0.94 + 0.06 * Math.sin(now * 0.0035);
+    var pAlpha = cfg.PHOTON_RING_BRIGHT * alpha * pulse;
+    // Thick distortion edge (new, c_4ac0a3e2) — sits just outside the
+    // photon ring as a wide soft ring suggesting strong space-bend.
+    ctx.strokeStyle = hsl(cfg.PHOTON_RING_HUE, 0.50, 0.50, pAlpha * 0.22);
+    ctx.lineWidth = pRingW * 5.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, pRingR * 1.04, 0, Math.PI * 2);
+    ctx.stroke();
+    // Outer soft glow first.
+    ctx.strokeStyle = hsl(cfg.PHOTON_RING_HUE, 0.55, 0.58, pAlpha * 0.42);
+    ctx.lineWidth = pRingW * 3.4;
+    ctx.beginPath();
+    ctx.arc(0, 0, pRingR * 1.012, 0, Math.PI * 2);
+    ctx.stroke();
+    // Crisp inner ring.
+    ctx.strokeStyle = hsl(cfg.PHOTON_RING_HUE, 0.78, 0.72, pAlpha * 0.92);
+    ctx.lineWidth = pRingW * 1.35;
+    ctx.beginPath();
+    ctx.arc(0, 0, pRingR, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  // Helper — draw one wrap arc (the lensed-back gradient blob).
+  // (cx, cy) is the centre in the BH's rotated frame; the blob is
+  // shaped like a vertically-stretched ellipse with a radial
+  // gradient so it fades smoothly into the surrounding void.
+  function drawWrapArc(cx, cy, halfW, halfH, brightness, hotHue, coldHue) {
+    var grad = ctx.createRadialGradient(cx, cy, halfW * 0.05, cx, cy, halfW);
+    grad.addColorStop(0.0,  hsl(hotHue, 0.78, 0.66, 0.90 * brightness));
+    grad.addColorStop(0.30, hsl((hotHue + coldHue) / 2, 0.70, 0.52, 0.55 * brightness));
+    grad.addColorStop(0.65, hsl(coldHue, 0.55, 0.36, 0.25 * brightness));
+    grad.addColorStop(1.00, hsl(coldHue, 0.40, 0.22, 0));
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(1, halfH / halfW);   // stretch vertically
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(0, 0, halfW, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Helper — render all particles whose theta places them on the
+  // requested half of the disk.  Doppler beaming and colour shift
+  // applied per particle.  The current canvas-px radius is derived
+  // from p.rFrac and the LIVE inner/outer extents so the whole
+  // particle field scales smoothly with the growing EH.
+  function drawParticles(bh, backHalf, k, hotHue, coldHue, bs, alphaBase, rInLive, rOutLive) {
+    var list = bh.particles;
+    var i, x, y, p, c, d, lift, hue, lum, ringAlpha, r;
+    var spread = rOutLive - rInLive;
+    for (i = 0; i < list.length; i++) {
+      p = list[i];
+      var s = Math.sin(p.theta);
+      if (backHalf ? !(s < 0) : !(s >= 0)) continue;
+      r = rInLive + p.rFrac * spread;
+      x = r * Math.cos(p.theta);
+      y = r * Math.sin(p.theta) * k;
+      c = Math.cos(p.theta);
+      d = 0.55 + 0.45 * c;
+      lift = d * (1 + bs * 0.7);
+      hue = c > 0 ? hotHue : coldHue;
+      hue += p.hueShift;
+      var radial = Math.pow(1 - p.rFrac, 1.2) * 0.8 + 0.2;
+      lum = radial * lift;
+      ringAlpha = alphaBase * lum * (0.7 + bs * 0.4);
+      var pr = p.size * DPR * cfg.PARTICLE_GLOW;
+      var g = ctx.createRadialGradient(x, y, 0, x, y, pr);
+      g.addColorStop(0.00, hsl(hue, 0.85, 0.70, ringAlpha * 1.00));
+      g.addColorStop(0.40, hsl(hue, 0.80, 0.55, ringAlpha * 0.55));
+      g.addColorStop(1.00, hsl(hue, 0.75, 0.45, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, pr, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Hot spots.
+    var hs = bh.hotspots;
+    for (i = 0; i < hs.length; i++) {
+      p = hs[i];
+      var sH = Math.sin(p.theta);
+      if (backHalf ? !(sH < 0) : !(sH >= 0)) continue;
+      r = rInLive + p.rFrac * spread;
+      x = r * Math.cos(p.theta);
+      y = r * Math.sin(p.theta) * k;
+      c = Math.cos(p.theta);
+      d = 0.55 + 0.45 * c;
+      lift = d * (1 + bs * 0.7);
+      hue = c > 0 ? hotHue : coldHue;
+      lum = lift * cfg.HOTSPOT_BRIGHT;
+      ringAlpha = alphaBase * lum * (0.7 + bs * 0.4);
+      var hpr = p.size * DPR * cfg.PARTICLE_GLOW;
+      var hg = ctx.createRadialGradient(x, y, 0, x, y, hpr);
+      hg.addColorStop(0.00, hsl(hue, 0.92, 0.82, ringAlpha * 1.10));
+      hg.addColorStop(0.35, hsl(hue, 0.85, 0.62, ringAlpha * 0.70));
+      hg.addColorStop(1.00, hsl(hue, 0.75, 0.48, 0));
+      ctx.fillStyle = hg;
+      ctx.beginPath();
+      ctx.arc(x, y, hpr, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // ================================================================
+  // PHYSICS PIPELINE — Schwarzschild geodesic ray tracer
+  //
+  // This block replaces the parent's layered 2D pipeline
+  // (renderLensHalo + renderDisk) with a single ray-marched
+  // gravitational-lensing pass.  See top-of-file doc block for the
+  // physics references and the list of approximations vs full DNGR.
+  // ================================================================
+
+  // ---- Geodesic deflection table ---------------------------------
+  // Integrate the null-geodesic Binet equation for Schwarzschild:
+  //     d²u/dφ² + u = (3/2) · rs · u²              (with rs = 1)
+  // for each impact parameter b in [b_photon · cap … bMax].  We
+  // start the ray at φ = 0, r = ∞ (u = 0) heading toward the BH
+  // along a path with closest approach controlled by b.  The
+  // standard parametrisation places the turning point at
+  // u_max = 1/r_min, where u'(0) = 1/b (the ray comes in flat from
+  // infinity at impact parameter b).  We integrate φ from 0 until
+  // the ray either:
+  //   · escapes back to infinity (u → 0 again with u' < 0), or
+  //   · plunges inside the photon sphere (u keeps growing).
+  // The total deflection α = φ_out - π (minus straight-line).
+  //
+  // The result is a 1D LUT keyed by b in rs units.  At lookup time
+  // we clamp b to [b_photon, bMax] and linearly interpolate α.
+  var GEOD = null;  // { bMin, bMax, n, alpha: Float32Array, captured: Uint8Array, bPhoton }
+  function buildGeodesicTable() {
+    var n   = cfg.GEODESIC_TABLE_SIZE | 0;
+    var bMax = cfg.GEODESIC_B_MAX;
+    var bPhoton = 3.0 * Math.sqrt(3.0) / 2.0;            // ≈ 2.598 rs
+    var bMin = bPhoton * cfg.PHOTON_CAPTURE_OFFSET;
+    var alphaArr = new Float32Array(n);
+    var captArr  = new Uint8Array(n);
+    // RK4 integrator on the Binet equation, rs = 1:
+    //   y = [u, u']
+    //   y' = [u', (3/2) u² - u]
+    // Step is in φ.  For each b we step until u escapes back to 0
+    // or u > 1/0.9 (= inside photon sphere → captured).
+    var DPHI   = Math.PI / 1200;        // ~0.15° per step
+    var MAX_STEPS = 14000;              // hard cap (~2100°)
+    var ESCAPE_U  = 1e-4;               // |u| < this AND u' < 0 → escaped
+    function deriv(u, up) {
+      return [up, 1.5 * u * u - u];
+    }
+    for (var i = 0; i < n; i++) {
+      var b = bMin + (bMax - bMin) * (i / (n - 1));
+      // Initial conditions: ray from infinity with impact parameter b.
+      // u(0) = 0; u'(0) = 1/b (sign chosen so u rises as φ increases).
+      var u  = 0.0;
+      var up = 1.0 / b;
+      var phi = 0.0;
+      var captured = 0;
+      var crossed = false;        // did u start dropping again (past peri)
+      var steps = 0;
+      while (steps < MAX_STEPS) {
+        // RK4 step in φ.
+        var k1 = deriv(u, up);
+        var k2 = deriv(u + 0.5 * DPHI * k1[0], up + 0.5 * DPHI * k1[1]);
+        var k3 = deriv(u + 0.5 * DPHI * k2[0], up + 0.5 * DPHI * k2[1]);
+        var k4 = deriv(u + DPHI * k3[0],       up + DPHI * k3[1]);
+        u  += (DPHI / 6.0) * (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0]);
+        up += (DPHI / 6.0) * (k1[1] + 2 * k2[1] + 2 * k3[1] + k4[1]);
+        phi += DPHI;
+        // Capture test — u grew past 1/(0.5·rs); ray is well inside
+        // the photon sphere and will plunge.
+        if (u > 2.0) { captured = 1; break; }
+        // Past pericentre check
+        if (!crossed && up < 0) crossed = true;
+        // Escape: u back near 0 AND moving away
+        if (crossed && u < ESCAPE_U && up < 0) break;
+        steps++;
+      }
+      if (captured) {
+        alphaArr[i] = 0;
+        captArr[i]  = 1;
+      } else {
+        // Total deflection = φ - π (a straight-line ray exits at φ=π).
+        alphaArr[i] = phi - Math.PI;
+        captArr[i]  = 0;
+      }
+    }
+    GEOD = { bMin: bMin, bMax: bMax, n: n,
+             alpha: alphaArr, captured: captArr, bPhoton: bPhoton };
+  }
+  // Lookup α(b).  Returns { alpha, captured }.
+  function geodLookup(b) {
+    if (!GEOD) return { alpha: 0, captured: 0 };
+    if (b < GEOD.bPhoton) return { alpha: 0, captured: 1 };
+    if (b >= GEOD.bMax)   return { alpha: 0, captured: 0 };
+    var t  = (b - GEOD.bMin) / (GEOD.bMax - GEOD.bMin);
+    var fi = t * (GEOD.n - 1);
+    var i0 = Math.floor(fi);
+    var i1 = Math.min(GEOD.n - 1, i0 + 1);
+    var f  = fi - i0;
+    if (GEOD.captured[i0] || GEOD.captured[i1]) return { alpha: 0, captured: 1 };
+    return { alpha: GEOD.alpha[i0] * (1 - f) + GEOD.alpha[i1] * f, captured: 0 };
+  }
+
+  // ---- Disk texture sample ---------------------------------------
+  // Procedural Shakura-Sunyaev disk in BH-radius units.  Inputs
+  // (rDisk, phiDisk) are the polar coordinates of the bent-ray
+  // intersection in the disk's own plane.  Output: [R, G, B] in
+  // 0..1, premultiplied by the disk's intrinsic brightness.
+  //
+  // T(r) ∝ r^-3/4  →  colour ramps inner=hot to outer=cool.
+  // A hash-noise stripe pattern in azimuth gives turbulent eddies.
+  // Doppler beaming + colour shift baked in via the cosψ of the
+  // disk-plane velocity against the line of sight at the sample
+  // point.  Gravitational redshift folded in by √(1 - 1/r) factor
+  // on the colour temperature (rs = 1).
+  function hash01(x, y) {
+    var s = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+    return s - Math.floor(s);
+  }
+  // Hue-to-RGB helper for the disk colour ramp (HSL space, simplified).
+  function hslToRgb(h, s, l) {
+    // h in [0, 360), s/l in [0,1]
+    var c = (1 - Math.abs(2 * l - 1)) * s;
+    var hp = (h / 60.0) % 6;
+    var x  = c * (1 - Math.abs((hp % 2) - 1));
+    var r1, g1, b1;
+    if      (hp < 1) { r1 = c; g1 = x; b1 = 0; }
+    else if (hp < 2) { r1 = x; g1 = c; b1 = 0; }
+    else if (hp < 3) { r1 = 0; g1 = c; b1 = x; }
+    else if (hp < 4) { r1 = 0; g1 = x; b1 = c; }
+    else if (hp < 5) { r1 = x; g1 = 0; b1 = c; }
+    else             { r1 = c; g1 = 0; b1 = x; }
+    var m = l - c / 2;
+    return [r1 + m, g1 + m, b1 + m];
+  }
+  function sampleDiskRGBA(rDisk, phiDisk, viewVec, diskBasis, now) {
+    // rDisk: radius in rs units; phiDisk: azimuth in disk plane.
+    var rIn = cfg.DISK_INNER_RS, rOut = cfg.DISK_OUTER_RS;
+    if (rDisk < rIn || rDisk > rOut) return null;
+    // Shakura-Sunyaev temperature profile T(r) ∝ r^-3/4
+    var rNorm = (rDisk - rIn) / (rOut - rIn);              // 0 inner → 1 outer
+    var tNorm = Math.pow(rIn / rDisk, 0.75);               // 0..1 ish
+    // Stripe noise — three layers for visible plasma banding:
+    // angular bands (42 cells), fine angular noise (96
+    // cells), and radial bands (per-rDisk×16 cells). Disk now reads as
+    // a textured plasma rather than a smooth radial gradient.
+    var swirl = phiDisk + 0.18 * Math.sin(now * 0.0006 + rDisk * 0.7)
+                        + 0.45 * (now * 0.00010);             // Keplerian-ish swirl drift
+    var nz1 = hash01(Math.floor(swirl * 42) + 0.1, Math.floor(rDisk * 6.0) + 0.3);
+    var nz2 = hash01(Math.floor(swirl * 96) + 1.7, Math.floor(rDisk * 16.0) + 2.1);
+    var nz3 = hash01(Math.floor(swirl * 12) + 4.4, Math.floor(rDisk * 3.0) + 7.7);
+    var noise = (nz1 * 0.45 + nz2 * 0.30 + nz3 * 0.25);
+    var noiseLift = (1 - cfg.DISK_NOISE_AMOUNT) + cfg.DISK_NOISE_AMOUNT * noise;
+    // Hot spots — N bright knots orbiting at fixed radii, brightening
+    // sharply when the sampled point is near a knot center. Cheap
+    // Gaussian falloff in (φ, r) space.
+    var hotBoost = 1.0;
+    var hotCount = cfg.DISK_HOTSPOT_COUNT | 0;
+    if (hotCount > 0) {
+      var hotSpread = (rOut - rIn) * 0.35;                     // radial sigma
+      var hotPhiSpread = 0.22;                                  // angular sigma (rad)
+      for (var hi = 0; hi < hotCount; hi++) {
+        // Each knot orbits at its own radius + angular speed; the
+        // seed gives a deterministic placement so the sky reads the
+        // same each visit.
+        var hr = rIn + ((hi * 0.371 + 0.13) % 1) * (rOut - rIn);
+        var hOmega = 0.00012 * Math.pow(rIn / hr, 1.5);          // ~Keplerian
+        var hPhi = (hi * 1.731 + now * hOmega) % (Math.PI * 2);
+        var dPhi = phiDisk - hPhi;
+        // Wrap to [-π, π].
+        if (dPhi >  Math.PI) dPhi -= 2 * Math.PI;
+        if (dPhi < -Math.PI) dPhi += 2 * Math.PI;
+        var dR = (rDisk - hr) / hotSpread;
+        var dP = dPhi / hotPhiSpread;
+        var fall = Math.exp(-(dR * dR + dP * dP));               // Gaussian
+        hotBoost += (cfg.DISK_HOTSPOT_BOOST - 1) * fall;
+      }
+    }
+    noiseLift *= hotBoost;
+    // Doppler factor.  Disk orbits with β = β_max · √(rIn/rDisk)
+    // (Keplerian: v ∝ r^-1/2).  Velocity direction is tangential
+    // in the disk plane.  Project against line of sight (viewVec
+    // expressed in disk-basis coords).
+    var beta = cfg.DOPPLER_BETA_MAX * Math.sqrt(rIn / rDisk);
+    // Tangential unit vector in disk plane: (-sin φ, cos φ, 0) in
+    // disk-basis (where the disk normal is z).
+    var vDx = -Math.sin(phiDisk), vDy = Math.cos(phiDisk);
+    // Project view-vec into disk-basis x/y (disk plane components).
+    // diskBasis is [ ex, ey, ez ] each a 3-vec in world coords; the
+    // viewVec we get in is already in disk-basis frame at the call
+    // site, so we just take its x,y components.
+    var vx = viewVec[0], vy = viewVec[1];
+    var vLen = Math.sqrt(vx * vx + vy * vy);
+    var cosPsi = vLen > 1e-6 ? (vDx * vx + vDy * vy) / vLen : 0;
+    var dopplerLift = 1 / (1 - beta * cosPsi * cfg.DOPPLER_STRENGTH);
+    // Gravitational redshift: photons emitted at radius r lose
+    // energy by factor √(1 - rs/r).  Acts on the perceived colour
+    // temperature.  rs = 1 in our units.
+    var grav = Math.sqrt(Math.max(0.001, 1 - 1 / rDisk));
+    var redshiftTempFactor = 1 - cfg.REDSHIFT_STRENGTH * (1 - grav);
+    // Compose colour: hot-gold at inner, deeper orange at outer,
+    // then doppler beaming brightens / colour-shifts.
+    var hue = cfg.DISK_HUE_INNER * (1 - rNorm) + cfg.DISK_HUE_OUTER * rNorm;
+    // Doppler colour-shift — approaching side (cosψ > 0) shifts
+    // toward blue (+hue); receding side toward red (-hue).
+    hue += cosPsi * beta * cfg.DOPPLER_STRENGTH * 28;     // hue degrees
+    hue = ((hue % 360) + 360) % 360;
+    // Final luminance: temperature × Doppler × noise × master.
+    var lum = tNorm * dopplerLift * dopplerLift * dopplerLift; // δ³ beaming
+    lum *= noiseLift;
+    lum *= redshiftTempFactor;
+    lum *= cfg.DISK_BRIGHTNESS_PHYS;
+    lum = Math.min(2.4, lum);
+    var sat = 0.88 - 0.18 * rNorm;
+    // lL cap relaxed 0.78 → 0.92 so the photon-ring band and hotspots
+    // can read as visibly hot rather than tone-mapping to mid-grey;
+    // lum coefficient bumped slightly to lift the warm inner.
+    var lL  = Math.min(0.92, 0.30 + 0.62 * lum * 0.62);
+    var rgb = hslToRgb(hue, sat, lL);
+    // Alpha edge-fade biased to the OUTER ring only; the inner edge
+    // stays fully opaque so the hot ring around the photon sphere
+    // reads bright rather than fading toward the EH.  Only the outer
+    // 18% fades, inner edge stays at α=0.92.
+    var edgeFade = rNorm > 0.82 ? Math.max(0, 1 - (rNorm - 0.82) / 0.18) : 1;
+    var a = 0.92 * edgeFade;
+    return [rgb[0] * lum, rgb[1] * lum, rgb[2] * lum, a];
+  }
+
+  // ---- The physics-pipeline raster -------------------------------
+  // We render into an offscreen ImageData at PHYSICS_SCALE × main
+  // canvas size, then blit (with smoothing) to the main canvas.
+  var _physOff = null;        // {canvas, ctx, w, h, img}
+  function ensurePhysicsBuf(w, h) {
+    if (!_physOff || _physOff.w !== w || _physOff.h !== h) {
+      var c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      var cx = c.getContext('2d');
+      _physOff = { canvas: c, ctx: cx, w: w, h: h, img: cx.createImageData(w, h) };
+    }
+    return _physOff;
+  }
+
+  // For each pixel we want the ray direction in world space, bent
+  // by α(b) and intersected with the disk plane.  We work in a
+  // BH-centric frame where:
+  //   · z+ is "toward the camera" (out of screen)
+  //   · the disk lies in the (x, y) plane of the DISK basis, which
+  //     is the screen frame rotated by the disk's tilt + spin
+  //     angle (bh.tilt about the rotated-x axis after rotating by
+  //     bh.phi about z).
+  //
+  // For a flat camera at distance D (rs units), the central ray
+  // through screen pixel (px - cx, py - cy) has angular offset
+  //   θ_px = pixelOffset / D       (small-angle)
+  // We use a slightly more accurate atan() formulation.
+  function renderPhysicsBH(bh, ehR, alpha, now) {
+    if (ehR < 1 || alpha <= 0.0) return;
+    var scale = cfg.PHYSICS_SCALE;
+    var ow = Math.max(2, Math.floor(W * scale));
+    var oh = Math.max(2, Math.floor(H * scale));
+    var off = ensurePhysicsBuf(ow, oh);
+    var img = off.img;
+    var data = img.data;
+    // Map BH center / radius into the offscreen raster's px space.
+    var bhx = bh.cx * scale;
+    var bhy = bh.cy * scale;
+    var rsPx = ehR * scale;                  // 1 rs = rsPx offscreen px
+    var D    = cfg.OBSERVER_DISTANCE;        // viewer-BH distance in rs
+    // The conversion from screen radius (in rs units) to the ray's
+    // impact parameter at infinity:  for a thin lens at distance D,
+    //   b ≈ D · sin θ, with θ the small angular offset = rScreen/D
+    // i.e. b ≈ rScreen.   We use the rScreen-in-rs as a direct b
+    // estimate; this is the lens-equation limit and is excellent
+    // for our small-angle observer geometry.
+    // Disk basis vectors in screen coords.  The "screen-up" axis
+    // is +y; the BH-centric x-y plane of the screen is our viewing
+    // plane.  Disk inclination is applied by tilting the disk plane
+    // about the (cos bh.phi, sin bh.phi) axis on screen.  When bh.phi
+    // = 0 the tilt axis is +x and the disk plane lies in the screen
+    // plane rotated about screen-x by DISK_INCLINATION_DEG.
+    var incl = cfg.DISK_INCLINATION_DEG * Math.PI / 180;
+    var phi  = bh.phi;                       // tilt axis angle on screen
+    var cp = Math.cos(phi), sp = Math.sin(phi);
+    var ci = Math.cos(incl), si = Math.sin(incl);
+    // Disk basis in 3D (screen-x = +x_w, screen-y = +y_w, into-screen = -z_w):
+    //   ex = (cos phi,  sin phi,           0)        ← tilt axis
+    //   ey = (-sin phi*ci,  cos phi*ci,  si)         ← orthog. in disk plane
+    //   ez = (-sin phi*si,  cos phi*si, -ci)         ← disk normal
+    var exX = cp,         exY = sp,         exZ = 0;
+    var eyX = -sp * ci,   eyY =  cp * ci,   eyZ = si;
+    var ezX = -sp * si,   ezY =  cp * si,   ezZ = -ci;
+    // Photon-ring boost band: rays with b just barely above b_photon
+    // accumulate many orbits and emerge bright. Approximate by boosting
+    // luminance in a band b ∈ [b_p, b_p · PHOTON_RING_BAND]. JH
+    // 2026-05-21: band widened 1.18 → 1.45 so the lensed crown (back-
+    // wrap of the disk arcing over the EH shadow) reads as a visible
+    // textured halo rather than a thin hairline.
+    var bRingLo = GEOD ? GEOD.bPhoton : 2.598;
+    var bRingHi = bRingLo * cfg.PHOTON_RING_BAND;
+    // Precompute screen→rs scaling
+    var inv_rsPx = rsPx > 0 ? 1 / rsPx : 0;
+    for (var py = 0; py < oh; py++) {
+      for (var px = 0; px < ow; px++) {
+        var dx = px - bhx;
+        var dy = py - bhy;
+        var rPx = Math.sqrt(dx * dx + dy * dy);
+        var bRS = rPx * inv_rsPx;            // impact parameter in rs
+        var idx = (py * ow + px) * 4;
+        // Direction of the ray in screen plane (outward from BH).
+        var screenDirX = rPx > 1e-6 ? dx / rPx : 1;
+        var screenDirY = rPx > 1e-6 ? dy / rPx : 0;
+        // Look up deflection.
+        var gl = geodLookup(bRS);
+        if (gl.captured) {
+          // Inside the shadow — pure black, fully opaque.
+          data[idx]     = 0;
+          data[idx + 1] = 0;
+          data[idx + 2] = 0;
+          data[idx + 3] = Math.floor(255 * alpha);
+          continue;
+        }
+        // Straight (unbent) ray would point toward the camera along
+        // -z_w at the screen pixel.  Apply the deflection α: the
+        // incoming photon (FROM the scene TO the camera) was bent
+        // toward the BH.  Tracing the ray BACK from the camera into
+        // the scene we rotate it AWAY from the BH by α in the plane
+        // defined by the BH center and the screen pixel.
+        //
+        // Working in the camera frame, the back-traced ray after
+        // bending makes angle (θ + α) with the -z axis, where θ is
+        // the small angular offset of the pixel from BH-center.
+        //   θ = atan(rPx / (D · rsPx))
+        // The back-traced ray direction (unit) in camera frame:
+        //   r̂ = ( sin(θ+α)·screenDirX,
+        //         sin(θ+α)·screenDirY,
+        //        -cos(θ+α)                  )    // -z = into scene
+        var theta = Math.atan2(bRS, D);
+        var totalAng = theta + gl.alpha;
+        var sinT = Math.sin(totalAng), cosT = Math.cos(totalAng);
+        var rxw = sinT * screenDirX;
+        var ryw = sinT * screenDirY;
+        var rzw = -cosT;
+        // Camera origin in world coords: (0, 0, D·rsPx)? No — we
+        // work in BH-centred, rs-scaled units.  Camera at (0,0,D).
+        // The back-traced ray PARAMETRISED by t ≥ 0:
+        //   P(t) = camera + t · r̂   (in rs-scaled world coords)
+        // We want the intersection with the disk plane (ez · P = 0).
+        var ox = 0, oy = 0, oz = D;
+        var denom = ezX * rxw + ezY * ryw + ezZ * rzw;
+        if (Math.abs(denom) < 1e-5) {
+          // Ray nearly parallel to disk plane — skip.
+          data[idx]     = 0;
+          data[idx + 1] = 0;
+          data[idx + 2] = 0;
+          data[idx + 3] = 0;
+          continue;
+        }
+        var t = -(ezX * ox + ezY * oy + ezZ * oz) / denom;
+        if (t <= 0) {
+          // Disk is behind the camera; no intersection.
+          data[idx]     = 0;
+          data[idx + 1] = 0;
+          data[idx + 2] = 0;
+          data[idx + 3] = 0;
+          continue;
+        }
+        // Intersection point in world coords.
+        var hx = ox + t * rxw;
+        var hy = oy + t * ryw;
+        var hz = oz + t * rzw;
+        // Express in disk-basis (ex, ey, ez).
+        var dxD = hx * exX + hy * exY + hz * exZ;
+        var dyD = hx * eyX + hy * eyY + hz * eyZ;
+        // (dzD should be 0 by construction.)
+        var rDisk = Math.sqrt(dxD * dxD + dyD * dyD);
+        if (rDisk < cfg.DISK_INNER_RS || rDisk > cfg.DISK_OUTER_RS) {
+          // Ray misses the disk annulus.
+          data[idx]     = 0;
+          data[idx + 1] = 0;
+          data[idx + 2] = 0;
+          data[idx + 3] = 0;
+          continue;
+        }
+        var phiD = Math.atan2(dyD, dxD);
+        // View-vector in disk-basis frame for Doppler projection:
+        // ray direction expressed in (ex, ey, ez).
+        var viewX = rxw * exX + ryw * exY + rzw * exZ;
+        var viewY = rxw * eyX + ryw * eyY + rzw * eyZ;
+        var viewZ = rxw * ezX + ryw * ezY + rzw * ezZ;
+        var samp = sampleDiskRGBA(rDisk, phiD, [viewX, viewY, viewZ], null, now);
+        if (!samp) {
+          data[idx + 3] = 0;
+          continue;
+        }
+        // Photon-ring boost — band of b just outside b_photon.
+        if (bRS >= bRingLo && bRS <= bRingHi) {
+          var rb = 1 - (bRS - bRingLo) / (bRingHi - bRingLo);   // 1 at bPhoton, 0 at edge
+          var boost = 1 + cfg.PHOTON_RING_BOOST * Math.pow(rb, 1.6);
+          samp[0] *= boost;
+          samp[1] *= boost;
+          samp[2] *= boost;
+        }
+        // Tone-map (Reinhard) and convert to 0..255.
+        var r = samp[0] / (1 + samp[0]);
+        var g = samp[1] / (1 + samp[1]);
+        var b = samp[2] / (1 + samp[2]);
+        data[idx]     = Math.max(0, Math.min(255, Math.floor(r * 255)));
+        data[idx + 1] = Math.max(0, Math.min(255, Math.floor(g * 255)));
+        data[idx + 2] = Math.max(0, Math.min(255, Math.floor(b * 255)));
+        data[idx + 3] = Math.max(0, Math.min(255, Math.floor(samp[3] * 255 * alpha)));
+      }
+    }
+    off.ctx.putImageData(img, 0, 0);
+    // Blit upscale to main canvas with smoothing for a soft look.
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(off.canvas, 0, 0, ow, oh, 0, 0, W, H);
+    ctx.restore();
+  }
+
+  // Boot the geodesic table once, lazily on first physics frame, so
+  // page-load cost is deferred until the user actually clicks.
+  function ensureGeodesicTable() {
+    if (!GEOD) buildGeodesicTable();
+  }
+
+  // ---- Render: full frame ----------------------------------------
+  // Two-phase lifecycle (pure expansion + true-exponential model,
+  // refit #5):
+  //   GROWING    — EH radius grows from bh.ehStart → bh.ehPeak
+  //                across cfg.GROWING_MS along a TRUE EXPONENTIAL
+  //                curve:
+  //                  ehR(t) = ehStart · (ehPeak/ehStart)^(t^k)
+  //                where k = cfg.GROWTH_CURVE.  Apparent size
+  //                accelerates without bound matching the free-fall
+  //                geometry of approaching r_s.
+  //   DISSOLVING — Radius is HELD at bh.ehPeak; alpha fades from
+  //                1 → 0 across cfg.DISSOLVING_MS.  The BH
+  //                dissipates rather than shrinks back —
+  //                "revealing new stars behind it" — so there is
+  //                NO visible contraction at any point.
+  //
+  // Particles use rFrac so they scale with the live EH naturally
+  // during GROWING; in DISSOLVING the EH is locked at peak so
+  // particle motion appears suspended/uniform as it fades.
+  var _lastTickNow = 0;
+  function render(now) {
+    var bh = STATE.bh;
+    var dt = _lastTickNow ? Math.min(0.1, (now - _lastTickNow) / 1000) : 0;
+    _lastTickNow = now;
+
+    var ehAlpha = 0;   // 0..1 — multiplies all BH-layer brightness
+    var ehR = 0;
+
+    if (bh) {
+      var elapsed = now - STATE.t0;
+      if (STATE.phase === 'growing') {
+        var t = elapsed / cfg.GROWING_MS;
+        if (t >= 1) {
+          STATE.phase = 'dissolving'; STATE.t0 = now;
+          t = 1;
+        }
+        STATE.lifeT = t;
+        // True exponential growth — the radius accelerates without
+        // bound as you "fall in", matching the free-fall geometry
+        // where the apparent size of the EH diverges as r → r_s.
+        //   ehR(t) = ehStart · (ehPeak/ehStart)^(t^GROWTH_CURVE)
+        // GROWTH_CURVE > 1 keeps the curve flatter at the start
+        // and accelerates harder at the end.  Falls back gracefully
+        // if ehStart ≤ 0 (degenerate cfg).
+        if (bh.ehStart > 0) {
+          var ratio = bh.ehPeak / bh.ehStart;
+          var tk = Math.pow(t, cfg.GROWTH_CURVE);
+          ehR = bh.ehStart * Math.pow(ratio, tk);
+        } else {
+          // Degenerate path — additive fallback.
+          ehR = bh.ehPeak * Math.pow(t, cfg.GROWTH_CURVE);
+        }
+        // Alpha eases in quickly so the BH appears immediately
+        // at click, then stays at full strength for the rest of
+        // the growth.
+        ehAlpha = Math.min(1, t * 6);
+      } else if (STATE.phase === 'dissolving') {
+        var dt2 = elapsed / cfg.DISSOLVING_MS;
+        if (dt2 >= 1) {
+          // Done — return to idle, clear the BH state.
+          STATE.phase = 'idle';
+          STATE.bh = null;
+          bh = null;
+          STATE.lifeT = 0;
+          ehAlpha = 0;
+          ehR = 0;
+          // Cycle counter ticks once per completed BH so the starfield
+          // brightens / sparkles harder with every fall.  Past the cap
+          // the counter still grows so the post-cap hue drift can keep
+          // accumulating to its own clamp (CYCLE_HUE_MAX).
+          bhCycleCount++;
+        } else {
+          STATE.lifeT = dt2;
+          // Radius is HELD at peak — no contraction.  Only the
+          // alpha fades so the BH dissipates into the starfield.
+          // Smooth-step ease-out feels right for a "lifting"
+          // dissolution.
+          ehR = bh.ehPeak;
+          ehAlpha = 1 - (dt2 * dt2 * (3 - 2 * dt2)); // smoothstep 1→0
+        }
+      }
+    }
+
+    // First-time particle seed.
+    if (bh && ehR > 0 && bh.particles && bh.particles.length === 0) {
+      seedParticles(bh);
+    }
+    // Step particles (rFrac-normalised so they scale with EH).
+    if (bh && ehR > 0 && bh.particles && bh.particles.length > 0) {
+      stepParticles(bh, ehR, dt);
+    }
+
+    // ---- Begin frame ---------------------------------------------
+    ctx.fillStyle = cfg.BG_COLOUR;
+    ctx.fillRect(0, 0, W, H);
+
+    // Calm starfield always on.  Once the BH grows past the
+    // viewport its EH disc occludes the stars naturally; nothing
+    // extra to do.
+    renderStars(now);
+    /* Sparkle layer fires after stars so the "+" cross paints OVER the
+       base starfield. [c_4ac0a3e2] */
+    renderStarSparkles(now);
+
+    if (bh && ehR > 0.5) {
+      // Physics fork: route through the Schwarzschild ray tracer if
+      // enabled.  Falls back to the parent's layered 2D pipeline if
+      // disabled (debug / perf-bail).
+      if (cfg.PHYSICS_ENABLE) {
+        ensureGeodesicTable();
+        renderPhysicsBH(bh, ehR, ehAlpha, now);
+      } else {
+        renderLensHalo(bh, ehR, ehAlpha);
+        renderDisk(bh, ehR, ehAlpha, now);
+      }
+    }
+  }
+
+  // ---- Animation loop --------------------------------------------
+  function loop(now) {
+    render(now);
+    requestAnimationFrame(loop);
+  }
+
+  // ---- Interaction -----------------------------------------------
+  // Clicks during the dissolving phase are ACCEPTED — the in-flight
+  // dissolve is interrupted and a fresh BH is spawned at the new
+  // click point.  Only the growing phase is uninterruptible (so a
+  // single climb plays out cleanly).  ESC force-resets if needed.
+  function onPress(ev) {
+    if (STATE.phase === 'growing') return;       // mid-climb: ignore
+    var pt = (ev.touches && ev.touches[0]) ? ev.touches[0] : ev;
+    var bh = spawnBH(pt.clientX, pt.clientY);
+    STATE.bh = bh;
+    STATE.phase = 'growing';
+    STATE.t0 = performance.now();
+    STATE.lifeT = 0;
+    /* Trigger sparkle pulse across the starfield. Each click picks
+       ~80 random stars and gives them a brief boost + draws a "+"
+       cross around them at a random orientation. Sparkles fade over
+       ~0.9s. [c_4ac0a3e2] */
+    triggerStarSparkle(performance.now());
+    // Canvas-clicks no longer affect the logo morph.  The
+    // signet ↔ wordmark transition is reserved for direct interaction
+    // with the mark (hover or click on the centre glass) so the BH
+    // spawn is purely a background event.
+  }
+
+  /* Click-sparkle state.  triggerStarSparkle activates ~80 stars with
+     random rotations for their "+" sparkle.  renderStarSparkles paints
+     the cross + halo glow at full alpha at pulse time, fading to 0
+     across SPARKLE_DURATION_MS. [c_4ac0a3e2] */
+  var SPARKLE_DURATION_MS = 900;
+  var SPARKLE_COUNT_PER_CLICK = 80;
+  var sparkleSet = [];   // [{idx, t0, rot}]
+  function triggerStarSparkle(now) {
+    if (stars.length === 0) return;
+    for (var i = 0; i < SPARKLE_COUNT_PER_CLICK; i++) {
+      var idx = Math.floor(Math.random() * stars.length);
+      sparkleSet.push({ idx: idx, t0: now, rot: Math.random() * Math.PI });
+    }
+  }
+  function renderStarSparkles(now) {
+    if (sparkleSet.length === 0) return;
+    var live = [];
+    for (var i = 0; i < sparkleSet.length; i++) {
+      var sp = sparkleSet[i];
+      var age = now - sp.t0;
+      if (age > SPARKLE_DURATION_MS) continue;
+      live.push(sp);
+      var st = stars[sp.idx];
+      if (!st) continue;
+      var t = age / SPARKLE_DURATION_MS;
+      var alpha = (1 - t) * (1 - t);  // ease-out fade
+      var armLen = (10 + 14 * (1 - t)) * DPR;
+      var ax = Math.cos(sp.rot) * armLen;
+      var ay = Math.sin(sp.rot) * armLen;
+      // perpendicular for the second arm of the +
+      var bx = -ay, by = ax;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
+      ctx.lineWidth = 1.4 * DPR;
+      ctx.strokeStyle = 'hsla(' + (st.hue + 20) + ', 80%, 88%, ' + (alpha * 0.85) + ')';
+      ctx.beginPath();
+      ctx.moveTo(st.x - ax, st.y - ay); ctx.lineTo(st.x + ax, st.y + ay);
+      ctx.moveTo(st.x - bx, st.y - by); ctx.lineTo(st.x + bx, st.y + by);
+      ctx.stroke();
+      // bright core
+      ctx.fillStyle = 'hsla(' + st.hue + ', 30%, 95%, ' + alpha + ')';
+      ctx.beginPath(); ctx.arc(st.x, st.y, (st.size + 1.2) * DPR, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+    sparkleSet = live;
+  }
+
+  canvas.addEventListener('mousedown',  onPress);
+  canvas.addEventListener('touchstart', function (e) { e.preventDefault(); onPress(e); }, { passive: false });
+
+  // ESC force-resets to idle (kills any in-flight cycle).
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      STATE.bh = null;
+      STATE.phase = 'idle';
+      STATE.lifeT = 0;
+    }
+  });
+
+  // ---- Controls panel -------------------------------------------
+  // Every knob in cfg that's user-interesting becomes a slider or
+  // colour picker in the BR panel.  Sections group related knobs.
+  function buildControls() {
+    var ctrl = document.getElementById('controls');
+    if (!ctrl) return;
+
+    // Header — live phase indicator + collapse toggle.
+    var headHtml =
+      '<div class="controls-head" id="ctrlHead">' +
+      '<span><span class="live-dot"></span>' +
+      '<span class="num" id="phaseLabel">idle</span></span>' +
+      '<span class="toggle">▾</span>' +
+      '</div>';
+
+    // Body — sliders by section.
+    var sections = [
+      { title: 'Lifecycle (ms)', knobs: [
+        ['GROWING_MS',          800, 12000, 100, 'Growing',            'How long the BH spends visibly growing from click-point to past the viewport corners. Snappier = faster re-click cadence.'],
+        ['DISSOLVING_MS',       20,  2500,  10,  'Dissolving',         'Alpha-fade at peak (no contraction). The BH disc is held at peak radius while it dissipates, revealing the starfield underneath. Clicks during the dissolve interrupt and spawn a fresh BH. Very low values (20-80 ms) snap-cut to the starfield almost instantly.']
+      ] },
+      { title: 'Event horizon', knobs: [
+        ['EH_START_PX',        2,    40,    1,   'Start radius (px)',  'Initial event-horizon radius at click time, in canvas px.'],
+        ['EH_TARGET_OVERSHOOT',1.00, 1.60,  0.01,'Target overshoot',   'Peak EH radius as a multiple of the longest click-to-corner distance. 1.0 = exactly reach the farthest corner; >1.0 = grow visibly past it.'],
+        ['GROWTH_CURVE',       0.4,  12.0,  0.05,'Growth curve (k)',   'Exponent on t inside the EXPONENTIAL interpolation ehR = ehStart · (ehPeak/ehStart)^(t^k). 1 = pure exponential; 2-4 = flatter start + sharper late acceleration (free-fall feel); 6-12 = extreme: a long quiet glimmer, then a sudden engulfing snap at the end.'],
+        ['EH_PEAK_OPACITY',    0.20, 1.00,  0.02,'EH opacity',         'Alpha multiplier on the event-horizon black disc.']
+      ] },
+      { title: 'Accretion disk', knobs: [
+        ['DISK_INNER_RATIO',   1.05, 3.0,   0.05,'Inner / EH',         'Disk inner edge as a multiple of the event-horizon radius (ISCO).'],
+        ['DISK_OUTER_RATIO',   3.0,  10.0,  0.05,'Outer / EH',         'Disk outer edge as a multiple of EH.'],
+        ['DISK_BRIGHTNESS',    0.20, 2.50,  0.05,'Brightness',         'Master multiplier on disk particle alpha.'],
+        ['DISK_OPACITY',       0.30, 1.50,  0.02,'Opacity',            'Per-particle base opacity envelope.'],
+        ['DISK_BLUESHIFT',     0.00, 1.00,  0.02,'Doppler shift',      'Doppler beaming asymmetry — bright crescent on the approaching side.'],
+        ['DISK_ROTATION_SPEED',0.00, 3.00,  0.05,'Rotation speed',     'Master rotation rate multiplier on the Keplerian orbits.'],
+        ['DISK_MAX_TILT_DEG',  0,    85,    1,   'Max tilt (corners)', 'Disk tilt at corner clicks. 0 = always face-on; 85 = nearly edge-on.']
+      ] },
+      { title: 'Disk colour', knobs: [
+        ['DISK_HUE_HOT',       0,    360,   1,   'Hot / approach hue', 'Hue of the disk\'s blueshifted approaching side (40 = warm amber).'],
+        ['DISK_HUE_COLD',      0,    360,   1,   'Cold / recede hue',  'Hue of the disk\'s redshifted receding side (18 = deep orange).']
+      ] },
+      { title: 'Particles', knobs: [
+        ['PARTICLE_COUNT',     60,   900,   20,  'Particle count',     'Number of plasma particles orbiting in the disk.'],
+        ['PARTICLE_SIZE_MIN',  0.2,  4.0,   0.1, 'Particle size min',  'Minimum particle radius (CSS px).'],
+        ['PARTICLE_SIZE_MAX',  0.5,  6.0,   0.1, 'Particle size max',  'Maximum particle radius.'],
+        ['PARTICLE_INFLOW',    0.00, 0.80,  0.01,'Inflow rate',        'Radial inflow speed — how fast matter spirals into the BH per second (fraction of disk span).'],
+        ['PARTICLE_GLOW',      0.50, 3.00,  0.05,'Particle glow',      'Soft glow multiplier per particle.'],
+        ['HOTSPOT_COUNT',      0,    20,    1,   'Hot spots',          'Number of extra-bright orbital knots in the disk.'],
+        ['HOTSPOT_BRIGHT',     0.50, 3.50,  0.05,'Hot-spot brightness','Brightness multiplier on hot spots.'],
+        ['HOTSPOT_SIZE_MULT',  1.00, 4.00,  0.05,'Hot-spot size mult', 'Size multiplier on hot spots vs ordinary particles.']
+      ] },
+      { title: 'Lensing wrap', knobs: [
+        ['WRAP_BRIGHTNESS',    0.00, 2.00,  0.05,'Wrap brightness',    'Brightness of the lensed disk-back arcs above + below the EH.'],
+        ['WRAP_WIDTH',         0.10, 2.00,  0.05,'Wrap radial width',  'Radial width of each wrap arc, in EH units.'],
+        ['WRAP_VERTICAL',      0.40, 3.50,  0.05,'Wrap vertical reach','How high the wrap arc extends above (and below) the EH, in EH units.']
+      ] },
+      { title: 'Photon ring + halo', knobs: [
+        ['PHOTON_RING_WIDTH',  0.5,  6.0,   0.1, 'Photon ring width',  'Stroke width of the bright ring just outside the event horizon.'],
+        ['PHOTON_RING_BRIGHT', 0.20, 2.50,  0.05,'Photon brightness',  'Brightness multiplier on the photon ring.'],
+        ['PHOTON_RING_HUE',    0,    360,   1,   'Photon ring hue',    'Hue of the photon ring (44 = honey-gold, 200 = cool cyan).'],
+        ['LENS_HALO_WIDTH',    0.10, 2.50,  0.05,'Halo width',         'How far the gravitational halo extends beyond the EH (EH units).'],
+        ['LENS_HALO_STRENGTH', 0.00, 1.60,  0.05,'Halo strength',      'Brightness of the lensing halo.']
+      ] },
+      { title: 'Starfield', knobs: [
+        ['STAR_COUNT',         100,  2000,  20,  'Star count',         'How many background stars are seeded.'],
+        ['STAR_BRIGHTNESS',    0.10, 2.00,  0.05,'Star brightness',    'Master brightness scalar on the starfield.'],
+        ['STAR_BG_BRIGHTNESS', 0.00, 1.00,  0.02,'Background haze',    'Faint ambient haze added to dim stars.'],
+        ['STAR_TWINKLE_AMOUNT',0.00, 1.00,  0.02,'Twinkle depth',      'Per-star brightness pulse range. 0 = frozen field (no twinkle); 0.4 = subtle shimmer; 1 = bright stars pulse from dim to over-bright. Positions stay fixed regardless.'],
+        ['STAR_TWINKLE_SPEED', 0.00, 4.00,  0.05,'Twinkle speed',      'Master frequency multiplier on the twinkle. Each star has its own freq/phase so the field shimmers organically rather than pulsing in unison.']
+      ] },
+      // Physics-pipeline tunables — drive the Schwarzschild ray-tracer
+      // (lensed wrap, banding, hot spots, photon-ring brightness,
+      // camera tilt).  Defaults tuned for a textured crown above the
+      // EH and banded plasma.
+      { title: 'Physics pipeline', knobs: [
+        ['PHYSICS_SCALE',          0.20, 1.00, 0.02, 'Render scale',      'Offscreen raster scale (per axis). 0.42 ≈ 17% of pixels at full resolution; 1.0 = full-res ray trace (very expensive). Higher = sharper, slower.'],
+        ['DISK_INCLINATION_DEG',   0,    89,   1,    'Disk inclination',  'Disk tilt in degrees from face-on. 0 = face-on (round disk, minimal wrap); 75-85 = near-edge-on, the iconic Interstellar/M87 lensed-crown geometry where the back side of the disk arcs over the EH shadow.'],
+        ['DISK_INNER_RS',          1.5,  6.0,  0.1,  'Inner radius (rs)', 'Disk inner edge in Schwarzschild-radius units. 3 ≈ ISCO for Schwarzschild.'],
+        ['DISK_OUTER_RS',          6.0,  30.0, 0.5,  'Outer radius (rs)', 'Disk outer edge in rs units.'],
+        ['DISK_BRIGHTNESS_PHYS',   0.50, 4.00, 0.05, 'Disk brightness',   'Master brightness on the physics-disk samples.'],
+        ['DISK_NOISE_AMOUNT',      0.00, 1.00, 0.02, 'Disk noise',        'Plasma stripe/band contrast — 0 reads as a smooth radial gradient; 0.8 reads as a turbulent textured disk.'],
+        ['DISK_HOTSPOT_COUNT',     0,    16,   1,    'Hot spots',         'Number of bright orbiting knots in the disk. Gaussian-falloff brightness blobs at fixed radii, each with its own Keplerian angular speed.'],
+        ['DISK_HOTSPOT_BOOST',     1.00, 3.50, 0.05, 'Hot-spot boost',    'Brightness multiplier at the centre of each hot spot.'],
+        ['DOPPLER_STRENGTH',       0.00, 1.50, 0.05, 'Doppler strength',  'Relativistic Doppler beaming strength. 0 = no asymmetry; 0.8-1.0 = approaching side reads markedly brighter and bluer.'],
+        ['DOPPLER_BETA_MAX',       0.10, 0.80, 0.02, 'Doppler β max',     'Maximum orbital velocity at the inner edge (β = v/c). 0.45 ≈ ISCO for thin disk; 0.6+ is exaggerated.'],
+        ['REDSHIFT_STRENGTH',      0.00, 1.50, 0.05, 'Redshift strength', 'Gravitational redshift strength on emerging photons. 1 = full √(1-rs/r); 0 = none.'],
+        ['PHOTON_RING_BOOST',      0.00, 3.00, 0.05, 'Photon ring boost', 'Additive brightness boost for rays in the photon-ring band (b just above b_photon). Drives the visible crown above the EH shadow.'],
+        ['PHOTON_RING_BAND',       1.05, 2.00, 0.01, 'Photon ring band',  'Band width — b_high / b_low for the photon-ring brightness lift. 1.18 = thin hairline; 1.45 = wide textured crown.'],
+        ['OBSERVER_DISTANCE',      8.0,  80.0, 1.0,  'Observer distance', 'Viewer-BH distance in rs units. Higher = smaller angular size, less lensing wrap visible.'],
+        ['DISK_HUE_INNER',         0,    360,  1,    'Inner hue',         'Hot inner-disk hue (46 = warm gold, 200 = cool cyan).'],
+        ['DISK_HUE_OUTER',         0,    360,  1,    'Outer hue',         'Cool outer-disk hue (22 = deep orange).']
+      ] },
+      // Cycle escalator section — every completed BH makes the stars
+      // brighter and sparkle harder.  Cap → hue drift.
+      { title: 'Cycle escalator', knobs: [
+        ['CYCLE_ESCALATE_MAX',         0,   30,   1,   'Cycle cap',          'How many BH cycles drive the brightness/sparkle ramp. Past this count further cycles feed the hue drift instead of the brightness, so the field can\'t run away.'],
+        ['CYCLE_BRIGHTNESS_PER_CYCLE', 0.00,0.20, 0.01,'Bright per cycle',   'Brightness gain added per completed BH cycle. At 0.06 the field reads 1.6× as bright at the 10-cycle cap.'],
+        ['CYCLE_SPARKLE_PER_CYCLE',    0.00,0.20, 0.01,'Sparkle per cycle',  'Twinkle-amplitude multiplier added per cycle. Clamped so amplitude never exceeds 1.'],
+        ['CYCLE_HUE_PER_CYCLE',        0.0, 30.0, 1.0, 'Hue drift / cycle',  'Degrees of hue rotation added to every star per post-cap cycle. 0 = no colour shift; 8 = subtle warm/cool drift over a few cycles past the cap.'],
+        ['CYCLE_HUE_MAX',              0.0, 180.0,5.0, 'Hue drift cap',      'Total hue drift clamp. 60 keeps the field within a sibling palette; 180 lets it rotate to the opposite hue.']
+      ] },
+      { title: 'Performance', knobs: [
+        ['PIXEL_RATIO_CAP',    0.5,  2.5,   0.05,'DPR cap',            'Pixel ratio cap — lower for cheaper draws on retina screens.']
+      ] }
+    ];
+
+    var body = '';
+    var afterStarReseed = ['STAR_COUNT'];      // keys that need stars rebuilt
+    var afterDPRResize  = ['PIXEL_RATIO_CAP']; // keys that trigger a resize
+
+    sections.forEach(function (section) {
+      body += '<div class="controls-section">' + section.title + '</div>';
+      section.knobs.forEach(function (knob) {
+        var key = knob[0], min = knob[1], max = knob[2], step = knob[3], label = knob[4], desc = knob[5];
+        var val = cfg[key];
+        body +=
+          '<div class="controls-row" data-key="' + key + '">' +
+          '<div class="label-row"><label>' + label + '</label><span class="val">' + val + '</span></div>' +
+          '<input type="range" min="' + min + '" max="' + max + '" step="' + step + '" value="' + val + '" data-key="' + key + '">' +
+          '<div class="controls-desc">' + desc + '</div>' +
+          '</div>';
+      });
+    });
+
+    // Colour section.
+    body += '<div class="controls-section">Aesthetic</div>';
+    body += '<div class="controls-row" data-key="BG_COLOUR">' +
+            '<div class="label-row"><label>Void colour</label><span class="val">' + cfg.BG_COLOUR + '</span></div>' +
+            '<input type="color" class="color-picker" value="' + cfg.BG_COLOUR + '" data-key="BG_COLOUR">' +
+            '<div class="controls-desc">Background canvas wash. Deep near-blacks read best.</div></div>';
+
+    var foot =
+      '<div class="controls-foot">' +
+      '<button id="ctrlReset">Reset BH</button>' +
+      // Dedicated cycle-zero so the user can rewind the escalator
+      // without disturbing slider state.
+      '<button id="ctrlResetCycles">Reset cycles</button>' +
+      '<button id="ctrlDefaults">Restore defaults</button>' +
+      '<button id="ctrlLog">Log to console</button>' +
+      '</div>';
+
+    ctrl.innerHTML = headHtml +
+      '<div class="controls-body" id="ctrlBody">' + body + '</div>' + foot;
+
+    // Wire up sliders.
+    var inputs = ctrl.querySelectorAll('input[type="range"], input[type="color"]');
+    inputs.forEach(function (inp) {
+      inp.addEventListener('input', function () {
+        var key = inp.getAttribute('data-key');
+        var v;
+        if (inp.type === 'color') {
+          v = inp.value;
+        } else {
+          v = parseFloat(inp.value);
+        }
+        cfg[key] = v;
+        // Update displayed value.
+        var row = inp.closest('.controls-row');
+        if (row) {
+          var span = row.querySelector('.val');
+          if (span) span.textContent = (inp.type === 'color') ? v :
+            (Number.isInteger(v) ? v : v.toFixed(2));
+        }
+        if (afterStarReseed.indexOf(key) !== -1) seedStars();
+        if (afterDPRResize.indexOf(key)  !== -1) resize();
+      });
+    });
+
+    // Collapse toggle.
+    document.getElementById('ctrlHead').addEventListener('click', function () {
+      ctrl.classList.toggle('collapsed');
+    });
+
+    // Buttons.
+    document.getElementById('ctrlReset').addEventListener('click', function () {
+      STATE.bh = null;
+      STATE.phase = 'idle';
+      STATE.lifeT = 0;
+      // Reset BH also rewinds the escalator so the field returns to
+      // baseline brightness.  To keep the climb, use Reset cycles
+      // separately.
+      bhCycleCount = 0;
+    });
+    document.getElementById('ctrlResetCycles').addEventListener('click', function () {
+      bhCycleCount = 0;
+    });
+
+    document.getElementById('ctrlDefaults').addEventListener('click', function () {
+      // Re-clone the defaults snapshot.
+      Object.keys(DEFAULTS).forEach(function (k) { cfg[k] = DEFAULTS[k]; });
+      // Rebuild the controls (cheaper than wiring per-input restore).
+      buildControls();
+      seedStars();
+      resize();
+    });
+
+    document.getElementById('ctrlLog').addEventListener('click', function () {
+      try { console.log(JSON.stringify(cfg, null, 2)); } catch (_) {}
+    });
+  }
+
+  // Capture defaults so the "Restore defaults" button works.
+  var DEFAULTS = JSON.parse(JSON.stringify(cfg));
+
+  // ---- Phase label tick -----------------------------------------
+  // The header live indicator shows the current phase + percent +
+  // cycle count.
+  function tickPhase() {
+    var lbl = document.getElementById('phaseLabel');
+    if (!lbl) return;
+    var s = STATE.phase;
+    if (s === 'growing')    s = 'growing · '    + Math.round(STATE.lifeT * 100) + '%';
+    if (s === 'dissolving') s = 'dissolving · ' + Math.round(STATE.lifeT * 100) + '%';
+    // Surface the escalator state — count, cap, post-cap hue drift.
+    var cap = cfg.CYCLE_ESCALATE_MAX;
+    var postCap = Math.max(0, bhCycleCount - cap);
+    var hueShift = Math.min(cfg.CYCLE_HUE_MAX, postCap * cfg.CYCLE_HUE_PER_CYCLE);
+    var cyc = ' · cycles: ' + bhCycleCount + ' / ' + cap;
+    if (postCap > 0) cyc += ' · hue +' + hueShift.toFixed(0) + '°';
+    lbl.textContent = s + cyc;
+    requestAnimationFrame(tickPhase);
+  }
+
+  // ---- Center mark — hover preview + direct-click toggle.
+  // The logo morph happens ONLY when the user interacts with the
+  // centre mark directly.  Canvas clicks (which spawn the BH)
+  // leave the logo alone.
+  //   · hover  — temporarily preview the wordmark; restore to the
+  //              previous state on leave.
+  //   · click  — toggle persistently between signet ↔ wordmark.
+  //              A click cancels the hover-preview state so the
+  //              user's choice sticks past the next mouseleave.
+  var cm = document.getElementById('centerMark');
+  if (cm) {
+    cm.addEventListener('mouseenter', function () {
+      if (cm.getAttribute('data-phase') === 'signet') {
+        cm.setAttribute('data-hover-preview', 'true');
+        cm.setAttribute('data-phase', 'wordmark');
+      }
+    });
+    cm.addEventListener('mouseleave', function () {
+      if (cm.getAttribute('data-hover-preview') === 'true') {
+        cm.removeAttribute('data-hover-preview');
+        cm.setAttribute('data-phase', 'signet');
+      }
+    });
+    cm.addEventListener('click', function (e) {
+      // Don't trigger a BH spawn from logo clicks.
+      e.stopPropagation();
+      // A direct click locks in the user's choice — clear the
+      // hover-preview flag so mouseleave can't revert it.
+      cm.removeAttribute('data-hover-preview');
+      var p = cm.getAttribute('data-phase');
+      cm.setAttribute('data-phase', p === 'signet' ? 'wordmark' : 'signet');
+    });
+  }
+
+  // ---- Init -----------------------------------------------------
+  resize();
+  buildControls();
+  requestAnimationFrame(loop);
+  requestAnimationFrame(tickPhase);
+
+})();
+</script>
+
+<script>
+  (function () {
+    const LOGOS = [
+      { id: 'infinite', signet: { sym: 'opInfinite',   vb: '0 0 497 329'   }, type: { sym: 'opInfiniteType', vb: '0 0 3549 1107' } },
+      { id: 'style',    signet: { sym: 'opStyle',      vb: '0 0 142 142'   }, type: { sym: 'opStyleType',    vb: '0 0 3840 998'  } },
+      { id: 'circle',   signet: { sym: 'opCircleMark', vb: '0 0 2843 2160' }, type: { sym: 'opCircleType',   vb: '0 0 3905 1443' } },
+      { id: 'swish',    signet: { sym: 'opSwish',      vb: '0 0 152 107'   }, type: { sym: 'opSwishType',    vb: '0 0 3025 752'  } },
+      { id: 'cursive',  signet: { sym: 'opCursive',    vb: '0 0 1737 1846' }, type: { sym: 'opCursiveType',  vb: '0 0 3776 1586' } }
+    ];
+    // PER-PAGE: change idx to match the family this page starts on.
+    //   0=infinite  1=style  2=circle  3=swish  4=cursive
+    let idx = 1;
+
+    function applyLogo() {
+      const set = LOGOS[idx];
+      document.querySelectorAll('.swap-logo').forEach(svg => {
+        const kind = svg.dataset.kind === 'wordmark' ? 'type' : 'signet';
+        const target = set[kind];
+        svg.setAttribute('viewBox', target.vb);
+        const useEl = svg.querySelector('use');
+        if (useEl) {
+          useEl.setAttribute('href', '#' + target.sym);
+          // Older browsers fall back to xlink:href; keep both in sync.
+          try { useEl.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '#' + target.sym); } catch (e) {}
+        }
+      });
+      try { window.dispatchEvent(new CustomEvent('swap-logo-changed', { detail: { id: set.id } })); } catch (e) {}
+    }
+
+    /* Apply initial logo at script boot — otherwise the page paints with the
+       broken hardcoded #opType href and the hero stays invisible until first click. */
+    applyLogo();
+
+    // Drag-aware click detection — measure pointer travel between down
+    // and up.  Below the threshold (small move) → treat as click → toggle.
+    // Above → it was a drag.  Lets a draggable .swap-logo coexist with
+    // the cycle gesture.
+    const DRAG_THRESHOLD = 6; // px
+    let downX = 0, downY = 0, downTarget = null;
+    function onPointerDown(e) {
+      const t = e.target.closest('.swap-logo');
+      if (!t) { downTarget = null; return; }
+      downTarget = t;
+      const p = (e.touches && e.touches[0]) ? e.touches[0] : e;
+      downX = p.clientX; downY = p.clientY;
+    }
+    function onPointerUp(e) {
+      if (!downTarget) return;
+      const t = e.target.closest('.swap-logo');
+      if (!t || t !== downTarget) { downTarget = null; return; }
+      const p = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : e;
+      const dx = p.clientX - downX;
+      const dy = p.clientY - downY;
+      downTarget = null;
+      if (Math.hypot(dx, dy) > DRAG_THRESHOLD) return; // it was a drag, not a click
+      idx = (idx + 1) % LOGOS.length;
+      applyLogo();
+    }
+    // Suppress the default <a href="#"> when the click actually toggles
+    // a swap-logo.
+    function onClickCapture(e) {
+      if (e.target.closest('.swap-logo')) e.preventDefault();
+    }
+    document.addEventListener('mousedown',  onPointerDown, true);
+    document.addEventListener('mouseup',    onPointerUp,   true);
+    document.addEventListener('touchstart', onPointerDown, { capture: true, passive: true });
+    document.addEventListener('touchend',   onPointerUp,   true);
+    document.addEventListener('click',      onClickCapture, true);
+  })();
+  </script>
+</body>
+</html>

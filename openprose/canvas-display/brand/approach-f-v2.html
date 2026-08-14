@@ -1,0 +1,2813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 142 142'%3E%3Cpath d='M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z' fill='%232a2520'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenProse — Responsibilities as a Service</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* ============================================
+     APPROACH F V2: Humanist Computer
+     Olivetti × Dieter Rams × Italian humanist book design
+     Warm cream/tan paper, true black, restrained red accent
+     Typography is everything: scale, spacing, no decoration
+     Feels like a beautifully typeset design manifesto
+     + 3 interactive canvas diagrams
+     ============================================ */
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --paper:     #f5f0e8;
+    --paper-dk:  #ede7d6;
+    --paper-lt:  #faf8f3;
+    --ink:       #0f0f0f;
+    --ink-2:     #2e2e2e;
+    --ink-3:     #5a5a5a;
+    --ink-4:     #909090;
+    --red:       #c0392b;
+    --red-muted: #d4604f;
+    --rule:      #d8d0c0;
+    --serif: 'Palatino Linotype', 'Palatino', 'Book Antiqua', Georgia, serif;
+    --sans: 'Helvetica Neue', 'Helvetica', Arial, sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+
+  html {
+    font-size: 18px;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--serif);
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+
+  /* ---- INTERACTIVE CANVAS BACKGROUNDS ---- */
+  #hero-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.5;
+  }
+
+  .hero {
+    position: relative;
+  }
+
+  .hero > *:not(#hero-canvas) {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ---- NETWORK VISUALIZATION ---- */
+  .network-viz {
+    position: relative;
+    width: 100%;
+    height: 260px;
+    margin: 2.5rem 0 1rem;
+    cursor: crosshair;
+  }
+
+  .network-viz canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .network-viz-label {
+    position: absolute;
+    bottom: -0.25rem;
+    right: 0;
+    font-family: var(--sans);
+    font-size: 0.5rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+  }
+
+  /* ---- DELEGATION FLOW VIZ ---- */
+  .delegation-flow {
+    position: relative;
+    width: 100%;
+    height: 200px;
+    margin: 2rem 0;
+    cursor: crosshair;
+  }
+
+  .delegation-flow canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* ---- PARTICLE FIELD ---- */
+  #particle-field {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.35;
+  }
+
+  body > *:not(#particle-field) {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ---- SCROLL REVEAL ANIMATIONS ---- */
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+                transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .reveal-delay-1 { transition-delay: 0.1s; }
+  .reveal-delay-2 { transition-delay: 0.2s; }
+  .reveal-delay-3 { transition-delay: 0.3s; }
+  .reveal-delay-4 { transition-delay: 0.4s; }
+
+  /* ---- HERO ENTRANCE ANIMATIONS ---- */
+  .hero-issue {
+    animation: fadeSlideUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
+  }
+
+  .hero h1 {
+    animation: fadeSlideUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.25s both;
+  }
+
+  .hero-lede {
+    animation: fadeSlideUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both;
+  }
+
+  .hero-actions {
+    animation: fadeSlideUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.55s both;
+  }
+
+  @keyframes fadeSlideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  /* ---- STAT COUNTER ANIMATION ---- */
+  .stat-num {
+    display: inline-block;
+    transition: transform 0.2s ease;
+  }
+
+  .stat-cell:hover .stat-num {
+    transform: scale(1.05);
+    color: var(--red);
+  }
+
+  .stat-cell {
+    transition: background 0.3s ease;
+    cursor: default;
+  }
+
+  .stat-cell:hover {
+    background: rgba(192,57,43,0.03);
+  }
+
+  /* ---- INTERACTIVE HOVER STATES ---- */
+  .btn-primary {
+    position: relative;
+    overflow: hidden;
+    transition: background 0.3s, transform 0.2s, box-shadow 0.3s;
+  }
+
+  .btn-primary::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(192,57,43,0.3);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.5s ease, height 0.5s ease;
+  }
+
+  .btn-primary:hover::after {
+    width: 300px;
+    height: 300px;
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(15,15,15,0.15);
+  }
+
+  .btn-text {
+    transition: color 0.2s, border-color 0.2s, letter-spacing 0.3s;
+  }
+
+  .btn-text:hover {
+    letter-spacing: 0.15em;
+  }
+
+  /* ---- COMPARE BLOCK HOVER ---- */
+  .compare-item {
+    transition: transform 0.3s ease, padding-left 0.3s ease;
+    padding-left: 0;
+  }
+
+  .compare-item:hover {
+    transform: translateX(4px);
+  }
+
+  .compare-item.positive:hover .marker {
+    color: var(--ink);
+  }
+
+  /* ---- CASE NOTE HOVER ---- */
+  .case-note {
+    transition: border-left-color 0.3s, box-shadow 0.3s, transform 0.3s;
+  }
+
+  .case-note:hover {
+    border-left-color: var(--ink);
+    box-shadow: 0 2px 16px rgba(15,15,15,0.06);
+    transform: translateY(-2px);
+  }
+
+  /* ---- TAG HOVER ---- */
+  .tag {
+    transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.2s;
+    cursor: default;
+  }
+
+  .tag:hover {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+    transform: translateY(-1px);
+  }
+
+  /* ---- PRICE TABLE ROW HOVER ---- */
+  .price-table tbody tr {
+    transition: background 0.2s ease;
+  }
+
+  .price-table tbody tr:hover td {
+    background: rgba(192,57,43,0.03);
+  }
+
+  .price-table .featured-row:hover td {
+    background: rgba(192,57,43,0.08);
+  }
+
+  /* ---- SPECIFICATION BLOCK ---- */
+  .specification-block {
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+
+  .specification-block:hover {
+    border-color: var(--ink-4);
+    box-shadow: 0 2px 12px rgba(15,15,15,0.04);
+  }
+
+  /* ---- CTA INPUT GLOW ---- */
+  .cta-input {
+    transition: border-color 0.2s, box-shadow 0.3s;
+  }
+
+  .cta-input:focus {
+    border-color: var(--red);
+    box-shadow: 0 0 0 3px rgba(192,57,43,0.08);
+  }
+
+  /* ---- PULL QUOTE ANIMATION ---- */
+  .pull-quote {
+    transition: border-left-color 0.3s;
+    border-left: 2px solid transparent;
+    padding-left: 1rem;
+  }
+
+  .pull-quote:hover {
+    border-left-color: var(--red);
+  }
+
+  /* ---- SECTION NUMBER HOVER ---- */
+  .section-number-large {
+    transition: color 0.5s ease, transform 0.5s ease;
+  }
+
+  .essay-section:hover .section-number-large {
+    color: var(--rule);
+    transform: scale(1.05);
+  }
+
+  /* ---- NAV LINK UNDERLINE ANIMATION ---- */
+  .nav-links a {
+    position: relative;
+  }
+
+  .nav-links a::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 1px;
+    background: var(--red);
+    transition: width 0.3s ease;
+  }
+
+  .nav-links a:hover::after {
+    width: 100%;
+  }
+
+  /* ---- GRID: strict column structure ---- */
+  .page-wrap {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+
+  /* ---- NAV ---- */
+  nav {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 1rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--ink);
+    animation: fadeSlideUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0s both;
+    gap: 1rem;
+  }
+
+  .nav-logo {
+    font-family: var(--sans);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink);
+    transition: color 0.2s;
+    cursor: default;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .nav-logo:hover {
+    color: var(--red);
+  }
+
+  .nav-links {
+    list-style: none;
+    display: flex;
+    gap: 1.25rem;
+    font-family: var(--sans);
+    font-size: 0.58rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    align-items: center;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+  }
+
+  .nav-links a {
+    color: var(--ink-3);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+
+  .nav-links a:hover { color: var(--red); }
+
+  .nav-cta {
+    color: var(--red) !important;
+    font-weight: 700;
+  }
+
+  /* ---- TYPOGRAPHIC HERO ---- */
+  .hero {
+    padding: 5rem 0 4rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .hero-issue {
+    font-family: var(--sans);
+    font-size: 0.62rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    display: block;
+    margin-bottom: 2.5rem;
+  }
+
+  .hero h1 {
+    font-family: var(--serif);
+    font-size: clamp(2.5rem, 7vw, 4.2rem);
+    line-height: 1.1;
+    font-weight: normal;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+    margin-bottom: 2rem;
+    hyphens: manual;
+  }
+
+  .hero h1 em {
+    font-style: italic;
+    color: var(--red);
+  }
+
+  .hero-lede {
+    font-size: 1.05rem;
+    color: var(--ink-2);
+    max-width: 520px;
+    margin-bottom: 2.5rem;
+    line-height: 1.8;
+  }
+
+  .hero-lede::first-line {
+    font-variant: small-caps;
+    letter-spacing: 0.04em;
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  /* ---- BUTTONS ---- */
+  .btn-primary {
+    display: inline-block;
+    font-family: var(--sans);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--paper);
+    background: var(--ink);
+    padding: 0.65rem 1.5rem;
+    text-decoration: none;
+    transition: background 0.2s;
+  }
+
+  .btn-primary:hover { background: var(--ink-2); }
+
+  .btn-text {
+    display: inline-block;
+    font-family: var(--sans);
+    font-size: 0.65rem;
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    text-decoration: none;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 1px;
+    transition: color 0.2s, border-color 0.2s;
+  }
+
+  .btn-text:hover {
+    color: var(--ink);
+    border-color: var(--ink);
+  }
+
+  /* ---- STATS ROW (as typographic footnote row) ---- */
+  .stat-row {
+    display: flex;
+    gap: 0;
+    margin: 3rem 0;
+    border-top: 1px solid var(--ink);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .stat-cell {
+    flex: 1;
+    padding: 1.25rem 1rem 1.25rem 0;
+    border-right: 1px solid var(--rule);
+  }
+
+  .stat-cell:last-child { border-right: none; }
+  .stat-cell:first-child { padding-left: 0; }
+
+  .stat-num {
+    display: block;
+    font-family: var(--serif);
+    font-size: 2rem;
+    font-weight: normal;
+    color: var(--ink);
+    line-height: 1;
+    letter-spacing: -0.02em;
+    transition: color 0.3s;
+  }
+
+  .stat-label {
+    display: block;
+    font-family: var(--sans);
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--ink-4);
+    margin-top: 0.3rem;
+  }
+
+  /* ---- SECTIONS ---- */
+  .essay-section {
+    padding: 4rem 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .section-num {
+    font-family: var(--sans);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--red);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .section-num::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--rule);
+  }
+
+  .essay-section h2 {
+    font-family: var(--serif);
+    font-size: clamp(1.6rem, 4.5vw, 2.8rem);
+    font-weight: normal;
+    line-height: 1.2;
+    color: var(--ink);
+    letter-spacing: -0.015em;
+    margin-bottom: 2rem;
+  }
+
+  .essay-section h2 em {
+    font-style: italic;
+    color: var(--ink-2);
+  }
+
+  .essay-section p {
+    font-size: 1rem;
+    color: var(--ink-2);
+    margin-bottom: 1.2rem;
+    max-width: 580px;
+  }
+
+  .essay-section p strong {
+    color: var(--ink);
+    font-weight: bold;
+  }
+
+  /* ---- COMPARE BLOCK (imperative vs declarative) ---- */
+  .compare-block {
+    margin: 2.5rem 0;
+    border-left: 3px solid var(--ink);
+    padding-left: 1.5rem;
+  }
+
+  .compare-item {
+    display: flex;
+    gap: 1rem;
+    align-items: baseline;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+  }
+
+  .compare-item:last-child { margin-bottom: 0; }
+
+  .compare-item .marker {
+    font-family: var(--sans);
+    font-size: 0.7rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    width: 1.25rem;
+    color: var(--ink-4);
+    padding-top: 0.15rem;
+  }
+
+  .compare-item.negative .marker { color: var(--ink-3); }
+  .compare-item.positive .marker { color: var(--red); }
+
+  .compare-item.negative .text {
+    color: var(--ink-3);
+    text-decoration: line-through;
+    text-decoration-color: var(--ink-4);
+    font-size: 0.85rem;
+  }
+
+  .compare-item.positive .text {
+    color: var(--ink);
+    font-size: 0.9rem;
+  }
+
+  /* ---- PULL QUOTE ---- */
+  .pull-quote {
+    font-size: 1.4rem;
+    font-style: italic;
+    color: var(--ink);
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+    margin: 2.5rem 0;
+    padding: 0 0 0 0;
+    max-width: 520px;
+    position: relative;
+  }
+
+  .pull-quote::before {
+    content: '\201C';
+    position: absolute;
+    left: -0.5em;
+    top: -0.1em;
+    font-size: 2rem;
+    color: var(--rule);
+    line-height: 1;
+  }
+
+  /* ---- FOOTNOTE STYLE ASIDE ---- */
+  .footnote-aside {
+    font-size: 0.8rem;
+    color: var(--ink-3);
+    font-style: italic;
+    border-top: 1px solid var(--rule);
+    padding-top: 0.75rem;
+    margin-top: 2rem;
+    max-width: 480px;
+  }
+
+  /* ---- PROOF CARD (as case note) ---- */
+  .case-note {
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--red);
+    margin: 2rem 0;
+    background: var(--paper-lt);
+  }
+
+  .case-note-header {
+    padding: 0.75rem 1.25rem;
+    border-bottom: 1px solid var(--rule);
+    font-family: var(--sans);
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .case-status {
+    color: var(--red);
+    font-weight: 700;
+  }
+
+  .case-status::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background: var(--red);
+    border-radius: 50%;
+    margin-right: 4px;
+    vertical-align: middle;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(192,57,43,0.4); }
+    50% { opacity: 0.6; box-shadow: 0 0 0 4px rgba(192,57,43,0); }
+  }
+
+  .case-note-body {
+    padding: 1.25rem 1.5rem;
+  }
+
+  .case-note-body h3 {
+    font-family: var(--serif);
+    font-size: 1.15rem;
+    font-weight: normal;
+    color: var(--ink);
+    margin-bottom: 0.75rem;
+    line-height: 1.3;
+  }
+
+  .case-note-body p {
+    max-width: 100%;
+    font-size: 0.9rem;
+  }
+
+  .tag-list {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+  }
+
+  .tag {
+    font-family: var(--sans);
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    padding: 0.2rem 0.6rem;
+    border: 1px solid var(--rule);
+    color: var(--ink-3);
+    background: var(--paper);
+  }
+
+  /* ---- PRICING (as typeset table) ---- */
+  .price-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 2rem 0;
+    font-family: var(--serif);
+    font-size: 0.9rem;
+  }
+
+  .price-table thead th {
+    font-family: var(--sans);
+    font-size: 0.55rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    font-weight: normal;
+    padding: 0.5rem 1rem 0.5rem 0;
+    border-bottom: 1px solid var(--ink);
+    text-align: left;
+  }
+
+  .price-table tbody td {
+    padding: 1rem 1rem 1rem 0;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+    color: var(--ink-2);
+    transition: background 0.2s;
+  }
+
+  .price-table tbody tr:last-child td {
+    border-bottom: 1px solid var(--ink);
+  }
+
+  .price-table .price-mark {
+    font-size: 1.5rem;
+    color: var(--ink);
+    letter-spacing: -0.03em;
+    font-weight: normal;
+    line-height: 1;
+    display: block;
+  }
+
+  .price-table .featured-row td {
+    background: rgba(192,57,43,0.04);
+  }
+
+  .price-table .featured-row .price-mark {
+    color: var(--red);
+  }
+
+  .price-table .featured-row .label-cell {
+    font-weight: bold;
+    color: var(--ink);
+  }
+
+  .footnote-ref {
+    font-size: 0.62rem;
+    color: var(--red);
+    vertical-align: super;
+    font-family: var(--sans);
+    margin-left: 1px;
+  }
+
+  /* ---- OSS BLOCK ---- */
+  .specification-block {
+    border: 1px solid var(--rule);
+    padding: 1.5rem;
+    margin: 2rem 0;
+    background: var(--paper-dk);
+    position: relative;
+  }
+
+  .specification-block::before {
+    content: 'SPECIFICATION';
+    position: absolute;
+    top: -0.55rem;
+    left: 1rem;
+    font-family: var(--sans);
+    font-size: 0.5rem;
+    letter-spacing: 0.2em;
+    color: var(--ink-4);
+    background: var(--paper-dk);
+    padding: 0 0.4rem;
+  }
+
+  .specification-block p {
+    font-size: 0.88rem;
+    max-width: 100%;
+  }
+
+  /* ---- CTA ---- */
+  .cta-section {
+    padding: 5rem 0 4rem;
+    text-align: left;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cta-section h2 {
+    font-family: var(--serif);
+    font-size: clamp(1.8rem, 5vw, 3rem);
+    font-weight: normal;
+    line-height: 1.2;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+    margin-bottom: 1.25rem;
+    max-width: 500px;
+  }
+
+  .cta-section p {
+    font-size: 1rem;
+    color: var(--ink-3);
+    margin-bottom: 2rem;
+    max-width: 400px;
+  }
+
+  .cta-form {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .cta-input {
+    font-family: var(--serif);
+    font-size: 0.9rem;
+    padding: 0.65rem 1rem;
+    border: 1px solid var(--ink);
+    background: var(--paper-lt);
+    color: var(--ink);
+    outline: none;
+    min-width: 240px;
+    transition: border-color 0.15s;
+  }
+
+  .cta-input:focus { border-color: var(--red); }
+  .cta-input::placeholder { color: var(--ink-4); font-style: italic; }
+
+  /* ---- FOOTER ---- */
+  footer {
+    border-top: 1px solid var(--ink);
+    padding: 1.5rem 0;
+    max-width: 680px;
+    margin: 0 auto;
+    padding-left: 2rem;
+    padding-right: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  footer p {
+    font-family: var(--sans);
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    margin: 0;
+  }
+
+  footer a {
+    color: var(--ink-3);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  footer a:hover { color: var(--red); }
+
+  /* ---- TYPOGRAPHIC RULES ---- */
+  .wide-rule {
+    border: none;
+    border-top: 1px solid var(--rule);
+    margin: 0;
+  }
+
+  .thick-rule {
+    border: none;
+    border-top: 1px solid var(--ink);
+    margin: 0;
+  }
+
+  /* ---- ORNAMENTAL NUMBER ---- */
+  .section-number-large {
+    font-family: var(--serif);
+    font-size: 5rem;
+    color: var(--paper-dk);
+    font-weight: normal;
+    line-height: 1;
+    float: right;
+    margin-left: 1rem;
+    margin-top: -1rem;
+    letter-spacing: -0.05em;
+    user-select: none;
+  }
+
+  /* ---- CTA SECTION CANVAS ---- */
+  #cta-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.6;
+  }
+
+  .cta-section > *:not(#cta-canvas) {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ---- PROOF SECTION CANVAS ---- */
+  .proof-canvas-wrap {
+    position: relative;
+  }
+
+  #proof-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  #proof .case-note,
+  #proof .section-num,
+  #proof h2,
+  #proof p,
+  #proof .tag-list {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ---- WAVEFORM DIVIDER ---- */
+  .waveform-divider {
+    width: 100%;
+    height: 60px;
+    position: relative;
+    overflow: hidden;
+    margin: 0;
+  }
+
+  .waveform-divider canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* ---- INTERACTIVE GRID OVERLAY (hero) ---- */
+  .hero-grid-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.12;
+    background-image:
+      linear-gradient(var(--rule) 1px, transparent 1px),
+      linear-gradient(90deg, var(--rule) 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: radial-gradient(ellipse 60% 80% at 50% 50%, black 20%, transparent 70%);
+    -webkit-mask-image: radial-gradient(ellipse 60% 80% at 50% 50%, black 20%, transparent 70%);
+  }
+
+  /* ============================================
+     V2: INTERACTIVE DIAGRAM CANVASES
+     ============================================ */
+  .diagram-canvas-wrap {
+    width: 100%;
+    max-width: 800px;
+    margin: 2.5rem 0;
+    position: relative;
+  }
+
+  .diagram-canvas-wrap canvas {
+    width: 100%;
+    height: 300px;
+    display: block;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+  }
+
+  .diagram-label {
+    font-family: var(--mono);
+    font-size: 0.55rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    margin-bottom: 0.5rem;
+  }
+
+  /* ---- RESPONSIVE ---- */
+  @media (max-width: 600px) {
+    html { font-size: 16px; }
+    .page-wrap { padding: 0 1.25rem; }
+    nav { padding: 0.75rem 1.25rem; }
+    .nav-links { display: none; }
+    .hero { padding: 3.5rem 0 3rem; }
+    .hero h1 { font-size: 2.2rem; }
+    .stat-row { flex-wrap: wrap; }
+    .stat-cell { min-width: 50%; border-bottom: 1px solid var(--rule); }
+    .essay-section { padding: 2.5rem 0; }
+    .essay-section h2 { font-size: 1.8rem; }
+    .cta-section { padding: 3rem 0; }
+    .cta-section h2 { font-size: 1.8rem; }
+    .cta-form { flex-direction: column; align-items: stretch; }
+    .cta-input { min-width: 0; }
+    footer { flex-direction: column; gap: 0.5rem; }
+    .price-table thead th:nth-child(2),
+    .price-table tbody td:nth-child(2) { display: none; }
+    .section-number-large { display: none; }
+    .network-viz { height: 180px; }
+    .delegation-flow { height: 140px; }
+    .diagram-canvas-wrap canvas { height: 200px; }
+  }
+
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+
+}
+</style>
+</head>
+<body>
+
+<!-- AMBIENT PARTICLE FIELD (subtle background) -->
+<canvas id="particle-field"></canvas>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">OpenProse</div>
+  <ul class="nav-links">
+    <li><a href="#concept">Concept</a></li>
+    <li><a href="#distinction">vs Claude</a></li>
+    <li><a href="#proof">Proof</a></li>
+    <li><a href="#pricing">Pricing</a></li>
+    <li><a href="#cta" class="nav-cta">Start --></a></li>
+  </ul>
+</nav>
+
+<div class="page-wrap">
+
+  <!-- HERO -->
+  <section class="hero" id="hero">
+    <canvas id="hero-canvas"></canvas>
+    <div class="hero-grid-overlay"></div>
+    <span class="hero-issue">OpenProse · Responsibilities as a Service · 2026</span>
+
+    <h1>
+      Your responsibilities,<br>
+      <em>automated.</em>
+    </h1>
+
+    <p class="hero-lede">
+      Most agent platforms keep you in the loop. OpenProse keeps you out of it.
+      Reclaim your attention.
+      OpenProse is declarative: describe the outcome, set the contract, let it run.
+    </p>
+
+    <div class="hero-actions">
+      <a href="#cta" class="btn-primary">Tell us what to offload</a>
+      <a href="#concept" class="btn-text">See how it works</a>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <div class="stat-row reveal">
+    <div class="stat-cell">
+      <span class="stat-num" data-count="6000" data-suffix="">6,000</span>
+      <span class="stat-label">Installs</span>
+    </div>
+    <div class="stat-cell">
+      <span class="stat-num" data-count="1000" data-suffix="">1,000</span>
+      <span class="stat-label">GitHub Stars</span>
+    </div>
+    <div class="stat-cell">
+      <span class="stat-num">MIT</span>
+      <span class="stat-label">License</span>
+    </div>
+    <div class="stat-cell">
+      <span class="stat-num">YC</span>
+      <span class="stat-label">Backed</span>
+    </div>
+  </div>
+
+  <!-- CONCEPT -->
+  <section class="essay-section" id="concept">
+    <div class="section-num reveal">I. &nbsp; The Concept</div>
+    <span class="section-number-large" aria-hidden="true">1</span>
+
+    <h2 class="reveal reveal-delay-1">
+      Responsibilities<br>
+      <em>as a service.</em>
+    </h2>
+
+    <p class="reveal reveal-delay-2">
+      You have responsibilities you want to offload. Today your options
+      are: hire someone, or buy a tool and learn to use it.
+      Both cost you attention. The former in management, the latter in mastery.
+    </p>
+
+    <p class="reveal reveal-delay-2">
+      OpenProse is a third option. You describe the responsibilities:
+      what needs to happen, what good looks like, what the guardrails are.
+      It handles them. <strong>No dashboard to check. No tool to learn.</strong>
+      Results show up in Slack or email on a cadence, like a good employee
+      who checks in when they have something to report.
+    </p>
+
+    <p class="reveal reveal-delay-2">
+      We call this a <strong>self-maintaining book of responsibilities.</strong>
+      You write what needs to happen. The book keeps itself up.
+    </p>
+
+    <!-- V2: The Responsibility Spec Diagram -->
+    <div class="diagram-canvas-wrap reveal reveal-delay-3">
+      <div class="diagram-label">The Responsibility Spec</div>
+      <canvas id="specCanvas" width="800" height="300"></canvas>
+    </div>
+
+    <!-- INTERACTIVE: Agent Orchestration Network -->
+    <div class="network-viz reveal reveal-delay-3" id="orchestration-net">
+      <canvas id="network-canvas"></canvas>
+      <span class="network-viz-label">Agent orchestration — move your cursor</span>
+    </div>
+
+    <div class="compare-block reveal reveal-delay-3">
+      <div class="compare-item negative">
+        <span class="marker">×</span>
+        <span class="text">Tell it what to do → check output → iterate → repeat. You're the manager. Attention never comes back.</span>
+      </div>
+      <div class="compare-item negative">
+        <span class="marker">×</span>
+        <span class="text">Every agent framework is imperative. Prescribe tasks. Manage execution.</span>
+      </div>
+      <div class="compare-item positive">
+        <span class="marker">→</span>
+        <span class="text">Describe the outcome. Set the contract. Let it run. Brief shows up in Slack. You never think about it again.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- DIFFERENTIATION -->
+  <section class="essay-section" id="distinction">
+    <div class="section-num reveal">II. &nbsp; vs Using Claude Directly</div>
+    <span class="section-number-large" aria-hidden="true">2</span>
+
+    <h2 class="reveal reveal-delay-1">
+      Claude does what<br>
+      you tell it.<br>
+      <em>OpenProse does<br>
+      what you need.</em>
+    </h2>
+
+    <p class="reveal reveal-delay-2">
+      You can use Claude to do this yourself. But then you're the manager.
+      Prescribing tasks, maintaining context, iterating on prompts.
+      Your mental overhead never goes away.
+    </p>
+
+    <!-- INTERACTIVE: Delegation Flow Visualization -->
+    <div class="delegation-flow reveal reveal-delay-2" id="delegation-viz">
+      <canvas id="delegation-canvas"></canvas>
+    </div>
+
+    <div class="pull-quote reveal reveal-delay-2">
+      We're the manager. You can use Claude directly, but then you're the
+      one managing. We're not selling a tool.
+      We're offloading a responsibility.
+    </div>
+
+    <p class="reveal reveal-delay-3">
+      Every agent framework today is imperative.
+      OpenProse is declarative. The difference between managing a junior employee
+      (constant oversight) and a senior one (set the goal, get out of the way).
+    </p>
+
+    <div class="footnote-aside reveal reveal-delay-3">
+      Declarative approaches (SQL, Terraform, React) have consistently won in
+      domains where "what" matters more than "how." Agent orchestration is next.
+    </div>
+  </section>
+
+  <!-- WAVEFORM DIVIDER -->
+  <div class="waveform-divider" id="waveform-1">
+    <canvas id="waveform-canvas-1"></canvas>
+  </div>
+
+  <!-- PROOF -->
+  <section class="essay-section proof-canvas-wrap" id="proof">
+    <canvas id="proof-canvas"></canvas>
+    <div class="section-num reveal">III. &nbsp; Proof of Work</div>
+    <span class="section-number-large" aria-hidden="true">3</span>
+
+    <h2 class="reveal reveal-delay-1">
+      Responsibilities<br>
+      complete<br>
+      <em>on schedule.</em>
+    </h2>
+
+    <p class="reveal reveal-delay-2">
+      We are running this for an energy monitoring company right now:
+      read-only to start, then private data access, then action.
+    </p>
+
+    <!-- V2: Signal vs Noise Diagram -->
+    <div class="diagram-canvas-wrap reveal reveal-delay-2">
+      <div class="diagram-label">Signal vs Noise</div>
+      <canvas id="signalCanvas" width="800" height="300"></canvas>
+    </div>
+
+    <div class="case-note reveal reveal-delay-2">
+      <div class="case-note-header">
+        <span>Energy Monitoring Company · Active Engagement</span>
+        <span class="case-status">Live</span>
+      </div>
+      <div class="case-note-body">
+        <h3>Anomaly Detection &amp; Equipment Health Monitoring</h3>
+        <p>
+          Detects anomalies across sensor networks, generates equipment health
+          reports, and delivers customer ROI dashboards. Work that used to
+          consume their team's hours each week now arrives completed.
+          In Slack, on cadence, without prompting.
+        </p>
+        <div class="tag-list">
+          <span class="tag">Anomaly Detection</span>
+          <span class="tag">Health Reports</span>
+          <span class="tag">ROI Dashboards</span>
+          <span class="tag">Weekly Cadence</span>
+        </div>
+      </div>
+    </div>
+
+    <p class="reveal reveal-delay-3" style="font-size: 0.8rem; color: var(--ink-3); font-style: italic;">
+      No integration required to start. We build a demonstration on public data
+      for your domain first. You decide if it is worth going further.
+    </p>
+  </section>
+
+  <!-- PRICING -->
+  <section class="essay-section" id="pricing">
+    <div class="section-num reveal">IV. &nbsp; Pricing</div>
+    <span class="section-number-large" aria-hidden="true">4</span>
+
+    <h2 class="reveal reveal-delay-1">
+      Competes with<br>
+      the decision<br>
+      <em>to hire.</em>
+    </h2>
+
+    <p class="reveal reveal-delay-2">
+      We price against the hire you are avoiding.
+      A junior analyst costs $6–8K per month fully loaded.
+      A senior analyst costs $12–15K. You manage both.
+    </p>
+
+    <!-- V2: The Cost Equation Diagram -->
+    <div class="diagram-canvas-wrap reveal reveal-delay-2">
+      <div class="diagram-label">The Cost Equation</div>
+      <canvas id="costCanvas" width="800" height="300"></canvas>
+    </div>
+
+    <table class="price-table reveal reveal-delay-2">
+      <thead>
+        <tr>
+          <th>Option</th>
+          <th>Monthly Cost</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Junior Analyst</td>
+          <td><span class="price-mark">$6–8K</span></td>
+          <td style="font-size: 0.82rem; color: var(--ink-3);">Fully loaded. Daily management required.</td>
+        </tr>
+        <tr>
+          <td>Senior Analyst</td>
+          <td><span class="price-mark">$12–15K</span></td>
+          <td style="font-size: 0.82rem; color: var(--ink-3);">More autonomous. Still your headcount.</td>
+        </tr>
+        <tr class="featured-row">
+          <td class="label-cell">OpenProse<span class="footnote-ref">*</span></td>
+          <td><span class="price-mark">~$2K</span></td>
+          <td style="font-size: 0.82rem; color: var(--ink-3);">Pilot. 2–3 responsibilities. No dashboard. No overhead.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="reveal reveal-delay-3" style="font-size: 0.75rem; color: var(--ink-4); font-style: italic;">
+      * Pricing is not on the page. Speak with us first. We will show you what offloaded looks like before you commit.
+    </p>
+  </section>
+
+  <!-- OPEN SOURCE -->
+  <section class="essay-section">
+    <div class="section-num reveal">V. &nbsp; Open Source</div>
+    <span class="section-number-large" aria-hidden="true">5</span>
+
+    <h2 class="reveal reveal-delay-1">
+      Run it yourself,<br>
+      <em>or let us run it.</em>
+    </h2>
+
+    <div class="specification-block reveal reveal-delay-2">
+      <p>
+        The complete stack is open source under the MIT license.
+        You can run it in your own cloud, like Terraform. Self-hosted,
+        with full control and no lock-in. 6,000 installs. 1,000 GitHub stars.
+        Most people prefer we run it for them.
+      </p>
+    </div>
+  </section>
+
+  <!-- WAVEFORM DIVIDER -->
+  <div class="waveform-divider" id="waveform-2">
+    <canvas id="waveform-canvas-2"></canvas>
+  </div>
+
+  <!-- CTA -->
+  <section class="cta-section" id="cta">
+    <canvas id="cta-canvas"></canvas>
+    <h2 class="reveal">What do you wish you could stop thinking about?</h2>
+    <p class="reveal reveal-delay-1">Tell us the responsibility. We'll show you what offloaded looks like.</p>
+    <div class="cta-form reveal reveal-delay-2">
+      <input class="cta-input" type="email" placeholder="your@email.com" />
+      <a href="#" class="btn-primary">Define your first responsibility</a>
+    </div>
+  </section>
+
+</div><!-- page-wrap -->
+
+<footer>
+  <p>&copy; 2026 OpenProse &middot; MIT License &middot; <a href="#">GitHub</a> &middot; YC-backed</p>
+  <p>No dashboard. No tool to learn. Responsibilities complete on schedule.</p>
+</footer>
+
+<script>
+(function() {
+  'use strict';
+
+  var COLORS = {
+    paper: '#f5f0e8',
+    paperDk: '#ede7d6',
+    ink: '#0f0f0f',
+    ink2: '#2e2e2e',
+    ink3: '#5a5a5a',
+    ink4: '#909090',
+    red: '#c0392b',
+    redMuted: '#d4604f',
+    rule: '#d8d0c0'
+  };
+
+  var mouseX = 0, mouseY = 0;
+  document.addEventListener('mousemove', function(e) {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+  });
+
+  // ============================================================
+  // V2 DIAGRAM 1: THE RESPONSIBILITY SPEC
+  // Pen-plotter style technical drawing that assembles itself
+  // ============================================================
+  (function initSpecCanvas() {
+    var canvas = document.getElementById('specCanvas');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var W = canvas.width, H = canvas.height;
+    var cycleTime = 8000;
+    var startTime = performance.now();
+
+    var sections = ['Scope', 'Expectations', 'Guardrails', 'Cadence'];
+    var sectionDetails = [
+      'Define the boundary\nof responsibility',
+      'What good looks like\nMeasurable outcomes',
+      'What must never happen\nConstraints & limits',
+      'When results arrive\nCheck-in rhythm'
+    ];
+
+    function ease(t) { return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; }
+    function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+    function drawLine(x1, y1, x2, y2, progress) {
+      var ex = x1 + (x2 - x1) * ease(clamp(progress, 0, 1));
+      var ey = y1 + (y2 - y1) * ease(clamp(progress, 0, 1));
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+    }
+
+    function animate(now) {
+      var elapsed = (now - startTime) % cycleTime;
+      var phase = elapsed / cycleTime;
+
+      ctx.fillStyle = COLORS.paper;
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.strokeStyle = COLORS.ink;
+      ctx.lineWidth = 1;
+
+      var mx = 60, my = 40;
+      var rw = W - mx * 2, rh = H - my * 2;
+      var p = phase;
+
+      if (p < 0.15) {
+        var t = p / 0.15;
+        var sides = [
+          [mx, my, mx + rw, my],
+          [mx + rw, my, mx + rw, my + rh],
+          [mx + rw, my + rh, mx, my + rh],
+          [mx, my + rh, mx, my]
+        ];
+        var perSide = 0.25;
+        for (var i = 0; i < 4; i++) {
+          var sp = clamp((t - i * perSide * 0.25) / 0.35, 0, 1);
+          if (sp > 0) {
+            drawLine(sides[i][0], sides[i][1], sides[i][2], sides[i][3], sp);
+          }
+        }
+      } else {
+        ctx.strokeRect(mx, my, rw, rh);
+
+        if (p >= 0.15) {
+          var divT = clamp((p - 0.15) / 0.1, 0, 1);
+          var midY = my + rh / 2;
+          var midX = mx + rw / 2;
+          if (divT > 0) {
+            drawLine(mx, midY, mx + rw, midY, divT);
+          }
+          if (divT > 0.3) {
+            drawLine(midX, my, midX, midY, clamp((divT - 0.3) / 0.7, 0, 1));
+          }
+          if (divT > 0.5) {
+            drawLine(midX, midY, midX, my + rh, clamp((divT - 0.5) / 0.5, 0, 1));
+          }
+        }
+
+        if (p >= 0.25) {
+          var labelT = clamp((p - 0.25) / 0.2, 0, 1);
+          var quads = [
+            { cx: mx + rw / 4, cy: my + rh / 4 },
+            { cx: mx + 3 * rw / 4, cy: my + rh / 4 },
+            { cx: mx + rw / 4, cy: my + 3 * rh / 4 },
+            { cx: mx + 3 * rw / 4, cy: my + 3 * rh / 4 }
+          ];
+
+          for (var qi = 0; qi < 4; qi++) {
+            var lt = clamp(labelT - qi * 0.15, 0, 1);
+            if (lt <= 0) continue;
+            var q = quads[qi];
+            ctx.fillStyle = COLORS.ink;
+            ctx.font = '600 13px JetBrains Mono, monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.globalAlpha = ease(lt);
+            ctx.fillText(sections[qi], q.cx, q.cy - 14);
+
+            ctx.font = '400 9px JetBrains Mono, monospace';
+            ctx.fillStyle = COLORS.ink3;
+            var lines = sectionDetails[qi].split('\n');
+            for (var li = 0; li < lines.length; li++) {
+              ctx.fillText(lines[li], q.cx, q.cy + 6 + li * 13);
+            }
+            ctx.globalAlpha = 1;
+          }
+        }
+
+        if (p >= 0.5) {
+          var dotT = clamp((p - 0.5) / 0.05, 0, 1);
+          if (dotT > 0) {
+            var pulse = 0.5 + 0.5 * Math.sin(now * 0.004);
+            ctx.beginPath();
+            ctx.arc(mx + rw - 4, my + 4, 3, 0, Math.PI * 2);
+            ctx.fillStyle = COLORS.red;
+            ctx.globalAlpha = ease(dotT) * (0.6 + 0.4 * pulse);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+
+            ctx.font = '400 8px JetBrains Mono, monospace';
+            ctx.fillStyle = COLORS.red;
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            ctx.globalAlpha = ease(dotT) * 0.7;
+            ctx.fillText('ACTIVE', mx + rw - 52, my + 2);
+            ctx.globalAlpha = 1;
+          }
+        }
+
+        if (p >= 0.55) {
+          var annotT = clamp((p - 0.55) / 0.15, 0, 1);
+          ctx.globalAlpha = ease(annotT) * 0.4;
+          ctx.font = '400 8px JetBrains Mono, monospace';
+          ctx.fillStyle = COLORS.ink4;
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'top';
+          ctx.fillText('resp-spec v1.0', mx, my + rh + 12);
+          ctx.fillText('4 fields · 12 constraints · auto-maintained', mx, my + rh + 24);
+          ctx.globalAlpha = 1;
+        }
+      }
+
+      ctx.strokeStyle = COLORS.ink;
+      ctx.lineWidth = 0.3;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, 0);
+      ctx.stroke();
+
+      requestAnimationFrame(animate);
+    }
+
+    requestAnimationFrame(animate);
+  })();
+
+  // ============================================================
+  // V2 DIAGRAM 2: THE COST EQUATION
+  // Typographic number animation like a proof in a textbook
+  // ============================================================
+  (function initCostCanvas() {
+    var canvas = document.getElementById('costCanvas');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var W = canvas.width, H = canvas.height;
+    var cycleTime = 10000;
+    var startTime = performance.now();
+
+    function ease(t) { return 1 - Math.pow(1 - t, 3); }
+    function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+    function drawTabularNum(text, x, y, size, color, alpha) {
+      ctx.font = '300 ' + size + 'px JetBrains Mono, monospace';
+      ctx.fillStyle = color;
+      ctx.globalAlpha = alpha;
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, x, y);
+      ctx.globalAlpha = 1;
+    }
+
+    function drawRule(x1, y, x2, progress, color) {
+      var ex = x1 + (x2 - x1) * ease(clamp(progress, 0, 1));
+      ctx.beginPath();
+      ctx.moveTo(x1, y);
+      ctx.lineTo(ex, y);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+
+    function animate(now) {
+      var elapsed = (now - startTime) % cycleTime;
+      var phase = elapsed / cycleTime;
+
+      ctx.fillStyle = COLORS.paper;
+      ctx.fillRect(0, 0, W, H);
+
+      var rightX = W - 80;
+      var topY = 65;
+      var midY = 150;
+      var bottomY = 235;
+
+      if (phase >= 0.0) {
+        var t1 = clamp(phase / 0.15, 0, 1);
+        var a1 = ease(t1);
+        drawTabularNum('$120,000', rightX, topY, 36, COLORS.ink, a1);
+        ctx.font = '400 9px JetBrains Mono, monospace';
+        ctx.fillStyle = COLORS.ink4;
+        ctx.globalAlpha = a1 * 0.7;
+        ctx.textAlign = 'right';
+        ctx.fillText('annual cost of a senior hire', rightX, topY + 24);
+        ctx.globalAlpha = 1;
+
+        drawRule(rightX - 180, topY + 36, rightX, t1, COLORS.rule);
+      }
+
+      if (phase >= 0.18) {
+        var t2 = clamp((phase - 0.18) / 0.15, 0, 1);
+        var a2 = ease(t2);
+        drawTabularNum('$24,000', rightX, bottomY, 36, COLORS.red, a2);
+        ctx.font = '400 9px JetBrains Mono, monospace';
+        ctx.fillStyle = COLORS.ink4;
+        ctx.globalAlpha = a2 * 0.7;
+        ctx.textAlign = 'right';
+        ctx.fillText('annual cost of OpenProse', rightX, bottomY + 24);
+        ctx.globalAlpha = 1;
+
+        drawRule(rightX - 180, bottomY - 36, rightX, t2, COLORS.rule);
+      }
+
+      if (phase >= 0.38) {
+        var t3 = clamp((phase - 0.38) / 0.12, 0, 1);
+        var a3 = ease(t3);
+
+        drawRule(rightX - 150, topY + 38, rightX - 150, bottomY - 38, t3, COLORS.ink4);
+
+        if (t3 > 0.3) {
+          drawRule(rightX - 150, midY, rightX - 30, clamp((t3 - 0.3) / 0.5, 0, 1), COLORS.ink4);
+        }
+
+        if (t3 > 0.6) {
+          drawTabularNum('$96,000', rightX, midY - 4, 24, COLORS.ink, a3);
+          ctx.font = '600 9px JetBrains Mono, monospace';
+          ctx.fillStyle = COLORS.red;
+          ctx.globalAlpha = a3;
+          ctx.textAlign = 'right';
+          ctx.fillText('saved', rightX, midY + 14);
+          ctx.globalAlpha = 1;
+
+          if (t3 > 0.8) {
+            var arrowT = clamp((t3 - 0.8) / 0.2, 0, 1);
+            ctx.globalAlpha = ease(arrowT);
+            ctx.strokeStyle = COLORS.red;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(rightX - 26, midY + 10);
+            ctx.lineTo(rightX - 20, midY + 10);
+            ctx.lineTo(rightX - 23, midY + 6);
+            ctx.moveTo(rightX - 20, midY + 10);
+            ctx.lineTo(rightX - 23, midY + 14);
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+          }
+        }
+      }
+
+      if (phase >= 0.6) {
+        var t4 = clamp((phase - 0.6) / 0.15, 0, 1);
+        ctx.globalAlpha = ease(t4) * 0.35;
+        ctx.font = '400 8px JetBrains Mono, monospace';
+        ctx.fillStyle = COLORS.ink4;
+        ctx.textAlign = 'left';
+        ctx.fillText('proof: senior_hire - openprose = savings', 80, H - 20);
+        ctx.globalAlpha = 1;
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    requestAnimationFrame(animate);
+  })();
+
+  // ============================================================
+  // V2 DIAGRAM 3: SIGNAL VS NOISE
+  // Left: chaotic noise, Right: clean signal
+  // ============================================================
+  (function initSignalCanvas() {
+    var canvas = document.getElementById('signalCanvas');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var W = canvas.width, H = canvas.height;
+
+    var noiseTexts = [
+      'sensor.reading.alpha=3.21',
+      'ALERT: threshold exceeded',
+      'dashboard.metric.7=...',
+      'raw.data.stream.12',
+      'anomaly.score=0.82',
+      'ping.node.4.timeout',
+      'metric.flux.9.delta',
+      'sensor.reading.beta',
+      'log.entry.4291.warn',
+      'heartbeat.check.fail',
+      'data.pipeline.lag',
+      'temp.sensor.3=71.2',
+      'cpu.utilization.89%',
+      'disk.write.latency.ms',
+      'queue.depth.241',
+      'conn.pool.exhausted',
+      'retry.attempt.3.fail',
+      'mem.usage.92%',
+      'net.throughput.mb',
+      'event.unclassified.8'
+    ];
+
+    var signalItems = [
+      { label: 'One Brief', text: 'Weekly anomaly summary', delay: 0 },
+      { label: 'One Alert', text: 'Equipment 7 needs attention', delay: 0.2 },
+      { label: 'One Report', text: 'Customer ROI delivered', delay: 0.4 }
+    ];
+
+    var noiseItems = [];
+    var cycleTime = 12000;
+    var startTime = performance.now();
+
+    for (var i = 0; i < 80; i++) {
+      noiseItems.push({
+        text: noiseTexts[i % noiseTexts.length],
+        x: 20 + Math.random() * (W / 2 - 60),
+        y: Math.random() * H,
+        vy: 0.3 + Math.random() * 0.8,
+        vx: (Math.random() - 0.5) * 0.4,
+        alpha: 0.06 + Math.random() * 0.12,
+        fontSize: 7 + Math.floor(Math.random() * 4)
+      });
+    }
+
+    function animate(now) {
+      var elapsed = (now - startTime) % cycleTime;
+      var phase = elapsed / cycleTime;
+
+      ctx.fillStyle = COLORS.paper;
+      ctx.fillRect(0, 0, W, H);
+
+      var midX = W / 2;
+
+      ctx.setLineDash([2, 3]);
+      ctx.beginPath();
+      ctx.moveTo(midX, 20);
+      ctx.lineTo(midX, H - 20);
+      ctx.strokeStyle = COLORS.rule;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.font = '600 8px JetBrains Mono, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = COLORS.ink4;
+      ctx.fillText('NOISE', W * 0.25, 18);
+      ctx.fillStyle = COLORS.red;
+      ctx.fillText('SIGNAL', W * 0.75, 18);
+
+      for (var i = 0; i < noiseItems.length; i++) {
+        var n = noiseItems[i];
+        n.y += n.vy;
+        n.x += n.vx;
+        if (n.y > H + 10) { n.y = -10; n.x = 20 + Math.random() * (midX - 60); }
+        if (n.x < 5) n.vx = Math.abs(n.vx);
+        if (n.x > midX - 30) n.vx = -Math.abs(n.vx);
+
+        ctx.font = n.fontSize + 'px JetBrains Mono, monospace';
+        ctx.fillStyle = COLORS.ink3;
+        ctx.globalAlpha = n.alpha;
+        ctx.textAlign = 'left';
+        ctx.fillText(n.text, n.x, n.y);
+      }
+      ctx.globalAlpha = 1;
+
+      var signalPhase = phase;
+      var sigStartX = midX + 30;
+      var sigRightEdge = W - 40;
+      var sigWidth = sigRightEdge - sigStartX;
+
+      for (var si = 0; si < signalItems.length; si++) {
+        var item = signalItems[si];
+        var itemPhase = clamp((signalPhase - item.delay) / 0.25, 0, 1);
+        if (itemPhase <= 0) continue;
+
+        var alpha = ease(itemPhase);
+        var yPos = 60 + si * 80;
+
+        ctx.globalAlpha = alpha * 0.1;
+        ctx.fillStyle = COLORS.red;
+        ctx.fillRect(sigStartX, yPos - 18, sigWidth * ease(itemPhase), 52);
+
+        ctx.globalAlpha = alpha;
+        ctx.font = '600 14px JetBrains Mono, monospace';
+        ctx.fillStyle = COLORS.ink;
+        ctx.textAlign = 'left';
+        ctx.fillText(item.label, sigStartX + 10, yPos);
+
+        ctx.font = '400 10px JetBrains Mono, monospace';
+        ctx.fillStyle = COLORS.ink3;
+        ctx.fillText(item.text, sigStartX + 10, yPos + 18);
+
+        if (itemPhase > 0.5) {
+          var dotAlpha = clamp((itemPhase - 0.5) / 0.5, 0, 1);
+          ctx.beginPath();
+          ctx.arc(sigStartX + sigWidth - 15, yPos + 4, 3, 0, Math.PI * 2);
+          ctx.fillStyle = COLORS.red;
+          ctx.globalAlpha = dotAlpha * (0.5 + 0.5 * Math.sin(now * 0.005 + si));
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      ctx.font = '400 7px JetBrains Mono, monospace';
+      ctx.fillStyle = COLORS.ink4;
+      ctx.globalAlpha = 0.35;
+      ctx.textAlign = 'center';
+      ctx.fillText('raw data · alerts · dashboards · logs', W * 0.25, H - 12);
+      ctx.fillText('brief · alert · report', W * 0.75, H - 12);
+      ctx.globalAlpha = 1;
+
+      requestAnimationFrame(animate);
+    }
+
+    function ease(t) { return 1 - Math.pow(1 - Math.max(0, Math.min(1, t)), 3); }
+    function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+    requestAnimationFrame(animate);
+  })();
+
+  // ============================================================
+  // 1. AMBIENT PARTICLE FIELD
+  // ============================================================
+  (function initParticleField() {
+    var canvas = document.getElementById('particle-field');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var w, h;
+    var particles = [];
+    var PARTICLE_COUNT = 40;
+
+    function resize() {
+      w = canvas.width = window.innerWidth;
+      h = canvas.height = window.innerHeight;
+    }
+
+    function createParticle() {
+      return {
+        x: Math.random() * w,
+        y: Math.random() * h,
+        vx: (Math.random() - 0.5) * 0.15,
+        vy: (Math.random() - 0.5) * 0.15,
+        r: Math.random() * 1.5 + 0.5,
+        opacity: Math.random() * 0.3 + 0.05
+      };
+    }
+
+    function init() {
+      resize();
+      particles.length = 0;
+      for (var i = 0; i < PARTICLE_COUNT; i++) {
+        particles.push(createParticle());
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, w, h);
+
+      for (var i = 0; i < particles.length; i++) {
+        for (var j = i + 1; j < particles.length; j++) {
+          var dx = particles[i].x - particles[j].x;
+          var dy = particles[i].y - particles[j].y;
+          var dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 200) {
+            var alpha = (1 - dist / 200) * 0.06;
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = 'rgba(192, 57, 43, ' + alpha + ')';
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+      }
+
+      for (var k = 0; k < particles.length; k++) {
+        var p = particles[k];
+        var dx = mouseX - p.x;
+        var dy = mouseY - p.y;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 300 && dist > 0) {
+          var force = (300 - dist) / 300 * 0.02;
+          p.vx += (dx / dist) * force;
+          p.vy += (dy / dist) * force;
+        }
+
+        p.vx *= 0.995;
+        p.vy *= 0.995;
+        p.x += p.vx;
+        p.y += p.vy;
+
+        if (p.x < -10) p.x = w + 10;
+        if (p.x > w + 10) p.x = -10;
+        if (p.y < -10) p.y = h + 10;
+        if (p.y > h + 10) p.y = -10;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(15, 15, 15, ' + p.opacity + ')';
+        ctx.fill();
+      }
+
+      requestAnimationFrame(draw);
+    }
+
+    window.addEventListener('resize', resize);
+    init();
+    draw();
+  })();
+
+  // ============================================================
+  // 2. HERO CANVAS — flowing data streams
+  // ============================================================
+  (function initHeroCanvas() {
+    var canvas = document.getElementById('hero-canvas');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var hero = canvas.parentElement;
+    var w, h;
+    var streams = [];
+    var STREAM_COUNT = 8;
+
+    function resize() {
+      var rect = hero.getBoundingClientRect();
+      w = canvas.width = rect.width;
+      h = canvas.height = rect.height;
+    }
+
+    function createStream() {
+      var startX = Math.random() * w;
+      var points = [];
+      var numPoints = 30 + Math.floor(Math.random() * 20);
+      for (var i = 0; i < numPoints; i++) {
+        points.push({
+          x: startX + (Math.random() - 0.5) * 100,
+          y: (i / numPoints) * h,
+          offset: Math.random() * Math.PI * 2
+        });
+      }
+      return {
+        points: points,
+        speed: 0.002 + Math.random() * 0.003,
+        phase: Math.random() * Math.PI * 2,
+        amplitude: 15 + Math.random() * 25,
+        opacity: 0.04 + Math.random() * 0.06
+      };
+    }
+
+    function init() {
+      resize();
+      streams.length = 0;
+      for (var i = 0; i < STREAM_COUNT; i++) {
+        streams.push(createStream());
+      }
+    }
+
+    var time = 0;
+    function draw() {
+      ctx.clearRect(0, 0, w, h);
+      time += 1;
+
+      for (var s = 0; s < streams.length; s++) {
+        var stream = streams[s];
+        ctx.beginPath();
+        for (var i = 0; i < stream.points.length; i++) {
+          var p = stream.points[i];
+          var wave = Math.sin(time * stream.speed + p.offset + stream.phase) * stream.amplitude;
+          var x = p.x + wave;
+          var y = p.y;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = 'rgba(192, 57, 43, ' + stream.opacity + ')';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      for (var s2 = 0; s2 < streams.length; s2++) {
+        var stream2 = streams[s2];
+        var idx = Math.floor((time * 0.5 + stream2.phase * 100) % stream2.points.length);
+        var p2 = stream2.points[idx];
+        if (p2) {
+          var wave2 = Math.sin(time * stream2.speed + p2.offset + stream2.phase) * stream2.amplitude;
+          ctx.beginPath();
+          ctx.arc(p2.x + wave2, p2.y, 2, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(192, 57, 43, 0.25)';
+          ctx.fill();
+        }
+      }
+
+      requestAnimationFrame(draw);
+    }
+
+    window.addEventListener('resize', function() { resize(); });
+    init();
+    draw();
+  })();
+
+  // ============================================================
+  // 3. AGENT ORCHESTRATION NETWORK
+  // ============================================================
+  (function initOrchestrationNetwork() {
+    var container = document.getElementById('orchestration-net');
+    var canvas = document.getElementById('network-canvas');
+    if (!canvas || !container) return;
+    var ctx = canvas.getContext('2d');
+    var w, h;
+    var localMouseX = -999, localMouseY = -999;
+    var nodes = [];
+    var edges = [];
+    var NODE_COUNT = 18;
+
+    var labels = [
+      'delegate', 'analyze', 'report', 'monitor', 'detect',
+      'schedule', 'verify', 'deliver', 'assess', 'route',
+      'compose', 'resolve', 'notify', 'audit', 'process',
+      'extract', 'classify', 'synthesize'
+    ];
+
+    function resize() {
+      var rect = container.getBoundingClientRect();
+      w = canvas.width = rect.width;
+      h = canvas.height = rect.height;
+    }
+
+    function init() {
+      resize();
+      nodes.length = 0;
+      edges.length = 0;
+
+      for (var i = 0; i < NODE_COUNT; i++) {
+        var angle = (i / NODE_COUNT) * Math.PI * 2;
+        var radiusX = w * 0.32 + Math.random() * w * 0.1;
+        var radiusY = h * 0.32 + Math.random() * h * 0.08;
+        nodes.push({
+          x: w / 2 + Math.cos(angle) * radiusX,
+          y: h / 2 + Math.sin(angle) * radiusY,
+          baseX: w / 2 + Math.cos(angle) * radiusX,
+          baseY: h / 2 + Math.sin(angle) * radiusY,
+          r: 3 + Math.random() * 4,
+          label: labels[i % labels.length],
+          phase: Math.random() * Math.PI * 2,
+          speed: 0.003 + Math.random() * 0.005,
+          active: false
+        });
+      }
+
+      nodes.push({
+        x: w / 2, y: h / 2,
+        baseX: w / 2, baseY: h / 2,
+        r: 8,
+        label: 'OpenProse',
+        phase: 0, speed: 0.002,
+        active: false,
+        isHub: true
+      });
+
+      var hubIdx = nodes.length - 1;
+      for (var j = 0; j < hubIdx; j++) {
+        edges.push({ from: hubIdx, to: j, flow: Math.random() });
+        if (Math.random() > 0.5) {
+          var neighbor = (j + 1 + Math.floor(Math.random() * 3)) % hubIdx;
+          edges.push({ from: j, to: neighbor, flow: Math.random() });
+        }
+      }
+    }
+
+    container.addEventListener('mousemove', function(e) {
+      var rect = container.getBoundingClientRect();
+      localMouseX = e.clientX - rect.left;
+      localMouseY = e.clientY - rect.top;
+    });
+
+    container.addEventListener('mouseleave', function() {
+      localMouseX = -999;
+      localMouseY = -999;
+    });
+
+    var time = 0;
+    function draw() {
+      ctx.clearRect(0, 0, w, h);
+      time += 1;
+
+      for (var ni = 0; ni < nodes.length; ni++) {
+        var node = nodes[ni];
+        var drift = Math.sin(time * node.speed + node.phase) * 4;
+        var driftY = Math.cos(time * node.speed * 0.7 + node.phase) * 3;
+        node.x = node.baseX + drift;
+        node.y = node.baseY + driftY;
+
+        if (localMouseX > -900) {
+          var dx = localMouseX - node.x;
+          var dy = localMouseY - node.y;
+          var dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 150 && dist > 0) {
+            var pull = (150 - dist) / 150 * 12;
+            node.x += (dx / dist) * pull;
+            node.y += (dy / dist) * pull;
+            node.active = true;
+          } else {
+            node.active = false;
+          }
+        } else {
+          node.active = false;
+        }
+      }
+
+      for (var ei = 0; ei < edges.length; ei++) {
+        var edge = edges[ei];
+        var from = nodes[edge.from];
+        var to = nodes[edge.to];
+        var dx = to.x - from.x;
+        var dy = to.y - from.y;
+        var isActive = from.active || to.active;
+
+        ctx.beginPath();
+        ctx.moveTo(from.x, from.y);
+        ctx.lineTo(to.x, to.y);
+        ctx.strokeStyle = isActive ? 'rgba(192, 57, 43, 0.3)' : 'rgba(90, 90, 90, 0.1)';
+        ctx.lineWidth = isActive ? 1.2 : 0.5;
+        ctx.stroke();
+
+        edge.flow = (edge.flow + 0.004) % 1;
+        var dotX = from.x + dx * edge.flow;
+        var dotY = from.y + dy * edge.flow;
+        var dotAlpha = isActive ? 0.6 : 0.15;
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, isActive ? 2 : 1, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(192, 57, 43, ' + dotAlpha + ')';
+        ctx.fill();
+      }
+
+      for (var nj = 0; nj < nodes.length; nj++) {
+        var nd = nodes[nj];
+        if (nd.active || nd.isHub) {
+          ctx.beginPath();
+          ctx.arc(nd.x, nd.y, nd.r + 6, 0, Math.PI * 2);
+          ctx.fillStyle = nd.isHub ? 'rgba(192, 57, 43, 0.06)' : 'rgba(192, 57, 43, 0.04)';
+          ctx.fill();
+        }
+
+        ctx.beginPath();
+        ctx.arc(nd.x, nd.y, nd.r, 0, Math.PI * 2);
+        if (nd.isHub) ctx.fillStyle = COLORS.red;
+        else if (nd.active) ctx.fillStyle = COLORS.ink2;
+        else ctx.fillStyle = COLORS.ink4;
+        ctx.fill();
+
+        if (nd.active || nd.isHub) {
+          ctx.font = nd.isHub ? '600 9px Helvetica Neue, Helvetica, Arial, sans-serif' : '400 8px Helvetica Neue, Helvetica, Arial, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillStyle = nd.isHub ? COLORS.red : COLORS.ink2;
+          ctx.fillText(nd.label, nd.x, nd.y - nd.r - 6);
+        }
+      }
+
+      requestAnimationFrame(draw);
+    }
+
+    window.addEventListener('resize', function() { init(); });
+    init();
+    draw();
+  })();
+
+  // ============================================================
+  // 4. DELEGATION FLOW
+  // ============================================================
+  (function initDelegationFlow() {
+    var container = document.getElementById('delegation-viz');
+    var canvas = document.getElementById('delegation-canvas');
+    if (!canvas || !container) return;
+    var ctx = canvas.getContext('2d');
+    var w, h;
+    var localMouseX = -999;
+
+    function resize() {
+      var rect = container.getBoundingClientRect();
+      w = canvas.width = rect.width;
+      h = canvas.height = rect.height;
+    }
+
+    container.addEventListener('mousemove', function(e) {
+      var rect = container.getBoundingClientRect();
+      localMouseX = e.clientX - rect.left;
+    });
+
+    container.addEventListener('mouseleave', function() {
+      localMouseX = -999;
+    });
+
+    var leftParticles = [];
+    var rightParticles = [];
+    var PCOUNT = 20;
+
+    function initParticles() {
+      leftParticles.length = 0;
+      rightParticles.length = 0;
+      for (var i = 0; i < PCOUNT; i++) {
+        leftParticles.push({
+          t: Math.random(),
+          speed: 0.003 + Math.random() * 0.004,
+          offset: Math.random() * 30 - 15,
+          direction: 1,
+          bounces: 0
+        });
+        rightParticles.push({
+          t: Math.random(),
+          speed: 0.004 + Math.random() * 0.002,
+          offset: Math.random() * 12 - 6
+        });
+      }
+    }
+
+    var time = 0;
+    function draw() {
+      ctx.clearRect(0, 0, w, h);
+      time += 1;
+
+      var midX = w / 2;
+      var topY = 35;
+      var bottomY = h - 25;
+      var midY = (topY + bottomY) / 2;
+
+      var blend = localMouseX > -900 ? Math.max(0, Math.min(1, localMouseX / w)) : 0.5;
+
+      ctx.font = '600 9px Helvetica Neue, Helvetica, Arial, sans-serif';
+      ctx.textAlign = 'center';
+
+      ctx.fillStyle = 'rgba(90, 90, 90, ' + (0.6 + (1 - blend) * 0.4) + ')';
+      ctx.fillText('IMPERATIVE', w * 0.25, 18);
+
+      ctx.beginPath();
+      ctx.setLineDash([3, 4]);
+      ctx.moveTo(midX, 25);
+      ctx.lineTo(midX, h - 10);
+      ctx.strokeStyle = 'rgba(216, 208, 192, 0.6)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.fillStyle = 'rgba(192, 57, 43, ' + (0.4 + blend * 0.6) + ')';
+      ctx.fillText('DECLARATIVE', w * 0.75, 18);
+
+      var leftCenterX = w * 0.25;
+      ctx.beginPath();
+      ctx.arc(leftCenterX, topY, 6, 0, Math.PI * 2);
+      ctx.fillStyle = COLORS.ink3;
+      ctx.fill();
+      ctx.font = '400 7px Helvetica Neue, Helvetica, Arial, sans-serif';
+      ctx.fillStyle = COLORS.ink4;
+      ctx.fillText('you', leftCenterX, topY + 16);
+
+      ctx.beginPath();
+      ctx.arc(leftCenterX, bottomY, 5, 0, Math.PI * 2);
+      ctx.fillStyle = COLORS.ink4;
+      ctx.fill();
+      ctx.fillText('agent', leftCenterX, bottomY + 14);
+
+      ctx.beginPath();
+      ctx.moveTo(leftCenterX, topY + 8);
+      for (var zi = 0; zi < 6; zi++) {
+        var y = topY + 8 + ((bottomY - topY - 16) / 6) * (zi + 0.5);
+        var xOff = (zi % 2 === 0 ? 1 : -1) * 20;
+        ctx.lineTo(leftCenterX + xOff, y);
+      }
+      ctx.lineTo(leftCenterX, bottomY - 8);
+      ctx.strokeStyle = 'rgba(90, 90, 90, 0.15)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      for (var pi = 0; pi < leftParticles.length; pi++) {
+        var p = leftParticles[pi];
+        p.t += p.speed * p.direction;
+        if (p.t >= 1) { p.direction = -1; p.t = 1; p.bounces++; }
+        if (p.t <= 0) { p.direction = 1; p.t = 0; p.bounces++; }
+
+        var progress = p.t;
+        var segIdx = Math.floor(progress * 6);
+        var segProg = (progress * 6) - segIdx;
+        var zigzagPoints = [];
+        zigzagPoints.push({ x: leftCenterX, y: topY + 8 });
+        for (var zj = 0; zj < 6; zj++) {
+          var zy = topY + 8 + ((bottomY - topY - 16) / 6) * (zj + 0.5);
+          var zxOff = (zj % 2 === 0 ? 1 : -1) * 20;
+          zigzagPoints.push({ x: leftCenterX + zxOff, y: zy });
+        }
+        zigzagPoints.push({ x: leftCenterX, y: bottomY - 8 });
+
+        var fromPt = zigzagPoints[Math.min(segIdx, zigzagPoints.length - 2)];
+        var toPt = zigzagPoints[Math.min(segIdx + 1, zigzagPoints.length - 1)];
+        var px = fromPt.x + (toPt.x - fromPt.x) * segProg + p.offset * 0.3;
+        var py = fromPt.y + (toPt.y - fromPt.y) * segProg;
+
+        ctx.beginPath();
+        ctx.arc(px, py, 1.5, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(90, 90, 90, 0.35)';
+        ctx.fill();
+      }
+
+      var rightCenterX = w * 0.75;
+
+      ctx.beginPath();
+      ctx.arc(rightCenterX, topY, 6, 0, Math.PI * 2);
+      ctx.fillStyle = COLORS.red;
+      ctx.fill();
+      ctx.font = '400 7px Helvetica Neue, Helvetica, Arial, sans-serif';
+      ctx.fillStyle = COLORS.redMuted;
+      ctx.fillText('you', rightCenterX, topY + 16);
+
+      ctx.beginPath();
+      ctx.arc(rightCenterX, midY, 7, 0, Math.PI * 2);
+      ctx.fillStyle = COLORS.red;
+      ctx.fill();
+      ctx.font = '600 7px Helvetica Neue, Helvetica, Arial, sans-serif';
+      ctx.fillStyle = COLORS.red;
+      ctx.fillText('openprose', rightCenterX, midY - 12);
+
+      var resultNodes = [
+        { x: rightCenterX - 40, y: bottomY, label: 'report' },
+        { x: rightCenterX, y: bottomY, label: 'alert' },
+        { x: rightCenterX + 40, y: bottomY, label: 'brief' }
+      ];
+
+      for (var ri = 0; ri < resultNodes.length; ri++) {
+        var rn = resultNodes[ri];
+        ctx.beginPath();
+        ctx.arc(rn.x, rn.y, 4, 0, Math.PI * 2);
+        ctx.fillStyle = COLORS.ink4;
+        ctx.fill();
+        ctx.font = '400 7px Helvetica Neue, Helvetica, Arial, sans-serif';
+        ctx.fillStyle = COLORS.ink4;
+        ctx.fillText(rn.label, rn.x, rn.y + 14);
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(rightCenterX, topY + 8);
+      ctx.lineTo(rightCenterX, midY - 10);
+      ctx.strokeStyle = 'rgba(192, 57, 43, 0.2)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      for (var rj = 0; rj < resultNodes.length; rj++) {
+        var rn2 = resultNodes[rj];
+        ctx.beginPath();
+        ctx.moveTo(rightCenterX, midY + 10);
+        ctx.lineTo(rn2.x, rn2.y - 8);
+        ctx.strokeStyle = 'rgba(192, 57, 43, 0.15)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      for (var rpi = 0; rpi < rightParticles.length; rpi++) {
+        var rp = rightParticles[rpi];
+        rp.t = (rp.t + rp.speed) % 1;
+
+        var rpx, rpy;
+        if (rp.t < 0.4) {
+          var seg = rp.t / 0.4;
+          rpx = rightCenterX + rp.offset * 0.3;
+          rpy = topY + 8 + (midY - topY - 18) * seg;
+        } else {
+          var seg2 = (rp.t - 0.4) / 0.6;
+          var targetIdx = rp.offset > 5 ? 2 : (rp.offset < -5 ? 0 : 1);
+          var target = resultNodes[targetIdx];
+          rpx = rightCenterX + (target.x - rightCenterX) * seg2 + rp.offset * 0.1;
+          rpy = midY + 10 + (target.y - midY - 18) * seg2;
+        }
+
+        ctx.beginPath();
+        ctx.arc(rpx, rpy, 1.8, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(192, 57, 43, 0.4)';
+        ctx.fill();
+      }
+
+      if (localMouseX > -900) {
+        ctx.font = '400 8px Helvetica Neue, Helvetica, Arial, sans-serif';
+        ctx.textAlign = 'center';
+        if (localMouseX < midX) {
+          ctx.fillStyle = 'rgba(90, 90, 90, 0.5)';
+          ctx.fillText('constant oversight', leftCenterX, h - 4);
+        } else {
+          ctx.fillStyle = 'rgba(192, 57, 43, 0.5)';
+          ctx.fillText('set the goal, get out of the way', rightCenterX, h - 4);
+        }
+      }
+
+      requestAnimationFrame(draw);
+    }
+
+    window.addEventListener('resize', function() { resize(); initParticles(); });
+    resize();
+    initParticles();
+    draw();
+  })();
+
+  // ============================================================
+  // 5. SCROLL-TRIGGERED REVEALS
+  // ============================================================
+  (function initScrollReveals() {
+    var reveals = document.querySelectorAll('.reveal');
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, {
+      threshold: 0.15,
+      rootMargin: '0px 0px -40px 0px'
+    });
+
+    reveals.forEach(function(el) {
+      observer.observe(el);
+    });
+  })();
+
+  // ============================================================
+  // 6. STAT NUMBER COUNTER ANIMATION
+  // ============================================================
+  (function initStatCounters() {
+    var stats = document.querySelectorAll('.stat-num[data-count]');
+    var animated = false;
+
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting && !animated) {
+          animated = true;
+          stats.forEach(function(stat) {
+            var target = parseInt(stat.getAttribute('data-count'));
+            var duration = 1500;
+            var start = performance.now();
+
+            function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+
+            function step(now) {
+              var elapsed = now - start;
+              var progress = Math.min(elapsed / duration, 1);
+              var value = Math.floor(easeOut(progress) * target);
+              stat.textContent = value.toLocaleString();
+              if (progress < 1) {
+                requestAnimationFrame(step);
+              }
+            }
+
+            requestAnimationFrame(step);
+          });
+        }
+      });
+    }, { threshold: 0.5 });
+
+    if (stats.length > 0) {
+      observer.observe(stats[0].closest('.stat-row'));
+    }
+  })();
+
+  // ============================================================
+  // 7. SMOOTH PARALLAX ON SECTION NUMBERS
+  // ============================================================
+  (function initParallax() {
+    var nums = document.querySelectorAll('.section-number-large');
+    window.addEventListener('scroll', function() {
+      var scrollY = window.pageYOffset;
+      nums.forEach(function(num) {
+        var rect = num.getBoundingClientRect();
+        var centerY = rect.top + rect.height / 2;
+        var viewCenter = window.innerHeight / 2;
+        var offset = (centerY - viewCenter) * 0.04;
+        num.style.transform = 'translateY(' + offset + 'px)';
+      });
+    }, { passive: true });
+  })();
+
+  // ============================================================
+  // 8. TYPED-FEEL CTA PLACEHOLDER
+  // ============================================================
+  (function initTypedPlaceholder() {
+    var input = document.querySelector('.cta-input');
+    if (!input) return;
+
+    var placeholders = [
+      'your@email.com',
+      'weekly competitor analysis...',
+      'daily anomaly reports...',
+      'customer health monitoring...',
+      'compliance audit summaries...',
+      'your@email.com'
+    ];
+
+    var currentIdx = 0;
+    var charIdx = 0;
+    var isDeleting = false;
+    var isPaused = false;
+
+    function type() {
+      if (document.activeElement === input || input.value.length > 0) {
+        setTimeout(type, 500);
+        return;
+      }
+
+      var current = placeholders[currentIdx];
+
+      if (isPaused) {
+        isPaused = false;
+        isDeleting = true;
+        setTimeout(type, 50);
+        return;
+      }
+
+      if (!isDeleting) {
+        charIdx++;
+        input.setAttribute('placeholder', current.substring(0, charIdx));
+        if (charIdx >= current.length) {
+          isPaused = true;
+          setTimeout(type, 2500);
+          return;
+        }
+        setTimeout(type, 60 + Math.random() * 40);
+      } else {
+        charIdx--;
+        input.setAttribute('placeholder', current.substring(0, charIdx));
+        if (charIdx <= 0) {
+          isDeleting = false;
+          currentIdx = (currentIdx + 1) % placeholders.length;
+          setTimeout(type, 400);
+          return;
+        }
+        setTimeout(type, 30);
+      }
+    }
+
+    setTimeout(type, 3000);
+  })();
+
+  // ============================================================
+  // 9. WAVEFORM DIVIDERS
+  // ============================================================
+  (function initWaveformDividers() {
+    ['waveform-canvas-1', 'waveform-canvas-2'].forEach(function(id, idx) {
+      var canvas = document.getElementById(id);
+      if (!canvas) return;
+      var ctx = canvas.getContext('2d');
+      var container = canvas.parentElement;
+      var w, h;
+
+      function resize() {
+        var rect = container.getBoundingClientRect();
+        w = canvas.width = rect.width;
+        h = canvas.height = rect.height;
+      }
+
+      var time = idx * 1000;
+      function draw() {
+        ctx.clearRect(0, 0, w, h);
+        time += 1;
+
+        for (var layer = 0; layer < 3; layer++) {
+          ctx.beginPath();
+          var amplitude = 8 + layer * 4;
+          var frequency = 0.008 - layer * 0.002;
+          var speed = 0.015 + layer * 0.005;
+          var alpha = 0.12 - layer * 0.03;
+
+          for (var x = 0; x <= w; x += 2) {
+            var y = h / 2
+              + Math.sin(x * frequency + time * speed) * amplitude
+              + Math.sin(x * frequency * 1.5 + time * speed * 0.7) * (amplitude * 0.4);
+
+            var dx = mouseX - x;
+            var proximity = Math.exp(-(dx * dx) / 20000);
+            var mouseInfluence = proximity * 6 * Math.sin(time * 0.05);
+
+            if (x === 0) ctx.moveTo(x, y + mouseInfluence);
+            else ctx.lineTo(x, y + mouseInfluence);
+          }
+          ctx.strokeStyle = 'rgba(192, 57, 43, ' + alpha + ')';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+
+        var pulseR = 2 + Math.sin(time * 0.03) * 1;
+        var pulseAlpha = 0.15 + Math.sin(time * 0.03) * 0.1;
+        ctx.beginPath();
+        ctx.arc(w / 2, h / 2, pulseR, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(192, 57, 43, ' + pulseAlpha + ')';
+        ctx.fill();
+
+        requestAnimationFrame(draw);
+      }
+
+      window.addEventListener('resize', resize);
+      resize();
+      draw();
+    });
+  })();
+
+  // ============================================================
+  // 10. CTA CANVAS
+  // ============================================================
+  (function initCtaCanvas() {
+    var canvas = document.getElementById('cta-canvas');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var section = canvas.parentElement;
+    var w, h;
+    var particles = [];
+    var PCOUNT = 30;
+
+    function resize() {
+      var rect = section.getBoundingClientRect();
+      w = canvas.width = rect.width;
+      h = canvas.height = rect.height;
+    }
+
+    function createParticle() {
+      return {
+        x: Math.random() * w,
+        y: Math.random() * h,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: -(0.2 + Math.random() * 0.4),
+        r: 1 + Math.random() * 2,
+        opacity: 0.08 + Math.random() * 0.15,
+        life: Math.random()
+      };
+    }
+
+    function init() {
+      resize();
+      particles.length = 0;
+      for (var i = 0; i < PCOUNT; i++) particles.push(createParticle());
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, w, h);
+
+      for (var i = 0; i < particles.length; i++) {
+        for (var j = i + 1; j < particles.length; j++) {
+          var dx = particles[i].x - particles[j].x;
+          var dy = particles[i].y - particles[j].y;
+          var dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 120) {
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = 'rgba(192, 57, 43, ' + ((1 - dist / 120) * 0.06) + ')';
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+      }
+
+      for (var k = 0; k < particles.length; k++) {
+        var p = particles[k];
+        var pdx = mouseX - p.x;
+        var sectionRect = section.getBoundingClientRect();
+        var pdy = (mouseY - sectionRect.top) - p.y;
+        var dist = Math.sqrt(pdx * pdx + pdy * pdy);
+        if (dist < 200 && dist > 0) {
+          p.vx += (pdx / dist) * 0.015;
+          p.vy += (pdy / dist) * 0.015;
+        }
+
+        p.vx *= 0.99;
+        p.x += p.vx;
+        p.y += p.vy;
+
+        if (p.y < -10 || p.x < -10 || p.x > w + 10) {
+          p.x = Math.random() * w;
+          p.y = h + 10;
+          p.vy = -(0.2 + Math.random() * 0.4);
+          p.vx = (Math.random() - 0.5) * 0.3;
+        }
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(192, 57, 43, ' + p.opacity + ')';
+        ctx.fill();
+      }
+
+      requestAnimationFrame(draw);
+    }
+
+    window.addEventListener('resize', resize);
+    init();
+    draw();
+  })();
+
+  // ============================================================
+  // 11. PROOF CANVAS — pulsing concentric rings
+  // ============================================================
+  (function initProofCanvas() {
+    var canvas = document.getElementById('proof-canvas');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var section = canvas.parentElement;
+    var w, h;
+
+    function resize() {
+      var rect = section.getBoundingClientRect();
+      w = canvas.width = rect.width;
+      h = canvas.height = rect.height;
+    }
+
+    var time = 0;
+    function draw() {
+      ctx.clearRect(0, 0, w, h);
+      time += 1;
+
+      var cx = w * 0.8;
+      var cy = h * 0.3;
+      var maxR = 180;
+      var ringCount = 6;
+
+      for (var i = 0; i < ringCount; i++) {
+        var phase = (time * 0.008 + i * 0.4) % (Math.PI * 2);
+        var expansion = Math.sin(phase) * 0.3 + 0.7;
+        var r = (maxR / ringCount) * (i + 1) * expansion;
+        var alpha = 0.04 * (1 - i / ringCount);
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(192, 57, 43, ' + alpha + ')';
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+      }
+
+      for (var j = 0; j < 4; j++) {
+        var angle = (time * 0.003) + (j * Math.PI / 2);
+        var innerR = 20;
+        var outerR = 60 + Math.sin(time * 0.01 + j) * 15;
+        var x1 = cx + Math.cos(angle) * innerR;
+        var y1 = cy + Math.sin(angle) * innerR;
+        var x2 = cx + Math.cos(angle) * outerR;
+        var y2 = cy + Math.sin(angle) * outerR;
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.strokeStyle = 'rgba(192, 57, 43, 0.06)';
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+
+      requestAnimationFrame(draw);
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+    draw();
+  })();
+
+  // ============================================================
+  // 12. MAGNETIC BUTTON EFFECT
+  // ============================================================
+  (function initMagneticButtons() {
+    var buttons = document.querySelectorAll('.btn-primary');
+    buttons.forEach(function(btn) {
+      btn.addEventListener('mousemove', function(e) {
+        var rect = btn.getBoundingClientRect();
+        var x = e.clientX - rect.left - rect.width / 2;
+        var y = e.clientY - rect.top - rect.height / 2;
+        btn.style.transform = 'translate(' + (x * 0.1) + 'px, ' + (y * 0.15 - 1) + 'px)';
+      });
+      btn.addEventListener('mouseleave', function() {
+        btn.style.transform = 'translate(0, 0)';
+      });
+    });
+  })();
+
+})();
+</script>
+
+</body>
+</html>

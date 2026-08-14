@@ -1,0 +1,2690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 142 142'%3E%3Cpath d='M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z' fill='%232a2520'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenProse — Responsibilities as a Service</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  /* ============================================
+     APPROACH D2: Gothic Humanist
+     Gothic manuscript warmth meets humanist clarity
+     Palette: warm vellum, ink, refined gold / amber
+     Typography: Cormorant Garamond display, DM Sans captions
+     Layout: book column with marginalia rule, gothic arch accents
+     Mood: cathedral library · luxury press · Dieter Rams
+     ============================================ */
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    /* Warm vellum palette */
+    --vellum:      #f5eedc;
+    --vellum-dk:   #ece2c4;
+    --vellum-lt:   #faf6ed;
+    --vellum-mid:  #f0e8d0;
+
+    /* Ink */
+    --ink:         #1a130a;
+    --ink-2:       #352818;
+    --ink-3:       #7a6040;
+    --ink-4:       #b09870;
+
+    /* Gold — refined, muted, not garish */
+    --gold:        #8a6e2f;
+    --gold-lt:     #b08d46;
+    --gold-rule:   #c9a85a;
+    --amber:       #a07530;
+
+    /* Dark sections — for contrast */
+    --dark:        #17100a;
+    --dark-mid:    #221808;
+    --dark-3:      #2e2010;
+    --dark-surface:#1e160c;
+    --dark-rule:   #3a2c18;
+    --dark-gold:   #c4a050;
+    --dark-text:   #e8dcc8;
+    --dark-muted:  #8a7860;
+
+    /* Fonts */
+    --serif:  'Cormorant Garamond', 'Palatino Linotype', Georgia, serif;
+    --sans:   'DM Sans', 'Helvetica Neue', Arial, sans-serif;
+  }
+
+  html { font-size: 18px; scroll-behavior: smooth; }
+
+  body {
+    background: var(--vellum);
+    color: var(--ink);
+    font-family: var(--serif);
+    line-height: 1.8;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* ============================================
+     LAYOUT
+     ============================================ */
+
+  .page-col {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+
+  /* ============================================
+     NAVIGATION
+     ============================================ */
+
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--vellum);
+    border-bottom: 1px solid var(--ink);
+    padding: 0;
+  }
+
+  .nav-inner {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 1rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .nav-logo {
+    font-family: var(--sans);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .nav-links {
+    list-style: none;
+    display: flex;
+    gap: 1.25rem;
+    align-items: center;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+  }
+
+  .nav-links a {
+    font-family: var(--sans);
+    font-size: 0.56rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+
+  .nav-links a:hover { color: var(--ink); }
+
+  .nav-cta {
+    color: var(--gold) !important;
+    font-weight: 500;
+  }
+
+  /* ============================================
+     OPENPROSE DISPLAY MARK — clean typographic mark
+     ============================================ */
+
+  .openprose-mark {
+    font-family: var(--sans);
+    font-size: 0.65rem;
+    font-weight: 500;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--gold);
+    text-align: center;
+    margin: 2rem auto;
+    opacity: 0.7;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+  }
+
+  .openprose-mark::before,
+  .openprose-mark::after {
+    content: '';
+    width: 40px;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.4;
+  }
+
+  .openprose-mark-dark {
+    color: var(--dark-gold);
+  }
+
+  /* ============================================
+     SECTION RULES
+     ============================================ */
+
+  .section-label {
+    font-family: var(--sans);
+    font-size: 0.58rem;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--gold);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--vellum-dk);
+  }
+
+  .section-label-dark {
+    color: var(--dark-gold);
+  }
+
+  .section-label-dark::after {
+    background: var(--dark-rule);
+  }
+
+  /* ============================================
+     HERO
+     ============================================ */
+
+  .hero {
+    padding: 5rem 0 4rem;
+    border-bottom: 1px solid var(--vellum-dk);
+    position: relative;
+  }
+
+  /* Slim gold rule above hero — like a book chapter opening bar */
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--gold-rule), transparent);
+    opacity: 0.6;
+  }
+
+  .hero-kicker {
+    font-family: var(--sans);
+    font-size: 0.58rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    display: block;
+    margin-bottom: 2.5rem;
+  }
+
+  .hero h1 {
+    font-family: var(--serif);
+    font-size: clamp(2.6rem, 7vw, 4.4rem);
+    font-weight: 500;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    margin-bottom: 1.75rem;
+    max-width: 560px;
+  }
+
+  .hero h1 em {
+    font-style: italic;
+    color: var(--amber);
+  }
+
+  /* (ornament removed per feedback) */
+
+  .hero-lede {
+    font-family: var(--serif);
+    font-size: 1.05rem;
+    color: var(--ink-2);
+    max-width: 500px;
+    margin-bottom: 2.5rem;
+    line-height: 1.85;
+    font-weight: 400;
+  }
+
+  .hero-lede::first-line {
+    font-variant: small-caps;
+    letter-spacing: 0.04em;
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  /* ============================================
+     BUTTONS
+     ============================================ */
+
+  .btn-primary {
+    display: inline-block;
+    font-family: var(--sans);
+    font-size: 0.62rem;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--vellum-lt);
+    background: var(--ink);
+    padding: 0.7rem 1.6rem;
+    text-decoration: none;
+    transition: background 0.2s;
+    border: 1px solid var(--ink);
+  }
+
+  .btn-primary:hover { background: var(--ink-2); }
+
+  .btn-ghost {
+    display: inline-block;
+    font-family: var(--sans);
+    font-size: 0.62rem;
+    font-weight: 400;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    text-decoration: none;
+    border-bottom: 1px solid var(--vellum-dk);
+    padding-bottom: 2px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  .btn-ghost:hover {
+    color: var(--ink);
+    border-color: var(--gold-rule);
+  }
+
+  /* ============================================
+     STATS — heraldic band, refined
+     ============================================ */
+
+  .stats-band {
+    border-top: 1px solid var(--ink);
+    border-bottom: 1px solid var(--vellum-dk);
+    display: flex;
+  }
+
+  .stat-cell {
+    flex: 1;
+    padding: 1.25rem 1rem 1.25rem 0;
+    border-right: 1px solid var(--vellum-dk);
+  }
+
+  .stat-cell:last-child { border-right: none; }
+  .stat-cell:first-child { padding-left: 0; }
+
+  .stat-num {
+    display: block;
+    font-family: var(--serif);
+    font-size: 2rem;
+    font-weight: 400;
+    color: var(--ink);
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+
+  .stat-label {
+    display: block;
+    font-family: var(--sans);
+    font-size: 0.52rem;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--ink-4);
+    margin-top: 0.35rem;
+  }
+
+  /* ============================================
+     MAIN SECTIONS
+     ============================================ */
+
+  .folio-section {
+    padding: 4rem 0;
+    border-bottom: 1px solid var(--vellum-dk);
+    position: relative;
+  }
+
+  .folio-section h2 {
+    font-family: var(--serif);
+    font-size: clamp(1.75rem, 5vw, 3rem);
+    font-weight: 400;
+    line-height: 1.2;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+    margin-bottom: 1.75rem;
+    max-width: 560px;
+  }
+
+  .folio-section h2 em {
+    font-style: italic;
+    color: var(--amber);
+  }
+
+  .folio-section p {
+    font-family: var(--serif);
+    font-size: 1rem;
+    color: var(--ink-2);
+    margin-bottom: 1.25rem;
+    max-width: 580px;
+    line-height: 1.85;
+  }
+
+  .folio-section p strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  /* Large decorative section number — ghosted */
+  .section-ghost-num {
+    font-family: var(--serif);
+    font-size: 6rem;
+    color: var(--vellum-dk);
+    font-weight: 600;
+    line-height: 1;
+    float: right;
+    margin-left: 1rem;
+    margin-top: -1.5rem;
+    letter-spacing: -0.06em;
+    user-select: none;
+    pointer-events: none;
+  }
+
+  /* ============================================
+     ILLUMINATED DROP CAP
+     ============================================ */
+
+  .drop-cap {
+    float: left;
+    font-family: var(--serif);
+    font-size: 5rem;
+    font-weight: 600;
+    line-height: 0.78;
+    margin-right: 0.06em;
+    margin-bottom: -0.08em;
+    color: var(--ink);
+    position: relative;
+  }
+
+  .drop-cap::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: -2px;
+    right: -2px;
+    height: 2px;
+    background: var(--gold-rule);
+    opacity: 0.7;
+  }
+
+  /* ============================================
+     COMPARISON BLOCK (marginalia style)
+     ============================================ */
+
+  .compare-block {
+    margin: 2rem 0;
+    border-left: 2px solid var(--gold-rule);
+    padding-left: 1.5rem;
+  }
+
+  .compare-item {
+    display: flex;
+    gap: 0.9rem;
+    align-items: baseline;
+    margin-bottom: 0.9rem;
+    font-size: 0.92rem;
+    line-height: 1.6;
+  }
+
+  .compare-item:last-child { margin-bottom: 0; }
+
+  .compare-marker {
+    font-family: var(--sans);
+    font-size: 0.7rem;
+    font-weight: 500;
+    flex-shrink: 0;
+    width: 1rem;
+    padding-top: 0.15rem;
+  }
+
+  .compare-item.negative .compare-marker { color: var(--ink-4); }
+  .compare-item.positive .compare-marker { color: var(--amber); }
+
+  .compare-item.negative .compare-text {
+    color: var(--ink-3);
+    text-decoration: line-through;
+    text-decoration-color: var(--vellum-dk);
+    font-style: italic;
+    font-size: 0.88rem;
+  }
+
+  .compare-item.positive .compare-text {
+    color: var(--ink);
+    font-size: 0.95rem;
+  }
+
+  /* ============================================
+     PULL QUOTE — illuminated block
+     ============================================ */
+
+  .pull-quote {
+    font-family: var(--serif);
+    font-size: 1.35rem;
+    font-style: italic;
+    font-weight: 400;
+    color: var(--ink);
+    line-height: 1.5;
+    letter-spacing: -0.005em;
+    margin: 2.5rem 0;
+    padding: 1.5rem 1.75rem;
+    border: 1px solid var(--vellum-dk);
+    border-left: 3px solid var(--gold-rule);
+    background: var(--vellum-lt);
+    max-width: 540px;
+    position: relative;
+  }
+
+  .pull-quote::before {
+    content: '\201C';
+    position: absolute;
+    top: 0.5rem;
+    left: 1rem;
+    font-size: 3rem;
+    color: var(--vellum-dk);
+    line-height: 1;
+    font-style: normal;
+  }
+
+  /* ============================================
+     FOOTNOTE ASIDE
+     ============================================ */
+
+  .footnote-aside {
+    font-family: var(--serif);
+    font-size: 0.82rem;
+    color: var(--ink-3);
+    font-style: italic;
+    border-top: 1px solid var(--vellum-dk);
+    padding-top: 0.8rem;
+    margin-top: 2rem;
+    max-width: 500px;
+    line-height: 1.7;
+  }
+
+  /* ============================================
+     DARK CONTRAST SECTION
+     ============================================ */
+
+  .dark-section {
+    background: var(--dark);
+    background-image:
+      radial-gradient(ellipse at 20% 30%, rgba(160,117,48,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 70%, rgba(160,117,48,0.05) 0%, transparent 60%);
+    padding: 5rem 0;
+  }
+
+  .dark-section .folio-section {
+    border-bottom-color: var(--dark-rule);
+  }
+
+  .dark-section .section-label {
+    color: var(--dark-gold);
+  }
+
+  .dark-section .section-label::after {
+    background: var(--dark-rule);
+  }
+
+  .dark-section h2 {
+    color: var(--dark-text);
+  }
+
+  .dark-section h2 em {
+    color: var(--dark-gold);
+  }
+
+  .dark-section p {
+    color: var(--dark-muted);
+  }
+
+  .dark-section p strong {
+    color: var(--dark-text);
+  }
+
+  .dark-section .section-ghost-num {
+    color: var(--dark-3);
+  }
+
+  /* ============================================
+     PROOF CARD — case note, warm vellum
+     ============================================ */
+
+  .case-note {
+    border: 1px solid var(--vellum-dk);
+    border-left: 3px solid var(--amber);
+    margin: 2rem 0;
+    background: var(--vellum-lt);
+  }
+
+  .case-note-header {
+    padding: 0.65rem 1.25rem;
+    border-bottom: 1px solid var(--vellum-dk);
+    font-family: var(--sans);
+    font-size: 0.56rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .case-status {
+    color: var(--amber);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .case-status::before {
+    content: '';
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--amber);
+    flex-shrink: 0;
+  }
+
+  .case-note-body {
+    padding: 1.25rem 1.5rem;
+  }
+
+  .case-note-body h3 {
+    font-family: var(--serif);
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--ink);
+    margin-bottom: 0.6rem;
+    line-height: 1.35;
+  }
+
+  .case-note-body p {
+    font-size: 0.9rem;
+    max-width: 100%;
+    color: var(--ink-2);
+    margin-bottom: 0;
+  }
+
+  .tag-list {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.9rem;
+  }
+
+  .tag {
+    font-family: var(--sans);
+    font-size: 0.52rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    padding: 0.2rem 0.6rem;
+    border: 1px solid var(--vellum-dk);
+    color: var(--ink-3);
+    background: var(--vellum);
+  }
+
+  /* ============================================
+     PRICING TABLE — typeset
+     ============================================ */
+
+  .price-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 2rem 0;
+    font-family: var(--serif);
+    font-size: 0.95rem;
+  }
+
+  .price-table thead th {
+    font-family: var(--sans);
+    font-size: 0.52rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    font-weight: 400;
+    padding: 0.5rem 1rem 0.5rem 0;
+    border-bottom: 1px solid var(--ink);
+    text-align: left;
+  }
+
+  .price-table tbody td {
+    padding: 0.9rem 1rem 0.9rem 0;
+    border-bottom: 1px solid var(--vellum-dk);
+    vertical-align: top;
+    color: var(--ink-2);
+    line-height: 1.5;
+  }
+
+  .price-table tbody tr:last-child td {
+    border-bottom: 1px solid var(--ink);
+  }
+
+  .price-mark {
+    font-size: 1.5rem;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+    font-weight: 400;
+    line-height: 1;
+    display: block;
+  }
+
+  .featured-row td { background: rgba(160,117,48,0.05); }
+  .featured-row .price-mark { color: var(--amber); }
+  .featured-row .label-cell { color: var(--ink); font-weight: 600; }
+
+  .footnote-ref {
+    font-size: 0.6rem;
+    color: var(--gold);
+    vertical-align: super;
+    font-family: var(--sans);
+    margin-left: 1px;
+  }
+
+  /* ============================================
+     OPEN SOURCE BLOCK — as colophon
+     ============================================ */
+
+  .colophon-block {
+    border: 1px solid var(--vellum-dk);
+    padding: 1.5rem 1.75rem;
+    margin: 2rem 0;
+    background: var(--vellum-mid);
+    position: relative;
+  }
+
+  .colophon-block::before {
+    content: 'Colophon';
+    position: absolute;
+    top: -0.6rem;
+    left: 1.25rem;
+    font-family: var(--sans);
+    font-size: 0.5rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    background: var(--vellum-mid);
+    padding: 0 0.4rem;
+  }
+
+  .colophon-block p {
+    font-size: 0.92rem;
+    max-width: 100%;
+    color: var(--ink-2);
+    margin-bottom: 0;
+  }
+
+  /* ============================================
+     ILLUMINATED TRACE — manuscript marginalia
+     for visualization / trace sections
+     ============================================ */
+
+  .marginalia-trace {
+    border-left: 2px solid var(--gold-rule);
+    padding: 1rem 0 1rem 1.25rem;
+    margin: 2rem 0;
+    opacity: 0.85;
+  }
+
+  .trace-label {
+    font-family: var(--sans);
+    font-size: 0.52rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+
+  .trace-body {
+    font-family: var(--serif);
+    font-size: 0.82rem;
+    color: var(--ink-3);
+    font-style: italic;
+    line-height: 1.65;
+  }
+
+  /* ============================================
+     CTA SECTION — dark, anchoring
+     ============================================ */
+
+  .cta-band {
+    background: var(--dark-surface);
+    border-top: 1px solid var(--dark-rule);
+    padding: 5rem 0 4.5rem;
+  }
+
+  .cta-band h2 {
+    font-family: var(--serif);
+    font-size: clamp(1.9rem, 5.5vw, 3.2rem);
+    font-weight: 400;
+    line-height: 1.2;
+    color: var(--dark-text);
+    letter-spacing: -0.01em;
+    margin-bottom: 1.25rem;
+    max-width: 500px;
+  }
+
+  .cta-band h2 em {
+    font-style: italic;
+    color: var(--dark-gold);
+  }
+
+  .cta-band p {
+    font-family: var(--serif);
+    font-size: 1rem;
+    color: var(--dark-muted);
+    margin-bottom: 2rem;
+    max-width: 420px;
+    line-height: 1.8;
+  }
+
+  .cta-form {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .cta-input {
+    font-family: var(--serif);
+    font-size: 0.92rem;
+    padding: 0.7rem 1rem;
+    border: 1px solid var(--dark-rule);
+    background: var(--dark-mid);
+    color: var(--dark-text);
+    outline: none;
+    min-width: 240px;
+    transition: border-color 0.15s;
+  }
+
+  .cta-input:focus { border-color: var(--dark-gold); }
+  .cta-input::placeholder { color: var(--dark-muted); font-style: italic; }
+
+  .btn-cta {
+    display: inline-block;
+    font-family: var(--sans);
+    font-size: 0.62rem;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--dark);
+    background: var(--dark-gold);
+    padding: 0.7rem 1.6rem;
+    text-decoration: none;
+    border: 1px solid var(--dark-gold);
+    transition: background 0.2s;
+  }
+
+  .btn-cta:hover { background: var(--gold-lt); }
+
+  /* ============================================
+     FOOTER
+     ============================================ */
+
+  footer {
+    background: var(--dark);
+    border-top: 1px solid var(--dark-rule);
+    padding: 1.25rem 0;
+  }
+
+  .footer-inner {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  footer p {
+    font-family: var(--sans);
+    font-size: 0.56rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--dark-muted);
+    margin: 0;
+  }
+
+  footer a {
+    color: var(--dark-gold);
+    text-decoration: none;
+  }
+
+  footer a:hover { color: var(--gold-lt); }
+
+  /* ============================================
+     ORNATE RULE DIVIDER
+     ============================================ */
+
+  .gold-rule {
+    text-align: center;
+    margin: 2rem 0;
+    position: relative;
+    height: 1px;
+  }
+
+  .gold-rule::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--vellum-dk), transparent);
+  }
+
+  /* (gold-rule-ornament removed per feedback) */
+
+  /* ============================================
+     INTERACTIVE CANVAS LAYERS
+     ============================================ */
+
+  .canvas-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .hero { position: relative; overflow: hidden; }
+  .hero > *:not(.canvas-bg) { position: relative; z-index: 1; }
+
+  .dark-section { position: relative; overflow: hidden; }
+  .dark-section > *:not(.canvas-bg) { position: relative; z-index: 1; }
+
+  .cta-band { position: relative; overflow: hidden; }
+  .cta-band > *:not(.canvas-bg) { position: relative; z-index: 1; }
+
+  /* ============================================
+     SCROLL REVEAL ANIMATIONS
+     ============================================ */
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(32px);
+    transition: opacity 0.8s cubic-bezier(0.23, 1, 0.32, 1),
+                transform 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .reveal-delay-1 { transition-delay: 0.1s; }
+  .reveal-delay-2 { transition-delay: 0.2s; }
+  .reveal-delay-3 { transition-delay: 0.3s; }
+  .reveal-delay-4 { transition-delay: 0.4s; }
+
+  .reveal-scale {
+    opacity: 0;
+    transform: scale(0.92);
+    transition: opacity 0.7s cubic-bezier(0.23, 1, 0.32, 1),
+                transform 0.7s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .reveal-scale.visible {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .reveal-left {
+    opacity: 0;
+    transform: translateX(-40px);
+    transition: opacity 0.8s cubic-bezier(0.23, 1, 0.32, 1),
+                transform 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .reveal-left.visible {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  /* ============================================
+     ENHANCED HOVER STATES
+     ============================================ */
+
+  .btn-primary {
+    position: relative;
+    overflow: hidden;
+    transition: background 0.3s, transform 0.2s, box-shadow 0.3s;
+  }
+
+  .btn-primary::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(196, 160, 80, 0.15);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.5s, height 0.5s;
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(138, 110, 47, 0.2);
+  }
+
+  .btn-primary:hover::after {
+    width: 300px;
+    height: 300px;
+  }
+
+  .btn-cta {
+    position: relative;
+    overflow: hidden;
+    transition: background 0.3s, transform 0.2s, box-shadow 0.3s;
+    cursor: pointer;
+  }
+
+  .btn-cta:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 24px rgba(196, 160, 80, 0.3);
+  }
+
+  .stat-cell {
+    transition: background 0.3s, transform 0.3s;
+    cursor: default;
+  }
+
+  .stat-cell:hover {
+    background: rgba(196, 160, 80, 0.05);
+  }
+
+  .stat-cell:hover .stat-num {
+    color: var(--amber);
+    transition: color 0.3s;
+  }
+
+  .stat-num {
+    transition: color 0.3s, transform 0.3s;
+  }
+
+  .stat-cell:hover .stat-num {
+    transform: scale(1.05);
+    display: inline-block;
+  }
+
+  .compare-item {
+    transition: transform 0.3s, padding-left 0.3s;
+  }
+
+  .compare-item:hover {
+    transform: translateX(6px);
+    padding-left: 0.3rem;
+  }
+
+  .pull-quote {
+    transition: border-left-color 0.3s, box-shadow 0.4s, transform 0.3s;
+  }
+
+  .pull-quote:hover {
+    border-left-color: var(--amber);
+    box-shadow: 0 4px 24px rgba(138, 110, 47, 0.08);
+    transform: translateX(4px);
+  }
+
+  .case-note,
+  [style*="border-left: 3px solid var(--dark-gold)"] {
+    transition: box-shadow 0.3s, transform 0.3s;
+  }
+
+  .colophon-block {
+    transition: box-shadow 0.3s, transform 0.3s, border-color 0.3s;
+  }
+
+  .colophon-block:hover {
+    box-shadow: 0 4px 24px rgba(138, 110, 47, 0.08);
+    transform: translateY(-2px);
+    border-color: var(--gold-rule);
+  }
+
+  .tag {
+    transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.2s;
+    cursor: default;
+  }
+
+  .tag:hover {
+    background: var(--gold-rule);
+    color: var(--ink);
+    border-color: var(--gold-rule);
+    transform: translateY(-1px);
+  }
+
+  .marginalia-trace {
+    transition: border-left-color 0.3s, opacity 0.3s;
+  }
+
+  .marginalia-trace:hover {
+    border-left-color: var(--amber);
+    opacity: 1;
+  }
+
+  .price-table tbody tr {
+    transition: background 0.3s;
+  }
+
+  .price-table tbody tr:hover {
+    background: rgba(196, 160, 80, 0.06);
+  }
+
+  .price-table tbody tr:hover .price-mark {
+    color: var(--amber);
+    transition: color 0.3s;
+  }
+
+  /* Gold glow for nav on scroll */
+  nav {
+    transition: background 0.4s, box-shadow 0.4s;
+  }
+
+  nav.scrolled {
+    background: rgba(245, 238, 220, 0.95);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 1px 12px rgba(26, 19, 10, 0.06);
+  }
+
+  /* Hero kicker typing effect holder */
+  .hero-kicker {
+    overflow: hidden;
+  }
+
+  /* Nav link hover underline */
+  .nav-links a {
+    position: relative;
+  }
+
+  .nav-links a::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 1px;
+    background: var(--gold-rule);
+    transition: width 0.3s ease;
+  }
+
+  .nav-links a:hover::after {
+    width: 100%;
+  }
+
+  /* Section ghost num parallax-ready */
+  .section-ghost-num {
+    transition: transform 0.1s linear;
+  }
+
+  /* Delegation tree SVG visualization */
+  .delegation-tree-container {
+    width: 100%;
+    height: 220px;
+    margin: 2rem 0 1rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .delegation-tree-container svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ============================================
+     AMBIENT PARTICLE LAYER
+     ============================================ */
+
+  #ambient-particles {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.3;
+  }
+
+  body > *:not(#ambient-particles) {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ============================================
+     FLOW VISUALIZATION (concept section)
+     ============================================ */
+
+  .flow-viz {
+    position: relative;
+    width: 100%;
+    height: 200px;
+    margin: 2rem 0;
+    cursor: crosshair;
+  }
+
+  .flow-viz canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .flow-viz-label {
+    position: absolute;
+    bottom: -0.25rem;
+    right: 0;
+    font-family: var(--sans);
+    font-size: 0.48rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+  }
+
+  /* ============================================
+     RESPONSIVE
+     ============================================ */
+
+  @media (max-width: 600px) {
+    html { font-size: 16px; }
+    .page-col { padding: 0 1.25rem; }
+    .nav-inner { padding: 0.75rem 1.25rem; }
+    .nav-links { display: none; }
+    .hero { padding: 3.5rem 0 3rem; }
+    .hero h1 { font-size: 2.4rem; }
+    .folio-section { padding: 2.5rem 0; }
+    .folio-section h2 { font-size: 1.9rem; }
+    .stats-band { flex-wrap: wrap; }
+    .stat-cell { min-width: 50%; border-bottom: 1px solid var(--vellum-dk); }
+    .section-ghost-num { display: none; }
+    .cta-band { padding: 3.5rem 0; }
+    .cta-band h2 { font-size: 2rem; }
+    .cta-form { flex-direction: column; align-items: stretch; }
+    .cta-input { min-width: 0; }
+    .footer-inner { flex-direction: column; gap: 0.5rem; }
+    .price-table thead th:nth-child(2),
+    .price-table tbody td:nth-child(2) { display: none; }
+    .pull-quote { font-size: 1.15rem; }
+    .delegation-tree-container { height: 160px; }
+    .flow-viz { height: 140px; }
+  }
+
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+
+}
+</style>
+</head>
+<body>
+
+<!-- AMBIENT PARTICLE LAYER -->
+<canvas id="ambient-particles"></canvas>
+
+<!-- ============================================================
+     NAVIGATION
+     ============================================================ -->
+<nav>
+  <div class="nav-inner">
+    <div class="nav-logo">OpenProse</div>
+    <ul class="nav-links">
+      <li><a href="#concept">Concept</a></li>
+      <li><a href="#distinction">vs Claude</a></li>
+      <li><a href="#proof">Proof</a></li>
+      <li><a href="#pricing">Pricing</a></li>
+      <li><a href="#cta" class="nav-cta">Start --></a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- ============================================================
+     HERO
+     ============================================================ -->
+<div class="page-col">
+
+  <section class="hero" id="hero">
+    <canvas class="canvas-bg" id="heroCanvas"></canvas>
+    <span class="hero-kicker reveal reveal-delay-1">OpenProse · Responsibilities as a Service · 2026</span>
+
+    <div class="openprose-mark reveal reveal-delay-2" aria-hidden="true">OpenProse</div>
+
+    <h1 class="reveal reveal-delay-2">
+      Declare. Delegate.<br>
+      <em>Done.</em>
+    </h1>
+
+    <p class="hero-lede reveal reveal-delay-3">
+      Most agent platforms keep you in the loop. OpenProse keeps you out of it.
+      Describe the outcome, set the contract, let it run. Reclaim your attention.
+    </p>
+
+    <div class="hero-actions reveal reveal-delay-4">
+      <a href="#cta" class="btn-primary">Offload a Responsibility</a>
+      <a href="#concept" class="btn-ghost">See How Responsibilities Work</a>
+    </div>
+  </section>
+
+  <!-- STATS BAND -->
+  <div class="stats-band reveal">
+    <div class="stat-cell">
+      <span class="stat-num" data-count="6000">0</span>
+      <span class="stat-label">Installs</span>
+    </div>
+    <div class="stat-cell">
+      <span class="stat-num" data-count="1000">0</span>
+      <span class="stat-label">GitHub Stars</span>
+    </div>
+    <div class="stat-cell">
+      <span class="stat-num">MIT</span>
+      <span class="stat-label">License</span>
+    </div>
+    <div class="stat-cell">
+      <span class="stat-num">YC</span>
+      <span class="stat-label">Backed</span>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       I. THE CONCEPT
+       ============================================================ -->
+  <section class="folio-section" id="concept">
+    <div class="section-label reveal">I. &nbsp; The Concept</div>
+    <span class="section-ghost-num" aria-hidden="true">1</span>
+
+    <h2 class="reveal reveal-delay-1">
+      Responsibilities<br>
+      <em>as a service.</em>
+    </h2>
+
+    <p class="reveal reveal-delay-2">
+      <span class="drop-cap">Y</span>ou have responsibilities you want to offload. Today your options
+      are: hire someone, or buy a tool and learn to use it.
+      Both cost you attention. The former in management, the latter in mastery.
+    </p>
+
+    <p class="reveal reveal-delay-2">
+      OpenProse is a third option. You describe the responsibilities:
+      what needs to happen, what good looks like, what the guardrails are.
+      It handles them. <strong>No dashboard to check. No tool to learn.</strong>
+      Results show up in Slack or email on a cadence, like a good employee
+      who checks in when they have something to report.
+    </p>
+
+    <p class="reveal reveal-delay-3">
+      We call this a <strong>self-maintaining book of responsibilities.</strong>
+      You write what needs to happen. The book keeps itself up.
+    </p>
+
+    <!-- Interactive flow visualization -->
+    <div class="flow-viz reveal reveal-delay-3" id="flow-viz">
+      <canvas id="flow-canvas"></canvas>
+      <span class="flow-viz-label">Responsibility delegation -- move cursor</span>
+    </div>
+
+    <!-- Interactive delegation tree visualization -->
+    <div class="delegation-tree-container reveal-scale" id="delegationTree" aria-hidden="true"></div>
+
+    <div class="compare-block reveal-left reveal-delay-1">
+      <div class="compare-item negative">
+        <span class="compare-marker">×</span>
+        <span class="compare-text">Tell it what to do → check output → iterate → repeat. You're the manager. Attention never comes back.</span>
+      </div>
+      <div class="compare-item negative">
+        <span class="compare-marker">×</span>
+        <span class="compare-text">Every agent framework is imperative. Prescribe tasks. Manage execution. Maintain workflows.</span>
+      </div>
+      <div class="compare-item positive">
+        <span class="compare-marker">→</span>
+        <span class="compare-text">Describe the outcome. Set the contract. Let it run. Brief shows up in Slack. You never think about it again.</span>
+      </div>
+    </div>
+
+    <div class="marginalia-trace reveal reveal-delay-2">
+      <span class="trace-label">Note Bene</span>
+      <span class="trace-body">
+        "No dashboard. No tool to learn. Responsibilities complete on schedule."
+      </span>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       II. vs CLAUDE
+       ============================================================ -->
+  <section class="folio-section" id="distinction">
+    <div class="section-label reveal">II. &nbsp; vs Using Claude Directly</div>
+    <span class="section-ghost-num" aria-hidden="true">2</span>
+
+    <h2 class="reveal reveal-delay-1">
+      Claude does what you tell it.<br>
+      <em>OpenProse does what you need.</em>
+    </h2>
+
+    <p class="reveal reveal-delay-2">
+      You can use Claude to do this yourself. But then you're the manager:
+      prescribing tasks, maintaining context, iterating on prompts.
+      Your mental overhead never goes away.
+    </p>
+
+    <div class="pull-quote reveal-scale reveal-delay-2">
+      We're the manager. You can use Claude directly,
+      but then you're the one managing. We're not selling a tool.
+      We're offloading a responsibility.
+    </div>
+
+    <p class="reveal reveal-delay-3">
+      Every agent framework today is imperative: prescribe tasks, manage execution.
+      OpenProse is declarative. Describe the outcome, set the contract, let it run.
+      The difference between constant oversight
+      and setting the goal, then getting out of the way.
+    </p>
+
+    <div class="footnote-aside reveal reveal-delay-3">
+      Declarative approaches (SQL, Terraform, React) have consistently won in
+      domains where "what" matters more than "how." Agent orchestration is the
+      next domain. OpenProse is the first declarative agent programming language.
+    </div>
+  </section>
+
+</div><!-- /page-col -->
+
+<!-- ============================================================
+     III. PROOF — Dark contrast section
+     ============================================================ -->
+<div class="dark-section">
+  <canvas class="canvas-bg" id="darkCanvas"></canvas>
+  <div class="page-col">
+    <section class="folio-section" id="proof" style="border-bottom-color: var(--dark-rule);">
+      <div class="section-label section-label-dark reveal">III. &nbsp; Proof of Work</div>
+      <span class="section-ghost-num" aria-hidden="true" style="color: var(--dark-3);">3</span>
+
+      <h2 style="color: var(--dark-text);" class="reveal reveal-delay-1">
+        Responsibilities complete<br>
+        <em>on schedule.</em>
+      </h2>
+
+      <p style="color: var(--dark-muted);" class="reveal reveal-delay-2">
+        We are running this for an energy monitoring company right now.
+        Read-only to start. Then private data access. Then action.
+        Each step earns the next.
+      </p>
+
+      <!-- Case note in dark section — slightly lighter surface -->
+      <div class="reveal-scale reveal-delay-2" style="border: 1px solid var(--dark-rule); border-left: 3px solid var(--dark-gold); margin: 2rem 0; background: var(--dark-mid); transition: box-shadow 0.3s, transform 0.3s;" onmouseenter="this.style.boxShadow='0 6px 32px rgba(196,160,80,0.12)';this.style.transform='translateY(-2px)'" onmouseleave="this.style.boxShadow='none';this.style.transform='none'">
+        <div style="padding: 0.65rem 1.25rem; border-bottom: 1px solid var(--dark-rule); font-family: var(--sans); font-size: 0.56rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--dark-muted); display: flex; justify-content: space-between; align-items: center;">
+          <span>Energy Monitoring Company · Active Engagement</span>
+          <span style="color: var(--dark-gold); font-weight: 500; display: flex; align-items: center; gap: 0.3rem;">
+            <span style="display:inline-block; width:5px; height:5px; border-radius:50%; background:var(--dark-gold);"></span>
+            Live
+          </span>
+        </div>
+        <div style="padding: 1.25rem 1.5rem;">
+          <h3 style="font-family: var(--serif); font-size: 1.1rem; font-weight: 500; color: var(--dark-text); margin-bottom: 0.6rem; line-height: 1.35;">
+            Anomaly Detection &amp; Equipment Health Monitoring
+          </h3>
+          <p style="font-family: var(--serif); font-size: 0.9rem; color: var(--dark-muted); max-width: 100%; margin-bottom: 0; line-height: 1.8;">
+            Detects anomalies across sensor networks, generates equipment health
+            reports, and delivers customer ROI dashboards. Work that used to
+            consume their team's hours each week now arrives completed.
+            In Slack, on cadence, without prompting.
+          </p>
+          <div class="tag-list">
+            <span style="font-family: var(--sans); font-size: 0.52rem; text-transform: uppercase; letter-spacing: 0.14em; padding: 0.2rem 0.6rem; border: 1px solid var(--dark-rule); color: var(--dark-muted); background: var(--dark-surface);">Anomaly Detection</span>
+            <span style="font-family: var(--sans); font-size: 0.52rem; text-transform: uppercase; letter-spacing: 0.14em; padding: 0.2rem 0.6rem; border: 1px solid var(--dark-rule); color: var(--dark-muted); background: var(--dark-surface);">Equipment Health</span>
+            <span style="font-family: var(--sans); font-size: 0.52rem; text-transform: uppercase; letter-spacing: 0.14em; padding: 0.2rem 0.6rem; border: 1px solid var(--dark-rule); color: var(--dark-muted); background: var(--dark-surface);">ROI Dashboards</span>
+            <span style="font-family: var(--sans); font-size: 0.52rem; text-transform: uppercase; letter-spacing: 0.14em; padding: 0.2rem 0.6rem; border: 1px solid var(--dark-rule); color: var(--dark-muted); background: var(--dark-surface);">Weekly Cadence</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="openprose-mark openprose-mark-dark" aria-hidden="true" style="margin: 2.5rem auto 0;">OpenProse</div>
+
+      <p style="font-size: 0.8rem; color: var(--dark-muted); font-style: italic; font-family: var(--serif); margin-top: 1.5rem; max-width: 500px;">
+        No integration required to start. We build a demonstration on public data
+        for your domain. You decide if it is worth going further.
+      </p>
+    </section>
+  </div>
+</div>
+
+<!-- ============================================================
+     Back to light section: IV. PRICING + V. OPEN SOURCE
+     ============================================================ -->
+<div class="page-col">
+
+  <!-- IV. PRICING -->
+  <section class="folio-section" id="pricing">
+    <div class="section-label reveal">IV. &nbsp; Pricing</div>
+    <span class="section-ghost-num" aria-hidden="true">4</span>
+
+    <h2 class="reveal reveal-delay-1">
+      Competes with the<br>
+      decision <em>to hire.</em>
+    </h2>
+
+    <p class="reveal reveal-delay-2">
+      We price against the hire you are avoiding.
+      A junior analyst costs $6–8K per month fully loaded.
+      A senior analyst costs $12–15K. You manage both.
+    </p>
+
+    <table class="price-table reveal-scale reveal-delay-2">
+      <thead>
+        <tr>
+          <th>Option</th>
+          <th>Monthly Cost</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Junior Analyst</td>
+          <td><span class="price-mark">$6–8K</span></td>
+          <td style="font-size: 0.82rem; color: var(--ink-3);">Fully loaded. Daily management required.</td>
+        </tr>
+        <tr>
+          <td>Senior Analyst</td>
+          <td><span class="price-mark">$12–15K</span></td>
+          <td style="font-size: 0.82rem; color: var(--ink-3);">More autonomous. Still your headcount.</td>
+        </tr>
+        <tr class="featured-row">
+          <td class="label-cell">OpenProse<span class="footnote-ref">*</span></td>
+          <td><span class="price-mark">~$2K</span></td>
+          <td style="font-size: 0.82rem; color: var(--ink-3);">Pilot. 2–3 responsibilities. No dashboard. No overhead.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p style="font-size: 0.72rem; color: var(--ink-4); font-style: italic; font-family: var(--serif);">
+      * Pricing is not on the page. Speak with us first. We will show you what offloaded looks like before you commit.
+    </p>
+  </section>
+
+  <!-- V. OPEN SOURCE -->
+  <section class="folio-section">
+    <div class="section-label reveal">V. &nbsp; Open Source</div>
+    <span class="section-ghost-num" aria-hidden="true">5</span>
+
+    <h2 class="reveal reveal-delay-1">
+      Run it yourself,<br>
+      <em>or let us run it.</em>
+    </h2>
+
+    <div class="colophon-block reveal-scale reveal-delay-2">
+      <p>
+        The complete stack is open source under the MIT license.
+        You can run it in your own cloud, like Terraform. Self-hosted,
+        with full control and no lock-in. 6,000 installs. 1,000 GitHub stars.
+        Most people prefer we run it for them.
+      </p>
+    </div>
+
+    <div class="marginalia-trace reveal reveal-delay-3">
+      <span class="trace-label">Technical Note</span>
+      <span class="trace-body">
+        OpenProse turns flat ReAct harnesses into RLM-like harnesses —
+        adding declarative practices to vanilla Claude Code. Declarative programming
+        has won every domain where "what" matters more than "how."
+        Agent orchestration is next.
+      </span>
+    </div>
+  </section>
+
+</div><!-- /page-col -->
+
+<!-- ============================================================
+     CTA — Dark anchoring close
+     ============================================================ -->
+<div class="cta-band" id="cta">
+  <canvas class="canvas-bg" id="ctaCanvas"></canvas>
+  <div class="page-col">
+    <div class="openprose-mark openprose-mark-dark reveal" aria-hidden="true" style="margin: 0 0 2.5rem 0;">OpenProse</div>
+
+    <h2 class="reveal reveal-delay-1">What do you wish you could<br><em>stop thinking about?</em></h2>
+    <p class="reveal reveal-delay-2">Tell us the responsibility. We'll show you what offloaded looks like.</p>
+    <div class="cta-form reveal reveal-delay-3">
+      <input class="cta-input" type="email" placeholder="your@email.com" />
+      <a href="#" class="btn-cta">Define Your First Responsibility</a>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     FOOTER
+     ============================================================ -->
+<footer>
+  <div class="footer-inner">
+    <p>© 2026 OpenProse · MIT License · <a href="#">GitHub</a> · YC-backed</p>
+    <p>No dashboard. No tool to learn. Responsibilities complete on schedule.</p>
+  </div>
+</footer>
+
+<script>
+(function() {
+  'use strict';
+
+  // ============================================================
+  // UTILITIES
+  // ============================================================
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const dist = (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1);
+  const rand = (min, max) => Math.random() * (max - min) + min;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+  // Global mouse position (normalized 0-1 relative to viewport)
+  let mouse = { x: 0.5, y: 0.5, px: 0.5, py: 0.5 };
+  document.addEventListener('mousemove', (e) => {
+    mouse.px = mouse.x;
+    mouse.py = mouse.y;
+    mouse.x = e.clientX / window.innerWidth;
+    mouse.y = e.clientY / window.innerHeight;
+  });
+
+  // ============================================================
+  // HERO CANVAS — Delegation Network / Flowing Data
+  // Organic nodes representing agents, connected by flowing lines
+  // Responds to mouse movement with attraction/repulsion
+  // ============================================================
+  function initHeroCanvas() {
+    const canvas = document.getElementById('heroCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let w, h, nodes = [], pulses = [];
+
+    function resize() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      w = rect.width;
+      h = rect.height;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = w + 'px';
+      canvas.style.height = h + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    // Node: represents an agent in the delegation tree
+    class Node {
+      constructor() {
+        this.x = rand(0, w);
+        this.y = rand(0, h);
+        this.vx = rand(-0.15, 0.15);
+        this.vy = rand(-0.15, 0.15);
+        this.radius = rand(1.5, 3.5);
+        this.baseRadius = this.radius;
+        this.opacity = rand(0.15, 0.5);
+        this.phase = rand(0, Math.PI * 2);
+        this.speed = rand(0.002, 0.008);
+      }
+
+      update(t) {
+        // Gentle drift
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // Pulse radius
+        this.radius = this.baseRadius + Math.sin(t * this.speed + this.phase) * 0.8;
+
+        // Mouse influence — gentle attraction toward cursor
+        const mx = mouse.x * w;
+        const my = (mouse.y * window.innerHeight - canvas.getBoundingClientRect().top);
+        const d = dist(this.x, this.y, mx, my);
+        if (d < 250 && d > 10) {
+          const force = (250 - d) / 250 * 0.08;
+          this.vx += (mx - this.x) / d * force;
+          this.vy += (my - this.y) / d * force;
+        }
+
+        // Damping
+        this.vx *= 0.985;
+        this.vy *= 0.985;
+
+        // Wrap
+        if (this.x < -20) this.x = w + 20;
+        if (this.x > w + 20) this.x = -20;
+        if (this.y < -20) this.y = h + 20;
+        if (this.y > h + 20) this.y = -20;
+      }
+    }
+
+    // Data pulse: flows along connections
+    class Pulse {
+      constructor(from, to) {
+        this.from = from;
+        this.to = to;
+        this.t = 0;
+        this.speed = rand(0.008, 0.02);
+        this.alive = true;
+      }
+
+      update() {
+        this.t += this.speed;
+        if (this.t > 1) this.alive = false;
+      }
+
+      draw() {
+        const x = lerp(this.from.x, this.to.x, this.t);
+        const y = lerp(this.from.y, this.to.y, this.t);
+        const alpha = Math.sin(this.t * Math.PI) * 0.7;
+        ctx.beginPath();
+        ctx.arc(x, y, 2, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(196, 160, 80, ${alpha})`;
+        ctx.fill();
+      }
+    }
+
+    function init() {
+      resize();
+      nodes = [];
+      const count = Math.min(Math.floor(w * h / 8000), 60);
+      for (let i = 0; i < count; i++) {
+        nodes.push(new Node());
+      }
+    }
+
+    let frame = 0;
+    function draw() {
+      frame++;
+      ctx.clearRect(0, 0, w, h);
+
+      // Update nodes
+      nodes.forEach(n => n.update(frame));
+
+      // Draw connections
+      const maxDist = 140;
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const d = dist(nodes[i].x, nodes[i].y, nodes[j].x, nodes[j].y);
+          if (d < maxDist) {
+            const alpha = (1 - d / maxDist) * 0.12;
+            ctx.beginPath();
+            ctx.moveTo(nodes[i].x, nodes[i].y);
+            ctx.lineTo(nodes[j].x, nodes[j].y);
+            ctx.strokeStyle = `rgba(138, 110, 47, ${alpha})`;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+
+            // Occasionally spawn a data pulse
+            if (frame % 120 === 0 && Math.random() < 0.03 && pulses.length < 15) {
+              pulses.push(new Pulse(nodes[i], nodes[j]));
+            }
+          }
+        }
+      }
+
+      // Draw nodes
+      nodes.forEach(n => {
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(138, 110, 47, ${n.opacity})`;
+        ctx.fill();
+      });
+
+      // Draw & update pulses
+      pulses = pulses.filter(p => p.alive);
+      pulses.forEach(p => {
+        p.update();
+        p.draw();
+      });
+
+      requestAnimationFrame(draw);
+    }
+
+    init();
+    draw();
+    window.addEventListener('resize', () => { init(); });
+  }
+
+  // ============================================================
+  // DARK SECTION CANVAS — Constellation / Circuit Network
+  // Glowing nodes with animated data flow lines on dark background
+  // ============================================================
+  function initDarkCanvas() {
+    const canvas = document.getElementById('darkCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let w, h, stars = [], connections = [];
+
+    function resize() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      w = rect.width;
+      h = rect.height;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = w + 'px';
+      canvas.style.height = h + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    class Star {
+      constructor() {
+        this.x = rand(0, w);
+        this.y = rand(0, h);
+        this.radius = rand(0.8, 2.5);
+        this.baseOpacity = rand(0.2, 0.6);
+        this.opacity = this.baseOpacity;
+        this.phase = rand(0, Math.PI * 2);
+        this.twinkleSpeed = rand(0.01, 0.04);
+        this.isHub = Math.random() < 0.15;
+        if (this.isHub) {
+          this.radius = rand(2.5, 4);
+          this.baseOpacity = rand(0.4, 0.8);
+        }
+      }
+
+      update(t) {
+        this.opacity = this.baseOpacity + Math.sin(t * this.twinkleSpeed + this.phase) * 0.2;
+
+        // Mouse proximity glow
+        const mx = mouse.x * w;
+        const sectionRect = canvas.parentElement.getBoundingClientRect();
+        const my = (mouse.y * window.innerHeight - sectionRect.top);
+        const d = dist(this.x, this.y, mx, my);
+        if (d < 200) {
+          this.opacity = Math.min(1, this.opacity + (200 - d) / 200 * 0.4);
+        }
+      }
+    }
+
+    // Flowing connection between two stars
+    class Connection {
+      constructor(a, b) {
+        this.a = a;
+        this.b = b;
+        this.flowOffset = rand(0, 1);
+        this.flowSpeed = rand(0.003, 0.01);
+        this.opacity = rand(0.05, 0.15);
+      }
+
+      draw(t) {
+        const alpha = this.opacity;
+        // Base line
+        ctx.beginPath();
+        ctx.moveTo(this.a.x, this.a.y);
+        ctx.lineTo(this.b.x, this.b.y);
+        ctx.strokeStyle = `rgba(196, 160, 80, ${alpha})`;
+        ctx.lineWidth = 0.4;
+        ctx.stroke();
+
+        // Animated flow dot
+        const progress = (t * this.flowSpeed + this.flowOffset) % 1;
+        const fx = lerp(this.a.x, this.b.x, progress);
+        const fy = lerp(this.a.y, this.b.y, progress);
+        const flowAlpha = Math.sin(progress * Math.PI) * 0.6;
+        ctx.beginPath();
+        ctx.arc(fx, fy, 1.5, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(196, 160, 80, ${flowAlpha})`;
+        ctx.fill();
+      }
+    }
+
+    function init() {
+      resize();
+      stars = [];
+      connections = [];
+      const count = Math.min(Math.floor(w * h / 10000), 50);
+      for (let i = 0; i < count; i++) {
+        stars.push(new Star());
+      }
+      // Create connections between nearby hub nodes and their neighbors
+      for (let i = 0; i < stars.length; i++) {
+        for (let j = i + 1; j < stars.length; j++) {
+          const d = dist(stars[i].x, stars[i].y, stars[j].x, stars[j].y);
+          if (d < 160 && (stars[i].isHub || stars[j].isHub) && Math.random() < 0.6) {
+            connections.push(new Connection(stars[i], stars[j]));
+          } else if (d < 100 && Math.random() < 0.15) {
+            connections.push(new Connection(stars[i], stars[j]));
+          }
+        }
+      }
+    }
+
+    let frame = 0;
+    function draw() {
+      frame++;
+      ctx.clearRect(0, 0, w, h);
+
+      stars.forEach(s => s.update(frame));
+
+      // Draw connections
+      connections.forEach(c => c.draw(frame));
+
+      // Draw stars
+      stars.forEach(s => {
+        // Glow for hub nodes
+        if (s.isHub) {
+          const gradient = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.radius * 6);
+          gradient.addColorStop(0, `rgba(196, 160, 80, ${s.opacity * 0.15})`);
+          gradient.addColorStop(1, 'rgba(196, 160, 80, 0)');
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.radius * 6, 0, Math.PI * 2);
+          ctx.fillStyle = gradient;
+          ctx.fill();
+        }
+
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(196, 160, 80, ${s.opacity})`;
+        ctx.fill();
+      });
+
+      requestAnimationFrame(draw);
+    }
+
+    init();
+    draw();
+    window.addEventListener('resize', () => { init(); });
+  }
+
+  // ============================================================
+  // CTA CANVAS — Gentle floating particles (aspirational / calm)
+  // ============================================================
+  function initCtaCanvas() {
+    const canvas = document.getElementById('ctaCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let w, h, particles = [];
+
+    function resize() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      w = rect.width;
+      h = rect.height;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = w + 'px';
+      canvas.style.height = h + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    class Particle {
+      constructor() {
+        this.reset();
+      }
+
+      reset() {
+        this.x = rand(0, w);
+        this.y = rand(0, h);
+        this.vx = rand(-0.2, 0.2);
+        this.vy = rand(-0.4, -0.1);
+        this.radius = rand(0.8, 2);
+        this.opacity = rand(0.1, 0.4);
+        this.life = 1;
+        this.decay = rand(0.001, 0.004);
+      }
+
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.life -= this.decay;
+        if (this.life <= 0 || this.y < -10) this.reset();
+      }
+    }
+
+    function init() {
+      resize();
+      particles = [];
+      const count = Math.min(Math.floor(w * h / 12000), 35);
+      for (let i = 0; i < count; i++) {
+        particles.push(new Particle());
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, w, h);
+      particles.forEach(p => {
+        p.update();
+        const alpha = p.opacity * p.life;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(196, 160, 80, ${alpha})`;
+        ctx.fill();
+      });
+      requestAnimationFrame(draw);
+    }
+
+    init();
+    draw();
+    window.addEventListener('resize', () => { init(); });
+  }
+
+  // ============================================================
+  // DELEGATION TREE — Interactive SVG node graph
+  // Shows how responsibilities flow from user to agents
+  // Responds to hover with highlighting and pulse animations
+  // ============================================================
+  function initDelegationTree() {
+    const container = document.getElementById('delegationTree');
+    if (!container) return;
+
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 700 200');
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    container.appendChild(svg);
+
+    // Defs: gold gradient, glow filter
+    const defs = document.createElementNS(svgNS, 'defs');
+
+    // Glow filter
+    const filter = document.createElementNS(svgNS, 'filter');
+    filter.setAttribute('id', 'glow');
+    filter.setAttribute('x', '-50%');
+    filter.setAttribute('y', '-50%');
+    filter.setAttribute('width', '200%');
+    filter.setAttribute('height', '200%');
+    const feGauss = document.createElementNS(svgNS, 'feGaussianBlur');
+    feGauss.setAttribute('stdDeviation', '3');
+    feGauss.setAttribute('result', 'blur');
+    filter.appendChild(feGauss);
+    const feMerge = document.createElementNS(svgNS, 'feMerge');
+    const feMN1 = document.createElementNS(svgNS, 'feMergeNode');
+    feMN1.setAttribute('in', 'blur');
+    const feMN2 = document.createElementNS(svgNS, 'feMergeNode');
+    feMN2.setAttribute('in', 'SourceGraphic');
+    feMerge.appendChild(feMN1);
+    feMerge.appendChild(feMN2);
+    filter.appendChild(feMerge);
+    defs.appendChild(filter);
+
+    // Animated pulse gradient
+    const radGrad = document.createElementNS(svgNS, 'radialGradient');
+    radGrad.setAttribute('id', 'pulseGrad');
+    const stop1 = document.createElementNS(svgNS, 'stop');
+    stop1.setAttribute('offset', '0%');
+    stop1.setAttribute('stop-color', '#c4a050');
+    stop1.setAttribute('stop-opacity', '0.6');
+    const stop2 = document.createElementNS(svgNS, 'stop');
+    stop2.setAttribute('offset', '100%');
+    stop2.setAttribute('stop-color', '#c4a050');
+    stop2.setAttribute('stop-opacity', '0');
+    radGrad.appendChild(stop1);
+    radGrad.appendChild(stop2);
+    defs.appendChild(radGrad);
+
+    svg.appendChild(defs);
+
+    // Tree structure
+    const treeData = {
+      label: 'You',
+      x: 350, y: 30,
+      children: [
+        {
+          label: 'Monitoring',
+          x: 140, y: 100,
+          children: [
+            { label: 'Anomaly\nDetection', x: 60, y: 170 },
+            { label: 'Health\nReports', x: 200, y: 170 }
+          ]
+        },
+        {
+          label: 'Analysis',
+          x: 350, y: 100,
+          children: [
+            { label: 'ROI\nDashboards', x: 310, y: 170 },
+            { label: 'Trend\nAlerts', x: 420, y: 170 }
+          ]
+        },
+        {
+          label: 'Reporting',
+          x: 560, y: 100,
+          children: [
+            { label: 'Weekly\nBriefs', x: 500, y: 170 },
+            { label: 'Slack\nUpdates', x: 640, y: 170 }
+          ]
+        }
+      ]
+    };
+
+    // Collect all nodes and edges
+    const allNodes = [];
+    const allEdges = [];
+
+    function traverse(node, parent) {
+      allNodes.push(node);
+      if (parent) {
+        allEdges.push({ from: parent, to: node });
+      }
+      if (node.children) {
+        node.children.forEach(c => traverse(c, node));
+      }
+    }
+    traverse(treeData, null);
+
+    // Draw edges first
+    const edgeGroup = document.createElementNS(svgNS, 'g');
+    allEdges.forEach((edge, i) => {
+      // Curved path
+      const path = document.createElementNS(svgNS, 'path');
+      const midY = (edge.from.y + edge.to.y) / 2;
+      const d = `M ${edge.from.x} ${edge.from.y} C ${edge.from.x} ${midY}, ${edge.to.x} ${midY}, ${edge.to.x} ${edge.to.y}`;
+      path.setAttribute('d', d);
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', '#c9a85a');
+      path.setAttribute('stroke-width', '1');
+      path.setAttribute('stroke-opacity', '0.3');
+      path.setAttribute('class', 'tree-edge');
+      path.dataset.index = i;
+
+      // Animated dash
+      const length = 200;
+      path.setAttribute('stroke-dasharray', `4 6`);
+      path.style.animation = `dashFlow ${rand(3, 6)}s linear infinite`;
+      path.style.animationDelay = `${rand(0, 2)}s`;
+
+      edgeGroup.appendChild(path);
+
+      // Flow particle along path
+      const circle = document.createElementNS(svgNS, 'circle');
+      circle.setAttribute('r', '2');
+      circle.setAttribute('fill', '#c4a050');
+      circle.setAttribute('opacity', '0');
+      const animMotion = document.createElementNS(svgNS, 'animateMotion');
+      animMotion.setAttribute('dur', `${rand(2, 4)}s`);
+      animMotion.setAttribute('repeatCount', 'indefinite');
+      animMotion.setAttribute('path', d);
+      const animOpacity = document.createElementNS(svgNS, 'animate');
+      animOpacity.setAttribute('attributeName', 'opacity');
+      animOpacity.setAttribute('values', '0;0.7;0.7;0');
+      animOpacity.setAttribute('dur', `${rand(2, 4)}s`);
+      animOpacity.setAttribute('repeatCount', 'indefinite');
+      circle.appendChild(animMotion);
+      circle.appendChild(animOpacity);
+      edgeGroup.appendChild(circle);
+    });
+    svg.appendChild(edgeGroup);
+
+    // Draw nodes
+    const nodeGroup = document.createElementNS(svgNS, 'g');
+    allNodes.forEach((node, i) => {
+      const g = document.createElementNS(svgNS, 'g');
+      g.style.cursor = 'pointer';
+      g.style.transition = 'transform 0.3s ease';
+
+      // Pulse ring (hidden until hover)
+      const pulseRing = document.createElementNS(svgNS, 'circle');
+      pulseRing.setAttribute('cx', node.x);
+      pulseRing.setAttribute('cy', node.y);
+      pulseRing.setAttribute('r', i === 0 ? '18' : '14');
+      pulseRing.setAttribute('fill', 'url(#pulseGrad)');
+      pulseRing.setAttribute('opacity', '0');
+      pulseRing.style.transition = 'opacity 0.4s';
+      g.appendChild(pulseRing);
+
+      // Main circle
+      const isRoot = i === 0;
+      const isLeaf = !node.children;
+      const r = isRoot ? 12 : (isLeaf ? 6 : 9);
+      const circle = document.createElementNS(svgNS, 'circle');
+      circle.setAttribute('cx', node.x);
+      circle.setAttribute('cy', node.y);
+      circle.setAttribute('r', r);
+      circle.setAttribute('fill', isRoot ? '#8a6e2f' : (isLeaf ? 'none' : '#352818'));
+      circle.setAttribute('stroke', isRoot ? '#c4a050' : '#c9a85a');
+      circle.setAttribute('stroke-width', isRoot ? '2' : '1');
+      circle.setAttribute('stroke-opacity', isRoot ? '0.8' : '0.4');
+      circle.style.transition = 'r 0.3s, fill 0.3s, stroke-opacity 0.3s';
+      if (isLeaf) {
+        circle.setAttribute('fill', '#f5eedc');
+        circle.setAttribute('fill-opacity', '0.05');
+      }
+      g.appendChild(circle);
+
+      // Label
+      const lines = node.label.split('\n');
+      lines.forEach((line, li) => {
+        const text = document.createElementNS(svgNS, 'text');
+        text.setAttribute('x', node.x);
+        text.setAttribute('y', node.y + r + 12 + li * 11);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('font-family', "'DM Sans', sans-serif");
+        text.setAttribute('font-size', isRoot ? '10' : '8');
+        text.setAttribute('fill', isRoot ? '#8a6e2f' : '#b09870');
+        text.setAttribute('letter-spacing', '0.08em');
+        text.textContent = line;
+        text.style.textTransform = 'uppercase';
+        text.style.transition = 'fill 0.3s';
+        g.appendChild(text);
+      });
+
+      // Hover interactivity
+      g.addEventListener('mouseenter', () => {
+        pulseRing.setAttribute('opacity', '1');
+        circle.setAttribute('stroke-opacity', '1');
+        circle.setAttribute('r', r + 2);
+        if (!isRoot && !isLeaf) circle.setAttribute('fill', '#8a6e2f');
+        g.querySelectorAll('text').forEach(t => t.setAttribute('fill', '#c4a050'));
+        // Highlight connected edges
+        allEdges.forEach((edge, ei) => {
+          if (edge.from === node || edge.to === node) {
+            const edgePath = edgeGroup.querySelectorAll('.tree-edge')[ei];
+            if (edgePath) {
+              edgePath.setAttribute('stroke-opacity', '0.8');
+              edgePath.setAttribute('stroke-width', '2');
+            }
+          }
+        });
+      });
+
+      g.addEventListener('mouseleave', () => {
+        pulseRing.setAttribute('opacity', '0');
+        circle.setAttribute('stroke-opacity', isRoot ? '0.8' : '0.4');
+        circle.setAttribute('r', r);
+        if (!isRoot && !isLeaf) circle.setAttribute('fill', '#352818');
+        const defaultFill = isRoot ? '#8a6e2f' : '#b09870';
+        g.querySelectorAll('text').forEach(t => t.setAttribute('fill', defaultFill));
+        // Reset edges
+        edgeGroup.querySelectorAll('.tree-edge').forEach(ep => {
+          ep.setAttribute('stroke-opacity', '0.3');
+          ep.setAttribute('stroke-width', '1');
+        });
+      });
+
+      nodeGroup.appendChild(g);
+    });
+    svg.appendChild(nodeGroup);
+
+    // Add CSS animation for dashed flow
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes dashFlow {
+        to { stroke-dashoffset: -40; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  // ============================================================
+  // SCROLL REVEAL OBSERVER
+  // ============================================================
+  function initScrollReveal() {
+    const revealEls = document.querySelectorAll('.reveal, .reveal-scale, .reveal-left');
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          // Don't unobserve — keep it one-way (once revealed, stays)
+          observer.unobserve(entry.target);
+        }
+      });
+    }, {
+      threshold: 0.12,
+      rootMargin: '0px 0px -40px 0px'
+    });
+
+    revealEls.forEach(el => observer.observe(el));
+  }
+
+  // ============================================================
+  // COUNTER ANIMATION — Animate stat numbers on scroll
+  // ============================================================
+  function initCounters() {
+    const counters = document.querySelectorAll('[data-count]');
+    let animated = false;
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && !animated) {
+          animated = true;
+          counters.forEach(counter => {
+            const target = parseInt(counter.dataset.count);
+            const duration = 1800;
+            const start = performance.now();
+
+            function step(now) {
+              const elapsed = now - start;
+              const progress = Math.min(elapsed / duration, 1);
+              // Ease out cubic
+              const ease = 1 - Math.pow(1 - progress, 3);
+              const current = Math.round(ease * target);
+              counter.textContent = current.toLocaleString();
+              if (progress < 1) requestAnimationFrame(step);
+            }
+            requestAnimationFrame(step);
+          });
+        }
+      });
+    }, { threshold: 0.3 });
+
+    const statsEl = document.querySelector('.stats-band');
+    if (statsEl) observer.observe(statsEl);
+  }
+
+  // ============================================================
+  // NAV SCROLL EFFECT
+  // ============================================================
+  function initNavScroll() {
+    const nav = document.querySelector('nav');
+    if (!nav) return;
+
+    let ticking = false;
+    window.addEventListener('scroll', () => {
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          if (window.scrollY > 60) {
+            nav.classList.add('scrolled');
+          } else {
+            nav.classList.remove('scrolled');
+          }
+          ticking = false;
+        });
+        ticking = true;
+      }
+    });
+  }
+
+  // ============================================================
+  // PARALLAX GHOST NUMBERS — subtle scroll parallax
+  // ============================================================
+  function initParallax() {
+    const ghostNums = document.querySelectorAll('.section-ghost-num');
+    if (!ghostNums.length) return;
+
+    let ticking = false;
+    window.addEventListener('scroll', () => {
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          const scrollY = window.scrollY;
+          ghostNums.forEach(el => {
+            const rect = el.getBoundingClientRect();
+            const center = rect.top + rect.height / 2;
+            const viewCenter = window.innerHeight / 2;
+            const offset = (center - viewCenter) * 0.06;
+            el.style.transform = `translateY(${offset}px)`;
+          });
+          ticking = false;
+        });
+        ticking = true;
+      }
+    });
+  }
+
+  // ============================================================
+  // GOLD RULE SHIMMER — subtle animation on gold rules
+  // ============================================================
+  function initGoldShimmer() {
+    const style = document.createElement('style');
+    style.textContent = `
+      .hero::before {
+        animation: shimmer 4s ease-in-out infinite;
+      }
+      @keyframes shimmer {
+        0%, 100% { opacity: 0.4; }
+        50% { opacity: 0.8; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  // ============================================================
+  // AMBIENT PARTICLE LAYER — fixed background, gold-tinted
+  // ============================================================
+  function initAmbientParticles() {
+    const canvas = document.getElementById('ambient-particles');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let w, h;
+    const particles = [];
+    const PCOUNT = 35;
+
+    function resize() {
+      w = canvas.width = window.innerWidth;
+      h = canvas.height = window.innerHeight;
+    }
+
+    function createParticle() {
+      return {
+        x: Math.random() * w,
+        y: Math.random() * h,
+        vx: (Math.random() - 0.5) * 0.12,
+        vy: (Math.random() - 0.5) * 0.12,
+        r: Math.random() * 1.5 + 0.5,
+        opacity: Math.random() * 0.2 + 0.05
+      };
+    }
+
+    function init() {
+      resize();
+      particles.length = 0;
+      for (let i = 0; i < PCOUNT; i++) particles.push(createParticle());
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, w, h);
+
+      // Connections
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const d = Math.sqrt(dx * dx + dy * dy);
+          if (d < 180) {
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = `rgba(138, 110, 47, ${(1 - d / 180) * 0.04})`;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+      }
+
+      for (const p of particles) {
+        // Mouse influence
+        const dx = mouse.x * w - p.x;
+        const dy = mouse.y * h - p.y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 250 && d > 0) {
+          p.vx += (dx / d) * 0.01;
+          p.vy += (dy / d) * 0.01;
+        }
+
+        p.vx *= 0.997;
+        p.vy *= 0.997;
+        p.x += p.vx;
+        p.y += p.vy;
+
+        if (p.x < -10) p.x = w + 10;
+        if (p.x > w + 10) p.x = -10;
+        if (p.y < -10) p.y = h + 10;
+        if (p.y > h + 10) p.y = -10;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(138, 110, 47, ${p.opacity})`;
+        ctx.fill();
+      }
+
+      requestAnimationFrame(draw);
+    }
+
+    window.addEventListener('resize', resize);
+    init();
+    draw();
+  }
+
+  // ============================================================
+  // FLOW VISUALIZATION — imperative vs declarative side-by-side
+  // ============================================================
+  function initFlowViz() {
+    const container = document.getElementById('flow-viz');
+    const canvas = document.getElementById('flow-canvas');
+    if (!canvas || !container) return;
+    const ctx = canvas.getContext('2d');
+    let w, h;
+    let localMX = -999, localMY = -999;
+
+    const leftParticles = [];
+    const rightParticles = [];
+    const PCOUNT = 18;
+
+    function resize() {
+      const rect = container.getBoundingClientRect();
+      w = canvas.width = rect.width;
+      h = canvas.height = rect.height;
+    }
+
+    function initParticles() {
+      leftParticles.length = 0;
+      rightParticles.length = 0;
+      for (let i = 0; i < PCOUNT; i++) {
+        leftParticles.push({
+          t: Math.random(), speed: 0.003 + Math.random() * 0.003,
+          offset: Math.random() * 25 - 12.5, direction: 1
+        });
+        rightParticles.push({
+          t: Math.random(), speed: 0.004 + Math.random() * 0.002,
+          offset: Math.random() * 10 - 5
+        });
+      }
+    }
+
+    container.addEventListener('mousemove', function(e) {
+      const rect = container.getBoundingClientRect();
+      localMX = e.clientX - rect.left;
+      localMY = e.clientY - rect.top;
+    });
+    container.addEventListener('mouseleave', function() {
+      localMX = -999; localMY = -999;
+    });
+
+    let time = 0;
+    function draw() {
+      ctx.clearRect(0, 0, w, h);
+      time++;
+
+      const midX = w / 2;
+      const topY = 30;
+      const bottomY = h - 20;
+      const midY = (topY + bottomY) / 2;
+
+      const blend = localMX > -900 ? Math.max(0, Math.min(1, localMX / w)) : 0.5;
+
+      // Labels
+      ctx.font = "500 9px 'DM Sans', sans-serif";
+      ctx.textAlign = 'center';
+
+      ctx.fillStyle = `rgba(122, 96, 64, ${0.5 + (1 - blend) * 0.5})`;
+      ctx.fillText('IMPERATIVE', w * 0.25, 16);
+
+      ctx.beginPath();
+      ctx.setLineDash([3, 4]);
+      ctx.moveTo(midX, 22);
+      ctx.lineTo(midX, h - 6);
+      ctx.strokeStyle = 'rgba(201, 168, 90, 0.25)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.fillStyle = `rgba(138, 110, 47, ${0.4 + blend * 0.6})`;
+      ctx.fillText('DECLARATIVE', w * 0.75, 16);
+
+      // Left: zigzag chaos
+      const leftCX = w * 0.25;
+      ctx.beginPath();
+      ctx.arc(leftCX, topY, 5, 0, Math.PI * 2);
+      ctx.fillStyle = '#7a6040';
+      ctx.fill();
+      ctx.font = "400 7px 'DM Sans', sans-serif";
+      ctx.fillStyle = '#b09870';
+      ctx.fillText('you', leftCX, topY + 14);
+
+      ctx.beginPath();
+      ctx.arc(leftCX, bottomY, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#b09870';
+      ctx.fill();
+      ctx.fillText('agent', leftCX, bottomY + 12);
+
+      // Zigzag path
+      ctx.beginPath();
+      ctx.moveTo(leftCX, topY + 7);
+      for (let i = 0; i < 6; i++) {
+        const y = topY + 7 + ((bottomY - topY - 14) / 6) * (i + 0.5);
+        ctx.lineTo(leftCX + (i % 2 === 0 ? 18 : -18), y);
+      }
+      ctx.lineTo(leftCX, bottomY - 7);
+      ctx.strokeStyle = 'rgba(176, 152, 112, 0.15)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Left particles bouncing
+      const zigPts = [{ x: leftCX, y: topY + 7 }];
+      for (let i = 0; i < 6; i++) {
+        zigPts.push({ x: leftCX + (i % 2 === 0 ? 18 : -18), y: topY + 7 + ((bottomY - topY - 14) / 6) * (i + 0.5) });
+      }
+      zigPts.push({ x: leftCX, y: bottomY - 7 });
+
+      for (const p of leftParticles) {
+        p.t += p.speed * p.direction;
+        if (p.t >= 1) { p.direction = -1; p.t = 1; }
+        if (p.t <= 0) { p.direction = 1; p.t = 0; }
+        const seg = Math.floor(p.t * (zigPts.length - 1));
+        const segT = (p.t * (zigPts.length - 1)) - seg;
+        const from = zigPts[Math.min(seg, zigPts.length - 2)];
+        const to = zigPts[Math.min(seg + 1, zigPts.length - 1)];
+        const px = from.x + (to.x - from.x) * segT + p.offset * 0.2;
+        const py = from.y + (to.y - from.y) * segT;
+        ctx.beginPath();
+        ctx.arc(px, py, 1.3, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(176, 152, 112, 0.3)';
+        ctx.fill();
+      }
+
+      // Right: smooth delegation
+      const rightCX = w * 0.75;
+      ctx.beginPath();
+      ctx.arc(rightCX, topY, 5, 0, Math.PI * 2);
+      ctx.fillStyle = '#8a6e2f';
+      ctx.fill();
+      ctx.font = "400 7px 'DM Sans', sans-serif";
+      ctx.fillStyle = '#c9a85a';
+      ctx.fillText('you', rightCX, topY + 14);
+
+      ctx.beginPath();
+      ctx.arc(rightCX, midY, 6, 0, Math.PI * 2);
+      ctx.fillStyle = '#8a6e2f';
+      ctx.fill();
+      ctx.font = "500 7px 'DM Sans', sans-serif";
+      ctx.fillStyle = '#8a6e2f';
+      ctx.fillText('openprose', rightCX, midY - 10);
+
+      const results = [
+        { x: rightCX - 35, y: bottomY, label: 'report' },
+        { x: rightCX, y: bottomY, label: 'alert' },
+        { x: rightCX + 35, y: bottomY, label: 'brief' }
+      ];
+
+      for (const rn of results) {
+        ctx.beginPath();
+        ctx.arc(rn.x, rn.y, 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#b09870';
+        ctx.fill();
+        ctx.font = "400 6.5px 'DM Sans', sans-serif";
+        ctx.fillStyle = '#b09870';
+        ctx.fillText(rn.label, rn.x, rn.y + 12);
+      }
+
+      // Flow lines
+      ctx.beginPath();
+      ctx.moveTo(rightCX, topY + 7);
+      ctx.lineTo(rightCX, midY - 9);
+      ctx.strokeStyle = 'rgba(138, 110, 47, 0.2)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      for (const rn of results) {
+        ctx.beginPath();
+        ctx.moveTo(rightCX, midY + 9);
+        ctx.lineTo(rn.x, rn.y - 7);
+        ctx.strokeStyle = 'rgba(138, 110, 47, 0.15)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      // Right particles flowing smoothly
+      for (const p of rightParticles) {
+        p.t = (p.t + p.speed) % 1;
+        let px, py;
+        if (p.t < 0.4) {
+          const seg = p.t / 0.4;
+          px = rightCX + p.offset * 0.2;
+          py = topY + 7 + (midY - topY - 16) * seg;
+        } else {
+          const seg = (p.t - 0.4) / 0.6;
+          const tIdx = p.offset > 3 ? 2 : (p.offset < -3 ? 0 : 1);
+          const target = results[tIdx];
+          px = rightCX + (target.x - rightCX) * seg;
+          py = midY + 9 + (target.y - midY - 16) * seg;
+        }
+        ctx.beginPath();
+        ctx.arc(px, py, 1.5, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(196, 160, 80, 0.4)';
+        ctx.fill();
+      }
+
+      // Annotation
+      if (localMX > -900) {
+        ctx.font = "400 7.5px 'DM Sans', sans-serif";
+        ctx.textAlign = 'center';
+        if (localMX < midX) {
+          ctx.fillStyle = 'rgba(176, 152, 112, 0.5)';
+          ctx.fillText('constant oversight', leftCX, h - 2);
+        } else {
+          ctx.fillStyle = 'rgba(138, 110, 47, 0.5)';
+          ctx.fillText('set the goal, get out of the way', rightCX, h - 2);
+        }
+      }
+
+      requestAnimationFrame(draw);
+    }
+
+    window.addEventListener('resize', function() { resize(); initParticles(); });
+    resize();
+    initParticles();
+    draw();
+  }
+
+  // ============================================================
+  // INIT EVERYTHING
+  // ============================================================
+  document.addEventListener('DOMContentLoaded', () => {
+    initAmbientParticles();
+    initHeroCanvas();
+    initDarkCanvas();
+    initCtaCanvas();
+    initFlowViz();
+    initDelegationTree();
+    initScrollReveal();
+    initCounters();
+    initNavScroll();
+    initParallax();
+    initGoldShimmer();
+  });
+
+})();
+</script>
+
+</body>
+</html>

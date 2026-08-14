@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 142 142'%3E%3Cpath d='M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z' fill='%232a2520'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenProse — θ Living Document · the run history (mono)</title>
+<link rel="stylesheet" href="_tokens.css">
+<link rel="stylesheet" href="_pairings.css">
+
+<style>
+/* ============================================
+   θ LIVING DOCUMENT · CONCEPT PAGE (MONO)
+   Forty-two Mondays, set entirely in monospace.
+   The page reads as a long, considered system
+   journal — git log meets New Yorker — with
+   weight, color, and spacing doing the work that
+   italic serif used to do.
+
+   No serif fallbacks. JetBrains Mono throughout.
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --paper:     #0f0c0a;
+  --paper-dk:  #08060500;
+  --paper-lt:  #1a1410;
+  --paper-elev:#221a14;
+  --ink:       #f0e8d8;
+  --ink-2:     #c8bfae;
+  --ink-3:     #8a8275;
+  --ink-4:     #5a5448;
+  --ember:     #d4a064;
+  --ember-deep:#b88444;
+  --ember-soft:#e0b878;
+  --ember-faint:rgba(212,160,100,0.16);
+  --good:      #8fc28b;
+  --warn:      #d49464;
+  --rule:      rgba(240,232,216,0.10);
+  --rule-mid:  rgba(240,232,216,0.06);
+  --mono:      'JetBrains Mono', 'SF Mono', 'Menlo', monospace;
+}
+
+/* ============================================
+   LIGHT MODE — complementary palette
+   The page defaults to dark (the working surface).
+   Light flips the cream/cocoa relationship while
+   preserving the ember accent and the editorial
+   structure intact.
+   ============================================ */
+[data-theme="light"] {
+  --paper:     #f5f0e8;
+  --paper-dk:  #ede7d6;
+  --paper-lt:  #faf8f3;
+  --paper-elev:#fbf6e9;
+  --ink:       #221408;
+  --ink-2:     #3a2614;
+  --ink-3:     #6a5538;
+  --ink-4:     #a89880;
+  --ember:     #b06820;
+  --ember-deep:#8e5418;
+  --ember-soft:#c47a30;
+  --ember-faint:rgba(176,104,32,0.14);
+  --good:      #5a8c52;
+  --warn:      #b85c2c;
+  --rule:      rgba(34,20,8,0.14);
+  --rule-mid:  rgba(34,20,8,0.06);
+}
+[data-theme="light"] .run::before { box-shadow: 0 0 0 3px var(--paper); }
+[data-theme="light"] .run.milestone::before {
+  box-shadow: 0 0 0 3px var(--paper), 0 0 0 6px var(--ember-faint);
+}
+
+/* THEME TOGGLE — small mono pill, fixed top-right */
+.theme-toggle {
+  position: fixed;
+  top: 1.1rem;
+  right: 1.1rem;
+  z-index: 50;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ember);
+  background: var(--paper-lt);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 0.45rem 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  display: inline-flex; align-items: center; gap: 0.4rem;
+}
+.theme-toggle:hover { border-color: var(--ember); color: var(--ink); }
+.theme-toggle .t-glyph { opacity: 0.65; }
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 0.86rem;
+  line-height: 1.7;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  padding: 0 0 4rem;
+}
+
+/* TOP BANNER */
+.banner {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 3.5rem 2rem 1.25rem;
+  text-align: left;
+  border-bottom: 1px solid var(--rule);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 1.5rem;
+  align-items: end;
+}
+.banner .b-eyebrow {
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ember);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.banner h1 {
+  font-family: var(--mono);
+  font-weight: 500;
+  font-size: clamp(1.05rem, 1.85vw, 1.45rem);
+  line-height: 1.3;
+  color: var(--ink);
+  letter-spacing: 0.005em;
+  text-align: center;
+}
+.banner h1 .acc { color: var(--ember); }
+.banner h1 .file { color: var(--ember); font-weight: 500; }
+.banner .b-meta {
+  font-size: 0.62rem;
+  color: var(--ink-3);
+  letter-spacing: 0.06em;
+  line-height: 1.7;
+  text-align: right;
+  white-space: nowrap;
+}
+.banner .b-meta .key { color: var(--ember); margin-right: 0.5rem; text-transform: uppercase; letter-spacing: 0.18em; }
+.banner .b-meta .val { color: var(--ink); font-weight: 500; }
+
+/* mobile: stack the 3-col banner into a single column */
+@media (max-width: 640px) {
+  .banner { grid-template-columns: 1fr; padding: 1.75rem 1.1rem 1rem; gap: 0.7rem; }
+  .banner .b-eyebrow { text-align: left; }
+  .banner h1 { text-align: left; font-size: 0.95rem; line-height: 1.45; word-break: break-all; }
+  .banner h1 .file { word-break: break-all; }
+  .banner .b-meta { text-align: left; white-space: normal; line-height: 1.55; }
+  .banner .b-meta > div { display: inline; margin-right: 0.9rem; }
+  .tagline { padding: 0 1.1rem; }
+}
+
+/* SUB-BANNER — the prose-tagline as comment */
+.tagline {
+  max-width: 920px;
+  margin: 1.25rem auto 0;
+  padding: 0 2rem;
+  font-size: 0.78rem;
+  color: var(--ink-3);
+  line-height: 1.7;
+}
+.tagline .c { color: var(--ink-4); }
+.tagline .acc { color: var(--ember); }
+
+/* SCORE STRIP */
+.score-strip {
+  max-width: 920px;
+  margin: 1.5rem auto 3rem;
+  padding: 1.1rem 1.4rem;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--paper-lt);
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 1.75rem;
+  align-items: center;
+}
+@media (max-width: 720px) { .score-strip { grid-template-columns: 1fr; } }
+.score-strip .ss-stat {
+  font-size: 0.78rem;
+  line-height: 1.85;
+  color: var(--ink-2);
+}
+.score-strip .ss-stat .label {
+  color: var(--ember);
+  margin-right: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.68rem;
+  font-weight: 500;
+}
+.score-strip .ss-stat .num { color: var(--ink); font-weight: 500; }
+.score-strip .ss-stat .num.up { color: var(--good); }
+.score-strip svg.ss-chart { display: block; width: 100%; height: 60px; }
+
+/* TIMELINE */
+.timeline {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  position: relative;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 80px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(180deg, transparent 0%, var(--rule) 6%, var(--rule) 94%, transparent 100%);
+}
+@media (max-width: 720px) {
+  .timeline::before { left: 32px; }
+  .timeline { padding: 0 1rem; }
+}
+
+.run {
+  position: relative;
+  padding-left: 130px;
+  padding-top: 1.25rem;
+  padding-bottom: 1.25rem;
+  min-height: 3rem;
+}
+@media (max-width: 720px) { .run { padding-left: 60px; } }
+
+.run::before {
+  content: '';
+  position: absolute;
+  left: 76px;
+  top: 1.55rem;
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--ember);
+  box-shadow: 0 0 0 3px var(--paper);
+}
+.run.milestone::before {
+  width: 13px; height: 13px;
+  left: 74px;
+  background: var(--ember-soft);
+  box-shadow: 0 0 0 3px var(--paper), 0 0 0 6px var(--ember-faint);
+}
+.run.held::before { background: var(--warn); }
+@media (max-width: 720px) {
+  .run::before { left: 28px; }
+  .run.milestone::before { left: 26px; }
+}
+
+.run .when {
+  position: absolute;
+  left: 0;
+  top: 1.55rem;
+  width: 64px;
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+  text-align: right;
+  line-height: 1.45;
+}
+.run .when .yyyy { color: var(--ink-4); }
+.run .when .mmdd { color: var(--ember); display: block; font-weight: 500; }
+@media (max-width: 720px) { .run .when { display: none; } }
+
+/* RUN CARD — header line + body + optional diff/sig */
+.run .v-tag {
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  color: var(--ember);
+  margin-bottom: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.85rem;
+  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+}
+.run .v-tag .vnum { color: var(--ink); font-weight: 600; }
+.run .v-tag .score { color: var(--good); font-weight: 500; }
+.run .v-tag .score.held { color: var(--warn); }
+.run .v-tag .delta { color: var(--ember); }
+.run .v-tag .pipe { color: var(--ink-4); font-weight: 400; }
+
+.run h3 {
+  font-family: var(--mono);
+  font-weight: 500;
+  font-size: 0.96rem;
+  line-height: 1.4;
+  color: var(--ink);
+  margin-bottom: 0.4rem;
+  letter-spacing: -0.005em;
+}
+.run h3 .acc { color: var(--ember); font-weight: 500; }
+.run h3 .strong { font-weight: 700; color: var(--ink); }
+
+.run-body {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  line-height: 1.7;
+  color: var(--ink-2);
+  margin-bottom: 0.5rem;
+  font-weight: 400;
+}
+.run-body .acc { color: var(--ember); font-weight: 500; }
+.run-body .quote {
+  color: var(--ink);
+  background: var(--paper-elev);
+  padding: 0 0.32em;
+  border-left: 2px solid var(--ember);
+  font-weight: 400;
+}
+.run-body code {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  background: var(--paper-elev);
+  padding: 0.05em 0.35em;
+  border-radius: 2px;
+  color: var(--ember-soft);
+  font-weight: 500;
+}
+.run-body strong {
+  color: var(--ink);
+  font-weight: 700;
+}
+.run.held .run-body strong[data-held] { color: var(--warn); font-weight: 500; }
+
+/* SPEC DIFF */
+.spec-diff {
+  font-size: 0.74rem;
+  line-height: 1.75;
+  background: var(--paper-elev);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 0.7rem 0.9rem;
+  margin-top: 0.5rem;
+}
+.spec-diff .diff-head {
+  font-size: 0.6rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ember);
+  margin-bottom: 0.4rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--rule);
+  font-weight: 500;
+}
+.spec-diff .diff-line {
+  display: block;
+  padding-left: 1.2em;
+  text-indent: -1.2em;
+  color: var(--ink-2);
+}
+.spec-diff .diff-line.minus { color: var(--warn); opacity: 0.78; text-decoration: line-through; }
+.spec-diff .diff-line.minus::before { content: '-  '; opacity: 0.7; text-decoration: none; display: inline-block; }
+.spec-diff .diff-line.plus  { color: var(--good); }
+.spec-diff .diff-line.plus::before  { content: '+  '; opacity: 0.7; }
+.spec-diff .diff-line.context { color: var(--ink-3); }
+.spec-diff .diff-line.context::before { content: '   '; }
+
+/* SIGN-OFF — comment-style trailing line */
+.signed {
+  display: block;
+  font-size: 0.66rem;
+  color: var(--ink-3);
+  margin-top: 0.4rem;
+  letter-spacing: 0.04em;
+  font-weight: 400;
+}
+.signed::before { content: '# '; color: var(--ink-4); }
+.signed .key { color: var(--ember); font-weight: 500; }
+.signed strong { color: var(--ember-soft); font-weight: 500; }
+
+/* COLLAPSE HINT */
+.collapsed {
+  position: relative;
+  padding: 0.65rem 0 0.65rem 130px;
+  font-size: 0.66rem;
+  color: var(--ink-4);
+  letter-spacing: 0.04em;
+  font-weight: 400;
+}
+.collapsed::before {
+  content: '';
+  position: absolute;
+  left: 80px;
+  top: 50%;
+  width: 9px; height: 1px;
+  background: var(--ink-4);
+  transform: translateX(-4px);
+}
+@media (max-width: 720px) {
+  .collapsed { padding-left: 60px; }
+  .collapsed::before { left: 32px; }
+}
+.collapsed .acc { color: var(--ember); }
+.collapsed::after {
+  content: '... ';
+  color: var(--ink-4);
+  margin-right: 0.4rem;
+}
+
+/* COLOPHON */
+.colophon {
+  max-width: 920px;
+  margin: 3rem auto 0;
+  padding: 1.5rem 2rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.66rem;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+  line-height: 1.7;
+}
+.colophon .col-line { margin-bottom: 0.2rem; }
+.colophon .col-line.tag { color: var(--ember); font-weight: 500; }
+.colophon .col-line.quote {
+  color: var(--ink-2);
+  font-size: 0.78rem;
+  letter-spacing: 0;
+  padding: 0.5rem 0 0.85rem;
+  border-bottom: 1px solid var(--rule-mid);
+  margin-bottom: 0.85rem;
+}
+.colophon .col-line.quote::before { content: '"'; color: var(--ember); margin-right: 0.05em; }
+.colophon .col-line.quote::after  { content: '"'; color: var(--ember); margin-left:  0.05em; }
+.colophon .col-line .key { color: var(--ember); }
+.colophon .col-line a { color: var(--ember); text-decoration: none; margin-left: 0.85rem; border-bottom: 1px dotted transparent; }
+.colophon .col-line a:hover { border-bottom-color: var(--ember); }
+.colophon .col-line.signature {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--rule-mid);
+  color: var(--ember-soft);
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+}
+
+
+
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+  div.b-meta { width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: auto; word-break: break-word; }
+}
+</style>
+<script src="_styleguide.js" defer></script>
+</head>
+<body data-direction="θ" data-palette="dark-livingdoc" data-pairing="F" data-mono="jet" data-layout="concept" data-mark="static">
+
+<!-- THEME TOGGLE -->
+<button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light/dark mode">
+  <span class="t-glyph">◐</span><span class="t-mode">light mode</span>
+</button>
+
+<!-- BANNER -->
+<div class="banner">
+  <div class="b-eyebrow">θ · the living document</div>
+  <h1><span class="acc">$</span> cat <span class="file">weekly-energy-digest.prose</span> --history</h1>
+  <div class="b-meta">
+    <div><span class="key">runs</span> <span class="val">v1 → v42</span></div>
+    <div><span class="key">score</span> <span class="val">0.62 → 0.97</span></div>
+    <div><span class="key">held</span> <span class="val">3 / 42</span></div>
+  </div>
+</div>
+
+<!-- TAGLINE -->
+<div class="tagline">
+  <span class="c"># forty-two Mondays of one program · same file, every week, watched</span><br>
+  <span class="c"># </span>each entry below is a real run · <span class="acc">milestones</span> are larger dots · <span class="acc" style="color: var(--warn);">held</span> runs are amber
+</div>
+
+<!-- SCORE STRIP -->
+<div class="score-strip">
+  <div class="ss-stat">
+    <div><span class="label">first</span><span class="num">v1 · 2025-08-04 · 0.62</span></div>
+    <div><span class="label">latest</span><span class="num">v42 · 2026-05-04 · 0.97</span></div>
+    <div><span class="label">delta</span><span class="num up">+0.35 over 42 wks</span></div>
+    <div><span class="label">held</span><span class="num">3 of 42 (7.1%)</span></div>
+  </div>
+  <svg class="ss-chart" viewBox="0 0 320 60" preserveAspectRatio="none" aria-hidden="true">
+    <line x1="0" y1="48" x2="320" y2="48" stroke="rgba(240,232,216,0.10)" stroke-width="0.5"/>
+    <line x1="0" y1="12" x2="320" y2="12" stroke="rgba(240,232,216,0.10)" stroke-width="0.5" stroke-dasharray="2,2"/>
+    <polyline fill="none" stroke="#d4a064" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"
+      points="0,40 8,38 16,36 24,38 32,34 40,32 48,30 56,30 64,28 72,28 80,26 88,26 96,28 104,24 112,22 120,22 128,20 136,18 144,18 152,16 160,16 168,14 176,16 184,14 192,12 200,12 208,10 216,10 224,8 232,8 240,8 248,6 256,8 264,6 272,6 280,5 288,5 296,4 304,5 312,4 320,4"/>
+    <circle cx="320" cy="4" r="2.5" fill="#d4a064"/>
+    <circle cx="120" cy="22" r="2" fill="#d49464"/>
+    <circle cx="216" cy="10" r="2" fill="#d49464"/>
+    <circle cx="280" cy="5" r="2" fill="#d49464"/>
+  </svg>
+</div>
+
+<!-- TIMELINE -->
+<div class="timeline">
+
+  <!-- v1 -->
+  <div class="run milestone">
+    <div class="when"><span class="yyyy">2025</span><span class="mmdd">08·04</span></div>
+    <div class="v-tag"><span class="vnum">v1</span><span class="pipe">·</span><span>declared</span></div>
+    <h3>The first <span class="acc">commit</span>. Fifteen lines.</h3>
+    <p class="run-body">Sarah K. checks <code>weekly-energy-digest.prose</code> into the repo. The spec lists two <code>requires</code> (data warehouse, weather), three <code>ensures</code>, a cadence of <span class="acc">Mondays at 09:00 ET</span>, and a one-line tone clause: <span class="quote">executive-friendly, flag anomalies</span>. The first dry-run scores <strong>0.62</strong>. It is not delivered.</p>
+    <span class="signed"><span class="key">signed:</span> <strong>sarah.k</strong> @ ridgeline · commit 3a8f29c</span>
+  </div>
+
+  <!-- v2-3 collapsed -->
+  <div class="collapsed">2 weeks of dry-runs · v2 0.71 · v3 0.79 · spec patched twice · <span class="acc">not yet delivered</span></div>
+
+  <!-- v4 -->
+  <div class="run">
+    <div class="when"><span class="yyyy">2025</span><span class="mmdd">09·01</span></div>
+    <div class="v-tag"><span class="vnum">v4</span><span class="pipe">·</span><span class="score">0.85</span><span class="pipe">·</span><span>delivered</span></div>
+    <h3>First Monday in the wild.</h3>
+    <p class="run-body">Threshold met for the first time. The brief lands in <code>#ops-energy</code>. Sarah edits the brief by hand before forwarding it to the leadership group; the runtime ingests the edits as feedback for v5.</p>
+    <span class="signed"><span class="key">delivered:</span> 09:00:14 ET · 247 words · 1 anomaly flagged (Building 14)</span>
+  </div>
+
+  <!-- v5-7 -->
+  <div class="run">
+    <div class="when"><span class="yyyy">2025</span><span class="mmdd">09·08</span></div>
+    <div class="v-tag"><span class="vnum">v5–v7</span><span class="pipe">·</span><span class="score">0.87 → 0.89</span><span class="pipe">·</span><span>delivered</span></div>
+    <h3>The runtime learns the tone.</h3>
+    <p class="run-body">Three Mondays of edits get folded into the spec. The phrase <span class="quote">approximately</span> — flagged twice by Sarah as "too soft for an executive read" — is replaced by a contract clause requiring <span class="acc">quantified language</span> on every claim.</p>
+    <div class="spec-diff">
+      <div class="diff-head">spec diff · v5 → v6 · ensures clause</div>
+      <span class="diff-line context">  ensures:</span>
+      <span class="diff-line minus">  - approximately weekly growth findings</span>
+      <span class="diff-line plus">  - weekly growth findings, all claims quantified</span>
+      <span class="diff-line context">  - delivered Mondays at 09:00 ET</span>
+    </div>
+  </div>
+
+  <!-- v8 milestone -->
+  <div class="run milestone">
+    <div class="when"><span class="yyyy">2025</span><span class="mmdd">09·29</span></div>
+    <div class="v-tag"><span class="vnum">v8</span><span class="pipe">·</span><span class="score">0.91</span><span class="pipe">·</span><span>delivered</span><span class="pipe">·</span><span class="delta">milestone</span></div>
+    <h3>Eight weeks in. The brief is <span class="acc">sharper</span> than the one Jamie used to write.</h3>
+    <p class="run-body">Sarah notes in the run log: <span class="quote">the file got smarter on a weekly cadence, the same way a junior writer does after eight weeks of edits.</span> The Monday standup is officially shortened from 30 minutes to 15.</p>
+    <span class="signed"><span class="key">signed:</span> <strong>sarah.k</strong> · run notes archived · standup duration ↓ 50%</span>
+  </div>
+
+  <!-- v9-13 collapsed -->
+  <div class="collapsed">5 quiet runs · v9–v13 score 0.92 ± 0.01 · <span class="acc">nothing notable</span></div>
+
+  <!-- v14 — first hold -->
+  <div class="run held">
+    <div class="when"><span class="yyyy">2025</span><span class="mmdd">11·17</span></div>
+    <div class="v-tag"><span class="vnum">v14</span><span class="pipe">·</span><span class="score held">0.74</span><span class="pipe">·</span><span style="color: var(--warn);">HELD</span></div>
+    <h3>Utility API <span class="acc" style="color: var(--warn);">fails closed</span>. On-call paged at 22:14 Sun.</h3>
+    <p class="run-body">First hold in the program's history. The runtime detects a partial fetch from the meter API and, lacking a contract clause for "what to do with a partial dataset," <strong data-held>declines to deliver</strong>. Jamie acks at 22:31 and patches the spec by Tue noon.</p>
+    <div class="spec-diff">
+      <div class="diff-head">spec diff · v14 → v15 · requires clause</div>
+      <span class="diff-line context">  requires:</span>
+      <span class="diff-line context">  - data_warehouse_url</span>
+      <span class="diff-line minus">  - utility_api</span>
+      <span class="diff-line plus">  - utility_api · on partial fetch, hold delivery</span>
+    </div>
+    <span class="signed"><span class="key">paged:</span> 22:14 ET · ack: 22:31 (jamie) · spec patched 2025-11-19 09:42 (sarah.k)</span>
+  </div>
+
+  <!-- v15-21 -->
+  <div class="run">
+    <div class="when"><span class="yyyy">2025</span><span class="mmdd">12·08</span></div>
+    <div class="v-tag"><span class="vnum">v15–v21</span><span class="pipe">·</span><span class="score">0.91 → 0.94</span><span class="pipe">·</span><span>delivered</span></div>
+    <h3>Six steady runs. Holiday week is the only blip.</h3>
+    <p class="run-body">The brief covers Thanksgiving week with a single-line note from Sarah preserved in the spec: <span class="quote">flag absences against the prior 4-week mean, not the prior week.</span> The runtime applies it correctly the following Monday.</p>
+  </div>
+
+  <!-- v22 — added scope -->
+  <div class="run milestone">
+    <div class="when"><span class="yyyy">2026</span><span class="mmdd">01·19</span></div>
+    <div class="v-tag"><span class="vnum">v22</span><span class="pipe">·</span><span class="score">0.93</span><span class="pipe">·</span><span>delivered</span><span class="pipe">·</span><span class="delta">scope expanded</span></div>
+    <h3>The board adds <span class="acc">narrative for the quarterly review</span> to the contract.</h3>
+    <p class="run-body">A new ensures clause is added at the request of the board: the brief must produce a 3-paragraph quarterly narrative from the running weekly history. The runtime initially drafts something verbose; Sarah tightens it on the first run.</p>
+    <div class="spec-diff">
+      <div class="diff-head">spec diff · v22 · ensures (new)</div>
+      <span class="diff-line context">  ensures:</span>
+      <span class="diff-line context">  - weekly growth findings, all claims quantified</span>
+      <span class="diff-line plus">  - quarterly: 3-paragraph narrative, no metaphors</span>
+      <span class="diff-line context">  - delivered Mondays at 09:00 ET</span>
+    </div>
+  </div>
+
+  <!-- v23-29 collapsed -->
+  <div class="collapsed">7 deliveries · v23–v29 score 0.93 → 0.95 · <span class="acc">quiet stretch · two scope tightenings</span></div>
+
+  <!-- v30 — second hold -->
+  <div class="run held">
+    <div class="when"><span class="yyyy">2026</span><span class="mmdd">03·09</span></div>
+    <div class="v-tag"><span class="vnum">v30</span><span class="pipe">·</span><span class="score held">0.81</span><span class="pipe">·</span><span style="color: var(--warn);">HELD</span></div>
+    <h3>Eval regressed below threshold for the <span class="acc" style="color: var(--warn);">first time</span> in 4 months.</h3>
+    <p class="run-body">A weather-API outage Sun 23:51–Mon 04:32 produced a draft that misclassified two anomalies. The runtime <strong data-held>held the delivery</strong>; Sarah and Jamie reviewed at 08:30, decided to ship the brief manually with a note explaining the data gap, and patched the contract to <span class="acc">defer delivery to Tue 09:00</span> on weather-API outages instead of holding indefinitely.</p>
+    <div class="spec-diff">
+      <div class="diff-head">spec diff · v30 → v31 · contract</div>
+      <span class="diff-line context">  contract:</span>
+      <span class="diff-line minus">    on partial-data, hold delivery</span>
+      <span class="diff-line plus">    on partial-data, defer delivery to next-day 09:00 ET</span>
+      <span class="diff-line plus">    cite the partial-data condition in the brief</span>
+    </div>
+    <span class="signed"><span class="key">paged:</span> 04:32 (jamie) · resolved: 08:30 (sarah.k) · spec patched 11:14</span>
+  </div>
+
+  <!-- v31-39 -->
+  <div class="run">
+    <div class="when"><span class="yyyy">2026</span><span class="mmdd">03·16</span></div>
+    <div class="v-tag"><span class="vnum">v31–v39</span><span class="pipe">·</span><span class="score">0.93 → 0.96</span><span class="pipe">·</span><span>delivered</span></div>
+    <h3>Nine clean Mondays. The contract is <span class="acc">holding its own</span>.</h3>
+    <p class="run-body">Sarah notes that the brief is now reaching the leadership group <span class="acc">before</span> she's had her coffee on Mondays. The standup has been moved to Tuesday 09:30. The Monday meeting is no longer on her calendar.</p>
+    <span class="signed">no spec changes · the spec was right · maya bumped the FP threshold from 0.05 to 0.02 in v37</span>
+  </div>
+
+  <!-- v40 — third hold -->
+  <div class="run held">
+    <div class="when"><span class="yyyy">2026</span><span class="mmdd">04·20</span></div>
+    <div class="v-tag"><span class="vnum">v40</span><span class="pipe">·</span><span class="score held">0.79</span><span class="pipe">·</span><span style="color: var(--warn);">HELD</span></div>
+    <h3>Building 14's boiler retrofit broke <span class="acc" style="color: var(--warn);">HDD-normalization</span>.</h3>
+    <p class="run-body">A real-world event — a boiler retrofit at Building 14 dropped the energy use by 22% week-over-week. The runtime correctly flagged it as an anomaly, but the contract didn't have a clause for "anomaly is the customer's intentional decision." Sarah and Jamie review, decide the spec should learn about <span class="acc">intentional anomalies</span>, and add a tag.</p>
+    <div class="spec-diff">
+      <div class="diff-head">spec diff · v40 → v41 · ensures (clause added)</div>
+      <span class="diff-line context">  ensures:</span>
+      <span class="diff-line context">  - flag anomalies > 2% deviation</span>
+      <span class="diff-line plus">  - check intentional-changes registry before flagging</span>
+      <span class="diff-line plus">  - if intentional, cite the change instead of flagging</span>
+    </div>
+    <span class="signed"><span class="key">paged:</span> 09:01 (sarah.k) · resolved: 09:42 · spec patched same day · brief shipped Tue 08:00</span>
+  </div>
+
+  <!-- v41 -->
+  <div class="run">
+    <div class="when"><span class="yyyy">2026</span><span class="mmdd">04·27</span></div>
+    <div class="v-tag"><span class="vnum">v41</span><span class="pipe">·</span><span class="score">0.96</span><span class="pipe">·</span><span>delivered</span></div>
+    <h3>The boiler retrofit is <span class="acc">cited</span>, not flagged.</h3>
+    <p class="run-body">First Monday with the new contract clause. The brief reads: <span class="quote">Building 14 used 22% less energy than expected this week, consistent with the boiler retrofit completed Apr 18.</span> Frank, who supervises the boilers, gets quoted in the brief for the first time.</p>
+    <span class="signed"><span class="key">delivered:</span> 09:00:18 ET · cited: building-14-retrofit · cited: frank.m</span>
+  </div>
+
+  <!-- v42 — current -->
+  <div class="run milestone">
+    <div class="when"><span class="yyyy">2026</span><span class="mmdd">05·04</span></div>
+    <div class="v-tag"><span class="vnum">v42</span><span class="pipe">·</span><span class="score">0.97</span><span class="pipe">·</span><span>delivered</span><span class="pipe">·</span><span class="delta">current</span></div>
+    <h3>This Monday's <span class="acc">brief</span>. Highest eval since v1.</h3>
+    <p class="run-body">A clean run. Three anomalies flagged (Buildings 12, 14, 31 — one is the boiler retrofit, correctly cited; two are real). The brief reaches the leadership group at 09:00:42 ET. Sarah is in Building 14 looking at the boiler when the brief lands. She doesn't open it until lunchtime. <span class="acc">That is the point.</span></p>
+    <span class="signed"><span class="key">delivered:</span> 09:00:42 ET · 252 words · 3 anomalies · 1 cited · score 0.97 · openprose-runtime-v0.42</span>
+  </div>
+
+</div>
+
+<!-- COLOPHON -->
+<div class="colophon">
+  <div class="col-line quote">A program is a document with guarantees. — this document, every Monday, since 2025-08-04.</div>
+  <div class="col-line"><span class="key">generated_at:</span> 2026-05-04T13:42Z</div>
+  <div class="col-line"><span class="key">runtime:</span> openprose-v0.42 · <span class="key">signed:</span> ridgeline-ops</div>
+  <div class="col-line">
+    <a href="direction-theta-living-document.html">θ template</a>
+    <a href="direction-alpha-editorial-concept.html">α</a>
+    <a href="direction-beta-tufte-concept.html">β</a>
+    <a href="direction-gamma-manuscript-concept.html">γ</a>
+    <a href="direction-delta-machine-concept.html">δ</a>
+    <a href="direction-epsilon-operator-concept.html">ε</a>
+    <a href="direction-zeta-saas-concept.html">ζ</a>
+    <a href="direction-eta-organism-concept.html">η</a>
+    <a href="direction-iota-reference-card-concept.html">ι</a>
+    <a href="direction-kappa-codex-spreads-concept.html">κ</a>
+  </div>
+  <div class="col-line signature">// signed: sarah.k · ridgeline-ops · v42</div>
+</div>
+
+<script>
+  (function() {
+    const KEY = 'op-theta-concept-theme';
+    const root = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    const label = btn ? btn.querySelector('.t-mode') : null;
+    function setTheme(t) {
+      root.setAttribute('data-theme', t);
+      // Surface tokens come from body[data-palette] in _tokens.css; swap the
+      // palette too or the dark-livingdoc surface wins and light never applies.
+      // The [data-theme="light"] block still supplies the bespoke ember accent.
+      document.body.setAttribute('data-palette', t === 'light' ? 'light-warm-teal' : 'dark-livingdoc');
+      if (label) label.textContent = t === 'light' ? 'dark mode' : 'light mode';
+      try { localStorage.setItem(KEY, t); } catch (e) {}
+    }
+    let saved = null;
+    try { saved = localStorage.getItem(KEY); } catch (e) {}
+    setTheme(saved || 'dark');
+    if (btn) {
+      btn.addEventListener('click', function () {
+        const cur = root.getAttribute('data-theme') || 'dark';
+        setTheme(cur === 'dark' ? 'light' : 'dark');
+      });
+    }
+  })();
+</script>
+
+</body>
+</html>

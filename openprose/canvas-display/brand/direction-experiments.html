@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenProse · The Aspect Catalog · every axis, every permutation</title>
+<!-- ============================================================
+     DIRECTION EXPERIMENTS — layouts × marks live gallery (2026-05-26 JH)
+     ----------------------------------------------------------------
+     Companion to direction-styleguide.html. The styleguide is the
+     foundation spec (tokens, type, palettes, components). This page
+     is the live test-bed for the two axes that don't visibly transform
+     the styleguide itself: data-layout and data-mark.
+
+     Sections:
+       I  Layouts gallery   — six containers, illustrated
+       II  Mark treatments    — eight live IIFEs (lazy-iframed)
+       III  Direction × mark   — ownership matrix
+       IV  Play surface       — loads the canonical page for the
+                                 currently selected direction + mark
+
+     Shares:
+       · _tokens.css      — palette + global tokens
+       · _pairings.css    — Kecal × {Plex, Jet, Space} × A–F
+       · _styleguide.js   — mode-panel + localStorage state shared
+                            with direction-styleguide.html
+     ============================================================ -->
+
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 142 142'%3E%3Ccircle cx='71' cy='71' r='62' fill='none' stroke='%232a2520' stroke-width='10'/%3E%3Ccircle cx='102' cy='40' r='14' fill='%232a2520'/%3E%3C/svg%3E">
+
+<link rel="stylesheet" href="_tokens.css">
+<link rel="stylesheet" href="_pairings.css">
+
+<style>
+/* ============================================================
+   PAGE CHROME — shell, cover, section frame
+   Mirrors direction-styleguide.html so the two pages feel like
+   companions, not strangers. Anything page-specific (matrix,
+   iframe wrappers, play surface) lives below this block.
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 17px; scroll-behavior: smooth; }
+
+body {
+  min-height: 100vh;
+  padding: 1.5rem 0 4rem;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--type-body);
+  font-weight: var(--w-body);
+  font-size: var(--fs-body);
+  line-height: 1.6;
+}
+
+.sg-shell {
+  max-width: var(--wide);
+  margin: 0 auto;
+  padding: 0 var(--space-lg);
+}
+
+/* ---- COVER ---- */
+.sg-cover {
+  padding: var(--space-3xl) 0 var(--space-2xl);
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+}
+.sg-cover-eyebrow {
+  font-family: var(--type-mono);
+  font-size: var(--fs-caption);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: var(--space-md);
+}
+.sg-cover-title {
+  font-family: var(--type-display);
+  font-weight: var(--w-display);
+  font-style: var(--i-display);
+  font-size: clamp(2rem, 5vw, var(--fs-display));
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  max-width: 22ch;
+}
+.sg-cover-title em {
+  font-family: var(--type-display-em);
+  font-weight: var(--w-display-em);
+  font-style: var(--i-display-em);
+}
+.sg-cover-sub {
+  margin-top: var(--space-md);
+  font-size: var(--fs-h3);
+  color: var(--ink-2);
+  max-width: 50ch;
+  line-height: 1.5;
+}
+.sg-cover-meta {
+  margin-top: var(--space-xl);
+  font-family: var(--type-mono);
+  font-size: var(--fs-caption);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  display: flex; flex-wrap: wrap; gap: var(--space-lg);
+}
+.sg-cover-meta b { color: var(--ink); font-weight: 600; }
+
+/* ---- ACTIVE MODE CARD (cover) ---- */
+.active-mode-card {
+  margin-top: var(--space-xl);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--paper-elev);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+}
+.active-mode-label {
+  font-family: var(--type-mono);
+  font-size: var(--fs-caption);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: var(--space-xs);
+}
+.active-mode-status {
+  font-family: var(--type-mono);
+  font-size: var(--fs-small);
+  color: var(--ink);
+  margin-bottom: var(--space-sm);
+}
+.active-mode-status b { font-weight: 700; color: var(--ink); }
+.active-mode-hint {
+  font-family: var(--type-mono);
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+}
+.active-mode-hint a { color: var(--accent, var(--ink-2)); text-decoration: none; border-bottom: 1px solid currentColor; }
+.active-mode-hint a:hover { color: var(--ink); }
+
+/* ---- COMPANION LINKS (back to styleguide + other companions) ---- */
+.companion-row {
+  display: flex; flex-wrap: wrap; gap: var(--space-md);
+  margin-top: var(--space-md);
+}
+.companion-link {
+  flex: 1; min-width: 220px;
+  display: block;
+  padding: var(--space-md);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: var(--ink);
+  background: var(--paper);
+  transition: all var(--t-fast);
+}
+.companion-link:hover { background: var(--paper-warm); border-color: var(--ink-3); }
+.companion-link .lbl {
+  font-family: var(--type-mono);
+  font-size: var(--fs-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--ink-3);
+  margin-bottom: var(--space-xs);
+}
+.companion-link .ttl {
+  font-size: var(--fs-h3);
+  color: var(--ink);
+}
+
+/* ---- SECTION FRAME ---- */
+.sg-section {
+  padding: var(--space-3xl) 0 var(--space-2xl);
+  border-bottom: 1px solid var(--rule);
+}
+.sg-section:last-of-type { border-bottom: none; }
+.sg-section-num {
+  font-family: var(--type-mono);
+  font-size: var(--fs-caption);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: var(--space-sm);
+}
+.sg-section h2 {
+  font-family: var(--type-display);
+  font-weight: var(--w-display);
+  font-style: var(--i-display);
+  font-size: clamp(1.6rem, 3vw, var(--fs-h1));
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  margin-bottom: var(--space-lg);
+  max-width: 28ch;
+}
+.sg-section h2 em {
+  font-family: var(--type-display-em);
+  font-weight: var(--w-display-em);
+  font-style: var(--i-display-em);
+}
+.sg-section .sg-lede {
+  font-family: var(--type-body);
+  font-weight: var(--w-body);
+  font-size: var(--fs-h3);
+  color: var(--ink-2);
+  max-width: var(--measure);
+  line-height: 1.55;
+  margin-bottom: var(--space-2xl);
+}
+.sg-section h3 {
+  font-family: var(--type-display);
+  font-weight: var(--w-display);
+  font-size: var(--fs-h3);
+  color: var(--ink);
+  margin: var(--space-xl) 0 var(--space-md);
+  letter-spacing: -0.005em;
+}
+.ui-code {
+  font-family: var(--type-mono);
+  font-size: var(--fs-mono);
+  background: var(--paper-warm);
+  border: 1px solid var(--rule-mid);
+  border-radius: 2px;
+  padding: 0.1em 0.4em;
+}
+.ui-badge {
+  display: inline-block;
+  padding: 0.18rem 0.5rem;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  font-family: var(--type-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  background: var(--paper-warm);
+}
+
+/* ============================================================
+   III DIRECTION × MARK MATRIX
+   ============================================================ */
+.matrix-wrap {
+  margin: var(--space-md) 0 var(--space-2xl);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+  background: var(--paper);
+}
+.matrix-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  font-family: var(--type-mono);
+  font-size: var(--fs-caption);
+}
+.matrix-table th, .matrix-table td {
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--rule-mid);
+  text-align: center;
+  vertical-align: middle;
+}
+.matrix-table thead th {
+  background: var(--paper-warm);
+  font-weight: 600;
+  color: var(--ink-2);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 0.6rem;
+  position: sticky; top: 0;
+  z-index: 1;
+}
+.matrix-table tbody th {
+  text-align: left;
+  background: var(--paper-warm);
+  position: sticky; left: 0;
+  z-index: 1;
+}
+.matrix-table tbody tr:hover { background: var(--paper-warm); }
+.matrix-table tbody tr:hover th { background: var(--paper-elev); }
+.matrix-cell {
+  width: 11%;
+}
+.matrix-combo {
+  appearance: none; -webkit-appearance: none;
+  width: 100%;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  padding: 0.4rem 0.2rem;
+  cursor: pointer;
+  font: inherit; color: inherit;
+  transition: border-color var(--t-fast), background var(--t-fast);
+}
+.matrix-combo:hover { border-color: var(--ink-3); background: var(--paper-warm); }
+.matrix-combo.active { border-color: var(--ink); background: var(--paper-warm); }
+.combo-dirs {
+  font-family: var(--type-kecal);
+  font-weight: 700;
+  font-style: normal;
+  font-size: 1.1rem;
+  color: var(--ink);
+  letter-spacing: 0.12em;
+}
+.matrix-dot {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--rule);
+  vertical-align: middle;
+}
+.matrix-dot.canonical { background: var(--ink); }
+.matrix-dot.compatible { background: var(--ink-3); }
+.matrix-dot.canonical { box-shadow: 0 0 0 2px var(--paper); outline: 1px solid var(--ink); }
+.matrix-label {
+  display: block;
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-3);
+  margin-top: 2px;
+}
+.matrix-legend {
+  margin-top: var(--space-sm);
+  display: flex; flex-wrap: wrap; gap: var(--space-md);
+  font-family: var(--type-mono);
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+}
+.matrix-legend span { display: inline-flex; align-items: center; gap: 0.4em; }
+
+
+/* ============================================================
+   VI LIBRARY SPECIMENS — pretext demo + composed voice
+   ============================================================ */
+.pretext-demo { position: relative; background: var(--paper-lt);
+  border: 1px solid var(--rule); border-radius: var(--radius-md);
+  padding: var(--space-lg); margin: var(--space-md) 0 var(--space-2xl); }
+.pretext-prose { position: relative; font-family: var(--type-mono); font-size: 0.96rem;
+  line-height: 1.72; color: var(--ink); max-width: var(--measure); margin: 0 auto; min-height: 12rem; }
+.pretext-prose p { text-align: justify; hyphens: auto; }
+.pretext-prose em { color: var(--ink); font-family: var(--type-kecal);
+  font-weight: 800; font-style: var(--i-body-em); }
+.pretext-mark { --px: 0.5; --py: 0.5; float: left; width: 140px; height: 140px;
+  margin: calc(var(--py) * 1rem) var(--space-md) var(--space-sm) calc(var(--px) * 1rem);
+  shape-outside: circle(50%); -webkit-shape-outside: circle(50%); shape-margin: 12px;
+  cursor: grab; user-select: none; filter: drop-shadow(0 1px 0 var(--rule)); }
+.pretext-mark.dragging { cursor: grabbing; }
+.pretext-swatches { display: flex; flex-wrap: wrap; gap: var(--space-sm);
+  margin-top: var(--space-md); padding-top: var(--space-sm); border-top: 1px solid var(--rule); }
+.pretext-swatch { display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.45rem 0.7rem; background: var(--paper); border: 1px solid var(--rule);
+  font-family: var(--type-mono); font-size: 0.78rem; letter-spacing: 0.04em;
+  color: var(--ink-2); cursor: pointer; }
+.pretext-swatch:hover, .pretext-swatch.active { border-color: var(--teal, var(--ink)); color: var(--ink); }
+.pretext-swatch img { width: 22px; height: 22px; display: block; }
+.pretext-meta { margin-top: var(--space-sm); font-family: var(--type-mono);
+  font-size: var(--fs-caption); color: var(--ink-3); letter-spacing: 0.04em; }
+@media (max-width: 640px) { .pretext-mark { width: 96px; height: 96px; }
+  .pretext-demo { padding: var(--space-md); }
+  .pretext-prose { font-size: 0.88rem; line-height: 1.6; min-height: 8rem; } }
+.vp-passage { background: var(--paper-lt); border: 1px solid var(--rule);
+  border-radius: var(--radius-md); padding: var(--space-lg);
+  margin: var(--space-md) 0 var(--space-2xl); max-width: var(--measure); }
+.vp-body { font-family: var(--type-body); font-size: 1rem; line-height: 1.75; color: var(--ink); }
+.vp-body + .vp-body { margin-top: var(--space-sm); }
+.vp-body em { font-family: var(--type-body-em); font-weight: var(--w-body-em); font-style: var(--i-body-em); }
+.vp-drop { float: left; font-family: var(--type-display); font-size: 3.2em;
+  line-height: 0.85; padding: 0.04em 0.12em 0 0; color: var(--ink); }
+.vp-quote { margin: var(--space-md) 0; padding: var(--space-2xs) 0;
+  border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+  font-family: var(--type-display); font-size: 1.3rem; line-height: 1.4; color: var(--ink); }
+.vp-sn { font-family: var(--type-mono); font-size: 0.7em; color: var(--teal, var(--ink-2)); }
+.vp-note { margin-top: var(--space-md); padding-top: var(--space-2xs);
+  border-top: 1px solid var(--rule); font-family: var(--type-mono);
+  font-size: var(--fs-caption); color: var(--ink-3); max-width: 48ch; }
+.cx-hero { background: var(--paper-lt); border: 1px solid var(--rule);
+  border-radius: var(--radius-md); padding: var(--space-xl) var(--space-lg);
+  margin: var(--space-md) 0 var(--space-2xl); text-align: center; }
+.cx-hero-line { font-family: var(--type-display); font-weight: var(--w-display);
+  font-style: var(--i-display); font-size: clamp(2rem, 5vw, 3.2rem);
+  line-height: 1.05; color: var(--ink); }
+.cx-hero-line em { font-family: var(--type-display-em); font-weight: var(--w-display-em);
+  font-style: var(--i-display-em); }
+.cx-hero-cmd { display: inline-flex; align-items: center; gap: 0.6rem;
+  margin-top: var(--space-md); font-family: var(--type-mono); font-size: 0.9rem;
+  background: var(--paper); border: 1px solid var(--rule); border-radius: 6px;
+  padding: 0.7rem 1rem; color: var(--ink); }
+.cx-hero-cmd .cx-prompt { color: var(--amber, var(--ink-3)); font-weight: 700; }
+.cx-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-sm);
+  margin: var(--space-md) 0 var(--space-2xl); }
+@media (max-width: 720px) { .cx-cards { grid-template-columns: 1fr; } }
+.cx-card { background: var(--paper-lt); border: 1px solid var(--rule);
+  border-radius: var(--radius-md); padding: var(--space-md); }
+.cx-num { font-family: var(--type-mono); font-size: var(--fs-caption);
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3);
+  margin-bottom: var(--space-2xs); }
+.cx-card h4 { font-family: var(--type-display); font-weight: var(--w-display);
+  font-size: 1.05rem; color: var(--ink); margin-bottom: var(--space-2xs); }
+.cx-card h4 em { font-family: var(--type-display-em); font-weight: var(--w-display-em);
+  font-style: var(--i-display-em); }
+.cx-card p { font-family: var(--type-body); font-size: 0.88rem; line-height: 1.6; color: var(--ink-2); }
+.vp-contract { background: var(--paper-lt); border: 1px solid var(--rule);
+  border-radius: var(--radius-md); padding: var(--space-md) var(--space-lg);
+  margin: var(--space-md) 0 var(--space-2xl);
+  font-family: var(--type-mono); font-size: 0.92rem; line-height: 1.7;
+  color: var(--ink-2); overflow-x: auto; white-space: pre; }
+.vp-contract .k { color: var(--teal, var(--ink)); font-weight: 600; }
+.vp-contract .c { color: var(--ink-3); font-style: italic; }
+
+/* ============================================================
+   MOBILE SAFETY
+   ============================================================ */
+html, body { overflow-x: hidden; }
+@media (max-width: 640px) {
+  .sg-section { padding: var(--space-xl) 0 var(--space-lg); }
+  .sg-cover { padding: var(--space-xl) 0; }
+  .sg-cover-title { font-size: clamp(1.8rem, 8vw, 2.4rem); line-height: 1.05; }
+  .sg-section h2 { font-size: clamp(1.4rem, 6vw, 1.8rem); }
+  .matrix-wrap { font-size: 0.55rem; }
+}
+
+/* This page has no mark rendering; the axis is noise here. */
+#sg-mode-panel .sg-mp-row[data-axis-row="mark"] { display: none; }
+
+/* Black-authored logo SVGs flip to paper on dark palettes. */
+body[data-palette^="dark"] .pretext-mark,
+body[data-palette^="dark"] .pretext-swatch img { filter: invert(1); }
+
+/* ---- 0.5 VISUAL PICKERS (c_11ad797d) ---- */
+.pick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-sm);
+  margin: var(--space-sm) 0 var(--space-md);
+}
+.pick-grid--mono { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.pick-grid--pair { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.pick-tile {
+  display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start;
+  gap: 0.4rem;
+  padding: var(--space-sm);
+  background: var(--paper-elev);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  text-align: left;
+  cursor: pointer;
+  font: inherit; color: inherit;
+  transition: border-color var(--t-fast) ease, transform var(--t-fast) ease, background var(--t-fast) ease;
+}
+.pick-tile:hover {
+  border-color: var(--ink-3);
+  transform: translateY(-1px);
+  background: var(--paper-warm);
+}
+.pick-tile.active {
+  border-color: var(--ink);
+  background: var(--paper-warm);
+}
+.pick-tile-swatch {
+  display: block;
+  height: 56px;
+  border-radius: var(--radius-md);
+  background:
+    linear-gradient(90deg,
+      var(--swatch-paper) 0,
+      var(--swatch-paper) 60%,
+      var(--swatch-ink) 60%,
+      var(--swatch-ink) 80%,
+      var(--swatch-accent) 80%,
+      var(--swatch-accent) 100%);
+  border: 1px solid var(--rule);
+}
+.pick-tile-name {
+  font-family: var(--type-mono);
+  font-size: var(--fs-caption);
+  letter-spacing: 0.04em;
+  color: var(--ink-2);
+}
+.pick-tile-mono {
+  font-size: 1.05rem;
+  color: var(--ink);
+  line-height: 1.1;
+}
+.pick-tile-mono--sample {
+  font-size: 0.78rem;
+  color: var(--ink-3);
+  line-height: 1.4;
+}
+.pick-tile-display {
+  font-family: var(--type-mono);
+  font-size: 1.32rem;
+  font-weight: 500;
+  color: var(--ink);
+  line-height: 1.1;
+}
+.pick-tile-display em {
+  font-family: 'Kecal', system-ui, sans-serif;
+  font-style: var(--i-display-em, normal); font-weight: 800;
+  color: var(--ink);
+}
+.pick-tile-recipe {
+  font-family: var(--type-mono);
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+  letter-spacing: 0.02em;
+}
+
+
+</style>
+</head>
+
+<body data-direction="β"
+      data-palette="light-warm-teal"
+      data-pairing="A"
+      data-mono="plex"
+      data-layout="styleguide"
+      data-mark="swap-cycle"
+      data-styleguide-autoinit>
+
+<div class="sg-shell">
+
+  <section class="sg-section" id="pickers">
+    <div class="sg-section-num">I Pick Palette, Pairing, Accent, Mono</div>
+    <h2>Specimens <em>as buttons</em>.</h2>
+    <p class="sg-lede">Each tile renders the option as it will look once selected. Click to apply. The page updates immediately; the mode panel records the state and carries it to the styleguide.</p>
+
+    <h3 style="margin-top: var(--space-lg);">Palette</h3>
+    <div class="pick-grid" id="palette-picker">
+      <button class="pick-tile" data-axis="palette" data-val="light-cool-default" style="--swatch-paper:#f7f5ee;--swatch-ink:#1f1d18;--swatch-accent:#3a6e6a;">
+        <span class="pick-tile-swatch"></span>
+        <span class="pick-tile-name">light · cool default</span>
+      </button>
+      <button class="pick-tile" data-axis="palette" data-val="light-warm-teal" style="--swatch-paper:#f5f0e8;--swatch-ink:#2a2520;--swatch-accent:#3a7a6a;">
+        <span class="pick-tile-swatch"></span>
+        <span class="pick-tile-name">light · warm teal</span>
+      </button>
+      <button class="pick-tile" data-axis="palette" data-val="light-warm-rust" style="--swatch-paper:#f4ede0;--swatch-ink:#221915;--swatch-accent:#a35a3d;">
+        <span class="pick-tile-swatch"></span>
+        <span class="pick-tile-name">light · warm rust</span>
+      </button>
+      <button class="pick-tile" data-axis="palette" data-val="light-manuscript-cream" style="--swatch-paper:#f8f1de;--swatch-ink:#26201b;--swatch-accent:#b18a3c;">
+        <span class="pick-tile-swatch"></span>
+        <span class="pick-tile-name">light · manuscript cream</span>
+      </button>
+      <button class="pick-tile" data-axis="palette" data-val="light-saas-neutral" style="--swatch-paper:#fafaf7;--swatch-ink:#1a1a1f;--swatch-accent:#3e64c2;">
+        <span class="pick-tile-swatch"></span>
+        <span class="pick-tile-name">light · saas neutral</span>
+      </button>
+      <button class="pick-tile" data-axis="palette" data-val="dark-machine" style="--swatch-paper:#0e0e10;--swatch-ink:#e8e4dc;--swatch-accent:#d4a64f;">
+        <span class="pick-tile-swatch"></span>
+        <span class="pick-tile-name">dark · machine</span>
+      </button>
+      <button class="pick-tile" data-axis="palette" data-val="dark-livingdoc" style="--swatch-paper:#171515;--swatch-ink:#eee6d6;--swatch-accent:#6ec8b1;">
+        <span class="pick-tile-swatch"></span>
+        <span class="pick-tile-name">dark · livingdoc</span>
+      </button>
+    </div>
+
+    <h3 style="margin-top: var(--space-lg);">Mono face</h3>
+    <div class="pick-grid pick-grid--mono" id="mono-picker">
+      <button class="pick-tile" data-axis="mono" data-val="plex">
+        <span class="pick-tile-mono" style="font-family: 'IBM Plex Mono', monospace;">OpenProse</span>
+        <span class="pick-tile-mono pick-tile-mono--sample" style="font-family: 'IBM Plex Mono', monospace;">A program is a document with guarantees.</span>
+        <span class="pick-tile-name">Plex</span>
+      </button>
+      <button class="pick-tile" data-axis="mono" data-val="jet">
+        <span class="pick-tile-mono" style="font-family: 'JetBrains Mono', monospace;">OpenProse</span>
+        <span class="pick-tile-mono pick-tile-mono--sample" style="font-family: 'JetBrains Mono', monospace;">A program is a document with guarantees.</span>
+        <span class="pick-tile-name">JetBrains</span>
+      </button>
+      <button class="pick-tile" data-axis="mono" data-val="space">
+        <span class="pick-tile-mono" style="font-family: 'Space Mono', monospace;">OpenProse</span>
+        <span class="pick-tile-mono pick-tile-mono--sample" style="font-family: 'Space Mono', monospace;">A program is a document with guarantees.</span>
+        <span class="pick-tile-name">Space</span>
+      </button>
+    </div>
+
+    <h3 style="margin-top: var(--space-lg);">Pairing recipe</h3>
+    <div class="pick-grid pick-grid--pair" id="pairing-picker">
+      <button class="pick-tile" data-axis="pairing" data-val="A">
+        <span class="pick-tile-display">Open<em>Prose</em></span>
+        <span class="pick-tile-recipe">A · mono 400 body · Kecal 800 accent</span>
+      </button>
+      <button class="pick-tile" data-axis="pairing" data-val="B">
+        <span class="pick-tile-display" style="font-family:'Kecal',sans-serif;">Open<em style="font-family:'IBM Plex Mono',monospace;font-style:italic;">Prose</em></span>
+        <span class="pick-tile-recipe">B · Kecal 400 body · mono 500 italic accent</span>
+      </button>
+      <button class="pick-tile" data-axis="pairing" data-val="C">
+        <span class="pick-tile-display" style="font-weight:700;">Open<em style="font-weight:700;font-style:var(--i-display-em, normal);">Prose</em></span>
+        <span class="pick-tile-recipe">C · mono 700 display · Kecal body</span>
+      </button>
+      <button class="pick-tile" data-axis="pairing" data-val="D">
+        <span class="pick-tile-display" style="font-family:'Kecal',sans-serif;font-weight:800;font-style:italic;">Open<em style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-style:normal;">Prose</em></span>
+        <span class="pick-tile-recipe">D · Kecal italic 800 · mono 600 upright em</span>
+      </button>
+      <button class="pick-tile" data-axis="pairing" data-val="E">
+        <span class="pick-tile-display" style="font-weight:300;">Open<em style="font-family:'Kecal',sans-serif;font-weight:400;font-style:var(--i-display-em, normal);">Prose</em></span>
+        <span class="pick-tile-recipe">E · mono 300 body · Kecal 400</span>
+      </button>
+      <button class="pick-tile" data-axis="pairing" data-val="F">
+        <span class="pick-tile-display" style="font-weight:700;">Open<em style="font-family:'Kecal',sans-serif;font-weight:800;font-style:var(--i-display-em, normal);">Prose</em></span>
+        <span class="pick-tile-recipe">F · mono 700 body · Kecal 800</span>
+      </button>
+    </div>
+  
+    <h3 style="margin-top: var(--space-lg);">Accent posture</h3>
+    <div class="pick-grid" id="accent-picker">
+      <button class="pick-tile" data-axis="accent" data-val="upright">
+        <span class="pick-tile-display">Open<em style="font-family:'Kecal',sans-serif;font-weight:800;font-style:normal;">Prose</em></span>
+        <span class="pick-tile-recipe">upright · the default (c_a965130b)</span>
+      </button>
+      <button class="pick-tile" data-axis="accent" data-val="italic">
+        <span class="pick-tile-display">Open<em style="font-family:'Kecal',sans-serif;font-weight:800;font-style:italic;">Prose</em></span>
+        <span class="pick-tile-recipe">italic · historical</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       COVER
+       ============================================================ -->
+  <header class="sg-cover">
+    <div class="sg-cover-eyebrow">OpenProse · The aspect catalog · every axis, every permutation</div>
+    <h1 class="sg-cover-title">Every <em>aspect</em>, every permutation.</h1>
+    <p class="sg-cover-sub">This page is the summation: all seven axes, every option, live. Four axes have visual pickers at the top: palette, pairing, accent, mono. Direction and layout live in the mode panel. Every choice applies to this page immediately and persists. The styleguide is the reconciliation: it renders the resolved spec of whatever you pick here.</p>
+    <div class="sg-cover-meta">
+      <span><b>v0.1</b> 2026-05-26</span>
+      <span><b>7</b> palettes · <b>6</b> pairings · <b>2</b> accents · <b>3</b> monos · <b>6</b> layouts · <b>10</b> directions</span>
+      <span>signed: <b>JH</b></span>
+    </div>
+
+
+    <!-- Active configuration — proves the panel does something on this page -->
+    <div class="active-mode-card">
+      <div class="active-mode-label">Active configuration</div>
+      <div class="active-mode-status" id="active-mode-status">
+        <b>β</b> · light-warm-teal · pairing <b>A</b> · accent <b>upright</b> · mono <b>plex</b> · layout <b>styleguide</b>
+      </div>
+      <div class="active-mode-hint">
+        Mode state shared with direction-styleguide.html via <code class="ui-code">localStorage</code>. Toggling the panel here updates the styleguide on next visit.
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================================================
+       0.5 VISUAL PICKERS — palettes / fonts / pairings (c_11ad797d)
+       Replaces the direction + layout dropdowns with tile-pickers
+       that show what each option LOOKS like.  Direction + layout
+       selectors hidden via .hide-direction-layout body class below.
+       ============================================================ -->
+<!-- (pickers moved to the top of the page — the first thing you meet) -->
+
+  <section class="sg-section" id="matrix">
+    <div class="sg-section-num">II Combination Matrix</div>
+    <h2>Palette × pairing, <em>every combination</em>.</h2>
+    <p class="sg-lede">
+      The two axes that set most of a page's look. Each cell is a combination. Click any cell to apply it to this page. A lettered cell is proven: at least one direction ships that pair. An open cell is valid and unexplored; the role tokens make every combination run.
+    </p>
+
+    <div class="matrix-wrap">
+      <table class="matrix-table">
+        <thead>
+          <tr>
+            <th style="text-align:left;">Palette</th>
+            <th class="matrix-cell">A</th>
+            <th class="matrix-cell">B</th>
+            <th class="matrix-cell">C</th>
+            <th class="matrix-cell">D</th>
+            <th class="matrix-cell">E</th>
+            <th class="matrix-cell">F</th>
+          </tr>
+        </thead>
+        <tbody id="matrix-body">
+          <!-- Generated by JS from COMBO_DATA -->
+        </tbody>
+      </table>
+    </div>
+
+    <div class="matrix-legend">
+      <span><span class="matrix-dot canonical"></span> proven · the letters name the directions that ship it</span>
+      <span><span class="matrix-dot"></span> open · valid, unexplored</span>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       IV PLAY SURFACE
+       ============================================================ -->
+  <section class="sg-section" id="play">
+    <div class="sg-section-num">III The Homepage Content, Re-set</div>
+    <h2>Real content, <em>every combination</em>.</h2>
+    <p class="sg-lede">
+      The specimens below are the canonical homepage's actual content, set live by whatever you pick above. This is the experimentation surface for that content: change an axis and watch the same words carry a different face. No frames, no page loads.
+    </p>
+
+    <h3>III.1 the hero line</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">
+      The homepage's headline and its one real command.
+    </p>
+    <div class="cx-hero">
+      <div class="cx-hero-line">Author <em>Outcomes</em></div>
+      <div class="cx-hero-cmd"><span class="cx-prompt" aria-hidden="true">$</span><code>npx skills add <strong>openprose/prose</strong></code></div>
+    </div>
+
+    <h3>III.2 the three-part contract</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">
+      The homepage's first section: what a responsibility requires, maintains, and is free to choose.
+    </p>
+    <div class="cx-cards">
+      <article class="cx-card">
+        <div class="cx-num">01 / requires</div>
+        <h4>It states what it <em>requires</em>.</h4>
+        <p>Preconditions, up front. What must hold before it runs: inputs, access, state. Nothing fires against an unmet world.</p>
+      </article>
+      <article class="cx-card">
+        <div class="cx-num">02 / maintains</div>
+        <h4>It is judged on what it <em>maintains</em>.</h4>
+        <p>The truth, kept current. What must stay true while it runs. Each run is scored against it: below the bar, the run holds; at or above, it ships.</p>
+      </article>
+      <article class="cx-card">
+        <div class="cx-num">03 / strategies</div>
+        <h4>It is free in its <em>strategies</em>.</h4>
+        <p>How it works, in prose, versioned. The approaches an agent may take to meet the contract, declared in the source.</p>
+      </article>
+    </div>
+
+    <h3>III.3 pretext · prose wraps a grabbable mark</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">
+      The mark floats inside the column. The text wraps its silhouette with CSS <code class="ui-code">shape-outside</code>. Drag the mark to move it. Click a signet below to swap the obstacle. The production engine lives in <code class="ui-code">brand/pretext/</code>; this demo is CSS only.
+    </p>
+    <div class="pretext-demo">
+      <div class="pretext-prose">
+        <img class="pretext-mark" id="pretextMark"
+             src="../Assets/openProse logos/OP-style-v2.svg"
+             alt="OpenProse mark" draggable="false">
+        <p>A responsibility is a <em>contract</em>, not a prompt. Write the future as a Markdown contract agents can run, review, and maintain. It states what it <em>requires</em>: preconditions, up front. What must hold before it runs: inputs, access, state. Nothing fires against an unmet world. It is judged on what it <em>maintains</em>: the truth, kept current. Each run is scored against it; below the bar, the run holds. It is free in its <em>strategies</em>: how it works, in prose, versioned. This copy is the canonical homepage's first section, set by the system it describes. Drag the mark and the paragraph reflows around it.</p>
+      </div>
+      <div class="pretext-swatches" aria-label="Swap mark">
+        <button class="pretext-swatch active" type="button" data-src="../Assets/openProse logos/OP-style-v2.svg" aria-label="OP style v2 signet"><img src="../Assets/openProse logos/OP-style-v2.svg" alt=""><span>style v2</span></button>
+        <button class="pretext-swatch" type="button" data-src="../Assets/openProse logos/OP-infinite.svg" aria-label="OP infinite signet"><img src="../Assets/openProse logos/OP-infinite.svg" alt=""><span>infinite</span></button>
+        <button class="pretext-swatch" type="button" data-src="../Assets/openProse logos/OP-Circle.svg" aria-label="OP circle signet"><img src="../Assets/openProse logos/OP-Circle.svg" alt=""><span>circle</span></button>
+        <button class="pretext-swatch" type="button" data-src="../Assets/openProse logos/OP-swish.svg" aria-label="OP swish signet"><img src="../Assets/openProse logos/OP-swish.svg" alt=""><span>swish</span></button>
+      </div>
+      <div class="pretext-meta">drag to relocate · <span id="pretextPos">x: 50% · y: 50%</span></div>
+    </div>
+
+    <h3>III.4 the composed voice · one passage, every role</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">
+      One passage that uses the full role scale: drop cap, body, accents, a pull quote, and a sidenote. Change any axis in the panel and every role follows.
+    </p>
+    <div class="vp-passage">
+      <p class="vp-body"><span class="vp-drop">O</span>nce, the week began with a scramble. Then the outcome was declared in a file<sup class="vp-sn">1</sup>. The editorial register carries the long form; <em>italic carries the pivot</em>. Billed by <em>delivery</em>: if the outcome does not ship, no line.</p>
+      <div class="vp-quote">Write the outcome. We run it.</div>
+      <p class="vp-body">Every sentence above is a sanctioned register from the styleguide's voice section: editorial, spec, and the six-word tagline. Roles, not faces, are the contract: <em>display</em>, <em>body</em>, <em>eyebrow</em>, <em>em</em>. One passage survives eighteen permutations without an edit.</p>
+      <p class="vp-note"><span class="vp-sn">1</span> The sidenote holds the reader's aside. It never shares a phrase with the accent.</p>
+    </div>
+
+    <h3>III.5 a running contract · the tooling's own responsibility</h3>
+    <p class="sg-lede" style="font-size:1rem; max-width:60ch;">
+      Not a specimen: this contract runs in the repository that produced this page. It keeps the design review state coherent while agents work in parallel.
+    </p>
+    <pre class="vp-contract"><span class="c">// .agents/prose/src/review-state-stays-coherent.prose.md · running in this repo</span>
+<span class="k">name:</span> review-state-stays-coherent
+<span class="k">kind:</span> responsibility
+
+<span class="k">Criteria</span> · `agent-close.mjs --audit-all` must read OPEN=0 for every closed round
+<span class="k">Constraints</span> · never close a comment to make the audit green. A clean audit is
+              the <span class="k">result</span> of coherent state, not the goal to be gamed.</pre>
+  </section>
+
+</div><!-- /sg-shell -->
+
+<script src="_styleguide.js" defer></script>
+<script>
+/* ============================================================
+   direction-experiments.html — page-specific logic
+   ----------------------------------------------------------------
+   1. Tile click handlers (layout + mark)
+   2. syncActiveTiles() mirrors mode-panel state into .active classes
+   3. Mini-swap inline widget (compact swap-cycle for III)
+   4. Matrix table generation + active-row highlight
+   5. Pretext specimen: pointer drag + swatch swap (VI)
+   ============================================================ */
+document.addEventListener('DOMContentLoaded', () => {
+
+  /* ---------- Tile-click → axis setter ---------- */
+  function setVia(axis, value) {
+    if (window.SG && window.SG.setAxis) {
+      window.SG.setAxis(axis, value);
+    } else {
+      document.body.setAttribute('data-' + axis, value);
+      document.dispatchEvent(new CustomEvent('sg:mode-change', {
+        detail: Object.assign({}, document.body.dataset)
+      }));
+    }
+  }  /* Visual picker tiles for palette/mono/pairing. Same setVia plumbing
+     as the layout/mark cards. */
+  document.querySelectorAll('.pick-tile').forEach(tile => {
+    tile.addEventListener('click', () => {
+      const axis = tile.dataset.axis;
+      const val  = tile.dataset.val;
+      if (axis && val) setVia(axis, val);
+    });
+  });
+
+  /* ---------- syncActiveTiles ---------- */
+  function syncActiveTiles() {
+    const ds = document.body.dataset;    /* Mirror palette/mono/pairing into the visual pick-tiles so the
+       active one is visibly framed. */
+    document.querySelectorAll('.pick-tile').forEach(tile => {
+      const axis = tile.dataset.axis;
+      if (!axis) return;
+      tile.classList.toggle('active', tile.dataset.val === ds[axis]);
+    });
+    // Active-mode card status line
+    const status = document.getElementById('active-mode-status');
+    if (status) {
+      status.innerHTML =
+        '<b>' + (ds.direction || '–') + '</b>' +
+        ' · ' + (ds.palette || '–') +
+        ' · pairing <b>' + (ds.pairing || '–') + '</b>' +
+        ' · accent <b>' + (ds.accent || 'upright') + '</b>' +
+        ' · mono <b>' + (ds.mono || '–') + '</b>' +
+        ' · layout <b>' + (ds.layout || '–') + '</b>';
+    }
+    // Highlight the active palette × pairing cell
+    document.querySelectorAll('.matrix-combo').forEach(btn => {
+      btn.classList.toggle('active',
+        btn.dataset.palette === ds.palette && btn.dataset.pairing === ds.pairing);
+    });
+  }
+  document.addEventListener('sg:mode-change', syncActiveTiles);
+
+  /* ============================================================
+     II Mini swap-cycle widget
+     ============================================================ */  /* ============================================================
+     III Direction × mark matrix
+     ============================================================ */
+  /* ============================================================
+     II Combination matrix — palette × pairing
+     ============================================================ */
+  const PAIRINGS = ['A', 'B', 'C', 'D', 'E', 'F'];
+  const COMBO_DATA = [
+    /* [palette value, short label, { pairing: directions that ship it }] */
+    ['light-cool-default',     'cool default',     {}],
+    ['light-warm-teal',        'warm teal',        { A: 'β μ', D: 'λ', E: 'ν' }],
+    ['light-warm-rust',        'warm rust',        { A: 'η', F: 'ρ' }],
+    ['light-manuscript-cream', 'manuscript cream', { B: 'γ' }],
+    ['light-saas-neutral',     'saas neutral',     { B: 'ζ' }],
+    ['dark-machine',           'machine',          { C: 'δ' }],
+    ['dark-livingdoc',         'livingdoc',        { F: 'θ' }],
+  ];
+  (function buildMatrix() {
+    const tbody = document.getElementById('matrix-body');
+    if (!tbody) return;
+    tbody.innerHTML = COMBO_DATA.map(row => {
+      const [val, label, proven] = row;
+      return (
+        '<tr data-palette-row="' + val + '">' +
+          '<th>' + label + '</th>' +
+          PAIRINGS.map(pr => {
+            const dirs = proven[pr];
+            const inner = dirs
+              ? '<span class="combo-dirs">' + dirs + '</span>'
+              : '<span class="matrix-dot"></span>';
+            return '<td><button class="matrix-combo" data-palette="' + val + '" data-pairing="' + pr + '"' +
+                   ' aria-label="Apply ' + label + ' with pairing ' + pr + '">' + inner + '</button></td>';
+          }).join('') +
+        '</tr>'
+      );
+    }).join('');
+    tbody.querySelectorAll('.matrix-combo').forEach(btn => {
+      btn.addEventListener('click', () => {
+        setVia('palette', btn.dataset.palette);
+        setVia('pairing', btn.dataset.pairing);
+      });
+    });
+  })();
+
+  /* ============================================================
+     V Pretext specimen — pointer drag + swatch swap
+     ============================================================ */
+  (function initPretext() {
+    const mark = document.getElementById('pretextMark');
+    const posEl = document.getElementById('pretextPos');
+    const swatches = document.querySelectorAll('.pretext-swatch');
+    if (!mark) return;
+    let dragging = false, startX = 0, startY = 0, startPx = 0.5, startPy = 0.5;
+    function setPos(px, py) {
+      px = Math.max(-1.2, Math.min(2.4, px));
+      py = Math.max(-0.6, Math.min(3.0, py));
+      mark.style.setProperty('--px', px.toFixed(3));
+      mark.style.setProperty('--py', py.toFixed(3));
+      if (posEl) posEl.textContent = 'x: ' + Math.round(px * 100) + '% · y: ' + Math.round(py * 100) + '%';
+    }
+    mark.addEventListener('pointerdown', e => {
+      dragging = true;
+      mark.setPointerCapture(e.pointerId);
+      mark.classList.add('dragging');
+      const cs = getComputedStyle(mark);
+      startPx = parseFloat(cs.getPropertyValue('--px')) || 0.5;
+      startPy = parseFloat(cs.getPropertyValue('--py')) || 0.5;
+      startX = e.clientX; startY = e.clientY;
+      e.preventDefault();
+    });
+    mark.addEventListener('pointermove', e => {
+      if (!dragging) return;
+      setPos(startPx + (e.clientX - startX) / 360, startPy + (e.clientY - startY) / 360);
+    });
+    ['pointerup', 'pointercancel'].forEach(evt =>
+      mark.addEventListener(evt, e => {
+        dragging = false;
+        mark.classList.remove('dragging');
+        try { mark.releasePointerCapture(e.pointerId); } catch (_) {}
+      })
+    );
+    swatches.forEach(sw => {
+      sw.addEventListener('click', () => {
+        if (!sw.dataset.src) return;
+        mark.src = sw.dataset.src;
+        swatches.forEach(x => x.classList.toggle('active', x === sw));
+      });
+    });
+  })();
+
+  /* ---------- Initial paint ---------- */
+  syncActiveTiles();
+});
+</script>
+</body>
+</html>

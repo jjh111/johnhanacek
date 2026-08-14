@@ -1,0 +1,1847 @@
+<!DOCTYPE html>
+<html lang="en" data-mode="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenProse — ρ Black Hole · the fall (three.js fork)</title>
+<link rel="stylesheet" href="_tokens.css">
+<link rel="stylesheet" href="_pairings.css">
+
+<meta name="description" content="A tunable interactive hero, three.js fork. A leapfrog-geodesic ray tracer renders a Schwarzschild black hole with accretion disk in WebGL fragment shader land, ported from vlwkaos/threejs-blackhole into our brand chrome.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 142 142'%3E%3Cpath fill='%23e5b94a' d='M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z'/%3E%3C/svg%3E">
+
+<!-- ============================================================
+     ρ BLACK HOLE — the fall · THREE.JS FORK
+     ============================================================
+     This fork SWAPS the prior canvas-2D / custom Schwarzschild
+     ray-tracer pipeline for the WebGL/three.js implementation
+     from vlwkaos/threejs-blackhole:
+
+       https://github.com/vlwkaos/threejs-blackhole
+       © vlwkaos, MIT-style — see upstream repo for license.
+       Original credits in fragmentShader.glsl reference
+       fieldOfView and gamedev.stackexchange for spherical
+       projection / FOV math.
+
+     The upstream implementation is a single full-screen WebGL
+     shader that traces null geodesics around a Schwarzschild
+     black hole via leapfrog integration, sampling a milky-way
+     bg, a star-noise tex (for blackbody-tinted background
+     stars), and an accretion-disk tex.  The vertex shader is
+     trivial (full-screen quad); the fragment shader is where
+     all the relativity lives.  UnrealBloom is run over the
+     output as a post pass to give the disk its glow.
+
+     PORT NOTES (single self-contained HTML file)
+       · three@0.160.0 + post-processing modules pulled via
+         esm.sh.  No build step; no node_modules.
+       · The fragment shader is inlined as a backtick template
+         string with `#define STEP 0.05` + `#define NSTEPS 600`
+         prepended (medium quality preset from the upstream
+         performance config).
+       · The vertex shader is inlined as a plain GLSL string
+         (the upstream sources it from a <script id=vertex>
+         tag; we don't need the indirection).
+       · The Observer + CameraDragControls classes are inlined
+         verbatim from upstream.  No dat.GUI; the brand pages
+         never expose dev GUIs.  cameraConfig.orbit is forced
+         true so the camera slowly orbits the BH ambiently —
+         page reads as cinematic without any interaction.
+       · Drag-to-look-around is wired but optional.  The
+         pointer-events policy on the chrome lets clicks on
+         empty canvas reach the controls; the chrome surfaces
+         (nav, hero-content children) capture their own.
+       · Textures are loaded over the network from upstream's
+         raw GitHub URLs (milkyway.jpg, star_noise.png,
+         accretion_disk.png).  Public repo, CORS is permissive
+         on raw.githubusercontent.com; TextureLoader's default
+         crossOrigin='anonymous' matches.
+
+     The brand chrome is the styleguide-teal palette: paper /
+     paper-dk / ink / ink-2 / ink-3 + teal accent + amber warm
+     complement + red reserved for fail states.  Kecal for type,
+     IBM Plex Mono for the eyebrow + nav.  Light/dark wired to
+     data-mode on <html>; default mode is dark so the BH reads
+     immediately on first paint.
+
+     EVERYTHING that is NOT the canvas pipeline (chrome, palette,
+     copy, light/dark) is the brand chrome verbatim.  The shader
+     pipeline is upstream verbatim.
+
+     ============================================================ -->
+
+<style>
+/* ============================================================
+   FONTS — Kecal (FungiType jsDelivr) + IBM Plex Mono (Google).
+   ============================================================ */
+@font-face { font-family: 'Kecal'; font-weight: 200; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extralight-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 300; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Light-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 400; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Regular-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 500; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Medium-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 600; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Semibold-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 700; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Bold-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 800; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extrabold-web.woff2') format('woff2'); }
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
+/* Inter added as the --sans for the delta-machine-concept
+   styleguide (Kecal stays as serif/accent). [c_2e905084] */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ============================================================
+   TOKENS — direction-delta-machine-concept palette. Dark is the
+   canonical mode: paper #0e0e10 + ink #e8e4dc + amber #d4a64f
+   (terminal/instrument feel). Light is the inversion (warm-paper
+   Solarized-ish) so the page can flip without restyling the
+   chrome. Replaces the previous styleguide-teal mono-only
+   palette. [c_2e905084]
+   ============================================================ */
+:root {
+  /* Dark is default — this :root carries the dark tokens; the
+     html[data-mode="light"] block below carries the inversion. */
+  --paper:      #0e0e10;
+  --paper-dk:   #07070a;
+  --paper-lt:   #16161a;
+  --paper-warm: #1d1d22;
+  --paper-elev: #1d1d22;
+
+  --ink:        #e8e4dc;
+  --ink-2:      #c8c4bc;
+  --ink-3:      #888880;
+  --ink-4:      #5a5a55;
+
+  /* Amber accent — restored from the mono-only ink ramp the previous
+     fork used. Reads as the active machine signal on dark paper. */
+  --amber:        #d4a64f;
+  --amber-deep:   #b8862e;
+  --amber-soft:   #e0bf68;
+  --amber-tint:   rgba(212,166,79,0.16);
+
+  --warn:         #d4604f;
+  --good:         #6ee87a;
+
+  /* Legacy teal/red tokens kept for selectors that still reference
+     them — both map onto the amber+warn pair so the chrome reads in
+     the delta-machine voice without rewriting every selector. */
+  --teal:        var(--amber);
+  --teal-deep:   var(--amber-deep);
+  --teal-soft:   var(--amber-soft);
+  --teal-tint:   var(--amber-tint);
+  --teal-faint:  rgba(212,166,79,0.06);
+
+  --red:         var(--warn);
+  --red-muted:   var(--ink-2);
+  --red-deep:    #b8442e;
+  --red-tint:    rgba(212,96,79,0.10);
+
+  --rule:        #2a2a30;
+  --rule-mid:    #1f1f24;
+
+  --serif:  'Kecal', Georgia, serif;
+  --sans:   'Inter', -apple-system, system-ui, sans-serif;
+  --mono:   'IBM Plex Mono', 'JetBrains Mono', 'SF Mono', monospace;
+  --accent: 'Kecal', Georgia, serif;
+}
+
+html[data-mode="light"] {
+  --paper:      #f4f1e8;
+  --paper-dk:   #ece8db;
+  --paper-lt:   #faf8f0;
+  --paper-warm: #fdfbf4;
+  --paper-elev: #fdfbf4;
+
+  --ink:        #1a1814;
+  --ink-2:      #44403a;
+  --ink-3:      #8a8478;
+  --ink-4:      #b0a896;
+
+  --amber:        #b8862e;
+  --amber-deep:   #8c5e1c;
+  --amber-soft:   #d4a64f;
+  --amber-tint:   rgba(184,134,46,0.14);
+
+  --warn:         #b8442e;
+  --good:         #4a8c44;
+
+  --teal:        var(--amber);
+  --teal-deep:   var(--amber-deep);
+  --teal-soft:   var(--amber-soft);
+  --teal-tint:   var(--amber-tint);
+  --teal-faint:  rgba(184,134,46,0.06);
+
+  --red:         var(--warn);
+  --red-muted:   var(--ink-2);
+  --red-deep:    #8c2920;
+  --red-tint:    rgba(184,68,46,0.08);
+
+  --rule:        #d8d2c4;
+  --rule-mid:    #ebe5d4;
+}
+
+html, body {
+  height: 100%;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 16px;
+  line-height: 1.7;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.25s ease, color 0.25s ease;
+  overflow-x: hidden;
+}
+body { display: flex; flex-direction: column; min-height: 100vh; }
+
+em {
+  font-family: var(--accent);
+  font-style: italic;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--ink);
+}
+
+a { color: var(--teal); text-decoration: none; }
+a:hover { color: var(--teal-deep); }
+html[data-mode="dark"] a:hover { color: var(--teal-soft); }
+
+/* ============================================================
+   NAV — signet-only mark (no wordmark) + mode toggle.
+   ============================================================ */
+nav {
+  position: sticky; top: 0; z-index: 50;
+  width: 100%;
+  background: rgba(245, 240, 232, 0.62);
+  backdrop-filter: blur(10px) saturate(140%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  border-bottom: 1px solid var(--rule);
+}
+html[data-mode="dark"] nav {
+  background: rgba(11, 10, 14, 0.72);
+}
+nav .inner {
+  max-width: 1480px; margin: 0 auto;
+  padding: 0.85rem 2rem;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1.5rem;
+}
+nav .logo {
+  display: inline-flex; align-items: center; gap: 0.65rem;
+  color: var(--ink); font-family: var(--mono); font-weight: 500;
+  font-size: 0.78rem; letter-spacing: 0.18em; text-transform: uppercase;
+}
+nav .logo svg { width: 28px; height: 28px; fill: var(--ink); }
+nav .logo .label em { font-family: var(--accent); font-style: italic; color: var(--teal); font-weight: 600; }
+nav .links {
+  display: flex; gap: 1.5rem;
+  font-family: var(--mono); font-size: 0.78rem;
+  color: var(--ink-3);
+  letter-spacing: 0.06em;
+}
+nav .links a {
+  color: var(--ink-2); display: inline-flex; align-items: center; gap: 0.4rem;
+}
+nav .links a:hover { color: var(--teal); }
+nav .links a::before {
+  content: ''; display: inline-block;
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--ink-4);
+}
+nav .links a:hover::before { background: var(--teal); }
+nav .right { display: flex; align-items: center; gap: 0.85rem; }
+.mode-toggle {
+  width: 34px; height: 34px;
+  background: transparent;
+  border: 1px solid var(--rule);
+  color: var(--ink-2);
+  cursor: pointer;
+  border-radius: 50%;
+  font-size: 1.05rem; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.mode-toggle:hover { border-color: var(--teal); color: var(--teal); }
+
+/* ============================================================
+   HERO — full-bleed three.js canvas + overlay + content.
+   ============================================================ */
+.hero {
+  position: relative;
+  flex: 0 0 auto;
+  width: 100%;
+  min-height: 92vh;
+  display: flex; align-items: flex-start;
+  overflow: hidden;
+  isolation: isolate;
+  background: #000; /* canvas paints over */
+}
+.bh-canvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  z-index: 0;
+  display: block;
+  touch-action: none;
+  cursor: grab;
+  background: #000;
+}
+.bh-canvas:active { cursor: grabbing; }
+
+/* Soft cream/ink overlay so the eyebrow + h1 sit above ink
+   instead of fighting the disk light. */
+.hero-overlay {
+  position: absolute; inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg,
+      rgba(11,10,14,0.62) 0%,
+      rgba(11,10,14,0.22) 16%,
+      rgba(11,10,14,0.06) 42%,
+      rgba(11,10,14,0.06) 64%,
+      rgba(11,10,14,0.42) 92%,
+      rgba(11,10,14,0.78) 100%);
+}
+html[data-mode="light"] .hero-overlay {
+  background:
+    linear-gradient(180deg,
+      rgba(11,10,14,0.52) 0%,
+      rgba(11,10,14,0.18) 16%,
+      rgba(11,10,14,0.04) 42%,
+      rgba(11,10,14,0.04) 64%,
+      rgba(11,10,14,0.32) 92%,
+      rgba(11,10,14,0.62) 100%);
+}
+
+.hero-content {
+  position: relative; z-index: 3;
+  max-width: 1480px; margin: 0 auto;
+  padding: 4rem 2rem 1.25rem;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 4rem;
+  align-items: start;
+  pointer-events: none; /* clicks fall through to canvas for drag */
+}
+.hero-content > * { pointer-events: auto; }
+.hero-left { max-width: 36rem; }
+
+/* Port delta-machine-concept's editorial typography hierarchy:
+   11px-mono amber eyebrow with the short-hairline; serif h1
+   (Cormorant Garamond) with amber Kecal-as-regular em; serif-ink
+   deck (no italic). Replaces the prior Kecal-stack h1 + italic
+   deck so the chrome reads as the same voice as the delta-machine
+   concept page. [c_2e905084] */
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 0.65rem;
+  font-family: var(--mono); font-size: 11px;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--amber); font-weight: 500;
+  margin-bottom: 1.5rem;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+}
+.hero-eyebrow::before {
+  content: ''; width: 28px; height: 1px; background: var(--amber);
+}
+
+.hero h1 {
+  font-family: var(--serif);                        /* Cormorant Garamond */
+  font-size: clamp(2.4rem, 5.2vw, 4.4rem);
+  font-weight: 400;                                 /* delta-machine h1 */
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  color: #f5f0e0;
+  margin-bottom: 1.5rem;
+  max-width: 18ch;
+  text-shadow: 0 2px 18px rgba(0,0,0,0.65);
+}
+.hero h1 em {
+  /* "Kecal regular, not italic" — same accent treatment as
+     delta-machine-concept's .head h1 em. */
+  font-style: normal;
+  font-weight: 500;
+  font-family: var(--accent);
+  color: var(--amber);
+  letter-spacing: -0.005em;
+}
+.hero-deck {
+  font-family: var(--serif);
+  font-size: 1.12rem;
+  line-height: 1.55;
+  color: rgba(245,240,224,0.86);
+  margin-bottom: 2rem;
+  max-width: 56ch;                                  /* delta-machine deck width */
+  text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+}
+.hero-deck em {
+  /* delta-machine: amber, Kecal regular, NOT italic. */
+  color: var(--amber);
+  font-style: normal;
+  font-weight: 500;
+  font-family: var(--accent);
+}
+
+.cta-row {
+  display: flex; gap: 0.85rem; flex-wrap: wrap;
+  margin-bottom: 0;
+}
+.cta-primary {
+  display: inline-flex; align-items: center; gap: 0.65rem;
+  background: var(--amber); color: #14131a;
+  font-family: var(--mono); font-size: 0.9rem; font-weight: 500;
+  padding: 0.85rem 1.25rem;
+  border-radius: 4px;
+  border: none; cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.cta-primary:hover { background: var(--amber-soft); }
+.cta-primary:active { transform: translateY(1px); }
+.cta-primary .arrow {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px;
+  background: rgba(20,19,26,0.85); color: var(--amber);
+  border-radius: 3px;
+  font-size: 12px;
+}
+.cta-ghost {
+  display: inline-flex; align-items: center; gap: 0.65rem;
+  background: rgba(11,10,14,0.32);
+  color: #f5f0e0;
+  font-family: var(--mono); font-size: 0.9rem; font-weight: 500;
+  padding: 0.85rem 1.25rem;
+  border: 1px solid rgba(245,240,224,0.32); border-radius: 4px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.cta-ghost:hover { border-color: var(--teal-soft); color: var(--teal-soft); background: rgba(11,10,14,0.52); }
+
+.hero-right {
+  text-align: right;
+  align-self: start;
+  font-family: var(--mono); font-size: 0.78rem;
+  color: rgba(245,240,224,0.62);
+  text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+}
+.hero-right .stamp-mark {
+  display: block;
+  width: 84px; height: 84px;
+  margin-left: auto;
+  margin-bottom: 1rem;
+  fill: var(--amber);
+  opacity: 0.92;
+  filter: drop-shadow(0 4px 18px rgba(0,0,0,0.55));
+}
+.hero-right .stamp-caption { margin-bottom: 0.25rem; }
+.hero-right .stamp-caption em { color: var(--teal-soft); font-family: var(--accent); font-style: italic; }
+.hero-right .stamp-hint {
+  color: rgba(245,240,224,0.42); font-size: 0.7rem;
+  letter-spacing: 0.06em;
+}
+
+/* Corner labels — quiet annotations, same idiom as ripple chrome */
+.hero-label {
+  position: absolute;
+  z-index: 3;
+  font-family: var(--mono); font-size: 0.66rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: rgba(245,240,224,0.6);
+  pointer-events: none;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+}
+.hero-label.tl { top: 5rem; left: 2rem; }
+.hero-label.br { bottom: 1.5rem; right: 2rem; }
+.hero-label em {
+  font-family: var(--accent); font-style: italic; font-weight: 600;
+  color: var(--teal-soft); font-size: 1em; letter-spacing: 0;
+}
+
+/* ============================================================
+   TUNABLES PANEL — exposed sliders for fall + related cycle
+   values. Anchored top-right of the hero, collapsible. Mono
+   labels + sliders, brand chrome (paper-on-ink).
+   ============================================================ */
+/* Tunables panel restyled to match delta-machine-concept's
+   section chrome: paper-elev card with 1px amber left-edge, 11px
+   mono amber section-num eyebrow, hairline rules at top + bottom
+   of header. [c_2e905084] */
+.tunables {
+  position: absolute;
+  top: 5rem;
+  right: 2rem;
+  z-index: 4;
+  width: 18rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: rgba(245,240,224,0.85);
+  background: rgba(14, 14, 16, 0.78);       /* delta-machine --paper at α */
+  border: 1px solid rgba(212, 166, 79, 0.22);
+  border-left: 2px solid var(--amber);
+  border-radius: 0;                          /* delta-machine = sharp corners */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  pointer-events: auto;
+}
+.tunables header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.6rem 0.85rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--amber);                       /* section-num amber */
+  border-bottom: 1px solid rgba(212, 166, 79, 0.18);
+}
+.tunables header button {
+  background: transparent;
+  border: 1px solid rgba(245,240,224,0.2);
+  color: rgba(245,240,224,0.7);
+  width: 1.4rem; height: 1.4rem;
+  border-radius: 2px;
+  font-family: var(--mono); font-size: 0.84rem; line-height: 1;
+  cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.tunables header button:hover { color: var(--teal-soft); border-color: var(--teal-soft); }
+.tunables-body {
+  padding: 0.6rem 0.75rem 0.75rem;
+  display: grid; grid-template-columns: 1fr; row-gap: 0.45rem;
+  max-height: 50vh; overflow-y: auto;
+}
+.tunables[data-collapsed="true"] .tunables-body { display: none; }
+/* Panel ships collapsed; the +/− toggle in the header pops it open. */
+.tunables[data-collapsed="true"] .tunables-footer { display: none; }
+.tunables[data-collapsed="true"] {
+  /* Compact width when collapsed so only the header strip shows. */
+  width: auto;
+  min-width: 0;
+}
+
+/* Centered glass card with the signet visible, ported from
+   direction-rho-blackhole-hero.html. Sits over the canvas, hands
+   click events through to the canvas so the BH still spawns at
+   click-position. */
+.center-glass {
+  position: absolute;
+  left: 50%; top: 42%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  background: rgba(247,241,227,0.06);
+  backdrop-filter: blur(18px) saturate(135%);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
+  border: 1px solid rgba(247,241,227,0.18);
+  border-radius: 50%;
+  box-shadow:
+    0 14px 64px rgba(0,0,0,0.55),
+    inset 0 1px 0 rgba(247,241,227,0.18);
+  width: clamp(180px, 18vw, 280px);
+  height: clamp(120px, 12vw, 180px);
+  display: flex; align-items: center; justify-content: center;
+  /* Don't intercept clicks — the canvas underneath spawns the BH. */
+  pointer-events: none;
+  opacity: 0.96;
+  transition: opacity 0.4s ease, box-shadow 0.4s ease;
+}
+.center-glass svg {
+  width: clamp(80px, 8vw, 130px);
+  height: auto;
+  fill: rgba(247,241,227,0.92);
+  filter: drop-shadow(0 4px 18px rgba(229,185,74,0.32));
+  pointer-events: none;
+}
+html[data-mode="light"] .center-glass {
+  background: rgba(20,18,16,0.06);
+  border-color: rgba(20,18,16,0.18);
+  box-shadow:
+    0 14px 64px rgba(20,18,16,0.32),
+    inset 0 1px 0 rgba(255,255,255,0.55);
+}
+html[data-mode="light"] .center-glass svg {
+  fill: rgba(20,18,16,0.92);
+  filter: drop-shadow(0 4px 18px rgba(20,18,16,0.32));
+}
+.tunables label {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  column-gap: 0.5rem;
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  color: rgba(245,240,224,0.7);
+}
+.tunables label > .label-text { grid-column: 1 / 3; line-height: 1.4; }
+.tunables label output {
+  font-variant-numeric: tabular-nums;
+  color: rgba(245,240,224,0.92);
+  font-size: 0.7rem;
+}
+.tunables input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  grid-column: 1 / 3;
+  width: 100%; height: 14px;
+  background: transparent;
+  cursor: pointer;
+}
+.tunables input[type="range"]::-webkit-slider-runnable-track {
+  height: 1px; background: rgba(245,240,224,0.35);
+}
+.tunables input[type="range"]::-moz-range-track {
+  height: 1px; background: rgba(245,240,224,0.35);
+}
+.tunables input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px; height: 10px; border-radius: 2px;
+  background: rgba(245,240,224,0.85);
+  margin-top: -5px;
+  border: 0;
+}
+.tunables input[type="range"]::-moz-range-thumb {
+  width: 10px; height: 10px; border-radius: 2px;
+  background: rgba(245,240,224,0.85); border: 0;
+}
+.tunables label.checkbox {
+  grid-template-columns: auto 1fr;
+  column-gap: 0.45rem;
+  margin-top: 0.2rem;
+}
+.tunables label.checkbox input { accent-color: rgba(245,240,224,0.85); }
+.tunables-footer {
+  border-top: 1px solid rgba(245,240,224,0.12);
+  padding: 0.45rem 0.75rem;
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 0.62rem; letter-spacing: 0.18em; text-transform: uppercase;
+  color: rgba(245,240,224,0.45);
+}
+.tunables-footer button {
+  background: transparent;
+  border: 1px solid rgba(245,240,224,0.18);
+  color: rgba(245,240,224,0.6);
+  font-family: var(--mono); font-size: 0.62rem;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 0.25rem 0.55rem;
+  border-radius: 2px; cursor: pointer;
+}
+.tunables-footer button:hover { color: var(--teal-soft); border-color: var(--teal-soft); }
+
+@media (max-width: 880px) {
+  .tunables { top: auto; bottom: 4rem; right: 1rem; width: 14rem; font-size: 0.66rem; }
+  .tunables-body { max-height: 35vh; }
+}
+
+/* ============================================================
+   FOOT — small narrative tail, same shape as the parent.
+   ============================================================ */
+.foot {
+  position: relative;
+  padding: 4.5rem 2rem 4rem;
+  background: var(--paper);
+  border-top: 1px solid var(--rule);
+  z-index: 5;
+}
+.foot-inner { max-width: 1100px; margin: 0 auto; }
+.foot-eyebrow {
+  font-family: var(--mono); font-size: 0.72rem;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--amber); margin-bottom: 1.25rem;
+}
+/* Foot h2/em/p re-aligned to delta-machine-concept voice: serif
+   (Cormorant Garamond) display, amber Kecal-regular em (NOT
+   italic), sans body paragraph. [c_2e905084] */
+.foot h2 {
+  font-family: var(--serif);
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  font-weight: 400; line-height: 1.18;
+  color: var(--ink); letter-spacing: -0.01em;
+  margin-bottom: 1.2rem; max-width: 28ch;
+}
+.foot h2 em {
+  color: var(--amber);
+  font-style: normal;
+  font-weight: 500;
+  font-family: var(--accent);
+}
+.foot p {
+  font-family: var(--sans);
+  font-size: 1.04rem;
+  line-height: 1.65;
+  color: var(--ink-2);
+  margin-bottom: 1.4rem;
+  max-width: 64ch;
+}
+/* Body p em → amber Kecal-as-regular, matching delta-machine-concept's
+   .section p em treatment. [c_2e905084] */
+.foot p em { color: var(--amber); font-style: normal; font-weight: 500; font-family: var(--accent); }
+.foot .ctas { display: flex; gap: 0.85rem; flex-wrap: wrap; margin: 1.4rem 0 1.6rem; }
+.foot .btn {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  font-family: var(--mono); font-size: 0.84rem; font-weight: 500;
+  padding: 0.7rem 1.1rem;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+.foot .btn.primary { background: var(--ink); color: var(--paper-lt); border: 1px solid var(--ink); }
+.foot .btn.primary:hover { background: var(--teal); border-color: var(--teal); color: var(--paper-lt); }
+.foot .btn.ghost { background: transparent; color: var(--ink-2); border: 1px solid var(--rule); }
+.foot .btn.ghost:hover { border-color: var(--teal); color: var(--teal); }
+.foot-meta {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  color: var(--ink-3);
+  display: flex; flex-wrap: wrap; gap: 1rem;
+  align-items: center;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--rule-mid);
+}
+.foot-meta a { color: var(--ink-2); }
+.foot-meta a:hover { color: var(--teal); }
+
+@media (max-width: 880px) {
+  .hero-content { grid-template-columns: 1fr; gap: 2rem; padding-top: 6rem; }
+  .hero-right { text-align: left; }
+  .hero-right .stamp-mark { margin-left: 0; }
+  nav .links { display: none; }
+  .hero-label.tl { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mode-toggle, .cta-primary, .cta-ghost, .foot .btn { transition: none; }
+}
+
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+
+}
+</style>
+<script src="_styleguide.js" defer></script>
+</head>
+<body data-direction="ρ" data-palette="light-warm-rust" data-pairing="F" data-mono="plex" data-layout="concept" data-mark="3d">
+
+<!-- Canonical oP signet — used in the nav + the hero-right stamp. -->
+<svg width="0" height="0" style="position: absolute;" aria-hidden="true">
+    <!-- INFINITE — wide flowing oP-infinite -->
+    <symbol id="opInfinite" viewBox="0 0 497 329">
+      <g transform="matrix(1.16677,0,0,0.997644,2.62326,-48.0333)">
+        <g transform="matrix(4.15,0,0,4.17651,2.48827,4.04285)">
+          <path d="M84.9,12.6C82.7,12.6 80.2,12.9 77.6,14.7C70.5,19.3 67,28.3 64.8,35.5C61.1,47.9 58.4,61 51.5,71.1C46.7,77.8 40.2,83.509 30.5,83.4C16.524,83.242 4.9,70.5 4.9,50.8C4.9,35.9 12.3,16.5 32.3,16.5C45.2,16.5 53.9,24.6 58.8,44L61,36C56.6,23.2 47.9,12.6 32.4,12.6C12.1,12.6 1.3,30.1 1.3,50.8C1.3,69.9 12.105,87.223 30.5,87.4C36.4,87.457 41.7,85.8 46.1,82.9C57.2,75.5 62.3,62.3 65.7,50C68.9,38.8 72.4,20.3 81.6,17.2C83.6,16.5 86.6,16.3 89,17.7C91.6,19.3 95.3,23.3 95.3,29.9C95.3,37.8 89.5,46.1 79.8,49.1C77.1,49.7 73.7,50.1 70,49.5L70,85.5C70,86.4 70.7,87.4 71.8,87.4C72.9,87.4 73.7,86.7 73.7,85.5L73.7,53.7C87.9,53.7 98.9,44.2 98.9,29.9C98.7,22.7 93.9,12.8 84.9,12.6Z"/>
+        </g>
+      </g>
+    </symbol>
+    <symbol id="opInfiniteType" viewBox="0 0 3549 1107">
+      <!-- Full 9-glyph "OpenProse" wordmark per OP-infinite-type.svg -->
+      <g transform="matrix(0.924174,0,0,0.512368,0,0)"><g transform="matrix(13.3273,0,0,21.4868,1380,-277.463)"><path d="M84.994,15.687C82.794,15.687 80.294,15.987 77.694,17.787C70.594,22.387 66.139,35.248 63.358,42.992C61.626,47.816 59.859,52.08 59.859,52.08C59.859,52.08 65.364,48.692 65.7,47.517C68.9,36.317 72.494,23.387 81.694,20.287C83.694,19.587 86.694,19.387 89.094,20.787C92.421,22.728 97.421,26.391 97.239,32.987C96.783,49.599 73.072,47.617 69.372,47.017L69.463,86.872C69.463,86.872 69.569,88.772 71.788,88.772C73.823,88.772 73.84,86.872 73.84,86.872L73.7,51.217C87.9,51.217 100.839,47.287 100.839,32.987C100.639,25.787 95.428,15.687 84.994,15.687Z" style="fill-rule:nonzero;"/><path d="M85.301,15.69C87.154,15.722 92.171,16.087 96.349,21.117C99.232,24.589 100.724,29.132 100.85,32.902C100.851,32.93 100.877,34.078 100.714,35.474C99.35,47.224 88.075,51.152 74.199,51.251L73.733,51.253C73.885,86.393 73.928,86.394 73.883,86.959C73.851,87.357 73.666,88.042 73.097,88.452C72.294,89.03 71.186,88.797 70.882,88.701C70.751,88.66 69.762,88.384 69.461,87.167C69.426,87.024 69.412,86.892 69.412,86.875C69.403,83.685 69.304,47.036 69.309,47.004C69.314,46.971 69.343,46.94 69.381,46.945C69.384,46.946 70.472,47.132 72.411,47.25C77.667,47.57 96.717,47.828 97.166,33.033C97.322,27.909 94.399,23.938 89.034,20.84C86.892,19.604 84.067,19.553 81.714,20.359C79.56,21.097 76.09,22.82 72.768,28.52C69.608,33.941 67.641,40.93 65.748,47.534C65.696,47.715 65.475,48.425 61.767,50.908C60.819,51.542 59.885,52.126 59.867,52.13C59.832,52.136 59.803,52.097 59.818,52.059C59.862,51.95 59.867,51.953 60.372,50.699C62.462,45.507 63.53,42.368 64.526,39.653C67.34,31.978 71.505,21.808 77.648,17.805C78.185,17.455 79.743,16.319 82.346,15.883C83.448,15.698 84.434,15.687 84.993,15.687C84.993,15.687 85.065,15.687 85.103,15.688L85.177,15.688C85.218,15.689 85.26,15.689 85.301,15.69Z"/></g><g transform="matrix(37.0768,0,0,56.5284,-38.6165,41.4661)"><path d="M38.971,22.698C39.006,20.794 38.659,19.281 38.121,18.206C36.83,15.623 34.908,15.225 33.551,15.139C29.553,14.883 27.67,17.15 26.516,21.328C25.31,25.689 23.5,34.3 14.7,34.3C8,34.2 3.7,28.1 3.7,20C3.4,10.6 8.5,2.6 14.8,2.6C21.3,2.3 25,7.2 27.1,16.5L28.719,13.674C26.719,7.774 22.3,0.3 14.8,0.3C7.3,0.3 1.5,7.7 1.6,18.9C1.5,27.8 6.2,36.4 14.7,36.4C23.6,36.7 26.116,31.728 28.116,24.428L28.838,21.384C29.709,17.307 31.193,16.933 33.074,16.992C34.811,17.046 35.803,17.588 36.622,19.063C37.075,19.877 37.31,21.015 37.365,22.326C37.593,27.77 29.653,26.04 29.653,26.04L29.525,35.529C29.525,35.529 29.435,36.206 30.335,36.206C31.035,36.206 31.085,35.512 31.085,35.512L31.098,27.854C38.46,28.325 38.921,25.449 38.971,22.698Z" style="fill-rule:nonzero;"/></g><g transform="matrix(26.5034,0,0,47.8049,294.868,160.59)"><path d="M50.7,15.5C46.7,15.7 43.1,18.5 43.1,23.2C43.1,26.9 45.5,30.7 50.7,30.7C52.9,30.7 55.1,29.9 56.5,28.5C56.9,28.1 57,27.8 57,27.5C57,26.9 56.4,26.4 55.8,26.4C55.5,26.4 55.3,26.6 55,26.8C54,27.9 52.7,28.6 50.8,28.6C48,28.6 45.8,26.8 45.4,23.8L56.2,23.8C57.2,23.8 57.6,23.4 57.6,22.6C57.6,18.9 55.3,15.5 50.7,15.5ZM45.4,21.9C45.8,19.5 47.6,17.7 50.5,17.7C53.3,17.7 55.1,19.5 55.2,21.9L45.4,21.9Z" style="fill-rule:nonzero;"/></g><g transform="matrix(6.36081,0,0,11.5486,307.59,152.335)"><path d="M303.204,127.796C292.691,126.817 286.282,119.92 286.282,108.75L286.282,89.583C286.282,80.833 281.699,73.75 271.282,73.75C261.699,73.75 253.365,82.5 253.365,95L253.365,122.5C253.365,125.833 250.865,127.5 247.949,127.5C245.032,127.5 242.949,126.25 242.949,122.917L242.949,70.417C242.949,67.083 245.032,65.417 247.949,65.417C250.449,65.417 252.532,67.083 252.532,70.417L252.532,76.25C256.282,68.75 263.365,65 272.949,65C287.115,65 295.865,74.583 295.865,89.583L295.865,108.333C295.865,114.401 298.312,118.023 303.204,118.937C303.204,118.937 306.369,120.117 306.151,123.666C305.945,127.04 303.204,127.796 303.204,127.796Z"/></g><g transform="matrix(26.5034,0,0,50.3225,-86.6137,116.293)"><path d="M102.9,15.5C101.2,15.7 99.5,16.6 98.5,18.5L98.5,16.9C98.5,16.1 98,15.6 97.3,15.6C96.6,15.6 96.1,16.1 96.1,16.8L95.906,29.335C95.906,29.335 96.201,30.045 97.143,30.044C98.167,30.043 98.391,29.393 98.391,29.393L98.5,23.2C98.5,20.2 100.2,17.9 102.5,17.9C103.4,17.8 103.8,18.2 104.2,18.2C104.8,18.2 105,17.8 105,17.2C105.3,16.1 104.1,15.5 102.9,15.5Z" style="fill-rule:nonzero;"/></g><g transform="matrix(26.5034,0,0,47.8049,-105.087,160.59)"><path d="M113.3,15.5C109,15.7 105.2,18.5 105.2,23.2C105.2,26.9 107.8,30.7 113.1,30.7C117.5,30.7 120.6,27.6 120.6,23.2C120.6,19.1 117.6,15.5 113.3,15.5ZM113.2,28.6C110.3,28.6 107.6,26.5 107.6,23.2C107.6,19.9 109.9,17.7 113.1,17.7C115.8,17.7 118.3,19.7 118.3,23.2C118.3,26.1 116.1,28.6 113.2,28.6Z" style="fill-rule:nonzero;"/></g><g transform="matrix(26.5034,0,0,47.8049,-117.723,160.59)"><path d="M128,21.8C128,21.8 125.1,21.1 125.1,19.8C125.1,18.5 126.4,17.7 128.1,17.7C130.5,17.7 131,19.1 132.1,19.2C132.6,19.2 133.2,18.7 133.3,18.3C133.4,17.3 131.4,15.6 128.4,15.5C125.5,15.5 122.7,16.7 122.7,19.8C122.7,22.7 125.3,23.4 128,24C129.8,24.4 131.5,25 131.5,26.5C131.5,27.9 130.3,28.7 128.4,28.7C125.1,28.7 124.7,26.5 123.5,26.4C123,26.4 122.2,26.9 122.2,27.6C122.2,28.6 124.2,30.7 128.1,30.7C131.4,30.7 133.8,29.3 133.8,26.4C133.8,23.2 131.4,22.6 128,21.8Z" style="fill-rule:nonzero;"/></g><g transform="matrix(26.5034,0,0,47.8049,-130.016,160.59)"><path d="M142.2,15.5C138.2,15.5 135.4,18.2 135.4,22.9C135.4,26.6 137.8,30.7 142.5,30.7C144.9,30.7 147,29.9 147.9,28.9C148.4,28.5 148.4,28.2 148.4,27.7C148.4,27.2 147.8,26.5 147.1,26.5C146.9,26.5 146.6,26.7 146.3,26.9C145.3,28 144,28.7 142.3,28.7C139.5,28.7 137.7,26.9 137.4,23.9L147.4,23.9C148,23.9 148.4,23.5 148.4,22.8C148.4,19.1 146.3,15.6 142.2,15.5ZM137.6,21.9C138,19.5 139.8,17.7 142.2,17.7C144.7,17.6 146.5,19.4 146.5,21.9L137.6,21.9Z" style="fill-rule:nonzero;"/></g></g>
+    </symbol>
+
+    <!-- STYLE — v2 standalone signet + lockup (canonical brand mark) -->
+    <symbol id="opStyle" viewBox="0 0 142 142">
+      <g transform="translate(4.4 4.45) scale(0.94)">
+        <path d="M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z"/>
+      </g>
+    </symbol>
+    <!-- Legacy alias — keep so any stale #opMark references still resolve -->
+    <symbol id="opMark" viewBox="0 0 142 142"><use href="#opStyle"/></symbol>
+    <symbol id="opStyleType" viewBox="0 0 3840 998">
+      <g transform="matrix(1,0,0,0.461843,0,0)"><g transform="matrix(9.67009,0,0,20.9381,46.3437,-426.712)"><path d="M84.1,83.4C85.206,79.362 96.732,71.983 96.732,71.983C96.732,71.983 95.683,77.806 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.32,59.25 95.117,62.595 91.927,64.086C88.649,65.618 87.58,63.568 86,61.4C83.953,58.591 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4Z" style="fill-rule:nonzero;"/></g><g transform="matrix(20.8204,0,0,45.081,376.732,587.069)"><path d="M47.6,19.2C47.6,23.6 45.2,28.5 39.5,28.5C36.7,28.5 34.4,27.4 33,25L33,33.071C33,33.071 32.758,33.891 32.027,34.219C31.452,34.477 29.5,34.5 29.5,34.5L29.5,10.9L30.3,10.9C31.9,10.9 32.7,12.6 32.8,14.1C34,11.8 36.2,10.2 39.3,10.2C44.4,10.2 47.6,14 47.6,19.2ZM44,19.4C44,16.3 42.3,12.9 38.5,12.9C35.1,12.9 32.9,15.6 32.9,19.4C32.9,22.5 34.8,25.7 38.5,25.7C41.7,25.7 44,23 44,19.4Z" style="fill-rule:nonzero;"/></g><g transform="matrix(21.5033,0,0,46.5599,334.885,571.985)"><path d="M66.5,23.7C65.9,25.9 63.4,28.5 58.9,28.5C53.5,28.5 50.2,25 49.2,20.6C48.6,14.5 52.3,10.2 58.4,10.2C62.1,10.2 66.4,12 66.4,15.8C66.4,18.4 64.1,19.8 59.2,20.4C56.7,20.7 54.8,21.3 54.8,23.1C54.8,25.1 57.2,26 59.6,26C61.9,26.1 64.6,25.3 66.5,23.7ZM53.3,22.7C54.2,17.1 61.7,19.1 61.7,15.5C61.7,13.8 60.2,12.7 58.1,12.7C55.5,12.7 52.6,15 52.6,19.1C52.6,20.4 52.9,21.8 53.3,22.7Z" style="fill-rule:nonzero;"/></g><g transform="matrix(21.3153,0,0,46.1527,2366.82,576.138)"><path d="M66.5,23.7C65.9,25.9 63.4,28.5 58.9,28.5C53.5,28.5 50.2,25 49.2,20.6C48.6,14.5 52.3,10.2 58.4,10.2C62.1,10.2 66.4,12 66.4,15.8C66.4,18.4 64.1,19.8 59.2,20.4C56.7,20.7 54.8,21.3 54.8,23.1C54.8,25.1 57.2,26 59.6,26C61.9,26.1 64.6,25.3 66.5,23.7ZM53.3,22.7C54.2,17.1 61.7,19.1 61.7,15.5C61.7,13.8 60.2,12.7 58.1,12.7C55.5,12.7 52.6,15 52.6,19.1C52.6,20.4 52.9,21.8 53.3,22.7Z" style="fill-rule:nonzero;"/></g><g transform="matrix(20.8204,0,0,47.1462,359.825,566.004)"><path d="M83.9,28.2C81.9,28.2 80.5,27.7 80.5,24.8L80.5,17.9C80.5,14.6 79.2,12.8 76.6,12.8C74.1,12.8 72,14.6 72,19.1L72,28.2L68.6,28.2L68.6,10.8L69,10.8C70.6,10.8 71.6,12.3 71.7,14.1C72.7,11.9 74.6,10.2 77.7,10.2C81.9,10.2 83.9,12.9 83.9,17.4L83.9,28.2Z" style="fill-rule:nonzero;"/></g><g transform="matrix(21.747,0,0,47.0874,150.341,566.604)"><path d="M117.8,10.5C118.4,11.9 117.2,13.3 115.3,13.3C112.1,13.1 110.1,15.2 110.1,19.3L110.1,28.2L106.6,28.2L106.6,10.9L107.3,10.9C108.9,10.9 109.7,12.4 109.8,14.4C110.8,11.9 112.8,10.2 115.4,10.2C116.1,10.2 117,10.3 117.8,10.5Z" style="fill-rule:nonzero;"/></g><g transform="matrix(21.4007,0,0,46.3376,179.308,574.252)"><path d="M135.6,19.4C135.6,23.8 132.7,28.5 126.4,28.5C120.6,28.5 117.1,24.5 117.1,19.4C117.1,14.8 120.3,10.2 126.3,10.2C131.8,10.2 135.6,14 135.6,19.4ZM132.1,19.4C132.1,15.9 129.9,12.9 126.4,12.9C122.9,12.9 120.5,15.6 120.5,19.4C120.5,22.7 122.7,25.7 126.3,25.7C129.7,25.8 132.1,23 132.1,19.4Z" style="fill-rule:nonzero;"/></g><g transform="matrix(26.9157,0,0,71.5109,-151.465,-124.38)"><path d="M86,2.4C83.4,2.7 81.1,3.6 82,5.9C82.5,7.2 85.4,8.5 87.5,12.9C88.6,15.2 89.463,15.088 88.663,12.588C86.263,6.788 83.477,6.006 84.477,4.406C84.977,3.606 99.303,3.255 99.1,9.9C99.018,12.599 96.5,13.8 93.3,14.6C91.4,15.1 88.4,16.7 88.1,19.9C87.9,22.4 88,24.1 86,28.2C87.7,28.4 89.6,27.9 90.5,26.7C91.8,25.1 91.6,21.1 91.7,19.5C91.9,17.6 93.6,16.9 95.4,16.6C99.9,15.7 104.9,14.7 104.9,10C104.9,4.4 96.9,1.4 86,2.4Z" style="fill-rule:nonzero;"/></g><g transform="matrix(20.4887,0,0,44.3629,217.988,633.895)"><path d="M144.6,14.2C144.6,12.9 146,11.7 147.9,11.7C151.2,11.7 152.1,14.4 153.9,14.4C154.6,14.4 155.2,13.6 155,13C154.6,11.1 151.5,9.3 148.5,9.3C145.5,9.3 141,10.4 141,14.4C141,20.9 152.3,18.6 152.3,23.1C152.3,25.3 149.6,25.9 148.1,25.8C144,25.6 140.266,22.027 140.266,22.027C140.266,22.027 140.3,23.55 140.3,23.9C140.3,25.6 143.1,28.4 148.3,28.4C152.1,28.4 155.6,27 155.6,23.1C155.6,16.7 144.6,18.4 144.6,14.2Z" style="fill-rule:nonzero;"/></g></g>
+    </symbol>
+
+    <!-- CIRCLE — open-ring oP-Circle.  Signet id is opCircleMark (not
+         opCircle) for backwards compat with the existing pages. -->
+    <symbol id="opCircleMark" viewBox="0 0 2843 2160" style="fill-rule:evenodd;clip-rule:evenodd;">
+      <g transform="matrix(0.740161,0,0,1,0,0)"><g transform="matrix(8.20113,0,0,6.07016,-20128.8,-3833.05)"><path d="M2759.78,927.845C2728.1,963.836 2681.7,986.56 2630.04,986.56C2534.66,986.56 2457.23,909.13 2457.23,813.757C2457.23,718.385 2534.66,640.955 2630.04,640.955C2680.01,640.955 2725.07,662.217 2756.63,696.182C2756.2,671.45 2755.82,654.804 2755.51,652.896C2754.22,644.866 2822.66,611.87 2882.41,659.592C2923.76,692.617 2930.35,758.088 2890.17,789.415C2850.95,819.988 2803.14,819.667 2804.19,819.748C2805.24,819.829 2801.73,938.55 2802.47,964.197C2802.72,973.044 2793.7,984.446 2782.33,984.728C2771.95,984.985 2760.81,980.336 2760.39,964.176C2760.24,958.249 2760.03,945.28 2759.78,927.845ZM2826.55,687.102C2805.05,687.102 2787.59,704.56 2787.59,726.064C2787.59,747.567 2805.05,765.026 2826.55,765.026C2848.05,765.026 2865.51,747.567 2865.51,726.064C2865.51,704.56 2848.05,687.102 2826.55,687.102ZM2630.04,734.651C2586.38,734.651 2550.93,770.097 2550.93,813.757C2550.93,857.418 2586.38,892.864 2630.04,892.864C2673.7,892.864 2709.14,857.418 2709.14,813.757C2709.14,770.097 2673.7,734.651 2630.04,734.651Z"/></g></g>
+    </symbol>
+    <symbol id="opCircleType" viewBox="0 0 3905 1443" style="fill-rule:evenodd;clip-rule:evenodd;">
+      <g transform="matrix(1.01681,0,0,0.667932,0,0)"><g transform="matrix(2.21727,0,0,3.37541,-2648.74,-2066.57)"><path d="M2498.63,890.329C2523.7,890.329 2544.05,910.677 2544.05,935.74C2544.05,960.803 2523.7,981.151 2498.63,981.151C2473.57,981.151 2453.22,960.803 2453.22,935.74C2453.22,910.677 2473.57,890.329 2498.63,890.329ZM2498.63,836.542C2553.38,836.542 2597.83,880.991 2597.83,935.74C2597.83,990.488 2553.38,1034.94 2498.63,1034.94C2443.89,1034.94 2399.44,990.488 2399.44,935.74C2399.44,880.991 2443.89,836.542 2498.63,836.542Z"/></g><g transform="matrix(3.80252,0,0,5.78869,-8704.03,-6459.53)"><path d="M2502.77,1325.17C2480.57,1349.47 2448.63,1364.73 2413.15,1364.73C2346.18,1364.73 2291.8,1310.36 2291.8,1243.38C2291.8,1176.41 2346.18,1122.04 2413.15,1122.04C2476.86,1122.04 2529.78,1171 2534.12,1244.84C2550.61,1243.52 2571.13,1241.2 2590.37,1256.57C2619.41,1279.76 2624.04,1320.36 2595.82,1342.36C2568.28,1363.83 2534.71,1363.6 2535.45,1363.66C2536.19,1363.71 2533.72,1447.08 2534.24,1465.09C2534.42,1471.31 2528.08,1479.31 2520.1,1479.51C2512.81,1479.69 2504.98,1476.43 2504.69,1465.08C2504.33,1451.17 2503.54,1382.04 2502.77,1325.17ZM2527.46,1289.56C2526.55,1292.1 2525.56,1294.6 2524.49,1297.06C2524.03,1299.05 2523.79,1301.12 2523.79,1303.25C2523.79,1318.35 2536.05,1330.61 2551.15,1330.61C2566.25,1330.61 2578.51,1318.35 2578.51,1303.25C2578.51,1288.15 2566.25,1275.89 2551.15,1275.89C2541.03,1275.89 2532.2,1281.39 2527.46,1289.56ZM2524.49,1297.06L2527.46,1289.56C2526.12,1291.87 2525.11,1294.39 2524.49,1297.06ZM2413.15,1187.83C2382.49,1187.83 2357.6,1212.73 2357.6,1243.38C2357.6,1274.04 2382.49,1298.94 2413.15,1298.94C2443.81,1298.94 2468.7,1274.04 2468.7,1243.38C2468.7,1212.73 2443.81,1187.83 2413.15,1187.83Z"/></g><g transform="matrix(3.80252,0,0,5.78869,-9021.99,-7865.74)"><path d="M3000.9,1398.29C3016,1398.29 3028.26,1410.55 3028.26,1425.65C3028.26,1440.75 3016,1453.01 3000.9,1453.01C2985.8,1453.01 2973.54,1440.75 2973.54,1425.65C2973.54,1410.55 2985.8,1398.29 3000.9,1398.29ZM2951.01,1374.27C2951.92,1379.9 2953.82,1568.82 2954.44,1592.86C2954.73,1604.2 2962.56,1607.47 2969.85,1607.29C2977.83,1607.09 2984.17,1599.08 2983.99,1592.87C2983.47,1574.86 2985.94,1491.49 2985.2,1491.43C2984.46,1491.38 3018.03,1491.6 3045.57,1470.13C3073.79,1448.13 3069.16,1402.16 3040.12,1378.97C2998.16,1345.46 2950.11,1368.63 2951.01,1374.27Z"/></g><g transform="matrix(25.9135,0,0,39.4489,148.648,165.716)"><path d="M50.7,15.369C55.386,15.369 57.731,18.831 57.731,22.6C57.731,23.045 57.612,23.376 57.362,23.598C57.118,23.815 56.742,23.931 56.2,23.931L45.551,23.931C45.994,26.77 48.113,28.469 50.8,28.469C52.656,28.469 53.926,27.786 54.903,26.712C54.91,26.704 54.918,26.697 54.927,26.691C55.079,26.59 55.206,26.489 55.333,26.413C55.478,26.325 55.625,26.269 55.8,26.269C56.468,26.269 57.131,26.832 57.131,27.5C57.131,27.827 57.029,28.157 56.593,28.593C55.17,30.015 52.936,30.831 50.7,30.831C45.41,30.831 42.969,26.964 42.969,23.2C42.969,18.422 46.627,15.572 50.693,15.369C50.696,15.369 50.698,15.369 50.7,15.369ZM45.557,21.769L55.061,21.769C54.903,19.507 53.166,17.831 50.5,17.831C47.736,17.831 45.996,19.507 45.557,21.769Z" style="fill-rule:nonzero;"/></g><g transform="matrix(3.13203,0,0,4.76799,-7162.23,-6236.36)"><path d="M2964.4,1579.23L2964.4,1596.67C2964.4,1597.25 2963.94,1597.73 2963.37,1597.75C2962.53,1597.79 2961.68,1597.81 2960.83,1597.81C2948.51,1597.81 2938.53,1594.16 2931.63,1587.47C2924.72,1580.77 2920.85,1571 2920.85,1558.66L2920.85,1520.61C2920.85,1510.54 2917.74,1501.6 2910.89,1496.07C2906.33,1492.39 2900.13,1490.25 2892.15,1490.25C2873.65,1490.25 2857.66,1507.23 2857.66,1531.36L2857.66,1585.97C2857.66,1593.28 2852.22,1596.98 2845.82,1596.98C2841.97,1596.98 2838.81,1595.92 2836.88,1593.54C2835.58,1591.95 2834.81,1589.75 2834.81,1586.79L2834.81,1482.55C2834.81,1478.88 2835.99,1476.14 2837.94,1474.31C2839.89,1472.48 2842.62,1471.53 2845.82,1471.53C2848.6,1471.53 2851.14,1472.48 2853,1474.33C2854.83,1476.16 2856.01,1478.89 2856.01,1482.55L2856.01,1489.98C2864.02,1477.15 2877.6,1470.7 2895.46,1470.7C2909.87,1470.7 2921.51,1475.61 2929.56,1484.29C2937.59,1492.95 2942.05,1505.4 2942.05,1520.61L2942.05,1557.84C2942.05,1564.54 2943.58,1569.68 2946.73,1573.13C2949.86,1576.56 2954.57,1578.26 2960.83,1578.26C2961.65,1578.26 2962.44,1578.23 2963.21,1578.15C2963.51,1578.12 2963.82,1578.22 2964.05,1578.43C2964.27,1578.63 2964.4,1578.92 2964.4,1579.23Z"/></g><g transform="matrix(25.9135,0,0,39.4489,-44.8323,169.661)"><path d="M102.9,15.369C103.528,15.369 104.156,15.529 104.587,15.83C105.042,16.147 105.289,16.614 105.131,17.217C105.128,17.613 105.037,17.926 104.83,18.117C104.684,18.252 104.48,18.331 104.2,18.331C104.026,18.331 103.851,18.265 103.643,18.189C103.369,18.088 103.027,17.973 102.514,18.03C102.51,18.031 102.505,18.031 102.5,18.031C100.264,18.031 98.631,20.283 98.631,23.2L98.631,29.5C98.631,29.893 98.488,30.2 98.249,30.411C98.015,30.617 97.686,30.731 97.3,30.731C96.913,30.731 96.583,30.617 96.348,30.395C96.112,30.174 95.969,29.843 95.969,29.4L95.969,16.8C95.969,16.024 96.524,15.469 97.3,15.469C98.073,15.469 98.631,16.016 98.631,16.9L98.631,18.011C99.673,16.359 101.279,15.559 102.885,15.37C102.89,15.369 102.895,15.369 102.9,15.369Z" style="fill-rule:nonzero;"/></g><g transform="matrix(25.9135,0,0,39.4489,-33.2184,165.716)"><path d="M128.029,21.772C128.029,21.772 130.14,22.246 131.829,23.323C132.981,24.058 133.931,25.075 133.931,26.4C133.931,29.375 131.485,30.831 128.1,30.831C125.318,30.831 123.488,29.775 122.638,28.797C122.255,28.354 122.069,27.922 122.069,27.6C122.069,27.21 122.287,26.873 122.58,26.636C122.868,26.403 123.226,26.269 123.5,26.269C123.504,26.269 123.507,26.269 123.511,26.269C123.775,26.291 124.006,26.403 124.232,26.573C124.441,26.729 124.648,26.935 124.883,27.158C125.557,27.797 126.469,28.569 128.4,28.569C130.209,28.569 131.369,27.833 131.369,26.5C131.369,25.799 130.965,25.312 130.358,24.95C129.718,24.569 128.857,24.325 127.972,24.128C126.882,23.886 125.809,23.627 124.913,23.217C123.534,22.586 122.569,21.602 122.569,19.8C122.569,16.62 125.425,15.369 128.4,15.369L128.404,15.369C130.55,15.441 132.193,16.319 132.951,17.187C133.299,17.584 133.463,17.985 133.43,18.313C133.43,18.319 133.429,18.326 133.427,18.332C133.371,18.555 133.181,18.809 132.93,19.003C132.682,19.197 132.376,19.331 132.1,19.331C132.096,19.331 132.092,19.331 132.088,19.331C131.626,19.289 131.262,19.034 130.833,18.736C130.237,18.323 129.502,17.831 128.1,17.831C126.485,17.831 125.231,18.565 125.231,19.8C125.231,20.522 125.603,20.941 126.257,21.243C126.72,21.458 127.319,21.614 128.028,21.772L128.029,21.772Z" style="fill-rule:nonzero;"/></g><g transform="matrix(25.9135,0,0,39.4489,-33.2184,165.716)"><path d="M148.365,28.513L148.362,28.529C148.352,28.557 148.288,28.659 148.177,28.791L148.204,28.825L147.99,28.996C147.07,30.011 144.938,30.831 142.5,30.831C137.717,30.831 135.269,26.665 135.269,22.9C135.269,20.511 135.985,18.631 137.205,17.347C138.429,16.06 140.161,15.369 142.2,15.369L142.203,15.369C146.381,15.471 148.531,19.029 148.531,22.8C148.531,23.189 148.415,23.493 148.221,23.702C148.022,23.915 147.74,24.031 147.4,24.031L137.546,24.031C137.711,25.429 138.213,26.552 139.004,27.332C139.819,28.134 140.938,28.569 142.3,28.569C143.959,28.569 145.227,27.885 146.203,26.812C146.21,26.804 146.218,26.797 146.227,26.791C146.413,26.667 146.598,26.544 146.761,26.465C146.888,26.404 147.004,26.369 147.1,26.369C147.561,26.369 147.984,26.642 148.248,26.981C148.427,27.213 148.531,27.475 148.531,27.7C148.531,28.026 148.492,28.273 148.365,28.513ZM137.757,21.769L146.367,21.769C146.305,19.416 144.583,17.736 142.205,17.831L142.2,17.831C139.916,17.831 138.195,19.511 137.757,21.769Z" style="fill-rule:nonzero;"/></g></g></symbol>
+
+    <!-- SWISH — two-stroke flow -->
+    <symbol id="opSwish" viewBox="0 0 152 107">
+      <g transform="matrix(0.981452,0,0,0.878406,2.4868,-8.28354)"><rect x="-2.534" y="9.43" width="154.346" height="121.268" style="fill:none;"/><g transform="matrix(1.0189,0,0,1.13843,-1.51112,-15.5823)"><path d="M76.7,25.1C82.9,29 95.6,39.3 102,50C105.2,55.5 106.3,60.3 106.3,67C105.4,68.4 101.1,71.3 99.6,72.1C101.1,72.7 104.7,73.8 106.9,74.3C107.8,93.9 96.6,111.2 76.5,125.1L82.6,122.7C94.1,115.8 110.9,97.6 110.9,74.2C117.6,74.2 148.6,72.9 148.6,53.7C148.3,43.7 132.2,29 107.6,25.3C97.1,23.8 85.4,24.2 76.7,25.1ZM109.9,33.6C117.8,36.9 128.2,43 128.2,53.3C128.2,59.4 120.9,64.6 110.8,66.4C111.1,51.8 101.9,30.1 89.1,28.1L86.7,27.5C94.3,28.3 104.1,31.2 109.9,33.6Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(1.0189,0,0,1.13843,-1.51112,-15.5823)"><path d="M95,72.3C96.7,71.3 99.3,69.1 100.7,67.3C97.9,50.9 84.3,23.5 50.4,23.5C23.3,23.5 1.2,43.7 1.2,74.7C1.2,97.8 16.3,126.5 50.7,126.5C78.2,126.5 101.5,109.2 101.5,76.8C100.2,75.7 97.3,73.6 94.7,72.3L95,72.3ZM50.5,116.3C28.7,116.3 10,100.8 10,75.1C10,55.1 25.1,34.2 49.9,34.2C68.3,34.2 89.9,48.5 90.8,74.5C91.3,98.4 74.3,116.3 50.5,116.3Z" style="fill:currentColor;fill-rule:nonzero;"/></g></g>
+    </symbol>
+    <symbol id="opSwishType" viewBox="0 0 3025 752">
+      <!-- Full 9-glyph "OpenProse" wordmark per OP-swish-type.svg.  Every fill
+           is currentColor so the wordmark inherits text color (light + dark). -->
+      <g transform="matrix(0.787745,0,0,0.347708,0,0)"><rect x="0" y="0" width="3840" height="2160" style="fill:none;"/><g transform="matrix(25.3499,0,0,57.4311,21.758,43.1089)"><path d="M34.5,15.8C33.7,8.6 27.6,0.4 17.2,0.4C8.2,0.4 1.1,7.9 1,17.6C0.9,25.8 5.9,35.1 16.7,35.1C25.8,35.1 34.6,29.8 34.7,19L32.4,17.6L34.5,15.8ZM16.7,31.5C9.4,31.5 4.5,25.6 4.5,18.2C4.5,11.7 9.4,4.5 16.9,4.5C24.7,4.3 29.9,10.4 30.4,17.1C30.7,23.2 27,31.5 16.7,31.5Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(15.8933,0,0,34.9068,473.082,978.691)"><path d="M25.02,1.827C36.105,6.18 33.244,16.433 33.244,16.433C33.15,19.81 27.02,27.194 19.012,30.939C22.712,29.839 34.322,27.652 37.813,18.162C41.913,18.062 49.9,17.3 51.3,13.3C53.8,7.2 34.081,-4.802 25.02,1.827ZM38.1,15.4C37.9,9.6 35,5.2 33.5,3.7C32.3,2.6 31.2,2.2 29.9,1.9C34.2,2.2 39.8,4.3 42.1,6.3C44.3,8.1 46,11.9 42.3,14C41.4,14.6 39.9,15.1 38.1,15.4Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(25.3499,0,0,57.4311,155.653,74.403)"><path d="M57.978,20.23C58.351,24.744 47.3,24.9 47.3,24.9L49.5,24.3C49.9,21.9 51.808,18.502 54.4,18.3C56.533,18.134 57.879,19.035 57.978,20.23ZM49.25,25.822C50.05,25.922 50.8,26 52.4,26C56.7,26 61.1,24.3 61.1,20.4C61.1,18.6 59.5,15.9 55.5,15.9C50.4,15.9 45.5,20.5 45.5,26.4C45.5,29.4 47.1,33.3 52.3,33.3C55.6,33.3 58.9,31.4 61.1,27.8C59.5,29.4 56.7,30.9 54.2,30.9C51.7,30.9 49.25,28.922 49.25,25.822Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(25.3499,0,0,57.4311,2217.17,74.403)"><path d="M57.978,20.23C58.351,24.744 47.3,24.9 47.3,24.9L49.5,24.3C49.9,21.9 51.808,18.502 54.4,18.3C56.533,18.134 57.879,19.035 57.978,20.23ZM49.25,25.822C50.05,25.922 50.8,26 52.4,26C56.7,26 61.1,24.3 61.1,20.4C61.1,18.6 59.5,15.9 55.5,15.9C50.4,15.9 45.5,20.5 45.5,26.4C45.5,29.4 47.1,33.3 52.3,33.3C55.6,33.3 58.9,31.4 61.1,27.8C59.5,29.4 56.7,30.9 54.2,30.9C51.7,30.9 49.25,28.922 49.25,25.822Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(25.3499,0,0,57.4311,155.653,74.403)"><path d="M61.3,15.6C62.5,17 63.1,20.1 63.1,22.5C63.1,26.1 62,29.9 58.9,33.2C61.4,32.7 64.3,30.9 65.6,25.6C66.2,23 67.5,20.1 70.1,20.1C72.3,20.1 73.6,22.6 73.6,26.3C73.6,28.6 73,31.1 71.7,33.7C74.6,31.9 76.8,27.9 76.8,23.7C76.8,18.9 74.4,15.9 71.2,15.9C68.6,15.9 66.4,17.9 65.2,21.6C64.9,19.5 63.6,16.9 61.3,15.6Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(25.3499,0,0,57.4311,155.653,74.403)"><path d="M70.8,0.9C75,4 79.4,9.1 80.2,16.4L76.8,17.2C77.9,17.6 79.1,17.8 80.3,18C80.7,23.4 78.7,30.5 72.6,34.9C76.2,33.6 82.5,28.8 82.6,18.2C86.6,18.2 95.9,17.4 95.9,11.2C96,7.2 88.6,-1.4 70.8,0.9ZM82.6,15.8C82.3,10.6 79.8,3.1 74.6,1.8C78.4,2.3 88.7,4.6 88.7,10.6C88.7,13.6 85.2,14.7 82.6,15.8Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(25.3499,0,0,57.4311,155.653,74.403)"><path d="M89.4,18.6C89.6,19.5 89.6,20.4 89.6,21.5C89.6,25 88.6,29.4 86.1,33.2C89.4,32.6 91.9,29.9 92.8,25.6C93.6,22.1 95.1,19.9 97.2,19.9C97.9,19.9 98.4,20.1 99,20.5C99.9,18.9 101.1,17.6 102.1,16.8C101.1,16.2 100.1,15.9 98.7,15.9C96.1,15.9 93.7,18.3 92.2,22.6C92.3,21.3 92.3,19.7 92.1,17.8L89.4,18.6Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(25.3499,0,0,57.4311,155.653,74.403)"><path d="M108.8,15.9C103.9,16.1 98.7,20.6 98.7,26.4C98.7,30.4 101.1,33.3 105.5,33.3C110.6,33.4 115.5,29.4 115.5,23.2C115.5,18.9 112.6,15.8 108.8,15.9ZM106.1,31C103.9,30.9 102.4,28.6 102.6,25.5C102.9,21.7 105,18.3 108.1,18.2C110.4,18.2 111.8,20.1 111.7,23.2C111.6,26.9 109.6,31 106.1,31Z" style="fill:currentColor;fill-rule:nonzero;"/></g><g transform="matrix(25.3499,0,0,57.4311,155.653,74.403)"><path d="M127.8,16.6C126.7,16.1 125.5,15.8 123.9,15.8C120.4,15.8 116.4,17.5 116.4,21.1C116.4,25 121.4,25.6 121.4,28.4C121.4,30.5 118.6,32.4 112.6,32.2C113.7,32.9 115.5,33.3 117.7,33.3C122.1,33.3 125.5,31.2 125.5,27.9C125.5,23.4 120.5,23.2 120.5,20.7C120.5,18.2 123.6,16.6 127.8,16.6Z" style="fill:currentColor;fill-rule:nonzero;"/></g></g>
+    </symbol>
+
+    <!-- CURSIVE — handwritten variant -->
+    <symbol id="opCursive" viewBox="0 0 1737 1846">
+      <g transform="matrix(0.452146,0,0,0.85439,0,0)"><g transform="matrix(72.3922,0,0,34.915,-0.537438,-12.8456)"><path d="M38.5,24C38.5,17.3 33.3,1.2 19.4,1.2C10.8,1.2 1.7,8.3 1.7,26.1C1.7,36.5 6.9,51.8 19.8,51.8C29.5,51.9 38.5,44.5 38.7,33.4L38.9,30C39,28.6 41.4,28.2 43.1,28.2C45,28.2 47.9,28.7 49,29.8C50.6,31.1 51.2,34.5 49.3,36.3C47.4,38 43.9,38.9 40,38.9C38.9,38.9 38.3,38.7 38.3,40L38.5,59.7C38.5,61.7 39.2,62.2 39.3,60L39.7,41C42.4,41 47.8,40.5 49.8,38.4C52.6,35.9 52.3,30.1 48.7,27.8C46.2,26.2 40.4,25.5 37.8,28C36.9,28.9 36.8,30.7 36.7,31.4C35.1,39.9 29.7,47.5 20,47.5C11.7,47.5 3.5,40.6 3.5,26.7C3.7,14.6 10.9,5.2 19.6,5.2C29.5,5.1 36.3,13.8 37.5,23.9C37.6,25.2 38.5,25.1 38.5,24" style="fill-rule:nonzero;"/></g></g>
+    </symbol>
+    <symbol id="opCursiveType" viewBox="0 0 3776 1586">
+      <g transform="matrix(0.983178,0,0,0.734075,0,0)"><g transform="matrix(25.7809,0,0,34.5295,-62.4849,105.595)"><path d="M147.9,31.7C145.9,33 143.5,34.1 141.4,34.1C139.9,34.3 138.9,33.9 138.5,33.5C138.2,33.4 138.5,33.5 138.5,33.5L138.4,33.4C138.2,33.3 138.2,33.1 138.6,33C140.9,31.1 146.1,28.155 146.1,23.755C146,22.655 145.2,21.555 143.6,21.555C139.8,21.555 135.9,25.6 136.1,30.5C136.1,31 136.2,32.1 136.2,33C135.4,33.5 133.6,34.5 132.5,35.1C134.2,31.9 131,29.9 129.1,27.9C130.5,26.5 132.6,25.352 132.5,22.952C132.4,21.952 131.5,21.352 130.5,21.452C128.4,21.452 125.6,23.4 125.7,25.7C125.7,26.9 126.2,27.6 126.6,28.1C124.6,29.9 121.5,31.4 118.2,32.5C119.9,31.1 121.7,28.1 121.7,25.4C121.7,23.1 120,21.6 117.9,21.6C113.2,21.6 108.5,26.6 108.5,31.4C108.5,32.1 108.7,33.584 109.1,34.184C106.5,36.484 104,35.7 104,32.4C104,29.9 106.5,24.9 107.7,22.6C108.1,21.9 107.7,21.4 107.1,21.6C104.2,22.9 100.9,23.9 96,23.1C95.5,23.1 94.8,23.4 94.6,24C93.6,27.9 91.5,34 87.9,36.2C87.4,36.5 87.4,37.4 88.2,37.1C90.4,36.1 94.4,32.1 96.2,25.4C99.1,25.6 101.9,25.4 105,24.1C103.9,26.1 101.9,29.9 101.9,32.4C101.9,35.9 104,36.6 105.4,36.5C107,36.5 108.9,35.984 109.8,35.084C110.5,35.584 111.764,35.965 112.6,35.984C114.885,36.036 116.81,34.936 117.942,34.489C123.107,32.45 124.037,32.109 127.4,29.1C129,30.7 131.4,32.1 131.2,34.1C131,36.1 127.6,37 124.4,35.6C122.1,34.6 122.255,33.99 121.255,34.49C120.755,34.69 119.5,35 120,35.5C121.1,37 123.9,38.1 126.6,38.1C129.5,38.1 132.6,36.5 136.6,34C137.4,35.4 138.9,35.9 140.5,35.9C144,35.9 147.9,33.5 148.2,32.9C148.9,32.1 148.2,31.6 147.9,31.7ZM113.4,33.984C112,33.684 110.9,32.4 111,29.9C111.4,26.9 114,23.4 117.1,23.3C119.1,23.3 120.1,24.4 120.1,26.1C120.1,29.5 116.4,33.984 113.4,33.984ZM128.2,26.9C127.7,26.5 127.5,25.9 127.5,24.9C127.5,23.4 128.6,23.252 129.9,23.252C131.6,23.452 130.2,25.4 128.2,26.9ZM137.9,31.7C137.6,31.9 137.6,31.6 137.6,31.5C137.5,31 137.5,30.6 137.5,30C137.6,27.1 140.4,23.655 143.1,23.555C143.9,23.555 144.4,24.055 144,25.255C143.1,28.155 140.1,30 137.9,31.7Z" style="fill-rule:nonzero;"/></g><g transform="matrix(25.7809,0,0,31.489,-30.4318,111.774)"><path d="M92,0.2C89.5,0.2 87.1,0.5 84.6,1.8C82.5,3 80.9,5.1 80.8,7.4C80.6,12.6 86.9,13.5 87.6,17.9C87.9,18.5 88.5,18.1 88.4,17.6C88.2,13.4 82.9,12 82.7,8.6C82.6,5.4 85.6,2.6 91.1,2.6C97.7,2.5 107.9,6.6 107.9,12.5C107.6,16.5 102.1,18 99,18.5C96.5,19 90.026,19.999 88.4,22.6C86.9,25 86.4,26.5 85.9,29.1C84.4,36.1 82.1,44.1 78.6,44.1C76.5,44 75.4,41.9 75.5,43.5C75.6,45.1 76.6,46 78.1,46C82.1,46 84.9,40.4 87,31.5C88.9,23.4 90.2,22.6 96.1,21.5C100,20.6 109.5,19.4 109.6,12.1C109.6,6.4 100,0.4 92,0.2Z" style="fill-rule:evenodd;"/></g><g transform="matrix(25.7809,0,0,34.5295,-0.400543,7.77857)"><path d="M38.5,24C38.5,17.3 33.3,1.2 19.4,1.2C10.8,1.2 1.7,8.3 1.7,26.1C1.7,36.5 6.9,51.8 19.8,51.8C29.5,51.9 38.5,44.5 38.7,33.4L38.9,30C39,28.6 41.4,28.2 43.1,28.2C45,28.2 47.9,28.7 49,29.8C50.6,31.1 51.2,34.5 49.3,36.3C47.4,38 43.9,38.9 40,38.9C38.9,38.9 38.3,38.7 38.3,40L38.5,59.7C38.5,61.7 39.2,62.2 39.3,60L39.7,41C42.4,41 47.8,40.5 49.8,38.4C52.6,35.9 52.3,30.1 48.7,27.8C46.2,26.2 40.4,25.5 37.8,28C36.9,28.9 36.8,30.7 36.7,31.4C35.1,39.9 29.7,47.5 20,47.5C11.7,47.5 3.5,40.6 3.5,26.7C3.7,14.6 10.9,5.2 19.6,5.2C29.5,5.1 36.3,13.8 37.5,23.9C37.6,25.2 38.5,25.1 38.5,24" style="fill-rule:nonzero;"/></g><g transform="matrix(21.351,0,0,36.3137,231.726,-39.8604)"><path d="M55.8,32.4C55.7,33 55.9,33.4 56.5,33.6C58.3,34.3 60.5,34.4 62.3,34.4C66,34.4 68.1,33.9 68.1,30.9C68.1,27.8 64.6,26.7 60.9,26.7C56.2,26.7 52.4,28.1 52.4,33.2C52.4,36.6 54.7,39.8 60.8,39.8C63.2,39.8 69.9,39 70,36.6C70,36.3 69.7,35.7 69.3,35.9C67.8,36.9 64.3,37.7 61,37.7C58.3,37.7 53.8,36.9 53.8,33.2C53.8,30.1 57.1,28.7 60.9,28.7C64.4,28.7 66.9,29.3 66.9,30.8C66.9,32.3 63.4,32.4 61.2,32.4C57.6,32.4 56.5,31.7 55.8,31.7L55.8,32.4" style="fill-rule:nonzero;"/></g><g transform="matrix(25.7809,0,0,34.5295,-77.5894,28.3524)"><path d="M71.4,26.6C71.4,27.8 70.9,38.4 71,39C71.1,39.6 71.8,40 72.1,39C72.8,34.7 72.4,27.8 76.5,27.8C79.5,27.8 78.8,32.9 78.6,35.4C78.4,39 79.6,39.5 80.3,39.3C80.8,39.3 81.2,37.8 80.4,37.8C79.1,37.4 80.8,33.2 79.6,29C78.4,25.2 74.3,25.1 72.6,28.8L72.5,28.8L72.5,26.7C72.4,25.5 71.4,25.7 71.4,26.6" style="fill-rule:nonzero;"/></g></g>
+    </symbol>
+  </svg>
+
+<!-- ===== NAV — the ρ glyph + label are gone; the page-level
+     logo now lives in the .center-glass overlay below. Nav keeps
+     only the mode toggle so dark mode stays reachable without
+     crowding the canvas. ===== -->
+<nav>
+  <div class="inner">
+    <div class="right">
+      <button class="mode-toggle" id="mode-toggle" type="button" aria-label="Toggle dark mode">◑</button>
+    </div>
+  </div>
+</nav>
+
+<!-- ===== HERO — three.js black-hole canvas =====
+     The hero is now just the canvas + the single corner label +
+     the tunables panel. The eyebrow / H1 / deck / CTAs / stamp
+     captions from earlier iterations are gone — nothing competes
+     with the void. -->
+<section class="hero">
+  <canvas class="bh-canvas" id="bh-canvas"></canvas>
+  <div class="hero-overlay"></div>
+  <!-- Centered glass logo, mirroring the original
+       direction-rho-blackhole-hero.html. pointer-events:none so
+       clicks fall through to the canvas underneath. -->
+  <div class="center-glass" aria-label="OpenProse mark">
+    <svg class="swap-logo" data-kind="signet" viewBox="0 0 142 142" aria-hidden="true"><use href="#opMark"/></svg>
+  </div>
+  <div class="hero-label br">click the void</div>
+
+  <!-- Exposed tunables for the autonomous cycle (fall + related
+       values). Ships collapsed; the + toggle pops it open. -->
+  <aside class="tunables" id="tunables" data-collapsed="true" aria-label="Black hole cycle tunables">
+    <header>
+      <span>// tunables</span>
+      <button id="tunables-toggle" type="button" aria-label="Toggle tunables">+</button>
+    </header>
+    <div class="tunables-body" id="tunables-body">
+      <!-- Ship defaults: far 24.9 · near 0.05 · fall 3.60 ·
+           exp 6.7 · fov 140 · fade in 0.55 ·
+           bloom 0.13 / 0.25 / 0.29. -->
+      <label><span class="label-text">far dist <output id="t-farDist-o">24.9</output></span>
+        <input type="range" id="t-farDist"  min="3"    max="40"  step="0.1"  value="24.9"></label>
+      <label><span class="label-text">near dist <output id="t-nearDist-o">0.05</output></span>
+        <input type="range" id="t-nearDist" min="0.05" max="3"   step="0.05" value="0.05"></label>
+      <label><span class="label-text">fall (s) <output id="t-fallDur-o">3.60</output></span>
+        <input type="range" id="t-fallDur"  min="0.4"  max="10"  step="0.05" value="3.60"></label>
+      <label><span class="label-text">fall exp <output id="t-fallExp-o">6.7</output></span>
+        <input type="range" id="t-fallExp"  min="0.5"  max="8"   step="0.1"  value="6.7"></label>
+      <label><span class="label-text">fov (°) <output id="t-fov-o">140</output></span>
+        <input type="range" id="t-fov"      min="40"   max="140" step="1"    value="140"></label>
+      <label><span class="label-text">fade in (s) <output id="t-fadeInDur-o">0.55</output></span>
+        <input type="range" id="t-fadeInDur" min="0"   max="2"   step="0.05" value="0.55"></label>
+      <label><span class="label-text">bloom strength <output id="t-bs-o">0.13</output></span>
+        <input type="range" id="t-bs"    min="0"    max="2"    step="0.01" value="0.13"></label>
+      <label><span class="label-text">bloom radius <output id="t-br-o">0.25</output></span>
+        <input type="range" id="t-br"    min="0"    max="3"    step="0.01" value="0.25"></label>
+      <label><span class="label-text">bloom threshold <output id="t-bt-o">0.29</output></span>
+        <input type="range" id="t-bt"    min="0"    max="1"    step="0.01" value="0.29"></label>
+      <label class="checkbox"><input type="checkbox" id="t-disk" checked> <span>accretion disk</span></label>
+    </div>
+    <div class="tunables-footer">
+      <span id="tunables-phase">idle</span>
+      <button id="tunables-reset" type="button">reset</button>
+    </div>
+  </aside>
+</section>
+
+<!-- ===== FOOT — narrative tail ===== -->
+<section class="foot" id="foot">
+  <div class="foot-inner">
+    <div class="foot-eyebrow">// ρ Black Hole — three.js fork · 2026-05-22</div>
+    <h2>The shadow is a <em>boundary</em> — and the trace is the program.</h2>
+    <p>This fork swaps the prior canvas-2D pipeline for the three.js leapfrog ray-tracer from <a href="https://github.com/vlwkaos/threejs-blackhole" target="_blank" rel="noopener">vlwkaos/threejs-blackhole</a>. Every pixel integrates a null geodesic around a Schwarzschild metric in a fragment shader, samples a milky-way background, blackbody-tinted stars, and an accretion-disk texture — then UnrealBloom carries the disk's glow. The void only exists when the operator <em>asks for it</em>: click anywhere on the canvas and the camera anchors to the angle of the click, the void fades in, holds, fades back out. The camera never moves. Tunables for rate and camera live in the panel at the right.</p>
+    <div class="ctas">
+      <a class="btn primary" href="direction-rho-blackhole-hero-physics.html">ρ physics fork — the predecessor <span>→</span></a>
+      <a class="btn ghost" href="https://github.com/vlwkaos/threejs-blackhole" target="_blank" rel="noopener">vlwkaos/threejs-blackhole on GitHub</a>
+    </div>
+    <div class="foot-meta">
+      // see also:
+      <a href="direction-mu-bloom-homepage-symmetry-ripple.html">μ symmetry ripple</a>
+      <a href="direction-mu-bloom-styleguide-teal.html">μ styleguide teal</a>
+      <a href="direction-rho-blackhole-hero.html">ρ original</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     THREE.JS BLACK HOLE — port of vlwkaos/threejs-blackhole
+     (MIT-style upstream; see header).  Inlined into a single
+     module so the page is self-contained.
+     ============================================================ -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://esm.sh/three@0.160.0",
+    "three/addons/": "https://esm.sh/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { CopyShader } from 'three/addons/shaders/CopyShader.js';
+
+// ----------------------------------------------------------------
+// Observer — extends PerspectiveCamera with an orbital position +
+// velocity + look-direction.  Verbatim from upstream Observer.js.
+// ----------------------------------------------------------------
+class Observer extends THREE.PerspectiveCamera {
+  constructor(fov, ratio, near, far) {
+    super(fov, ratio, near, far);
+    this.time = 0;
+    this.theta = 0;
+    this.angularVelocity = 0;
+    this.maxAngularVelocity = 0;
+    this.velocity = new THREE.Vector3();
+    this.position.set(0, 0, 1);
+    this.direction = new THREE.Vector3();
+    this.moving = false;
+    this.timeDilation = false;
+    this.incline = -5 * Math.PI / 180;
+  }
+  set distance(r) {
+    this.r = r;
+    this.maxAngularVelocity = 1 / Math.sqrt(2.0 * (r - 1.0)) / this.r;
+    this.position.normalize().multiplyScalar(r);
+  }
+  get distance() { return this.r; }
+  setDirection(pitch, yaw) {
+    const originalDirection = new THREE.Vector3(0, 0, -1);
+    const rotation = new THREE.Euler(0, 0, 0, 'YXZ');
+    rotation.set(pitch, yaw, 0);
+    const newDirection = new THREE.Vector3();
+    newDirection.copy(originalDirection).applyEuler(rotation);
+    this.direction = newDirection.normalize();
+  }
+  update(delta) {
+    if (this.timeDilation) {
+      this.delta = Math.sqrt((delta * delta * (1.0 - this.angularVelocity * this.angularVelocity)) / (1 - 1.0 / this.r));
+    } else {
+      this.delta = delta;
+    }
+    this.theta += this.angularVelocity * this.delta;
+    const cos = Math.cos(this.theta);
+    const sin = Math.sin(this.theta);
+    this.position.set(this.r * sin, 0, this.r * cos);
+    this.velocity.set(cos * this.angularVelocity, 0, -sin * this.angularVelocity);
+    const inclineMatrix = (new THREE.Matrix4()).makeRotationX(this.incline);
+    this.position.applyMatrix4(inclineMatrix);
+    this.velocity.applyMatrix4(inclineMatrix);
+    if (this.moving) {
+      if (this.angularVelocity < this.maxAngularVelocity) this.angularVelocity += this.delta / this.r;
+      else this.angularVelocity = this.maxAngularVelocity;
+    } else {
+      if (this.angularVelocity > 0.0) this.angularVelocity -= this.delta / this.r;
+      else { this.angularVelocity = 0; this.velocity.set(0.0, 0.0, 0.0); }
+    }
+    this.time += this.delta;
+  }
+}
+
+// ----------------------------------------------------------------
+// CameraDragControls — pointer drag → pitch/yaw on the Observer.
+// Verbatim from upstream CameraDragControls.js (minus type-script
+// no-check pragma; not needed in vanilla browser JS).
+// ----------------------------------------------------------------
+class CameraDragControls {
+  constructor(observer, domElement) {
+    this.domElement = domElement;
+    this.observer = observer;
+    const inclineMatrix = (new THREE.Matrix4()).makeRotationZ(this.observer.incline);
+    this.observer.up.applyMatrix4(inclineMatrix);
+    this.enabled = true;
+    this.lookSpeed = 0.005;
+    this.lookVertical = true;
+    this.offsetX = 0; this.offsetY = 0;
+    this.lastX = 0; this.lastY = 0;
+    this.pitch = 0; this.yaw = 0; this.roll = -1;
+    this.viewHalfX = 0; this.viewHalfY = 0;
+    this.mouseDragOn = false;
+    if (this.domElement && this.domElement !== document) {
+      this.domElement.setAttribute('tabindex', '-1');
+    }
+    this.addMouseEventHandlers();
+    this.handleResize();
+  }
+  handleResize() {
+    const isEl = this.domElement && this.domElement !== document;
+    if (!isEl) {
+      this.viewHalfX = window.innerWidth / 2;
+      this.viewHalfY = window.innerHeight / 2;
+    } else {
+      this.viewHalfX = this.domElement.offsetWidth / 2;
+      this.viewHalfY = this.domElement.offsetHeight / 2;
+    }
+    this.observer.setDirection(this.pitch, this.yaw);
+  }
+  update(delta) {
+    if (!this.enabled) return;
+    if (this.observer.angularVelocity > 0) {
+      this.yaw += this.observer.angularVelocity * delta;
+    }
+    if (this.mouseDragOn) {
+      this.yaw += this.lookSpeed * this.offsetX;
+      if (this.lookVertical) {
+        this.pitch += this.lookSpeed * this.offsetY;
+        this.pitch = Math.min(Math.PI / 2 - 0.01, Math.max(-Math.PI / 2 + 0.01, this.pitch));
+      }
+      this.offsetX /= 2;
+      this.offsetY /= 2;
+    }
+    this.observer.setDirection(this.pitch, this.yaw);
+  }
+  addMouseEventHandlers() {
+    const el = this.domElement;
+    const isEl = el && el !== document;
+    el.addEventListener('contextmenu', (event) => event.preventDefault());
+    el.addEventListener('mousemove', (event) => {
+      if (this.mouseDragOn) {
+        let newX, newY;
+        if (!isEl) {
+          newX = event.pageX - this.viewHalfX;
+          newY = event.pageY - this.viewHalfY;
+        } else {
+          newX = event.pageX - el.offsetLeft - this.viewHalfX;
+          newY = event.pageY - el.offsetTop - this.viewHalfY;
+        }
+        this.offsetX = newX - this.lastX;
+        this.offsetY = newY - this.lastY;
+        this.lastX = newX;
+        this.lastY = newY;
+      }
+    });
+    el.addEventListener('mousedown', (event) => {
+      if (isEl) el.focus();
+      event.preventDefault();
+      event.stopPropagation();
+      this.mouseDragOn = true;
+      if (!isEl) {
+        this.lastX = event.pageX - this.viewHalfX;
+        this.lastY = event.pageY - this.viewHalfY;
+      } else {
+        this.lastX = event.pageX - el.offsetLeft - this.viewHalfX;
+        this.lastY = event.pageY - el.offsetTop - this.viewHalfY;
+      }
+    });
+    el.addEventListener('mouseup', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      this.mouseDragOn = false;
+      this.offsetX = 0;
+      this.offsetY = 0;
+    });
+    // mouseleave too — otherwise drag-off-canvas leaves it stuck on
+    el.addEventListener('mouseleave', () => {
+      this.mouseDragOn = false;
+      this.offsetX = 0;
+      this.offsetY = 0;
+    });
+  }
+}
+
+// ----------------------------------------------------------------
+// Vertex shader — full-screen triangle, no transforms.
+// Inlined; the upstream sources it from a <script> tag, we don't.
+// ----------------------------------------------------------------
+const vertexShader = /* glsl */ `
+void main() {
+  gl_Position = vec4(position, 1.0);
+}
+`;
+
+// ----------------------------------------------------------------
+// Fragment shader — verbatim from upstream fragmentShader.glsl.
+// `#define STEP / NSTEPS` are prepended at runtime per quality
+// preset.  Medium = 0.05 / 600.
+// ----------------------------------------------------------------
+const fragmentShaderBody = /* glsl */ `
+#define PI 3.141592653589793238462643383279
+#define DEG_TO_RAD (PI/180.0)
+#define ROT_Y(a) mat3(1, 0, 0, 0, cos(a), sin(a), 0, -sin(a), cos(a))
+#define ROT_Z(a) mat3(cos(a), -sin(a), 0, sin(a), cos(a), 0, 0, 0, 1)
+
+uniform float time;
+uniform vec2 resolution;
+
+uniform vec3 cam_pos;
+uniform vec3 cam_dir;
+uniform vec3 cam_up;
+uniform float fov;
+uniform vec3 cam_vel;
+
+const float MIN_TEMPERATURE = 1000.0;
+const float TEMPERATURE_RANGE = 39000.0;
+
+uniform bool accretion_disk;
+uniform bool use_disk_texture;
+const float DISK_IN = 2.0;
+const float DISK_WIDTH = 4.0;
+
+uniform bool doppler_shift;
+uniform bool lorentz_transform;
+uniform bool beaming;
+
+/* bh_active gates the entire geodesic + horizon + disk pipeline.
+   At IDLE (bh_active == false) the shader skips the leapfrog
+   integration entirely and just samples the starfield + milky-way
+   background, so the user sees an empty void waiting for a click.
+   When a click spawns the lifecycle, bh_active flips true and the
+   full ray-trace kicks back in. */
+uniform bool bh_active;
+
+/* bh_alpha is a 0..1 fade factor on the BH+disk contribution
+   while bh_active is true. Used to crossfade the BH in/out
+   without moving the camera (the camera stays in place from the
+   clicked location). When alpha is 0, the shader returns the
+   starfield path directly; otherwise it blends BH-shading into
+   the starfield by alpha. */
+uniform float bh_alpha;
+
+uniform sampler2D bg_texture;
+uniform sampler2D star_texture;
+uniform sampler2D disk_texture;
+
+vec2 square_frame(vec2 screen_size) {
+  vec2 position = 2.0 * (gl_FragCoord.xy / screen_size.xy) - 1.0;
+  return position;
+}
+
+vec2 to_spherical(vec3 cartesian_coord) {
+  vec2 uv = vec2(atan(cartesian_coord.z, cartesian_coord.x), asin(cartesian_coord.y));
+  uv *= vec2(1.0/(2.0*PI), 1.0/PI);
+  uv += 0.5;
+  return uv;
+}
+
+vec3 lorentz_transform_velocity(vec3 u, vec3 v) {
+  float speed = length(v);
+  if (speed > 0.0) {
+    float gamma = 1.0/sqrt(1.0-dot(v,v));
+    float denominator = 1.0 - dot(v,u);
+    vec3 new_u = (u/gamma - v + (gamma/(gamma+1.0)) * dot(u,v)*v)/denominator;
+    return new_u;
+  }
+  return u;
+}
+
+vec3 temp_to_color(float temp_kelvin) {
+  vec3 color;
+  temp_kelvin = clamp(temp_kelvin, 1000.0, 40000.0) / 100.0;
+  if (temp_kelvin <= 66.0) {
+    color.r = 255.0;
+    color.g = temp_kelvin;
+    color.g = 99.4708025861 * log(color.g) - 161.1195681661;
+    if (color.g < 0.0) color.g = 0.0;
+    if (color.g > 255.0) color.g = 255.0;
+  } else {
+    color.r = temp_kelvin - 60.0;
+    if (color.r < 0.0) color.r = 0.0;
+    color.r = 329.698727446 * pow(color.r, -0.1332047592);
+    if (color.r < 0.0) color.r = 0.0;
+    if (color.g > 255.0) color.r = 255.0;
+    color.g = temp_kelvin - 60.0;
+    if (color.g < 0.0) color.g = 0.0;
+    color.g = 288.1221695283 * pow(color.g, -0.0755148492);
+    if (color.g > 255.0) color.g = 255.0;
+  }
+  if (temp_kelvin >= 66.0) {
+    color.b = 255.0;
+  } else if (temp_kelvin <= 19.0) {
+    color.b = 0.0;
+  } else {
+    color.b = temp_kelvin - 10.0;
+    color.b = 138.5177312231 * log(color.b) - 305.0447927307;
+    if (color.b < 0.0) color.b = 0.0;
+    if (color.b > 255.0) color.b = 255.0;
+  }
+  color /= 255.0;
+  return color;
+}
+
+void main() {
+  float uvfov = tan(fov / 2.0 * DEG_TO_RAD);
+  vec2 uv = square_frame(resolution);
+  uv *= vec2(resolution.x/resolution.y, 1.0);
+  vec3 forward = normalize(cam_dir);
+  vec3 up = normalize(cam_up);
+  vec3 nright = normalize(cross(forward, up));
+  up = cross(nright, forward);
+  vec3 pixel_pos = cam_pos + forward + nright*uv.x*uvfov + up*uv.y*uvfov;
+  vec3 ray_dir = normalize(pixel_pos - cam_pos);
+  /* Preserve the un-bent ray for the bh_alpha crossfade; the BH
+     branch overwrites ray_dir at the end of the geodesic loop, so
+     capture it before any mutation. NB: avoid wrapping ray_dir in
+     backticks here — that would break the enclosing JS template
+     literal and freeze the page in the static IDLE state (black
+     screen). */
+  vec3 ray_dir_idle = ray_dir;
+
+  if (lorentz_transform)
+    ray_dir = lorentz_transform_velocity(ray_dir, cam_vel);
+
+  vec4 color = vec4(0.0, 0.0, 0.0, 1.0);
+
+  vec3 point = cam_pos;
+  vec3 velocity = ray_dir;
+  vec3 c = cross(point, velocity);
+  float h2 = dot(c, c);
+
+  float ray_gamma = 1.0/sqrt(1.0-dot(cam_vel, cam_vel));
+  float ray_doppler_factor = ray_gamma * (1.0 + dot(ray_dir, -cam_vel));
+
+  float ray_intensity = 1.0;
+  if (beaming)
+    ray_intensity /= pow(ray_doppler_factor, 3.0);
+
+  vec3 oldpoint;
+  float pointsqr;
+  float distance = length(point);
+
+  /* IDLE shortcut. When bh_active is false (no BH spawned yet),
+     skip the geodesic + horizon + disk work entirely and just
+     sample the starfield + milky-way bg along the straight ray
+     direction. This is the "stars empty of black hole" idle
+     state. */
+  if (!bh_active) {
+    vec2 tex_coord = to_spherical(ray_dir * ROT_Z(45.0 * DEG_TO_RAD));
+    vec4 star_color = texture2D(star_texture, tex_coord);
+    if (star_color.g > 0.0) {
+      float star_temperature = (MIN_TEMPERATURE + TEMPERATURE_RANGE*star_color.r);
+      float star_velocity = star_color.b - 0.5;
+      float star_doppler_factor = sqrt((1.0+star_velocity)/(1.0-star_velocity));
+      if (doppler_shift) star_temperature /= ray_doppler_factor*star_doppler_factor;
+      color += vec4(temp_to_color(star_temperature), 1.0) * star_color.g;
+    }
+    color += texture2D(bg_texture, tex_coord) * 0.25;
+    gl_FragColor = color * ray_intensity;
+    return;
+  }
+
+  for (int i = 0; i < NSTEPS; i++) {
+    oldpoint = point;
+    point += velocity * STEP;
+    vec3 accel = -1.5 * h2 * point / pow(dot(point, point), 2.5);
+    velocity += accel * STEP;
+    distance = length(point);
+    if (distance < 0.0) break;
+    bool horizon_mask = distance < 1.0 && length(oldpoint) > 1.0;
+    if (horizon_mask) {
+      vec4 black = vec4(0.0, 0.0, 0.0, 1.0);
+      color += black;
+      break;
+    }
+    if (accretion_disk) {
+      if (oldpoint.y * point.y < 0.0) {
+        float lambda = -oldpoint.y/velocity.y;
+        vec3 intersection = oldpoint + lambda*velocity;
+        float r = length(intersection);
+        if (DISK_IN <= r && r <= DISK_IN+DISK_WIDTH) {
+          float phi = atan(intersection.x, intersection.z);
+          vec3 disk_velocity = vec3(-intersection.x, 0.0, intersection.z)/sqrt(2.0*(r-1.0))/(r*r);
+          phi -= time;
+          phi = mod(phi, PI*2.0);
+          float disk_gamma = 1.0/sqrt(1.0-dot(disk_velocity, disk_velocity));
+          float disk_doppler_factor = disk_gamma*(1.0+dot(ray_dir/distance, disk_velocity));
+          if (use_disk_texture) {
+            vec2 tex_coord = vec2(mod(phi, 2.0*PI)/(2.0*PI), 1.0-(r-DISK_IN)/(DISK_WIDTH));
+            vec4 disk_color = texture2D(disk_texture, tex_coord) / (ray_doppler_factor * disk_doppler_factor);
+            float disk_alpha = clamp(dot(disk_color, disk_color)/4.5, 0.0, 1.0);
+            if (beaming) disk_alpha /= pow(disk_doppler_factor, 3.0);
+            color += vec4(disk_color)*disk_alpha;
+          } else {
+            float disk_temperature = 10000.0*(pow(r/DISK_IN, -3.0/4.0));
+            if (doppler_shift) disk_temperature /= ray_doppler_factor*disk_doppler_factor;
+            vec3 disk_color = temp_to_color(disk_temperature);
+            float disk_alpha = clamp(dot(disk_color, disk_color)/3.0, 0.0, 1.0);
+            if (beaming) disk_alpha /= pow(disk_doppler_factor, 3.0);
+            color += vec4(disk_color, 1.0)*disk_alpha;
+          }
+        }
+      }
+    }
+  }
+
+  if (distance > 1.0) {
+    ray_dir = normalize(point - oldpoint);
+    vec2 tex_coord = to_spherical(ray_dir * ROT_Z(45.0 * DEG_TO_RAD));
+    vec4 star_color = texture2D(star_texture, tex_coord);
+    if (star_color.g > 0.0) {
+      float star_temperature = (MIN_TEMPERATURE + TEMPERATURE_RANGE*star_color.r);
+      float star_velocity = star_color.b - 0.5;
+      float star_doppler_factor = sqrt((1.0+star_velocity)/(1.0-star_velocity));
+      if (doppler_shift) star_temperature /= ray_doppler_factor*star_doppler_factor;
+      color += vec4(temp_to_color(star_temperature), 1.0) * star_color.g;
+    }
+    color += texture2D(bg_texture, tex_coord) * 0.25;
+  }
+
+  /* bh_alpha crossfade. Compute the un-bent IDLE star color along
+     the original ray_dir and lerp toward the geodesic BH color by
+     bh_alpha. At alpha=1 the BH fully composites; at alpha=0 the
+     BH branch is invisible and only the IDLE starfield shows.
+     Lets the JS smoothly fade the BH in/out while the camera
+     stays anchored at the click point. */
+  vec4 idle_color = vec4(0.0, 0.0, 0.0, 1.0);
+  {
+    vec2 tex_coord_idle = to_spherical(ray_dir_idle * ROT_Z(45.0 * DEG_TO_RAD));
+    vec4 star_color_idle = texture2D(star_texture, tex_coord_idle);
+    if (star_color_idle.g > 0.0) {
+      float star_temperature = (MIN_TEMPERATURE + TEMPERATURE_RANGE*star_color_idle.r);
+      idle_color += vec4(temp_to_color(star_temperature), 1.0) * star_color_idle.g;
+    }
+    idle_color += texture2D(bg_texture, tex_coord_idle) * 0.25;
+  }
+  vec4 final_color = mix(idle_color, color, clamp(bh_alpha, 0.0, 1.0));
+  gl_FragColor = final_color * ray_intensity;
+}
+`;
+
+// Quality presets — medium is the brand ship value.
+function shaderDefines(quality) {
+  let STEP, NSTEPS;
+  switch (quality) {
+    case 'low':    STEP = 0.1;  NSTEPS = 300;  break;
+    case 'high':   STEP = 0.02; NSTEPS = 1000; break;
+    case 'medium':
+    default:       STEP = 0.05; NSTEPS = 600;  break;
+  }
+  return `#define STEP ${STEP}\n#define NSTEPS ${NSTEPS}\n`;
+}
+
+// ----------------------------------------------------------------
+// Bootstrap.
+// ----------------------------------------------------------------
+(async () => {
+  const canvas = document.getElementById('bh-canvas');
+  if (!canvas) return;
+
+  // Honour ?debug=1 to bump shader quality during dev.
+  const params = new URLSearchParams(location.search);
+  const quality = params.get('q') === 'high' ? 'high'
+                : params.get('q') === 'low'  ? 'low'
+                : 'medium';
+  const resolutionScale = params.get('res') ? parseFloat(params.get('res')) : 1.0;
+
+  // ── Renderer ────────────────────────────────────────────────
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+  renderer.setClearColor(0x000000, 1.0);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2) * resolutionScale);
+  renderer.setSize(canvas.clientWidth || window.innerWidth, canvas.clientHeight || window.innerHeight, false);
+  renderer.autoClear = false;
+
+  // ── Scene + composer ────────────────────────────────────────
+  const scene = new THREE.Scene();
+  const camera = new THREE.Camera();
+  camera.position.z = 1;
+
+  const composer = new EffectComposer(renderer);
+  const renderPass = new RenderPass(scene, camera);
+  // Upstream bloom defaults (strength=0.8, radius=2.0,
+  // threshold=0.0) produced a very hot, oversized disk halo when
+  // paired with our hero-sized canvas. Pulled strength to 0.32,
+  // radius to 0.6, and raised threshold to 0.42 so only the
+  // brightest disk knots bloom.
+  const bloomPass = new UnrealBloomPass(new THREE.Vector2(128, 128), 0.32, 0.6, 0.42);
+  const shaderPass = new ShaderPass(CopyShader);
+  shaderPass.renderToScreen = true;
+  composer.addPass(renderPass);
+  composer.addPass(bloomPass);
+  composer.addPass(shaderPass);
+
+  // ── Uniforms ───────────────────────────────────────────────
+  // bh_active + accretion_disk are driven by the lifecycle below
+  // (click spawns; camera distance is what changes during the
+  // fall). The bh_active=false shader branch above renders the
+  // IDLE starfield while waiting for a click.
+  const uniforms = {
+    time:              { value: 0.0 },
+    resolution:        { value: new THREE.Vector2() },
+    accretion_disk:    { value: false },
+    use_disk_texture:  { value: true },
+    lorentz_transform: { value: true },
+    doppler_shift:     { value: true },
+    beaming:           { value: true },
+    bh_active:         { value: false },
+    bh_alpha:          { value: 0.0 },
+    cam_pos:           { value: new THREE.Vector3() },
+    cam_vel:           { value: new THREE.Vector3() },
+    cam_dir:           { value: new THREE.Vector3() },
+    cam_up:            { value: new THREE.Vector3() },
+    fov:               { value: 0.0 },
+    bg_texture:        { value: null },
+    star_texture:      { value: null },
+    disk_texture:      { value: null },
+  };
+
+  // ── Textures (raw GitHub URLs, public repo, CORS-friendly) ─
+  const textureLoader = new THREE.TextureLoader();
+  textureLoader.crossOrigin = 'anonymous';
+  const loadTex = (url, interpolation) => new Promise((resolve) => {
+    textureLoader.load(url, (tex) => {
+      tex.magFilter = interpolation;
+      tex.minFilter = interpolation;
+      tex.wrapS = THREE.ClampToEdgeWrapping;
+      tex.wrapT = THREE.ClampToEdgeWrapping;
+      resolve(tex);
+    }, undefined, () => resolve(null));
+  });
+  const TEX_BASE = 'https://raw.githubusercontent.com/vlwkaos/threejs-blackhole/master/assets';
+  // Kick off all three loads in parallel; the shader will paint
+  // a temporarily-null sampler as black, which is fine — first frames
+  // just have no stars / no bg / no disk.
+  Promise.all([
+    loadTex(`${TEX_BASE}/milkyway.jpg`,        THREE.NearestFilter),
+    loadTex(`${TEX_BASE}/star_noise.png`,      THREE.LinearFilter),
+    loadTex(`${TEX_BASE}/accretion_disk.png`,  THREE.LinearFilter),
+  ]).then(([bg, star, disk]) => {
+    uniforms.bg_texture.value = bg;
+    uniforms.star_texture.value = star;
+    uniforms.disk_texture.value = disk;
+  });
+
+  // ── Shader material on a full-screen quad ───────────────────
+  const material = new THREE.ShaderMaterial({
+    uniforms,
+    vertexShader,
+    fragmentShader: shaderDefines(quality) + fragmentShaderBody,
+  });
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
+  scene.add(mesh);
+
+  // ── Observer (camera) ──────────────────────────────────────
+  // The orbit-on-load behaviour is gone. The Observer class is
+  // still useful as a container for fov and position, but the
+  // orbital motion / drag pitch+yaw / wheel zoom are all replaced
+  // by the click-driven lifecycle below.
+  const observer = new Observer(60.0, window.innerWidth / window.innerHeight, 1, 80000);
+  observer.fov = 90;
+  observer.moving = false;                       // no orbit; lifecycle owns position
+  scene.add(observer);
+
+  // ── Click-driven, camera-anchored lifecycle ─────────────────
+  // The black hole only starts existing when the user clicks; the
+  // click location influences the angle the camera approaches the
+  // singularity from. The two phases below are stationary in the
+  // alpha-fade variant:
+  //
+  //   IDLE   — bh_active=false, bh_alpha=0. Pure starfield. The
+  //            camera sits at a neutral resting spot along +Z so
+  //            the shader has a consistent ray space.
+  //   ACTIVE — bh_active=true, camera teleported to the click-
+  //            derived position. bh_alpha ramps 0→1 over
+  //            tune.fadeInDur, holds at 1 for tune.holdDur, then
+  //            ramps 1→0 over tune.fadeOutDur. On hitting 0 we
+  //            drop bh_active and return to IDLE.
+  //
+  // The restored camera-moving (FALL) variant below supersedes
+  // the stationary ACTIVE phase; the BH fades in AND the camera
+  // pulls inward along entryDir.
+  uniforms.bh_active.value     = false;
+  uniforms.accretion_disk.value = false;
+  uniforms.bh_alpha.value      = 0.0;
+
+  const PHASE = Object.freeze({ IDLE: 'idle', ACTIVE: 'active' });
+
+  // Click-spawn-and-GROW camera flow.
+  //
+  // Lifecycle (camera-moving variant):
+  //   IDLE       — bh_active=false, bh_alpha=0, camera at +Z resting.
+  //   FALL       — on click, BH spawns at click-derived angle. Camera
+  //                starts at `farDist` along entryDir, looking at the
+  //                origin. Distance shrinks toward `nearDist` over
+  //                `fallDur` seconds following an EXP curve. bh_alpha
+  //                fades in over `fadeInDur`. When t > fallDur (camera
+  //                has effectively passed through), reset to IDLE.
+  //
+  // All knobs below are wired to range inputs in the tunables panel so
+  // operators can tune the "fall" feel live. clickDist is kept as an
+  // alias for backward compat with prior tune objects.
+  /* Ship defaults: far dist 24.9 · near dist 0.05 · fall (s) 3.60
+     · fall exp 6.7 · fov (°) 140 · fade in (s) 0.55 · bloom
+     strength 0.13 · bloom radius 0.25 · bloom threshold 0.29. The
+     panel sliders pick them up via the HTML `value` attribute
+     (set below in the panel markup). */
+  const tune = {
+    farDist:    24.9,
+    nearDist:   0.05,
+    fallDur:    3.60,
+    fallExp:    6.7,
+    fadeInDur:  0.55,
+    fov:        140.0,
+    bloomStrength:  0.13,
+    bloomRadius:    0.25,
+    bloomThreshold: 0.29,
+    accretionDisk:  true,
+    // Aliases retained so the resize/reset path doesn't choke on the
+    // legacy field names referenced elsewhere in the IIFE.
+    clickDist:  24.9,
+    holdDur:    0.0,
+    fadeOutDur: 0.0,
+  };
+
+  let phase      = PHASE.IDLE;
+  let phaseStart = 0;
+  // entryDir: unit vector pointing from origin → camera at ACTIVE.
+  // Set when the user clicks; camera sits at clickDist along it
+  // and looks back at the origin.
+  const entryDir = new THREE.Vector3(0, 0, 1);
+  const _tmp     = new THREE.Vector3();
+
+  function setPhase(p, now) {
+    phase = p;
+    phaseStart = now;
+  }
+
+  function spawnAtNDC(sx, sy, aspect) {
+    // sx, sy ∈ [-1, 1], y-up screen NDC. The ray from a camera at
+    // origin (forward = -Z, up = +Y) through screen point (sx, sy)
+    // has direction (sx · uvfov · aspect, sy · uvfov, -1) in world
+    // space. entryDir = -ray (i.e. pointing back at the camera),
+    // so the BH sits at the click point on screen when the camera
+    // looks back at origin.
+    const uvfov = Math.tan(tune.fov * Math.PI / 360);
+    entryDir.set(sx * uvfov * aspect, sy * uvfov, 1).normalize();
+    uniforms.bh_active.value      = true;
+    uniforms.accretion_disk.value = tune.accretionDisk;
+    setPhase(PHASE.ACTIVE, elapsed);
+  }
+
+  function eventToNDC(ev) {
+    const rect = canvas.getBoundingClientRect();
+    const cx = ev.clientX != null ? ev.clientX
+             : (ev.changedTouches && ev.changedTouches[0] && ev.changedTouches[0].clientX);
+    const cy = ev.clientY != null ? ev.clientY
+             : (ev.changedTouches && ev.changedTouches[0] && ev.changedTouches[0].clientY);
+    if (cx == null || cy == null) return null;
+    const sx =  ((cx - rect.left) / rect.width)  * 2 - 1;
+    const sy = -((cy - rect.top)  / rect.height) * 2 + 1;
+    const aspect = rect.width / rect.height;
+    return { sx, sy, aspect };
+  }
+
+  function onSpawn(ev) {
+    if (phase !== PHASE.IDLE) return;
+    const p = eventToNDC(ev);
+    if (!p) return;
+    spawnAtNDC(p.sx, p.sy, p.aspect);
+  }
+  canvas.addEventListener('click', onSpawn);
+  canvas.addEventListener('touchend', (e) => {
+    if (e.touches.length === 0 && e.changedTouches && e.changedTouches.length === 1) {
+      onSpawn(e);
+    }
+  }, { passive: true });
+
+  function updatePhase(now, delta) {
+    // Camera up is fixed so stars never rotate. FOV is read each
+    // frame so the tunable applies live.
+    observer.up.set(0, 1, 0);
+    observer.fov = tune.fov;
+
+    if (phase === PHASE.IDLE) {
+      // Pure starfield. Camera at a stable resting position along +Z,
+      // looking toward origin. bh_alpha sits at 0 so the shader's mix()
+      // lands on the IDLE star path.
+      observer.position.set(0, 0, tune.farDist);
+      observer.direction.set(0, 0, -1);
+      uniforms.bh_alpha.value = 0.0;
+      return;
+    }
+    if (phase === PHASE.ACTIVE) {
+      /* Click-spawn-and-GROW camera flow. Position interpolates
+         from `farDist` → `nearDist` along entryDir over `fallDur`
+         seconds following an exponential curve. As distance
+         shrinks the BH grows in the frame — same visual as the
+         original "fall in" lifecycle.
+
+         Distance schedule:
+           d(t) = farDist * exp(-fallExp * t / fallDur)
+                  ↓ but clamp to nearDist so the camera never wraps. */
+      const t   = now - phaseStart;
+      const k   = Math.max(0.0001, tune.fallExp);
+      const dur = Math.max(0.0001, tune.fallDur);
+      const dRaw = tune.farDist * Math.exp(-k * t / dur);
+      const dist = Math.max(tune.nearDist, dRaw);
+      _tmp.copy(entryDir).multiplyScalar(dist);
+      observer.position.copy(_tmp);
+      // Always look at origin (singularity).
+      observer.direction.copy(_tmp).multiplyScalar(-1).normalize();
+
+      // Alpha fades in over fadeInDur; stays at 1 for the rest of the
+      // fall.  Reset when t > fallDur OR distance has reached the near
+      // edge — whichever fires first.
+      const alpha = Math.min(1.0, t / Math.max(0.0001, tune.fadeInDur));
+      uniforms.bh_alpha.value = alpha;
+
+      if (t >= dur || dist <= tune.nearDist + 0.005) {
+        uniforms.bh_active.value      = false;
+        uniforms.accretion_disk.value = false;
+        uniforms.bh_alpha.value       = 0.0;
+        setPhase(PHASE.IDLE, now);
+      }
+      return;
+    }
+  }
+
+  function resetCycle() {
+    uniforms.bh_active.value      = false;
+    uniforms.accretion_disk.value = false;
+    uniforms.bh_alpha.value       = 0.0;
+    setPhase(PHASE.IDLE, elapsed);
+  }
+
+  // Debug binding for the console.
+  window.__bh = {
+    get phase() { return phase; },
+    get phaseStart() { return phaseStart; },
+    get elapsed() { return elapsed; },
+    get pos() { return observer.position.toArray(); },
+    get dir() { return observer.direction.toArray(); },
+    get entry() { return entryDir.toArray(); },
+    get bhActive() { return uniforms.bh_active.value; },
+    get diskOn() { return uniforms.accretion_disk.value; },
+    uniforms,
+    observer,
+    tune,
+    resetCycle,
+    spawnAtNDC,
+  };
+
+  // ── Tunables panel wiring ───────────────────────────────────
+  function wireRange(id, key, fmt) {
+    const input = document.getElementById(id);
+    const out   = document.getElementById(id + '-o');
+    if (!input || !out) return;
+    const apply = () => {
+      const v = parseFloat(input.value);
+      tune[key] = v;
+      out.value = (fmt || ((n) => n.toFixed(2)))(v);
+      onTuneChange(key, v);
+    };
+    input.addEventListener('input', apply);
+    apply();
+  }
+  function onTuneChange(key, v) {
+    if (key === 'bloomStrength')  bloomPass.strength  = v;
+    if (key === 'bloomRadius')    bloomPass.radius    = v;
+    if (key === 'bloomThreshold') bloomPass.threshold = v;
+    if (key === 'accretionDisk')  uniforms.accretion_disk.value = !!v;
+    // clickDist / fov / hold / fadeIn / fadeOut are read directly
+    // by updatePhase each frame, no extra wiring needed.
+  }
+  /* Wire the fall-curve tunables. */
+  wireRange('t-farDist',    'farDist',        (n) => n.toFixed(1));
+  wireRange('t-nearDist',   'nearDist',       (n) => n.toFixed(2));
+  wireRange('t-fallDur',    'fallDur',        (n) => n.toFixed(2));
+  wireRange('t-fallExp',    'fallExp',        (n) => n.toFixed(1));
+  wireRange('t-fov',        'fov',            (n) => n.toFixed(0));
+  wireRange('t-fadeInDur',  'fadeInDur',      (n) => n.toFixed(2));
+  wireRange('t-bs',          'bloomStrength',  (n) => n.toFixed(2));
+  wireRange('t-br',          'bloomRadius',    (n) => n.toFixed(2));
+  wireRange('t-bt',          'bloomThreshold', (n) => n.toFixed(2));
+  {
+    const cb = document.getElementById('t-disk');
+    if (cb) {
+      cb.addEventListener('change', () => {
+        tune.accretionDisk = cb.checked;
+        onTuneChange('accretionDisk', cb.checked);
+      });
+    }
+  }
+  {
+    const tunablesPanel  = document.getElementById('tunables');
+    const tunablesToggle = document.getElementById('tunables-toggle');
+    const tunablesReset  = document.getElementById('tunables-reset');
+    const phaseLabel     = document.getElementById('tunables-phase');
+    if (tunablesPanel && tunablesToggle) {
+      tunablesToggle.addEventListener('click', () => {
+        const collapsed = tunablesPanel.getAttribute('data-collapsed') === 'true';
+        tunablesPanel.setAttribute('data-collapsed', collapsed ? 'false' : 'true');
+        tunablesToggle.textContent = collapsed ? '−' : '+';
+      });
+    }
+    if (tunablesReset) tunablesReset.addEventListener('click', resetCycle);
+    // Lightweight phase indicator — RAF would be overkill; setInterval is fine.
+    if (phaseLabel) setInterval(() => { phaseLabel.textContent = phase; }, 120);
+  }
+
+  // ── Resize handling ─────────────────────────────────────────
+  const onResize = () => {
+    const w = canvas.clientWidth || window.innerWidth;
+    const h = canvas.clientHeight || window.innerHeight;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2) * resolutionScale);
+    renderer.setSize(w, h, false);
+    composer.setSize(w * resolutionScale, h * resolutionScale);
+  };
+  window.addEventListener('resize', onResize);
+  onResize();
+
+  // ── Loop ────────────────────────────────────────────────────
+  // observer.update + cameraControl.update are gone. The lifecycle
+  // (updatePhase) owns position + direction completely; the Observer
+  // class is just a uniform-bag now.
+  //
+  // Visibility handling: when the tab is backgrounded the browser
+  // pauses RAF; on return the first delta would otherwise be huge.
+  // We reset lastFrame on visibilitychange so the lifecycle keeps
+  // its timing and the FALL doesn't snap-forward on focus return.
+  let lastFrame = performance.now();
+  let elapsed = 0;
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) lastFrame = performance.now();
+  });
+  function frame() {
+    const now = performance.now();
+    const delta = Math.min(0.1, (now - lastFrame) / 1000);
+    elapsed += delta;
+    lastFrame = now;
+
+    updatePhase(elapsed, delta);
+
+    const w = canvas.clientWidth || window.innerWidth;
+    const h = canvas.clientHeight || window.innerHeight;
+    uniforms.time.value = elapsed;
+    uniforms.resolution.value.set(w * resolutionScale, h * resolutionScale);
+    uniforms.cam_pos.value = observer.position;
+    uniforms.cam_dir.value = observer.direction;
+    uniforms.cam_up.value  = observer.up;
+    uniforms.fov.value     = observer.fov;
+    uniforms.cam_vel.value = observer.velocity;
+
+    composer.render();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // Dispose on page unload so the GPU resources are released cleanly
+  window.addEventListener('beforeunload', () => {
+    [uniforms.bg_texture.value, uniforms.star_texture.value, uniforms.disk_texture.value]
+      .forEach(t => t && t.dispose());
+    material.dispose();
+    renderer.dispose();
+  });
+})().catch((err) => {
+  // Surface IIFE rejections so blank-screen regressions are
+  // diagnosable from the console + window.__bhError.
+  window.__bhError = { msg: String(err), stack: err && err.stack };
+  console.error('[BH IIFE]', err);
+});
+</script>
+
+<!-- ============================================================
+     MODE TOGGLE — light/dark via data-mode on <html>.
+     Default is dark (set on <html> directly so the first paint
+     matches the BH canvas).  The BH canvas is unaffected by the
+     mode (it's always dark in the canvas itself) — only the page
+     chrome flips between paper/ink ramps.
+     ============================================================ -->
+<script>
+(function () {
+  var btn = document.getElementById('mode-toggle');
+  if (!btn) return;
+  function applyMode(m) {
+    document.documentElement.setAttribute('data-mode', m);
+    btn.textContent = m === 'dark' ? '◑' : '◐';
+    try { localStorage.setItem('openprose-rho-bh-threejs-mode', m); } catch(e){}
+  }
+  var saved = 'dark';
+  try { saved = localStorage.getItem('openprose-rho-bh-threejs-mode') || 'dark'; } catch(e){}
+  applyMode(saved);
+  btn.addEventListener('click', function () {
+    var c = document.documentElement.getAttribute('data-mode') || 'dark';
+    applyMode(c === 'dark' ? 'light' : 'dark');
+  });
+})();
+</script>
+
+
+<script>
+  (function () {
+    const LOGOS = [
+      { id: 'infinite', signet: { sym: 'opInfinite',   vb: '0 0 497 329'   }, type: { sym: 'opInfiniteType', vb: '0 0 3549 1107' } },
+      { id: 'style',    signet: { sym: 'opStyle',      vb: '0 0 142 142'   }, type: { sym: 'opStyleType',    vb: '0 0 3840 998'  } },
+      { id: 'circle',   signet: { sym: 'opCircleMark', vb: '0 0 2843 2160' }, type: { sym: 'opCircleType',   vb: '0 0 3905 1443' } },
+      { id: 'swish',    signet: { sym: 'opSwish',      vb: '0 0 152 107'   }, type: { sym: 'opSwishType',    vb: '0 0 3025 752'  } },
+      { id: 'cursive',  signet: { sym: 'opCursive',    vb: '0 0 1737 1846' }, type: { sym: 'opCursiveType',  vb: '0 0 3776 1586' } }
+    ];
+    // PER-PAGE: change idx to match the family this page starts on.
+    //   0=infinite  1=style  2=circle  3=swish  4=cursive
+    let idx = 1;
+
+    function applyLogo() {
+      const set = LOGOS[idx];
+      document.querySelectorAll('.swap-logo').forEach(svg => {
+        const kind = svg.dataset.kind === 'wordmark' ? 'type' : 'signet';
+        const target = set[kind];
+        svg.setAttribute('viewBox', target.vb);
+        const useEl = svg.querySelector('use');
+        if (useEl) {
+          useEl.setAttribute('href', '#' + target.sym);
+          // Older browsers fall back to xlink:href; keep both in sync.
+          try { useEl.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '#' + target.sym); } catch (e) {}
+        }
+      });
+      try { window.dispatchEvent(new CustomEvent('swap-logo-changed', { detail: { id: set.id } })); } catch (e) {}
+    }
+
+    /* Apply initial logo at script boot — otherwise the page paints with the
+       broken hardcoded #opType href and the hero stays invisible until first click. */
+    applyLogo();
+
+    // Drag-aware click detection — measure pointer travel between down
+    // and up.  Below the threshold (small move) → treat as click → toggle.
+    // Above → it was a drag.  Lets a draggable .swap-logo coexist with
+    // the cycle gesture.
+    const DRAG_THRESHOLD = 6; // px
+    let downX = 0, downY = 0, downTarget = null;
+    function onPointerDown(e) {
+      const t = e.target.closest('.swap-logo');
+      if (!t) { downTarget = null; return; }
+      downTarget = t;
+      const p = (e.touches && e.touches[0]) ? e.touches[0] : e;
+      downX = p.clientX; downY = p.clientY;
+    }
+    function onPointerUp(e) {
+      if (!downTarget) return;
+      const t = e.target.closest('.swap-logo');
+      if (!t || t !== downTarget) { downTarget = null; return; }
+      const p = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : e;
+      const dx = p.clientX - downX;
+      const dy = p.clientY - downY;
+      downTarget = null;
+      if (Math.hypot(dx, dy) > DRAG_THRESHOLD) return; // it was a drag, not a click
+      idx = (idx + 1) % LOGOS.length;
+      applyLogo();
+    }
+    // Suppress the default <a href="#"> when the click actually toggles
+    // a swap-logo.
+    function onClickCapture(e) {
+      if (e.target.closest('.swap-logo')) e.preventDefault();
+    }
+    document.addEventListener('mousedown',  onPointerDown, true);
+    document.addEventListener('mouseup',    onPointerUp,   true);
+    document.addEventListener('touchstart', onPointerDown, { capture: true, passive: true });
+    document.addEventListener('touchend',   onPointerUp,   true);
+    document.addEventListener('click',      onClickCapture, true);
+  })();
+  </script>
+</body>
+</html>

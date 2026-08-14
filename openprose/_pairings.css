@@ -1,0 +1,273 @@
+/* ============================================================
+   OpenProse · _pairings.css — canonical typography pairings
+   ----------------------------------------------------------------
+   Created 2026-05-26 by JH (extracted from typography-pairings.html).
+
+   Two axes:
+     · data-pairing  (A · B · C · D · E · F)  — role assignment
+     · data-mono     (plex · jet · space)     — which mono fills the role
+
+   Outputs the role tokens that components consume:
+     --type-display       --w-display       --i-display
+     --type-display-em    --w-display-em    --i-display-em
+     --type-body          --w-body          --i-body
+     --type-body-em       --w-body-em       --i-body-em
+     --type-eyebrow       --w-eyebrow       --i-eyebrow
+     --type-mono                              (raw mono var for inline code/labels)
+     --type-kecal                             (raw Kecal var, always available)
+
+   The 18 canonical slots are the 6 pairings × 3 monos. Each direction
+   adopts one canonical slot (set via body data-pairing + data-mono).
+
+   IMPORTANT — cap-height normalisation:
+     Kecal sits ~9% taller than monos at same nominal font-size. Use
+     `font-size-adjust: cap-height var(--cap-norm);` on display elements
+     and `font-size-adjust: ex-height var(--ex-norm);` on body elements
+     to align top edges. Tokens --cap-norm (0.70) + --ex-norm (0.50) are
+     defined in _tokens.css.
+   ============================================================ */
+
+/* @import must precede all other rules (it was below the @font-face
+   blocks before, which made it invalid and silently ignored). */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
+
+
+/* ============================================================
+   FONT LOADS — Kecal (FungiType CDN) + 3 monos (Google Fonts)
+   ============================================================ */
+@font-face { font-family: 'Kecal'; font-weight: 200; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extralight-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 300; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Light-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 400; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Regular-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 500; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Medium-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 600; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Semibold-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 700; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Bold-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 800; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extrabold-web.woff2') format('woff2'); }
+
+
+
+/* ============================================================
+   GLOBAL — Kecal alias + default mono
+   ============================================================ */
+:root {
+  --type-kecal: 'Kecal', system-ui, -apple-system, sans-serif;
+  /* Default mono (overridden by [data-mono=…] below) */
+  --type-mono:  'IBM Plex Mono', monospace;
+}
+
+
+/* ============================================================
+   AXIS · data-mono   (which mono fills the mono-role in the pairing)
+   ============================================================ */
+body[data-mono="plex"]  { --type-mono: 'IBM Plex Mono', monospace; }
+body[data-mono="jet"]   { --type-mono: 'JetBrains Mono', monospace; }
+body[data-mono="space"] { --type-mono: 'Space Mono', monospace; }
+
+
+/* ============================================================
+   AXIS · data-pairing   (role assignment — A through F)
+   ----------------------------------------------------------------
+   Each pairing block sets 5 role triples: (family, weight, italic).
+   Components consume via var(--type-X), var(--w-X), var(--i-X).
+
+   Reference (typography-pairings.html 2026-05-26):
+     A · mono body · upright Kecal accent    [workhorse — β default]
+     B · Kecal body · mono italic accent     [inverted — warmer]
+     C · mono bold display · Kecal body      [mono leads — dark-favouring]
+     D · Kecal italic 800 display · mono body[Kecal leads — single-stroke]
+     E · weight light · mono 300/400 body    [whisper — ν default]
+     F · weight heavy · mono 700 body        [shout — δ-machine / ρ default]
+   ============================================================ */
+
+/* ---- DEFAULT (no data-pairing or unrecognised) ---- */
+:root {
+  --type-display:    var(--type-mono);
+  --type-display-em: var(--type-kecal);
+  --type-body:       var(--type-mono);
+  --type-body-em:    var(--type-kecal);
+  --type-eyebrow:    var(--type-mono);
+
+  --w-display: 500;     --i-display: normal;
+  --w-display-em: 800;  --i-display-em: normal;
+  --w-body: 400;        --i-body: normal;
+  --w-body-em: 800;     --i-body-em: normal;
+  --w-eyebrow: 500;     --i-eyebrow: normal;
+}
+
+/* ---- A · workhorse (mono body + upright Kecal accent) ----
+   A IS the default block above — same five role triples, no overrides.
+   Keep data-pairing="A" on pages for the record; it resolves to the
+   default values. (2026-08-05, c_a965130b: A went upright; 2026-08-06:
+   the duplicate block was removed — one source, less drift.) ---- */
+
+/* ---- B · inverted (Kecal body + mono italic accent) ---- */
+body[data-pairing="B"] {
+  --type-display:    var(--type-kecal);
+  --type-display-em: var(--type-mono);
+  --type-body:       var(--type-kecal);
+  --type-body-em:    var(--type-mono);
+  --type-eyebrow:    var(--type-kecal);
+
+  --w-display: 500;     --i-display: normal;
+  --w-display-em: 500;  --i-display-em: italic;
+  --w-body: 400;        --i-body: normal;
+  --w-body-em: 500;     --i-body-em: italic;
+  --w-eyebrow: 500;     --i-eyebrow: normal;
+}
+
+/* ---- C · mono-leads (mono bold display, Kecal body) ---- */
+body[data-pairing="C"] {
+  --type-display:    var(--type-mono);
+  --type-display-em: var(--type-mono);
+  --type-body:       var(--type-kecal);
+  --type-body-em:    var(--type-kecal);
+  --type-eyebrow:    var(--type-mono);
+
+  --w-display: 700;     --i-display: normal;
+  --w-display-em: 700;  --i-display-em: italic;
+  --w-body: 400;        --i-body: normal;
+  --w-body-em: 600;     --i-body-em: italic;
+  --w-eyebrow: 600;     --i-eyebrow: normal;
+}
+
+/* ---- D · Kecal-leads (Kecal italic 800 display, mono body) ---- */
+body[data-pairing="D"] {
+  --type-display:    var(--type-kecal);
+  --type-display-em: var(--type-mono);
+  --type-body:       var(--type-mono);
+  --type-body-em:    var(--type-kecal);
+  --type-eyebrow:    var(--type-kecal);
+
+  --w-display: 800;     --i-display: italic;
+  --w-display-em: 600;  --i-display-em: normal;
+  --w-body: 400;        --i-body: normal;
+  --w-body-em: 800;     --i-body-em: italic;
+  --w-eyebrow: 700;     --i-eyebrow: normal;
+}
+
+/* ---- E · whisper (light weights — mono 300, Kecal 400) ---- */
+body[data-pairing="E"] {
+  --type-display:    var(--type-mono);
+  --type-display-em: var(--type-kecal);
+  --type-body:       var(--type-mono);
+  --type-body-em:    var(--type-kecal);
+  --type-eyebrow:    var(--type-mono);
+
+  --w-display: 300;     --i-display: normal;
+  --w-display-em: 400;  --i-display-em: italic;
+  --w-body: 300;        --i-body: normal;
+  --w-body-em: 400;     --i-body-em: italic;
+  --w-eyebrow: 300;     --i-eyebrow: normal;
+}
+
+/* ---- F · shout (heavy weights — mono 700, Kecal 800) ---- */
+body[data-pairing="F"] {
+  --type-display:    var(--type-mono);
+  --type-display-em: var(--type-kecal);
+  --type-body:       var(--type-mono);
+  --type-body-em:    var(--type-kecal);
+  --type-eyebrow:    var(--type-mono);
+
+  --w-display: 700;     --i-display: normal;
+  --w-display-em: 800;  --i-display-em: italic;
+  --w-body: 700;        --i-body: normal;
+  --w-body-em: 800;     --i-body-em: italic;
+  --w-eyebrow: 600;     --i-eyebrow: normal;
+}
+
+
+/* ============================================================
+   AXIS · data-accent  (posture of the em accents) — upright | italic
+   ----------------------------------------------------------------
+   Default = upright (c_a965130b, 2026-08-05). The pairing blocks above
+   keep their historical italic specs for the record; this layer comes
+   later in the cascade and pins the posture. Set data-accent="italic"
+   to restore the historical accent.
+   Identity carve-outs:
+     · B is exempt. Its mono-italic accent is the pairing's identity.
+     · D's Kecal-italic display face is --i-display (not an em token);
+       this axis does not touch it.
+   ============================================================ */
+body:not([data-accent="italic"]):not([data-pairing="B"]) {
+  --i-display-em: normal;
+  --i-body-em: normal;
+}
+body[data-accent="italic"]:not([data-pairing="B"]) {
+  --i-display-em: italic;
+  --i-body-em: italic;
+}
+
+
+/* ============================================================
+   APPLICATION — make the role tokens take effect on standard HTML
+   ----------------------------------------------------------------
+   Pages that opt-out of these defaults can override at higher
+   specificity. Pages that follow the convention will look right
+   automatically when data-pairing + data-mono are set.
+   ============================================================ */
+body {
+  font-family: var(--type-body);
+  font-weight: var(--w-body);
+  font-style:  var(--i-body);
+  font-size-adjust: ex-height var(--ex-norm);
+}
+
+h1, h2, h3, .display, [data-role="display"] {
+  font-family: var(--type-display);
+  font-weight: var(--w-display);
+  font-style:  var(--i-display);
+  font-size-adjust: cap-height var(--cap-norm);
+}
+
+h1 em, h2 em, h3 em, .display em, [data-role="display"] em {
+  font-family: var(--type-display-em);
+  font-weight: var(--w-display-em);
+  font-style:  var(--i-display-em);
+}
+
+p em, li em, blockquote em, .body em, [data-role="body"] em {
+  font-family: var(--type-body-em);
+  font-weight: var(--w-body-em);
+  font-style:  var(--i-body-em);
+}
+
+.eyebrow, [data-role="eyebrow"], .section-kicker, .perm-eyebrow,
+.hero-eyebrow, .tile-tag {
+  font-family: var(--type-eyebrow);
+  font-weight: var(--w-eyebrow);
+  font-style:  var(--i-eyebrow);
+  font-size-adjust: cap-height var(--cap-norm);
+}
+
+code, kbd, samp, pre, .ui-code, .mono, [data-role="mono"] {
+  font-family: var(--type-mono);
+}
+
+/* Kecal explicit utility for places that always want the human face
+   regardless of pairing (signatures, marks, manuscript heading runs) */
+.kecal, [data-role="kecal"] {
+  font-family: var(--type-kecal);
+}
+
+
+/* ============================================================
+   LEGACY MIGRATION HELPERS (deprecated — for old pages that haven't
+   been re-tagged yet). Maps the old --serif/--sans/--mono vars to
+   the new role tokens so unconverted pages don't break.
+   ============================================================ */
+:root {
+  --serif: var(--type-kecal);   /* old pages alias serif → kecal */
+  --sans:  var(--type-kecal);   /* old pages alias sans  → kecal */
+  --mono:  var(--type-mono);    /* mono is direct */
+  --kecal: var(--type-kecal);   /* keep --kecal name in scope for pairings page */
+  --plex:  'IBM Plex Mono', monospace;
+  --jet:   'JetBrains Mono', monospace;
+  --space: 'Space Mono', monospace;
+}

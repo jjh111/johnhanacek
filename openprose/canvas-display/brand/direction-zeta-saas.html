@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 142 142'%3E%3Cpath d='M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z' fill='%232a2520'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenProse — Direction ζ · SaaS</title>
+<style>
+/* ============================================
+   DIRECTION ζ · SAAS
+   Round-3 finalist, distilled from approach-i-editorial-saas
+   (Dan 4★ + JH 4★ — the second consensus pick after F).
+   CharacterQuilt-influenced: elegant serif headings, blurred
+   mosaic hero, steel-blue accent, soft drop-shadows.
+
+   DNA: Cormorant Garamond serif (light weight 300-400) for
+   prose. Inter for chrome and labels. SF Mono for code. Off-
+   white #f9f9f7 with white-card surfaces. Steel blue #306a99
+   replaces editorial red. The page reads like a sophisticated
+   SaaS landing — confident, approachable, software-shaped.
+
+   Implementation: kept α's stylesheet intact; appended
+   SAAS OVERRIDE block. Hero gets a CSS gradient-mesh that
+   mimics the blurred-mosaic-canvas atmosphere without JS.
+   Cards round to 12px and lift on hover. Section V becomes
+   "The Steel & The Tint".
+   ============================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --paper:     #f5f0e8;
+  --paper-dk:  #ede7d6;
+  --paper-lt:  #faf8f3;
+  --ink:       #0f0f0f;
+  --ink-2:     #2e2e2e;
+  --ink-3:     #5a5a5a;
+  --ink-4:     #909090;
+  --red:       #c0392b;
+  --red-muted: #d4604f;
+  --red-deep:  #8e2b20;
+  --rule:      #d8d0c0;
+  --rule-mid:  #e2dcc9;
+
+  /* NEW — the highlighter palette. Two stops so the mark lands
+     as a visible stroke over paper without bleeding the whole row.
+     Yellow = the reader's marker (calm, studious).
+     Hot red = editorial emphasis (urgent, "look here"). */
+  --hl:        rgba(255, 207, 64, 0.36);
+  --hl-hot:    rgba(218, 105, 72, 0.32);
+
+  --serif: 'Palatino Linotype', 'Palatino', 'Book Antiqua', Georgia, serif;
+  --sans:  'Helvetica Neue', 'Helvetica', Arial, sans-serif;
+  --mono:  'SF Mono', 'Fira Code', 'JetBrains Mono', Consolas, monospace;
+  --wide: 1180px;
+  --measure: 860px;
+}
+
+html { font-size: 17px; scroll-behavior: smooth; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--serif);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
+}
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 15% 8%, rgba(192,57,43,0.03), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 95% 95%, rgba(192,57,43,0.02), transparent 60%);
+}
+body > * { position: relative; z-index: 1; }
+
+/* HIGHLIGHTER MARK — the reader's pen. Linear-gradient rests under the
+   baseline so it reads like a thick marker stroke, not a solid block.
+   Inline so it wraps naturally inside the prose. */
+.hl,
+.hl-hot {
+  background: var(--hl);
+  padding: 0.06em 0.18em;
+  /* Keep gilt/warmth consistent with the warm paper ground. */
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  /* Italic inside a highlighter gets harder to read; drop the italic when the
+     highlighter is applied to an <em>. Red italic is authorial voice; the
+     highlighter replaces that role with reader emphasis. */
+  font-style: inherit;
+  color: inherit;
+}
+.hl-hot { background: var(--hl-hot); }
+
+/* HERO */
+.hero {
+  padding: 5.5rem 2rem 4rem;
+  text-align: center;
+  max-width: var(--wide); margin: 0 auto;
+  position: relative;
+}
+.hero-eyebrow {
+  font-family: var(--sans); font-size: 0.72rem;
+  letter-spacing: 0.24em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 2.5rem;
+  display: inline-flex; align-items: center; gap: 0.75rem;
+}
+.hero-eyebrow::before, .hero-eyebrow::after {
+  content: ''; width: 28px; height: 1px; background: var(--red);
+}
+.hero-mark {
+  font-family: var(--serif);
+  font-size: clamp(4rem, 11vw, 8rem);
+  font-weight: 400; line-height: 0.95;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+.hero-mark em { font-style: italic; color: var(--red); }
+.hero-rule { width: 120px; height: 1px; background: var(--red); margin: 2rem auto 1.5rem; }
+.hero-tagline {
+  font-family: var(--serif);
+  font-size: clamp(1.05rem, 1.8vw, 1.25rem);
+  font-style: italic; color: var(--ink-2);
+  letter-spacing: 0.005em;
+}
+.hero-meta {
+  margin-top: 2rem;
+  font-family: var(--mono); font-size: 0.66rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* SECTIONS */
+section.logotype-section {
+  max-width: var(--wide); margin: 0 auto;
+  padding: 4.5rem 2rem;
+}
+section.logotype-section.narrow { max-width: var(--measure); }
+
+.section-kicker {
+  font-family: var(--sans); font-size: 0.7rem;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 1.25rem;
+  display: flex; align-items: center; gap: 0.85rem;
+}
+.section-kicker::after { content: ''; flex: 1; height: 1px; background: var(--red-muted); opacity: 0.5; }
+
+section.logotype-section h2 {
+  font-family: var(--serif);
+  font-size: clamp(1.8rem, 3.2vw, 2.4rem);
+  font-weight: 400; line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin-bottom: 0.5rem;
+}
+section.logotype-section h2 em { font-style: italic; color: var(--red); }
+section.logotype-section .lede {
+  font-family: var(--serif); font-size: 1.08rem;
+  color: var(--ink-2); max-width: 58ch;
+  margin-bottom: 2rem; line-height: 1.55;
+}
+section.logotype-section .lede::first-line {
+  font-variant: small-caps; letter-spacing: 0.04em;
+}
+
+/* PALETTE */
+.palette-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;
+  margin-top: 2rem;
+}
+.swatch {
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  padding: 1rem;
+  display: flex; flex-direction: column; gap: 0.25rem;
+}
+.swatch-chip {
+  width: 100%; aspect-ratio: 1.4;
+  border: 1px solid var(--rule);
+  margin-bottom: 0.75rem;
+}
+.swatch-name {
+  font-family: var(--sans); font-size: 0.66rem;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink); font-weight: 600;
+}
+.swatch-hex {
+  font-family: var(--mono); font-size: 0.76rem;
+  color: var(--ink-3);
+}
+.swatch-role {
+  font-family: var(--serif); font-style: italic;
+  font-size: 0.84rem; color: var(--ink-3); margin-top: 0.15rem;
+}
+
+/* TYPE SCALE */
+.type-specimen {
+  border: 1px solid var(--rule); background: var(--paper-lt);
+  padding: 2rem 2.25rem;
+}
+.type-row {
+  display: grid; grid-template-columns: 140px 1fr auto;
+  gap: 1.5rem; align-items: baseline;
+  padding: 0.9rem 0; border-bottom: 1px dotted var(--rule-mid);
+}
+.type-row:last-child { border-bottom: none; }
+.type-label {
+  font-family: var(--sans); font-size: 0.62rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+}
+.type-sample { color: var(--ink); line-height: 1.05; }
+.type-sample.display { font-family: var(--serif); font-size: 3rem; font-weight: 400; letter-spacing: -0.02em; }
+.type-sample.display em { font-style: italic; color: var(--red); }
+.type-sample.h2 { font-family: var(--serif); font-size: 2rem; font-weight: 400; font-style: italic; color: var(--red); }
+.type-sample.h3 { font-family: var(--serif); font-size: 1.4rem; font-weight: 400; letter-spacing: -0.01em; }
+.type-sample.body { font-family: var(--serif); font-size: 1.08rem; line-height: 1.55; color: var(--ink-2); }
+.type-sample.small-caps { font-family: var(--serif); font-size: 1rem; font-variant: small-caps; letter-spacing: 0.04em; color: var(--ink-2); }
+.type-sample.mono { font-family: var(--mono); font-size: 0.92rem; color: var(--ink-2); }
+.type-sample.hl-sample { font-family: var(--serif); font-size: 1.2rem; line-height: 1.5; color: var(--ink); }
+.type-meta {
+  font-family: var(--mono); font-size: 0.68rem;
+  color: var(--ink-4); letter-spacing: 0.02em; text-align: right;
+}
+
+/* LOGO VARIATIONS */
+.variations-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem;
+}
+.variation-tile {
+  border: 1px solid var(--rule);
+  padding: 3.25rem 2rem;
+  min-height: 240px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem;
+  text-align: center;
+}
+.variation-tile.paper { background: var(--paper-lt); }
+.variation-tile.warm  { background: var(--paper-dk); }
+.variation-tile.dark  { background: var(--ink); color: var(--paper); border-color: #222; }
+.variation-tile .vt-mark {
+  font-family: var(--serif); font-size: 2.25rem;
+  font-weight: 400; letter-spacing: -0.015em; line-height: 1;
+  color: var(--ink);
+}
+.variation-tile.dark .vt-mark { color: var(--paper); }
+.variation-tile .vt-mark em { font-style: italic; color: var(--red); }
+.variation-tile.dark .vt-mark em { color: var(--red-muted); }
+.variation-tile .vt-tag {
+  font-family: var(--sans); font-size: 0.62rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink-3); font-weight: 600;
+}
+.variation-tile.dark .vt-tag { color: rgba(245,240,232,0.5); }
+.variation-tile .vt-signet {
+  width: 84px; height: 84px;
+  border: 1.5px solid var(--ink);
+  background: var(--paper-lt);
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+.variation-tile .vt-signet::before, .variation-tile .vt-signet::after {
+  content: ''; position: absolute; background: var(--red);
+}
+.variation-tile .vt-signet::before { top: -3px; left: 50%; transform: translateX(-50%); width: 6px; height: 6px; border-radius: 50%; }
+.variation-tile .vt-signet::after  { bottom: -3px; left: 50%; transform: translateX(-50%); width: 28px; height: 1px; }
+.variation-tile .vt-signet span {
+  font-family: var(--serif); font-size: 1.7rem; font-weight: 400;
+  letter-spacing: -0.015em;
+}
+.variation-tile .vt-signet span em { font-style: italic; color: var(--red); }
+
+/* UI ELEMENTS */
+.ui-kit {
+  border: 1px solid var(--rule); background: var(--paper-lt);
+  padding: 2rem 2.25rem;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;
+}
+.ui-cell h4 {
+  font-family: var(--sans); font-size: 0.62rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 1rem;
+}
+.ui-buttons { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.ui-btn {
+  font-family: var(--sans); font-size: 0.8rem; font-weight: 600;
+  padding: 0.75rem 1.4rem;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  border: 1px solid var(--ink); cursor: pointer;
+  transition: all 0.15s;
+}
+.ui-btn.primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.ui-btn.primary:hover { background: var(--red); border-color: var(--red); }
+.ui-btn.secondary { background: var(--red); color: var(--paper); border-color: var(--red); }
+.ui-btn.secondary:hover { background: var(--red-deep); border-color: var(--red-deep); }
+.ui-btn.ghost { background: transparent; color: var(--ink); border-color: var(--ink); }
+.ui-btn.ghost:hover { background: var(--ink); color: var(--paper); }
+
+.ui-badges { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1.5rem; }
+.ui-badge {
+  font-family: var(--sans); font-size: 0.62rem;
+  padding: 0.25rem 0.6rem; border: 1px solid;
+  letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600;
+}
+.ui-badge.live { color: var(--red); border-color: var(--red); background: rgba(192,57,43,0.05); }
+.ui-badge.ok { color: #14803e; border-color: #14803e; background: rgba(20,128,62,0.04); }
+.ui-badge.hold { color: var(--ink-3); border-color: var(--ink-4); }
+
+.ui-code {
+  background: var(--ink); color: var(--paper);
+  padding: 1.25rem 1.5rem;
+  font-family: var(--mono); font-size: 0.8rem; line-height: 1.85;
+}
+.ui-code .k { color: var(--red-muted); }
+.ui-code .c { color: #7a7a7a; font-style: italic; }
+.ui-code .v { color: var(--paper); }
+
+.ui-input-wrap { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 1.5rem; }
+.ui-input {
+  font-family: var(--serif); font-size: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--paper);
+  border: 1px solid var(--rule); color: var(--ink);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.ui-input:focus {
+  outline: none; border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(192,57,43,0.1);
+}
+
+/* HIGHLIGHTER SPECIMEN — documents the new brand tool inline */
+.hl-specimen {
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  padding: 2rem 2.25rem;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem;
+}
+.hl-rule { display: flex; flex-direction: column; gap: 0.55rem; }
+.hl-rule .rule-label {
+  font-family: var(--sans); font-size: 0.62rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+}
+.hl-rule .rule-text {
+  font-family: var(--serif); font-size: 0.98rem;
+  color: var(--ink-2); line-height: 1.55;
+}
+.hl-rule .rule-text em { color: var(--ink); font-style: italic; }
+.hl-rule .rule-text .hl { background: var(--hl); }
+.hl-rule .rule-text .hl-hot { background: var(--hl-hot); }
+.hl-sample-lines {
+  display: flex; flex-direction: column; gap: 1.2rem;
+  font-family: var(--serif); font-size: 1.05rem;
+  color: var(--ink); line-height: 1.65;
+}
+.hl-sample-lines .label {
+  font-family: var(--sans); font-size: 0.58rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--red); font-weight: 600; margin-bottom: 0.25rem;
+  display: block;
+}
+
+/* EDITORIAL PAIRING */
+.pairing {
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  padding: 3rem 3.5rem;
+  position: relative;
+  max-width: var(--measure); margin: 0 auto;
+}
+.pairing::before {
+  content: 'SPECIMEN · EDITORIAL PAGE';
+  position: absolute; top: -10px; left: 2rem;
+  background: var(--paper); color: var(--red);
+  padding: 0.2rem 0.7rem;
+  font-family: var(--sans); font-size: 0.56rem;
+  letter-spacing: 0.2em; font-weight: 600;
+}
+.pairing .article-eyebrow {
+  font-family: var(--sans); font-size: 0.66rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 0.85rem;
+}
+.pairing h3 {
+  font-family: var(--serif);
+  font-size: clamp(1.7rem, 3vw, 2.1rem);
+  font-weight: 400; line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin-bottom: 1.25rem;
+}
+.pairing h3 em { font-style: italic; color: var(--red); }
+.pairing p {
+  font-family: var(--serif); font-size: 1.1rem;
+  color: var(--ink-2); line-height: 1.75;
+  margin-bottom: 1.15rem;
+}
+.pairing p:first-of-type::first-letter {
+  font-family: var(--serif); font-weight: 400;
+  float: left; font-size: 4.5rem; line-height: 0.85;
+  padding: 0.35rem 0.55rem 0 0; color: var(--red);
+}
+.pairing p:first-of-type::first-line {
+  font-variant: small-caps; letter-spacing: 0.04em;
+}
+.pairing p strong { color: var(--ink); font-weight: 500; }
+.pairing .pull-quote {
+  font-family: var(--serif); font-style: italic;
+  font-size: 1.35rem; line-height: 1.4;
+  padding: 1.25rem 0 1.25rem 1.5rem;
+  border-left: 2px solid var(--red);
+  margin: 1.5rem 0; color: var(--ink);
+}
+.pairing .byline {
+  margin-top: 1.5rem; padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+  font-family: var(--sans); font-size: 0.72rem;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-3);
+}
+.pairing .byline strong { color: var(--ink-2); font-weight: 500; }
+
+/* APPLICATIONS */
+.applications-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;
+}
+.app-card {
+  border: 1px solid var(--rule);
+  padding: 2rem;
+  background: var(--paper-lt);
+  position: relative;
+}
+.app-card .app-kicker {
+  font-family: var(--sans); font-size: 0.58rem;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 1rem;
+}
+.business-card {
+  aspect-ratio: 7 / 4;
+  background: var(--paper-lt);
+  border: 1px solid var(--rule);
+  padding: 1.5rem 1.75rem;
+  display: flex; flex-direction: column; justify-content: space-between;
+  position: relative;
+}
+.business-card::before {
+  content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 4px;
+  background: var(--red);
+}
+.business-card .bc-mark {
+  font-family: var(--serif); font-size: 1.4rem;
+  font-weight: 400; letter-spacing: -0.015em;
+}
+.business-card .bc-mark em { font-style: italic; color: var(--red); }
+.business-card .bc-rows {
+  font-family: var(--mono); font-size: 0.72rem;
+  color: var(--ink-3); line-height: 1.7;
+}
+.business-card .bc-rows strong { color: var(--ink); font-weight: 500; }
+
+.document-head {
+  background: var(--paper); border: 1px solid var(--rule);
+  padding: 1.75rem 1.85rem;
+  position: relative;
+}
+.document-head .dh-kicker {
+  font-family: var(--sans); font-size: 0.58rem;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  border-bottom: 1px solid var(--red);
+  padding-bottom: 0.35rem; margin-bottom: 1rem;
+  display: inline-block;
+}
+.document-head h4 {
+  font-family: var(--serif); font-size: 1.45rem;
+  font-weight: 400; letter-spacing: -0.015em; line-height: 1.2;
+  margin-bottom: 0.75rem;
+}
+.document-head h4 em { font-style: italic; color: var(--red); }
+.document-head h4 .hl { background: var(--hl); }
+.document-head .dh-body {
+  font-family: var(--serif); font-size: 0.95rem;
+  color: var(--ink-2); line-height: 1.55;
+}
+.document-head .dh-body::first-line {
+  font-variant: small-caps; letter-spacing: 0.04em;
+}
+.document-head .dh-body .hl { background: var(--hl); }
+.document-head .dh-colophon {
+  margin-top: 1.25rem; padding-top: 0.85rem;
+  border-top: 1px dotted var(--rule-mid);
+  font-family: var(--mono); font-size: 0.66rem;
+  color: var(--ink-3); letter-spacing: 0.04em;
+}
+
+.spec-plate {
+  background: var(--ink); color: var(--paper);
+  padding: 1.85rem 2rem;
+  font-family: var(--mono); font-size: 0.78rem;
+  line-height: 1.85;
+  position: relative;
+}
+.spec-plate::before {
+  content: 'RESPONSIBILITY · FORMAL SPEC';
+  position: absolute; top: -10px; left: 1.5rem;
+  background: var(--paper); color: var(--red);
+  padding: 0.2rem 0.6rem;
+  font-family: var(--sans); font-size: 0.56rem;
+  letter-spacing: 0.18em; font-weight: 600;
+}
+.spec-plate .k { color: var(--red-muted); }
+.spec-plate .c { color: #8a8a8a; font-style: italic; }
+.spec-plate .v { color: var(--paper); }
+
+/* VOICE & TONE */
+.voice-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem;
+}
+.voice-card {
+  border: 1px solid var(--rule);
+  background: var(--paper-lt);
+  padding: 1.75rem 1.5rem;
+  transition: transform 0.2s, border-color 0.2s;
+}
+.voice-card:hover { transform: translateY(-2px); border-color: var(--red); }
+.voice-card .vc-tag {
+  font-family: var(--sans); font-size: 0.6rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--red); font-weight: 600;
+  margin-bottom: 0.85rem;
+}
+.voice-card blockquote {
+  font-family: var(--serif); font-style: italic;
+  font-size: 1.15rem; line-height: 1.4;
+  color: var(--ink); margin-bottom: 1rem; letter-spacing: -0.005em;
+}
+.voice-card blockquote em { color: var(--red); }
+.voice-card blockquote .hl { background: var(--hl); font-style: italic; }
+.voice-card .vc-note {
+  font-family: var(--serif); font-size: 0.9rem;
+  color: var(--ink-2); line-height: 1.55;
+}
+
+/* COLOPHON */
+.colophon {
+  text-align: center;
+  padding: 3rem 2rem 5rem;
+  max-width: var(--wide); margin: 3rem auto 0;
+  border-top: 1px solid var(--rule);
+  font-family: var(--sans); font-size: 0.7rem;
+  color: var(--ink-3); letter-spacing: 0.06em;
+}
+.colophon .rule { width: 48px; height: 1px; background: var(--red); margin: 0 auto 1.5rem; }
+.colophon .line { margin: 0.35rem 0; }
+.colophon .line.italic { font-family: var(--serif); font-style: italic; font-size: 0.9rem; color: var(--ink-2); letter-spacing: 0; margin-bottom: 1rem; }
+.colophon a { color: var(--red); text-decoration: none; margin: 0 0.75rem; transition: color 0.15s; }
+.colophon a:hover { color: var(--red-deep); }
+
+/* Responsive */
+@media (max-width: 880px) {
+  .hero { padding: 4rem 1.5rem 2.5rem; }
+  section.logotype-section { padding: 3.5rem 1.5rem; }
+  .palette-grid { grid-template-columns: repeat(2, 1fr); }
+  .variations-grid { grid-template-columns: 1fr; }
+  .ui-kit { grid-template-columns: 1fr; gap: 2rem; }
+  .hl-specimen { grid-template-columns: 1fr; gap: 1.5rem; }
+  .type-row { grid-template-columns: 1fr; gap: 0.5rem; }
+  .type-meta { text-align: left; }
+  .pairing { padding: 2.25rem 1.75rem; }
+  .applications-grid { grid-template-columns: 1fr; }
+  .voice-grid { grid-template-columns: 1fr; }
+}
+
+/* ============================================
+   ▶ SAAS OVERRIDE ◀
+   Cormorant Garamond + Inter + SF Mono.
+   Off-white #f9f9f7 with crisp white cards.
+   Steel blue #306a99 replaces editorial red.
+   Soft shadows + 12px rounded corners. Mosaic
+   hero atmosphere via multi-radial-gradient.
+   ============================================ */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap');
+
+:root {
+  --paper:     #f9f9f7;
+  --paper-dk:  #f3f1ec;
+  --paper-lt:  #ffffff;
+  --paper-card:#ffffff;
+
+  --ink:       #1a1a1a;
+  --ink-2:     #444444;
+  --ink-3:     rgba(26,26,26,0.6);
+  --ink-4:     rgba(26,26,26,0.5);
+
+  /* Steel blue replaces editorial red. Same role: section
+     markers, italic accents, hairline rules. */
+  --red:       #306a99;
+  --red-muted: #4a8abb;
+  --red-deep:  #245580;
+
+  --steel:       #306a99;
+  --steel-hover: #245580;
+  --steel-soft:  #7eb8da;
+  --steel-tint:  rgba(48,106,153,0.15);
+  --steel-faint: rgba(48,106,153,0.08);
+
+  /* Warm-cream complement borrowed from approach-i's mosaic
+     palette — used as a secondary tint for the comparison
+     "before" surface and for atmospheric gradients. */
+  --warm:        #d4a76a;
+  --warm-faint:  rgba(212,167,106,0.10);
+
+  --rule:      rgba(26,26,26,0.1);
+  --rule-mid:  rgba(26,26,26,0.06);
+
+  --shadow:    0 2px 16px rgba(0,0,0,0.06);
+  --shadow-lg: 0 8px 40px rgba(0,0,0,0.08);
+
+  /* Highlighter rendered as a steel-tint pill on a serif
+     phrase — same .hl markup, different gesture. The "hot"
+     becomes a warm-tinted pill, complementary to the steel. */
+  --hl:        var(--steel-faint);
+  --hl-hot:    var(--warm-faint);
+
+  --serif: 'Cormorant Garamond', 'Cormorant', Georgia, 'Times New Roman', serif;
+  --sans:  'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --mono:  'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 1rem;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Hero — gradient-mesh atmosphere mimicking the blurred mosaic.
+   Five soft radial blooms scattered with two color families
+   (warm + steel) — the same rectangle palette approach-i uses
+   in its canvas, expressed as a static CSS mesh. */
+body::before {
+  background:
+    radial-gradient(ellipse 50% 35% at 18% 12%, rgba(212,167,106,0.20), transparent 65%),
+    radial-gradient(ellipse 45% 32% at 82% 22%, rgba(48,106,153,0.16), transparent 65%),
+    radial-gradient(ellipse 40% 28% at 45% 32%, rgba(232,207,160,0.16), transparent 65%),
+    radial-gradient(ellipse 50% 35% at 78% 75%, rgba(48,106,153,0.10), transparent 65%),
+    radial-gradient(ellipse 40% 30% at 12% 70%, rgba(212,167,106,0.10), transparent 65%);
+  filter: blur(8px);
+  opacity: 0.85;
+}
+
+/* Hero */
+.hero { position: relative; padding-top: 5.5rem; padding-bottom: 5rem; }
+.hero-eyebrow {
+  font-family: var(--sans);
+  color: var(--steel);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+}
+.hero-eyebrow::before, .hero-eyebrow::after { background: var(--steel); }
+.hero-mark {
+  font-family: var(--serif);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.hero-mark em { color: var(--steel); font-style: italic; font-weight: 400; }
+.hero-rule { background: var(--steel); width: 80px; }
+.hero-tagline { color: var(--ink-2); font-style: italic; font-family: var(--serif); font-size: 1.2rem; }
+.hero-meta { color: var(--ink-3); font-family: var(--sans); font-weight: 500; }
+
+/* SECTIONS */
+.section-kicker {
+  color: var(--steel);
+  font-family: var(--sans);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+.section-kicker::after { background: var(--steel); opacity: 0.3; }
+
+section.logotype-section h2 {
+  font-family: var(--serif);
+  font-weight: 400;
+  letter-spacing: -0.012em;
+  color: var(--ink);
+}
+section.logotype-section h2 em { color: var(--steel); font-style: italic; font-weight: 400; }
+section.logotype-section .lede {
+  font-family: var(--sans);
+  color: var(--ink-3);
+  font-size: 1rem;
+  line-height: 1.7;
+  max-width: 600px;
+}
+section.logotype-section .lede::first-line { font-variant: normal; letter-spacing: 0; }
+
+/* Steel pill — replaces highlighter */
+.hl, .hl-hot {
+  background: var(--hl);
+  padding: 0.06em 0.32em;
+  border-radius: 4px;
+  color: var(--ink);
+}
+.hl-hot { background: var(--hl-hot); color: var(--ink); }
+
+/* Type specimen — saas-style card */
+.type-specimen {
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+.type-row { border-bottom-color: var(--rule); }
+.type-label {
+  color: var(--steel);
+  font-family: var(--sans);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  font-size: 0.7rem;
+}
+.type-sample.display { font-family: var(--serif); font-weight: 400; }
+.type-sample.display em { color: var(--steel); font-style: italic; font-weight: 400; }
+.type-sample.h2 { font-family: var(--serif); color: var(--steel); font-style: italic; font-weight: 400; }
+.type-sample.h3 { font-family: var(--serif); font-weight: 400; }
+.type-sample.h3 em { color: var(--steel); font-style: italic; font-weight: 400; }
+.type-sample.body { font-family: var(--sans); color: var(--ink-2); }
+.type-meta { color: var(--ink-4); font-family: var(--mono); }
+
+/* Variations — saas-style cards */
+.variation-tile {
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  transition: box-shadow 0.3s ease, transform 0.2s ease;
+}
+.variation-tile:hover { box-shadow: var(--shadow-lg); transform: translateY(-3px); }
+.variation-tile.paper { background: var(--paper-card); }
+.variation-tile.warm { background: var(--paper-dk); }
+.variation-tile.dark { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.variation-tile .vt-mark { font-family: var(--serif); font-weight: 400; }
+.variation-tile .vt-mark em { color: var(--steel); font-style: italic; font-weight: 400; }
+.variation-tile.dark .vt-mark { color: var(--paper); }
+.variation-tile.dark .vt-mark em { color: var(--steel-soft); }
+.variation-tile .vt-tag { color: var(--ink-3); font-family: var(--sans); font-weight: 500; }
+.variation-tile.dark .vt-tag { color: rgba(249,249,247,0.6); }
+.variation-tile .vt-signet {
+  border-color: var(--steel);
+  border-radius: 10px;
+  background: var(--steel-faint);
+}
+.variation-tile .vt-signet::before { background: var(--steel); }
+.variation-tile .vt-signet::after { background: var(--steel); }
+.variation-tile .vt-signet span { font-family: var(--serif); font-weight: 400; }
+.variation-tile .vt-signet span em { color: var(--steel); font-style: italic; font-weight: 400; }
+
+/* UI primitives — saas-style */
+.ui-kit {
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+.ui-cell h4 {
+  color: var(--steel);
+  font-family: var(--sans);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  font-size: 0.7rem;
+}
+.ui-btn {
+  font-family: var(--sans);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  border-radius: 6px;
+  padding: 0.85rem 1.75rem;
+  transition: background 0.2s ease, transform 0.15s ease, border-color 0.2s ease;
+}
+.ui-btn.primary {
+  background: var(--steel);
+  color: var(--paper-lt);
+  border-color: var(--steel);
+}
+.ui-btn.primary:hover {
+  background: var(--steel-hover);
+  border-color: var(--steel-hover);
+  transform: translateY(-1px);
+}
+.ui-btn.secondary {
+  background: var(--ink);
+  color: var(--paper-lt);
+  border-color: var(--ink);
+}
+.ui-btn.secondary:hover { background: var(--ink-2); border-color: var(--ink-2); }
+.ui-btn.ghost {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--rule);
+}
+.ui-btn.ghost:hover { border-color: var(--steel); color: var(--steel); }
+
+.ui-badge {
+  font-family: var(--sans);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  border-radius: 16px;
+  padding: 0.25rem 0.85rem;
+  font-size: 0.72rem;
+}
+.ui-badge.live {
+  color: var(--steel);
+  border-color: var(--steel);
+  background: var(--steel-faint);
+}
+.ui-badge.ok { color: #1f8a4c; border-color: #1f8a4c; background: rgba(31,138,76,0.06); }
+.ui-badge.hold { color: var(--ink-3); border-color: var(--rule); }
+
+.ui-code {
+  background: var(--ink);
+  color: #e8e8e8;
+  border-radius: 8px;
+  font-size: 0.8rem;
+}
+.ui-code .k { color: var(--steel-soft); }
+.ui-code .v { color: var(--paper-lt); }
+.ui-code .c { color: rgba(232,232,232,0.5); font-style: italic; }
+
+.ui-input {
+  font-family: var(--sans);
+  border-color: var(--rule);
+  background: var(--paper-lt);
+  border-radius: 6px;
+}
+.ui-input:focus { border-color: var(--steel); box-shadow: 0 0 0 3px var(--steel-faint); }
+
+/* Section V — The Steel & The Tint */
+.hl-specimen {
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+.hl-rule .rule-label {
+  color: var(--steel);
+  font-family: var(--sans);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  font-size: 0.7rem;
+}
+.hl-rule .rule-text em { color: var(--steel); font-style: italic; font-weight: 500; }
+.hl-rule .rule-text { color: var(--ink-2); }
+.hl-sample-lines .label {
+  color: var(--steel);
+  font-family: var(--sans);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  font-size: 0.7rem;
+}
+
+/* Editorial Pairing */
+.pairing {
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+.pairing::before {
+  color: var(--steel);
+  background: var(--paper);
+  font-family: var(--sans);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+.pairing .article-eyebrow {
+  color: var(--steel);
+  font-family: var(--sans);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+.pairing h3 { font-family: var(--serif); font-weight: 400; }
+.pairing h3 em { color: var(--steel); font-style: italic; font-weight: 400; }
+.pairing p { font-family: var(--sans); color: var(--ink-2); font-size: 1rem; line-height: 1.75; }
+.pairing p:first-of-type::first-letter {
+  font-family: var(--serif);
+  color: var(--steel);
+  font-weight: 400;
+  font-size: 4rem;
+}
+.pairing p:first-of-type::first-line { font-variant: normal; letter-spacing: 0; }
+.pairing p strong { color: var(--ink); font-weight: 600; }
+.pairing .pull-quote {
+  border-left: 3px solid var(--steel);
+  background: var(--steel-faint);
+  border-radius: 0 8px 8px 0;
+  padding: 1.5rem 1.75rem;
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--ink);
+  font-size: 1.25rem;
+}
+.pairing .byline { color: var(--ink-3); font-family: var(--sans); font-weight: 500; border-top-color: var(--rule); }
+.pairing .byline strong { color: var(--ink-2); font-weight: 600; }
+
+/* Applications */
+.app-card {
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+.app-card .app-kicker {
+  color: var(--steel);
+  font-family: var(--sans);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  font-size: 0.65rem;
+}
+.business-card {
+  background: var(--paper-lt);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+.business-card::before { background: var(--steel); width: 5px; }
+.business-card .bc-mark { font-family: var(--serif); font-weight: 400; }
+.business-card .bc-mark em { color: var(--steel); font-style: italic; font-weight: 400; }
+.business-card .bc-rows { font-family: var(--sans); color: var(--ink-3); }
+.business-card .bc-rows strong { color: var(--ink); font-weight: 600; }
+.business-card .bc-rows div[style*="--red"] { color: var(--steel) !important; }
+
+.document-head {
+  background: var(--paper-lt);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+.document-head .dh-kicker {
+  color: var(--steel);
+  border-bottom-color: var(--steel);
+  font-family: var(--sans);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+.document-head h4 { font-family: var(--serif); font-weight: 400; }
+.document-head h4 em { color: var(--steel); font-style: italic; font-weight: 400; }
+.document-head h4 .hl, .document-head .dh-body .hl { background: var(--hl); }
+.document-head .dh-body { color: var(--ink-2); font-family: var(--sans); }
+.document-head .dh-body::first-line { font-variant: normal; letter-spacing: 0; }
+.document-head .dh-colophon { color: var(--ink-3); font-family: var(--mono); border-top-color: var(--rule); }
+
+.spec-plate {
+  background: var(--ink);
+  color: #e8e8e8;
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+.spec-plate::before {
+  color: var(--steel);
+  background: var(--paper);
+  font-family: var(--sans);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+.spec-plate .k { color: var(--steel-soft); }
+.spec-plate .v { color: var(--paper-lt); }
+.spec-plate .c { color: rgba(232,232,232,0.5); font-style: italic; }
+
+/* Voice */
+.voice-card {
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  transition: box-shadow 0.3s ease, transform 0.2s ease;
+}
+.voice-card:hover {
+  border-color: var(--steel);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-3px);
+}
+.voice-card .vc-tag {
+  color: var(--steel);
+  font-family: var(--sans);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  font-size: 0.7rem;
+}
+.voice-card blockquote { font-family: var(--serif); color: var(--ink); font-style: italic; font-weight: 400; }
+.voice-card blockquote em { color: var(--steel); font-style: italic; font-weight: 400; }
+.voice-card blockquote .hl,
+.voice-card blockquote .hl-hot {
+  background: var(--hl);
+  color: var(--ink);
+  font-style: italic;
+}
+.voice-card blockquote .hl-hot { background: var(--hl-hot); }
+.voice-card .vc-note { color: var(--ink-2); font-family: var(--sans); }
+
+/* Swatches */
+.swatch {
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+.swatch-name { color: var(--ink); font-family: var(--sans); font-weight: 600; }
+.swatch-hex { color: var(--ink-3); font-family: var(--mono); }
+.swatch-role { color: var(--ink-3); font-style: italic; font-family: var(--sans); }
+
+/* Colophon */
+.colophon { font-family: var(--sans); color: var(--ink-3); border-top-color: var(--rule); font-weight: 500; }
+.colophon .rule { background: var(--steel); width: 60px; }
+.colophon .line.italic { color: var(--ink-2); font-family: var(--serif); font-style: italic; }
+.colophon a { color: var(--steel); }
+.colophon a:hover { color: var(--steel-hover); }
+
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+
+}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-eyebrow">Direction &zeta; &middot; SaaS</div>
+  <h1 class="hero-mark">Open<em>Prose</em></h1>
+  <div class="hero-rule"></div>
+  <p class="hero-tagline">Declare the outcome. <em>We handle the rest.</em></p>
+  <div class="hero-meta">Cormorant Garamond &middot; Inter &middot; SF Mono &middot; steel blue</div>
+</section>
+
+<!-- PALETTE -->
+<section class="logotype-section" id="palette">
+  <div class="section-kicker">I &middot; Palette</div>
+  <h2>Off-white and ink, with a thread of <em>steel blue</em> and a <span class="hl">warm complement</span>.</h2>
+  <p class="lede">Off-white #f9f9f7 carries the page; crisp white #ffffff carries the cards. Ink stays close to true black at #1a1a1a. Steel blue #306a99 does the work of an accent &mdash; section markers, italic emphasis, primary buttons, link underlines. The warm complement #d4a76a is the second color, used only in the mosaic background and as a "before" tint in comparison cards. Together steel and warm cream make the palette read as a sophisticated SaaS landing rather than an editorial book.</p>
+  <div class="palette-grid">
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--paper);"></div>
+      <span class="swatch-name">Paper</span>
+      <span class="swatch-hex">#f9f9f7</span>
+      <span class="swatch-role">the page</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--paper-card); border: 1px solid var(--rule);"></div>
+      <span class="swatch-name">Card</span>
+      <span class="swatch-hex">#ffffff</span>
+      <span class="swatch-role">lifted surfaces</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--paper-dk);"></div>
+      <span class="swatch-name">Paper Warm</span>
+      <span class="swatch-hex">#f3f1ec</span>
+      <span class="swatch-role">comparison "before"</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--ink); border-color: var(--ink);"></div>
+      <span class="swatch-name">Ink</span>
+      <span class="swatch-hex">#1a1a1a</span>
+      <span class="swatch-role">primary copy</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--steel); border-color: var(--steel);"></div>
+      <span class="swatch-name">Steel</span>
+      <span class="swatch-hex">#306a99</span>
+      <span class="swatch-role">accent &middot; italic em</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--steel-soft); border-color: var(--steel-soft);"></div>
+      <span class="swatch-name">Steel Soft</span>
+      <span class="swatch-hex">#7eb8da</span>
+      <span class="swatch-role">code keyword &middot; dark mark</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--warm); border-color: var(--warm);"></div>
+      <span class="swatch-name">Warm</span>
+      <span class="swatch-hex">#d4a76a</span>
+      <span class="swatch-role">complement &middot; mosaic only</span>
+    </div>
+    <div class="swatch">
+      <div class="swatch-chip" style="background: var(--steel-faint); border: 1px solid var(--steel);"></div>
+      <span class="swatch-name">Steel Tint</span>
+      <span class="swatch-hex">rgba 48·106·153·.08</span>
+      <span class="swatch-role">pill background &middot; "after"</span>
+    </div>
+  </div>
+</section>
+
+<!-- TYPE SCALE -->
+<section class="logotype-section" id="type">
+  <div class="section-kicker">II &middot; Type Scale</div>
+  <h2>Cormorant Garamond for the <em>headline</em>. <span class="hl">Inter</span> for the body and chrome.</h2>
+  <p class="lede">A two-face system, inverted from α: where α uses Palatino for both display and body, ζ splits the work. Cormorant Garamond &mdash; light at 300, regular at 400, italic for emphasis &mdash; carries every headline, blockquote, and feature card title. Inter handles every paragraph, label, button, and badge. The split is the SaaS convention: serif elegance for the moments the reader pauses on; sans clarity for the work in between. Italic is always steel blue.</p>
+  <div class="type-specimen">
+    <div class="type-row">
+      <span class="type-label">Display</span>
+      <span class="type-sample display">Write the <em>outcome</em>.</span>
+      <span class="type-meta">Cormorant 400 &middot; clamp 2–3rem</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">H2 italic</span>
+      <span class="type-sample h2">the quiet arrival</span>
+      <span class="type-meta">Cormorant italic 400 &middot; 2rem</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">H3</span>
+      <span class="type-sample h3">A specification, <em>recited</em></span>
+      <span class="type-meta">Cormorant 400 &middot; 1.4rem</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Body &middot; sans</span>
+      <span class="type-sample body">You declare the outcome in a file. The system picks it up on cadence, runs it, verifies the result, and delivers.</span>
+      <span class="type-meta">Inter 400 &middot; 1rem / 1.7</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Steel pill</span>
+      <span class="type-sample hl-sample">The standup happens anyway, but it is <span class="hl">fifteen minutes shorter</span>. Nobody asks where the numbers came from.</span>
+      <span class="type-meta">steel-faint pill &middot; 8% alpha</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Warm pill</span>
+      <span class="type-sample hl-sample">If the outcome <span class="hl-hot">doesn't ship</span>, no line.</span>
+      <span class="type-meta">warm-faint pill &middot; 10% alpha</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Label &middot; sans</span>
+      <span class="type-sample" style="font-family: var(--sans); font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--steel); font-weight: 600;">Responsibilities as a Service</span>
+      <span class="type-meta">Inter 600 &middot; 0.75rem</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Mono</span>
+      <span class="type-sample mono">responsibility: weekly-investor-digest</span>
+      <span class="type-meta">SF Mono 400 &middot; 0.92rem</span>
+    </div>
+  </div>
+</section>
+
+<!-- LOGO VARIATIONS -->
+<section class="logotype-section" id="variations">
+  <div class="section-kicker">III &middot; Logo Variations</div>
+  <h2>One mark, <em>three impressions</em>.</h2>
+  <p class="lede">Primary on off-white, a compact signet with steel serifs in a 10px rounded square, and a reversed mark for dark surfaces. The italic in <em>Prose</em> always carries the steel blue, whether on light or dark ground. The pill never touches the mark &mdash; it is a reader's tool for prose, not a brand device.</p>
+  <div class="variations-grid">
+    <div class="variation-tile paper">
+      <div class="vt-mark">Open<em>Prose</em></div>
+      <div class="vt-tag">Primary &middot; 40px+</div>
+    </div>
+    <div class="variation-tile warm">
+      <div class="vt-signet"><span>O<em>P</em></span></div>
+      <div class="vt-tag">Signet &middot; favicon</div>
+    </div>
+    <div class="variation-tile dark">
+      <div class="vt-mark">Open<em>Prose</em></div>
+      <div class="vt-tag">Reversed &middot; dark ground</div>
+    </div>
+  </div>
+</section>
+
+<!-- UI ELEMENTS -->
+<section class="logotype-section" id="ui">
+  <div class="section-kicker">IV &middot; UI Elements</div>
+  <h2>Buttons, badges, and a <em>specification</em>.</h2>
+  <p class="lede">Interface primitives are SaaS-shaped: 6px-rounded buttons that lift one pixel on hover, fully-rounded pill badges, soft 16-blur drop-shadows on cards. The code surface is ink-on-paper inverted with steel-soft for keys &mdash; the same code surface a developer sees in their IDE.</p>
+  <div class="ui-kit">
+    <div class="ui-cell">
+      <h4>Buttons</h4>
+      <div class="ui-buttons">
+        <button class="ui-btn primary">Primary</button>
+        <button class="ui-btn secondary">Secondary</button>
+        <button class="ui-btn ghost">Ghost</button>
+      </div>
+      <div class="ui-badges">
+        <span class="ui-badge live">&middot; Live</span>
+        <span class="ui-badge ok">&#10003; Verified</span>
+        <span class="ui-badge hold">&middot; On hold</span>
+      </div>
+      <div class="ui-input-wrap">
+        <label style="font-family: var(--sans); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--steel); font-weight: 600;">Declare the outcome</label>
+        <input class="ui-input" type="text" placeholder="e.g. weekly-investor-digest">
+      </div>
+    </div>
+    <div class="ui-cell">
+      <h4>Code surface</h4>
+      <div class="ui-code"><span class="c"># pick up the file</span>
+<span class="k">$</span> openprose run weekly-digest
+<span class="c"># verify, deliver, archive</span>
+<span class="v">&#10003; delivered 09:14 ET</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- THE STEEL & THE TINT — ζ's emphasis primitive -->
+<section class="logotype-section" id="highlighter">
+  <div class="section-kicker">V &middot; The Steel &amp; The Tint</div>
+  <h2><em>Italic steel</em> is the writer. <span class="hl">The steel pill</span> is the reader. <span class="hl-hot">The warm tint</span> is the comparison.</h2>
+  <p class="lede">ζ runs three layered marks. <em>Italic steel-blue</em> is the author's emphasis &mdash; the same role italic-red plays in α, just in a different ink. <span class="hl">The steel-tint pill</span> on a serif phrase is the reader's pause &mdash; soft enough to scan past, present enough to come back to. <span class="hl-hot">The warm-tint pill</span> is reserved for the "before" half of a comparison &mdash; the old way, the manual hours, the line item being eliminated. Together they make the page look like a SaaS product brief that has been carefully edited.</p>
+  <div class="hl-specimen">
+    <div class="hl-sample-lines">
+      <div>
+        <span class="label">Steel pill &middot; reader pause</span>
+        <div>Every Monday at 09:00 ET, the digest arrives &mdash; <span class="hl">verified, signed, archived</span>. The standup happens anyway, but it is fifteen minutes shorter.</div>
+      </div>
+      <div>
+        <span class="label">Warm tint &middot; the "before"</span>
+        <div>Where billing was once an apology email and a manual spreadsheet, OpenProse is <span class="hl-hot">billed by delivery</span>. If the outcome doesn't ship, no line.</div>
+      </div>
+      <div>
+        <span class="label">With italic author voice</span>
+        <div>The humanist computer is the insight that these two dispositions &mdash; <em>craft and machinery</em> &mdash; are not opposed. The <span class="hl">machine handles the cadence</span>. The <span class="hl">prose handles the voice</span>.</div>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+      <div class="hl-rule">
+        <span class="rule-label">Rule &middot; steel pill</span>
+        <span class="rule-text"><em>Use</em> on the nouns and numbers a busy operator would scroll back to. Steel pill is a soft 8% wash on a serif phrase &mdash; <span class="hl">never an underline, never a fluorescent block</span>.</span>
+      </div>
+      <div class="hl-rule">
+        <span class="rule-label">Rule &middot; warm tint</span>
+        <span class="rule-text"><em>Use</em> only on the "before" half of a comparison &mdash; the old way, the manual hours, the legacy SLA. The warm tint signals what the product is replacing, not what the product is.</span>
+      </div>
+      <div class="hl-rule">
+        <span class="rule-label">Rule &middot; layering</span>
+        <span class="rule-text">Italic steel and the steel pill <em>never</em> share a phrase &mdash; one is the writer, one is the reader. The warm tint and the steel pill <em>never</em> share a sentence &mdash; one is the past, one is the present.</span>
+      </div>
+      <div class="hl-rule">
+        <span class="rule-label">Rule &middot; the mark</span>
+        <span class="rule-text">Never on the logotype. Never on a button. Pills are <em>prose tools only</em> &mdash; body copy, editorial H2/H3, comparison cards. Not chrome.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EDITORIAL PAIRING -->
+<section class="logotype-section narrow" id="pairing">
+  <div class="section-kicker">VI &middot; Editorial Pairing</div>
+  <h2>Set in type &mdash; <em>the voice</em> at length, <span class="hl">with a steel pen</span>.</h2>
+  <p class="lede">The SaaS voice is calm, specific, and clearly approachable. Cormorant carries the headline; Inter carries the running paragraph. The italic steel marks the pivot. The steel pill marks the reader's pause. Read aloud, the cadence is one a marketing-page reader recognizes &mdash; problem, declaration, evidence, ask &mdash; but each sentence carries the weight of a sentence that wants to be read.</p>
+  <article class="pairing">
+    <div class="article-eyebrow">From the field notes</div>
+    <h3>On the <em>quiet arrival</em> of Monday reports.</h3>
+    <p>Once, the week began with a scramble. Someone opened seven dashboards, pulled the numbers, wrote the digest, and dropped it in the 09:00 standup. The rotation was a line in the budget. The standup was a line in the calendar. Nobody was quite sure what either accomplished beyond confirming that the dashboards were fine.</p>
+    <p>Then the outcome was declared in a file. <strong>Fifteen lines.</strong> Every Monday at 09:00 ET, the digest arrives &mdash; <span class="hl">verified, signed, archived</span>. The standup happens anyway, but it is fifteen minutes shorter. Nobody asks where the numbers came from. <span class="hl">They are already in the document</span>.</p>
+    <div class="pull-quote">The first thing we noticed was what we stopped doing &mdash; the standing meetings where we'd review the dashboard to confirm the dashboard was fine.</div>
+    <p>The humanist computer is the insight that these two dispositions &mdash; craft and machinery &mdash; are not opposed. The machine handles the cadence. The prose handles the voice. The page reads the way a good analyst would have written it. <span class="hl-hot">The result is the point</span>.</p>
+    <div class="byline"><strong>Maya Chen</strong> &middot; Head of Operations &middot; Series-C payments platform</div>
+  </article>
+</section>
+
+<!-- APPLICATIONS -->
+<section class="logotype-section" id="applications">
+  <div class="section-kicker">VII &middot; Applications</div>
+  <h2>A card, a <em>masthead</em>, a plate.</h2>
+  <p class="lede">Three real surfaces the brand has to carry: a business card (formal, steel rule, no pill), a document header (operator's brief, steel pill welcome), and a specification plate (the spec in dark mode, steel-soft for keys, no pill because the spec <em>is</em> the bookmark).</p>
+  <div class="applications-grid">
+    <div class="app-card">
+      <div class="app-kicker">Business Card</div>
+      <div class="business-card">
+        <div class="bc-mark">Open<em>Prose</em></div>
+        <div class="bc-rows">
+          <div><strong>Maya Chen</strong></div>
+          <div>Head of Operations</div>
+          <div style="margin-top: 0.5rem; color: var(--red);">maya@openprose.ai</div>
+          <div style="color: var(--red);">+1 &middot; 415 &middot; 0113</div>
+        </div>
+      </div>
+    </div>
+    <div class="app-card">
+      <div class="app-kicker">Document Header</div>
+      <div class="document-head">
+        <span class="dh-kicker">Weekly Investor Digest &middot; Wk 14</span>
+        <h4>ARR crossed <em>$14.2M</em> <span class="hl">this week</span>.</h4>
+        <p class="dh-body">The new $40K Meridian contract pushed us over the line. Three new logos in pipeline, <span class="hl">two expected to close this quarter</span>.</p>
+        <div class="dh-colophon">Generated 09:02 &middot; Verified 09:14 &middot; OpenProse</div>
+      </div>
+    </div>
+    <div class="app-card" style="grid-column: 1 / -1;">
+      <div class="app-kicker">Formal Specification</div>
+      <div class="spec-plate">
+<span class="k">responsibility:</span> <span class="v">weekly-investor-digest</span>
+<span class="k">owner:</span>         <span class="v">finance@company.example</span>
+<span class="k">cadence:</span>       <span class="v">mondays @ 09:00 ET</span>
+<span class="k">input:</span>
+  <span class="c">- gmail:investors@*</span>
+  <span class="c">- notion:portfolio/updates</span>
+<span class="k">outcome:</span> <span class="v">|</span>
+  <span class="v">One page. What changed, what's on track,</span>
+  <span class="v">what needs attention. 200 words.</span>
+<span class="k">deliver:</span>
+  <span class="c">- email:investors@</span>
+<span class="k">audit:</span>         <span class="v">retain 7 years</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- VOICE & TONE -->
+<section class="logotype-section" id="voice">
+  <div class="section-kicker">VIII &middot; Voice &amp; Tone</div>
+  <h2>Three sentences, <em>one register</em>, <span class="hl">three marks</span>.</h2>
+  <p class="lede">Three sanctioned voices the brand uses: the short declaration, the spec-sheet note, the editorial observation. Each sentence can live on its own without ornament &mdash; and each demonstrates one placement of the steel pill.</p>
+  <div class="voice-grid">
+    <div class="voice-card">
+      <div class="vc-tag">Voice &middot; short &middot; steel pill</div>
+      <blockquote>&ldquo;Write the outcome. <span class="hl">We run it.</span>&rdquo;</blockquote>
+      <p class="vc-note">The tagline. Six words. The pill lands on the second sentence &mdash; the part that shifts the burden from the operator to the service.</p>
+    </div>
+    <div class="voice-card">
+      <div class="vc-tag">Voice &middot; spec &middot; warm tint</div>
+      <blockquote>&ldquo;Billed by <em>delivery</em>. <span class="hl-hot">If the outcome doesn't ship, no line.</span>&rdquo;</blockquote>
+      <p class="vc-note">Terms of art spoken plainly. Italic steel on the load-bearing word; warm tint on the contrast clause &mdash; the part that says &ldquo;unlike the legacy SaaS, this is what we do not charge for.&rdquo;</p>
+    </div>
+    <div class="voice-card">
+      <div class="vc-tag">Voice &middot; editorial &middot; <em>italic</em></div>
+      <blockquote>&ldquo;Once, the week began with a scramble. <em>Then the outcome was declared in a file.</em>&rdquo;</blockquote>
+      <p class="vc-note">The long form voice. Italic steel carries the pivot. No pill here &mdash; this sentence is still the author's, not yet the reader's.</p>
+    </div>
+  </div>
+</section>
+
+<!-- COLOPHON -->
+<section class="colophon">
+  <div class="rule"></div>
+  <div class="line italic">OpenProse &middot; Round-3 finalists &middot; <span class="hl">Direction &zeta; &middot; SaaS</span></div>
+  <div class="line">Cormorant Garamond &middot; Inter &middot; SF Mono</div>
+  <div class="line">Paper #f9f9f7 &middot; Ink #1a1a1a &middot; Steel #306a99 &middot; Warm #d4a76a</div>
+  <div class="line" style="margin-top: 1.25rem;">
+    <a href="direction-alpha-editorial.html">&alpha; Editorial</a>
+    <a href="direction-beta-tufte.html">&beta; Tufte</a>
+    <a href="direction-gamma-manuscript.html">&gamma; Manuscript</a>
+    <a href="direction-delta-machine.html">&delta; Machine</a>
+    <a href="direction-epsilon-operator.html">&epsilon; Operator</a>
+    <a href="direction-eta-organism.html">&eta; Organism</a>
+  <a href="direction-theta-living-document.html">&theta; Living Doc</a>
+  <a href="direction-iota-reference-card.html">&iota; Reference Card</a>
+    <a href="direction-kappa-codex-spreads.html">&kappa; Codex</a>
+  </div>
+</section>
+
+</body>
+</html>
