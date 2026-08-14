@@ -978,19 +978,25 @@
     // Nav Trigger Setup
     // ============================================
     function setupNavTriggers() {
-        // Find search links in nav — intercept clicks
-        document.querySelectorAll('a[data-search-trigger], a[href="search.html"]').forEach(link => {
-            // Only intercept if it's the nav search link (has shape SVG with magnifying glass)
-            const svg = link.querySelector('svg');
-            if (!svg) return;
-            const hasCircle = svg.querySelector('circle');
-            const hasLine = svg.querySelector('line');
-            if (!hasCircle || !hasLine) return; // Not the magnifying glass
+        // Delegated, because <jh-nav> renders its search link AFTER this script runs
+        // (jh-chrome.js is a later deferred script). Per-link listeners bound at init
+        // only ever caught the hero's hand-written nav, so once the hero scrolled away
+        // the sticky nav fell through to search.html instead of opening the overlay.
+        document.addEventListener('click', (e) => {
+            const link = e.target.closest && e.target.closest('a[data-search-trigger], a[href="search.html"], a[href="./search.html"]');
+            if (!link) return;
+            if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+            if (link.target && link.target !== '_self') return;
 
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                openSearch();
-            });
+            // Only intercept the magnifying-glass shape link (circle + line), never a
+            // prose link that happens to point at the search page.
+            const svg = link.querySelector('svg');
+            if (!link.hasAttribute('data-search-trigger')) {
+                if (!svg || !svg.querySelector('circle') || !svg.querySelector('line')) return;
+            }
+
+            e.preventDefault();
+            openSearch();
         });
     }
 
