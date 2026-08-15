@@ -104,6 +104,12 @@ body.mode-canvas #stage {
   touch-action: none;
 }
 body.mode-canvas #stage.dragging { cursor: grabbing; }
+/* Touch counterpart to the embedded wheel rule (see the stage wheel handler).
+   touch-action:none hands every finger to the pan logic, which standalone is
+   right and embedded means a swipe over the panel freezes the article. pan-y
+   gives vertical drags back to the page; horizontal still pans the canvas,
+   and taps still open cards. */
+body.embedded.mode-canvas #stage { touch-action: pan-y; }
 body.mode-canvas #plane {
   display: block; max-width: none; padding: 0; margin: 0;
   transform-origin: 0 0; will-change: transform;
@@ -952,6 +958,13 @@ body.no-descs .card .desc, body.no-descs #focus .fdesc { display: none; }
   });
   stage.addEventListener('wheel', function (ev) {
     if (viewMode !== 'canvas') return;
+    // Embedded, a plain wheel belongs to the host page. Standalone this is a
+    // canvas tool and the wheel is its zoom; inside an article it is a reader
+    // scrolling past, and swallowing that traps them wherever the cursor
+    // happens to cross the panel. Pinch-zoom still reaches us — browsers
+    // deliver it as a wheel with ctrlKey — so the gesture that MEANS zoom
+    // keeps working, and drag-to-pan and clicking cards are untouched.
+    if (EMBEDDED && !ev.ctrlKey && !ev.metaKey) return;
     ev.preventDefault();
     var r = stage.getBoundingClientRect();
     zoomTo(view.s * Math.exp(-ev.deltaY * 0.0012), ev.clientX - r.left, ev.clientY - r.top);
@@ -1112,6 +1125,8 @@ body.no-descs .card .desc, body.no-descs #focus .fdesc { display: none; }
   navCanvas.addEventListener('pointermove', function (ev) { if (navDragging) navJump(ev); });
   navCanvas.addEventListener('pointerup', function () { navDragging = false; });
   navCanvas.addEventListener('wheel', function (ev) {
+    // Same rule as the stage: embedded, the reader's wheel is not ours.
+    if (EMBEDDED && !ev.ctrlKey && !ev.metaKey) return;
     ev.preventDefault(); ev.stopPropagation();
     if (focusEl.classList.contains('open')) {
       openFocus((fIdx < 0 ? 0 : fIdx) + (ev.deltaY > 0 ? 1 : -1));

@@ -57,8 +57,8 @@
      page's headings, main and typography. See styles/jh-chrome.css header.)
      Loaded BEFORE the page's own tokens so _tokens.css wins on every name they
      share; the chrome reads its own values through --jh- prefixed tokens. -->
-<link rel="stylesheet" href="./styles/jh-chrome.css?v=1.25">
-<link rel="stylesheet" href="./scripts/search-overlay.css?v=1.25">
+<link rel="stylesheet" href="./styles/jh-chrome.css?v=1.26">
+<link rel="stylesheet" href="./scripts/search-overlay.css?v=1.26">
 <!-- Only the two faces the chrome itself uses. The case study's own typography
      (IBM Plex + Kecal) is the deliverable and is left completely alone. -->
 <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -1274,59 +1274,12 @@ html[data-mode="dark"] .mode-toggle:focus-visible {
 .embed-live iframe.ready { opacity: 1; }
 .embed-live.natural iframe { width: 100%; height: 100%; transform: none; }
 
-/* ── Scroll passes over an embed until you ask it not to ──────────────
-   The canvas cut pans and zooms on wheel. Inline, that means the page
-   stops dead wherever the cursor happens to cross a panel, which is a
-   trap rather than a feature: the reader is scrolling an article, not
-   driving a canvas. So the iframe is inert until it is clicked, exactly
-   like a map embed. One click arms it (and only then does its own ⛶
-   become reachable); Esc, a click outside, or scrolling it out of view
-   disarms it again. The viewport overlay is always armed — reaching it
-   IS the deliberate act. */
-/* Specificity note: the frosted-panel block above re-enables pointer events on
-   `.sections-frosted .embed-live iframe` (0,3,1). The inert default has to
-   match that weight or it silently never applies. */
-.sections-frosted .embed-live iframe { pointer-events: none; }
-.sections-frosted .embed-live.is-live iframe,
-.embed-live.cv-overlay iframe { pointer-events: auto; }
-
-.embed-arm {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding-bottom: var(--space-sm);
-  cursor: pointer;
-  background: transparent;
-  border: 0;
-  font: inherit;
-  transition: background 0.2s ease;
-}
-.embed-arm span {
-  font-family: var(--type-mono);
-  font-size: var(--fs-caption, 0.72rem);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-2);
-  background: var(--paper);
-  border: 1px solid var(--rule);
-  border-radius: 999px;
-  padding: 0.3rem 0.75rem;
-  opacity: 0;
-  transform: translateY(4px);
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-.embed-arm:hover span,
-.embed-arm:focus-visible span { opacity: 1; transform: none; }
-.embed-arm:focus-visible { outline: 2px solid var(--teal); outline-offset: -2px; }
-.embed-live.is-live .embed-arm { display: none; }
-@media (hover: none) and (pointer: coarse) {
-  /* No hover to reveal the pill, and a touch drag over an inert iframe
-     scrolls the page correctly already — so show the invitation outright. */
-  .embed-arm span { opacity: 1; transform: none; }
-}
+/* Panels stay fully interactive: scroll-over is handled inside the cut
+   itself (canvas-display/index.html, the stage wheel handler), which
+   declines a plain wheel while EMBEDDED and keeps pinch-to-zoom. Only
+   one of the six panels ever absorbed the wheel — the canvas-mode
+   colophon — so a page-wide click-to-activate gate was a whole mode
+   layered over a single frame's behaviour. Nothing to add here. */
 /* Canvas-embed viewport overlay — the display cut's ⛶ posts fs-toggle and a
    same-origin listener expands that panel to the viewport (no OS fullscreen,
    no permission chain). The panel is promoted via the Popover API: the TOP
@@ -2144,12 +2097,12 @@ system consumes it.
     <h2><em>37</em> approaches. <em>29</em> marks.</h2>
     <p class="lede">Two months of parallel explorations looking for the best surface area. Every approach is a working page.</p>
         <div class="cs-figure">
-      <div class="embed-live natural" data-fit data-src="openprose/canvas-display/?v=31&ratings=1&footer=0&nav=0&cols=4&items=approach-f-v2,approach-d2-gothic-humanist,approach-h-warm-editorial,approach-i-editorial-saas,approach-j-tufte-v2,approach-f-v5-openprose,approach-m-dan-accordion" data-auto style="aspect-ratio: 15 / 8;">
+      <div class="embed-live natural" data-fit data-src="openprose/canvas-display/?v=32&ratings=1&footer=0&nav=0&cols=4&items=approach-f-v2,approach-d2-gothic-humanist,approach-h-warm-editorial,approach-i-editorial-saas,approach-j-tufte-v2,approach-f-v5-openprose,approach-m-dan-accordion" data-auto style="aspect-ratio: 15 / 8;">
         <iframe title="Top-rated brand approaches, live canvas" loading="lazy" allowfullscreen allow="fullscreen"></iframe>
       </div>
       <div class="embed-bar">
         <span>The combined top-rated set, both reviewers, live. Stars shown on each card.</span>
-        <a href="openprose/canvas-display/?v=31&ratings=1&footer=0&nav=0&cols=4&items=approach-f-v2,approach-d2-gothic-humanist,approach-h-warm-editorial,approach-i-editorial-saas,approach-j-tufte-v2,approach-f-v5-openprose,approach-m-dan-accordion" target="_blank" rel="noopener">open ↗</a>
+        <a href="openprose/canvas-display/?v=32&ratings=1&footer=0&nav=0&cols=4&items=approach-f-v2,approach-d2-gothic-humanist,approach-h-warm-editorial,approach-i-editorial-saas,approach-j-tufte-v2,approach-f-v5-openprose,approach-m-dan-accordion" target="_blank" rel="noopener">open ↗</a>
       </div>
     </div>
     <p class="lede" style="margin-top: var(--space-xl);">Round-one stars and comments were compiled into a written document, <strong>DAN-PRINCIPLES.md</strong>: <em>seven</em> invariants, <em>five</em> named rejects. Later rounds designed against that target.</p>
@@ -2178,12 +2131,12 @@ system consumes it.
   <p class="lede" style="margin-top: var(--space-xl);">The top of the ratings shared a look: warm serif editorial. By 2026 that look was everywhere. Serif fonts were undergoing their vibe-coded assault, the default dress of generated landing pages. OpenProse needed its own <em>face</em>.</p>
   <p class="lede" style="margin-top: var(--space-sm);">The answer stepped sideways: monospace families for the running voice, and <a href="https://github.com/FungiType/Kecal" target="_blank" rel="noopener">Kecal</a> for the accents. Monotypes and Kecal became a way to rise above the noise and contribute to <em>legibility</em>: clearly readable, quietly esoteric, a face no generator reaches for. Kecal is an open typeface (OFL) by FungiType: Rodrigo Fuenzalida, Jordan Egstad, and Jiří Krblich. Used with thanks.</p>
     <div class="cs-figure">
-      <div class="embed-live natural" data-fit data-src="openprose/canvas-display/?v=31&footer=0&nav=0&items=direction-delta-machine,direction-beta-tufte-mono-kecal-styleguide-teal,typography-pairings,direction-experiments" data-auto style="aspect-ratio: 15 / 8;">
+      <div class="embed-live natural" data-fit data-src="openprose/canvas-display/?v=32&footer=0&nav=0&items=direction-delta-machine,direction-beta-tufte-mono-kecal-styleguide-teal,typography-pairings,direction-experiments" data-auto style="aspect-ratio: 15 / 8;">
         <iframe title="The type studies, live canvas" loading="lazy" allowfullscreen allow="fullscreen"></iframe>
       </div>
       <div class="embed-bar">
         <span>The type studies: the pure monospaced page, the pinned mono spec, the permutation sheet, and the aspect catalog where exploration continues.</span>
-        <a href="openprose/canvas-display/?v=31&footer=0&nav=0&items=direction-delta-machine,direction-beta-tufte-mono-kecal-styleguide-teal,typography-pairings,direction-experiments" target="_blank" rel="noopener">open ↗</a>
+        <a href="openprose/canvas-display/?v=32&footer=0&nav=0&items=direction-delta-machine,direction-beta-tufte-mono-kecal-styleguide-teal,typography-pairings,direction-experiments" target="_blank" rel="noopener">open ↗</a>
       </div>
     </div>
     <p class="lede" style="margin-top: var(--space-xl);">In parallel the <em>voice</em> settled: monospace families for the running text, Tufte density for the register, <em>Kecal</em>, upright, as the one accent. The system consolidated into <strong>_tokens.css</strong>, <strong>_pairings.css</strong>, <strong>_styleguide.js</strong>; the permutation sheet keeps every pairing.</p>
@@ -2228,22 +2181,22 @@ system consumes it.
     <p class="lede" style="margin-top: var(--space-sm);">From there I went into trying black hole motifs: pure vibe-coded 2D versions alongside a port of <a href="https://github.com/vlwkaos/threejs-blackhole" target="_blank" rel="noopener">vlwkaos/threejs-blackhole</a>.</p>
     <p class="lede" style="margin-top: var(--space-sm);">A fun idea, but ultimately just a moment of creative madness that helped me transition back into refining the cellular automata style.</p>
     <div class="cs-figure">
-      <div class="embed-live natural" data-fit data-src="openprose/canvas-display/?v=31&footer=0&nav=0&items=direction-eta-organism-homepage-kecal,direction-delta-machine-homepage-rain-infinite,direction-nu-tideline,direction-rho-blackhole-hero-physics,direction-mu-bloom" data-auto style="aspect-ratio: 15 / 8;">
+      <div class="embed-live natural" data-fit data-src="openprose/canvas-display/?v=32&footer=0&nav=0&items=direction-eta-organism-homepage-kecal,direction-delta-machine-homepage-rain-infinite,direction-nu-tideline,direction-rho-blackhole-hero-physics,direction-mu-bloom" data-auto style="aspect-ratio: 15 / 8;">
         <iframe title="The mediums, live canvas" loading="lazy" allowfullscreen allow="fullscreen"></iframe>
       </div>
       <div class="embed-bar">
         <span>Click into any card; ⛶ in its header goes fullscreen.</span>
-        <a href="openprose/canvas-display/?v=31&footer=0&nav=0&items=direction-eta-organism-homepage-kecal,direction-delta-machine-homepage-rain-infinite,direction-nu-tideline,direction-rho-blackhole-hero-physics,direction-mu-bloom" target="_blank" rel="noopener">open ↗</a>
+        <a href="openprose/canvas-display/?v=32&footer=0&nav=0&items=direction-eta-organism-homepage-kecal,direction-delta-machine-homepage-rain-infinite,direction-nu-tideline,direction-rho-blackhole-hero-physics,direction-mu-bloom" target="_blank" rel="noopener">open ↗</a>
       </div>
     </div>
     <p class="lede" style="margin-top: var(--space-xl);">The automata were alive but abstract, and thus also possible for others to generate. The search for unique texture led back to my oldest medium, <em>photography</em>, and one motif held through the search: the bloom and its ripples. I started by simply putting photographs in place of whitespace, but it became clear that I had to try combining the interactive elements with photography, something I have found myself doing as an <a href="https://www.johnhanacek.com/art.html" target="_blank" rel="noopener">artist</a>, here in its most advanced form.</p>
     <div class="cs-figure">
-      <div class="embed-live natural" data-fit data-src="openprose/canvas-display/?v=31&footer=0&nav=0&items=direction-mu-bloom-homepage-landscape,direction-mu-bloom-homepage-landscape-tufte-kecal,direction-mu-bloom-homepage-symmetry-ripple-topmask" data-auto style="aspect-ratio: 15 / 8;">
+      <div class="embed-live natural" data-fit data-src="openprose/canvas-display/?v=32&footer=0&nav=0&items=direction-mu-bloom-homepage-landscape,direction-mu-bloom-homepage-landscape-tufte-kecal,direction-mu-bloom-homepage-symmetry-ripple-topmask" data-auto style="aspect-ratio: 15 / 8;">
         <iframe title="The mu chain, live canvas" loading="lazy" allowfullscreen allow="fullscreen"></iframe>
       </div>
       <div class="embed-bar">
         <span>Exploring the bloom and grounding it.</span>
-        <a href="openprose/canvas-display/?v=31&footer=0&nav=0&items=direction-mu-bloom-homepage-landscape,direction-mu-bloom-homepage-landscape-tufte-kecal,direction-mu-bloom-homepage-symmetry-ripple-topmask" target="_blank" rel="noopener">open ↗</a>
+        <a href="openprose/canvas-display/?v=32&footer=0&nav=0&items=direction-mu-bloom-homepage-landscape,direction-mu-bloom-homepage-landscape-tufte-kecal,direction-mu-bloom-homepage-symmetry-ripple-topmask" target="_blank" rel="noopener">open ↗</a>
       </div>
     </div>
     <div class="photo-grid" aria-label="Sierra Nevada lake series, 2011">
@@ -2309,12 +2262,12 @@ system consumes it.
     <h2>Everything above settled into a <em>style</em>.</h2>
     <p class="lede">Thirty-seven approaches, five families, and a chain of heroes distill into the canonical set: the homepage concept, the permutation sheet, and the styleguide that pins the defaults, with the aspect catalog beside them showing the different aspects of this style landscape. The catalog is a way to explore alternatives and play with the best feeling. The 'canonical' style and page represent crystallizations of the possibilities into some ideal candidates.</p>
     <div class="cs-figure">
-      <div class="embed-live natural" data-fit data-src="openprose/canvas-display/?v=31&footer=0&nav=0&items=logo-collection,direction-styleguide,direction-canonical-homepage" data-auto style="aspect-ratio: 10 / 7;">
+      <div class="embed-live natural" data-fit data-src="openprose/canvas-display/?v=32&footer=0&nav=0&items=logo-collection,direction-styleguide,direction-canonical-homepage" data-auto style="aspect-ratio: 10 / 7;">
         <iframe title="The canonical set, live canvas" loading="lazy" allowfullscreen allow="fullscreen"></iframe>
       </div>
       <div class="embed-bar">
         <span>The canonical set: the logo collection, the pinned styleguide, and the homepage concept that lands it.</span>
-        <a href="openprose/canvas-display/?v=31&footer=0&nav=0&items=logo-collection,direction-styleguide,direction-canonical-homepage" target="_blank" rel="noopener">open ↗</a>
+        <a href="openprose/canvas-display/?v=32&footer=0&nav=0&items=logo-collection,direction-styleguide,direction-canonical-homepage" target="_blank" rel="noopener">open ↗</a>
       </div>
     </div>
   </div>
@@ -2354,12 +2307,12 @@ system consumes it.
       </div>
     </div>
     <div class="cs-figure">
-      <div class="embed-live natural" data-src="openprose/canvas-display/?v=31&mode=canvas&zoom=0.65" data-auto>
+      <div class="embed-live natural" data-src="openprose/canvas-display/?v=32&mode=canvas&zoom=0.65" data-auto>
         <iframe title="The JHDesign Review Canvas — display cut, live" loading="lazy" allowfullscreen allow="fullscreen"></iframe>
       </div>
       <div class="embed-bar">
         <span>The parting gift: the full canvas, unfiltered. Every un-archived brand experiment, live. Modes, comments (✎) and fullscreen in its header.</span>
-        <a href="openprose/canvas-display/?v=31" target="_blank" rel="noopener">open the canvas ↗</a>
+        <a href="openprose/canvas-display/?v=32" target="_blank" rel="noopener">open the canvas ↗</a>
       </div>
     </div>
     <footer class="page-foot">
@@ -4086,64 +4039,6 @@ system consumes it.
 
   document.querySelectorAll('.embed-live').forEach(function (el) { register(el, 'panel'); });
 
-  // ── Click-to-arm (see .embed-arm in the stylesheet) ──────────────────
-  // Panels ship inert so the wheel keeps scrolling the article across them.
-  // The button is a real <button>, so keyboard users reach it in order and
-  // Enter arms the panel the same way a click does.
-  (function armEmbeds() {
-    var armed = null;
-    function disarm() {
-      if (!armed) return;
-      armed.classList.remove('is-live');
-      armed = null;
-    }
-    function arm(panel) {
-      if (armed === panel) return;
-      disarm();
-      panel.classList.add('is-live');
-      armed = panel;
-      // Once the pointer is inside the frame its document owns the keystrokes,
-      // so the parent's Escape handler never fires. The cut is same-origin, so
-      // hand the same release into it. Wrapped: a cross-origin embed later
-      // would throw here and must not take the arming with it.
-      var f = panel.querySelector('iframe');
-      try {
-        var d = f && f.contentDocument;
-        if (d && !d.__armEsc) {
-          d.__armEsc = true;
-          d.addEventListener('keydown', function (ev) {
-            if (ev.key === 'Escape' && !panel.classList.contains('cv-overlay')) disarm();
-          });
-        }
-      } catch (e) {}
-    }
-    document.querySelectorAll('.embed-live').forEach(function (panel) {
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'embed-arm';
-      btn.innerHTML = '<span>click to explore</span>';
-      btn.setAttribute('aria-label', 'Activate this embedded canvas. Press Escape to release it.');
-      btn.addEventListener('click', function (ev) { ev.stopPropagation(); arm(panel); });
-      panel.appendChild(btn);
-    });
-    // Release: Esc, or a click anywhere that is not the armed panel.
-    document.addEventListener('keydown', function (ev) {
-      if (ev.key === 'Escape' && armed && !armed.classList.contains('cv-overlay')) disarm();
-    });
-    document.addEventListener('pointerdown', function (ev) {
-      if (armed && !armed.contains(ev.target)) disarm();
-    }, true);
-    // Release when it leaves the viewport, so an armed panel scrolled past
-    // cannot swallow the wheel again on the way back down.
-    if ('IntersectionObserver' in window) {
-      var io = new IntersectionObserver(function (entries) {
-        entries.forEach(function (en) {
-          if (!en.isIntersecting && en.target === armed) disarm();
-        });
-      }, { threshold: 0.35 });
-      document.querySelectorAll('.embed-live').forEach(function (el) { io.observe(el); });
-    }
-  })();
 
   // QA hook — inspect embed states from the console.
   window.__embedDebug = function () {
@@ -4345,9 +4240,9 @@ system consumes it.
 <!-- jhcom chrome behaviour: nav reveal + mobile toggle, the <jh-nav> component
      (jh-chrome.js also defines <jh-footer>, unused here), and the ⌘K search
      overlay. Same trio every site page loads. -->
-<script src="./scripts/shared.js?v=1.25"></script>
-<script src="./scripts/search-overlay.js?v=1.25" defer></script>
-<script src="./scripts/jh-chrome.js?v=1.25" defer></script>
+<script src="./scripts/shared.js?v=1.26"></script>
+<script src="./scripts/search-overlay.js?v=1.26" defer></script>
+<script src="./scripts/jh-chrome.js?v=1.26" defer></script>
 
 </body>
 </html>
