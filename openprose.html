@@ -57,8 +57,8 @@
      page's headings, main and typography. See styles/jh-chrome.css header.)
      Loaded BEFORE the page's own tokens so _tokens.css wins on every name they
      share; the chrome reads its own values through --jh- prefixed tokens. -->
-<link rel="stylesheet" href="./styles/jh-chrome.css?v=1.24">
-<link rel="stylesheet" href="./scripts/search-overlay.css?v=1.24">
+<link rel="stylesheet" href="./styles/jh-chrome.css?v=1.25">
+<link rel="stylesheet" href="./scripts/search-overlay.css?v=1.25">
 <!-- Only the two faces the chrome itself uses. The case study's own typography
      (IBM Plex + Kecal) is the deliverable and is left completely alone. -->
 <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -1817,31 +1817,19 @@ html[data-mode="dark"] .h2-sig { filter: invert(1); }
 
 /* ============================================================
    JHCOM CHROME
-   styles/jh-chrome.css brings the site's #nav and body > footer.
-   Only two things need reconciling with this page's own chrome.
+   styles/jh-chrome.css brings the site's #nav. The footer is NOT
+   used here: §VII already closes the page on its own colophon, and
+   a second ending underneath it read as a wrapper around the work.
+   The nav is the whole of the site's frame on this page.
 
-   1. The bar occupies the top 40px once .visible, which is exactly
-      where the scroll-progress line and the two corner pills live.
-      Sibling selectors push both clear — no :has(), no script, and
-      no cost at all while the bar is hidden.
-   2. The footer oval is glass built to float on the deep-sea pages.
-      On cream it reads as a stray blob, so the band behind it goes
-      deep-sea: nav and footer then bookend the case study in the
-      site's colour, and the paper between them is unmistakably the
-      work rather than the wrapper.
+   The bar occupies the top 40px once .visible, which is exactly
+   where the scroll-progress line and the two corner pills live.
+   Sibling selectors push both clear — no :has(), no script, and no
+   cost at all while the bar is hidden.
    ============================================================ */
 #nav.visible ~ .scroll-progress { top: calc(40px + env(safe-area-inset-top)); }
 #nav.visible ~ .brand-nav { padding-top: calc(1.5rem + 40px + env(safe-area-inset-top)); }
 .scroll-progress, .brand-nav { transition: top 0.25s ease, padding-top 0.25s ease; }
-
-body > footer {
-  background: var(--sea-deep);
-  position: relative;
-  z-index: 70;              /* above the fixed hero canvas (z:1) and main (z:2) */
-  pointer-events: auto;     /* the lake does not extend past the page */
-  padding-block: var(--jh-space-xl);
-}
-body > footer .footer-oval { backdrop-filter: none; -webkit-backdrop-filter: none; }
 
 /* The logo-sheet lightbox predates the site bar (z 1000) and would open
    underneath it. The canvas overlay is fine: it is promoted to the top
@@ -2394,11 +2382,9 @@ system consumes it.
 </section>
 </main>
 
-<!-- jhcom site footer. The page keeps its own .page-foot colophon inside §VII;
-     this is the site's, and it marks the exit back to johnhanacek.com. -->
-<footer>
-    <jh-footer></jh-footer>
-</footer>
+<!-- No <jh-footer> here on purpose: §VII already closes the page with its own
+     colophon over the bloom canvas, and the site's glass oval landing under it
+     read as a second ending. The nav is the way back to johnhanacek.com. -->
 
 <!-- Exploration-sheet overlay — outside main (pointer-events:none) on purpose -->
 <div class="expl-overlay" id="expl-overlay" role="dialog" aria-modal="true" aria-label="Exploration sheet, full size" hidden>
@@ -4356,11 +4342,12 @@ system consumes it.
 })();
 </script>
 
-<!-- jhcom chrome behaviour: nav reveal + mobile toggle, the <jh-nav>/<jh-footer>
-     components, and the ⌘K search overlay. Same trio every site page loads. -->
-<script src="./scripts/shared.js?v=1.24"></script>
-<script src="./scripts/search-overlay.js?v=1.24" defer></script>
-<script src="./scripts/jh-chrome.js?v=1.24" defer></script>
+<!-- jhcom chrome behaviour: nav reveal + mobile toggle, the <jh-nav> component
+     (jh-chrome.js also defines <jh-footer>, unused here), and the ⌘K search
+     overlay. Same trio every site page loads. -->
+<script src="./scripts/shared.js?v=1.25"></script>
+<script src="./scripts/search-overlay.js?v=1.25" defer></script>
+<script src="./scripts/jh-chrome.js?v=1.25" defer></script>
 
 </body>
 </html>

@@ -14,6 +14,10 @@ const EXPECTED_VERSION = 'v' + vMatch[1];
 const BASE = 'http://127.0.0.1:1337';
 const STANDARD = ['index.html', 'design.html', 'art.html', 'about.html', 'services.html', 'search.html', 'nanome2.html', 'openprose.html', '404.html'];
 const OTHER = ['playground.html', 'writing.html', 'tidepool.html', 'beach-beers.html', 'onagents.html', 'fish-demo/index.html'];
+// Standard pages that deliberately carry the nav but NOT <jh-footer>.
+// openprose.html closes on its own §VII colophon; the site's glass oval landing
+// under it read as a second ending. Nav + canonical are still asserted.
+const NO_FOOTER = ['openprose.html'];
 
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
 const page = await browser.newPage();
@@ -36,11 +40,14 @@ for (const p of [...STANDARD, ...OTHER]) {
 
     if (STANDARD.includes(p)) {
       report.nav = await page.$eval('jh-nav .nav-left', el => el.querySelectorAll('a').length).catch(() => 0);
-      report.footer = await page.$eval('jh-footer .footer-oval .version', el => el.textContent.trim().split('\n')[0]).catch(() => 'MISSING');
+      report.footer = NO_FOOTER.includes(p)
+        ? 'n/a (by design)'
+        : await page.$eval('jh-footer .footer-oval .version', el => el.textContent.trim().split('\n')[0]).catch(() => 'MISSING');
       report.active = await page.$$eval('jh-nav a.active', els => els.map(e => e.getAttribute('aria-label')).join(',')).catch(() => '');
       report.canonical = await page.$eval('link[rel="canonical"]', el => el.href).catch(() => null);
     }
-    const bad = status >= 400 || jsErrors.length || report.consoleErrors.length || (STANDARD.includes(p) && (report.nav < 6 || !String(report.footer).includes(EXPECTED_VERSION)));
+    const footerOk = NO_FOOTER.includes(p) || String(report.footer).includes(EXPECTED_VERSION);
+    const bad = status >= 400 || jsErrors.length || report.consoleErrors.length || (STANDARD.includes(p) && (report.nav < 6 || !footerOk));
     if (bad) failures++;
     console.log((bad ? 'FAIL ' : 'ok   ') + JSON.stringify(report));
   } catch (e) {
