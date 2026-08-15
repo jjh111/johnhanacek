@@ -18,6 +18,10 @@ function initNavigation() {
         nav.classList.add('visible');
         // Still set up mobile toggle below
     } else if (hero) {
+        // NOTE: the no-hero, no-page-header case is handled in the else below.
+        // It used to bail out entirely, which left onagents.html carrying a
+        // <jh-nav> that could never become .visible — chrome present in the
+        // markup and invisible in the browser.
         // For hero pages, show nav after scrolling past hero
         function updateNavVisibility() {
             const heroBottom = hero.offsetTop + hero.offsetHeight - 60;
@@ -32,7 +36,11 @@ function initNavigation() {
         window.addEventListener('resize', updateNavVisibility);
         updateNavVisibility();
     } else {
-        return; // No hero or page-header found
+        // Neither: the page opens straight into content (onagents.html), so
+        // there is nothing to scroll past — show the bar right away, same as
+        // a page-header page. Falling through also wires the mobile toggle,
+        // which the old early return skipped.
+        nav.classList.add('visible');
     }
 
     // Mobile navigation toggle
