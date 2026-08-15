@@ -57,8 +57,8 @@
      page's headings, main and typography. See styles/jh-chrome.css header.)
      Loaded BEFORE the page's own tokens so _tokens.css wins on every name they
      share; the chrome reads its own values through --jh- prefixed tokens. -->
-<link rel="stylesheet" href="./styles/jh-chrome.css?v=1.23">
-<link rel="stylesheet" href="./scripts/search-overlay.css?v=1.23">
+<link rel="stylesheet" href="./styles/jh-chrome.css?v=1.24">
+<link rel="stylesheet" href="./scripts/search-overlay.css?v=1.24">
 <!-- Only the two faces the chrome itself uses. The case study's own typography
      (IBM Plex + Kecal) is the deliverable and is left completely alone. -->
 <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -1273,6 +1273,60 @@ html[data-mode="dark"] .mode-toggle:focus-visible {
 }
 .embed-live iframe.ready { opacity: 1; }
 .embed-live.natural iframe { width: 100%; height: 100%; transform: none; }
+
+/* ── Scroll passes over an embed until you ask it not to ──────────────
+   The canvas cut pans and zooms on wheel. Inline, that means the page
+   stops dead wherever the cursor happens to cross a panel, which is a
+   trap rather than a feature: the reader is scrolling an article, not
+   driving a canvas. So the iframe is inert until it is clicked, exactly
+   like a map embed. One click arms it (and only then does its own ⛶
+   become reachable); Esc, a click outside, or scrolling it out of view
+   disarms it again. The viewport overlay is always armed — reaching it
+   IS the deliberate act. */
+/* Specificity note: the frosted-panel block above re-enables pointer events on
+   `.sections-frosted .embed-live iframe` (0,3,1). The inert default has to
+   match that weight or it silently never applies. */
+.sections-frosted .embed-live iframe { pointer-events: none; }
+.sections-frosted .embed-live.is-live iframe,
+.embed-live.cv-overlay iframe { pointer-events: auto; }
+
+.embed-arm {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: var(--space-sm);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  transition: background 0.2s ease;
+}
+.embed-arm span {
+  font-family: var(--type-mono);
+  font-size: var(--fs-caption, 0.72rem);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 0.3rem 0.75rem;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.embed-arm:hover span,
+.embed-arm:focus-visible span { opacity: 1; transform: none; }
+.embed-arm:focus-visible { outline: 2px solid var(--teal); outline-offset: -2px; }
+.embed-live.is-live .embed-arm { display: none; }
+@media (hover: none) and (pointer: coarse) {
+  /* No hover to reveal the pill, and a touch drag over an inert iframe
+     scrolls the page correctly already — so show the invitation outright. */
+  .embed-arm span { opacity: 1; transform: none; }
+}
 /* Canvas-embed viewport overlay — the display cut's ⛶ posts fs-toggle and a
    same-origin listener expands that panel to the viewport (no OS fullscreen,
    no permission chain). The panel is promoted via the Popover API: the TOP
@@ -4046,6 +4100,65 @@ system consumes it.
 
   document.querySelectorAll('.embed-live').forEach(function (el) { register(el, 'panel'); });
 
+  // ── Click-to-arm (see .embed-arm in the stylesheet) ──────────────────
+  // Panels ship inert so the wheel keeps scrolling the article across them.
+  // The button is a real <button>, so keyboard users reach it in order and
+  // Enter arms the panel the same way a click does.
+  (function armEmbeds() {
+    var armed = null;
+    function disarm() {
+      if (!armed) return;
+      armed.classList.remove('is-live');
+      armed = null;
+    }
+    function arm(panel) {
+      if (armed === panel) return;
+      disarm();
+      panel.classList.add('is-live');
+      armed = panel;
+      // Once the pointer is inside the frame its document owns the keystrokes,
+      // so the parent's Escape handler never fires. The cut is same-origin, so
+      // hand the same release into it. Wrapped: a cross-origin embed later
+      // would throw here and must not take the arming with it.
+      var f = panel.querySelector('iframe');
+      try {
+        var d = f && f.contentDocument;
+        if (d && !d.__armEsc) {
+          d.__armEsc = true;
+          d.addEventListener('keydown', function (ev) {
+            if (ev.key === 'Escape' && !panel.classList.contains('cv-overlay')) disarm();
+          });
+        }
+      } catch (e) {}
+    }
+    document.querySelectorAll('.embed-live').forEach(function (panel) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'embed-arm';
+      btn.innerHTML = '<span>click to explore</span>';
+      btn.setAttribute('aria-label', 'Activate this embedded canvas. Press Escape to release it.');
+      btn.addEventListener('click', function (ev) { ev.stopPropagation(); arm(panel); });
+      panel.appendChild(btn);
+    });
+    // Release: Esc, or a click anywhere that is not the armed panel.
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape' && armed && !armed.classList.contains('cv-overlay')) disarm();
+    });
+    document.addEventListener('pointerdown', function (ev) {
+      if (armed && !armed.contains(ev.target)) disarm();
+    }, true);
+    // Release when it leaves the viewport, so an armed panel scrolled past
+    // cannot swallow the wheel again on the way back down.
+    if ('IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          if (!en.isIntersecting && en.target === armed) disarm();
+        });
+      }, { threshold: 0.35 });
+      document.querySelectorAll('.embed-live').forEach(function (el) { io.observe(el); });
+    }
+  })();
+
   // QA hook — inspect embed states from the console.
   window.__embedDebug = function () {
     return embeds.map(function (e) {
@@ -4245,9 +4358,9 @@ system consumes it.
 
 <!-- jhcom chrome behaviour: nav reveal + mobile toggle, the <jh-nav>/<jh-footer>
      components, and the ⌘K search overlay. Same trio every site page loads. -->
-<script src="./scripts/shared.js?v=1.23"></script>
-<script src="./scripts/search-overlay.js?v=1.23" defer></script>
-<script src="./scripts/jh-chrome.js?v=1.23" defer></script>
+<script src="./scripts/shared.js?v=1.24"></script>
+<script src="./scripts/search-overlay.js?v=1.24" defer></script>
+<script src="./scripts/jh-chrome.js?v=1.24" defer></script>
 
 </body>
 </html>
