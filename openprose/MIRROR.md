@@ -71,6 +71,8 @@ OpenProse is a way to *author outcomes*. The approach is to contract the LLM rat
 
 (gap: sm) The trace track is still confidential. This page is the brand and web-craft journey.
 
+Upfront please understand that the exact copy for most of this work is intentionally left as LLM-ese; it stands in for lorem ipsum as a placeholder with a twist.
+
 RIGHT (code block):
 
 ```
@@ -215,7 +217,7 @@ lede (gap: xl): The top of the ratings shared a look: warm serif editorial. By 2
 lede (gap: sm): Turning to legibility and tradition, I explored monospace families. However, the appearance can become monotonous. Then at just the right moment of scrolling TwXtter I see [Kecal](https://github.com/FungiType/Kecal) for the accents. Kecal is an open typeface (OFL) by FungiType: Rodrigo Fuenzalida, Jordan Egstad, and Jiří Krblich. Used with thanks.
 Monotypes and Kecal became a way to rise above the noise and contribute to *legibility*: clearly readable, quietly esoteric, a face no generator reaches for.
 [EMBED · the type studies]
-items: direction-delta-machine, direction-delta-machine-kecal, direction-theta-living-document-concept, direction-gamma-manuscript-concept-kecal, direction-beta-tufte-mono-kecal-styleguide-teal, direction-eta-organism-mono-kecal, typography-pairings, direction-experiments
+items: direction-delta-machine, direction-delta-machine-kecal, direction-theta-living-document-concept, direction-gamma-manuscript-concept-kecal, direction-eta-organism-mono-kecal, direction-beta-tufte-mono-kecal-styleguide-teal, typography-pairings, direction-experiments
 sort: sequence
 cols: auto
 ratings: off
@@ -259,7 +261,7 @@ lede: Aiming to become more interactive: a surface that responds.
 (gap: sm) A fun idea, but ultimately just a moment of creative madness that helped me transition back into refining the cellular automata style.
 
 [EMBED · the mediums]
-items: direction-eta-organism-homepage-kecal, direction-delta-machine-homepage-rain-infinite, direction-nu-tideline, direction-rho-blackhole-hero-physics, direction-mu-bloom
+items: direction-eta-organism-homepage-kecal, direction-delta-machine-homepage-rain-infinite, direction-nu-tideline, direction-rho-blackhole-hero-physics, direction-rho-blackhole-hero-threejs, direction-mu-bloom
 sort: sequence
 cols: auto
 ratings: off
@@ -270,7 +272,7 @@ caption: Click into any card; ⛶ in its header goes fullscreen.
 lede (gap: xl): The automata were alive but abstract, and thus also possible for others to generate. The search for unique texture led back to my oldest medium, *photography*, and one motif held through the search: the bloom and its ripples. I started by simply putting photographs in place of whitespace, but it became clear that I had to try combining the interactive elements with photography, something I have found myself doing as an [artist](https://www.johnhanacek.com/art.html), here in its most advanced form.
 
 [EMBED · the mu chain]
-items: direction-mu-bloom-homepage-landscape, direction-mu-bloom-homepage-landscape-tufte-kecal, direction-mu-bloom-homepage-symmetry-ripple-topmask
+items: direction-beta-tufte-mono-homepage-kecal, direction-mu-bloom-homepage-landscape-tufte-kecal, direction-mu-bloom-homepage-symmetry-ripple-topmask
 sort: sequence
 cols: auto
 ratings: off
@@ -312,7 +314,9 @@ lede (gap: lg): I wanted to make something that would stand out from the increas
 kicker: VI The Distillation
 h2: Everything above settled into a *style*.
 
-lede: Thirty-seven approaches, five families, and a chain of heroes distill into the canonical set: the homepage concept, the permutation sheet, and the styleguide that pins the defaults, with the aspect catalog beside them showing the different aspects of this style landscape. The catalog is a way to explore alternatives and play with the best feeling. The 'canonical' style and page represent crystallizations of the possibilities into some ideal candidates.
+lede: Thirty-seven approaches, five families, and a chain of heroes distill into the canonical set: the homepage concept, the permutation sheet, and the styleguide that pins the defaults, with the aspect catalog beside them showing the different aspects of this style landscape. 
+
+The catalog is a way to explore alternatives and play with the best feeling. The 'canonical' style and page represent crystallizations of the possibilities into some ideal candidates.
 
 [EMBED · the canonical set]
 items: logo-collection, direction-styleguide, direction-canonical-homepage
@@ -330,7 +334,7 @@ h2: Initial work. *Whole* craft. [JH signature]
 
 lede: Branding, design, engineering, and tooling in one engagement. Founding design where agentic tools meet the handcrafted.
 
-counts: **471** commits · **130** total pages · **6** finalist styleguide pages · **5** logos · **1** homepage concept
+counts: **471** commits · **130** total pages · **6** permutation styleguide pages · **5** logos · **1** distillation
 
 ```  (gap: lg above, flush below)
 $ npx skills add openprose/prose
@@ -339,7 +343,8 @@ $ npx skills add openprose/prose
 button (gap: sm): OpenProse ↗ (prose.md)
 
 [EMBED · the full canvas]
-items: full set (all 36, oldest first — the blob is written in creation order)
+items: full set (all 35, oldest first — the blob is written in creation order;
+       direction-zeta-saas-concept-kecal pulled by hand from items.js)
 sort: sequence
 cols: auto
 ratings: off
