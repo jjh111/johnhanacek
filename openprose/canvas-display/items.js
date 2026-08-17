@@ -14,6 +14,26 @@ window.CANVAS_ITEMS = [
   "created": "2026-04-10T10:26:09-07:00"
  },
  {
+  "file": "brand/approach-d-v2.html",
+  "name": "approach-d-v2",
+  "desc": "Illuminated Manuscript v2",
+  "stars": {
+   "Dan": 1,
+   "JH": 4
+  },
+  "created": "2026-04-10T10:26:09-07:00"
+ },
+ {
+  "file": "brand/approach-c-v2.html",
+  "name": "approach-c-v2",
+  "desc": "Bold High Contrast v2",
+  "stars": {
+   "Dan": 1,
+   "JH": 3
+  },
+  "created": "2026-04-10T12:14:57-07:00"
+ },
+ {
   "file": "brand/approach-d2-gothic-humanist.html",
   "name": "approach-d2-gothic-humanist",
   "desc": "Gothic Humanist Hybrid",
@@ -41,6 +61,15 @@ window.CANVAS_ITEMS = [
    "Dan": 4
   },
   "created": "2026-04-14T07:47:15-07:00"
+ },
+ {
+  "file": "brand/approach-e-v3-translucent.html",
+  "name": "approach-e-v3-translucent",
+  "desc": "iMac Aqua v3 · Translucent Serif 2030",
+  "stars": {
+   "Dan": 1
+  },
+  "created": "2026-04-14T10:11:35-07:00"
  },
  {
   "file": "brand/approach-j-tufte-v2.html",

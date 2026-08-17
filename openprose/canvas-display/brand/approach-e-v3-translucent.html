@@ -1,0 +1,1578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 142 142'%3E%3Cpath d='M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z' fill='%232a2520'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenProse — Declarative .prose Language for Multi-Agent AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+  /* ============================================
+     APPROACH E-V3: Translucent Plastic
+     iMac G3 meets 1984 meets 2030
+     Thick frosted translucent panels, serif +
+     Helvetica Neue block lettering, immersive
+     fullscreen snap-scrolling, strange attractor
+     butterflies + aqua frosted glass
+     ============================================ */
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    /* -- Aqua Palette -- */
+    --aqua:           #00bfff;
+    --aqua-light:     #4dd9ff;
+    --aqua-deep:      #0099cc;
+    --aqua-dark:      #007aa3;
+    --aqua-pale:      #e0f7ff;
+    --aqua-wash:      #f0fbff;
+    --orange:         #ff6600;
+    --orange-light:   #ff8800;
+
+    /* -- Translucent Plastic Material System (enhanced frost) -- */
+    --plastic-white:           rgba(255, 255, 255, 0.42);
+    --plastic-white-thick:     rgba(255, 255, 255, 0.52);
+    --plastic-white-thin:      rgba(255, 255, 255, 0.28);
+    --plastic-aqua:            rgba(0, 191, 255, 0.08);
+    --plastic-aqua-tint:       rgba(0, 191, 255, 0.12);
+    --plastic-aqua-frost:      rgba(0, 153, 204, 0.06);
+    --plastic-edge:            rgba(0, 153, 204, 0.22);
+    --plastic-edge-strong:     rgba(0, 153, 204, 0.35);
+    --plastic-shine:           rgba(255, 255, 255, 0.55);
+    --plastic-inner-glow:      rgba(0, 191, 255, 0.15);
+    --plastic-depth:           rgba(0, 40, 60, 0.04);
+
+    /* -- Frosted Glass (new) -- */
+    --frost-blur:              32px;
+    --frost-saturate:          200%;
+    --frost-bg:                rgba(255, 255, 255, 0.25);
+    --frost-bg-thick:          rgba(255, 255, 255, 0.38);
+    --frost-bg-aqua:           rgba(0, 191, 255, 0.08);
+    --frost-border:            rgba(255, 255, 255, 0.35);
+    --frost-border-aqua:       rgba(0, 191, 255, 0.18);
+
+    /* -- Shadows -- */
+    --shadow-plastic:    0 8px 40px rgba(0, 140, 200, 0.12),
+                         0 2px 8px rgba(0, 0, 0, 0.05),
+                         inset 0 1px 0 var(--plastic-shine);
+    --shadow-deep:       0 16px 64px rgba(0, 140, 200, 0.15),
+                         0 4px 16px rgba(0, 0, 0, 0.06),
+                         inset 0 1px 0 var(--plastic-shine);
+    --shadow-gel:        0 4px 16px rgba(0, 140, 200, 0.30),
+                         0 1px 3px rgba(0, 0, 0, 0.10),
+                         inset 0 1px 0 rgba(255, 255, 255, 0.45);
+    --shadow-frost:      0 8px 32px rgba(0, 140, 200, 0.10),
+                         0 0 0 1px rgba(255, 255, 255, 0.15);
+
+    /* -- Text -- */
+    --text-dark:    #1a3040;
+    --text-mid:     #3a6070;
+    --text-light:   #6a97a8;
+    --white:        #ffffff;
+
+    /* -- Layout -- */
+    --radius:       18px;
+    --radius-sm:    12px;
+    --radius-pill:  100px;
+
+    /* -- Fonts -- */
+    --font-serif:   'Playfair Display', Georgia, 'Times New Roman', serif;
+    --font-swiss:   -apple-system, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    --font-mono:    'SF Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
+  }
+
+  html {
+    font-size: 16px;
+    scroll-behavior: smooth;
+    scroll-snap-type: y mandatory;
+  }
+
+  body {
+    background: var(--aqua-wash);
+    color: var(--text-dark);
+    font-family: var(--font-swiss);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+    min-height: 100vh;
+    position: relative;
+  }
+
+  /* ---- STRANGE ATTRACTOR CANVAS ---- */
+  #attractor-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* ---- FROSTED GLASS AMBIENT LAYER ---- */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background:
+      radial-gradient(ellipse 80% 60% at 25% 20%, rgba(0, 191, 255, 0.06) 0%, transparent 70%),
+      radial-gradient(ellipse 60% 50% at 75% 70%, rgba(255, 102, 0, 0.04) 0%, transparent 70%),
+      radial-gradient(ellipse 90% 80% at 50% 50%, rgba(0, 191, 255, 0.03) 0%, transparent 80%);
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* ---- NAV (floating translucent bar) ---- */
+  nav {
+    position: fixed;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    background: var(--frost-bg-thick);
+    backdrop-filter: blur(var(--frost-blur)) saturate(var(--frost-saturate));
+    -webkit-backdrop-filter: blur(var(--frost-blur)) saturate(var(--frost-saturate));
+    border: 1.5px solid var(--frost-border);
+    border-radius: var(--radius-pill);
+    padding: 0 0.5rem;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.25rem;
+    box-shadow: var(--shadow-frost), inset 0 1px 0 rgba(255,255,255,0.5);
+    max-width: 720px;
+    width: calc(100% - 2rem);
+  }
+
+  /* Specular highlight on nav */
+  nav::before {
+    content: '';
+    position: absolute;
+    top: 1px;
+    left: 15%;
+    right: 15%;
+    height: 45%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0.0));
+    border-radius: var(--radius-pill);
+    pointer-events: none;
+  }
+
+  .nav-logo {
+    font-family: var(--font-swiss);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-dark);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-left: 1rem;
+    white-space: nowrap;
+  }
+
+  .nav-logo .glyph {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    background: linear-gradient(135deg, var(--aqua-light), var(--aqua-deep));
+    border-radius: 50%;
+    color: var(--white);
+    font-size: 0.7rem;
+    box-shadow: 0 2px 8px rgba(0,191,255,0.3), inset 0 1px 0 rgba(255,255,255,0.3);
+  }
+
+  .nav-links {
+    list-style: none;
+    display: flex;
+    gap: 0.15rem;
+    align-items: center;
+  }
+
+  .nav-links a {
+    font-family: var(--font-swiss);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-mid);
+    text-decoration: none;
+    padding: 0.4rem 0.7rem;
+    border-radius: var(--radius-pill);
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .nav-links a:hover {
+    color: var(--aqua-deep);
+    background: rgba(0,191,255,0.08);
+  }
+
+  .nav-cta {
+    background: linear-gradient(180deg, #4dd9ff 0%, #00a8e6 50%, #0088cc 100%) !important;
+    color: var(--white) !important;
+    padding: 0.45rem 1rem !important;
+    font-weight: 700 !important;
+    border: 1px solid rgba(0,120,180,0.4) !important;
+    position: relative;
+    overflow: hidden;
+    text-shadow: 0 -1px 0 rgba(0,60,100,0.3);
+    box-shadow: var(--shadow-gel);
+  }
+
+  .nav-cta::after {
+    content: '';
+    position: absolute;
+    top: 1px;
+    left: 12%;
+    right: 12%;
+    height: 45%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.5), rgba(255,255,255,0.0));
+    border-radius: var(--radius-pill);
+    pointer-events: none;
+  }
+
+  /* ---- FULLSCREEN SNAP SECTIONS ---- */
+  .snap-section {
+    min-height: 100vh;
+    scroll-snap-align: start;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+    padding: 5rem 2rem;
+    overflow: hidden;
+  }
+
+  .snap-section .inner {
+    max-width: 1080px;
+    width: 100%;
+    position: relative;
+  }
+
+  /* ---- TRANSLUCENT PLASTIC PANEL (frosted glass enhanced) ---- */
+  .plastic-panel {
+    background: var(--frost-bg);
+    backdrop-filter: blur(var(--frost-blur)) saturate(var(--frost-saturate));
+    -webkit-backdrop-filter: blur(var(--frost-blur)) saturate(var(--frost-saturate));
+    border: 1.5px solid var(--frost-border);
+    border-radius: var(--radius);
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-deep), inset 0 0 60px rgba(255,255,255,0.05);
+  }
+
+  /* Inner frost ring */
+  .plastic-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: calc(var(--radius) - 2px);
+    border: 1px solid rgba(255,255,255,0.3);
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  /* Top specular highlight (light reflecting off glass) */
+  .plastic-panel::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(180deg,
+      rgba(255,255,255,0.30) 0%,
+      rgba(255,255,255,0.06) 40%,
+      transparent 100%
+    );
+    border-radius: calc(var(--radius) - 2px) calc(var(--radius) - 2px) 0 0;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  /* Variant: thicker / more opaque frost */
+  .plastic-panel--thick {
+    background: var(--frost-bg-thick);
+    border-color: rgba(255,255,255,0.45);
+  }
+
+  /* Variant: thinner / more translucent */
+  .plastic-panel--thin {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255,255,255,0.25);
+  }
+
+  /* Variant: aqua tinted frost */
+  .plastic-panel--aqua {
+    background: rgba(0, 191, 255, 0.08);
+    border-color: var(--frost-border-aqua);
+  }
+
+  .plastic-panel--aqua::after {
+    background: linear-gradient(180deg,
+      rgba(255,255,255,0.20) 0%,
+      rgba(0,191,255,0.03) 40%,
+      transparent 100%
+    );
+  }
+
+  /* ---- TYPOGRAPHY ---- */
+  .kicker {
+    font-family: var(--font-swiss);
+    font-size: clamp(0.65rem, 1.2vw, 0.75rem);
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--aqua-deep);
+    display: inline-block;
+    margin-bottom: 1.25rem;
+  }
+
+  h1 {
+    font-family: var(--font-serif);
+    font-size: clamp(3rem, 8vw, 5.5rem);
+    font-weight: 900;
+    line-height: 1.0;
+    letter-spacing: -0.02em;
+    color: var(--text-dark);
+  }
+
+  h1 .accent { color: var(--orange); }
+  h1 .aqua { color: var(--aqua-deep); }
+  h1 em {
+    font-style: italic;
+    color: var(--text-light);
+    font-weight: 400;
+  }
+
+  h2 {
+    font-family: var(--font-serif);
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 900;
+    line-height: 1.08;
+    letter-spacing: -0.015em;
+    color: var(--text-dark);
+  }
+
+  h2 .aqua { color: var(--aqua-deep); }
+  h2 .ghost { color: var(--text-light); font-weight: 400; }
+
+  h3 {
+    font-family: var(--font-serif);
+    font-size: clamp(1.2rem, 2.5vw, 1.6rem);
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--text-dark);
+  }
+
+  .body-text {
+    font-family: var(--font-swiss);
+    font-size: clamp(0.95rem, 1.5vw, 1.1rem);
+    line-height: 1.75;
+    color: var(--text-mid);
+    max-width: 560px;
+  }
+
+  .label {
+    font-family: var(--font-swiss);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-light);
+  }
+
+  /* ---- GEL BUTTONS ---- */
+  .btn-gel {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-swiss);
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-decoration: none;
+    padding: 0.9rem 2.2rem;
+    border-radius: var(--radius-pill);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    cursor: pointer;
+    border: none;
+  }
+
+  /* Specular highlight on all gel buttons */
+  .btn-gel::before {
+    content: '';
+    position: absolute;
+    top: 1px;
+    left: 12%;
+    right: 12%;
+    height: 45%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,255,255,0.0));
+    border-radius: var(--radius-pill);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .btn-gel--primary {
+    background: linear-gradient(180deg, #4dd9ff 0%, #00a8e6 45%, #0088cc 100%);
+    color: var(--white);
+    border: 2px solid rgba(0,120,180,0.5);
+    text-shadow: 0 -1px 0 rgba(0,60,100,0.3);
+    box-shadow: var(--shadow-gel);
+  }
+
+  .btn-gel--primary:hover {
+    background: linear-gradient(180deg, #66e0ff 0%, #00b8f0 45%, #009ddd 100%);
+    box-shadow: 0 6px 24px rgba(0,140,200,0.35),
+                0 2px 6px rgba(0,0,0,0.10),
+                inset 0 1px 0 rgba(255,255,255,0.5);
+    transform: translateY(-2px);
+  }
+
+  .btn-gel--ghost {
+    background: var(--frost-bg);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    color: var(--text-mid);
+    border: 1.5px solid var(--frost-border);
+    box-shadow: var(--shadow-frost);
+  }
+
+  .btn-gel--ghost:hover {
+    border-color: var(--aqua);
+    color: var(--aqua-deep);
+    background: rgba(255,255,255,0.35);
+    box-shadow: 0 6px 24px rgba(0,140,200,0.15),
+                inset 0 1px 0 rgba(255,255,255,0.5);
+    transform: translateY(-2px);
+  }
+
+  .btn-gel--orange {
+    background: linear-gradient(180deg, #ff8800 0%, #ff6600 50%, #e85500 100%);
+    color: var(--white);
+    border: 2px solid rgba(180,70,0,0.5);
+    text-shadow: 0 -1px 0 rgba(100,30,0,0.3);
+    box-shadow: 0 4px 16px rgba(255,102,0,0.30),
+                0 1px 3px rgba(0,0,0,0.10),
+                inset 0 1px 0 rgba(255,255,255,0.35);
+  }
+
+  .btn-gel--orange:hover {
+    background: linear-gradient(180deg, #ff9922 0%, #ff7711 50%, #f06600 100%);
+    box-shadow: 0 6px 24px rgba(255,102,0,0.35),
+                inset 0 1px 0 rgba(255,255,255,0.4);
+    transform: translateY(-2px);
+  }
+
+  /* ---- SOCIAL PROOF BAR ---- */
+  .proof-bar {
+    display: flex;
+    gap: 1px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    border: 1.5px solid var(--frost-border);
+    box-shadow: var(--shadow-frost);
+    background: var(--frost-bg);
+    backdrop-filter: blur(var(--frost-blur)) saturate(var(--frost-saturate));
+    -webkit-backdrop-filter: blur(var(--frost-blur)) saturate(var(--frost-saturate));
+  }
+
+  .proof-bar::before {
+    display: none;
+  }
+
+  .proof-cell {
+    flex: 1;
+    padding: 1.2rem 1rem;
+    text-align: center;
+    background: rgba(255,255,255,0.1);
+    position: relative;
+  }
+
+  .proof-cell + .proof-cell {
+    border-left: 1px solid rgba(255,255,255,0.25);
+  }
+
+  .proof-cell .val {
+    display: block;
+    font-family: var(--font-swiss);
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--aqua-deep);
+    letter-spacing: -0.03em;
+    line-height: 1;
+    margin-bottom: 0.35rem;
+  }
+
+  .proof-cell .lbl {
+    display: block;
+    font-family: var(--font-swiss);
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-light);
+  }
+
+  /* ---- CODE BLOCK (frosted dark glass) ---- */
+  .code-panel {
+    background: rgba(10, 25, 40, 0.75);
+    backdrop-filter: blur(var(--frost-blur)) saturate(150%);
+    -webkit-backdrop-filter: blur(var(--frost-blur)) saturate(150%);
+    border: 1.5px solid rgba(0,191,255,0.15);
+    border-radius: var(--radius-sm);
+    padding: 0;
+    overflow: hidden;
+    box-shadow: 0 12px 48px rgba(0,0,0,0.15),
+                0 0 0 1px rgba(0,191,255,0.05),
+                inset 0 1px 0 rgba(255,255,255,0.05);
+    position: relative;
+  }
+
+  .code-panel::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 40%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.04), transparent);
+    pointer-events: none;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  }
+
+  .code-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1rem;
+    border-bottom: 1px solid rgba(0,191,255,0.12);
+    background: rgba(0,0,0,0.2);
+  }
+
+  .code-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .code-dot--red    { background: #ff5f57; }
+  .code-dot--yellow { background: #febc2e; }
+  .code-dot--green  { background: #28c840; }
+
+  .code-header span:last-child {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: rgba(255,255,255,0.35);
+    margin-left: auto;
+    letter-spacing: 0.04em;
+  }
+
+  .code-body {
+    padding: 1.25rem 1.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    line-height: 1.8;
+    color: rgba(255,255,255,0.75);
+    overflow-x: auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  .code-body .kw   { color: #ff79c6; }
+  .code-body .str  { color: #50fa7b; }
+  .code-body .prop { color: #8be9fd; }
+  .code-body .val  { color: #f1fa8c; }
+  .code-body .cmt  { color: rgba(255,255,255,0.3); font-style: italic; }
+
+  /* ---- LAYER CARDS (overlapping translucent panels) ---- */
+  .layer-stack {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    position: relative;
+  }
+
+  .layer-card {
+    padding: 2.5rem 2rem;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .layer-card .layer-number {
+    font-family: var(--font-serif);
+    font-size: 3.5rem;
+    font-weight: 900;
+    line-height: 1;
+    color: var(--aqua);
+    opacity: 0.2;
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+  }
+
+  .layer-card .layer-label {
+    font-family: var(--font-swiss);
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--aqua-deep);
+    padding: 0.3rem 0.8rem;
+    background: rgba(0,191,255,0.1);
+    border: 1px solid rgba(0,191,255,0.2);
+    border-radius: var(--radius-pill);
+    display: inline-block;
+    width: fit-content;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .layer-card h3 {
+    margin-top: 0.5rem;
+    position: relative;
+    z-index: 3;
+  }
+
+  .layer-card p {
+    font-family: var(--font-swiss);
+    font-size: 0.88rem;
+    color: var(--text-mid);
+    line-height: 1.7;
+    position: relative;
+    z-index: 3;
+  }
+
+  /* ---- STEP CARDS ---- */
+  .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+
+  .step-card {
+    padding: 2rem 1.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .step-num {
+    font-family: var(--font-serif);
+    font-size: 2.5rem;
+    font-weight: 900;
+    color: var(--aqua);
+    line-height: 1;
+    opacity: 0.35;
+  }
+
+  .step-card h3 {
+    position: relative;
+    z-index: 3;
+  }
+
+  .step-card p {
+    font-family: var(--font-swiss);
+    font-size: 0.85rem;
+    line-height: 1.7;
+    color: var(--text-mid);
+    position: relative;
+    z-index: 3;
+  }
+
+  /* ---- DECORATIVE DEPTH LAYERS (visible "inner structure") ---- */
+  .depth-layer {
+    position: absolute;
+    border-radius: var(--radius);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .depth-layer--1 {
+    background: rgba(0,191,255,0.04);
+    border: 1px solid rgba(0,191,255,0.08);
+  }
+
+  .depth-layer--2 {
+    background: rgba(0,191,255,0.02);
+    border: 1px dashed rgba(0,191,255,0.06);
+  }
+
+  /* ---- SECTION-SPECIFIC ---- */
+
+  /* Hero */
+  .hero-section {
+    background: linear-gradient(180deg,
+      rgba(240, 251, 255, 0.6) 0%,
+      rgba(224,247,255,0.3) 100%
+    );
+  }
+
+  .hero-content {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    position: relative;
+    z-index: 2;
+  }
+
+  .hero-panel {
+    padding: clamp(3rem, 6vw, 5rem) clamp(2rem, 5vw, 4rem);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .hero-panel h1 {
+    margin-bottom: 0.5rem;
+  }
+
+  .hero-sub {
+    font-family: var(--font-swiss);
+    font-size: clamp(1rem, 1.8vw, 1.2rem);
+    line-height: 1.7;
+    color: var(--text-mid);
+    max-width: 520px;
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 0.5rem;
+  }
+
+  /* "What is" section */
+  .what-section {
+    background: linear-gradient(180deg,
+      rgba(224,247,255,0.2) 0%,
+      rgba(240,251,255,0.4) 100%
+    );
+  }
+
+  .what-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    align-items: start;
+  }
+
+  .what-text {
+    padding: 3rem 2.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .what-code {
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .what-code .code-panel {
+    border-radius: 0;
+    border: none;
+    flex: 1;
+  }
+
+  .what-code .code-header {
+    border-radius: 0;
+  }
+
+  /* Layers section */
+  .layers-section {
+    background: linear-gradient(180deg,
+      rgba(240,251,255,0.4) 0%,
+      rgba(224,247,255,0.2) 100%
+    );
+  }
+
+  .layers-header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+
+  /* How it works */
+  .how-section {
+    background: linear-gradient(180deg,
+      rgba(224,247,255,0.2) 0%,
+      rgba(240,251,255,0.4) 100%
+    );
+  }
+
+  .how-header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+
+  /* CTA section */
+  .cta-section {
+    background: linear-gradient(180deg,
+      rgba(240,251,255,0.3) 0%,
+      rgba(0,191,255,0.04) 50%,
+      rgba(240,251,255,0.3) 100%
+    );
+  }
+
+  .cta-content {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+  }
+
+  .cta-panel {
+    padding: clamp(3rem, 6vw, 5rem) clamp(2rem, 5vw, 4rem);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    max-width: 700px;
+    width: 100%;
+  }
+
+  .cta-panel h2 {
+    text-align: center;
+  }
+
+  .cta-panel .body-text {
+    text-align: center;
+    max-width: 460px;
+  }
+
+  .cta-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 0.5rem;
+  }
+
+  .cta-footnote {
+    font-family: var(--font-swiss);
+    font-size: 0.75rem;
+    color: var(--text-light);
+    margin-top: 0.5rem;
+  }
+
+  /* ---- INNER GLOW DECORATION ---- */
+  .inner-glow {
+    position: absolute;
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--plastic-inner-glow), transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ---- FLOATING BADGE ---- */
+  .floating-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: var(--font-swiss);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--aqua-deep);
+    background: var(--frost-bg);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1.5px solid var(--frost-border);
+    border-radius: var(--radius-pill);
+    padding: 0.4rem 1rem;
+    box-shadow: var(--shadow-frost);
+  }
+
+  .floating-badge::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background: var(--aqua);
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(0,191,255,0.5);
+  }
+
+  /* ---- RESPONSIVE ---- */
+  @media (max-width: 900px) {
+    .what-grid {
+      grid-template-columns: 1fr;
+    }
+    .layer-stack {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+    .steps-grid {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+  }
+
+  @media (max-width: 640px) {
+    html {
+      scroll-snap-type: y proximity;
+    }
+    .snap-section {
+      min-height: auto;
+      padding: 4rem 1.25rem;
+    }
+    nav {
+      top: 0.5rem;
+      height: 48px;
+      padding: 0 0.3rem;
+    }
+    .nav-links a:not(.nav-cta) {
+      display: none;
+    }
+    .nav-logo {
+      padding-left: 0.6rem;
+    }
+    h1 { font-size: 2.5rem; }
+    .hero-panel,
+    .what-text,
+    .cta-panel {
+      padding: 2rem 1.5rem;
+    }
+    .what-grid {
+      grid-template-columns: 1fr;
+    }
+    .proof-bar {
+      flex-wrap: wrap;
+    }
+    .proof-cell {
+      flex-basis: calc(50% - 1px);
+    }
+    .hero-actions,
+    .cta-actions {
+      flex-direction: column;
+      align-items: center;
+    }
+    .btn-gel {
+      width: 100%;
+      max-width: 280px;
+      justify-content: center;
+    }
+  }
+
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+
+}
+</style>
+</head>
+<body>
+
+<!-- Strange attractor butterflies canvas -->
+<canvas id="attractor-canvas"></canvas>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <span class="glyph">&#x2B21;</span>
+    OpenProse
+  </div>
+  <ul class="nav-links">
+    <li><a href="#what">Language</a></li>
+    <li><a href="#layers">Layers</a></li>
+    <li><a href="#how">How</a></li>
+    <li><a href="#cta" class="nav-cta">Book a Demo</a></li>
+  </ul>
+</nav>
+
+<!-- ================================
+     SECTION 1: HERO
+     ================================ -->
+<section class="snap-section hero-section" id="hero">
+  <div class="inner">
+    <div class="hero-content">
+
+      <div class="plastic-panel hero-panel" style="position: relative;">
+        <!-- Inner glow decorations -->
+        <div class="inner-glow" style="top: -60px; right: -40px; opacity: 0.5;"></div>
+        <div class="inner-glow" style="bottom: -40px; left: -30px; opacity: 0.3; width: 150px; height: 150px;"></div>
+
+        <span class="kicker">Declarative Agent Infrastructure</span>
+
+        <h1>
+          Here's to the<br>
+          <span class="aqua">crazy workflows.</span>
+        </h1>
+
+        <p class="hero-sub">
+          OpenProse is a declarative <code style="font-family: var(--font-mono); background: rgba(0,191,255,0.08); padding: 0.15em 0.4em; border-radius: 4px; font-size: 0.9em;">.prose</code>
+          language for multi-agent AI. Describe the outcome. Set the contract. Let it run.
+        </p>
+
+        <div class="hero-actions">
+          <a href="#cta" class="btn-gel btn-gel--primary">Book a Demo</a>
+          <a href="https://github.com/openprose" class="btn-gel btn-gel--ghost">View on GitHub &rarr;</a>
+        </div>
+      </div>
+
+      <!-- Social proof bar -->
+      <div class="proof-bar" style="max-width: 560px; width: 100%;">
+        <div class="proof-cell">
+          <span class="val">YC</span>
+          <span class="lbl">Backed</span>
+        </div>
+        <div class="proof-cell">
+          <span class="val">6K</span>
+          <span class="lbl">Installs</span>
+        </div>
+        <div class="proof-cell">
+          <span class="val">1K</span>
+          <span class="lbl">GitHub Stars</span>
+        </div>
+        <div class="proof-cell">
+          <span class="val">MIT</span>
+          <span class="lbl">License</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ================================
+     SECTION 2: WHAT IS OPENPROSE
+     ================================ -->
+<section class="snap-section what-section" id="what">
+  <div class="inner">
+    <div class="plastic-panel what-grid" style="overflow: hidden;">
+
+      <!-- Left: Text -->
+      <div class="what-text">
+        <span class="kicker">The Language</span>
+
+        <h2>
+          <span class="aqua">Responsibilities</span><br>
+          <span class="ghost">as code.</span>
+        </h2>
+
+        <p class="body-text">
+          You have responsibilities you want to offload. Today your options are: hire someone, or buy a tool and learn to use it. Both cost you attention.
+        </p>
+        <p class="body-text">
+          OpenProse is a third option. Write <code style="font-family: var(--font-mono); background: rgba(0,191,255,0.1); padding: 0.1em 0.35em; border-radius: 4px; font-size: 0.9em;">.prose</code>
+          files that describe what needs to happen, what good looks like, what the guardrails are. The runtime handles the rest.
+        </p>
+        <p class="body-text" style="font-size: 0.85rem; color: var(--text-light);">
+          Declarative. Like SQL. Like Terraform. Like React.<br>
+          <strong style="color: var(--text-dark);">"What" not "how."</strong>
+        </p>
+      </div>
+
+      <!-- Right: Code card visible through frost -->
+      <div class="what-code">
+        <div class="code-panel" style="border-radius: 0; margin: 0;">
+          <div class="code-header">
+            <span class="code-dot code-dot--red"></span>
+            <span class="code-dot code-dot--yellow"></span>
+            <span class="code-dot code-dot--green"></span>
+            <span>weekly-report.prose</span>
+          </div>
+          <div class="code-body">
+<span class="cmt"># A responsibility, not a prompt</span>
+
+<span class="kw">responsibility</span> <span class="str">"Weekly Revenue Report"</span> {
+
+  <span class="prop">schedule</span>: <span class="val">"every Monday 8am"</span>
+  <span class="prop">data</span>:     <span class="val">@stripe + @postgres</span>
+
+  <span class="prop">outcome</span>: <span class="str">"Executive summary with
+    week-over-week trends, anomaly
+    flags, and recommended actions"</span>
+
+  <span class="prop">quality</span>: {
+    <span class="prop">accuracy</span>:  <span class="val">"numbers match Stripe"</span>
+    <span class="prop">tone</span>:      <span class="val">"direct, no filler"</span>
+    <span class="prop">length</span>:    <span class="val">"under 500 words"</span>
+  }
+
+  <span class="prop">deliver</span>: <span class="val">#finance-channel</span>
+
+  <span class="prop">guardrails</span>: [
+    <span class="str">"never share raw customer data"</span>
+    <span class="str">"flag anomalies over 15% delta"</span>
+  ]
+}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================
+     SECTION 3: THREE LAYERS
+     ================================ -->
+<section class="snap-section layers-section" id="layers">
+  <div class="inner">
+    <div class="layers-header">
+      <span class="kicker">Architecture</span>
+      <h2>
+        Three layers.<br>
+        <span class="aqua">One stack.</span>
+      </h2>
+    </div>
+
+    <div class="layer-stack">
+
+      <!-- Layer 1: Language -->
+      <div class="plastic-panel plastic-panel--aqua layer-card">
+        <span class="layer-number">01</span>
+        <span class="layer-label">Layer One</span>
+        <h3>Language</h3>
+        <p>
+          The <code style="font-family: var(--font-mono); font-size: 0.85em;">.prose</code> file format.
+          Human-readable declarations that describe responsibilities, outcomes,
+          quality contracts, and delivery schedules.
+          Not prompts. Not scripts. Specifications.
+        </p>
+      </div>
+
+      <!-- Layer 2: Framework -->
+      <div class="plastic-panel layer-card">
+        <span class="layer-number">02</span>
+        <span class="layer-label">Layer Two</span>
+        <h3>Framework</h3>
+        <p>
+          The orchestration layer. Parses <code style="font-family: var(--font-mono); font-size: 0.85em;">.prose</code>
+          files, plans multi-agent workflows, manages retries,
+          quality checks, and escalation paths.
+          You never touch this.
+        </p>
+      </div>
+
+      <!-- Layer 3: Runtime -->
+      <div class="plastic-panel plastic-panel--thin layer-card">
+        <span class="layer-number">03</span>
+        <span class="layer-label">Layer Three</span>
+        <h3>Runtime</h3>
+        <p>
+          Execution engine. Connects to your data sources,
+          manages agent pools, handles scheduling, and
+          delivers results to the channels you specify.
+          Self-healing. Self-maintaining.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ================================
+     SECTION 4: HOW IT WORKS
+     ================================ -->
+<section class="snap-section how-section" id="how">
+  <div class="inner">
+    <div class="how-header">
+      <span class="kicker">Workflow</span>
+      <h2>
+        <span class="ghost">From zero to</span><br>
+        <span class="aqua">running responsibility</span>
+      </h2>
+    </div>
+
+    <div class="steps-grid">
+
+      <div class="plastic-panel step-card">
+        <span class="step-num">01</span>
+        <h3>Describe It</h3>
+        <p>
+          Write a <code style="font-family: var(--font-mono); font-size: 0.9em;">.prose</code> file.
+          Define the responsibility: what outcome you need, how often, where it delivers,
+          and what quality looks like.
+        </p>
+      </div>
+
+      <div class="plastic-panel plastic-panel--thick step-card">
+        <span class="step-num">02</span>
+        <h3>Connect It</h3>
+        <p>
+          Point to your data sources. Stripe, Postgres, Salesforce, internal APIs.
+          The framework handles authentication and access patterns.
+          Read-only to start.
+        </p>
+      </div>
+
+      <div class="plastic-panel step-card">
+        <span class="step-num">03</span>
+        <h3>Forget It</h3>
+        <p>
+          Results arrive on schedule in Slack, email, or wherever you specified.
+          Like a good senior employee who checks in when they have something to report.
+          No dashboard. No overhead.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ================================
+     SECTION 5: CTA
+     ================================ -->
+<section class="snap-section cta-section" id="cta">
+  <div class="inner">
+    <div class="cta-content">
+
+      <div class="plastic-panel plastic-panel--thick cta-panel" style="position: relative;">
+        <div class="inner-glow" style="top: -50px; left: 50%; transform: translateX(-50%); width: 300px; height: 300px; opacity: 0.4;"></div>
+
+        <span class="floating-badge">Open Source &middot; MIT Licensed</span>
+
+        <h2>
+          Think different<br>
+          <span class="aqua">about agents.</span>
+        </h2>
+
+        <p class="body-text" style="text-align: center; max-width: 420px;">
+          Stop managing AI. Start offloading responsibilities.
+          We'll build a demo on your data before you commit to anything.
+        </p>
+
+        <div class="cta-actions">
+          <a href="#" class="btn-gel btn-gel--orange">Book a Demo</a>
+          <a href="https://github.com/openprose" class="btn-gel btn-gel--ghost">View on GitHub &rarr;</a>
+        </div>
+
+        <p class="cta-footnote">
+          No credit card. No integration required. We build the proof first.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ================================
+     FOOTER
+     ================================ -->
+<footer style="
+  position: relative;
+  z-index: 10;
+  background: var(--frost-bg-thick);
+  backdrop-filter: blur(var(--frost-blur)) saturate(var(--frost-saturate));
+  -webkit-backdrop-filter: blur(var(--frost-blur)) saturate(var(--frost-saturate));
+  border-top: 1.5px solid var(--frost-border);
+  padding: 1.5rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-swiss);
+  scroll-snap-align: end;
+">
+  <p style="font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-light); margin: 0;">
+    &copy; 2026 OpenProse &middot; MIT License
+  </p>
+  <div style="display: flex; gap: 1.5rem;">
+    <a href="https://github.com/openprose" style="font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--aqua-deep); text-decoration: none;">GitHub</a>
+    <a href="#" style="font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--aqua-deep); text-decoration: none;">Docs</a>
+    <a href="#" style="font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--aqua-deep); text-decoration: none;">Twitter</a>
+  </div>
+</footer>
+
+<!-- ================================
+     JAVASCRIPT
+     ================================ -->
+<script>
+(function() {
+  'use strict';
+
+  // ---- STRANGE ATTRACTOR BUTTERFLIES ----
+  // Lorenz attractor system producing butterfly-shaped trajectories
+  // Multiple butterflies in aqua/teal/orange palette, rendered as
+  // glowing translucent trails on a fixed canvas background
+
+  const canvas = document.getElementById('attractor-canvas');
+  const ctx = canvas.getContext('2d');
+  let animId;
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+
+  // Lorenz attractor parameters
+  const SIGMA = 10;
+  const RHO = 28;
+  const BETA = 8 / 3;
+  const DT = 0.003;
+
+  // Color palette for butterflies
+  const PALETTE = [
+    { r: 0,   g: 191, b: 255 },   // aqua
+    { r: 0,   g: 153, b: 204 },   // deep teal
+    { r: 77,  g: 217, b: 255 },   // light aqua
+    { r: 0,   g: 180, b: 180 },   // teal
+    { r: 255, g: 102, b: 0   },   // orange
+    { r: 0,   g: 220, b: 220 },   // cyan
+    { r: 255, g: 136, b: 0   },   // light orange
+  ];
+
+  // Each butterfly: an independent Lorenz system with its own state,
+  // trail history, color, offset, and scale
+  class Butterfly {
+    constructor(index, total) {
+      const col = PALETTE[index % PALETTE.length];
+      this.color = col;
+
+      // Slightly perturbed initial conditions so each butterfly diverges
+      this.x = 0.1 + (index * 0.87);
+      this.y = 0.0 + (index * 0.53);
+      this.z = 25.0 + (index * 0.31);
+
+      // Per-butterfly Lorenz parameter variation for visual variety
+      this.sigma = SIGMA + (Math.random() - 0.5) * 1.5;
+      this.rho   = RHO   + (Math.random() - 0.5) * 3.0;
+      this.beta  = BETA  + (Math.random() - 0.5) * 0.3;
+
+      // Visual: scale, position offset, opacity, trail length
+      this.scale = 6.0 + Math.random() * 4.0;
+
+      // Push attractors toward the sides — alternate left/right by index
+      // with some jitter, leaving the middle of the screen open for content.
+      const side = (index % 2 === 0) ? -1 : 1;
+      const sideDepth = 0.32 + Math.random() * 0.14;   // 32% - 46% from center
+      this.offsetX = side * W * sideDepth;
+      this.offsetY = (Math.random() - 0.5) * H * 0.42; // broader vertical spread
+
+      this.baseOpacity = 0.06 + Math.random() * 0.08;
+      this.trailLen = 280 + Math.floor(Math.random() * 180);
+
+      // Trail is stored as an array of {x, y} screen coordinates
+      this.trail = [];
+
+      // Step speed variation
+      this.stepsPerFrame = 3 + Math.floor(Math.random() * 3);
+    }
+
+    step() {
+      for (let i = 0; i < this.stepsPerFrame; i++) {
+        const dx = this.sigma * (this.y - this.x);
+        const dy = this.x * (this.rho - this.z) - this.y;
+        const dz = this.x * this.y - this.beta * this.z;
+
+        this.x += dx * DT;
+        this.y += dy * DT;
+        this.z += dz * DT;
+      }
+
+      // Project Lorenz 3D (x, z) onto screen 2D, centered
+      const sx = W / 2 + this.x * this.scale + this.offsetX;
+      const sy = H / 2 - (this.z - 25) * this.scale + this.offsetY;
+
+      this.trail.push({ x: sx, y: sy });
+      if (this.trail.length > this.trailLen) {
+        this.trail.shift();
+      }
+    }
+
+    draw(ctx) {
+      const len = this.trail.length;
+      if (len < 2) return;
+
+      const { r, g, b } = this.color;
+
+      // Draw the trail as a series of line segments with fading opacity
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      for (let i = 1; i < len; i++) {
+        const t = i / len;  // 0..1, more recent = higher
+        const alpha = t * t * this.baseOpacity;
+        const width = 0.4 + t * 1.8;
+
+        ctx.beginPath();
+        ctx.moveTo(this.trail[i - 1].x, this.trail[i - 1].y);
+        ctx.lineTo(this.trail[i].x, this.trail[i].y);
+        ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        ctx.lineWidth = width;
+        ctx.stroke();
+      }
+
+      // Draw a brighter head glow at the current position
+      const head = this.trail[len - 1];
+      const headGrad = ctx.createRadialGradient(head.x, head.y, 0, head.x, head.y, 12);
+      headGrad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${this.baseOpacity * 4})`);
+      headGrad.addColorStop(0.4, `rgba(${r}, ${g}, ${b}, ${this.baseOpacity * 1.5})`);
+      headGrad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+      ctx.beginPath();
+      ctx.arc(head.x, head.y, 12, 0, Math.PI * 2);
+      ctx.fillStyle = headGrad;
+      ctx.fill();
+    }
+  }
+
+  // Create butterflies
+  const NUM_BUTTERFLIES = 7;
+  let butterflies = [];
+
+  function initButterflies() {
+    butterflies = [];
+    for (let i = 0; i < NUM_BUTTERFLIES; i++) {
+      const b = new Butterfly(i, NUM_BUTTERFLIES);
+      // Warm up: run several hundred steps so trails are pre-populated
+      for (let s = 0; s < 400; s++) {
+        b.step();
+      }
+      butterflies.push(b);
+    }
+  }
+
+  // Subtle frosted glass overlay drawn on canvas as a near-transparent wash
+  function drawFrostOverlay() {
+    // Extremely faint radial glow spots that give a "frosted ambient" feel
+    const spots = [
+      { x: W * 0.2, y: H * 0.3, r: W * 0.35, c: '0, 191, 255', a: 0.012 },
+      { x: W * 0.8, y: H * 0.6, r: W * 0.30, c: '255, 102, 0',  a: 0.008 },
+      { x: W * 0.5, y: H * 0.8, r: W * 0.40, c: '0, 191, 255', a: 0.010 },
+    ];
+
+    for (const s of spots) {
+      const grad = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.r);
+      grad.addColorStop(0, `rgba(${s.c}, ${s.a})`);
+      grad.addColorStop(1, `rgba(${s.c}, 0)`);
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+    }
+  }
+
+  function animate() {
+    // Semi-transparent clear for very subtle motion blur / trail persistence
+    ctx.fillStyle = 'rgba(240, 251, 255, 0.08)';
+    ctx.fillRect(0, 0, W, H);
+
+    // Clear fully every ~120 frames to prevent buildup
+    if (animate.frame && animate.frame % 120 === 0) {
+      ctx.clearRect(0, 0, W, H);
+    }
+    animate.frame = (animate.frame || 0) + 1;
+
+    drawFrostOverlay();
+
+    for (const b of butterflies) {
+      b.step();
+      b.draw(ctx);
+    }
+
+    animId = requestAnimationFrame(animate);
+  }
+  animate.frame = 0;
+
+  window.addEventListener('resize', () => {
+    resize();
+    // Re-center butterflies on resize
+    for (const b of butterflies) {
+      b.offsetX = (Math.random() - 0.5) * W * 0.3;
+      b.offsetY = (Math.random() - 0.5) * H * 0.15;
+      b.trail = [];
+    }
+  });
+
+  resize();
+  initButterflies();
+  animId = requestAnimationFrame(animate);
+
+  // ---- SUBTLE PARALLAX ON PANELS ----
+  const panels = document.querySelectorAll('.plastic-panel');
+  let ticking = false;
+
+  window.addEventListener('scroll', () => {
+    if (!ticking) {
+      requestAnimationFrame(() => {
+        const scrollY = window.scrollY;
+        panels.forEach((panel) => {
+          const rect = panel.getBoundingClientRect();
+          const center = rect.top + rect.height / 2;
+          const viewCenter = window.innerHeight / 2;
+          const offset = (center - viewCenter) * 0.015;
+          panel.style.transform = `translateY(${offset}px)`;
+        });
+        ticking = false;
+      });
+      ticking = true;
+    }
+  });
+
+  // ---- INTERSECTION OBSERVER FOR FADE-IN ----
+  const observerOptions = {
+    threshold: 0.15,
+    rootMargin: '0px 0px -50px 0px'
+  };
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.style.opacity = '1';
+        entry.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, observerOptions);
+
+  // Apply initial hidden state and observe
+  document.querySelectorAll('.layer-card, .step-card, .proof-bar, .what-grid').forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(24px)';
+    el.style.transition = 'opacity 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+    observer.observe(el);
+  });
+
+  // Stagger layer cards
+  document.querySelectorAll('.layer-card').forEach((card, i) => {
+    card.style.transitionDelay = `${i * 0.12}s`;
+  });
+
+  document.querySelectorAll('.step-card').forEach((card, i) => {
+    card.style.transitionDelay = `${i * 0.12}s`;
+  });
+
+})();
+</script>
+
+</body>
+</html>

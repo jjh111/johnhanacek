@@ -1,0 +1,1537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 142 142'%3E%3Cpath d='M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z' fill='%232a2520'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenProse — A Fable of Responsibilities</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Cinzel:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cream:        #f7f1e3;
+    --cream-warm:   #f0e6cf;
+    --cream-deep:   #e8dbc2;
+    --paper:        #faf6ed;
+    --ink:          #2c1810;
+    --ink-soft:     #4a3728;
+    --ink-light:    #8a7560;
+    --ink-faint:    #b8a890;
+    --crimson:      #7a2028;
+    --crimson-soft: #9a3038;
+    --cobalt:       #1a3a6b;
+    --cobalt-soft:  #2a5090;
+    --gold:         #b8860b;
+    --gold-soft:    #d4aa30;
+    --cell-alive:   #2c1810;
+    --cell-fade:    rgba(44,24,16,0.12);
+    --serif:        'Cormorant Garamond', 'Palatino Linotype', Palatino, Georgia, serif;
+    --cinzel:       'Cinzel', Georgia, serif;
+    --chapter-gap:  12vh;
+  }
+
+  html {
+    font-size: 19px;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: var(--cream);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-weight: 400;
+    line-height: 1.85;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* === THE BOOK === */
+  .book {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+
+  /* === COVER === */
+  .cover {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    padding: 4rem 2rem;
+  }
+
+  .cover-automaton {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 0;
+    opacity: 0.35;
+  }
+
+  .cover-content {
+    position: relative;
+    z-index: 1;
+  }
+
+  .cover-epigraph {
+    font-family: var(--cinzel);
+    font-size: 0.55rem;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--ink-light);
+    margin-bottom: 3rem;
+  }
+
+  .cover h1 {
+    font-family: var(--cinzel);
+    font-size: 2.8rem;
+    font-weight: 400;
+    line-height: 1.2;
+    color: var(--ink);
+    letter-spacing: 0.02em;
+    margin-bottom: 1rem;
+  }
+
+  .cover h1 em {
+    font-family: var(--serif);
+    font-style: italic;
+    font-weight: 300;
+    color: var(--crimson);
+  }
+
+  .cover-subtitle {
+    font-size: 1.15rem;
+    font-weight: 300;
+    font-style: italic;
+    color: var(--ink-soft);
+    max-width: 420px;
+    margin: 0 auto 3rem;
+    line-height: 1.6;
+  }
+
+  .cover-ornament {
+    color: var(--gold);
+    font-size: 0.7rem;
+    letter-spacing: 1em;
+  }
+
+  .scroll-hint {
+    position: absolute;
+    bottom: 2.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    animation: gentle-pulse 3s ease-in-out infinite;
+  }
+
+  @keyframes gentle-pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.8; }
+  }
+
+  /* === CHAPTERS === */
+  .chapter {
+    padding: var(--chapter-gap) 0;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 1.2s ease, transform 1.2s ease;
+  }
+
+  .chapter.revealed {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .chapter-number {
+    font-family: var(--cinzel);
+    font-size: 0.5rem;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    text-align: center;
+    display: block;
+    margin-bottom: 0.75rem;
+  }
+
+  .chapter-title {
+    font-family: var(--cinzel);
+    font-size: 1.6rem;
+    font-weight: 400;
+    text-align: center;
+    color: var(--ink);
+    margin-bottom: 0.5rem;
+    line-height: 1.35;
+  }
+
+  .chapter-title em {
+    font-family: var(--serif);
+    font-style: italic;
+    font-weight: 300;
+    color: var(--crimson);
+  }
+
+  /* === RULE DIVIDERS === */
+  .rule {
+    text-align: center;
+    margin: 2.5rem 0;
+    color: var(--gold);
+    font-size: 0.55rem;
+    letter-spacing: 0.8em;
+    position: relative;
+  }
+
+  .rule::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 15%;
+    right: 15%;
+    height: 1px;
+    background: var(--cream-deep);
+  }
+
+  .rule span {
+    background: var(--cream);
+    padding: 0 1rem;
+    position: relative;
+  }
+
+  /* === PROSE === */
+  .prose {
+    margin-bottom: 1.5rem;
+    font-size: 1rem;
+    text-align: left;
+    color: var(--ink-soft);
+    font-weight: 400;
+  }
+
+  .prose strong {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  .prose em {
+    color: var(--crimson);
+    font-style: italic;
+  }
+
+  /* === DROP CAP === */
+  .drop-cap::first-letter {
+    float: left;
+    font-family: var(--cinzel);
+    font-size: 4.2rem;
+    line-height: 0.8;
+    margin-right: 0.08em;
+    margin-top: 0.08em;
+    color: var(--crimson);
+    font-weight: 400;
+  }
+
+  /* === ILLUSTRATIONS (CANVAS AUTOMATA) === */
+  .illustration {
+    margin: 3rem -1rem;
+    position: relative;
+  }
+
+  .illustration canvas {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 2px;
+  }
+
+  .illustration-caption {
+    text-align: center;
+    font-family: var(--cinzel);
+    font-size: 0.5rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-top: 1rem;
+  }
+
+  /* === MARGINAL NOTE === */
+  .aside-note {
+    border-left: 2px solid var(--cream-deep);
+    padding-left: 1.25rem;
+    margin: 2rem 0 2rem 0.5rem;
+    font-size: 0.85rem;
+    font-style: italic;
+    color: var(--ink-light);
+    line-height: 1.7;
+  }
+
+  .aside-note cite {
+    display: block;
+    margin-top: 0.5rem;
+    font-size: 0.72rem;
+    font-style: normal;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  /* === PROOF BLOCK === */
+  .proof-block {
+    background: var(--paper);
+    border: 1px solid var(--cream-deep);
+    padding: 1.75rem 2rem;
+    margin: 2rem 0;
+  }
+
+  .proof-block h3 {
+    font-family: var(--cinzel);
+    font-size: 0.6rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--ink-light);
+    margin-bottom: 1rem;
+  }
+
+  .proof-block p {
+    font-size: 0.92rem;
+    color: var(--ink-soft);
+    margin-bottom: 0.75rem;
+    line-height: 1.7;
+  }
+
+  .proof-block p:last-child { margin-bottom: 0; }
+
+  /* === CONTRAST BLOCK === */
+  .contrast {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin: 2.5rem 0;
+  }
+
+  .contrast-side {
+    padding: 1.25rem 0;
+  }
+
+  .contrast-side h4 {
+    font-family: var(--cinzel);
+    font-size: 0.5rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--cream-deep);
+  }
+
+  .contrast-side p {
+    font-size: 0.88rem;
+    color: var(--ink-light);
+    line-height: 1.65;
+  }
+
+  .contrast-side.after h4 { color: var(--crimson); border-bottom-color: var(--crimson); opacity: 0.6; }
+  .contrast-side.after p { color: var(--ink-soft); }
+
+  /* === COLOPHON / CTA === */
+  .colophon {
+    padding: 6rem 0 4rem;
+    text-align: center;
+  }
+
+  .colophon h2 {
+    font-family: var(--cinzel);
+    font-size: 1.4rem;
+    font-weight: 400;
+    color: var(--ink);
+    margin-bottom: 0.75rem;
+    line-height: 1.4;
+  }
+
+  .colophon h2 em {
+    font-family: var(--serif);
+    font-style: italic;
+    font-weight: 300;
+    color: var(--crimson);
+  }
+
+  .colophon p {
+    font-size: 0.92rem;
+    color: var(--ink-light);
+    max-width: 360px;
+    margin: 0 auto 2rem;
+    font-style: italic;
+  }
+
+  .colophon-form {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 2.5rem;
+  }
+
+  .colophon-input {
+    font-family: var(--serif);
+    font-size: 0.9rem;
+    padding: 0.7rem 1.1rem;
+    border: 1px solid var(--cream-deep);
+    background: var(--paper);
+    color: var(--ink);
+    outline: none;
+    min-width: 220px;
+    transition: border-color 0.3s;
+  }
+
+  .colophon-input:focus { border-color: var(--crimson); }
+  .colophon-input::placeholder { color: var(--ink-faint); font-style: italic; }
+
+  .btn {
+    font-family: var(--cinzel);
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 0.75rem 1.8rem;
+    border: 1px solid var(--crimson);
+    background: var(--crimson);
+    color: var(--paper);
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: inline-block;
+  }
+
+  .btn:hover {
+    background: transparent;
+    color: var(--crimson);
+  }
+
+  /* === FOOTER === */
+  .endpaper {
+    text-align: center;
+    padding: 3rem 2rem;
+    border-top: 1px solid var(--cream-deep);
+    margin-top: 2rem;
+  }
+
+  .endpaper p {
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    line-height: 2.2;
+  }
+
+  .endpaper a {
+    color: var(--ink-light);
+    text-decoration: none;
+    border-bottom: 1px solid var(--cream-deep);
+  }
+
+  .endpaper a:hover { color: var(--crimson); border-bottom-color: var(--crimson); }
+
+  /* === RESPONSIVE === */
+  @media (max-width: 600px) {
+    html { font-size: 17px; }
+    .book { padding: 0 1.25rem; }
+    .cover h1 { font-size: 2rem; }
+    .chapter-title { font-size: 1.3rem; }
+    .contrast { grid-template-columns: 1fr; gap: 1rem; }
+    .illustration { margin: 2rem 0; }
+    .colophon-form { flex-direction: column; align-items: center; }
+    .colophon-input { min-width: 0; width: 100%; max-width: 300px; }
+  }
+
+
+
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+  canvas#ch1 { width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: auto; word-break: break-word; }
+  canvas#ch2 { width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: auto; word-break: break-word; }
+  canvas#ch3 { width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: auto; word-break: break-word; }
+}
+</style>
+</head>
+<body>
+
+<!-- ================================================ -->
+<!-- THE COVER                                        -->
+<!-- ================================================ -->
+<section class="cover">
+  <canvas class="cover-automaton" id="coverAutomaton"></canvas>
+  <div class="cover-content">
+    <div class="cover-epigraph">A Fable in Five Chapters</div>
+    <h1>Open<em>Prose</em></h1>
+    <p class="cover-subtitle" style="font-family: var(--cinzel); font-style: normal; font-size: 0.85rem; letter-spacing: 0.08em;">
+      Write the outcome. We run it.
+    </p>
+    <p class="cover-subtitle">
+      In which a small company discovers that the best way
+      to manage work is to stop managing it altogether.
+    </p>
+    <div class="cover-ornament">*</div>
+  </div>
+  <div class="scroll-hint">Turn the page</div>
+</section>
+
+
+<div class="book">
+
+<!-- ================================================ -->
+<!-- CHAPTER I                                        -->
+<!-- ================================================ -->
+<div class="chapter" data-chapter="1">
+
+  <span class="chapter-number">Chapter I</span>
+  <h2 class="chapter-title">The Burden of <em>Attention</em></h2>
+
+  <div class="rule"><span>*</span></div>
+
+  <p class="prose drop-cap">
+    Once there was a company that grew faster than its people could follow.
+    Every week brought new tasks that someone had to tend: monitor the sensors,
+    compile the reports, watch the dashboards, alert the stakeholders. Each task
+    was small. Together, they were a weight that pressed down on every hour of
+    every day. The people were not lazy. They were simply finite.
+  </p>
+
+  <p class="prose">
+    They hired more people. They bought more tools. Each solution demanded its
+    own management, its own learning curve, its own slice of the day. The
+    tools multiplied. <strong>The burden did not shrink. It changed shape.</strong>
+  </p>
+
+  <div class="illustration">
+    <canvas id="ch1Automaton" width="680" height="200"></canvas>
+    <div class="illustration-caption">Fig. I -- The proliferation of tasks, each cell a responsibility dividing</div>
+  </div>
+
+  <div class="aside-note">
+    A cell divides. Each daughter cell divides again. This is the nature of
+    operational work: it reproduces. Tools do not eliminate it. They give it
+    new surfaces on which to grow.
+    <cite>On the arithmetic of attention</cite>
+  </div>
+</div>
+
+
+<!-- ================================================ -->
+<!-- CHAPTER II                                       -->
+<!-- ================================================ -->
+<div class="chapter" data-chapter="2">
+
+  <span class="chapter-number">Chapter II</span>
+  <h2 class="chapter-title">Two Kinds of <em>Delegation</em></h2>
+
+  <div class="rule"><span>*</span></div>
+
+  <p class="prose drop-cap">
+    There are two ways to delegate. The first is to stand beside someone and
+    explain every step. Check their work. Correct their mistakes. This is
+    how most agent tools work today: you prescribe the task, inspect the
+    output, iterate, repeat. You remain the manager. Your attention stays
+    consumed.
+  </p>
+
+  <p class="prose">
+    The second way is different. You describe what good looks like. You set the
+    boundaries. Then you leave the room. This is how you work with a senior
+    employee: someone who understands the <em>why</em>, not just the what. You
+    do not check on them. They check in with you, only when they have something
+    to report.
+  </p>
+
+  <div class="illustration">
+    <canvas id="ch2Automaton" width="680" height="260"></canvas>
+    <div class="illustration-caption">Fig. II -- Rule 110: from simple rules, complex order emerges</div>
+  </div>
+
+  <div class="contrast">
+    <div class="contrast-side before">
+      <h4>The Imperative Way</h4>
+      <p>Tell it what to do. Check the output. Iterate. Repeat. You remain the manager. Your attention is the bottleneck.</p>
+    </div>
+    <div class="contrast-side after">
+      <h4>The Declarative Way</h4>
+      <p>Describe the outcome. Set the contract. Let it run. A brief arrives in Slack. You never think about it again.</p>
+    </div>
+  </div>
+
+  <div class="aside-note">
+    Declarative approaches (SQL, Terraform, React) have consistently won
+    in domains where <em>what</em> matters more than <em>how</em>. Agent orchestration
+    is the next domain.
+    <cite>On the history of abstraction</cite>
+  </div>
+</div>
+
+
+<!-- ================================================ -->
+<!-- CHAPTER III                                      -->
+<!-- ================================================ -->
+<div class="chapter" data-chapter="3">
+
+  <span class="chapter-number">Chapter III</span>
+  <h2 class="chapter-title">The Book of <em>Responsibilities</em></h2>
+
+  <div class="rule"><span>*</span></div>
+
+  <p class="prose drop-cap">
+    And so they built a different kind of system. Not a tool. Not an assistant.
+    A <strong>book of responsibilities</strong>: a living document where you
+    write down what needs to happen, what good looks like, and what the guardrails
+    are. The book keeps itself up.
+  </p>
+
+  <p class="prose">
+    No dashboard to check. No tool to learn. You write the responsibility in
+    plain language. The system reads it, understands the contract, and begins.
+    Results arrive on cadence, in Slack or email. Like a colleague who
+    has been doing this work for years. Quietly. Reliably. Without being asked.
+  </p>
+
+  <div class="illustration">
+    <canvas id="ch3Automaton" width="680" height="280"></canvas>
+    <div class="illustration-caption">Fig. III -- Conway's Game of Life: stable structures emerge from simple contracts</div>
+  </div>
+
+  <p class="prose">
+    This is OpenProse. It is open source, MIT licensed, and backed by Y Combinator.
+    Six thousand installations. One thousand stars on GitHub. You can run it yourself,
+    as one runs Terraform. Self-hosted, with full control. <strong>Most prefer
+    that we run it for them.</strong>
+  </p>
+</div>
+
+
+<!-- ================================================ -->
+<!-- CHAPTER IV                                       -->
+<!-- ================================================ -->
+<div class="chapter" data-chapter="4">
+
+  <span class="chapter-number">Chapter IV</span>
+  <h2 class="chapter-title">Proof of <em>Work</em></h2>
+
+  <div class="rule"><span>*</span></div>
+
+  <p class="prose drop-cap">
+    Here is what it looks like in practice. An energy monitoring company --
+    real, active, running right now. They had a team spending hours every week
+    on work that was necessary but mechanical: anomaly detection across sensor
+    networks, equipment health reports, customer ROI dashboards.
+  </p>
+
+  <div class="proof-block">
+    <h3>Active Engagement -- Energy Monitoring</h3>
+    <p>
+      Anomalies detected across sensor networks. Equipment health reports generated
+      weekly. Customer ROI dashboards delivered on cadence. Work that consumed their
+      team's hours now arrives completed. In Slack, on cadence, without prompting.
+    </p>
+    <p>
+      We began with read-only access to public data. Built a demonstration.
+      Then private data access. Then action. No integration required to start.
+      <strong>We show you what offloaded looks like before you commit.</strong>
+    </p>
+  </div>
+
+  <div class="illustration">
+    <canvas id="ch4Automaton" width="680" height="180"></canvas>
+    <div class="illustration-caption">Fig. IV -- Elementary automaton: each row a week, order accreting from simple rules</div>
+  </div>
+
+  <p class="prose">
+    We price against the hire you are avoiding. A junior analyst costs six to
+    eight thousand a month. A senior analyst, twelve to fifteen. OpenProse
+    delivers comparable output at a fraction. No headcount, no management
+    overhead, no HR. <em>Responsibilities complete on schedule.</em>
+  </p>
+</div>
+
+
+<!-- ================================================ -->
+<!-- CHAPTER V                                        -->
+<!-- ================================================ -->
+<div class="chapter" data-chapter="5">
+
+  <span class="chapter-number">Chapter V</span>
+  <h2 class="chapter-title">The <em>Moral</em></h2>
+
+  <div class="rule"><span>*</span></div>
+
+  <p class="prose drop-cap">
+    Every fable ends with a lesson. This one is simple. The scarcest resource
+    in any organization is not money, not time, not talent. It is attention.
+    And attention, once fragmented, does not reassemble itself.
+  </p>
+
+  <p class="prose">
+    The tools we build should not demand more of it. They should return it.
+    That is the promise of declarative work: <strong>describe the outcome,
+    set the contract, and get your attention back.</strong>
+  </p>
+
+  <div class="illustration">
+    <canvas id="ch5Automaton" width="680" height="240"></canvas>
+    <div class="illustration-caption">Fig. V -- Emergence: complex beauty from the simplest possible rules</div>
+  </div>
+
+  <div class="aside-note">
+    We are not selling a tool. We are offloading a responsibility.
+    The difference is everything.
+    <cite>OpenProse, first principles</cite>
+  </div>
+</div>
+
+
+<!-- ================================================ -->
+<!-- COLOPHON / CTA                                   -->
+<!-- ================================================ -->
+<div class="chapter colophon" data-chapter="6">
+
+  <h2>What do you wish you could<br><em>stop thinking about?</em></h2>
+
+  <p>Tell us the responsibility. We will show you what offloaded looks like.</p>
+
+  <div class="colophon-form">
+    <input class="colophon-input" type="email" placeholder="your@email.com" />
+    <button class="btn" type="button">Define Your First Responsibility</button>
+  </div>
+
+  <div class="rule"><span>*</span></div>
+
+  <div class="endpaper">
+    <p>
+      OpenProse &middot; MIT License &middot; <a href="#">GitHub</a> &middot; YC-backed<br>
+      6,000 installs &middot; 1,000 stars &middot; Open source &middot; Self-hostable<br>
+      &copy; 2026 OpenProse
+    </p>
+  </div>
+</div>
+
+</div><!-- .book -->
+
+
+<script>
+// =========================================================
+// UTILITY: Resize canvas for device pixel ratio
+// =========================================================
+function setupCanvas(canvas, w, h) {
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return { ctx: ctx, w: w, h: h };
+}
+
+// =========================================================
+// SCROLL REVEAL
+// =========================================================
+(function() {
+  var chapters = document.querySelectorAll('.chapter');
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('revealed');
+      }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -60px 0px' });
+
+  chapters.forEach(function(ch) { observer.observe(ch); });
+})();
+
+
+// =========================================================
+// COLOR PALETTE for automata
+// =========================================================
+var CA_COLORS = {
+  ink:      '#2c1810',
+  inkSoft:  'rgba(44,24,16,0.55)',
+  inkFaint: 'rgba(44,24,16,0.12)',
+  cream:    '#f7f1e3',
+  crimson:  'rgba(122,32,40,0.6)',
+  gold:     'rgba(184,134,11,0.4)',
+  cobalt:   'rgba(26,58,107,0.35)'
+};
+
+
+// =========================================================
+// COVER: Wolfram Rule 30 trickling down as a textile pattern
+// Deferred to ensure layout dimensions are available
+// =========================================================
+(function() {
+  function drawCover() {
+    var canvas = document.getElementById('coverAutomaton');
+    var parent = canvas.parentElement;
+    var W = Math.floor(parent.offsetWidth)  || window.innerWidth;
+    var H = Math.floor(parent.offsetHeight) || window.innerHeight;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width  = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width  = '100%';
+    canvas.style.height = '100%';
+    var ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+
+    var cellSize = 4;
+    var cols = Math.ceil(W / cellSize);
+    var maxRows = Math.ceil(H / cellSize);
+    var rule = 30;
+
+    function rulebit(l, c, r) {
+      var idx = (l << 2) | (c << 1) | r;
+      return (rule >> idx) & 1;
+    }
+
+    var row = new Uint8Array(cols);
+    row[Math.floor(cols / 2)] = 1;
+
+    var rows = [row.slice()];
+    for (var r = 1; r < maxRows; r++) {
+      var next = new Uint8Array(cols);
+      for (var c = 0; c < cols; c++) {
+        var l = row[(c - 1 + cols) % cols];
+        var m = row[c];
+        var ri = row[(c + 1) % cols];
+        next[c] = rulebit(l, m, ri);
+      }
+      rows.push(next.slice());
+      row = next;
+    }
+
+    // Draw once, very faintly
+    ctx.fillStyle = CA_COLORS.cream;
+    ctx.fillRect(0, 0, W, H);
+
+    for (var r = 0; r < rows.length; r++) {
+      for (var c = 0; c < cols; c++) {
+        if (rows[r][c]) {
+          var dist = Math.abs(c - cols / 2) / (cols / 2);
+          var rowFade = r / rows.length;
+          var alpha = 0.06 + 0.10 * (1 - dist) * (0.5 + 0.5 * Math.sin(rowFade * Math.PI));
+          ctx.fillStyle = 'rgba(44,24,16,' + alpha.toFixed(3) + ')';
+          ctx.fillRect(c * cellSize, r * cellSize, cellSize - 0.5, cellSize - 0.5);
+        }
+      }
+    }
+  }
+
+  // Run after layout is complete
+  if (document.readyState === 'complete') { drawCover(); }
+  else { window.addEventListener('load', drawCover); }
+  // Also redraw on resize
+  window.addEventListener('resize', (function() {
+    var timer;
+    return function() { clearTimeout(timer); timer = setTimeout(drawCover, 200); };
+  })());
+})();
+
+
+// =========================================================
+// CH1: Proliferating cells -- a growing population
+// Standard Conway's Game of Life (B3/S23) seeded with small
+// clusters that grow, split, and colonize the canvas gently
+// =========================================================
+(function() {
+  var canvas = document.getElementById('ch1Automaton');
+  var s = setupCanvas(canvas, 680, 200);
+  var ctx = s.ctx, W = s.w, H = s.h;
+
+  var cellSize = 4;
+  var cols = Math.floor(W / cellSize);
+  var rowCount = Math.floor(H / cellSize);
+  var grid = [];
+  for (var r = 0; r < rowCount; r++) {
+    grid[r] = new Uint8Array(cols);
+  }
+
+  // Seed a small cluster of cells around a position
+  function seedCluster(cr, cc, size) {
+    for (var i = 0; i < size; i++) {
+      var dr = Math.floor(Math.random() * 5) - 2;
+      var dc = Math.floor(Math.random() * 5) - 2;
+      var nr = cr + dr, nc = cc + dc;
+      if (nr >= 0 && nr < rowCount && nc >= 0 && nc < cols) {
+        grid[nr][nc] = 1;
+      }
+    }
+  }
+
+  // Place known interesting patterns that produce controlled growth
+  // R-pentomino: chaotic but bounded, runs ~1100 generations
+  var rpentomino = [[0,1,1],[1,1,0],[0,1,0]];
+  // Acorn: long-lived methuselah (~5200 gen)
+  var acorn = [[0,1,0,0,0,0,0],[0,0,0,1,0,0,0],[1,1,0,0,1,1,1]];
+  // Glider
+  var glider = [[0,1,0],[0,0,1],[1,1,1]];
+
+  function place(pattern, startR, startC) {
+    for (var r = 0; r < pattern.length; r++) {
+      for (var c = 0; c < pattern[r].length; c++) {
+        var gr = startR + r, gc = startC + c;
+        if (gr >= 0 && gr < rowCount && gc >= 0 && gc < cols) {
+          grid[gr][gc] = pattern[r][c];
+        }
+      }
+    }
+  }
+
+  // Place a few methuselahs and gliders spread across the canvas
+  place(rpentomino, Math.floor(rowCount * 0.3), Math.floor(cols * 0.2));
+  place(acorn, Math.floor(rowCount * 0.5), Math.floor(cols * 0.6));
+  place(glider, 4, Math.floor(cols * 0.45));
+  place(glider, rowCount - 8, Math.floor(cols * 0.8));
+  // Add two small random clusters for organic variety
+  seedCluster(Math.floor(rowCount * 0.7), Math.floor(cols * 0.35), 5);
+  seedCluster(Math.floor(rowCount * 0.2), Math.floor(cols * 0.75), 5);
+
+  var generation = 0;
+
+  function countNeighbors(r, c) {
+    var count = 0;
+    for (var dr = -1; dr <= 1; dr++) {
+      for (var dc = -1; dc <= 1; dc++) {
+        if (dr === 0 && dc === 0) continue;
+        var nr = r + dr, nc = c + dc;
+        if (nr >= 0 && nr < rowCount && nc >= 0 && nc < cols) {
+          count += grid[nr][nc] ? 1 : 0;
+        }
+      }
+    }
+    return count;
+  }
+
+  // Standard Conway's Game of Life (B3/S23) -- controlled, elegant growth
+  function step() {
+    var next = [];
+    for (var r = 0; r < rowCount; r++) {
+      next[r] = new Uint8Array(cols);
+      for (var c = 0; c < cols; c++) {
+        var n = countNeighbors(r, c);
+        if (grid[r][c]) {
+          next[r][c] = (n === 2 || n === 3) ? 1 : 0;
+        } else {
+          next[r][c] = (n === 3) ? 1 : 0;
+        }
+      }
+    }
+    grid = next;
+    generation++;
+
+    // Periodically re-seed if the canvas has become too quiet
+    if (generation % 200 === 0) {
+      var liveCount = 0;
+      for (var r = 0; r < rowCount; r++)
+        for (var c = 0; c < cols; c++)
+          liveCount += grid[r][c];
+      if (liveCount < cols) {
+        place(rpentomino, Math.floor(Math.random() * (rowCount - 5)),
+                          Math.floor(Math.random() * (cols - 5)));
+        place(glider, Math.floor(Math.random() * (rowCount - 5)),
+                      Math.floor(Math.random() * (cols - 5)));
+      }
+    }
+  }
+
+  // Trail effect for visual richness
+  var trails = [];
+  for (var r = 0; r < rowCount; r++) {
+    trails[r] = new Float32Array(cols);
+  }
+
+  function draw() {
+    ctx.fillStyle = CA_COLORS.cream;
+    ctx.fillRect(0, 0, W, H);
+
+    for (var r = 0; r < rowCount; r++) {
+      for (var c = 0; c < cols; c++) {
+        if (grid[r][c]) {
+          trails[r][c] = 1.0;
+        } else {
+          trails[r][c] *= 0.88;
+        }
+      }
+    }
+
+    for (var r = 0; r < rowCount; r++) {
+      for (var c = 0; c < cols; c++) {
+        var val = trails[r][c];
+        if (val > 0.02) {
+          var hash = (r * 7 + c * 13) % 5;
+          if (val > 0.8) {
+            if (hash === 0) ctx.fillStyle = 'rgba(122,32,40,' + (val * 0.65).toFixed(3) + ')';
+            else if (hash === 1) ctx.fillStyle = 'rgba(26,58,107,' + (val * 0.5).toFixed(3) + ')';
+            else ctx.fillStyle = 'rgba(44,24,16,' + (val * 0.55).toFixed(3) + ')';
+          } else if (val > 0.3) {
+            ctx.fillStyle = 'rgba(184,134,11,' + (val * 0.3).toFixed(3) + ')';
+          } else {
+            ctx.fillStyle = 'rgba(44,24,16,' + (val * 0.2).toFixed(3) + ')';
+          }
+          ctx.fillRect(c * cellSize, r * cellSize, cellSize - 1, cellSize - 1);
+        }
+      }
+    }
+  }
+
+  var frameCount = 0;
+  function animate() {
+    if (canvas.dataset.visible === 'false') {
+      requestAnimationFrame(animate);
+      return;
+    }
+    frameCount++;
+    if (frameCount % 4 === 0) {
+      step();
+    }
+    draw();
+    requestAnimationFrame(animate);
+  }
+
+  draw();
+  animate();
+})();
+
+
+// =========================================================
+// CH2: Rule 110 -- complexity from simplicity
+// Classic 1D elementary automaton, drawn row by row
+// =========================================================
+(function() {
+  var canvas = document.getElementById('ch2Automaton');
+  var s = setupCanvas(canvas, 680, 260);
+  var ctx = s.ctx, W = s.w, H = s.h;
+
+  var cellSize = 3;
+  var cols = Math.floor(W / cellSize);
+  var maxRows = Math.floor(H / cellSize);
+  var rule = 110;
+
+  function rulebit(l, c, r) {
+    var idx = (l << 2) | (c << 1) | r;
+    return (rule >> idx) & 1;
+  }
+
+  var currentRow = new Uint8Array(cols);
+  // Start with a single cell on the right
+  currentRow[cols - 2] = 1;
+
+  var allRows = [currentRow.slice()];
+  var displayRow = 0;
+
+  function generateRow() {
+    var next = new Uint8Array(cols);
+    for (var c = 0; c < cols; c++) {
+      var l = currentRow[(c - 1 + cols) % cols];
+      var m = currentRow[c];
+      var r = currentRow[(c + 1) % cols];
+      next[c] = rulebit(l, m, r);
+    }
+    currentRow = next;
+    allRows.push(next.slice());
+    if (allRows.length > maxRows) {
+      allRows.shift();
+    }
+  }
+
+  function draw() {
+    ctx.fillStyle = CA_COLORS.cream;
+    ctx.fillRect(0, 0, W, H);
+
+    for (var r = 0; r < allRows.length; r++) {
+      for (var c = 0; c < cols; c++) {
+        if (allRows[r][c]) {
+          // Gradient from top (faint) to bottom (strong) with subtle color
+          var rowAlpha = 0.15 + 0.55 * (r / allRows.length);
+          var hash = (r + c * 3) % 7;
+          if (hash === 0) {
+            ctx.fillStyle = 'rgba(122,32,40,' + (rowAlpha * 0.8).toFixed(3) + ')';
+          } else if (hash === 1) {
+            ctx.fillStyle = 'rgba(26,58,107,' + (rowAlpha * 0.7).toFixed(3) + ')';
+          } else {
+            ctx.fillStyle = 'rgba(44,24,16,' + rowAlpha.toFixed(3) + ')';
+          }
+          ctx.fillRect(c * cellSize, r * cellSize, cellSize - 0.5, cellSize - 0.5);
+        }
+      }
+    }
+  }
+
+  var frameCount = 0;
+  function animate() {
+    if (canvas.dataset.visible === 'false') {
+      requestAnimationFrame(animate);
+      return;
+    }
+    frameCount++;
+    if (frameCount % 3 === 0) {
+      generateRow();
+    }
+    draw();
+    requestAnimationFrame(animate);
+  }
+
+  animate();
+})();
+
+
+// =========================================================
+// CH3: Conway's Game of Life -- stable structures
+// Seeded with known stable/oscillating patterns
+// =========================================================
+(function() {
+  var canvas = document.getElementById('ch3Automaton');
+  var s = setupCanvas(canvas, 680, 280);
+  var ctx = s.ctx, W = s.w, H = s.h;
+
+  var cellSize = 5;
+  var cols = Math.floor(W / cellSize);
+  var rowCount = Math.floor(H / cellSize);
+  var grid = [];
+  for (var r = 0; r < rowCount; r++) {
+    grid[r] = new Uint8Array(cols);
+  }
+
+  // Place some classic patterns
+  function place(pattern, startR, startC) {
+    for (var r = 0; r < pattern.length; r++) {
+      for (var c = 0; c < pattern[r].length; c++) {
+        var gr = startR + r, gc = startC + c;
+        if (gr >= 0 && gr < rowCount && gc >= 0 && gc < cols) {
+          grid[gr][gc] = pattern[r][c];
+        }
+      }
+    }
+  }
+
+  // Glider
+  var glider = [[0,1,0],[0,0,1],[1,1,1]];
+  // Lightweight spaceship
+  var lwss = [[0,1,0,0,1],[1,0,0,0,0],[1,0,0,0,1],[1,1,1,1,0]];
+  // Pulsar seed (partial)
+  var pulsarSeed = [
+    [0,0,1,1,1,0,0,0,1,1,1,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [1,0,0,0,0,1,0,1,0,0,0,0,1],
+    [1,0,0,0,0,1,0,1,0,0,0,0,1],
+    [1,0,0,0,0,1,0,1,0,0,0,0,1],
+    [0,0,1,1,1,0,0,0,1,1,1,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,1,1,1,0,0,0,1,1,1,0,0],
+    [1,0,0,0,0,1,0,1,0,0,0,0,1],
+    [1,0,0,0,0,1,0,1,0,0,0,0,1],
+    [1,0,0,0,0,1,0,1,0,0,0,0,1],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,1,1,1,0,0,0,1,1,1,0,0]
+  ];
+  // R-pentomino (chaotic seed)
+  var rpentomino = [[0,1,1],[1,1,0],[0,1,0]];
+  // Block (still life)
+  var block = [[1,1],[1,1]];
+  // Beehive
+  var beehive = [[0,1,1,0],[1,0,0,1],[0,1,1,0]];
+
+  // Scatter patterns across the canvas
+  place(pulsarSeed, Math.floor(rowCount/2) - 6, Math.floor(cols/2) - 6);
+  place(glider, 3, 5);
+  place(glider, 5, cols - 20);
+  place(lwss, rowCount - 10, 10);
+  place(rpentomino, 8, Math.floor(cols * 0.3));
+  place(rpentomino, rowCount - 15, Math.floor(cols * 0.7));
+  place(block, 4, Math.floor(cols * 0.6));
+  place(beehive, rowCount - 8, Math.floor(cols * 0.45));
+
+  // Scatter a few random cells for organic texture
+  for (var i = 0; i < 30; i++) {
+    var rr = Math.floor(Math.random() * rowCount);
+    var rc = Math.floor(Math.random() * cols);
+    grid[rr][rc] = 1;
+  }
+
+  function countNeighbors(r, c) {
+    var count = 0;
+    for (var dr = -1; dr <= 1; dr++) {
+      for (var dc = -1; dc <= 1; dc++) {
+        if (dr === 0 && dc === 0) continue;
+        var nr = (r + dr + rowCount) % rowCount;
+        var nc = (c + dc + cols) % cols;
+        count += grid[nr][nc] ? 1 : 0;
+      }
+    }
+    return count;
+  }
+
+  function step() {
+    var next = [];
+    for (var r = 0; r < rowCount; r++) {
+      next[r] = new Uint8Array(cols);
+      for (var c = 0; c < cols; c++) {
+        var n = countNeighbors(r, c);
+        if (grid[r][c]) {
+          next[r][c] = (n === 2 || n === 3) ? 1 : 0;
+        } else {
+          next[r][c] = (n === 3) ? 1 : 0;
+        }
+      }
+    }
+    grid = next;
+  }
+
+  // Fading trail effect: store previous states for ghosting
+  var trailGrid = [];
+  for (var r = 0; r < rowCount; r++) {
+    trailGrid[r] = new Float32Array(cols);
+  }
+
+  function draw() {
+    ctx.fillStyle = CA_COLORS.cream;
+    ctx.fillRect(0, 0, W, H);
+
+    // Update trails
+    for (var r = 0; r < rowCount; r++) {
+      for (var c = 0; c < cols; c++) {
+        if (grid[r][c]) {
+          trailGrid[r][c] = 1.0;
+        } else {
+          trailGrid[r][c] *= 0.88;
+        }
+      }
+    }
+
+    for (var r = 0; r < rowCount; r++) {
+      for (var c = 0; c < cols; c++) {
+        var val = trailGrid[r][c];
+        if (val > 0.02) {
+          if (val > 0.9) {
+            ctx.fillStyle = CA_COLORS.ink;
+          } else if (val > 0.4) {
+            ctx.fillStyle = 'rgba(44,24,16,' + (val * 0.6).toFixed(3) + ')';
+          } else {
+            ctx.fillStyle = 'rgba(44,24,16,' + (val * 0.25).toFixed(3) + ')';
+          }
+          ctx.fillRect(c * cellSize, r * cellSize, cellSize - 1, cellSize - 1);
+        }
+      }
+    }
+  }
+
+  var frameCount = 0;
+  var ch3canvas = canvas;
+  function animate() {
+    if (ch3canvas.dataset.visible === 'false') {
+      requestAnimationFrame(animate);
+      return;
+    }
+    frameCount++;
+    if (frameCount % 5 === 0) {
+      step();
+    }
+    draw();
+    requestAnimationFrame(animate);
+  }
+
+  animate();
+})();
+
+
+// =========================================================
+// CH4: Elementary automaton Rule 90 (Sierpinski triangle)
+// Builds row by row, suggesting orderly accumulation
+// =========================================================
+(function() {
+  var canvas = document.getElementById('ch4Automaton');
+  var s = setupCanvas(canvas, 680, 180);
+  var ctx = s.ctx, W = s.w, H = s.h;
+
+  var cellSize = 3;
+  var cols = Math.floor(W / cellSize);
+  var maxRows = Math.floor(H / cellSize);
+  var rule = 90;
+
+  function rulebit(l, c, r) {
+    var idx = (l << 2) | (c << 1) | r;
+    return (rule >> idx) & 1;
+  }
+
+  var currentRow = new Uint8Array(cols);
+  currentRow[Math.floor(cols / 2)] = 1;
+
+  var allRows = [];
+  var currentRowIndex = 0;
+
+  function generateAllRows() {
+    allRows.push(currentRow.slice());
+    for (var i = 1; i < maxRows; i++) {
+      var next = new Uint8Array(cols);
+      for (var c = 0; c < cols; c++) {
+        var l = currentRow[(c - 1 + cols) % cols];
+        var m = currentRow[c];
+        var r = currentRow[(c + 1) % cols];
+        next[c] = rulebit(l, m, r);
+      }
+      allRows.push(next.slice());
+      currentRow = next;
+    }
+  }
+
+  generateAllRows();
+
+  function draw() {
+    ctx.fillStyle = CA_COLORS.cream;
+    ctx.fillRect(0, 0, W, H);
+
+    var rowsToShow = Math.min(currentRowIndex, maxRows);
+    for (var r = 0; r < rowsToShow; r++) {
+      for (var c = 0; c < cols; c++) {
+        if (allRows[r][c]) {
+          var alpha = 0.25 + 0.4 * (r / maxRows);
+          // Use gold/crimson tones
+          var hash = (r + c) % 5;
+          if (hash === 0) {
+            ctx.fillStyle = 'rgba(122,32,40,' + alpha.toFixed(3) + ')';
+          } else if (hash === 1) {
+            ctx.fillStyle = 'rgba(184,134,11,' + (alpha * 0.7).toFixed(3) + ')';
+          } else {
+            ctx.fillStyle = 'rgba(44,24,16,' + alpha.toFixed(3) + ')';
+          }
+          ctx.fillRect(c * cellSize, r * cellSize, cellSize - 0.5, cellSize - 0.5);
+        }
+      }
+    }
+  }
+
+  var frameCount = 0;
+  var ch4canvas = canvas;
+  function animate() {
+    if (ch4canvas.dataset.visible === 'false') {
+      requestAnimationFrame(animate);
+      return;
+    }
+    frameCount++;
+    if (frameCount % 2 === 0 && currentRowIndex <= maxRows) {
+      currentRowIndex++;
+    }
+    // Once complete, pause briefly then restart with a slightly offset seed
+    if (currentRowIndex > maxRows + 120) {
+      currentRowIndex = 0;
+      // Regenerate with a slightly varied starting position
+      currentRow = new Uint8Array(cols);
+      var offset = Math.floor(Math.random() * 7) - 3;
+      currentRow[Math.floor(cols / 2) + offset] = 1;
+      allRows = [];
+      generateAllRows();
+    }
+    draw();
+    requestAnimationFrame(animate);
+  }
+
+  animate();
+})();
+
+
+// =========================================================
+// CH5: "Emergence" -- Multiple Game of Life ecosystems
+// Glider gun streams interact with methuselahs, producing
+// sustained, beautiful complexity. Non-wrapping boundaries
+// prevent self-interference from the gun.
+// =========================================================
+(function() {
+  var canvas = document.getElementById('ch5Automaton');
+  var s = setupCanvas(canvas, 680, 240);
+  var ctx = s.ctx, W = s.w, H = s.h;
+
+  var cellSize = 3;
+  var cols = Math.floor(W / cellSize);
+  var rowCount = Math.floor(H / cellSize);
+  var grid = [];
+  for (var r = 0; r < rowCount; r++) {
+    grid[r] = new Uint8Array(cols);
+  }
+
+  function place(pattern, startR, startC) {
+    for (var r = 0; r < pattern.length; r++) {
+      for (var c = 0; c < pattern[r].length; c++) {
+        var gr = startR + r, gc = startC + c;
+        if (gr >= 0 && gr < rowCount && gc >= 0 && gc < cols) {
+          grid[gr][gc] = pattern[r][c];
+        }
+      }
+    }
+  }
+
+  // Gosper glider gun -- produces a stream of gliders
+  var gliderGun = [
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1],
+    [0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1],
+    [1,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [1,1,0,0,0,0,0,0,0,0,1,0,0,0,1,0,1,1,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+  ];
+  // Acorn -- takes 5206 generations to stabilize
+  var acorn = [[0,1,0,0,0,0,0],[0,0,0,1,0,0,0],[1,1,0,0,1,1,1]];
+  // R-pentomino (chaotic, long-lived)
+  var rpentomino = [[0,1,1],[1,1,0],[0,1,0]];
+  // Lightweight spaceship
+  var lwss = [[0,1,0,0,1],[1,0,0,0,0],[1,0,0,0,1],[1,1,1,1,0]];
+
+  // Place glider gun in upper-left with enough margin for it to operate cleanly
+  // Gun needs ~9 rows and ~36 cols; place with a buffer from edges
+  place(gliderGun, 5, 5);
+
+  // Place methuselahs in the lower-right quadrant where gliders will reach them
+  place(acorn, Math.floor(rowCount * 0.55), Math.floor(cols * 0.55));
+  place(rpentomino, Math.floor(rowCount * 0.4), Math.floor(cols * 0.7));
+
+  // Spaceships traveling from opposite corners for visual cross-currents
+  place(lwss, rowCount - 10, Math.floor(cols * 0.15));
+  place(lwss, Math.floor(rowCount * 0.25), cols - 12);
+
+  // Non-wrapping neighbor count: dead boundary prevents gun self-interference
+  function countNeighbors(r, c) {
+    var count = 0;
+    for (var dr = -1; dr <= 1; dr++) {
+      for (var dc = -1; dc <= 1; dc++) {
+        if (dr === 0 && dc === 0) continue;
+        var nr = r + dr, nc = c + dc;
+        if (nr >= 0 && nr < rowCount && nc >= 0 && nc < cols) {
+          count += grid[nr][nc] ? 1 : 0;
+        }
+      }
+    }
+    return count;
+  }
+
+  function step() {
+    var next = [];
+    for (var r = 0; r < rowCount; r++) {
+      next[r] = new Uint8Array(cols);
+      for (var c = 0; c < cols; c++) {
+        var n = countNeighbors(r, c);
+        if (grid[r][c]) {
+          next[r][c] = (n === 2 || n === 3) ? 1 : 0;
+        } else {
+          next[r][c] = (n === 3) ? 1 : 0;
+        }
+      }
+    }
+    grid = next;
+  }
+
+  // Trails for ghosting effect
+  var trails = [];
+  for (var r = 0; r < rowCount; r++) {
+    trails[r] = new Float32Array(cols);
+  }
+
+  var generation = 0;
+
+  function draw() {
+    ctx.fillStyle = CA_COLORS.cream;
+    ctx.fillRect(0, 0, W, H);
+
+    for (var r = 0; r < rowCount; r++) {
+      for (var c = 0; c < cols; c++) {
+        if (grid[r][c]) {
+          trails[r][c] = 1.0;
+        } else {
+          trails[r][c] *= 0.91;
+        }
+      }
+    }
+
+    for (var r = 0; r < rowCount; r++) {
+      for (var c = 0; c < cols; c++) {
+        var val = trails[r][c];
+        if (val > 0.02) {
+          // Stable color assignment based on spatial position only (no flicker)
+          var h = (r * 3 + c * 7) % 60;
+          if (val > 0.85) {
+            if (h < 20) ctx.fillStyle = 'rgba(122,32,40,' + (val * 0.7).toFixed(3) + ')';
+            else if (h < 40) ctx.fillStyle = 'rgba(26,58,107,' + (val * 0.6).toFixed(3) + ')';
+            else ctx.fillStyle = 'rgba(44,24,16,' + (val * 0.65).toFixed(3) + ')';
+          } else if (val > 0.3) {
+            ctx.fillStyle = 'rgba(184,134,11,' + (val * 0.35).toFixed(3) + ')';
+          } else {
+            ctx.fillStyle = 'rgba(44,24,16,' + (val * 0.12).toFixed(3) + ')';
+          }
+          ctx.fillRect(c * cellSize, r * cellSize, cellSize - 0.5, cellSize - 0.5);
+        }
+      }
+    }
+  }
+
+  var frameCount = 0;
+  function animate() {
+    if (canvas.dataset.visible === 'false') {
+      requestAnimationFrame(animate);
+      return;
+    }
+    frameCount++;
+    if (frameCount % 3 === 0) {
+      step();
+      generation++;
+
+      // Re-seed if activity drops too low (gun got destroyed somehow)
+      if (generation % 400 === 0) {
+        var liveCount = 0;
+        for (var r = 0; r < rowCount; r++)
+          for (var c = 0; c < cols; c++)
+            liveCount += grid[r][c];
+        if (liveCount < cols) {
+          place(rpentomino, Math.floor(Math.random() * (rowCount - 10)) + 5,
+                            Math.floor(Math.random() * (cols - 10)) + 5);
+          place(acorn, Math.floor(Math.random() * (rowCount - 10)) + 5,
+                       Math.floor(Math.random() * (cols - 15)) + 5);
+        }
+      }
+    }
+    draw();
+    requestAnimationFrame(animate);
+  }
+
+  animate();
+})();
+
+
+// =========================================================
+// Performance: pause off-screen canvases
+// =========================================================
+(function() {
+  var canvases = document.querySelectorAll('.illustration canvas');
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      entry.target.dataset.visible = entry.isIntersecting ? 'true' : 'false';
+    });
+  }, { rootMargin: '100px' });
+
+  canvases.forEach(function(c) {
+    c.dataset.visible = 'false';
+    observer.observe(c);
+  });
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 142 142'%3E%3Cpath d='M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z' fill='%232a2520'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenProse — Responsibilities as a Service (v2)</title>
+<style>
+  /* ============================================
+     APPROACH C v2: Bold / High Contrast / Conversational
+     Think: Loom, Superhuman, Arc — opinionated, direct, confident
+     Typography: Large, expressive, chunky hierarchy
+     Layout: Full-bleed sections, alternating rhythm, big type moments
+     Color: Near-black + bold off-white + one vivid accent
+     ============================================ */
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black: #0d0d0d;
+    --near-black: #151515;
+    --dark: #1e1e1e;
+    --white: #f8f7f4;
+    --white-2: #ede9e0;
+    --rule: rgba(255,255,255,0.1);
+    --text: #f8f7f4;
+    --text-2: rgba(248,247,244,0.65);
+    --text-dim: rgba(248,247,244,0.3);
+    --vivid: #e8d44d;
+    --vivid-2: #d4c234;
+    --sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Helvetica Neue', sans-serif;
+    --mono: 'SF Mono', 'Fira Code', Consolas, monospace;
+  }
+
+  html { font-size: 16px; scroll-behavior: smooth; }
+
+  body {
+    background: var(--black);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    padding: 0 2.5rem;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(13,13,13,0.95);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .nav-logo {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+
+  .nav-logo .dot { color: var(--vivid); }
+
+  .nav-links {
+    list-style: none;
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+  }
+
+  .nav-links a {
+    font-size: 0.875rem;
+    color: var(--text-2);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+
+  .nav-links a:hover { color: var(--text); }
+
+  .nav-cta {
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0.5rem 1.125rem;
+    background: var(--vivid);
+    color: var(--black);
+    text-decoration: none;
+    border-radius: 2px;
+    transition: background 0.15s;
+    letter-spacing: -0.01em;
+  }
+
+  .nav-cta:hover { background: var(--vivid-2); }
+
+  /* MATRIX RAIN CANVASES */
+  #heroMatrixCanvas,
+  #ctaMatrixCanvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* CTA needs the rain behind its content */
+  .cta-section { position: relative; overflow: hidden; }
+  .cta-inner { position: relative; z-index: 1; }
+
+  /* HERO — FULL BLEED */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 0 2.5rem 5rem;
+    background: var(--near-black);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-bg-text {
+    position: absolute;
+    top: 0;
+    right: -2rem;
+    font-size: clamp(8rem, 18vw, 18rem);
+    font-weight: 900;
+    color: rgba(255,255,255,0.03);
+    line-height: 0.9;
+    pointer-events: none;
+    user-select: none;
+    letter-spacing: -0.05em;
+    white-space: nowrap;
+  }
+
+  .hero-content {
+    max-width: 900px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .hero-overline {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--vivid);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .hero-overline::before {
+    content: '';
+    display: block;
+    width: 24px;
+    height: 1px;
+    background: var(--vivid);
+  }
+
+  h1 {
+    font-size: clamp(2.5rem, 6vw, 5.5rem);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.04em;
+    color: var(--text);
+    margin-bottom: 2rem;
+  }
+
+  h1 .highlight { color: var(--vivid); }
+
+  .hero-sub {
+    font-size: clamp(1rem, 1.75vw, 1.25rem);
+    color: var(--text-2);
+    max-width: 580px;
+    line-height: 1.7;
+    margin-bottom: 3rem;
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .btn-vivid {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    padding: 0.875rem 1.75rem;
+    background: var(--vivid);
+    color: var(--black);
+    text-decoration: none;
+    border-radius: 2px;
+    letter-spacing: -0.01em;
+    transition: background 0.15s;
+  }
+
+  .btn-vivid:hover { background: var(--vivid-2); }
+
+  .btn-outline {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    padding: 0.875rem 1.75rem;
+    background: transparent;
+    color: var(--text-2);
+    text-decoration: none;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 2px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  .btn-outline:hover { color: var(--text); border-color: rgba(255,255,255,0.3); }
+
+  .hero-scroll-hint {
+    position: absolute;
+    bottom: 2.5rem;
+    right: 2.5rem;
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    writing-mode: vertical-rl;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* STAT BAR */
+  .stat-bar {
+    background: var(--vivid);
+    padding: 1.25rem 2.5rem;
+    display: flex;
+    gap: 0;
+    overflow: hidden;
+  }
+
+  .stat-item {
+    flex: 1;
+    display: flex;
+    align-items: baseline;
+    gap: 0.625rem;
+    padding: 0 1.5rem;
+    border-right: 1px solid rgba(0,0,0,0.15);
+  }
+
+  .stat-item:first-child { padding-left: 0; }
+  .stat-item:last-child  { border-right: none; }
+
+  .stat-num {
+    font-size: 1.625rem;
+    font-weight: 800;
+    color: var(--black);
+    letter-spacing: -0.03em;
+  }
+
+  .stat-desc {
+    font-size: 0.8125rem;
+    color: rgba(0,0,0,0.6);
+    font-weight: 500;
+  }
+
+  /* BIG STATEMENT SECTION */
+  .statement-section {
+    padding: 7rem 2.5rem;
+    background: var(--dark);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .statement-inner {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .statement-label {
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 2rem;
+  }
+
+  .big-statement {
+    font-size: clamp(1.5rem, 3vw, 2.625rem);
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.03em;
+    color: var(--text);
+    margin-bottom: 2.5rem;
+  }
+
+  .big-statement .dim { color: var(--text-2); font-weight: 400; }
+
+  .body-text {
+    font-size: 1.0625rem;
+    color: var(--text-2);
+    line-height: 1.8;
+    max-width: 640px;
+  }
+
+  .body-text p { margin-bottom: 1.25rem; }
+  .body-text p:last-child { margin-bottom: 0; }
+  .body-text strong { color: var(--text); font-weight: 600; }
+
+  /* VERSUS SECTION */
+  .versus-section {
+    padding: 7rem 2.5rem;
+    background: var(--black);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .versus-inner {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .versus-grid {
+    display: grid;
+    grid-template-columns: 1fr 80px 1fr;
+    gap: 0;
+    margin-top: 3rem;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .versus-col {
+    padding: 2.5rem 2rem;
+    background: var(--near-black);
+  }
+
+  .versus-col.right {
+    background: var(--dark);
+    border-left: 1px solid var(--rule);
+  }
+
+  .versus-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--rule);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    font-family: var(--mono);
+    border-left: 1px solid var(--rule);
+    border-right: 1px solid var(--rule);
+  }
+
+  .versus-label {
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .versus-col .versus-label { color: var(--text-dim); }
+  .versus-col.right .versus-label { color: var(--vivid); }
+
+  .versus-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+
+  .versus-item:last-child { margin-bottom: 0; }
+
+  .versus-col .versus-item { color: var(--text-2); }
+  .versus-col.right .versus-item { color: var(--text); }
+
+  .icon-x     { color: rgba(248,113,113,0.7); font-size: 0.875rem; flex-shrink: 0; margin-top: 0.1rem; }
+  .icon-check { color: var(--vivid); font-size: 0.875rem; flex-shrink: 0; margin-top: 0.1rem; }
+
+  /* PROOF SECTION — DARK BG */
+  .proof-section {
+    padding: 7rem 2.5rem;
+    background: var(--near-black);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .proof-inner { max-width: 900px; margin: 0 auto; }
+
+  .proof-card {
+    background: var(--dark);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 2.5rem;
+    margin-top: 3rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .proof-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--vivid), transparent);
+  }
+
+  .proof-tag {
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    color: var(--vivid);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 1.25rem;
+  }
+
+  .proof-card h3 {
+    font-size: 1.375rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 1rem;
+    letter-spacing: -0.02em;
+    line-height: 1.3;
+  }
+
+  .proof-card p {
+    color: var(--text-2);
+    font-size: 1rem;
+    line-height: 1.75;
+    margin-bottom: 1.5rem;
+  }
+
+  .delivery-list {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .delivery-item {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    padding: 0.375rem 0.75rem;
+    background: rgba(232,212,77,0.1);
+    border: 1px solid rgba(232,212,77,0.2);
+    color: var(--vivid);
+    border-radius: 2px;
+    letter-spacing: 0.03em;
+  }
+
+  /* PRICING SECTION */
+  .pricing-section {
+    padding: 7rem 2.5rem;
+    background: var(--black);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .pricing-inner { max-width: 900px; margin: 0 auto; }
+
+  .pricing-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 3rem;
+  }
+
+  .p-card {
+    background: var(--near-black);
+    padding: 2rem 1.75rem;
+  }
+
+  .p-card.featured {
+    background: var(--dark);
+    position: relative;
+  }
+
+  .p-card.featured::before {
+    content: 'OpenProse';
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-family: var(--mono);
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 0.375rem 0.625rem;
+    background: var(--vivid);
+    color: var(--black);
+    font-weight: 700;
+  }
+
+  .p-card-label {
+    font-family: var(--mono);
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    margin-bottom: 1rem;
+  }
+
+  .p-amount {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.04em;
+    margin-bottom: 0.375rem;
+  }
+
+  .p-card.featured .p-amount { color: var(--vivid); }
+
+  .p-note {
+    font-size: 0.8125rem;
+    color: var(--text-2);
+    line-height: 1.55;
+  }
+
+  /* OSS */
+  .oss-section {
+    padding: 4rem 2.5rem;
+    background: var(--dark);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .oss-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 3rem;
+  }
+
+  .oss-icon { font-size: 2.5rem; flex-shrink: 0; }
+
+  .oss-text h3 {
+    font-size: 1.0625rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.02em;
+  }
+
+  .oss-text p {
+    font-size: 0.9375rem;
+    color: var(--text-2);
+    line-height: 1.65;
+    margin: 0;
+  }
+
+  .oss-text a { color: var(--vivid); text-decoration: none; }
+
+  /* CTA */
+  .cta-section {
+    padding: 9rem 2.5rem;
+    background: var(--black);
+    text-align: center;
+  }
+
+  .cta-inner {
+    max-width: 700px;
+    margin: 0 auto;
+  }
+
+  .cta-eyebrow {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--vivid);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 1.5rem;
+  }
+
+  .cta-section h2 {
+    font-size: clamp(2rem, 5vw, 4rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.04em;
+    color: var(--text);
+    margin-bottom: 1.5rem;
+  }
+
+  .cta-section p {
+    font-size: 1.0625rem;
+    color: var(--text-2);
+    margin-bottom: 3rem;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.75;
+  }
+
+  .cta-form {
+    display: flex;
+    gap: 0;
+    max-width: 440px;
+    margin: 0 auto;
+    border: 1px solid rgba(232,212,77,0.3);
+    border-radius: 2px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .cta-form:focus-within { border-color: var(--vivid); }
+
+  .cta-email {
+    flex: 1;
+    font-family: var(--sans);
+    font-size: 0.9375rem;
+    padding: 0.875rem 1.125rem;
+    background: var(--near-black);
+    border: none;
+    outline: none;
+    color: var(--text);
+  }
+
+  .cta-email::placeholder { color: var(--text-dim); }
+
+  .cta-submit {
+    font-size: 0.875rem;
+    font-weight: 700;
+    padding: 0.875rem 1.5rem;
+    background: var(--vivid);
+    color: var(--black);
+    border: none;
+    cursor: pointer;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    transition: background 0.15s;
+  }
+
+  .cta-submit:hover { background: var(--vivid-2); }
+
+  /* FOOTER */
+  footer {
+    background: var(--near-black);
+    border-top: 1px solid var(--rule);
+    padding: 2.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .footer-brand {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+
+  .footer-brand .dot { color: var(--vivid); }
+
+  .footer-meta {
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+    display: flex;
+    gap: 1.5rem;
+  }
+
+  .footer-meta a { color: var(--text-dim); text-decoration: none; transition: color 0.15s; }
+  .footer-meta a:hover { color: var(--text-2); }
+
+  /* SECTION HEADING REUSE */
+  .section-heading {
+    font-size: clamp(1.75rem, 4vw, 3rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1.15;
+    color: var(--text);
+    margin-bottom: 1.5rem;
+  }
+
+  .section-heading .dim { color: var(--text-2); font-weight: 400; }
+
+  .section-sub {
+    font-size: 1.0625rem;
+    color: var(--text-2);
+    max-width: 560px;
+    line-height: 1.75;
+  }
+
+  /* ==============================
+     CANVAS DIAGRAM STYLES (v2 additions)
+     Motion graphics / keynote feel
+     ============================== */
+
+  .canvas-block {
+    margin-top: 4rem;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    overflow: hidden;
+    background: var(--black);
+    position: relative;
+  }
+
+  .canvas-topbar {
+    padding: 0.625rem 1rem;
+    background: rgba(255,255,255,0.04);
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .canvas-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--vivid);
+    opacity: 0.6;
+  }
+
+  .canvas-topbar-label {
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-left: 0.5rem;
+  }
+
+  .canvas-block canvas {
+    display: block;
+    width: 100%;
+    aspect-ratio: 900 / 300;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    nav { padding: 0 1.25rem; }
+    .nav-links { display: none; }
+    .hero { padding: 100px 1.25rem 4rem; }
+    .stat-bar { flex-direction: column; gap: 0.75rem; }
+    .stat-item { border-right: none; padding: 0; }
+    .statement-section,
+    .versus-section,
+    .proof-section,
+    .pricing-section,
+    .oss-section,
+    .cta-section { padding: 4rem 1.25rem; }
+    .versus-grid { grid-template-columns: 1fr; }
+    .versus-divider { padding: 1rem; writing-mode: horizontal-tb; border: none; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+    .versus-col.right { border-left: none; border-top: 1px solid var(--rule); }
+    .pricing-cards { grid-template-columns: 1fr; }
+    .oss-inner { flex-direction: column; gap: 1.5rem; }
+    footer { flex-direction: column; gap: 1rem; text-align: center; }
+    .footer-meta { flex-direction: column; gap: 0.5rem; align-items: center; }
+  }
+
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">Open<span class="dot">.</span>Prose</div>
+  <ul class="nav-links">
+    <li><a href="#concept">How it works</a></li>
+    <li><a href="#vs">vs Claude</a></li>
+    <li><a href="#proof">Results</a></li>
+    <li><a href="#pricing">Pricing</a></li>
+    <li><a href="#cta" class="nav-cta">Define a responsibility</a></li>
+  </ul>
+</nav>
+
+<main>
+
+  <!-- HERO -->
+  <section class="hero">
+    <canvas id="heroMatrixCanvas"></canvas>
+    <div class="hero-bg-text">PROSE</div>
+    <div class="hero-content">
+      <div class="hero-overline">Responsibilities as a service</div>
+      <h1>
+        Declare the outcome.<br>
+        <span class="highlight">We handle the rest.</span>
+      </h1>
+      <p class="hero-sub">
+        Every agent tool makes you manage it. You prescribe tasks, check outputs, iterate.
+        Reclaim your attention. OpenProse is different: describe the responsibility,
+        set the contract, step away. Responsibilities complete on schedule.
+      </p>
+      <div class="hero-actions">
+        <a href="#cta" class="btn-vivid">Define your first responsibility</a>
+        <a href="#concept" class="btn-outline">See how responsibilities work</a>
+      </div>
+    </div>
+    <div class="hero-scroll-hint">Scroll</div>
+  </section>
+
+  <!-- STATS -->
+  <div class="stat-bar">
+    <div class="stat-item">
+      <span class="stat-num">6,000</span>
+      <span class="stat-desc">installs</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-num">1,000</span>
+      <span class="stat-desc">GitHub stars</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-num">MIT</span>
+      <span class="stat-desc">open source</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-num">YC</span>
+      <span class="stat-desc">backed</span>
+    </div>
+  </div>
+
+  <!-- CONCEPT -->
+  <section class="statement-section" id="concept">
+    <div class="statement-inner">
+      <div class="statement-label">01 — The concept</div>
+      <div class="big-statement">
+        A self-maintaining book of responsibilities.<br>
+        <span class="dim">Write what needs to happen. The book keeps itself up.</span>
+      </div>
+      <div class="body-text">
+        <p>
+          You have responsibilities you want to offload. Today your options are: hire someone,
+          or buy a tool and learn to use it. <strong>Both cost you attention.</strong>
+        </p>
+        <p>
+          OpenProse is a third option. You describe the responsibilities: what needs to happen,
+          what good looks like, what the guardrails are. It handles them.
+          No dashboard to check. No tool to learn.
+          Results show up in Slack or email on a cadence.
+        </p>
+        <p>
+          <strong>We're not selling a tool. We're offloading a responsibility.</strong>
+        </p>
+      </div>
+
+      <!-- CANVAS C1: The Magic Book / Particle Assembly -->
+      <div class="canvas-block">
+        <div class="canvas-topbar">
+          <div class="canvas-dot"></div>
+          <span class="canvas-topbar-label">responsibilities.assemble — live</span>
+        </div>
+        <canvas id="canvasBook" width="900" height="300"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- VERSUS -->
+  <section class="versus-section" id="vs">
+    <div class="versus-inner">
+      <div class="statement-label">02 — vs Claude / AI tools</div>
+      <div class="section-heading">
+        Claude does what you tell it.<br>
+        <span class="dim">OpenProse does what you need.</span>
+      </div>
+
+      <div class="versus-grid">
+        <div class="versus-col">
+          <div class="versus-label">Using Claude yourself</div>
+          <div class="versus-item"><span class="icon-x">✕</span>You prescribe every task</div>
+          <div class="versus-item"><span class="icon-x">✕</span>You manage context and iteration</div>
+          <div class="versus-item"><span class="icon-x">✕</span>Your attention stays locked</div>
+          <div class="versus-item"><span class="icon-x">✕</span>Imperative: you're the manager</div>
+          <div class="versus-item"><span class="icon-x">✕</span>Constant oversight required</div>
+        </div>
+
+        <div class="versus-divider">VS</div>
+
+        <div class="versus-col right">
+          <div class="versus-label">OpenProse</div>
+          <div class="versus-item"><span class="icon-check">✓</span>Describe the outcome once</div>
+          <div class="versus-item"><span class="icon-check">✓</span>We manage context and execution</div>
+          <div class="versus-item"><span class="icon-check">✓</span>Your attention is free</div>
+          <div class="versus-item"><span class="icon-check">✓</span>Declarative: we're the manager</div>
+          <div class="versus-item"><span class="icon-check">✓</span>Results show up. You never think about it.</div>
+        </div>
+      </div>
+
+      <!-- CANVAS C2: Stress Test -->
+      <div class="canvas-block">
+        <div class="canvas-topbar">
+          <div class="canvas-dot"></div>
+          <span class="canvas-topbar-label">stress-test.sim — your workflow vs OpenProse</span>
+        </div>
+        <canvas id="canvasStress" width="900" height="300"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROOF -->
+  <section class="proof-section" id="proof">
+    <div class="proof-inner">
+      <div class="statement-label">03 — Proof</div>
+      <div class="section-heading">
+        Responsibilities that used to take hours.<br>
+        <span class="dim">Now they complete on schedule.</span>
+      </div>
+      <p class="section-sub">
+        We're running this for an energy monitoring company right now.
+        Their team used to spend hours each week on this. Now it arrives on schedule.
+      </p>
+
+      <div class="proof-card">
+        <div class="proof-tag">Energy monitoring company / active pilot</div>
+        <h3>Anomaly detection + equipment health + customer ROI dashboards</h3>
+        <p>
+          Sensor anomaly detection across their entire network. Automated equipment health reports.
+          Customer ROI dashboards. All delivered on a weekly cadence without anyone managing it.
+          We started with read-only access to public data. Built the demo first. Earned trust.
+        </p>
+        <div class="delivery-list">
+          <span class="delivery-item">anomaly-detection</span>
+          <span class="delivery-item">equipment-health</span>
+          <span class="delivery-item">roi-dashboards</span>
+          <span class="delivery-item">weekly-cadence</span>
+          <span class="delivery-item">slack-delivery</span>
+        </div>
+      </div>
+
+      <!-- CANVAS C3: What Shows Up — Inbox simulation -->
+      <div class="canvas-block">
+        <div class="canvas-topbar">
+          <div class="canvas-dot"></div>
+          <span class="canvas-topbar-label">inbox.live — deliveries arriving</span>
+        </div>
+        <canvas id="canvasInbox" width="900" height="300"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section class="pricing-section" id="pricing">
+    <div class="pricing-inner">
+      <div class="statement-label">04 — Pricing</div>
+      <div class="section-heading">
+        Competes with the hire you're avoiding.
+      </div>
+      <p class="section-sub">
+        A junior analyst costs $6–8K per month fully loaded. A senior analyst costs $12–15K.
+        We price at a fraction of that, anchored to the hire you're skipping.
+      </p>
+
+      <div class="pricing-cards">
+        <div class="p-card">
+          <div class="p-card-label">Junior analyst</div>
+          <div class="p-amount">$6–8K</div>
+          <div class="p-note">Per month, fully loaded. Daily management still on you.</div>
+        </div>
+        <div class="p-card">
+          <div class="p-card-label">Senior analyst</div>
+          <div class="p-amount">$12–15K</div>
+          <div class="p-note">More autonomous. Still your headcount to manage.</div>
+        </div>
+        <div class="p-card featured">
+          <div class="p-card-label">Pilot: 2-3 responsibilities</div>
+          <div class="p-amount">~$2K</div>
+          <div class="p-note">Per month. No dashboard. No management overhead. Responsibilities delivered.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- OSS -->
+  <section class="oss-section">
+    <div class="oss-inner">
+      <div class="oss-icon">⎔</div>
+      <div class="oss-text">
+        <h3>Open source. Run it yourself, or let us run it.</h3>
+        <p>
+          MIT license. 6,000 installs. 1,000 GitHub stars. You can run the whole stack in your own cloud,
+          like Terraform. Self-hosted, full control, no lock-in. Most people prefer we run it for them.
+          <a href="#">View on GitHub →</a>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section" id="cta">
+    <canvas id="ctaMatrixCanvas"></canvas>
+    <div class="cta-inner">
+      <div class="cta-eyebrow">The closing question</div>
+      <h2>What do you wish you could stop thinking about?</h2>
+      <p>
+        That's where we start. Tell us the responsibility and we'll
+        show you what offloaded looks like before you commit.
+      </p>
+      <div class="cta-form">
+        <input class="cta-email" type="email" placeholder="your@email.com" />
+        <button class="cta-submit">Define your first responsibility →</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="footer-brand">Open<span class="dot">.</span>Prose</div>
+  <div class="footer-meta">
+    <a href="#">GitHub</a>
+    <span>MIT License</span>
+    <span>YC-backed</span>
+    <span>© 2026</span>
+  </div>
+</footer>
+
+<script>
+/* ============================================================
+   PROSE MATRIX RAIN — slow, calm, contemplative
+   Used on hero + closing-question sections.
+   ============================================================ */
+const FRAGMENTS = [
+  'responsibility', 'declare', 'outcome', 'contract', 'offload',
+  'autonomy', 'cadence', 'delivery', 'guardrail', 'schedule',
+  'anomaly', 'detection', 'health', 'monitor', 'report',
+  'dashboard', 'sensor', 'alert', 'brief', 'ROI',
+  'prose', 'open', 'define', 'execute', 'deliver',
+  'trust', 'verify', 'weekly', 'daily', 'hourly',
+  'slack', 'email', 'notify', 'complete', 'active',
+  'agent', 'orchestrate', 'pipeline', 'deploy', 'run',
+  'observe', 'measure', 'iterate', 'automate', 'scale',
+  'declare()', 'run()', '.prose', 'MIT', 'OSS',
+  '{...}', '=>', '/**/', '[]', '()',
+  'fn', 'let', 'use', 'pub', 'mod',
+];
+
+function initMatrixRain(canvas, opts) {
+  if (!canvas) return;
+  const o = Object.assign({
+    speedMin: 0.12,        // was 0.5 — now ~4x slower
+    speedJitter: 0.10,     // was 0.3
+    fontSize: 14,
+    trailFade: 0.035,      // lower = longer, more serene trail (was 0.06)
+    headAlpha: 0.85,
+    headBlur: 6,
+    charAdvanceChance: 0.45, // only advance chars ~half the frames for legibility
+    trailLenBase: 10,
+    trailLenJitter: 6,
+    accentRgb: '232,212,77',
+    trailRgb: '248,247,244',
+    resetChance: 0.985,    // higher = rarer reset → longer pauses between showers
+  }, opts || {});
+
+  const ctx = canvas.getContext('2d');
+  const fontSize = o.fontSize;
+  let W, H, columns = [], drops = [];
+  const columnFragments = [];
+  const columnCharIdx = [];
+
+  function resize() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    W = Math.max(1, rect.width);
+    H = Math.max(1, rect.height);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const colCount = Math.floor(W / fontSize);
+    const newDrops = [];
+    const newColumns = [];
+    for (let i = 0; i < colCount; i++) {
+      newColumns.push(i);
+      newDrops.push(drops[i] !== undefined ? drops[i] : Math.random() * -100);
+      if (columnFragments[i] === undefined) {
+        columnFragments[i] = FRAGMENTS[Math.floor(Math.random() * FRAGMENTS.length)];
+        columnCharIdx[i] = 0;
+      }
+    }
+    columns = newColumns;
+    drops = newDrops;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // Stagger initial positions so nothing starts in a rigid line
+  for (let i = 0; i < drops.length; i++) {
+    drops[i] = Math.random() * (H / fontSize) * -1;
+  }
+
+  function draw() {
+    // Fade overlay — lower alpha keeps longer ghost trails for calm vibe
+    ctx.fillStyle = `rgba(13,13,13,${o.trailFade})`;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.font = fontSize + 'px "SF Mono", "Fira Code", "JetBrains Mono", Consolas, monospace';
+
+    for (let i = 0; i < columns.length; i++) {
+      const frag = columnFragments[i] || FRAGMENTS[0];
+      const charIdx = columnCharIdx[i] || 0;
+      const char = frag[charIdx % frag.length];
+
+      const x = i * fontSize;
+      const y = drops[i] * fontSize;
+
+      if (y > 0 && y < H) {
+        ctx.fillStyle = '#' +
+          [parseInt(o.accentRgb.split(',')[0]),
+           parseInt(o.accentRgb.split(',')[1]),
+           parseInt(o.accentRgb.split(',')[2])]
+          .map(v => v.toString(16).padStart(2,'0')).join('');
+        ctx.globalAlpha = o.headAlpha;
+        ctx.shadowColor = ctx.fillStyle;
+        ctx.shadowBlur = o.headBlur;
+        ctx.fillText(char, x, y);
+        ctx.shadowBlur = 0;
+      }
+
+      const trailLen = o.trailLenBase + Math.floor(Math.random() * o.trailLenJitter);
+      for (let t = 1; t <= trailLen; t++) {
+        const ty = y - t * fontSize;
+        if (ty < 0 || ty > H) continue;
+        const trailFrag = FRAGMENTS[(i + t) % FRAGMENTS.length];
+        const trailChar = trailFrag[(charIdx + t) % trailFrag.length];
+        const fadeFactor = 1 - (t / trailLen);
+        if (t <= 3) {
+          ctx.fillStyle = `rgba(${o.accentRgb},${fadeFactor * 0.55})`;
+        } else {
+          ctx.fillStyle = `rgba(${o.trailRgb},${fadeFactor * 0.18})`;
+        }
+        ctx.globalAlpha = 1;
+        ctx.fillText(trailChar, x, ty);
+      }
+      ctx.globalAlpha = 1;
+
+      // Advance drop slowly
+      drops[i] += o.speedMin + Math.random() * o.speedJitter;
+
+      // Only advance char every so often so glyphs stay legible
+      if (Math.random() < o.charAdvanceChance) {
+        columnCharIdx[i] = (columnCharIdx[i] || 0) + 1;
+      }
+
+      if (drops[i] * fontSize > H + trailLen * fontSize) {
+        if (Math.random() > o.resetChance) {
+          drops[i] = Math.random() * -20;
+          columnFragments[i] = FRAGMENTS[Math.floor(Math.random() * FRAGMENTS.length)];
+          columnCharIdx[i] = 0;
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// Hero rain — slightly more active, still calm
+initMatrixRain(document.getElementById('heroMatrixCanvas'), {
+  speedMin: 0.15,
+  speedJitter: 0.12,
+  trailFade: 0.04,
+  headAlpha: 0.9,
+  headBlur: 8,
+  charAdvanceChance: 0.5,
+});
+
+// Closing-question rain — quieter, slower, more contemplative
+initMatrixRain(document.getElementById('ctaMatrixCanvas'), {
+  speedMin: 0.08,
+  speedJitter: 0.06,
+  trailFade: 0.028,
+  headAlpha: 0.55,
+  headBlur: 4,
+  charAdvanceChance: 0.32,
+  trailLenBase: 8,
+  trailLenJitter: 4,
+  // slightly cooler / dimmer palette so type stays dominant
+  accentRgb: '220,200,80',
+  resetChance: 0.99,
+});
+
+
+/* ============================================================
+   CANVAS C1 — The Magic Book / Particle Assembly
+   Particles spell responsibilities, then sweep into organized grid.
+   Yellow glow pulse when organized. Dramatic, high-energy.
+   ============================================================ */
+(function() {
+  const c   = document.getElementById('canvasBook');
+  const ctx = c.getContext('2d');
+  const W   = 900, H = 300;
+
+  const BG    = '#0d0d0d';
+  const VIVID = '#e8d44d';
+  const TEXT  = '#f8f7f4';
+  const DIM   = 'rgba(248,247,244,0.3)';
+
+  // Responsibility cards — target grid positions
+  const responsibilities = [
+    'Anomaly Detection',
+    'Equipment Health',
+    'ROI Dashboards',
+    'Morning Brief',
+    'Sensor Monitoring',
+    'Slack Delivery',
+  ];
+
+  const gridCols  = 3;
+  const gridRows  = 2;
+  const cardW     = 210;
+  const cardH     = 68;
+  const cardGapX  = 30;
+  const cardGapY  = 22;
+  const gridTotalW = gridCols * cardW + (gridCols - 1) * cardGapX;
+  const gridTotalH = gridRows * cardH + (gridRows - 1) * cardGapY;
+  const gridStartX = (W - gridTotalW) / 2;
+  const gridStartY = (H - gridTotalH) / 2;
+
+  // Each responsibility becomes a cluster of particles
+  const PARTICLES_PER = 20;
+  const allParticles = [];
+
+  responsibilities.forEach((resp, idx) => {
+    const col = idx % gridCols;
+    const row = Math.floor(idx / gridCols);
+    const targetX = gridStartX + col * (cardW + cardGapX) + cardW / 2;
+    const targetY = gridStartY + row * (cardH + cardGapY) + cardH / 2;
+
+    for (let i = 0; i < PARTICLES_PER; i++) {
+      allParticles.push({
+        // Start scattered randomly
+        x: Math.random() * W,
+        y: Math.random() * H,
+        // Target: inside card
+        tx: targetX + (Math.random() - 0.5) * (cardW * 0.7),
+        ty: targetY + (Math.random() - 0.5) * (cardH * 0.6),
+        vx: (Math.random() - 0.5) * 3,
+        vy: (Math.random() - 0.5) * 3,
+        r: 1.5 + Math.random() * 2,
+        color: Math.random() < 0.35 ? VIVID : TEXT,
+        alpha: 0.5 + Math.random() * 0.5,
+        cardIdx: idx,
+        assembled: false,
+        assembleSpeed: 0.04 + Math.random() * 0.03,
+      });
+    }
+  });
+
+  // Phase: 'scatter' -> 'assembling' -> 'assembled' -> 'pulse' -> repeat
+  const SCATTER_FRAMES   = 80;
+  const ASSEMBLE_FRAMES  = 120;
+  const PULSE_FRAMES     = 60;
+  const HOLD_FRAMES      = 80;
+  const TOTAL_CYCLE      = SCATTER_FRAMES + ASSEMBLE_FRAMES + PULSE_FRAMES + HOLD_FRAMES;
+
+  let tick = 0;
+  let pulseGlow = 0;
+
+  function getPhase(t) {
+    t = t % TOTAL_CYCLE;
+    if (t < SCATTER_FRAMES) return { phase: 'scatter', progress: t / SCATTER_FRAMES };
+    t -= SCATTER_FRAMES;
+    if (t < ASSEMBLE_FRAMES) return { phase: 'assembling', progress: t / ASSEMBLE_FRAMES };
+    t -= ASSEMBLE_FRAMES;
+    if (t < PULSE_FRAMES) return { phase: 'pulse', progress: t / PULSE_FRAMES };
+    return { phase: 'hold', progress: (t - PULSE_FRAMES) / HOLD_FRAMES };
+  }
+
+  function easeInOut(t) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; }
+
+  function draw() {
+    tick++;
+    ctx.fillStyle = 'rgba(13,13,13,0.18)';
+    ctx.fillRect(0, 0, W, H);
+
+    const { phase, progress } = getPhase(tick);
+
+    // Update particles
+    allParticles.forEach(p => {
+      if (phase === 'scatter') {
+        // Free drift with slight repulsion from center
+        p.x += p.vx;
+        p.y += p.vy;
+        // Wrap
+        if (p.x < 0) p.x = W;
+        if (p.x > W) p.x = 0;
+        if (p.y < 0) p.y = H;
+        if (p.y > H) p.y = 0;
+        p.assembled = false;
+      } else if (phase === 'assembling') {
+        const ease = easeInOut(progress);
+        p.x += (p.tx - p.x) * p.assembleSpeed * (1 + ease);
+        p.y += (p.ty - p.y) * p.assembleSpeed * (1 + ease);
+        if (Math.abs(p.x - p.tx) < 2 && Math.abs(p.y - p.ty) < 2) p.assembled = true;
+      } else if (phase === 'pulse' || phase === 'hold') {
+        // Tiny jitter
+        p.x = p.tx + Math.sin(tick * 0.15 + p.r * 7) * 1.5;
+        p.y = p.ty + Math.cos(tick * 0.12 + p.r * 5) * 1.5;
+        p.assembled = true;
+      }
+    });
+
+    // Draw particles
+    allParticles.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = p.alpha * (phase === 'scatter' ? 0.65 : 1);
+      if (p.color === VIVID && p.assembled) {
+        ctx.shadowColor = VIVID;
+        ctx.shadowBlur  = 8;
+      }
+      ctx.fill();
+      ctx.shadowBlur  = 0;
+      ctx.globalAlpha = 1;
+    });
+
+    // When assembled: draw card outlines and labels
+    if (phase === 'assembling' || phase === 'pulse' || phase === 'hold') {
+      const cardAlpha = phase === 'assembling' ? progress * 0.9 : 0.9;
+
+      // Global pulse glow on pulse phase
+      if (phase === 'pulse') {
+        pulseGlow = Math.sin(progress * Math.PI) * 30;
+      } else {
+        pulseGlow *= 0.9;
+      }
+
+      responsibilities.forEach((resp, idx) => {
+        const col = idx % gridCols;
+        const row = Math.floor(idx / gridCols);
+        const cx  = gridStartX + col * (cardW + cardGapX);
+        const cy  = gridStartY + row * (cardH + cardGapY);
+
+        // Card background
+        ctx.globalAlpha = cardAlpha * 0.85;
+        ctx.fillStyle   = '#151515';
+        ctx.fillRect(cx, cy, cardW, cardH);
+        ctx.globalAlpha = 1;
+
+        // Card border
+        ctx.strokeStyle = `rgba(232,212,77,${cardAlpha * 0.6})`;
+        ctx.lineWidth   = 1.2;
+        if (phase === 'pulse' || pulseGlow > 2) {
+          ctx.shadowColor = VIVID;
+          ctx.shadowBlur  = pulseGlow;
+        }
+        ctx.strokeRect(cx, cy, cardW, cardH);
+        ctx.shadowBlur = 0;
+
+        // Label
+        ctx.font         = `bold 11px -apple-system, BlinkMacSystemFont, sans-serif`;
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle    = VIVID;
+        ctx.globalAlpha  = cardAlpha;
+        ctx.fillText(resp, cx + cardW / 2, cy + cardH / 2);
+        ctx.globalAlpha  = 1;
+
+        // Status dot
+        ctx.beginPath();
+        ctx.arc(cx + cardW - 14, cy + 14, 4, 0, Math.PI * 2);
+        ctx.fillStyle = '#4ade80';
+        ctx.shadowColor = '#4ade80';
+        ctx.shadowBlur  = phase === 'hold' ? 6 : 0;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      });
+    }
+
+    // Label
+    ctx.font         = '10px SF Mono, monospace';
+    ctx.textAlign    = 'left';
+    ctx.textBaseline = 'bottom';
+    ctx.fillStyle    = 'rgba(248,247,244,0.2)';
+    if (phase === 'scatter') ctx.fillText('// defining responsibilities...', 16, H - 10);
+    else if (phase === 'assembling') ctx.fillText('// assembling book of responsibilities...', 16, H - 10);
+    else ctx.fillText('// book active — running autonomously', 16, H - 10);
+
+    requestAnimationFrame(draw);
+  }
+
+  draw();
+})();
+
+
+/* ============================================================
+   CANVAS C2 — Stress Test
+   LEFT: chaotic workflow — 20 nodes all demanding attention,
+         arrows flying, colors flashing.
+   RIGHT: OpenProse — same 20 nodes, calm, yellow pulses for outputs.
+   ============================================================ */
+(function() {
+  const c   = document.getElementById('canvasStress');
+  const ctx = c.getContext('2d');
+  const W   = 900, H = 300;
+
+  const BG    = '#0d0d0d';
+  const VIVID = '#e8d44d';
+  const RED   = '#f87171';
+  const ORG   = '#fb923c';
+  const YEL   = '#fbbf24';
+  const TEXT  = '#f8f7f4';
+  const DIM   = 'rgba(248,247,244,0.3)';
+  const RULE  = 'rgba(255,255,255,0.1)';
+
+  const midX = W / 2;
+
+  // 20 task nodes for each side
+  const N = 20;
+
+  function makeGrid(side) {
+    const cols = 5, rows = 4;
+    const startX = side === 'left' ? 40 : midX + 30;
+    const gapX   = ((midX - 40) - 40) / cols;
+    const gapY   = (H - 60) / rows;
+    const nodes  = [];
+    for (let r = 0; r < rows; r++) {
+      for (let cl = 0; cl < cols; cl++) {
+        nodes.push({
+          x: startX + cl * gapX + gapX / 2,
+          y: 40 + r * gapY + gapY / 2,
+          r: 7,
+          flash: 0,
+          label: `t${r * cols + cl + 1}`,
+          side,
+          outputTimer: Math.random() * 80,
+        });
+      }
+    }
+    return nodes;
+  }
+
+  const leftNodes  = makeGrid('left');
+  const rightNodes = makeGrid('right');
+
+  // Arrows flying (left side chaos)
+  const arrows = [];
+  function spawnArrow() {
+    const from = leftNodes[Math.floor(Math.random() * N)];
+    const to   = leftNodes[Math.floor(Math.random() * N)];
+    if (from !== to) {
+      arrows.push({
+        fx: from.x, fy: from.y,
+        tx: to.x, ty: to.y,
+        t: 0, speed: 0.04 + Math.random() * 0.05,
+        color: [RED, ORG, YEL][Math.floor(Math.random() * 3)],
+      });
+    }
+  }
+
+  // Output pulses (right side — calm deliveries)
+  const outputs = [];
+  function spawnOutput(node) {
+    outputs.push({
+      x: node.x, y: node.y,
+      r: 0, maxR: 22, speed: 0.8,
+      alpha: 1,
+    });
+  }
+
+  let tick = 0;
+
+  function draw() {
+    tick++;
+    ctx.fillStyle = 'rgba(13,13,13,0.2)';
+    ctx.fillRect(0, 0, W, H);
+
+    // Divider
+    ctx.beginPath();
+    ctx.moveTo(midX, 10);
+    ctx.lineTo(midX, H - 10);
+    ctx.strokeStyle = RULE;
+    ctx.lineWidth   = 1;
+    ctx.stroke();
+
+    // Labels
+    ctx.font      = '11px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(248,113,113,0.7)';
+    ctx.fillText('Your current workflow', midX / 2, 20);
+    ctx.fillStyle = `rgba(232,212,77,0.8)`;
+    ctx.fillText('With OpenProse', midX + (W - midX) / 2, 20);
+
+    // ---- LEFT SIDE: CHAOS ----
+
+    // Spawn arrows frequently
+    if (tick % 8 === 0) spawnArrow();
+    if (tick % 5 === 0) {
+      // Flash a random node
+      leftNodes[Math.floor(Math.random() * N)].flash = 20;
+    }
+
+    // Draw arrows
+    for (let i = arrows.length - 1; i >= 0; i--) {
+      const a = arrows[i];
+      a.t += a.speed;
+      if (a.t >= 1) { arrows.splice(i, 1); continue; }
+      const px = a.fx + (a.tx - a.fx) * a.t;
+      const py = a.fy + (a.ty - a.fy) * a.t;
+      ctx.beginPath();
+      ctx.arc(px, py, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = a.color;
+      ctx.globalAlpha = 1 - a.t;
+      ctx.shadowColor = a.color;
+      ctx.shadowBlur  = 6;
+      ctx.fill();
+      ctx.shadowBlur  = 0;
+      ctx.globalAlpha = 1;
+    }
+
+    // Draw left nodes
+    leftNodes.forEach(node => {
+      if (node.flash > 0) node.flash--;
+      const isFlashing = node.flash > 0;
+      const flashColors = [RED, ORG, YEL];
+      const fColor      = flashColors[Math.floor(tick / 3) % 3];
+
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, node.r, 0, Math.PI * 2);
+      ctx.fillStyle = isFlashing ? fColor : '#1e1e1e';
+      ctx.strokeStyle = isFlashing ? fColor : 'rgba(255,255,255,0.15)';
+      ctx.lineWidth = isFlashing ? 1.5 : 0.8;
+      if (isFlashing) {
+        ctx.shadowColor = fColor;
+        ctx.shadowBlur  = 10;
+      }
+      ctx.fill();
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      ctx.font         = '7px SF Mono, monospace';
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle    = isFlashing ? '#0d0d0d' : 'rgba(248,247,244,0.3)';
+      ctx.fillText(node.label, node.x, node.y);
+      ctx.textBaseline = 'alphabetic';
+    });
+
+    // "YOU" hub on left (stressed)
+    const hubLX = midX - 28;
+    const stressColor = [RED, ORG, YEL][Math.floor(tick / 15) % 3];
+    ctx.beginPath();
+    ctx.arc(hubLX, H / 2, 14, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(248,113,113,0.15)';
+    ctx.strokeStyle = RED;
+    ctx.lineWidth   = 1.5;
+    ctx.shadowColor = RED;
+    ctx.shadowBlur  = 8 + Math.sin(tick * 0.3) * 6;
+    ctx.fill();
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.font         = 'bold 8px sans-serif';
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle    = RED;
+    ctx.fillText('YOU', hubLX, H / 2);
+    ctx.textBaseline = 'alphabetic';
+
+    // ---- RIGHT SIDE: CALM ----
+
+    // Periodically spawn output pulses
+    rightNodes.forEach(node => {
+      node.outputTimer--;
+      if (node.outputTimer <= 0) {
+        spawnOutput(node);
+        node.outputTimer = 60 + Math.random() * 100;
+      }
+    });
+
+    // Draw output pulse rings
+    for (let i = outputs.length - 1; i >= 0; i--) {
+      const o = outputs[i];
+      o.r    += o.speed;
+      o.alpha = 1 - o.r / o.maxR;
+      if (o.alpha <= 0) { outputs.splice(i, 1); continue; }
+      ctx.beginPath();
+      ctx.arc(o.x, o.y, o.r, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(232,212,77,${o.alpha * 0.7})`;
+      ctx.lineWidth   = 1.5;
+      ctx.stroke();
+    }
+
+    // Draw right nodes (calm)
+    rightNodes.forEach(node => {
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, node.r, 0, Math.PI * 2);
+      ctx.fillStyle   = '#1e1e1e';
+      ctx.strokeStyle = 'rgba(232,212,77,0.25)';
+      ctx.lineWidth   = 0.8;
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.font         = '7px SF Mono, monospace';
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle    = 'rgba(248,247,244,0.3)';
+      ctx.fillText(node.label, node.x, node.y);
+      ctx.textBaseline = 'alphabetic';
+    });
+
+    // OpenProse hub on right (calm)
+    const hubRX = midX + 28;
+    ctx.beginPath();
+    ctx.arc(hubRX, H / 2, 14, 0, Math.PI * 2);
+    ctx.fillStyle   = 'rgba(232,212,77,0.1)';
+    ctx.strokeStyle = VIVID;
+    ctx.lineWidth   = 1.2;
+    ctx.shadowColor = VIVID;
+    ctx.shadowBlur  = 4 + Math.sin(tick * 0.04) * 2;
+    ctx.fill();
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.font         = 'bold 7px sans-serif';
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle    = VIVID;
+    ctx.fillText('OP', hubRX, H / 2);
+    ctx.textBaseline = 'alphabetic';
+
+    // Chaos counter on left
+    ctx.font      = '9px SF Mono, monospace';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(248,113,113,0.5)';
+    ctx.fillText(`${arrows.length} demands in flight`, 40, H - 12);
+
+    // Outputs counter on right
+    ctx.textAlign = 'right';
+    ctx.fillStyle = `rgba(232,212,77,0.6)`;
+    ctx.fillText(`${outputs.length} deliveries happening`, W - 40, H - 12);
+
+    requestAnimationFrame(draw);
+  }
+
+  draw();
+})();
+
+
+/* ============================================================
+   CANVAS C3 — What Shows Up — Inbox Simulation
+   Vertical stack of messages arriving with slide-in animation.
+   Each item: "Morning brief ✓", "Anomaly alert ✓", etc.
+   Yellow accent on arrival. Bold, satisfying.
+   ============================================================ */
+(function() {
+  const c   = document.getElementById('canvasInbox');
+  const ctx = c.getContext('2d');
+  const W   = 900, H = 300;
+
+  const BG    = '#0d0d0d';
+  const NB    = '#151515';
+  const DARK  = '#1e1e1e';
+  const VIVID = '#e8d44d';
+  const TEXT  = '#f8f7f4';
+  const DIM   = 'rgba(248,247,244,0.45)';
+  const RULE  = 'rgba(255,255,255,0.07)';
+
+  const INBOX_W  = 500;
+  const INBOX_X  = (W - INBOX_W) / 2;
+  const ITEM_H   = 52;
+  const ITEM_GAP = 8;
+  const MAX_ITEMS = 5;
+
+  const deliveries = [
+    { icon: '📊', label: 'Morning Brief',           tag: 'daily',   time: 'Today 06:00' },
+    { icon: '⚡', label: 'Anomaly Alert — Sector 4', tag: 'alert',   time: 'Today 07:14' },
+    { icon: '📋', label: 'Equipment Health Report',  tag: 'weekly',  time: 'Today 08:00' },
+    { icon: '📈', label: 'ROI Dashboard — Q2',       tag: 'monthly', time: 'Today 09:00' },
+    { icon: '✉️', label: 'Slack Summary Delivered',  tag: 'daily',   time: 'Today 09:01' },
+    { icon: '🔍', label: 'Sensor Scan Complete',     tag: 'hourly',  time: 'Today 10:00' },
+    { icon: '📊', label: 'Weekly Wrap Report',       tag: 'weekly',  time: 'Today 10:05' },
+  ];
+
+  // Inbox items: live objects with slide-in state
+  const inbox = [];
+  let nextDelivery   = 0;
+  let spawnTimer     = 60;
+  let tick           = 0;
+
+  function addItem() {
+    const d = deliveries[nextDelivery % deliveries.length];
+    nextDelivery++;
+    inbox.unshift({
+      ...d,
+      slideX: INBOX_X - INBOX_W - 20, // starts off-screen left
+      targetX: INBOX_X,
+      alpha: 0,
+      glow: 1,
+      age: 0,
+    });
+    // Keep max items
+    if (inbox.length > MAX_ITEMS) inbox.pop();
+  }
+
+  function draw() {
+    tick++;
+    ctx.fillStyle = 'rgba(13,13,13,0.22)';
+    ctx.fillRect(0, 0, W, H);
+
+    // Background inbox panel
+    ctx.fillStyle = NB;
+    ctx.strokeStyle = RULE;
+    ctx.lineWidth = 1;
+    ctx.fillRect(INBOX_X - 12, 24, INBOX_W + 24, H - 36);
+    ctx.strokeRect(INBOX_X - 12, 24, INBOX_W + 24, H - 36);
+
+    // Inbox header
+    ctx.fillStyle = DARK;
+    ctx.fillRect(INBOX_X - 12, 24, INBOX_W + 24, 36);
+    ctx.strokeStyle = RULE;
+    ctx.strokeRect(INBOX_X - 12, 24, INBOX_W + 24, 36);
+
+    ctx.font         = '11px -apple-system, sans-serif';
+    ctx.textAlign    = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle    = DIM;
+    ctx.fillText('Inbox', INBOX_X, 42);
+
+    // Item count badge
+    const unread = inbox.length;
+    if (unread > 0) {
+      ctx.beginPath();
+      ctx.arc(INBOX_X + 50, 42, 9, 0, Math.PI * 2);
+      ctx.fillStyle = VIVID;
+      ctx.fill();
+      ctx.font = 'bold 9px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#0d0d0d';
+      ctx.fillText(unread, INBOX_X + 50, 43);
+      ctx.textAlign = 'left';
+    }
+
+    // Time label
+    ctx.font      = '9px SF Mono, monospace';
+    ctx.textAlign = 'right';
+    ctx.fillStyle = 'rgba(248,247,244,0.2)';
+    ctx.fillText('live feed', INBOX_X + INBOX_W, 42);
+
+    // Spawn timer
+    spawnTimer--;
+    if (spawnTimer <= 0) {
+      addItem();
+      spawnTimer = 75 + Math.random() * 60;
+    }
+
+    // Render items
+    const startY = 72;
+    inbox.forEach((item, i) => {
+      item.age++;
+      // Slide in
+      item.slideX += (item.targetX - item.slideX) * 0.18;
+      item.alpha  += (1 - item.alpha) * 0.14;
+      item.glow   *= 0.94;
+
+      const iy = startY + i * (ITEM_H + ITEM_GAP);
+      if (iy > H - ITEM_H) return;
+
+      const ix = item.slideX;
+
+      // Item background
+      ctx.globalAlpha = item.alpha;
+      ctx.fillStyle   = DARK;
+      ctx.fillRect(ix, iy, INBOX_W, ITEM_H);
+
+      // Left accent bar (vivid for new, dims with age)
+      const barAlpha = Math.max(0.15, item.glow);
+      ctx.fillStyle  = VIVID;
+      ctx.globalAlpha = barAlpha * item.alpha;
+      ctx.fillRect(ix, iy, 3, ITEM_H);
+      ctx.globalAlpha = item.alpha;
+
+      // Glow effect on fresh items
+      if (item.glow > 0.3) {
+        ctx.shadowColor = VIVID;
+        ctx.shadowBlur  = 12 * item.glow;
+      }
+
+      // Border
+      ctx.strokeStyle = `rgba(232,212,77,${0.08 + item.glow * 0.2})`;
+      ctx.lineWidth   = 0.8;
+      ctx.strokeRect(ix, iy, INBOX_W, ITEM_H);
+      ctx.shadowBlur  = 0;
+
+      // Icon
+      ctx.font         = '16px sans-serif';
+      ctx.textAlign    = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle    = TEXT;
+      ctx.globalAlpha  = item.alpha;
+      ctx.fillText(item.icon, ix + 16, iy + ITEM_H / 2);
+
+      // Label
+      ctx.font      = 'bold 13px -apple-system, sans-serif';
+      ctx.fillStyle = TEXT;
+      ctx.fillText(item.label, ix + 48, iy + ITEM_H / 2 - 7);
+
+      // Tag and time
+      ctx.font      = '10px SF Mono, monospace';
+      ctx.fillStyle = `rgba(232,212,77,${0.5 + item.glow * 0.5})`;
+      ctx.fillText(item.tag, ix + 48, iy + ITEM_H / 2 + 9);
+
+      ctx.textAlign = 'right';
+      ctx.fillStyle = 'rgba(248,247,244,0.3)';
+      ctx.fillText(item.time, ix + INBOX_W - 14, iy + ITEM_H / 2 - 7);
+
+      // Checkmark
+      ctx.font      = 'bold 12px sans-serif';
+      ctx.fillStyle = VIVID;
+      ctx.shadowColor = VIVID;
+      ctx.shadowBlur  = item.glow * 8;
+      ctx.fillText('✓', ix + INBOX_W - 16, iy + ITEM_H / 2 + 9);
+      ctx.shadowBlur  = 0;
+
+      ctx.globalAlpha = 1;
+    });
+
+    // Footer message
+    ctx.font         = '9px SF Mono, monospace';
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillStyle    = 'rgba(232,212,77,0.3)';
+    ctx.fillText('// no dashboard · no prompts · it just shows up', W / 2, H - 8);
+
+    requestAnimationFrame(draw);
+  }
+
+  // Seed with 2 initial items
+  addItem();
+  setTimeout(addItem, 300);
+  spawnTimer = 90;
+
+  draw();
+})();
+</script>
+
+</body>
+</html>
