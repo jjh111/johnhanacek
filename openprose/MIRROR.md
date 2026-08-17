@@ -65,7 +65,7 @@ kicker: OpenProse
 
 LEFT (three ledes):
 
-OpenProse is a way to author *outcomes*. The approach is to contract the LLM rather than merely prompt it, using OpenProse structuring to define: *requirements*, *maintenance*, and *strategies*. Agents run, maintain, and review it on cadence.
+OpenProse is a way to *author outcomes*. The approach is to contract the LLM rather than merely prompt it, using OpenProse structuring to define: *requirements*, *maintenance*, and *strategies*. Agents run, maintain, and review the contract on cadence.
 
 (gap: sm) In April 2026, Dan, the CEO of the newly funded [OpenProse](https://prose.md/), hired JHDesign for a founding design project with two tracks of exploration: the brand, and the design of solutions for visualizing trace data from the RLM product.
 
@@ -107,16 +107,16 @@ lede: Communicating quality and stability with useful elegance in a growing sea 
 
 [3-card row: paradigm cards]
 
-card 01 / the pitch · **Agents with *responsibilities*.** (no claim line)
-Combining the best of declarative approaches, like SQL, with the reasoning power of AI. Describe the outcome, set the contract, let it run and self-correct.
+card 01 / the pitch · **Agents with *responsibilities*.** claim: Beyond prompts, author outcomes
+Combining the best of declarative approaches, like SQL, with the reasoning power of LLMs. Describe the outcome, set the contract, let it run and self-correct.
 foot: · OpenProse.md
 
 card 02 / the audience · ***Four* core *personas*.** · claim: Power users to investors.
-AI power users, investors, CTOs, senior engineers. Each holds a different question, from "is this real?" to "can we trust it in production?" 
+AI power users, investors, CTOs, senior engineers.  
 foot: · PERSONAS.md
 
 card 03 / the voice · **Understated *authority*.** · claim: Open and informative with style.
-No hype. Show the work: real outputs, real numbers. Technical depth when asked, accessible by default. Confident but not loud.
+No hype. Show the work: real outputs, real numbers. Technical depth when asked, accessible by default. Confident with reciepts.
 foot: · brief.md
 
 ## II THE TOOLING
@@ -128,15 +128,15 @@ h2: Building the *workshop* while working in it.
 
 LEFT (five ledes):
 
-Reviewing dozens of live experiments needed more than a folder. I've been a designer for about 10 solid years now; from Adobe XD to Figma, I've been there.
-
 For this project I got to debut my take on a 'canvas' for generative web design: the **JHDesign Review Canvas**, built alongside the brand work. It shows the content of a repo as one navigable page with three view modes (canvas, grid, focus), where every page is a live iframe with star ratings, typed comments, and freehand drawings composited onto screenshots. Review state lives in *git*; each reviewer writes only their own file, so feedback merges without conflict.
 
-This makes it multiplayer: Dan could look at the material directly, review it, and leave his feedback, all as code in the shared GitHub repo, with no extra overhead, no accounts to set up, and no intermediary steps to get the comments back into production.
+Reviewing dozens of live website experiments needed more than a folder, but I wanted a better way. I've been a designer for about 10 solid years now; from Adobe XD to Figma. To be real with you, I've been there and I don't want to go back. As an artist I've done creative coding, as an XR designer I've done hacking and copy/pasting. Now finally I can stop "stop drawing dead fish". With the rise of vibe coding, I'm also recalling my standards days; for so long we designers have been adding abstraction to simulate code, now why not just use standards? Thus the webpage that is a canvas of iframes. 
+
+The Review Canvas just needs a Github repo to make it multiplayer. Dan could look at the material directly, review it, and leave his feedback, all as code in the shared GitHub repo, with no extra overhead, no accounts to set up, and no intermediary steps to get the comments back into production.
 
 The supporting tooling for the Canvas even runs on *OpenProse* itself: the canvas's integrity is a written responsibility an agent keeps, audited by script and attested with commit SHAs, and the design system is indexed by a runnable OpenProse program. 
 
-This system was essential in managing the large surface area of this project across two tracks. Instead of staying linear in code chat I could spread out and review whole swaths of work, specify changes, then just have the agent read the latest manifest and get to work in parallel plans. Every exhibit grid on this page is a stripped-down version of the review canvas; the full canvas viewer is at the end.
+This system was essential in managing the large surface area of this project across two tracks. Instead of staying linear in code chat I could spread out and review whole swaths of work, specify changes, then just have the agent read the latest manifest and get to work in parallel plans. Every exhibit grid on this page is a stripped-down version of the review canvas; the full canvas viewer is at the end. I'm still developing this project to enhance realtime and be deployable as a platform outside of the dev environment of sharing a repo.
 
 RIGHT (code block, then the 4 steps stacked):
 
@@ -149,7 +149,6 @@ Criteria · `agent-close.mjs --audit-all` must read OPEN=0 for every closed roun
 Constraints · never close a comment to make the audit green — a clean audit is
               the result of coherent state, not the goal to be gamed
 ```
-
 
 ✎ **Draw · comment** — **Drawn** annotations over the live page become typed work items, each with a stable id like **c_1c28d078**.
 ⇄ **Claim · two locks** — **Claimed** by an agent under a two-lock protocol (a file reservation plus a comment claim), so parallel sessions never collide.
@@ -216,7 +215,7 @@ lede (gap: xl): The top of the ratings shared a look: warm serif editorial. By 2
 lede (gap: sm): Turning to legibility and tradition, I explored monospace families. However, the appearance can become nonotonous. Then at just the right moment of scrolling TwXtter I see  [Kecal](https://github.com/FungiType/Kecal) for the accents.  Kecal is an open typeface (OFL) by FungiType: Rodrigo Fuenzalida, Jordan Egstad, and Jiří Krblich. Used with thanks. 
 Monotypes and Kecal became a way to rise above the noise and contribute to *legibility*: clearly readable, quietly esoteric, a face no generator reaches for.
 [EMBED · the type studies]
-items: direction-delta-machine, direction-beta-tufte-mono-kecal-styleguide-teal, typography-pairings, direction-experiments
+items: direction-delta-machine, direction-delta-machine-kecal, direction-theta-living-document-concept, direction-gamma-manuscript-concept-kecal, direction-beta-tufte-mono-kecal-styleguide-teal, direction-eta-organism-mono-kecal, direction-beta-tufte-mono-kecal-styleguide-teal, typography-pairings, direction-experiments
 sort: sequence
 cols: auto
 ratings: off

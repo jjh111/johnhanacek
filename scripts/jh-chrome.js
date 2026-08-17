@@ -14,7 +14,7 @@
   const SITE = {
     year: 2026,
     org: 'JHDesign LLC',
-    version: '1.32', // ← THE site version. Footer badge, ?v= cache-bust, and README all read this (run scripts/sync-version.mjs after bumping).
+    version: '1.33', // ← THE site version. Footer badge, ?v= cache-bust, and README all read this (run scripts/sync-version.mjs after bumping).
     versionNote: 'Made with Claude Code &amp; Open Code',
     github: 'https://github.com/jjh111/johnhanacek',
     githubLabel: 'github.com/jjh111/johnhanacek',
@@ -75,4 +75,67 @@
     }
   }
   if (!customElements.get('jh-nav')) customElements.define('jh-nav', JHNav);
+
+  // ---- Autoplay gate -------------------------------------------------------
+  // Decorative loops autoplay on a desktop pointer and nowhere else.
+  //
+  // Two reasons, one mechanism. On a phone an autoplaying loop spends someone
+  // else's data before they have decided the page is worth it — index alone
+  // carries 4.5MB of video. And a visitor who asks the OS for less motion is
+  // asking for precisely this: nothing moving until they say so.
+  //
+  // It lives HERE rather than in shared.js because index.html and design.html
+  // do not load shared.js (they keep their own inline nav), while every page
+  // that has a <video> loads this file. One home, one behaviour.
+  //
+  // Gated videos keep their frame (poster, or the first frame) and get a small
+  // corner control rather than a full-bleed cover — on both cards the media is
+  // also the link into the case study, and covering it would take that away on
+  // exactly the devices where it is the easiest target.
+  function initAutoplayGate() {
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+    var coarse = window.matchMedia('(hover: none) and (pointer: coarse)');
+    if (!reduce.matches && !coarse.matches) return; // desktop, motion welcome
+
+    document.querySelectorAll('video[autoplay]').forEach(function (video) {
+      if (video.closest('.video-gate')) return; // already gated
+      video.removeAttribute('autoplay');
+      video.autoplay = false;
+      try { video.pause(); } catch (e) {}
+      // preload:none was chosen against autoplay's own eagerness; without
+      // autoplay it would leave an empty box, so ask for enough to paint.
+      if (video.getAttribute('preload') === 'none') video.preload = 'metadata';
+
+      var wrap = document.createElement('span');
+      wrap.className = 'video-gate';
+      video.parentNode.insertBefore(wrap, video);
+      wrap.appendChild(video);
+
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'video-gate-btn';
+      wrap.appendChild(btn);
+
+      function sync() {
+        var playing = !video.paused && !video.ended;
+        btn.classList.toggle('playing', playing);
+        btn.setAttribute('aria-label', playing ? 'Pause this loop' : 'Play this loop');
+        btn.setAttribute('aria-pressed', String(playing));
+      }
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation(); // the media usually sits inside a link
+        if (video.paused) { var r = video.play(); if (r && r.catch) r.catch(function () {}); }
+        else video.pause();
+      });
+      video.addEventListener('play', sync);
+      video.addEventListener('pause', sync);
+      sync();
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAutoplayGate);
+  } else {
+    initAutoplayGate();
+  }
 })();

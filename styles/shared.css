@@ -1348,6 +1348,61 @@ section {
     border-radius: 4px;
 }
 
+/* ── Autoplay gate (scripts/shared.js initAutoplayGate) ──
+   Wraps a video that would have autoplayed, on touch or under reduced motion,
+   and puts a play/pause control in its corner. Deliberately small: the media
+   is often also a link into a case study, and covering it with a button would
+   take that away on exactly the devices where it is the easiest target. */
+.video-gate {
+    position: relative;
+    display: block;
+}
+.video-gate-btn {
+    position: absolute;
+    right: 0.6rem;
+    bottom: 0.6rem;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(125, 216, 247, 0.35);
+    background: rgba(2, 10, 18, 0.72);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    cursor: pointer;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, border-color 0.15s ease, opacity 0.3s ease;
+}
+.video-gate-btn:hover,
+.video-gate-btn:focus-visible {
+    background: rgba(2, 10, 18, 0.9);
+    border-color: var(--cyan);
+}
+/* Play triangle, drawn in CSS so there is no icon asset to load or theme. */
+.video-gate-btn::before {
+    content: '';
+    width: 0; height: 0;
+    margin-left: 3px; /* optical centring of a triangle in a circle */
+    border-left: 12px solid var(--cyan);
+    border-top: 8px solid transparent;
+    border-bottom: 8px solid transparent;
+}
+/* Playing: two bars, and the control recedes so it stops competing. */
+.video-gate-btn.playing { opacity: 0.45; }
+.video-gate-btn.playing:hover,
+.video-gate-btn.playing:focus-visible { opacity: 1; }
+.video-gate-btn.playing::before {
+    margin-left: 0;
+    width: 4px; height: 14px;
+    border: 0;
+    background: var(--cyan);
+    box-shadow: 7px 0 0 var(--cyan);
+    transform: translateX(-3px);
+}
+
 /* Utility: Blockquote citation */
 .blockquote-citation {
     border-left: 2px solid var(--cyan);

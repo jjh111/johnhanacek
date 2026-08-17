@@ -169,7 +169,14 @@ styles/jh-chrome.css      — the chrome alone: design tokens + #nav + shape nav
                             palette cannot reach in. Chrome also resets font-size-adjust, which
                             openprose's body sets and which otherwise revives the font-size:0 the
                             compact <900px nav title relies on.
-scripts/jh-chrome.js      — <jh-nav> + <jh-footer> components; JH_SITE identity + THE site version
+scripts/jh-chrome.js      — <jh-nav> + <jh-footer> components; JH_SITE identity + THE site version.
+                            Also the site-wide AUTOPLAY GATE: under prefers-reduced-motion or on a
+                            coarse pointer, every <video autoplay> is stripped of autoplay, keeps its
+                            poster, and gets a corner play/pause control (.video-gate in shared.css).
+                            It lives here, not shared.js, because index.html and design.html do not
+                            load shared.js but every page with a <video> loads this. design.html's own
+                            2-loop videos restate the same media query inline (its block runs before
+                            this deferred file).
 scripts/shared.js         — nav scroll-visibility, cursor spotlight, lightbox, responsive nav
 scripts/search-overlay.js — site-wide ⌘K search overlay (3-tier)
 scripts/search-overlay.css— overlay styles

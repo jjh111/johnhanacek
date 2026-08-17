@@ -135,16 +135,31 @@ body.mode-canvas footer { display: none; }
   font-size: 10px; letter-spacing: 0.06em;
 }
 body.no-ratings .stars { display: none; }
+/* Corner control: the ⛶ that opens this card fullscreen. Was the words
+   "open ↗", which read as "leave for another page" — it does the opposite,
+   it brings the page here. An icon in the corner of every card also stays
+   legible when canvas mode shrinks the type past reading size. */
 .card .bar a {
-  margin-left: auto; flex: none; font-size: 10px;
+  margin-left: auto; flex: none;
+  font-size: 13px; line-height: 1;
   color: var(--teal); text-decoration: none;
+  padding: 2px 4px; border-radius: 3px;
+  transition: background 0.12s ease, color 0.12s ease;
 }
-.card .bar a:hover { text-decoration: underline; }
+.card .bar a:hover, .card .bar a:focus-visible {
+  background: var(--teal-tint, rgba(58,122,106,0.14)); color: var(--teal-deep, var(--teal));
+  text-decoration: none;
+}
 .card .well {
   position: relative; aspect-ratio: 16 / 10; cursor: zoom-in;
   background: var(--paper);
   touch-action: manipulation; -webkit-tap-highlight-color: transparent;
 }
+/* Canvas mode: the well is not clickable — the stage captures the pointer for
+   panning, so a click on a card never reaches it. The cursor said otherwise.
+   Here the card body is something you drag, double-click to zoom, or open via
+   the corner ⛶; grid mode keeps zoom-in, where a click really does focus. */
+body.mode-canvas .card .well { cursor: inherit; }
 .card .well iframe {
   /* paper, not white — no flash against dark pages/mode */
   position: absolute; inset: 0; border: 0;
@@ -531,7 +546,7 @@ body.no-descs .card .desc, body.no-descs #focus .fdesc { display: none; }
       card.innerHTML =
         '<div class="bar"><span class="name"></span>' +
         '<span class="stars"></span>' +
-        '<a target="_blank" rel="noopener">open ↗</a></div>' +
+        '<a target="_blank" rel="noopener" title="Open fullscreen" aria-label="Open fullscreen">⛶</a></div>' +
         '<div class="well" role="button" tabindex="0" aria-label="Focus this experiment">' +
         '<span class="ph">loading nearby…</span></div>' +
         '<div class="desc"></div>';
@@ -956,6 +971,20 @@ body.no-descs .card .desc, body.no-descs #focus .fdesc { display: none; }
     stage.classList.remove('dragging');
     setTimeout(function () { window.__panDist = 0; }, 0);
   });
+  // Double-click zooms toward the cursor; with a modifier, away from it. The
+  // wheel is no longer the zoom when embedded (see below) and a single click
+  // cannot be one either — the pan capture eats it — so the gesture that is
+  // left, and that nothing else claims, is the double-click.
+  var DBL_STEP = 1.6;
+  stage.addEventListener('dblclick', function (ev) {
+    if (viewMode !== 'canvas') return;
+    if (ev.target.closest('.bar')) return; // the corner ⛶ is not a zoom target
+    ev.preventDefault();
+    var r = stage.getBoundingClientRect();
+    var out = ev.altKey || ev.shiftKey || ev.metaKey;
+    zoomTo(view.s * (out ? 1 / DBL_STEP : DBL_STEP), ev.clientX - r.left, ev.clientY - r.top);
+  });
+
   stage.addEventListener('wheel', function (ev) {
     if (viewMode !== 'canvas') return;
     // Embedded, a plain wheel belongs to the host page. Standalone this is a
@@ -1125,8 +1154,11 @@ body.no-descs .card .desc, body.no-descs #focus .fdesc { display: none; }
   navCanvas.addEventListener('pointermove', function (ev) { if (navDragging) navJump(ev); });
   navCanvas.addEventListener('pointerup', function () { navDragging = false; });
   navCanvas.addEventListener('wheel', function (ev) {
-    // Same rule as the stage: embedded, the reader's wheel is not ours.
-    if (EMBEDDED && !ev.ctrlKey && !ev.metaKey) return;
+    // The navigator keeps its wheel even when embedded, unlike the stage. The
+    // stage is most of the panel and you cross it by accident while reading;
+    // this is a small map in the corner you have to aim at, so a wheel here is
+    // already a deliberate act. Stepping the deck from the minimap is the nice
+    // part of the tool and there is nothing to protect the reader from.
     ev.preventDefault(); ev.stopPropagation();
     if (focusEl.classList.contains('open')) {
       openFocus((fIdx < 0 ? 0 : fIdx) + (ev.deltaY > 0 ? 1 : -1));
