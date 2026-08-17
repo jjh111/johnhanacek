@@ -135,7 +135,11 @@ which stamps every `?v=` cache-bust ref across root `*.html` **and** the `Portfo
 - ⌘K overlay on every standard page; search.html is the full standalone page
 - **Tier 1**: BM25 instant search via MiniSearch (always on)
 - **Tier 2**: In-browser Qwen3.5-0.8B via WebGPU (Transformers.js v4)
-- **Tier 3**: Local LMStudio/Ollama auto-discovered on localhost (handles reasoning models)
+- **Tier 3**: Local LMStudio/Ollama on localhost (handles reasoning models). **Never probed on page
+  load** — that made the browser ask a first-time visitor for local-network access before they had
+  asked the site for anything. Detection runs when the overlay is first opened, and the localhost
+  half only after the visitor clicks Detect (or automatically for one who has, stored under
+  `jh-local-llm-optin`). search.html carries its own copy of this logic — keep the two in step.
 - **BYOM**: Custom endpoint input with OpenAI-compatible API probing
 - **Chunks**: `Assets/search-chunks.json` — flat factual text, field-boosted
 - **Engine color coding**: WebGPU=blue, LMStudio=purple, Ollama=orange, Custom=green

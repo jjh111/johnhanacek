@@ -26,7 +26,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Raleway:wght@100;200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles/shared.css?v=1.29">
+    <link rel="stylesheet" href="./styles/shared.css?v=1.30">
 
     <!-- Structured Data -->
     <link rel="alternate" type="application/json" href="./john-hanacek.json" title="Structured data">
@@ -195,7 +195,8 @@
         .badge-webgpu { background: rgba(77, 201, 246, 0.08); color: var(--engine-browser); }
         .badge-custom { background: rgba(74, 222, 128, 0.12); color: var(--engine-custom); }
 
-        #enableBtn {
+        #enableBtn,
+        #detectLocalBtn {
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.62rem;
             background: rgba(77, 201, 246, 0.08);
@@ -207,11 +208,14 @@
             width: 100%; margin-top: 0.2rem; margin-left: 1.15rem;
             width: calc(100% - 1.15rem);
         }
-        #enableBtn:hover { background: rgba(77, 201, 246, 0.14); border-color: rgba(77, 201, 246, 0.25); }
-        #enableBtn:disabled { opacity: 0.3; cursor: default; }
+        #enableBtn:hover ,
+        #detectLocalBtn:hover { background: rgba(77, 201, 246, 0.14); border-color: rgba(77, 201, 246, 0.25); }
+        #enableBtn:disabled ,
+        #detectLocalBtn:disabled { opacity: 0.3; cursor: default; }
         #enableBtn.cached { background: rgba(34, 197, 94, 0.05); border-color: rgba(34, 197, 94, 0.12); color: #4ade80; }
         #enableBtn.cached:hover { background: rgba(34, 197, 94, 0.1); }
-        #enableBtn.model-active { background: rgba(34, 197, 94, 0.06); border-color: rgba(34, 197, 94, 0.12); color: #4ade80; cursor: default; }
+        #enableBtn.model-active,
+        #detectLocalBtn.model-active { background: rgba(34, 197, 94, 0.06); border-color: rgba(34, 197, 94, 0.12); color: #4ade80; cursor: default; }
         .cache-hint { font-size: 0.55rem; color: var(--muted); margin-top: 0.08rem; opacity: 0.6; margin-left: 1.15rem; }
         #progress { font-size: 0.58rem; color: var(--muted); margin-top: 0.1rem; margin-left: 1.15rem; }
         #progressBar { width: calc(100% - 1.15rem); height: 2px; background: rgba(0,20,40,0.4); border-radius: 1px; margin-top: 0.1rem; display: none; margin-left: 1.15rem; }
@@ -456,10 +460,11 @@
                 <div id="localModelSection" class="popover-section" style="--section-color:var(--engine-lmstudio);">
                     <div class="popover-section-header">
                         <span class="popover-radio"></span>
-                        <span class="popover-section-name" id="localModelName"></span>
+                        <span class="popover-section-name" id="localModelName">Local Model</span>
                         <span class="popover-section-badge badge-lmstudio" id="localModelSource"></span>
                     </div>
-                    <div class="popover-section-detail" id="localModelDetail">localhost:1234</div>
+                    <div class="popover-section-detail" id="localModelDetail">LMStudio or Ollama on this machine · Detect will ask your browser for local access</div>
+                    <button id="detectLocalBtn">Detect</button>
                 </div>
                 <!-- In-browser section -->
                 <div id="browserModelSection" class="popover-section" style="--section-color:var(--engine-browser);">
@@ -711,17 +716,43 @@
             try { const res = await fetch('http://localhost:11434/api/tags', { signal: AbortSignal.timeout(2000) }); if (res.ok) { const data = await res.json(); if (data.models?.length > 0) { const m = data.models[0]; return { name: m.name || 'Unknown', source: 'Ollama', endpoint: 'http://localhost:11434/api/chat', host: 'localhost:11434' }; } } } catch {}
             return null;
         }
-        localModel = await checkLocalModels();
+        // Probing localhost makes the browser ask the visitor for permission to
+        // reach their own machine. Never on page load — only when they click
+        // Detect, or automatically for someone who has said yes here before.
+        // Mirrors the opt-in in scripts/search-overlay.js; keep the two in step.
+        const LOCAL_OPTIN_KEY = 'jh-local-llm-optin';
+        const detectLocalBtn = document.getElementById('detectLocalBtn');
 
-        if (localModel) {
-            console.log(`Local model detected: ${localModel.name} via ${localModel.source}`);
-            document.getElementById('localModelSection').classList.add('detected');
-            document.getElementById('localModelName').textContent = localModel.name.split('/').pop();
-            document.getElementById('localModelSource').textContent = localModel.source;
-            document.getElementById('localModelSource').className = 'popover-section-badge badge-' + localModel.source.toLowerCase();
-            document.getElementById('localModelDetail').textContent = localModel.host;
-            setActiveEngine('local');
+        async function runLocalDetect(userInitiated) {
+            if (userInitiated) {
+                try { localStorage.setItem(LOCAL_OPTIN_KEY, 'true'); } catch {}
+                detectLocalBtn.disabled = true;
+                detectLocalBtn.textContent = 'Scanning...';
+            }
+            localModel = await checkLocalModels();
+            if (localModel) {
+                console.log(`Local model detected: ${localModel.name} via ${localModel.source}`);
+                document.getElementById('localModelName').textContent = localModel.name.split('/').pop();
+                document.getElementById('localModelSource').textContent = localModel.source;
+                document.getElementById('localModelSource').className = 'popover-section-badge badge-' + localModel.source.toLowerCase();
+                document.getElementById('localModelDetail').textContent = localModel.host;
+                detectLocalBtn.textContent = '✓ Connected';
+                detectLocalBtn.classList.add('model-active');
+                detectLocalBtn.disabled = true;
+                setActiveEngine('local');
+            } else if (userInitiated) {
+                detectLocalBtn.textContent = 'Not found';
+                detectLocalBtn.disabled = false;
+                setTimeout(() => { detectLocalBtn.textContent = 'Detect'; }, 2000);
+            }
         }
+
+        document.getElementById('localModelSection').classList.add('detected');
+        detectLocalBtn.addEventListener('click', (e) => { e.stopPropagation(); runLocalDetect(true); });
+
+        let optedIn = false;
+        try { optedIn = localStorage.getItem(LOCAL_OPTIN_KEY) === 'true'; } catch {}
+        if (optedIn) await runLocalDetect(false);
 
         // ============================================
         // Custom Endpoint Support
@@ -756,14 +787,17 @@
             else e.target.style.borderColor = 'rgba(248, 113, 113, 0.4)';
         });
 
-        // Auto-probe saved custom endpoint
-        if (savedEndpoint && !localModel) {
+        // Auto-probe a saved custom endpoint. Saving one was itself an explicit
+        // act, so this is not a cold prompt — but it is still a network reach,
+        // so it waits on the same opt-in as the localhost scan above.
+        if (savedEndpoint && !localModel && optedIn) {
             customModel = await probeCustomEndpoint(savedEndpoint);
             if (customModel) setActiveEngine('custom');
         }
 
         // ── Popover section clicks (switch engine) ──
-        document.getElementById('localModelSection').addEventListener('click', () => {
+        document.getElementById('localModelSection').addEventListener('click', (e) => {
+            if (e.target.id === 'detectLocalBtn' || e.target.closest('#detectLocalBtn')) return; // let Detect handle itself
             if (localModel) setActiveEngine('local');
         });
         document.getElementById('browserModelSection').addEventListener('click', (e) => {
@@ -1064,7 +1098,7 @@
     <footer>
         <jh-footer></jh-footer>
     </footer>
-<script src="./scripts/shared.js?v=1.29"></script>
-    <script src="./scripts/jh-chrome.js?v=1.29" defer></script>
+<script src="./scripts/shared.js?v=1.30"></script>
+    <script src="./scripts/jh-chrome.js?v=1.30" defer></script>
 </body>
 </html>

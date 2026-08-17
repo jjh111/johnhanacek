@@ -123,7 +123,7 @@
                                 <span class="popover-section-name" id="so-localModelName">Local Model</span>
                                 <span class="popover-section-badge badge-lmstudio" id="so-localModelSource"></span>
                             </div>
-                            <div class="popover-section-detail" id="so-localModelDetail">LMStudio or Ollama on localhost</div>
+                            <div class="popover-section-detail" id="so-localModelDetail">LMStudio or Ollama on this machine · Detect will ask your browser for local access</div>
                             <button id="so-detectLocalBtn">Detect</button>
                         </div>
                         <div id="so-browserModelSection" class="popover-section" style="--section-color:var(--engine-browser);">
@@ -377,7 +377,25 @@
         document.body.dataset.searchEngine = state;
     }
 
-    async function checkEnginesAsync() {
+    // ── Local-network opt-in ─────────────────────────────────────────────
+    // Probing localhost for LMStudio/Ollama makes the browser ask the visitor
+    // for permission to reach devices on their own machine/network. Asking
+    // that of someone who just opened a portfolio homepage is alarming and
+    // unexplained, so nothing touches localhost until they ask for it: the
+    // engine panel offers it, the Detect button performs it, and the answer
+    // is remembered so a returning opted-in visitor is not made to re-ask.
+    const LOCAL_OPTIN_KEY = 'jh-local-llm-optin';
+    function localOptedIn() {
+        try { return localStorage.getItem(LOCAL_OPTIN_KEY) === 'true'; } catch { return false; }
+    }
+    function rememberLocalOptIn() {
+        try { localStorage.setItem(LOCAL_OPTIN_KEY, 'true'); } catch {}
+    }
+    let enginesChecked = false;
+
+    // probeLocal:false does only same-origin/in-browser work (WebGPU adapter,
+    // model cache) — nothing that can raise a permission prompt.
+    async function checkEnginesAsync({ probeLocal = false } = {}) {
         // iOS detection — Safari on iOS reports WebGPU but crashes loading models
         const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent)
             || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -417,9 +435,19 @@
             }
         }
 
-        // Local models — auto-detect LMStudio/Ollama on localhost
+        // Local models — only when the visitor has asked for it (see the
+        // opt-in note above). Otherwise the section just sits there offering.
+        if (!probeLocal) {
+            const localSection = $('so-localModelSection');
+            if (localSection) localSection.classList.add('detected');
+            if (!activeEngine) updateEngineBar();
+            broadcastEngineState();
+            return;
+        }
+
         localModel = await checkLocalModels();
         if (localModel) {
+            rememberLocalOptIn();
             console.log(`[SearchOverlay] Local model: ${localModel.name} via ${localModel.source}`);
             const localSection = $('so-localModelSection');
             if (localSection) {
@@ -770,6 +798,7 @@
             const url = e.target.value.trim();
             if (!url) { customModel = null; localStorage.removeItem('searchCustomEndpoint'); updateEngineBar(); return; }
             localStorage.setItem('searchCustomEndpoint', url);
+            rememberLocalOptIn(); // typing an endpoint is consent to reach it
             customModel = await probeCustomEndpoint(url);
             if (customModel) setActiveEngine('custom');
             else e.target.style.borderColor = 'rgba(248, 113, 113, 0.4)';
@@ -807,6 +836,7 @@
             e.stopPropagation();
             const detectBtn = $('so-detectLocalBtn');
             detectBtn.disabled = true; detectBtn.textContent = 'Scanning...';
+            rememberLocalOptIn(); // clicking Detect IS the consent
             localModel = await checkLocalModels();
             if (localModel) {
                 console.log(`[SearchOverlay] Local model: ${localModel.name} via ${localModel.source}`);
@@ -879,6 +909,16 @@
     // ============================================
     async function openSearch(initialQuery) {
         await ensureInitialized();
+
+        // First open is when engines get looked at. WebGPU and the model cache
+        // are checked either way (neither prompts); localhost is only probed
+        // for a visitor who has opted in before. Not awaited — the panel fills
+        // itself in as answers arrive, and BM25 needs none of it.
+        if (!enginesChecked) {
+            enginesChecked = true;
+            checkEnginesAsync({ probeLocal: localOptedIn() });
+        }
+
         previousFocus = document.activeElement;
 
         // Detect which nav is visible and position panel below it
@@ -1044,7 +1084,11 @@
         setupNavTriggers();
         setupHeroSearch();
         checkUrlQuery();
-        checkEnginesAsync(); // early detection for nav indicator
+        // Deliberately no engine detection here. It used to run on every page
+        // load "for the nav indicator", which meant a visitor was asked for
+        // permission to reach their own machine before they had asked the site
+        // for anything. Detection now happens when the overlay is opened, and
+        // the localhost half of it only on request — see checkEnginesAsync.
     }
 
     if (document.readyState === 'loading') {
