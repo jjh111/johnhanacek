@@ -350,7 +350,7 @@ cols: auto
 ratings: off
 view: canvas · zoom 0.65
 aspect: none (fixed panel, scrolls/pans inside)
-caption: The parting gift: the full canvas, unfiltered. Every un-archived brand experiment, live. Modes, comments (✎) and fullscreen in its header.
+caption: The parting gift: a sampling of brand experiments in the Review Canvas Lite. Modes, comments (✎) and fullscreen in its header.
 
 ## FOOTER
 
