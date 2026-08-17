@@ -8,6 +8,9 @@ font CDNs (Google Fonts + Kecal via jsDelivr) and outbound links.
 
 ## What this is
 
+> Companion: `MIRROR.md` (beside this file) — JH's copy + layout editing
+> surface for openprose.html. Read its header before touching page copy.
+
 - `openprose.html` — the case study ("Design Exploration · OpenProse ×
   JHDesign"). THE deliverable. One page: WebGL reflection hero, seven
   sections (I The Brief … VII Conclusion), live exhibit embeds throughout.
