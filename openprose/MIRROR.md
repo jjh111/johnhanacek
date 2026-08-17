@@ -128,9 +128,9 @@ h2: Building the *workshop* while working in it.
 
 LEFT (five ledes):
 
-For this project I got to debut my take on a 'canvas' for generative web design: the **JHDesign Review Canvas**, built alongside the brand work. It shows the content of a repo as one navigable page with three view modes (canvas, grid, focus), where every page is a live iframe with star ratings, typed comments, and freehand drawings composited onto screenshots. Review state lives in *git*; each reviewer writes only their own file, so feedback merges without conflict.
+For this project I debuted my take on a 'canvas' for generative web design: the **JHDesign Review Canvas**, built alongside the work as needs emerged. The Review Canvas shows the content of a repo as one navigable page with three view modes (canvas, grid, focus), where every page is a live iframe with star ratings, typed comments, and freehand drawings composited onto screenshots. Review state lives in *git*; each reviewer writes only their own file, so feedback merges without conflict.
 
-Reviewing dozens of live website experiments needed more than a folder, but I wanted a better way. I've been a designer for about 10 solid years now; from Adobe XD to Figma. To be real with you, I've been there and I don't want to go back. As an artist I've done creative coding, as an XR designer I've done hacking and copy/pasting. Now finally I can stop "stop drawing dead fish". With the rise of vibe coding, I'm also recalling my standards days; for so long we designers have been adding abstraction to simulate code, now why not just use standards? Thus the webpage that is a canvas of iframes. 
+Reviewing dozens of live website experiments needed more than a folder, but I wanted a better way. I've been a designer for about 10 solid years now; from Adobe XD to Figma. Being real with you, I've been there and I don't want to go back. As an artist I've done creative coding, as an XR designer I've done hacking and copy/pasting. Now finally I can "stop drawing dead fish". Yet, the rise of vibe coding, I'm also recalling my history and standards; for so long we designers have been adding abstractions of different apps and tools just to simulate code, now why not just use the code and standards directly? Thus the webpage that is a canvas that shows iframes. Took some iteration to get it performance stable, but now it's such a great way to scan a bunch of sites or docs.  
 
 The Review Canvas just needs a Github repo to make it multiplayer. Dan could look at the material directly, review it, and leave his feedback, all as code in the shared GitHub repo, with no extra overhead, no accounts to set up, and no intermediary steps to get the comments back into production.
 
@@ -212,10 +212,10 @@ REJECTED (×):
 
 lede (gap: xl): The top of the ratings shared a look: warm serif editorial. By 2026 that look was everywhere. Serif fonts were undergoing their vibe-coded assault, the default dress of generated landing pages. OpenProse needed its own *style*.
 
-lede (gap: sm): Turning to legibility and tradition, I explored monospace families. However, the appearance can become nonotonous. Then at just the right moment of scrolling TwXtter I see  [Kecal](https://github.com/FungiType/Kecal) for the accents.  Kecal is an open typeface (OFL) by FungiType: Rodrigo Fuenzalida, Jordan Egstad, and Jiří Krblich. Used with thanks. 
+lede (gap: sm): Turning to legibility and tradition, I explored monospace families. However, the appearance can become monotonous. Then at just the right moment of scrolling TwXtter I see [Kecal](https://github.com/FungiType/Kecal) for the accents. Kecal is an open typeface (OFL) by FungiType: Rodrigo Fuenzalida, Jordan Egstad, and Jiří Krblich. Used with thanks.
 Monotypes and Kecal became a way to rise above the noise and contribute to *legibility*: clearly readable, quietly esoteric, a face no generator reaches for.
 [EMBED · the type studies]
-items: direction-delta-machine, direction-delta-machine-kecal, direction-theta-living-document-concept, direction-gamma-manuscript-concept-kecal, direction-beta-tufte-mono-kecal-styleguide-teal, direction-eta-organism-mono-kecal, direction-beta-tufte-mono-kecal-styleguide-teal, typography-pairings, direction-experiments
+items: direction-delta-machine, direction-delta-machine-kecal, direction-theta-living-document-concept, direction-gamma-manuscript-concept-kecal, direction-beta-tufte-mono-kecal-styleguide-teal, direction-eta-organism-mono-kecal, typography-pairings, direction-experiments
 sort: sequence
 cols: auto
 ratings: off
@@ -233,12 +233,12 @@ h2: *Five* directions emerged from doodling. *One* stood out.
 
 lede: To differentiate the brand of OpenProse from pure vibe-coded competitors, I returned to my roots: *drawing* by hand, then rebuilding in vector. Now with a modern twist: I used Arrow, an SVG-generating LLM from [QuiverAI](https://quiver.ai/), to help fill in details and explore alternates.
 
-(gap: sm) Five families emerged and one seemed to call out more than the others. The logo family called **Style** was forwarded as a candidate for canonical mark. Click below to *cycle* the logo concepts.
+(gap: sm) Five families emerged and one seemed to call out more than the others. The logo family called **Style** was forwarded as a candidate for canonical mark. Pick one below to *see* it at size.
 
-[5-tile row: logo families, ink-normalized] style · canonical / infinite / circle / swish / cursive
+[5-tile row: logo families, ink-normalized — each tile is a button that shows that family in the specimen; teal marks the one showing] style · canonical / infinite / circle / swish / cursive
 
 [LIVING SPECIMEN · constant stage, signet + logotype, click cycles families]
-figcap: The living specimen · click to cycle infinite → style → circle → swish → cursive.
+figcap: The living specimen · pick a family above, or click the mark to cycle infinite → style → circle → swish → cursive.
 
 [EXPLORATION SHEET · click-to-expand overlay]
 figcap: The field of studies the five families were distilled from, clustered by idea. Click to expand.
