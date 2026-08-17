@@ -57,8 +57,8 @@
      page's headings, main and typography. See styles/jh-chrome.css header.)
      Loaded BEFORE the page's own tokens so _tokens.css wins on every name they
      share; the chrome reads its own values through --jh- prefixed tokens. -->
-<link rel="stylesheet" href="./styles/jh-chrome.css?v=1.30">
-<link rel="stylesheet" href="./scripts/search-overlay.css?v=1.30">
+<link rel="stylesheet" href="./styles/jh-chrome.css?v=1.31">
+<link rel="stylesheet" href="./scripts/search-overlay.css?v=1.31">
 <!-- Only the two faces the chrome itself uses. The case study's own typography
      (IBM Plex + Kecal) is the deliverable and is left completely alone. -->
 <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -1163,6 +1163,7 @@ html[data-mode="dark"] .mode-toggle:focus-visible {
 .sections-frosted .embed-live,
 .sections-frosted .embed-live iframe,
 .sections-frosted .exploration-sheet,
+.sections-frosted .logo-row .logo-tile,
 .sections-frosted .logo-specimen .swap-logo,
 .sections-frosted .spec-pre,
 .sections-frosted .jh-coda { pointer-events: auto; }
@@ -1203,7 +1204,7 @@ html[data-mode="dark"] .mode-toggle:focus-visible {
   .embed-live[data-fit] { aspect-ratio: 3 / 4 !important; }
 }
 /* Touch niceties — no grey tap flash, no double-tap zoom on the cyclers */
-.swap-logo, .exploration-sheet, .embed-live, .sheet-cover {
+.swap-logo, .exploration-sheet, .embed-live, .sheet-cover, .logo-tile {
   touch-action: manipulation; -webkit-tap-highlight-color: transparent;
 }
 
@@ -1392,7 +1393,15 @@ body.cv-overlay-open { overflow: hidden; }
   padding: var(--space-sm) var(--space-xs);
   display: flex; flex-direction: column;
   align-items: center; gap: var(--space-2xs);
+  /* real <button>s now — reset the UA chrome, keep the tile look */
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  width: 100%;
+  transition: border-color var(--t-fast, 0.15s) ease, background var(--t-fast, 0.15s) ease;
 }
+.logo-tile:hover { border-color: var(--teal-soft, var(--rule-mid)); background: var(--paper-elev, var(--paper)); }
+.logo-tile:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
 /* Uniform show-area: every pair centered in the same fixed-height box,
    sized to fit the largest lockup (JH round-5). Logotypes +15%: 34 -> 39px. */
 .logo-tile .lt-pair { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; height: 48px; }
@@ -1417,8 +1426,18 @@ body.cv-overlay-open { overflow: hidden; }
   color: var(--ink-3);
   letter-spacing: 0.1em;
 }
-.logo-tile.canonical { border-color: var(--teal); }
-.logo-tile.canonical .lt-name { color: var(--teal); }
+/* Teal marks WHICH FAMILY IS SHOWING, and follows the specimen. It used to be
+   pinned to .canonical, so cycling the specimen left the highlight sitting on
+   "style" describing something that was no longer on screen. The story fact —
+   that style is the canonical mark — is carried by its label instead, which
+   reads "style · canonical" whether or not it happens to be selected. */
+.logo-tile[aria-pressed="true"] {
+  border-color: var(--teal);
+  background: var(--teal-faint, var(--paper));
+}
+/* --teal-deep, not --teal: the label sits ON the tint, and teal-on-teal at
+   caption size was the weakest text on the page. */
+.logo-tile[aria-pressed="true"] .lt-name { color: var(--teal-deep, var(--teal)); }
 .logo-specimen {
   margin-top: var(--space-lg);
   border: 1px solid var(--rule);
@@ -2149,19 +2168,19 @@ system consumes it.
     <div class="section-kicker">IV The Logo</div>
     <h2><em>Five</em> directions emerged from doodling. <em>One</em> stood out.</h2>
     <p class="lede">To differentiate the brand of OpenProse from pure vibe-coded competitors, I returned to my roots: <em>drawing</em> by hand, then rebuilding in vector. Now with a modern twist: I used Arrow, an SVG-generating LLM from <a href="https://quiver.ai/" target="_blank" rel="noopener">QuiverAI</a>, to help fill in details and explore alternates.</p>
-    <p class="lede" style="margin-top: var(--space-sm);">Five families emerged and one seemed to call out more than the others. The logo family called <strong>Style</strong> was forwarded as a candidate for canonical mark. Click below to <em>cycle</em> the logo concepts.</p>
+    <p class="lede" style="margin-top: var(--space-sm);">Five families emerged and one seemed to call out more than the others. The logo family called <strong>Style</strong> was forwarded as a candidate for canonical mark. Pick one below to <em>see</em> it at size.</p>
     <div class="logo-row">
-      <div class="logo-tile canonical" data-family="style"><div class="lt-pair"><svg class="lt-signet" viewBox="0 0 142 142" aria-hidden="true"><use href="#opStyle"/></svg><svg class="lt-type" viewBox="0 0 3840 998" role="img" aria-label="OpenProse, style family (canonical)"><use href="#opStyleType"/></svg></div><span class="lt-name">style · canonical</span></div>
-      <div class="logo-tile" data-family="infinite"><div class="lt-pair"><svg class="lt-signet" viewBox="0 0 497 329" aria-hidden="true"><use href="#opInfinite"/></svg><svg class="lt-type" viewBox="0 0 3549 1107" role="img" aria-label="OpenProse, infinite family"><use href="#opInfiniteType"/></svg></div><span class="lt-name">infinite</span></div>
-      <div class="logo-tile" data-family="circle"><div class="lt-pair"><svg class="lt-signet" viewBox="0 0 2843 2160" aria-hidden="true"><use href="#opCircleMark"/></svg><svg class="lt-type" viewBox="0 0 3905 1443" role="img" aria-label="OpenProse, circle family"><use href="#opCircleType"/></svg></div><span class="lt-name">circle</span></div>
-      <div class="logo-tile" data-family="swish"><div class="lt-pair"><svg class="lt-signet" viewBox="0 0 152 107" aria-hidden="true"><use href="#opSwish"/></svg><svg class="lt-type" viewBox="0 0 3025 752" role="img" aria-label="OpenProse, swish family"><use href="#opSwishType"/></svg></div><span class="lt-name">swish</span></div>
-      <div class="logo-tile" data-family="cursive"><div class="lt-pair"><svg class="lt-signet" viewBox="0 0 1737 1846" aria-hidden="true"><use href="#opCursive"/></svg><svg class="lt-type" viewBox="0 0 3776 1586" role="img" aria-label="OpenProse, cursive family"><use href="#opCursiveType"/></svg></div><span class="lt-name">cursive</span></div>
+      <button type="button" class="logo-tile canonical" data-family="style" aria-pressed="false" aria-label="Show the style logo family in the specimen below"><div class="lt-pair"><svg class="lt-signet" viewBox="0 0 142 142" aria-hidden="true"><use href="#opStyle"/></svg><svg class="lt-type" viewBox="0 0 3840 998" role="img" aria-label="OpenProse, style family (canonical)"><use href="#opStyleType"/></svg></div><span class="lt-name">style · canonical</span></button>
+      <button type="button" class="logo-tile" data-family="infinite" aria-pressed="false" aria-label="Show the infinite logo family in the specimen below"><div class="lt-pair"><svg class="lt-signet" viewBox="0 0 497 329" aria-hidden="true"><use href="#opInfinite"/></svg><svg class="lt-type" viewBox="0 0 3549 1107" role="img" aria-label="OpenProse, infinite family"><use href="#opInfiniteType"/></svg></div><span class="lt-name">infinite</span></button>
+      <button type="button" class="logo-tile" data-family="circle" aria-pressed="false" aria-label="Show the circle logo family in the specimen below"><div class="lt-pair"><svg class="lt-signet" viewBox="0 0 2843 2160" aria-hidden="true"><use href="#opCircleMark"/></svg><svg class="lt-type" viewBox="0 0 3905 1443" role="img" aria-label="OpenProse, circle family"><use href="#opCircleType"/></svg></div><span class="lt-name">circle</span></button>
+      <button type="button" class="logo-tile" data-family="swish" aria-pressed="false" aria-label="Show the swish logo family in the specimen below"><div class="lt-pair"><svg class="lt-signet" viewBox="0 0 152 107" aria-hidden="true"><use href="#opSwish"/></svg><svg class="lt-type" viewBox="0 0 3025 752" role="img" aria-label="OpenProse, swish family"><use href="#opSwishType"/></svg></div><span class="lt-name">swish</span></button>
+      <button type="button" class="logo-tile" data-family="cursive" aria-pressed="false" aria-label="Show the cursive logo family in the specimen below"><div class="lt-pair"><svg class="lt-signet" viewBox="0 0 1737 1846" aria-hidden="true"><use href="#opCursive"/></svg><svg class="lt-type" viewBox="0 0 3776 1586" role="img" aria-label="OpenProse, cursive family"><use href="#opCursiveType"/></svg></div><span class="lt-name">cursive</span></button>
     </div>
     <div class="logo-specimen" data-family="style">
       <svg class="swap-logo spec-signet" data-kind="signet" viewBox="0 0 142 142" aria-hidden="true"><use href="#opStyle"/></svg>
       <svg class="swap-logo spec-type" data-kind="wordmark" viewBox="0 0 3840 998" role="img" aria-label="OpenProse wordmark · click to cycle families"><use href="#opStyleType"/></svg>
     </div>
-    <p class="cs-figcap">The living specimen · click to cycle infinite → style → circle → swish → cursive.</p>
+    <p class="cs-figcap">The living specimen · pick a family above, or click the mark to cycle infinite → style → circle → swish → cursive.</p>
     <button class="exploration-sheet" id="expl-trigger" type="button" aria-label="Expand the exploration sheet to full size">
       <img loading="lazy" src="openprose/page-assets/openprose-logo-sheet.svg" alt="OpenProse logo exploration sheet: the wider field of marks the five canonical families were distilled from">
       <span class="expl-hint">Click to expand</span>
@@ -2307,7 +2326,13 @@ system consumes it.
       </div>
     </div>
     <div class="cs-figure">
-      <div class="embed-live natural" data-src="openprose/canvas-display/?v=32&mode=canvas&zoom=0.65" data-auto>
+      <!-- footer=0 like every other embed here. Without it the shell's own
+           footer line renders under the grid as a 56px band of bare paper,
+           which reads as a rendering fault; canvas mode hides that footer, so
+           switching modes and back appeared to "fix" it. The host page already
+           captions this embed, so the shell's footer is redundant inside it.
+           The standalone link below keeps its footer. -->
+      <div class="embed-live natural" data-src="openprose/canvas-display/?v=32&footer=0&mode=canvas&zoom=0.65" data-auto>
         <iframe title="The JHDesign Review Canvas — display cut, live" loading="lazy" allowfullscreen allow="fullscreen"></iframe>
       </div>
       <div class="embed-bar">
@@ -3812,8 +3837,24 @@ system consumes it.
       });
       // Stamp the family so the specimen's per-family optical corrections apply.
       document.querySelectorAll('.logo-specimen').forEach(el => { el.dataset.family = set.id; });
+      // Move the teal highlight onto whichever tile is showing.
+      document.querySelectorAll('.logo-tile').forEach(tile => {
+        tile.setAttribute('aria-pressed', String(tile.dataset.family === set.id));
+      });
       try { window.dispatchEvent(new CustomEvent('swap-logo-changed', { detail: { id: set.id } })); } catch (e) {}
     }
+
+    // The five tiles pick a family directly; the specimen still cycles. Two
+    // ways in, because the row reads as a set of options and the big mark
+    // reads as a thing to poke — visitors reach for both.
+    document.querySelectorAll('.logo-tile').forEach(tile => {
+      tile.addEventListener('click', () => {
+        const i = LOGOS.findIndex(l => l.id === tile.dataset.family);
+        if (i < 0 || i === idx) return;
+        idx = i;
+        applyLogo();
+      });
+    });
 
     // Drag-aware click detection — measure pointer travel between down
     // and up.  Below the threshold (small move) → treat as click → toggle.
@@ -3850,6 +3891,10 @@ system consumes it.
     document.addEventListener('touchstart', onPointerDown, { capture: true, passive: true });
     document.addEventListener('touchend',   onPointerUp,   true);
     document.addEventListener('click',      onClickCapture, true);
+
+    // The markup already ships the starting family; this only stamps the
+    // highlight and data-family so the tiles agree with the specimen on load.
+    applyLogo();
   })();
 </script>
 
@@ -4240,9 +4285,9 @@ system consumes it.
 <!-- jhcom chrome behaviour: nav reveal + mobile toggle, the <jh-nav> component
      (jh-chrome.js also defines <jh-footer>, unused here), and the ⌘K search
      overlay. Same trio every site page loads. -->
-<script src="./scripts/shared.js?v=1.30"></script>
-<script src="./scripts/search-overlay.js?v=1.30" defer></script>
-<script src="./scripts/jh-chrome.js?v=1.30" defer></script>
+<script src="./scripts/shared.js?v=1.31"></script>
+<script src="./scripts/search-overlay.js?v=1.31" defer></script>
+<script src="./scripts/jh-chrome.js?v=1.31" defer></script>
 
 </body>
 </html>
