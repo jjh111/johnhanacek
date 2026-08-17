@@ -130,9 +130,10 @@ h2: Building the *workshop* while working in it.
 
 LEFT (five ledes):
 
-Reviewing dozens of live website experiments needed more than a folder, but I wanted a better way. So I made a simple 'canvas' for generative web design: the **JHDesign Review Canvas**. The Review Canvas shows the content of a repo as one navigable page with three view modes (canvas, grid, focus), where every page is a live iframe with star ratings, typed comments, and freehand drawings composited onto screenshots. Review state lives in *git*; each reviewer writes only their own file, so feedback merges without conflict. The Review Canvas just needs a Github repo to make it multiplayer. No extra overhead, no extra accounts or permissions to set up, and no intermediary steps to get the comments back into production.
+R
+I've been a designer for about 10 solid years now; from Adobe XD to Figma. Being real with you, I've been there and I don't want to go back. I want to build programmatic artifacts directly. Yet reviewing dozens of live website experiments needs more than a folder. So I have made a simple 'canvas' for generative web design: the **JHDesign Review Canvas**. The Review Canvas shows the content of a repo as one navigable page with three view modes (canvas, grid, focus), where every page is a live iframe with star ratings, typed comments, and freehand drawings composited onto screenshots. 
 
-I've been a designer for about 10 solid years now; from Adobe XD to Figma. Being real with you, I've been there and I don't want to go back. As agentic engineering offers new potentials, I find myself recalling… For so long we designers have been adding abstractions of different apps and tools just to simulate code, now why not just use the code and standards directly? Thus the webpage that is a canvas that shows iframes. Took some iteration to get it performance stable, but now it's such a great way to scan a bunch of sites or docs.  
+Review state lives in *git*; each reviewer writes only their own file, so feedback merges without conflict. The Review Canvas just needs a Github repo to make it collaborative. No extra overhead, no extra accounts or permissions to set up, and no intermediary steps to get the comments back into production.
 
 This system was essential in managing the large surface area of this project across two tracks. Instead of staying linear in code chat I could spread out and review whole swaths of work, specify changes, then just have the agent read the latest manifest and get to work in parallel plans. The supporting tooling for the Canvas even runs on *OpenProse* itself: the canvas's integrity is a written responsibility an agent keeps, audited by script and attested with commit SHAs, and the design system is indexed by a runnable OpenProse program. 
 
@@ -181,12 +182,12 @@ foot: · agent-reserve.mjs
 ## III BREADTH
 
 kicker: III Breadth
-h2: *37* approaches. *29* marks.
+h2: *37* approaches. 
 
 lede: Two months of parallel explorations looking for the best surface area. Every approach is a working page. 
 
 [EMBED · top-rated approaches]
-items: approach-f-v2, approach-d2-gothic-humanist, approach-h-warm-editorial, approach-i-editorial-saas, approach-j-tufte-v2, approach-f-v5-openprose, approach-m-dan-accordion
+items: approach-f-v2, approach-d2-gothic-humanist, approach-h-warm-editorial, approach-i-editorial-saas, approach-j-tufte-v2, approach-f-v5-openprose, approach-m-dan-accordion, approach-d-v2
 sort: sequence
 cols: 4
 ratings: on
@@ -201,7 +202,7 @@ lede (gap: xl): Round-one stars and comments were compiled into a written docume
 REWARDED (✓):
 - **Warm editorial** surfaces · paper, ink, patience
 - **Elegance and the developer surface** on one page
-- **Tufte data-density** written as prose
+- **Tufte data-density** written as prose with sparklines
 - **Calm confidence** · the quiet voice wins
 - Real artifacts over abstract decoration
 
@@ -269,7 +270,12 @@ view: grid
 aspect: 15 / 8
 caption: Click into any card; ⛶ in its header goes fullscreen.
 
-lede (gap: xl): The automata were alive but abstract, and thus also possible for others to generate. The search for unique texture led back to my oldest medium, *photography*, and one motif held through the search: the bloom and its ripples. I started by simply putting photographs in place of whitespace, but it became clear that I had to try combining the interactive elements with photography, something I have found myself doing as an [artist](https://www.johnhanacek.com/art.html), here in its most advanced form.
+lede (gap: xl): The automata were alive but abstract, and thus also possible for others to generate. The search for unique texture led back to my oldest medium, *photography*, and one motif held through the search: the bloom and its ripples. 
+
+[3-photo row] Just the Light / Like Dust / Moon Shine
+figcap: The Sierra Nevada series.
+
+I started by simply putting photographs in place of whitespace, but it became clear that I had to try combining the interactive elements with photography, something I have found myself doing as an [artist](https://www.johnhanacek.com/art.html), here in its most advanced form.
 
 [EMBED · the mu chain]
 items: direction-beta-tufte-mono-homepage-kecal, direction-mu-bloom-homepage-landscape-tufte-kecal, direction-mu-bloom-homepage-symmetry-ripple-topmask
@@ -279,12 +285,17 @@ ratings: off
 view: grid
 aspect: 15 / 8
 caption: Exploring the bloom and grounding it.
-[3-photo row] Just the Light / Like Dust / Moon Shine
-figcap: The Sierra Nevada series.
+
 [3-row feature list]
-01 **Texture** — A series of Sierra Nevada lake scenes, shot in **2011**, a decade before the project.
-02 **The move** — Keep the photograph. **Replace** the sky and the water with shaders: real mountain, procedural dawn clouds, simulated ripples.
-03 **Registration** — Aligning the digital reflection with the real one took **11** documented revisions and a hand-dialed tuner, later retired into markdown.
+01 **Something Real** — A series of my favorite Sierra Nevada lake scenes, shot in **2011**.
+02 **Something Simulated** — Keep the photograph. **Replace** the sky and the water with shaders: real mountain, procedural dawn clouds, simulated ripples.
+03 **Hand Tuning** — The mask was finalized by hand. Aligning the digital reflection with the real one used a live tuner, later retired into markdown.
+
+lede (gap: lg): I wanted to make something that would stand out from the increasingly crowded field of design in the generative age. 
+
+The real photograph hangs printed above my monitor, its ripples frozen except in memory; on the monitor below, they move.
+
+A reminder of how far technology has come; of all that will change, and all that will stay the same.
 
 [cols: labels + code LEFT (42%) | 3D layer stack RIGHT (58%), vertically centered]
 
@@ -303,10 +314,6 @@ tilt −0.004   axisTilt −0.009   keystone 0.000
 ```
 
 RIGHT: [3D LAYER STACK · four plates exploded in perspective]
-
-lede (gap: lg): I wanted to make something that would stand out from the increasingly crowded field of design in the generative age. The real photograph hangs printed above my monitor, its ripples frozen except in memory; on the monitor below, they move.
-
-(gap: sm) A reminder of how far technology has come; of all that will change, and all that will stay the same.
 
 
 ## VI THE DISTILLATION
