@@ -139,7 +139,7 @@ This system was essential in managing the large surface area of this project acr
 
 I'll be developing this tooling further and consider if it's a product of its own, or just my secret sauce for now.
 
-Every exhibit grid on this page is a stripped-down version of the review canvas; the canvas viewer lite is at the end. 
+Every exhibit grid on this page is a stripped-down version of the review canvas; view all the pages at the end. 
 
 RIGHT (code block, then the 4 steps stacked):
 
