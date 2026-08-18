@@ -30,7 +30,9 @@ const m = chromeSrc.match(/version:\s*'([0-9.]+)'/);
 if (!m) throw new Error("Couldn't find version: '<x.y>' in scripts/jh-chrome.js");
 const SITE_VERSION = m[1];
 
-const ASSETS = ['shared.css', 'jh-chrome.css', 'shared.js', 'search-overlay.css', 'search-overlay.js', 'jh-chrome.js', 'shape-detection.js', 'fish-engine.js'];
+// Matched by basename, so openprose/_tokens.css and _pairings.css are covered
+// too — openprose.html is the only page that loads them.
+const ASSETS = ['shared.css', 'jh-chrome.css', 'shared.js', 'search-overlay.css', 'search-overlay.js', 'jh-chrome.js', 'shape-detection.js', 'fish-engine.js', '_tokens.css', '_pairings.css'];
 
 const htmlFiles = readdirSync(root).filter((f) => f.endsWith('.html'));
 let total = 0;
