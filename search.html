@@ -26,7 +26,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Raleway:wght@100;200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles/shared.css?v=1.44">
+    <link rel="stylesheet" href="./styles/shared.css?v=1.45">
 
     <!-- Structured Data -->
     <link rel="alternate" type="application/json" href="./john-hanacek.json" title="Structured data">
@@ -538,7 +538,12 @@
 
         async function loadSearchIndex() {
             try {
-                const response = await fetch('Assets/search-chunks.json');
+                // Same cache-bust as the overlay: read the stamped version off a
+                // script tag, which is in the DOM from parse time regardless of
+                // deferred load order.
+                const vTag = document.querySelector('script[src*="jh-chrome.js"]');
+                const vM = vTag && /[?&]v=([\w.]+)/.exec(vTag.getAttribute('src') || '');
+                const response = await fetch('Assets/search-chunks.json' + (vM ? '?v=' + vM[1] : ''));
                 const data = await response.json();
                 chunks = data.chunks;
                 miniSearch.addAll(chunks);
@@ -1098,7 +1103,7 @@
     <footer>
         <jh-footer></jh-footer>
     </footer>
-<script src="./scripts/shared.js?v=1.44"></script>
-    <script src="./scripts/jh-chrome.js?v=1.44" defer></script>
+<script src="./scripts/shared.js?v=1.45"></script>
+    <script src="./scripts/jh-chrome.js?v=1.45" defer></script>
 </body>
 </html>

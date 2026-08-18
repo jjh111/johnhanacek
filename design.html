@@ -26,8 +26,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Raleway:wght@100;200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles/shared.css?v=1.44">
-    <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.44">
+    <link rel="stylesheet" href="./styles/shared.css?v=1.45">
+    <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.45">
 
     <!-- Model Viewer is loaded on approach, not at page load — see the
          warm-up observer near the bottom of this file. The library is 239KB
@@ -691,10 +691,19 @@
                
                 </div>
                       <div class="project-content">
+                    <!-- The loop is the card's biggest target, so it goes to the
+                         case study like the OpenProse one above it. Replay moves
+                         onto the corner .video-gate button, because the body of
+                         the video can't both navigate and replay. -->
                     <div class="video-embed" style="margin-bottom:1rem;">
-                        <video id="nanomeVideo" muted playsinline preload="auto" loop style="width:100%; display:block;">
-                            <source src="./Assets/nanome-hero.mp4" type="video/mp4">
-                        </video>
+                        <span class="video-gate">
+                            <a href="nanome2.html" aria-label="Nanome 2 XR product design case study" style="display:block;">
+                                <video id="nanomeVideo" muted playsinline preload="auto" loop style="width:100%; display:block;">
+                                    <source src="./Assets/nanome-hero.mp4" type="video/mp4">
+                                </video>
+                            </a>
+                            <button type="button" class="video-gate-btn" data-gate-for="nanomeVideo" aria-label="Play this loop" aria-pressed="false"></button>
+                        </span>
                     </div>
                     <p>Led the complete redesign of Nanome's molecular visualization platform for VR and Mixed Reality. Worked closely with scientists and researchers to create intuitive spatial interfaces for drug discovery.</p>
                     <h4 style="margin-bottom: var(--space-md);"><a href="nanome2.html">Nanome 2: XR Product Design Case Study</a> <span class="year-badge">Interactive</span></h4>
@@ -1051,7 +1060,9 @@
         const autoplayGated = window.matchMedia('(prefers-reduced-motion: reduce)').matches
             || window.matchMedia('(hover: none) and (pointer: coarse)').matches;
         const videos = [
-            { id: 'nanomeVideo', maxLoops: 2 },
+            // linked: the video body is an <a> to the case study, so its click
+            // must navigate. Replay lives on the corner button instead.
+            { id: 'nanomeVideo', maxLoops: 2, linked: true },
             { id: 'holotriageVideo', maxLoops: 2 },
             { id: 'clinicVideo', maxLoops: 2 }
         ];
@@ -1061,44 +1072,68 @@
             if (!video) return;
             
             let loopCount = 0;
-            
+            const gateBtn = v.linked
+                ? document.querySelector('.video-gate-btn[data-gate-for="' + v.id + '"]')
+                : null;
+
+            function park(label) {
+                video.pause();
+                video.loop = false;
+                if (gateBtn) { syncGate(); return; }
+                video.style.cursor = 'pointer';
+                video.title = label;
+            }
+            function replay() {
+                video.currentTime = 0;
+                video.loop = true;
+                loopCount = 0;
+                video.play();
+                video.title = '';
+                syncGate();
+            }
+            function syncGate() {
+                if (!gateBtn) return;
+                const playing = !video.paused && !video.ended;
+                gateBtn.classList.toggle('playing', playing);
+                gateBtn.setAttribute('aria-pressed', String(playing));
+                gateBtn.setAttribute('aria-label', playing ? 'Pause this loop' : 'Replay this loop');
+            }
+
             video.addEventListener('ended', () => {
                 loopCount++;
-                if (loopCount >= v.maxLoops) {
-                    video.pause();
-                    video.loop = false;
-                    // Show replay button
-                    video.style.cursor = 'pointer';
-                    video.title = 'Click to replay';
-                }
+                if (loopCount >= v.maxLoops) park('Click to replay');
             });
 
-            video.addEventListener('click', () => {
-                if (video.paused && loopCount >= v.maxLoops) {
-                    video.currentTime = 0;
-                    video.loop = true;
-                    loopCount = 0;
-                    video.play();
-                    video.title = '';
-                }
-            });
+            if (gateBtn) {
+                gateBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation(); // the video sits inside the case-study link
+                    if (video.paused) replay();
+                    else { video.pause(); syncGate(); }
+                });
+                video.addEventListener('play', syncGate);
+                video.addEventListener('pause', syncGate);
+            } else {
+                video.addEventListener('click', () => {
+                    if (video.paused && loopCount >= v.maxLoops) replay();
+                });
+            }
 
             if (autoplayGated) {
                 // Park it at the same state two loops would have left: paused,
                 // with the replay affordance already showing.
                 loopCount = v.maxLoops;
-                video.loop = false;
-                video.style.cursor = 'pointer';
-                video.title = 'Click to play';
+                park('Click to play');
             } else {
                 video.play();
             }
+            syncGate();
         });
     </script>
 
     <!-- Hero Canvas Drawing Interaction -->
-    <script src="./scripts/shape-detection.js?v=1.44"></script>
-    <script src="./scripts/fish-engine.js?v=1.44"></script>
+    <script src="./scripts/shape-detection.js?v=1.45"></script>
+    <script src="./scripts/fish-engine.js?v=1.45"></script>
     <script>
         const canvas = document.getElementById('heroCanvas');
         const ctx = canvas.getContext('2d');
@@ -2908,9 +2943,9 @@
             resizeMetaMedium();
         })();
     </script>
-<script src="./scripts/search-overlay.js?v=1.44" defer></script>
+<script src="./scripts/search-overlay.js?v=1.45" defer></script>
 <script>document.addEventListener('DOMContentLoaded',()=>{const t=document.querySelector('.nav-title');if(t)t.dataset.short='JH';document.querySelectorAll('.nav-right a').forEach(a=>{const w=a.textContent.trim().split(/\s+/);a.dataset.short=w.length>1?w.map(x=>x[0]).join('').toUpperCase().slice(0,2):a.textContent.trim().slice(0,2).toUpperCase()})});</script>
-    <script src="./scripts/jh-chrome.js?v=1.44" defer></script>
+    <script src="./scripts/jh-chrome.js?v=1.45" defer></script>
 
     <!-- ============================================
          3D warm-up — load model-viewer on approach, not at page load.

@@ -213,7 +213,14 @@
 
         // Load search chunks
         try {
-            const response = await fetch(getBasePath() + 'Assets/search-chunks.json');
+            // The index changes independently of the pages that load it, so bust it
+            // on the site version. Read it off a script tag rather than window.JH_SITE:
+            // both files are deferred and the load order isn't guaranteed, but the tag
+            // is in the DOM from parse time. Without this a returning visitor keeps
+            // searching a stale copy until their browser decides to revalidate.
+            const vTag = document.querySelector('script[src*="jh-chrome.js"], script[src*="search-overlay.js"]');
+            const vM = vTag && /[?&]v=([\w.]+)/.exec(vTag.getAttribute('src') || '');
+            const response = await fetch(getBasePath() + 'Assets/search-chunks.json' + (vM ? '?v=' + vM[1] : ''));
             const data = await response.json();
             chunks = data.chunks;
             miniSearchInstance.addAll(chunks);
