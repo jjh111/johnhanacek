@@ -46,6 +46,11 @@ header h1 { font-size: 13px; font-weight: 600; letter-spacing: 0.04em; }
 header h1 span { color: var(--ink3); font-weight: 400; }
 header .modes { display: flex; gap: 4px; margin-left: auto; }
 header .modes button.active { border-color: var(--teal); color: var(--teal); }
+/* Mode buttons read as a picture of what they do: a 4x3 plane, a 2x2 grid,
+   one whole page. The icon carries the meaning, so the word is the part
+   that yields when the bar gets narrow. */
+header .modes button { display: inline-flex; align-items: center; gap: 6px; }
+header .modes .mico { display: block; width: 14px; height: 10px; flex: none; }
 header .tb-group { display: none; align-items: center; gap: 4px; }
 header .tb-group.visible { display: flex; }
 header .tb-group .zoom-display {
@@ -86,7 +91,7 @@ body.embedded #plane { padding: 0; }
      host page already says what this is), the signet shrinks to a badge,
      and paddings/gaps tighten so the mode buttons and toggles hold one
      line without wrapping. */
-  header h1, header .count, header .modes .knum { display: none; }
+  header h1, header .count, header .modes .mlabel { display: none; }
   /* Controls fill the bar: space-between spreads each wrapped row so the
      first and last control sit flush at the edges. */
   header { gap: 5px; padding: 6px 8px; flex-wrap: wrap; row-gap: 4px; justify-content: space-between; }
@@ -276,11 +281,11 @@ body.no-descs .card .desc, body.no-descs #focus .fdesc { display: none; }
 
 <header>
   <img class="mark-sig" src="Assets/JHsig.svg" alt="JHDesign">
-  <h1>Canvas <span>· JHDesign × OpenProse</span></h1>
+  <h1>Canvas <span>· JH × OP</span></h1>
   <nav class="modes" aria-label="View mode">
-    <button type="button" data-mode-btn="canvas"><span class="knum">1 · </span>canvas</button>
-    <button type="button" data-mode-btn="grid" class="active"><span class="knum">2 · </span>grid</button>
-    <button type="button" data-mode-btn="focus"><span class="knum">3 · </span>focus</button>
+    <button type="button" data-mode-btn="canvas" title="canvas · key 1"><svg class="mico" viewBox="0 0 14 10" fill="currentColor" aria-hidden="true" focusable="false"><rect x="0" y="0" width="2.98" height="2.87"/><rect x="3.67" y="0" width="2.98" height="2.87"/><rect x="7.35" y="0" width="2.98" height="2.87"/><rect x="11.02" y="0" width="2.98" height="2.87"/><rect x="0" y="3.57" width="2.98" height="2.87"/><rect x="3.67" y="3.57" width="2.98" height="2.87"/><rect x="7.35" y="3.57" width="2.98" height="2.87"/><rect x="11.02" y="3.57" width="2.98" height="2.87"/><rect x="0" y="7.13" width="2.98" height="2.87"/><rect x="3.67" y="7.13" width="2.98" height="2.87"/><rect x="7.35" y="7.13" width="2.98" height="2.87"/><rect x="11.02" y="7.13" width="2.98" height="2.87"/></svg><span class="mlabel">canvas</span></button>
+    <button type="button" data-mode-btn="grid" class="active" title="grid · key 2"><svg class="mico" viewBox="0 0 14 10" fill="currentColor" aria-hidden="true" focusable="false"><rect x="0" y="0" width="6.5" height="4.5"/><rect x="7.5" y="0" width="6.5" height="4.5"/><rect x="0" y="5.5" width="6.5" height="4.5"/><rect x="7.5" y="5.5" width="6.5" height="4.5"/></svg><span class="mlabel">grid</span></button>
+    <button type="button" data-mode-btn="focus" title="focus · key 3"><svg class="mico" viewBox="0 0 14 10" fill="currentColor" aria-hidden="true" focusable="false"><rect x="0" y="0" width="14" height="10"/></svg><span class="mlabel">focus</span></button>
   </nav>
   <div class="tb-group" id="zoom-group">
     <button type="button" id="zoom-out" aria-label="Zoom out">−</button>
@@ -569,7 +574,7 @@ body.no-descs .card .desc, body.no-descs #focus .fdesc { display: none; }
       grid.appendChild(card);
       cells.push({ it: it, well: well, iframe: null, live: false, near: false, lastNear: 0 });
     });
-    document.getElementById('count').textContent = items.length + ' experiments';
+    document.getElementById('count').textContent = items.length;
     if (cellIO) {
       cellIO.disconnect();
       cells.forEach(function (c) { cellIO.observe(c.well); });
