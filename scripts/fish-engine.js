@@ -132,11 +132,24 @@
                 }
             }
             const bw = f.bodyWidth || 20;
-            const standoff = bw >= MEDIUM_THRESHOLD ? 26 : bw >= SMALL_THRESHOLD ? 16 : 9;
+            // Standoff has to scale with the animal. A flat 26px in front of a
+            // 92px body is a third of a body length, which for a fish turning at
+            // 0.01-0.03 rad/frame is no warning at all — it arrives already
+            // touching. Large fish get a standoff proportional to their length.
+            const standoff = bw >= MEDIUM_THRESHOLD ? Math.max(26, bw * 0.45)
+                           : bw >= SMALL_THRESHOLD ? 16 : 9;
             const body = Math.max(6, (f.bodyHeight || 12) * 0.5);
             const nowW = Date.now();
             let contact = false;
             let lastSlide = null;
+            // A large IDLE fish is steered by cruiseAngle alone (see
+            // largeFishSimpleMode in the heading block) — it never reads
+            // targetHeading. Writing only targetHeading here therefore steered
+            // nothing at all for exactly the fish with the worst turning circle,
+            // which is why they ground along shapes instead of rounding them.
+            const followsCruise = bw >= MEDIUM_THRESHOLD && f.state === 'idle' && f.cruiseAngle !== undefined;
+            f.wallNear = false;
+            f.wallSteer = null;
             for (let i = 0; i < wallRects.length; i++) {
                 const r = wallRects[i];
 
@@ -155,6 +168,13 @@
                     const steerTarget = slide + angleDiff(away, slide) * 0.3;
                     lastSlide = steerTarget;
                     f.targetHeading += angleDiff(steerTarget, f.targetHeading) * 0.16;
+                    // Steer whatever this fish actually follows, not just the
+                    // channel most fish happen to use.
+                    if (followsCruise) f.cruiseAngle += angleDiff(steerTarget, f.cruiseAngle) * 0.16;
+                    // Proximity flag the heading block reads next frame to turn
+                    // faster than a lazy cruise blend allows.
+                    f.wallNear = true;
+                    f.wallSteer = steerTarget;
                 }
 
                 // Hard containment: resolve overlap along the shallowest axis,
@@ -188,7 +208,11 @@
                                                           : (Math.sin(f.heading) >= 0 ? 1 : -1);
                         f.vx = 0;
                         f.vy = dir * speed;
-                        f.targetHeading += angleDiff(dir > 0 ? Math.PI / 2 : -Math.PI / 2, f.targetHeading) * 0.25;
+                        const face = dir > 0 ? Math.PI / 2 : -Math.PI / 2;
+                        f.targetHeading += angleDiff(face, f.targetHeading) * 0.25;
+                        if (followsCruise) f.cruiseAngle += angleDiff(face, f.cruiseAngle) * 0.25;
+                        f.wallNear = true;
+                        if (f.wallSteer === null) f.wallSteer = face;
                     } else {
                         // horizontal face → tangent is ±X
                         f.y = minPush === pushUp ? r.minY - m : r.maxY + m;
@@ -196,7 +220,11 @@
                                                           : (Math.cos(f.heading) >= 0 ? 1 : -1);
                         f.vy = 0;
                         f.vx = dir * speed;
-                        f.targetHeading += angleDiff(dir > 0 ? 0 : Math.PI, f.targetHeading) * 0.25;
+                        const face = dir > 0 ? 0 : Math.PI;
+                        f.targetHeading += angleDiff(face, f.targetHeading) * 0.25;
+                        if (followsCruise) f.cruiseAngle += angleDiff(face, f.cruiseAngle) * 0.25;
+                        f.wallNear = true;
+                        if (f.wallSteer === null) f.wallSteer = face;
                     }
                     contact = true;
                 }
@@ -4084,6 +4112,12 @@
                     // Emergency edge or retreating: turn much faster to avoid getting stuck at walls
                     if (inEmergency) {
                         headingDelta = rawHeadingDelta * 0.12; // Urgent edge escape
+                    } else if (f.wallNear) {
+                        // A drawn wall is as hard as the canvas edge, so it gets
+                        // the same urgency. Without this the cruise blend tops
+                        // out at 0.03/frame and a large fish scrapes the whole
+                        // length of a shape before its nose comes round.
+                        headingDelta = rawHeadingDelta * 0.10;
                     } else if (needsEdgeAvoid && avoidStrength > 0.1) {
                         // BUFFER/ANTICIPATION ZONE: moderate turn rate — much faster than cruise
                         // Without this, large idle fish drift into walls at 0.01-0.03 blend/frame
@@ -5891,6 +5925,88 @@
                     ctx.font = '8px JetBrains Mono';
                     ctx.fillStyle = 'rgba(255, 200, 50, 0.9)';
                     ctx.fillText('🍕', ft.x - 5, ft.y + 4);
+                }
+
+                // 5a2. SENSES — the proximity radii the fish is ACTUALLY using
+                // this frame. The engine keeps fourteen of them and debug drew
+                // one; drawing all fourteen on every fish is unreadable, so each
+                // ring appears only while the behaviour that reads it is live.
+                const bwS = f.bodyWidth || 20;
+                const ring = (rad, col, label) => {
+                    ctx.strokeStyle = col;
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash([2, 5]);
+                    ctx.beginPath();
+                    ctx.arc(f.x, f.y, rad, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                    if (label) {
+                        ctx.font = '8px JetBrains Mono';
+                        ctx.fillStyle = col;
+                        ctx.fillText(label, f.x - 8, f.y - rad - 3);
+                    }
+                };
+                if (f.state === 'seeking' || (food.length && !f.debugFoodTarget)) {
+                    ring(DETECT_RANGE, 'rgba(122, 229, 130, 0.16)', f.debugFoodTarget ? null : 'detect');
+                }
+                if (f.state === 'fleeing' || f.state === 'hiding') ring(THREAT_RANGE_CLOSE, 'rgba(255, 90, 90, 0.35)', 'threat');
+                if (f.state === 'hunting') ring(HUNT_RANGE, 'rgba(255, 140, 60, 0.4)', 'hunt');
+                if (f.state === 'challenging' || f.state === 'retreating') ring(TERRITORY_RANGE, 'rgba(255, 200, 50, 0.3)', 'territory');
+                if (bwS >= MEDIUM_THRESHOLD && f.state === 'idle') ring(LARGE_FISH_AVOIDANCE_RANGE, 'rgba(180, 140, 255, 0.18)', 'spacing');
+                if (bwS >= SMALL_THRESHOLD && bwS < MEDIUM_THRESHOLD && f.schoolSlot !== undefined) ring(BOID_SEP_RANGE, 'rgba(120, 200, 255, 0.22)', 'separation');
+
+                // 5a3. WALL SENSE — the probe that decides whether a fish turns
+                // before a shape or grinds along it. This is the single most
+                // useful thing to see when a fish "slams into the line": the
+                // dot is where the fish is looking, the capsule is how much room
+                // it insists on, and the arrow is the way the wall told it to go.
+                if (wallRects.length) {
+                    const lookAhead = 24 + bwS * 1.2;
+                    const standoff = bwS >= MEDIUM_THRESHOLD ? Math.max(26, bwS * 0.45)
+                                   : bwS >= SMALL_THRESHOLD ? 16 : 9;
+                    const bodyS = Math.max(6, (f.bodyHeight || 12) * 0.5);
+                    const px = f.x + Math.cos(f.heading) * lookAhead;
+                    const py = f.y + Math.sin(f.heading) * lookAhead;
+                    const hot = !!f.wallNear;
+                    ctx.strokeStyle = hot ? 'rgba(255, 170, 60, 0.9)' : 'rgba(255, 170, 60, 0.28)';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(f.x, f.y);
+                    ctx.lineTo(px, py);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(px, py, standoff + bodyS, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.fillStyle = hot ? 'rgba(255, 170, 60, 0.9)' : 'rgba(255, 170, 60, 0.4)';
+                    ctx.beginPath();
+                    ctx.arc(px, py, 2.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    if (hot && f.wallSteer !== null && f.wallSteer !== undefined) {
+                        ctx.strokeStyle = 'rgba(255, 170, 60, 0.95)';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(f.x, f.y);
+                        ctx.lineTo(f.x + Math.cos(f.wallSteer) * 40, f.y + Math.sin(f.wallSteer) * 40);
+                        ctx.stroke();
+                        ctx.font = '8px JetBrains Mono';
+                        ctx.fillStyle = 'rgba(255, 170, 60, 0.95)';
+                        ctx.fillText('avoid', f.x + Math.cos(f.wallSteer) * 44, f.y + Math.sin(f.wallSteer) * 44);
+                    }
+                    // Cruise heading for the fish that steer by it — when this
+                    // and the heading disagree, the fish is mid-turn.
+                    if (bwS >= MEDIUM_THRESHOLD && f.cruiseAngle !== undefined && f.state === 'idle') {
+                        ctx.strokeStyle = 'rgba(180, 140, 255, 0.7)';
+                        ctx.lineWidth = 1.5;
+                        ctx.setLineDash([5, 3]);
+                        ctx.beginPath();
+                        ctx.moveTo(f.x, f.y);
+                        ctx.lineTo(f.x + Math.cos(f.cruiseAngle) * 52, f.y + Math.sin(f.cruiseAngle) * 52);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                        ctx.font = '8px JetBrains Mono';
+                        ctx.fillStyle = 'rgba(180, 140, 255, 0.85)';
+                        ctx.fillText('cruise', f.x + Math.cos(f.cruiseAngle) * 56, f.y + Math.sin(f.cruiseAngle) * 56);
+                    }
                 }
 
                 // 5c. NAVIGATION — the route, the two candidate headings, and
