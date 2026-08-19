@@ -101,6 +101,22 @@
 /* Page-scoped tokens (palette + type come from _tokens.css). */
 :root { --content-max: 1400px; } /* shared max-width for the section / cta / footer inners */
 
+/* Accent role. Every accent on the page — link colour, kicker, card numbers,
+   hover borders, the scroll-progress bar — binds to this one pair rather than
+   to a palette colour directly, so the role can move without touching them.
+   Light mode is teal (JH 2026-08-18, was the amber/tan). Named --accent-ink,
+   not --accent: _tokens.css already uses --accent for a FONT FAMILY, and a
+   color bound to it silently resolves to inherited ink.
+   Dark mode keeps binding to --amber, which the dark block below redeclares to
+   an ink tone — that is deliberate, and --teal is NOT redeclared for dark, so
+   pointing dark at teal here would put #3a7a6a on near-black. */
+:root { --accent-ink: var(--teal); --accent-ink-deep: var(--teal-deep); }
+html[data-mode="dark"],
+html[data-mode="dark"] body,
+html[data-mode="dark"] body[data-palette] {
+  --accent-ink: var(--amber); --accent-ink-deep: var(--amber-deep);
+}
+
 html, body {
   height: 100%;
   background: var(--paper);
@@ -131,7 +147,7 @@ html, body {
   transform: translateY(-130%);
   transition: transform 0.16s ease;
 }
-.skip-link:focus { transform: translateY(0); outline: 2px solid var(--amber); }
+.skip-link:focus { transform: translateY(0); outline: 2px solid var(--accent-ink); }
 #main-content:focus { outline: none; }
 .sr-only {
   position: absolute;
@@ -155,7 +171,7 @@ html, body {
 
    The --amber ramp is redeclared here so it flips to the ink-ramp tones
    on dark; without it, the muted-tan light-palette value bleeds through
-   (e.g. the footer-right link hover binds to var(--amber)). Redeclaring
+   (e.g. the footer-right link hover binds to var(--accent-ink)). Redeclaring
    the ramp keeps footer link-hover parity and flips every other --amber
    binding on the page cleanly.
    ============================================================ */
@@ -210,8 +226,8 @@ strong {
   color: var(--ink);
 }
 
-a { color: var(--amber); text-decoration: none; transition: color 0.15s ease; }
-a:hover { color: var(--amber-deep, var(--ink)); }
+a { color: var(--accent-ink); text-decoration: none; transition: color 0.15s ease; }
+a:hover { color: var(--accent-ink-deep, var(--ink)); }
 
 /* ============================================================
    NAV — fixed logo top-left + mode-toggle top-right
@@ -248,7 +264,7 @@ a:hover { color: var(--amber-deep, var(--ink)); }
   display: block;
   width: 100%;
   height: 100%;
-  background: var(--amber);
+  background: var(--accent-ink);
   transform-origin: left center;
   transform: scaleX(var(--p, 0));
   /* No transition: --p is already set from a rAF scroll handler every frame,
@@ -612,8 +628,8 @@ html[data-mode="dark"] .sections-frosted {
   margin-top: 2rem; font-family: var(--type-mono); font-size: 1.03rem;
   color: var(--ink-2);
 }
-.built-on-prose .bop-foot a { color: var(--amber); }
-.built-on-prose .bop-foot a:hover { color: var(--amber-deep, var(--ink)); }
+.built-on-prose .bop-foot a { color: var(--accent-ink); }
+.built-on-prose .bop-foot a:hover { color: var(--accent-ink-deep, var(--ink)); }
 .section .inner {
   max-width: var(--content-max);
   margin: 0 auto;
@@ -634,7 +650,7 @@ html[data-mode="dark"] .sections-frosted {
   font-size: 0.87rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--amber);
+  color: var(--accent-ink);
   font-weight: 600;
   margin-bottom: 1.25rem;
   display: inline-flex;
@@ -684,7 +700,7 @@ html[data-mode="dark"] .sections-frosted {
 }
 .paradigm-card:hover {
   transform: translateY(-2px);
-  border-color: var(--amber);
+  border-color: var(--accent-ink);
   box-shadow: var(--shadow-md);
 }
 .paradigm-card .num {
@@ -692,7 +708,7 @@ html[data-mode="dark"] .sections-frosted {
   font-size: 0.87rem;
   font-weight: 500;
   letter-spacing: 0.16em;
-  color: var(--amber);
+  color: var(--accent-ink);
   margin-bottom: 1.25rem;
 }
 .paradigm-card h3 {
@@ -764,13 +780,13 @@ html[data-mode="dark"] .sections-frosted {
 }
 .feature-row:hover {
   transform: translateY(-2px);
-  border-color: var(--amber);
+  border-color: var(--accent-ink);
   box-shadow: var(--shadow-md);
 }
 .feature-row .glyph {
   font-family: var(--type-mono);
   font-weight: 600;
-  color: var(--amber);
+  color: var(--accent-ink);
   font-size: 1.33rem;
   line-height: 1;
   /* Push the symbol down to the h4 cap-top: the title carries ~5px of leading
@@ -946,7 +962,7 @@ html[data-mode="dark"] .sections-frosted {
   margin-bottom: 1.3rem;
 }
 html[data-mode="dark"] .install-cmd { background: rgba(245, 240, 232, 0.06); }
-.install-cmd .ic-prompt { color: var(--amber, var(--ink-3)); font-weight: 700; }
+.install-cmd .ic-prompt { color: var(--accent-ink, var(--ink-3)); font-weight: 700; }
 .install-cmd code { color: inherit; }
 .access-form { display: flex; gap: 0.6rem; flex-wrap: wrap; pointer-events: auto; margin-bottom: 0.3rem; }
 .access-email {
@@ -959,7 +975,7 @@ html[data-mode="dark"] .install-cmd { background: rgba(245, 240, 232, 0.06); }
   border: 1px solid var(--rule); border-radius: 6px;
 }
 .access-email::placeholder { color: var(--ink-3); }
-.access-email:focus-visible { outline: 2px solid var(--amber, var(--ink)); outline-offset: 1px; }
+.access-email:focus-visible { outline: 2px solid var(--accent-ink, var(--ink)); outline-offset: 1px; }
 .access-note { font-family: var(--type-mono); font-size: 0.86rem; min-height: 1em; color: var(--ink-2); margin: 0; }
 .access-note[data-state="err"] { color: #b54a3a; }
 
@@ -999,14 +1015,14 @@ html[data-mode="dark"] .install-cmd { background: rgba(245, 240, 232, 0.06); }
   color: var(--paper);
   border-color: var(--ink);
 }
-.ui-btn.primary:hover { background: var(--amber); color: var(--paper); border-color: var(--amber); }
+.ui-btn.primary:hover { background: var(--accent-ink); color: var(--paper); border-color: var(--accent-ink); }
 .ui-btn.primary:active { transform: translateY(1px); }
 .ui-btn.ghost {
   background: transparent;
   color: var(--ink-2);
   border-color: var(--rule);
 }
-.ui-btn.ghost:hover { color: var(--amber); border-color: var(--amber); }
+.ui-btn.ghost:hover { color: var(--accent-ink); border-color: var(--accent-ink); }
 
 
 /* ============================================================
@@ -1084,7 +1100,7 @@ html[data-mode="dark"] .page-foot .foot-sig:hover { opacity: 0.8; }
   color: var(--ink-3);
 }
 .page-foot .foot-right a:hover,
-.page-foot .foot-right a:active { color: var(--amber); }
+.page-foot .foot-right a:active { color: var(--accent-ink); }
 
 /* ============================================================
    FOCUS-VISIBLE
@@ -1094,7 +1110,7 @@ html[data-mode="dark"] .page-foot .foot-sig:hover { opacity: 0.8; }
    preserved.
    ============================================================ */
 :focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--accent-ink);
   outline-offset: 3px;
   border-radius: 3px;
 }
@@ -1102,13 +1118,13 @@ html[data-mode="dark"] .page-foot .foot-sig:hover { opacity: 0.8; }
 .mode-toggle:focus-visible {
   outline: none;
   box-shadow:
-    0 0 0 3px var(--amber),
+    0 0 0 3px var(--accent-ink),
     0 4px 18px rgba(20, 18, 16, 0.18);
 }
 html[data-mode="dark"] .brand-logo:focus-visible,
 html[data-mode="dark"] .mode-toggle:focus-visible {
   box-shadow:
-    0 0 0 3px var(--amber),
+    0 0 0 3px var(--accent-ink),
     0 4px 18px rgba(0, 0, 0, 0.45);
 }
 
@@ -1731,7 +1747,7 @@ html[data-mode="dark"] .scratch-grid figure:not(.photo) .scratch-img {
   width: fit-content; max-width: 100%;
 }
 html[data-mode="dark"] .install-cmd { background: rgba(245, 240, 232, 0.06); }
-.install-cmd .ic-prompt { color: var(--amber, var(--ink-3)); font-weight: 700; }
+.install-cmd .ic-prompt { color: var(--accent-ink, var(--ink-3)); font-weight: 700; }
 .install-cmd code { color: inherit; font-family: inherit; }
 /* Copy control. flex:none keeps it off the horizontally-scrolling run of the
    command itself, and the confirmation is the label swapping to "copied" —
