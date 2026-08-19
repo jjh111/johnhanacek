@@ -453,9 +453,11 @@
                at 0.35em tracking — grew wider than its own box and pushed a
                horizontal scrollbar onto the whole document. The max-width cap
                below only bounds the box, not one unbreakable word inside it.
-               Checked clean at 390 / 768 / 1024 / 1280 / 1366 / 1440 / 1512 /
-               1600 / 1920. */
-            font-size: clamp(2.8rem, 5.2vw, 5.5rem);
+               Ceiling and slope are now sized so the longest word clears the
+               box with room to spare at every width, rather than landing on
+               the limit — see the .title-block note above. Checked 390 / 768 /
+               1024 / 1280 / 1366 / 1440 / 1512 / 1600 / 1659 / 1920 / 2560. */
+            font-size: clamp(2.8rem, 5vw, 4.8rem);
         }
 
         .display-title.lg {
@@ -476,6 +478,12 @@
 
         /* Subtitle — Raleway thin */
         .subtitle {
+            /* The global `p { max-width: max-content }` shrink-wraps this to
+               its text, which then sits at the block's LEFT edge — the subtitle
+               was 92px left of the title it belongs to. Auto margins re-centre
+               the shrink-wrapped box. */
+            margin-left: auto;
+            margin-right: auto;
             font-family: 'Raleway', sans-serif;
             font-weight: 200;
             font-size: clamp(1rem, 2vw, 1.4rem);
@@ -952,7 +960,13 @@
         /* Slide 0: Title */
         .slide-title .title-block {
             text-align: center;
-            max-width: 1100px;
+            /* 1100 was too narrow for the .xl title's longest word: at any
+               viewport past ~1220px "ORCHESTRATION" rendered wider than the
+               block, and an over-wide line under text-align:center starts at
+               the content edge and runs off the right — so the title sat
+               visibly right of the kicker, divider and subtitle. The slide's
+               own horizontal padding still caps this well below 1500. */
+            max-width: min(1500px, 92vw);
         }
 
         /* Slide 1: Hook */
@@ -1808,7 +1822,9 @@
 
                 <div class="section-label">JHDesign on</div>
 
-                <h1 class="display-title xl">The Problems of<br>Agent Orchestration</h1>
+                <!-- nbsp binds "of" to "Problems": free to wrap, it lands alone on its own
+                     line at desktop widths. -->
+                <h1 class="display-title xl">The Problems&nbsp;of<br>Agent Orchestration</h1>
 
                 <div class="gold-divider"></div>
 
