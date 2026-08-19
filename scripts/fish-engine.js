@@ -73,6 +73,10 @@
                 let state = f.state || 'idle';
                 if (state === 'idle' && f.lastWallContact && nowL - f.lastWallContact < 700) state = 'sliding';
                 let text = tier + ' · ' + state;
+                if (f.navLeapUntil && nowL < f.navLeapUntil) text += ' · LEAP';
+                else if (f.navReappraisedAt && nowL - f.navReappraisedAt < 700) text += ' · rethink';
+                if (f.state === 'seeking' && f.debugRoutedAngle !== null && f.debugRoutedAngle !== undefined) text += ' · routing';
+                if (f.state === 'seeking' && f.debugFoodReachable === false) text += ' · walled off';
                 if (f.ignoredFood && Object.values(f.ignoredFood).some(t => t > nowL)) text += ' · gave up';
                 if (opts.annotateAt) { const extra = opts.annotateAt(f.x, f.y); if (extra) text += ' · ' + extra; }
                 tag(f.x, f.y - (f.bodyHeight || 12) - 18, text);
@@ -249,9 +253,16 @@
         ];
         let navCols = 0, navRows = 0;
         let navFields = null;     // per tier: Int32Array, BFS distance to nearest food
+        let navSources = null;    // per tier: Int32Array, id of the pellet that route ends at
         let navRegions = null;    // per tier: { ids: Int32Array, list: [room, …] }
         let navDirty = true;
         let navSig = -1;
+        // Bumped whenever the walls or the food change. Fish compare it against
+        // their own last-seen value and RE-APPRAISE: every give-up flag a fish
+        // set while it was walled off is an opinion about a world that no longer
+        // exists, and without this the fish keeps acting on it — erase the wall
+        // and it swims away from food it is now free to reach.
+        let navEpoch = 0;
 
         function navTierFor(f) {
             const bw = f.bodyWidth || 20;
@@ -381,8 +392,10 @@
             navRows = Math.max(1, Math.ceil(ch / NAV_CELL));
             const n = navCols * navRows;
             navFields = null;
+            navSources = null;
             navRegions = null;
             navDirty = false;
+            navEpoch++;
             navSig = navSignature();
             // No walls means nothing to route around and no rooms to speak of, so
             // the whole apparatus stays off: seeking uses exact direct steering
@@ -391,7 +404,7 @@
 
             navRegions = {};
             const withFood = food.length > 0;
-            if (withFood) navFields = {};
+            if (withFood) { navFields = {}; navSources = {}; }
             const queue = new Int32Array(n);
             for (let t = 0; t < NAV_TIERS.length; t++) {
                 const tier = NAV_TIERS[t];
@@ -442,6 +455,13 @@
 
                 if (!withFood) continue;
                 const dist = new Int32Array(n).fill(-1);
+                // Which pellet the shortest route from this cell actually ends
+                // at. The distance field alone says "food is 12 cells that way"
+                // but not WHICH food, so a fish could lock onto the pellet
+                // nearest as the crow flies while the route led somewhere else
+                // entirely. Carrying the source through the flood costs one
+                // array and makes "the pellet I am actually walking to" a fact.
+                const src = new Int32Array(n).fill(-1);
                 let head = 0, tail = 0;
                 for (let i = 0; i < food.length; i++) {
                     const fx = Math.floor(food[i].x / NAV_CELL);
@@ -453,6 +473,7 @@
                     // is still a valid goal, so seed it and let the flood leave
                     // through whichever neighbours are open.
                     dist[idx] = 0;
+                    src[idx] = +food[i].id;
                     queue[tail++] = idx;
                 }
                 while (head < tail) {
@@ -466,10 +487,12 @@
                         const ni = ny * navCols + nx;
                         if (dist[ni] !== -1 || blocked[ni]) continue;
                         dist[ni] = d;
+                        src[ni] = src[cur];
                         queue[tail++] = ni;
                     }
                 }
                 navFields[tier.key] = dist;
+                navSources[tier.key] = src;
             }
         }
 
@@ -553,6 +576,96 @@
             const field = navFields[navTierFor(f)];
             if (!field) return false;
             return navProbe(field, Math.floor(f.x / NAV_CELL), Math.floor(f.y / NAV_CELL)) === null;
+        }
+
+        // ---- Reachability and route, per pellet -----------------------------
+        // "Can THIS fish get to THAT pellet" is a room question, not a distance
+        // one: rooms are already flood-filled per size class, so two cells in
+        // the same room are connected for a fish of that size, and cells in
+        // different rooms are not. Answering it per pellet is what lets a fish
+        // forgive one pellet when a wall opens without forgiving pellets that
+        // are still sealed away.
+        function navRoomIdAtPoint(tierKey, x, y) {
+            if (!navRegions) return null;
+            const R = navRegions[tierKey];
+            if (!R) return null;
+            const cx = Math.floor(x / NAV_CELL), cy = Math.floor(y / NAV_CELL);
+            if (cx < 0 || cy < 0 || cx >= navCols || cy >= navRows) return null;
+            let id = R.ids[cy * navCols + cx];
+            // A pellet or a wall-hugging fish sits in the clearance band, which
+            // belongs to no room; take the nearest labelled cell instead.
+            for (let r = 1; r <= NAV_PROBE_RINGS && id < 0; r++) {
+                for (let dy = -r; dy <= r && id < 0; dy++) {
+                    for (let dx = -r; dx <= r && id < 0; dx++) {
+                        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+                        const nx = cx + dx, ny = cy + dy;
+                        if (nx < 0 || ny < 0 || nx >= navCols || ny >= navRows) continue;
+                        const v = R.ids[ny * navCols + nx];
+                        if (v >= 0) id = v;
+                    }
+                }
+            }
+            return id >= 0 ? id : null;
+        }
+        // No walls → everything is reachable, which is the honest answer and
+        // keeps wall-free pages on exactly their old code path.
+        function navFoodReachable(f, fd) {
+            if (!fd || !navRegions) return true;
+            const tier = navTierFor(f);
+            const a = navRoomIdAtPoint(tier, f.x, f.y);
+            const b = navRoomIdAtPoint(tier, fd.x, fd.y);
+            if (a === null || b === null) return true; // can't tell — don't punish the fish
+            return a === b;
+        }
+        // The pellet the fish would actually arrive at by following the field.
+        function navTargetFood(f) {
+            if (!navSources) return null;
+            const src = navSources[navTierFor(f)];
+            if (!src) return null;
+            const field = navFields[navTierFor(f)];
+            const cx = Math.floor(f.x / NAV_CELL), cy = Math.floor(f.y / NAV_CELL);
+            let id = -1;
+            if (cx >= 0 && cy >= 0 && cx < navCols && cy < navRows) id = src[cy * navCols + cx];
+            if (id < 0) {
+                const probe = navProbe(field, cx, cy);
+                if (probe) {
+                    const px = cx + probe.dx, py = cy + probe.dy;
+                    if (px >= 0 && py >= 0 && px < navCols && py < navRows) id = src[py * navCols + px];
+                }
+            }
+            if (id < 0) return null;
+            for (let i = 0; i < food.length; i++) if (+food[i].id === id) return food[i];
+            return null;
+        }
+        // Debug only: walk the field downhill and hand back the cell centres, so
+        // the route a fish is actually on can be drawn rather than inferred.
+        function navTracePath(f, maxSteps) {
+            if (!navFields) return null;
+            const field = navFields[navTierFor(f)];
+            if (!field) return null;
+            let cx = Math.floor(f.x / NAV_CELL), cy = Math.floor(f.y / NAV_CELL);
+            if (navCellValue(field, cx, cy) < 0) {
+                const probe = navProbe(field, cx, cy);
+                if (!probe) return null;
+                cx += probe.dx; cy += probe.dy;
+            }
+            const pts = [];
+            for (let step = 0; step < (maxSteps || 160); step++) {
+                pts.push(navCellCenter(cy * navCols + cx));
+                const here = navCellValue(field, cx, cy);
+                if (here <= 0) break;
+                let best = here, bx = cx, by = cy;
+                for (let dy = -1; dy <= 1; dy++) {
+                    for (let dx = -1; dx <= 1; dx++) {
+                        if (!dx && !dy) continue;
+                        const v = navCellValue(field, cx + dx, cy + dy);
+                        if (v >= 0 && v < best) { best = v; bx = cx + dx; by = cy + dy; }
+                    }
+                }
+                if (bx === cx && by === cy) break;
+                cx = bx; cy = by;
+            }
+            return pts.length > 1 ? pts : null;
         }
 
         // Does a straight swim to (tx,ty) cut through a wall? Cheap segment vs
@@ -1735,6 +1848,14 @@
                 let nearestFood = null;
                 let nearestDist = Infinity;
                 let nearestMouthDist = Infinity;
+                // A pellet the fish can actually swim to always beats a closer
+                // one behind a wall. Straight-line distance alone made a fish
+                // fixate on the pellet on the far side of a pen and grind the
+                // wall until the frustration timer fired; reachability is a
+                // room lookup the field already knows, so prefer it and keep
+                // the unreachable nearest only as a fallback (it can still lure
+                // the fish once a wall opens).
+                let reachFood = null, reachDist = Infinity, reachMouthDist = Infinity;
                 food.forEach(fd => {
                     if (fd.inBubble) return;
                     if (f.ignoredFood && f.ignoredFood[fd.id] > now) return; // gave up on it (walled off)
@@ -1747,7 +1868,16 @@
                         nearestMouthDist = md;
                         nearestFood = fd;
                     }
+                    if (cd < reachDist && navFoodReachable(f, fd)) {
+                        reachDist = cd; reachMouthDist = md; reachFood = fd;
+                    }
                 });
+                if (reachFood && reachFood !== nearestFood) {
+                    nearestFood = reachFood;
+                    nearestDist = reachDist;
+                    nearestMouthDist = reachMouthDist;
+                }
+                f.debugFoodReachable = nearestFood ? navFoodReachable(f, nearestFood) : null;
 
                 // Get personality (with defaults for old fish)
                 const energy = f.energy || 0.5;
@@ -1784,6 +1914,36 @@
                 f.huntTimer = Math.max(0, (f.huntTimer || 0) - deltaTime);
                 f.fleeTimer = Math.max(0, (f.fleeTimer || 0) - deltaTime);
                 f.challengeTimer = Math.max(0, (f.challengeTimer || 0) - deltaTime);
+
+                // ---- RE-APPRAISAL: the world changed, so drop stale grudges ----
+                // Every give-up flag below is a conclusion drawn about a maze
+                // that may no longer exist. Erase the wall a fish is sliding
+                // along and, without this, the fish keeps ignoring the pellet it
+                // abandoned (for up to 9s), keeps the heading the wall-press
+                // disengage committed it to, and keeps the velocity the wall
+                // containment projected along the old face — so it coasts on and
+                // turns away instead of leaping at food now in the open.
+                // Grudges are forgiven per pellet: one opening up does not
+                // pardon another that is still sealed behind a wall.
+                if (f.navEpochSeen !== navEpoch) {
+                    f.navEpochSeen = navEpoch;
+                    f.navLosUntil = 0;              // force a fresh line-of-sight test
+                    f.unreachableFoodTimer = 0;
+                    f.seekProgressAt = now;         // restart the no-progress clock
+                    f.wallContactSince = 0;         // release the wall-press commitment
+                    f.navReappraisedAt = now;       // debug
+                    if (f.ignoredFood) {
+                        for (const key in f.ignoredFood) {
+                            if (f.ignoredFood[key] <= now) { delete f.ignoredFood[key]; continue; }
+                            const fd = food.find(x => String(x.id) === key);
+                            if (!fd || navFoodReachable(f, fd)) delete f.ignoredFood[key];
+                        }
+                    }
+                    if (f.ignoreFoodId !== undefined) {
+                        const fd = food.find(x => x.id === f.ignoreFoodId);
+                        if (!fd || navFoodReachable(f, fd)) f.ignoreFoodId = undefined;
+                    }
+                }
 
                 // ---- FRUSTRATION: abandon food we can't reach ----
                 // Two ways to conclude a pellet is hopeless, in order of honesty:
@@ -1853,6 +2013,16 @@
                             lockedFood = nearestFood;
                         }
                     }
+                    // Hysteresis must not out-stubborn geometry: if the locked
+                    // pellet is sealed off at this fish's size, hand the lock to
+                    // the pellet the navigation field actually leads to.
+                    if (wallRects.length && !navFoodReachable(f, lockedFood)) {
+                        const routedTarget = navTargetFood(f);
+                        if (routedTarget && routedTarget !== lockedFood) {
+                            lockedFood = routedTarget;
+                            f.seekFoodId = routedTarget.id;
+                        }
+                    }
                     // Recalculate distances for locked food (may differ from nearestFood)
                     const lockedDx = lockedFood.x - centerX;
                     const lockedDy = lockedFood.y - centerY;
@@ -1865,18 +2035,50 @@
                     // way, so pages with no walls behave precisely as before.
                     const directFoodAngle = Math.atan2(lockedFood.y - centerY, lockedFood.x - centerX);
                     let foodAngle = directFoodAngle;
+                    let pathJustOpened = false;
                     if (wallRects.length) {
                         // Line of sight is a few tests against a short wall list;
                         // recheck ~5×/s rather than every frame.
+                        const wasBlocked = f.navLosBlocked;
                         if (!f.navLosUntil || now > f.navLosUntil || f.navLosFoodId !== lockedFood.id) {
                             f.navLosUntil = now + 200;
                             f.navLosFoodId = lockedFood.id;
                             f.navLosBlocked = navLineBlocked(centerX, centerY, lockedFood.x, lockedFood.y);
+                            // The wall between fish and pellet is gone. That is
+                            // the moment the fish should visibly commit, not
+                            // drift on the tangent the wall left it travelling.
+                            if (wasBlocked && !f.navLosBlocked) pathJustOpened = true;
                         }
                         if (f.navLosBlocked) {
                             const routed = navHeading(f);
                             if (routed !== null) foodAngle = routed;
                         }
+                    } else if (f.navLosBlocked) {
+                        // Last wall erased: nothing can be blocked any more.
+                        f.navLosBlocked = false;
+                        pathJustOpened = true;
+                    }
+                    f.debugRoutedAngle = (wallRects.length && f.navLosBlocked) ? foodAngle : null;
+                    f.debugDirectAngle = directFoodAngle;
+
+                    // ---- LEAP: the path opened, so go ------------------------
+                    // A fish that was already 'seeking' never re-runs the
+                    // first-frame snap below, so before this it inherited the
+                    // wall-slide heading and the wall-projected velocity and
+                    // merely blended toward the food a few degrees per frame —
+                    // which, from a tangent pointing the other way, reads as the
+                    // fish turning AWAY the instant you free it.
+                    if (pathJustOpened && f.state === 'seeking' &&
+                        Math.abs(angleDiff(directFoodAngle, f.heading)) > 0.25) {
+                        f.targetHeading = directFoodAngle;
+                        f.committedHeading = directFoodAngle;
+                        f.reversalPressure = 0;
+                        f.wallContactSince = 0;
+                        const leapSpeed = (isLarge ? SEEK_SPEED * 0.9 : SEEK_SPEED * 0.7);
+                        f.vx = Math.cos(directFoodAngle) * leapSpeed;
+                        f.vy = Math.sin(directFoodAngle) * leapSpeed;
+                        f.navLeapUntil = now + 600;   // debug flash
+                        foodAngle = directFoodAngle;
                     }
                     const angleToFood = Math.abs(angleDiff(foodAngle, f.heading));
 
@@ -5305,6 +5507,45 @@
 
             ctx.save();
 
+            // ---- NAVIGATION LAYER ------------------------------------------
+            // The pathfinding is the part you cannot see from the swimming, so
+            // draw the things the fish are actually reading: the walls it knows
+            // about, the distance field it descends, and the route it is on.
+            if (wallRects.length) {
+                ctx.setLineDash([4, 4]);
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = 'rgba(255, 90, 90, 0.45)';
+                for (let i = 0; i < wallRects.length; i++) {
+                    const r = wallRects[i];
+                    ctx.strokeRect(r.minX, r.minY, r.maxX - r.minX, r.maxY - r.minY);
+                }
+                ctx.setLineDash([]);
+
+                // Distance field for the SMALL tier — one tier only, because
+                // three overlaid grids read as noise. Brightness is proximity
+                // to food, so the gradient the fish descends is visible as a
+                // glow around each pellet.
+                const field = navFields && navFields.small;
+                if (field) {
+                    let maxD = 1;
+                    for (let i = 0; i < field.length; i++) if (field[i] > maxD) maxD = field[i];
+                    for (let cy = 0; cy < navRows; cy += 2) {
+                        for (let cx = 0; cx < navCols; cx += 2) {
+                            const v = field[cy * navCols + cx];
+                            const px = (cx + 0.5) * NAV_CELL, py = (cy + 0.5) * NAV_CELL;
+                            if (v < 0) {
+                                ctx.fillStyle = 'rgba(255, 90, 90, 0.12)'; // no route: blocked or walled off
+                                ctx.fillRect(px - 1.5, py - 1.5, 3, 3);
+                            } else {
+                                const t = 1 - v / maxD;
+                                ctx.fillStyle = 'rgba(122, 229, 130, ' + (0.06 + t * 0.34).toFixed(3) + ')';
+                                ctx.fillRect(px - 1.5, py - 1.5, 3, 3);
+                            }
+                        }
+                    }
+                }
+            }
+
             // Draw food hitboxes
             food.forEach(fd => {
                 // Food detection range (just a small marker)
@@ -5650,6 +5891,72 @@
                     ctx.font = '8px JetBrains Mono';
                     ctx.fillStyle = 'rgba(255, 200, 50, 0.9)';
                     ctx.fillText('🍕', ft.x - 5, ft.y + 4);
+                }
+
+                // 5c. NAVIGATION — the route, the two candidate headings, and
+                // the moments the pathfinding actually made a decision.
+                if (f.state === 'seeking' && wallRects.length) {
+                    const path = navTracePath(f, 200);
+                    if (path) {
+                        ctx.strokeStyle = 'rgba(140, 220, 255, 0.55)';
+                        ctx.lineWidth = 1.5;
+                        ctx.setLineDash([2, 3]);
+                        ctx.beginPath();
+                        ctx.moveTo(path[0].x, path[0].y);
+                        for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                    }
+                }
+                // Routed heading (magenta) vs the straight line to the pellet
+                // (yellow): when they diverge the fish is going around something.
+                if (f.debugRoutedAngle !== null && f.debugRoutedAngle !== undefined) {
+                    const L = 34;
+                    ctx.strokeStyle = 'rgba(255, 120, 255, 0.85)';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(f.x, f.y);
+                    ctx.lineTo(f.x + Math.cos(f.debugRoutedAngle) * L, f.y + Math.sin(f.debugRoutedAngle) * L);
+                    ctx.stroke();
+                    ctx.font = '8px JetBrains Mono';
+                    ctx.fillStyle = 'rgba(255, 120, 255, 0.9)';
+                    ctx.fillText('route', f.x + Math.cos(f.debugRoutedAngle) * (L + 4) - 6,
+                                          f.y + Math.sin(f.debugRoutedAngle) * (L + 4));
+                }
+                // Leap flash — the burst fired when a wall stopped blocking.
+                if (f.navLeapUntil && Date.now() < f.navLeapUntil) {
+                    const k = (f.navLeapUntil - Date.now()) / 600;
+                    ctx.strokeStyle = 'rgba(255, 235, 120, ' + (0.15 + k * 0.75).toFixed(3) + ')';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(f.x, f.y, 16 + (1 - k) * 26, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.font = '9px JetBrains Mono';
+                    ctx.fillStyle = 'rgba(255, 235, 120, 0.95)';
+                    ctx.fillText('LEAP', f.x + 10, f.y - 16);
+                }
+                // Re-appraisal flash — the frame the fish dropped stale grudges.
+                if (f.navReappraisedAt && Date.now() - f.navReappraisedAt < 700) {
+                    const k = 1 - (Date.now() - f.navReappraisedAt) / 700;
+                    ctx.strokeStyle = 'rgba(140, 220, 255, ' + (k * 0.8).toFixed(3) + ')';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.arc(f.x, f.y, 10 + (1 - k) * 18, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                // Pellets this fish has written off, and why it can't have them.
+                if (f.ignoredFood) {
+                    for (const key in f.ignoredFood) {
+                        if (f.ignoredFood[key] <= Date.now()) continue;
+                        const fd = food.find(x => String(x.id) === key);
+                        if (!fd) continue;
+                        ctx.strokeStyle = 'rgba(255, 90, 90, 0.5)';
+                        ctx.lineWidth = 1.5;
+                        ctx.beginPath();
+                        ctx.moveTo(fd.x - 6, fd.y - 6); ctx.lineTo(fd.x + 6, fd.y + 6);
+                        ctx.moveTo(fd.x + 6, fd.y - 6); ctx.lineTo(fd.x - 6, fd.y + 6);
+                        ctx.stroke();
+                    }
                 }
 
                 // 5b. RETREAT DESTINATION - orange dashed line when retreating
