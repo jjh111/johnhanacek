@@ -80,14 +80,14 @@
      page's headings, main and typography. See styles/jh-chrome.css header.)
      Loaded BEFORE the page's own tokens so _tokens.css wins on every name they
      share; the chrome reads its own values through --jh- prefixed tokens. -->
-<link rel="stylesheet" href="./styles/jh-chrome.css?v=1.47">
-<link rel="stylesheet" href="./scripts/search-overlay.css?v=1.47">
+<link rel="stylesheet" href="./styles/jh-chrome.css?v=1.48">
+<link rel="stylesheet" href="./scripts/search-overlay.css?v=1.48">
 <!-- Only the two faces the chrome itself uses. The case study's own typography
      (IBM Plex + Kecal) is the deliverable and is left completely alone. -->
 <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-<link rel="stylesheet" href="openprose/_tokens.css?v=1.47">
-<link rel="stylesheet" href="openprose/_pairings.css?v=1.47">
+<link rel="stylesheet" href="openprose/_tokens.css?v=1.48">
+<link rel="stylesheet" href="openprose/_pairings.css?v=1.48">
 <style>
 /* ============================================================
    PAGE-SPECIFIC LAYOUT
@@ -1207,6 +1207,12 @@ html[data-mode="dark"] .mode-toggle:focus-visible {
    Everything interactive that this page adds must re-enable itself here. */
 .sections-frosted .embed-live,
 .sections-frosted .embed-live iframe,
+/* The YouTube player is an iframe this page adds, and iframe is NOT one of the
+   tags the frosted panel re-enables — so once the facade swapped itself for the
+   player, every click went through to the ripple canvas behind and the video
+   could not be paused, scrubbed or fullscreened. */
+.sections-frosted .video-slot,
+.sections-frosted .video-slot iframe,
 .sections-frosted .exploration-sheet,
 .sections-frosted .logo-row .logo-tile,
 .sections-frosted .logo-specimen .swap-logo,
@@ -1370,6 +1376,44 @@ body.cv-overlay-open { overflow: hidden; }
 }
 .video-slot video { display: block; width: 100%; height: auto; }
 .video-slot .vs-empty { display: none; }
+/* YouTube facade — the page's own paper and type, not a grey player chrome.
+   The box holds the SOURCE aspect, not YouTube's default 16/9: the reel is a
+   16/10 screen recording, and in a 16/9 player YouTube letterboxes it, so the
+   slot showed black bars down both sides. Matching the source makes the picture
+   fill the column edge to edge, and holding the ratio before the click means
+   nothing reflows when the iframe replaces the facade. */
+.video-slot.yt { aspect-ratio: 16 / 10; }
+.video-slot .yt-facade {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--space-2xs);
+  width: 100%; border: 0; cursor: pointer;
+  /* At column width the meta line wraps; without side padding it runs into
+     the slot's own edge. */
+  padding: var(--space-xs) var(--space-md);
+  background: var(--paper-warm);
+  color: var(--ink-2); font: inherit; text-align: center;
+  transition: background 0.2s ease;
+}
+.video-slot .yt-facade:hover { background: var(--paper-elev); }
+.video-slot .yt-facade:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: -4px; }
+.video-slot .yt-play {
+  width: 58px; height: 58px; border-radius: 50%;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  position: relative;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+.video-slot .yt-facade:hover .yt-play { border-color: var(--accent-ink); transform: scale(1.04); }
+.video-slot .yt-play::before {
+  content: ''; position: absolute; top: 50%; left: 54%;
+  transform: translate(-50%, -50%);
+  border-style: solid; border-width: 9px 0 9px 15px;
+  border-color: transparent transparent transparent var(--accent-ink);
+}
+.video-slot .yt-title { font-size: var(--fs-small, 0.9rem); color: var(--ink); }
+.video-slot .yt-meta { font-size: var(--fs-caption); color: var(--ink-3); }
+.video-slot iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 .video-slot.empty { aspect-ratio: 16 / 10; max-height: 420px; }
 .video-slot.empty video { display: none; }
 .video-slot.empty .vs-empty {
@@ -1811,6 +1855,13 @@ html[data-mode="dark"] .install-cmd { background: rgba(245, 240, 232, 0.06); }
 #canvas-tool .tool-cols .lede { max-width: none; }
 #canvas-tool .tool-cols .spec-pre { margin-top: var(--space-md); }
 #canvas-tool .tool-cols .lede + .lede { margin-top: var(--space-sm); }
+/* The film sits under the lifecycle rows in the same column, so it takes the
+   column's rhythm rather than the full-bleed figure spacing. */
+#canvas-tool .tool-film { margin-top: 0; }
+#canvas-tool .tool-main > .spec-pre { margin-top: var(--space-lg); }
+#canvas-tool .tool-film .video-slot { margin-top: 0; }
+#canvas-tool .tool-film .yt-play { width: 46px; height: 46px; }
+#canvas-tool .tool-film .yt-play::before { border-width: 7px 0 7px 12px; }
 
 /* Byline co-brand — JHsig inline ahead of the subtitle */
 .byline-sig {
@@ -2092,13 +2143,29 @@ system consumes it.
         <p class="lede">Every exhibit grid on this page is a stripped-down version of the review canvas; view all the pages at the end.</p>
       </div>
       <div class="tool-main">
-    <pre class="spec-pre"><span class="c">// .agents/prose/src/review-state-stays-coherent.prose.md</span>
-<span class="k">name:</span> review-state-stays-coherent
-<span class="k">kind:</span> responsibility
-
-<span class="k">Criteria</span> · `agent-close.mjs --audit-all` must read OPEN=0 for every closed round
-<span class="k">Constraints</span> · never close a comment to make the audit green — a clean audit is
-              the <span class="k">result</span> of coherent state, not the goal to be gamed</pre>
+        <!-- Film band — sits in this column, directly under the lifecycle it
+             shows, so on desktop the four steps and the footage of those four
+             steps read as one unit. Full width when the columns collapse.
+             It is a FACADE: no request of any kind reaches YouTube until the
+             visitor clicks. The capture lives there rather than in this repo,
+             so a minute of video costs the repo nothing, and this page already
+             carries enough nested iframes on a phone without adding a player
+             plus ~1MB of JS to every visit whether or not anyone watches.
+             Swapping back to a local file means putting a <video> in place of
+             .yt-facade and dropping the click handler. -->
+        <div class="cs-figure tool-film">
+          <div class="video-slot yt" id="canvas-video-slot" data-yt="TZ7pjo_y_MA">
+            <button type="button" class="yt-facade" aria-label="Play: highlight reel cut from the end-of-project handoff video (1 min 26 sec, opens the YouTube player)">
+              <span class="yt-play" aria-hidden="true"></span>
+              <span class="yt-title">Highlight reel</span>
+              <span class="yt-meta">1:26, cut from the handoff video · loads YouTube on click</span>
+            </button>
+          </div>
+          <div class="embed-bar">
+            <span>A highlight reel cut from the handoff video delivered at the end of the project.</span>
+            <a href="https://www.youtube.com/watch?v=TZ7pjo_y_MA" target="_blank" rel="noopener">watch on YouTube ↗</a>
+          </div>
+        </div>
         <div class="feature-list" style="margin-top: var(--space-lg);">
           <div class="feature-row">
             <span class="glyph">✎</span>
@@ -2129,26 +2196,13 @@ system consumes it.
             </div>
           </div>
         </div>
-      </div>
-    </div>
-    <!-- Film band parked (JH): hidden until review-canvas-loop.mp4 lands -->
-    <div class="cs-figure" hidden>
-      <div class="video-slot" id="canvas-video-slot">
-        <!-- TODO(JH): film the review-canvas loop and drop it at
-             brand/assets/case-study/review-canvas-loop.mp4 (any aspect; an
-             optional poster frame at review-canvas-poster.webp sits beside
-             it). The slot auto-fits the file; until then the placeholder
-             shows. -->
-        <!-- src lives on data-src, not src: the band is hidden but a <source>
-             still fetches, and the page is public now, so an expected 404 would
-             sit in every visitor's console. Move it back to src with the file. -->
-        <video muted loop playsinline preload="metadata">
-          <source data-src="openprose/page-assets/case-study/review-canvas-loop.mp4" type="video/mp4">
-        </video>
-        <div class="vs-empty">film slot · the review canvas in motion, looping capture to come</div>
-      </div>
-      <div class="embed-bar">
-        <span>The working review canvas: draw, claim, close, return.</span>
+    <pre class="spec-pre"><span class="c">// .agents/prose/src/review-state-stays-coherent.prose.md</span>
+<span class="k">name:</span> review-state-stays-coherent
+<span class="k">kind:</span> responsibility
+
+<span class="k">Criteria</span> · `agent-close.mjs --audit-all` must read OPEN=0 for every closed round
+<span class="k">Constraints</span> · never close a comment to make the audit green — a clean audit is
+              the <span class="k">result</span> of coherent state, not the goal to be gamed</pre>
       </div>
     </div>
     <div class="paradigm-grid" style="margin-top: var(--space-md);">
@@ -4355,22 +4409,25 @@ system consumes it.
     if (ev.key === 'Escape') closeOverlay();
   });
 
-  // §II video slot — placeholder until the capture lands; play only in view.
+  // §II video slot — click-to-load YouTube facade. Nothing reaches Google
+  // until the visitor asks for it, which is the same bargain the search
+  // overlay makes about the local network: the page does not spend someone
+  // else's bandwidth, or hand them to a third party, on the chance they might
+  // want it. youtube-nocookie keeps the request cookieless even then.
   var slot = document.getElementById('canvas-video-slot');
-  if (slot) {
-    var v = slot.querySelector('video');
-    var src = slot.querySelector('source');
-    if (src) src.addEventListener('error', function () { slot.classList.add('empty'); });
-    if (v && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      v.controls = true;
-    } else if (v && 'IntersectionObserver' in window) {
-      new IntersectionObserver(function (entries) {
-        entries.forEach(function (en) {
-          if (en.isIntersecting) { var p = v.play(); if (p && p.catch) p.catch(function () {}); }
-          else v.pause();
-        });
-      }, { threshold: 0.2 }).observe(slot);
-    }
+  if (slot && slot.dataset.yt) {
+    var facade = slot.querySelector('.yt-facade');
+    if (facade) facade.addEventListener('click', function () {
+      var f = document.createElement('iframe');
+      f.src = 'https://www.youtube-nocookie.com/embed/' + slot.dataset.yt +
+              '?autoplay=1&rel=0&modestbranding=1&playsinline=1';
+      f.title = 'Highlight reel from the OpenProse handoff video';
+      f.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+      f.setAttribute('allowfullscreen', '');
+      f.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+      slot.innerHTML = '';
+      slot.appendChild(f);
+    });
   }
 })();
 </script>
@@ -4418,9 +4475,9 @@ system consumes it.
 <!-- jhcom chrome behaviour: nav reveal + mobile toggle, the <jh-nav> component
      (jh-chrome.js also defines <jh-footer>, unused here), and the ⌘K search
      overlay. Same trio every site page loads. -->
-<script src="./scripts/shared.js?v=1.47"></script>
-<script src="./scripts/search-overlay.js?v=1.47" defer></script>
-<script src="./scripts/jh-chrome.js?v=1.47" defer></script>
+<script src="./scripts/shared.js?v=1.48"></script>
+<script src="./scripts/search-overlay.js?v=1.48" defer></script>
+<script src="./scripts/jh-chrome.js?v=1.48" defer></script>
 
 </body>
 </html>
