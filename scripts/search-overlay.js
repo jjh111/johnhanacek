@@ -246,7 +246,13 @@
                 if (btn) btn.textContent = 'Download ' + MODEL_DISPLAY_NAME + ' (~700 MB)';
                 if (cacheHint) cacheHint.textContent = '';
             }
-        } else {
+        } else if (enginesChecked) {
+            // Only report unavailable once detection has actually CONCLUDED.
+            // Detection moved to first-open (so the page never probes on load),
+            // which means this runs while hasWebGPU is merely undetermined —
+            // and disabling here left the button permanently dead even after
+            // detection came back positive, because the positive path below
+            // only rewrites the label.
             const btn = $('so-enableBtn');
             if (btn) { btn.textContent = 'WebGPU unavailable'; btn.disabled = true; }
         }
@@ -433,6 +439,10 @@
             modelIsCached = await checkModelCache();
             const btn = $('so-enableBtn');
             const cacheHint = $('so-cacheHint');
+            // Re-enable explicitly: an earlier pass may have disabled this while
+            // WebGPU was still undetermined, and a stale disabled flag is the
+            // difference between "the model loads" and "nothing happens".
+            if (btn && !modelReady) btn.disabled = false;
             if (modelIsCached) {
                 if (btn) { btn.textContent = 'Load ' + MODEL_DISPLAY_NAME; btn.classList.add('cached'); }
                 if (cacheHint) cacheHint.textContent = 'Cached — loads in seconds';
