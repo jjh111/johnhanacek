@@ -26,7 +26,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Raleway:wght@100;200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles/shared.css?v=1.49">
+    <link rel="stylesheet" href="./styles/shared.css?v=1.50">
 
     <!-- Structured Data -->
     <link rel="alternate" type="application/json" href="./john-hanacek.json" title="Structured data">
@@ -524,7 +524,7 @@
     <script src="https://cdn.jsdelivr.net/npm/minisearch@7.1.1/dist/umd/index.min.js"></script>
 
     <script type="module">
-        import { AutoProcessor, Qwen3_5ForConditionalGeneration, TextStreamer } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.0.0-next.5";
+        import { AutoProcessor, Qwen3_5ForConditionalGeneration, TextStreamer } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0";
 
         // ============================================
         // Content Index
@@ -927,7 +927,7 @@
                 btn.classList.add('cached');
                 cacheHint.textContent = 'Cached — loads in seconds';
             } else {
-                btn.textContent = 'Download Qwen 3.5 (~700 MB)';
+                btn.textContent = 'Download Qwen 3.5 (~585 MB)';
                 cacheHint.textContent = '';
             }
         }
@@ -957,7 +957,7 @@
                 progress.textContent = 'Loading processor...';
                 processor = await AutoProcessor.from_pretrained(MODEL_ID, { progress_callback: onProgress });
                 progress.textContent = 'Loading weights...';
-                llmModel = await Qwen3_5ForConditionalGeneration.from_pretrained(MODEL_ID, { dtype: { embed_tokens: "q4", vision_encoder: "q4", decoder_model_merged: "q4" }, device: "webgpu", progress_callback: onProgress });
+                llmModel = await Qwen3_5ForConditionalGeneration.from_pretrained(MODEL_ID, { dtype: { embed_tokens: "q4f16", vision_encoder: "q4f16", decoder_model_merged: "q4f16" }, device: "webgpu", progress_callback: onProgress });
                 progress.textContent = 'Compiling shaders...';
                 const warmup = processor.tokenizer("hi"); await llmModel.generate({ ...warmup, max_new_tokens: 1 });
                 const loadTime = ((Date.now() - loadStartTime) / 1000).toFixed(1);
@@ -1103,7 +1103,7 @@
     <footer>
         <jh-footer></jh-footer>
     </footer>
-<script src="./scripts/shared.js?v=1.49"></script>
-    <script src="./scripts/jh-chrome.js?v=1.49" defer></script>
+<script src="./scripts/shared.js?v=1.50"></script>
+    <script src="./scripts/jh-chrome.js?v=1.50" defer></script>
 </body>
 </html>

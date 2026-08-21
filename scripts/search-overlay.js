@@ -243,7 +243,7 @@
                 if (btn) { btn.textContent = 'Load ' + MODEL_DISPLAY_NAME; btn.classList.add('cached'); }
                 if (cacheHint) cacheHint.textContent = 'Cached — loads in seconds';
             } else if (!modelReady) {
-                if (btn) btn.textContent = 'Download ' + MODEL_DISPLAY_NAME + ' (~700 MB)';
+                if (btn) btn.textContent = 'Download ' + MODEL_DISPLAY_NAME + ' (~585 MB)';
                 if (cacheHint) cacheHint.textContent = '';
             }
         } else if (enginesChecked) {
@@ -447,7 +447,7 @@
                 if (btn) { btn.textContent = 'Load ' + MODEL_DISPLAY_NAME; btn.classList.add('cached'); }
                 if (cacheHint) cacheHint.textContent = 'Cached — loads in seconds';
             } else {
-                if (btn) btn.textContent = 'Download ' + MODEL_DISPLAY_NAME + ' (~700 MB)';
+                if (btn) btn.textContent = 'Download ' + MODEL_DISPLAY_NAME + ' (~585 MB)';
                 if (cacheHint) cacheHint.textContent = '';
             }
         }
@@ -881,9 +881,24 @@
             dot.className = 'status-dot loading'; progressBar.style.display = 'block';
             $('so-cacheHint').textContent = '';
 
-            // Lazy-load Transformers.js
+            // Lazy-load Transformers.js.
+            //
+            // Pinned to a real release, not a `next` pre-release: the page sat on
+            // 4.0.0-next.5 (2026-03-02) for months while 4.2.0 shipped.
+            //
+            // dtype is q4f16, not q4 — 585 MB against 718 MB for the same model.
+            // Measured, because fp16 on WebGPU is not automatically safe: the
+            // same path makes gemma-3-270m emit `<unused56>` forever
+            // (onnxruntime#26732). Qwen3.5 was loaded and generated at q4f16
+            // before this was committed, and answers correctly.
+            //
+            // The vision encoder is NOT droppable, however tempting: omitting it
+            // from dtype does not skip it, it falls back to the UNQUANTIZED
+            // vision_encoder.onnx (402 MB vs 62 MB at q4f16), i.e. dropping the
+            // key makes the download bigger. Losing the vision tower means
+            // moving to a text-only model — see SEARCH_MODEL_RESEARCH.md.
             if (!AutoProcessor) {
-                const mod = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.0.0-next.5');
+                const mod = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0');
                 AutoProcessor = mod.AutoProcessor;
                 Qwen3_5ForConditionalGeneration = mod.Qwen3_5ForConditionalGeneration;
                 TextStreamer = mod.TextStreamer;
@@ -903,7 +918,7 @@
                 progress.textContent = 'Loading processor...';
                 processor = await AutoProcessor.from_pretrained(MODEL_ID, { progress_callback: onProgress });
                 progress.textContent = 'Loading weights...';
-                llmModel = await Qwen3_5ForConditionalGeneration.from_pretrained(MODEL_ID, { dtype: { embed_tokens: "q4", vision_encoder: "q4", decoder_model_merged: "q4" }, device: "webgpu", progress_callback: onProgress });
+                llmModel = await Qwen3_5ForConditionalGeneration.from_pretrained(MODEL_ID, { dtype: { embed_tokens: "q4f16", vision_encoder: "q4f16", decoder_model_merged: "q4f16" }, device: "webgpu", progress_callback: onProgress });
                 progress.textContent = 'Compiling shaders...';
                 const warmup = processor.tokenizer("hi"); await llmModel.generate({ ...warmup, max_new_tokens: 1 });
                 const loadTime = ((Date.now() - loadStartTime) / 1000).toFixed(1);
