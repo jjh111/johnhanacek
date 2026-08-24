@@ -1,5 +1,5 @@
 # Search Commands — Intent Router + Action Surface
-*Status: Planned | Priority: 3 | Depends on: SEARCH_OVERLAY, SEARCH_ENRICHMENT*
+*Status: SUPERSEDED (Aug 2026) by SEARCH_COMMAND_BAR.md — intent cards + verification absorbed into its Phase 3*
 
 ## Context
 The search input becomes more than search — it's an intent router. Certain queries trigger specialized response cards with CTAs for services, contact, and scheduling, turning the overlay into a lightweight command surface.

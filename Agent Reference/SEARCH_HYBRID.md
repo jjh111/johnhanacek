@@ -1,5 +1,5 @@
 # Search Hybrid — Multi-Engine Collaboration
-*Status: Planned | Priority: 4 | Depends on: SEARCH_OVERLAY*
+*Status: DEFERRED (Aug 2026) — see SEARCH_COMMAND_BAR.md Phase 4; revisit only if Tier 1 answer quality disappoints after the LFM2.5 swap*
 
 ## Context
 Instead of "pick one engine," the WebGPU in-browser model and a local model work together in a draft→refinement pipeline. The small browser model generates a fast draft, then the larger local model refines it into a better answer.

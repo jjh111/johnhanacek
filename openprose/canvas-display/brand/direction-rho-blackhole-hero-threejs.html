@@ -103,7 +103,7 @@
    chrome. Replaces the previous styleguide-teal mono-only
    palette. [c_2e905084]
    ============================================================ */
-:root {
+:root, body[data-palette] {
   /* Dark is default — this :root carries the dark tokens; the
      html[data-mode="light"] block below carries the inversion. */
   --paper:      #0e0e10;
@@ -150,7 +150,7 @@
   --accent: 'Kecal', Georgia, serif;
 }
 
-html[data-mode="light"] {
+html[data-mode="light"], html[data-mode="light"] body[data-palette] {
   --paper:      #f4f1e8;
   --paper-dk:   #ece8db;
   --paper-lt:   #faf8f0;
@@ -556,17 +556,9 @@ html[data-mode="light"] .hero-overlay {
   filter: drop-shadow(0 4px 18px rgba(229,185,74,0.32));
   pointer-events: none;
 }
-html[data-mode="light"] .center-glass {
-  background: rgba(20,18,16,0.06);
-  border-color: rgba(20,18,16,0.18);
-  box-shadow:
-    0 14px 64px rgba(20,18,16,0.32),
-    inset 0 1px 0 rgba(255,255,255,0.55);
-}
-html[data-mode="light"] .center-glass svg {
-  fill: rgba(20,18,16,0.92);
-  filter: drop-shadow(0 4px 18px rgba(20,18,16,0.32));
-}
+/* The mark floats over the void canvas, which stays black in both
+   modes — so the glass and signet keep their cream treatment in
+   light mode too (a dark flip here read as ink-on-void). */
 .tunables label {
   display: grid;
   grid-template-columns: 1fr auto;

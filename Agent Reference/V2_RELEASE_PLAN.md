@@ -219,6 +219,18 @@ new canvas features on top.
     (35MB→6.3MB); 404 JSON-LD added; last stray old-domain email fixed; CLAUDE.md/README
     rewritten to match reality.
 
+## Decision (August 2026)
+11. **v2.0 search scope restructured around the Command Bar** — see
+    `SEARCH_COMMAND_BAR.md` (the umbrella plan; "structure first, models as garnish").
+    Four phases: (1) extract `scripts/search-core.js` to end the search.html/overlay
+    duplication (measured: payloads identical, wiring diverged — the v1.8 extraction
+    pattern applied to search); (2) semantic Tier 0.5 — tiny WASM embedder + precomputed
+    chunk vectors, works on iOS, no LLM; (3) command registry + page actions + "On this
+    page" topline, absorbing SEARCH_ENRICHMENT's `url` fields and superseding
+    SEARCH_COMMANDS; (4) generation demoted to garnish — LFM2.5-350M swap + tool-use
+    over the registry. SEARCH_HYBRID stays deferred. Enrichment's rich-media cards
+    remain in its own doc, unblocked after Phase 3's `url` work.
+
 ## Deferred to v2.1+ (explicitly out of scope for v2)
 - **ART_HERO_ENHANCEMENT** (star layers, Web Audio, shooting stars) — delightful, large, isolated.
 - **MULTIPLAYER_CURSORS** (PartyKit) — adds an external runtime dependency.
@@ -234,8 +246,10 @@ new canvas features on top.
 | FISH_TUNING_PLAN (14–21) | **Done** — all phase markers verified in fish-engine.js (v1.8 audit) |
 | FISH_MINIGAME_DESIGN, FISH_SYSTEM_TECHNICAL, METAMEDIUM_CONVERGENCE, LLM_SEARCH_INTEGRATION | Reference (no work) |
 | SEARCH_OVERLAY | Done |
-| SEARCH_ENRICHMENT | **v1.9** |
-| SEARCH_COMMANDS, SEARCH_HYBRID | v2.1 |
+| **SEARCH_COMMAND_BAR** | **v2.0 (active umbrella — decision #11)** |
+| SEARCH_ENRICHMENT | url/anchors → COMMAND_BAR Phase 3; media cards remain here, after |
+| SEARCH_COMMANDS | **Superseded** by SEARCH_COMMAND_BAR (Phase 3) |
+| SEARCH_HYBRID | Deferred (COMMAND_BAR Phase 4 note) |
 | PLAYGROUND_CLEANUP | **Dropped** (decision #5 — jh-deng-template rebuild supersedes) |
 | ART_HERO_ENHANCEMENT | v2.1 |
 | MULTIPLAYER_CURSORS | v2.1 |

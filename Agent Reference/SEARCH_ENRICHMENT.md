@@ -1,5 +1,5 @@
 # Search Enrichment — Rich Result Cards + Cross-Page Links
-*Status: Next | Priority: 2 | Depends on: SEARCH_OVERLAY*
+*Status: PARTIALLY ABSORBED (Aug 2026) — the `url`/anchor fields ship via SEARCH_COMMAND_BAR.md Phase 3; the rich media cards (video/3D/image) below remain this doc's scope, unblocked once `url` lands*
 
 ## Context
 Once the search overlay is live on every page, results need to be richer than plain text cards. This feature adds video preview cards, 3D model viewers, headshot images, and clickable title links that navigate to the correct page + section anchor.

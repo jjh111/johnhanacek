@@ -80,14 +80,14 @@
      page's headings, main and typography. See styles/jh-chrome.css header.)
      Loaded BEFORE the page's own tokens so _tokens.css wins on every name they
      share; the chrome reads its own values through --jh- prefixed tokens. -->
-<link rel="stylesheet" href="./styles/jh-chrome.css?v=1.51">
-<link rel="stylesheet" href="./scripts/search-overlay.css?v=1.51">
+<link rel="stylesheet" href="./styles/jh-chrome.css?v=1.52">
+<link rel="stylesheet" href="./scripts/search-overlay.css?v=1.52">
 <!-- Only the two faces the chrome itself uses. The case study's own typography
      (IBM Plex + Kecal) is the deliverable and is left completely alone. -->
 <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-<link rel="stylesheet" href="openprose/_tokens.css?v=1.51">
-<link rel="stylesheet" href="openprose/_pairings.css?v=1.51">
+<link rel="stylesheet" href="openprose/_tokens.css?v=1.52">
+<link rel="stylesheet" href="openprose/_pairings.css?v=1.52">
 <style>
 /* ============================================================
    PAGE-SPECIFIC LAYOUT
@@ -1861,6 +1861,43 @@ html[data-mode="dark"] .install-cmd { background: rgba(245, 240, 232, 0.06); }
 /* The film sits under the lifecycle rows in the same column, so it takes the
    column's rhythm rather than the full-bleed figure spacing. */
 #canvas-tool .tool-film { margin-top: 0; }
+/* Single-column outro. Capped at a reading measure rather than run to the full
+   1400px inner: one column does not mean one very long line. */
+#canvas-tool .tool-outro { margin-top: var(--space-lg); max-width: 78ch; }
+
+/* ---- Ragged-edge control on the running prose --------------------------
+   Measured across three measures on this page (narrow column, one-column
+   outro, standfirst), comparing mean/max leftover space per line:
+
+     baseline           meanGap 6.9 / 4.3 / 8.4 %
+     text-wrap: pretty  identical — no effect at all
+     hyphens: auto      meanGap 5.7 / 2.8 / 4.6 %   (max gap ~40% smaller)
+
+   `text-wrap: pretty` does nothing here: it only reworks the last few lines
+   to avoid orphans, and these paragraphs already end acceptably. Hyphenation
+   is what closes the gaps, and it does so WITHOUT adding a single line — the
+   line counts are identical before and after, so this costs no height.
+
+   hyphenate-limit-chars is set conservatively. Pooled mean leftover space:
+
+     off       6.79 %
+     8 4 3     5.50 %   tidiest, but hyphenates often enough to ladder
+     10 5 4    5.63 %   96% of the gain, far fewer hyphens  ← chosen
+     12 6 4    6.79 %   too strict, nothing qualifies
+
+   Only words of 10+ characters break, 5 before and 4 after. Laddering (three
+   or more hyphenated lines running) cannot be capped in CSS here —
+   hyphenate-limit-lines is unsupported in Chromium — so the word-length bar
+   is the lever that controls it. */
+#canvas-tool .lede,
+#openprose .lede,
+.section .lede {
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  hyphenate-limit-chars: 10 5 4;
+}
+#canvas-tool .tool-outro .lede { max-width: none; }
+#canvas-tool .tool-outro .lede + .lede { margin-top: var(--space-sm); }
 #canvas-tool .tool-main > .spec-pre { margin-top: var(--space-lg); }
 #canvas-tool .tool-film .video-slot { margin-top: 0; }
 #canvas-tool .tool-film .yt-play { width: 46px; height: 46px; }
@@ -2141,9 +2178,6 @@ system consumes it.
       <div>
         <p class="lede">Reviewing dozens of live website experiments needs more than a folder. So I have made a simple 'canvas' for generative web design: the <strong>JHDesign Review Canvas</strong>. The Review Canvas shows the content of a repo as one navigable page with three view modes (canvas, grid, focus), where every page is a live iframe with star ratings, typed comments, and freehand drawings composited onto screenshots. Review state lives in <em>git</em>; each reviewer writes only their own file, so feedback merges without conflict. The Review Canvas just needs a Github repo to make it collaborative. No extra overhead, no extra accounts or permissions to set up, and no intermediary steps to get the comments back into production.</p>
         <p class="lede">I've been a designer for about 10 solid years now; from Adobe XD to Figma. Being real with you, I've been there and I don't want to go back. As agentic engineering offers new potentials, I find myself recalling… For so long we designers have been adding abstractions of different apps and tools just to simulate code, now why not just use the code and standards directly? Thus the webpage that is a canvas that shows iframes.</p>
-        <p class="lede">This system was essential in managing the large surface area of this project across two tracks. Instead of staying linear in code chat I could spread out and review whole swaths of work, specify changes, then just have the agent read the latest manifest and get to work in parallel plans. The supporting tooling for the Canvas even runs on <em>OpenProse</em> itself: the canvas's integrity is a written responsibility an agent keeps, audited by script and attested with commit SHAs, and the design system is indexed by a runnable OpenProse program.</p>
-        <p class="lede">I'll be developing this tooling further and consider if it's a product of its own, or just my secret sauce for now.</p>
-        <p class="lede">Every exhibit grid on this page is a stripped-down version of the review canvas; view all the pages at the end.</p>
       </div>
       <div class="tool-main">
         <!-- Film band — sits in this column, directly under the lifecycle it
@@ -2207,6 +2241,16 @@ system consumes it.
 <span class="k">Constraints</span> · never close a comment to make the audit green — a clean audit is
               the <span class="k">result</span> of coherent state, not the goal to be gamed</pre>
       </div>
+    </div>
+    <!-- The closing ledes run as ONE column. The right-hand column ends with
+         the contract block, and these paragraphs used to carry on alone in the
+         narrow left measure beside a column of empty space — a hole down the
+         page with the text bunched into a gutter next to it. -->
+    <div class="tool-outro">
+      <p class="lede">This system was essential in managing the large surface area of this project across two tracks. Instead of staying linear in code chat I could spread out and review whole swaths of work, specify changes, then just have the agent read the latest manifest and get to work in parallel plans.</p>
+      <p class="lede">The supporting tooling for the Canvas even runs on <em>OpenProse</em> itself: the canvas's integrity is a written responsibility an agent keeps, audited by script and attested with commit SHAs, and the design system is indexed by a runnable OpenProse program.</p>
+      <p class="lede">I'll be developing this tooling further and consider if it's a product of its own, or just my secret sauce for now.</p>
+      <p class="lede">Every exhibit grid on this page is a stripped-down version of the review canvas; view all the pages at the end.</p>
     </div>
     <div class="paradigm-grid" style="margin-top: var(--space-md);">
       <article class="paradigm-card">
@@ -2391,7 +2435,7 @@ system consumes it.
         <ol class="ls-legend">
           <li><strong>1 · the photograph</strong>real mountain, real reflection. When WebGL is unavailable it shows.</li>
           <li><strong>2 · the clouds</strong>the procedural pass, rendered alone: an FBM cloud field lit from the upper left.</li>
-          <li><strong>3 · the ripples</strong>gaussian ring displacement plus ambient shimmer, raindrop randomness and larger response to the cursor.</li>
+          <li><strong>3 · the ripples</strong>gaussian ring displacement plus ambient shimmer, raindrop randomness and user ripples.</li>
           <li><strong>4 · the mask</strong>the mountain with its sky cut away by hand.</li>
         </ol>
         <pre class="spec-pre"><span class="c">// reflection registration · dialed by hand, then baked (_reflection-tuner.md)</span>
@@ -4478,9 +4522,9 @@ system consumes it.
 <!-- jhcom chrome behaviour: nav reveal + mobile toggle, the <jh-nav> component
      (jh-chrome.js also defines <jh-footer>, unused here), and the ⌘K search
      overlay. Same trio every site page loads. -->
-<script src="./scripts/shared.js?v=1.51"></script>
-<script src="./scripts/search-overlay.js?v=1.51" defer></script>
-<script src="./scripts/jh-chrome.js?v=1.51" defer></script>
+<script src="./scripts/shared.js?v=1.52"></script>
+<script src="./scripts/search-overlay.js?v=1.52" defer></script>
+<script src="./scripts/jh-chrome.js?v=1.52" defer></script>
 
 </body>
 </html>
