@@ -1610,3 +1610,33 @@ section {
     .hero h1, .hero .subtitle, .hero .tagline, .hero .byline { color: #1a1a2e; }
     .hero h1 .meta { -webkit-text-fill-color: #2a6a7a; }
 }
+
+/* ── pretext wrap ─────────────────────────────────────────────────────────
+   Support for scripts/pretext-wrap.js, which flows prose around a mark on
+   both sides — something no CSS shape can express. Loaded only where used.
+
+   .pretext-source is the REAL prose: clipped to a pixel rather than
+   display:none, because display:none removes it from the accessibility tree
+   and from find-in-page. The visible lines are aria-hidden decoration over
+   the top of it, so assistive tech reads continuous sentences instead of the
+   line fragments a positioned layout would otherwise expose. */
+.pretext-source {
+    position: absolute;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+.pretext-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+.pretext-line {
+    position: absolute;
+    top: 0; left: 0;
+    white-space: nowrap;
+    will-change: transform;
+}
+/* No JS, or the module threw: the untouched prose is still in the element and
+   simply renders as an ordinary paragraph. Nothing to undo. */

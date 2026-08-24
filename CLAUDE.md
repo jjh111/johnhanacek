@@ -42,6 +42,7 @@ These are intentional. All carry `<meta name="robots" content="noindex, nofollow
 | `fish-demo/` | Standalone extraction of the fish minigame (`index.html` + `fish.js`). Testbed / seed for the v1.8 `scripts/fish-engine.js` extraction. |
 | `Assets/JH-brand-styleguide.html` | Internal brand/design-token reference ("Deep Sea Terminal" styleguide v1.0). |
 | `Assets/DemosPlayground/test-llm.html`, `test-vision.html` | LLM/VLM proof-of-concept pages (Qwen 0.8B WebGPU + LMStudio/Ollama). |
+| `Assets/DemosPlayground/pretext-wrap-test.html` | Test rig for `scripts/pretext-wrap.js` — circle and ellipse obstacles with prose flowing both sides. |
 
 **Never commit business/personal documents (invoices, contracts) to this repo — it is public and served.** Resumes in `Assets/` are intentionally public.
 
@@ -131,17 +132,34 @@ which stamps every `?v=` cache-bust ref across root `*.html` **and** the `Portfo
 - The "Labels" toggle also shows live behavior chips over fish/food (`tier · state · enclosed/gave up`) via engine `setInfoLabels` + the `annotateAt` hook
 - The original pre-maze MetaMedium whitepaper demo is snapshotted verbatim at `Archive/design-blueprint-frozen.html` — never edit that snapshot
 
-### Site-wide AI Search (scripts/search-overlay.js + search.html)
-- ⌘K overlay on every standard page; search.html is the full standalone page
-- **Tier 1**: BM25 instant search via MiniSearch (always on)
-- **Tier 2**: In-browser Qwen3.5-0.8B via WebGPU (Transformers.js v4)
-- **Tier 3**: Local LMStudio/Ollama on localhost (handles reasoning models). **Never probed on page
-  load** — that made the browser ask a first-time visitor for local-network access before they had
-  asked the site for anything. Detection runs when the overlay is first opened, and the localhost
-  half only after the visitor clicks Detect (or automatically for one who has, stored under
-  `jh-local-llm-optin`). search.html carries its own copy of this logic — keep the two in step.
+### Site-wide AI Search / Command Bar (scripts/search-core.js + shells)
+- **One pipeline, two shells.** `scripts/search-core.js` owns ALL knowledge and behavior
+  (intents, prompts, chunks, engines, generation, command registry); `scripts/search-overlay.js`
+  (⌘K overlay, lazy-loads the core on first open) and `search.html` are thin shells passing an
+  `el(name)` element adapter. The old "keep the two copies in step" rule is retired — there is
+  one copy. Umbrella plan + build record: `Agent Reference/SEARCH_COMMAND_BAR.md`; QA suites:
+  `Agent Reference/search-tests/`.
+- **Tier 0**: BM25 (MiniSearch) + regex intent grammar — instant, always on
+- **Tier 0.5**: semantic layer — chunk vectors precomputed into `Assets/search-chunks.json`
+  (`node scripts/build-chunk-vectors.mjs` after editing chunk text; int8 base64) + a ~24 MB
+  MiniLM q8 embedder on WASM (works on iOS), lazy-loaded on first search. Results upgrade in
+  place via two-mode reciprocal-rank fusion (constants in `hybridMerge` — tuned by
+  `search-tests/fusionlab.mjs`, re-run it before touching them). Model choice + HF repo traps:
+  `Agent Reference/SEARCH_EMBEDDER_RESEARCH.md`
+- **Tier 1**: In-browser Qwen3.5-0.8B via WebGPU (Transformers.js v4; LFM2.5 swap researched,
+  gated on device QA — SEARCH_MODEL_RESEARCH.md)
+- **Tier 2**: Local LMStudio/Ollama. **Never probed on page load** — detection runs when the
+  overlay first opens, localhost only after the visitor clicks Detect (or opted in before,
+  `jh-local-llm-optin`). Embedding-only local models (nomic-embed etc.) are skipped.
+- **Commands**: pages declare actions via `(window.JH_COMMANDS = window.JH_COMMANDS || []).push({...})`
+  (index: feed/logic/scare; design: clear walls/fish, labels, feed, spawn). Nav + section-jump
+  commands are synthesized from each page's `.nav-right` TOC. Typing a matching query surfaces
+  action cards; Enter/click runs them. Services/contact/schedule queries get gold intent cards.
+- **Tool-use**: with an LMStudio/Custom engine active, the registry is handed to the model as
+  OpenAI tools; a tool call renders as a confirm chip — never auto-run.
 - **BYOM**: Custom endpoint input with OpenAI-compatible API probing
-- **Chunks**: `Assets/search-chunks.json` — flat factual text, field-boosted
+- **Chunks**: `Assets/search-chunks.json` — flat factual text, field-boosted, each with a
+  verified `url` (titles render as links) and a precomputed `vec`
 - **Engine color coding**: WebGPU=blue, LMStudio=purple, Ollama=orange, Custom=green
 - AI toggle: users can disable LLM even when engine detected
 
@@ -178,8 +196,26 @@ scripts/jh-chrome.js      — <jh-nav> + <jh-footer> components; JH_SITE identit
                             2-loop videos restate the same media query inline (its block runs before
                             this deferred file).
 scripts/shared.js         — nav scroll-visibility, cursor spotlight, lightbox, responsive nav
-scripts/search-overlay.js — site-wide ⌘K search overlay (3-tier)
-scripts/search-overlay.css— overlay styles
+scripts/search-core.js    — THE search/command-bar pipeline (knowledge + behavior, no DOM);
+                            both search surfaces are shells over it
+scripts/search-overlay.js — ⌘K overlay shell (lazy-loads search-core on first open)
+scripts/search-overlay.css— overlay styles + command-bar card styles (search.html links it too)
+scripts/build-chunk-vectors.mjs — dev-time: embeds chunks into search-chunks.json (run after
+                            editing chunk text; needs `npm install --no-save @huggingface/transformers`)
+scripts/pretext-wrap.js   — flows running prose around obstacles on BOTH sides, which no CSS
+                            shape can do (`shape-outside` excludes on one edge only; `shape-inside`
+                            never shipped). Wraps the vendored pretext line-breaker, whose
+                            `layoutNextLine(prepared, cursor, maxWidth)` is incremental — so each
+                            row is carved into slots and asked for a line per slot. ESM, dynamically
+                            imported, so pages that don't wrap pay nothing. Extracted from
+                            direction-lambda-inkwell-concept.html and generalised (any shape, DOM as
+                            source of truth, aria-hidden line layer over a retained prose copy,
+                            re-layout on document.fonts.ready + ResizeObserver).
+                            Demo/test: Assets/DemosPlayground/pretext-wrap-test.html
+scripts/pretext/          — vendored copy of the pretext text-measurement + line-breaking engine
+                            (see VENDORED.md). Also usable measurement-only: prepare() + layout()
+                            answer "how many lines at width W" arithmetically with no DOM read,
+                            which is the right way to use it for fit/truncate decisions.
 scripts/sync-version.mjs  — dev-time version stamper (reads version from jh-chrome.js)
 john-hanacek.json         — structured data for AI/Search (Schema.org Person)
 robots.txt                — allows AI crawlers explicitly; points to sitemap

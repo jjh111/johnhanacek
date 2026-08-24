@@ -123,8 +123,8 @@
                 <!-- Sources -->
                 <div id="so-sourcesSection">
                     <div class="section-label">
-                        Sources
-                        <span class="score-info">ⓘ<span class="score-tooltip">BM25 keyword relevance: title 3×, tags 2×, content 1× with fuzzy matching.</span></span>
+                        Results
+                        <span class="score-info">ⓘ<span class="score-tooltip">BM25 keyword relevance (title 3×, tags 2×, fuzzy), fused with semantic similarity once the on-device embedding tier loads.</span></span>
                     </div>
                     <div id="so-searchResults"></div>
                 </div>
@@ -185,10 +185,12 @@
             mutedColor: 'var(--so-muted)',
             onResultsChange: (has) => overlayEl.classList.toggle('has-results', has),
             onRequestSettingsOpen: openSettings,
+            onCommandRun: () => closeSearch(),   // the effect is on the page — show it
         });
         await core.init();
         wireShellEvents();
         core.updateEngineBar();
+        window.JHSearch = core;   // public handle (debugging, future tool-use tier)
     }
 
     // ============================================

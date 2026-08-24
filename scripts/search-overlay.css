@@ -632,3 +632,109 @@ body.search-overlay-open {
     .search-overlay .result-content { font-size: 0.8rem; }
     .search-overlay .engine-settings-inner { padding: 0.45rem 0.55rem; }
 }
+
+/* ═══ Command bar cards ═══
+   Shared by the overlay AND search.html (which links this file; the
+   .search-overlay-scoped rules above are inert there). Colors fall back so
+   both token contexts work. */
+.cmdbar-group-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.16em;
+    color: var(--so-muted, var(--muted, #7a9aaa));
+    margin: 0.55rem 0 0.3rem;
+}
+.cmd-card {
+    display: flex; align-items: center; gap: 0.6rem;
+    background: rgba(77, 201, 246, 0.05);
+    border: 1px solid rgba(77, 201, 246, 0.18);
+    border-radius: 5px; padding: 0.5rem 0.7rem; margin-bottom: 0.3rem;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+.cmd-card:hover, .cmd-card:focus-visible {
+    border-color: rgba(212, 175, 55, 0.45);
+    background: rgba(212, 175, 55, 0.05);
+    outline: none;
+}
+.cmd-icon { color: var(--gold, #d4af37); font-size: 0.85rem; flex-shrink: 0; }
+.cmd-body { display: flex; flex-direction: column; gap: 0.05rem; flex: 1; min-width: 0; }
+.cmd-title { font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; color: var(--text-bright, #b8dced); }
+.cmd-detail { font-family: 'Raleway', sans-serif; font-size: 0.7rem; color: var(--so-muted, var(--muted, #7a9aaa)); }
+.cmd-kbd {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55rem; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--cyan-dim, #4dc9f6);
+    border: 1px solid rgba(77, 201, 246, 0.2); border-radius: 3px;
+    padding: 0.12rem 0.4rem; opacity: 0.7; flex-shrink: 0;
+}
+.cmd-card:hover .cmd-kbd { color: var(--gold, #d4af37); border-color: rgba(212, 175, 55, 0.35); }
+
+.intent-card {
+    background: rgba(212, 175, 55, 0.04);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    border-radius: 6px; padding: 0.85rem 1rem; margin-bottom: 0.45rem;
+}
+.intent-card-title { font-family: 'Cinzel', serif; font-size: 0.95rem; color: var(--gold, #d4af37); margin-bottom: 0.25rem; }
+.intent-card-body { font-family: 'Raleway', sans-serif; font-size: 0.8rem; color: var(--text-bright, #b8dced); line-height: 1.55; margin-bottom: 0.6rem; }
+.intent-card-actions { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
+.intent-cta {
+    font-family: 'Raleway', sans-serif; font-weight: 500; font-size: 0.78rem;
+    background: var(--gold, #d4af37); color: var(--sea-deep, #020a12);
+    padding: 0.4rem 1rem; border-radius: 4px; text-decoration: none;
+    transition: opacity 0.15s;
+}
+.intent-cta:hover { opacity: 0.85; }
+.intent-alt {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+    color: var(--cyan-dim, #4dc9f6); text-decoration: none;
+    border-bottom: 1px dotted rgba(77, 201, 246, 0.35);
+}
+.intent-alt:hover { color: var(--gold, #d4af37); }
+
+.result-link { color: var(--text-primary, #8cb8cc); text-decoration: none; }
+.result-link:hover { color: var(--gold, #d4af37); }
+.result-link-ext::after { content: ' ↗'; font-size: 0.7em; opacity: 0.7; }
+
+/* ═══ Phase 5 — Explorer: overview slot, related chips, media cards ═══ */
+.overview-lead { color: var(--cyan-dim, #4dc9f6); font-style: italic; }
+.overview-related, .card-related-row { margin-top: 0.45rem; display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.related-chip {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.66rem;
+    color: var(--cyan-dim, #4dc9f6); text-decoration: none;
+    border: 1px solid rgba(77, 201, 246, 0.16); border-radius: 3px;
+    padding: 0.12rem 0.45rem;
+    background: rgba(77, 201, 246, 0.04);
+    transition: border-color 0.15s, color 0.15s;
+}
+.related-chip:hover { color: var(--gold, #d4af37); border-color: rgba(212, 175, 55, 0.35); }
+.card-related-row { margin-top: 0.3rem; }
+.card-related { font-size: 0.6rem; opacity: 0.8; }
+
+/* generation dims a showing overview instead of stomping it */
+#aiAnswer.refining, #so-aiAnswer.refining { opacity: 0.55; transition: opacity 0.25s; }
+
+/* media cards */
+.result-video-wrap { position: relative; cursor: pointer; flex-shrink: 0; display: inline-block; }
+.result-video-wrap .play-icon {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: var(--text-bright, #b8dced); font-size: 1.1rem;
+    background: rgba(2, 10, 18, 0.35); border-radius: 4px;
+    transition: background 0.15s, color 0.15s;
+}
+.result-video-wrap:hover .play-icon { background: rgba(2, 10, 18, 0.15); color: var(--gold, #d4af37); }
+.video-placeholder {
+    display: inline-block; width: 72px; height: 72px; border-radius: 4px;
+    background: linear-gradient(135deg, rgba(77,201,246,0.10), rgba(2,10,18,0.6));
+    border: 1px solid rgba(77, 201, 246, 0.12);
+}
+.result-video {
+    width: 100%; max-height: 200px; border-radius: 5px;
+    background: #000; flex-shrink: 0; display: block; margin-bottom: 0.4rem;
+}
+.result-row:has(.result-video) { flex-direction: column; }
+.result-model {
+    width: 110px; height: 110px; flex-shrink: 0; border-radius: 4px;
+    background: rgba(0, 20, 40, 0.4);
+    border: 1px solid rgba(77, 201, 246, 0.08);
+    --poster-color: transparent;
+}

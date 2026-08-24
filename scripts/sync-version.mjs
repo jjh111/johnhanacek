@@ -32,7 +32,7 @@ const SITE_VERSION = m[1];
 
 // Matched by basename, so openprose/_tokens.css and _pairings.css are covered
 // too — openprose.html is the only page that loads them.
-const ASSETS = ['shared.css', 'jh-chrome.css', 'shared.js', 'search-overlay.css', 'search-overlay.js', 'jh-chrome.js', 'shape-detection.js', 'fish-engine.js', '_tokens.css', '_pairings.css'];
+const ASSETS = ['shared.css', 'jh-chrome.css', 'shared.js', 'search-overlay.css', 'search-overlay.js', 'search-core.js', 'jh-chrome.js', 'shape-detection.js', 'fish-engine.js', '_tokens.css', '_pairings.css'];
 
 const htmlFiles = readdirSync(root).filter((f) => f.endsWith('.html'));
 let total = 0;

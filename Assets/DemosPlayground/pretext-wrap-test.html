@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>pretext-wrap — two-sided flow test</title>
+<link rel="stylesheet" href="../../styles/shared.css">
+<style>
+  body { background: var(--sea-deep); color: var(--text-primary);
+         font-family: 'JetBrains Mono', monospace; padding: 3rem 1.5rem; }
+  .rig { max-width: 780px; margin: 0 auto 4rem; }
+  h1 { font-family: 'Cinzel', serif; color: var(--cyan); font-size: 1.4rem; }
+  .prose { position: relative; font-size: 17px; line-height: 30px; min-height: 340px; }
+  .mark { position: absolute; width: 190px; height: 190px; border-radius: 50%;
+          background: radial-gradient(circle at 35% 35%, var(--cyan-dim), #123);
+          border: 1px solid var(--border); }
+  .mark.oval { border-radius: 50%; width: 170px; height: 250px; }
+  .note { color: var(--muted); font-size: 0.8rem; margin-bottom: 0.75rem; }
+</style>
+</head>
+<body>
+
+<div class="rig">
+  <h1>Circle, centred — text on both sides</h1>
+  <p class="note">A CSS float can only exclude on one edge. This carves each row into two slots.</p>
+  <div class="prose" id="p1">
+    <div class="mark" id="m1" style="left:290px; top:40px;"></div>
+    The mark is large enough to be the page's centre of gravity, but it does not sit alone. The prose curves around it the way a stream curves around a stone, not because anyone composed the wrap by hand, but because the type system was told the shape and trusted to do its work. A monospace face reads oddly when it has to bend, which makes it a fair test: if the rhythm survives here it will survive anywhere. The mark is an event the page accommodates, and the paragraph is running prose that knows about the event and bends to it. Every line you are reading was measured, carved into slots, and placed by arithmetic rather than by the browser's own line box machinery.
+  </div>
+</div>
+
+<div class="rig">
+  <h1>Ellipse, off-centre</h1>
+  <p class="note">Same engine, different geometry — the interval solver is shared.</p>
+  <div class="prose" id="p2">
+    <div class="mark oval" id="m2" style="left:420px; top:20px;"></div>
+    The mark is large enough to be the page's centre of gravity, but it does not sit alone. The prose curves around it the way a stream curves around a stone, not because anyone composed the wrap by hand, but because the type system was told the shape and trusted to do its work. A monospace face reads oddly when it has to bend, which makes it a fair test: if the rhythm survives here it will survive anywhere. The mark is an event the page accommodates, and the paragraph is running prose that knows about the event and bends to it.
+  </div>
+</div>
+
+<script type="module">
+import { wrapAround } from '../../scripts/pretext-wrap.js';
+const results = [];
+try {
+  const a = await wrapAround(document.getElementById('p1'), {
+    obstacles: [{ el: document.getElementById('m1'), shape: 'circle', hPad: 16, vPad: 4 }],
+    minSlot: 110,
+  });
+  const b = await wrapAround(document.getElementById('p2'), {
+    obstacles: [{ el: document.getElementById('m2'), shape: 'ellipse', hPad: 16, vPad: 4 }],
+    minSlot: 110,
+  });
+  window.__wrap = { a, b };
+  results.push('ok');
+} catch (e) {
+  results.push('FAIL ' + e.message);
+  console.error(e);
+}
+window.__wrapResults = results;
+</script>
+</body>
+</html>

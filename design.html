@@ -26,8 +26,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Raleway:wght@100;200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles/shared.css?v=1.52">
-    <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.52">
+    <link rel="stylesheet" href="./styles/shared.css?v=1.53">
+    <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.53">
 
     <!-- Model Viewer is loaded on approach, not at page load — see the
          warm-up observer near the bottom of this file. The library is 239KB
@@ -1132,8 +1132,8 @@
     </script>
 
     <!-- Hero Canvas Drawing Interaction -->
-    <script src="./scripts/shape-detection.js?v=1.52"></script>
-    <script src="./scripts/fish-engine.js?v=1.52"></script>
+    <script src="./scripts/shape-detection.js?v=1.53"></script>
+    <script src="./scripts/fish-engine.js?v=1.53"></script>
     <script>
         const canvas = document.getElementById('heroCanvas');
         const ctx = canvas.getContext('2d');
@@ -2943,9 +2943,63 @@
             resizeMetaMedium();
         })();
     </script>
-<script src="./scripts/search-overlay.js?v=1.52" defer></script>
+<script src="./scripts/search-overlay.js?v=1.53" defer></script>
 <script>document.addEventListener('DOMContentLoaded',()=>{const t=document.querySelector('.nav-title');if(t)t.dataset.short='JH';document.querySelectorAll('.nav-right a').forEach(a=>{const w=a.textContent.trim().split(/\s+/);a.dataset.short=w.length>1?w.map(x=>x[0]).join('').toUpperCase().slice(0,2):a.textContent.trim().slice(0,2).toUpperCase()})});</script>
-    <script src="./scripts/jh-chrome.js?v=1.52" defer></script>
+    <!-- Command bar: what this page can DO (consumed by scripts/search-core.js) -->
+    <script>
+        (window.JH_COMMANDS = window.JH_COMMANDS || []).push(
+            {
+                id: 'maze.clearWalls', title: 'Clear the walls', page: 'design',
+                detail: 'Remove every wall, keep the fish',
+                tags: 'clear erase walls maze reset shapes',
+                hints: ['clear the walls', 'erase the maze', 'remove all shapes'],
+                run: () => document.getElementById('clearCanvas')?.click()
+            },
+            {
+                id: 'maze.clearFish', title: 'Empty the tank', page: 'design',
+                detail: 'Remove the fish, keep the walls',
+                tags: 'clear fish empty tank remove',
+                hints: ['clear the fish', 'empty the tank', 'remove the fish'],
+                run: () => document.getElementById('clearFish')?.click()
+            },
+            {
+                id: 'maze.labels', title: 'Toggle labels', page: 'design',
+                detail: 'Live behavior chips over fish and shapes',
+                tags: 'labels debug behavior chips info',
+                hints: ['show the labels', 'what are the fish doing', 'behavior labels'],
+                run: () => { const t = document.getElementById('toggleLabels');
+                    if (t) { t.checked = !t.checked; t.dispatchEvent(new Event('change')); } }
+            },
+            {
+                id: 'maze.feed', title: 'Feed the fish', page: 'design',
+                detail: 'Drop food into the maze',
+                tags: 'food feed fish drop maze',
+                hints: ['feed the fish', 'drop some food', 'give them food'],
+                run: () => { const f = window.designFish; if (!f) return; const c = f.canvas;
+                    f.addFood(c.clientWidth * (0.35 + Math.random() * 0.3), c.clientHeight * (0.3 + Math.random() * 0.3)); }
+            },
+            {
+                id: 'maze.spawn', title: 'Spawn a fish', page: 'design',
+                detail: 'Draw one into being',
+                tags: 'spawn add fish create new',
+                hints: ['spawn a fish', 'add a fish', 'make a new fish'],
+                run: () => { const f = window.designFish; if (!f) return; const c = f.canvas;
+                    // Synthesize an ichthys — the open, self-crossing loop the
+                    // classifier reads as a fish (a closed circle is a bubble)
+                    const cx = c.clientWidth * (0.35 + Math.random() * 0.3), cy = c.clientHeight * (0.3 + Math.random() * 0.3);
+                    const rx = 45, ry = 32, ov = 0.55, pts = [];
+                    const a0 = ov, a1 = Math.PI * 2 - ov;
+                    const sx = cx + rx * Math.cos(a0), sy = cy + ry * Math.sin(a0);
+                    for (let i = 0; i <= 3; i++) pts.push({ x: (cx + 75) + (sx - cx - 75) * i / 4, y: (cy - 28) + (sy - cy + 28) * i / 4 });
+                    for (let i = 0; i <= 26; i++) { const a = a0 + (a1 - a0) * i / 26;
+                        pts.push({ x: cx + rx * Math.cos(a), y: cy + ry * Math.sin(a) }); }
+                    const ex = cx + rx * Math.cos(a1), ey = cy + ry * Math.sin(a1);
+                    for (let i = 1; i <= 4; i++) pts.push({ x: ex + (cx + 75 - ex) * i / 4, y: ey + (cy + 28 - ey) * i / 4 });
+                    f.processStroke(pts, ['fish']); }
+            }
+        );
+    </script>
+    <script src="./scripts/jh-chrome.js?v=1.53" defer></script>
 
     <!-- ============================================
          3D warm-up — load model-viewer on approach, not at page load.

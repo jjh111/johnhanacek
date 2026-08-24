@@ -1,5 +1,46 @@
 # Search Command Bar — Structure First, Models as Garnish
-*Status: Planned (August 2026) | Supersedes: SEARCH_COMMANDS | Absorbs: SEARCH_ENRICHMENT's url/anchor work | Defers: SEARCH_HYBRID to Phase 4 garnish*
+*Status: **BUILT (Aug 2026) — local, pre-QA-gate.** All four phases implemented and
+verified headless (suites in `search-tests/`, all green). Supersedes: SEARCH_COMMANDS |
+Absorbs: SEARCH_ENRICHMENT's url/anchor work | Defers: SEARCH_HYBRID*
+
+> **Build record (2026-08-24):**
+> - **P1 shipped** — `scripts/search-core.js` (pipeline + knowledge + registry, zero
+>   DOM); overlay + search.html are thin shells over an `el(name)` adapter. Deliberate
+>   unifications: search.html gained the iOS WebGPU gate, lazy Transformers.js import,
+>   custom-endpoint consent, and engine-state broadcast. 26-check parity suite green.
+> - **P2 shipped** — embedder measured and chosen (`Xenova/all-MiniLM-L6-v2`, 23.7 MB
+>   q8 WASM — see SEARCH_EMBEDDER_RESEARCH.md incl. two repo traps); vectors built by
+>   `scripts/build-chunk-vectors.mjs` into search-chunks.json (int8 base64, ~0.5 KB/chunk).
+>   Fusion is **two-mode RRF**, tuned offline (fusionlab): intent-fired queries trust the
+>   grammar (WB 1.5/WS 1.0/floor .25 — 5/5), fallthrough queries trust meaning
+>   (WB 1.0/WS 1.15/floor .18 — 21/22 top-3, 5/5 keyword-top-1). Fusion's BM25 leg
+>   STRIPS pronouns instead of resolving to the name (measured: name-resolution handed
+>   About a 145.6 BM25 score for "prizes he has been given").
+> - **P3 shipped** — registry (`JH_COMMANDS` queue + `JHSearchCore.register`); actions on
+>   index (feed/logic/scare) + design (clear walls/fish, labels, feed, spawn-via-ichthys);
+>   synthetic nav + section commands from the DOM `.nav-right`; routed rendering (intent
+>   card → Actions → On this page → Across the site); all 42 chunks carry verified `url`s,
+>   titles are links; services/contact/schedule intent cards live. Command matching:
+>   uncapped BM25/8 vs cosine≥.45, floor .6, command-corpus stopwords incl. generic verbs.
+> - **P4 partial** — tool-use SHIPPED for LMStudio/Custom: registry → OpenAI tools,
+>   streamed tool_calls → confirm chips (never auto-run), E2E-verified against a mock
+>   endpoint (`search-tests/mock-llm.mjs`). Bonus fix: local detection skips
+>   embedding-only models (a real Ollama+nomic-embed-text produced silent garbage).
+>   **Open:** LFM2.5-350M swap (gated on John's real-device latency), Ollama tool-use,
+>   keyboard ↑↓ result navigation. Templated no-LLM answers were deliberately DROPPED —
+>   intent cards + hints + reordering already deliver the value; prose templates read
+>   as redundant next to the result cards.
+> - **P5 shipped (same day)** — topline gating fixed (group renders only when search put
+>   a local chunk #1 — locality labels relevance, never fabricates it); confident-gated
+>   overview slot upgrading in place (composed-from-sources byline → model byline; a
+>   showing overview dims during generation and the first token takes the slot); related
+>   chips from shipped vectors (cos ≥ .45, top-2 overview / top-1 per card); media cards
+>   with re-verified inventory (nanome + AvatarMEDIC + HoloTRIAGE + OpenProse videos as
+>   click-to-play posters, Aerospace Award .glb as LIVE auto-rotating model-viewer,
+>   CDN injected only when a 3D card first renders, auto-rotate off under
+>   prefers-reduced-motion). `search-tests/phase5.mjs` green; phases 1–4 regression green.
+> - **John's QA gates before ship:** real-device pass (laptop + iPhone — semantic tier
+>   load time/feel), visual polish pass, then version bump + sync-version + tag.
 
 ## Thesis
 
@@ -171,6 +212,41 @@ tool call rendered as a tappable action chip; with no model, the same phrase sti
 nearest-neighbors to a registered action via Tier 0.5.
 
 ---
+
+## Phase 5 — Explorer (decided with John, 2026-08-24)
+
+The bar becomes the site's periscope: rich media inline, chained exploration,
+and an overview paragraph that composes structurally and upgrades to the model.
+Decisions: overview is **confident-gated**; videos are **click-to-play**
+(posters, no autoplay in the overlay); 3D is **live** (`<model-viewer>`
+auto-rotating inline, CDN lazy-loaded only when a 3D card first renders).
+
+1. **Topline gating fix (bug).** "On this page" currently promotes ANY
+   current-page chunk found anywhere in results — locality overriding
+   relevance ("awards" on index hoists weak index chunks over the real Awards
+   result). New rule: the group renders **only when search already put a
+   local chunk at #1**; locals within the global top 3 may join it. Locality
+   labels relevance, never fabricates it.
+2. **Overview slot.** One slot (the existing answer area), tiers upgrade it
+   in place: instantly a deterministic composition — intent hint as lead +
+   top chunk's answer-shaped content + related chips — byline "composed from
+   sources"; a model tier replaces it in the same slot with its own byline.
+   **Confidence gate:** an intent fired, OR the top result dominates
+   (≥1.5× the runner-up score). No overview when an intent CARD is shown
+   (the doorway is the answer) or when confidence isn't met — an overview on
+   a garbage query reads as bluffing.
+3. **Related chips.** Cosine neighbors from the SHIPPED chunk vectors (zero
+   download, no embedder needed): top-2 on the overview, top-1 per result
+   card, clickable via the chunks' verified `url`s. Search → result →
+   related → related is the exploration mechanic.
+4. **Media cards** (surviving SEARCH_ENRICHMENT scope, inventory re-verified
+   against the actual post-compression Assets/ before any path enters the
+   JSON): `video` + poster → click-to-play `<video muted playsinline>`
+   (embeds have no audio track by design); `model3d` → live auto-rotating
+   `<model-viewer>` (~120px, `camera-controls`, auto-rotate suppressed under
+   prefers-reduced-motion); images already render via `result-thumb`.
+5. **QA:** `search-tests/phase5.mjs` (gating, overview gate + upgrade,
+   chips, media incl. lazy CDN injection) + full phase1–4 regression.
 
 ## Files
 
