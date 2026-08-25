@@ -14,7 +14,7 @@
   const SITE = {
     year: 2026,
     org: 'JHDesign LLC',
-    version: '1.53', // ← THE site version. Footer badge, ?v= cache-bust, and README all read this (run scripts/sync-version.mjs after bumping).
+    version: '1.54', // ← THE site version. Footer badge, ?v= cache-bust, and README all read this (run scripts/sync-version.mjs after bumping).
     versionNote: 'Made with Claude Code &amp; Open Code',
     github: 'https://github.com/jjh111/johnhanacek',
     githubLabel: 'github.com/jjh111/johnhanacek',
@@ -59,7 +59,13 @@
       label: '<span class="shape-label">ABOUT</span>' },
     { key: 'services', href: 'services.html', cls: 'shape-link secondary', aria: 'Services',
       svg: '<svg class="shape star" viewBox="0 0 40 40"><polygon points="20,6 23,16 34,16 25,22 28,34 20,26 12,34 15,22 6,16 17,16"/></svg>',
-      label: '<span class="shape-label">SERVICES</span>' }
+      label: '<span class="shape-label">SERVICES</span>' },
+    // Hexagon / PLAY — carried over from the old hand-written playground nav,
+    // which was the one page that never joined the shared chrome. Same polygon
+    // points, so the mark is unchanged.
+    { key: 'play', href: 'playground.html', cls: 'shape-link secondary', aria: 'Playground',
+      svg: '<svg class="shape hexagon" viewBox="0 0 40 40"><polygon points="20,5 33,12.5 33,27.5 20,35 7,27.5 7,12.5"/></svg>',
+      label: '<span class="shape-label">PLAY</span>' }
   ];
 
   class JHNav extends HTMLElement {

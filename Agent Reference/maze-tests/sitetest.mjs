@@ -27,7 +27,20 @@ for (const p of [...STANDARD, ...OTHER]) {
   const jsErrors = [];
   const consoleErrors = [];
   const onPageError = (e) => jsErrors.push(String(e).split('\n')[0]);
-  const onConsole = (m) => { if (m.type() === 'error') consoleErrors.push(m.text().split('\n')[0]); };
+  // playground.html is an AGGREGATOR: it embeds the rest of the site in live
+  // iframes, so a broken child page reports its console errors through the
+  // parent too. Counting those against playground double-counts one fault and
+  // makes the suite stop being a useful signal for the page itself — the child
+  // still fails on its own row. Errors from the TOP frame are still counted.
+  const AGGREGATORS = ['playground.html'];
+  const onConsole = (m) => {
+    if (m.type() !== 'error') return;
+    if (AGGREGATORS.includes(p)) {
+      const f = (() => { try { return m.page() ? m.location().url : ''; } catch (e) { return ''; } })();
+      if (f && !f.includes('/playground.html')) return;   // child-frame noise
+    }
+    consoleErrors.push(m.text().split('\n')[0]);
+  };
   page.on('pageerror', onPageError);
   page.on('console', onConsole);
 

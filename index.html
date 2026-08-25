@@ -26,8 +26,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Raleway:wght@100;200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles/shared.css?v=1.53">
-    <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.53">
+    <link rel="stylesheet" href="./styles/shared.css?v=1.54">
+    <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.54">
 
     <!-- Structured Data for AI/Search -->
     <link rel="alternate" type="application/json" href="./john-hanacek.json" title="Structured data">
@@ -696,8 +696,8 @@
 
     <!-- Hero Canvas Drawing Interaction -->
     <!-- Hero Canvas — fish minigame (shared engine) -->
-    <script src="./scripts/shape-detection.js?v=1.53"></script>
-    <script src="./scripts/fish-engine.js?v=1.53"></script>
+    <script src="./scripts/shape-detection.js?v=1.54"></script>
+    <script src="./scripts/fish-engine.js?v=1.54"></script>
     <script>
         // Boot the shared fish engine on the hero canvas.
         // `hero` comes from the nav script above; QR helpers are declared below (hoisted).
@@ -886,8 +886,65 @@
                 }
             }, 2000);
         });
+
+        // ============================================
+        // Scene provider (Phase 6b) — the tank speaks the scene language.
+        // Everything spawns through processStroke, the same classifier a
+        // drawn stroke feeds; caps mirror the engine's computeEntityLimits.
+        // ============================================
+        window.JH_SCENE = {
+            page: 'index',
+            census() {
+                const f = window.heroFish;
+                if (!f) return null;
+                const tier = bw => bw >= 60 ? 'large' : bw >= 35 ? 'medium' : 'small';
+                const t = { small: 0, medium: 0, large: 0 };
+                f.state.fish.forEach(x => t[tier(x.bodyWidth)]++);
+                return {
+                    smallFish: t.small, mediumFish: t.medium, largeFish: t.large,
+                    coral: f.state.coral.filter(c => !c.isExternal).length,
+                    food: f.state.food.length, bubbles: f.state.bubbles.length,
+                    jellyfish: f.state.jellyfish.length,
+                };
+            },
+            async materialize(step, kit, made) {
+                const f = window.heroFish;
+                if (!f) throw new Error('no tank');
+                const W = f.canvas.clientWidth, H = f.canvas.clientHeight;
+                const mobile = W < 600;
+                const CAPS = {
+                    fish: { small: mobile ? 6 : 9, medium: mobile ? 4 : 6, large: mobile ? 1 : 2 },
+                    coral: mobile ? 4 : 6, food: mobile ? 8 : 12,
+                    bubble: mobile ? 12 : 20, jellyfish: mobile ? 1 : 2,
+                };
+                const capFor = step.entity === 'fish' ? CAPS.fish[step.size || 'small'] : (CAPS[step.entity] ?? 6);
+                const nDo = Math.min(step.count === 'max' ? capFor : step.count, capFor);
+                const rnd = (a, b) => a + Math.random() * (b - a);
+                const out = [];
+                for (let i = 0; i < nDo; i++) {
+                    const ref = step.rel && step.rel.type === 'near' && step.rel.ref != null ? made[step.rel.ref] : null;
+                    const p = ref ? kit.place.near(ref, 70) : { x: rnd(W * 0.2, W * 0.8), y: rnd(H * 0.22, H * 0.6) };
+                    p.x = Math.max(90, Math.min(W - 90, p.x));
+                    p.y = Math.max(90, Math.min(H - 90, p.y));
+                    if (step.entity === 'food') f.addFood(p.x, p.y);
+                    else if (step.entity === 'fish') f.processStroke(kit.ichthys(p.x, p.y, step.size || 'small'), ['fish']);
+                    else if (step.entity === 'coral') f.processStroke(kit.square(p.x, p.y, 95), ['coral']);
+                    else if (step.entity === 'bubble') f.processStroke(kit.circle(p.x, p.y, 32), ['bubble']);
+                    else if (step.entity === 'jellyfish') f.processStroke(kit.triangle(p.x, p.y, 75), ['jellyfish']);
+                    else throw new Error(step.entity + ' does not live in this tank');
+                    out.push({ entity: step.entity, x: p.x, y: p.y, size: 70 });
+                    await new Promise(r => setTimeout(r, 140));
+                }
+                const clamped = step.count !== 'max' && step.count > capFor;
+                return {
+                    made: out,
+                    note: `✓ ${nDo} ${step.size ? step.size + ' ' : ''}${nDo === 1 || ['fish','food','coral','jellyfish'].includes(step.entity) ? step.entity : step.entity + 's'}`
+                        + (clamped ? ` of ${step.count} — tank limit` : (step.count === 'max' ? ' (max)' : '')),
+                };
+            },
+        };
     </script>
-<script src="./scripts/search-overlay.js?v=1.53" defer></script>
+<script src="./scripts/search-overlay.js?v=1.54" defer></script>
 <script>document.addEventListener('DOMContentLoaded',()=>{const t=document.querySelector('.nav-title');if(t)t.dataset.short='JH';document.querySelectorAll('.nav-right a').forEach(a=>{const w=a.textContent.trim().split(/\s+/);a.dataset.short=w.length>1?w.map(x=>x[0]).join('').toUpperCase().slice(0,2):a.textContent.trim().slice(0,2).toUpperCase()})});</script>
     <!-- Command bar: what this page can DO (consumed by scripts/search-core.js) -->
     <script>
@@ -919,6 +976,6 @@
             }
         );
     </script>
-    <script src="./scripts/jh-chrome.js?v=1.53" defer></script>
+    <script src="./scripts/jh-chrome.js?v=1.54" defer></script>
 </body>
 </html>

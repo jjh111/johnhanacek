@@ -1,1352 +1,1257 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Playground - John Hanacek</title>
-    <meta name="description" content="Interactive demos and creative experiments by John Hanacek — zoomable, explorable, alive.">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Playground — John Hanacek</title>
+<meta name="description" content="A review canvas of the whole site: every page and every experiment, live and side by side.">
+<meta name="color-scheme" content="dark">
+<link rel="canonical" href="https://www.johnhanacek.com/playground.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Playground — John Hanacek">
+<meta property="og:description" content="A review canvas of the whole site: every page and every experiment, live and side by side.">
+<meta property="og:url" content="https://www.johnhanacek.com/playground.html">
+<meta property="og:image" content="https://www.johnhanacek.com/Assets/socialgraph-jhcom.webp">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" href="./Assets/favicon-jhsigfrmpaper.png">
 
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="./Assets/favicon-jhsigfrmpaper.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  "name": "Playground",
+  "description": "A review canvas of the whole site: every page and every experiment, live and side by side.",
+  "url": "https://www.johnhanacek.com/playground.html",
+  "author": { "@type": "Person", "name": "John Hanacek", "url": "https://www.johnhanacek.com" }
+}
+</script>
 
-    <!-- Open Graph / Social Share -->
-    <meta property="og:title" content="Playground - John Hanacek">
-    <meta property="og:description" content="Interactive demos and creative experiments — zoomable, explorable, alive.">
-    <meta property="og:image" content="https://www.johnhanacek.com/Assets/socialgraph-jhcom.webp">
-    <meta property="og:url" content="https://www.johnhanacek.com/playground.html">
-    <link rel="canonical" href="https://www.johnhanacek.com/playground.html">
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "CollectionPage",
-      "name": "Playground — John Hanacek",
-      "description": "Interactive demos and creative experiments — zoomable, explorable, alive.",
-      "url": "https://www.johnhanacek.com/playground.html",
-      "isPartOf": { "@type": "WebSite", "name": "John Hanacek", "url": "https://www.johnhanacek.com/" },
-      "author": { "@type": "Person", "name": "John Hanacek", "url": "https://www.johnhanacek.com/" }
-    }
-    </script>
-    <meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=JetBrains+Mono:wght@300;400;500&family=Raleway:wght@200;300;400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./styles/jh-chrome.css?v=1.54">
+<link rel="stylesheet" href="./scripts/search-overlay.css?v=1.54">
+<style>
+/* Self-contained shell — no external fonts or stylesheets, so the blob works
+   anywhere it is dropped. Palette mirrors brand/_tokens.css light-warm-teal. */
+/* The tool's own token names, bound to the site palette. Keeping the names
+   means the ~1100 lines of canvas CSS below are untouched — only what the
+   names MEAN changes, so this reads as johnhanacek.com rather than as the
+   OpenProse warm-paper deliverable it was cut from. */
+:root {
+  --paper: #020a12; --paper-warm: #051018; --ink: #b8dced; --ink2: #8cb8cc;
+  --ink3: #7a9aaa; --rule: rgba(77, 201, 246, 0.2); --teal: #7dd8f7; --amber: #d4af37;
+  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--paper); color: var(--ink); font-family: var(--mono); }
+body { font-size: 13px; line-height: 1.55; }
 
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Playground - John Hanacek">
-    <meta name="twitter:description" content="Interactive demos and creative experiments — zoomable, explorable, alive.">
-    <meta name="twitter:image" content="https://www.johnhanacek.com/Assets/socialgraph-jhcom.webp">
+header {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 18px;
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+}
+header .mark-sig { height: 22px; width: auto; flex: none; }
+:root[data-mode="dark"] header .mark-sig { filter: invert(1); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-mode="light"]) header .mark-sig { filter: invert(1); }
+}
+header h1 { font-size: 13px; font-weight: 600; letter-spacing: 0.04em; }
+header h1 span { color: var(--ink3); font-weight: 400; }
+header .modes { display: flex; gap: 4px; margin-left: auto; }
+header .modes button.active { border-color: var(--teal); color: var(--teal); }
+/* Mode buttons read as a picture of what they do: a 4x3 plane, a 2x2 grid,
+   one whole page. The icon carries the meaning, so the word is the part
+   that yields when the bar gets narrow. */
+header .modes button { display: inline-flex; align-items: center; gap: 6px; }
+header .modes .mico { display: block; width: 14px; height: 10px; flex: none; }
+header .tb-group { display: none; align-items: center; gap: 4px; }
+header .tb-group.visible { display: flex; }
+header .tb-group .zoom-display {
+  min-width: 42px; text-align: center;
+  color: var(--ink3); font-size: 11px; font-variant-numeric: tabular-nums;
+}
+header .count { color: var(--ink3); font-size: 11px; }
+header button {
+  font: inherit; font-size: 11px; color: var(--ink2);
+  background: none; border: 1px solid var(--rule); border-radius: 5px;
+  padding: 3px 10px; cursor: pointer;
+}
+header button:hover { border-color: var(--ink3); }
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Raleway:wght@100;200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles/shared.css?v=1.53">
-    <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.53">
+#plane {
+  display: grid; gap: 16px; padding: 4px;
+  /* auto-fit (not auto-fill): empty tracks collapse, so few cards stretch
+     to fill the available width instead of parking beside phantom columns. */
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  max-width: 1720px; margin: 0 auto;
+}
+/* Embeds sit flush: the host page frames the panel, so the 4px inset would
+   read as a hairline of dead paper inside the border. */
+body.embedded #plane { padding: 0; }
+#plane[data-cols="1"] { grid-template-columns: 1fr; }
+#plane[data-cols="2"] { grid-template-columns: repeat(2, 1fr); }
+#plane[data-cols="3"] { grid-template-columns: repeat(3, 1fr); }
+#plane[data-cols="4"] { grid-template-columns: repeat(4, 1fr); }
+#plane[data-cols="5"] { grid-template-columns: repeat(5, 1fr); }
+/* Narrow shells (phone embeds and phone standalone): 3+ columns become
+   postage stamps, so cap at two. The height handshake re-sizes the host
+   panel to whatever this wraps to. */
+@media (max-width: 640px) {
+  #plane[data-cols="3"], #plane[data-cols="4"], #plane[data-cols="5"] {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  /* Narrow shells: words out, controls in. The title goes entirely (the
+     host page already says what this is), the signet shrinks to a badge,
+     and paddings/gaps tighten so the mode buttons and toggles hold one
+     line without wrapping. */
+  header h1, header .count, header .modes .mlabel { display: none; }
+  /* Controls fill the bar: space-between spreads each wrapped row so the
+     first and last control sit flush at the edges. */
+  header { gap: 5px; padding: 6px 8px; flex-wrap: wrap; row-gap: 4px; justify-content: space-between; }
+  header .mark-sig { height: 16px; }
+  header .modes { gap: 3px; margin-left: 0; }
+  header button { padding: 3px 6px; font-size: 10px; }
+  header .tb-group { gap: 3px; }
+  header .tb-group label { display: none; }
+  header .tb-group select { font-size: 10px !important; padding: 2px 3px !important; }
+}
+/* Canvas mode — free pan/zoom surface, the tool's signature view */
+body.mode-canvas #stage {
+  position: fixed; inset: 47px 0 0 0;
+  overflow: hidden; cursor: grab;
+  touch-action: none;
+}
+body.mode-canvas #stage.dragging { cursor: grabbing; }
+/* Touch counterpart to the embedded wheel rule (see the stage wheel handler).
+   touch-action:none hands every finger to the pan logic, which standalone is
+   right and embedded means a swipe over the panel freezes the article. pan-y
+   gives vertical drags back to the page; horizontal still pans the canvas,
+   and taps still open cards. */
+body.embedded.mode-canvas #stage { touch-action: pan-y; }
+body.mode-canvas #plane {
+  display: block; max-width: none; padding: 0; margin: 0;
+  transform-origin: 0 0; will-change: transform;
+}
+body.mode-canvas .card { position: absolute; width: 420px; }
+body.mode-canvas footer { display: none; }
+.card {
+  border: 1px solid var(--rule); border-radius: 8px; overflow: hidden;
+  background: var(--paper-warm);
+  display: flex; flex-direction: column;
+  contain: content;
+}
+.card .bar {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 7px 10px; border-bottom: 1px solid var(--rule);
+}
+.card .bar .name {
+  font-size: 11px; font-weight: 600; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.card .bar .stars, #focus .fbar .stars {
+  color: var(--amber); flex: none;
+  font-size: 10px; letter-spacing: 0.06em;
+}
+body.no-ratings .stars { display: none; }
+/* Corner control: the ⛶ that opens this card fullscreen. Was the words
+   "open ↗", which read as "leave for another page" — it does the opposite,
+   it brings the page here. An icon in the corner of every card also stays
+   legible when canvas mode shrinks the type past reading size. */
+.card .bar a {
+  margin-left: auto; flex: none;
+  font-size: 13px; line-height: 1;
+  color: var(--teal); text-decoration: none;
+  padding: 2px 4px; border-radius: 3px;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.card .bar a:hover, .card .bar a:focus-visible {
+  background: var(--teal-tint, rgba(58,122,106,0.14)); color: var(--teal-deep, var(--teal));
+  text-decoration: none;
+}
+.card .well {
+  position: relative; aspect-ratio: 16 / 10; cursor: zoom-in;
+  background: var(--paper);
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+}
+/* Canvas mode: the well is not clickable — the stage captures the pointer for
+   panning, so a click on a card never reaches it. The cursor said otherwise.
+   Here the card body is something you drag, double-click to zoom, or open via
+   the corner ⛶; grid mode keeps zoom-in, where a click really does focus. */
+body.mode-canvas .card .well { cursor: inherit; }
+.card .well iframe {
+  /* paper, not white — no flash against dark pages/mode */
+  position: absolute; inset: 0; border: 0;
+  width: 400%; height: 400%;
+  transform: scale(0.25); transform-origin: top left;
+  pointer-events: none; background: var(--paper);
+  /* Invisible until the page paints (.ready on load) — heavy pages boot
+     pure white; the well + "loading" hint hold the fort instead. */
+  opacity: 0; transition: opacity 0.35s ease;
+}
+.card .well iframe.ready { opacity: 1; }
+/* Physical touch shield over every preview: iOS Safari does not honor
+   pointer-events:none on iframes, so touch-drags scrolled the SUBPAGES
+   instead of the page. A real element above the frame catches the gesture
+   (it belongs to the well, so tap-to-focus still works) and scroll chains
+   up like everywhere else. Interaction with a page happens in focus mode,
+   same as desktop: gated by the zoom click. */
+.card .well::after { content: ''; position: absolute; inset: 0; z-index: 2; }
+.card .well .ph {
+  position: absolute; inset: 0; display: flex; align-items: center;
+  justify-content: center; color: var(--ink3); font-size: 11px;
+}
+.card .desc {
+  padding: 7px 10px; font-size: 10.5px; color: var(--ink3);
+  border-top: 1px solid var(--rule);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; min-height: 2.4em;
+}
 
-    <style>
-        /* ============================================
-           PLAYGROUND PAGE — Full-screen board layout
-           ============================================ */
+/* Focus overlay */
+#focus {
+  position: fixed; inset: 0; z-index: 50; display: none;
+  flex-direction: column; background: var(--paper);
+}
+#focus.open { display: flex; }
+#focus .fbar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 14px; border-bottom: 1px solid var(--rule);
+  background: var(--paper-warm);
+}
+#focus .fbar .name { font-size: 12px; font-weight: 600; }
+#focus .fbar .counter {
+  color: var(--ink3); font-size: 11px; flex: none;
+  min-width: 48px; text-align: center; font-variant-numeric: tabular-nums;
+}
+#focus .fbar .fdesc {
+  font-size: 10.5px; color: var(--ink3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#focus .fbar a { font-size: 11px; color: var(--teal); text-decoration: none; flex: none; margin-left: auto; }
+#focus .fbar button {
+  font: inherit; font-size: 12px; color: var(--ink2); background: none;
+  border: 1px solid var(--rule); border-radius: 5px; padding: 2px 10px;
+  cursor: pointer; flex: none;
+}
+#focus .fbar button:hover { border-color: var(--ink3); }
+#focus iframe {
+  flex: 1; border: 0; width: 100%; background: var(--paper);
+  opacity: 0; transition: opacity 0.35s ease;
+}
+#focus iframe.ready { opacity: 1; }
+#focus .keys { font-size: 10px; color: var(--ink3); flex: none; }
 
-        /* Override body to be full-screen, no scroll */
-        body {
-            overflow: hidden;
-            background: #122d3e;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            padding-top: 40px; /* Account for fixed nav height */
-        }
+footer {
+  padding: 14px 18px 26px; text-align: center;
+  color: var(--ink3); font-size: 10.5px;
+}
 
-        /* Caustic ripple layer — sits BELOW board-world in DOM so cards are never covered.
-           mix-blend-mode:screen brightens the teal background gaps; dark card surfaces
-           are already near-black so screen barely affects them. */
-        .caustic-layer {
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-            z-index: 0;
-            mix-blend-mode: screen;
-            background:
-                radial-gradient(ellipse 42% 32% at 20% 26%, rgba(0, 200, 240, 0.25) 0%, transparent 65%),
-                radial-gradient(ellipse 32% 48% at 70% 60%, rgba(0, 180, 225, 0.20) 0%, transparent 62%),
-                radial-gradient(ellipse 52% 28% at 48% 84%, rgba(10, 210, 240, 0.18) 0%, transparent 56%),
-                radial-gradient(ellipse 30% 42% at 86% 20%, rgba(0, 195, 235, 0.16) 0%, transparent 60%),
-                radial-gradient(ellipse 36% 36% at 10% 75%, rgba(5, 190, 230, 0.14) 0%, transparent 56%);
-            animation: pgCausticDrift 20s ease-in-out infinite alternate;
-        }
+/* Config-hidden chrome — for inline/iframe embeds (?header=0 etc.) */
+body.no-header header { display: none; }
+body.no-header.mode-canvas #stage { inset: 0; }
+body.no-footer footer { display: none; }
+body.no-nav #navigator { display: none; }
+body.no-descs .card .desc, body.no-descs #focus .fdesc { display: none; }
+#ratings-toggle.on { border-color: var(--amber); color: var(--amber); }
+#descs-toggle.on { border-color: var(--teal); color: var(--teal); }
 
-        @keyframes pgCausticDrift {
-            0%   { transform: scale(1)    translate(0%,   0%);   }
-            20%  { transform: scale(1.06) translate(1%,   2%);   }
-            45%  { transform: scale(0.96) translate(2%,  -1.5%); }
-            70%  { transform: scale(1.03) translate(1.5%, 2.5%); }
-            100% { transform: scale(0.98) translate(0.5%,  1%);  }
-        }
+/* Navigator — the minimap, ported from the working canvas. Active in every
+   mode: click/drag jumps, wheel zooms (canvas) / scrolls (grid) / steps
+   (focus). Collapsible via its header. */
+#navigator {
+  position: fixed; bottom: 12px; right: 12px; z-index: 60;
+  background: color-mix(in srgb, var(--paper) 92%, transparent);
+  border: 1px solid var(--rule); border-radius: 6px;
+  backdrop-filter: blur(10px);
+  display: flex; flex-direction: column; overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+}
+#navigator .nav-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; padding: 4px 8px;
+  border-bottom: 1px solid var(--rule);
+  cursor: pointer; user-select: none;
+  font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink3);
+}
+#navigator .nav-header span:first-child {
+  /* The panel width follows the drawn map (set by navDraw) — the label must
+     yield, never hold the panel wider than the map. */
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+}
+#navigator.collapsed { width: auto !important; }
+#navigator.collapsed .nav-body { display: none; }
+#navigator .nav-body { position: relative; cursor: crosshair; }
+#navigator canvas { display: block; }
+@media (max-width: 720px) { #navigator { display: none; } }
 
-        /* ---- Controls Bar (top) ---- */
-        .playground-header {
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.5rem 1rem;
-            background: rgba(6, 13, 26, 0.95);
-            border-bottom: 1px solid rgba(77, 201, 246, 0.12);
-            backdrop-filter: blur(8px);
-            z-index: 100;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.7rem;
-            flex-wrap: wrap;
-            min-height: 46px;
-        }
+#focus .fbar .fdesc { flex: 1; min-width: 0; }
+@media (max-width: 720px) { #focus .keys { display: none; } }
+.card .bar .name { min-width: 0; }
 
-        .pg-title {
-            color: rgba(77, 201, 246, 0.9);
-            font-weight: 500;
-            letter-spacing: 0.15em;
-            text-transform: uppercase;
-            font-size: 0.65rem;
-            margin-right: 0.5rem;
-            white-space: nowrap;
-        }
+/* ---- JHCOM CHROME -------------------------------------------------------
+   The tool was built to own the viewport. The site nav is fixed at 40px, so
+   the stage and header sit below it once the nav becomes visible. */
+#nav.visible ~ header { top: calc(40px + env(safe-area-inset-top)); }
+#nav.visible ~ main#stage { top: calc(40px + env(safe-area-inset-top)); }
+body.mode-canvas #nav.visible ~ main#stage { inset: calc(40px + env(safe-area-inset-top)) 0 0 0; }
+header, main#stage { transition: top 0.25s ease; }
+/* The tool's footer is replaced by the site's. */
+body > footer.canvas-foot { display: none; }
 
-        .pg-divider {
-            width: 1px;
-            height: 18px;
-            background: rgba(77, 201, 246, 0.15);
-            flex-shrink: 0;
-        }
-
-        .zoom-display {
-            color: rgba(255, 255, 255, 0.5);
-            font-size: 0.65rem;
-            min-width: 44px;
-            text-align: center;
-        }
-
-        .pg-btn {
-            background: rgba(77, 201, 246, 0.06);
-            border: 1px solid rgba(77, 201, 246, 0.2);
-            color: rgba(77, 201, 246, 0.8);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.65rem;
-            padding: 0.25rem 0.5rem;
-            border-radius: 3px;
-            cursor: pointer;
-            transition: all 0.15s ease;
-            white-space: nowrap;
-            line-height: 1;
-        }
-        .pg-btn:hover {
-            background: rgba(77, 201, 246, 0.15);
-            border-color: rgba(77, 201, 246, 0.4);
-            color: rgba(77, 201, 246, 1);
-        }
-        .pg-btn.active {
-            background: rgba(77, 201, 246, 0.18);
-            border-color: rgba(77, 201, 246, 0.5);
-            color: #4dc9f6;
-        }
-
-        .filter-group {
-            display: flex;
-            align-items: center;
-            gap: 0.35rem;
-            margin-left: auto;
-        }
-
-        .filter-label {
-            color: rgba(255, 255, 255, 0.3);
-            font-size: 0.6rem;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-        }
-
-        /* ---- Board Viewport ---- */
-        .board-viewport {
-            flex: 1;
-            overflow: hidden;
-            position: relative;
-            cursor: grab;
-            user-select: none;
-            -webkit-user-select: none;
-        }
-        .board-viewport.panning {
-            cursor: grabbing;
-        }
-
-        /* ---- Dot grid — fixed to viewport so it always fills the full visible area ---- */
-        /* Placed on board-viewport (the clipping container), not on board-world (the transformed layer).
-           This means the grid doesn't move/scale with the canvas, giving a subtle infinite-feeling backdrop. */
-        .board-viewport {
-            background-image: radial-gradient(circle, rgba(100, 210, 240, 0.18) 1px, transparent 1px);
-            background-size: 28px 28px;
-        }
-
-        /* ---- Board World (transformed) ---- */
-        .board-world {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 6000px;
-            height: 4000px;
-            transform-origin: 0 0;
-            z-index: 1;
-            background: transparent;
-        }
-
-        /* ---- Demo Cards ---- */
-        .demo-card {
-            position: absolute;
-            border: 1px solid rgba(77, 201, 246, 0.28);
-            border-radius: 8px;
-            background: #0b1e2e;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(77, 201, 246, 0.06) inset;
-            overflow: visible;
-            transition: box-shadow 0.2s ease, border-color 0.2s ease;
-        }
-        .demo-card:hover {
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.65), 0 0 20px rgba(77, 201, 246, 0.1), 0 0 0 1px rgba(77, 201, 246, 0.1) inset;
-            border-color: rgba(77, 201, 246, 0.45);
-        }
-        .demo-card.dragging-card {
-            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8), 0 0 30px rgba(77, 201, 246, 0.18);
-            border-color: rgba(77, 201, 246, 0.6);
-            z-index: 1000 !important;
-        }
-        .demo-card.hidden-card {
-            display: none;
-        }
-
-        /* Card header — left: drag handle + title/desc; right: size buttons + controls */
-        .card-header {
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-            padding: 6px 8px;
-            background: rgba(77, 201, 246, 0.06);
-            border-bottom: 1px solid rgba(77, 201, 246, 0.14);
-            border-radius: 8px 8px 0 0;
-            cursor: grab;
-            font-family: 'JetBrains Mono', monospace;
-        }
-        .card-header:active {
-            cursor: grabbing;
-        }
-
-        .drag-handle {
-            color: rgba(77, 201, 246, 0.3);
-            font-size: 0.8rem;
-            line-height: 1;
-            flex-shrink: 0;
-            cursor: grab;
-        }
-
-        .card-info {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .card-title {
-            display: block;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.7rem;
-            font-weight: 500;
-            color: #4dc9f6;
-            letter-spacing: 0.08em;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .card-desc {
-            display: block;
-            font-family: 'Raleway', sans-serif;
-            font-size: 0.65rem;
-            color: rgba(255, 255, 255, 0.42);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            margin-top: 1px;
-            line-height: 1.3;
-        }
-
-        /* Right side controls cluster */
-        .card-controls {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            flex-shrink: 0;
-            margin-left: auto;
-        }
-
-        /* Tech badges */
-        .tech-badge {
-            flex-shrink: 0;
-            font-size: 0.55rem;
-            font-weight: 500;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-family: 'JetBrains Mono', monospace;
-        }
-        .tech-threejs  { background: rgba(77, 201, 246, 0.12); color: #4dc9f6;  border: 1px solid rgba(77, 201, 246, 0.25); }
-        .tech-react    { background: rgba(97, 218, 251, 0.1);  color: #61dafb;  border: 1px solid rgba(97, 218, 251, 0.2); }
-        .tech-p5js     { background: rgba(237, 34, 93, 0.12);  color: #ed225d;  border: 1px solid rgba(237, 34, 93, 0.25); }
-        .tech-paperjs  { background: rgba(139, 92, 246, 0.12); color: #a78bfa;  border: 1px solid rgba(139, 92, 246, 0.25); }
-        .tech-css      { background: rgba(160, 160, 160, 0.1); color: #9ca3af;  border: 1px solid rgba(160, 160, 160, 0.2); }
-
-        /* Open in new tab button */
-        .card-open {
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 22px;
-            height: 22px;
-            background: rgba(77, 201, 246, 0.06);
-            border: 1px solid rgba(77, 201, 246, 0.18);
-            border-radius: 3px;
-            color: rgba(77, 201, 246, 0.6);
-            font-size: 0.7rem;
-            text-decoration: none;
-            transition: all 0.15s ease;
-            line-height: 1;
-        }
-        .card-open:hover {
-            background: rgba(77, 201, 246, 0.15);
-            border-color: rgba(77, 201, 246, 0.4);
-            color: #4dc9f6;
-        }
-
-        /* Card iframe wrap */
-        .card-iframe-wrap {
-            position: relative;
-            overflow: hidden;
-            border-radius: 0 0 7px 7px;
-        }
-
-        .card-iframe-wrap iframe {
-            display: block;
-            width: 100%;
-            height: 100%;
-            border: none;
-            background: #050c1a;
-        }
-
-        /* Iframe blocker — shown during any drag to prevent iframe stealing events */
-        .iframe-blocker {
-            position: absolute;
-            inset: 0;
-            z-index: 10;
-            display: none;
-            background: transparent;
-        }
-
-        /* Card placeholder — shown until iframe loaded */
-        .card-placeholder {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 0.6rem;
-            background: rgba(5, 12, 26, 0.96);
-            color: rgba(77, 201, 246, 0.5);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.65rem;
-            letter-spacing: 0.1em;
-            border-radius: 0 0 7px 7px;
-            transition: opacity 0.4s ease;
-            cursor: pointer;
-        }
-        .card-placeholder .ph-icon {
-            font-size: 1.8rem;
-            opacity: 0.4;
-        }
-        .card-placeholder .ph-label {
-            text-transform: uppercase;
-            opacity: 0.7;
-        }
-        .card-placeholder .ph-hint {
-            font-size: 0.55rem;
-            opacity: 0.4;
-            text-transform: uppercase;
-            letter-spacing: 0.15em;
-        }
-        .card-placeholder:hover {
-            background: rgba(10, 22, 40, 0.96);
-            color: rgba(77, 201, 246, 0.8);
-        }
-
-        .demo-card.loaded .card-placeholder {
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        /* ---- Board corner controls ---- */
-        .board-controls {
-            position: fixed;
-            bottom: 1rem;
-            right: 1rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.35rem;
-            z-index: 200;
-        }
-
-        .board-controls .pg-btn {
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0;
-            font-size: 1rem;
-        }
-
-        /* ---- Nav override (fixed as normal, but always visible — no scroll needed) ---- */
-        /* nav.visible class is added via JS immediately at page load */
-
-        /* Hint text at bottom of board */
-        .board-hint {
-            position: fixed;
-            bottom: 1rem;
-            left: 50%;
-            transform: translateX(-50%);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.6rem;
-            color: rgba(77, 201, 246, 0.25);
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            pointer-events: none;
-            white-space: nowrap;
-        }
-
-        /* ---- Card Size Presets (+25% from original S/M/L) ---- */
-        /* Width controlled on .demo-card; height on .card-iframe-wrap */
-        .demo-card.size-sm { width: 475px; }
-        .demo-card.size-md { width: 700px; }
-        .demo-card.size-lg { width: 950px; }
-
-        .demo-card.size-sm .card-iframe-wrap { height: 400px; }
-        .demo-card.size-md .card-iframe-wrap { height: 625px; }
-        .demo-card.size-lg .card-iframe-wrap { height: 850px; }
-
-        /* Size toggle buttons — now in .card-controls on the right */
-        .size-btn {
-            background: rgba(77, 201, 246, 0.04);
-            border: 1px solid rgba(77, 201, 246, 0.15);
-            color: rgba(77, 201, 246, 0.45);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.55rem;
-            width: 18px;
-            height: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 2px;
-            cursor: pointer;
-            transition: all 0.12s ease;
-            padding: 0;
-            line-height: 1;
-        }
-        .size-btn:hover {
-            background: rgba(77, 201, 246, 0.12);
-            border-color: rgba(77, 201, 246, 0.35);
-            color: rgba(77, 201, 246, 0.9);
-        }
-        .size-btn.active {
-            background: rgba(77, 201, 246, 0.18);
-            border-color: rgba(77, 201, 246, 0.5);
-            color: #4dc9f6;
-        }
-
-        /* Unload button */
-        .card-unload {
-            flex-shrink: 0;
-            width: 22px;
-            height: 22px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0;
-            font-size: 0.65rem;
-            opacity: 0.5;
-        }
-        .card-unload:hover {
-            opacity: 1;
-            color: rgba(246, 120, 77, 0.9);
-            border-color: rgba(246, 120, 77, 0.4);
-            background: rgba(246, 120, 77, 0.08);
-        }
-        /* Only show unload button when card is loaded */
-        .demo-card:not(.loaded) .card-unload {
-            display: none;
-        }
-
-        @media (max-width: 768px) {
-            .pg-title { display: none; }
-            .pg-divider { display: none; }
-            .filter-label { display: none; }
-            .board-hint { display: none; }
-        }
-    </style>
+/* An item flagged `nested` is never woken — it embeds this same tool, and a
+   canvas inside a canvas runs two budgets against one device. The card says
+   so and sends you out to the page instead. */
+.card.is-nested .well { cursor: pointer; }
+.card.is-nested .ph { color: var(--amber); text-align: center; padding: 0 1.5rem; line-height: 1.6; }
+</style>
 </head>
 <body>
-    <!-- Interactive Cursor Spotlight -->
-    <div id="cursorSpotlight"></div>
 
-    <a href="#board" class="skip-link">Skip to playground board</a>
+<a href="#stage" class="skip-link">Skip to the canvas</a>
+<nav id="nav"><jh-nav current="play"></jh-nav></nav>
 
-    <!-- Shared Nav -->
-    <nav id="nav" role="navigation" aria-label="Main navigation">
-        <div class="nav-inner">
-            <div class="nav-left">
-                <a href="search.html" class="shape-link search-icon" aria-label="Search">
-                    <svg class="shape" viewBox="0 0 40 40" fill="none" stroke="currentColor"><circle class="state-ring" cx="20" cy="20" r="15" stroke-width="1.5"/><circle cx="16" cy="16" r="5.5" stroke-width="2.5"/><line x1="20" y1="20" x2="26" y2="26" stroke-width="2.5" stroke-linecap="round"/></svg>
-                </a>
-                <a href="index.html" class="shape-link" aria-label="Home">
-                    <svg class="shape triangle" viewBox="0 0 40 40"><polygon points="20,8 34,32 6,32"/></svg>
-                    <img class="shape-label shape-label-img" src="./Assets/JHsig.svg" alt="JH">
-                </a>
-                <a href="design.html" class="shape-link" aria-label="Design">
-                    <svg class="shape rounded-square" viewBox="0 0 40 40"><rect x="6" y="6" width="28" height="28" rx="6"/></svg>
-                    <span class="shape-label">DESIGN</span>
-                </a>
-                <a href="art.html" class="shape-link" aria-label="Art">
-                    <svg class="shape circle" viewBox="0 0 40 40"><circle cx="20" cy="20" r="14"/></svg>
-                    <span class="shape-label">ART</span>
-                </a>
-                <a href="index.html" class="nav-title">John Hanacek</a>
-                <a href="about.html" class="shape-link secondary" aria-label="About">
-                    <svg class="shape diamond" viewBox="0 0 40 40"><polygon points="20,6 34,20 20,34 6,20"/></svg>
-                    <span class="shape-label">ABOUT</span>
-                </a>
-                <a href="services.html" class="shape-link secondary" aria-label="Services">
-                    <svg class="shape star" viewBox="0 0 40 40"><polygon points="20,6 23,16 34,16 25,22 28,34 20,26 12,34 15,22 6,16 17,16"/></svg>
-                    <span class="shape-label">SERVICES</span>
-                </a>
-                <a href="playground.html" class="shape-link active" aria-label="Playground" aria-current="page">
-                    <svg class="shape hexagon" viewBox="0 0 40 40"><polygon points="20,5 33,12.5 33,27.5 20,35 7,27.5 7,12.5"/></svg>
-                    <span class="shape-label">PLAY</span>
-                </a>
-            </div>
-            <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
-            <ul class="nav-right">
-                <li><a href="#board">Board</a></li>
-            </ul>
-        </div>
-    </nav>
+<header>
+  <img class="mark-sig" src="./Assets/JHsig.svg" alt="JHDesign">
+  <h1>Playground <span>· the whole site, live</span></h1>
+  <nav class="modes" aria-label="View mode">
+    <button type="button" data-mode-btn="canvas" title="canvas · key 1"><svg class="mico" viewBox="0 0 14 10" fill="currentColor" aria-hidden="true" focusable="false"><rect x="0" y="0" width="2.98" height="2.87"/><rect x="3.67" y="0" width="2.98" height="2.87"/><rect x="7.35" y="0" width="2.98" height="2.87"/><rect x="11.02" y="0" width="2.98" height="2.87"/><rect x="0" y="3.57" width="2.98" height="2.87"/><rect x="3.67" y="3.57" width="2.98" height="2.87"/><rect x="7.35" y="3.57" width="2.98" height="2.87"/><rect x="11.02" y="3.57" width="2.98" height="2.87"/><rect x="0" y="7.13" width="2.98" height="2.87"/><rect x="3.67" y="7.13" width="2.98" height="2.87"/><rect x="7.35" y="7.13" width="2.98" height="2.87"/><rect x="11.02" y="7.13" width="2.98" height="2.87"/></svg><span class="mlabel">canvas</span></button>
+    <button type="button" data-mode-btn="grid" class="active" title="grid · key 2"><svg class="mico" viewBox="0 0 14 10" fill="currentColor" aria-hidden="true" focusable="false"><rect x="0" y="0" width="6.5" height="4.5"/><rect x="7.5" y="0" width="6.5" height="4.5"/><rect x="0" y="5.5" width="6.5" height="4.5"/><rect x="7.5" y="5.5" width="6.5" height="4.5"/></svg><span class="mlabel">grid</span></button>
+    <button type="button" data-mode-btn="focus" title="focus · key 3"><svg class="mico" viewBox="0 0 14 10" fill="currentColor" aria-hidden="true" focusable="false"><rect x="0" y="0" width="14" height="10"/></svg><span class="mlabel">focus</span></button>
+  </nav>
+  <div class="tb-group" id="zoom-group">
+    <button type="button" id="zoom-out" aria-label="Zoom out">−</button>
+    <span class="zoom-display" id="zoom-display">85%</span>
+    <button type="button" id="zoom-in" aria-label="Zoom in">+</button>
+    <button type="button" id="zoom-fit" aria-label="Fit all">fit</button>
+  </div>
+  <div class="tb-group visible" id="live-group">
+    <label for="live-max" style="color: var(--ink3); font-size: 11px;">live</label>
+    <select id="live-max" style="font: inherit; font-size: 11px; color: var(--ink2); background: var(--paper); border: 1px solid var(--rule); border-radius: 5px; padding: 2px 6px;">
+      <option value="4">4</option>
+      <option value="6">6</option>
+      <option value="8" selected>8</option>
+      <option value="12">12</option>
+      <option value="16">16</option>
+      <option value="20">20</option>
+    </select>
+  </div>
+  <div class="tb-group" id="cols-group">
+    <label for="grid-cols" style="color: var(--ink3); font-size: 11px;">cols</label>
+    <select id="grid-cols" style="font: inherit; font-size: 11px; color: var(--ink2); background: var(--paper); border: 1px solid var(--rule); border-radius: 5px; padding: 2px 6px;">
+      <option value="auto" selected>auto</option>
+      <option value="2">2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+      <option value="5">5</option>
+    </select>
+  </div>
+  <div class="tb-group visible" id="sort-group">
+    <label for="grid-sort" style="color: var(--ink3); font-size: 11px;">sort</label>
+    <select id="grid-sort" style="font: inherit; font-size: 11px; color: var(--ink2); background: var(--paper); border: 1px solid var(--rule); border-radius: 5px; padding: 2px 6px;">
+      <option value="sequence" selected>sequence</option>
+      <option value="date">date made</option>
+    </select>
+  </div>
+  <span class="count" id="count"></span>
+  <button id="descs-toggle" type="button" aria-label="Show or hide review comments" title="comments">✎</button>
+  <button id="ratings-toggle" type="button" class="on" aria-label="Show or hide ratings" title="ratings">★</button>
+  <button id="mode" type="button" aria-label="Toggle dark mode">◐</button>
+  <button id="fs-toggle" type="button" aria-label="Toggle fullscreen" title="fullscreen">⛶</button>
+</header>
 
-    <!-- Playground Controls Bar -->
-    <div class="playground-header">
-        <span class="pg-title">⬡ Playground</span>
-        <div class="pg-divider"></div>
-        <span class="zoom-display" id="zoomDisplay">68%</span>
-        <button class="pg-btn" id="btnZoomOut" title="Zoom out">−</button>
-        <button class="pg-btn" id="btnZoomIn" title="Zoom in">+</button>
-        <button class="pg-btn" id="btnReset" title="Reset view">⌂ Reset</button>
-        <div class="pg-divider"></div>
-        <div class="filter-group">
-            <span class="filter-label">Filter:</span>
-            <button class="pg-btn active" data-filter="all">All</button>
-            <button class="pg-btn" data-filter="game">Game</button>
-            <button class="pg-btn" data-filter="tool">Tool</button>
-            <button class="pg-btn" data-filter="demo">Demo</button>
-            <button class="pg-btn" data-filter="ideas">Ideas</button>
-        </div>
-    </div>
+<main id="stage"><div id="plane"></div></main>
 
-    <!-- Infinite Canvas Board -->
-    <div class="board-viewport" id="boardViewport">
-        <!-- Caustic light layer — below board-world, never covers card content -->
-        <div class="caustic-layer"></div>
-        <div class="board-world" id="boardWorld">
+<div id="focus" role="dialog" aria-modal="true" aria-label="Focused experiment">
+  <div class="fbar">
+    <button id="f-close" type="button" aria-label="Close focus">← back</button>
+    <button id="f-prev" type="button" aria-label="Previous">‹</button>
+    <span class="counter" id="f-counter">1 / 29</span>
+    <button id="f-next" type="button" aria-label="Next">›</button>
+    <span class="name" id="f-name"></span>
+    <span class="stars" id="f-stars"></span>
+    <span class="fdesc" id="f-desc"></span>
+    <span class="keys">← → navigate · esc close</span>
+    <a id="f-open" href="#" target="_blank" rel="noopener">open ↗</a>
+    <button id="f-fs" type="button" aria-label="Toggle fullscreen" title="fullscreen">⛶</button>
+  </div>
+  <iframe id="f-frame" title="Focused experiment — live"></iframe>
+</div>
 
-            <!-- ═══════════════════════════════════════
-                 ROW 1 — Games & Tools (top, y=60)
-                 ═══════════════════════════════════════ -->
+<footer class="canvas-foot" hidden></footer>
 
-            <!-- CARD: CYBERBIRD -->
-            <div class="demo-card size-lg" id="card-cyberbird" data-category="game"
-                 style="left: 60px; top: 60px;">
-                <div class="card-header">
-                    <span class="drag-handle">⠿</span>
-                    <div class="card-info">
-                        <span class="card-title">CYBERBIRD</span>
-                        <span class="card-desc">Radical aerial flight simulator in 3D space</span>
-                    </div>
-                    <div class="card-controls">
-                        <button class="size-btn" data-size="sm">S</button>
-                        <button class="size-btn" data-size="md">M</button>
-                        <button class="size-btn active" data-size="lg">L</button>
-                        <button class="card-unload pg-btn" title="Unload">✕</button>
-                        <span class="tech-badge tech-threejs">Three.js</span>
-                        <a class="card-open" href="./Assets/DemosPlayground/aethereal-flight/index.html" target="_blank" rel="noopener" title="Open in new tab">↗</a>
-                    </div>
-                </div>
-                <div class="card-iframe-wrap">
-                    <iframe data-src="./Assets/DemosPlayground/aethereal-flight/index.html" title="CYBERBIRD — aerial flight simulator" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
-                    <div class="iframe-blocker"></div>
-                    <div class="card-placeholder" data-card="card-cyberbird">
-                        <div class="ph-icon">✈</div>
-                        <div class="ph-label">CYBERBIRD</div>
-                        <div class="ph-hint">Click to load · Three.js</div>
-                    </div>
-                </div>
-            </div>
+<div id="navigator" aria-label="Navigator minimap">
+  <div class="nav-header" id="nav-header"><span>navigator</span><span id="nav-toggle">▾</span></div>
+  <div class="nav-body"><canvas id="nav-canvas" width="200" height="150"></canvas></div>
+</div>
 
-            <!-- CARD: Social Network Viz -->
-            <div class="demo-card size-lg" id="card-sna" data-category="tool"
-                 style="left: 1070px; top: 60px;">
-                <div class="card-header">
-                    <span class="drag-handle">⠿</span>
-                    <div class="card-info">
-                        <span class="card-title">SOCIAL NETWORK VIZ</span>
-                        <span class="card-desc">Draw nodes and edges, watch force-directed layout emerge</span>
-                    </div>
-                    <div class="card-controls">
-                        <button class="size-btn" data-size="sm">S</button>
-                        <button class="size-btn" data-size="md">M</button>
-                        <button class="size-btn active" data-size="lg">L</button>
-                        <button class="card-unload pg-btn" title="Unload">✕</button>
-                        <span class="tech-badge tech-react">React</span>
-                        <a class="card-open" href="./Assets/DemosPlayground/sna-drawing-demo.html" target="_blank" rel="noopener" title="Open in new tab">↗</a>
-                    </div>
-                </div>
-                <div class="card-iframe-wrap">
-                    <iframe data-src="./Assets/DemosPlayground/sna-drawing-demo.html" title="Social Network Analysis — draw nodes and edges" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
-                    <div class="iframe-blocker"></div>
-                    <div class="card-placeholder" data-card="card-sna">
-                        <div class="ph-icon">◎</div>
-                        <div class="ph-label">SOCIAL NETWORK VIZ</div>
-                        <div class="ph-hint">Click to load · React + Canvas</div>
-                    </div>
-                </div>
-            </div>
+<script src="./scripts/playground-items.js?v=1.53"></script>
+<script>
+(function () {
+  'use strict';
+  // ---- CONFIG — one component, three uses ---------------------------------
+  // Full page (defaults) · iframe embed (?ratings=0&header=0&nav=0&mode=grid
+  // &items=a,b&budget=4&cols=3) · inline code block (set window.CANVAS_CONFIG
+  // = {...} before this script). Query params win over CANVAS_CONFIG.
+  var EMBEDDED = (function () { try { return window.self !== window.top; } catch (e) { return true; } })();
+  var CONFIG = (function () {
+    var c = Object.assign(
+      // Embeds start quiet: ratings off unless the host page opts in
+      // (?ratings=1). Full-page visits keep stars on.
+      { ratings: !EMBEDDED, header: true, footer: true, nav: true, descs: false,
+        mode: null, items: null, budget: 8, cols: null, sort: null },
+      window.CANVAS_CONFIG || {});
+    var q = new URLSearchParams(location.search);
+    ['ratings', 'header', 'footer', 'nav', 'descs'].forEach(function (k) {
+      if (q.has(k)) c[k] = !/^(0|false|off)$/i.test(q.get(k));
+    });
+    if (q.has('mode')) c.mode = q.get('mode');
+    if (q.has('items')) c.items = q.get('items').split(',').map(function (s) { return s.trim(); });
+    if (q.has('budget')) c.budget = Math.max(1, parseInt(q.get('budget'), 10) || c.budget);
+    // Phones: fewer live iframes per embed unless the host asked explicitly —
+    // several panels × 8 subframes is real memory and battery on mobile.
+    else if (EMBEDDED && window.matchMedia && matchMedia('(pointer: coarse)').matches) c.budget = Math.min(c.budget, 4);
+    if (q.has('cols')) c.cols = q.get('cols');
+    if (q.has('sort')) c.sort = q.get('sort'); // 'date' | 'sequence'
+    // Starting view for canvas mode, per embed: ?zoom=0.65 boots zoomed out
+    // to that scale (top-left anchored), ?zoom=fit boots with everything in
+    // frame. Ignored outside canvas mode.
+    if (q.has('zoom')) c.zoom = q.get('zoom');
+    return c;
+  })();
 
-            <!-- CARD: 3D Sync Demo (demo-gated) -->
-            <div class="demo-card size-lg" id="card-3dsync" data-category="demo"
-                 data-no-autoload="true"
-                 style="left: 2080px; top: 60px;">
-                <div class="card-header">
-                    <span class="drag-handle">⠿</span>
-                    <div class="card-info">
-                        <span class="card-title">3D SYNC DEMO</span>
-                        <span class="card-desc">Three synchronized 3D viewports with linked camera controls</span>
-                    </div>
-                    <div class="card-controls">
-                        <button class="size-btn" data-size="sm">S</button>
-                        <button class="size-btn" data-size="md">M</button>
-                        <button class="size-btn active" data-size="lg">L</button>
-                        <button class="card-unload pg-btn" title="Unload">✕</button>
-                        <span class="tech-badge tech-threejs">Three.js</span>
-                        <a class="card-open" href="./Assets/3d-sync-demo/index.html" target="_blank" rel="noopener" title="Open in new tab">↗</a>
-                    </div>
-                </div>
-                <div class="card-iframe-wrap">
-                    <iframe data-src="./Assets/3d-sync-demo/index.html" title="3D Sync Demo — synchronized 3D viewports" sandbox="allow-scripts allow-same-origin"></iframe>
-                    <div class="iframe-blocker"></div>
-                    <div class="card-placeholder" data-card="card-3dsync">
-                        <div class="ph-icon">⬡</div>
-                        <div class="ph-label">3D SYNC DEMO</div>
-                        <div class="ph-hint">Click to load · Three.js</div>
-                    </div>
-                </div>
-            </div>
+  var items = window.CANVAS_ITEMS || [];
+  if (CONFIG.items) {
+    // Param order rules display order, so narrative sequences are URL-editable.
+    items = CONFIG.items.map(function (n) {
+      return items.find(function (it) { return it.name === n; });
+    }).filter(Boolean);
+  }
+  // 'sequence' = the order above (param order, else items.js order, which the
+  // builder already writes oldest-first). 'date' re-sorts any curated subset
+  // by first-commit timestamp from items.js; pages added in the same commit
+  // tie-break by manifest order, so a date sort always reproduces the full
+  // canvas's chronological sequence.
+  var baseItems = items.slice();
+  var canonIdx = {};
+  (window.CANVAS_ITEMS || []).forEach(function (it, i) { canonIdx[it.name] = i; });
+  function applySort(mode) {
+    items = mode === 'date'
+      ? baseItems.slice().sort(function (a, b) {
+          var da = a.created || '9999', db = b.created || '9999';
+          if (da < db) return -1;
+          if (da > db) return 1;
+          return (canonIdx[a.name] || 0) - (canonIdx[b.name] || 0);
+        })
+      : baseItems.slice();
+  }
+  var maxLive = CONFIG.budget;
+  document.body.classList.toggle('embedded', EMBEDDED);
+  document.body.classList.toggle('no-header', !CONFIG.header);
+  document.body.classList.toggle('no-footer', !CONFIG.footer);
+  document.body.classList.toggle('no-nav', !CONFIG.nav);
+  document.body.classList.toggle('no-ratings', !CONFIG.ratings);
+  document.body.classList.toggle('no-descs', !CONFIG.descs);
 
-            <!-- ═══════════════════════════════════════
-                 ROW 2 — Style References (y=1000)
-                 ═══════════════════════════════════════ -->
+  function starsText(st) {
+    if (!st) return '';
+    return Object.keys(st).sort().map(function (who) { return '★' + st[who] + ' ' + who; }).join(' · ');
+  }
+  var liveSel = document.getElementById('live-max');
+  if ([...liveSel.options].some(function (o) { return +o.value === maxLive; })) liveSel.value = String(maxLive);
+  liveSel.addEventListener('change', function () {
+    maxLive = Math.max(1, parseInt(liveSel.value, 10) || 8);
+    // Lowering takes effect immediately: sleep the farthest live cells over
+    // the new cap (previously only future wakes noticed the budget).
+    var lives = liveCells();
+    if (lives.length > maxLive) {
+      lives.sort(function (a, b) { return cellDist(b) - cellDist(a); })
+           .slice(0, lives.length - maxLive)
+           .forEach(sleepCell);
+      if (typeof navDraw === 'function') navDraw();
+    }
+    if (typeof drainCells === 'function') drainCells();
+    if (typeof saveState === 'function') saveState();
+  });
+  function toggleFullscreen() {
+    if (EMBEDDED) {
+      // Viewport overlay in the host page rather than OS fullscreen: the
+      // same-origin host (case-study.html) listens for this and expands the
+      // embed panel to its viewport. No permission chain, no new tab.
+      try { window.parent.postMessage({ cv: 'fs-toggle' }, '*'); } catch (e) {}
+      return;
+    }
+    var d = document, root = d.documentElement;
+    if (d.fullscreenElement || d.webkitFullscreenElement) {
+      (d.exitFullscreen || d.webkitExitFullscreen).call(d);
+      return;
+    }
+    var req = root.requestFullscreen || root.webkitRequestFullscreen;
+    if (!req) { window.open(location.href, '_blank', 'noopener'); return; }
+    var out = req.call(root);
+    if (out && out.catch) out.catch(function () {
+      // Permission denied: fall back to a real new tab so the button delivers.
+      window.open(location.href, '_blank', 'noopener');
+    });
+  }
+  // One fullscreen, two doors: the header ⛶ and the focus bar's ⛶, both far
+  // right in their bars.
+  document.getElementById('fs-toggle').addEventListener('click', toggleFullscreen);
+  document.getElementById('f-fs').addEventListener('click', toggleFullscreen);
+  // Esc inside the shell backs out of the host overlay (focus mode's own Esc
+  // handler runs first and stops here only when focus is closed).
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key !== 'Escape' || !EMBEDDED) return;
+    var f = document.getElementById('focus');
+    if (f && f.classList.contains('open')) return; // focus Esc wins
+    try { window.parent.postMessage({ cv: 'fs-exit' }, '*'); } catch (e) {}
+  });
+  // Height handshake: the host sizes the panel to the content and re-sizes on
+  // every reflow here (column change, sort rebuild, viewport resize). The host
+  // applies its own cap, which is where the interior scroll break lives.
+  if (EMBEDDED) {
+    var lastPostedH = 0;
+    var postHeight = function () {
+      // Canvas mode pulls #stage out of the flow (position:fixed) and focus
+      // is a fixed overlay — in both, body height is just the chrome. Never
+      // report it: the panel keeps its grid height and the view fills it.
+      if (document.body.classList.contains('mode-canvas')) return;
+      var focusEl = document.getElementById('focus');
+      if (focusEl && focusEl.classList.contains('open')) return;
+      // True content height (body border-box), NOT documentElement.scrollHeight:
+      // scrollHeight is floored at the iframe's viewport, so a panel taller
+      // than the content could never report small enough to shrink.
+      var h = Math.ceil(document.body.getBoundingClientRect().height);
+      if (h < 40 || h === lastPostedH) return;
+      lastPostedH = h;
+      try { window.parent.postMessage({ cv: 'height', px: h }, '*'); } catch (e) {}
+    };
+    if (window.ResizeObserver) {
+      new ResizeObserver(postHeight).observe(document.body);
+    }
+    window.addEventListener('load', postHeight);
+    setTimeout(postHeight, 0);
+    // The host announces the panel's ceiling (its placeholder height); auto
+    // re-fits to the biggest cards that stay under it, and the resulting
+    // reflow reposts the true height above.
+    window.addEventListener('message', function (ev) {
+      var d = ev.data;
+      if (d && d.cv === 'fs-state') { hostFs = !!d.on; if (!hostFs) focusOwnsFs = false; return; }
+      if (!d || d.cv !== 'ceiling' || !(d.px > 0)) return;
+      if (Math.abs(d.px - hostCeiling) < 2) return;
+      hostCeiling = d.px;
+      if (document.getElementById('grid-cols').value === 'auto') {
+        applyCols('auto');
+        if (typeof navDraw === 'function') navDraw();
+      }
+    });
+  }
+  var ratingsBtn = document.getElementById('ratings-toggle');
+  ratingsBtn.classList.toggle('on', CONFIG.ratings);
+  ratingsBtn.addEventListener('click', function () {
+    var off = document.body.classList.toggle('no-ratings');
+    ratingsBtn.classList.toggle('on', !off);
+  });
+  var descsBtn = document.getElementById('descs-toggle');
+  descsBtn.classList.toggle('on', CONFIG.descs);
+  descsBtn.addEventListener('click', function () {
+    var off = document.body.classList.toggle('no-descs');
+    descsBtn.classList.toggle('on', !off);
+  });
+  var grid = document.getElementById('plane');
+  var stage = document.getElementById('stage');
 
-            <!-- CARD: Black Hole Gothic -->
-            <div class="demo-card size-md" id="card-bhg" data-category="ideas"
-                 style="left: 60px; top: 1000px;">
-                <div class="card-header">
-                    <span class="drag-handle">⠿</span>
-                    <div class="card-info">
-                        <span class="card-title">BLACK HOLE GOTHIC</span>
-                        <span class="card-desc">Dark cosmic design system with gold accents and star animations</span>
-                    </div>
-                    <div class="card-controls">
-                        <button class="size-btn" data-size="sm">S</button>
-                        <button class="size-btn active" data-size="md">M</button>
-                        <button class="size-btn" data-size="lg">L</button>
-                        <button class="card-unload pg-btn" title="Unload">✕</button>
-                        <span class="tech-badge tech-css">CSS</span>
-                        <a class="card-open" href="./Assets/DemosPlayground/StyleRefs/black-hole-gothic.html" target="_blank" rel="noopener" title="Open in new tab">↗</a>
-                    </div>
-                </div>
-                <div class="card-iframe-wrap">
-                    <iframe data-src="./Assets/DemosPlayground/StyleRefs/black-hole-gothic.html" title="Black Hole Gothic — dark cosmic design system" sandbox="allow-scripts allow-same-origin"></iframe>
-                    <div class="iframe-blocker"></div>
-                    <div class="card-placeholder" data-card="card-bhg">
-                        <div class="ph-icon">✦</div>
-                        <div class="ph-label">BLACK HOLE GOTHIC</div>
-                        <div class="ph-hint">Click to load · CSS</div>
-                    </div>
-                </div>
-            </div>
+  // ---- mode toggle ----------------------------------------------------------
+  document.getElementById('mode').addEventListener('click', function () {
+    var root = document.documentElement;
+    var dark = root.getAttribute('data-mode') === 'dark' ||
+      (!root.getAttribute('data-mode') &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches);
+    root.setAttribute('data-mode', dark ? 'light' : 'dark');
+  });
 
-            <!-- CARD: Transcendence Gold -->
-            <div class="demo-card size-md" id="card-gold" data-category="ideas"
-                 style="left: 820px; top: 1000px;">
-                <div class="card-header">
-                    <span class="drag-handle">⠿</span>
-                    <div class="card-info">
-                        <span class="card-title">TRANSCENDENCE GOLD</span>
-                        <span class="card-desc">Luxury warm-toned design system, elegant typography</span>
-                    </div>
-                    <div class="card-controls">
-                        <button class="size-btn" data-size="sm">S</button>
-                        <button class="size-btn active" data-size="md">M</button>
-                        <button class="size-btn" data-size="lg">L</button>
-                        <button class="card-unload pg-btn" title="Unload">✕</button>
-                        <span class="tech-badge tech-css">CSS</span>
-                        <a class="card-open" href="./Assets/DemosPlayground/CreativeCODE2016/transcendence-gold.html" target="_blank" rel="noopener" title="Open in new tab">↗</a>
-                    </div>
-                </div>
-                <div class="card-iframe-wrap">
-                    <iframe data-src="./Assets/DemosPlayground/CreativeCODE2016/transcendence-gold.html" title="Transcendence Gold — luxury design system" sandbox="allow-scripts allow-same-origin"></iframe>
-                    <div class="iframe-blocker"></div>
-                    <div class="card-placeholder" data-card="card-gold">
-                        <div class="ph-icon">◈</div>
-                        <div class="ph-label">TRANSCENDENCE GOLD</div>
-                        <div class="ph-hint">Click to load · CSS</div>
-                    </div>
-                </div>
-            </div>
+  // ---- grid + preview lifecycle (budgeted, LRU) -----------------------------
+  var cells = [];
+  var cellIO = null; // IntersectionObserver, created below; rebuilds re-observe
+  function buildCards() {
+    cells.forEach(sleepCell); // free every live context before the DOM goes
+    cells = [];
+    grid.innerHTML = '';
+    items.forEach(function (it, i) {
+      var card = document.createElement('article');
+      card.className = 'card';
+      card.innerHTML =
+        '<div class="bar"><span class="name"></span>' +
+        '<span class="stars"></span>' +
+        '<a target="_blank" rel="noopener" title="Open fullscreen" aria-label="Open fullscreen">⛶</a></div>' +
+        '<div class="well" role="button" tabindex="0" aria-label="Focus this experiment">' +
+        '<span class="ph">loading nearby…</span></div>' +
+        '<div class="desc"></div>';
+      if (it.nested) {
+        card.classList.add('is-nested');
+        card.querySelector('.ph').textContent =
+          'embeds this canvas — opens in its own tab ↗';
+      }
+      if (it.weight === 'heavy') card.classList.add('is-heavy');
+      card.querySelector('.name').textContent = it.name;
+      card.querySelector('.stars').textContent = starsText(it.stars);
+      card.querySelector('.desc').textContent = it.desc || '';
+      var openA = card.querySelector('a');
+      openA.href = it.file;
+      openA.addEventListener('click', function (ev) {
+        if (ev.metaKey || ev.ctrlKey || ev.shiftKey) return;
+        ev.preventDefault();
+        openFocus(i);
+      });
+      var well = card.querySelector('.well');
+      function focusMe() { if (window.__panDist && window.__panDist > 6) return; openFocus(i); }
+      well.addEventListener('click', focusMe);
+      well.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); focusMe(); }
+      });
+      grid.appendChild(card);
+      cells.push({ it: it, well: well, iframe: null, live: false, near: false, lastNear: 0 });
+    });
+    document.getElementById('count').textContent = items.length;
+    if (cellIO) {
+      cellIO.disconnect();
+      cells.forEach(function (c) { cellIO.observe(c.well); });
+    }
+  }
+  if (CONFIG.sort === 'date') {
+    document.getElementById('grid-sort').value = 'date';
+    applySort('date');
+  }
+  buildCards();
 
-            <!-- CARD: Gothic Manuscript -->
-            <div class="demo-card size-md" id="card-goth" data-category="ideas"
-                 style="left: 1580px; top: 1000px;">
-                <div class="card-header">
-                    <span class="drag-handle">⠿</span>
-                    <div class="card-info">
-                        <span class="card-title">GOTHIC MANUSCRIPT</span>
-                        <span class="card-desc">Medieval manuscript aesthetic, parchment tones</span>
-                    </div>
-                    <div class="card-controls">
-                        <button class="size-btn" data-size="sm">S</button>
-                        <button class="size-btn active" data-size="md">M</button>
-                        <button class="size-btn" data-size="lg">L</button>
-                        <button class="card-unload pg-btn" title="Unload">✕</button>
-                        <span class="tech-badge tech-css">CSS</span>
-                        <a class="card-open" href="./Assets/DemosPlayground/StyleRefs/gothic-manuscript.html" target="_blank" rel="noopener" title="Open in new tab">↗</a>
-                    </div>
-                </div>
-                <div class="card-iframe-wrap">
-                    <iframe data-src="./Assets/DemosPlayground/StyleRefs/gothic-manuscript.html" title="Gothic Manuscript — medieval design system" sandbox="allow-scripts allow-same-origin"></iframe>
-                    <div class="iframe-blocker"></div>
-                    <div class="card-placeholder" data-card="card-goth">
-                        <div class="ph-icon">⚜</div>
-                        <div class="ph-label">GOTHIC MANUSCRIPT</div>
-                        <div class="ph-hint">Click to load · CSS</div>
-                    </div>
-                </div>
-            </div>
+  function liveCells() { return cells.filter(function (c) { return c.live; }); }
+  function cellDist(c) {
+    var r = c.well.getBoundingClientRect();
+    return Math.abs(r.top + r.height / 2 - window.innerHeight / 2) +
+           Math.abs(r.left + r.width / 2 - window.innerWidth / 2);
+  }
+  function sleepCell(c) {
+    if (!c.live) return;
+    // Actually unload: removing the src ATTRIBUTE does not navigate the
+    // frame — the page (and any WebGL context) kept running behind a blank
+    // attribute. Removing the element tears the document down for real.
+    if (c.iframe) { c.iframe.remove(); c.iframe = null; }
+    c.live = false;
+  }
+  function wakeCell(c) {
+    c.lastNear = performance.now();
+    if (c.live) return;
+    // RECURSION GUARD. An item flagged `nested` embeds this same tool, so
+    // waking it puts a canvas inside a canvas — two budgets, one device, and
+    // the inner copy has no idea it is already inside one. Enforced here at
+    // the single choke point every wake passes through, rather than trusted to
+    // whoever edits the manifest next.
+    if (c.it && c.it.nested) return;
+    var lives = liveCells();
+    if (lives.length >= maxLive) {
+      var myd = cellDist(c);
+      var victims = lives.filter(function (x) { return !x.near || cellDist(x) > myd + 600; })
+                         .sort(function (a, b) { return cellDist(b) - cellDist(a); });
+      if (victims.length) sleepCell(victims[0]);
+      else return;
+    }
+    if (!c.iframe) {
+      c.iframe = document.createElement('iframe');
+      c.iframe.loading = 'lazy';
+      c.iframe.title = c.it.name + ' — live preview';
+      // Fade in only once the page has painted — heavy pages boot white, so
+      // the paper-colored well + "loading" hint hold until then.
+      c.iframe.addEventListener('load', function (ev) {
+        ev.target.classList.add('ready');
+      });
+      c.well.appendChild(c.iframe);
+    }
+    c.iframe.src = c.it.file;
+    c.live = true;
+  }
 
-            <!-- CARD: Ancient Matrix Lab -->
-            <div class="demo-card size-md" id="card-matrix" data-category="ideas"
-                 style="left: 2340px; top: 1000px;">
-                <div class="card-header">
-                    <span class="drag-handle">⠿</span>
-                    <div class="card-info">
-                        <span class="card-title">ANCIENT MATRIX LAB</span>
-                        <span class="card-desc">Glitch-meets-antiquity design system with matrix aesthetics</span>
-                    </div>
-                    <div class="card-controls">
-                        <button class="size-btn" data-size="sm">S</button>
-                        <button class="size-btn active" data-size="md">M</button>
-                        <button class="size-btn" data-size="lg">L</button>
-                        <button class="card-unload pg-btn" title="Unload">✕</button>
-                        <span class="tech-badge tech-css">CSS</span>
-                        <a class="card-open" href="./Assets/DemosPlayground/StyleRefs/ancient-matrix-lab.html" target="_blank" rel="noopener" title="Open in new tab">↗</a>
-                    </div>
-                </div>
-                <div class="card-iframe-wrap">
-                    <iframe data-src="./Assets/DemosPlayground/StyleRefs/ancient-matrix-lab.html" title="Ancient Matrix Lab — glitch design system" sandbox="allow-scripts allow-same-origin"></iframe>
-                    <div class="iframe-blocker"></div>
-                    <div class="card-placeholder" data-card="card-matrix">
-                        <div class="ph-icon">⌘</div>
-                        <div class="ph-label">ANCIENT MATRIX LAB</div>
-                        <div class="ph-hint">Click to load · CSS</div>
-                    </div>
-                </div>
-            </div>
+  function drainCells() {
+    cells.filter(function (c) { return c.near && !c.live; })
+         .sort(function (a, b) { return cellDist(a) - cellDist(b); })
+         .forEach(function (c) { wakeCell(c); });
+    if (typeof navDraw === 'function') navDraw();
+  }
 
-            <!-- CARD: Typography Experiments -->
-            <div class="demo-card size-md" id="card-typo" data-category="ideas"
-                 style="left: 3100px; top: 1000px;">
-                <div class="card-header">
-                    <span class="drag-handle">⠿</span>
-                    <div class="card-info">
-                        <span class="card-title">TYPOGRAPHY EXPERIMENTS</span>
-                        <span class="card-desc">Expressive type explorations and layout experiments</span>
-                    </div>
-                    <div class="card-controls">
-                        <button class="size-btn" data-size="sm">S</button>
-                        <button class="size-btn active" data-size="md">M</button>
-                        <button class="size-btn" data-size="lg">L</button>
-                        <button class="card-unload pg-btn" title="Unload">✕</button>
-                        <span class="tech-badge tech-css">CSS</span>
-                        <a class="card-open" href="./Assets/DemosPlayground/StyleRefs/altec-style.html" target="_blank" rel="noopener" title="Open in new tab">↗</a>
-                    </div>
-                </div>
-                <div class="card-iframe-wrap">
-                    <iframe data-src="./Assets/DemosPlayground/StyleRefs/altec-style.html" title="Typography Experiments" sandbox="allow-scripts allow-same-origin"></iframe>
-                    <div class="iframe-blocker"></div>
-                    <div class="card-placeholder" data-card="card-typo">
-                        <div class="ph-icon">Aa</div>
-                        <div class="ph-label">TYPOGRAPHY EXPERIMENTS</div>
-                        <div class="ph-hint">Click to load · CSS</div>
-                    </div>
-                </div>
-            </div>
+  // Idle sweep — wake-time eviction alone lets far-scrolled cells stay live
+  // forever (the implicit-root IO clips through the parent viewport when
+  // embedded, so "near" is honest). Sleep anything not-near for >6s; it
+  // re-wakes via drainCells when it intersects again.
+  setInterval(function () {
+    var now = performance.now();
+    var slept = false;
+    liveCells().forEach(function (c) {
+      if (!c.near && now - c.lastNear > 6000) { sleepCell(c); slept = true; }
+    });
+    if (slept && typeof navDraw === 'function') navDraw();
+  }, 3000);
+  if ('IntersectionObserver' in window) {
+    cellIO = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        var c = cells.find(function (x) { return x.well === en.target; });
+        if (!c) return;
+        c.near = en.isIntersecting;
+        if (c.near) c.lastNear = performance.now();
+      });
+      drainCells();
+    }, { rootMargin: '400px 0px' });
+    cells.forEach(function (c) { cellIO.observe(c.well); });
+    var cellTick = null;
+    window.addEventListener('scroll', function () {
+      if (cellTick) return;
+      cellTick = setTimeout(function () { cellTick = null; drainCells(); }, 250);
+    }, { passive: true });
+  } else {
+    cells.slice(0, maxLive).forEach(wakeCell);
+  }
 
-            <!-- ═══════════════════════════════════════
-                 ROW 3 — Creative Code 2016 (y=1740)
-                 ═══════════════════════════════════════ -->
+  // ---- focus mode -----------------------------------------------------------
+  var focusEl = document.getElementById('focus');
+  var fFrame = document.getElementById('f-frame');
+  fFrame.addEventListener('load', function () {
+    // about:blank (the unload navigation) must not fade in
+    if (fFrame.src && fFrame.src.indexOf('about:blank') === -1) fFrame.classList.add('ready');
+  });
+  var fIdx = -1;
+  // Embedded focus is fullscreen focus: opening a card expands the host's
+  // viewport overlay (unless it is already up), and closing focus lets it
+  // back down only if focus raised it. The host reports overlay state via
+  // {cv:'fs-state'} so a ⛶-first flow is respected.
+  var hostFs = false, focusOwnsFs = false;
+  function openFocus(i) {
+    var candidate = items[(i + items.length) % items.length];
+    // Second wake path — focus sets fFrame.src directly and never goes through
+    // wakeCell, so the recursion guard has to be repeated here or a nested item
+    // still nests, just fullscreen. Send it out to its own tab instead, which
+    // is what someone clicking a page-sized card actually wants.
+    if (candidate && candidate.nested) {
+      window.open(candidate.file, '_blank', 'noopener');
+      return;
+    }
+    fIdx = (i + items.length) % items.length;
+    var it = items[fIdx];
+    document.getElementById('f-name').textContent = it.name;
+    document.getElementById('f-stars').textContent = starsText(it.stars);
+    document.getElementById('f-counter').textContent = (fIdx + 1) + ' / ' + items.length;
+    document.getElementById('f-desc').textContent = it.desc || '';
+    document.getElementById('f-open').href = it.file;
+    fFrame.classList.remove('ready');
+    fFrame.src = it.file;
+    cells.forEach(sleepCell);   // free the grid's contexts while a page runs fullscreen
+    focusEl.classList.add('open');
+    if (EMBEDDED && !hostFs) {
+      focusOwnsFs = true;
+      try { window.parent.postMessage({ cv: 'fs-toggle' }, '*'); } catch (e) {}
+    }
+    document.body.style.overflow = 'hidden';
+    if (typeof syncModeButtons === 'function') syncModeButtons();
+    if (typeof navDraw === 'function') navDraw();
+    try { history.replaceState(null, '', '#' + encodeURIComponent(it.name)); } catch (e) {}
+  }
+  var lastFocusIdx = 0;
+  function closeFocus() {
+    focusEl.classList.remove('open');
+    if (EMBEDDED && focusOwnsFs) {
+      focusOwnsFs = false;
+      try { window.parent.postMessage({ cv: 'fs-exit' }, '*'); } catch (e) {}
+    }
+    // Navigate to blank to actually unload (attribute removal doesn't).
+    fFrame.classList.remove('ready');
+    fFrame.src = 'about:blank';
+    setTimeout(function () { if (typeof drainCells === 'function') drainCells(); }, 120);
+    document.body.style.overflow = '';
+    if (fIdx >= 0) lastFocusIdx = fIdx;
+    fIdx = -1;
+    if (typeof syncModeButtons === 'function') syncModeButtons();
+    if (typeof navDraw === 'function') navDraw(); // deck map → layout map
+    try { history.replaceState(null, '', location.pathname); } catch (e) {}
+  }
+  document.getElementById('f-close').addEventListener('click', closeFocus);
+  document.getElementById('f-prev').addEventListener('click', function () { openFocus(fIdx - 1); });
+  document.getElementById('f-next').addEventListener('click', function () { openFocus(fIdx + 1); });
+  document.addEventListener('keydown', function (ev) {
+    if (!focusEl.classList.contains('open')) return;
+    if (ev.key === 'Escape') closeFocus();
+    else if (ev.key === 'ArrowLeft') openFocus(fIdx - 1);
+    else if (ev.key === 'ArrowRight') openFocus(fIdx + 1);
+  });
 
-            <!-- CARD: Hypercube Projection -->
-            <div class="demo-card size-sm" id="card-hypercube" data-category="demo"
-                 data-no-autoload="true"
-                 style="left: 60px; top: 1740px;">
-                <div class="card-header">
-                    <span class="drag-handle">⠿</span>
-                    <div class="card-info">
-                        <span class="card-title">HYPERCUBE PROJECTION</span>
-                        <span class="card-desc">4D tesseract projected into 3D space, rotating in real time</span>
-                    </div>
-                    <div class="card-controls">
-                        <button class="size-btn active" data-size="sm">S</button>
-                        <button class="size-btn" data-size="md">M</button>
-                        <button class="size-btn" data-size="lg">L</button>
-                        <button class="card-unload pg-btn" title="Unload">✕</button>
-                        <span class="tech-badge tech-p5js">p5.js</span>
-                        <a class="card-open" href="./Assets/DemosPlayground/CreativeCODE2016/hypercube/hypercube.html" target="_blank" rel="noopener" title="Open in new tab">↗</a>
-                    </div>
-                </div>
-                <div class="card-iframe-wrap">
-                    <iframe data-src="./Assets/DemosPlayground/CreativeCODE2016/hypercube/hypercube.html" title="Hypercube Projection" sandbox="allow-scripts allow-same-origin"></iframe>
-                    <div class="iframe-blocker"></div>
-                    <div class="card-placeholder" data-card="card-hypercube">
-                        <div class="ph-icon">⬡</div>
-                        <div class="ph-label">HYPERCUBE PROJECTION</div>
-                        <div class="ph-hint">Click to load · p5.js</div>
-                    </div>
-                </div>
-            </div>
+  // ---- three views: canvas (pan/zoom) · grid · focus ----------------------
+  var MODE_KEY = 'display-mode';
+  var STATE_KEY = 'display-state';
+  var viewMode = 'grid';
+  var view = { x: 40, y: 30, s: 0.85 };
+  var hasSavedCanvasView = false;
+  function saveState() {
+    if (EMBEDDED) return; // embeds are stateless — config params only
+    try {
+      localStorage.setItem(STATE_KEY, JSON.stringify({
+        mode: viewMode, x: view.x, y: view.y, s: view.s,
+        cols: document.getElementById('grid-cols').value,
+        sort: document.getElementById('grid-sort').value,
+        live: maxLive
+      }));
+    } catch (e) {}
+  }
+  // 'auto' = fit the content without scroll, at the LARGEST card size that
+  // does: walk columns fewest-first (fewest columns = biggest cards) and take
+  // the first count whose whole grid fits the height budget. Standalone the
+  // budget is the window; embedded it is the host panel's ceiling, which the
+  // host posts as {cv:'ceiling'} (before it arrives, rows of four hold the
+  // fort). Nothing fits → width-driven auto-fit and the scroll break.
+  var hostCeiling = 0;
+  function autoColsFor() {
+    var n = items.length;
+    if (!n) return null;
+    var headerEl = document.querySelector('header');
+    var headH = document.body.classList.contains('no-header') || !headerEl ? 0 : headerEl.offsetHeight;
+    var availH, availW, pad;
+    if (EMBEDDED) {
+      if (!hostCeiling) return n <= 4 ? n : (n <= 8 ? 4 : null);
+      availW = window.innerWidth; pad = 0;
+      availH = hostCeiling - headH;
+    } else {
+      availW = Math.min(window.innerWidth, 1720) - 8; pad = 8;
+      availH = window.innerHeight - headH - 12;
+    }
+    var descH = document.body.classList.contains('no-descs') ? 0 : 48;
+    var maxC = window.innerWidth <= 640 ? 2 : Math.min(5, n); // narrow CSS caps 3-5 cols at 2
+    for (var c = 1; c <= maxC; c++) {
+      var rows = Math.ceil(n / c);
+      var cardH = ((availW - (c - 1) * 16) / c) / 1.6 + 32 + descH;
+      if (rows * cardH + (rows - 1) * 16 + pad <= availH) return c;
+    }
+    return null;
+  }
+  function applyCols(v) {
+    var plane = document.getElementById('plane');
+    if (v === 'auto') {
+      var c = autoColsFor();
+      if (c) plane.setAttribute('data-cols', String(c));
+      else plane.removeAttribute('data-cols');
+    } else {
+      plane.setAttribute('data-cols', v);
+    }
+  }
+  if (CONFIG.cols && CONFIG.cols !== 'auto') {
+    document.getElementById('grid-cols').value = CONFIG.cols;
+    document.getElementById('plane').setAttribute('data-cols', CONFIG.cols);
+  } else {
+    applyCols('auto');
+  }
+  // Auto re-fits when the viewport changes (standalone; embeds re-derive
+  // from item count, which does not change on resize).
+  var autoColsTick = null;
+  window.addEventListener('resize', function () {
+    if (document.getElementById('grid-cols').value !== 'auto') return;
+    if (autoColsTick) return;
+    autoColsTick = setTimeout(function () {
+      autoColsTick = null;
+      applyCols('auto');
+      if (typeof navDraw === 'function') navDraw();
+    }, 200);
+  });
+  if (!EMBEDDED) try {
+    var st = JSON.parse(localStorage.getItem(STATE_KEY) || 'null');
+    if (st && typeof st.s === 'number') {
+      view = { x: st.x, y: st.y, s: st.s };
+      hasSavedCanvasView = true;
+    }
+    if (st && st.live && !new URLSearchParams(location.search).has('budget')) {
+      maxLive = st.live;
+    }
+    if (st && st.cols && st.cols !== 'auto') {
+      document.getElementById('grid-cols').value = st.cols;
+      document.getElementById('plane').setAttribute('data-cols', st.cols);
+    }
+    if (st && st.sort === 'date' && !CONFIG.sort) {
+      document.getElementById('grid-sort').value = 'date';
+      applySort('date');
+      buildCards();
+    }
+  } catch (e) {}
+  function applyView() {
+    grid.style.transform = viewMode === 'canvas'
+      ? 'translate(' + view.x + 'px,' + view.y + 'px) scale(' + view.s + ')'
+      : '';
+  }
+  function layoutCanvas() {
+    // Uniform aligned columns, like the original review canvas: adaptive
+    // column count for the viewport aspect, fixed slot pitch, no jitter.
+    var CARD_W = 420, GAP = 8; // frames read as touching; 8px breathing room
+    var aspect = Math.max(0.5, stage.clientWidth / Math.max(1, stage.clientHeight));
+    var cols = Math.max(2, Math.min(8, Math.round(Math.sqrt(cells.length * aspect))));
+    var rowH = 0;
+    cells.forEach(function (c) {
+      var card = c.well.closest('.card');
+      rowH = Math.max(rowH, card.offsetHeight || 330);
+    });
+    cells.forEach(function (c, i) {
+      var col = i % cols, row = Math.floor(i / cols);
+      var card = c.well.closest('.card');
+      card.style.left = (col * (CARD_W + GAP)) + 'px';
+      card.style.top  = (row * (rowH + GAP)) + 'px';
+    });
+  }
+  function syncModeButtons() {
+    var effective = focusEl.classList.contains('open') ? 'focus' : viewMode;
+    document.querySelectorAll('[data-mode-btn]').forEach(function (b) {
+      b.classList.toggle('active', b.getAttribute('data-mode-btn') === effective);
+    });
+  }
+  function planeBounds() {
+    var maxX = 0, maxY = 0;
+    cells.forEach(function (c) {
+      var card = c.well.closest('.card');
+      maxX = Math.max(maxX, (parseFloat(card.style.left) || 0) + 420);
+      maxY = Math.max(maxY, (parseFloat(card.style.top) || 0) + (card.offsetHeight || 330));
+    });
+    return { maxX: maxX, maxY: maxY };
+  }
+  function clampCanvasPan() {
+    var b = planeBounds();
+    if (!b.maxX) return;
+    var pad = 40;
+    var xA = pad, xB = stage.clientWidth - b.maxX * view.s - pad;
+    var yA = pad, yB = stage.clientHeight - b.maxY * view.s - pad;
+    view.x = Math.max(Math.min(xA, xB), Math.min(Math.max(xA, xB), view.x));
+    view.y = Math.max(Math.min(yA, yB), Math.min(Math.max(yA, yB), view.y));
+  }
+  function zoomDisplay() {
+    var el = document.getElementById('zoom-display');
+    if (el) el.textContent = Math.round(view.s * 100) + '%';
+  }
+  function afterViewChange() {
+    clampCanvasPan();
+    applyView();
+    zoomDisplay();
+    saveState();
+    if (typeof navDraw === 'function') navDraw();
+  }
+  function zoomTo(s2, cx, cy) {
+    s2 = Math.min(1.6, Math.max(0.22, s2));
+    cx = cx === undefined ? stage.clientWidth / 2 : cx;
+    cy = cy === undefined ? stage.clientHeight / 2 : cy;
+    view.x = cx - (cx - view.x) * (s2 / view.s);
+    view.y = cy - (cy - view.y) * (s2 / view.s);
+    view.s = s2;
+    afterViewChange();
+  }
+  function fitAll() {
+    var b = planeBounds();
+    if (!b.maxX) return;
+    var pad = 60;
+    view.s = Math.min(1, Math.min(stage.clientWidth / (b.maxX + pad), stage.clientHeight / (b.maxY + pad)));
+    view.x = (stage.clientWidth - b.maxX * view.s) / 2;
+    view.y = (stage.clientHeight - b.maxY * view.s) / 2;
+    applyView(); zoomDisplay(); saveState();
+    if (typeof navDraw === 'function') navDraw();
+  }
+  function fitTopLeft() {
+    // First entry: 0th card pinned upper-left at 1:1, same as the big canvas.
+    var first = cells[0] && cells[0].well.closest('.card');
+    view.s = 1;
+    view.x = 24 - (first ? parseFloat(first.style.left) || 0 : 0);
+    view.y = 12 - (first ? parseFloat(first.style.top) || 0 : 0);
+    afterViewChange();
+  }
+  function setMode(m) {
+    if (m === 'focus') { openFocus(lastFocusIdx); syncModeButtons(); return; }
+    if (focusEl.classList.contains('open')) closeFocus();
+    var entering = viewMode !== m;
+    viewMode = m;
+    if (!EMBEDDED) try { localStorage.setItem(MODE_KEY, m); } catch (e) {}
+    document.body.classList.toggle('mode-canvas', m === 'canvas');
+    document.getElementById('zoom-group').classList.toggle('visible', m === 'canvas');
+    document.getElementById('cols-group').classList.toggle('visible', m === 'grid');
+    if (m === 'canvas') {
+      layoutCanvas();
+      if (entering && !hasSavedCanvasView) fitTopLeft();
+      else afterViewChange();
+      hasSavedCanvasView = true;
+    } else {
+      applyView();
+    }
+    syncModeButtons();
+    saveState();
+    if (typeof navDraw === 'function') navDraw();
+  }
+  document.getElementById('zoom-in').addEventListener('click', function () { zoomTo(view.s * 1.2); });
+  document.getElementById('zoom-out').addEventListener('click', function () { zoomTo(view.s / 1.2); });
+  document.getElementById('zoom-fit').addEventListener('click', fitAll);
+  document.getElementById('grid-cols').addEventListener('change', function (ev) {
+    applyCols(ev.target.value);
+    saveState();
+    if (typeof navDraw === 'function') navDraw();
+  });
+  document.getElementById('grid-sort').addEventListener('change', function (ev) {
+    applySort(ev.target.value);
+    buildCards(); // sleeps everything; the IO re-observes and re-wakes nearby
+    if (viewMode === 'canvas') layoutCanvas();
+    drainCells();
+    saveState();
+    if (typeof navDraw === 'function') navDraw();
+  });
+  document.querySelectorAll('[data-mode-btn]').forEach(function (b) {
+    b.addEventListener('click', function () { setMode(b.getAttribute('data-mode-btn')); });
+  });
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key === '1') setMode('canvas');
+    else if (ev.key === '2') setMode('grid');
+    else if (ev.key === '3') setMode('focus');
+  });
 
-            <!-- CARD: Dynaboard v1 -->
-            <div class="demo-card size-sm" id="card-dynaboard" data-category="demo"
-                 data-no-autoload="true"
-                 style="left: 1130px; top: 1740px;">
-                <div class="card-header">
-                    <span class="drag-handle">⠿</span>
-                    <div class="card-info">
-                        <span class="card-title">DYNABOARD V1</span>
-                        <span class="card-desc">Dynamic 3D board experiment — early spatial interface concept</span>
-                    </div>
-                    <div class="card-controls">
-                        <button class="size-btn active" data-size="sm">S</button>
-                        <button class="size-btn" data-size="md">M</button>
-                        <button class="size-btn" data-size="lg">L</button>
-                        <button class="card-unload pg-btn" title="Unload">✕</button>
-                        <span class="tech-badge tech-threejs">Three.js</span>
-                        <a class="card-open" href="./Assets/DemosPlayground/CreativeCODE2016/DynaBoard1/Dynaboard1.html" target="_blank" rel="noopener" title="Open in new tab">↗</a>
-                    </div>
-                </div>
-                <div class="card-iframe-wrap">
-                    <iframe data-src="./Assets/DemosPlayground/CreativeCODE2016/DynaBoard1/Dynaboard1.html" title="Dynaboard v1" sandbox="allow-scripts allow-same-origin"></iframe>
-                    <div class="iframe-blocker"></div>
-                    <div class="card-placeholder" data-card="card-dynaboard">
-                        <div class="ph-icon">⬜</div>
-                        <div class="ph-label">DYNABOARD V1</div>
-                        <div class="ph-hint">Click to load · Three.js</div>
-                    </div>
-                </div>
-            </div>
+  // Pan (pointer drag) + zoom (wheel, toward cursor) for canvas mode.
+  var panning = false, px = 0, py = 0;
+  window.__panDist = 0;
+  stage.addEventListener('pointerdown', function (ev) {
+    if (viewMode !== 'canvas') return;
+    if (ev.target.closest('.bar')) return; // links/buttons in card bars stay clickable
+    panning = true; px = ev.clientX; py = ev.clientY;
+    window.__panDist = 0;
+    stage.classList.add('dragging');
+    stage.setPointerCapture(ev.pointerId);
+  });
+  stage.addEventListener('pointermove', function (ev) {
+    if (!panning) return;
+    var dx = ev.clientX - px, dy = ev.clientY - py;
+    px = ev.clientX; py = ev.clientY;
+    window.__panDist += Math.abs(dx) + Math.abs(dy);
+    view.x += dx; view.y += dy;
+    afterViewChange();
+  });
+  stage.addEventListener('pointerup', function () {
+    panning = false;
+    stage.classList.remove('dragging');
+    setTimeout(function () { window.__panDist = 0; }, 0);
+  });
+  // Double-click zooms toward the cursor; with a modifier, away from it. The
+  // wheel is no longer the zoom when embedded (see below) and a single click
+  // cannot be one either — the pan capture eats it — so the gesture that is
+  // left, and that nothing else claims, is the double-click.
+  var DBL_STEP = 1.6;
+  stage.addEventListener('dblclick', function (ev) {
+    if (viewMode !== 'canvas') return;
+    if (ev.target.closest('.bar')) return; // the corner ⛶ is not a zoom target
+    ev.preventDefault();
+    var r = stage.getBoundingClientRect();
+    var out = ev.altKey || ev.shiftKey || ev.metaKey;
+    zoomTo(view.s * (out ? 1 / DBL_STEP : DBL_STEP), ev.clientX - r.left, ev.clientY - r.top);
+  });
 
-        </div><!-- end board-world -->
-    </div><!-- end board-viewport -->
+  stage.addEventListener('wheel', function (ev) {
+    if (viewMode !== 'canvas') return;
+    // Embedded, a plain wheel belongs to the host page. Standalone this is a
+    // canvas tool and the wheel is its zoom; inside an article it is a reader
+    // scrolling past, and swallowing that traps them wherever the cursor
+    // happens to cross the panel. Pinch-zoom still reaches us — browsers
+    // deliver it as a wheel with ctrlKey — so the gesture that MEANS zoom
+    // keeps working, and drag-to-pan and clicking cards are untouched.
+    if (EMBEDDED && !ev.ctrlKey && !ev.metaKey) return;
+    ev.preventDefault();
+    var r = stage.getBoundingClientRect();
+    zoomTo(view.s * Math.exp(-ev.deltaY * 0.0012), ev.clientX - r.left, ev.clientY - r.top);
+  }, { passive: false });
 
-    <!-- Corner zoom controls -->
-    <div class="board-controls">
-        <button class="pg-btn" id="cornerZoomIn" title="Zoom in">+</button>
-        <button class="pg-btn" id="cornerZoomOut" title="Zoom out">−</button>
-    </div>
-
-    <!-- Hint text -->
-    <div class="board-hint">Scroll to pan · Pinch or Ctrl+scroll to zoom · Drag card header to move · S/M/L to resize</div>
-
-    <script>
-        // ============================================================
-        // PLAYGROUND BOARD — Infinite canvas with draggable iframe cards
-        // ============================================================
-
-        const boardViewport = document.getElementById('boardViewport');
-        const boardWorld    = document.getElementById('boardWorld');
-        const zoomDisplay   = document.getElementById('zoomDisplay');
-
-        // Board state — initial view fits all 5 cards (computed after DOM ready)
-        let worldX = 0, worldY = 0, worldScale = 0.78;
-        const MIN_SCALE = 0.20, MAX_SCALE = 1.50;
-
-        // Drag state
-        let isPanning = false;
-        let panStart  = { px: 0, py: 0, wx: 0, wy: 0 };
-
-        let draggingCard = null;
-        let cardDragStart = { px: 0, py: 0, cx: 0, cy: 0 };
-
-        // Pinch state
-        let pinchDist = null;
-
-        // ---- Transform ----
-        function applyTransform() {
-            boardWorld.style.transform = `translate(${worldX}px, ${worldY}px) scale(${worldScale})`;
-            zoomDisplay.textContent = Math.round(worldScale * 100) + '%';
+  // Restore last mode (focus restores as grid — a fullscreen page on arrival
+  // would hide that this is a canvas of many).
+  if (CONFIG.mode === 'canvas' || CONFIG.mode === 'grid') {
+    setMode(CONFIG.mode);
+    if (CONFIG.mode === 'canvas' && CONFIG.zoom) {
+      if (CONFIG.zoom === 'fit') {
+        fitAll();
+      } else {
+        var bootZ = parseFloat(CONFIG.zoom);
+        if (bootZ > 0) {
+          view.s = Math.min(1.6, Math.max(0.22, bootZ));
+          view.x = 24; view.y = 12; // top-left anchor, like first entry
+          afterViewChange();
         }
+      }
+    }
+  } else if (CONFIG.mode === 'focus') {
+    setMode('grid');
+    openFocus(0);
+  } else if (EMBEDDED) {
+    setMode('grid'); // embeds always start predictable; params override above
+  } else {
+    try {
+      var savedMode = localStorage.getItem(MODE_KEY);
+      if (savedMode === 'canvas') setMode('canvas');
+      else setMode('grid');
+    } catch (e) { setMode('grid'); }
+  }
 
-        function clampScale(s) {
-            return Math.max(MIN_SCALE, Math.min(MAX_SCALE, s));
+  // ---- navigator — minimap active in every mode ---------------------------
+  var navCanvas = document.getElementById('nav-canvas');
+  var navCtx = navCanvas.getContext('2d');
+  var navW = 200, navH = 150, navScale = 1, navOX = 0, navOY = 0;
+  function navGeometry(contentW, contentH) {
+    // Big-canvas convention: wide panel in canvas mode; narrow tall panel in
+    // grid/focus whose height follows the content's aspect (clamped).
+    if (viewMode === 'canvas') { navW = 200; navH = 130; return; }
+    navW = 110;
+    navH = Math.max(70, Math.min(170, Math.round(navW * (contentH / Math.max(1, contentW)))));
+  }
+  function cardRects() {
+    if (focusEl.classList.contains('open') || viewMode === 'focus') {
+      // Focus map = the deck itself: uniform tiles stacked in wrapped rows,
+      // independent of the (hidden) grid layout and scroll behind the overlay.
+      var n = cells.length;
+      var cols = Math.max(1, Math.round(Math.sqrt(n * 0.46)));
+      return cells.map(function (c, i) {
+        return { x: (i % cols) * 18, y: Math.floor(i / cols) * 12, w: 16, h: 10, c: c, i: i };
+      });
+    }
+    // Document-space (grid) or plane-space (canvas) rects per card.
+    return cells.map(function (c, i) {
+      var card = c.well.closest('.card');
+      if (viewMode === 'canvas') {
+        return { x: parseFloat(card.style.left) || 0, y: parseFloat(card.style.top) || 0,
+                 w: 420, h: card.offsetHeight || 330, c: c, i: i };
+      }
+      var r = card.getBoundingClientRect();
+      return { x: r.left + window.scrollX, y: r.top + window.scrollY,
+               w: r.width, h: r.height, c: c, i: i };
+    });
+  }
+  function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+  var navRaf = null;
+  function navDraw() {
+    if (navRaf) return;
+    navRaf = requestAnimationFrame(function () {
+      navRaf = null;
+      var focusMap = focusEl.classList.contains('open') || viewMode === 'focus';
+      var rects = cardRects();
+      if (!rects.length) return;
+      var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      rects.forEach(function (r) {
+        minX = Math.min(minX, r.x); minY = Math.min(minY, r.y);
+        maxX = Math.max(maxX, r.x + r.w); maxY = Math.max(maxY, r.y + r.h);
+      });
+      // Focus rects are in abstract tile units — a document-scale pad would
+      // shrink them to specks.
+      var pad = focusMap ? 2 : 40;
+      minX -= pad; minY -= pad; maxX += pad; maxY += pad;
+      navGeometry(maxX - minX, maxY - minY);
+      navScale = Math.min(navW / (maxX - minX), navH / (maxY - minY));
+      // Tighten the panel to the drawn content — the geometry box is a MAX;
+      // without this, content with a different aspect leaves dead grey space
+      // beside (or under) the map.
+      navW = Math.max(48, Math.round((maxX - minX) * navScale));
+      navH = Math.max(36, Math.round((maxY - minY) * navScale));
+      navOX = minX; navOY = minY;
+      var dpr = window.devicePixelRatio || 1;
+      if (navCanvas.width !== navW * dpr || navCanvas.height !== navH * dpr) {
+        navCanvas.width = navW * dpr; navCanvas.height = navH * dpr;
+      }
+      navCanvas.style.width = navW + 'px'; navCanvas.style.height = navH + 'px';
+      // Panel hugs the map: without an explicit width the header's label can
+      // hold the panel open wider than the canvas — dead grey space beside
+      // the map (+2 = the panel's own borders under border-box).
+      document.getElementById('navigator').style.width = (navW + 2) + 'px';
+      navCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      navCtx.clearRect(0, 0, navW, navH);
+      var teal = css('--teal') || '#3a7a6a', rule = css('--rule') || '#d8cfc2', ink = css('--ink') || '#2a2520';
+      rects.forEach(function (r) {
+        navCtx.fillStyle = r.c.live ? teal : rule;
+        navCtx.globalAlpha = (fIdx >= 0 && r.i === fIdx) ? 1 : (r.c.live ? 0.85 : 0.55);
+        navCtx.fillRect((r.x - navOX) * navScale, (r.y - navOY) * navScale,
+                        Math.max(2, r.w * navScale), Math.max(2, r.h * navScale));
+        if (fIdx >= 0 && r.i === fIdx) {
+          navCtx.strokeStyle = teal; navCtx.lineWidth = 1.5; navCtx.globalAlpha = 1;
+          navCtx.strokeRect((r.x - navOX) * navScale - 1, (r.y - navOY) * navScale - 1,
+                            r.w * navScale + 2, r.h * navScale + 2);
         }
+      });
+      navCtx.globalAlpha = 1;
+      // viewport rectangle — meaningless over the focus deck (the overlay is
+      // fullscreen; the teal ring on the current tile is the position cue)
+      if (focusMap) return;
+      var vx, vy, vw, vh;
+      if (viewMode === 'canvas') {
+        vx = -view.x / view.s; vy = -view.y / view.s;
+        vw = stage.clientWidth / view.s; vh = stage.clientHeight / view.s;
+      } else {
+        vx = window.scrollX; vy = window.scrollY;
+        vw = window.innerWidth; vh = window.innerHeight;
+      }
+      navCtx.strokeStyle = ink; navCtx.lineWidth = 1;
+      navCtx.strokeRect((vx - navOX) * navScale, (vy - navOY) * navScale, vw * navScale, vh * navScale);
+    });
+  }
+  function navPoint(ev) {
+    var r = navCanvas.getBoundingClientRect();
+    return { x: (ev.clientX - r.left) / navScale + navOX,
+             y: (ev.clientY - r.top) / navScale + navOY };
+  }
+  function navJump(ev) {
+    var pt = navPoint(ev);
+    if (focusEl.classList.contains('open') || viewMode === 'focus') {
+      // snap focus to the card under/nearest the point
+      var rects = cardRects(); var best = null, bd = Infinity;
+      rects.forEach(function (r) {
+        var d = Math.abs(r.x + r.w / 2 - pt.x) + Math.abs(r.y + r.h / 2 - pt.y);
+        if (d < bd) { bd = d; best = r; }
+      });
+      if (best) openFocus(best.i);
+    } else if (viewMode === 'canvas') {
+      view.x = stage.clientWidth / 2 - pt.x * view.s;
+      view.y = stage.clientHeight / 2 - pt.y * view.s;
+      afterViewChange();
+    } else {
+      window.scrollTo({ top: Math.max(0, pt.y - window.innerHeight / 2) });
+    }
+  }
+  var navDragging = false;
+  navCanvas.addEventListener('pointerdown', function (ev) { navDragging = true; navJump(ev); navCanvas.setPointerCapture(ev.pointerId); });
+  navCanvas.addEventListener('pointermove', function (ev) { if (navDragging) navJump(ev); });
+  navCanvas.addEventListener('pointerup', function () { navDragging = false; });
+  navCanvas.addEventListener('wheel', function (ev) {
+    // The navigator keeps its wheel even when embedded, unlike the stage. The
+    // stage is most of the panel and you cross it by accident while reading;
+    // this is a small map in the corner you have to aim at, so a wheel here is
+    // already a deliberate act. Stepping the deck from the minimap is the nice
+    // part of the tool and there is nothing to protect the reader from.
+    ev.preventDefault(); ev.stopPropagation();
+    if (focusEl.classList.contains('open')) {
+      openFocus((fIdx < 0 ? 0 : fIdx) + (ev.deltaY > 0 ? 1 : -1));
+    } else if (viewMode === 'canvas') {
+      zoomTo(view.s * (ev.deltaY > 0 ? 0.9 : 1.1));
+    } else {
+      window.scrollBy({ top: ev.deltaY });
+    }
+  }, { passive: false });
+  document.getElementById('nav-header').addEventListener('click', function () {
+    document.getElementById('navigator').classList.toggle('collapsed');
+    var t = document.getElementById('nav-toggle');
+    t.textContent = document.getElementById('navigator').classList.contains('collapsed') ? '▴' : '▾';
+  });
+  window.addEventListener('scroll', navDraw, { passive: true });
+  window.addEventListener('resize', navDraw, { passive: true });
+  navDraw();
 
-        // Zoom centered on a viewport point (vx, vy)
-        function zoomAt(vx, vy, factor) {
-            const newScale = clampScale(worldScale * factor);
-            const actualFactor = newScale / worldScale;
-            worldX = vx - (vx - worldX) * actualFactor;
-            worldY = vy - (vy - worldY) * actualFactor;
-            worldScale = newScale;
-            applyTransform();
-            scheduledVisibilityCheck();
-        }
+  // Deep link: #<name> opens focus on load.
+  var h = decodeURIComponent((location.hash || '').slice(1));
+  if (h) {
+    var idx = items.findIndex(function (it) { return it.name === h; });
+    if (idx >= 0) openFocus(idx);
+  }
+})();
+</script>
 
-        // Zoom centered on viewport center
-        function zoomCenter(factor) {
-            const rect = boardViewport.getBoundingClientRect();
-            zoomAt(rect.width / 2, rect.height / 2, factor);
-        }
-
-        // Fit all visible cards into the viewport with padding
-        function fitAllCards() {
-            const vpRect = boardViewport.getBoundingClientRect();
-            const vpW = vpRect.width, vpH = vpRect.height;
-            const padding = 50;
-
-            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-            document.querySelectorAll('.demo-card:not(.hidden-card)').forEach(card => {
-                const l = parseInt(card.style.left) || 0;
-                const t = parseInt(card.style.top)  || 0;
-                const w = card.offsetWidth;
-                const h = card.offsetHeight;
-                minX = Math.min(minX, l);
-                minY = Math.min(minY, t);
-                maxX = Math.max(maxX, l + w);
-                maxY = Math.max(maxY, t + h);
-            });
-            if (minX === Infinity) return;
-
-            const contentW = maxX - minX;
-            const contentH = maxY - minY;
-            const scale = clampScale(Math.min(
-                (vpW - padding * 2) / contentW,
-                (vpH - padding * 2) / contentH
-            ));
-            worldScale = scale;
-            worldX = (vpW - contentW * scale) / 2 - minX * scale;
-            worldY = (vpH - contentH * scale) / 2 - minY * scale;
-            applyTransform();
-            scheduledVisibilityCheck();
-        }
-
-        // Reset — restore all cards, reset filter to All, re-fit view
-        function resetView() {
-            // Reset filter to All
-            document.querySelectorAll('[data-filter]').forEach(b => b.classList.remove('active'));
-            document.querySelector('[data-filter="all"]').classList.add('active');
-            document.querySelectorAll('.demo-card').forEach(card => card.classList.remove('hidden-card'));
-            fitAllCards();
-        }
-
-        // ---- Blocker (prevent iframes from stealing pointer events during drag) ----
-        function setBlockers(active) {
-            document.querySelectorAll('.iframe-blocker').forEach(b => {
-                b.style.display = active ? 'block' : 'none';
-            });
-        }
-
-        // ---- Pointer Events ----
-
-        // Track active pointers for pinch zoom
-        const activePointers = {};
-
-        function getPinchInfo() {
-            const ids = Object.keys(activePointers);
-            if (ids.length < 2) return null;
-            const a = activePointers[ids[0]];
-            const b = activePointers[ids[1]];
-            const dist = Math.hypot(b.x - a.x, b.y - a.y);
-            const mx   = (a.x + b.x) / 2;
-            const my   = (a.y + b.y) / 2;
-            return { dist, mx, my };
-        }
-
-        // Board pointerdown — pan or start pinch
-        boardViewport.addEventListener('pointerdown', e => {
-            // Card header is handled separately
-            if (e.target.closest('.card-header')) return;
-            // Don't pan when clicking a placeholder (allows click-to-load to fire)
-            if (e.target.closest('.card-placeholder')) return;
-            // Don't start pan if clicking inside a loaded card's content area
-            if (e.target.closest('.demo-card.loaded') &&
-                !e.target.closest('.iframe-blocker')) return;
-
-            activePointers[e.pointerId] = { x: e.clientX, y: e.clientY };
-            boardViewport.setPointerCapture(e.pointerId);
-
-            const pinch = getPinchInfo();
-            if (pinch) {
-                // Two fingers — switch to pinch mode, cancel pan
-                isPanning = false;
-                pinchDist = pinch.dist;
-                boardViewport.classList.remove('panning');
-                return;
-            }
-
-            // Single pointer — start pan
-            isPanning = true;
-            boardViewport.classList.add('panning');
-            panStart = { px: e.clientX, py: e.clientY, wx: worldX, wy: worldY };
-            setBlockers(true);
-        });
-
-        boardViewport.addEventListener('pointermove', e => {
-            if (!(e.pointerId in activePointers)) return;
-            activePointers[e.pointerId] = { x: e.clientX, y: e.clientY };
-
-            const pinch = getPinchInfo();
-            if (pinch && pinchDist !== null) {
-                // Pinch zoom
-                const factor = pinch.dist / pinchDist;
-                const rect = boardViewport.getBoundingClientRect();
-                zoomAt(pinch.mx - rect.left, pinch.my - rect.top, factor);
-                pinchDist = pinch.dist;
-                return;
-            }
-
-            if (isPanning) {
-                worldX = panStart.wx + (e.clientX - panStart.px);
-                worldY = panStart.wy + (e.clientY - panStart.py);
-                applyTransform();
-            }
-        });
-
-        boardViewport.addEventListener('pointerup', e => {
-            delete activePointers[e.pointerId];
-            const remaining = Object.keys(activePointers).length;
-            pinchDist = null;
-
-            if (remaining === 0) {
-                isPanning = false;
-                boardViewport.classList.remove('panning');
-                setBlockers(false);
-                scheduledVisibilityCheck();
-            } else if (remaining === 1) {
-                // Back to single pointer — restart pan from current position
-                const id = Object.keys(activePointers)[0];
-                const p = activePointers[id];
-                panStart = { px: p.x, py: p.y, wx: worldX, wy: worldY };
-                isPanning = true;
-            }
-        });
-
-        boardViewport.addEventListener('pointercancel', e => {
-            delete activePointers[e.pointerId];
-            isPanning = false;
-            pinchDist = null;
-            boardViewport.classList.remove('panning');
-            setBlockers(false);
-        });
-
-        // Card dragging — delegated on boardWorld, but capture on target header
-        let activeCardHeader = null;
-
-        boardWorld.addEventListener('pointerdown', e => {
-            const header = e.target.closest('.card-header');
-            if (!header) return;
-            // Don't trigger if clicking a button inside the header
-            if (e.target.closest('button') || e.target.closest('a')) return;
-            e.stopPropagation(); // Don't trigger board pan
-            const card = header.closest('.demo-card');
-            activeCardHeader = header;
-            draggingCard = card;
-            card.classList.add('dragging-card');
-            card.style.zIndex = Date.now();
-            cardDragStart = {
-                px: e.clientX,
-                py: e.clientY,
-                cx: parseInt(card.style.left) || 0,
-                cy: parseInt(card.style.top)  || 0,
-            };
-            header.setPointerCapture(e.pointerId);
-            setBlockers(true);
-        });
-
-        boardWorld.addEventListener('pointermove', e => {
-            if (!draggingCard || !activeCardHeader) return;
-            const dx = (e.clientX - cardDragStart.px) / worldScale;
-            const dy = (e.clientY - cardDragStart.py) / worldScale;
-            draggingCard.style.left = (cardDragStart.cx + dx) + 'px';
-            draggingCard.style.top  = (cardDragStart.cy + dy) + 'px';
-        });
-
-        boardWorld.addEventListener('pointerup', () => {
-            if (draggingCard) {
-                draggingCard.classList.remove('dragging-card');
-                draggingCard = null;
-                activeCardHeader = null;
-                setBlockers(false);
-                scheduledVisibilityCheck();
-            }
-        });
-
-        boardWorld.addEventListener('pointercancel', () => {
-            if (draggingCard) {
-                draggingCard.classList.remove('dragging-card');
-                draggingCard = null;
-                activeCardHeader = null;
-                setBlockers(false);
-            }
-        });
-
-        // Wheel / trackpad handler
-        // - Trackpad pinch  → ctrlKey=true  → zoom at cursor
-        // - Trackpad 2-finger scroll → ctrlKey=false, deltaX≠0 or small deltaY → pan
-        // - Mouse wheel → ctrlKey=false, deltaX=0, large deltaY → zoom at cursor
-        boardViewport.addEventListener('wheel', e => {
-            e.preventDefault();
-            const rect = boardViewport.getBoundingClientRect();
-
-            if (e.ctrlKey) {
-                // Trackpad pinch-to-zoom (or Ctrl + mouse wheel)
-                const vx = e.clientX - rect.left;
-                const vy = e.clientY - rect.top;
-                let delta = e.deltaY;
-                if (e.deltaMode === 1) delta *= 20;
-                if (e.deltaMode === 2) delta *= 300;
-                // Trackpad pinch deltas are small — use finer factor for smoothness
-                const factor = delta < 0 ? 1.06 : 0.94;
-                zoomAt(vx, vy, factor);
-            } else {
-                // Distinguish trackpad 2-finger scroll from mouse wheel:
-                // Trackpad: deltaMode===0 (pixels) with deltaX possibly non-zero, or |deltaY| is small
-                // Mouse wheel: deltaMode===0 with deltaX===0 and |deltaY| typically ≥ 100
-                const isTrackpad = Math.abs(e.deltaX) > 0 ||
-                                   (e.deltaMode === 0 && Math.abs(e.deltaY) < 60);
-                if (isTrackpad) {
-                    // Two-finger pan
-                    worldX -= e.deltaX;
-                    worldY -= e.deltaY;
-                    applyTransform();
-                    scheduledVisibilityCheck();
-                } else {
-                    // Mouse wheel → zoom at cursor
-                    const vx = e.clientX - rect.left;
-                    const vy = e.clientY - rect.top;
-                    let delta = e.deltaY;
-                    if (e.deltaMode === 1) delta *= 20;
-                    if (e.deltaMode === 2) delta *= 300;
-                    const factor = delta < 0 ? 1.1 : 0.9;
-                    zoomAt(vx, vy, factor);
-                }
-            }
-        }, { passive: false });
-
-        // ---- Zoom control buttons ----
-        document.getElementById('btnZoomIn').addEventListener('click', () => zoomCenter(1.15));
-        document.getElementById('btnZoomOut').addEventListener('click', () => zoomCenter(0.87));
-        document.getElementById('btnReset').addEventListener('click', resetView);
-        document.getElementById('cornerZoomIn').addEventListener('click', () => zoomCenter(1.15));
-        document.getElementById('cornerZoomOut').addEventListener('click', () => zoomCenter(0.87));
-
-        // ---- Filter buttons ----
-        document.querySelectorAll('[data-filter]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                // Update active state
-                document.querySelectorAll('[data-filter]').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-
-                const filter = btn.dataset.filter;
-                document.querySelectorAll('.demo-card').forEach(card => {
-                    if (filter === 'all' || card.dataset.category === filter) {
-                        card.classList.remove('hidden-card');
-                    } else {
-                        card.classList.add('hidden-card');
-                        // Unload iframe if loaded — frees GPU/memory while filtered out
-                        if (card.classList.contains('loaded')) {
-                            const iframe = card.querySelector('iframe');
-                            if (iframe) iframe.removeAttribute('src');
-                            card.classList.remove('loaded');
-                        }
-                    }
-                });
-                // Re-fit after filtering to show relevant cards
-                setTimeout(fitAllCards, 50);
-            });
-        });
-
-        // ---- Size toggle buttons (delegated on boardWorld) ----
-        boardWorld.addEventListener('click', e => {
-            const sizeBtn = e.target.closest('.size-btn');
-            if (!sizeBtn) return;
-            const card = sizeBtn.closest('.demo-card');
-            const oldW = card.offsetWidth;
-            const oldH = card.offsetHeight;
-            card.classList.remove('size-sm', 'size-md', 'size-lg');
-            card.classList.add('size-' + sizeBtn.dataset.size);
-            card.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
-            sizeBtn.classList.add('active');
-
-            // Responsive repositioning — push overlapping cards away from the resized card
-            requestAnimationFrame(() => {
-                const newW = card.offsetWidth;
-                const newH = card.offsetHeight;
-                const dW = newW - oldW;
-                const dH = newH - oldH;
-                if (Math.abs(dW) < 4 && Math.abs(dH) < 4) return; // no meaningful change
-
-                const cLeft  = parseInt(card.style.left) || 0;
-                const cTop   = parseInt(card.style.top)  || 0;
-                const cRight  = cLeft + newW;
-                const cBottom = cTop  + newH;
-                const GAP = 24; // minimum gap to maintain between cards
-
-                document.querySelectorAll('.demo-card:not(.hidden-card)').forEach(other => {
-                    if (other === card) return;
-                    const oLeft   = parseInt(other.style.left)  || 0;
-                    const oTop    = parseInt(other.style.top)   || 0;
-                    const oRight  = oLeft + other.offsetWidth;
-                    const oBottom = oTop  + other.offsetHeight;
-
-                    // Check overlap after resize
-                    const overlapX = cRight  + GAP > oLeft && oRight  + GAP > cLeft;
-                    const overlapY = cBottom + GAP > oTop  && oBottom + GAP > cTop;
-                    if (!overlapX || !overlapY) return;
-
-                    // Push right if card grew rightward and other is to the right
-                    if (dW > 0 && oLeft >= cLeft && oLeft < cLeft + newW + GAP) {
-                        other.style.left = (oLeft + dW) + 'px';
-                    }
-                    // Push down if card grew downward and other is below
-                    if (dH > 0 && oTop >= cTop && oTop < cTop + newH + GAP) {
-                        other.style.top = (oTop + dH) + 'px';
-                    }
-                });
-                scheduledVisibilityCheck();
-            });
-        });
-
-        // ---- Unload button (delegated on boardWorld) ----
-        boardWorld.addEventListener('click', e => {
-            const unloadBtn = e.target.closest('.card-unload');
-            if (!unloadBtn) return;
-            const card = unloadBtn.closest('.demo-card');
-            const iframe = card.querySelector('iframe');
-            iframe.removeAttribute('src');
-            card.classList.remove('loaded');
-        });
-
-        // ---- Progressive Loading ----
-        // IntersectionObserver doesn't work well with CSS transforms on the parent.
-        // Use getBoundingClientRect() check after pan/zoom.
-
-        function loadCard(card) {
-            const iframe = card.querySelector('iframe');
-            if (iframe && !iframe.src && iframe.dataset.src) {
-                iframe.src = iframe.dataset.src;
-                // Small delay before marking loaded (let iframe start rendering)
-                setTimeout(() => card.classList.add('loaded'), 800);
-            }
-        }
-
-        function checkCardVisibility() {
-            // "demo" category cards (data-no-autoload) are click-gated only.
-            // All other categories (game, tool, ideas) auto-load when in view.
-            // All loaded cards auto-unload when far outside the viewport.
-            const vpRect = boardViewport.getBoundingClientRect();
-            const loadMargin   = 400;  // auto-load when within 400px of viewport edge
-            const unloadMargin = 1200; // auto-unload when >1200px outside viewport edge
-
-            document.querySelectorAll('.demo-card:not(.hidden-card)').forEach(card => {
-                const r = card.getBoundingClientRect();
-
-                const inLoad = r.right  > vpRect.left   - loadMargin &&
-                               r.left   < vpRect.right  + loadMargin &&
-                               r.bottom > vpRect.top    - loadMargin &&
-                               r.top    < vpRect.bottom + loadMargin;
-
-                const farOut = r.right  < vpRect.left   - unloadMargin ||
-                               r.left   > vpRect.right  + unloadMargin ||
-                               r.bottom < vpRect.top    - unloadMargin ||
-                               r.top    > vpRect.bottom + unloadMargin;
-
-                // Auto-load non-demo cards when near viewport
-                if (!card.dataset.noAutoload && inLoad) {
-                    loadCard(card);
-                }
-
-                // Auto-unload all loaded cards when far off-screen
-                if (farOut && card.classList.contains('loaded')) {
-                    const iframe = card.querySelector('iframe');
-                    if (iframe) iframe.removeAttribute('src');
-                    card.classList.remove('loaded');
-                }
-            });
-        }
-
-        let visibilityTimer = null;
-        function scheduledVisibilityCheck() {
-            clearTimeout(visibilityTimer);
-            visibilityTimer = setTimeout(checkCardVisibility, 150);
-        }
-
-        // Click-to-load on placeholder
-        document.querySelectorAll('.card-placeholder').forEach(ph => {
-            ph.addEventListener('click', () => {
-                const cardId = ph.dataset.card;
-                const card = document.getElementById(cardId);
-                if (card) loadCard(card);
-            });
-        });
-
-        // ---- Nav scroll behavior (keeps nav always visible on this page) ----
-        // Nav is always shown since playground is full-screen (no hero to scroll past)
-        const nav = document.getElementById('nav');
-        nav.classList.add('visible');
-
-        // Cursor spotlight (shared pattern)
-        const spotlight = document.getElementById('cursorSpotlight');
-        document.addEventListener('mousemove', e => {
-            spotlight.style.setProperty('--x', e.clientX + 'px');
-            spotlight.style.setProperty('--y', e.clientY + 'px');
-        });
-
-        // ---- Init ----
-        // Fit all cards into view after DOM layout settles
-        setTimeout(() => {
-            fitAllCards();
-            checkCardVisibility();
-        }, 50);
-    </script>
-<script src="./scripts/shared.js?v=1.53"></script>
-<script src="./scripts/search-overlay.js?v=1.53" defer></script>
+<jh-footer></jh-footer>
+<script src="./scripts/jh-chrome.js?v=1.54" defer></script>
+<script src="./scripts/shared.js?v=1.54" defer></script>
+<script src="./scripts/search-overlay.js?v=1.54" defer></script>
 </body>
 </html>
