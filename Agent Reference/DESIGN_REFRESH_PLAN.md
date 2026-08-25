@@ -145,6 +145,15 @@ Everything else rides on this. No visual change.
 - Numbered section kickers on the long pages (about, services, design) as the structure device.
 
 ### Phase 4 — Light/dark mode · ~2–3 days (the lift)
+> **Status: mechanism + controls + first-pass "Shallows" palette SHIPPED** (pulled forward
+> at John's request): head bootstrap on the 7 standard pages, `jh-theme` key, OS-following,
+> three controls (nav sig top-left, nav glyph far right, hero glass pill upper-right — all
+> from jh-chrome.js; suppressed on openprose via its `data-mode` marker). shared.css +
+> jh-chrome.css rgba literals swept onto the -rgb triplets. **Remaining:** canvas light
+> palettes (fish engine / blueprint / cosmos listen for `jh-theme-change`), page-inline
+> literal sweeps, search.html + writing.html alignment post-merge, palette tuning to AA.
+> Canvas-anchored chrome (hero shape-nav pill, canvas-guide, hero toggle) deliberately
+> keeps deep-sea colors until the canvases theme.
 - **Mechanism** (adopt OpenProse's, align writing.html):
   - `data-theme` on `<html>`; storage key **`jh-theme`** (writing.html's existing key);
   - render-blocking bootstrap in `<head>` of every page: stored value, else

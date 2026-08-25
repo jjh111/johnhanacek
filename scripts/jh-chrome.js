@@ -22,6 +22,43 @@
   };
   window.JH_SITE = SITE;
 
+  // ---- Theme (light/dark) --------------------------------------------------
+  // Dark is the base; data-theme="light" on <html> switches to the "Shallows"
+  // palette (styles/jh-chrome.css). The head of each page carries a tiny
+  // inline bootstrap that stamps the attribute before first paint; this
+  // module owns the toggles and persistence. The stored preference
+  // ('jh-theme', shared with writing.html) is written ONLY on an explicit
+  // toggle — an auto-detected OS preference is never frozen into storage,
+  // so the site keeps following the OS until the visitor picks a side.
+  // openprose.html runs its own data-mode theming and is left alone.
+  // Declared before the custom elements: define() upgrades synchronously,
+  // so JHNav's connectedCallback reads THEME during the define call.
+  const THEME = {
+    KEY: 'jh-theme',
+    foreign: document.documentElement.hasAttribute('data-mode'),
+    current: function () {
+      return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    },
+    apply: function (mode, persist) {
+      if (mode === 'light') document.documentElement.setAttribute('data-theme', 'light');
+      else document.documentElement.removeAttribute('data-theme');
+      document.querySelectorAll('.jh-theme-btn').forEach(function (b) {
+        const g = b.querySelector('.theme-glyph');
+        if (g) g.textContent = mode === 'light' ? '◐' : '◑';
+        b.setAttribute('aria-label', mode === 'light' ? 'Switch to dark theme' : 'Switch to light theme');
+      });
+      let m = document.querySelector('meta[name="theme-color"]');
+      if (!m) { m = document.createElement('meta'); m.name = 'theme-color'; document.head.appendChild(m); }
+      m.content = mode === 'light' ? '#eef4f6' : '#020a12';
+      if (persist) { try { localStorage.setItem(THEME.KEY, mode); } catch (e) {} }
+      window.dispatchEvent(new CustomEvent('jh-theme-change', { detail: { theme: mode } }));
+    },
+    toggle: function () {
+      THEME.apply(THEME.current() === 'light' ? 'dark' : 'light', true);
+    }
+  };
+  window.JH_THEME = THEME;
+
   class JHFooter extends HTMLElement {
     connectedCallback() {
       this.style.display = 'contents'; // host vanishes from layout; .footer-oval is the visual child
@@ -71,10 +108,55 @@
         const on = n.key === current;
         return '<a href="' + n.href + '" class="' + n.cls + (on ? ' active' : '') + '" aria-label="' + n.aria + '"' + (on ? ' aria-current="page"' : '') + '>' + n.svg + n.label + '</a>';
       }).join('');
-      this.innerHTML = '<div class="nav-left">' + links + '</div>';
+      // Signature = theme toggle, leftmost in the bar (not on openprose,
+      // which themes itself via data-mode).
+      const sigBtn = THEME.foreign ? '' :
+        '<button type="button" class="nav-sig-toggle jh-theme-btn" aria-label="Switch theme">' +
+          '<img src="' + SITE.sig + '" alt=""></button>';
+      this.innerHTML = '<div class="nav-left">' + sigBtn + links + '</div>';
+      const btn = this.querySelector('.nav-sig-toggle');
+      if (btn) btn.addEventListener('click', THEME.toggle);
     }
   }
   if (!customElements.get('jh-nav')) customElements.define('jh-nav', JHNav);
+
+  function initTheme() {
+    if (THEME.foreign) return;
+    // Right-edge toggle balances the bar; appended after the page's .nav-right.
+    const inner = document.querySelector('#nav .nav-inner');
+    if (inner && !inner.querySelector('.nav-theme-toggle')) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'nav-theme-toggle jh-theme-btn';
+      b.innerHTML = '<span class="theme-glyph" aria-hidden="true">◑</span>';
+      b.addEventListener('click', THEME.toggle);
+      inner.appendChild(b);
+    }
+    // Hero pages: standalone glass toggle, upper right, sibling of the
+    // shape-nav pill it visually pairs with.
+    const hero = document.querySelector('.hero');
+    if (hero && hero.querySelector('nav.shape-nav') && !hero.querySelector('.hero-theme-toggle')) {
+      const hb = document.createElement('button');
+      hb.type = 'button';
+      hb.className = 'hero-theme-toggle jh-theme-btn';
+      hb.innerHTML = '<span class="theme-glyph" aria-hidden="true">◑</span>';
+      hb.addEventListener('click', THEME.toggle);
+      hero.appendChild(hb);
+    }
+    // Resolve initial state (the head bootstrap already stamped the
+    // attribute; this syncs glyphs/labels and covers pages without it).
+    let stored = null;
+    try { stored = localStorage.getItem(THEME.KEY); } catch (e) {}
+    const mql = window.matchMedia('(prefers-color-scheme: light)');
+    THEME.apply(stored ? stored : (mql.matches ? 'light' : 'dark'), false);
+    // Follow the OS while no explicit choice is stored.
+    const onOs = function (e) {
+      let s = null;
+      try { s = localStorage.getItem(THEME.KEY); } catch (err) {}
+      if (!s) THEME.apply(e.matches ? 'light' : 'dark', false);
+    };
+    if (mql.addEventListener) mql.addEventListener('change', onOs);
+  }
 
   // ---- Autoplay gate -------------------------------------------------------
   // Decorative loops autoplay on a desktop pointer and nowhere else.
@@ -133,9 +215,13 @@
       sync();
     });
   }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initAutoplayGate);
-  } else {
+  function initChrome() {
+    initTheme();
     initAutoplayGate();
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initChrome);
+  } else {
+    initChrome();
   }
 })();
