@@ -1057,8 +1057,8 @@ const catOrder = ['eduos', 'metamedium'];
 // ============================================
 // STATE
 // ============================================
-let history = [];
-let historyIndex = -1;
+let navHistory = [];
+let navHistoryIndex = -1;
 let currentPath = null;
 
 // ============================================
@@ -1205,11 +1205,11 @@ function openFile(path, skipHistory) {
     }
 
     if (!skipHistory) {
-        if (historyIndex < history.length - 1) {
-            history = history.slice(0, historyIndex + 1);
+        if (navHistoryIndex < navHistory.length - 1) {
+            navHistory = navHistory.slice(0, navHistoryIndex + 1);
         }
-        history.push(path);
-        historyIndex = history.length - 1;
+        navHistory.push(path);
+        navHistoryIndex = navHistory.length - 1;
     }
 
     updateNavState();
@@ -1247,24 +1247,28 @@ function closePanel() {
     document.getElementById('panelOverlay').classList.remove('open');
     document.body.style.overflow = '';
     currentPath = null;
-    // Clear hash
-    history.replaceState('', document.title, window.location.pathname + window.location.search);
+    // Clear hash. window.history spelled out on purpose: a bare `history`
+    // here silently resolved to the nav-history ARRAY declared at the top of
+    // this script, so every panel close threw TypeError and the #slug was
+    // never removed. The close still looked fine only because this is the
+    // last statement in the function.
+    window.history.replaceState('', document.title, window.location.pathname + window.location.search);
 }
 
 // ============================================
 // NAVIGATION
 // ============================================
 function navBack() {
-    if (historyIndex > 0) {
-        historyIndex--;
-        openFile(history[historyIndex], true);
+    if (navHistoryIndex > 0) {
+        navHistoryIndex--;
+        openFile(navHistory[navHistoryIndex], true);
     }
 }
 
 function navForward() {
-    if (historyIndex < history.length - 1) {
-        historyIndex++;
-        openFile(history[historyIndex], true);
+    if (navHistoryIndex < navHistory.length - 1) {
+        navHistoryIndex++;
+        openFile(navHistory[navHistoryIndex], true);
     }
 }
 
@@ -1305,8 +1309,8 @@ function getFileIndexPos(path) {
 }
 
 function updateNavState() {
-    document.getElementById('btnBack').disabled = historyIndex <= 0;
-    document.getElementById('btnForward').disabled = historyIndex >= history.length - 1;
+    document.getElementById('btnBack').disabled = navHistoryIndex <= 0;
+    document.getElementById('btnForward').disabled = navHistoryIndex >= navHistory.length - 1;
 
     const idx = getFileIndexPos(currentPath);
     document.getElementById('btnPrev').disabled = idx <= 0;
