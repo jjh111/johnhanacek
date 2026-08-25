@@ -2,10 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<script>/* jh-theme bootstrap: stamp before first paint (scripts/jh-chrome.js owns the toggle) */(function(){try{var t=localStorage.getItem("jh-theme");if(t?t==="light":matchMedia("(prefers-color-scheme: light)").matches)document.documentElement.setAttribute("data-theme","light")}catch(e){}})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Playground — John Hanacek</title>
 <meta name="description" content="A review canvas of the whole site: every page and every experiment, live and side by side.">
-<meta name="color-scheme" content="dark">
+<meta name="color-scheme" content="light dark">
 <link rel="canonical" href="https://www.johnhanacek.com/playground.html">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Playground — John Hanacek">
@@ -32,17 +33,21 @@
 <link rel="stylesheet" href="./styles/jh-chrome.css?v=1.55">
 <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.55">
 <style>
-/* Self-contained shell — no external fonts or stylesheets, so the blob works
-   anywhere it is dropped. Palette mirrors brand/_tokens.css light-warm-teal. */
-/* The tool's own token names, bound to the site palette. Keeping the names
-   means the ~1100 lines of canvas CSS below are untouched — only what the
-   names MEAN changes, so this reads as johnhanacek.com rather than as the
-   OpenProse warm-paper deliverable it was cut from. */
+/* The tool's own token names, bound to the SITE tokens from jh-chrome.css
+   (loaded above) rather than to copied hex. Keeping the names means the
+   ~1100 lines of canvas CSS below are untouched — only what the names MEAN
+   changes — and the site's data-theme flip (Shallows light palette) reaches
+   every surface of the tool for free. */
 :root {
-  --paper: #020a12; --paper-warm: #051018; --ink: #b8dced; --ink2: #8cb8cc;
-  --ink3: #7a9aaa; --rule: rgba(77, 201, 246, 0.2); --teal: #7dd8f7; --amber: #d4af37;
+  --paper: var(--sea-deep); --paper-warm: var(--sea-mid);
+  --ink: var(--text-bright); --ink2: var(--text-primary); --ink3: var(--muted);
+  --rule: var(--border); --teal: var(--accent-ink); --amber: var(--accent-warm);
+  --teal-deep: var(--accent-ink-deep);
+  --teal-tint: rgba(var(--cyan-dim-rgb), 0.14);
   --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  color-scheme: dark;
 }
+:root[data-theme="light"] { color-scheme: light; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { background: var(--paper); color: var(--ink); font-family: var(--mono); }
 body { font-size: 13px; line-height: 1.55; }
@@ -54,11 +59,6 @@ header {
   background: color-mix(in srgb, var(--paper) 88%, transparent);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--rule);
-}
-header .mark-sig { height: 22px; width: auto; flex: none; }
-:root[data-mode="dark"] header .mark-sig { filter: invert(1); }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-mode="light"]) header .mark-sig { filter: invert(1); }
 }
 header h1 { font-size: 13px; font-weight: 600; letter-spacing: 0.04em; }
 header h1 span { color: var(--ink3); font-weight: 400; }
@@ -106,14 +106,13 @@ body.embedded #plane { padding: 0; }
     grid-template-columns: repeat(2, 1fr);
   }
   /* Narrow shells: words out, controls in. The title goes entirely (the
-     host page already says what this is), the signet shrinks to a badge,
-     and paddings/gaps tighten so the mode buttons and toggles hold one
-     line without wrapping. */
+     site nav above — or the host page, embedded — already says what this
+     is), and paddings/gaps tighten so the mode buttons and toggles hold
+     one line without wrapping. */
   header h1, header .count, header .modes .mlabel { display: none; }
   /* Controls fill the bar: space-between spreads each wrapped row so the
      first and last control sit flush at the edges. */
   header { gap: 5px; padding: 6px 8px; flex-wrap: wrap; row-gap: 4px; justify-content: space-between; }
-  header .mark-sig { height: 16px; }
   header .modes { gap: 3px; margin-left: 0; }
   header button { padding: 3px 6px; font-size: 10px; }
   header .tb-group { gap: 3px; }
@@ -309,7 +308,12 @@ body.no-descs .card .desc, body.no-descs #focus .fdesc { display: none; }
 
 /* ---- JHCOM CHROME -------------------------------------------------------
    The tool was built to own the viewport. The site nav is fixed at 40px, so
-   the stage and header sit below it once the nav becomes visible. */
+   the stage and header sit below it once the nav becomes visible.
+   Standalone, the nav IS visible from load (JS adds .visible — a tool page
+   has no hero to scroll past), and it carries the brand + theme toggles, so
+   the toolbar below stays purely tool controls. Embedded, the host page is
+   the chrome and the nav is dropped entirely. */
+body.embedded #nav { display: none; }
 /* Focus mode is role="dialog" aria-modal="true" — a modal belongs ABOVE the
    page chrome, not under it. The site nav is z-index 1000 and the tool, built
    to own the viewport, only asked for 50: the "← back" button landed inside
@@ -332,11 +336,10 @@ header, main#stage { transition: top 0.25s ease; }
 <body>
 
 <a href="#stage" class="skip-link">Skip to the canvas</a>
-<nav id="nav"><jh-nav current="play"></jh-nav></nav>
+<nav id="nav"><div class="nav-inner"><jh-nav current="play"></jh-nav></div></nav>
 
 <header>
-  <img class="mark-sig" src="./Assets/JHsig.svg" alt="JHDesign">
-  <h1>Playground <span>· the whole site, live</span></h1>
+  <h1>Playground <span>· review canvas</span></h1>
   <nav class="modes" aria-label="View mode">
     <button type="button" data-mode-btn="canvas" title="canvas · key 1"><svg class="mico" viewBox="0 0 14 10" fill="currentColor" aria-hidden="true" focusable="false"><rect x="0" y="0" width="2.98" height="2.87"/><rect x="3.67" y="0" width="2.98" height="2.87"/><rect x="7.35" y="0" width="2.98" height="2.87"/><rect x="11.02" y="0" width="2.98" height="2.87"/><rect x="0" y="3.57" width="2.98" height="2.87"/><rect x="3.67" y="3.57" width="2.98" height="2.87"/><rect x="7.35" y="3.57" width="2.98" height="2.87"/><rect x="11.02" y="3.57" width="2.98" height="2.87"/><rect x="0" y="7.13" width="2.98" height="2.87"/><rect x="3.67" y="7.13" width="2.98" height="2.87"/><rect x="7.35" y="7.13" width="2.98" height="2.87"/><rect x="11.02" y="7.13" width="2.98" height="2.87"/></svg><span class="mlabel">canvas</span></button>
     <button type="button" data-mode-btn="grid" class="active" title="grid · key 2"><svg class="mico" viewBox="0 0 14 10" fill="currentColor" aria-hidden="true" focusable="false"><rect x="0" y="0" width="6.5" height="4.5"/><rect x="7.5" y="0" width="6.5" height="4.5"/><rect x="0" y="5.5" width="6.5" height="4.5"/><rect x="7.5" y="5.5" width="6.5" height="4.5"/></svg><span class="mlabel">grid</span></button>
@@ -380,7 +383,6 @@ header, main#stage { transition: top 0.25s ease; }
   <span class="count" id="count"></span>
   <button id="descs-toggle" type="button" aria-label="Show or hide review comments" title="comments">✎</button>
   <button id="ratings-toggle" type="button" class="on" aria-label="Show or hide ratings" title="ratings">★</button>
-  <button id="mode" type="button" aria-label="Toggle dark mode">◐</button>
   <button id="fs-toggle" type="button" aria-label="Toggle fullscreen" title="fullscreen">⛶</button>
 </header>
 
@@ -667,13 +669,28 @@ header, main#stage { transition: top 0.25s ease; }
   var grid = document.getElementById('plane');
   var stage = document.getElementById('stage');
 
-  // ---- mode toggle ----------------------------------------------------------
-  document.getElementById('mode').addEventListener('click', function () {
-    var root = document.documentElement;
-    var dark = root.getAttribute('data-mode') === 'dark' ||
-      (!root.getAttribute('data-mode') &&
-        window.matchMedia('(prefers-color-scheme: dark)').matches);
-    root.setAttribute('data-mode', dark ? 'light' : 'dark');
+  // ---- site chrome + theme --------------------------------------------------
+  // Light/dark is the SITE's system (scripts/jh-chrome.js: sig + glyph
+  // toggles in the nav, 'jh-theme' key, OS-following) — the tool's tokens
+  // are bound to the site tokens above, so there is nothing page-local to
+  // toggle. Standalone, the nav shows from load; embedded, the host is the
+  // chrome (CSS drops #nav) and the theme still arrives via the storage key.
+  if (!EMBEDDED) {
+    var siteNav = document.getElementById('nav');
+    if (siteNav) siteNav.classList.add('visible');
+  }
+  // A theme flip propagates into every LIVE same-origin preview, so the
+  // review canvas shows the whole site changing together. Pages that theme
+  // themselves (openprose runs data-mode) are left alone, same as the
+  // chrome does; frames woken later read the shared key on boot.
+  window.addEventListener('jh-theme-change', function (e) {
+    var mode = e.detail && e.detail.theme;
+    document.querySelectorAll('.well iframe, #f-frame').forEach(function (f) {
+      try {
+        var W = f.contentWindow;
+        if (W && W.JH_THEME && !W.JH_THEME.foreign) W.JH_THEME.apply(mode, false);
+      } catch (err) {}
+    });
   });
 
   // ---- grid + preview lifecycle (budgeted, LRU) -----------------------------
