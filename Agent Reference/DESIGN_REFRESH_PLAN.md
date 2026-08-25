@@ -149,11 +149,15 @@ Everything else rides on this. No visual change.
 > at John's request): head bootstrap on the 7 standard pages, `jh-theme` key, OS-following,
 > three controls (nav sig top-left, nav glyph far right, hero glass pill upper-right — all
 > from jh-chrome.js; suppressed on openprose via its `data-mode` marker). shared.css +
-> jh-chrome.css rgba literals swept onto the -rgb triplets. **Remaining:** canvas light
-> palettes (fish engine / blueprint / cosmos listen for `jh-theme-change`), page-inline
-> literal sweeps, search.html + writing.html alignment post-merge, palette tuning to AA.
-> Canvas-anchored chrome (hero shape-nav pill, canvas-guide, hero toggle) deliberately
-> keeps deep-sea colors until the canvases theme.
+> jh-chrome.css rgba literals swept onto the -rgb triplets.
+> **Second slice SHIPPED — the canvases theme:** fish engine (daylight-water gradient,
+> lShift on HSL colors, themed labels/bubbles/particles; ambient 404 fish too), design's
+> blueprint (drafting-paper light palette, live via `colors` mutation), the MetaMedium
+> diagram (mmPal(), redrawn on flip), art's cosmos (dawn palette). All follow
+> `jh-theme-change` + the initial `data-theme` stamp; deep-sea pins on canvas-anchored
+> chrome removed. Inline `<style>` literals on index/design/art swept to triplets.
+> **Remaining:** search.html + writing.html alignment post-merge, AA palette tuning,
+> maze-effect literals (amber/green transients) if they read weak on paper.
 - **Mechanism** (adopt OpenProse's, align writing.html):
   - `data-theme` on `<html>`; storage key **`jh-theme`** (writing.html's existing key);
   - render-blocking bootstrap in `<head>` of every page: stored value, else

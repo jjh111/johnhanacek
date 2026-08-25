@@ -56,14 +56,14 @@
             const tag = (x, y, text) => {
                 const tw = ctx.measureText(text).width + 12;
                 const left = x - tw / 2, top = y - 15;
-                ctx.fillStyle = 'rgba(2, 10, 18, 0.72)';
-                ctx.strokeStyle = 'rgba(77, 201, 246, 0.35)';
+                ctx.fillStyle = water.labelBg;
+                ctx.strokeStyle = water.labelBorder;
                 ctx.lineWidth = 1;
                 ctx.beginPath();
                 if (ctx.roundRect) ctx.roundRect(left, top, tw, 15, 3); else ctx.rect(left, top, tw, 15);
                 ctx.fill();
                 ctx.stroke();
-                ctx.fillStyle = 'rgba(125, 216, 247, 0.9)';
+                ctx.fillStyle = water.labelText;
                 ctx.fillText(text, x, y - 4);
             };
             fish.forEach(f => {
@@ -952,6 +952,56 @@
             glow: 'rgba(77, 201, 246, 0.4)',
         };
 
+        // ---- Theme (Design Refresh Phase 4) --------------------------------
+        // The engine paints the page's background itself, so it participates
+        // in the site's light/dark theme ("Shallows"). Dark is the native
+        // tuning above; light swaps water/ink values and `lShift` pulls the
+        // airy lightness of HSL-derived colors (fish bodies, bubbles) down so
+        // entities keep contrast on pale water. Host pages need no wiring:
+        // the engine reads <html data-theme> and follows the jh-theme-change
+        // event that scripts/jh-chrome.js dispatches.
+        const WATER_DARK = {
+            bg: '#020a12', bgTop: '#041722',
+            stroke: 'rgba(77, 201, 246, 0.85)', cursor: 'rgba(212, 175, 55, 0.85)',
+            glow: 'rgba(77, 201, 246, 0.4)',
+            inkRgb: '147, 197, 253', lineRgb: '77, 201, 246',
+            bubble: 'rgba(77, 201, 246, 0.3)', food: '#7ae582',
+            fish: ['#00d9ff', '#4dc9f6', '#38bdf8'],
+            labelBg: 'rgba(2, 10, 18, 0.72)', labelBorder: 'rgba(77, 201, 246, 0.35)',
+            labelText: 'rgba(125, 216, 247, 0.9)',
+            lShift: 0
+        };
+        const WATER_LIGHT = {
+            bg: '#bcdbe8', bgTop: '#e7f3f7',
+            stroke: 'rgba(18, 83, 108, 0.85)', cursor: 'rgba(138, 109, 28, 0.9)',
+            glow: 'rgba(18, 83, 108, 0.3)',
+            inkRgb: '18, 83, 108', lineRgb: '18, 83, 108',
+            bubble: 'rgba(18, 83, 108, 0.3)', food: '#2f7d38',
+            fish: ['#0b7ea6', '#12699b', '#0d94c4'],
+            labelBg: 'rgba(248, 251, 252, 0.82)', labelBorder: 'rgba(18, 83, 108, 0.35)',
+            labelText: 'rgba(15, 70, 92, 0.95)',
+            lShift: -24
+        };
+        let themeLight = false;
+        let water = WATER_DARK;
+        function applyEngineTheme(light) {
+            themeLight = !!light;
+            water = themeLight ? WATER_LIGHT : WATER_DARK;
+            colors.bg = water.bg;
+            colors.stroke = water.stroke;
+            colors.cursor = water.cursor;
+            colors.glow = water.glow;
+            aquaColors.bubble = water.bubble;
+            aquaColors.food = water.food;
+            aquaColors.line = 'rgba(' + water.lineRgb + ', 0.5)';
+            // A host-supplied fish palette wins in both themes.
+            aquaColors.fish = (opts.palette && opts.palette.fish) ? opts.palette.fish : water.fish;
+        }
+        applyEngineTheme(document.documentElement.getAttribute('data-theme') === 'light');
+        window.addEventListener('jh-theme-change', function (e) {
+            applyEngineTheme(e.detail && e.detail.theme === 'light');
+        });
+
         // ============================================
         // Helper Functions (recognition math comes from ShapeDetect)
         // ============================================
@@ -1368,7 +1418,15 @@
         // ============================================
         function drawGrid() {
             if (opts.transparent) { ctx.clearRect(0, 0, _cw, _ch); return; }
-            ctx.fillStyle = colors.bg;
+            if (themeLight) {
+                // Daylight water: light falls from the surface
+                const g = ctx.createLinearGradient(0, 0, 0, _ch);
+                g.addColorStop(0, water.bgTop);
+                g.addColorStop(1, water.bg);
+                ctx.fillStyle = g;
+            } else {
+                ctx.fillStyle = colors.bg;
+            }
             ctx.fillRect(0, 0, _cw, _ch);
         }
         
@@ -1391,7 +1449,7 @@
                 
                 ctx.shadowColor = colors.glow;
                 ctx.shadowBlur = 12 * easedOpacity;
-                ctx.strokeStyle = `rgba(147, 197, 253, ${0.85 * easedOpacity})`;
+                ctx.strokeStyle = `rgba(${water.inkRgb}, ${0.85 * easedOpacity})`;
                 ctx.lineWidth = 2.5;
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
@@ -1808,8 +1866,8 @@
                 // the whole wheel. See FISH_HUE_FULL: this is deliberately NOT tied
                 // to renderStyle, so a blueprint page can be colourful.
                 const hsl = FISH_HUE_FULL
-                    ? `hsl(${(180 + hueShift) % 360}, 80%, 65%)`
-                    : `hsl(${188 + (hueShift % 24)}, 75%, ${62 + (hueShift % 17)}%)`;
+                    ? `hsl(${(180 + hueShift) % 360}, 80%, ${65 + water.lShift}%)`
+                    : `hsl(${188 + (hueShift % 24)}, 75%, ${62 + (hueShift % 17) + water.lShift}%)`;
                 const color = hueShift ? hsl : baseColor;
 
                 // Per-fish randomness offset (consistent per fish)
@@ -5074,7 +5132,7 @@
                     const ringR = b.radius * (1 + progress * 0.9);
                     ctx.save();
                     ctx.globalAlpha = 0.5 * (1 - progress);
-                    ctx.strokeStyle = `hsla(${hue}, 75%, 80%, 1)`;
+                    ctx.strokeStyle = `hsla(${hue}, 75%, ${80 + water.lShift * 1.5}%, 1)`;
                     ctx.lineWidth = Math.max(0.5, 1.5 * (1 - progress));
                     ctx.beginPath();
                     ctx.arc(b.x, b.y, ringR, 0, Math.PI * 2);
@@ -5139,7 +5197,7 @@
 
                 // Draw bubble
                 const hue = 195 + b.hueOffset;
-                const bubbleColor = `hsla(${hue}, 70%, 65%, 0.6)`;
+                const bubbleColor = `hsla(${hue}, 70%, ${65 + water.lShift}%, 0.6)`;
 
                 // Subtle squash/stretch as it rises
                 const squash = 1 + 0.05 * Math.sin(now / 300 + b.id);
@@ -5153,9 +5211,9 @@
                     b.x - b.radius * 0.3, b.y - b.radius * 0.35, b.radius * 0.05,
                     b.x, b.y, b.radius
                 );
-                grad.addColorStop(0, `hsla(${hue}, 85%, 92%, 0.18)`);
-                grad.addColorStop(0.6, `hsla(${hue}, 70%, 65%, 0.06)`);
-                grad.addColorStop(1, `hsla(${hue}, 60%, 45%, 0.02)`);
+                grad.addColorStop(0, `hsla(${hue}, 85%, ${92 + water.lShift}%, 0.18)`);
+                grad.addColorStop(0.6, `hsla(${hue}, 70%, ${65 + water.lShift}%, 0.06)`);
+                grad.addColorStop(1, `hsla(${hue}, 60%, ${45 + water.lShift}%, 0.02)`);
                 ctx.fillStyle = grad;
                 ctx.globalAlpha = 0.9;
                 ctx.fill();
@@ -5275,7 +5333,7 @@
                 }
 
                 ctx.save();
-                ctx.strokeStyle = `rgba(77, 201, 246, ${0.6 * opacity})`;
+                ctx.strokeStyle = `rgba(${water.lineRgb}, ${0.6 * opacity})`;
                 ctx.lineWidth = 2;
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
@@ -5526,7 +5584,7 @@
                 // Pulsing opacity
                 const pulse = 0.15 + 0.1 * Math.sin(now / 2000 + p.phase);
 
-                ctx.fillStyle = `rgba(147, 197, 253, ${pulse})`;
+                ctx.fillStyle = `rgba(${water.inkRgb}, ${pulse})`;
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
                 ctx.fill();
@@ -6905,7 +6963,15 @@
             cursor.y = e.touches[0].clientY;
         }, { passive: true });
 
-        const COLOR = opts.color || '#4dc9f6';   // aquaColors.fish[1]
+        // Themed like the full engine: the ambient fish swims over the page
+        // background, which flips with the site theme.
+        let COLOR = opts.color ||
+            (document.documentElement.getAttribute('data-theme') === 'light' ? '#12699b' : '#4dc9f6');
+        if (!opts.color) {
+            window.addEventListener('jh-theme-change', function (e) {
+                COLOR = (e.detail && e.detail.theme === 'light') ? '#12699b' : '#4dc9f6';
+            });
+        }
 
         function drawFish() {
             const strokePulse = 1 + 0.15 * Math.sin(fish.now / 800);
