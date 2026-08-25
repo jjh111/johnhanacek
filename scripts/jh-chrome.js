@@ -14,7 +14,7 @@
   const SITE = {
     year: 2026,
     org: 'JHDesign LLC',
-    version: '1.54', // ← THE site version. Footer badge, ?v= cache-bust, and README all read this (run scripts/sync-version.mjs after bumping).
+    version: '1.55', // ← THE site version. Footer badge, ?v= cache-bust, and README all read this (run scripts/sync-version.mjs after bumping).
     versionNote: 'Made with Claude Code &amp; Open Code',
     github: 'https://github.com/jjh111/johnhanacek',
     githubLabel: 'github.com/jjh111/johnhanacek',
@@ -82,6 +82,25 @@
   }
   if (!customElements.get('jh-nav')) customElements.define('jh-nav', JHNav);
 
+  // ---- Return to playground -------------------------------------------------
+  // The canvas can send you to a page in its own tab, and a fresh tab has no
+  // history to go back through — the page's own nav takes you to the site, not
+  // back to the board you came from. Anything the playground launches carries
+  // ?from=playground; this renders the way home.
+  //
+  // Lives in the chrome so it works on every page from one place, including
+  // the unlisted experiments that have no nav of their own.
+  function initReturnChip() {
+    var p = new URLSearchParams(location.search);
+    if (p.get('from') !== 'playground') return;
+    if (document.querySelector('.jh-return-chip')) return;
+    var a = document.createElement('a');
+    a.className = 'jh-return-chip';
+    a.href = 'playground.html';
+    a.textContent = '\u2190 back to playground';
+    document.body.appendChild(a);
+  }
+
   // ---- Autoplay gate -------------------------------------------------------
   // Decorative loops autoplay on a desktop pointer and nowhere else.
   //
@@ -139,9 +158,10 @@
       sync();
     });
   }
+  function initChrome() { initAutoplayGate(); initReturnChip(); }
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initAutoplayGate);
+    document.addEventListener('DOMContentLoaded', initChrome);
   } else {
-    initAutoplayGate();
+    initChrome();
   }
 })();

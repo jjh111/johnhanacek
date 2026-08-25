@@ -199,6 +199,19 @@ removed along with their CSS and the vestigial `?footer=` config.
   because focus sets `fFrame.src` directly and bypasses the first one
 - `weight: 'heavy'` is recorded per item but not yet acted on — the staged
   perf plan spends optimisation before it spends clicks
+- **Type filters are derived, not declared.** The chip vocabulary is whatever
+  `cat` values the manifest uses, collected at boot; a new type appears by
+  tagging an item. Click selects one, shift-click accumulates, `all` clears.
+  State lives in `?cat=a,b` so a filtered view is shareable
+- `external: true` marks an off-origin URL — never framed (X-Frame-Options
+  would paint a blank), card shows the hostname, opens in a new tab. Shares the
+  `neverWake()` predicate with `nested`
+- **Focus mode is `z-index: 1100`, above the site nav's 1000.** It is an
+  `aria-modal` dialog; at the tool's native z-50 the `← back` button landed
+  inside the fixed nav's 40px band and `elementFromPoint` returned a nav icon,
+  so it was unclickable — fully-zoomed genuinely had no way out
+- Leaving for a real tab appends `?from=playground`, and `jh-chrome.js` renders
+  a `← back to playground` chip on any page carrying it — one place, every page
 - Plan of record: `Agent Reference/PLAYGROUND_CANVAS_PLAN.md`
 
 ### Writing (writing.html + writing/)

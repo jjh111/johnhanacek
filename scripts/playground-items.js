@@ -18,6 +18,17 @@
  *                  reaches hard gating (see PLAYGROUND_CANVAS_PLAN.md §5); it is
  *                  recorded now so the measurements have something to key on.
  *
+ *   external: true  An off-origin URL. Also never woken — most sites send
+ *                  X-Frame-Options, so a live attempt paints a silent blank
+ *                  rather than a page. The card shows the hostname and opens
+ *                  in a new tab. Shares the `neverWake()` predicate with
+ *                  `nested`: two reasons, one rule.
+ *
+ *   cat: '…'       The type. The filter vocabulary is DERIVED from whatever
+ *                  values appear here — there is no separate list to keep in
+ *                  step. Adding a type means tagging an item with it; a new
+ *                  value grows a new chip by itself.
+ *
  * `created` drives the date sort. Dates are first-appearance, approximate for
  * the older demos carried over from the hand-built board.
  */

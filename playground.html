@@ -29,8 +29,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=JetBrains+Mono:wght@300;400;500&family=Raleway:wght@200;300;400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./styles/jh-chrome.css?v=1.54">
-<link rel="stylesheet" href="./scripts/search-overlay.css?v=1.54">
+<link rel="stylesheet" href="./styles/jh-chrome.css?v=1.55">
+<link rel="stylesheet" href="./scripts/search-overlay.css?v=1.55">
 <style>
 /* Self-contained shell — no external fonts or stylesheets, so the blob works
    anywhere it is dropped. Palette mirrors brand/_tokens.css light-warm-teal. */
@@ -287,9 +287,36 @@ body.no-descs .card .desc, body.no-descs #focus .fdesc { display: none; }
 @media (max-width: 720px) { #focus .keys { display: none; } }
 .card .bar .name { min-width: 0; }
 
+/* ---- type filter ------------------------------------------------------
+   The vocabulary is not hardcoded: it is whatever `cat` values the manifest
+   actually uses, collected at boot. Adding a type = adding it to an item. */
+#filter-group { flex-wrap: wrap; gap: 3px; }
+#filter-group button {
+  font: inherit; font-size: 10.5px; letter-spacing: 0.04em;
+  color: var(--ink3); background: none;
+  border: 1px solid var(--rule); border-radius: 999px;
+  padding: 1px 8px; cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+#filter-group button:hover { color: var(--ink2); border-color: var(--ink3); }
+#filter-group button.on { color: var(--teal); border-color: var(--teal); }
+#filter-group .fcount { color: var(--ink3); font-size: 10.5px; padding-left: 4px; }
+
+/* An external link is a card that can never be woken — most sites refuse to
+   be framed, so a live attempt shows a silent blank rather than a page. */
+.card.is-external .well { cursor: pointer; }
+.card.is-external .ph { color: var(--teal); text-align: center; padding: 0 1.5rem; line-height: 1.6; }
+
 /* ---- JHCOM CHROME -------------------------------------------------------
    The tool was built to own the viewport. The site nav is fixed at 40px, so
    the stage and header sit below it once the nav becomes visible. */
+/* Focus mode is role="dialog" aria-modal="true" — a modal belongs ABOVE the
+   page chrome, not under it. The site nav is z-index 1000 and the tool, built
+   to own the viewport, only asked for 50: the "← back" button landed inside
+   the nav's 40px band, where elementFromPoint returned a nav icon. It was not
+   merely hidden, it was unclickable, which is why fully-zoomed had no way out. */
+#focus { z-index: 1100; }
+
 #nav.visible ~ header { top: calc(40px + env(safe-area-inset-top)); }
 #nav.visible ~ main#stage { top: calc(40px + env(safe-area-inset-top)); }
 body.mode-canvas #nav.visible ~ main#stage { inset: calc(40px + env(safe-area-inset-top)) 0 0 0; }
@@ -332,6 +359,7 @@ header, main#stage { transition: top 0.25s ease; }
       <option value="20">20</option>
     </select>
   </div>
+  <div class="tb-group visible" id="filter-group" aria-label="Filter by type"></div>
   <div class="tb-group" id="cols-group">
     <label for="grid-cols" style="color: var(--ink3); font-size: 11px;">cols</label>
     <select id="grid-cols" style="font: inherit; font-size: 11px; color: var(--ink2); background: var(--paper); border: 1px solid var(--rule); border-radius: 5px; padding: 2px 6px;">
@@ -393,7 +421,7 @@ header, main#stage { transition: top 0.25s ease; }
       // Embeds start quiet: ratings off unless the host page opts in
       // (?ratings=1). Full-page visits keep stars on.
       { ratings: !EMBEDDED, header: true, nav: true, descs: false,
-        mode: null, items: null, budget: 8, cols: null, sort: null },
+        mode: null, items: null, budget: 8, cols: null, sort: null, cats: null },
       window.CANVAS_CONFIG || {});
     var q = new URLSearchParams(location.search);
     ['ratings', 'header', 'nav', 'descs'].forEach(function (k) {
@@ -407,6 +435,9 @@ header, main#stage { transition: top 0.25s ease; }
     else if (EMBEDDED && window.matchMedia && matchMedia('(pointer: coarse)').matches) c.budget = Math.min(c.budget, 4);
     if (q.has('cols')) c.cols = q.get('cols');
     if (q.has('sort')) c.sort = q.get('sort'); // 'date' | 'sequence'
+    // Filter state belongs in the URL for the same reason mode and items do:
+    // a filtered view is a thing you send someone.
+    if (q.has('cat')) c.cats = q.get('cat').split(',').map(function (x) { return x.trim(); }).filter(Boolean);
     // Starting view for canvas mode, per embed: ?zoom=0.65 boots zoomed out
     // to that scale (top-left anchored), ?zoom=fit boots with everything in
     // frame. Ignored outside canvas mode.
@@ -429,15 +460,97 @@ header, main#stage { transition: top 0.25s ease; }
   var baseItems = items.slice();
   var canonIdx = {};
   (window.CANVAS_ITEMS || []).forEach(function (it, i) { canonIdx[it.name] = i; });
+  // ---- type filter ------------------------------------------------------
+  // The vocabulary is DERIVED, never declared twice: whatever `cat` values the
+  // manifest uses are the types that exist. Adding a type means tagging an item.
+  var allCats = (function () {
+    var seen = [];
+    baseItems.forEach(function (it) {
+      if (it.cat && seen.indexOf(it.cat) === -1) seen.push(it.cat);
+    });
+    return seen;
+  })();
+  // null = no filter (everything). A set = show only those.
+  var activeCats = (function () {
+    if (!CONFIG.cats || !CONFIG.cats.length) return null;
+    var known = CONFIG.cats.filter(function (c) { return allCats.indexOf(c) !== -1; });
+    // A ?cat= naming only types that do not exist means "no filter", not "an
+    // empty filter" — otherwise nothing is lit and the state is unreadable.
+    return known.length ? known : null;
+  })();
+
+  function filtered(list) {
+    if (!activeCats || !activeCats.length) return list;
+    return list.filter(function (it) { return activeCats.indexOf(it.cat) !== -1; });
+  }
+
+  var lastSort = 'sequence';
   function applySort(mode) {
+    lastSort = mode;
     items = mode === 'date'
-      ? baseItems.slice().sort(function (a, b) {
+      ? filtered(baseItems).slice().sort(function (a, b) {
           var da = a.created || '9999', db = b.created || '9999';
           if (da < db) return -1;
           if (da > db) return 1;
           return (canonIdx[a.name] || 0) - (canonIdx[b.name] || 0);
         })
-      : baseItems.slice();
+      : filtered(baseItems).slice();
+  }
+
+  // Filter chips. Clicking toggles one type; clicking the active sole type
+  // clears back to everything, so there is always a way back to the whole set.
+  function renderFilters() {
+    var box = document.getElementById('filter-group');
+    if (!box || !allCats.length) return;
+    box.innerHTML = '';
+    var mk = function (label, on, fn) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      if (on) b.className = 'on';
+      b.addEventListener('click', fn);
+      box.appendChild(b);
+      return b;
+    };
+    mk('all', !activeCats, function () { setCats(null); });
+    allCats.forEach(function (c) {
+      mk(c, !!(activeCats && activeCats.indexOf(c) !== -1), function (ev) {
+        // Shift-click accumulates; a plain click selects just this one.
+        if (ev.shiftKey && activeCats) {
+          var next = activeCats.slice();
+          var i = next.indexOf(c);
+          if (i === -1) next.push(c); else next.splice(i, 1);
+          setCats(next.length ? next : null);
+        } else {
+          setCats(activeCats && activeCats.length === 1 && activeCats[0] === c ? null : [c]);
+        }
+      });
+    });
+    var count = document.createElement('span');
+    count.className = 'fcount';
+    count.textContent = items.length + (items.length === 1 ? ' item' : ' items');
+    box.appendChild(count);
+  }
+
+  // Filters live in the query string; focus lives in the hash. Keeping them in
+  // separate halves of the URL means neither clobbers the other, which is what
+  // closeFocus() used to do (see below).
+  function syncUrl() {
+    try {
+      var q = new URLSearchParams(location.search);
+      if (activeCats && activeCats.length) q.set('cat', activeCats.join(','));
+      else q.delete('cat');
+      var qs = q.toString();
+      history.replaceState(null, '', location.pathname + (qs ? '?' + qs : '') + location.hash);
+    } catch (e) {}
+  }
+
+  function setCats(next) {
+    activeCats = next;
+    applySort(lastSort);
+    buildCards();
+    renderFilters();
+    syncUrl();
   }
   var maxLive = CONFIG.budget;
   document.body.classList.toggle('embedded', EMBEDDED);
@@ -585,12 +698,22 @@ header, main#stage { transition: top 0.25s ease; }
         card.querySelector('.ph').textContent =
           'embeds this canvas — opens in its own tab ↗';
       }
+      if (it.external) {
+        card.classList.add('is-external');
+        var host = (function () { try { return new URL(it.file).hostname.replace(/^www\./, ''); }
+                                  catch (e) { return 'external'; } })();
+        card.querySelector('.ph').textContent = host + ' — opens externally ↗';
+      }
+      if (it.cat) card.dataset.cat = it.cat;
       if (it.weight === 'heavy') card.classList.add('is-heavy');
       card.querySelector('.name').textContent = it.name;
       card.querySelector('.stars').textContent = starsText(it.stars);
       card.querySelector('.desc').textContent = it.desc || '';
       var openA = card.querySelector('a');
-      openA.href = it.file;
+      // Plain click focuses (the original behaviour); cmd/ctrl/shift-click is
+      // the browser's own "new tab", which the visitor asked for — so that is
+      // the one that carries the way back.
+      openA.href = withReturn(it.file);
       openA.addEventListener('click', function (ev) {
         if (ev.metaKey || ev.ctrlKey || ev.shiftKey) return;
         ev.preventDefault();
@@ -611,11 +734,14 @@ header, main#stage { transition: top 0.25s ease; }
       cells.forEach(function (c) { cellIO.observe(c.well); });
     }
   }
-  if (CONFIG.sort === 'date') {
-    document.getElementById('grid-sort').value = 'date';
-    applySort('date');
-  }
+  if (CONFIG.sort === 'date') document.getElementById('grid-sort').value = 'date';
+  // Always run the pipeline at boot, not only for the date sort. It used to be
+  // called only inside that branch, so a ?cat= deep link lit the right chips
+  // and then rendered every card — the filter had never been applied to the
+  // list at all. Sorting and filtering are one pass; boot has to take it.
+  applySort(CONFIG.sort === 'date' ? 'date' : 'sequence');
   buildCards();
+  renderFilters();
 
   function liveCells() { return cells.filter(function (c) { return c.live; }); }
   function cellDist(c) {
@@ -631,6 +757,19 @@ header, main#stage { transition: top 0.25s ease; }
     if (c.iframe) { c.iframe.remove(); c.iframe = null; }
     c.live = false;
   }
+  // Two different reasons a card can never run live, one predicate. `nested`
+  // would put this canvas inside itself; `external` points off-origin, where
+  // X-Frame-Options means the frame paints nothing at all.
+  function neverWake(it) { return !!(it && (it.nested || it.external)); }
+
+  // Anything that genuinely opens in its own tab carries ?from=playground, so
+  // the shared chrome can offer a way back. Skipped for off-origin links,
+  // which are not ours to decorate.
+  function withReturn(url) {
+    if (/^[a-z]+:\/\//i.test(url)) return url;
+    return url + (url.indexOf('?') === -1 ? '?' : '&') + 'from=playground';
+  }
+
   function wakeCell(c) {
     c.lastNear = performance.now();
     if (c.live) return;
@@ -639,7 +778,7 @@ header, main#stage { transition: top 0.25s ease; }
     // the inner copy has no idea it is already inside one. Enforced here at
     // the single choke point every wake passes through, rather than trusted to
     // whoever edits the manifest next.
-    if (c.it && c.it.nested) return;
+    if (neverWake(c.it)) return;
     var lives = liveCells();
     if (lives.length >= maxLive) {
       var myd = cellDist(c);
@@ -721,7 +860,7 @@ header, main#stage { transition: top 0.25s ease; }
     // wakeCell, so the recursion guard has to be repeated here or a nested item
     // still nests, just fullscreen. Send it out to its own tab instead, which
     // is what someone clicking a page-sized card actually wants.
-    if (candidate && candidate.nested) {
+    if (neverWake(candidate)) {
       window.open(candidate.file, '_blank', 'noopener');
       return;
     }
@@ -731,7 +870,7 @@ header, main#stage { transition: top 0.25s ease; }
     document.getElementById('f-stars').textContent = starsText(it.stars);
     document.getElementById('f-counter').textContent = (fIdx + 1) + ' / ' + items.length;
     document.getElementById('f-desc').textContent = it.desc || '';
-    document.getElementById('f-open').href = it.file;
+    document.getElementById('f-open').href = withReturn(it.file);
     fFrame.classList.remove('ready');
     fFrame.src = it.file;
     cells.forEach(sleepCell);   // free the grid's contexts while a page runs fullscreen
@@ -761,7 +900,10 @@ header, main#stage { transition: top 0.25s ease; }
     fIdx = -1;
     if (typeof syncModeButtons === 'function') syncModeButtons();
     if (typeof navDraw === 'function') navDraw(); // deck map → layout map
-    try { history.replaceState(null, '', location.pathname); } catch (e) {}
+    // location.pathname alone DROPS the query string — closing a focused card
+    // silently discarded ?cat, ?mode, ?budget and every other view setting.
+    // Only the hash belongs to focus, so only the hash is cleared.
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
   }
   document.getElementById('f-close').addEventListener('click', closeFocus);
   document.getElementById('f-prev').addEventListener('click', function () { openFocus(fIdx - 1); });
@@ -1237,8 +1379,8 @@ header, main#stage { transition: top 0.25s ease; }
 })();
 </script>
 
-<script src="./scripts/jh-chrome.js?v=1.54" defer></script>
-<script src="./scripts/shared.js?v=1.54" defer></script>
-<script src="./scripts/search-overlay.js?v=1.54" defer></script>
+<script src="./scripts/jh-chrome.js?v=1.55" defer></script>
+<script src="./scripts/shared.js?v=1.55" defer></script>
+<script src="./scripts/search-overlay.js?v=1.55" defer></script>
 </body>
 </html>
