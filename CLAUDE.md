@@ -160,12 +160,30 @@ which stamps every `?v=` cache-bust ref across root `*.html` **and** the `Portfo
 - **BYOM**: Custom endpoint input with OpenAI-compatible API probing
 - **Chunks**: `Assets/search-chunks.json` — flat factual text, field-boosted, each with a
   verified `url` (titles render as links) and a precomputed `vec`
+- **The Postcard (6a)**: results render as ONE microdense surface whose density adapts to
+  query specificity — LOD ladder (mention → one-liner → tldr sentence → dossier with prose
+  pretext-wrapped BOTH sides of its media), allocated by pretext line-arithmetic. Chunks
+  carry dev-authored `micro`/`tldr` fields (data, not runtime generation). Hover = shared
+  tooltip; click pins to dossier; compact/comfortable density toggle; empty state shows
+  page-aware suggestion chips.
+- **Scene language (6b)**: on index + design, utterances like "add 3 small fish and 2
+  coral" or "draw a circle and put two fish inside" parse (deterministic grammar, never
+  bluffs) into a PLAN CARD → confirm → materialize through the real recognizer (design:
+  synthetic pointer strokes; providers in each page's inline script close over sealed
+  state) with cap-aware receipts and physics-verified "N/N enclosed". "how many fish/what
+  shapes" → census bylined "read from the canvas". Providers: `window.JH_SCENE`.
+- **Escalation seam (6c)**: the model APPENDS below the postcard ("elaboration" eyebrow),
+  an artifact rail pins the grounding chunks deterministically, the census line grounds
+  local-model context, and the `scene_execute` tool has the model EMIT scene language
+  that the same parser gates into the same plan card.
 - **Engine color coding**: WebGPU=blue, LMStudio=purple, Ollama=orange, Custom=green
 - AI toggle: users can disable LLM even when engine detected
 
 ### Playground — the site Review Canvas (playground.html)
 Rebuilt on the OpenProse review-canvas engine, which replaced the old hand-built
-board wholesale. Wears the standard `<jh-nav current="play">` / `<jh-footer>`.
+board wholesale. Wears `<jh-nav current="play">`; **no footer** — it is a
+full-viewport canvas app, so the site footer and the tool's own were both
+removed along with their CSS and the vestigial `?footer=` config.
 
 - Three view modes: canvas (pan/zoom), grid, focus. `?mode=`, `?items=`,
   `?budget=`, `?zoom=`, `?cols=`, `?sort=` all URL-editable

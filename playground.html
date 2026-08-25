@@ -138,7 +138,6 @@ body.mode-canvas #plane {
   transform-origin: 0 0; will-change: transform;
 }
 body.mode-canvas .card { position: absolute; width: 420px; }
-body.mode-canvas footer { display: none; }
 .card {
   border: 1px solid var(--rule); border-radius: 8px; overflow: hidden;
   background: var(--paper-warm);
@@ -246,15 +245,9 @@ body.mode-canvas .card .well { cursor: inherit; }
 #focus iframe.ready { opacity: 1; }
 #focus .keys { font-size: 10px; color: var(--ink3); flex: none; }
 
-footer {
-  padding: 14px 18px 26px; text-align: center;
-  color: var(--ink3); font-size: 10.5px;
-}
-
 /* Config-hidden chrome — for inline/iframe embeds (?header=0 etc.) */
 body.no-header header { display: none; }
 body.no-header.mode-canvas #stage { inset: 0; }
-body.no-footer footer { display: none; }
 body.no-nav #navigator { display: none; }
 body.no-descs .card .desc, body.no-descs #focus .fdesc { display: none; }
 #ratings-toggle.on { border-color: var(--amber); color: var(--amber); }
@@ -301,8 +294,6 @@ body.no-descs .card .desc, body.no-descs #focus .fdesc { display: none; }
 #nav.visible ~ main#stage { top: calc(40px + env(safe-area-inset-top)); }
 body.mode-canvas #nav.visible ~ main#stage { inset: calc(40px + env(safe-area-inset-top)) 0 0 0; }
 header, main#stage { transition: top 0.25s ease; }
-/* The tool's footer is replaced by the site's. */
-body > footer.canvas-foot { display: none; }
 
 /* An item flagged `nested` is never woken — it embeds this same tool, and a
    canvas inside a canvas runs two budgets against one device. The card says
@@ -383,8 +374,6 @@ body > footer.canvas-foot { display: none; }
   <iframe id="f-frame" title="Focused experiment — live"></iframe>
 </div>
 
-<footer class="canvas-foot" hidden></footer>
-
 <div id="navigator" aria-label="Navigator minimap">
   <div class="nav-header" id="nav-header"><span>navigator</span><span id="nav-toggle">▾</span></div>
   <div class="nav-body"><canvas id="nav-canvas" width="200" height="150"></canvas></div>
@@ -403,11 +392,11 @@ body > footer.canvas-foot { display: none; }
     var c = Object.assign(
       // Embeds start quiet: ratings off unless the host page opts in
       // (?ratings=1). Full-page visits keep stars on.
-      { ratings: !EMBEDDED, header: true, footer: true, nav: true, descs: false,
+      { ratings: !EMBEDDED, header: true, nav: true, descs: false,
         mode: null, items: null, budget: 8, cols: null, sort: null },
       window.CANVAS_CONFIG || {});
     var q = new URLSearchParams(location.search);
-    ['ratings', 'header', 'footer', 'nav', 'descs'].forEach(function (k) {
+    ['ratings', 'header', 'nav', 'descs'].forEach(function (k) {
       if (q.has(k)) c[k] = !/^(0|false|off)$/i.test(q.get(k));
     });
     if (q.has('mode')) c.mode = q.get('mode');
@@ -453,7 +442,6 @@ body > footer.canvas-foot { display: none; }
   var maxLive = CONFIG.budget;
   document.body.classList.toggle('embedded', EMBEDDED);
   document.body.classList.toggle('no-header', !CONFIG.header);
-  document.body.classList.toggle('no-footer', !CONFIG.footer);
   document.body.classList.toggle('no-nav', !CONFIG.nav);
   document.body.classList.toggle('no-ratings', !CONFIG.ratings);
   document.body.classList.toggle('no-descs', !CONFIG.descs);
@@ -1249,7 +1237,6 @@ body > footer.canvas-foot { display: none; }
 })();
 </script>
 
-<jh-footer></jh-footer>
 <script src="./scripts/jh-chrome.js?v=1.54" defer></script>
 <script src="./scripts/shared.js?v=1.54" defer></script>
 <script src="./scripts/search-overlay.js?v=1.54" defer></script>
