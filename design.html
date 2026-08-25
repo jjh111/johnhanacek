@@ -27,8 +27,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Raleway:wght@100;200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles/shared.css?v=1.53">
-    <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.53">
+    <link rel="stylesheet" href="./styles/shared.css?v=1.55">
+    <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.55">
 
     <!-- Model Viewer is loaded on approach, not at page load — see the
          warm-up observer near the bottom of this file. The library is 239KB
@@ -1137,8 +1137,8 @@
     </script>
 
     <!-- Hero Canvas Drawing Interaction -->
-    <script src="./scripts/shape-detection.js?v=1.53"></script>
-    <script src="./scripts/fish-engine.js?v=1.53"></script>
+    <script src="./scripts/shape-detection.js?v=1.55"></script>
+    <script src="./scripts/fish-engine.js?v=1.55"></script>
     <script>
         const canvas = document.getElementById('heroCanvas');
         const ctx = canvas.getContext('2d');
@@ -2988,8 +2988,101 @@
             window.addEventListener('jh-theme-change', resizeMetaMedium);
             resizeMetaMedium();
         })();
+
+        // ============================================
+        // Scene provider (Phase 6b) — closes over the sealed canvas state.
+        // Language materializes through the SAME startDraw/draw/endDraw path
+        // a hand uses: same recognition, same morphs, same whispers.
+        // ============================================
+        window.JH_SCENE = {
+            page: 'design',
+            census() {
+                const tier = bw => bw >= 60 ? 'large' : bw >= 35 ? 'medium' : 'small';
+                const t = { small: 0, medium: 0, large: 0 };
+                let enclosed = 0;
+                fishLayer.state.fish.forEach(f => { t[tier(f.bodyWidth)]++; if (insideEnclosure(f.x, f.y)) enclosed++; });
+                return {
+                    smallFish: t.small, mediumFish: t.medium, largeFish: t.large,
+                    food: fishLayer.state.food.length, coral: 0, bubbles: 0, jellyfish: 0, enclosed,
+                    shapes: recognizedShapes.map(s => ({
+                        type: s.type, x: s.center.x, y: s.center.y,
+                        size: s.bounds ? Math.max(s.bounds.maxX - s.bounds.minX, s.bounds.maxY - s.bounds.minY)
+                            : (s.radius ? s.radius * 2 : 60),
+                    })),
+                };
+            },
+            _stroke(points) {
+                const rect = canvas.getBoundingClientRect();
+                const ev = p => ({ clientX: rect.left + p.x, clientY: rect.top + p.y, preventDefault() {} });
+                startDraw(ev(points[0]));
+                for (let i = 1; i < points.length; i++) draw(ev(points[i]));
+                endDraw();
+            },
+            async materialize(step, kit, made) {
+                const rect = canvas.getBoundingClientRect();
+                const W = rect.width, H = rect.height;
+                const rnd = (a, b) => a + Math.random() * (b - a);
+                const pause = ms => new Promise(r => setTimeout(r, ms));
+                const findRef = () => {
+                    if (!step.rel || step.rel.mutual) return null;
+                    if (step.rel.ref != null && made[step.rel.ref]) return made[step.rel.ref];
+                    const wanted = step.rel.refEntity;
+                    for (let i = recognizedShapes.length - 1; i >= 0; i--) {
+                        const s = recognizedShapes[i];
+                        if (s.type === wanted || (wanted === 'square' && s.type === 'rectangle')) {
+                            const size = s.bounds ? Math.max(s.bounds.maxX - s.bounds.minX, s.bounds.maxY - s.bounds.minY)
+                                : (s.radius ? s.radius * 2 : 80);
+                            return { entity: wanted, x: s.center.x, y: s.center.y, size };
+                        }
+                    }
+                    throw new Error('no ' + wanted + ' to reference');
+                };
+                const out = [];
+                if (step.rel && step.rel.mutual && step.entity === 'line') {
+                    const cx = rnd(W * 0.3, W * 0.6), cy = rnd(H * 0.3, H * 0.55);
+                    for (const [x1, y1, x2, y2] of kit.place.crossPair(cx, cy)) {
+                        this._stroke(kit.line(x1, y1, x2, y2));
+                        await pause(260);
+                    }
+                    out.push({ entity: 'line', x: cx, y: cy, size: 170 }, { entity: 'line', x: cx, y: cy, size: 170 });
+                    return { made: out, note: '✓ 2 lines, intersecting' };
+                }
+                const n = step.count === 'max' ? 3 : step.count;
+                let verified = 0;
+                for (let i = 0; i < n; i++) {
+                    const ref = findRef();
+                    const sizeOf = { circle: 130, square: 120, triangle: 120, line: 160, fish: 60, food: 8 }[step.entity] || 100;
+                    let p;
+                    if (ref && step.rel.type === 'inside') p = { x: ref.x + rnd(-8, 8), y: ref.y + rnd(-8, 8) };
+                    else if (ref && step.rel.type === 'near') p = kit.place.near(ref, sizeOf);
+                    else p = { x: rnd(W * 0.25, W * 0.7), y: rnd(H * 0.28, H * 0.6) };
+                    p.x = Math.max(80, Math.min(W - 80, p.x));
+                    p.y = Math.max(80, Math.min(H - 80, p.y));
+                    if (step.entity === 'fish') {
+                        let tier = step.size || 'small';
+                        if (ref && step.rel.type === 'inside' && ref.size < 150) tier = 'small';
+                        this._stroke(kit.ichthys(p.x, p.y, tier));
+                        await pause(150);
+                        const f = fishLayer.state.fish[fishLayer.state.fish.length - 1];
+                        if (ref && step.rel.type === 'inside' && f && insideEnclosure(f.x, f.y)) verified++;
+                        out.push({ entity: 'fish', x: p.x, y: p.y, size: 50 });
+                    } else if (step.entity === 'food') {
+                        this._stroke([p, { x: p.x + 2, y: p.y + 1 }, { x: p.x + 1, y: p.y + 2 }]);
+                        out.push({ entity: 'food', x: p.x, y: p.y, size: 10 });
+                    } else if (step.entity === 'circle') { this._stroke(kit.circle(p.x, p.y, sizeOf / 2)); out.push({ entity: 'circle', x: p.x, y: p.y, size: sizeOf }); }
+                    else if (step.entity === 'square') { this._stroke(kit.square(p.x, p.y, sizeOf)); out.push({ entity: 'square', x: p.x, y: p.y, size: sizeOf }); }
+                    else if (step.entity === 'triangle') { this._stroke(kit.triangle(p.x, p.y, sizeOf)); out.push({ entity: 'triangle', x: p.x, y: p.y, size: sizeOf }); }
+                    else if (step.entity === 'line') { this._stroke(kit.line(p.x - 80, p.y - 20, p.x + 80, p.y + 20)); out.push({ entity: 'line', x: p.x, y: p.y, size: 160 }); }
+                    else throw new Error(step.entity + ' is not drawable here');
+                    await pause(240);
+                }
+                const note = `✓ ${n} ${step.size ? step.size + ' ' : ''}${n === 1 || ['fish','food','coral','jellyfish'].includes(step.entity) ? step.entity : step.entity + 's'}`
+                    + (step.rel && step.rel.type === 'inside' && step.entity === 'fish' ? ` — ${verified}/${n} enclosed` : '');
+                return { made: out, note };
+            },
+        };
     </script>
-<script src="./scripts/search-overlay.js?v=1.53" defer></script>
+<script src="./scripts/search-overlay.js?v=1.55" defer></script>
 <script>document.addEventListener('DOMContentLoaded',()=>{const t=document.querySelector('.nav-title');if(t)t.dataset.short='JH';document.querySelectorAll('.nav-right a').forEach(a=>{const w=a.textContent.trim().split(/\s+/);a.dataset.short=w.length>1?w.map(x=>x[0]).join('').toUpperCase().slice(0,2):a.textContent.trim().slice(0,2).toUpperCase()})});</script>
     <!-- Command bar: what this page can DO (consumed by scripts/search-core.js) -->
     <script>
@@ -3045,7 +3138,7 @@
             }
         );
     </script>
-    <script src="./scripts/jh-chrome.js?v=1.53" defer></script>
+    <script src="./scripts/jh-chrome.js?v=1.55" defer></script>
 
     <!-- ============================================
          3D warm-up — load model-viewer on approach, not at page load.

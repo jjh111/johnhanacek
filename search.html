@@ -26,7 +26,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Raleway:wght@100;200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles/shared.css?v=1.53">
+    <link rel="stylesheet" href="./styles/shared.css?v=1.55">
 
     <!-- Structured Data -->
     <link rel="alternate" type="application/json" href="./john-hanacek.json" title="Structured data">
@@ -428,74 +428,57 @@
     </nav>
 
     <div class="search-wrap">
-        <!-- Engine bar -->
-        <div class="engine-bar">
-            <span id="aiDot" class="status-dot off"></span>
-            <span id="engineModelLabel" class="engine-model-label"></span>
-            <span id="engineSourceBadge" class="engine-source-badge none"></span>
-            <button class="engine-info-btn" id="engineInfoBtn" aria-label="Engine details">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        <!-- Search first -->
+        <div class="search-input-wrap">
+            <input type="text" id="searchInput" placeholder="Search, ask, or command..." autofocus>
+            <button id="clearBtn" class="clear-btn" aria-label="Clear search">&times;</button>
+        </div>
+        <!-- The tier strip: the intelligence ladder, one legible line -->
+        <div class="tier-strip-row">
+            <div class="tier-strip" id="tierStrip" role="group" aria-label="Search intelligence tiers"></div>
+            <button class="engine-info-btn" id="engineInfoBtn" aria-label="Engine details" title="Engine details">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
             <div class="engine-popover" id="enginePopover">
-                <!-- Pipeline label -->
-                <div style="font-size:0.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:0.3rem;padding:0 0.1rem;">Search Pipeline</div>
-                <!-- BM25 always-on -->
-                <div class="popover-section" style="cursor:default;opacity:0.8;margin-bottom:0.5rem;border-bottom:1px solid rgba(77,201,246,0.06);border-radius:4px 4px 0 0;padding-bottom:0.55rem;">
-                    <div class="popover-section-header">
-                        <span class="popover-radio" style="border-color:var(--cyan-dim);background:var(--cyan-dim);"></span>
-                        <span class="popover-section-name" style="font-size:0.72rem;">Keyword Search</span>
-                        <span class="popover-section-badge" style="background:rgba(77,201,246,0.06);color:var(--text-primary);font-size:0.52rem;">BM25</span>
-                    </div>
-                    <div class="popover-section-detail" style="font-size:0.6rem;">Always on — instant results</div>
-                </div>
-                <!-- AI engine header -->
-                <div style="font-size:0.55rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.25rem;padding:0 0.1rem;display:flex;align-items:center;gap:0.3rem;">
-                    AI Answer
-                    <label id="aiToggleLabel" style="margin-left:auto;display:flex;align-items:center;gap:0.3rem;cursor:pointer;font-size:0.55rem;color:var(--text-primary);text-transform:none;letter-spacing:0;">
+                <div class="engine-status-row">
+                    <span id="aiDot" class="status-dot off"></span>
+                    <span id="engineModelLabel" class="engine-model-label"></span>
+                    <span id="engineSourceBadge" class="engine-source-badge none"></span>
+                    <label id="aiToggleLabel" style="margin-left:auto;display:flex;align-items:center;gap:0.3rem;cursor:pointer;font-size:0.62rem;color:var(--text-primary);">
                         <input type="checkbox" id="aiToggle" checked style="accent-color:var(--engine-color,var(--cyan-dim));width:12px;height:12px;">
                         <span id="aiToggleText">on</span>
                     </label>
                 </div>
-                <!-- Local server section -->
-                <div id="localModelSection" class="popover-section" style="--section-color:var(--engine-lmstudio);">
+                <div id="localModelSection" class="popover-section popover-section--compact" style="--section-color:var(--engine-lmstudio);">
                     <div class="popover-section-header">
                         <span class="popover-radio"></span>
-                        <span class="popover-section-name" id="localModelName">Local Model</span>
+                        <span class="popover-section-name" id="localModelName">Local model</span>
                         <span class="popover-section-badge badge-lmstudio" id="localModelSource"></span>
+                        <button id="detectLocalBtn">Detect</button>
                     </div>
-                    <div class="popover-section-detail" id="localModelDetail">LMStudio or Ollama on this machine · Detect will ask your browser for local access</div>
-                    <button id="detectLocalBtn">Detect</button>
+                    <div class="popover-section-detail" id="localModelDetail">LMStudio/Ollama · Detect asks your browser for local access</div>
                 </div>
-                <!-- In-browser section -->
-                <div id="browserModelSection" class="popover-section" style="--section-color:var(--engine-browser);">
+                <div id="browserModelSection" class="popover-section popover-section--compact" style="--section-color:var(--engine-browser);">
                     <div class="popover-section-header">
                         <span class="popover-radio"></span>
                         <span class="popover-section-name">Qwen 3.5</span>
-                        <span class="popover-section-badge badge-browser">In-Browser</span>
                         <span class="popover-section-badge badge-webgpu" id="webgpuBadge"></span>
+                        <button id="enableBtn">Load</button>
                     </div>
-                    <div class="popover-section-detail" id="browserModelDetail">WebGPU inference · 0.8B params</div>
-                    <button id="enableBtn">Load Model</button>
+                    <div class="popover-section-detail" id="browserModelDetail">0.8B in-browser · WebGPU</div>
                     <div class="cache-hint" id="cacheHint"></div>
                     <div id="progress"></div>
                     <div id="progressBar"><div id="progressFill"></div></div>
                 </div>
-                <!-- Custom endpoint section -->
-                <div id="customSection" class="popover-section" style="--section-color:var(--engine-custom);">
+                <div id="customSection" class="popover-section popover-section--compact" style="--section-color:var(--engine-custom);">
                     <div class="popover-section-header">
                         <span class="popover-radio"></span>
-                        <span class="popover-section-name">Custom Endpoint</span>
+                        <span class="popover-section-name">Custom endpoint</span>
                     </div>
                     <input type="text" class="custom-endpoint-input" id="customEndpoint"
                            placeholder="http://localhost:8080/v1" spellcheck="false">
                 </div>
             </div>
-        </div>
-
-        <!-- Search input -->
-        <div class="search-input-wrap">
-            <input type="text" id="searchInput" placeholder="Ask about John Hanacek..." autofocus>
-            <button id="clearBtn" class="clear-btn" aria-label="Clear search">&times;</button>
         </div>
     </div>
 
@@ -522,7 +505,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/minisearch@7.1.1/dist/umd/index.min.js"></script>
-    <script src="./scripts/search-core.js?v=1.53"></script>
+    <script src="./scripts/search-core.js?v=1.55"></script>
 
     <script>
         // Shell only — the pipeline lives in scripts/search-core.js (shared
@@ -567,6 +550,8 @@
             if (initialQuery) {
                 document.getElementById('searchInput').value = initialQuery;
                 setTimeout(() => core.runQuery(initialQuery), 500);
+            } else {
+                core.doSearchOnly('');   // renders the try-these suggestion chips
             }
         })();
     </script>
@@ -574,7 +559,7 @@
     <footer>
         <jh-footer></jh-footer>
     </footer>
-<script src="./scripts/shared.js?v=1.53"></script>
-    <script src="./scripts/jh-chrome.js?v=1.53" defer></script>
+<script src="./scripts/shared.js?v=1.55"></script>
+    <script src="./scripts/jh-chrome.js?v=1.55" defer></script>
 </body>
 </html>

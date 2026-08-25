@@ -24,7 +24,7 @@ Each page is a standalone HTML document with embedded CSS and JavaScript. All pa
 | `services.html` | Star | Services — AI coaching (JH Coaching OS), Claude Code coaching, founding designer |
 | `nanome2.html` | — | Nanome 2 Redesign case study (subpage of Design) |
 | `openprose.html` | — | OpenProse founding-design case study (subpage of Design). Brings its own design language (IBM Plex + Kecal, warm paper) and loads `styles/jh-chrome.css` **instead of** `shared.css` — see below |
-| `playground.html` | — | Infinite canvas board with iframe demo cards (slated for a future rebuild on jh-deng-template) |
+| `playground.html` | Hexagon | Playground — a Review Canvas of the whole site: every page and every demo, live, in canvas/grid/focus modes |
 | `writing.html` | — | Writing index/reader — fetches and renders the `writing/*.md` essays (EduOS + MetaMedium sets); linked from art.html |
 | `search.html` | 🔍 | AI-powered search (3-tier: BM25 / WebGPU / local LLM) |
 
@@ -36,9 +36,9 @@ These are intentional. All carry `<meta name="robots" content="noindex, nofollow
 
 | File | Status |
 |------|--------|
-| `onagents.html` | Finished ~37k-word essay "The Problems of Agent Orchestration". **Held for later release** as part of the future jh-deng-template playground rebuild. |
-| `tidepool.html` | Internal experiment — bioluminescent tidepool canvas visualizing an AI-agent ecosystem. |
-| `beach-beers.html` | Internal experiment — whimsical animated SVG scene. |
+| `onagents.html` | Finished ~37k-word essay "The Problems of Agent Orchestration". Still `noindex`, but now **linked from playground.html** — the canvas was its release vehicle, so it is discoverable by humans while staying out of search. |
+| `tidepool.html` | Internal experiment — bioluminescent tidepool canvas visualizing an AI-agent ecosystem. Now listed on playground.html (still `noindex`). |
+| `beach-beers.html` | Internal experiment — whimsical animated SVG scene. Now listed on playground.html (still `noindex`). |
 | `fish-demo/` | Standalone extraction of the fish minigame (`index.html` + `fish.js`). Testbed / seed for the v1.8 `scripts/fish-engine.js` extraction. |
 | `Assets/JH-brand-styleguide.html` | Internal brand/design-token reference ("Deep Sea Terminal" styleguide v1.0). |
 | `Assets/DemosPlayground/test-llm.html`, `test-vision.html` | LLM/VLM proof-of-concept pages (Qwen 0.8B WebGPU + LMStudio/Ollama). |
@@ -51,18 +51,18 @@ These are intentional. All carry `<meta name="robots" content="noindex, nofollow
 Rendered by the `<jh-nav current="home|design|art|about|services|search">` component from `scripts/jh-chrome.js` — edit the nav in that one file, not per-page:
 
 ```
-[🔍 Search] [Triangle/Home] [Square/Design] [Circle/Art]   "John Hanacek"   [Diamond/About] [Star/Services]
+[🔍 Search] [Triangle/Home] [Square/Design] [Circle/Art]   "John Hanacek"   [Diamond/About] [Star/Services] [Hexagon/Play]
 ```
 
 - Search icon leftmost, then primary shapes: Home, Design, Art
 - Center: "John Hanacek" text link → index.html
-- Secondary shapes (right): About, Services
+- Secondary shapes (right): About, Services, Play
 - `current` attribute sets `class="active"` + `aria-current="page"`
 - Each page keeps its own `.nav-toggle` + `.nav-right` (per-page section TOC); mobile hamburger toggles it
 - Nav is fixed, appears after scrolling past hero section
-- Exceptions: `playground.html` has a bespoke hardcoded nav (left as-is pending its rebuild); `writing.html` has its own standalone chrome
+- Exception: `writing.html` has its own standalone chrome
 
-**Shape SVGs:** defined in `scripts/jh-chrome.js` (triangle, rounded-square, circle, diamond, star, search magnifier).
+**Shape SVGs:** defined in `scripts/jh-chrome.js` (triangle, rounded-square, circle, diamond, star, hexagon, search magnifier).
 
 ## Design System — "Deep Sea Terminal"
 
@@ -160,15 +160,59 @@ which stamps every `?v=` cache-bust ref across root `*.html` **and** the `Portfo
 - **BYOM**: Custom endpoint input with OpenAI-compatible API probing
 - **Chunks**: `Assets/search-chunks.json` — flat factual text, field-boosted, each with a
   verified `url` (titles render as links) and a precomputed `vec`
+- **The Postcard (6a)**: results render as ONE microdense surface whose density adapts to
+  query specificity — LOD ladder (mention → one-liner → tldr sentence → dossier with prose
+  pretext-wrapped BOTH sides of its media), allocated by pretext line-arithmetic. Chunks
+  carry dev-authored `micro`/`tldr` fields (data, not runtime generation). Hover = shared
+  tooltip; click pins to dossier; compact/comfortable density toggle; empty state shows
+  page-aware suggestion chips.
+- **Scene language (6b)**: on index + design, utterances like "add 3 small fish and 2
+  coral" or "draw a circle and put two fish inside" parse (deterministic grammar, never
+  bluffs) into a PLAN CARD → confirm → materialize through the real recognizer (design:
+  synthetic pointer strokes; providers in each page's inline script close over sealed
+  state) with cap-aware receipts and physics-verified "N/N enclosed". "how many fish/what
+  shapes" → census bylined "read from the canvas". Providers: `window.JH_SCENE`.
+- **Escalation seam (6c)**: the model APPENDS below the postcard ("elaboration" eyebrow),
+  an artifact rail pins the grounding chunks deterministically, the census line grounds
+  local-model context, and the `scene_execute` tool has the model EMIT scene language
+  that the same parser gates into the same plan card.
 - **Engine color coding**: WebGPU=blue, LMStudio=purple, Ollama=orange, Custom=green
 - AI toggle: users can disable LLM even when engine detected
 
-### Playground (playground.html)
-- Infinite canvas board with pan/zoom (trackpad + mouse)
-- Iframe demo cards loaded on visibility
-- Categories: 3D, Code, Design, Style
-- Caustic ripple background animation
-- **Planned rebuild** on jh-deng-template (lives on John's local machine, not in this repo); will host `onagents.html`. Don't invest in the current implementation.
+### Playground — the site Review Canvas (playground.html)
+Rebuilt on the OpenProse review-canvas engine, which replaced the old hand-built
+board wholesale. Wears `<jh-nav current="play">`; **no footer** — it is a
+full-viewport canvas app, so the site footer and the tool's own were both
+removed along with their CSS and the vestigial `?footer=` config.
+
+- Three view modes: canvas (pan/zoom), grid, focus. `?mode=`, `?items=`,
+  `?budget=`, `?zoom=`, `?cols=`, `?sort=` all URL-editable
+- Manifest: `scripts/playground-items.js` — 24 items, the whole site plus the
+  demo collection carried over from the old board
+- **Budgeted LRU lifecycle, not naive lazy-load.** `maxLive` iframes (8 by
+  default), an IntersectionObserver at 400px, nearest-first wake, eviction with
+  600px hysteresis, a 3s idle sweep, and `sleepCell` doing a real
+  `iframe.remove()` so documents and WebGL contexts are actually released
+- **`nested: true` in the manifest is a recursion guard.** `openprose.html`
+  embeds six copies of this same canvas; waking it live would nest the tool
+  inside itself. Enforced at BOTH wake paths (`wakeCell` and `openFocus`),
+  because focus sets `fFrame.src` directly and bypasses the first one
+- `weight: 'heavy'` is recorded per item but not yet acted on — the staged
+  perf plan spends optimisation before it spends clicks
+- **Type filters are derived, not declared.** The chip vocabulary is whatever
+  `cat` values the manifest uses, collected at boot; a new type appears by
+  tagging an item. Click selects one, shift-click accumulates, `all` clears.
+  State lives in `?cat=a,b` so a filtered view is shareable
+- `external: true` marks an off-origin URL — never framed (X-Frame-Options
+  would paint a blank), card shows the hostname, opens in a new tab. Shares the
+  `neverWake()` predicate with `nested`
+- **Focus mode is `z-index: 1100`, above the site nav's 1000.** It is an
+  `aria-modal` dialog; at the tool's native z-50 the `← back` button landed
+  inside the fixed nav's 40px band and `elementFromPoint` returned a nav icon,
+  so it was unclickable — fully-zoomed genuinely had no way out
+- Leaving for a real tab appends `?from=playground`, and `jh-chrome.js` renders
+  a `← back to playground` chip on any page carrying it — one place, every page
+- Plan of record: `Agent Reference/PLAYGROUND_CANVAS_PLAN.md`
 
 ### Writing (writing.html + writing/)
 - Client-side markdown reader with its own chrome (light/dark theme, breadcrumbs, prev/next)
@@ -202,6 +246,9 @@ scripts/search-overlay.js — ⌘K overlay shell (lazy-loads search-core on firs
 scripts/search-overlay.css— overlay styles + command-bar card styles (search.html links it too)
 scripts/build-chunk-vectors.mjs — dev-time: embeds chunks into search-chunks.json (run after
                             editing chunk text; needs `npm install --no-save @huggingface/transformers`)
+scripts/playground-items.js — manifest for playground.html (24 items). `nested: true` marks a
+                            page that embeds the canvas itself (recursion guard); `weight: 'heavy'`
+                            records cost for the staged perf work.
 scripts/pretext-wrap.js   — flows running prose around obstacles on BOTH sides, which no CSS
                             shape can do (`shape-outside` excludes on one edge only; `shape-inside`
                             never shipped). Wraps the vendored pretext line-breaker, whose

@@ -2,7 +2,7 @@
 
 Portfolio website for John Hanacek — work at the intersection of Creativity, Curiosity, AI & Human Augmentation.
 
-**[www.johnhanacek.com](https://www.johnhanacek.com)** · Portfolio v1.53
+**[www.johnhanacek.com](https://www.johnhanacek.com)** · Portfolio v1.55
 
 ---
 
