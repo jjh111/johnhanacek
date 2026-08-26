@@ -77,8 +77,11 @@ window.CANVAS_ITEMS = [
 
   // ---- tools --------------------------------------------------------------
   { file: 'Assets/DemosPlayground/sna-drawing-demo.html', name: 'social-network-viz', cat: 'tools',
-    desc: 'Draw nodes and edges, watch force-directed layout emerge',
+    desc: 'Map who knows who and what they care about — surfaces the introductions worth making',
     created: '2025-11-05T00:00:00-08:00' },
+  { file: 'Assets/JH-brand-styleguide.html', name: 'styleguide', cat: 'tools',
+    desc: 'Deep Sea Terminal — the site’s brand and design-token reference',
+    created: '2026-01-05T00:00:00-08:00' },
   { file: 'Assets/DemosPlayground/pretext-wrap-test.html', name: 'pretext-wrap', cat: 'tools',
     desc: 'Prose flowing around obstacles on both sides — scripts/pretext-wrap.js',
     created: '2026-08-24T00:00:00-07:00' },
@@ -90,6 +93,12 @@ window.CANVAS_ITEMS = [
   { file: 'beach-beers.html', name: 'beach-beers', cat: 'experiments',
     desc: 'Whimsical animated SVG scene',
     created: '2026-04-02T00:00:00-07:00' },
+  { file: 'Assets/DemosPlayground/StyleRefs/altec-style.html', name: 'typography-experiments', cat: 'experiments',
+    desc: 'Expressive type explorations and layout experiments',
+    created: '2025-12-12T00:00:00-08:00' },
+  { file: 'Assets/DemosPlayground/StyleRefs/black-hole-gothic.html', name: 'black-hole-gothic', cat: 'experiments',
+    desc: 'Dark cosmic design system with gold accents and star animations',
+    created: '2025-12-01T00:00:00-08:00' },
 
   // ---- demos --------------------------------------------------------------
   { file: 'https://jjh111.github.io/MetaMedium/', name: 'metamedium', cat: 'demos',
@@ -110,13 +119,33 @@ window.CANVAS_ITEMS = [
   { file: 'Assets/DemosPlayground/CreativeCODE2016/DynaBoard1/Dynaboard1.html', name: 'dynaboard-v1', cat: 'demos',
     desc: 'Dynamic 3D board experiment — early spatial interface concept',
     created: '2016-04-01T00:00:00-07:00' },
+  { file: 'fish-demo/index.html', name: 'fish-demo', cat: 'demos',
+    desc: 'The fish minigame on its own — standalone extraction of the shared engine',
+    weight: 'heavy', created: '2026-04-15T00:00:00-07:00' },
+  // Work that lives off-site (external: hostname card, opens in its own tab)
+  { file: 'https://earthstar.space', name: 'earth-star', cat: 'demos',
+    desc: 'Earth Star — regenerative-future worldbuilding & research project',
+    external: true, created: '2026-08-26T00:00:00-07:00' },
+  { file: 'https://fractalfuture.substack.com', name: 'fractal-futures', cat: 'demos',
+    desc: 'Fractal Futures — original science fiction (also as ebook & Kindle)',
+    external: true, created: '2026-08-26T00:00:00-07:00' },
+  { file: 'https://johnhanacek.smugmug.com', name: 'photography', cat: 'demos',
+    desc: 'Photography portfolio',
+    external: true, created: '2026-08-26T00:00:00-07:00' },
+  { file: 'https://johnhanacek.substack.com', name: 'substack', cat: 'demos',
+    desc: 'Main Substack — essays and updates',
+    external: true, created: '2026-08-26T00:00:00-07:00' },
+  { file: 'https://spatialandimmersivedesign.substack.com', name: 'spatial-design', cat: 'demos',
+    desc: 'Spatial & Immersive Design — XR design writing',
+    external: true, created: '2026-08-26T00:00:00-07:00' },
+  { file: 'https://jhanazone.substack.com', name: 'jhanazone', cat: 'demos',
+    desc: 'Jhana Zone — personal Substack',
+    external: true, created: '2026-08-26T00:00:00-07:00' },
 
-  // ---- ideas (style references) — REMOVED FROM VIEW, Aug 2026 -------------
-  // Parked, not deleted: uncomment an entry to restore its card (the `ideas`
-  // filter chip regrows by itself the moment one is live again).
-  // { file: 'Assets/DemosPlayground/StyleRefs/black-hole-gothic.html', name: 'black-hole-gothic', cat: 'ideas',
-  //   desc: 'Dark cosmic design system with gold accents and star animations',
-  //   created: '2025-12-01T00:00:00-08:00' },
+  // ---- parked (out of view, Aug 2026) -------------------------------------
+  // Not deleted: uncomment an entry to restore its card (its filter chip
+  // regrows by itself the moment one is live again). typography-experiments
+  // and black-hole-gothic returned to view under `experiments` above.
   // { file: 'Assets/DemosPlayground/CreativeCODE2016/transcendence-gold.html', name: 'transcendence-gold', cat: 'ideas',
   //   desc: 'Luxury warm-toned design system, elegant typography',
   //   created: '2016-06-01T00:00:00-07:00' },
@@ -126,7 +155,4 @@ window.CANVAS_ITEMS = [
   // { file: 'Assets/DemosPlayground/StyleRefs/ancient-matrix-lab.html', name: 'ancient-matrix-lab', cat: 'ideas',
   //   desc: 'Glitch-meets-antiquity design system with matrix aesthetics',
   //   created: '2025-12-08T00:00:00-08:00' },
-  // { file: 'Assets/DemosPlayground/StyleRefs/altec-style.html', name: 'typography-experiments', cat: 'ideas',
-  //   desc: 'Expressive type explorations and layout experiments',
-  //   created: '2025-12-12T00:00:00-08:00' },
 ];
