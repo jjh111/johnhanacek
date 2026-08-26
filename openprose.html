@@ -1854,10 +1854,15 @@ html[data-mode="dark"] .install-cmd { background: rgba(245, 240, 232, 0.06); }
   margin-top: var(--space-lg);
 }
 @media (max-width: 980px) { #canvas-tool .tool-cols { grid-template-columns: 1fr; } }
-#canvas-tool .tool-cols .feature-list { grid-template-columns: 1fr; gap: var(--space-2xs); }
+/* These once hung off .tool-cols; §II's intro now lives in .tool-flow (the
+   unified pretext flow), so they cover both containers. */
+#canvas-tool .tool-cols .feature-list,
+#canvas-tool .tool-flow .feature-list { grid-template-columns: 1fr; gap: var(--space-2xs); }
 #canvas-tool .tool-cols .lede { max-width: none; }
-#canvas-tool .tool-cols .spec-pre { margin-top: var(--space-md); }
-#canvas-tool .tool-cols .lede + .lede { margin-top: var(--space-sm); }
+#canvas-tool .tool-cols .spec-pre,
+#canvas-tool .tool-flow .spec-pre { margin-top: var(--space-md); }
+#canvas-tool .tool-cols .lede + .lede,
+#canvas-tool .tool-flow .lede + .lede { margin-top: var(--space-sm); }
 /* The film sits under the lifecycle rows in the same column, so it takes the
    column's rhythm rather than the full-bleed figure spacing. */
 #canvas-tool .tool-film { margin-top: 0; }
@@ -1996,6 +2001,20 @@ html[data-mode="dark"] .h2-sig { filter: invert(1); }
   top: 0; left: 0;
   white-space: nowrap;
   will-change: transform;
+}
+
+/* §II unified flow. Default (no JS, or narrow): everything stacks in DOM
+   order at the lede measure. With .pretext-on (wide screens, module
+   loaded): the media stack pins to the top right as an island and the
+   paragraphs — full-width containers, line length capped by the wrap
+   itself — flow around it. */
+#canvas-tool .tool-flow { position: relative; }
+#canvas-tool .tool-flow > .tool-main { margin: var(--space-xl) 0; max-width: 720px; }
+#canvas-tool .tool-flow.pretext-on > .lede { max-width: none; }
+#canvas-tool .tool-flow.pretext-on > .tool-main {
+  position: absolute; top: 0; right: 0;
+  width: min(52%, 700px);
+  margin: 0;
 }
 </style>
 </head>
@@ -2196,11 +2215,16 @@ system consumes it.
   <div class="inner">
     <div class="section-kicker">II The Tooling</div>
     <h2>Building the <em>workshop</em> while working in it.</h2>
-    <div class="tool-cols tool-intro">
-      <div>
-        <p class="lede">Reviewing dozens of live website experiments needs more than a folder. So I have made a simple 'canvas' for generative web design: the <strong>JHDesign Review Canvas</strong>. The Review Canvas shows the content of a repo as one navigable page with three view modes (canvas, grid, focus), where every page is a live iframe with star ratings, typed comments, and freehand drawings composited onto screenshots. Review state lives in <em>git</em>; each reviewer writes only their own file, so feedback merges without conflict. The Review Canvas just needs a Github repo to make it collaborative. No extra overhead, no extra accounts or permissions to set up, and no intermediary steps to get the comments back into production.</p>
-        <p class="lede">I've been a designer for about 10 solid years now; from Adobe XD to Figma. Being real with you, I've been there and I don't want to go back. As agentic engineering offers new potentials, I find myself recalling… For so long we designers have been adding abstractions of different apps and tools just to simulate code, now why not just use the code and standards directly? Thus the webpage that is a canvas that shows iframes.</p>
-      </div>
+    <!-- ONE prose flow with the media stack as an island: the old two-column
+         intro AND the old .tool-outro paragraphs share this container, and
+         the pretext script at the end of the page wraps them AROUND
+         .tool-main — so the text no longer hard-breaks at a column boundary,
+         leaving a hole under the shorter column. Without JS (or under 900px)
+         the stack reads in DOM order: two ledes, media, closing ledes — the
+         order phones already used. -->
+    <div class="tool-flow" id="tool-flow">
+      <p class="lede">Reviewing dozens of live website experiments needs more than a folder. So I have made a simple 'canvas' for generative web design: the <strong>JHDesign Review Canvas</strong>. The Review Canvas shows the content of a repo as one navigable page with three view modes (canvas, grid, focus), where every page is a live iframe with star ratings, typed comments, and freehand drawings composited onto screenshots. Review state lives in <em>git</em>; each reviewer writes only their own file, so feedback merges without conflict. The Review Canvas just needs a Github repo to make it collaborative. No extra overhead, no extra accounts or permissions to set up, and no intermediary steps to get the comments back into production.</p>
+      <p class="lede">I've been a designer for about 10 solid years now; from Adobe XD to Figma. Being real with you, I've been there and I don't want to go back. As agentic engineering offers new potentials, I find myself recalling… For so long we designers have been adding abstractions of different apps and tools just to simulate code, now why not just use the code and standards directly? Thus the webpage that is a canvas that shows iframes.</p>
       <div class="tool-main">
         <!-- Film band — sits in this column, directly under the lifecycle it
              shows, so on desktop the four steps and the footage of those four
@@ -2263,12 +2287,6 @@ system consumes it.
 <span class="k">Constraints</span> · never close a comment to make the audit green — a clean audit is
               the <span class="k">result</span> of coherent state, not the goal to be gamed</pre>
       </div>
-    </div>
-    <!-- The closing ledes run as ONE column. The right-hand column ends with
-         the contract block, and these paragraphs used to carry on alone in the
-         narrow left measure beside a column of empty space — a hole down the
-         page with the text bunched into a gutter next to it. -->
-    <div class="tool-outro">
       <p class="lede">This system was essential in managing the large surface area of this project across two tracks. Instead of staying linear in code chat I could spread out and review whole swaths of work, specify changes, then just have the agent read the latest manifest and get to work in parallel plans.</p>
       <p class="lede">The supporting tooling for the Canvas even runs on <em>OpenProse</em> itself: the canvas's integrity is a written responsibility an agent keeps, audited by script and attested with commit SHAs, and the design system is indexed by a runnable OpenProse program.</p>
       <p class="lede">I'll be developing this tooling further and consider if it's a product of its own, or just my secret sauce for now.</p>
@@ -4541,16 +4559,49 @@ system consumes it.
 })();
 </script>
 
-<!-- §II intro ledes ride the pretext line-breaker: whole words wrap — no
-     more "compos-ited", where CSS hyphenation split a word mid-lede — and
-     the strong/em runs survive via the module's styled-run layer. If the
-     module fails to load, the CSS-hyphenated original stands untouched. -->
+<!-- §II rides the pretext line-breaker: on wide screens the whole section is
+     ONE prose flow wrapping around the media stack (rect obstacle), so the
+     text never hard-breaks at a column boundary — and whole words wrap, no
+     "compos-ited" CSS hyphenation. Inline strong/em survive via the module's
+     styled-run layer. Below 900px, or if the module fails, the stacked DOM
+     order stands untouched. -->
 <script type="module">
   try {
     const { default: wrapAround } = await import('./scripts/pretext-wrap.js');
-    for (const p of document.querySelectorAll('#canvas-tool .tool-intro .lede')) {
-      await wrapAround(p);
+    const flow = document.getElementById('tool-flow');
+    const media = flow.querySelector('.tool-main');
+    const paras = [...flow.querySelectorAll(':scope > .lede')];
+    const wide = window.matchMedia('(min-width: 900px)');
+    let wraps = [], ro = null;
+
+    async function engage() {
+      if (wraps.length) return;
+      flow.classList.add('pretext-on');
+      try {
+        for (const p of paras) {
+          wraps.push(await wrapAround(p, {
+            obstacles: [{ el: media, shape: 'rect', hPad: 30, vPad: 12 }],
+            maxLineWidth: 920,
+          }));
+        }
+      } catch (e) { disengage(); return; }
+      // The island is out of flow; the flow must still clear it.
+      flow.style.minHeight = (media.offsetHeight + 24) + 'px';
+      // A paragraph growing moves its siblings without resizing them, so a
+      // container-level observer refreshes every wrap; the second pass
+      // computes identical lines and the loop settles.
+      ro = new ResizeObserver(() => wraps.forEach(w => w.refresh()));
+      ro.observe(flow);
     }
+    function disengage() {
+      if (ro) { ro.disconnect(); ro = null; }
+      wraps.forEach(w => { try { w.destroy(); } catch (e) {} });
+      wraps = [];
+      flow.classList.remove('pretext-on');
+      flow.style.minHeight = '';
+    }
+    if (wide.matches) await engage();
+    wide.addEventListener('change', e => { e.matches ? engage() : disengage(); });
   } catch (e) { /* un-wrapped is the original page */ }
 </script>
 

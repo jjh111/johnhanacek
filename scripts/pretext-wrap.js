@@ -109,6 +109,10 @@ export async function wrapAround(el, opts = {}) {
         `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
     const minSlot = opts.minSlot != null ? opts.minSlot : 90;
     const maxLines = opts.maxLines || 400;
+    // Optional measure cap: a slot wider than this is trimmed from the right,
+    // so lines in open water keep a readable length even when the container
+    // spans the full page.
+    const maxLineWidth = opts.maxLineWidth || Infinity;
 
     // Inline emphasis survives the wrap. The element's own <strong>/<em>/
     // <b>/<i>/<code> runs are recorded as character ranges over the
@@ -231,6 +235,7 @@ export async function wrapAround(el, opts = {}) {
             }
             blocked.sort((a, b) => a.left - b.left);
             const slots = carveSlots({ left: 0, right: width }, blocked, minSlot);
+            slots.forEach(s => { if (s.right - s.left > maxLineWidth) s.right = s.left + maxLineWidth; });
 
             // A row entirely blocked still advances, or a wide mark would spin
             // the loop until the guard trips.
