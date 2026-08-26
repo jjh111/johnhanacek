@@ -129,8 +129,27 @@ async function pollContext() {
 // On public portfolio views (no localhost API), contextPct stays 0 — which is
 // intentional: the water shows as pristine dark-teal, the organisms glow fully.
 // No fallback demo value is set; the visualization is meaningful at 0% context.
-pollContext();
-setInterval(pollContext, 15000);
+//
+// But "stays 0" used to be achieved by asking anyway, four times a minute,
+// forever. On www.johnhanacek.com every one of those was a refused connection
+// to a machine that is not the visitor's — a console error each time, and, in
+// the playground canvas where this page runs as a live iframe, a permanent
+// background drip. The API only ever exists beside a local dev server, so the
+// host decides whether to ask at all. Any port works: John serves the site on
+// 1337 while the API listens on 3000.
+const LOCAL_HOST = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+if (LOCAL_HOST) {
+  let pollDelay = 15000;
+  const tick = async () => {
+    await pollContext();
+    // Back off while the API is down so a dev server without it doesn't drip
+    // errors either — and recover the moment it answers, because John may
+    // start it after this page is already open.
+    pollDelay = live.error ? 60000 : 15000;
+    setTimeout(tick, pollDelay);
+  };
+  tick();
+}
 
 // ─── Cron scheduling ───────────────────────────────────────────────────────
 const CRONS = [
