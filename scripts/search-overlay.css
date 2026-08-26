@@ -53,9 +53,9 @@
     -webkit-backdrop-filter: blur(8px) saturate(1.1);
     border: 1px solid rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.18);
 
-    /* drop-shadow, not box-shadow — site convention */
+    /* drop-shadow, not box-shadow — site convention; theme-aware elevation */
     filter: drop-shadow(0 0 1px rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.06))
-            drop-shadow(0 12px 50px rgba(0, 0, 0, 0.5));
+            drop-shadow(0 12px 50px var(--elevation, rgba(0, 0, 0, 0.5)));
     box-shadow: none;
 
     /* Default: closed state transform */
@@ -887,7 +887,7 @@ model-viewer.pc-obstacle--float { width: 118px; height: 118px; }
     border: 1px solid rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.3); border-radius: 4px;
     font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; line-height: 1.5;
     padding: 0.4rem 0.55rem; pointer-events: none;
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 6px 24px var(--elevation, rgba(0, 0, 0, 0.5));
 }
 /* empty-state suggestion chips */
 .pc-suggest { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; }
@@ -1134,3 +1134,115 @@ model-viewer.pc-obstacle--float { width: 118px; height: 118px; }
 @media (prefers-reduced-motion: reduce) {
     .result-thumb, .result-model { transition: none; }
 }
+
+/* ═══ 10b — the collapsed search: session continuity strip ═══ */
+.so-continuity {
+    position: fixed;
+    top: calc(44px + env(safe-area-inset-top));
+    left: 50%; transform: translateX(-50%);
+    z-index: 900;   /* under the nav (1000) and the overlay (2000) */
+    display: flex; align-items: center; gap: 0.1rem;
+    background: rgba(var(--surface-rgb, 2, 10, 18), 0.88);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.22);
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    padding: 0.15rem 0.3rem 0.2rem 0.55rem;
+    max-width: min(92vw, 480px);
+}
+.so-continuity-open {
+    background: none; border: none; cursor: pointer;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+    color: var(--text-primary, #8cb8cc);
+    display: inline-flex; align-items: baseline; gap: 0.35rem;
+    padding: 0.15rem 0.2rem; min-width: 0;
+}
+.so-continuity-q {
+    color: var(--text-bright, #b8dced);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    max-width: 16rem;
+}
+.so-continuity-cta {
+    color: var(--cyan-dim, #4dc9f6);
+    border: 1px solid rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.25);
+    border-radius: 3px; padding: 0.05rem 0.4rem;
+    font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.08em;
+}
+.so-continuity-open:hover .so-continuity-cta {
+    color: var(--gold, #d4af37);
+    border-color: rgba(var(--gold-rgb, 212, 175, 55), 0.4);
+}
+.so-continuity-x {
+    background: none; border: none; cursor: pointer;
+    color: var(--so-muted, var(--muted, #7a9aaa)); opacity: 0.55;
+    font-size: 0.95rem; line-height: 1; padding: 0.15rem 0.35rem;
+}
+.so-continuity-x:hover { opacity: 1; }
+/* the strip yields to the open overlay */
+body.search-overlay-open .so-continuity { display: none; }
+
+/* a KEPT answer wears an honest byline, never the live eyebrow */
+#aiAnswer[data-restored]::before, #so-aiAnswer[data-restored]::before {
+    content: 'from your last search';
+}
+
+/* ═══ 10c — pieces: the site's widgets as first-class search material ═══ */
+.pc-piece {
+    position: relative; display: inline-flex; flex-direction: column;
+    justify-content: space-between; overflow: hidden;
+    border: 1px solid rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.22);
+    border-radius: 6px;
+    background: rgba(var(--panel-rgb, 10, 22, 40), 0.35);
+    text-decoration: none; flex-shrink: 0;
+}
+.pc-piece--demo { width: 240px; height: 160px; cursor: pointer; }
+.pc-piece--demo:hover { border-color: rgba(var(--gold-rgb, 212, 175, 55), 0.4); }
+.pc-piece-poster {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; opacity: 0.45;
+}
+.pc-piece-kind {
+    position: relative; align-self: flex-start; margin: 0.35rem;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.58rem;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--gold, #d4af37);
+    background: rgba(var(--surface-rgb, 2, 10, 18), 0.75);
+    border: 1px solid rgba(var(--gold-rgb, 212, 175, 55), 0.3);
+    border-radius: 3px; padding: 0.12rem 0.4rem;
+    z-index: 2;
+}
+.pc-piece-title {
+    position: relative; margin: 0.35rem 0.45rem;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.66rem;
+    color: var(--text-bright, #b8dced);
+    background: rgba(var(--surface-rgb, 2, 10, 18), 0.6);
+    border-radius: 3px; padding: 0.1rem 0.3rem;
+    align-self: flex-start; max-width: calc(100% - 0.9rem);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pc-piece--woken iframe {
+    position: absolute; inset: 0; width: 100%; height: 100%; border: 0;
+    background: var(--sea-deep, #020a12);
+}
+.pc-piece--woken .pc-piece-title { display: none; }
+.pc-piece--woken .pc-piece-kind { cursor: pointer; z-index: 3; }
+/* off-origin: a labeled doorway, never a frame */
+.pc-piece--link {
+    flex-direction: row; align-items: baseline; gap: 0.4rem;
+    padding: 0.35rem 0.6rem; width: auto; height: auto;
+    font-family: 'JetBrains Mono', monospace;
+}
+.pc-piece--link .pc-piece-kind { position: static; margin: 0; align-self: center; }
+.pc-piece--link .pc-piece-title { position: static; margin: 0; background: none; padding: 0; }
+.pc-piece--link .pc-piece-host { font-size: 0.6rem; color: var(--so-muted, var(--muted, #7a9aaa)); }
+.pc-piece--link:hover .pc-piece-title { color: var(--gold, #d4af37); }
+/* the rail: pieces collected from the top results, one strip, wraps (never scrolls) */
+.pc-piece-rail { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.25rem 0 0.4rem; }
+.pc-piece-rail .pc-piece--demo { width: 150px; height: 100px; }
+.pc-piece-rail .pc-piece-title { font-size: 0.58rem; }
+/* a piece obstacle is taller than a thumb — the dossier accommodates */
+.pc-dossier:has(.pc-piece.pc-obstacle--float) { min-height: 172px; }
+/* a small in-module piece sits where a thumb would */
+.result-row .pc-piece--demo { width: 150px; height: 100px; }
+.result-row .pc-piece--demo .pc-piece-title { font-size: 0.58rem; }

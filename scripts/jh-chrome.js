@@ -77,33 +77,10 @@
   // Renders the uniform .nav-left (search + shape links + center title) for the
   // fixed top nav. The page keeps its own .nav-toggle + .nav-right (page section TOC).
   // current="" (or absent) marks nothing active (e.g. 404).
-  const NAV = [
-    { key: 'search', href: 'search.html', cls: 'shape-link search-icon', aria: 'Search',
-      svg: '<svg class="shape" viewBox="0 0 40 40" fill="none" stroke="currentColor"><circle class="state-ring" cx="20" cy="20" r="15" stroke-width="1.5"/><circle cx="16" cy="16" r="5.5" stroke-width="2.5"/><line x1="20" y1="20" x2="26" y2="26" stroke-width="2.5" stroke-linecap="round"/></svg>',
-      label: '' },
-    { key: 'home', href: 'index.html', cls: 'shape-link', aria: 'Home',
-      svg: '<svg class="shape triangle" viewBox="0 0 40 40"><polygon points="20,8 34,32 6,32"/></svg>',
-      label: '<img class="shape-label shape-label-img" src="./Assets/JHsig.svg" alt="JH">' },
-    { key: 'design', href: 'design.html', cls: 'shape-link', aria: 'Design',
-      svg: '<svg class="shape rounded-square" viewBox="0 0 40 40"><rect x="6" y="6" width="28" height="28" rx="6"/></svg>',
-      label: '<span class="shape-label">DESIGN</span>' },
-    { key: 'art', href: 'art.html', cls: 'shape-link', aria: 'Art',
-      svg: '<svg class="shape circle" viewBox="0 0 40 40"><circle cx="20" cy="20" r="14"/></svg>',
-      label: '<span class="shape-label">ART</span>' },
-    { title: true },
-    { key: 'about', href: 'about.html', cls: 'shape-link secondary', aria: 'About',
-      svg: '<svg class="shape diamond" viewBox="0 0 40 40"><polygon points="20,6 34,20 20,34 6,20"/></svg>',
-      label: '<span class="shape-label">ABOUT</span>' },
-    { key: 'services', href: 'services.html', cls: 'shape-link secondary', aria: 'Services',
-      svg: '<svg class="shape star" viewBox="0 0 40 40"><polygon points="20,6 23,16 34,16 25,22 28,34 20,26 12,34 15,22 6,16 17,16"/></svg>',
-      label: '<span class="shape-label">SERVICES</span>' },
-    // Hexagon / PLAY — carried over from the old hand-written playground nav,
-    // which was the one page that never joined the shared chrome. Same polygon
-    // points, so the mark is unchanged.
-    { key: 'play', href: 'playground.html', cls: 'shape-link secondary', aria: 'Playground',
-      svg: '<svg class="shape hexagon" viewBox="0 0 40 40"><polygon points="20,5 33,12.5 33,27.5 20,35 7,27.5 7,12.5"/></svg>',
-      label: '<span class="shape-label">PLAY</span>' }
-  ];
+  // Shape SVGs + link metadata live in scripts/jh-shapes.js (single source —
+  // the same data renders the hero shape-nav strips). Requires that file
+  // loaded synchronously before this deferred script executes.
+  const NAV = window.JHShapes.links;
 
   class JHNav extends HTMLElement {
     connectedCallback() {

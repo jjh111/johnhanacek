@@ -42,6 +42,11 @@
     --muted-light: #8aabb8;
     --border: rgba(var(--cyan-dim-rgb), 0.2);
     --shadow: rgba(var(--cyan-dim-rgb), 0.15);
+    /* Elevation shadows for the glass ovals / floating controls. On the deep-sea
+       ground black IS the ambient dark; the light "Shallows" theme lifts these to
+       soft ink-teal so glass doesn't grow a hard black halo on paper. */
+    --elevation: rgba(0, 0, 0, 0.55);
+    --elevation-soft: rgba(0, 0, 0, 0.35);
     --focus: var(--cyan);
 
     /* Typography Scale */
@@ -605,8 +610,9 @@ body > footer { pointer-events: none; }
     -webkit-backdrop-filter: blur(8px) saturate(1.1);
     border: 1px solid rgba(var(--cyan-dim-rgb), 0.18);
     border-radius: 50%;
-    /* Safari fix: use drop-shadow instead of box-shadow for non-square border-radius */
-    filter: drop-shadow(0 0 1px rgba(var(--cyan-dim-rgb), 0.06)) drop-shadow(0 8px 40px rgba(0, 0, 0, 0.55));
+    /* Safari fix: use drop-shadow instead of box-shadow for non-square border-radius.
+       Color is theme-aware (--elevation) — black here grew a halo on light mode. */
+    filter: drop-shadow(0 0 1px rgba(var(--cyan-dim-rgb), 0.06)) drop-shadow(0 8px 40px var(--elevation));
     position: relative;
 }
 
@@ -831,6 +837,8 @@ body > footer .version {
     --muted-light: #52707e;
     --border: rgba(18, 83, 108, 0.28);
     --shadow: rgba(18, 83, 108, 0.15);
+    --elevation: rgba(18, 83, 108, 0.18);
+    --elevation-soft: rgba(18, 83, 108, 0.14);
 
     --cyan-rgb: 22, 96, 124;
     --cyan-dim-rgb: 18, 83, 108;
@@ -944,7 +952,7 @@ body > footer .version {
     cursor: pointer;
     box-shadow:
         0 0 0 1px rgba(var(--cyan-dim-rgb), 0.05),
-        0 4px 20px rgba(0, 0, 0, 0.35);
+        0 4px 20px var(--elevation-soft);
     transition: color 0.2s ease, border-color 0.2s ease;
     -webkit-tap-highlight-color: transparent;
 }
