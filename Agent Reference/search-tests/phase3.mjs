@@ -86,15 +86,19 @@ async function newPage(url) {
   await page.keyboard.press('/');
   await page.waitForTimeout(1200);
 
+  // 'spawn a fish' is scene language now (6b) — the plan card superseded
+  // the bare command card, and running it draws the fish into being
   await page.fill('#so-searchInput', 'spawn a fish');
-  await page.waitForTimeout(500);
-  const spawn = page.locator('[data-cmd="maze.spawn"]');
-  check('"spawn a fish" surfaces action', await spawn.count() === 1);
+  await page.waitForTimeout(600);
+  check('"spawn a fish" parses to a scene plan', await page.locator('[data-scene-run]').count() === 1);
   const before = await page.evaluate(() => window.designFish.state.fish.length);
-  await spawn.click();
-  await page.waitForTimeout(800);
+  await page.click('[data-scene-run]');
+  await page.waitForTimeout(1500);
   const after = await page.evaluate(() => window.designFish.state.fish.length);
-  check('spawn action adds a fish', after > before, `${before} → ${after}`);
+  check('running the plan adds a fish', after > before, `${before} → ${after}`);
+  await page.waitForTimeout(1700); // plan auto-closes the overlay
+  await page.keyboard.press('/');
+  await page.waitForTimeout(500);
 
   await page.keyboard.press('/');
   await page.waitForTimeout(400);

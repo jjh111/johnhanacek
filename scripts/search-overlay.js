@@ -42,73 +42,70 @@
         div.innerHTML = `
             <div class="search-overlay-backdrop"></div>
             <div class="search-overlay-panel">
-                <!-- Engine bar — compact status line -->
-                <div class="engine-bar">
-                    <span id="so-aiDot" class="status-dot off"></span>
-                    <span id="so-engineModelLabel" class="engine-model-label"></span>
-                    <span id="so-engineSourceBadge" class="engine-source-badge none"></span>
-                    <button class="engine-bar-load-btn" id="so-engineBarLoadBtn" style="display:none;">Load AI</button>
-                    <button class="engine-info-btn" id="so-engineInfoBtn" aria-label="Engine settings">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                <!-- The command frame never scrolls — the bar IS the product.
+                     Results scroll beneath it in .so-panel-scroll. -->
+                <div class="so-command-frame">
+                <!-- Search first — the bar is the point -->
+                <div class="search-input-wrap">
+                    <input type="text" id="so-searchInput" placeholder="Search, ask, or command..." autocomplete="off">
+                    <button id="so-clearBtn" class="clear-btn" aria-label="Clear search">&times;</button>
+                </div>
+                <!-- The tier strip: the intelligence ladder, one legible line -->
+                <div class="tier-strip-row">
+                    <div class="tier-strip" id="so-tierStrip" role="group" aria-label="Search intelligence tiers"></div>
+                    <button class="engine-info-btn so-workspace-btn" id="so-workspaceBtn" aria-label="Workspace view" title="Workspace view">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                    </button>
+                    <button class="engine-info-btn" id="so-engineInfoBtn" aria-label="Engine details" title="Engine details">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                     </button>
                 </div>
-                <!-- Engine settings — inline expanding section -->
+                <!-- Engine details — compact, opened from the strip's chevron -->
                 <div class="engine-settings" id="so-engineSettings">
                     <div class="engine-settings-inner">
-                        <div class="engine-section-label">Search Pipeline</div>
-                        <div class="popover-section popover-section--bm25">
-                            <div class="popover-section-header">
-                                <span class="popover-radio bm25-always-on"></span>
-                                <span class="popover-section-name">Keyword Search</span>
-                                <span class="popover-section-badge badge-bm25">BM25</span>
-                            </div>
-                            <div class="popover-section-detail">Always on — instant results</div>
-                        </div>
-                        <div class="ai-toggle-row">
-                            <span class="engine-section-label">AI Answer</span>
+                        <div class="engine-status-row">
+                            <span id="so-aiDot" class="status-dot off"></span>
+                            <span id="so-engineModelLabel" class="engine-model-label"></span>
+                            <span id="so-engineSourceBadge" class="engine-source-badge none"></span>
                             <label class="ai-toggle-label" id="so-aiToggleLabel">
                                 <input type="checkbox" class="ai-toggle-checkbox" id="so-aiToggle" checked>
                                 <span id="so-aiToggleText">on</span>
                             </label>
                         </div>
-                        <div id="so-localModelSection" class="popover-section" style="--section-color:var(--engine-lmstudio);">
+                        <div id="so-localModelSection" class="popover-section popover-section--compact" style="--section-color:var(--engine-lmstudio);">
                             <div class="popover-section-header">
                                 <span class="popover-radio"></span>
-                                <span class="popover-section-name" id="so-localModelName">Local Model</span>
+                                <span class="popover-section-name" id="so-localModelName">Local model</span>
                                 <span class="popover-section-badge badge-lmstudio" id="so-localModelSource"></span>
+                                <button id="so-detectLocalBtn">Detect</button>
                             </div>
-                            <div class="popover-section-detail" id="so-localModelDetail">LMStudio or Ollama on this machine · Detect will ask your browser for local access</div>
-                            <button id="so-detectLocalBtn">Detect</button>
+                            <div class="popover-section-detail" id="so-localModelDetail">LMStudio/Ollama · Detect asks your browser for local access</div>
                         </div>
-                        <div id="so-browserModelSection" class="popover-section" style="--section-color:var(--engine-browser);">
+                        <div id="so-browserModelSection" class="popover-section popover-section--compact" style="--section-color:var(--engine-browser);">
                             <div class="popover-section-header">
                                 <span class="popover-radio"></span>
                                 <span class="popover-section-name">Qwen 3.5</span>
-                                <span class="popover-section-badge badge-browser">In-Browser</span>
                                 <span class="popover-section-badge badge-webgpu" id="so-webgpuBadge"></span>
+                                <button id="so-enableBtn">Load</button>
                             </div>
-                            <div class="popover-section-detail" id="so-browserModelDetail">WebGPU inference · 0.8B params</div>
-                            <button id="so-enableBtn">Load Model</button>
+                            <div class="popover-section-detail" id="so-browserModelDetail">0.8B in-browser · WebGPU</div>
                             <div class="cache-hint" id="so-cacheHint"></div>
                             <div id="so-progress"></div>
                             <div id="so-progressBar"><div id="so-progressFill"></div></div>
                         </div>
-                        <div id="so-customSection" class="popover-section" style="--section-color:var(--engine-custom);">
+                        <div id="so-customSection" class="popover-section popover-section--compact" style="--section-color:var(--engine-custom);">
                             <div class="popover-section-header">
                                 <span class="popover-radio"></span>
-                                <span class="popover-section-name">Custom Endpoint</span>
+                                <span class="popover-section-name">Custom endpoint</span>
                             </div>
                             <input type="text" class="custom-endpoint-input" id="so-customEndpoint"
                                    placeholder="http://localhost:8080/v1" spellcheck="false">
                         </div>
                     </div>
                 </div>
-                <!-- Search input -->
-                <div class="search-input-wrap">
-                    <input type="text" id="so-searchInput" placeholder="Search portfolio or ask a question..." autocomplete="off">
-                    <button id="so-clearBtn" class="clear-btn" aria-label="Clear search">&times;</button>
-                </div>
-                <!-- AI Answer -->
+                </div><!-- /.so-command-frame -->
+                <div class="so-panel-scroll">
+                <!-- AI Answer (the elaboration seam) -->
                 <div class="ai-answer-wrap">
                     <div id="so-aiAnswer"></div>
                     <div class="ai-actions" id="so-aiActions">
@@ -120,18 +117,20 @@
                         </button>
                     </div>
                 </div>
-                <!-- Sources -->
+                <!-- Results (the "Results" label row is gone — the postcard's
+                     own byline carries the ⓘ; chrome must earn its lines) -->
                 <div id="so-sourcesSection">
-                    <div class="section-label">
-                        Results
-                        <span class="score-info">ⓘ<span class="score-tooltip">BM25 keyword relevance (title 3×, tags 2×, fuzzy), fused with semantic similarity once the on-device embedding tier loads.</span></span>
-                    </div>
                     <div id="so-searchResults"></div>
                 </div>
+                <!-- Workspace detail pane (9d): on wide screens the ⤢ toggle
+                     turns the panel into two panes — compact waterfall left,
+                     whatever's pinned living here on the right -->
+                <div id="so-detailPane"></div>
                 <!-- Keyboard hint -->
                 <div class="so-keyboard-hint">
                     <kbd>esc</kbd> close · <kbd>/</kbd> or <kbd>${shortcut}</kbd> search
                 </div>
+                </div><!-- /.so-panel-scroll -->
             </div>
         `;
         document.body.appendChild(div);
@@ -186,6 +185,7 @@
             onResultsChange: (has) => overlayEl.classList.toggle('has-results', has),
             onRequestSettingsOpen: openSettings,
             onCommandRun: () => closeSearch(),   // the effect is on the page — show it
+            workspaceActive: () => overlayEl.classList.contains('so-workspace'),
         });
         await core.init();
         wireShellEvents();
@@ -202,7 +202,10 @@
         // Backdrop click → close
         overlayEl.querySelector('.search-overlay-backdrop').addEventListener('click', closeSearch);
 
-        // Escape inside the input → close overlay (Enter is the core's)
+        // Escape inside the input → close overlay. The CORE's Esc ladder
+        // (cursor → pin → query) registered first and consumes its rungs via
+        // stopImmediatePropagation — this handler is only reached when there
+        // is nothing left to unwind, so Esc closes. (Enter is the core's.)
         searchInput.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') { e.preventDefault(); closeSearch(); }
         });
@@ -217,6 +220,23 @@
             e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
             if (popoverOpen) closeSettings(); else openSettings();
         });
+
+        // Workspace toggle (9d): two-pane view on wide screens, persisted.
+        const wsBtn = document.getElementById('so-workspaceBtn');
+        wsBtn.addEventListener('click', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            const on = overlayEl.classList.toggle('so-workspace');
+            wsBtn.classList.toggle('open', on);
+            try { localStorage.setItem('jh-search-workspace', on ? '1' : ''); } catch {}
+            core.renderCurrent();   // re-lay the surface for the new geometry
+            searchInput.focus();
+        });
+        try {
+            if (localStorage.getItem('jh-search-workspace') === '1') {
+                overlayEl.classList.add('so-workspace');
+                wsBtn.classList.add('open');
+            }
+        } catch {}
     }
 
     // ============================================
@@ -259,6 +279,8 @@
         if (typeof initialQuery === 'string' && initialQuery.trim()) {
             input.value = initialQuery;
             setTimeout(() => { core.runQuery(initialQuery); }, 50);
+        } else if (!input.value.trim()) {
+            core.doSearchOnly('');   // renders the try-these suggestion chips
         }
         // Focus after transition
         requestAnimationFrame(() => { input.focus(); });

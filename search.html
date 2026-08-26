@@ -26,7 +26,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Raleway:wght@100;200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles/shared.css?v=1.55">
+    <link rel="stylesheet" href="./styles/shared.css?v=1.56">
+    <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.56">
 
     <!-- Structured Data -->
     <link rel="alternate" type="application/json" href="./john-hanacek.json" title="Structured data">
@@ -59,8 +60,8 @@
             --text-bright: #d8edf8;
             --text-heading: #7dd8f7;
             --muted: #6a90a4;
-            --border: rgba(77, 201, 246, 0.15);
-            --border-hover: rgba(77, 201, 246, 0.3);
+            --border: rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.15);
+            --border-hover: rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.3);
             /* Engine colors */
             --engine-browser: #4dc9f6;
             --engine-lmstudio: #c084fc;
@@ -87,11 +88,19 @@
         footer { margin-top: var(--space-xl, 2.5rem); }
 
         /* ─── Engine Bar (above search) ─── */
+        /* The command frame sticks under the fixed nav — the bar is never
+           off-screen. Glass ground so results scroll beneath it legibly. */
         .search-wrap {
-            position: relative;
+            position: sticky;
+            top: calc(40px + env(safe-area-inset-top));
+            z-index: 300;
             max-width: 660px;
             margin: 0 auto;
-            padding: 3.5rem 1.5rem 3rem;
+            padding: 2.2rem 1.5rem 0.7rem;
+            background: rgba(var(--surface-rgb, 2, 10, 18), 0.92);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-bottom: 1px solid rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.08);
         }
         .engine-bar {
             display: flex;
@@ -117,9 +126,9 @@
         }
         .engine-source-badge.lmstudio { background: rgba(192, 132, 252, 0.12); color: var(--engine-lmstudio); }
         .engine-source-badge.ollama { background: rgba(251, 146, 60, 0.12); color: var(--engine-ollama); }
-        .engine-source-badge.browser { background: rgba(77, 201, 246, 0.12); color: var(--engine-browser); }
+        .engine-source-badge.browser { background: rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.12); color: var(--engine-browser); }
         .engine-source-badge.custom { background: rgba(74, 222, 128, 0.12); color: var(--engine-custom); }
-        .engine-source-badge.none { background: rgba(100, 116, 139, 0.08); color: #64748b; }
+        .engine-source-badge.none { background: rgba(var(--ink-rgb, 140, 184, 204), 0.08); color: rgba(var(--ink-rgb, 140, 184, 204), 0.6); }
 
         .status-dot {
             display: inline-block;
@@ -127,7 +136,7 @@
             border-radius: 50%;
             flex-shrink: 0;
         }
-        .status-dot.off { background: #333; }
+        .status-dot.off { background: rgba(var(--ink-rgb, 140, 184, 204), 0.25); }
         .status-dot.loading { background: var(--gold); animation: pulse-dot 1s infinite; }
         .status-dot.ready { background: var(--engine-color, #22c55e); }
         @keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
@@ -167,8 +176,8 @@
             transition: border-color 0.15s, background 0.15s;
         }
         .popover-section:last-child { margin-bottom: 0; }
-        .popover-section:hover { border-color: rgba(77, 201, 246, 0.1); }
-        .popover-section.active { border-color: var(--section-color, rgba(77, 201, 246, 0.25)); background: rgba(255,255,255,0.02); }
+        .popover-section:hover { border-color: rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.1); }
+        .popover-section.active { border-color: var(--section-color, rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.25)); background: rgba(var(--ink-rgb, 140, 184, 204), 0.04); }
         .popover-section.disabled { opacity: 0.4; cursor: default; }
         .popover-section-header {
             display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.1rem;
@@ -191,17 +200,17 @@
         #localModelSection.detected { display: flex; flex-direction: column; }
         .badge-lmstudio { background: rgba(192, 132, 252, 0.12); color: var(--engine-lmstudio); }
         .badge-ollama { background: rgba(251, 146, 60, 0.12); color: var(--engine-ollama); }
-        .badge-browser { background: rgba(77, 201, 246, 0.12); color: var(--engine-browser); }
-        .badge-webgpu { background: rgba(77, 201, 246, 0.08); color: var(--engine-browser); }
+        .badge-browser { background: rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.12); color: var(--engine-browser); }
+        .badge-webgpu { background: rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.08); color: var(--engine-browser); }
         .badge-custom { background: rgba(74, 222, 128, 0.12); color: var(--engine-custom); }
 
         #enableBtn,
         #detectLocalBtn {
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.62rem;
-            background: rgba(77, 201, 246, 0.08);
+            background: rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.08);
             color: var(--cyan-dim);
-            border: 1px solid rgba(77, 201, 246, 0.12);
+            border: 1px solid rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.12);
             padding: 0.22rem 0.5rem;
             border-radius: 3px; cursor: pointer;
             transition: all 0.15s;
@@ -209,32 +218,32 @@
             width: calc(100% - 1.15rem);
         }
         #enableBtn:hover ,
-        #detectLocalBtn:hover { background: rgba(77, 201, 246, 0.14); border-color: rgba(77, 201, 246, 0.25); }
+        #detectLocalBtn:hover { background: rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.14); border-color: rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.25); }
         #enableBtn:disabled ,
         #detectLocalBtn:disabled { opacity: 0.3; cursor: default; }
-        #enableBtn.cached { background: rgba(34, 197, 94, 0.05); border-color: rgba(34, 197, 94, 0.12); color: #4ade80; }
+        #enableBtn.cached { background: rgba(34, 197, 94, 0.05); border-color: rgba(34, 197, 94, 0.12); color: var(--engine-custom, #4ade80); }
         #enableBtn.cached:hover { background: rgba(34, 197, 94, 0.1); }
         #enableBtn.model-active,
-        #detectLocalBtn.model-active { background: rgba(34, 197, 94, 0.06); border-color: rgba(34, 197, 94, 0.12); color: #4ade80; cursor: default; }
+        #detectLocalBtn.model-active { background: rgba(34, 197, 94, 0.06); border-color: rgba(34, 197, 94, 0.12); color: var(--engine-custom, #4ade80); cursor: default; }
         .cache-hint { font-size: 0.55rem; color: var(--muted); margin-top: 0.08rem; opacity: 0.6; margin-left: 1.15rem; }
         #progress { font-size: 0.58rem; color: var(--muted); margin-top: 0.1rem; margin-left: 1.15rem; }
-        #progressBar { width: calc(100% - 1.15rem); height: 2px; background: rgba(0,20,40,0.4); border-radius: 1px; margin-top: 0.1rem; display: none; margin-left: 1.15rem; }
+        #progressBar { width: calc(100% - 1.15rem); height: 2px; background: rgba(var(--panel-rgb, 10, 22, 40),0.4); border-radius: 1px; margin-top: 0.1rem; display: none; margin-left: 1.15rem; }
         #progressFill { height: 100%; background: var(--cyan-dim); border-radius: 1px; width: 0%; transition: width 0.3s; }
 
         /* Custom endpoint */
         .custom-endpoint-input {
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.68rem; width: 100%;
-            background: rgba(0, 20, 40, 0.5);
+            background: rgba(var(--panel-rgb, 10, 22, 40), 0.5);
             color: var(--text-bright);
-            border: 1px solid rgba(77, 201, 246, 0.1);
+            border: 1px solid rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.1);
             border-radius: 3px;
             padding: 0.2rem 0.4rem;
             outline: none; margin-top: 0.2rem; margin-left: 1.15rem;
             width: calc(100% - 1.15rem);
             transition: border-color 0.15s;
         }
-        .custom-endpoint-input:focus { border-color: rgba(77, 201, 246, 0.3); }
+        .custom-endpoint-input:focus { border-color: rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.3); }
         .custom-endpoint-input::placeholder { color: var(--muted); opacity: 0.5; }
 
         /* ─── Search Input ─── */
@@ -245,7 +254,7 @@
             font-family: 'Raleway', sans-serif;
             font-size: 1.1rem;
             font-weight: 300;
-            background: rgba(0, 20, 40, 0.55);
+            background: rgba(var(--panel-rgb, 10, 22, 40), 0.55);
             color: var(--text-bright);
             border: 1px solid var(--border);
             border-radius: 6px;
@@ -253,8 +262,8 @@
             transition: border-color 0.2s, box-shadow 0.2s;
         }
         #searchInput:focus {
-            border-color: rgba(77, 201, 246, 0.35);
-            box-shadow: 0 0 0 3px rgba(77, 201, 246, 0.07);
+            border-color: rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.35);
+            box-shadow: 0 0 0 3px rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.07);
         }
         #searchInput::placeholder { color: var(--muted); opacity: 0.65; }
         .clear-btn {
@@ -266,7 +275,9 @@
         .clear-btn:hover { opacity: 1; color: var(--text-bright); }
 
         /* ─── AI Answer ─── */
-        .ai-answer-wrap { position: relative; margin: 0.6rem 0 0; }
+        /* Answer + results live OUTSIDE .search-wrap in the markup — pin
+           them to the same 660px column or they bleed to the viewport edge */
+        .ai-answer-wrap { position: relative; margin: 0.6rem auto 0; max-width: 660px; padding: 0 1.5rem; }
         #aiAnswer {
             display: none;
             padding: 0.8rem 1rem;
@@ -303,7 +314,7 @@
         }
         .ai-actions.visible { display: flex; }
         .ai-action-btn {
-            background: rgba(0, 20, 40, 0.6); border: 1px solid rgba(77, 201, 246, 0.1);
+            background: rgba(var(--panel-rgb, 10, 22, 40), 0.6); border: 1px solid rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.1);
             color: var(--muted); cursor: pointer;
             width: 28px; height: 28px; border-radius: 4px;
             display: flex; align-items: center; justify-content: center;
@@ -313,7 +324,7 @@
         .ai-action-btn.copied::after, .ai-action-btn.linked::after {
             content: 'Copied!';
             position: absolute; top: -1.6rem; left: 50%; transform: translateX(-50%);
-            font-family: 'JetBrains Mono', monospace; font-size: 0.55rem; color: #4ade80;
+            font-family: 'JetBrains Mono', monospace; font-size: 0.55rem; color: var(--engine-custom, #4ade80);
             white-space: nowrap; pointer-events: none;
             animation: fade-hint 1.5s forwards;
         }
@@ -321,7 +332,7 @@
         @keyframes fade-hint { 0%,60% { opacity: 1; } 100% { opacity: 0; } }
 
         /* ─── Sources ─── */
-        #sourcesSection { display: none; margin-top: 0.7rem; }
+        #sourcesSection { display: none; margin: 0.7rem auto 0; max-width: 660px; padding: 0 1.5rem; }
         #sourcesSection.visible { display: block; }
         .section-label {
             font-family: 'JetBrains Mono', monospace;
@@ -338,7 +349,7 @@
             margin: 0 0 0.2rem; font-family: 'Raleway', sans-serif;
         }
         .score-info {
-            cursor: help; color: rgba(106, 144, 164, 0.6);
+            cursor: help; color: rgba(var(--ink-rgb, 140, 184, 204), 0.6);
             font-size: 0.65rem; position: relative;
         }
         .score-info:hover .score-tooltip { display: block; }
@@ -353,8 +364,8 @@
         }
 
         .result {
-            background: rgba(0, 20, 40, 0.3);
-            border: 1px solid rgba(77, 201, 246, 0.05);
+            background: rgba(var(--panel-rgb, 10, 22, 40), 0.3);
+            border: 1px solid rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.05);
             border-radius: 5px;
             padding: 0.55rem 0.75rem;
             margin-bottom: 0.3rem;
@@ -366,8 +377,8 @@
         .result-thumb {
             width: 72px; height: 72px; border-radius: 4px;
             object-fit: cover; flex-shrink: 0;
-            background: rgba(0, 20, 40, 0.4);
-            border: 1px solid rgba(77, 201, 246, 0.06);
+            background: rgba(var(--panel-rgb, 10, 22, 40), 0.4);
+            border: 1px solid rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.06);
         }
         .result-header { display: flex; align-items: baseline; gap: 0.35rem; }
         .result-title {
@@ -376,7 +387,7 @@
         }
         .result-page {
             font-size: 0.55rem; padding: 0.08rem 0.3rem;
-            border-radius: 2px; background: rgba(77, 201, 246, 0.05);
+            border-radius: 2px; background: rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.05);
             color: var(--muted); white-space: nowrap;
         }
         .result-content {
@@ -385,13 +396,13 @@
             margin-top: 0.2rem; line-height: 1.55;
         }
         .result-bar { display: flex; align-items: center; gap: 0.3rem; margin-top: 0.2rem; }
-        .result-bar .score-track { flex: 1; height: 2px; background: rgba(0,20,40,0.4); border-radius: 1px; overflow: hidden; }
-        .result-bar .score-fill { height: 100%; border-radius: 1px; background: linear-gradient(90deg, rgba(77,201,246,0.1), rgba(77,201,246,0.3)); }
+        .result-bar .score-track { flex: 1; height: 2px; background: rgba(var(--panel-rgb, 10, 22, 40),0.4); border-radius: 1px; overflow: hidden; }
+        .result-bar .score-fill { height: 100%; border-radius: 1px; background: linear-gradient(90deg, rgba(var(--cyan-dim-rgb, 77, 201, 246),0.1), rgba(var(--cyan-dim-rgb, 77, 201, 246),0.3)); }
         .result-bar .score-num { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: var(--text-primary); min-width: 1.5rem; text-align: right; opacity: 0.7; }
 
         .show-more-btn {
             width: 100%; background: transparent;
-            border: 1px dashed rgba(77,201,246,0.08);
+            border: 1px dashed rgba(var(--cyan-dim-rgb, 77, 201, 246),0.08);
             border-radius: 4px; color: var(--muted);
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.68rem; padding: 0.4rem; cursor: pointer;
@@ -495,17 +506,13 @@
         </div>
     </div>
 
-    <!-- Sources -->
+    <!-- Sources (no "Results" label row — the postcard's byline carries the ⓘ) -->
     <div id="sourcesSection">
-        <div class="section-label">
-            Results
-            <span class="score-info">ⓘ<span class="score-tooltip">BM25 keyword relevance (title 3×, tags 2×, fuzzy), fused with semantic similarity once the on-device embedding tier loads.</span></span>
-        </div>
         <div id="searchResults"></div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/minisearch@7.1.1/dist/umd/index.min.js"></script>
-    <script src="./scripts/search-core.js?v=1.55"></script>
+    <script src="./scripts/search-core.js?v=1.56"></script>
 
     <script>
         // Shell only — the pipeline lives in scripts/search-core.js (shared
@@ -559,7 +566,7 @@
     <footer>
         <jh-footer></jh-footer>
     </footer>
-<script src="./scripts/shared.js?v=1.55"></script>
-    <script src="./scripts/jh-chrome.js?v=1.55" defer></script>
+<script src="./scripts/shared.js?v=1.56"></script>
+    <script src="./scripts/jh-chrome.js?v=1.56" defer></script>
 </body>
 </html>

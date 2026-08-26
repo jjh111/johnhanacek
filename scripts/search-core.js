@@ -213,6 +213,7 @@
         function ensureSemantic() {
             if (semanticState !== 'idle' || !chunkVecs) return;
             semanticState = 'loading';
+            renderTierStrip();
             (async () => {
                 try {
                     const mod = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0');
@@ -222,10 +223,12 @@
                     await semanticEx('warmup', { pooling: 'mean', normalize: true });
                     semanticState = 'ready';
                     document.body.dataset.searchSemantic = 'ready';
+                    renderTierStrip();
                     console.log(`${logTag} Semantic tier ready (MiniLM 384d · WASM)`);
                     if (currentQueryRaw) refineSemantic(currentQueryRaw, ++semanticGen);
                 } catch (err) {
                     semanticState = 'failed';
+                    renderTierStrip();
                     console.warn(`${logTag} Semantic tier unavailable — staying keyword-only:`, err?.message || err);
                 }
             })();
@@ -268,7 +271,8 @@
                 merged.push({
                     id: c.id, title: c.title, content: c.content, page: c.page,
                     image: c.image, url: c.url, type: c.type,
-                    video: c.video, model3d: c.model3d, score,
+                    video: c.video, model3d: c.model3d,
+                    micro: c.micro, tldr: c.tldr, facts: c.facts, score,
                 });
             }
             merged.sort((a, b) => b.score - a.score);
@@ -294,10 +298,234 @@
                 if (!merged.length && !lastCmdMatches.length) return;
                 renderResults(merged, lastHint);
                 lastSearchResults = merged;
-                updateOverview();
             } catch (err) {
                 console.warn(`${logTag} Semantic refine failed:`, err?.message || err);
             }
+        }
+
+
+        // ============================================
+        // Scene Language (Phase 6b) — the mini-MetaMedium
+        // ============================================
+        // One intermediate representation: entities + quantities + spatial
+        // relations. Drawing produces it (recognition), language produces it
+        // (this small grammar — it never bluffs; unparsed input falls through
+        // to search), and the canvas answers back in it (census). The parse
+        // renders as a PLAN CARD before anything executes — structure shown,
+        // not inference hidden. Pages register window.JH_SCENE providers.
+        let lastScenePlan = null, lastSceneCensus = null;
+
+        const SCENE_NUM = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, a: 1, an: 1, couple: 2, few: 3, some: 3, max: 'max' };
+        const SCENE_ENTITY = [
+            [/jelly(?:fish)?(?:es)?/, 'jellyfish'], [/fish(?:es)?/, 'fish'],
+            [/corals?/, 'coral'], [/foods?|pellets?/, 'food'], [/bubbles?/, 'bubble'],
+            [/circles?|rings?/, 'circle'], [/squares?|rect(?:angle)?s?|box(?:es)?/, 'square'],
+            [/triangles?/, 'triangle'], [/lines?/, 'line'],
+        ];
+        function sceneEntity(word) {
+            for (const [re, name] of SCENE_ENTITY) if (re.test(word)) return name;
+            return null;
+        }
+        function sceneSize(s) {
+            if (/small|little|tiny/.test(s)) return 'small';
+            if (/medium|mid/.test(s)) return 'medium';
+            if (/large|big|huge|giant/.test(s)) return 'large';
+            return null;
+        }
+        function sceneRel(s) {
+            if (/inside|into|\bin\b|within/.test(s)) return 'inside';
+            if (/near|next to|beside|\bby\b|around|close to/.test(s)) return 'near';
+            if (/intersect|cross/.test(s)) return 'intersect';
+            return null;
+        }
+
+        // parse → null | {kind:'query', about} | {kind:'plan', steps, labels}
+        function parseScene(raw) {
+            const q = (raw || '').toLowerCase().trim();
+            if (!q || !window.JH_SCENE) return null;
+
+            if (/^(how many|what shapes|what is (on|in)|what's (on|in)|describe|count)\b/.test(q)) {
+                const about = /shape/.test(q) ? 'shapes' : (/fish|tank/.test(q) ? 'fish' : 'scene');
+                return { kind: 'query', about };
+            }
+
+            if (!/^(add|draw|put|spawn|place|make|create|give)\b/.test(q)) return null;
+            const clauses = q.replace(/^(add|draw|put|spawn|place|make|create|give)\b/, '')
+                .split(/,| and | then |;/).map(c => c.trim()).filter(Boolean);
+            const steps = [];
+            const made = [];   // utterance entities, in order, for "the circle" resolution
+            for (const clause of clauses) {
+                const c = clause.replace(/^(add|draw|put|spawn|place|make|create|give)\b/, '').trim();
+                // count
+                let count = 1, rest = c;
+                const nm = rest.match(/^(\d+|one|two|three|four|five|six|seven|eight|nine|ten|a|an|couple(?: of)?|few|some|max)\s+/);
+                if (nm) {
+                    const w = nm[1].replace(/ of$/, '');
+                    count = /^\d+$/.test(w) ? parseInt(w, 10) : SCENE_NUM[w] ?? 1;
+                    rest = rest.slice(nm[0].length);
+                }
+                // "two intersecting lines" — mutual relation as modifier
+                const mutual = /^(intersecting|crossing|crossed)\s+/.test(rest);
+                if (mutual) rest = rest.replace(/^(intersecting|crossing|crossed)\s+/, '');
+                const size = sceneSize(rest);
+                if (size) rest = rest.replace(/\b(small|little|tiny|medium|mid|large|big|huge|giant)\b\s*/, '');
+                const em = rest.match(/^([a-z]+)/);
+                const entity = em && sceneEntity(em[1]);
+                if (!entity) return null;   // never bluff — unparsed falls to search
+                rest = rest.slice(em[0].length).trim();
+                // relation + reference
+                let rel = null;
+                const rm = rest.match(/^(inside|into|in|within|near|next to|beside|by|around|close to)\s+(.*)$/);
+                if (mutual) {
+                    rel = { type: 'intersect', mutual: true };
+                    if (count < 2) count = 2;
+                } else if (rm) {
+                    const type = sceneRel(rm[1]);
+                    const refText = rm[2].trim();
+                    const refEm = refText.match(/(?:the|a|an|that)?\s*([a-z]+)/);
+                    const refEntity = refEm && sceneEntity(refEm[1]);
+                    if (!type || !refEntity) return null;
+                    // "the X" → latest X made in this utterance, else the canvas's latest X
+                    const idx = made.map(m => m.entity).lastIndexOf(refEntity);
+                    rel = { type, ref: idx >= 0 ? idx : null, refEntity };
+                }
+                const step = { count, size, entity, rel, label: entity + '\u2460'.charCodeAt ? '' : '' };
+                steps.push(step);
+                for (let i = 0; i < count; i++) made.push({ entity, step });
+                if (steps.length > 6) return null;   // scope guard
+            }
+            if (!steps.length) return null;
+            return { kind: 'plan', steps };
+        }
+
+        // ── stroke synthesis kit (handed to providers) ──
+        function ptsClosed(fn, n) {
+            const pts = [];
+            for (let i = 0; i <= n; i++) pts.push(fn(i / n));
+            return pts;
+        }
+        const sceneKit = {
+            circle: (cx, cy, r) => ptsClosed(t => ({ x: cx + Math.cos(t * 2 * Math.PI) * r, y: cy + Math.sin(t * 2 * Math.PI) * r }), 26),
+            square: (cx, cy, s) => {
+                const h = s / 2, cs = [[-h, -h], [h, -h], [h, h], [-h, h]];
+                const pts = [];
+                for (let e = 0; e < 4; e++) {
+                    const [x1, y1] = cs[e], [x2, y2] = cs[(e + 1) % 4];
+                    for (let i = 0; i < 7; i++) pts.push({ x: cx + x1 + (x2 - x1) * i / 7, y: cy + y1 + (y2 - y1) * i / 7 });
+                }
+                pts.push({ x: cx + cs[0][0], y: cy + cs[0][1] });
+                return pts;
+            },
+            triangle: (cx, cy, s) => {
+                const h = s / 2, cs = [[0, -h], [h, h * 0.9], [-h, h * 0.9]];
+                const pts = [];
+                for (let e = 0; e < 3; e++) {
+                    const [x1, y1] = cs[e], [x2, y2] = cs[(e + 1) % 3];
+                    for (let i = 0; i < 9; i++) pts.push({ x: cx + x1 + (x2 - x1) * i / 9, y: cy + y1 + (y2 - y1) * i / 9 });
+                }
+                pts.push({ x: cx + cs[0][0], y: cy + cs[0][1] });
+                return pts;
+            },
+            line: (x1, y1, x2, y2) => ptsClosed(t => ({ x: x1 + (x2 - x1) * t, y: y1 + (y2 - y1) * t }), 12),
+            // the open, self-crossing loop the classifier reads as a fish;
+            // scale sets the behavior tier (see CONTROL_SURFACES §1)
+            ichthys: (cx, cy, tier) => {
+                const S = tier === 'large' ? 1.55 : tier === 'medium' ? 1.0 : 0.62;
+                const rx = 45 * S, ry = 32 * S, ov = 0.55, tx = 75 * S, ty = 28 * S;
+                const pts = [];
+                const a0 = ov, a1 = Math.PI * 2 - ov;
+                const sx = cx + rx * Math.cos(a0), sy = cy + ry * Math.sin(a0);
+                for (let i = 0; i <= 3; i++) pts.push({ x: (cx + tx) + (sx - cx - tx) * i / 4, y: (cy - ty) + (sy - cy + ty) * i / 4 });
+                for (let i = 0; i <= 26; i++) { const a = a0 + (a1 - a0) * i / 26; pts.push({ x: cx + rx * Math.cos(a), y: cy + ry * Math.sin(a) }); }
+                const ex = cx + rx * Math.cos(a1), ey = cy + ry * Math.sin(a1);
+                for (let i = 1; i <= 4; i++) pts.push({ x: ex + (cx + tx - ex) * i / 4, y: ey + (cy + ty - ey) * i / 4 });
+                return pts;
+            },
+            // greedy placement: sequential, verified after — not a solver
+            place: {
+                near: (ref, size) => {
+                    const a = Math.random() * 2 * Math.PI;
+                    const d = (ref.size || 60) / 2 + size / 2 + 34;
+                    return { x: ref.x + Math.cos(a) * d, y: ref.y + Math.sin(a) * d };
+                },
+                crossPair: (cx, cy) => [
+                    [cx - 85, cy - 55, cx + 85, cy + 55],
+                    [cx - 85, cy + 55, cx + 85, cy - 55],
+                ],
+            },
+        };
+
+        function scenePlural(entity, n) {
+            if (n === 1) return entity;
+            if (['fish', 'food', 'coral', 'jellyfish'].includes(entity)) return entity;
+            return entity + 's';
+        }
+
+        function renderPlanCard(plan) {
+            // an executed plan renders its receipts — any later re-render
+            // (semantic upgrade, density toggle) must not resurrect the button
+            if (plan.receipts) {
+                return `<div class="pc-plan" data-scene-plan="1"><div class="cmdbar-group-label">Done — receipts</div>`
+                    + `<div class="pc-plan-steps">${plan.receipts.map(r => `<span class="pc-plan-step">${r}</span>`).join('')}</div></div>`;
+            }
+            const stepText = (s) => {
+                let t = s.count === 'max' ? 'max' : s.count;
+                t += ' ' + (s.size ? s.size + ' ' : '') + scenePlural(s.entity, s.count === 'max' ? 2 : s.count);
+                if (s.rel && s.rel.mutual) t += ', intersecting';
+                else if (s.rel) t += ` ${s.rel.type} the ${s.rel.refEntity}`;
+                return t;
+            };
+            return `<div class="pc-plan" data-scene-plan="1"><div class="cmdbar-group-label">Plan — the parse, before anything runs</div>`
+                + `<div class="pc-plan-steps">${plan.steps.map(s => `<span class="pc-plan-step">→ ${stepText(s)}</span>`).join('')}</div>`
+                + `<div class="pc-plan-actions"><button class="intent-cta" data-scene-run="1">Draw it</button>`
+                + `<span class="pc-plan-note">runs on the canvas behind this panel</span></div></div>`;
+        }
+
+        async function executeScene(plan) {
+            const provider = window.JH_SCENE;
+            if (!provider) return;
+            const receipts = [];
+            const madeRefs = [];   // placement info per created entity, for "the circle"
+            for (const step of plan.steps) {
+                try {
+                    const out = await provider.materialize(step, sceneKit, madeRefs);
+                    (out.made || []).forEach(m => madeRefs.push(m));
+                    receipts.push(out.note || ('✓ ' + step.entity));
+                } catch (err) {
+                    receipts.push('✗ ' + step.entity + ' — ' + (err?.message || 'failed'));
+                    console.warn(`${logTag} scene step failed:`, step, err);
+                }
+            }
+            plan.receipts = receipts;
+            const card = el('searchResults').querySelector('[data-scene-plan]')
+                || el('aiAnswer').querySelector('[data-scene-plan]');
+            if (card) card.innerHTML = `<div class="cmdbar-group-label">Done — receipts</div>`
+                + `<div class="pc-plan-steps">${receipts.map(r => `<span class="pc-plan-step">${r}</span>`).join('')}</div>`;
+            // let the receipts read, then show the canvas itself
+            setTimeout(() => { if (config.onCommandRun) config.onCommandRun({ id: 'scene' }); }, 1400);
+        }
+
+        function renderCensusHtml() {
+            const provider = window.JH_SCENE;
+            if (!provider || !lastSceneCensus) return '';
+            let c;
+            try { c = provider.census(); } catch { return ''; }
+            if (!c) return '';
+            const bits = [];
+            const n = (v, label) => { if (v > 0) bits.push(`<span class="pc-count"><strong>${v}</strong> ${label}</span>`); };
+            n(c.smallFish, 'small'); n(c.mediumFish, 'medium'); n(c.largeFish, 'large');
+            if ((c.smallFish + c.mediumFish + c.largeFish) > 0) bits.push('<span class="pc-count-unit">fish</span>');
+            else bits.push('<span class="pc-count"><strong>0</strong> fish</span>');
+            n(c.coral, 'coral'); n(c.food, 'food'); n(c.bubbles, 'bubbles'); n(c.jellyfish, 'jellyfish');
+            if (c.shapes && c.shapes.length) {
+                const byType = {};
+                c.shapes.forEach(s => { byType[s.type] = (byType[s.type] || 0) + 1; });
+                bits.push('<span class="pc-sep">·</span>');
+                Object.entries(byType).forEach(([t, v]) => bits.push(`<span class="pc-count"><strong>${v}</strong> ${t}${v > 1 ? 's' : ''}</span>`));
+            }
+            if (c.enclosed > 0) bits.push(`<span class="pc-sep">·</span><span class="pc-count"><strong>${c.enclosed}</strong> enclosed</span>`);
+            return `<div class="pc-census"><div class="cmdbar-group-label">read from the canvas</div>`
+                + `<div class="pc-census-row">${bits.join(' ')}</div></div>`;
         }
 
         // ============================================
@@ -387,6 +615,10 @@
                 // generic command verbs appear in EVERY nav/section entry, so
                 // inside this corpus they carry no signal — the object does
                 .replace(/\b(go|open|show|jump|take|navigate)\b/gi, ' ')
+                // single-char orphans: "who's" tokenizes to who + s, and a
+                // bare "s" prefix-matches Startle/Scare/Services/Section —
+                // fabricating action cards for informational queries
+                .replace(/\b\w\b/g, ' ')
                 .replace(/\s+/g, ' ').trim();
             if (!q) return [];
             const bScore = new Map(cmdIndex.search(q).map(r => [r.id, r.score]));
@@ -499,7 +731,7 @@
 
             miniSearchInstance = new MiniSearch({
                 fields: ['title', 'content', 'tags'],
-                storeFields: ['title', 'content', 'page', 'image', 'url', 'type', 'video', 'model3d'],
+                storeFields: ['title', 'content', 'page', 'image', 'url', 'type', 'video', 'model3d', 'micro', 'tldr', 'facts'],
                 searchOptions: { boost: { title: 3, tags: 2 }, fuzzy: 0.2, prefix: true }
             });
 
@@ -535,6 +767,57 @@
             return mutedColor;
         }
 
+
+        // ============================================
+        // The Tier Strip — one line that IS the intelligence ladder
+        // ============================================
+        // Left→right ascending: keyword → semantic → qwen → local (→ custom).
+        // Facts render as facts (keyword/semantic are never buttons that lie),
+        // loadable tiers wear their cost as their label ("qwen ↓585mb"), the
+        // active generation engine glows in its color, and the whole state is
+        // legible with the detail panel closed. Clicks proxy to the existing
+        // panel controls, so consent semantics (Detect = opt-in) are unchanged.
+        let browserLoadPct = null;
+        function renderTierStrip() {
+            const strip = el('tierStrip');
+            if (!strip) return;
+            const seg = (tier, dot, label, state, title, color) =>
+                `<button type="button" class="tier tier-${state}" data-tier="${tier}" title="${title}"${color ? ` style="--tier-color:${color}"` : ''}><span class="tier-dot">${dot}</span>${label}</button>`;
+            let html = '';
+            html += seg('keyword', '\u25cf', 'keyword', 'fact-on', 'BM25 keyword match \u2014 always on');
+            const semTitle = 'meaning match \u2014 ~24MB on-device, loads with your first search';
+            if (semanticState === 'ready') html += seg('semantic', '\u25cf', 'semantic', 'fact-on', semTitle);
+            else if (semanticState === 'loading') html += seg('semantic', '\u25d0', 'semantic', 'loading', 'meaning match \u2014 loading\u2026');
+            else if (semanticState === 'failed') html += seg('semantic', '\u25cb', 'semantic', 'gone', 'meaning match unavailable');
+            else html += seg('semantic', '\u25cb', 'semantic', 'fact-off', semTitle);
+            // qwen (in-browser generation)
+            if (!hasWebGPU && enginesChecked) {
+                html += seg('qwen', '\u25cb', 'qwen', 'gone', 'in-browser model needs WebGPU \u2014 unavailable here');
+            } else if (browserLoadPct != null) {
+                html += seg('qwen', '\u25d0', `qwen ${browserLoadPct}%`, 'loading', 'loading Qwen 3.5\u2026', 'var(--engine-browser)');
+            } else if (modelReady) {
+                const st = (activeEngine === 'browser' && aiEnabled) ? 'active' : 'ready';
+                html += seg('qwen', '\u25cf', 'qwen', st, 'Qwen 3.5 in-browser \u2014 tap to answer with it', 'var(--engine-browser)');
+            } else {
+                html += seg('qwen', '\u25cb', modelIsCached ? 'qwen \u26a1' : 'qwen \u2193585mb', 'load',
+                    modelIsCached ? 'Qwen 3.5 \u2014 cached, tap to load' : 'Qwen 3.5 in-browser \u2014 tap to download (585MB, WebGPU)', 'var(--engine-browser)');
+            }
+            // local
+            if (localModel) {
+                const st = (activeEngine === 'local' && aiEnabled) ? 'active' : 'ready';
+                const color = localModel.source === 'Ollama' ? 'var(--engine-ollama)' : 'var(--engine-lmstudio)';
+                html += seg('local', '\u25cf', localModel.name.split('/').pop().slice(0, 16), st, localModel.source + ' \u2014 tap to answer with it', color);
+            } else {
+                html += seg('local', '\u25cb', 'local', 'load', 'LMStudio/Ollama on this machine \u2014 tap to detect (asks your browser for local access)', 'var(--engine-lmstudio)');
+            }
+            if (customModel) {
+                const st = (activeEngine === 'custom' && aiEnabled) ? 'active' : 'ready';
+                html += seg('custom', '\u25cf', 'custom', st, customModel.name + ' \u2014 tap to answer with it', 'var(--engine-custom)');
+            }
+            html += seg('ai', aiEnabled ? '\u23fb' : '\u25cb', aiEnabled ? 'ai on' : 'ai off', aiEnabled ? 'ai-on' : 'ai-off', 'toggle AI answers');
+            strip.innerHTML = html;
+        }
+
         function updateEngineBar() {
             const dot = el('aiDot');
             const label = el('engineModelLabel');
@@ -564,6 +847,7 @@
                 badge.className = 'engine-source-badge none';
                 dot.className = 'status-dot off';
                 root.style.setProperty('--engine-color', mutedColor);
+                renderTierStrip();   // the early return must not skip the strip
                 return;
             }
 
@@ -603,6 +887,7 @@
                     dot.className = 'status-dot off';
                 }
             }
+            renderTierStrip();
         }
 
         function setActiveEngine(engine) {
@@ -659,7 +944,7 @@
 
             const btn = el('enableBtn');
             if (!hasWebGPU) {
-                if (btn) { btn.textContent = 'WebGPU unavailable'; btn.disabled = true; }
+                if (btn) { btn.textContent = 'No WebGPU'; btn.disabled = true; }
             } else {
                 modelIsCached = await checkModelCache();
                 const cacheHint = el('cacheHint');
@@ -668,10 +953,10 @@
                 // difference between "the model loads" and "nothing happens".
                 if (btn && !modelReady) btn.disabled = false;
                 if (modelIsCached) {
-                    if (btn) { btn.textContent = 'Load ' + MODEL_DISPLAY_NAME; btn.classList.add('cached'); }
+                    if (btn) { btn.textContent = 'Load \u26a1'; btn.classList.add('cached'); }
                     if (cacheHint) cacheHint.textContent = 'Cached — loads in seconds';
                 } else {
-                    if (btn) btn.textContent = 'Download ' + MODEL_DISPLAY_NAME + ' (~585 MB)';
+                    if (btn) btn.textContent = 'Download 585MB';
                     if (cacheHint) cacheHint.textContent = '';
                 }
             }
@@ -683,6 +968,7 @@
                 if (localSection) localSection.classList.add('detected');
                 if (!activeEngine) updateEngineBar();
                 broadcastEngineState();
+                renderTierStrip();
                 return;
             }
 
@@ -720,6 +1006,7 @@
 
             if (!activeEngine) updateEngineBar();
             broadcastEngineState();
+            renderTierStrip();
         }
 
         async function checkModelCache() {
@@ -791,48 +1078,6 @@
             return miniSearchInstance.search(query);
         }
 
-        // Routed rendering, topline down: intent card → actions → on-this-page
-        // → across the site. Groups only appear when they have members, so a
-        // plain content query renders exactly as it always did.
-        function renderResults(results, hint) {
-            const resultsEl = el('searchResults');
-            if (!resultsEl) return;
-            let html = '';
-            if (lastIntentCard) html += renderIntentCard(lastIntentCard);
-            if (lastCmdMatches.length) {
-                html += `<div class="cmdbar-group-label">Actions</div>`;
-                html += lastCmdMatches.map(renderCmdCard).join('');
-            }
-            if (results.length === 0) {
-                html += `<div class="result" style="color:${mutedColor};font-family:Raleway,sans-serif;font-size:0.85rem;">${html ? 'No other results.' : 'No results found.'}</div>`;
-                resultsEl.innerHTML = html;
-                return;
-            }
-            const maxScore = results[0]?.score || 1;
-            let rest = results;
-            // "On this page" appears only when search already put a local
-            // chunk FIRST; locals within the global top 3 may join it.
-            // Locality labels relevance — it never fabricates it (the old
-            // unconditional hoist put weak local matches above real answers).
-            const local = (results[0] && results[0].page === curPage)
-                ? results.slice(0, 3).filter(r => r.page === curPage).slice(0, 2)
-                : [];
-            if (local.length && results.length > local.length) {
-                const localIds = new Set(local.map(r => r.id));
-                rest = results.filter(r => !localIds.has(r.id));
-                html += `<div class="cmdbar-group-label">On this page</div>`;
-                html += local.map(r => renderResultCard(r, maxScore)).join('');
-                html += `<div class="cmdbar-group-label">Across the site</div>`;
-            }
-            const topResults = rest.slice(0, RESULTS_PER_PAGE);
-            const remaining = rest.length - RESULTS_PER_PAGE;
-            html += topResults.map(r => renderResultCard(r, maxScore)).join('');
-            if (remaining > 0) {
-                html += `<button class="show-more-btn" onclick="this.parentNode.querySelectorAll('.result-hidden').forEach(e=>e.style.display='block');this.remove();">Show ${remaining} more</button>`;
-                html += rest.slice(RESULTS_PER_PAGE).map(r => `<div class="result result-hidden" style="display:none">${renderResultCardInner(r, maxScore)}</div>`).join('');
-            }
-            resultsEl.innerHTML = html;
-        }
 
         // Related chunks by cosine over the SHIPPED vectors — chunk↔chunk
         // similarity costs the visitor zero download and no embedder.
@@ -870,99 +1115,663 @@
             document.head.appendChild(s);
         }
 
-        function renderResultCard(r, maxScore) { return `<div class="result">${renderResultCardInner(r, maxScore)}</div>`; }
-        function renderResultCardInner(r, maxScore) {
-            const pct = Math.min(100, (r.score / maxScore) * 100);
-            let mediaHtml = '';
+        // ============================================
+        // The Postcard (Phase 6a) — microdense, density-adaptive surface
+        // ============================================
+        // One composed surface whose density adapts to query specificity.
+        // LOD ladder per module: L0 inline mention → L1 one-liner → L2 dense
+        // sentence → L3 dossier (prose flowing BOTH sides of an inline media
+        // obstacle via pretext-wrap). The allocator picks each module's
+        // largest LOD that fits the line budget, using pretext's arithmetic
+        // line counting — deterministic typography, no clamp guessing.
+        // Chunks carry dev-time-authored `micro` (~40ch) and `tldr` (~110ch)
+        // fields; the runtime only ever SELECTS, never generates.
+        let pretextMod = null, pretextWrapMod = null, pretextState = 'idle';
+        const preparedCache = new Map();
+        let pinnedId = null;          // click-expanded module (reset per query)
+        let currentWrap = null;       // live pretext-wrap instance (destroy before re-render)
+        let tipEl = null;             // the one shared hover-tooltip node
+
+        function pcDensity() {
+            try { return localStorage.getItem('jh-postcard-density') || 'compact'; } catch { return 'compact'; }
+        }
+        function pcMetrics() {
+            const comfy = pcDensity() === 'comfortable';
+            return {
+                font: comfy ? '400 14px "JetBrains Mono", monospace' : '400 13px "JetBrains Mono", monospace',
+                lineHeight: comfy ? 22 : 20,
+                budget: comfy ? 24 : 16,
+            };
+        }
+
+        function ensurePretext() {
+            if (pretextState !== 'idle') return;
+            pretextState = 'loading';
+            // Dynamic import in a classic script resolves against the SCRIPT's
+            // URL, not the page's — resolve explicitly against the document.
+            const abs = (p) => new URL(getBasePath() + p, document.baseURI).href;
+            Promise.all([
+                import(abs('scripts/pretext/layout.js')),
+                import(abs('scripts/pretext-wrap.js')),
+            ]).then(([lay, wrap]) => {
+                pretextMod = lay; pretextWrapMod = wrap; pretextState = 'ready';
+                if (currentQueryRaw && lastSearchResults.length) renderResults(lastSearchResults, lastHint);
+            }).catch(err => {
+                pretextState = 'failed';
+                console.warn(`${logTag} pretext unavailable — estimated line fitting:`, err?.message || err);
+            });
+        }
+
+        // Lines this text will occupy at this width — pretext arithmetic when
+        // ready, honest character estimate until then / if it failed.
+        function countLines(text, width, m) {
+            if (!text) return 0;
+            if (pretextState === 'ready') {
+                try {
+                    const key = m.font + '|' + text;
+                    let prep = preparedCache.get(key);
+                    if (!prep) { prep = pretextMod.prepare(text, m.font); preparedCache.set(key, prep); }
+                    return pretextMod.layout(prep, width, m.lineHeight).lineCount;
+                } catch { /* fall through to estimate */ }
+            }
+            const cpl = Math.max(18, Math.floor(width / (m.lineHeight * 0.4)));
+            return Math.ceil(text.length / cpl);
+        }
+
+        // ── The allocator ──
+        // Dominance mirrors the confidence rule the overview used: a decisive
+        // top hit (or an intent firing) earns the dossier; a close field
+        // shares the space; a broad field waterfalls to one-liners + a tail.
+        function allocate(results, width, m, budgetLines) {
+            const mods = [];
+            let budget = budgetLines != null ? budgetLines : m.budget;
+            const dominant = results.length === 1 ||
+                (results[1] && results[0].score >= 1.5 * results[1].score);
+            const comfy = pcDensity() === 'comfortable';
+            // Workspace (9d): the list stays a compact waterfall — the detail
+            // pane owns dossier depth, and pinning fills IT, not the list.
+            const ws = workspaceOn();
+            results.forEach((r, i) => {
+                let lod;
+                if (i === 0 && dominant) lod = 3;
+                else if (i === 0) lod = 2;
+                else if (i === 1 && dominant) lod = 2;
+                else if (i <= 3) lod = 1;
+                else lod = 0;
+                // Density is SEMANTIC zoom, not type scale: comfortable
+                // promotes every module one full tier — micro one-liners
+                // become tldr sentences, the tldr becomes the dossier — and
+                // widens the L1 window into the tail. The budget pass below
+                // still downgrades whatever cannot fit, so the wording tier
+                // is what the toggle visibly changes.
+                if (comfy) lod = lod > 0 ? Math.min(3, lod + 1) : (i <= 5 ? 1 : 0);
+                if (!ws && pinnedId != null && r.id === pinnedId) lod = 3;
+                if (ws) lod = Math.min(lod, 2);
+                mods.push({ r, lod });
+            });
+            // Budget pass: measure top-down, downgrade what does not fit.
+            const costOf = (mod) => {
+                if (mod.lod === 3) return mod.r.facts && mod.r.facts.length
+                    ? mod.r.facts.length + 3                                  // one line per fact row + head
+                    : countLines(mod.r.content || '', width - 128, m) + 3;    // obstacle + head + facts
+                if (mod.lod === 2) return countLines(mod.r.tldr || mod.r.content || '', width - 88, m) + 1;
+                if (mod.lod === 1) return 1;
+                return 0;
+            };
+            for (const mod of mods) {
+                if (mod.r.id === pinnedId) { budget -= costOf(mod); continue; } // pinned may overflow
+                let cost = costOf(mod);
+                while (mod.lod > 0 && cost > budget) { mod.lod--; cost = costOf(mod); }
+                if (mod.lod === 0 && cost > budget) { /* tail is ~free */ }
+                budget -= cost;
+            }
+            // What this ladder actually costs in line-units — the fit loop
+            // scales the budget PROPORTIONALLY against measured pixels
+            // (fixed chrome never shrinks, so subtracting raw pixel overflow
+            // from a line budget over-corrects into oblivion).
+            let spent = 0;
+            for (const mod of mods) spent += costOf(mod);
+            mods.usedCost = spent;
+            return mods;
+        }
+
+        function pcMediaHtml(r, big) {
             if (r.video) {
-                // Click-to-play: poster (or placeholder tile) with a play glyph;
-                // the embeds carry no audio track, so muted playback loses nothing.
                 const poster = r.image
                     ? `<img class="result-thumb" src="${r.image}" alt="" loading="lazy" />`
                     : `<span class="result-thumb video-placeholder"></span>`;
-                mediaHtml = `<span class="result-video-wrap" data-video="${r.video}" role="button" tabindex="0" aria-label="Play video">${poster}<span class="play-icon">▶</span></span>`;
-            } else if (r.model3d) {
+                return `<span class="result-video-wrap${big ? ' pc-obstacle' : ''}" data-video="${r.video}" role="button" tabindex="0" aria-label="Play video">${poster}<span class="play-icon">▶</span></span>`;
+            }
+            if (r.model3d) {
                 ensureModelViewer();
                 const spin = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? '' : ' auto-rotate';
-                mediaHtml = `<model-viewer class="result-model" src="${resolveHref(r.model3d)}"${spin} camera-controls loading="lazy"></model-viewer>`;
-            } else if (r.image) {
-                mediaHtml = `<img class="result-thumb" src="${r.image}" alt="" loading="lazy" />`;
+                return `<model-viewer class="result-model${big ? ' pc-obstacle' : ''}" src="${resolveHref(r.model3d)}"${spin} camera-controls loading="lazy"></model-viewer>`;
             }
+            if (r.image) return `<img class="result-thumb${big ? ' pc-obstacle' : ''}" src="${r.image}" alt="" loading="lazy" />`;
+            return '';
+        }
+
+        function pcTitleHtml(r) {
             const ext = r.url && /^https?:/i.test(r.url);
-            const titleHtml = r.url
+            return r.url
                 ? `<a class="result-title result-link${ext ? ' result-link-ext' : ''}" href="${ext ? r.url : resolveHref(r.url.replace(/^\.\//, ''))}"${ext ? ' target="_blank" rel="noopener"' : ''}>${r.title}</a>`
                 : `<span class="result-title">${r.title}</span>`;
-            const rel = relatedChunks(r.id, 1)[0];
-            const relHtml = rel ? `<div class="card-related-row">${relatedChipHtml(rel, 'card-related')}</div>` : '';
-            return `<div class="result-row">${mediaHtml}<div class="result-body"><div class="result-header">${titleHtml}<span class="result-page">${r.page}</span></div><div class="result-content">${r.content}</div>${relHtml}<div class="result-bar"><span class="score-track"><span class="score-fill" style="width:${pct}%"></span></span><span class="score-num">${r.score.toFixed(0)}</span></div></div></div>`;
         }
 
-        // ============================================
-        // Overview slot (Phase 5)
-        // ============================================
-        // ONE slot, upgraded in place by the tiers: instantly a deterministic
-        // composition from the top chunk (which is hand-authored to be
-        // answer-shaped), replaced by the model's answer when a tier speaks.
-        // Confidence-gated — an intent fired, or the top result dominates —
-        // because an overview on a garbage query reads as bluffing.
-        function buildOverviewHtml(results, hint) {
-            if (!results.length || lastIntentCard) return null;
-            const top = results[0];
-            const confident = !!hint || results.length === 1 || (results[1] && top.score >= 1.5 * results[1].score);
-            if (!confident || !top.content) return null;
-            let text = top.content;
-            if (text.length > 260) {
-                const cut = text.slice(0, 260);
-                const p = cut.lastIndexOf('. ');
-                text = p > 120 ? cut.slice(0, p + 1) : cut + '…';
+        // 9c grammar: navigation's EXPLICIT affordance — the page badge is a
+        // link wearing ↗. (Titles also navigate, declared on hover; clicks
+        // anywhere else on a module zoom in place.)
+        function pcPageBadge(r) {
+            if (!r.url) return `<span class="result-page">${r.page}</span>`;
+            const ext = /^https?:/i.test(r.url);
+            const href = ext ? r.url : resolveHref(r.url.replace(/^\.\//, ''));
+            return `<a class="result-page result-page-link" href="${href}"${ext ? ' target="_blank" rel="noopener"' : ''}>${r.page} ↗</a>`;
+        }
+
+        function pcFactsHtml(r, nRelated) {
+            const bits = [`<span class="result-page">${r.page}</span>`];
+            if (r.video) bits.push('<span class="pc-glyph" title="video">▸</span>');
+            if (r.model3d) bits.push('<span class="pc-glyph" title="3D">◆</span>');
+            const rel = relatedChunks(r.id, nRelated);
+            rel.forEach(c => bits.push(relatedChipHtml(c, 'card-related')));
+            return `<div class="pc-facts">${bits.join('<span class="pc-sep">·</span>')}</div>`;
+        }
+
+        // A list-like chunk renders its dossier as FACT ROWS, not a prose
+        // monolith — one row per authored fact (9b granularity). The chunk's
+        // media sits beside the row it belongs to (fact.media), not looming
+        // over the whole list. Compact density shows `t · y` (detail lives in
+        // the hover tip); comfortable adds the detail inline — semantic zoom
+        // reaches inside the dossier.
+        function pcFactRowsHtml(r) {
+            const media = pcMediaHtml(r, false);
+            let mediaPlaced = false;
+            const rows = r.facts.map(f => {
+                const own = f.media && media && !mediaPlaced;
+                if (own) mediaPlaced = true;
+                return `<div class="pc-fact-row${own ? ' pc-fact-row--media' : ''}"${f.d ? ` data-tip="${f.d.replace(/"/g, '&quot;')}"` : ''}>`
+                    + `<span class="pc-fact-t">${f.t}</span>`
+                    + (f.d ? `<span class="pc-fact-d">${f.d}</span>` : '')
+                    + (f.y ? `<span class="pc-fact-y">${f.y}</span>` : '')
+                    + (own ? `<span class="pc-fact-media">${media}</span>` : '')
+                    + `</div>`;
+            }).join('');
+            // media with no marked row: float it beside the list, top-right
+            const loose = media && !mediaPlaced ? `<span class="pc-fact-media pc-fact-media--loose">${media}</span>` : '';
+            return `<div class="pc-fact-list">${loose}${rows}</div>`;
+        }
+
+        function renderModule(mod) {
+            const r = mod.r;
+            if (mod.lod === 3) {
+                const body = r.facts && r.facts.length
+                    ? pcFactRowsHtml(r)
+                    : `<div class="pc-dossier">${pcMediaHtml(r, true)}<div class="pc-prose">${r.content}</div></div>`;
+                return `<div class="result pc-mod pc-l3" data-id="${r.id}" data-lod="3">`
+                    + `<div class="result-header">${pcTitleHtml(r)}${pcPageBadge(r)}</div>`
+                    + body
+                    + pcFactsHtml(r, 2)
+                    + `</div>`;
             }
-            const lead = hint ? `<span class="overview-lead">${hint}.</span> ` : '';
-            const chips = relatedChunks(top.id, 2).map(c => relatedChipHtml(c)).join('');
-            return `<div class="overview-body">${lead}${text}${chips ? `<div class="overview-related">${chips}</div>` : ''}</div>`;
+            if (mod.lod === 2) {
+                return `<div class="result pc-mod pc-l2" data-id="${r.id}" data-lod="2" data-tip="${(r.content || '').replace(/"/g, '&quot;')}">`
+                    + `<div class="result-row">${pcMediaHtml(r, false)}<div class="result-body">`
+                    + `<div class="result-header">${pcTitleHtml(r)}${pcPageBadge(r)}</div>`
+                    + `<div class="pc-tldr">${r.tldr || r.content || ''}</div>`
+                    + pcFactsHtml(r, 1)
+                    + `</div></div></div>`;
+            }
+            return `<div class="result pc-mod pc-l1" data-id="${r.id}" data-lod="1" data-tip="${(r.tldr || r.content || '').replace(/"/g, '&quot;')}">`
+                + `<span class="pc-l1-line">${pcTitleHtml(r)}<span class="pc-sep">·</span><span class="pc-micro">${r.micro || ''}</span>${pcPageBadge(r)}</span>`
+                + `</div>`;
         }
 
-        function updateOverview() {
-            const answerEl = el('aiAnswer');
-            if (isGenerating) return; // the model owns the slot right now
-            const html = buildOverviewHtml(lastSearchResults, lastHint);
-            if (html) {
-                answerEl.style.display = 'block';
-                answerEl.classList.remove('generating', 'refining');
-                answerEl.innerHTML = html;
-                answerEl.dataset.model = 'composed from sources';
-                answerEl.dataset.overview = 'true';
-            } else {
-                answerEl.style.display = 'none';
-                answerEl.innerHTML = '';
-                delete answerEl.dataset.model;
-                delete answerEl.dataset.overview;
-                el('aiActions').classList.remove('visible');
+        // The fusion note — was the shells' "Results ⓘ" label row; now it
+        // travels in the postcard byline so chrome earns its lines.
+        const PC_INFO_TIP = 'BM25 keyword relevance (title 3×, tags 2×, fuzzy), fused with semantic similarity once the on-device embedding tier loads.';
+        let lastRenderedQuery = null;   // same-query re-render → morph/preserve scroll
+        let fitKey = null, fitBudget = null;   // no-scroll: viewport-fitted line budget
+
+        function scrollAnchor(resultsEl) {
+            // Nearest scrollable ancestor (the overlay's .so-panel-scroll);
+            // null means the page itself scrolls (search.html).
+            let n = resultsEl;
+            while (n && n !== document.body) {
+                const s = getComputedStyle(n);
+                if (/(auto|scroll)/.test(s.overflowY)) return n;
+                n = n.parentElement;
+            }
+            return null;
+        }
+
+        function applyDossierWrap(container, m, slot) {
+            // The dossier gets the signature: prose flowing on BOTH sides of
+            // its media. Degrades honestly — a failed wrap leaves the plain
+            // paragraph exactly as rendered. slot 'detail' is the workspace
+            // pane's wrap, tracked apart from the list's.
+            if (pretextState !== 'ready') return;
+            const dossier = container.querySelector('.pc-l3 .pc-dossier');
+            const obstacle = dossier && dossier.querySelector('.pc-obstacle');
+            const prose = dossier && dossier.querySelector('.pc-prose');
+            if (dossier && obstacle && prose) {
+                obstacle.classList.add('pc-obstacle--float');
+                pretextWrapMod.wrapAround(prose, {
+                    obstacles: [{ el: obstacle, shape: 'rect', hPad: 14, vPad: 4 }],
+                    lineHeight: m.lineHeight,
+                    font: m.font,
+                    minSlot: 80,
+                }).then(w => { currentWrap = w; }).catch(() => {});
             }
         }
 
-        // The generators share the slot with the overview: while an overview
-        // is showing, generation dims it instead of stomping it with a
-        // spinner, and the first written token takes the slot over.
+        // ── 9d/9e: the workspace detail pane — a pretext META-PARAGRAPH ──
+        // Not one dossier floating in empty space: the pane composes STRATA —
+        // the pinned (or top, or this page's own) chunk at full depth, then
+        // its nearest related chunks as running tldr prose — each stratum's
+        // media placed as a pretext obstacle with prose flowing BOTH sides,
+        // alternating insets for rhythm. Sized by line arithmetic to the
+        // pane's real height: the pane obeys the no-scroll doctrine too, and
+        // what doesn't fit becomes related chips, not scroll.
+        let detailWraps = [];
+        function clearDetailWraps() {
+            for (const w of detailWraps) { try { w.destroy(); } catch {} }
+            detailWraps = [];
+        }
+        function workspaceOn() {
+            // Below 900px the CSS collapses the pane away — the list must
+            // keep its dossiers there even with the class still latched.
+            return !!(config.workspaceActive && config.workspaceActive() && el('detailPane')
+                && window.matchMedia && window.matchMedia('(min-width: 900px)').matches);
+        }
+        function wrapStrata(pane, m) {
+            if (pretextState !== 'ready') return;
+            for (const dossier of pane.querySelectorAll('.pc-dossier')) {
+                const obstacle = dossier.querySelector('.pc-obstacle');
+                const prose = dossier.querySelector('.pc-prose');
+                if (!obstacle || !prose) continue;
+                obstacle.classList.add('pc-obstacle--float');
+                pretextWrapMod.wrapAround(prose, {
+                    obstacles: [{ el: obstacle, shape: 'rect', hPad: 14, vPad: 4 }],
+                    lineHeight: m.lineHeight,
+                    font: m.font,
+                    minSlot: 80,
+                }).then(w => { detailWraps.push(w); }).catch(() => {});
+            }
+        }
+        function renderDetailPane(results) {
+            const pane = el('detailPane');
+            if (!pane) return;
+            if (!workspaceOn()) {
+                clearDetailWraps();
+                if (pane.innerHTML) pane.innerHTML = '';
+                delete pane.dataset.showing;
+                return;
+            }
+            // Seed: pinned (from the list OR a promoted stratum) → top
+            // result → this page's own chunk — the pane is never an empty
+            // half of the screen, empty state included.
+            let r = null;
+            if (results && results.length) r = results.find(x => x.id === pinnedId) || null;
+            if (!r && pinnedId != null) r = chunks.find(c => c.id === pinnedId) || null;
+            if (!r) r = (results && results[0]) || chunks.find(c => c.page === curPage) || chunks[0];
+            if (!r) { clearDetailWraps(); pane.innerHTML = ''; return; }
+            const rel = relatedChunks(r.id, 4);
+            const key = r.id + '|' + rel.map(c => c.id).join(',');
+            if (pane.dataset.showing === key && pane.firstChild) {
+                if (!detailWraps.length) wrapStrata(pane, pcMetrics());   // pretext arrived late
+                return;
+            }
+            const m = pcMetrics();
+            const width = Math.max(280, pane.clientWidth || 460);
+            let lines = Math.max(10, Math.floor((pane.clientHeight || 480) / m.lineHeight) - 1);
+            let side = 0, html = '';
+            const seenMedia = new Set();   // the same portrait twice reads as a glitch
+            const stratum = (c, depth) => {
+                const text = depth === 'full' ? (c.content || '') : (c.tldr || c.content || '');
+                const hasFacts = depth === 'full' && c.facts && c.facts.length;
+                const mediaKey = c.video || c.model3d || c.image;
+                let mediaHtml = '';
+                if (mediaKey && !seenMedia.has(mediaKey)) { mediaHtml = pcMediaHtml(c, true); seenMedia.add(mediaKey); }
+                let cost = (hasFacts ? c.facts.length : countLines(text, width - 150, m)) + 2;
+                if (mediaHtml && !hasFacts) cost = Math.max(cost, 7);   // a stratum is never shorter than its media
+                if (cost > lines) return null;
+                lines -= cost;
+                let body;
+                if (hasFacts) body = pcFactRowsHtml(c);
+                else if (mediaHtml) {
+                    const sideClass = side++ % 2 ? ' pc-dossier--left' : '';
+                    body = `<div class="pc-dossier${sideClass}">${mediaHtml}<div class="pc-prose">${text}</div></div>`;
+                } else body = `<div class="pc-meta-prose">${text}</div>`;
+                return `<div class="pc-meta-stratum" data-id="${c.id}">`
+                    + `<div class="result-header">${pcTitleHtml(c)}${pcPageBadge(c)}</div>`
+                    + body + `</div>`;
+            };
+            html += stratum(r, 'full') || '';
+            const leftovers = [];
+            for (const c of rel) {
+                const s = stratum(c, 'tldr');
+                if (s) html += s; else leftovers.push(c);
+            }
+            if (leftovers.length) {
+                html += `<div class="pc-artifacts">` + leftovers.map(c => relatedChipHtml(c, 'card-related')).join('') + `</div>`;
+            }
+            clearDetailWraps();
+            const media = harvestMedia(pane);
+            pane.dataset.showing = key;
+            pane.innerHTML = html;
+            graftMedia(pane, media);
+            wrapStrata(pane, m);
+        }
+
+        // ── Live media continuity ──
+        // A model-viewer's WebGL context (or a playing video, or a decoded
+        // image) is GRAFTED from the old DOM into the fresh markup instead of
+        // being rebuilt — the frame never blinks when a module changes tier.
+        function harvestMedia(container) {
+            const map = new Map();
+            const mods = container.matches && container.matches('[data-id]') ? [container] : [];
+            mods.push(...container.querySelectorAll('[data-id]'));
+            for (const mod of mods) {
+                const media = mod.querySelector('model-viewer, video, img.result-thumb');
+                if (media) map.set(mod.dataset.id + '|' + media.tagName, media);
+            }
+            return map;
+        }
+        function graftMedia(scope, map) {
+            if (!map || !map.size) return;
+            const mods = scope.matches && scope.matches('[data-id]') ? [scope] : [];
+            mods.push(...scope.querySelectorAll('[data-id]'));
+            for (const mod of mods) {
+                const fresh = mod.querySelector('model-viewer, img.result-thumb, .result-video-wrap');
+                if (!fresh) continue;
+                // an activated (playing) video lives under the VIDEO key but
+                // fresh markup re-renders its poster wrap — match either
+                const tag = fresh.classList.contains('result-video-wrap') ? 'VIDEO' : fresh.tagName;
+                const live = map.get(mod.dataset.id + '|' + tag);
+                if (!live || live === fresh) continue;
+                if (live.tagName === fresh.tagName) live.className = fresh.className;
+                fresh.replaceWith(live);
+                map.delete(mod.dataset.id + '|' + tag);
+            }
+        }
+
+        // Morph, don't rebuild: when a same-query interaction (pin, density)
+        // changes only LODs, swap ONLY the changed module nodes. Unchanged
+        // modules keep their DOM — a live model-viewer never re-initializes
+        // because a sibling was pinned, and nothing flashes. Returns false
+        // when the structure itself changed (tail item promoted, labels
+        // shift) — the caller falls back to a full, scroll-preserved render.
+        function morphPostcard(resultsEl, mods, tailRs, m) {
+            const pcEl = resultsEl.querySelector('.postcard');
+            if (!pcEl) return false;
+            const live = [...pcEl.querySelectorAll('.pc-mod')];
+            const want = mods.filter(mod => mod.lod > 0);
+            if (live.length !== want.length) return false;
+            for (let i = 0; i < want.length; i++)
+                if (String(want[i].r.id) !== live[i].dataset.id) return false;
+            const liveTail = [...pcEl.querySelectorAll('.pc-tail-item')].map(n => n.dataset.id).join();
+            if (liveTail !== tailRs.map(r => String(r.id)).join()) return false;
+            let dossierTouched = false;
+            for (let i = 0; i < want.length; i++) {
+                if (String(want[i].lod) === live[i].dataset.lod) continue;
+                if (live[i].dataset.lod === '3' || want[i].lod === 3) dossierTouched = true;
+                const keep = harvestMedia(live[i]);   // the module's own live media
+                const tpl = document.createElement('template');
+                tpl.innerHTML = renderModule(want[i]);
+                const fresh = tpl.content.firstElementChild;
+                fresh.classList.add('pc-swap-in');
+                graftMedia(fresh, keep);              // frame survives the tier change
+                live[i].replaceWith(fresh);
+            }
+            pcEl.dataset.density = pcDensity();
+            const btn = pcEl.querySelector('.pc-density');
+            if (btn) btn.textContent = pcDensity() === 'compact' ? '⊞' : '⊟';
+            if (dossierTouched) {
+                if (currentWrap) { try { currentWrap.destroy(); } catch {} currentWrap = null; }
+                applyDossierWrap(resultsEl, m);
+            } else if (!currentWrap) {
+                // pretext just became ready over an unchanged structure —
+                // the wrap is the only thing missing
+                applyDossierWrap(resultsEl, m);
+            }
+            return true;
+        }
+
+        // Routed, topline down: intent card → actions → the postcard
+        // (on-this-page eyebrow → across-the-site eyebrow → modules → tail).
+        function renderResults(results, hint) {
+            const resultsEl = el('searchResults');
+            if (!resultsEl) return;
+            ensurePretext();
+            if (cursorIdx >= 0) setCursor(-1);   // a new surface is a new traversal
+            const sameQuery = lastRenderedQuery === currentQueryRaw;
+            lastRenderedQuery = currentQueryRaw;
+
+            const m = pcMetrics();
+            const width = Math.max(240, resultsEl.clientWidth || 560);
+            const localFirst = results[0] && results[0].page === curPage && results.length > 1
+                && results.slice(0, 3).some(r => r.page === curPage);
+            const anchor = scrollAnchor(resultsEl);
+
+            // ── The no-scroll doctrine ──
+            // Inside the panel, depth comes from semantic zoom, never from
+            // scrolling: the line budget is fitted to the actual viewport
+            // (measure → shrink → re-render), and the fitted value is keyed
+            // so morphs reuse it instead of re-deriving a different ladder.
+            const fk = currentQueryRaw + '|' + pcDensity() + '|' + (anchor ? anchor.clientHeight : 0) + '|' + (workspaceOn() ? 'ws' : '');
+            if (fk !== fitKey) { fitKey = fk; fitBudget = null; }
+            let budget = fitBudget != null ? fitBudget : m.budget;
+            let mods = results.length ? allocate(results, width, m, budget) : [];
+            const TAIL_MAX = 8;   // the tail run stays ≤ ~2 lines; the rest is "+N more"
+            const splitTail = (ms) => {
+                const all = ms.filter(mod => mod.lod === 0).map(mod => mod.r);
+                return { shown: all.slice(0, TAIL_MAX), extra: all.slice(TAIL_MAX) };
+            };
+            let tail = splitTail(mods);
+
+            // Same query, same structure → surgical swap, no rebuild.
+            if (sameQuery && results.length && morphPostcard(resultsEl, mods, tail.shown, m)) {
+                renderDetailPane(results);
+                return;
+            }
+
+            if (currentWrap) { try { currentWrap.destroy(); } catch {} currentWrap = null; }
+
+            let html = '';
+            if (lastScenePlan) html += renderPlanCard(lastScenePlan);
+            if (lastSceneCensus) html += renderCensusHtml();
+            if (lastIntentCard) html += renderIntentCard(lastIntentCard);
+            // No "Actions" label — the run-chip on the cards already says it.
+            if (lastCmdMatches.length) html += lastCmdMatches.map(renderCmdCard).join('');
+            if (results.length === 0) {
+                html += `<div class="result" style="color:${mutedColor};font-family:Raleway,sans-serif;font-size:0.85rem;">${html ? 'No other results.' : 'No results found.'}</div>`;
+                resultsEl.innerHTML = html;
+                renderDetailPane([]);
+                return;
+            }
+
+            const buildPc = (ms, t) => {
+                let pc = `<div class="postcard" data-density="${pcDensity()}">`;
+                // ONE byline row: intent hint (only when one fired — a permanent
+                // "tl;dr" is filler, not signal) · fusion ⓘ · density toggle.
+                pc += `<div class="pc-head">${hint ? `<span class="cmdbar-group-label">${hint}</span>` : '<span class="pc-head-spacer"></span>'}`
+                    + `<span class="pc-info" data-tip="${PC_INFO_TIP}" aria-label="How results are ranked" tabindex="0">ⓘ</span>`
+                    + `<button class="pc-density" title="Density: ${pcDensity() === 'compact' ? 'micro — tap for full sentences' : 'full — tap for micro'}" aria-label="Toggle density">${pcDensity() === 'compact' ? '⊞' : '⊟'}</button></div>`;
+                let localLabelDone = !localFirst, siteLabelDone = !localFirst;
+                for (const mod of ms) {
+                    if (mod.lod === 0) continue;
+                    if (localFirst && !localLabelDone && mod.r.page === curPage) {
+                        pc += `<div class="cmdbar-group-label">On this page</div>`; localLabelDone = true;
+                    } else if (localFirst && localLabelDone && !siteLabelDone && mod.r.page !== curPage) {
+                        pc += `<div class="cmdbar-group-label">Across the site</div>`; siteLabelDone = true;
+                    }
+                    pc += renderModule(mod);
+                }
+                if (t.shown.length) {
+                    pc += `<div class="pc-tail">also<span class="pc-sep">:</span> ` + t.shown.map(r =>
+                        `<span class="pc-tail-item" data-id="${r.id}" data-tip="${(r.micro || '').replace(/"/g, '&quot;')}">${pcTitleHtml(r)}</span>`
+                    ).join('<span class="pc-sep">·</span>')
+                    + (t.extra.length ? `<span class="pc-sep">·</span><span class="pc-tail-more" data-tip="${t.extra.map(r => r.title).join(' · ').replace(/"/g, '&quot;')}">+${t.extra.length} more</span>` : '')
+                    + `</div>`;
+                }
+                return pc + `</div>`;
+            };
+
+            // Scroll discipline: a NEW query starts at the top; a same-query
+            // structural re-render (density reshuffle, semantic upgrade)
+            // keeps the reader exactly where they were. Live media is
+            // harvested before and grafted after — frames never blink.
+            const saved = anchor ? anchor.scrollTop : (window.scrollY || 0);
+            let media = harvestMedia(resultsEl);
+            resultsEl.innerHTML = html + buildPc(mods, tail);
+            graftMedia(resultsEl, media);
+
+            // Fit pass: shrink the ladder until the whole surface fits the
+            // panel viewport (the tail absorbs what the ladder sheds).
+            // Steps are GENTLE — exactly the measured overflow, no slack —
+            // and a sub-line residue is tolerated rather than costing a
+            // whole module (interstitial paddings don't quantize to lines).
+            if (anchor) {
+                let guard = 0;
+                while (anchor.scrollHeight > anchor.clientHeight + m.lineHeight / 2 && budget > 4 && guard++ < 5) {
+                    // Proportional step: scale by (viewport / content) applied
+                    // to the line-units actually spent, not to raw pixels —
+                    // the fixed chrome (heads, hint, paddings) is in both
+                    // measurements, so the ratio lands where a subtraction
+                    // wildly overshoots.
+                    const used = mods.usedCost || budget;
+                    budget = Math.max(4, Math.min(budget - 1,
+                        Math.floor(used * anchor.clientHeight / anchor.scrollHeight)));
+                    mods = allocate(results, width, m, budget);
+                    tail = splitTail(mods);
+                    media = harvestMedia(resultsEl);
+                    resultsEl.innerHTML = html + buildPc(mods, tail);
+                    graftMedia(resultsEl, media);
+                }
+                fitBudget = budget;
+            }
+
+            if (sameQuery) { if (anchor) anchor.scrollTop = saved; else window.scrollTo(0, saved); }
+            else if (anchor) anchor.scrollTop = 0;
+
+            applyDossierWrap(resultsEl, m, 'list');
+            renderDetailPane(results);
+        }
+
+        function renderResultCard(r, maxScore) { return renderModule({ r, lod: 2 }); }
+
+        // Empty state: the capability should be discoverable in the first
+        // five seconds of a demo — an empty panel teaches nothing.
+        function pageSuggestions() {
+            if (curPage === 'index') return ['add 3 small fish', 'how many fish are there?', 'why should I hire him'];
+            if (curPage === 'design') return ['draw a circle and put two fish inside', 'what shapes are there?', 'clear the walls'];
+            return ['why should I hire him', 'what has he shipped', 'go to design'];
+        }
+        function renderEmptyState() {
+            const resultsEl = el('searchResults');
+            if (!resultsEl) return;
+            lastRenderedQuery = null;   // next query is "new" — scroll to top
+            cursorIdx = -1;
+            renderDetailPane([]);
+            if (currentWrap) { try { currentWrap.destroy(); } catch {} currentWrap = null; }
+            resultsEl.innerHTML = `<div class="pc-suggest"><span class="cmdbar-group-label">try</span>` +
+                pageSuggestions().map(s => `<button class="pc-suggest-chip" data-suggest="${s}">${s}</button>`).join('') + `</div>`;
+            el('sourcesSection').classList.add('visible');
+            if (config.onResultsChange) config.onResultsChange(true);
+        }
+
+        // ── 9c: keyboard cursor over the composed surface ──
+        // One ephemeral highlight across actions → modules → tail; dies on
+        // any re-render (a new surface is a new traversal).
+        let cursorIdx = -1;
+        function cursorItems() {
+            const resultsEl = el('searchResults');
+            return resultsEl ? [...resultsEl.querySelectorAll('.cmd-card, .pc-mod, .pc-tail-item')] : [];
+        }
+        function setCursor(i) {
+            const items = cursorItems();
+            cursorIdx = i;
+            items.forEach((n, k) => n.classList.toggle('pc-cursor', k === i));
+            if (i >= 0 && items[i]) items[i].scrollIntoView({ block: 'nearest' });
+        }
+        function moveCursor(delta) {
+            const items = cursorItems();
+            if (!items.length) return;
+            setCursor(Math.min(items.length - 1, Math.max(-1, cursorIdx + delta)));
+        }
+        function commitItem(n) {
+            if (n.classList.contains('cmd-card')) { executeCommand(n.dataset.cmd); return; }
+            const a = n.querySelector('a.result-link');
+            if (a) { window.location.href = a.href; return; }
+            const id = Number(n.dataset.id);   // no link → commit = pin toggle
+            if (!isNaN(id)) { pinnedId = (pinnedId === id ? null : id); renderResults(lastSearchResults, lastHint); }
+        }
+        // Enter's semantics: the top thing on the surface, in surface order —
+        // the cursor item if one is lit, the plan card's confirm (the visible
+        // parse IS the confirm), the first action, else the top result.
+        function commitTop() {
+            if (cursorIdx >= 0) { const it = cursorItems()[cursorIdx]; if (it) { commitItem(it); return; } }
+            if (lastScenePlan && !lastScenePlan.receipts) {
+                const btn = el('searchResults') && el('searchResults').querySelector('[data-scene-run]');
+                if (btn && !btn.disabled) { btn.disabled = true; executeScene(lastScenePlan); return; }
+            }
+            if (lastCmdMatches.length) { executeCommand(lastCmdMatches[0].id); return; }
+            if (lastSearchResults.length && lastSearchResults[0].url) {
+                const r = lastSearchResults[0];
+                const ext = /^https?:/i.test(r.url);
+                const href = ext ? r.url : resolveHref(r.url.replace(/^\.\//, ''));
+                if (ext) window.open(href, '_blank', 'noopener'); else window.location.href = href;
+            }
+        }
+
+        // The one shared tooltip node — fixed, repositioned, zero per-module DOM.
+        function ensureTip() {
+            if (tipEl) return tipEl;
+            tipEl = document.createElement('div');
+            tipEl.className = 'pc-tip';
+            document.body.appendChild(tipEl);
+            return tipEl;
+        }
+        function showTip(text, x, y) {
+            const t = ensureTip();
+            t.textContent = text;
+            t.style.display = 'block';
+            const pad = 12;
+            const w = Math.min(360, window.innerWidth - 2 * pad);
+            t.style.maxWidth = w + 'px';
+            t.style.left = Math.min(x + 14, window.innerWidth - w - pad) + 'px';
+            t.style.top = Math.min(y + 16, window.innerHeight - 80) + 'px';
+        }
+        function hideTip() { if (tipEl) tipEl.style.display = 'none'; }
+
+        // The answer slot is the LLM's elaboration seam (6c): the postcard
+        // carries the deterministic layer; the model only ever adds to it.
+        // The rail below the answer pins the ARTIFACTS that grounded it —
+        // collected deterministically from the context chunks, never parsed
+        // out of model text.
+        function appendArtifactRail(answerEl, results) {
+            if (answerEl.querySelector('.pc-artifacts')) return;
+            const top = (results || []).slice(0, 4).filter(r => r.url);
+            if (!top.length) return;
+            const rail = document.createElement('div');
+            rail.className = 'pc-artifacts';
+            rail.innerHTML = `<span class="cmdbar-group-label">artifacts</span>` + top.map(r => {
+                const ext = /^https?:/i.test(r.url);
+                const href = ext ? r.url : resolveHref(r.url.replace(/^\.\//, ''));
+                const glyph = r.video ? '▸ ' : r.model3d ? '◆ ' : r.image ? '▣ ' : '';
+                return `<a class="related-chip" href="${href}"${ext ? ' target="_blank" rel="noopener"' : ''}>${glyph}${r.title}</a>`;
+            }).join('');
+            answerEl.appendChild(rail);
+        }
         function beginAnswer(answerEl, dot, label) {
             answerEl.style.display = 'block';
             answerEl.classList.add('generating');
             el('aiActions').classList.remove('visible');
             dot.className = 'status-dot loading';
-            if (answerEl.dataset.overview === 'true') {
-                answerEl.classList.add('refining');
-                answerEl.dataset.pendingModel = label;
-            } else {
-                answerEl.innerHTML = '<span class="thinking-spinner">Thinking</span>';
-                answerEl.dataset.model = label;
-            }
+            answerEl.innerHTML = '<span class="thinking-spinner">Thinking</span>';
+            answerEl.dataset.model = label;
         }
         function writeAnswer(answerEl, text) {
-            if (answerEl.dataset.overview === 'true') {
-                delete answerEl.dataset.overview;
-                answerEl.classList.remove('refining');
-                if (answerEl.dataset.pendingModel) answerEl.dataset.model = answerEl.dataset.pendingModel;
-                delete answerEl.dataset.pendingModel;
-            }
             answerEl.textContent = text;
         }
 
@@ -976,7 +1785,7 @@
         // call renders as a confirm chip the visitor taps, never an auto-run.
         function toolName(id) { return id.replace(/[^a-zA-Z0-9_-]/g, '_'); }
         function buildTools() {
-            return matchableCommands().map(c => ({
+            const tools = matchableCommands().map(c => ({
                 type: 'function',
                 function: {
                     name: toolName(c.id),
@@ -984,18 +1793,69 @@
                     parameters: { type: 'object', properties: {} },
                 },
             }));
+            // The model composes scenes by EMITTING SCENE LANGUAGE — the same
+            // deterministic grammar the keyboard uses parses and gates it, so
+            // the parser stays the single authority over what can happen.
+            if (window.JH_SCENE) {
+                tools.push({
+                    type: 'function',
+                    function: {
+                        name: 'scene_execute',
+                        description: 'Compose entities on the live canvas behind this panel. Express the composition as a short scene-language utterance, e.g. "add 3 small fish and 2 coral" or "draw a circle and put two fish inside the circle". Supported: add/draw/put · counts · small/medium/large · fish/coral/food/bubble/jellyfish/circle/square/triangle/line · inside/near/intersecting.',
+                        parameters: {
+                            type: 'object',
+                            properties: { utterance: { type: 'string', description: 'the scene-language sentence to execute' } },
+                            required: ['utterance'],
+                        },
+                    },
+                });
+            }
+            return tools;
+        }
+
+        function sceneCensusLine() {
+            if (!window.JH_SCENE) return '';
+            try {
+                const c = window.JH_SCENE.census();
+                if (!c) return '';
+                const bits = [];
+                if (c.smallFish) bits.push(c.smallFish + ' small fish');
+                if (c.mediumFish) bits.push(c.mediumFish + ' medium fish');
+                if (c.largeFish) bits.push(c.largeFish + ' large fish');
+                if (c.coral) bits.push(c.coral + ' coral');
+                if (c.food) bits.push(c.food + ' food');
+                if (c.jellyfish) bits.push(c.jellyfish + ' jellyfish');
+                if (c.shapes && c.shapes.length) bits.push(c.shapes.length + ' drawn shapes (' + c.shapes.map(s => s.type).join(', ') + ')');
+                if (c.enclosed) bits.push(c.enclosed + ' fish enclosed');
+                return bits.length ? `[Canvas right now]: ${bits.join(', ')}.\n\n` : '';
+            } catch { return ''; }
         }
         function commandByToolName(name) {
             return matchableCommands().find(c => toolName(c.id) === name);
         }
         function renderToolChips(answerEl, calls) {
             const seen = new Set();
-            const chips = calls
-                .map(tc => commandByToolName(tc.name))
-                .filter(c => c && !seen.has(c.id) && seen.add(c.id));
-            if (!chips.length) return;
+            const chips = [];
+            let sceneHtml = '';
+            for (const tc of calls) {
+                if (tc.name === 'scene_execute') {
+                    // model-emitted scene language → the SAME parser, the SAME
+                    // plan card, the SAME confirm — grammar and model converge
+                    let utter = '';
+                    try { utter = JSON.parse(tc.args || '{}').utterance || ''; } catch {}
+                    const plan = parseScene(utter);
+                    if (plan && plan.kind === 'plan') {
+                        lastScenePlan = plan;
+                        sceneHtml = renderPlanCard(plan);
+                    }
+                    continue;
+                }
+                const c = commandByToolName(tc.name);
+                if (c && !seen.has(c.id) && seen.add(c.id)) chips.push(c);
+            }
+            if (!chips.length && !sceneHtml) return;
             const wrap = document.createElement('div');
-            wrap.innerHTML = `<div class="cmdbar-group-label">Suggested action — tap to run</div>` + chips.map(renderCmdCard).join('');
+            wrap.innerHTML = (chips.length ? `<div class="cmdbar-group-label">Suggested action — tap to run</div>` + chips.map(renderCmdCard).join('') : '') + sceneHtml;
             answerEl.appendChild(wrap);
         }
 
@@ -1005,10 +1865,10 @@
             const dot = el('aiDot');
             beginAnswer(answerEl, dot, model.name.split('/').pop() + ' · ' + model.source);
 
-            const context = results.slice(0, 8).map(r => `[${r.title}]: ${r.content}`).join('\n\n');
+            const context = sceneCensusLine() + results.slice(0, 8).map(r => `[${r.title}]: ${r.content}`).join('\n\n');
             const tools = (model.source === 'LMStudio' || model.source === 'Custom') ? buildTools() : null;
             const toolLine = tools && tools.length
-                ? '\n- Tools are live actions on the current page. If the visitor asks you to DO something the tools cover (feed, clear, toggle, navigate), call the matching tool instead of describing it. Otherwise just answer.'
+                ? '\n- Tools are live actions on the current page. If the visitor asks you to DO something the tools cover (feed, clear, toggle, navigate, compose a scene), call the matching tool instead of describing it. Otherwise just answer.'
                 : '';
             const messages = [
                 { role: "system", content: SYSTEM_PROMPT_LOCAL + toolLine },
@@ -1055,6 +1915,7 @@
                     answerEl.classList.remove('generating');
                     dot.className = 'status-dot ready';
                     el('aiActions').classList.add('visible');
+                    appendArtifactRail(answerEl, results);
                 }
             }
         }
@@ -1091,6 +1952,7 @@
                 if (!isGenerating && genId === currentGenId) {
                     answerEl.classList.remove('generating'); dot.className = 'status-dot ready';
                     el('aiActions').classList.add('visible');
+                    appendArtifactRail(answerEl, results);
                 }
             }
         }
@@ -1111,14 +1973,24 @@
                 aiActionsEl.classList.remove('visible');
                 lastSearchResults = []; lastLlmQuery = '';
                 currentQueryRaw = ''; lastFusionQuery = '';
-                lastCmdMatches = []; lastIntentCard = null;
+                lastCmdMatches = []; lastIntentCard = null; pinnedId = null;
+                lastScenePlan = null; lastSceneCensus = null;
                 clearBtn.style.display = 'none';
+                renderEmptyState();
                 return;
             }
             clearBtn.style.display = 'block';
+            if (rawQuery !== currentQueryRaw) pinnedId = null;
+            // Set BEFORE renderResults: the renderer keys its same-query
+            // morph/scroll decisions off currentQueryRaw — rendering first
+            // left it one query stale until a semantic refine happened by.
+            currentQueryRaw = rawQuery;
+            const scene = parseScene(rawQuery);
+            lastScenePlan = scene && scene.kind === 'plan' ? scene : null;
+            lastSceneCensus = scene && scene.kind === 'query' ? scene : null;
             const { query: expanded, hint, originalQuery, card } = expandQuery(rawQuery);
             lastIntentCard = card || null;
-            lastCmdMatches = matchCommands(rawQuery, null);
+            lastCmdMatches = lastScenePlan ? [] : matchCommands(rawQuery, null);
             const results = search(expanded);
             sourcesSection.classList.add('visible');
             if (config.onResultsChange) config.onResultsChange(true);
@@ -1127,7 +1999,6 @@
             // Semantic tier: BM25 rendered instantly above; the vectors refine
             // it in place. First real search is also what triggers the one-time
             // embedder load — until it lands, this is a no-op.
-            currentQueryRaw = rawQuery;
             lastFusionQuery = originalQuery ? expanded : stripPronouns(rawQuery.trim());
             lastIntentFired = !!originalQuery;
             lastHint = hint;
@@ -1136,7 +2007,7 @@
                 if (semanticState === 'ready') refineSemantic(rawQuery, ++semanticGen);
             }
             if (answerEl.style.display !== 'none' && isGenerating) answerEl.innerHTML = '<span class="thinking-spinner">Thinking</span>';
-            updateOverview();
+            else if (!isGenerating) { answerEl.style.display = 'none'; delete answerEl.dataset.model; aiActionsEl.classList.remove('visible'); }
         }
 
         function doAIGeneration() {
@@ -1175,16 +2046,67 @@
                 v.src = wrap.dataset.video;
                 v.autoplay = true; v.loop = true; v.muted = true;
                 v.playsInline = true; v.controls = true;
-                wrap.replaceWith(v);
+                if (wrap.classList.contains('pc-obstacle')) {
+                    // keep the node — pretext-wrap's ResizeObserver watches it
+                    wrap.innerHTML = '';
+                    wrap.appendChild(v);
+                    wrap.classList.add('pc-obstacle--video');
+                    wrap.removeAttribute('data-video');
+                    if (currentWrap) currentWrap.refresh();
+                } else {
+                    wrap.replaceWith(v);
+                }
             }
-            for (const host of [el('searchResults'), el('aiAnswer')]) {
+            for (const host of [el('searchResults'), el('aiAnswer'), el('detailPane')]) {
                 if (!host) continue;
                 host.addEventListener('click', (e) => {
                     const vid = e.target.closest('[data-video]');
                     if (vid) { activateVideo(vid); return; }
                     const card = e.target.closest('[data-cmd]');
-                    if (card) executeCommand(card.dataset.cmd);
+                    if (card) { executeCommand(card.dataset.cmd); return; }
+                    const run = e.target.closest('[data-scene-run]');
+                    if (run) { run.disabled = true; executeScene(lastScenePlan); return; }
+                    const sug = e.target.closest('[data-suggest]');
+                    if (sug) { searchInput.value = sug.dataset.suggest; runQuery(sug.dataset.suggest); return; }
+                    const dens = e.target.closest('.pc-density');
+                    if (dens) {
+                        try { localStorage.setItem('jh-postcard-density', pcDensity() === 'compact' ? 'comfortable' : 'compact'); } catch {}
+                        renderResults(lastSearchResults, lastHint);
+                        return;
+                    }
+                    // click a collapsed module (not its links/media) → pin to dossier
+                    const mod = e.target.closest('.pc-mod, .pc-tail-item');
+                    if (mod && mod.dataset.id && !e.target.closest('a, [data-video], model-viewer, button')) {
+                        hideTip();
+                        const id = Number(mod.dataset.id);
+                        pinnedId = (pinnedId === id ? null : id);
+                        renderResults(lastSearchResults, lastHint);
+                        return;
+                    }
+                    // click a related stratum in the workspace pane → it
+                    // becomes the lead (semantic zoom inside the pane)
+                    const stratum = e.target.closest('.pc-meta-stratum');
+                    if (stratum && stratum.dataset.id && !e.target.closest('a, [data-video], model-viewer, button')) {
+                        hideTip();
+                        pinnedId = Number(stratum.dataset.id);
+                        if (lastSearchResults.length) renderResults(lastSearchResults, lastHint);
+                        else renderDetailPane([]);
+                    }
                 });
+                // hover LOD: the next level up, in the one shared tooltip node
+                if (window.matchMedia && window.matchMedia('(hover: hover)').matches) {
+                    host.addEventListener('mouseover', (e) => {
+                        const t = e.target.closest('[data-tip]');
+                        if (t && t.dataset.tip) showTip(t.dataset.tip, e.clientX, e.clientY);
+                    });
+                    host.addEventListener('mousemove', (e) => {
+                        const t = e.target.closest('[data-tip]');
+                        if (t && t.dataset.tip) showTip(t.dataset.tip, e.clientX, e.clientY);
+                    });
+                    host.addEventListener('mouseout', (e) => {
+                        if (e.target.closest('[data-tip]')) hideTip();
+                    });
+                }
                 host.addEventListener('keydown', (e) => {
                     if (e.key !== 'Enter') return;
                     const vid = e.target.closest('[data-video]');
@@ -1203,10 +2125,37 @@
                     aiDebounce = setTimeout(() => doAIGeneration(), delay);
                 }
             });
+            // ── 9c: one keyboard grammar ──
+            // ↑↓ traverses actions/modules/tail; Enter COMMITS the top thing
+            // (cursor item → plan confirm → first action → top result);
+            // Esc is a ladder: cursor → pin → query → (the shell may close).
+            // This listener registers before the shells' own — consuming a
+            // ladder rung stops theirs via stopImmediatePropagation.
             searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    moveCursor(e.key === 'ArrowDown' ? 1 : -1);
+                    return;
+                }
+                if (e.key === 'Escape') {
+                    const consume = () => { e.preventDefault(); e.stopImmediatePropagation(); };
+                    if (cursorIdx >= 0) { setCursor(-1); consume(); return; }
+                    if (pinnedId != null) { pinnedId = null; renderResults(lastSearchResults, lastHint); consume(); return; }
+                    if (searchInput.value) {
+                        searchInput.value = '';
+                        clearTimeout(searchDebounce); clearTimeout(aiDebounce);
+                        doSearchOnly('');
+                        consume(); return;
+                    }
+                    return; // nothing left to unwind — the shell closes
+                }
                 if (e.key === 'Enter') {
+                    e.preventDefault();
                     clearTimeout(searchDebounce); clearTimeout(aiDebounce);
-                    runQuery(e.target.value);
+                    const val = e.target.value;
+                    if (!val.trim()) return;
+                    if (val !== currentQueryRaw) doSearchOnly(val);   // flush a pending debounce
+                    commitTop();
                 }
             });
 
@@ -1262,12 +2211,37 @@
                 updateEngineBar();
                 broadcastEngineState();
                 if (!aiEnabled) {
-                    // the overview is composed, not generated — it stays
-                    updateOverview();
+                    const answerEl = el('aiAnswer');
+                    answerEl.style.display = 'none'; delete answerEl.dataset.model;
+                    el('aiActions').classList.remove('visible');
                 } else if (lastLlmQuery.trim() && lastSearchResults.length > 0) {
                     doAIGeneration();
                 }
             });
+
+            // Tier strip — every segment is signal AND control
+            const strip = el('tierStrip');
+            if (strip) {
+                strip.addEventListener('click', (e) => {
+                    const t = e.target.closest('[data-tier]');
+                    if (!t) return;
+                    const tier = t.dataset.tier;
+                    if (tier === 'qwen') {
+                        if (modelReady) setActiveEngine('browser');
+                        else { const b = el('enableBtn'); if (b && !b.disabled) b.click(); }
+                    } else if (tier === 'local') {
+                        if (localModel) setActiveEngine('local');
+                        else el('detectLocalBtn')?.click();
+                    } else if (tier === 'custom') {
+                        if (customModel) setActiveEngine('custom');
+                    } else if (tier === 'semantic') {
+                        ensureSemantic();
+                    } else if (tier === 'ai') {
+                        const c = el('aiToggle');
+                        if (c) { c.checked = !c.checked; c.dispatchEvent(new Event('change')); }
+                    }
+                });
+            }
 
             // Engine bar "Load AI" CTA (surfaces that have one)
             const loadBtn = el('engineBarLoadBtn');
@@ -1341,7 +2315,7 @@
                         fileProgress.set(info.file, { loaded: info.loaded, total: info.total });
                         let loaded = 0, total = 0; for (const fp of fileProgress.values()) { loaded += fp.loaded; total += fp.total; }
                         if (detectedSource === null && Date.now() - loadStartTime > 1000) detectedSource = (loaded / total > 0.5) ? 'cache' : 'download';
-                        if (total > 0) { progressFill.style.width = (loaded / total * 100) + '%'; progress.textContent = detectedSource === 'download' ? `Downloading ${(loaded / 1e6).toFixed(0)}/${(total / 1e6).toFixed(0)} MB` : 'Loading from cache...'; }
+                        if (total > 0) { progressFill.style.width = (loaded / total * 100) + '%'; progress.textContent = detectedSource === 'download' ? `Downloading ${(loaded / 1e6).toFixed(0)}/${(total / 1e6).toFixed(0)} MB` : 'Loading from cache...'; browserLoadPct = Math.min(99, Math.round(loaded / total * 100)); renderTierStrip(); }
                     } else if (info.status === 'initiate') { progress.textContent = `Loading ${info.file || 'model'}...`; }
                 }
 
@@ -1353,7 +2327,7 @@
                     progress.textContent = 'Compiling shaders...';
                     const warmup = processor.tokenizer("hi"); await llmModel.generate({ ...warmup, max_new_tokens: 1 });
                     const loadTime = ((Date.now() - loadStartTime) / 1000).toFixed(1);
-                    modelReady = true; modelIsCached = true;
+                    modelReady = true; modelIsCached = true; browserLoadPct = null;
                     btn.textContent = '✓ Active'; btn.classList.remove('cached'); btn.classList.add('model-active');
                     progress.textContent = `Ready in ${loadTime}s`; progressBar.style.display = 'none';
                     setActiveEngine('browser');
@@ -1362,6 +2336,7 @@
                 } catch (err) {
                     btn.textContent = 'Error — retry'; btn.disabled = false; dot.className = 'status-dot off';
                     progress.textContent = `Error: ${err.message}`; progressBar.style.display = 'none';
+                    browserLoadPct = null; renderTierStrip();
                     console.error(`${logTag} Model load error:`, err);
                 }
             });
@@ -1383,6 +2358,10 @@
             get semanticState() { return semanticState; },
             executeCommand,
             get commands() { return matchableCommands(); },
+            renderCurrent: () => {
+                if (currentQueryRaw && lastSearchResults.length) renderResults(lastSearchResults, lastHint);
+                else renderDetailPane([]);
+            },
         };
     }
 

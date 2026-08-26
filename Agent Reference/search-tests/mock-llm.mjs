@@ -32,7 +32,16 @@ http.createServer((req, res) => {
       const parsed = JSON.parse(body);
       const userMsg = parsed.messages.filter(m => m.role === 'user').map(m => m.content).join(' ');
       const hasTools = Array.isArray(parsed.tools) && parsed.tools.length > 0;
-      if (hasTools && /feed|food/i.test(userMsg)) {
+      const hasScene = hasTools && parsed.tools.some(t => t.function?.name === 'scene_execute');
+      const qm = userMsg.match(/Question: ([^\n]+)/);
+      const question = qm ? qm[1] : userMsg;
+      if (hasScene && /\b(add|draw|put|spawn)\b/i.test(question)) {
+        const utter = question.replace(/please |for me|could you |can you /gi, '').trim();
+        sse(res, [
+          delta({ tool_calls: [{ index: 0, function: { name: 'scene_execute', arguments: '' } }] }),
+          delta({ tool_calls: [{ index: 0, function: { arguments: JSON.stringify({ utterance: utter }) } }] }),
+        ]);
+      } else if (hasTools && /feed|food/i.test(userMsg)) {
         sse(res, [
           delta({ tool_calls: [{ index: 0, function: { name: 'fish_feed', arguments: '' } }] }),
           delta({ tool_calls: [{ index: 0, function: { arguments: '{}' } }] }),

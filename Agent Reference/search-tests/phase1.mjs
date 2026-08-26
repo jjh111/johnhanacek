@@ -46,10 +46,10 @@ async function newPage() {
   await page.waitForTimeout(500);
   check('keyword query returns results', await page.locator('#searchResults .result').count() > 0);
 
-  // clear button
+  // clear button → empty state renders try-these suggestion chips
   await page.click('#clearBtn');
   await page.waitForTimeout(300);
-  check('clear hides sources', !(await page.locator('#sourcesSection.visible').count()));
+  check('clear shows suggestion chips', await page.locator('#searchResults .pc-suggest-chip').count() > 0);
 
   // engine bar state (headless has no WebGPU adapter usually → Search only)
   const label = await page.locator('#engineModelLabel').textContent();
@@ -110,7 +110,11 @@ async function newPage() {
   await page.focus('#so-searchInput');
   check('settings close on input focus', await page.locator('#so-engineSettings.open').count() === 0);
 
-  // Escape closes
+  // Escape closes — through the 9c ladder: with a query in the input, Esc
+  // clears it first; the close is the LAST rung. Clear first so one Esc
+  // deterministically closes. (The full ladder is phase9's to assert.)
+  await page.fill('#so-searchInput', '');
+  await page.waitForTimeout(400);
   await page.keyboard.press('Escape');
   await page.waitForTimeout(400);
   check('Escape closes overlay', await page.evaluate(() =>

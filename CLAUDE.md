@@ -166,6 +166,19 @@ which stamps every `?v=` cache-bust ref across root `*.html` **and** the `Portfo
   carry dev-authored `micro`/`tldr` fields (data, not runtime generation). Hover = shared
   tooltip; click pins to dossier; compact/comfortable density toggle; empty state shows
   page-aware suggestion chips.
+- **Production coherence (Phase 9)**: renders MORPH instead of rebuilding (same-query
+  interactions swap only changed modules — keyed by `data-id`; new query = full render +
+  scroll-to-top); the input + tier strip live in a never-scrolling command frame
+  (`.so-command-frame` in the overlay, sticky `.search-wrap` on search.html); list-like
+  chunks carry dev-authored `facts` arrays rendered as dossier ROWS (density toggle then
+  reaches inside the dossier); one grammar — page badge = the nav link (`design ↗`),
+  clicks elsewhere zoom in place, ↑↓/Enter/4-rung-Esc on the keyboard; ⤢ workspace mode
+  (≥900px, persisted) splits the overlay into list + a pretext META-PARAGRAPH pane
+  (strata of chunks, media as both-sides wrap obstacles, empty state seeds the page's
+  own story). **The panel NEVER scrolls** (9e doctrine): the line budget is fitted to
+  the viewport by measure→shrink proportional to line-units spent, the tail caps at
+  "+N more", and live media (model-viewer/video/img) is GRAFTED across re-renders so
+  frames never blink. Spec + build records: SEARCH_COMMAND_BAR.md Phase 9.
 - **Scene language (6b)**: on index + design, utterances like "add 3 small fish and 2
   coral" or "draw a circle and put two fish inside" parse (deterministic grammar, never
   bluffs) into a PLAN CARD → confirm → materialize through the real recognizer (design:

@@ -14,7 +14,7 @@ function check(name, cond, detail = '') {
 const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true });
 
 async function newPage(url) {
-  const ctx = await browser.newContext();
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 920 } });   // tall: 9e no-scroll sheds depth on short panels
   const page = await ctx.newPage();
   const errors = [];
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
@@ -41,34 +41,25 @@ async function newPage(url) {
   check('"awards" first result is the real answer', first.includes('Awards'), first);
 
   await page.fill('#so-searchInput', 'fish');
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(900);   // 500 flaked under full-suite load (embedder contention)
   const labels2 = await page.locator('#so-searchResults .cmdbar-group-label').allTextContents();
   check('"fish" on index keeps earned local group', labels2.some(l => /on this page/i.test(l)), labels2.join(','));
 
-  // ───────── overview slot ─────────
-  console.log('overview slot:');
+  // ───────── postcard lead (replaced the overview slot in 6a) ─────────
+  console.log('postcard lead:');
   await page.fill('#so-searchInput', 'why should I hire him');
-  await page.waitForTimeout(500);
-  const ovVisible = await page.evaluate(() => {
-    const a = document.getElementById('so-aiAnswer');
-    return a.style.display !== 'none' && a.dataset.overview === 'true' ? a.dataset.model : null;
-  });
-  check('intent query composes an overview', ovVisible === 'composed from sources', String(ovVisible));
-  check('overview carries related chips', await page.locator('#so-aiAnswer .related-chip').count() > 0);
+  await page.waitForTimeout(600);
+  const eyebrow = await page.locator('#so-searchResults .postcard .cmdbar-group-label').first().textContent();
+  check('intent hint becomes the postcard eyebrow', /expertise|unique/i.test(eyebrow), eyebrow);
+  check('postcard carries related chips', await page.locator('#so-searchResults .related-chip').count() > 0);
 
   await page.fill('#so-searchInput', 'design');
-  await page.waitForTimeout(500);
-  const ovGone = await page.evaluate(() => document.getElementById('so-aiAnswer').dataset.overview !== 'true'
-    || document.getElementById('so-aiAnswer').style.display === 'none');
-  check('low-confidence query shows no overview', ovGone);
+  await page.waitForTimeout(600);
+  check('broad query gets NO dossier (no L3)', await page.locator('#so-searchResults [data-lod="3"]').count() === 0);
 
   await page.fill('#so-searchInput', 'book a call with him');
   await page.waitForTimeout(500);
-  const cardNoOv = await page.evaluate(() => ({
-    card: !!document.querySelector('#so-searchResults .intent-card'),
-    ov: document.getElementById('so-aiAnswer').dataset.overview === 'true',
-  }));
-  check('intent card suppresses overview', cardNoOv.card && !cardNoOv.ov, JSON.stringify(cardNoOv));
+  check('intent card renders above postcard', await page.locator('#so-searchResults .intent-card').count() === 1);
 
   // ───────── media + related on cards ─────────
   console.log('media cards:');
@@ -96,12 +87,8 @@ async function newPage(url) {
   console.log('search.html:');
   const { ctx, page, errors } = await newPage(`${BASE}/search.html`);
   await page.fill('#searchInput', 'what makes him unique');
-  await page.waitForTimeout(600);
-  const ov = await page.evaluate(() => {
-    const a = document.getElementById('aiAnswer');
-    return { shown: a.style.display !== 'none', model: a.dataset.model, overview: a.dataset.overview };
-  });
-  check('overview renders on search page', ov.shown && ov.overview === 'true', JSON.stringify(ov));
+  await page.waitForTimeout(700);
+  check('postcard renders on search page', await page.locator('#searchResults .postcard .pc-mod').count() > 0);
   check('no console errors', errors.length === 0, errors.slice(0, 3).join(' | '));
   await ctx.close();
 }
