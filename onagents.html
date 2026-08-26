@@ -52,7 +52,7 @@
          rules below win every conflict at equal specificity — shared.css is here
          for <jh-nav>/<jh-footer>, not to restyle the essay. The nav and footer
          inherit this page's --cyan/--gold, so they read as part of it. -->
-    <link rel="stylesheet" href="./styles/shared.css?v=1.55">
+    <link rel="stylesheet" href="./styles/shared.css?v=1.56">
     <style>
         /* ============================================
            DESIGN SYSTEM — Void Terminal
@@ -76,6 +76,12 @@
             --gold-line: rgba(212, 175, 55, 0.6);
             --plasma-hot: #ffaa00;
             --plasma-warm: #ff6600;
+            /* Named because they were literals in ~20 places — including
+               inline style attributes, which no stylesheet can override. A
+               theme cannot restate a colour it has no name for. */
+            --green: #5ae05a;
+            --forest-gold: #c4a957;
+            --alarm: #ff4444;
 
             /* Text */
             --text-bright: #f5f5f5;
@@ -855,6 +861,18 @@
 
         body.slide-mode .slide-progress { opacity: 1; }
 
+        /* Slide mode pins each slide to the viewport, which takes them out of
+           the flow the site footer was sitting at the end of — so the glass
+           oval floated over the middle of every slide, copyright and version
+           badge included. A fullscreen presentation has no footer. (Present in
+           both themes; found while checking the light one.)
+
+           Targets .footer-oval, not <jh-footer>: the component sets
+           style.display='contents' on ITSELF in connectedCallback, and an
+           inline style beats any stylesheet rule short of !important. The oval
+           is the visual child and takes the rule cleanly. */
+        body.slide-mode .footer-oval { display: none; }
+
         /* ESC badge — bottom-right, visible in slide mode */
         .esc-hint {
             position: fixed;
@@ -1135,10 +1153,10 @@
         }
 
         .section-header.problems { color: var(--plasma-warm); }
-        .section-header.solutions { color: #5ae05a; }
+        .section-header.solutions { color: var(--green); }
         .section-header.quickfixes { color: var(--gold); }
         .section-header.ecoviz { color: var(--cyan); }
-        .section-header.forest { color: #c4a957; }
+        .section-header.forest { color: var(--forest-gold); }
 
         /* Problem card accent border variants */
         .glass-card.plasma::before {
@@ -1163,7 +1181,7 @@
         }
 
         .slide-heading.plasma { color: var(--plasma-warm); }
-        .slide-heading.green { color: #5ae05a; }
+        .slide-heading.green { color: var(--green); }
         .slide-heading.gold-color { color: var(--gold); }
 
         /* Bullet lists */
@@ -1235,8 +1253,8 @@
         }
 
         .cell-label.right { color: var(--plasma-warm); }
-        .cell-label.wrong { color: #ff4444; }
-        .cell-label.green-label { color: #5ae05a; }
+        .cell-label.wrong { color: var(--alarm); }
+        .cell-label.green-label { color: var(--green); }
 
         /* Node map visual (slide 3) */
         .node-map {
@@ -1342,7 +1360,7 @@
         }
 
         .big-quote .gold { color: var(--gold); font-style: normal; }
-        .big-quote .green { color: #5ae05a; font-style: normal; }
+        .big-quote .green { color: var(--green); font-style: normal; }
         .big-quote .plasma { color: var(--plasma-warm); font-style: normal; }
 
         /* Versus layout */
@@ -1420,7 +1438,7 @@
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.9rem;
             letter-spacing: 0.15em;
-            color: #5ae05a;
+            color: var(--green);
             text-transform: uppercase;
             margin-bottom: var(--space-xs);
         }
@@ -1723,6 +1741,171 @@
             .slide { padding: var(--space-lg) var(--space-md); }
             .glass-card { padding: var(--space-lg) var(--space-md); }
         }
+
+        /* ============================================
+           THEME — "Void Terminal, daylight"
+
+           scripts/jh-chrome.js stamps data-theme="light" on <html>. Before
+           this block existed the page took half a theme: the site's light
+           palette in styles/jh-chrome.css redefines a handful of names this
+           page also uses (--cyan, --gold-glow, --text-bright, --text-heading,
+           --border) and, being :root[data-theme="light"], outranked the plain
+           :root above. The names it does NOT share — --void chief among them —
+           stayed dark. The result was #1b3644 ink on a #000000 ground: the
+           essay was unreadable in light mode, not merely unstyled.
+
+           So every token this page owns is restated here. It is declared after
+           shared.css and at the same specificity, which is the same ordering
+           trick the file already relies on for :root.
+
+           THE FIGURES STAY DARK, ON PURPOSE. The 24 applet canvases paint with
+           colours hardcoded in JS, for a dark field, and none of them listens
+           for a theme change. Rather than half-convert them, they are framed as
+           plates — dark figures inset in light paper, the way a printed paper
+           sets a photographic plate. Deliberate, and it reads as deliberate.
+        ============================================ */
+        :root[data-theme="light"] {
+            /* Heights, where the dark theme had depths. --void matches the
+               site's --sea-deep so the essay and the chrome share one ground. */
+            --void: #eef4f6;
+            --deep: #e4edf1;
+            --abyss: #dae6ec;
+            --glass: rgba(255, 255, 255, 0.72);
+            --glass-light: rgba(255, 255, 255, 0.45);
+            --glass-edge: rgba(18, 83, 108, 0.18);
+
+            /* Accents darken rather than invert — the same sea in daylight,
+               matching the Shallows palette the nav and footer already wear. */
+            --cyan: #16607c;
+            --cyan-dim: #12536c;
+            --cyan-glow: rgba(18, 83, 108, 0.22);
+            --gold: #7a6016;
+            --gold-glow: rgba(122, 96, 22, 0.22);
+            --gold-line: rgba(122, 96, 22, 0.55);
+            /* Plasma at #ff6600 is a 3:1 blur on white. Burnt, not neon. */
+            --plasma-hot: #a04c08;
+            --plasma-warm: #a8410c;
+            --green: #2f7d38;
+            --forest-gold: #6f5a14;
+            --alarm: #b02020;
+
+            --text-bright: #1b3644;
+            --text-heading: #0d2531;
+            --text-sub: #4a6472;
+            --text-body: #35525f;
+            --text-muted: #506873;
+
+            --border: rgba(18, 83, 108, 0.28);
+            --border-subtle: rgba(18, 83, 108, 0.12);
+        }
+
+        /* Daylight has no stars. Removing them rather than fading them also
+           stops the twinkle animation from running unseen. */
+        :root[data-theme="light"] .stars { display: none; }
+
+        :root[data-theme="light"] .cosmic-bg {
+            background: radial-gradient(ellipse at 50% 40%, #ffffff 0%, var(--void) 70%);
+        }
+
+        :root[data-theme="light"] .cosmic-dust {
+            background:
+                radial-gradient(ellipse at 20% 30%, rgba(168, 65, 12, 0.05) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 70%, rgba(18, 83, 108, 0.05) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(138, 109, 28, 0.04) 0%, transparent 40%);
+        }
+
+        /* A 60px black bloom sat behind light glyphs. Behind dark ones on
+           paper it is just a smudge. */
+        :root[data-theme="light"] .display-title { text-shadow: none; }
+
+        /* No per-selector colour overrides live here. The literals those rules
+           used to hold — and the ones inside inline style attributes, which a
+           stylesheet cannot reach at all — are now --green / --forest-gold /
+           --alarm, so restating the token above is the whole fix. */
+        :root[data-theme="light"] .glass-card.plasma::before {
+            background: linear-gradient(90deg, transparent, rgba(168, 65, 12, 0.5), transparent);
+        }
+        :root[data-theme="light"] .glass-card.green::before,
+        :root[data-theme="light"] .glass-card.forest-card::before {
+            background: linear-gradient(90deg, transparent, rgba(47, 125, 56, 0.5), transparent);
+        }
+        :root[data-theme="light"] .glass-card.forest-card {
+            border-color: rgba(47, 125, 56, 0.28);
+        }
+
+        :root[data-theme="light"] .scale-level {
+            background: rgba(168, 65, 12, 0.06);
+            border-color: rgba(168, 65, 12, 0.22);
+        }
+        :root[data-theme="light"] .ecology-item {
+            background: rgba(47, 125, 56, 0.06);
+            border-color: rgba(47, 125, 56, 0.22);
+        }
+        :root[data-theme="light"] .node-map .node:hover {
+            box-shadow: 0 0 20px rgba(168, 65, 12, 0.22);
+        }
+
+        /* The three forest gradients ran #030a04 → #1a1508. Same journey,
+           read as light woodland rather than night woodland. */
+        :root[data-theme="light"] .slide-forest-transition {
+            background: linear-gradient(180deg, var(--void) 0%, #eaf1e6 40%, #e2eddc 100%);
+        }
+        :root[data-theme="light"] .slide-forest {
+            background: linear-gradient(180deg, #e2eddc 0%, #e6eeda 50%, #eaf0dc 100%);
+        }
+        :root[data-theme="light"] .slide-forest-final {
+            background: linear-gradient(180deg, #eaf0dc 0%, #f0eeda 50%, #f2ecdc 100%);
+        }
+
+        /* ---- floating chrome: dark panels become light panels ---- */
+        :root[data-theme="light"] .nav-toc {
+            background: rgba(255, 255, 255, 0.94);
+        }
+        :root[data-theme="light"] .toc-slide:hover {
+            background: rgba(18, 83, 108, 0.07);
+        }
+        :root[data-theme="light"] .toc-slide.active {
+            background: rgba(138, 109, 28, 0.12);
+        }
+        :root[data-theme="light"] .mode-toggle:hover {
+            border-color: rgba(18, 83, 108, 0.4);
+            background: rgba(18, 83, 108, 0.08);
+        }
+        :root[data-theme="light"] .esc-hint kbd,
+        :root[data-theme="light"] .key-hint kbd {
+            background: rgba(18, 83, 108, 0.08);
+        }
+        :root[data-theme="light"] .dikw-ring .orbit {
+            border-color: rgba(18, 83, 108, 0.28);
+        }
+        :root[data-theme="light"] .dikw-ring .orbit-inner {
+            border-color: rgba(138, 109, 28, 0.28);
+        }
+        :root[data-theme="light"] .orbit-ring {
+            border-color: rgba(138, 109, 28, 0.35);
+        }
+
+        /* ---- the plates ----
+           Everything here draws from JS with bright-on-dark colours. Given an
+           opaque dark ground and a rim, they read as figures rather than as
+           patches the theme forgot. */
+        :root[data-theme="light"] .applet-canvas,
+        :root[data-theme="light"] #networkContainer {
+            background: #071018;
+            border: 1px solid rgba(18, 83, 108, 0.35);
+            box-shadow: 0 2px 14px rgba(18, 83, 108, 0.16);
+        }
+        :root[data-theme="light"] .slot-reels {
+            background: rgba(7, 16, 24, 0.92);
+            box-shadow: 0 2px 14px rgba(18, 83, 108, 0.18), inset 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+        :root[data-theme="light"] .reel {
+            background: rgba(7, 16, 24, 0.96);
+            border-color: rgba(138, 109, 28, 0.45);
+        }
+        /* The black hole is the essay's one true black. It stays black — a
+           light-mode black hole would be a contradiction, not a theme. */
+
     </style>
     <script type="importmap">
     {
@@ -2393,7 +2576,7 @@
                         <p class="body-text" style="font-size:0.9rem; margin-top:2px;">Simple things combine into complex things. Named compositions become building blocks.</p>
                     </div>
                     <div style="text-align:center;">
-                        <p class="terminal-text" style="font-size:0.9rem; color:#5ae05a;">Queryable</p>
+                        <p class="terminal-text" style="font-size:0.9rem; color:var(--green);">Queryable</p>
                         <p class="body-text" style="font-size:0.9rem; margin-top:2px;">Everything is connected, searchable, meaningful. Ask the system about itself.</p>
                     </div>
                 </div>
@@ -2427,7 +2610,7 @@
                         <div class="label">Wisdom</div>
                         <div class="i-verb">I know</div>
                     </div>
-                    <div class="stage" style="top:50%; right:-18px; transform:translateY(-50%); color:#5ae05a;">
+                    <div class="stage" style="top:50%; right:-18px; transform:translateY(-50%); color:var(--green);">
                         <div class="label">Knowledge</div>
                         <div class="i-verb">I understand</div>
                     </div>
@@ -2449,7 +2632,7 @@
                     <!-- Doubt label on the left descent -->
                     <div style="position:absolute; top:28%; left:-8px; font-family:'JetBrains Mono',monospace; font-size:0.55rem; color:var(--plasma-hot); opacity:0.5; transform:rotate(-90deg); letter-spacing:0.15em;">DOUBT</div>
                     <!-- Synthesis label on the right ascent -->
-                    <div style="position:absolute; top:72%; right:-14px; font-family:'JetBrains Mono',monospace; font-size:0.55rem; color:#5ae05a; opacity:0.5; transform:rotate(90deg); letter-spacing:0.15em;">SYNTHESIS</div>
+                    <div style="position:absolute; top:72%; right:-14px; font-family:'JetBrains Mono',monospace; font-size:0.55rem; color:var(--green); opacity:0.5; transform:rotate(90deg); letter-spacing:0.15em;">SYNTHESIS</div>
                 </div>
 
                 <!-- Black hole / strange loop image -->
@@ -2497,7 +2680,7 @@
                         <p class="body-text" style="font-size:1rem; margin-top:var(--space-xs);">A live simulation, not a static diagram. Agents are visible.</p>
                     </div>
                     <div style="flex:1; min-width:200px; text-align:center;">
-                        <p class="terminal-text" style="font-size:1rem; color:#5ae05a;">Self-description</p>
+                        <p class="terminal-text" style="font-size:1rem; color:var(--green);">Self-description</p>
                         <p class="body-text" style="font-size:1rem; margin-top:var(--space-xs);">The system visualizes itself using the same structures it operates with.</p>
                     </div>
                 </div>
@@ -2584,7 +2767,7 @@
                 <div class="glass-card green" style="flex:1; min-width:240px; padding:var(--space-xs) var(--space-sm);">
                     <div class="cell-label green-label" style="font-size:0.75rem;">openProse = the ecosystem</div>
                     <p class="body-text" style="font-size:0.85rem; margin-top:2px;">
-                        The session <em>is</em> the runtime. The <code style="font-size:0.8em; color:#5ae05a;">.prose</code> program runs <em>inside</em> the agent.
+                        The session <em>is</em> the runtime. The <code style="font-size:0.8em; color:var(--green);">.prose</code> program runs <em>inside</em> the agent.
                     </p>
                 </div>
                 <div class="glass-card" style="flex:1; min-width:240px; padding:var(--space-xs) var(--space-sm); border-color:rgba(77,201,246,0.15);">
@@ -2599,28 +2782,28 @@
             <div style="display:grid; grid-template-columns:1fr auto 1fr; gap:2px var(--space-xs); max-width:700px; font-family:'JetBrains Mono',monospace; font-size:clamp(0.65rem, 1.1vw, 0.78rem);">
                 <div style="text-align:right; padding:4px 6px; color:var(--text-muted);">Plants</div>
                 <div style="color:var(--gold); padding:4px 2px; text-align:center;">&rarr;</div>
-                <div style="padding:4px 6px; color:#5ae05a;"><strong>publisher</strong></div>
+                <div style="padding:4px 6px; color:var(--green);"><strong>publisher</strong></div>
                 <div style="text-align:right; padding:4px 6px; color:var(--text-muted);">Pollinators</div>
                 <div style="color:var(--gold); padding:4px 2px; text-align:center;">&rarr;</div>
-                <div style="padding:4px 6px; color:#5ae05a;"><strong>pollinator</strong></div>
+                <div style="padding:4px 6px; color:var(--green);"><strong>pollinator</strong></div>
                 <div style="text-align:right; padding:4px 6px; color:var(--text-muted);">Predators</div>
                 <div style="color:var(--gold); padding:4px 2px; text-align:center;">&rarr;</div>
-                <div style="padding:4px 6px; color:#5ae05a;"><strong>sentinel</strong></div>
+                <div style="padding:4px 6px; color:var(--green);"><strong>sentinel</strong></div>
                 <div style="text-align:right; padding:4px 6px; color:var(--text-muted);">Decomposers</div>
                 <div style="color:var(--gold); padding:4px 2px; text-align:center;">&rarr;</div>
-                <div style="padding:4px 6px; color:#5ae05a;"><strong>gardener</strong></div>
+                <div style="padding:4px 6px; color:var(--green);"><strong>gardener</strong></div>
                 <div style="text-align:right; padding:4px 6px; color:var(--text-muted);">Microbes</div>
                 <div style="color:var(--gold); padding:4px 2px; text-align:center;">&rarr;</div>
-                <div style="padding:4px 6px; color:#5ae05a;"><strong>chronicler</strong></div>
+                <div style="padding:4px 6px; color:var(--green);"><strong>chronicler</strong></div>
                 <div style="text-align:right; padding:4px 6px; color:var(--text-muted);">Keystone</div>
                 <div style="color:var(--gold); padding:4px 2px; text-align:center;">&rarr;</div>
-                <div style="padding:4px 6px; color:#5ae05a;"><strong>holon</strong></div>
+                <div style="padding:4px 6px; color:var(--green);"><strong>holon</strong></div>
             </div>
 
             <div class="gold-divider" style="margin:var(--space-xs) auto;"></div>
 
             <p class="body-text" style="text-align:center; max-width:500px;">
-                <strong style="color:#5ae05a;">We host the habitat.</strong>
+                <strong style="color:var(--green);">We host the habitat.</strong>
                 <strong style="color:var(--gold);"> You own the organism.</strong>
             </p>
 
@@ -2633,7 +2816,7 @@
     <section class="slide slide-forest" id="slide-25">
         <div class="content-window" data-layout="single">
             <div class="section-header forest">The Forest Floor</div>
-            <h2 class="slide-heading" style="text-align:center; color:#c4a957;">The Living System</h2>
+            <h2 class="slide-heading" style="text-align:center; color:var(--forest-gold);">The Living System</h2>
 
             <!-- Ecosystem particle simulation -->
             <canvas id="ecosystemCanvas" class="applet-canvas" width="500" height="260" style="border-color:rgba(90,180,60,0.1);"></canvas>
@@ -8954,8 +9137,8 @@
         <jh-footer></jh-footer>
     </footer>
 
-    <script src="./scripts/shared.js?v=1.55"></script>
-    <script src="./scripts/jh-chrome.js?v=1.55" defer></script>
+    <script src="./scripts/shared.js?v=1.56"></script>
+    <script src="./scripts/jh-chrome.js?v=1.56" defer></script>
 
 </body>
 </html>

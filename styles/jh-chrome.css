@@ -811,7 +811,10 @@ body > footer .version {
     --cyan: #16607c;
     --cyan-dim: #12536c;
     --cyan-glow: rgba(18, 83, 108, 0.14);
-    --jh-gold: #8a6d1c;
+    /* #8a6d1c measured 4.41:1 on --sea-deep — under AA for normal text, and
+       this gold IS text: year badges, section labels, "View the Case Study".
+       #7a6016 clears it at 5.38 and is indistinguishable as a hue. */
+    --jh-gold: #7a6016;
     --gold-glow: rgba(138, 109, 28, 0.16);
     --green: #2f7d38;
 
@@ -820,14 +823,18 @@ body > footer .version {
     --text-heading: #135a74;
     --text-subhead: #0d2531;
 
-    --muted: #5c7480;
+    /* Same story at 4.43:1, and --muted carries the most text of any accent:
+       footer copyright, the version badge, nav-right links, every caption.
+       #546b77 clears it at 5.05 and still reads a full step below
+       --text-primary (7.49), which is what "muted" has to mean. */
+    --muted: #546b77;
     --muted-light: #52707e;
     --border: rgba(18, 83, 108, 0.28);
     --shadow: rgba(18, 83, 108, 0.15);
 
     --cyan-rgb: 22, 96, 124;
     --cyan-dim-rgb: 18, 83, 108;
-    --gold-rgb: 138, 109, 28;
+    --gold-rgb: 122, 96, 22;
     --surface-rgb: 238, 244, 246;
     --panel-rgb: 248, 251, 252;
     --ink-rgb: 53, 82, 95;
@@ -843,6 +850,15 @@ body > footer .version {
 :root[data-theme="light"] .nav-left .shape-label-img,
 :root[data-theme="light"] .shape-nav .shape-label-img {
     filter: invert(0.82) sepia(0.35) saturate(2) hue-rotate(155deg);
+}
+
+/* The hero's "view content" cue is rgba(--gold-rgb, 0.7). On the deep-sea
+   ground a 70% gold still carries; on paper the wash lands at 3.0:1 and no
+   gold dark enough to fix it still reads as gold. Light mode spends the alpha
+   instead — the cue is already quiet by size and tracking. Specificity, not
+   order, wins this one: shared.css is imported after this file. */
+:root[data-theme="light"] .oval-scroll-btn {
+    color: rgb(var(--gold-rgb));
 }
 
 /* Hero glass pills over the light canvas: light glass, like the hero oval.

@@ -19,20 +19,21 @@ class Application {
         this.setupUI();
     }
     
+    // The built molecule IS the model here, not a stand-in for a missing one.
+    //
+    // This used to request 'models/Scaffold_3_2022-08-18_00.37.12.gltf', which
+    // is a bare JSON manifest whose 6900-byte buffer was never committed. Every
+    // load 404'd, THREE.GLTFLoader threw, and the catch quietly drew this same
+    // molecule — so the panel always looked exactly as it does now, at the cost
+    // of a failed request and a console error on a public case study page.
+    //
+    // The demo is about SYNCHRONISED VIEWPORTS, not about which molecule is on
+    // screen, and the procedural one reads clearly at this size. So it is the
+    // real subject now rather than a fallback. ModelLoader.loadModel(url) still
+    // works if a complete .gltf (manifest AND .bin) ever arrives — call it here
+    // and this comment becomes the history of why it didn't.
     async loadModel() {
-        console.log('Creating model...');
-        // Points at the only model in models/. Previously it asked for
-        // 'models/molecule.gltf', which has never existed in this repo.
-        //
-        // HEADS UP: this still falls back to createFallbackModel(), because the
-        // .gltf is a bare JSON manifest whose 6900-byte buffer
-        // 'Scaffold_3_2022-08-18_00.37.12.bin' is missing from the repo (not
-        // gitignored — simply never committed). Drop that .bin in beside the
-        // .gltf and the real scaffold renders with no code change. Until then
-        // the demo shows a placeholder primitive, which is why the Nanome case
-        // study's 3D panel looks generic.
-        this.model = await ModelLoader.loadModel('models/Scaffold_3_2022-08-18_00.37.12.gltf');
-        console.log('Model loaded');
+        this.model = ModelLoader.createFallbackModel();
     }
     
     createViewports() {

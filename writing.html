@@ -94,8 +94,13 @@
             --text-subhead:  #1a2a3a;
             --text-bright:   #3a5a6a;
             --text-primary:  #4a6a7a;
-            --muted:         #8a9aa4;
-            --muted-light:   #7a8a94;
+            /* Measured on --sea-deep #f8f5f0: the old #8a9aa4 was 2.67:1 and
+               #7a8a94 3.28:1 — both well under AA, and between them they
+               coloured the page title, every category title, both article
+               counts and the byline. Darkened to 4.84 and 5.44 while keeping
+               --muted-light the stronger of the pair, as the dark theme has it. */
+            --muted:         #5f6e78;
+            --muted-light:   #55646e;
             --border:        rgba(42, 74, 90, 0.2);
             --border-subtle: rgba(42, 74, 90, 0.08);
             --shadow:        rgba(0, 0, 0, 0.08);
@@ -108,7 +113,7 @@
             --p3-bg:    rgba(58, 90, 106, 0.06);
             --p4-color: #2d7a3a;
             --p4-bg:    rgba(45, 122, 58, 0.06);
-            --p5-color: #8a9aa4;
+            --p5-color: #5f6e78;
             --p5-bg:    rgba(138, 154, 164, 0.06);
             --p6-color: #b8862a;
             --p6-bg:    rgba(184, 134, 42, 0.08);
@@ -889,7 +894,12 @@
             margin-top: var(--space-xs);
         }
 
-        .footer-links a {
+        /* The byline link ("johnhanacek.com") sits in .site-footer p, not in
+           .footer-links, so it never matched this rule and rendered in the
+           browser's default #0000ee — 2.1:1 on the dark ground. Both footer
+           links share one idiom now rather than one having none. */
+        .footer-links a,
+        .site-footer p a {
             color: var(--muted-light);
             text-decoration: underline;
             text-underline-offset: 3px;
@@ -897,7 +907,8 @@
             transition: color 0.15s;
         }
 
-        .footer-links a:hover {
+        .footer-links a:hover,
+        .site-footer p a:hover {
             color: var(--cyan);
             text-decoration-color: var(--cyan);
         }
