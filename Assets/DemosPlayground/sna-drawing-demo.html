@@ -2,11 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <script>/* jh-theme bootstrap: stamp before first paint (scripts/jh-chrome.js owns persistence) */(function(){try{var t=localStorage.getItem("jh-theme");if(t?t==="light":matchMedia("(prefers-color-scheme: light)").matches)document.documentElement.setAttribute("data-theme","light")}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
   <title>Social Network Analysis Tool</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@200;300;400;500;600&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <!-- Site tokens + JH_THEME (no nav markup here, so only the theme module runs).
+       Loading these means the playground's theme flip propagates into this page
+       like any site page, and the demo follows the shared jh-theme key. -->
+  <link rel="stylesheet" href="../../styles/jh-chrome.css">
+  <script src="../../scripts/jh-chrome.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
@@ -15,9 +22,10 @@
     html, body, #root { height: 100%; width: 100%; }
     body {
       font-family: 'JetBrains Mono', monospace;
-      background: #f8f5f0;
-      color: #4a6a7a;
+      background: var(--sea-deep, #020a12);
+      color: var(--text-primary, #8cb8cc);
       -webkit-font-smoothing: antialiased;
+      transition: background 0.25s ease, color 0.25s ease;
     }
   </style>
 </head>
@@ -27,43 +35,78 @@
     const { useState, useRef, useEffect, useCallback, useMemo } = React;
 
     /* ============================================
-       DESIGN TOKENS — Light Paper
-       (from writing.html [data-theme="light"])
+       DESIGN TOKENS — the site's two faces
+       (Deep Sea Terminal dark / "Shallows" light, mirroring
+       styles/jh-chrome.css; canvas + inline styles can't read CSS vars,
+       so the values live here like the fish engine's palettes do)
     ============================================ */
-    const T = {
-      bg:          '#f8f5f0',
-      surface:     '#f0ece4',
-      glass:       'rgba(255, 255, 255, 0.85)',
-      white:       '#ffffff',
-      accent:      '#2a6b8a',
-      accentHover: '#3a7d9c',
-      accentFaint: 'rgba(42, 107, 138, 0.12)',
-      gold:        '#9a7b2a',
-      goldFaint:   'rgba(154, 123, 42, 0.12)',
-      goldBg:      'rgba(154, 123, 42, 0.08)',
-      green:       '#2d7a3a',
-      greenBg:     'rgba(45, 122, 58, 0.06)',
-      warm:        '#c97856',
-      heading:     '#2a4a5a',
-      subhead:     '#1a2a3a',
-      bright:      '#3a5a6a',
-      primary:     '#4a6a7a',
-      muted:       '#8a9aa4',
-      mutedFaint:  'rgba(138, 154, 164, 0.25)',
-      border:      'rgba(42, 74, 90, 0.2)',
-      borderSub:   'rgba(42, 74, 90, 0.08)',
-      shadow:      'rgba(0, 0, 0, 0.08)',
-      dotGrid:     'rgba(42, 74, 90, 0.12)',
-      fontUI:      "'Raleway', sans-serif",
-      fontMono:    "'JetBrains Mono', monospace",
+    const FONTS = { fontUI: "'Raleway', sans-serif", fontMono: "'JetBrains Mono', monospace" };
+    const THEMES = {
+      dark: {
+        bg:          '#020a12',
+        surface:     '#051018',
+        glass:       'rgba(5, 16, 24, 0.85)',
+        white:       '#0a1b28',            /* raised field (inputs, cards) */
+        accent:      '#7dd8f7',
+        accentHover: '#4dc9f6',
+        accentFaint: 'rgba(125, 216, 247, 0.14)',
+        onAccent:    '#041019',            /* text on accent-filled buttons */
+        gold:        '#d4af37',
+        goldFaint:   'rgba(212, 175, 55, 0.18)',
+        goldBg:      'rgba(212, 175, 55, 0.08)',
+        green:       '#7ae582',
+        greenBg:     'rgba(122, 229, 130, 0.08)',
+        warm:        '#e08a7a',
+        heading:     '#7dd8f7',
+        subhead:     '#e8f4ff',
+        bright:      '#b8dced',
+        primary:     '#8cb8cc',
+        muted:       '#7a9aaa',
+        mutedFaint:  'rgba(122, 154, 170, 0.25)',
+        border:      'rgba(77, 201, 246, 0.25)',
+        borderSub:   'rgba(77, 201, 246, 0.1)',
+        shadow:      'rgba(0, 0, 0, 0.4)',
+        dotGrid:     'rgba(77, 201, 246, 0.12)',
+        ...FONTS,
+      },
+      light: {
+        bg:          '#eef4f6',
+        surface:     '#e1eaee',
+        glass:       'rgba(248, 251, 252, 0.85)',
+        white:       '#ffffff',
+        accent:      '#16607c',
+        accentHover: '#12536c',
+        accentFaint: 'rgba(22, 96, 124, 0.12)',
+        onAccent:    '#ffffff',
+        gold:        '#8a6d1c',
+        goldFaint:   'rgba(138, 109, 28, 0.15)',
+        goldBg:      'rgba(138, 109, 28, 0.08)',
+        green:       '#2f7d38',
+        greenBg:     'rgba(47, 125, 56, 0.07)',
+        warm:        '#a8442e',
+        heading:     '#135a74',
+        subhead:     '#0d2531',
+        bright:      '#1b3644',
+        primary:     '#35525f',
+        muted:       '#5c7480',
+        mutedFaint:  'rgba(92, 116, 128, 0.25)',
+        border:      'rgba(18, 83, 108, 0.28)',
+        borderSub:   'rgba(18, 83, 108, 0.1)',
+        shadow:      'rgba(18, 83, 108, 0.12)',
+        dotGrid:     'rgba(18, 83, 108, 0.14)',
+        ...FONTS,
+      },
     };
+    const currentThemeMode = () =>
+      document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    let T = THEMES[currentThemeMode()];
 
-    /* Edge colors by type pair */
-    const EDGE_STYLES = {
+    /* Edge colors by type pair — a function so it always reads the live theme */
+    const edgeStyle = (et) => ({
       'person-person':   { color: T.accent,  dash: [],       label: 'Social tie',   width: 2.5 },
       'person-concept':  { color: T.gold,    dash: [6, 4],   label: 'Affiliation',   width: 2 },
       'concept-concept': { color: T.muted,   dash: [3, 3],   label: 'Conceptual',    width: 1.5 },
-    };
+    }[et]);
 
     function getEdgeType(sourceNode, targetNode) {
       const types = [sourceNode.type || 'person', targetNode.type || 'person'].sort();
@@ -260,6 +303,42 @@
         coAffiliation.sort((a, b) => b.count - a.count);
       }
 
+      // Introductions worth making — triadic closure over the social graph
+      // merged with co-affiliation. For every pair of people with NO direct
+      // tie: mutual acquaintances (A–B–C open triads) weigh double, shared
+      // concepts add affinity. The result is a ranked list of the closures
+      // the room is already suggesting.
+      const opportunities = [];
+      if (nP > 1) {
+        const knows = {};
+        people.forEach(p => { knows[p.id] = new Set(); });
+        edges.forEach(e => {
+          const s = nodeMap[e.source], t = nodeMap[e.target];
+          if (!s || !t) return;
+          if ((s.type || 'person') !== 'concept' && (t.type || 'person') !== 'concept') {
+            knows[s.id].add(t.id);
+            knows[t.id].add(s.id);
+          }
+        });
+        const coAffMap = {};
+        coAffiliation.forEach(ca => { coAffMap[ca.personA.id + '-' + ca.personB.id] = ca; });
+        for (let i = 0; i < people.length; i++) {
+          for (let j = i + 1; j < people.length; j++) {
+            const a = people[i], b = people[j];
+            if (knows[a.id].has(b.id)) continue;
+            const mutuals = [...knows[a.id]].filter(id => knows[b.id].has(id)).map(id => nodeMap[id]);
+            const ca = coAffMap[a.id + '-' + b.id];
+            const sharedConcepts = ca ? ca.sharedConcepts : [];
+            if (mutuals.length === 0 && sharedConcepts.length === 0) continue;
+            opportunities.push({
+              personA: a, personB: b, mutuals, sharedConcepts,
+              score: mutuals.length * 2 + sharedConcepts.length,
+            });
+          }
+        }
+        opportunities.sort((a, b) => b.score - a.score);
+      }
+
       return {
         nodes: nodeMetrics,
         network: {
@@ -273,6 +352,7 @@
           ccDensity: maxCC > 0 ? ccEdges / maxCC : 0,
         },
         coAffiliation,
+        opportunities,
       };
     };
 
@@ -500,7 +580,7 @@
        — Typed edge rendering (solid/dashed/dotted)
        — Legend overlay
     ============================================ */
-    const NetworkCanvas = ({ nodes, edges, onAddNode, onUpdateNode, onRemoveNode, onAddEdge, onCanvasSizeChange, nodeType }) => {
+    const NetworkCanvas = ({ nodes, edges, opportunities, themeTick, onAddNode, onUpdateNode, onRemoveNode, onAddEdge, onCanvasSizeChange, nodeType }) => {
       const containerRef = useRef(null);
       const canvasRef = useRef(null);
       const [canvasSize, setCanvasSize] = useState({ width: 400, height: 320 });
@@ -567,6 +647,39 @@
         const nodeMap = {};
         nodes.forEach(n => { nodeMap[n.id] = n; });
 
+        // Introduction opportunities — ghost edges UNDER the real graph.
+        // Top few only: the point is a nudge, not a hairball.
+        (opportunities || []).slice(0, 5).forEach(op => {
+          const a = nodeMap[op.personA.id], b = nodeMap[op.personB.id];
+          if (!a || !b) return;
+          ctx.beginPath();
+          ctx.setLineDash([2, 6]);
+          ctx.strokeStyle = T.green;
+          ctx.globalAlpha = 0.65;
+          ctx.lineWidth = 1.5;
+          ctx.lineCap = 'round';
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          // Midpoint chip: the closure score
+          const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+          ctx.globalAlpha = 1;
+          ctx.beginPath();
+          ctx.arc(mx, my, 8, 0, Math.PI * 2);
+          ctx.fillStyle = T.bg;
+          ctx.fill();
+          ctx.strokeStyle = T.green;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+          ctx.fillStyle = T.green;
+          ctx.font = '600 10px JetBrains Mono, monospace';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('+', mx, my + 0.5);
+        });
+        ctx.globalAlpha = 1;
+
         // Edges — typed rendering
         edges.forEach(edge => {
           const source = nodeMap[edge.source];
@@ -574,7 +687,7 @@
           if (!source || !target) return;
 
           const et = getEdgeType(source, target);
-          const style = EDGE_STYLES[et] || EDGE_STYLES['person-person'];
+          const style = edgeStyle(et) || edgeStyle('person-person');
 
           ctx.beginPath();
           ctx.setLineDash(style.dash);
@@ -648,7 +761,7 @@
           // Label
           if (node.label && editingNode !== node.id) {
             let label = node.label;
-            ctx.font = `${isConcept ? '500 ' : ''}11px JetBrains Mono, monospace`;
+            ctx.font = `${isConcept ? '500 ' : ''}12px JetBrains Mono, monospace`;
             const maxWidth = nodeRadius * 1.7;
             if (ctx.measureText(label).width > maxWidth) {
               while (label.length > 1 && ctx.measureText(label + '…').width > maxWidth) {
@@ -678,7 +791,7 @@
         // Canvas legend (bottom-left)
         if (nodes.length > 0) {
           const lx = 12, ly = canvas.height - 12;
-          ctx.font = '9px JetBrains Mono, monospace';
+          ctx.font = '10px JetBrains Mono, monospace';
           ctx.textAlign = 'left';
           ctx.textBaseline = 'bottom';
 
@@ -686,6 +799,7 @@
             { color: T.accent, dash: [], label: 'Social tie' },
             { color: T.gold, dash: [4, 3], label: 'Affiliation' },
             { color: T.muted, dash: [2, 2], label: 'Conceptual' },
+            ...((opportunities || []).length ? [{ color: T.green, dash: [2, 5], label: 'Introduce?' }] : []),
           ];
 
           let ox = lx;
@@ -705,7 +819,7 @@
             ox += ctx.measureText(item.label).width + 30;
           });
         }
-      }, [nodes, edges, currentStroke, editingNode, nodeRadius]);
+      }, [nodes, edges, opportunities, currentStroke, editingNode, nodeRadius, themeTick]);
 
       useEffect(() => { draw(); }, [draw, canvasSize]);
 
@@ -842,13 +956,11 @@
        — Network density by type pair
        — Co-affiliation discovery
     ============================================ */
-    const NetworkTable = ({ nodes, edges, onAddNode, onUpdateNode, onRemoveNode, onToggleNodeType, onAddEdge, onRemoveEdge, onArrange, onClear, onExportJSON, onExportCSV, nodeType, onNodeTypeChange, style }) => {
+    const NetworkTable = ({ nodes, edges, metrics, onAddNode, onUpdateNode, onRemoveNode, onToggleNodeType, onAddEdge, onRemoveEdge, onArrange, onClear, onExportJSON, onExportCSV, nodeType, onNodeTypeChange, style }) => {
       const [newLabel, setNewLabel] = useState('');
       const [edgeSrc, setEdgeSrc] = useState('');
       const [edgeTgt, setEdgeTgt] = useState('');
       const [sidebarTab, setSidebarTab] = useState('nodes'); // 'nodes' | 'analysis'
-
-      const metrics = useMemo(() => calculateMetrics(nodes, edges), [nodes, edges]);
 
       const nodeMap = useMemo(() => {
         const m = {};
@@ -897,7 +1009,7 @@
 
       return (
         <div style={{
-          width: '280px', flexShrink: 0, background: T.glass, borderRadius: '8px',
+          width: '310px', flexShrink: 0, background: T.glass, borderRadius: '8px',
           border: `1.5px solid ${T.border}`, padding: '12px', display: 'flex', flexDirection: 'column',
           gap: '10px', overflow: 'hidden', ...style
         }}>
@@ -1007,7 +1119,7 @@
                           </button>
                           <input value={node.label} onChange={e => onUpdateNode(node.id, { label: e.target.value })}
                             placeholder="…" style={{
-                              flex: 1, minWidth: 0, padding: '2px 4px', fontSize: '11px',
+                              flex: 1, minWidth: 0, padding: '2px 4px', fontSize: '12px',
                               fontFamily: T.fontMono, fontWeight: 500, color: T.heading,
                               border: 'none', background: 'transparent', outline: 'none'
                             }}
@@ -1020,7 +1132,7 @@
 
                         {/* Per-node metrics */}
                         <div style={{
-                          marginTop: '4px', display: 'flex', gap: '6px', fontSize: '9px',
+                          marginTop: '4px', display: 'flex', gap: '6px', fontSize: '10px',
                           fontFamily: T.fontMono, color: T.muted, flexWrap: 'wrap'
                         }}>
                           <span title="Total degree">deg:{m.degree || 0}</span>
@@ -1041,7 +1153,7 @@
 
                         {/* Connections grouped by type */}
                         {conns.length > 0 && (
-                          <div style={{ marginTop: '3px', fontFamily: T.fontMono, fontSize: '9px', lineHeight: 1.5 }}>
+                          <div style={{ marginTop: '3px', fontFamily: T.fontMono, fontSize: '10px', lineHeight: 1.55 }}>
                             {peopleConns.length > 0 && (
                               <div style={{ color: T.primary }}>
                                 <span style={{ color: T.accent }}>○</span>{' '}
@@ -1086,7 +1198,7 @@
                 <div style={{ fontFamily: T.fontUI, fontWeight: 500, fontSize: '10px', color: T.heading, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                   Network Summary
                 </div>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10.5px' }}>
                   <tbody>
                     <tr>
                       <td style={{ padding: '2px 0', color: T.muted }}>People</td>
@@ -1121,7 +1233,7 @@
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {/* Social ties PP */}
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', marginBottom: '2px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', marginBottom: '2px' }}>
                       <span style={{ color: T.accent }}>○↔○ Social ties</span>
                       <span>{net.ppEdges} {net.people > 1 ? `(${(net.ppDensity * 100).toFixed(0)}%)` : ''}</span>
                     </div>
@@ -1133,7 +1245,7 @@
                   </div>
                   {/* Affiliations PC */}
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', marginBottom: '2px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', marginBottom: '2px' }}>
                       <span style={{ color: T.gold }}>○↔▢ Affiliations</span>
                       <span>{net.pcEdges} {net.people > 0 && net.concepts > 0 ? `(${(net.pcDensity * 100).toFixed(0)}%)` : ''}</span>
                     </div>
@@ -1145,7 +1257,7 @@
                   </div>
                   {/* Conceptual CC */}
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', marginBottom: '2px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', marginBottom: '2px' }}>
                       <span style={{ color: T.muted }}>▢↔▢ Conceptual</span>
                       <span>{net.ccEdges} {net.concepts > 1 ? `(${(net.ccDensity * 100).toFixed(0)}%)` : ''}</span>
                     </div>
@@ -1158,34 +1270,44 @@
                 </div>
               </div>
 
-              {/* Co-Affiliation Discovery */}
-              {metrics.coAffiliation.length > 0 && (
-                <div style={{ fontSize: '10px', fontFamily: T.fontMono, color: T.primary }}>
-                  <div style={{ fontFamily: T.fontUI, fontWeight: 500, fontSize: '10px', color: T.heading, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                    Co-Affiliation
+              {/* Introductions — triadic closure + co-affiliation, ranked */}
+              {metrics.opportunities.length > 0 && (
+                <div style={{ fontSize: '11px', fontFamily: T.fontMono, color: T.primary }}>
+                  <div style={{ fontFamily: T.fontUI, fontWeight: 500, fontSize: '11px', color: T.heading, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    Introductions
                   </div>
-                  <div style={{ fontSize: '9px', color: T.muted, marginBottom: '6px', fontStyle: 'italic' }}>
-                    People sharing concept links
+                  <div style={{ fontSize: '10px', color: T.muted, marginBottom: '6px', fontStyle: 'italic' }}>
+                    Pairs the network is already suggesting — mutual friends and shared concepts, no direct tie yet
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {metrics.coAffiliation.slice(0, 8).map((ca, i) => (
+                    {metrics.opportunities.slice(0, 8).map((op, i) => (
                       <div key={i} style={{
-                        background: ca.hasTie ? T.surface : T.goldBg,
-                        padding: '5px 7px', borderRadius: '4px',
-                        border: `1px solid ${ca.hasTie ? T.borderSub : T.goldFaint}`,
+                        background: T.greenBg,
+                        padding: '6px 8px', borderRadius: '4px',
+                        border: `1px solid ${T.borderSub}`,
+                        borderLeft: `3px solid ${T.green}`,
                       }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ color: T.heading, fontSize: '9px' }}>
-                            {ca.personA.label || '?'} ↔ {ca.personB.label || '?'}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ color: T.heading, fontSize: '10.5px', fontWeight: 500 }}>
+                            {op.personA.label || '?'} ↔ {op.personB.label || '?'}
                           </span>
-                          {ca.hasTie ? (
-                            <span style={{ fontSize: '8px', color: T.accent, fontWeight: 500 }}>linked</span>
-                          ) : (
-                            <span style={{ fontSize: '8px', color: T.gold, fontWeight: 500 }}>potential</span>
-                          )}
+                          <button onClick={() => onAddEdge(op.personA.id, op.personB.id)}
+                            title="Record the introduction — adds the social tie"
+                            style={{
+                              padding: '2px 8px', fontSize: '10px', fontFamily: T.fontMono,
+                              background: 'transparent', color: T.green,
+                              border: `1px solid ${T.green}`, borderRadius: '999px',
+                              cursor: 'pointer', flexShrink: 0,
+                            }}>+ introduce</button>
                         </div>
-                        <div style={{ fontSize: '8px', color: T.muted, marginTop: '2px' }}>
-                          via: {ca.sharedConcepts.map(c => c.label || '?').join(', ')}
+                        <div style={{ fontSize: '10px', color: T.muted, marginTop: '3px', lineHeight: 1.5 }}>
+                          {op.mutuals.length > 0 && (
+                            <span>via {op.mutuals.map(m => m.label || '?').join(', ')}</span>
+                          )}
+                          {op.mutuals.length > 0 && op.sharedConcepts.length > 0 && <span> · </span>}
+                          {op.sharedConcepts.length > 0 && (
+                            <span style={{ color: T.gold }}>share {op.sharedConcepts.map(c => c.label || '?').join(', ')}</span>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -1197,7 +1319,7 @@
 
           {/* Summary bar (always visible) */}
           <div style={{
-            fontSize: '9px', color: T.muted, fontFamily: T.fontMono,
+            fontSize: '10px', color: T.muted, fontFamily: T.fontMono,
             borderTop: `1px solid ${T.borderSub}`, paddingTop: '6px',
             display: 'flex', gap: '4px', flexWrap: 'wrap'
           }}>
@@ -1220,7 +1342,7 @@
             </div>
           )}
           <div style={{
-            fontSize: '8px', color: T.muted, fontFamily: T.fontMono,
+            fontSize: '9px', color: T.muted, fontFamily: T.fontMono,
             textAlign: 'center', paddingTop: '2px', borderTop: `1px solid ${T.borderSub}`,
             letterSpacing: '0.04em', opacity: 0.6
           }}>
@@ -1235,12 +1357,23 @@
     ============================================ */
     function SocialNetworkDemo() {
       const graph = useGraph();
-      const [isVertical, setIsVertical] = useState(window.innerWidth < 640);
+      const [isVertical, setIsVertical] = useState(window.innerWidth < 700);
       const [canvasSize, setCanvasSize] = useState({ width: 400, height: 320 });
       const [nodeType, setNodeType] = useState('person');
+      // Site theme: T swaps and everything re-renders. jh-chrome.js dispatches
+      // jh-theme-change for the local toggle AND when the playground canvas
+      // propagates a flip into this frame.
+      const [themeMode, setThemeMode] = useState(currentThemeMode());
+      useEffect(() => {
+        const onTheme = () => { const m = currentThemeMode(); T = THEMES[m]; setThemeMode(m); };
+        window.addEventListener('jh-theme-change', onTheme);
+        return () => window.removeEventListener('jh-theme-change', onTheme);
+      }, []);
+
+      const metrics = useMemo(() => calculateMetrics(graph.nodes, graph.edges), [graph.nodes, graph.edges]);
 
       useEffect(() => {
-        const checkLayout = () => setIsVertical(window.innerWidth < 640);
+        const checkLayout = () => setIsVertical(window.innerWidth < 700);
         window.addEventListener('resize', checkLayout);
         return () => window.removeEventListener('resize', checkLayout);
       }, []);
@@ -1255,19 +1388,27 @@
       return (
         <div style={{
           display: 'flex', flexDirection: 'column', gap: '10px',
-          padding: '14px', height: '100%', maxWidth: '960px',
+          padding: '14px', height: '100%', maxWidth: '1200px',
           margin: '0 auto', boxSizing: 'border-box'
         }}>
           <div style={{
             display: 'flex', alignItems: 'baseline', gap: '10px',
             paddingBottom: '6px', borderBottom: `1px solid ${T.borderSub}`
           }}>
-            <span style={{ fontFamily: T.fontUI, fontSize: '13px', fontWeight: 400, color: T.heading, letterSpacing: '0.03em' }}>
+            <span style={{ fontFamily: T.fontUI, fontSize: '14px', fontWeight: 400, color: T.heading, letterSpacing: '0.03em' }}>
               Social Network Analysis
             </span>
-            <span style={{ fontSize: '10px', color: T.muted, fontFamily: T.fontMono }}>
+            <span style={{ fontSize: '11px', color: T.muted, fontFamily: T.fontMono }}>
               Draw ◯ people · ▢ concepts · lines to connect · drag to move
             </span>
+            <button onClick={() => window.JH_THEME && window.JH_THEME.toggle()}
+              aria-label={themeMode === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}
+              style={{
+                marginLeft: 'auto', width: '26px', height: '26px', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'none', border: `1px solid ${T.border}`, borderRadius: '50%',
+                color: T.accent, fontSize: '13px', lineHeight: 1, cursor: 'pointer',
+              }}>{themeMode === 'light' ? '◐' : '◑'}</button>
           </div>
 
           <div style={{
@@ -1276,12 +1417,13 @@
           }}>
             <NetworkCanvas
               nodes={graph.nodes} edges={graph.edges}
+              opportunities={metrics.opportunities} themeTick={themeMode}
               onAddNode={graph.addNode} onUpdateNode={graph.updateNode}
               onRemoveNode={graph.removeNode} onAddEdge={graph.addEdge}
               onCanvasSizeChange={setCanvasSize} nodeType={nodeType}
             />
             <NetworkTable
-              nodes={graph.nodes} edges={graph.edges}
+              nodes={graph.nodes} edges={graph.edges} metrics={metrics}
               onAddNode={graph.addNode} onUpdateNode={graph.updateNode}
               onRemoveNode={graph.removeNode} onToggleNodeType={graph.toggleNodeType}
               onAddEdge={graph.addEdge} onRemoveEdge={graph.removeEdge}
