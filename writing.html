@@ -7,6 +7,19 @@
     <link rel="icon" type="image/png" href="./Assets/favicon-jhsigfrmpaper.png">
     <link rel="canonical" href="https://www.johnhanacek.com/writing.html">
     <meta name="description" content="Writing, notes, worldbuilding, and learning resources from John Hanacek.">
+    <!-- Social share (was bare: shares rendered without card or image) -->
+    <meta property="og:title" content="Writing — John Hanacek">
+    <meta property="og:description" content="Essays on sovereign AI in education and the drawing-as-programming lineage — notes, worldbuilding, and learning resources.">
+    <meta property="og:image" content="https://www.johnhanacek.com/Assets/socialgraph-jhcom.webp">
+    <meta property="og:url" content="https://www.johnhanacek.com/writing.html">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Writing — John Hanacek">
+    <meta name="twitter:description" content="Essays on sovereign AI in education and the drawing-as-programming lineage — notes, worldbuilding, and learning resources.">
+    <meta name="twitter:image" content="https://www.johnhanacek.com/Assets/socialgraph-jhcom.webp">
+    <!-- Site chrome: same theme bootstrap (before first paint) + tokens + nav/footer -->
+    <script>/* jh-theme bootstrap + theme-color meta (scripts/jh-chrome.js owns the toggle) */(function(){var m=document.querySelector('meta[name="theme-color"]');var up=function(){if(m)m.setAttribute("content",document.documentElement.hasAttribute("data-theme")?"#eef4f6":"#020a12")};if(!m){m=document.createElement("meta");m.name="theme-color";document.head.appendChild(m)}try{var t=localStorage.getItem("jh-theme");if(t?t==="light":matchMedia("(prefers-color-scheme: light)").matches)document.documentElement.setAttribute("data-theme","light")}catch(e){}up();})();</script>
+    <link rel="stylesheet" href="./styles/jh-chrome.css?v=1.56">
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -147,6 +160,9 @@
             max-width: 960px;
             margin: 0 auto;
             padding: var(--space-md);
+            /* The fixed site nav overlays the top 44px (same contract as the
+               standard pages' .page-header). */
+            padding-top: calc(var(--space-md) + 44px);
         }
 
         /* ============================================
@@ -658,6 +674,12 @@
             transition: all 0.15s;
             display: flex;
             flex-direction: column;
+            /* button reset — was a div, now a real control (the footer's
+               border-top on .panel-footer stays the single divider) */
+            background: none;
+            border: none;
+            font-family: inherit;
+            text-align: left;
         }
 
         .footer-nav:hover { background: rgba(77, 201, 246, 0.04); color: var(--text-bright); }
@@ -876,42 +898,9 @@
         }
 
         /* ============================================
-           FOOTER
+           FOOTER — the shared <jh-footer> oval (jh-chrome.css) replaced the
+           old .site-footer markup; its rules went with it.
         ============================================ */
-        .site-footer {
-            text-align: center;
-            padding: var(--space-xl) var(--space-md);
-            border-top: 1px solid var(--border-subtle);
-            margin-top: var(--space-xl);
-        }
-
-        .site-footer p {
-            font-size: var(--text-xs);
-            color: var(--muted);
-        }
-
-        .footer-links {
-            margin-top: var(--space-xs);
-        }
-
-        /* The byline link ("johnhanacek.com") sits in .site-footer p, not in
-           .footer-links, so it never matched this rule and rendered in the
-           browser's default #0000ee — 2.1:1 on the dark ground. Both footer
-           links share one idiom now rather than one having none. */
-        .footer-links a,
-        .site-footer p a {
-            color: var(--muted-light);
-            text-decoration: underline;
-            text-underline-offset: 3px;
-            text-decoration-color: var(--border);
-            transition: color 0.15s;
-        }
-
-        .footer-links a:hover,
-        .site-footer p a:hover {
-            color: var(--cyan);
-            text-decoration-color: var(--cyan);
-        }
 
         .show-welcome {
             display: none;
@@ -968,10 +957,6 @@
         [data-theme="light"] .file-tag.tag-green { background: rgba(45, 122, 58, 0.08); }
         [data-theme="light"] .file-tag.tag-muted { background: rgba(138, 154, 164, 0.06); }
 
-        /* Footer */
-        [data-theme="light"] .footer-links a { color: var(--cyan); }
-        [data-theme="light"] .footer-links a:hover { color: var(--gold); }
-
         /* ============================================
            RESPONSIVE
         ============================================ */
@@ -1003,23 +988,27 @@
     <div id="fileList"></div>
     </main>
 
-    <!-- Footer -->
-    <footer class="site-footer">
-        <p>John Hanacek · <a href="https://johnhanacek.com">johnhanacek.com</a></p>
-        <p class="footer-links">
-            <a href="https://johnhanacek.com" target="_blank">Home</a>
-            <span style="color:var(--muted);margin:0 0.35rem;">·</span>
-            <a href="https://github.com/jjh111/johnhanacek" target="_blank">GitHub</a>
-        </p>
+    <!-- Footer: shared chrome oval (same as every standard page) -->
+    <footer>
+        <jh-footer></jh-footer>
     </footer>
 
 </div>
+
+<!-- Site nav (fixed bar; appears after scrolling past the header) -->
+<nav id="nav" role="navigation" aria-label="Main navigation">
+    <div class="nav-inner">
+        <div class="nav-left">
+            <jh-nav current=""></jh-nav>
+        </div>
+    </div>
+</nav>
 
 <!-- Overlay -->
 <div class="panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
 
 <!-- Content panel -->
-<div class="content-panel" id="contentPanel">
+<div class="content-panel" id="contentPanel" role="dialog" aria-modal="true" aria-label="Reading panel" aria-hidden="true">
     <div class="panel-header">
         <div class="panel-nav-row">
             <button class="nav-btn" id="btnBack" onclick="navBack()" disabled title="Back (Alt+Left)">&#8592;</button>
@@ -1027,7 +1016,7 @@
             <button class="nav-btn" id="btnPrev" onclick="navPrev()" disabled title="Previous file (Alt+Up)">&#8593;</button>
             <button class="nav-btn" id="btnNext" onclick="navNext()" disabled title="Next file (Alt+Down)">&#8595;</button>
             <div class="breadcrumbs" id="breadcrumbs">
-                <span class="crumb crumb-root" onclick="closePanel()">Writing</span>
+                <button class="crumb crumb-root" onclick="closePanel()" style="background:none;border:none;color:inherit;font:inherit;cursor:pointer;padding:0;">Writing</button>
             </div>
             <button class="download-btn" id="btnDownload" onclick="downloadCurrent()" title="Download as .md">&#8595; <span id="downloadLabel">Download</span></button>
             <button class="theme-toggle" id="panelThemeToggle" onclick="toggleTheme()" title="Switch to light mode"><span id="panelToggleIcon">&#9788;</span></button>
@@ -1036,14 +1025,14 @@
     </div>
     <div class="panel-body" id="panelBody"></div>
     <div class="panel-footer" id="panelFooter">
-        <div class="footer-nav prev" id="footerPrev" onclick="navPrev()">
+        <button class="footer-nav prev" id="footerPrev" onclick="navPrev()" aria-label="Previous file">
             <span class="footer-dir">&#8592; Previous</span>
             <span class="footer-name" id="prevName"></span>
-        </div>
-        <div class="footer-nav next" id="footerNext" onclick="navNext()">
+        </button>
+        <button class="footer-nav next" id="footerNext" onclick="navNext()" aria-label="Next file">
             <span class="footer-dir">Next &#8594;</span>
             <span class="footer-name" id="nextName"></span>
-        </div>
+        </button>
     </div>
 </div>
 
@@ -1074,6 +1063,7 @@ const catOrder = ['eduos', 'metamedium'];
 let navHistory = [];
 let navHistoryIndex = -1;
 let currentPath = null;
+let panelReturnFocus = null;   // element to refocus when the reader panel closes
 
 // ============================================
 // RENDER FILE LISTING
@@ -1237,6 +1227,11 @@ function openFile(path, skipHistory) {
     document.getElementById('contentPanel').classList.add('open');
     document.getElementById('panelOverlay').classList.add('open');
     document.body.style.overflow = 'hidden';
+    // Dialog semantics: focus moves in, Esc/Tab handled, focus returns on close.
+    panelReturnFocus = document.activeElement;
+    const panel = document.getElementById('contentPanel');
+    panel.setAttribute('aria-hidden', 'false');
+    panel.querySelector('.panel-close').focus();
 
     fetch(path)
         .then(r => {
@@ -1259,7 +1254,12 @@ function openFile(path, skipHistory) {
 function closePanel() {
     document.getElementById('contentPanel').classList.remove('open');
     document.getElementById('panelOverlay').classList.remove('open');
+    document.getElementById('contentPanel').setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
+    if (panelReturnFocus && document.contains(panelReturnFocus)) {
+        try { panelReturnFocus.focus(); } catch (e) {}
+    }
+    panelReturnFocus = null;
     currentPath = null;
     // Clear hash. window.history spelled out on purpose: a bare `history`
     // here silently resolved to the nav-history ARRAY declared at the top of
@@ -1335,7 +1335,7 @@ function updateBreadcrumbs(path) {
     const file = fileIndex.find(f => f.path === path);
     const catInfo = file ? categories[file.cat] : null;
 
-    let html = `<span class="crumb crumb-root" onclick="closePanel()">Writing</span>`;
+    let html = `<button class="crumb crumb-root" onclick="closePanel()" style="background:none;border:none;color:inherit;font:inherit;cursor:pointer;padding:0;">Writing</button>`;
     if (catInfo) {
         html += `<span class="crumb-sep">/</span><span class="crumb crumb-category">${catInfo.title}</span>`;
     }
@@ -1451,6 +1451,11 @@ function updateThemeIcon() {
     updateThemeIcon();
 })();
 </script>
+
+<!-- Shared chrome: shape marks + nav/footer components + scroll visibility -->
+<script src="./scripts/jh-shapes.js?v=1.56"></script>
+<script src="./scripts/jh-chrome.js?v=1.56" defer></script>
+<script src="./scripts/shared.js?v=1.56"></script>
 
 </body>
 </html>
