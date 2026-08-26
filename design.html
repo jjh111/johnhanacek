@@ -27,6 +27,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Raleway:wght@100;200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./styles/jh-chrome.css?v=1.56">
     <link rel="stylesheet" href="./styles/shared.css?v=1.56">
     <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.56">
 
@@ -527,10 +528,6 @@
         <div class="hero-oval" role="banner">
             <div class="hero-content">
                 <h1><span class="jh-sig"><span class="sr-only">JH</span><img src="./Assets/JHsig.svg" alt="" aria-hidden="true"></span> <span class="meta">Design</span></h1>
-                <!-- TODO: Finalize tagline and byline copy before launch
-                <p class="tagline">DRAW · RECOGNIZE · EXPLORE</p>
-                <p class="byline"><span class="role">Interactive shape recognition demo</span></p>
-                -->
             </div>
 
             <!-- Persistent way off the fullscreen canvas. .oval-scroll-btn already
@@ -703,7 +700,7 @@
                     <div class="video-embed" style="margin-bottom:1rem;">
                         <span class="video-gate">
                             <a href="nanome2.html" aria-label="Nanome 2 XR product design case study" style="display:block;">
-                                <video id="nanomeVideo" muted playsinline preload="auto" loop style="width:100%; display:block;">
+                                <video id="nanomeVideo" muted playsinline preload="none" poster="./Assets/nanome-hero-poster.webp" loop style="width:100%; display:block;">
                                     <source src="./Assets/nanome-hero.mp4" type="video/mp4">
                                 </video>
                             </a>
@@ -762,7 +759,7 @@
                     <!-- HoloTRIAGE (Local) -->
                     <div class="video-card">
                         <div class="video-embed">
-                            <video id="holotriageVideo" muted playsinline preload="auto" loop style="width:100%; display:block;">
+                            <video id="holotriageVideo" muted playsinline preload="none" poster="./Assets/holotriage-poster.webp" loop style="width:100%; display:block;">
                                 <source src="./Assets/Avatarmedic-Holotriageclip-1.mp4" type="video/mp4">
                             </video>
                         </div>
@@ -776,7 +773,7 @@
                     <!-- AvatarMEDIC Clinic (Local) -->
                     <div class="video-card">
                         <div class="video-embed">
-                            <video id="clinicVideo" muted playsinline preload="auto" loop style="width:100%; display:block;">
+                            <video id="clinicVideo" muted playsinline preload="none" poster="./Assets/avatarmedic-clinic-poster.webp" loop style="width:100%; display:block;">
                                 <source src="./Assets/AvatarMEDIC -Clinic-concept.mp4" type="video/mp4">
                             </video>
                         </div>
@@ -1010,20 +1007,22 @@
 
     <script>
         // Navigation scroll visibility - show after scrolling past hero
+        // (rAF-coalesced + passive; matches scripts/shared.js)
         const nav = document.getElementById('nav');
         const hero = document.querySelector('.hero');
 
+        let navTick = false;
         function updateNavVisibility() {
+            navTick = false;
             const heroBottom = hero.offsetTop + hero.offsetHeight - 60;
-            if (window.scrollY > heroBottom) {
-                nav.classList.add('visible');
-            } else {
-                nav.classList.remove('visible');
-            }
+            nav.classList.toggle('visible', window.scrollY > heroBottom);
+        }
+        function requestNavUpdate() {
+            if (!navTick) { navTick = true; requestAnimationFrame(updateNavVisibility); }
         }
 
-        window.addEventListener('scroll', updateNavVisibility);
-        window.addEventListener('resize', updateNavVisibility);
+        window.addEventListener('scroll', requestNavUpdate, { passive: true });
+        window.addEventListener('resize', requestNavUpdate, { passive: true });
         updateNavVisibility();
 
         // Mobile navigation toggle
@@ -1137,9 +1136,12 @@
     </script>
 
     <!-- Hero Canvas Drawing Interaction -->
-    <script src="./scripts/shape-detection.js?v=1.56"></script>
-    <script src="./scripts/fish-engine.js?v=1.56"></script>
+    <!-- Engines defer; the boot below waits for DOMContentLoaded, which fires
+         after deferred scripts — order preserved, parser never blocks. -->
+    <script src="./scripts/shape-detection.js?v=1.56" defer></script>
+    <script src="./scripts/fish-engine.js?v=1.56" defer></script>
     <script>
+    document.addEventListener('DOMContentLoaded', function() {
         const canvas = document.getElementById('heroCanvas');
         const ctx = canvas.getContext('2d');
 
@@ -3081,6 +3083,7 @@
                 return { made: out, note };
             },
         };
+    });
     </script>
 <script src="./scripts/search-overlay.js?v=1.56" defer></script>
 <script>document.addEventListener('DOMContentLoaded',()=>{const t=document.querySelector('.nav-title');if(t)t.dataset.short='JH';document.querySelectorAll('.nav-right a').forEach(a=>{const w=a.textContent.trim().split(/\s+/);a.dataset.short=w.length>1?w.map(x=>x[0]).join('').toUpperCase().slice(0,2):a.textContent.trim().slice(0,2).toUpperCase()})});</script>

@@ -22,18 +22,22 @@ function initNavigation() {
         // It used to bail out entirely, which left onagents.html carrying a
         // <jh-nav> that could never become .visible — chrome present in the
         // markup and invisible in the browser.
-        // For hero pages, show nav after scrolling past hero
+        // For hero pages, show nav after scrolling past hero.
+        // rAF-coalesced: scroll fires far faster than paint; only the last
+        // event in a frame wins. offsetTop/offsetHeight are layout reads —
+        // they belong inside the rAF too, not per-event.
+        let navTick = false;
         function updateNavVisibility() {
+            navTick = false;
             const heroBottom = hero.offsetTop + hero.offsetHeight - 60;
-            if (window.scrollY > heroBottom) {
-                nav.classList.add('visible');
-            } else {
-                nav.classList.remove('visible');
-            }
+            nav.classList.toggle('visible', window.scrollY > heroBottom);
+        }
+        function requestNavUpdate() {
+            if (!navTick) { navTick = true; requestAnimationFrame(updateNavVisibility); }
         }
 
-        window.addEventListener('scroll', updateNavVisibility);
-        window.addEventListener('resize', updateNavVisibility);
+        window.addEventListener('scroll', requestNavUpdate, { passive: true });
+        window.addEventListener('resize', requestNavUpdate, { passive: true });
         updateNavVisibility();
     } else {
         // Neither: the page opens straight into content (onagents.html), so

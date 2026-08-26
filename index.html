@@ -27,6 +27,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Raleway:wght@100;200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./styles/jh-chrome.css?v=1.56">
     <link rel="stylesheet" href="./styles/shared.css?v=1.56">
     <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.56">
 
@@ -650,20 +651,22 @@
 
     <script>
         // Navigation scroll visibility - show after scrolling past hero
+        // (rAF-coalesced + passive; matches scripts/shared.js)
         const nav = document.getElementById('nav');
         const hero = document.querySelector('.hero');
 
+        let navTick = false;
         function updateNavVisibility() {
+            navTick = false;
             const heroBottom = hero.offsetTop + hero.offsetHeight - 60;
-            if (window.scrollY > heroBottom) {
-                nav.classList.add('visible');
-            } else {
-                nav.classList.remove('visible');
-            }
+            nav.classList.toggle('visible', window.scrollY > heroBottom);
+        }
+        function requestNavUpdate() {
+            if (!navTick) { navTick = true; requestAnimationFrame(updateNavVisibility); }
         }
 
-        window.addEventListener('scroll', updateNavVisibility);
-        window.addEventListener('resize', updateNavVisibility);
+        window.addEventListener('scroll', requestNavUpdate, { passive: true });
+        window.addEventListener('resize', requestNavUpdate, { passive: true });
         updateNavVisibility();
 
         // Hero oval sig-click: toggle collapsed (sig-only mini mode)
@@ -711,9 +714,12 @@
 
     <!-- Hero Canvas Drawing Interaction -->
     <!-- Hero Canvas — fish minigame (shared engine) -->
-    <script src="./scripts/shape-detection.js?v=1.56"></script>
-    <script src="./scripts/fish-engine.js?v=1.56"></script>
+    <!-- Engines defer; the boot below waits for DOMContentLoaded, which fires
+         after deferred scripts — order preserved, parser never blocks. -->
+    <script src="./scripts/shape-detection.js?v=1.56" defer></script>
+    <script src="./scripts/fish-engine.js?v=1.56" defer></script>
     <script>
+    document.addEventListener('DOMContentLoaded', function() {
         // Boot the shared fish engine on the hero canvas.
         // `hero` comes from the nav script above; QR helpers are declared below (hoisted).
         const { segmentsIntersect, distance, getLineScore } = window.ShapeDetect;
@@ -958,6 +964,7 @@
                 };
             },
         };
+    });
     </script>
 <script src="./scripts/search-overlay.js?v=1.56" defer></script>
 <script>document.addEventListener('DOMContentLoaded',()=>{const t=document.querySelector('.nav-title');if(t)t.dataset.short='JH';document.querySelectorAll('.nav-right a').forEach(a=>{const w=a.textContent.trim().split(/\s+/);a.dataset.short=w.length>1?w.map(x=>x[0]).join('').toUpperCase().slice(0,2):a.textContent.trim().slice(0,2).toUpperCase()})});</script>
