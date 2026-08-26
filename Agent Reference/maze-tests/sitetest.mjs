@@ -19,11 +19,25 @@ const OTHER = ['playground.html', 'writing.html', 'tidepool.html', 'beach-beers.
 // under it read as a second ending. Nav + canonical are still asserted.
 const NO_FOOTER = ['openprose.html'];
 
+// Console noise emitted by EMBEDDED THIRD-PARTY PLAYERS, not by this site.
+// Both come from YouTube's iframe: the permissions-policy warnings are the
+// player asking for features its own `allow` attribute doesn't grant, and the
+// `%c%d` line is an internal styled log whose %d argument is NaN. Neither is
+// actionable here, and leaving them in made art.html a permanent FAIL, which
+// is the same as having no signal at all. Anything a 4xx/5xx produces is NOT
+// on this list — a dead embed is a real finding.
+const THIRD_PARTY = [/^Permissions policy violation:/, /font-size:0;color:transparent/];
+
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
-const page = await browser.newPage();
 
 let failures = 0;
 for (const p of [...STANDARD, ...OTHER]) {
+  // A FRESH page per URL. Sharing one page across the whole sweep let console
+  // messages from the previous document flush after the next one's listeners
+  // were attached, so playground.html's iframed children reported their errors
+  // against writing.html — which looked broken for weeks and was always clean.
+  // Page-scoped listeners cannot fix that; only a page boundary can.
+  const page = await browser.newPage();
   const jsErrors = [];
   const consoleErrors = [];
   const onPageError = (e) => jsErrors.push(String(e).split('\n')[0]);
@@ -49,7 +63,13 @@ for (const p of [...STANDARD, ...OTHER]) {
     await page.waitForTimeout(1500); // let deferred scripts + components run
     const status = resp.status();
 
-    const report = { page: p, status, jsErrors, consoleErrors: consoleErrors.filter(t => !t.includes('googleapis') && !t.includes('gstatic') && !t.includes('ERR_') ) , externalLoadFails: consoleErrors.filter(t => t.includes('googleapis') || t.includes('gstatic') || t.includes('ERR_')) };
+    const external = (t) => t.includes('googleapis') || t.includes('gstatic') || t.includes('ERR_');
+    const report = {
+      page: p, status, jsErrors,
+      consoleErrors: consoleErrors.filter(t => !external(t) && !THIRD_PARTY.some(re => re.test(t))),
+      thirdParty: consoleErrors.filter(t => THIRD_PARTY.some(re => re.test(t))).length,
+      externalLoadFails: consoleErrors.filter(external),
+    };
 
     if (STANDARD.includes(p)) {
       report.nav = await page.$eval('jh-nav .nav-left', el => el.querySelectorAll('a').length).catch(() => 0);
@@ -67,8 +87,7 @@ for (const p of [...STANDARD, ...OTHER]) {
     failures++;
     console.log('FAIL ' + JSON.stringify({ page: p, error: String(e).split('\n')[0] }));
   }
-  page.removeListener('pageerror', onPageError);
-  page.removeListener('console', onConsole);
+  await page.close();
 }
 await browser.close();
 console.log(failures ? `\n${failures} page(s) failed` : '\nALL PAGES PASS');

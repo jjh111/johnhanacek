@@ -55,6 +55,27 @@ Notes:
   `document.visibilityState === "hidden"`, so requestAnimationFrame is throttled to roughly one
   tick every two seconds, the simulation never advances, and every behaviour soak passes
   vacuously with frozen positions. Headless Chromium only for anything time-based.
-- Two known environment-only failures in sitetest when CDNs are blocked:
-  nanome2 (Three.js iframe) and onagents (unpkg). Fine on a normal connection.
+- **sitetest's two standing failures are REAL, not environmental.** An earlier note here
+  blamed them on blocked CDNs; that was wrong, and it meant a red suite got waved through.
+  What actually fails, as of 2026-08-26:
+  - `art.html` — the Vimeo embed for *God Like (2016)* (`player.vimeo.com/video/194577325`)
+    returns **401**, on the live site as well as locally. The video is public and still up,
+    but it belongs to the collaborator (Nathan Danskey) and its privacy settings do not
+    permit embedding here. Visitors see an empty player. Needs a decision, not a code fix.
+  - `nanome2.html` — the embedded 3D demo requests
+    `Assets/3d-sync-demo/models/Scaffold_3_2022-08-18_00.37.12.bin` and gets **404**. The
+    `.gltf` beside it is a bare manifest; its 6900-byte buffer was never committed (not
+    gitignored — simply absent since 2022). `ModelLoader` falls back to a procedural
+    molecule, so the panel renders, just not the real scaffold. Drop the `.bin` in and it
+    fixes itself with no code change.
+- **Console noise from embedded third-party players is filtered, 4xx/5xx is not.** YouTube's
+  iframe emits `Permissions policy violation:` lines and a styled `%c%d … NaN` log; those
+  are counted separately as `thirdParty` and don't fail a page. A dead embed still does.
+  (That `%c%d … NaN` message was a long-standing mystery attributed to `writing.html`. It is
+  YouTube's, it comes from `art.html`, and see the next bullet for why it looked otherwise.)
+- **sitetest opens a fresh page per URL.** It used to share one, and console messages from
+  the previous document flushed after the next page's listeners attached — so
+  `playground.html`'s iframed children reported their errors against `writing.html`, which
+  looked broken for weeks and was always clean. Per-page listeners can't fix that; only a
+  page boundary can.
 - `timeout(1)` is not available on stock macOS zsh — don't wrap these in it.

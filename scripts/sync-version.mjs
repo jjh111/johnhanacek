@@ -32,7 +32,19 @@ const SITE_VERSION = m[1];
 
 // Matched by basename, so openprose/_tokens.css and _pairings.css are covered
 // too — openprose.html is the only page that loads them.
-const ASSETS = ['shared.css', 'jh-chrome.css', 'shared.js', 'search-overlay.css', 'search-overlay.js', 'search-core.js', 'jh-chrome.js', 'shape-detection.js', 'fish-engine.js', '_tokens.css', '_pairings.css'];
+//
+// This list is hand-maintained, which is exactly the kind of thing that drifts:
+// scripts/playground-items.js sat at ?v=1.53 through two releases because it
+// was never added here, and nothing said so. The AUDIT below is the answer —
+// the list decides what gets stamped, the audit decides what gets REPORTED, so
+// a forgotten asset is now loud instead of silent.
+const ASSETS = ['shared.css', 'jh-chrome.css', 'shared.js', 'search-overlay.css', 'search-overlay.js', 'search-core.js', 'jh-chrome.js', 'shape-detection.js', 'fish-engine.js', 'playground-items.js', '_tokens.css', '_pairings.css'];
+
+// Paths whose ?v= is a DIFFERENT counter and must not be stamped to the site
+// version. openprose/canvas-display/ is the client deliverable: its handoff
+// invariant is a manual bump on every change inside that folder, so the site
+// version reaching in would quietly break the contract.
+const EXEMPT = [/canvas-display/];
 
 const htmlFiles = readdirSync(root).filter((f) => f.endsWith('.html'));
 let total = 0;
@@ -40,13 +52,18 @@ const touched = [];
 
 for (const file of htmlFiles) {
   const path = join(root, file);
-  let html = readFileSync(path, 'utf8');
+  const before = readFileSync(path, 'utf8');
+  let html = before;
   let count = 0;
   for (const asset of ASSETS) {
     const re = new RegExp(`(${asset.replace(/\./g, '\\.')})\\?v=[0-9.]+`, 'g');
     html = html.replace(re, (_m, name) => { count++; return `${name}?v=${SITE_VERSION}`; });
   }
-  if (count) { writeFileSync(path, html); total += count; touched.push(`${file} (${count})`); }
+  // Write only on a REAL change. Re-stamping an already-current file with
+  // identical bytes is invisible to git but not to an editor holding the file
+  // open, and this repo is routinely worked on by more than one session at a
+  // time. `count` counts matches, not edits — it is not the test.
+  if (html !== before) { writeFileSync(path, html); total += count; touched.push(`${file} (${count})`); }
 }
 
 const readmePath = join(root, 'README.md');
@@ -56,3 +73,26 @@ if (stamped !== readme) { writeFileSync(readmePath, stamped); touched.push('READ
 
 console.log(`Stamped v${SITE_VERSION} on ${total} asset ref(s) across ${touched.length} file(s):`);
 for (const t of touched) console.log('  ' + t);
+
+// ---- drift audit ---------------------------------------------------------
+// Every LOCAL src/href carrying a numeric ?v= should now read SITE_VERSION.
+// One that doesn't is an asset missing from ASSETS above. Reported, never
+// auto-stamped: an unknown ?v= may belong to a counter we don't own.
+const REF = /(?:src|href)\s*=\s*["']([^"']+\?v=[\w.]+)["']/g;
+const drift = [];
+for (const file of htmlFiles) {
+  const html = readFileSync(join(root, file), 'utf8');
+  for (const [, ref] of html.matchAll(REF)) {
+    if (/^[a-z]+:\/\/|^\/\//i.test(ref)) continue;              // off-site
+    if (EXEMPT.some((re) => re.test(ref))) continue;
+    const v = ref.slice(ref.lastIndexOf('?v=') + 3);
+    if (!/^[0-9.]+$/.test(v) || v === SITE_VERSION) continue;
+    drift.push(`${file}: ${ref}`);
+  }
+}
+if (drift.length) {
+  console.log(`\n${drift.length} local ref(s) still off-version — add the basename to ASSETS:`);
+  for (const d of drift) console.log('  ' + d);
+} else {
+  console.log('\nNo off-version local refs.');
+}

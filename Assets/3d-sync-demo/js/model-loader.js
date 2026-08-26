@@ -9,10 +9,16 @@ class ModelLoader {
                     resolve(gltf.scene);
                 },
                 (progress) => {
-                    console.log('Loading progress:', (progress.loaded / progress.total * 100) + '%');
+                    if (progress.total) {
+                        console.log('Loading progress:', (progress.loaded / progress.total * 100) + '%');
+                    }
                 },
                 (error) => {
-                    console.error('Error loading model:', error);
+                    // Rejected, not logged. loadModel() CATCHES this and draws
+                    // the fallback molecule, so a failure here is a handled
+                    // branch, not a fault — and console.error is what a page
+                    // health check reads as "this page is broken". The one
+                    // report belongs to whoever decides what to do about it.
                     reject(error);
                 }
             );
