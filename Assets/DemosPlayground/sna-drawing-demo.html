@@ -366,8 +366,8 @@
       if (nodes.length === 0) return nodes;
 
       const workingNodes = nodes.map(n => ({ ...n, vx: 0, vy: 0 }));
-      const nodeRadius = 28;
-      const repulsion = 3000;
+      const nodeRadius = 48;   // shapes now fit their text, so they run wider
+      const repulsion = 5200;
       const attraction = 0.01;
       const crossAttraction = 0.006; // weaker for cross-type — longer ideal distance
       const damping = 0.8;
@@ -564,9 +564,12 @@
         return { type: 'circle', x: centerX, y: centerY, radius: Math.max(25, Math.min(40, avgRadius)) };
       }
 
-      const hitRadius = nodeRadius + 20;
-      const startNode = nodes.find(n => Math.hypot(n.x - first.x, n.y - first.y) < hitRadius);
-      const endNode = nodes.find(n => Math.hypot(n.x - last.x, n.y - last.y) < hitRadius);
+      const near = (p, n) => {
+        const d = dimsOf(n);
+        return Math.abs(p.x - n.x) < d.w / 2 + 20 && Math.abs(p.y - n.y) < d.h / 2 + 20;
+      };
+      const startNode = nodes.find(n => near(first, n));
+      const endNode = nodes.find(n => near(last, n));
 
       if (startNode && endNode && startNode.id !== endNode.id) {
         return { type: 'edge', source: startNode.id, target: endNode.id };
@@ -574,6 +577,49 @@
 
       return { type: 'none' };
     };
+
+    /* ============================================
+       NODE GEOMETRY — shapes fit their text
+       People are capsules, concepts are rounded tiles; both size to the
+       label, so the text fills the shape instead of drowning in it.
+       Dims are measured once per draw and cached for hit-testing.
+    ============================================ */
+    const NODE_H = 38;
+    const _measureCtx = document.createElement('canvas').getContext('2d');
+    const _dimsCache = {};
+    function dimsOf(node) {
+      return _dimsCache[node.id] || { w: NODE_H * 2, h: NODE_H };
+    }
+    function measureNode(node) {
+      _measureCtx.font = `${node.type === 'concept' ? '500 ' : ''}13px JetBrains Mono, monospace`;
+      const tw = _measureCtx.measureText(node.label || '···').width;
+      const d = { w: Math.max(NODE_H + 6, Math.ceil(tw) + 28), h: NODE_H };
+      _dimsCache[node.id] = d;
+      return d;
+    }
+    function inNode(p, node, pad = 0) {
+      const d = dimsOf(node);
+      return Math.abs(p.x - node.x) <= d.w / 2 + pad && Math.abs(p.y - node.y) <= d.h / 2 + pad;
+    }
+    /* Point where the segment from this node's center toward (tx,ty) leaves
+       the node's rectangle — edges START AT THE EDGE, never at the middle. */
+    function edgePoint(node, tx, ty, inset = 0) {
+      const d = dimsOf(node);
+      const dx = tx - node.x, dy = ty - node.y;
+      if (dx === 0 && dy === 0) return { x: node.x, y: node.y };
+      const sx = dx !== 0 ? (d.w / 2 + inset) / Math.abs(dx) : Infinity;
+      const sy = dy !== 0 ? (d.h / 2 + inset) / Math.abs(dy) : Infinity;
+      const s = Math.min(sx, sy, 1);
+      return { x: node.x + dx * s, y: node.y + dy * s };
+    }
+    function roundRectPath(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
 
     /* ============================================
        CANVAS COMPONENT
@@ -612,6 +658,19 @@
         return () => ro.disconnect();
       }, [onCanvasSizeChange]);
 
+      // Keep every node reachable: when the frame shrinks (rotation, embeds,
+      // narrow shells), anything stranded outside slides back inside.
+      useEffect(() => {
+        if (canvasSize.width < 60 || canvasSize.height < 60) return;
+        nodes.forEach(n => {
+          const d = dimsOf(n);
+          const mX = d.w / 2 + 8, mY = d.h / 2 + 8;
+          const cx = Math.max(mX, Math.min(canvasSize.width - mX, n.x));
+          const cy = Math.max(mY, Math.min(canvasSize.height - mY, n.y));
+          if (cx !== n.x || cy !== n.y) onUpdateNode(n.id, { x: cx, y: cy });
+        });
+      }, [canvasSize]); // deliberately only when the frame changes
+
       const getCanvasPoint = useCallback((e) => {
         const canvas = canvasRef.current;
         const rect = canvas.getBoundingClientRect();
@@ -643,27 +702,42 @@
           }
         }
 
-        // Build node lookup for edge rendering
+        // Build node lookup + measure every node ONCE per frame — the shapes
+        // fit their text, and edges/hit-tests read these dims.
         const nodeMap = {};
-        nodes.forEach(n => { nodeMap[n.id] = n; });
+        nodes.forEach(n => { nodeMap[n.id] = n; measureNode(n); });
 
-        // Introduction opportunities — ghost edges UNDER the real graph.
-        // Top few only: the point is a nudge, not a hairball.
+        // Empty state — the instructions live where the finger goes
+        if (nodes.length === 0) {
+          ctx.fillStyle = T.muted;
+          ctx.font = '13px JetBrains Mono, monospace';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          const cx = canvas.width / 2, cy = canvas.height / 2;
+          ['draw a circle — person', 'draw a square — concept', 'draw a line between shapes — tie', 'double-tap a shape — rename'].forEach((s, i) => {
+            ctx.fillText(s, cx, cy - 33 + i * 22);
+          });
+        }
+
+        // Introduction opportunities — ghost edges UNDER the real graph,
+        // trimmed to shape boundaries. Top few only: a nudge, not a hairball.
         (opportunities || []).slice(0, 5).forEach(op => {
           const a = nodeMap[op.personA.id], b = nodeMap[op.personB.id];
           if (!a || !b) return;
+          const p1 = edgePoint(a, b.x, b.y, 3);
+          const p2 = edgePoint(b, a.x, a.y, 3);
           ctx.beginPath();
           ctx.setLineDash([2, 6]);
           ctx.strokeStyle = T.green;
           ctx.globalAlpha = 0.65;
           ctx.lineWidth = 1.5;
           ctx.lineCap = 'round';
-          ctx.moveTo(a.x, a.y);
-          ctx.lineTo(b.x, b.y);
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
           ctx.stroke();
           ctx.setLineDash([]);
-          // Midpoint chip: the closure score
-          const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+          // Midpoint chip: the suggested closure
+          const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2;
           ctx.globalAlpha = 1;
           ctx.beginPath();
           ctx.arc(mx, my, 8, 0, Math.PI * 2);
@@ -680,7 +754,8 @@
         });
         ctx.globalAlpha = 1;
 
-        // Edges — typed rendering
+        // Edges — typed rendering, from boundary to boundary (never through
+        // a shape's middle)
         edges.forEach(edge => {
           const source = nodeMap[edge.source];
           const target = nodeMap[edge.target];
@@ -688,91 +763,59 @@
 
           const et = getEdgeType(source, target);
           const style = edgeStyle(et) || edgeStyle('person-person');
+          const p1 = edgePoint(source, target.x, target.y, 1);
+          const p2 = edgePoint(target, source.x, source.y, 1);
 
           ctx.beginPath();
           ctx.setLineDash(style.dash);
           ctx.strokeStyle = style.color;
           ctx.lineWidth = style.width;
           ctx.lineCap = 'round';
-          ctx.moveTo(source.x, source.y);
-          ctx.lineTo(target.x, target.y);
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
           ctx.stroke();
           ctx.setLineDash([]);
 
-          // Connection dots at node borders
-          [source, target].forEach(node => {
-            const other = node === source ? target : source;
-            const angle = Math.atan2(other.y - node.y, other.x - node.x);
-            const px = node.x + Math.cos(angle) * nodeRadius;
-            const py = node.y + Math.sin(angle) * nodeRadius;
+          // Connection dots exactly where the line meets each shape
+          [p1, p2].forEach(p => {
             ctx.beginPath();
-            ctx.arc(px, py, 3, 0, Math.PI * 2);
+            ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
             ctx.fillStyle = style.color;
             ctx.fill();
           });
         });
 
-        // Nodes
+        // Nodes — capsules (people) and rounded tiles (concepts), each sized
+        // to its own label so the text fills the shape
         nodes.forEach(node => {
           const isConcept = node.type === 'concept';
           const isEditing = editingNode === node.id;
+          const d = dimsOf(node);
+          const x = node.x - d.w / 2, y = node.y - d.h / 2;
+          const r = isConcept ? 7 : d.h / 2;
 
-          // Shadow
+          // Ground the shape: opaque field first, tint over it, so edges and
+          // grid never show through the fill
+          roundRectPath(ctx, x + 1.5, y + 1.5, d.w, d.h, r);
           ctx.fillStyle = T.shadow;
-          if (isConcept) {
-            const r = 5;
-            const x = node.x - nodeRadius + 2, y = node.y - nodeRadius + 2, w = nodeRadius * 2, h = nodeRadius * 2;
-            ctx.beginPath();
-            ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-            ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-            ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-            ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y);
-            ctx.fill();
-          } else {
-            ctx.beginPath();
-            ctx.arc(node.x + 2, node.y + 2, nodeRadius, 0, Math.PI * 2);
-            ctx.fill();
-          }
+          ctx.fill();
+          roundRectPath(ctx, x, y, d.w, d.h, r);
+          ctx.fillStyle = T.bg;
+          ctx.fill();
+          roundRectPath(ctx, x, y, d.w, d.h, r);
+          ctx.fillStyle = isEditing ? T.white : (isConcept ? T.goldFaint : T.accentFaint);
+          ctx.fill();
+          ctx.strokeStyle = isEditing ? T.accentHover : (isConcept ? T.gold : T.accent);
+          ctx.lineWidth = isEditing ? 2.5 : 1.5;
+          ctx.stroke();
 
-          // Shape — concepts get rounded rect
-          if (isConcept) {
-            const r = 5;
-            const x = node.x - nodeRadius, y = node.y - nodeRadius, w = nodeRadius * 2, h = nodeRadius * 2;
-            ctx.beginPath();
-            ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-            ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-            ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-            ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y);
-            ctx.fillStyle = isEditing ? T.white : T.goldFaint;
-            ctx.fill();
-            ctx.strokeStyle = isEditing ? T.accentHover : T.gold;
-            ctx.lineWidth = isEditing ? 2.5 : 1.5;
-            ctx.stroke();
-          } else {
-            ctx.beginPath();
-            ctx.arc(node.x, node.y, nodeRadius, 0, Math.PI * 2);
-            ctx.fillStyle = isEditing ? T.white : T.accentFaint;
-            ctx.fill();
-            ctx.strokeStyle = isEditing ? T.accentHover : T.accent;
-            ctx.lineWidth = isEditing ? 2.5 : 1.5;
-            ctx.stroke();
-          }
-
-          // Label
-          if (node.label && editingNode !== node.id) {
-            let label = node.label;
-            ctx.font = `${isConcept ? '500 ' : ''}12px JetBrains Mono, monospace`;
-            const maxWidth = nodeRadius * 1.7;
-            if (ctx.measureText(label).width > maxWidth) {
-              while (label.length > 1 && ctx.measureText(label + '…').width > maxWidth) {
-                label = label.slice(0, -1);
-              }
-              label += '…';
-            }
+          // Label — the shape already fits it
+          if (node.label && !isEditing) {
+            ctx.font = `${isConcept ? '500 ' : ''}13px JetBrains Mono, monospace`;
             ctx.fillStyle = isConcept ? T.gold : T.heading;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(label, node.x, node.y);
+            ctx.fillText(node.label, node.x, node.y + 0.5);
           }
         });
 
@@ -845,9 +888,10 @@
         const now = Date.now();
         if (now - lastActionRef.current < 50) return;
 
-        const grabRadius = nodeRadius * 0.5;
-        const clickedNodeForDrag = nodes.find(n => Math.hypot(n.x - point.x, n.y - point.y) < grabRadius);
-        const clickedNode = nodes.find(n => Math.hypot(n.x - point.x, n.y - point.y) < nodeRadius);
+        // Inner zone drags the node; the rim is still free for starting a
+        // line stroke onto/off the shape.
+        const clickedNodeForDrag = nodes.find(n => inNode(point, n, -12));
+        const clickedNode = nodes.find(n => inNode(point, n, 0));
 
         const isDoubleTap = (now - lastTapRef.current) < 300;
         lastTapRef.current = now;
@@ -930,9 +974,9 @@
     /* ============================================
        HELPER: Find valid spawn position
     ============================================ */
-    const findValidSpawnPosition = (nodes, canvasWidth = 400, canvasHeight = 320, nodeRadius = 28) => {
-      const minDistance = nodeRadius * 3;
-      const margin = nodeRadius + 20;
+    const findValidSpawnPosition = (nodes, canvasWidth = 400, canvasHeight = 320, nodeRadius = 40) => {
+      const minDistance = 115;
+      const margin = nodeRadius + 30;
       for (let i = 0; i < 100; i++) {
         const x = margin + Math.random() * (canvasWidth - 2 * margin);
         const y = margin + Math.random() * (canvasHeight - 2 * margin);
@@ -1101,8 +1145,7 @@
                     return (
                       <div key={node.id} style={{
                         background: T.surface, padding: '7px 9px', borderRadius: '6px',
-                        border: `1px solid ${T.borderSub}`,
-                        borderLeft: `3px solid ${isConcept ? T.gold : T.accent}`
+                        border: `1px solid ${T.borderSub}`
                       }}>
                         <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
                           {/* Clickable type toggle */}
@@ -1285,7 +1328,6 @@
                         background: T.greenBg,
                         padding: '6px 8px', borderRadius: '4px',
                         border: `1px solid ${T.borderSub}`,
-                        borderLeft: `3px solid ${T.green}`,
                       }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px' }}>
                           <span style={{ color: T.heading, fontSize: '10.5px', fontWeight: 500 }}>
@@ -1353,6 +1395,160 @@
     };
 
     /* ============================================
+       MATRIX VIEW — the researcher's table
+       Four matrices over the same graph. Adjacency and affiliation are
+       EDITABLE (tap a cell to toggle the tie); shared-concepts and mutual-
+       acquaintance counts are derived, tinted by value. Sticky row/column
+       headers so a big room stays navigable on a tablet.
+    ============================================ */
+    const MATRIX_TYPES = [
+      { key: 'adjacency', label: 'adjacency', hint: 'who knows who — tap a cell to toggle the tie' },
+      { key: 'affiliation', label: 'affiliation', hint: 'people × concepts — tap a cell to toggle the link' },
+      { key: 'shared', label: 'shared concepts', hint: 'how many concepts each pair has in common' },
+      { key: 'mutuals', label: 'mutuals', hint: 'how many acquaintances each pair shares' },
+    ];
+
+    const MatrixView = ({ nodes, edges, onAddEdge, onRemoveEdge }) => {
+      const [mtype, setMtype] = useState('adjacency');
+
+      const people = useMemo(() => nodes.filter(n => (n.type || 'person') !== 'concept'), [nodes]);
+      const concepts = useMemo(() => nodes.filter(n => n.type === 'concept'), [nodes]);
+
+      const { hasEdge, personConcepts, knows } = useMemo(() => {
+        const set = new Set();
+        edges.forEach(e => { set.add(e.source + '|' + e.target); set.add(e.target + '|' + e.source); });
+        const pc = {}, kn = {};
+        const nodeMap = {};
+        nodes.forEach(n => { nodeMap[n.id] = n; });
+        people.forEach(p => { pc[p.id] = new Set(); kn[p.id] = new Set(); });
+        edges.forEach(e => {
+          const s = nodeMap[e.source], t = nodeMap[e.target];
+          if (!s || !t) return;
+          const sP = (s.type || 'person') !== 'concept', tP = (t.type || 'person') !== 'concept';
+          if (sP && tP) { kn[s.id] && kn[s.id].add(t.id); kn[t.id] && kn[t.id].add(s.id); }
+          else if (sP && !tP) pc[s.id] && pc[s.id].add(t.id);
+          else if (!sP && tP) pc[t.id] && pc[t.id].add(s.id);
+        });
+        return { hasEdge: (a, b) => set.has(a + '|' + b), personConcepts: pc, knows: kn };
+      }, [nodes, edges, people]);
+
+      const cols = mtype === 'affiliation' ? concepts : people;
+      const rows = people;
+      const editable = mtype === 'adjacency' || mtype === 'affiliation';
+
+      const valueAt = (r, c) => {
+        if (mtype === 'adjacency' || mtype === 'affiliation') return hasEdge(r.id, c.id) ? 1 : 0;
+        if (mtype === 'shared') return [...(personConcepts[r.id] || [])].filter(x => (personConcepts[c.id] || new Set()).has(x)).length;
+        return [...(knows[r.id] || [])].filter(x => (knows[c.id] || new Set()).has(x)).length;
+      };
+      let maxVal = 1;
+      if (!editable) rows.forEach(r => cols.forEach(c => { if (r.id !== c.id) maxVal = Math.max(maxVal, valueAt(r, c)); }));
+
+      const active = MATRIX_TYPES.find(m => m.key === mtype);
+      const cell = 40;
+      const headCell = {
+        position: 'sticky', top: 0, zIndex: 2, background: T.surface,
+        fontFamily: T.fontMono, fontSize: '11px', fontWeight: 500, color: T.muted,
+        padding: '6px 4px', minWidth: cell + 'px', maxWidth: '86px',
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        borderBottom: `1px solid ${T.border}`, textAlign: 'center',
+      };
+
+      const tooFew = mtype === 'affiliation'
+        ? (people.length === 0 || concepts.length === 0)
+        : people.length < 2;
+
+      return (
+        <div style={{
+          flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column',
+          background: T.surface, borderRadius: '8px', border: `1.5px solid ${T.border}`, overflow: 'hidden'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', borderBottom: `1px solid ${T.borderSub}`, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '3px', background: T.bg, borderRadius: '6px', padding: '3px' }}>
+              {MATRIX_TYPES.map(m => (
+                <button key={m.key} onClick={() => setMtype(m.key)} style={{
+                  padding: '5px 10px', border: 'none', borderRadius: '4px', cursor: 'pointer',
+                  fontFamily: T.fontMono, fontSize: '11px', transition: 'all 0.15s',
+                  background: mtype === m.key ? T.accent : 'transparent',
+                  color: mtype === m.key ? T.white : T.muted,
+                }}>{m.label}</button>
+              ))}
+            </div>
+            <span style={{ fontSize: '11px', color: T.muted, fontFamily: T.fontMono }}>{active.hint}</span>
+          </div>
+          {tooFew ? (
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.muted, fontFamily: T.fontMono, fontSize: '12px', padding: '2rem', textAlign: 'center' }}>
+              {mtype === 'affiliation' ? 'needs at least one person and one concept' : 'needs at least two people'}
+            </div>
+          ) : (
+            <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+              <table style={{ borderCollapse: 'separate', borderSpacing: 0, fontVariantNumeric: 'tabular-nums' }}>
+                <thead>
+                  <tr>
+                    <th style={{ ...headCell, left: 0, zIndex: 3, textAlign: 'left', paddingLeft: '10px' }}></th>
+                    {cols.map(c => (
+                      <th key={c.id} title={c.label} style={{ ...headCell, color: c.type === 'concept' ? T.gold : T.accent }}>
+                        {c.label || '?'}
+                      </th>
+                    ))}
+                    <th style={{ ...headCell, color: T.muted }}>Σ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map(r => {
+                    const rowSum = cols.reduce((s, c) => s + (r.id === c.id ? 0 : valueAt(r, c)), 0);
+                    return (
+                      <tr key={r.id}>
+                        <th style={{
+                          position: 'sticky', left: 0, zIndex: 1, background: T.surface,
+                          fontFamily: T.fontMono, fontSize: '11.5px', fontWeight: 500, color: T.accent,
+                          padding: '0 10px', textAlign: 'left', whiteSpace: 'nowrap', maxWidth: '130px',
+                          overflow: 'hidden', textOverflow: 'ellipsis',
+                          borderRight: `1px solid ${T.border}`, height: cell + 'px',
+                        }} title={r.label}>{r.label || '?'}</th>
+                        {cols.map(c => {
+                          const self = r.id === c.id;
+                          const v = self ? 0 : valueAt(r, c);
+                          const tint = self ? 'transparent'
+                            : editable
+                              ? (v ? T.accentFaint : 'transparent')
+                              : (v ? `rgba(${T === THEMES.dark ? '122, 229, 130' : '47, 125, 56'}, ${0.10 + 0.5 * (v / maxVal)})` : 'transparent');
+                          return (
+                            <td key={c.id}
+                              onClick={editable && !self ? () => (v ? onRemoveEdge(r.id, c.id) : onAddEdge(r.id, c.id)) : undefined}
+                              title={self ? '' : `${r.label || '?'} × ${c.label || '?'}${editable ? ' — tap to toggle' : ''}`}
+                              style={{
+                                width: cell + 'px', height: cell + 'px', textAlign: 'center',
+                                fontFamily: T.fontMono, fontSize: '12px',
+                                color: editable ? T.accent : T.bright,
+                                background: tint,
+                                borderBottom: `1px solid ${T.borderSub}`,
+                                borderRight: `1px solid ${T.borderSub}`,
+                                cursor: editable && !self ? 'pointer' : 'default',
+                                userSelect: 'none',
+                              }}>
+                              {self ? <span style={{ color: T.mutedFaint }}>·</span>
+                                : editable ? (v ? '●' : '') : (v || '')}
+                            </td>
+                          );
+                        })}
+                        <td style={{
+                          width: cell + 'px', textAlign: 'center', fontFamily: T.fontMono,
+                          fontSize: '11.5px', color: T.muted,
+                          borderBottom: `1px solid ${T.borderSub}`,
+                        }}>{rowSum}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    /* ============================================
        MAIN APP
     ============================================ */
     function SocialNetworkDemo() {
@@ -1360,6 +1556,7 @@
       const [isVertical, setIsVertical] = useState(window.innerWidth < 700);
       const [canvasSize, setCanvasSize] = useState({ width: 400, height: 320 });
       const [nodeType, setNodeType] = useState('person');
+      const [view, setView] = useState('graph'); // 'graph' | 'matrix'
       // Site theme: T swaps and everything re-renders. jh-chrome.js dispatches
       // jh-theme-change for the local toggle AND when the playground canvas
       // propagates a flip into this frame.
@@ -1385,26 +1582,40 @@
       const handleExportJSON = useCallback(() => exportJSON(graph.nodes, graph.edges), [graph.nodes, graph.edges]);
       const handleExportCSV = useCallback(() => exportCSV(graph.nodes, graph.edges), [graph.nodes, graph.edges]);
 
+      // One compact bar, then features wall to wall — every pixel below the
+      // bar is workspace, none of it is chrome.
+      const viewBtn = (v, glyph, label) => (
+        <button onClick={() => setView(v)} style={{
+          display: 'inline-flex', alignItems: 'center', gap: '5px',
+          padding: '5px 11px', border: 'none', borderRadius: '4px', cursor: 'pointer',
+          fontFamily: T.fontMono, fontSize: '12px', transition: 'all 0.15s',
+          background: view === v ? T.accent : 'transparent',
+          color: view === v ? T.white : T.muted,
+        }}>{glyph} {label}</button>
+      );
+
       return (
         <div style={{
-          display: 'flex', flexDirection: 'column', gap: '10px',
-          padding: '14px', height: '100%', maxWidth: '1200px',
-          margin: '0 auto', boxSizing: 'border-box'
+          display: 'flex', flexDirection: 'column', gap: '8px',
+          padding: '8px', height: '100%', width: '100%', boxSizing: 'border-box'
         }}>
-          <div style={{
-            display: 'flex', alignItems: 'baseline', gap: '10px',
-            paddingBottom: '6px', borderBottom: `1px solid ${T.borderSub}`
-          }}>
-            <span style={{ fontFamily: T.fontUI, fontSize: '14px', fontWeight: 400, color: T.heading, letterSpacing: '0.03em' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <span style={{ fontFamily: T.fontUI, fontSize: '14px', fontWeight: 400, color: T.heading, letterSpacing: '0.03em', whiteSpace: 'nowrap' }}>
               Social Network Analysis
             </span>
-            <span style={{ fontSize: '11px', color: T.muted, fontFamily: T.fontMono }}>
-              Draw ◯ people · ▢ concepts · lines to connect · drag to move
-            </span>
+            <div style={{ display: 'flex', gap: '3px', background: T.surface, borderRadius: '6px', padding: '3px' }}>
+              {viewBtn('graph', '◉', 'graph')}
+              {viewBtn('matrix', '▦', 'matrix')}
+            </div>
+            {!isVertical && view === 'graph' && (
+              <span style={{ fontSize: '11px', color: T.muted, fontFamily: T.fontMono }}>
+                draw ◯ people · ▢ concepts · lines to connect · drag to move
+              </span>
+            )}
             <button onClick={() => window.JH_THEME && window.JH_THEME.toggle()}
               aria-label={themeMode === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}
               style={{
-                marginLeft: 'auto', width: '26px', height: '26px', flexShrink: 0,
+                marginLeft: 'auto', width: '28px', height: '28px', flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: 'none', border: `1px solid ${T.border}`, borderRadius: '50%',
                 color: T.accent, fontSize: '13px', lineHeight: 1, cursor: 'pointer',
@@ -1413,15 +1624,22 @@
 
           <div style={{
             display: 'flex', flexDirection: isVertical ? 'column' : 'row',
-            gap: '12px', flex: 1, minHeight: 0
+            gap: '8px', flex: 1, minHeight: 0
           }}>
-            <NetworkCanvas
-              nodes={graph.nodes} edges={graph.edges}
-              opportunities={metrics.opportunities} themeTick={themeMode}
-              onAddNode={graph.addNode} onUpdateNode={graph.updateNode}
-              onRemoveNode={graph.removeNode} onAddEdge={graph.addEdge}
-              onCanvasSizeChange={setCanvasSize} nodeType={nodeType}
-            />
+            {view === 'graph' ? (
+              <NetworkCanvas
+                nodes={graph.nodes} edges={graph.edges}
+                opportunities={metrics.opportunities} themeTick={themeMode}
+                onAddNode={graph.addNode} onUpdateNode={graph.updateNode}
+                onRemoveNode={graph.removeNode} onAddEdge={graph.addEdge}
+                onCanvasSizeChange={setCanvasSize} nodeType={nodeType}
+              />
+            ) : (
+              <MatrixView
+                nodes={graph.nodes} edges={graph.edges}
+                onAddEdge={graph.addEdge} onRemoveEdge={graph.removeEdge}
+              />
+            )}
             <NetworkTable
               nodes={graph.nodes} edges={graph.edges} metrics={metrics}
               onAddNode={graph.addNode} onUpdateNode={graph.updateNode}
@@ -1430,7 +1648,7 @@
               onArrange={handleArrange} onClear={graph.clearAll}
               onExportJSON={handleExportJSON} onExportCSV={handleExportCSV}
               nodeType={nodeType} onNodeTypeChange={setNodeType}
-              style={isVertical ? { width: '100%' } : {}}
+              style={isVertical ? { width: '100%', maxHeight: '45%' } : {}}
             />
           </div>
         </div>
