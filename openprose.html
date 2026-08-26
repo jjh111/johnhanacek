@@ -1975,6 +1975,28 @@ html[data-mode="dark"] .h2-sig { filter: invert(1); }
   #nav.visible ~ .scroll-progress { top: calc(34px + env(safe-area-inset-top)); }
   #nav.visible ~ .brand-nav { padding-top: calc(1.1rem + 34px + env(safe-area-inset-top)); }
 }
+
+/* ---- pretext wrap (scripts/pretext-wrap.js) — §II intro ledes ----------
+   The line layer's support classes, mirrored from shared.css (this page
+   deliberately does not load shared.css). The REAL prose stays in
+   .pretext-source — clipped to a pixel, still in the accessibility tree
+   and find-in-page — while the aria-hidden lines above it are the
+   rendering. No JS, or the module failing: the untouched paragraph simply
+   renders as it always did. */
+.pretext-source {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.pretext-layer { position: absolute; inset: 0; pointer-events: none; }
+.pretext-line {
+  position: absolute;
+  top: 0; left: 0;
+  white-space: nowrap;
+  will-change: transform;
+}
 </style>
 </head>
 
@@ -4517,6 +4539,19 @@ system consumes it.
   window.addEventListener('resize', onScroll, { passive: true });
   update();
 })();
+</script>
+
+<!-- §II intro ledes ride the pretext line-breaker: whole words wrap — no
+     more "compos-ited", where CSS hyphenation split a word mid-lede — and
+     the strong/em runs survive via the module's styled-run layer. If the
+     module fails to load, the CSS-hyphenated original stands untouched. -->
+<script type="module">
+  try {
+    const { default: wrapAround } = await import('./scripts/pretext-wrap.js');
+    for (const p of document.querySelectorAll('#canvas-tool .tool-intro .lede')) {
+      await wrapAround(p);
+    }
+  } catch (e) { /* un-wrapped is the original page */ }
 </script>
 
 <!-- jhcom chrome behaviour: nav reveal + mobile toggle, the <jh-nav> component

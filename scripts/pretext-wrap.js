@@ -110,8 +110,56 @@ export async function wrapAround(el, opts = {}) {
     const minSlot = opts.minSlot != null ? opts.minSlot : 90;
     const maxLines = opts.maxLines || 400;
 
-    const text = (opts.text || el.textContent || '').replace(/\s+/g, ' ').trim();
+    // Inline emphasis survives the wrap. The element's own <strong>/<em>/
+    // <b>/<i>/<code> runs are recorded as character ranges over the
+    // normalized text, and each rendered line re-wraps its slice of those
+    // ranges in the same tags — so the page's existing strong/em styling
+    // applies to the visual layer too. Measurement still uses the base font:
+    // exact for monospaced faces (bold advances match), approximate
+    // otherwise, which is why the ranges decorate rather than re-measure.
+    const INLINE = { STRONG: 'strong', B: 'strong', EM: 'em', I: 'em', CODE: 'code' };
+    const styleRuns = [];
+    let text;
+    if (opts.text) {
+        text = opts.text.replace(/\s+/g, ' ').trim();
+    } else {
+        let acc = '';
+        const visit = (node, tag) => {
+            if (node.nodeType === 3) {
+                const piece = node.textContent.replace(/\s+/g, ' ');
+                if (tag && piece.trim()) styleRuns.push({ start: acc.length, end: acc.length + piece.length, tag });
+                acc += piece;
+                return;
+            }
+            if (node.nodeType !== 1) return;
+            const t = INLINE[node.tagName] || tag;
+            node.childNodes.forEach(ch => visit(ch, t));
+        };
+        el.childNodes.forEach(ch => visit(ch, null));
+        // Normalize like the plain path does, tracking how the leading trim
+        // shifts every recorded range.
+        const lead = acc.length - acc.replace(/^\s+/, '').length;
+        text = acc.replace(/^\s+/, '').replace(/\s+$/, '');
+        styleRuns.forEach(r => { r.start -= lead; r.end -= lead; });
+    }
     if (!text) throw new Error('pretext-wrap: nothing to lay out');
+
+    const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;' };
+    const esc = s => s.replace(/[&<>]/g, c => ESC[c]);
+    function lineMarkup(lineText, lineStart) {
+        const lineEnd = lineStart + lineText.length;
+        const hits = styleRuns.filter(r => r.start < lineEnd && r.end > lineStart);
+        if (!hits.length) return null;
+        let html = '', pos = lineStart;
+        for (const r of hits) {
+            const s = Math.max(r.start, lineStart), e = Math.min(r.end, lineEnd);
+            if (s > pos) html += esc(text.slice(pos, s));
+            html += '<' + r.tag + '>' + esc(text.slice(s, e)) + '</' + r.tag + '>';
+            pos = e;
+        }
+        if (pos < lineEnd) html += esc(text.slice(pos, lineEnd));
+        return html;
+    }
 
     const prepared = prepareWithSegments(text, font);
 
@@ -202,10 +250,26 @@ export async function wrapAround(el, opts = {}) {
             top += lineHeight;
         }
 
+        // Each line's slice of the normalized text locates its styled runs.
+        // line.text is an exact substring, so a moving indexOf is reliable.
+        let searchFrom = 0;
         for (let i = 0; i < Math.max(out.length, lastCount); i++) {
             const d = lineDiv(i);
             if (i < out.length) {
-                if (d.textContent !== out[i].text) d.textContent = out[i].text;
+                let html = null;
+                if (styleRuns.length) {
+                    const at = text.indexOf(out[i].text, searchFrom);
+                    if (at !== -1) {
+                        html = lineMarkup(out[i].text, at);
+                        searchFrom = at + out[i].text.length;
+                    }
+                }
+                if (html !== null) {
+                    if (d.dataset.ptHtml !== html) { d.innerHTML = html; d.dataset.ptHtml = html; }
+                } else if (d.textContent !== out[i].text || d.dataset.ptHtml) {
+                    d.textContent = out[i].text;
+                    delete d.dataset.ptHtml;
+                }
                 d.style.transform = `translate(${out[i].x}px, ${out[i].y}px)`;
                 d.style.display = 'block';
             } else {
