@@ -282,7 +282,11 @@ export async function wrapAround(el, opts = {}) {
             }
         }
         lastCount = out.length;
-        el.style.minHeight = (top + lineHeight) + 'px';
+        // `top` already sits at the bottom edge of the last line — it advanced
+        // by one lineHeight after placing it — so it IS the content height.
+        // Adding another lineHeight here padded every wrapped block with a
+        // phantom empty line, which read as doubled paragraph spacing.
+        el.style.minHeight = top + 'px';
     }
 
     let queued = false;
