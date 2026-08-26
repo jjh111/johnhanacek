@@ -207,6 +207,43 @@
             font-size: 0.8rem;
             color: var(--muted);
         }
+
+        /* ============================================
+           FIXED-SCALE EMBED — jhana.zone
+           The p5 sketch resizes its CANVAS to whatever frame it is given, but
+           draws stars, the signature and the copyright line at fixed pixel
+           sizes. So the starfield does not get denser as the frame shrinks —
+           it gets emptier, and below roughly 640px it is a handful of white
+           blobs with the watermark dominating. At a 390px viewport this embed
+           is 273x155, which is where it looks broken. (Measured identical
+           before and after the design refresh — this is long-standing, not a
+           regression.)
+
+           We do not own the sketch, but we do own the size we hand it. So it
+           is rendered at a width it composes for and the RESULT is scaled to
+           the column, which keeps the desktop composition at every width
+           instead of thinning it out. Only ever scales down: past the
+           reference width the frame is used at its natural size rather than
+           being blown up soft.
+        ============================================ */
+        .embed-fixed > iframe {
+            /* The WIDTH must be static CSS, not something script assigns. The
+               sketch sizes its canvas once, at its own load, and never listens
+               for a resize — so a frame that is 273px wide when the sketch
+               boots and 960px a moment later leaves a 273px canvas stretched
+               across it. Declaring it here means the frame is already the
+               right width at first layout, before the sketch runs.
+               max() also means a column wider than the reference is used at
+               its natural size, so nothing is ever upscaled. */
+            width: max(960px, 100%);
+            height: auto;
+            aspect-ratio: 16 / 9;
+            /* Only the scale comes from script, and only ever visually: a
+               transform does not change the frame's inner viewport, so
+               resizing the window never re-sizes — or breaks — the canvas. */
+            transform: scale(var(--embed-k, 1));
+            transform-origin: top left;
+        }
     </style>
 </head>
 <body>
@@ -430,7 +467,7 @@ Earth Star is live.</code>
                     </div>
                 </div>
 
-                <div class="video-embed">
+                <div class="video-embed embed-fixed">
                     <iframe src="https://www.jhana.zone" width="100%" height="600" frameborder="0" allow="autoplay; fullscreen" allowfullscreen title="Jhana Zone - Interactive Meditation"></iframe>
                 </div>
             </div>
@@ -555,6 +592,30 @@ Earth Star is live.</code>
 
     <!-- Hero Canvas - Cosmos Starfield -->
     <script>
+
+    // Fixed-scale embed (see .embed-fixed in the stylesheet above). Renders the
+    // frame at REF width when the column is narrower than that, then scales the
+    // whole thing down — so a sketch that draws at fixed pixel sizes keeps its
+    // intended composition instead of thinning out. Container width, not
+    // viewport: this box sits in a column, and the column is what changes.
+    (function () {
+        var boxes = document.querySelectorAll('.embed-fixed');
+        if (!boxes.length) return;
+        function size(box) {
+            var ifr = box.querySelector('iframe');
+            var w = box.clientWidth;
+            // offsetWidth is the frame's LAID-OUT width, before the transform —
+            // max(960px, 100%) from the stylesheet. When the column is wider
+            // than the reference the two are equal and the scale is exactly 1.
+            if (!ifr || !w || !ifr.offsetWidth) return;
+            box.style.setProperty('--embed-k', w / ifr.offsetWidth);
+        }
+        boxes.forEach(function (box) {
+            size(box);
+            if (window.ResizeObserver) new ResizeObserver(function () { size(box); }).observe(box);
+            else window.addEventListener('resize', function () { size(box); });
+        });
+    })();
         const canvas = document.getElementById('heroCanvas');
         const ctx = canvas.getContext('2d');
 
