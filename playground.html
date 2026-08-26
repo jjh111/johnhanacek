@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script>/* jh-theme bootstrap: stamp before first paint (scripts/jh-chrome.js owns the toggle) */(function(){try{var t=localStorage.getItem("jh-theme");if(t?t==="light":matchMedia("(prefers-color-scheme: light)").matches)document.documentElement.setAttribute("data-theme","light")}catch(e){}})();</script>
+<script>/* jh-theme bootstrap + theme-color meta (scripts/jh-chrome.js owns the toggle) */(function(){var m=document.querySelector('meta[name="theme-color"]');var up=function(){if(m)m.setAttribute("content",document.documentElement.hasAttribute("data-theme")?"#eef4f6":"#020a12")};if(!m){m=document.createElement("meta");m.name="theme-color";document.head.appendChild(m)}try{var t=localStorage.getItem("jh-theme");if(t?t==="light":matchMedia("(prefers-color-scheme: light)").matches)document.documentElement.setAttribute("data-theme","light")}catch(e){}up();})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Playground — John Hanacek</title>
 <meta name="description" content="A review canvas of the whole site: every page and every experiment, live and side by side.">
@@ -897,11 +897,16 @@ header, main#stage { transition: top 0.25s ease; }
       try { window.parent.postMessage({ cv: 'fs-toggle' }, '*'); } catch (e) {}
     }
     document.body.style.overflow = 'hidden';
+    // aria-modal without focus management is a promise the dialog didn't keep:
+    // move focus in (close button = sensible base), remember where it came from.
+    if (!focusEl.contains(document.activeElement)) focusReturnTo = document.activeElement;
+    document.getElementById('f-close').focus();
     if (typeof syncModeButtons === 'function') syncModeButtons();
     if (typeof navDraw === 'function') navDraw();
     try { history.replaceState(null, '', '#' + encodeURIComponent(it.name)); } catch (e) {}
   }
   var lastFocusIdx = 0;
+  var focusReturnTo = null;
   function closeFocus() {
     focusEl.classList.remove('open');
     if (EMBEDDED && focusOwnsFs) {
@@ -915,6 +920,11 @@ header, main#stage { transition: top 0.25s ease; }
     document.body.style.overflow = '';
     if (fIdx >= 0) lastFocusIdx = fIdx;
     fIdx = -1;
+    // Hand focus back to the card/well that opened the dialog.
+    if (focusReturnTo && document.contains(focusReturnTo)) {
+      try { focusReturnTo.focus(); } catch (e) {}
+    }
+    focusReturnTo = null;
     if (typeof syncModeButtons === 'function') syncModeButtons();
     if (typeof navDraw === 'function') navDraw(); // deck map → layout map
     // location.pathname alone DROPS the query string — closing a focused card
@@ -930,6 +940,15 @@ header, main#stage { transition: top 0.25s ease; }
     if (ev.key === 'Escape') closeFocus();
     else if (ev.key === 'ArrowLeft') openFocus(fIdx - 1);
     else if (ev.key === 'ArrowRight') openFocus(fIdx + 1);
+    else if (ev.key === 'Tab') {
+      // keep Tab inside the modal bar
+      var els = [...focusEl.querySelectorAll('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+        .filter(function (el) { return el.offsetParent !== null; });
+      if (!els.length) return;
+      var first = els[0], last = els[els.length - 1];
+      if (ev.shiftKey && document.activeElement === first) { ev.preventDefault(); last.focus(); }
+      else if (!ev.shiftKey && document.activeElement === last) { ev.preventDefault(); first.focus(); }
+    }
   });
 
   // ---- three views: canvas (pan/zoom) · grid · focus ----------------------

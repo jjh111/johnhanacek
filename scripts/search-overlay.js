@@ -38,6 +38,7 @@
         div.className = 'search-overlay';
         div.setAttribute('aria-hidden', 'true');
         div.setAttribute('role', 'dialog');
+        div.setAttribute('aria-modal', 'true');
         div.setAttribute('aria-label', 'Search');
         div.innerHTML = `
             <div class="search-overlay-backdrop"></div>
@@ -47,7 +48,7 @@
                 <div class="so-command-frame">
                 <!-- Search first — the bar is the point -->
                 <div class="search-input-wrap">
-                    <input type="text" id="so-searchInput" placeholder="Search, ask, or command..." autocomplete="off">
+                    <input type="text" id="so-searchInput" placeholder="Search, ask, or command..." autocomplete="off" aria-label="Search, ask, or command">
                     <button id="so-clearBtn" class="clear-btn" aria-label="Clear search">&times;</button>
                 </div>
                 <!-- The tier strip: the intelligence ladder, one legible line -->
@@ -99,7 +100,7 @@
                                 <span class="popover-section-name">Custom endpoint</span>
                             </div>
                             <input type="text" class="custom-endpoint-input" id="so-customEndpoint"
-                                   placeholder="http://localhost:8080/v1" spellcheck="false">
+                                   placeholder="http://localhost:8080/v1" spellcheck="false" aria-label="Custom endpoint URL">
                         </div>
                     </div>
                 </div>
@@ -109,18 +110,20 @@
                 <div class="ai-answer-wrap">
                     <div id="so-aiAnswer"></div>
                     <div class="ai-actions" id="so-aiActions">
-                        <button class="ai-action-btn" id="so-copyBtn" title="Copy answer">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        <button class="ai-action-btn" id="so-copyBtn" title="Copy answer" aria-label="Copy answer">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                         </button>
-                        <button class="ai-action-btn" id="so-shareBtn" title="Copy link to this query">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                        <button class="ai-action-btn" id="so-shareBtn" title="Copy link to this query" aria-label="Copy link to this query">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                         </button>
                     </div>
                 </div>
                 <!-- Results (the "Results" label row is gone — the postcard's
                      own byline carries the ⓘ; chrome must earn its lines) -->
                 <div id="so-sourcesSection">
-                    <div id="so-searchResults"></div>
+                    <!-- role=status: result re-renders are announced politely
+                         (the postcard morph rewrites this subtree in place) -->
+                    <div id="so-searchResults" role="status" aria-live="polite"></div>
                 </div>
                 <!-- Workspace detail pane (9d): on wide screens the ⤢ toggle
                      turns the panel into two panes — compact waterfall left,
@@ -286,8 +289,24 @@
         requestAnimationFrame(() => { input.focus(); });
     }
 
+    // aria-modal: Tab cycles inside the dialog instead of wandering the page
+    // behind it. Selector picks up focusables in both panes; bound once.
+    const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
+    function trapTab(e) {
+        if (e.key !== 'Tab' || overlayEl.getAttribute('aria-hidden') !== 'false') return;
+        const focusables = [...overlayEl.querySelectorAll(FOCUSABLE)]
+            .filter(el => el.offsetParent !== null || el === document.activeElement);
+        if (!focusables.length) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+
     function closeSearch() {
         if (!overlayEl) return;
+        // A hidden overlay must not keep a live demo running behind it
+        if (core && core.sleepPieces) core.sleepPieces();
         // Trigger close animation
         overlayEl.setAttribute('aria-hidden', 'true');
         closeSettings();
@@ -335,6 +354,9 @@
             closeSearch();
             return;
         }
+
+        // Tab → cycle within the modal dialog
+        trapTab(e);
 
         // / → open (when not in input/textarea)
         if (e.key === '/' && !isOverlayOpen()) {
@@ -409,12 +431,43 @@
     }
 
     // ============================================
+    // The collapsed search (10b): a navigation command doesn't amputate the
+    // search — it collapses it. If the core flagged a continuity handoff
+    // before navigating, this page shows a one-line strip under the nav;
+    // tapping reopens the overlay RESTORED (query re-derived, kept answer
+    // re-attached with an honest byline). Feather-weight: reads two
+    // sessionStorage keys, loads nothing.
+    // ============================================
+    function maybeShowContinuity() {
+        let s = null;
+        try {
+            if (sessionStorage.getItem('jh-search-continue') !== '1') return;
+            sessionStorage.removeItem('jh-search-continue');   // one-shot per navigation
+            s = JSON.parse(sessionStorage.getItem('jh-search-session') || 'null');
+        } catch { return; }
+        if (!s || !s.query || Date.now() - (s.ts || 0) > 30 * 60 * 1000) return;
+        const q = String(s.query).slice(0, 60).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+        const strip = document.createElement('div');
+        strip.className = 'so-continuity';
+        strip.innerHTML = `<button class="so-continuity-open" type="button">◂ <span class="so-continuity-q">“${q}”</span>${s.answer ? ' · answer kept' : ''}<span class="so-continuity-cta">reopen</span></button>`
+            + `<button class="so-continuity-x" type="button" aria-label="Dismiss">×</button>`;
+        document.body.appendChild(strip);
+        strip.querySelector('.so-continuity-open').addEventListener('click', async () => {
+            strip.remove();
+            await openSearch();          // ensures the core is initialized
+            core.restoreSession();
+        });
+        strip.querySelector('.so-continuity-x').addEventListener('click', () => strip.remove());
+    }
+
+    // ============================================
     // Init on DOM ready
     // ============================================
     function init() {
         setupNavTriggers();
         setupHeroSearch();
         checkUrlQuery();
+        maybeShowContinuity();
         // Deliberately no engine detection here. It used to run on every page
         // load "for the nav indicator", which meant a visitor was asked for
         // permission to reach their own machine before they had asked the site

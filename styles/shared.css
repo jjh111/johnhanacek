@@ -39,6 +39,24 @@ html { scroll-behavior: smooth; font-size: 100%; }
     }
 }
 
+/* Selection in the site's palette (tokens in jh-chrome.css, per theme). */
+::selection { background: var(--selection-bg, rgba(77, 201, 246, 0.35)); color: var(--selection-ink, #e8f4ff); }
+
+/* Slim scrollbar, token-colored — replaces the split-brain where only
+   onagents/openprose styled scrollbars. Native width elsewhere is fine on
+   touch; this targets hover-capable fine pointers. */
+@media (pointer: fine) {
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb {
+        background: rgba(var(--cyan-dim-rgb), 0.25);
+        border-radius: 5px;
+        border: 2px solid transparent;
+        background-clip: padding-box;
+    }
+    ::-webkit-scrollbar-thumb:hover { background-color: rgba(var(--cyan-dim-rgb), 0.45); }
+}
+
 body {
     font-family: 'JetBrains Mono', monospace;
     font-size: var(--text-base);
@@ -758,6 +776,10 @@ section {
     gap: var(--space-lg);
 }
 .card-grid > .content-card { margin: 0; }
+/* Explicit two-col intent (used by index/about/services). Same as the default
+   today, but stated so a future .card-grid default change can't silently
+   reshape these four grids. */
+.card-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
 
 /* Widescreen split - two sections side by side */
 .widescreen-split {

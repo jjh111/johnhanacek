@@ -13,11 +13,18 @@
     justify-content: center;
     padding-top: 0;
     opacity: 0;
+    /* visibility (not just opacity): a closed overlay's inputs must leave the
+       tab order entirely — opacity:0 alone left an invisible form tabbable
+       behind every page (WCAG 2.4.3/4.1.2). The delay keeps the close
+       transition visible; [aria-hidden="false"] restores it immediately. */
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0s 0.25s;
     pointer-events: none;
-    transition: opacity 0.25s ease;
 }
 .search-overlay[aria-hidden="false"] {
     opacity: 1;
+    visibility: visible;
+    transition: opacity 0.25s ease;
     pointer-events: auto;
 }
 
