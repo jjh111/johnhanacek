@@ -156,6 +156,7 @@
         let miniSearchInstance = null;
         let activeEngine = null; // 'local' | 'browser' | 'custom' | null
         let aiEnabled = true;
+        let localServers = [];   // every local server that answered, with its full model list
         let localModel = null;
         let customModel = null;
         let processor = null, llmModel = null, modelReady = false;
@@ -1014,18 +1015,11 @@
             localModel = await checkLocalModels();
             if (localModel) {
                 rememberLocalOptIn();
-                log(`${logTag} Local model: ${localModel.name} via ${localModel.source}`);
-                if (localSection) {
-                    localSection.classList.add('detected');
-                    el('localModelName').textContent = localModel.name.split('/').pop();
-                    el('localModelSource').textContent = localModel.source;
-                    el('localModelSource').className = 'popover-section-badge badge-' + localModel.source.toLowerCase();
-                    el('localModelDetail').textContent = localModel.host;
-                }
-                const detectBtn = el('detectLocalBtn');
-                if (detectBtn) { detectBtn.textContent = '✓ Connected'; detectBtn.classList.add('model-active'); detectBtn.disabled = true; }
+                log(`${logTag} Local: ${localServers.length} server(s), ${localServers.reduce((n, sv) => n + sv.models.length, 0)} chat model(s); using ${localModel.name} via ${localModel.source}`);
+                applyLocalModel();
                 setActiveEngine('local');
             } else {
+                applyLocalModel();
                 // Show section but as unconnected — user can click Detect to retry
                 if (localSection) localSection.classList.add('detected');
             }
@@ -1072,24 +1066,147 @@
             return null;
         }
 
+        // Every chat model a server offers, not just the first. firstChatModel
+        // skipped embedders and stopped; this keeps the whole list so the
+        // visitor can pick, and reports what was hidden and why.
+        function chatModels(list, nameOf) {
+            const out = [], skipped = [];
+            for (const m of list || []) {
+                const n = nameOf(m) || '';
+                if (!n) continue;
+                if (/embed/i.test(n)) { skipped.push(n); continue; }
+                out.push(n);
+            }
+            return { models: out, skipped };
+        }
+
+        // BOTH servers, in parallel. This used to `return` on the first one that
+        // answered, so a running LMStudio meant Ollama was never probed at all —
+        // two servers could not be offered because the second was never seen.
+        // Parallel also makes the worst case one 2s timeout instead of two.
+        async function checkLocalServers() {
+            const probes = [
+                { source: 'LMStudio', host: 'localhost:1234',
+                  list: 'http://localhost:1234/v1/models',
+                  endpoint: 'http://localhost:1234/v1/chat/completions',
+                  pick: (d) => chatModels(d.data, m => m.id) },
+                { source: 'Ollama', host: 'localhost:11434',
+                  list: 'http://localhost:11434/api/tags',
+                  endpoint: 'http://localhost:11434/api/chat',
+                  pick: (d) => chatModels(d.models, m => m.name) },
+            ];
+            const settled = await Promise.allSettled(probes.map(async (pr) => {
+                const res = await fetch(pr.list, { signal: AbortSignal.timeout(2000) });
+                if (!res.ok) throw new Error(String(res.status));
+                const { models, skipped } = pr.pick(await res.json());
+                if (!models.length && !skipped.length) throw new Error('no models');
+                return { source: pr.source, host: pr.host, endpoint: pr.endpoint, models, skipped };
+            }));
+            return settled.filter(r => r.status === 'fulfilled').map(r => r.value);
+        }
+
+        // The chosen {host, model} survives a reload, but ONLY as a preference:
+        // it is honoured when that server still offers that model, and quietly
+        // ignored otherwise. A remembered pointer at something that is no longer
+        // running is worse than no memory at all.
+        const LOCAL_PICK_KEY = 'jh-local-llm-pick';
+        function savedLocalPick() {
+            try { return JSON.parse(localStorage.getItem(LOCAL_PICK_KEY) || 'null'); } catch { return null; }
+        }
+        function rememberLocalPick(host, model) {
+            try { localStorage.setItem(LOCAL_PICK_KEY, JSON.stringify({ host, model })); } catch {}
+        }
+
+        function modelFrom(server, name) {
+            return { name, source: server.source, endpoint: server.endpoint, host: server.host };
+        }
+
+        function resolveLocalChoice(servers) {
+            if (!servers.length) return null;
+            const want = savedLocalPick();
+            if (want) {
+                const srv = servers.find(sv => sv.host === want.host);
+                if (srv && srv.models.includes(want.model)) return modelFrom(srv, want.model);
+            }
+            const first = servers.find(sv => sv.models.length);
+            return first ? modelFrom(first, first.models[0]) : null;
+        }
+
         async function checkLocalModels() {
-            try {
-                const res = await fetch('http://localhost:1234/v1/models', { signal: AbortSignal.timeout(2000) });
-                if (res.ok) {
-                    const data = await res.json();
-                    const name = firstChatModel(data.data, m => m.id);
-                    if (name) return { name, source: 'LMStudio', endpoint: 'http://localhost:1234/v1/chat/completions', host: 'localhost:1234' };
+            localServers = await checkLocalServers();
+            return resolveLocalChoice(localServers);
+        }
+
+        // The picker. One row per model per server, so two running servers are
+        // two labelled groups rather than a coin flip resolved by probe order.
+        // Rendered into a container the shells provide; absent container = no-op,
+        // so a shell that has not adopted it degrades to the single-model row.
+        function renderLocalPicker() {
+            const box = el('localPicker');
+            if (!box) return;
+            if (!localServers.length) { box.innerHTML = ''; box.classList.remove('has-choice'); return; }
+            const total = localServers.reduce((n, sv) => n + sv.models.length, 0);
+            const skipped = localServers.reduce((n, sv) => n + sv.skipped.length, 0);
+            let html = '';
+            for (const sv of localServers) {
+                html += `<div class="lp-server"><span class="popover-section-badge badge-${sv.source.toLowerCase()}">${sv.source}</span>`
+                     + `<span class="lp-host">${sv.host}</span></div>`;
+                for (const m of sv.models) {
+                    const on = localModel && localModel.host === sv.host && localModel.name === m;
+                    html += `<button class="lp-model${on ? ' on' : ''}" data-lp-host="${sv.host}" data-lp-model="${encodeURIComponent(m)}">`
+                         + `<span class="lp-dot"></span><span class="lp-name">${m.split('/').pop()}</span></button>`;
                 }
-            } catch {}
-            try {
-                const res = await fetch('http://localhost:11434/api/tags', { signal: AbortSignal.timeout(2000) });
-                if (res.ok) {
-                    const data = await res.json();
-                    const name = firstChatModel(data.models, m => m.name);
-                    if (name) return { name, source: 'Ollama', endpoint: 'http://localhost:11434/api/chat', host: 'localhost:11434' };
+                // An embedding-only server used to show NOTHING and explain
+                // nothing — you were left wondering why your running Ollama was
+                // invisible. Say it instead.
+                if (!sv.models.length && sv.skipped.length) {
+                    html += `<div class="lp-empty">only embedding models here — they cannot chat</div>`;
                 }
-            } catch {}
-            return null;
+            }
+            if (skipped && total) html += `<div class="lp-empty">${skipped} embedding model${skipped > 1 ? 's' : ''} hidden</div>`;
+            box.innerHTML = html;
+            box.classList.toggle('has-choice', total > 1 || localServers.length > 1);
+        }
+
+        // ONE place that reflects `localModel` into the section. Detection ran in
+        // two code paths — the opt-in scan and the Detect button — each with its
+        // own copy of the same five DOM writes, and they had already drifted
+        // (only one of them ever got the picker). Now they share this.
+        function applyLocalModel() {
+            const sec = el('localModelSection');
+            if (sec) sec.classList.add('detected');
+            if (localModel) {
+                const nameEl = el('localModelName'), srcEl = el('localModelSource'), detEl = el('localModelDetail');
+                if (nameEl) nameEl.textContent = localModel.name.split('/').pop();
+                if (srcEl) { srcEl.textContent = localModel.source; srcEl.className = 'popover-section-badge badge-' + localModel.source.toLowerCase(); }
+                if (detEl) detEl.textContent = localModel.host;
+            }
+            renderLocalPicker();
+            const btn = el('detectLocalBtn');
+            if (!btn) return;
+            // Rescan stays ENABLED on success. It used to disable itself, so
+            // starting a second server or swapping the loaded model could not be
+            // noticed short of a page reload.
+            btn.disabled = false;
+            btn.classList.toggle('model-active', !!localModel);
+            btn.textContent = localModel ? '\u21bb Rescan' : 'Detect';
+        }
+
+        function pickLocalModel(host, name) {
+            const sv = localServers.find(s2 => s2.host === host);
+            if (!sv || !sv.models.includes(name)) return;
+            localModel = modelFrom(sv, name);
+            rememberLocalPick(host, name);
+            const nameEl = el('localModelName'), srcEl = el('localModelSource'), detEl = el('localModelDetail');
+            if (nameEl) nameEl.textContent = name.split('/').pop();
+            if (srcEl) { srcEl.textContent = sv.source; srcEl.className = 'popover-section-badge badge-' + sv.source.toLowerCase(); }
+            if (detEl) detEl.textContent = sv.host;
+            renderLocalPicker();
+            // setActiveEngine kicks generation when the engine CHANGES; picking a
+            // different model on an already-active local engine is not a change,
+            // so ask for the answer explicitly.
+            if (activeEngine === 'local') { renderTierStrip(); updateEngineBar(); kickGeneration(true); }
+            else setActiveEngine('local');
         }
 
         async function probeCustomEndpoint(url) {
@@ -2662,6 +2779,12 @@
             // Popover section clicks (switch engine)
             el('localModelSection').addEventListener('click', (e) => {
                 if (e.target.id?.endsWith('detectLocalBtn') || e.target.closest('[id$="detectLocalBtn"]')) return;
+                const row = e.target.closest('.lp-model');
+                if (row) {
+                    e.stopPropagation();
+                    pickLocalModel(row.dataset.lpHost, decodeURIComponent(row.dataset.lpModel));
+                    return;
+                }
                 if (localModel) setActiveEngine('local');
             });
             el('browserModelSection').addEventListener('click', (e) => {
@@ -2753,14 +2876,11 @@
                 rememberLocalOptIn(); // clicking Detect IS the consent
                 localModel = await checkLocalModels();
                 if (localModel) {
-                    log(`${logTag} Local model: ${localModel.name} via ${localModel.source}`);
-                    el('localModelName').textContent = localModel.name.split('/').pop();
-                    el('localModelSource').textContent = localModel.source;
-                    el('localModelSource').className = 'popover-section-badge badge-' + localModel.source.toLowerCase();
-                    el('localModelDetail').textContent = localModel.host;
-                    detectBtn.textContent = '✓ Connected'; detectBtn.classList.add('model-active');
+                    log(`${logTag} Local: ${localServers.length} server(s), ${localServers.reduce((n, sv) => n + sv.models.length, 0)} chat model(s); using ${localModel.name} via ${localModel.source}`);
+                    applyLocalModel();
                     setActiveEngine('local');
                 } else {
+                    applyLocalModel();
                     detectBtn.textContent = 'Not found'; detectBtn.disabled = false;
                     setTimeout(() => { detectBtn.textContent = 'Detect'; }, 2000);
                 }

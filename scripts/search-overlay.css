@@ -228,16 +228,40 @@
 }
 
 /* Engine settings — inline expanding section */
+/* The engine disclosure OVERLAYS, it does not push.
+   As an in-flow block it grew the command frame from 92px to 342px, and since
+   the panel is capped at 88vh those 250px came straight out of the results:
+   measured detail pane 418px -> 168px and scrolling, list 754px -> 504px. The
+   visitor asked to see the engines, not to have the answer taken away.
+   search.html's own shell already floats this as .engine-popover; the overlay
+   was the odd one out. Anchored to .so-command-frame, which is position:
+   relative already. */
 .search-overlay .engine-settings {
+    position: absolute;
+    top: calc(100% - 0.25rem);
+    right: 0.75rem;
+    left: 0.75rem;
+    z-index: 20;
     max-height: 0;
     overflow: hidden;
-    transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    z-index: 1;
-    position: relative;
+    opacity: 0;
+    pointer-events: none;
+    transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s ease;
 }
 .search-overlay .engine-settings.open {
-    max-height: 400px;
-    transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    max-height: min(400px, 62vh);
+    overflow-y: auto;
+    opacity: 1;
+    pointer-events: auto;
+    transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+}
+/* floating now, so it needs to read as a surface rather than an inset panel */
+.search-overlay .engine-settings.open .engine-settings-inner {
+    background: rgba(var(--surface-rgb, 2, 10, 18), 0.94);
+    backdrop-filter: blur(12px) saturate(1.1);
+    -webkit-backdrop-filter: blur(12px) saturate(1.1);
+    border-color: rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.22);
+    box-shadow: 0 10px 34px var(--elevation, rgba(0, 0, 0, 0.5));
 }
 .search-overlay .engine-settings-inner {
     background: rgba(var(--panel-rgb, 10, 22, 40), 0.25);
@@ -317,9 +341,17 @@
 .search-overlay .popover-section:hover { border-color: rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.1); }
 .search-overlay .popover-section.active { border-color: var(--section-color, rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.25)); background: rgba(var(--ink-rgb, 140, 184, 204), 0.04); }
 .search-overlay .popover-section.disabled { opacity: 0.4; cursor: default; }
+/* Badge BEFORE the name. It trailed the title, which put the one token that
+   says what a row IS — ollama, webgpu — after the words it qualifies, and left
+   the column of names ragged. Ordered, not re-marked-up, so the core's label
+   wiring is untouched. */
 .search-overlay .popover-section-header {
     display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.1rem;
 }
+.search-overlay .popover-section-header > .popover-radio { order: 0; }
+.search-overlay .popover-section-header > .popover-section-badge { order: 1; }
+.search-overlay .popover-section-header > .popover-section-name { order: 2; }
+.search-overlay .popover-section-header > button { order: 3; margin-left: auto; }
 .search-overlay .popover-radio {
     width: 8px; height: 8px; border-radius: 50%;
     border: 1.5px solid var(--so-muted); flex-shrink: 0;
@@ -330,9 +362,54 @@
 .search-overlay .popover-section-name { font-size: 0.78rem; font-weight: 500; color: var(--so-text-bright); }
 .search-overlay .popover-section-badge {
     font-size: 0.58rem; padding: 0.06rem 0.3rem;
-    border-radius: 2px; margin-left: auto; font-weight: 500;
+    border-radius: 2px; font-weight: 500;
+    /* `margin-left: auto` used to live here — it was what right-aligned the
+       badge. Left in place after the reorder it still ate every spare pixel,
+       so the badge and name drifted to the middle of the row and the radio sat
+       alone at the far left. The auto margin now belongs to the button, which
+       is the only thing that should be pushed to the far edge. */
+    flex-shrink: 0;
 }
 .search-overlay .popover-section-detail { font-size: 0.65rem; color: var(--so-text-primary); margin-left: 1.15rem; }
+
+/* ═══ Local endpoint picker ═══
+   Two running servers are two labelled groups, not a coin flip resolved by
+   probe order. Scoped WITHOUT the .search-overlay prefix so search.html — which
+   links this stylesheet and now carries the same #localPicker container — gets
+   it too. */
+.local-picker { display: none; margin: 0.35rem 0 0.1rem 1.15rem; }
+.local-picker.has-choice { display: block; }
+.lp-server {
+    display: flex; align-items: center; gap: 0.35rem;
+    margin: 0.3rem 0 0.15rem;
+}
+.lp-host {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.58rem;
+    color: var(--so-muted, var(--muted, #7a9aaa)); opacity: 0.8;
+}
+.lp-model {
+    display: flex; align-items: center; gap: 0.4rem; width: 100%;
+    background: none; border: 1px solid transparent; border-radius: 4px;
+    padding: 0.2rem 0.4rem; cursor: pointer; text-align: left;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.66rem;
+    color: var(--so-text-primary, #8cb8cc);
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.lp-model:hover { background: rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.07); border-color: rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.2); }
+.lp-model .lp-dot {
+    width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+    border: 1.5px solid var(--so-muted, #7a9aaa);
+}
+.lp-model.on { color: var(--cyan, #7dd8f7); border-color: rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.28); }
+.lp-model.on .lp-dot { background: var(--engine-lmstudio, #c084fc); border-color: var(--engine-lmstudio, #c084fc); }
+.lp-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* An embedding-only server used to render NOTHING and explain nothing — you
+   were left wondering why a running Ollama was invisible. */
+.lp-empty {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.56rem;
+    color: var(--so-muted, var(--muted, #7a9aaa)); opacity: 0.65;
+    margin: 0.25rem 0 0.1rem; font-style: italic;
+}
 
 .search-overlay #so-localModelSection { display: none; }
 .search-overlay #so-localModelSection.detected { display: flex; flex-direction: column; }

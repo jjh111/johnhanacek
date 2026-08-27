@@ -81,6 +81,7 @@
                                 <button id="so-detectLocalBtn">Detect</button>
                             </div>
                             <div class="popover-section-detail" id="so-localModelDetail">LMStudio/Ollama · Detect asks your browser for local access</div>
+                            <div class="local-picker" id="so-localPicker"></div>
                         </div>
                         <div id="so-browserModelSection" class="popover-section popover-section--compact" style="--section-color:var(--engine-browser);">
                             <div class="popover-section-header">
@@ -219,7 +220,9 @@
     // Shrinking never feeds back into allocation because allocation has already
     // happened and the next one starts from a cleared height.
     const PANEL_MIN = 260;
-    let fitTimer = null, fitObserver = null, fitted = false;
+    // CONTENT high-water for the current query. Chrome is deliberately NOT in
+    // it — see fitPanel.
+    let fitTimer = null, fitObserver = null, contentFloor = 0;
 
     function panelEl() { return overlayEl && overlayEl.querySelector('.search-overlay-panel'); }
     function inWorkspace() { return overlayEl && overlayEl.classList.contains('so-workspace'); }
@@ -229,14 +232,35 @@
     function releasePanelHeight() {
         const panel = panelEl();
         if (panel) panel.style.height = '';
-        fitted = false;
+        contentFloor = 0;
     }
 
     // Pass 2. Content height is the TALLER column, because the grid rows are
     // sized by the tallest cell — measuring only the pane would clip the list.
-    function shrinkPanelToContent() {
+    // Pass 2. GROW-TO-FIT, and the split between content and chrome is the
+    // whole design:
+    //
+    //   contentFloor is a HIGH-WATER MARK, reset only by a new query. Content
+    //   arrives late and in pieces — a streamed answer, a woken iframe, the
+    //   semantic re-rank — and every one of those used to squeeze whatever was
+    //   already on screen into a scrollbar, because the panel was pinned at the
+    //   height measured before they landed. Measured: the answer arriving took
+    //   the detail pane from 403px to 63px with 155px of overflow. Never
+    //   shrinking within a query means late content can only ever push the
+    //   panel out, never crush its neighbours. It also kills the jitter for
+    //   free — a re-wrap that reflows a line shorter cannot pull the panel back
+    //   in, so there is nothing left to oscillate.
+    //
+    //   CHROME is measured live every time and deliberately NOT conserved. It
+    //   is the command frame, which doubles in height when the engine details
+    //   disclosure opens (92px -> 342px measured). That is a deliberate act by
+    //   the visitor, and the panel should give it room rather than take 250px
+    //   out of the results — which is exactly what it did: pane 63px -> 4px,
+    //   list 399px -> 149px, everything scrolling. Closing it hands the space
+    //   straight back.
+    function fitPanel() {
         const panel = panelEl();
-        if (!panel || !inWorkspace() || fitted) return;
+        if (!panel || !inWorkspace()) return;
         const scroll = overlayEl.querySelector('.so-panel-scroll');
         const frame = overlayEl.querySelector('.so-command-frame');
         if (!scroll || !frame) return;
@@ -265,23 +289,23 @@
         const chrome = frame.getBoundingClientRect().height
                      + parseFloat(cs.paddingTop || 0) + parseFloat(cs.paddingBottom || 0);
         const cap = Math.round(window.innerHeight * 0.88);
-        const want = Math.round(Math.min(cap, Math.max(PANEL_MIN, content + chrome + 2)));
-        // Only ever SHRINK. Growing here would race the cap and flicker.
-        if (want >= panel.getBoundingClientRect().height - 4) return;
+        // whatever any column has ever needed this query, plus whatever the
+        // chrome needs right now
+        contentFloor = Math.max(contentFloor, content);
+        const want = Math.round(Math.min(cap, Math.max(PANEL_MIN, contentFloor + chrome + 2)));
+        if (Math.abs(want - panel.getBoundingClientRect().height) < 2) return;
         panel.style.height = want + 'px';
-        // ONE fit per render cycle, released by the next input/resize. Without
-        // this the shrink re-wraps the prose, the wrap mutates the subtree, the
-        // observer fires and it shrinks again — measured stepping 550 -> 508 on
-        // a single query. Same shape as the core's own refitSteps guard.
-        fitted = true;
-        // A single self-correcting step, rather than a magic slack constant:
-        // child margins are not in the extent measurement, so if the shrink
-        // clipped anything, give exactly that many pixels back.
+        // One self-correcting step rather than a magic slack constant: child
+        // margins are outside the extent measurement, so if anything is still
+        // clipped, hand back exactly that many pixels — and remember it, so the
+        // correction survives into the floor instead of being re-derived.
         requestAnimationFrame(() => {
             const over = Math.max(
                 (list && list.scrollHeight - list.clientHeight) || 0,
                 (pane && pane.scrollHeight - pane.clientHeight) || 0);
-            if (over > 0) panel.style.height = Math.min(cap, want + over + 2) + 'px';
+            if (over <= 0) return;
+            contentFloor += over + 2;
+            panel.style.height = Math.round(Math.min(cap, contentFloor + chrome + 2)) + 'px';
         });
     }
 
@@ -289,7 +313,7 @@
         clearTimeout(fitTimer);
         // 450ms clears the core's own post-wrap refit (a 350ms timeout), so we
         // measure the settled layout rather than an intermediate one.
-        fitTimer = setTimeout(shrinkPanelToContent, 450);
+        fitTimer = setTimeout(fitPanel, 450);
     }
 
     // Any mutation inside the results grid means a render happened. Cheaper and
@@ -300,6 +324,12 @@
         if (!scroll || typeof MutationObserver === 'undefined') return;
         fitObserver = new MutationObserver(schedulePanelFit);
         fitObserver.observe(scroll, { childList: true, subtree: true, characterData: true });
+        // The engine-details disclosure lives in the command FRAME, outside the
+        // results grid, so a grid-only observer never saw it open.
+        const frame = overlayEl.querySelector('.so-command-frame');
+        if (frame && typeof ResizeObserver !== 'undefined') {
+            new ResizeObserver(() => schedulePanelFit()).observe(frame);
+        }
         window.addEventListener('resize', () => { releasePanelHeight(); schedulePanelFit(); });
     }
 
