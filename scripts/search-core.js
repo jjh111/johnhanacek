@@ -2244,6 +2244,27 @@
             answerEl.textContent = text;
         }
 
+        // THE HARD LIMIT, in one place for every local engine. It is not a
+        // suggestion the model can talk past; it is where we stop reading.
+        const ANSWER_TOKEN_CAP = 600;
+
+        // A model stopped by the cap ends wherever it happened to be — the
+        // observed case ended "...collaborating with Open", mid-word, which
+        // reads as a rendering fault rather than as a budget. Wind back to the
+        // last sentence that actually finished, and SAY that it was cut. A
+        // truncated answer is fine; a truncated answer pretending to be whole
+        // is not.
+        function endCleanly(text) {
+            const t = (text || '').trim();
+            if (!t) return t;
+            const m = t.match(/^[\s\S]*[.!?]["')\]]?(?=\s|$)/);
+            const body = (m ? m[0] : t).trim();
+            // Nothing finished at all — keep what there is rather than blanking
+            // an answer the visitor can still read.
+            const kept = body.length >= t.length * 0.4 ? body : t;
+            return kept + '\n\n\u2014 stopped at the length limit.';
+        }
+
         // ── Session memory (10b): the collapsed search ──
         // The last generated answer — and, failing that, the last query —
         // survives navigation for the length of the tab session.
@@ -2424,7 +2445,8 @@
 
             try {
                 if (model.source === 'LMStudio' || model.source === 'Custom') {
-                    const body = { model: model.name, messages, max_tokens: 600, temperature: 0, stream: true };
+                    const body = { model: model.name, messages, max_tokens: ANSWER_TOKEN_CAP, temperature: 0, stream: true };
+                    let cutByLength = false;
                     if (tools && tools.length) body.tools = tools;
                     const res = await fetch(model.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
                     if (!res.ok) { const body = await res.text().catch(() => ''); throw new Error(`LMStudio ${res.status} ${res.statusText}${body ? ' — ' + body.slice(0, 200) : ''}`); }
@@ -2434,26 +2456,32 @@
                         const { done, value } = await reader.read(); if (done) break;
                         if (genId !== currentGenId) { reader.cancel(); break; }
                         buffer += decoder.decode(value, { stream: true }); const lines = buffer.split('\n'); buffer = lines.pop();
-                        for (const line of lines) { const s = line.trim(); if (!s.startsWith('data:')) continue; const payload = s.slice(5).trim(); if (payload === '[DONE]') continue; try { const delta = JSON.parse(payload).choices?.[0]?.delta || {}; if (delta.reasoning_content) reasoning += delta.reasoning_content; if (delta.tool_calls) { for (const tc of delta.tool_calls) { const i = tc.index || 0; if (!toolCalls[i]) toolCalls[i] = { name: '', args: '' }; if (tc.function?.name) toolCalls[i].name += tc.function.name; if (tc.function?.arguments) toolCalls[i].args += tc.function.arguments; } } if (delta.content) { outputText += delta.content; const vis = stripThink(outputText).trimStart(); if (vis) writeAnswer(answerEl, vis); } } catch {} }
+                        for (const line of lines) { const s = line.trim(); if (!s.startsWith('data:')) continue; const payload = s.slice(5).trim(); if (payload === '[DONE]') continue; try { const choice = JSON.parse(payload).choices?.[0] || {}; if (choice.finish_reason === 'length') cutByLength = true; const delta = choice.delta || {}; if (delta.reasoning_content) reasoning += delta.reasoning_content; if (delta.tool_calls) { for (const tc of delta.tool_calls) { const i = tc.index || 0; if (!toolCalls[i]) toolCalls[i] = { name: '', args: '' }; if (tc.function?.name) toolCalls[i].name += tc.function.name; if (tc.function?.arguments) toolCalls[i].args += tc.function.arguments; } } if (delta.content) { outputText += delta.content; const vis = stripThink(outputText).trimStart(); if (vis) writeAnswer(answerEl, vis); } } catch {} }
                     }
                     if (genId === currentGenId) {
-                        const finalText = stripThink(outputText).trim();
+                        let finalText = stripThink(outputText).trim();
+                        if (cutByLength && finalText) finalText = endCleanly(finalText);
                         const calls = toolCalls.filter(Boolean).filter(tc => tc.name);
                         if (!finalText && !calls.length) console.warn(`${logTag} LMStudio returned no answer — content chars:`, outputText.length, 'reasoning chars:', reasoning.length, '— a reasoning model may need a higher token budget or a non-reasoning model.');
                         writeAnswer(answerEl, finalText || (calls.length ? '' : '(No answer — the model returned only reasoning. Try a non-reasoning model.)'));
                         if (calls.length) renderToolChips(answerEl, calls);
                     }
                 } else if (model.source === 'Ollama') {
-                    const res = await fetch(model.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: model.name, messages, stream: true, options: { temperature: 0, num_predict: 600 } }) });
+                    const res = await fetch(model.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: model.name, messages, stream: true, options: { temperature: 0, num_predict: ANSWER_TOKEN_CAP } }) });
                     if (!res.ok) { const body = await res.text().catch(() => ''); throw new Error(`Ollama ${res.status} ${res.statusText}${body ? ' — ' + body.slice(0, 200) : ''}`); }
                     const reader = res.body.getReader(); const decoder = new TextDecoder(); let outputText = '';
+                    let cutByLength = false;
                     while (true) {
                         const { done, value } = await reader.read(); if (done) break;
                         if (genId !== currentGenId) { reader.cancel(); break; }
                         const text = decoder.decode(value, { stream: true });
-                        for (const line of text.split('\n')) { if (!line.trim()) continue; try { const chunk = JSON.parse(line); if (chunk.message?.content) { outputText += chunk.message.content; const vis = stripThink(outputText).trimStart(); if (vis) writeAnswer(answerEl, vis); } } catch {} }
+                        for (const line of text.split('\n')) { if (!line.trim()) continue; try { const chunk = JSON.parse(line); if (chunk.done_reason === 'length') cutByLength = true; if (chunk.message?.content) { outputText += chunk.message.content; const vis = stripThink(outputText).trimStart(); if (vis) writeAnswer(answerEl, vis); } } catch {} }
                     }
-                    if (genId === currentGenId) writeAnswer(answerEl, stripThink(outputText).trim() || '(No answer generated.)');
+                    if (genId === currentGenId) {
+                        let finalText = stripThink(outputText).trim();
+                        if (cutByLength && finalText) finalText = endCleanly(finalText);
+                        writeAnswer(answerEl, finalText || '(No answer generated.)');
+                    }
                 }
             } catch (err) {
                 if (genId === currentGenId) { writeAnswer(answerEl, `Error: ${err.message}`); console.error(`${logTag} Local generation error:`, err); }

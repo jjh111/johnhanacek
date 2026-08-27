@@ -1153,7 +1153,10 @@ model-viewer.pc-obstacle--float { width: 170px; height: 170px; }
 .search-overlay.so-workspace .so-panel-scroll {
     display: grid;
     grid-template-columns: minmax(280px, 5fr) 7fr;
-    grid-template-rows: minmax(0, 1fr) auto;
+    /* The pane keeps a FLOOR. Row 2 is auto-sized, so a long answer used to be
+       able to take the whole column and drive the detail pane to nothing — the
+       same crushing this release just removed everywhere else. */
+    grid-template-rows: minmax(140px, 1fr) auto;
     gap: 0 1.4rem;
     overflow: hidden;          /* each column scrolls itself */
     padding-bottom: 1rem;
@@ -1175,9 +1178,23 @@ model-viewer.pc-obstacle--float { width: 170px; height: 170px; }
     font-family: 'JetBrains Mono', monospace;
     color: var(--text-bright, #b8dced);
 }
+/* The answer GROWS; it does not scroll inside a fixed window.
+   34vh was 340px on a 1000px viewport, and a 120-word answer already
+   overflowed it by 24px — a 260-word one by 431px. That is the clipping: the
+   model had more to say and the box simply stopped showing it. The panel's
+   conserved fit (search-overlay.js) grows to take the answer as it streams, so
+   expanding IS the behaviour now.
+   The HARD LIMIT is 44vh — deliberately HALF the panel's own 88vh cap, so that
+   once the panel can grow no further the answer and the detail pane above it
+   split the column rather than the answer taking it. At 60vh the answer won
+   almost everything: measured pane 418px -> 158px and scrolling, which is just
+   the crushing this release removed, pointed the other way. Real answers land
+   well inside it — 40 words is 149px, 120 words 364px — so the limit is a
+   backstop, not the working size. */
 .search-overlay.so-workspace .ai-answer-wrap {
     grid-column: 2; grid-row: 2;
-    overflow-y: auto; max-height: 34vh;
+    max-height: 44vh;
+    overflow-y: auto;
 }
 .search-overlay.so-workspace .so-keyboard-hint { display: none; }
 .so-workspace-btn.open { opacity: 0.9; color: var(--gold, #d4af37); }
