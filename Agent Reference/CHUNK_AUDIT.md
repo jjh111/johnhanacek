@@ -239,3 +239,14 @@ text fields untouched, no re-embed needed):
 - [ ] Enter on a top result never leaves the site anymore — external top
   results pin to their dossier instead (unreachable after the sweep; kept
   as a guard).
+
+## H2. Media swaps — John-directed, confirmed in chat 2026-08-27
+
+- [x] 25 (Agentic Coding & Prototyping): hypercube demo piece →
+  `openprose-casestudy.webp` image (the current flagship of the same claim;
+  openprose.html itself is never framed — nested canvas). John: "that media
+  should be the openprose case study."
+- [x] 28 (What Makes John Unique): `nanome2-beforeafter.webp` →
+  `model3d: BlackBox-Model.glb` (86 KB). John: "the media for what makes
+  john unique should be the blackbox model." (Resolves the §10e.2 open
+  question — the model's home is 28, not 9.)
