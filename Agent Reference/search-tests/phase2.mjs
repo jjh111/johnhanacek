@@ -20,8 +20,12 @@ page.on('pageerror', e => errors.push(String(e)));
 const logs = [];
 page.on('console', m => logs.push(m.text()));
 
+// the core's breadcrumb logs are gated (localStorage jh-search-debug=1)
+await page.addInitScript(() => { try { localStorage.setItem('jh-search-debug', '1'); } catch {} });
 await page.goto(`${BASE}/search.html`, { waitUntil: 'networkidle' });
-await page.waitForTimeout(800);
+// the chunks file has grown (facts + pieces) — wait for the init log rather
+// than a fixed beat
+for (let i = 0; i < 25 && !logs.some(l => l.includes('with vectors')); i++) await page.waitForTimeout(200);
 
 check('chunks load with vectors', logs.some(l => l.includes('with vectors')), logs.find(l => l.includes('chunks')));
 check('embedder NOT loading before first search', await page.evaluate(() => !document.body.dataset.searchSemantic));

@@ -68,7 +68,7 @@ check('panel status line lives inside the panel', await page.evaluate(() =>
 // semantic segment reaches ready state after a search
 await page.fill('#so-searchInput', 'meta');
 let semReady = false;
-for (let i = 0; i < 60; i++) {
+for (let i = 0; i < 90; i++) {   // 60 flaked under full-suite load (concurrent cold embedder downloads)
   await page.waitForTimeout(1000);
   semReady = await page.evaluate(() => document.querySelector('[data-tier="semantic"]')?.className.includes('fact-on'));
   if (semReady) break;

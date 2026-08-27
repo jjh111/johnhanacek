@@ -26,6 +26,10 @@ node phase7.mjs   # tier strip: UX sequence, collapsed signals, fact-vs-control,
 SHOTDIR=/tmp node phase8.mjs   # action gating (orphan tokens), no filler eyebrow,
                   # SEMANTIC density zoom, Shallows light theme both surfaces
                   # (writes theme screenshots into $SHOTDIR)
+node mock-llm.mjs &   # phase10's continuity section needs the mock on :9911
+node phase10.mjs  # Phase 10: session continuity (answer kept across "go",
+                  # collapsed-search strip, TTL/one-shot) + pieces (rail, wake
+                  # budget of one, zoom-and-wake, never-frame-external)
 node phase9.mjs   # Phase 9 (all four slices): 9a stable surface (morph not
                   # rebuild, scroll discipline, the never-scrolling command
                   # frame, chrome consolidation) · 9b fact rows (awards

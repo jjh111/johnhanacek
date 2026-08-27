@@ -27,7 +27,7 @@ const lodsOf = (page) => page.evaluate(() =>
 // ───────── 1. action gating + eyebrow + density (index overlay) ─────────
 {
   console.log('actions / eyebrow / density:');
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 920 } });   // tall: 9e no-scroll sheds depth on short panels
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 1100 } });   // tall: 9e no-scroll sheds depth on short panels; density needs room for the larger media dossier
   await ctx.route(/(localhost|127\.0\.0\.1):(1234|11434)/, r => r.abort());
   const { page, errors } = await freshPage(ctx);
   await page.goto(`${BASE}/index.html`, { waitUntil: 'domcontentloaded' });

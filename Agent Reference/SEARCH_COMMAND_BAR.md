@@ -590,6 +590,182 @@ in the same commit as the removal — never after.
 > - **Padding pass.** Frame/scroll/module/label/hint paddings trimmed (~10 rules);
 >   the keyboard hint no longer costs a whole module of space.
 
+## Phase 10 — Truth, Memory, Pieces (drafted 2026-08-26, awaiting John's ratify)
+
+*Shipped through Phase 9 the command bar is structurally production-ready. Phase 10
+is what makes it TRUSTWORTHY (the chunks say only what John confirms), CONTINUOUS
+(a session's answer survives navigation), and ALIVE (the site's media and
+interactive widgets become first-class pieces, text woven around them). Four
+slices; 10a starts immediately because John's confirms gate everything else.*
+
+### 10a — The Honesty Audit (chunks are claims; claims get confirmed)
+Every string in `Assets/search-chunks.json` — content, tags, micro, tldr, facts —
+is a CLAIM the site makes on John's behalf. Process:
+1. Generate `Agent Reference/CHUNK_AUDIT.md`: one section per chunk, every
+   discrete claim extracted and classified — **[site-verifiable]** (a page/anchor
+   on this repo backs it; verified mechanically), **[John-confirm]** (external
+   world: awards, dates, employers, client names, shipped claims), **[tone]**
+   (superlatives, AI-writing patterns, anything that oversells). Each
+   John-confirm claim gets a checkbox line: confirm / edit-to / cut.
+2. John marks the doc (or answers batched questions); edits are applied verbatim.
+3. `node scripts/build-chunk-vectors.mjs` after any content edit (README rule),
+   then the offline eval labs re-run to prove retrieval didn't drift.
+Exit: zero unconfirmed external claims in the index. This doc then becomes the
+standing rule: **new chunks land with their audit section, or they don't land.**
+
+### 10b — Session Memory & the Collapsed Search (continuity across "go")
+The requirement: the last LLM-generated answer survives per user session AT LEAST,
+and navigating via a command doesn't amputate the search — it collapses it.
+- **Store**: `sessionStorage` key `jh-search-session` (per-tab = per session,
+  private by construction): `{ query, answer, model, engine, pinnedId, fromPage,
+  ts }`. Written when a generation completes and (synchronously) when a nav
+  command executes. TTL ~30 min; never localStorage without an explicit later
+  decision.
+- **The collapsed search**: arriving on a page with fresh session state, the
+  overlay shell (before the core even loads — this must be feather-weight)
+  renders a one-line **continuity strip** under the nav: `◂ "add 3 small fish" ·
+  answer kept — reopen`. Tapping reopens the overlay RESTORED: query refilled,
+  postcard re-derived deterministically (search is pure), and the stored answer
+  re-attached with an honest byline — "from your last search · <model>". The
+  model is never re-run to fake continuity; what you saw is what you kept.
+- Esc/ignore dismisses the strip for that page-view; the state persists until
+  TTL or a new generation replaces it.
+- QA (phase10): mock-engine answer → `go to design` → strip present on
+  design.html → tap → same answer text + byline restored; TTL expiry honored.
+
+### 10c — The Piece Registry (visual/interactive first, text woven)
+Take stock of EVERY medium and interactive widget on the site and make them
+surfaceable pieces — the meta-paragraph's obstacles graduate from thumbnails to
+the real thing.
+- **Inventory, not invention**: `scripts/playground-items.js` (24 items) is
+  already the site's widget registry — the piece registry DERIVES from it plus a
+  sweep for page-embedded media (case-study videos, the trophy GLB, 3d-sync
+  demo, hero canvases, tidepool/beach-beers/SNA, pretext rigs, writing reader).
+  One new field on chunks: `pieces: [{kind: demo|video|3d|image, src, title,
+  wake?}]` — authored data, audited under the 10a rule.
+- **Surfacing**: (1) piece queries ("show me the demos", "interactive",
+  "fish game") get a PIECE RAIL — poster cards that wake on click into live
+  iframes; (2) dossiers/strata whose chunk has a live piece use IT as the
+  pretext obstacle — a running fish tank inside the paragraph, prose flowing
+  both sides; (3) the workspace pane budgets AT MOST one live iframe at a time
+  (playground's budgeted-LRU lesson: wake nearest, sleep the rest,
+  `iframe.remove()` actually releases). `nested`/`external` guards inherit from
+  the playground manifest — the overlay must never frame playground.html or an
+  off-origin URL.
+- The visual/interactive emphasis inverts the current default: where a piece
+  exists, the piece leads and the text wraps it — micro/tldr become captions.
+- QA: wake/sleep budget asserted; recursion guard asserted; piece rail renders
+  from registry only (no ad-hoc embeds).
+
+### 10d — The Design Pass (the remaining clunk)
+Screenshot-driven, John's eye leading. Six canonical states captured before/after
+on both themes: empty, compact, comfortable, pinned, workspace, mobile. Known
+candidates already on the list: model-viewer letterbox dead space, L1 baseline
+alignment under truncation, plan-card vs postcard visual kinship, workspace
+column divider rhythm, answer-seam styling, engine panel typography. Each round:
+contact sheet → John marks → applied → re-shot. Exit is John saying it's done,
+not a checklist.
+
+### Sequencing
+10a audit doc generated FIRST (John reviews while 10b builds) → 10b (small,
+self-contained) → 10c (the big one: data + embed engine) → 10d rounds throughout,
+final polish last. Ship gate stays the same: suites green + John's eyes + his
+version bump.
+
+### 10e — visual dedupe · more visuals · wording-tier zoom [PLANNED 2026-08-26]
+Spec lives in `SEARCH_HANDOFF.md` §Phase 10e (written as the handoff for the
+interim agent): (1) render-level src-dedupe across the postcard list + pane
+(plus fixing the two data dupes — headshot on 1/28, nanome2casestudy on 5/37 —
+and the still-jpeg headshot fields); (2) map the 45 unused assets onto the 25
+text-only chunks via a new CHUNK_AUDIT §G batch; (3) the three-tier text
+ladder — micro sentence / microparagraph (`brief` field, sentence-split
+derivation interim) / full paragraph — selected by ONE `textFor(r, lod,
+density)` used by render AND allocator, with the morph diff extended to a
+`data-txt` tier stamp. Build order: dedupe → wording ladder → visual batch.
+
+### 10f — externals: containerize uniformly, exit on purpose only [PLANNED 2026-08-26]
+Spec in `SEARCH_HANDOFF.md` §10f. The invariant: chunk `url` must be
+SAME-ORIGIN (it's where WE talk about the thing; `pieces` is where IT lives —
+chunk 13's jhana.zone url re-points to art.html#installations). Three-tier
+policy: John-owned + frameable hosts (header-verified `frame-ancestors`, a
+curated `FRAMEABLE_HOSTS` allowlist) wake LIVE like demo pieces; owned-but-
+unframeable and all third-party render the one uniform DEPARTURE CARD (local
+poster via `capture-posters.mjs`, hostname, explicit ↗, `rel="me noopener"`).
+Enter never exits the origin; a raw external `<a>` outside a departure card is
+a lint failure.
+
+### 10g — the residue sentence [PLANNED 2026-08-26, John's final direction]
+Spec in `SEARCH_HANDOFF.md` §10g. The continuity strip graduates from one-shot
+toast to STANDING chrome: a terminal status line at the BOTTOM edge (on-brand:
+Deep Sea Terminal gets its vim-style status line; covers nothing, contends
+with nothing) showing the session at its most minimized zoom tier —
+`◂ "query" → first clause of the answer… · reopen`. Core stores a computed
+`residue` string in the session payload; shell renders it dumb. Standing while
+TTL-fresh + overlay closed; click restores; ✕ dismisses per session; a new
+search resurrects it; the overlay open/close reads as the same object
+expanding and collapsing.
+
+> **10a/10b/10c build record (2026-08-26, same session):** phase10 suite green,
+> ALL TWELVE suites green.
+> - **10a delivered as `Agent Reference/CHUNK_AUDIT.md`** — every claim in all 42
+>   chunks extracted and classified via a mechanical grep sweep of `*.html`.
+>   Headline finding: nearly everything is page-backed; the CHUNK-ONLY claims
+>   (search says what the site never says) are the personal chunks — cooking
+>   dishes, the brownie, hiking/camping. ~40 John-confirm checklist lines await
+>   his marks; two consistency catches ("Primary" vs "Lead" designer at Nanome;
+>   MetaMedium "prototype" vs "shipped product") and the "no npm" precision nit.
+> - **10b shipped — the collapsed search.** `sessionStorage` (`jh-search-session`,
+>   30-min TTL) written on generation complete and synchronously at every
+>   navigation (commands, Enter-commit, result/badge link clicks — all raise the
+>   one-shot `jh-search-continue` flag). The next page's shell shows the
+>   continuity strip (feather-weight: two storage reads, no core load); tap
+>   reopens RESTORED — postcard re-derived, the KEPT answer re-attached under a
+>   `data-restored` byline reading "from your last search". Never regenerated.
+>   One-shot flag → no strip on plain reloads; TTL honored; dismiss is per
+>   page-view.
+> - **10c shipped — pieces.** Nine chunks carry `pieces: [{kind, src, title}]`
+>   derived from the playground manifest (demo = same-origin wakeable; link =
+>   off-origin, never framed — doorway card only; playground/openprose are never
+>   pieces). Surfacings: the PIECE RAIL on browsy queries (intent deliberately
+>   narrow — 'minigame' was in the pattern and hijacked "fish minigame" away
+>   from its own chunk, found and removed); piece-first obstacles at dossier and
+>   stratum scale (the interactive thing IS the visual, prose wraps it — a LIVE
+>   fish tank runs inside the paragraph, 9 pretext lines flowing around it);
+>   media-less chunks show their piece at L2, and a small-piece tap is ONE
+>   gesture: zoom to dossier + wake. Budget: ONE live iframe ever (waking a
+>   second sleeps the first, `iframe.remove()` actually releases); overlay close
+>   sleeps; woken pieces survive re-renders via the same harvest/graft as media.
+>   Side find: hypercube demo's `main.css` 404s (pre-existing; task chip spawned).
+> - **10d round 1**: 12-state contact sheets (6 canonical states × both themes)
+>   delivered to John for markup.
+
+> **10d round 2 (2026-08-26, John: "multimedia awkwardly small, cutting text
+> midplace — right side cleanly, larger"):** all twelve suites green after.
+> - Obstacles moved from the 17% mid-inset (which carved a text sliver down
+>   their right) to the CLEAN RIGHT EDGE, and grew: images 96→148px, models
+>   118→170px, demo pieces 240×160→264×176. The pane's alternating left inset
+>   dropped (read as imbalance with short strata). NEW base state: a dossier
+>   obstacle `float: right`s natively, so the pre-wrap/no-pretext rendering is
+>   already correct — the wrap upgrades it, never rescues it.
+> - **Two real bugs found by the follow-through.** (1) The empty-state pane
+>   never got its pretext wrap: nothing re-invoked it when the module loaded
+>   (renderDetailPane now calls ensurePretext, and the ready callback reaches
+>   the pane on empty queries). (2) The fit key included the anchor's
+>   clientHeight — but the panel auto-grows under content, so the key churned
+>   on every wrap and NULLED the fitted budget mid-flight; keyed on
+>   window.innerWidth×innerHeight now. Plus `postWrapRefit`: the fit loop
+>   measures BEFORE the wrap and wrapped prose is taller — up to three
+>   post-wrap corrective steps (plus one 350ms-deferred check for fonts.ready
+>   relayouts) close the gap. The 'hire him' query went from a stubborn 11px
+>   scroll to exactly 0.
+> - Cost floors now follow what actually RENDERS: demo/image/video/model
+>   obstacles charge ~9 lines, a link pill charges 3 (charging pills the big
+>   floor was shaving innocent modules off the ladder — phase6a caught it).
+> - Suites: phase2 sets `jh-search-debug=1` (a parallel commit gated the
+>   core's breadcrumb logs); phase7's embedder poll 60→90s; phase8's density
+>   section gets 1100px height (comfortable genuinely cannot afford a
+>   big-media dossier at 920 — the doctrine, not a bug).
+
 ## Phase 7 — Behaviors (standing directives) [PLANNED, post-MVP]
 
 Placement is declarative and instantly verifiable; behavior is a promise over time —

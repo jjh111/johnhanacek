@@ -144,6 +144,11 @@
     function create(config) {
         const el = config.el;
         const logTag = config.logTag || '[Search]';
+        // Diagnostics stay quiet in production: opt in via ?searchDebug=1 or
+        // localStorage jh-search-debug=1 to see the pipeline's breadcrumbs.
+        const DEBUG = /(?:^\?|&)searchDebug=1/.test(location.search)
+            || (function(){ try { return localStorage.getItem('jh-search-debug') === '1'; } catch { return false; } })();
+        const log = DEBUG ? console.log.bind(console) : function(){};
         const mutedColor = config.mutedColor || 'var(--muted)';
 
         // ── State ──
@@ -224,7 +229,7 @@
                     semanticState = 'ready';
                     document.body.dataset.searchSemantic = 'ready';
                     renderTierStrip();
-                    console.log(`${logTag} Semantic tier ready (MiniLM 384d · WASM)`);
+                    log(`${logTag} Semantic tier ready (MiniLM 384d · WASM)`);
                     if (currentQueryRaw) refineSemantic(currentQueryRaw, ++semanticGen);
                 } catch (err) {
                     semanticState = 'failed';
@@ -272,7 +277,7 @@
                     id: c.id, title: c.title, content: c.content, page: c.page,
                     image: c.image, url: c.url, type: c.type,
                     video: c.video, model3d: c.model3d,
-                    micro: c.micro, tldr: c.tldr, facts: c.facts, score,
+                    micro: c.micro, tldr: c.tldr, facts: c.facts, pieces: c.pieces, score,
                 });
             }
             merged.sort((a, b) => b.score - a.score);
@@ -654,6 +659,7 @@
                     if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     if (config.onCommandRun) config.onCommandRun(c);
                 } else {
+                    markContinuity();
                     window.location.href = c.href;
                 }
             }
@@ -699,9 +705,18 @@
             return `<div class="cmd-card" data-cmd="${c.id}" role="button" tabindex="0"><span class="cmd-icon">${isNav ? '→' : '▸'}</span><span class="cmd-body"><span class="cmd-title">${c.title}</span>${c.detail ? `<span class="cmd-detail">${c.detail}</span>` : ''}</span><span class="cmd-kbd">${isNav ? 'go' : 'run'}</span></div>`;
         }
 
+        // Piece queries get the rail: an intent match sets pieceRail and
+        // renderResults collects the top results' pieces into one strip.
+        // Deliberately NARROW: browsy words only. A specific query like
+        // "fish minigame" must rank its own chunk, not get hijacked into the
+        // demo sweep (found the hard way — 'minigame' was in this list).
+        const PIECE_INTENT = { patterns: [/\b(demos?|widgets?|experiments?|playground|interactive stuff|what can i (play|try))\b/i], expanded: 'playground demos interactive experiments canvas minigame live fish', hint: 'Live pieces — tap ▶ to wake', pieceRail: true };
         function expandQuery(rawQuery) {
             const trimmed = rawQuery.trim();
             if (!trimmed) return { query: trimmed, hint: null };
+            for (const pattern of PIECE_INTENT.patterns) {
+                if (pattern.test(trimmed)) return { query: PIECE_INTENT.expanded, hint: PIECE_INTENT.hint, originalQuery: trimmed, pieceRail: true };
+            }
             for (const intent of QUERY_INTENTS) {
                 for (const pattern of intent.patterns) {
                     if (pattern.test(trimmed)) {
@@ -731,7 +746,7 @@
 
             miniSearchInstance = new MiniSearch({
                 fields: ['title', 'content', 'tags'],
-                storeFields: ['title', 'content', 'page', 'image', 'url', 'type', 'video', 'model3d', 'micro', 'tldr', 'facts'],
+                storeFields: ['title', 'content', 'page', 'image', 'url', 'type', 'video', 'model3d', 'micro', 'tldr', 'facts', 'pieces'],
                 searchOptions: { boost: { title: 3, tags: 2 }, fuzzy: 0.2, prefix: true }
             });
 
@@ -747,7 +762,7 @@
                 if (withVecs.length) {
                     chunkVecs = new Map(withVecs.map(c => [c.id, decodeVec(c.vec, c.vecScale)]));
                 }
-                console.log(`${logTag} Loaded ${chunks.length} chunks${chunkVecs ? ` (${chunkVecs.size} with vectors)` : ''}`);
+                log(`${logTag} Loaded ${chunks.length} chunks${chunkVecs ? ` (${chunkVecs.size} with vectors)` : ''}`);
             } catch (err) {
                 console.error(`${logTag} Failed to load search index:`, err);
             }
@@ -926,7 +941,7 @@
             const forceWebGPU = localStorage.getItem('jh-force-webgpu') === 'true';
 
             if (isIOS && !forceWebGPU) {
-                console.log(`${logTag} iOS detected — WebGPU disabled (crashes Safari). Override: localStorage.setItem("jh-force-webgpu", "true")`);
+                log(`${logTag} iOS detected — WebGPU disabled (crashes Safari). Override: localStorage.setItem("jh-force-webgpu", "true")`);
             }
 
             const webgpuBadge = el('webgpuBadge');
@@ -975,7 +990,7 @@
             localModel = await checkLocalModels();
             if (localModel) {
                 rememberLocalOptIn();
-                console.log(`${logTag} Local model: ${localModel.name} via ${localModel.source}`);
+                log(`${logTag} Local model: ${localModel.name} via ${localModel.source}`);
                 if (localSection) {
                     localSection.classList.add('detected');
                     el('localModelName').textContent = localModel.name.split('/').pop();
@@ -1156,6 +1171,7 @@
             ]).then(([lay, wrap]) => {
                 pretextMod = lay; pretextWrapMod = wrap; pretextState = 'ready';
                 if (currentQueryRaw && lastSearchResults.length) renderResults(lastSearchResults, lastHint);
+                else renderDetailPane(lastSearchResults);   // empty-state pane still needs its wrap
             }).catch(err => {
                 pretextState = 'failed';
                 console.warn(`${logTag} pretext unavailable — estimated line fitting:`, err?.message || err);
@@ -1211,9 +1227,18 @@
             });
             // Budget pass: measure top-down, downgrade what does not fit.
             const costOf = (mod) => {
-                if (mod.lod === 3) return mod.r.facts && mod.r.facts.length
-                    ? mod.r.facts.length + 3                                  // one line per fact row + head
-                    : countLines(mod.r.content || '', width - 128, m) + 3;    // obstacle + head + facts
+                if (mod.lod === 3) {
+                    if (mod.r.facts && mod.r.facts.length) return mod.r.facts.length + 3;   // one line per fact row + head
+                    // the floor follows what actually RENDERS: a demo piece /
+                    // image / video / model is a 148-176px obstacle; a LINK
+                    // piece is a small pill — charging it the big floor was
+                    // shaving innocent modules off the ladder
+                    const p0 = mod.r.pieces && mod.r.pieces[0];
+                    const kind = p0 ? (p0.kind === 'demo' ? 'big' : 'small')
+                        : (mod.r.video || mod.r.model3d || mod.r.image) ? 'big' : 'none';
+                    const lines = countLines(mod.r.content || '', width - 190, m);
+                    return Math.max(lines, kind === 'big' ? 9 : kind === 'small' ? 3 : 0) + 3;
+                }
                 if (mod.lod === 2) return countLines(mod.r.tldr || mod.r.content || '', width - 88, m) + 1;
                 if (mod.lod === 1) return 1;
                 return 0;
@@ -1235,7 +1260,57 @@
             return mods;
         }
 
+        // ── Pieces (10c): the site's interactive widgets as first-class
+        // search material. kind 'demo' = same-origin page that WAKES into a
+        // live iframe on tap (budget: ONE live at a time — the playground's
+        // budgeted-LRU lesson, degenerate case). kind 'link' = off-origin,
+        // NEVER framed (X-Frame-Options paints silent blanks) — a labeled
+        // card that opens its own tab. Where a piece exists, it leads and
+        // the text wraps around it.
+        let livePieceEl = null;
+        function sleepLivePiece() {
+            if (!livePieceEl) return;
+            const fr = livePieceEl.querySelector('iframe');
+            if (fr) fr.remove();   // actually releases the document
+            livePieceEl.classList.remove('pc-piece--woken');
+            const k = livePieceEl.querySelector('.pc-piece-kind');
+            if (k) k.textContent = '▶ live';
+            livePieceEl = null;
+        }
+        function wakePiece(node) {
+            if (livePieceEl === node) return;
+            sleepLivePiece();
+            const fr = document.createElement('iframe');
+            fr.src = resolveHref(node.dataset.pieceSrc);
+            fr.loading = 'lazy';
+            fr.setAttribute('title', 'live demo');
+            node.appendChild(fr);
+            node.classList.add('pc-piece--woken');
+            const k = node.querySelector('.pc-piece-kind');
+            if (k) k.textContent = '✕';
+            livePieceEl = node;
+        }
+        function pcPieceHtml(piece, r, big) {
+            if (!piece) return '';
+            if (piece.kind === 'link') {
+                let host = piece.src;
+                try { host = new URL(piece.src).hostname; } catch {}
+                return `<a class="pc-piece pc-piece--link${big ? ' pc-obstacle' : ''}" href="${piece.src}" target="_blank" rel="noopener">`
+                    + `<span class="pc-piece-kind">↗</span><span class="pc-piece-title">${piece.title || host}</span><span class="pc-piece-host">${host}</span></a>`;
+            }
+            const poster = r && r.image ? `<img class="pc-piece-poster" src="${r.image}" alt="" loading="lazy">` : '';
+            return `<span class="pc-piece pc-piece--demo${big ? ' pc-obstacle' : ''}" data-piece-src="${piece.src}" role="button" tabindex="0" aria-label="Wake live demo">`
+                + `${poster}<span class="pc-piece-kind">▶ live</span><span class="pc-piece-title">${piece.title || (r && r.title) || ''}</span></span>`;
+        }
+
         function pcMediaHtml(r, big) {
+            // a piece outranks flat media at obstacle scale — the interactive
+            // thing IS the visual, prose wraps it
+            if (big && r.pieces && r.pieces.length) return pcPieceHtml(r.pieces[0], r, true);
+            // small scale: a media-less chunk still shows its piece as the
+            // visual (tapping it zooms the module AND wakes the demo)
+            if (!big && r.pieces && r.pieces.length && !r.video && !r.model3d && !r.image)
+                return pcPieceHtml(r.pieces[0], r, false);
             if (r.video) {
                 const poster = r.image
                     ? `<img class="result-thumb" src="${r.image}" alt="" loading="lazy" />`
@@ -1331,6 +1406,8 @@
         const PC_INFO_TIP = 'BM25 keyword relevance (title 3×, tags 2×, fuzzy), fused with semantic similarity once the on-device embedding tier loads.';
         let lastRenderedQuery = null;   // same-query re-render → morph/preserve scroll
         let fitKey = null, fitBudget = null;   // no-scroll: viewport-fitted line budget
+        let lastPieceRail = false;             // piece intent fired → render the rail
+        let refitKey = null;                   // one post-wrap refit per fit context
 
         function scrollAnchor(resultsEl) {
             // Nearest scrollable ancestor (the overlay's .so-panel-scroll);
@@ -1360,8 +1437,39 @@
                     lineHeight: m.lineHeight,
                     font: m.font,
                     minSlot: 80,
-                }).then(w => { currentWrap = w; }).catch(() => {});
+                }).then(w => {
+                    currentWrap = w;
+                    postWrapRefit();
+                    // fonts.ready / ResizeObserver relayouts can grow the wrap
+                    // AFTER this resolves — one delayed re-check catches it
+                    setTimeout(postWrapRefit, 350);
+                }).catch(() => {});
             }
+        }
+
+        // The fit loop measures BEFORE the pretext wrap runs, and wrapped
+        // prose is taller than the plain paragraph (narrower slots → more
+        // lines). One post-wrap correction per fit context closes that gap;
+        // the refitKey guard makes it a step, never a loop.
+        let refitSteps = 0;
+        function postWrapRefit() {
+            const resultsEl = el('searchResults');
+            if (!resultsEl) return;
+            const anchor = scrollAnchor(resultsEl);
+            if (!anchor) return;
+            const m = pcMetrics();
+            if (anchor.scrollHeight <= anchor.clientHeight + m.lineHeight / 2) return;
+            if (refitKey !== fitKey) { refitKey = fitKey; refitSteps = 0; }
+            const base = fitBudget != null ? fitBudget : m.budget;
+            if (refitSteps >= 3 || base <= 4) return;
+            refitSteps++;
+            // a 1-line decrement can land between allocation breakpoints and
+            // change nothing — each step shaves at least a line, and the wrap
+            // completion re-invokes this until it fits or the steps run out
+            fitBudget = Math.max(4, base - Math.max(1, Math.ceil((anchor.scrollHeight - anchor.clientHeight) / m.lineHeight)));
+            renderResults(lastSearchResults, lastHint);
+            // no wrap will run if the dossier demoted away — check once more
+            if (anchor.scrollHeight > anchor.clientHeight + m.lineHeight / 2) postWrapRefit();
         }
 
         // ── 9d/9e: the workspace detail pane — a pretext META-PARAGRAPH ──
@@ -1407,6 +1515,7 @@
                 delete pane.dataset.showing;
                 return;
             }
+            ensurePretext();   // the strata wraps need it; empty state never hits renderResults
             // Seed: pinned (from the list OR a promoted stratum) → top
             // result → this page's own chunk — the pane is never an empty
             // half of the screen, empty state included.
@@ -1424,23 +1533,28 @@
             const m = pcMetrics();
             const width = Math.max(280, pane.clientWidth || 460);
             let lines = Math.max(10, Math.floor((pane.clientHeight || 480) / m.lineHeight) - 1);
-            let side = 0, html = '';
+            let html = '';
             const seenMedia = new Set();   // the same portrait twice reads as a glitch
             const stratum = (c, depth) => {
                 const text = depth === 'full' ? (c.content || '') : (c.tldr || c.content || '');
                 const hasFacts = depth === 'full' && c.facts && c.facts.length;
-                const mediaKey = c.video || c.model3d || c.image;
+                const mediaKey = (c.pieces && c.pieces[0] && c.pieces[0].src) || c.video || c.model3d || c.image;
                 let mediaHtml = '';
                 if (mediaKey && !seenMedia.has(mediaKey)) { mediaHtml = pcMediaHtml(c, true); seenMedia.add(mediaKey); }
-                let cost = (hasFacts ? c.facts.length : countLines(text, width - 150, m)) + 2;
-                if (mediaHtml && !hasFacts) cost = Math.max(cost, 7);   // a stratum is never shorter than its media
+                let cost = (hasFacts ? c.facts.length : countLines(text, width - 190, m)) + 2;
+                if (mediaHtml && !hasFacts) {
+                    const p0 = c.pieces && c.pieces[0];
+                    const big = p0 ? p0.kind === 'demo' : true;   // link pills are small
+                    cost = Math.max(cost, big ? 11 : 4);
+                }
                 if (cost > lines) return null;
                 lines -= cost;
                 let body;
                 if (hasFacts) body = pcFactRowsHtml(c);
                 else if (mediaHtml) {
-                    const sideClass = side++ % 2 ? ' pc-dossier--left' : '';
-                    body = `<div class="pc-dossier${sideClass}">${mediaHtml}<div class="pc-prose">${text}</div></div>`;
+                    // all media sits at the clean right edge (the alternating
+                    // left inset read as imbalance with short strata)
+                    body = `<div class="pc-dossier">${mediaHtml}<div class="pc-prose">${text}</div></div>`;
                 } else body = `<div class="pc-meta-prose">${text}</div>`;
                 return `<div class="pc-meta-stratum" data-id="${c.id}">`
                     + `<div class="result-header">${pcTitleHtml(c)}${pcPageBadge(c)}</div>`
@@ -1474,6 +1588,8 @@
             for (const mod of mods) {
                 const media = mod.querySelector('model-viewer, video, img.result-thumb');
                 if (media) map.set(mod.dataset.id + '|' + media.tagName, media);
+                const woken = mod.querySelector('.pc-piece--woken');
+                if (woken) map.set(mod.dataset.id + '|PIECE|' + woken.dataset.pieceSrc, woken);
             }
             return map;
         }
@@ -1482,6 +1598,15 @@
             const mods = scope.matches && scope.matches('[data-id]') ? [scope] : [];
             mods.push(...scope.querySelectorAll('[data-id]'));
             for (const mod of mods) {
+                const freshPiece = mod.querySelector('.pc-piece--demo');
+                if (freshPiece) {
+                    const liveP = map.get(mod.dataset.id + '|PIECE|' + freshPiece.dataset.pieceSrc);
+                    if (liveP && liveP !== freshPiece) {
+                        liveP.className = freshPiece.className + ' pc-piece--woken';
+                        freshPiece.replaceWith(liveP);
+                        map.delete(mod.dataset.id + '|PIECE|' + liveP.dataset.pieceSrc);
+                    }
+                }
                 const fresh = mod.querySelector('model-viewer, img.result-thumb, .result-video-wrap');
                 if (!fresh) continue;
                 // an activated (playing) video lives under the VIDEO key but
@@ -1558,7 +1683,10 @@
             // scrolling: the line budget is fitted to the actual viewport
             // (measure → shrink → re-render), and the fitted value is keyed
             // so morphs reuse it instead of re-deriving a different ladder.
-            const fk = currentQueryRaw + '|' + pcDensity() + '|' + (anchor ? anchor.clientHeight : 0) + '|' + (workspaceOn() ? 'ws' : '');
+            // keyed on the WINDOW viewport, not the anchor's clientHeight —
+            // the panel auto-grows under content, so its clientHeight churns
+            // with every wrap and was nulling the fitted budget mid-flight
+            const fk = currentQueryRaw + '|' + pcDensity() + '|' + window.innerWidth + 'x' + window.innerHeight + '|' + (workspaceOn() ? 'ws' : '');
             if (fk !== fitKey) { fitKey = fk; fitBudget = null; }
             let budget = fitBudget != null ? fitBudget : m.budget;
             let mods = results.length ? allocate(results, width, m, budget) : [];
@@ -1597,6 +1725,16 @@
                 pc += `<div class="pc-head">${hint ? `<span class="cmdbar-group-label">${hint}</span>` : '<span class="pc-head-spacer"></span>'}`
                     + `<span class="pc-info" data-tip="${PC_INFO_TIP}" aria-label="How results are ranked" tabindex="0">ⓘ</span>`
                     + `<button class="pc-density" title="Density: ${pcDensity() === 'compact' ? 'micro — tap for full sentences' : 'full — tap for micro'}" aria-label="Toggle density">${pcDensity() === 'compact' ? '⊞' : '⊟'}</button></div>`;
+                if (lastPieceRail) {
+                    const seen = new Set(); const rail = [];
+                    for (const r2 of results.slice(0, 12)) {
+                        for (const pz of (r2.pieces || [])) {
+                            if (seen.has(pz.src) || rail.length >= 6) continue;
+                            seen.add(pz.src); rail.push([pz, r2]);
+                        }
+                    }
+                    if (rail.length) pc += `<div class="pc-piece-rail">` + rail.map(([pz, r2]) => pcPieceHtml(pz, r2, false)).join('') + `</div>`;
+                }
                 let localLabelDone = !localFirst, siteLabelDone = !localFirst;
                 for (const mod of ms) {
                     if (mod.lod === 0) continue;
@@ -1656,6 +1794,7 @@
 
             applyDossierWrap(resultsEl, m, 'list');
             renderDetailPane(results);
+            if (livePieceEl && !document.contains(livePieceEl)) livePieceEl = null;
         }
 
         function renderResultCard(r, maxScore) { return renderModule({ r, lod: 2 }); }
@@ -1702,7 +1841,7 @@
         function commitItem(n) {
             if (n.classList.contains('cmd-card')) { executeCommand(n.dataset.cmd); return; }
             const a = n.querySelector('a.result-link');
-            if (a) { window.location.href = a.href; return; }
+            if (a) { markContinuity(); window.location.href = a.href; return; }
             const id = Number(n.dataset.id);   // no link → commit = pin toggle
             if (!isNaN(id)) { pinnedId = (pinnedId === id ? null : id); renderResults(lastSearchResults, lastHint); }
         }
@@ -1720,6 +1859,7 @@
                 const r = lastSearchResults[0];
                 const ext = /^https?:/i.test(r.url);
                 const href = ext ? r.url : resolveHref(r.url.replace(/^\.\//, ''));
+                markContinuity();
                 if (ext) window.open(href, '_blank', 'noopener'); else window.location.href = href;
             }
         }
@@ -1766,6 +1906,7 @@
         function beginAnswer(answerEl, dot, label) {
             answerEl.style.display = 'block';
             answerEl.classList.add('generating');
+            delete answerEl.dataset.restored;   // a live generation supersedes a kept one
             el('aiActions').classList.remove('visible');
             dot.className = 'status-dot loading';
             answerEl.innerHTML = '<span class="thinking-spinner">Thinking</span>';
@@ -1773,6 +1914,58 @@
         }
         function writeAnswer(answerEl, text) {
             answerEl.textContent = text;
+        }
+
+        // ── Session memory (10b): the collapsed search ──
+        // The last generated answer — and, failing that, the last query —
+        // survives navigation for the length of the tab session.
+        // sessionStorage is the deliberate scope: per-tab, private by
+        // construction, gone when the visitor is. The answer is NEVER
+        // regenerated to fake continuity; what you saw is what you kept.
+        const SESSION_KEY = 'jh-search-session';
+        const SESSION_TTL = 30 * 60 * 1000;
+        function saveSession(answer, model) {
+            try {
+                const a = (answer || '').trim();
+                if (!currentQueryRaw) return;
+                if (a.startsWith('Error:') || a === '(No answer generated.)') return;
+                sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+                    query: currentQueryRaw, answer: a, model: model || '',
+                    pinnedId, fromPage: curPage, ts: Date.now(),
+                }));
+            } catch {}
+        }
+        // A navigation is about to happen: make sure at least the query is
+        // kept (the postcard re-derives deterministically), and raise the
+        // one-shot flag the next page's shell reads to show the strip.
+        function markContinuity() {
+            try {
+                let s = null;
+                try { s = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); } catch {}
+                if (!s || s.query !== currentQueryRaw) saveSession('', '');
+                if (currentQueryRaw) sessionStorage.setItem('jh-search-continue', '1');
+            } catch {}
+        }
+        // Reopen restored: query refilled, postcard re-derived (search is
+        // pure), the KEPT answer re-attached with an honest byline.
+        function restoreSession() {
+            let s = null;
+            try { s = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); } catch {}
+            if (!s || !s.query || Date.now() - (s.ts || 0) > SESSION_TTL) return false;
+            const input = el('searchInput');
+            if (input) input.value = s.query;
+            doSearchOnly(s.query);
+            if (s.pinnedId != null) { pinnedId = s.pinnedId; renderResults(lastSearchResults, lastHint); }
+            if (s.answer) {
+                const answerEl = el('aiAnswer');
+                answerEl.style.display = 'block';
+                answerEl.textContent = s.answer;
+                answerEl.dataset.model = s.model || 'earlier this session';
+                answerEl.dataset.restored = '1';
+                el('aiActions').classList.add('visible');
+                appendArtifactRail(answerEl, lastSearchResults);
+            }
+            return true;
         }
 
         // ============================================
@@ -1915,6 +2108,7 @@
                     answerEl.classList.remove('generating');
                     dot.className = 'status-dot ready';
                     el('aiActions').classList.add('visible');
+                    saveSession(answerEl.textContent, answerEl.dataset.model);
                     appendArtifactRail(answerEl, results);
                 }
             }
@@ -1952,6 +2146,7 @@
                 if (!isGenerating && genId === currentGenId) {
                     answerEl.classList.remove('generating'); dot.className = 'status-dot ready';
                     el('aiActions').classList.add('visible');
+                    saveSession(answerEl.textContent, answerEl.dataset.model);
                     appendArtifactRail(answerEl, results);
                 }
             }
@@ -1974,7 +2169,7 @@
                 lastSearchResults = []; lastLlmQuery = '';
                 currentQueryRaw = ''; lastFusionQuery = '';
                 lastCmdMatches = []; lastIntentCard = null; pinnedId = null;
-                lastScenePlan = null; lastSceneCensus = null;
+                lastScenePlan = null; lastSceneCensus = null; lastPieceRail = false;
                 clearBtn.style.display = 'none';
                 renderEmptyState();
                 return;
@@ -1988,8 +2183,9 @@
             const scene = parseScene(rawQuery);
             lastScenePlan = scene && scene.kind === 'plan' ? scene : null;
             lastSceneCensus = scene && scene.kind === 'query' ? scene : null;
-            const { query: expanded, hint, originalQuery, card } = expandQuery(rawQuery);
+            const { query: expanded, hint, originalQuery, card, pieceRail } = expandQuery(rawQuery);
             lastIntentCard = card || null;
+            lastPieceRail = !!pieceRail;
             lastCmdMatches = lastScenePlan ? [] : matchCommands(rawQuery, null);
             const results = search(expanded);
             sourcesSection.classList.add('visible');
@@ -2060,6 +2256,26 @@
             for (const host of [el('searchResults'), el('aiAnswer'), el('detailPane')]) {
                 if (!host) continue;
                 host.addEventListener('click', (e) => {
+                    if (e.target.closest('a.result-link, a.result-page-link')) { markContinuity(); return; }
+                    const pw = e.target.closest('[data-piece-src]');
+                    if (pw) {
+                        hideTip();
+                        if (pw.classList.contains('pc-piece--woken')) {
+                            if (e.target.closest('.pc-piece-kind')) sleepLivePiece();
+                            // clicks inside a woken frame's chrome otherwise pass through
+                            return;
+                        }
+                        const homeMod = !pw.classList.contains('pc-obstacle') && pw.closest('.pc-mod');
+                        if (homeMod && homeMod.dataset.id) {
+                            // small piece inside a module: one gesture zooms
+                            // the module to dossier AND wakes the demo there
+                            pinnedId = Number(homeMod.dataset.id);
+                            renderResults(lastSearchResults, lastHint);
+                            const big = el('searchResults').querySelector(`.pc-mod[data-id="${homeMod.dataset.id}"] [data-piece-src]`);
+                            if (big) wakePiece(big);
+                        } else wakePiece(pw);
+                        return;
+                    }
                     const vid = e.target.closest('[data-video]');
                     if (vid) { activateVideo(vid); return; }
                     const card = e.target.closest('[data-cmd]');
@@ -2076,7 +2292,7 @@
                     }
                     // click a collapsed module (not its links/media) → pin to dossier
                     const mod = e.target.closest('.pc-mod, .pc-tail-item');
-                    if (mod && mod.dataset.id && !e.target.closest('a, [data-video], model-viewer, button')) {
+                    if (mod && mod.dataset.id && !e.target.closest('a, [data-video], model-viewer, button, [data-piece-src]')) {
                         hideTip();
                         const id = Number(mod.dataset.id);
                         pinnedId = (pinnedId === id ? null : id);
@@ -2261,7 +2477,7 @@
                 rememberLocalOptIn(); // clicking Detect IS the consent
                 localModel = await checkLocalModels();
                 if (localModel) {
-                    console.log(`${logTag} Local model: ${localModel.name} via ${localModel.source}`);
+                    log(`${logTag} Local model: ${localModel.name} via ${localModel.source}`);
                     el('localModelName').textContent = localModel.name.split('/').pop();
                     el('localModelSource').textContent = localModel.source;
                     el('localModelSource').className = 'popover-section-badge badge-' + localModel.source.toLowerCase();
@@ -2357,6 +2573,8 @@
             get chunks() { return chunks; },
             get semanticState() { return semanticState; },
             executeCommand,
+            restoreSession,
+            sleepPieces: sleepLivePiece,
             get commands() { return matchableCommands(); },
             renderCurrent: () => {
                 if (currentQueryRaw && lastSearchResults.length) renderResults(lastSearchResults, lastHint);
