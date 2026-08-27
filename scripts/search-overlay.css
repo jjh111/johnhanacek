@@ -83,7 +83,7 @@
 /* ─── Nav-Drop Mode (unified — drops from whichever nav is visible) ─── */
 .search-overlay--from-nav .search-overlay-panel {
     margin-top: var(--nav-bottom, 44px);
-    border-radius: 0.25rem 0.25rem 1.5rem 1.5rem;
+    border-radius: 1.5rem;
     /* Closed state — ease-in for collapse */
     transform: scaleY(0.4) translateY(-15px);
     opacity: 0;
@@ -103,7 +103,10 @@
     flex-shrink: 0;
     position: relative;
     z-index: 2;
-    padding: 0.9rem 1.2rem 0.4rem;
+    /* Tighter than .so-panel-scroll on purpose: the bar IS the product, so it
+       runs nearer the panel edge while results stay inset. 0.75rem clears the
+       1.5rem corner radius once the input's own 20px radius is accounted for. */
+    padding: 0.55rem 0.75rem 0.4rem;
     border-bottom: 1px solid rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.08);
 }
 /* Results scroll beneath the frame */
@@ -974,8 +977,15 @@ model-viewer.pc-obstacle--float { width: 170px; height: 170px; }
     position: relative;   /* anchors search.html's popover */
 }
 .tier-strip {
-    display: flex; align-items: center; flex-wrap: wrap; gap: 0.15rem;
+    display: flex; align-items: center; flex-wrap: nowrap; gap: 0.15rem;
     flex: 1; min-width: 0;
+    /* NOWRAP is load-bearing. `ai on` carries margin-left:auto, and an auto
+       margin inside a WRAPPING flex container resolves to the entire remaining
+       free space on the line — which then cannot fit, so the item was pushed
+       onto a second row. It read as a layout bug and was really a wrap rule.
+       Overflow is clipped rather than wrapped: the ladder is left-to-right and
+       the leftmost tiers are the ones that always apply. */
+    overflow: hidden;
 }
 .tier {
     background: none; border: none; cursor: default;
@@ -1057,6 +1067,10 @@ model-viewer.pc-obstacle--float { width: 170px; height: 170px; }
 }
 .search-overlay.so-workspace .so-keyboard-hint { display: none; }
 .so-workspace-btn.open { opacity: 0.9; color: var(--gold, #d4af37); }
+/* Ordered last in .tier-strip-row rather than reordered in markup — it is the
+   outermost affordance (it changes the shape of the whole panel), so it sits
+   at the panel's outer edge, past the engine-details chevron. */
+.so-workspace-btn { order: 1; }
 /* narrow screens: the workspace collapses back to the single column */
 @media (max-width: 899px) {
     .so-workspace-btn { display: none; }

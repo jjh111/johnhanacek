@@ -962,8 +962,13 @@ body > footer .version {
     top: 1.5rem;
     right: 1.5rem;
     z-index: 6;
-    width: 44px;
-    height: 44px;
+    /* 40px, NOT 44 — the .shape-nav pill beside it is content-sized and lands
+       at exactly 40px tall from the same 1.5rem top, and the search overlay
+       drops from --nav-bottom = that pill's bottom edge (64px). At 44 the
+       toggle hung 4px lower than the pill and the opening panel sliced its
+       bottom off. Matching the pill puts both at 24..64, flush with the panel. */
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -988,12 +993,11 @@ body > footer .version {
     border-color: rgba(var(--gold-rgb), 0.4);
 }
 @media (max-width: 600px) {
+    /* Horizontal inset only. Top and size stay put: .shape-nav does NOT shrink
+       at this breakpoint, so shrinking the toggle here misaligned the two at
+       both edges (toggle 18..56 against a pill still sitting at 24..64). */
     .hero-theme-toggle {
-        top: 1.1rem;
         right: 0.9rem;
-        width: 38px;
-        height: 38px;
-        font-size: 1rem;
     }
 }
 
