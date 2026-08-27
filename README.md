@@ -110,7 +110,7 @@ Three-tier search system with progressive enhancement:
 
 Blueprint-style interactive drawing canvas — draw on the dark grid, shapes are recognized and animated with particles and ripples. Stroke persistence with smooth opacity decay.
 
-Also includes: MetaMedium whitepaper interactive demo, design case studies, Google `model-viewer` embeds for the Aerospace Award and BlackBox Award 3D trophies (GLB files), services overview.
+Also includes: MetaMedium whitepaper interactive demo, design case studies, Google `model-viewer` embeds of both physical trophies as GLB (the AsMA R&D Innovation Award, and the Georgetown CCT "Most Meta" black-box award), services overview.
 
 ---
 

@@ -206,7 +206,7 @@ candidates (each lands via the CHUNK_AUDIT rule — media are claims too; add a
 | 42 Review Canvas | `openprose-casestudy.webp` |
 | 2 Contact | `jhqr.png` (the QR — delightful, on-thesis) |
 | 12/13 Installations | rotate `jhana-2/4/5.webp` so each chunk is distinct |
-| 9 Robot Digital Twin | `BlackBox-Model.glb` — **ask John what this model is** first |
+| 21 Awards & Recognition | `BlackBox-Model.glb` — ANSWERED 2026-08-27, read off the model itself: it is the Georgetown CCT **"Most Meta" 2016** peer award — a black cube in a printed paper wrap reading "Most Meta CCT'16". Chunk 21 already names that award; chunk **9 Robot Digital Twin is the WRONG target** — that award is AsMA 2022, and its trophy is the other file, `Aerospace Award.glb`. Mapping BlackBox to 9 would break this table's own never-map-what-it-doesn't-depict rule. |
 | 33 Beliefs | `I am a strange looping black hole.jpg` — **John's call on tone** |
 | 39 Writing | a `pieces` demo entry for `writing.html` (same-origin, wakeable) |
 
