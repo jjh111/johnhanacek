@@ -697,7 +697,8 @@
             const c = INTENT_CARDS[kind];
             if (!c) return '';
             const ext = c.alt.href.startsWith('http');
-            return `<div class="intent-card"><div class="intent-card-title">${c.title}</div><div class="intent-card-body">${c.body}</div><div class="intent-card-actions"><a class="intent-cta" href="${resolveHref(c.cta.href)}">${c.cta.label}</a><a class="intent-alt" href="${resolveHref(c.alt.href)}"${ext ? ' target="_blank" rel="noopener"' : ''}>${c.alt.label}</a></div></div>`;
+            const altTitle = ext ? ' title="Leaves the site — your search is kept"' : '';
+            return `<div class="intent-card"><div class="intent-card-title">${c.title}</div><div class="intent-card-body">${c.body}</div><div class="intent-card-actions"><a class="intent-cta" href="${resolveHref(c.cta.href)}">${c.cta.label}</a><a class="intent-alt" href="${resolveHref(c.alt.href)}"${ext ? ' target="_blank" rel="me noopener"' : ''}${altTitle}>${c.alt.label}</a></div></div>`;
         }
 
         function renderCmdCard(c) {
@@ -1115,8 +1116,14 @@
         function relatedChipHtml(c, extraClass) {
             if (!c || !c.url) return '';
             const ext = /^https?:/i.test(c.url);
-            const href = ext ? c.url : resolveHref(c.url.replace(/^\.\//, ''));
-            return `<a class="related-chip${extraClass ? ' ' + extraClass : ''}" href="${href}"${ext ? ' target="_blank" rel="noopener"' : ''}>↳ ${c.title}</a>`;
+            if (ext) {
+                // chip-scale departure: glyph + hostname; the full card lives
+                // where the chunk has room
+                let host = c.url; try { host = new URL(c.url).hostname; } catch {}
+                return `<a class="related-chip departure-chip${extraClass ? ' ' + extraClass : ''}" href="${c.url}" target="_blank" rel="me noopener" title="${c.title} — leaves the site; your search is kept">↗ ${host}</a>`;
+            }
+            const href = resolveHref(c.url.replace(/^\.\//, ''));
+            return `<a class="related-chip${extraClass ? ' ' + extraClass : ''}" href="${href}">↳ ${c.title}</a>`;
         }
 
         // <model-viewer> loads from CDN only when a 3D card first renders.
@@ -1282,7 +1289,9 @@
                     // piece is a small pill — charging it the big floor was
                     // shaving innocent modules off the ladder
                     const p0 = mod.r.pieces && mod.r.pieces[0];
-                    const kind = p0 ? (p0.kind === 'demo' ? 'big' : 'small')
+                    // kind follows what RENDERS: a frameable link-piece wakes
+                    // into the big demo card (10f), so it costs big
+                    const kind = p0 ? ((p0.kind === 'demo' || (p0.kind === 'link' && isFrameable(p0.src))) ? 'big' : 'small')
                         : (mod.r.video || mod.r.model3d || mod.r.image) ? 'big' : 'none';
                     const lines = countLines(textFor(mod.r, 3, density), width - 190, m);
                     return Math.max(lines, kind === 'big' ? 9 : kind === 'small' ? 3 : 0) + 3;
@@ -1305,6 +1314,7 @@
             let spent = 0;
             for (const mod of mods) spent += costOf(mod);
             mods.usedCost = spent;
+            if (window.__pcDbg) console.log('[allocdbg] budget-start', budgetLines, 'spent', spent, mods.map(m2 => m2.r.id + '/' + m2.lod).join(','));
             return mods;
         }
 
@@ -1315,6 +1325,29 @@
         // NEVER framed (X-Frame-Options paints silent blanks) — a labeled
         // card that opens its own tab. Where a piece exists, it leads and
         // the text wraps around it.
+        // ── 10f: the three-tier external policy ─────────────────────────
+        // 1. Own + frameable → wakes LIVE like a demo piece. John controls
+        //    these hosts; header-checked (jhana.zone + jjh111.github.io are
+        //    GitHub Pages, which send no framing headers; earthstar.space
+        //    sends none either). curl -sI each before adding — never assume.
+        // 2. Own + unframeable (Substack, SmugMug) → DEPARTURE CARD: local
+        //    poster, title, hostname, explicit ↗. Leaving is labeled.
+        // 3. Third-party → departure card, no allowlist entries, ever.
+        const FRAMEABLE_HOSTS = new Set(['jhana.zone', 'jjh111.github.io', 'earthstar.space']);
+        function isFrameable(url) {
+            try { return FRAMEABLE_HOSTS.has(new URL(url).hostname); } catch { return false; }
+        }
+        // THE one external-link builder — departure cards and chips route
+        // through here; no bespoke <a target=_blank> anywhere else. Posters
+        // (Assets/posters/<host>.webp, dated in CHUNK_AUDIT §G) render when
+        // provided. The title attr softens the exit: the session survives it.
+        function departureCardHtml(url, title, opts = {}) {
+            let host = url;
+            try { host = new URL(url).hostname; } catch {}
+            const poster = opts.poster ? `<img class="pc-piece-poster" src="${opts.poster}" alt="" loading="lazy">` : '';
+            return `<a class="pc-piece pc-piece--link${opts.big ? ' pc-obstacle' : ''}" href="${url}" target="_blank" rel="me noopener" title="Leaves the site — your search is kept">`
+                + `${poster}<span class="pc-piece-kind">↗</span><span class="pc-piece-title">${title || host}</span><span class="pc-piece-host">${host}</span></a>`;
+        }
         let livePieceEl = null;
         function sleepLivePiece() {
             if (!livePieceEl) return;
@@ -1341,10 +1374,14 @@
         function pcPieceHtml(piece, r, big) {
             if (!piece) return '';
             if (piece.kind === 'link') {
-                let host = piece.src;
-                try { host = new URL(piece.src).hostname; } catch {}
-                return `<a class="pc-piece pc-piece--link${big ? ' pc-obstacle' : ''}" href="${piece.src}" target="_blank" rel="noopener">`
-                    + `<span class="pc-piece-kind">↗</span><span class="pc-piece-title">${piece.title || host}</span><span class="pc-piece-host">${host}</span></a>`;
+                // John-owned frameable hosts wake LIVE — same budget, graft,
+                // and sleep-on-close semantics as same-origin demos
+                if (isFrameable(piece.src)) {
+                    const poster = r && r.image ? `<img class="pc-piece-poster" src="${r.image}" alt="" loading="lazy">` : (piece.poster ? `<img class="pc-piece-poster" src="${piece.poster}" alt="" loading="lazy">` : '');
+                    return `<span class="pc-piece pc-piece--demo${big ? ' pc-obstacle' : ''}" data-piece-src="${piece.src}" role="button" tabindex="0" aria-label="Wake live demo">`
+                        + `${poster}<span class="pc-piece-kind">▶ live</span><span class="pc-piece-title">${piece.title || (r && r.title) || ''}</span></span>`;
+                }
+                return departureCardHtml(piece.src, piece.title, { big, poster: piece.poster });
             }
             const poster = r && r.image ? `<img class="pc-piece-poster" src="${r.image}" alt="" loading="lazy">` : '';
             return `<span class="pc-piece pc-piece--demo${big ? ' pc-obstacle' : ''}" data-piece-src="${piece.src}" role="button" tabindex="0" aria-label="Wake live demo">`
@@ -2000,9 +2037,13 @@
             if (lastSearchResults.length && lastSearchResults[0].url) {
                 const r = lastSearchResults[0];
                 const ext = /^https?:/i.test(r.url);
-                const href = ext ? r.url : resolveHref(r.url.replace(/^\.\//, ''));
+                // 10f: Enter never leaves the origin. External top results
+                // PIN to their dossier — the departure card inside is the one
+                // deliberate exit (after the url sweep this is a pure guard).
+                if (ext) { pinnedId = r.id; renderResults(lastSearchResults, lastHint); return; }
+                const href = resolveHref(r.url.replace(/^\.\//, ''));
                 markContinuity();
-                if (ext) window.open(href, '_blank', 'noopener'); else window.location.href = href;
+                window.location.href = href;
             }
         }
 
@@ -2039,9 +2080,10 @@
             rail.className = 'pc-artifacts';
             rail.innerHTML = `<span class="cmdbar-group-label">artifacts</span>` + top.map(r => {
                 const ext = /^https?:/i.test(r.url);
-                const href = ext ? r.url : resolveHref(r.url.replace(/^\.\//, ''));
+                if (ext) return relatedChipHtml(r);
+                const href = resolveHref(r.url.replace(/^\.\//, ''));
                 const glyph = r.video ? '▸ ' : r.model3d ? '◆ ' : r.image ? '▣ ' : '';
-                return `<a class="related-chip" href="${href}"${ext ? ' target="_blank" rel="noopener"' : ''}>${glyph}${r.title}</a>`;
+                return `<a class="related-chip" href="${href}">${glyph}${r.title}</a>`;
             }).join('');
             answerEl.appendChild(rail);
         }
@@ -2415,7 +2457,21 @@
                             renderResults(lastSearchResults, lastHint);
                             const big = el('searchResults').querySelector(`.pc-mod[data-id="${homeMod.dataset.id}"] [data-piece-src]`);
                             if (big) wakePiece(big);
-                        } else wakePiece(pw);
+                        } else {
+                            wakePiece(pw);
+                            // An OBSTACLE-scale piece already lives in a list
+                            // dossier (dominant top hit) — wake-only used to
+                            // leave the module UNPINNED, so the semantic
+                            // refine's re-rank downgraded it to a lower tier
+                            // UNDER the running demo (bitten: the suite's
+                            // zoom-and-wake raced the embedder). Pin the host
+                            // so refines hold its depth. Pane strata manage
+                            // themselves (no .pc-mod ancestor).
+                            const host = pw.closest('.pc-mod');
+                            if (host && host.dataset.id && pinnedId == null) {
+                                pinnedId = Number(host.dataset.id);
+                            }
+                        }
                         return;
                     }
                     const vid = e.target.closest('[data-video]');

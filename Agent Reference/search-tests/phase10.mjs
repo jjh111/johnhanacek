@@ -147,8 +147,10 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
     framedExternals: [...document.querySelectorAll('.pc-piece--link iframe')].length,
   }));
   check('piece intent fires the rail', /pieces/i.test(rail.hint) && rail.demos >= 3, JSON.stringify(rail));
-  check('off-origin pieces are doorways, never frames', rail.framedExternals === 0
-    && rail.links >= 1);
+  // 10f: allowlisted (John-owned, header-checked) externals wake as demos —
+  // the rail's demo count includes them. Departure cards never carry iframes.
+  check('departure cards are doorways, never frames (allowlist pieces wake instead)',
+    rail.framedExternals === 0);
 
   // wake budget: ONE live iframe, ever
   const srcs = await page.evaluate(() =>
@@ -266,6 +268,108 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
     !cross.err && cross.paneHasMedia && !cross.listHasMedia, JSON.stringify(cross));
 
   check('no console errors (dedupe)', errors.length === 0, errors.slice(0, 3).join(' | '));
+  await ctx.close();
+}
+
+// ───────── 5. 10f — externals: frameable wakes live, others are labeled exits ─────────
+{
+  console.log('10f externals:');
+  const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width: 1280, height: 920 } });
+  await ctx.route('**://localhost:1234/**', r => r.abort());
+  await ctx.route('**://localhost:11434/**', r => r.abort());
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('console', m => { if (m.type() === 'error' && !/net::|Failed to load resource/.test(m.text())) errors.push(m.text()); });
+  page.on('pageerror', e => errors.push(String(e)));
+  await page.goto(`${BASE}/index.html`, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(1200);
+  await page.keyboard.press('/');
+  await page.waitForTimeout(700);
+
+  // 1. frameable (John's GitHub Pages) wakes LIVE under the one-iframe budget
+  await page.fill('#so-searchInput', 'metamedium');
+  await page.waitForTimeout(1200);
+  await page.click('.pc-mod .pc-piece--demo, .pc-piece-rail .pc-piece--demo');
+  await page.waitForTimeout(1500);
+  const frameSrc = await page.evaluate(() => document.querySelector('.pc-piece--woken iframe')?.getAttribute('src') || '');
+  check('frameable external piece (MetaMedium) wakes like a demo',
+    /jjh111\.github\.io/.test(frameSrc), frameSrc || '(no iframe)');
+  check('wake budget still one with external frames live',
+    await page.evaluate(() => document.querySelectorAll('.pc-piece iframe').length === 1));
+
+  // 2. unframeable (Substack) renders the DEPARTURE CARD with its poster
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(400);
+  await page.keyboard.press('/');           // reopen (Escape closed the overlay)
+  await page.waitForTimeout(500);
+  await page.fill('#so-searchInput', 'fractal futures');
+  await page.waitForTimeout(1200);
+  const depart = await page.evaluate(() => {
+    const card = document.querySelector('.pc-piece--link');
+    return card ? {
+      href: card.getAttribute('href'),
+      rel: card.getAttribute('rel'),
+      poster: !!card.querySelector('.pc-piece-poster'),
+      host: card.querySelector('.pc-piece-host')?.textContent,
+      tip: card.getAttribute('title') || '',
+    } : null;
+  });
+  check('unframeable piece renders a departure card with poster',
+    !!depart && /substack/.test(depart.href) && depart.poster && /me noopener/.test(depart.rel)
+    && /leaves the site/i.test(depart.tip), JSON.stringify(depart));
+
+  // 3. lint: every external anchor in rendered results is a labeled departure
+  const rawExt = await page.evaluate(() =>
+    [...document.querySelectorAll('#so-searchResults a[target="_blank"]')]
+      .filter(a => !a.classList.contains('pc-piece--link'))
+      .map(a => a.getAttribute('href')));
+  check('no raw external anchors — every exit is a labeled departure',
+    rawExt.length === 0, rawExt.join(', ') || 'clean');
+
+  // 4. same-origin chunk-url lint (the sweep's data invariant)
+  const extUrls = await page.evaluate(() =>
+    window.JHSearch.chunks.filter(c => /^https?:/i.test(c.url || '')).map(c => c.id));
+  check('every chunk url is same-origin', extUrls.length === 0, extUrls.join(','));
+
+  await ctx.close();
+
+  // 5. Enter on a top result never exits — only testable with an external
+  // top result, so doctor one via the chunks route (post-sweep no chunk url
+  // is external; this keeps the guard honest)
+  {
+    const ctx2 = await browser.newContext({ colorScheme: 'dark', viewport: { width: 1280, height: 920 } });
+    let doctored2 = false;
+    await ctx2.route('**/search-chunks.json*', async route => {
+      if (doctored2) return route.fallback();
+      doctored2 = true;
+      const resp = await route.fetch();
+      const body = await resp.json();
+      const list = body.chunks || body;
+      const c1 = list.find(c => c.id === 1);
+      if (c1) c1.url = 'https://fractalfuture.substack.com';
+      await route.fulfill({ response: resp, body: JSON.stringify(body), contentType: 'application/json' });
+    });
+    await ctx2.route('**://localhost:1234/**', r => r.abort());
+    await ctx2.route('**://localhost:11434/**', r => r.abort());
+    const page2 = await ctx2.newPage();
+    await page2.goto(`${BASE}/index.html`, { waitUntil: 'domcontentloaded' });
+    await page2.waitForTimeout(1200);
+    await page2.keyboard.press('/');
+    await page2.waitForTimeout(700);
+    await page2.fill('#so-searchInput', 'who is john');
+    await page2.waitForTimeout(1400);
+    const before = page2.url();
+    await page2.keyboard.press('Enter');
+    await page2.waitForTimeout(1000);
+    const after = page2.url();
+    const pinned = await page2.evaluate(() =>
+      document.querySelector('.pc-mod[data-id="1"]')?.dataset.lod === '3');
+    check('Enter on an external top result pins the dossier — never exits',
+      after === before && pinned, `${before} → ${after} pinned=${pinned}`);
+    await ctx2.close();
+  }
+
+  check('no console errors (10f)', errors.length === 0, errors.slice(0, 3).join(' | '));
   await ctx.close();
 }
 

@@ -32,7 +32,11 @@ check('"meta": exactly one dossier', await page.locator('[data-lod="3"]').count(
 const l3title = await page.locator('[data-lod="3"] .result-title').textContent();
 check('dossier is MetaMedium', l3title.includes('MetaMedium'), l3title);
 check('dossier prose is pretext-wrapped', await page.locator('[data-lod="3"] .pretext-line').count() > 3);
-check('graded field below (L1s present)', await page.locator('[data-lod="1"]').count() >= 1);
+// 10f: MetaMedium's piece is frameable → it wakes at dossier scale (the big
+// card), and the 9e no-scroll doctrine trades the L1 field for that depth.
+// The graded structure is intact if smaller tiers OR the tail run below.
+check('graded field below (smaller tiers or tail)',
+  await page.locator('[data-lod="1"], [data-lod="2"], .pc-tail-item').count() >= 1);
 check('tail run present', await page.locator('.pc-tail').count() === 1);
 
 // broad → waterfall, no dossier

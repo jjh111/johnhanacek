@@ -762,6 +762,40 @@ poster via `capture-posters.mjs`, hostname, explicit ↗, `rel="me noopener"`).
 Enter never exits the origin; a raw external `<a>` outside a departure card is
 a lint failure.
 
+> **10f build record (2026-08-27):** externals containerized — the site is
+> the demo, exits are labeled.
+> - **Sweep:** chunk 13's url re-pointed to `art.html#installations`; ZERO
+>   external chunk urls remain (suite-linted). `pieces` is where externals
+>   live.
+> - **Frameable allowlist** (`FRAMEABLE_HOSTS`): jhana.zone,
+>   jjh111.github.io, earthstar.space — all John's, all header-checked
+>   (GitHub Pages sends no framing headers; earthstar none). Allowlisted
+>   link-pieces render as WAKEABLE demos: same one-iframe budget, graft,
+>   sleep-on-close. jhana.zone inside the wrapped paragraph is the payoff.
+> - **Departure cards** via ONE builder (`departureCardHtml`): Substack
+>   (CSP frame-ancestors) and SmugMug (X-Frame-Options DENY) render poster +
+>   title + hostname + ↗, `rel="me noopener"`, title attr notes the search
+>   is kept. relatedChip + artifact rail + intent-card alt route through
+>   chip-scale variants. Posters captured by the new dev script
+>   `scripts/capture-posters.mjs` → `Assets/posters/<host>.webp` (dated in
+>   CHUNK_AUDIT §H). **jhana.zone capture FAILED — its DNS mixes a dead
+>   parking A record (192.64.119.230) with the GitHub Pages record; John
+>   should drop it at the registrar (visitors hit this too).**
+> - **Enter never exits:** external top results PIN to their dossier now
+>   (commitTop guard — unreachable post-sweep, kept honest by a
+>   route-doctored suite case).
+> - **BITTEN — cost must follow render (doctrine 7, again):** the frameable
+>   piece renders at demo scale (264×176) but `costOf` still charged the
+>   link-pill floor (data kind stays 'link') → real height outgrew the cost
+>   → the fit loop shed the L1 field under 'meta' (phase6a red). Fix: cost
+>   kind = demo when `kind === 'link' && isFrameable(src)`. phase6a's "L1s
+>   present" expectation was updated instead: the doctrine legitimately
+>   trades the L1 field for a live dossier-scale demo.
+> - **BITTEN — the suite's own doorways check** asserted the OLD binary
+>   policy (off-origin = never a frame); allowlisted pieces ARE frames now.
+>   Updated to "departure cards never carry iframes".
+> - ALL TWELVE suites green (6b stumbled once in a sweep; standalone green).
+
 ### 10g — the residue sentence [PLANNED 2026-08-26, John's final direction]
 Spec in `SEARCH_HANDOFF.md` §10g. The continuity strip graduates from one-shot
 toast to STANDING chrome: a terminal status line at the BOTTOM edge (on-brand:

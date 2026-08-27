@@ -217,3 +217,25 @@ text fields untouched, no re-embed needed):
 - [ ] render rule, not a claim but visible: when two results would show the
   same visual, the lower-ranked renders text-only; in workspace the side pane
   owns its lead chunk's visual and the list yields.
+
+## H. Externals containerized (10f) — authored 2026-08-27
+
+- [ ] 13's `url` re-pointed `https://jhana.zone` → `art.html#installations`
+  (the chunk is where WE talk about the installation; the live site is and
+  remains its `pieces` entry). After the sweep ZERO chunk urls are external.
+- [ ] Frameable allowlist (these wake LIVE inside the postcard, same
+  one-iframe budget as demos): `jhana.zone`, `jjh111.github.io`,
+  `earthstar.space`. Header-checked 2026-08-27: GitHub Pages sends no
+  framing headers; earthstar.space sends none. John owns all three.
+- [ ] Departure cards (poster + title + hostname + ↗, `rel="me noopener"`,
+  title attr notes the search is kept): `fractalfuture.substack.com`
+  (Substack CSP), `johnhanacek.smugmug.com` (X-Frame-Options DENY).
+- [ ] Posters captured 2026-08-27 (`scripts/capture-posters.mjs` →
+  `Assets/posters/<host>.webp`): jjh111.github.io, earthstar.space,
+  fractalfuture.substack.com, johnhanacek.smugmug.com. jhana.zone: capture
+  FAILED — its DNS mixes a dead parking A record (192.64.119.230) with the
+  GitHub Pages record; **John should drop the dead record at his
+  registrar** (visitors hit this too). Poster added when reachable.
+- [ ] Enter on a top result never leaves the site anymore — external top
+  results pin to their dossier instead (unreachable after the sweep; kept
+  as a guard).
