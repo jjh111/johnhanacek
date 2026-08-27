@@ -1303,14 +1303,33 @@
                 + `${poster}<span class="pc-piece-kind">▶ live</span><span class="pc-piece-title">${piece.title || (r && r.title) || ''}</span></span>`;
         }
 
-        function pcMediaHtml(r, big) {
+        // `seen` (10e.1): a Set of src keys already shown in this render pass.
+        // Threaded by the caller — NEVER module state (morph re-renders single
+        // modules against a stale set). A repeat visual renders text-only:
+        // the same face twice in one list reads as a glitch. Piece keys are
+        // namespaced 'P:' so a piece and its poster never collide.
+        function pcMediaHtml(r, big, seen) {
             // a piece outranks flat media at obstacle scale — the interactive
             // thing IS the visual, prose wraps it
-            if (big && r.pieces && r.pieces.length) return pcPieceHtml(r.pieces[0], r, true);
+            if (big && r.pieces && r.pieces.length) {
+                const pk = 'P:' + r.pieces[0].src;
+                if (seen && seen.has(pk)) return '';
+                if (seen) seen.add(pk);
+                return pcPieceHtml(r.pieces[0], r, true);
+            }
             // small scale: a media-less chunk still shows its piece as the
             // visual (tapping it zooms the module AND wakes the demo)
-            if (!big && r.pieces && r.pieces.length && !r.video && !r.model3d && !r.image)
+            if (!big && r.pieces && r.pieces.length && !r.video && !r.model3d && !r.image) {
+                const pk = 'P:' + r.pieces[0].src;
+                if (seen && seen.has(pk)) return '';
+                if (seen) seen.add(pk);
                 return pcPieceHtml(r.pieces[0], r, false);
+            }
+            const mediaKey = r.video || r.model3d || r.image;
+            if (mediaKey) {
+                if (seen && seen.has(mediaKey)) return '';
+                if (seen) seen.add(mediaKey);
+            }
             if (r.video) {
                 const poster = r.image
                     ? `<img class="result-thumb" src="${r.image}" alt="" loading="lazy" />`
@@ -1320,7 +1339,9 @@
             if (r.model3d) {
                 ensureModelViewer();
                 const spin = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? '' : ' auto-rotate';
-                return `<model-viewer class="result-model${big ? ' pc-obstacle' : ''}" src="${resolveHref(r.model3d)}"${spin} camera-controls loading="lazy"></model-viewer>`;
+                // data-mv keeps the RAW chunk path on the node — morph's
+                // seen-set harvest reads data attrs, not resolved srcs
+                return `<model-viewer class="result-model${big ? ' pc-obstacle' : ''}" src="${resolveHref(r.model3d)}" data-mv="${r.model3d}"${spin} camera-controls loading="lazy"></model-viewer>`;
             }
             if (r.image) return `<img class="result-thumb${big ? ' pc-obstacle' : ''}" src="${r.image}" alt="" loading="lazy" />`;
             return '';
@@ -1358,8 +1379,8 @@
         // over the whole list. Compact density shows `t · y` (detail lives in
         // the hover tip); comfortable adds the detail inline — semantic zoom
         // reaches inside the dossier.
-        function pcFactRowsHtml(r) {
-            const media = pcMediaHtml(r, false);
+        function pcFactRowsHtml(r, seen) {
+            const media = pcMediaHtml(r, false, seen);
             let mediaPlaced = false;
             const rows = r.facts.map(f => {
                 const own = f.media && media && !mediaPlaced;
@@ -1376,12 +1397,21 @@
             return `<div class="pc-fact-list">${loose}${rows}</div>`;
         }
 
-        function renderModule(mod) {
+        // `seen` (10e.1): pass the render pass's Set to suppress repeated
+        // visuals; `noMedia`: the workspace pane owns this chunk's visual
+        // (the pane wins — it has depth), so render text-only.
+        function renderModule(mod, seen, noMedia) {
             const r = mod.r;
+            // media computed LAZILY per tier: the two scales are alternatives,
+            // never both — computing the unused one would spend its seen-key
+            // and suppress the used one (bitten, logged in the 10e.1 record).
             if (mod.lod === 3) {
+                // facts path must not touch the seen-set — pcFactRowsHtml
+                // spends the key itself (mediaBig here would poison it and
+                // starve the fact row of its media — bitten, logged)
                 const body = r.facts && r.facts.length
-                    ? pcFactRowsHtml(r)
-                    : `<div class="pc-dossier">${pcMediaHtml(r, true)}<div class="pc-prose">${r.content}</div></div>`;
+                    ? pcFactRowsHtml(r, seen)
+                    : `<div class="pc-dossier">${noMedia ? '' : pcMediaHtml(r, true, seen)}<div class="pc-prose">${r.content}</div></div>`;
                 return `<div class="result pc-mod pc-l3" data-id="${r.id}" data-lod="3">`
                     + `<div class="result-header">${pcTitleHtml(r)}${pcPageBadge(r)}</div>`
                     + body
@@ -1389,8 +1419,9 @@
                     + `</div>`;
             }
             if (mod.lod === 2) {
+                const mediaSmall = noMedia ? '' : pcMediaHtml(r, false, seen);
                 return `<div class="result pc-mod pc-l2" data-id="${r.id}" data-lod="2" data-tip="${(r.content || '').replace(/"/g, '&quot;')}">`
-                    + `<div class="result-row">${pcMediaHtml(r, false)}<div class="result-body">`
+                    + `<div class="result-row">${mediaSmall}<div class="result-body">`
                     + `<div class="result-header">${pcTitleHtml(r)}${pcPageBadge(r)}</div>`
                     + `<div class="pc-tldr">${r.tldr || r.content || ''}</div>`
                     + pcFactsHtml(r, 1)
@@ -1506,7 +1537,23 @@
                 }).then(w => { detailWraps.push(w); }).catch(() => {});
             }
         }
-        function renderDetailPane(results) {
+        // The pane's seed, computable WITHOUT the pane: pinned (from the list
+        // OR a promoted stratum) → top result → this page's own chunk — the
+        // pane is never an empty half of the screen, empty state included.
+        // Computed BEFORE the list builds so the pane-wins suppression reads
+        // the CURRENT pane intent, not the previous render's (bitten: the
+        // morph path seeded the pane after the list, leaving the list one
+        // pane-state behind — logged in the 10e.1 record).
+        function paneSeed(results) {
+            let r = null;
+            if (results && results.length) r = results.find(x => x.id === pinnedId) || null;
+            if (!r && pinnedId != null) r = chunks.find(c => c.id === pinnedId) || null;
+            if (!r) r = (results && results[0]) || chunks.find(c => c.page === curPage) || chunks[0];
+            if (!r) return null;
+            const rel = relatedChunks(r.id, 4);
+            return { r, rel, key: r.id + '|' + rel.map(c => c.id).join(',') };
+        }
+        function renderDetailPane(results, seed) {
             const pane = el('detailPane');
             if (!pane) return;
             if (!workspaceOn()) {
@@ -1516,16 +1563,9 @@
                 return;
             }
             ensurePretext();   // the strata wraps need it; empty state never hits renderResults
-            // Seed: pinned (from the list OR a promoted stratum) → top
-            // result → this page's own chunk — the pane is never an empty
-            // half of the screen, empty state included.
-            let r = null;
-            if (results && results.length) r = results.find(x => x.id === pinnedId) || null;
-            if (!r && pinnedId != null) r = chunks.find(c => c.id === pinnedId) || null;
-            if (!r) r = (results && results[0]) || chunks.find(c => c.page === curPage) || chunks[0];
-            if (!r) { clearDetailWraps(); pane.innerHTML = ''; return; }
-            const rel = relatedChunks(r.id, 4);
-            const key = r.id + '|' + rel.map(c => c.id).join(',');
+            seed = seed || paneSeed(results);
+            if (!seed) { clearDetailWraps(); pane.innerHTML = ''; return; }
+            const r = seed.r, rel = seed.rel, key = seed.key;
             if (pane.dataset.showing === key && pane.firstChild) {
                 if (!detailWraps.length) wrapStrata(pane, pcMetrics());   // pretext arrived late
                 return;
@@ -1626,7 +1666,7 @@
         // because a sibling was pinned, and nothing flashes. Returns false
         // when the structure itself changed (tail item promoted, labels
         // shift) — the caller falls back to a full, scroll-preserved render.
-        function morphPostcard(resultsEl, mods, tailRs, m) {
+        function morphPostcard(resultsEl, mods, tailRs, m, seed) {
             const pcEl = resultsEl.querySelector('.postcard');
             if (!pcEl) return false;
             const live = [...pcEl.querySelectorAll('.pc-mod')];
@@ -1637,12 +1677,42 @@
             const liveTail = [...pcEl.querySelectorAll('.pc-tail-item')].map(n => n.dataset.id).join();
             if (liveTail !== tailRs.map(r => String(r.id)).join()) return false;
             let dossierTouched = false;
+            // 10e.1: a morph re-renders ONE module — ambient dedupe state
+            // would be stale. Harvest each live module's visible srcs, then
+            // per swap suppress everything EXCEPT the swapped module's own
+            // (its media must survive the tier change — graftMedia re-homes
+            // it). Pane-owned srcs suppress entirely (pane wins).
+            const paneIds = (workspaceOn() && seed)
+                ? new Set([seed.r.id, ...seed.rel.map(c => c.id)])
+                : null;
+            const srcsByMod = new Map();
+            for (const el2 of pcEl.querySelectorAll('.pc-mod')) {
+                const s = new Set();
+                const img = el2.querySelector('img.result-thumb');
+                if (img) s.add(img.getAttribute('src'));
+                const mv = el2.querySelector('model-viewer[data-mv]');
+                if (mv) s.add(mv.getAttribute('data-mv'));
+                const vw = el2.querySelector('.result-video-wrap');
+                if (vw) s.add(vw.dataset.video);
+                const piece = el2.querySelector('.pc-piece');
+                if (piece) s.add('P:' + (piece.dataset.pieceSrc || ''));
+                srcsByMod.set(el2.dataset.id, s);
+            }
             for (let i = 0; i < want.length; i++) {
                 if (String(want[i].lod) === live[i].dataset.lod) continue;
                 if (live[i].dataset.lod === '3' || want[i].lod === 3) dossierTouched = true;
                 const keep = harvestMedia(live[i]);   // the module's own live media
+                const noMedia = !!(paneIds && paneIds.has(want[i].r.id));
+                let suppress = null;
+                if (!noMedia) {
+                    suppress = new Set();
+                    for (const [id, s] of srcsByMod) {
+                        if (id === String(want[i].r.id)) continue;
+                        for (const k of s) suppress.add(k);
+                    }
+                }
                 const tpl = document.createElement('template');
-                tpl.innerHTML = renderModule(want[i]);
+                tpl.innerHTML = renderModule(want[i], suppress, noMedia);
                 const fresh = tpl.content.firstElementChild;
                 fresh.classList.add('pc-swap-in');
                 graftMedia(fresh, keep);              // frame survives the tier change
@@ -1688,6 +1758,10 @@
             // with every wrap and was nulling the fitted budget mid-flight
             const fk = currentQueryRaw + '|' + pcDensity() + '|' + window.innerWidth + 'x' + window.innerHeight + '|' + (workspaceOn() ? 'ws' : '');
             if (fk !== fitKey) { fitKey = fk; fitBudget = null; }
+            // The pane's seed, BEFORE any list build: the pane-wins
+            // suppression must read the pane's CURRENT intent, not the
+            // previous render's dataset.showing.
+            const paneSeedState = paneSeed(results);
             let budget = fitBudget != null ? fitBudget : m.budget;
             let mods = results.length ? allocate(results, width, m, budget) : [];
             const TAIL_MAX = 8;   // the tail run stays ≤ ~2 lines; the rest is "+N more"
@@ -1698,8 +1772,8 @@
             let tail = splitTail(mods);
 
             // Same query, same structure → surgical swap, no rebuild.
-            if (sameQuery && results.length && morphPostcard(resultsEl, mods, tail.shown, m)) {
-                renderDetailPane(results);
+            if (sameQuery && results.length && morphPostcard(resultsEl, mods, tail.shown, m, paneSeedState)) {
+                renderDetailPane(results, paneSeedState);
                 return;
             }
 
@@ -1714,7 +1788,7 @@
             if (results.length === 0) {
                 html += `<div class="result" style="color:${mutedColor};font-family:Raleway,sans-serif;font-size:0.85rem;">${html ? 'No other results.' : 'No results found.'}</div>`;
                 resultsEl.innerHTML = html;
-                renderDetailPane([]);
+                renderDetailPane([], paneSeedState);
                 return;
             }
 
@@ -1735,6 +1809,20 @@
                     }
                     if (rail.length) pc += `<div class="pc-piece-rail">` + rail.map(([pz, r2]) => pcPieceHtml(pz, r2, false)).join('') + `</div>`;
                 }
+                // 10e.1 dedupe: one src-keyed set per render pass, walked in
+                // module order — first (highest-rank) occurrence keeps the
+                // visual, later repeats render text-only. Fresh set each call:
+                // the fit loop re-renders the WHOLE list, so per-pass scope is
+                // correct here; only the morph path harvests (it re-renders
+                // single modules).
+                const listSeen = new Set();
+                // Cross-pane: in workspace the pane leads with a chunk at full
+                // depth — the pane wins, the list suppresses that chunk's
+                // visual. dataset.showing = "leadId|rel,rel,rel".
+                let paneIds = null;
+                if (workspaceOn() && paneSeedState) {
+                    paneIds = new Set([paneSeedState.r.id, ...paneSeedState.rel.map(c => c.id)]);
+                }
                 let localLabelDone = !localFirst, siteLabelDone = !localFirst;
                 for (const mod of ms) {
                     if (mod.lod === 0) continue;
@@ -1743,7 +1831,7 @@
                     } else if (localFirst && localLabelDone && !siteLabelDone && mod.r.page !== curPage) {
                         pc += `<div class="cmdbar-group-label">Across the site</div>`; siteLabelDone = true;
                     }
-                    pc += renderModule(mod);
+                    pc += renderModule(mod, listSeen, paneIds && paneIds.has(mod.r.id));
                 }
                 if (t.shown.length) {
                     pc += `<div class="pc-tail">also<span class="pc-sep">:</span> ` + t.shown.map(r =>
@@ -1793,7 +1881,7 @@
             else if (anchor) anchor.scrollTop = 0;
 
             applyDossierWrap(resultsEl, m, 'list');
-            renderDetailPane(results);
+            renderDetailPane(results, paneSeedState);
             if (livePieceEl && !document.contains(livePieceEl)) livePieceEl = null;
         }
 

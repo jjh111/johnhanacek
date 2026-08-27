@@ -195,6 +195,80 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
   await ctx.close();
 }
 
+// ───────── 4. 10e.1 — media dedupe (list guard, cross-pane, data lint) ─────────
+{
+  console.log('10e.1 media dedupe:');
+  const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width: 1280, height: 920 } });
+  // Doctor the index BEFORE the core loads: chunks 1 and 28 share a visual.
+  // (Mutating window.JHSearch.chunks post-hoc does nothing — retrieval reads
+  // MiniSearch's stored-field snapshot, not the raw array.)
+  let doctored = false;
+  await ctx.route('**/search-chunks.json*', async route => {
+    if (doctored) return route.fallback();
+    doctored = true;
+    const resp = await route.fetch();
+    const body = await resp.json();
+    const list = body.chunks || body;
+    const c1 = list.find(c => c.id === 1);
+    if (c1) c1.image = 'Assets/nanome2-beforeafter.webp';   // same as 28
+    await route.fulfill({ response: resp, body: JSON.stringify(body), contentType: 'application/json' });
+  });
+  await ctx.route('**://localhost:1234/**', r => r.abort());
+  await ctx.route('**://localhost:11434/**', r => r.abort());
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('console', m => { if (m.type() === 'error' && !/net::|Failed to load resource/.test(m.text())) errors.push(m.text()); });
+  page.on('pageerror', e => errors.push(String(e)));
+  await page.goto(`${BASE}/index.html`, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(1200);
+  await page.keyboard.press('/');
+  await page.waitForTimeout(700);
+  await page.fill('#so-searchInput', 'who is john');
+  await page.waitForTimeout(1500);
+
+  // data lint on the SHIPPED (undoctored) index — need a fresh fetch: the
+  // route only doctors this context's request, so compare in-page
+  const lint = await page.evaluate(async () => {
+    const d = await (await fetch('./Assets/search-chunks.json?v=' + Date.now())).json();
+    const list = d.chunks || d;
+    const seen = new Map(); const dupes = [];
+    for (const c of list) {
+      for (const key of [c.image, c.video, c.model3d].filter(Boolean)) {
+        if (seen.has(key)) dupes.push(`${seen.get(key)}+${c.id}: ${key}`);
+        else seen.set(key, c.id);
+      }
+    }
+    return dupes;
+  });
+  check('shipped index carries no duplicate media fields', lint.length === 0, lint.join(' ; '));
+
+  // render guard: two modules, one visual → rendered once (higher rank wins)
+  const imgs = await page.evaluate(() =>
+    [...document.querySelectorAll('.pc-mod img.result-thumb')].map(i => i.getAttribute('src')));
+  check('forced duplicate renders text-only on the later module',
+    imgs.filter(s => /beforeafter/.test(s)).length === 1, imgs.join(','));
+
+  // cross-pane: workspace on → pane leads with chunk 1; the list copy of the
+  // SAME chunk renders text-only (the pane wins — it has depth)
+  await page.click('#so-workspaceBtn');
+  await page.waitForTimeout(1200);
+  const cross = await page.evaluate(() => {
+    const pane = document.getElementById('so-detailPane');
+    const showing = pane?.dataset?.showing;
+    if (!showing) return { err: 'pane empty' };
+    const lead = Number(showing.split('|')[0]);
+    const paneHasMedia = !!pane.querySelector('.pc-meta-stratum img.result-thumb, .pc-meta-stratum model-viewer, .pc-meta-stratum .result-video-wrap, .pc-meta-stratum .pc-piece');
+    const listMod = document.querySelector(`.postcard .pc-mod[data-id="${lead}"]`);
+    const listHasMedia = !!listMod && !!(listMod.querySelector('img.result-thumb, model-viewer, .result-video-wrap, .pc-piece'));
+    return { lead, paneHasMedia, listHasMedia };
+  });
+  check('workspace: pane wins — lead chunk media in pane, text-only in list',
+    !cross.err && cross.paneHasMedia && !cross.listHasMedia, JSON.stringify(cross));
+
+  check('no console errors (dedupe)', errors.length === 0, errors.slice(0, 3).join(' | '));
+  await ctx.close();
+}
+
 await browser.close();
 console.log(failures.length ? `\nFAILURES (${failures.length}):\n- ` + failures.join('\n- ') : '\nALL PASS');
 process.exit(failures.length ? 1 : 0);

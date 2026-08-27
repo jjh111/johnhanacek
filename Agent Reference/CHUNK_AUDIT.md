@@ -198,3 +198,22 @@ are meant to be surfaced by search:
 - [ ] 25 → hypercube (live, as the "creative code since 2016" proof)
 - [ ] 3 → jjh111.github.io/MetaMedium (new tab) · 11 → earthstar.space ·
   13 → jhana.zone · 14 → fractalfuture.substack.com · 15 → smugmug
+
+## G. Media fields (10e.1) — authored 2026-08-27, same audit rule
+
+The visual-dedupe pass also finished f775ced's asset swap and gave dupe'd
+chunks their own visuals. Media depict — so each line is a claim. Confirm the
+batch (all swaps are dev-directed from the 10e plan; vectors unaffected —
+text fields untouched, no re-embed needed):
+
+- [ ] 1 (About John) image → `jjh-…flower headshot Large.webp` (was .jpeg —
+  same frame, 63% lighter; re-encoded at matched fidelity in f775ced)
+- [ ] 28 (What Makes John Unique) image → `nanome2-beforeafter.webp` (was the
+  SAME headshot as chunk 1 — now the redesign before/after as the evidence of
+  the rare-combination claim. John: does this image belong on THIS claim?)
+- [ ] 5 (Nanome XR Molecular Design) video → `nanome-mara.mp4` +
+  poster `nanome-mara-poster.webp` (was nanome-hero.mp4 + the SAME
+  casestudy.webp as chunk 37. Mara = the molecular-contact demo.)
+- [ ] render rule, not a claim but visible: when two results would show the
+  same visual, the lower-ranked renders text-only; in workspace the side pane
+  owns its lead chunk's visual and the list yields.

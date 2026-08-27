@@ -683,6 +683,48 @@ derivation interim) / full paragraph — selected by ONE `textFor(r, lod,
 density)` used by render AND allocator, with the morph diff extended to a
 `data-txt` tier stamp. Build order: dedupe → wording ladder → visual batch.
 
+> **10e.1 build record (2026-08-27):** dedupe shipped — render guard, cross-pane
+> rule, and the data fixes; phase10 §4 added; ALL TWELVE suites green (phase10
+> flaked once in a full sweep — the documented pretext/font race; standalone
+> green ×3).
+> - **Render guard.** `pcMediaHtml`/`renderModule`/`pcFactRowsHtml` take a
+>   threaded `seen` Set (src keys; pieces namespaced `P:` so a piece and its
+>   poster never collide) — first occurrence in module order keeps the visual,
+>   repeats render text-only. Fresh set per `buildPc` call (the fit loop
+>   re-renders the whole list; per-pass scope is correct there). The morph path
+>   harvests each live module's visible srcs into `srcsByMod` (raw values;
+>   model-viewer now carries `data-mv` with the RAW chunk path — resolved `src`
+>   attrs don't match chunk keys) and suppresses everything EXCEPT the swapped
+>   module's own srcs (its media must survive the tier change for graftMedia to
+>   re-home).
+> - **BITTEN #1 — eager twin compute.** `renderModule` initially computed
+>   `mediaBig` AND `mediaSmall` up front: the big call spends the seen-key, the
+>   small call then suppresses ITSELF — every L2 piece vanished (the suite's
+>   zoom-and-wake click timed out; phase5's trophy too). Fix: compute lazily
+>   inside each tier branch. **BITTEN #2 — same bug one branch over:** the
+>   lod3+facts path still computed `mediaBig` (discarded) before
+>   `pcFactRowsHtml`, so Awards' fact-row model-viewer starved (phase5/9 red).
+>   Rule the records now state: a seen-key is spent ONLY by the render that
+>   uses it.
+> - **Cross-pane (pane wins).** Pane seeding extracted to `paneSeed(results)`
+>   (pinned → top result → page chunk) and computed BEFORE the list builds;
+>   `renderDetailPane(results, seed)` consumes it. **BITTEN #3 — order:** the
+>   morph path originally seeded the pane AFTER the list, so the list read the
+>   PREVIOUS pane state and lagged one render behind the pane-wins rule
+>   (workspace toggle left the lead chunk's media in the list). Seed-first
+>   fixed it. Morph suppression takes the seed directly.
+> - **Data fixes** (finished f775ced + killed both dupes): chunks 1+28 headshot
+>   `.jpeg`→`.webp`; 28 → `nanome2-beforeafter.webp` (own visual); 5 →
+>   `nanome-mara.mp4` + `nanome-mara-poster.webp` (casestudy.webp now unique to
+>   37). Media fields only — text untouched, vectors still valid, no re-embed.
+>   Audit: CHUNK_AUDIT §G (four confirm lines for John).
+> - **Suite.** phase10 §4: shipped-index media lint (fetches the JSON fresh),
+>   forced-duplicate render guard (doctors `search-chunks.json` via Playwright
+>   route BEFORE core load — post-hoc mutation of `window.JHSearch.chunks` is a
+>   trap: retrieval reads MiniSearch's stored-field snapshot, not the raw
+>   array), workspace pane-wins assertion (pane id is `so-detailPane` on the
+>   overlay).
+
 ### 10f — externals: containerize uniformly, exit on purpose only [PLANNED 2026-08-26]
 Spec in `SEARCH_HANDOFF.md` §10f. The invariant: chunk `url` must be
 SAME-ORIGIN (it's where WE talk about the thing; `pieces` is where IT lives —
