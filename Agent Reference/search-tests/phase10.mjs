@@ -38,7 +38,7 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
   check('answer saved to the session', !!stored && stored.query === 'who is john' && stored.answer.length > 30,
     stored ? `${stored.query} / ${stored.answer.slice(0, 30)}` : 'null');
 
-  // navigate via a nav command → strip on the next page
+  // navigate via a nav command → the residue sentence stands on the next page
   await page.fill('#so-searchInput', 'who is john');   // keep query current
   await page.waitForTimeout(400);
   await Promise.all([
@@ -47,13 +47,15 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
   ]);
   await page.waitForTimeout(1500);
   check('landed on design', /design\.html/.test(page.url()), page.url());
-  const strip = page.locator('.so-continuity');
-  check('continuity strip appears', await strip.count() === 1);
-  check('strip shows the query and the kept answer', /who is john/.test(await strip.textContent())
-    && /answer kept/.test(await strip.textContent()), (await strip.textContent()).trim());
+  const residue = page.locator('.so-residue');
+  check('residue sentence stands at the bottom', await residue.count() === 1);
+  const residueText = await residue.textContent();
+  check('residue carries the query and the answer clause', /who is john/.test(residueText)
+    && residueText.length > 'who is john'.length + 5, residueText.trim().slice(0, 90));
+  // (overlay-open hiding is CSS: body.search-overlay-open .so-residue)
 
   // reopen restored
-  await page.locator('.so-continuity-open').click();
+  await page.locator('.so-residue-open').click();
   await page.waitForTimeout(2500);
   const restored = await page.evaluate(() => ({
     open: document.getElementById('searchOverlay')?.getAttribute('aria-hidden') === 'false',
@@ -67,7 +69,11 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
   check('the KEPT answer is re-attached (not regenerated)', restored.answer.includes(ans.slice(0, 25)));
   check('honest byline: "from your last search"', restored.restoredFlag && /last search/.test(restored.byline), restored.byline);
   check('postcard re-derived deterministically', restored.postcard);
-  check('strip gone once reopened', await strip.count() === 0);
+  // closing the overlay brings the sentence back — open/collapse is one object
+  await page.keyboard.press('Escape');   // clear the query (ladder rung)
+  await page.keyboard.press('Escape');   // close
+  await page.waitForTimeout(600);
+  check('closing the overlay resurrects the sentence', await page.locator('.so-residue').count() === 1);
 
   check('no console errors', errors.length === 0, errors.slice(0, 3).join(' | '));
   await ctx.close();
@@ -95,28 +101,43 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
     page.keyboard.press('Enter'),
   ]);
   await page.waitForTimeout(1200);
-  const strip = page.locator('.so-continuity');
-  check('query-only strip appears after Enter-navigation', await strip.count() === 1);
-  const t = await strip.textContent();
-  check('strip carries the query, no false "answer kept"', /nanome case study/.test(t) && !/answer kept/.test(t), t.trim());
+  const residue = page.locator('.so-residue');
+  check('query-only residue appears after Enter-navigation', await residue.count() === 1);
+  const t = await residue.textContent();
+  check('residue carries the query and the top result micro', /nanome case study/.test(t) && t.length > 'nanome case study'.length + 5, t.trim());
 
-  // dismiss is one-shot: a plain reload shows no strip
-  await page.locator('.so-continuity-x').click();
-  check('dismiss removes the strip', await strip.count() === 0);
+  // STANDING: a plain reload keeps the sentence (not a one-shot toast)
   await page.reload({ waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(1200);
-  check('the flag is one-shot — no strip on plain reload', await page.locator('.so-continuity').count() === 0);
+  check('standing — the residue survives a plain reload', await page.locator('.so-residue').count() === 1);
+
+  // ✕ dismisses for the SESSION: survives reloads and navigation
+  await page.locator('.so-residue-x').click();
+  check('dismiss removes the sentence', await residue.count() === 0);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(1200);
+  check('dismissal survives a reload', await page.locator('.so-residue').count() === 0);
+
+  // a NEW search resurrects it
+  await page.keyboard.press('/');
+  await page.waitForTimeout(800);
+  await page.fill('#so-searchInput', 'fish minigame');
+  await page.waitForTimeout(900);
+  await page.keyboard.press('Escape');   // clear query
+  await page.keyboard.press('Escape');   // close
+  await page.waitForTimeout(600);
+  check('a new search resurrects a dismissed sentence', await page.locator('.so-residue').count() === 1
+    && /fish minigame/.test(await page.locator('.so-residue').textContent()));
 
   // TTL: a stale session never resurfaces
   await page.evaluate(() => {
     const s = JSON.parse(sessionStorage.getItem('jh-search-session'));
     s.ts = Date.now() - 31 * 60 * 1000;
     sessionStorage.setItem('jh-search-session', JSON.stringify(s));
-    sessionStorage.setItem('jh-search-continue', '1');
   });
   await page.reload({ waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(1200);
-  check('expired session shows no strip', await page.locator('.so-continuity').count() === 0);
+  check('expired session shows no residue', await page.locator('.so-residue').count() === 0);
 
   check('no console errors', errors.length === 0, errors.slice(0, 3).join(' | '));
   await ctx.close();

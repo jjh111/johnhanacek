@@ -868,6 +868,40 @@ expanding and collapsing.
 >   section gets 1100px height (comfortable genuinely cannot afford a
 >   big-media dossier at 920 — the doctrine, not a bug).
 
+
+> **10g build record (2026-08-27):** the residue sentence shipped — the
+> one-shot strip is retired.
+> - **Core computes it:** `residueOf(answer)` — the answer's FIRST clause
+>   (sentence-split, ≤90ch, ellipsis) or the top result's `micro`;
+>   `saveSession` stores it as `residue` in the session payload. The shell
+>   renders verbatim — it knows nothing about chunks or answers.
+> - **Standing chrome:** `maybeShowContinuity`/`jh-search-continue` are
+>   GONE. `renderResidue()` runs at shell init and at every `closeSearch()`
+>   — visible on every page while the session is fresh (30-min TTL),
+>   including plain reloads. `body.search-overlay-open` hides it via CSS;
+>   closing re-reads (a new generation updates the sentence in place).
+>   ✕ dismisses for the session (`jh-residue-dismissed`); ANY rendered query
+>   un-dismisses (`doSearchOnly` clears it) and resurrects the line.
+> - **BITTEN — the session downgrade:** saveSession-on-render (every
+>   rendered query now updates the session, engine or no) initially let a
+>   pre-navigation re-render WIPE a kept answer for the same query — the
+>   restore flow re-attached from a session that no longer had it. Guard:
+>   a query-only save returns early when the existing session already holds
+>   an answer for the SAME query.
+> - **BITTEN — the woken piece's module sat unpinned:** clicking an
+>   OBSTACLE-scale piece (dominant top hit already at dossier) took the
+>   wake-only branch — no pin — so the semantic refine's re-rank downgraded
+>   the module UNDER the running demo (the suite's zoom-and-wake raced the
+>   embedder, pass/fail by timing). Fix: wake pins the host module.
+> - **Esc ladder in suites:** one Escape clears the query (overlay open —
+>   residue hidden by CSS), the SECOND closes it. Continuity checks need
+>   both. (Old strip suite pressed one — the strip was one-shot, the
+>   sentence is standing chrome.)
+> - phase10's continuity sections rewritten for the standing semantics
+>   (residue stands, survives reload, ✕ persists, new search resurrects,
+>   TTL honored); ALL TWELVE suites green (3+10 stumbled in sweeps;
+>   standalone green).
+
 ## Phase 7 — Behaviors (standing directives) [PLANNED, post-MVP]
 
 Placement is declarative and instantly verifiable; behavior is a promise over time —

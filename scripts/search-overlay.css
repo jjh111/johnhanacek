@@ -1154,51 +1154,15 @@ model-viewer.pc-obstacle--float { width: 170px; height: 170px; }
 }
 
 /* ═══ 10b — the collapsed search: session continuity strip ═══ */
-.so-continuity {
-    position: fixed;
-    top: calc(44px + env(safe-area-inset-top));
-    left: 50%; transform: translateX(-50%);
-    z-index: 900;   /* under the nav (1000) and the overlay (2000) */
-    display: flex; align-items: center; gap: 0.1rem;
-    background: rgba(var(--surface-rgb, 2, 10, 18), 0.88);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.22);
-    border-top: none;
-    border-radius: 0 0 10px 10px;
-    padding: 0.15rem 0.3rem 0.2rem 0.55rem;
-    max-width: min(92vw, 480px);
-}
-.so-continuity-open {
-    background: none; border: none; cursor: pointer;
-    font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
-    color: var(--text-primary, #8cb8cc);
-    display: inline-flex; align-items: baseline; gap: 0.35rem;
-    padding: 0.15rem 0.2rem; min-width: 0;
-}
-.so-continuity-q {
-    color: var(--text-bright, #b8dced);
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    max-width: 16rem;
-}
-.so-continuity-cta {
-    color: var(--cyan-dim, #4dc9f6);
-    border: 1px solid rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.25);
-    border-radius: 3px; padding: 0.05rem 0.4rem;
-    font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.08em;
-}
-.so-continuity-open:hover .so-continuity-cta {
-    color: var(--gold, #d4af37);
-    border-color: rgba(var(--gold-rgb, 212, 175, 55), 0.4);
-}
-.so-continuity-x {
-    background: none; border: none; cursor: pointer;
-    color: var(--so-muted, var(--muted, #7a9aaa)); opacity: 0.55;
-    font-size: 0.95rem; line-height: 1; padding: 0.15rem 0.35rem;
-}
-.so-continuity-x:hover { opacity: 1; }
+
+
+
+
+
+
+
 /* the strip yields to the open overlay */
-body.search-overlay-open .so-continuity { display: none; }
+body.search-overlay-open 
 
 /* a KEPT answer wears an honest byline, never the live eyebrow */
 #aiAnswer[data-restored]::before, #so-aiAnswer[data-restored]::before {
@@ -1272,3 +1236,67 @@ body.search-overlay-open .so-continuity { display: none; }
 /* ─── 10f: chip-scale departure (glyph + hostname, the labeled exit) ─── */
 .departure-chip { color: var(--so-accent-warm, var(--gold)); }
 .departure-chip::after { content: none; }   /* shared.css adds its own external arrow — the glyph here is the departure mark */
+
+/* ─── 10g: the residue sentence — the session's standing chrome ───
+   One line docked at the bottom edge (vim/tmux status-line register):
+   query → answer's first clause · reopen. Hidden while the overlay is
+   open (the overlay IS the expanded view); closing brings it back. */
+.so-residue {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 900;                    /* under the overlay's 2000 */
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    gap: 0;
+    background: rgba(var(--surface-rgb, 2, 10, 18), 0.72);
+    backdrop-filter: blur(8px) saturate(1.1);
+    -webkit-backdrop-filter: blur(8px) saturate(1.1);
+    border-top: 1px solid rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.18);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    line-height: 26px;
+    height: 26px;
+    overflow: hidden;
+    white-space: nowrap;
+}
+body.search-overlay-open .so-residue { display: none; }
+.so-residue-open {
+    all: unset;
+    cursor: pointer;
+    max-width: 92vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 0.75rem;
+    color: var(--text-primary, #8cb8cc);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+}
+.so-residue-open:hover { background: rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.08); }
+.so-residue-q { color: var(--text-bright, #b8dced); }
+.so-residue-sep { color: var(--muted, #7a9aaa); }
+.so-residue-a {
+    color: var(--text-primary, #8cb8cc);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+.so-residue-cta {
+    color: rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.9);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 0.62rem;
+    flex: none;
+}
+.so-residue-x {
+    all: unset;
+    cursor: pointer;
+    padding: 0 0.7rem;
+    color: var(--muted, #7a9aaa);
+    font-size: 0.8rem;
+}
+.so-residue-x:hover { color: var(--text-bright, #b8dced); }

@@ -310,6 +310,7 @@
         // Trigger close animation
         overlayEl.setAttribute('aria-hidden', 'true');
         closeSettings();
+        renderResidue();   // 10g: the sentence re-reads — a new generation shows
         // Blur the overlay's own input so it doesn't hold focus while hidden
         const overlayInput = document.getElementById('so-searchInput');
         if (overlayInput) overlayInput.blur();
@@ -431,33 +432,37 @@
     }
 
     // ============================================
-    // The collapsed search (10b): a navigation command doesn't amputate the
-    // search — it collapses it. If the core flagged a continuity handoff
-    // before navigating, this page shows a one-line strip under the nav;
-    // tapping reopens the overlay RESTORED (query re-derived, kept answer
-    // re-attached with an honest byline). Feather-weight: reads two
-    // sessionStorage keys, loads nothing.
+    // The residue sentence (10g): the session's standing chrome. After any
+    // search, ONE line docks at the bottom of every page — question and the
+    // answer's first clause — until the 30-min TTL, ✕, or a new search.
+    // Click anywhere on it: the overlay reopens RESTORED. Feather-weight:
+    // one storage read, no core load.
     // ============================================
-    function maybeShowContinuity() {
+    function escResidue(t) {
+        return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+    }
+    function renderResidue() {
+        document.querySelectorAll('.so-residue').forEach(n => n.remove());
         let s = null;
-        try {
-            if (sessionStorage.getItem('jh-search-continue') !== '1') return;
-            sessionStorage.removeItem('jh-search-continue');   // one-shot per navigation
-            s = JSON.parse(sessionStorage.getItem('jh-search-session') || 'null');
-        } catch { return; }
+        try { s = JSON.parse(sessionStorage.getItem('jh-search-session') || 'null'); } catch { return; }
         if (!s || !s.query || Date.now() - (s.ts || 0) > 30 * 60 * 1000) return;
-        const q = String(s.query).slice(0, 60).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+        try { if (sessionStorage.getItem('jh-residue-dismissed') === '1') return; } catch {}
+        const q = escResidue(String(s.query).slice(0, 60));
+        const a = escResidue(String(s.residue || '').slice(0, 110));
         const strip = document.createElement('div');
-        strip.className = 'so-continuity';
-        strip.innerHTML = `<button class="so-continuity-open" type="button">◂ <span class="so-continuity-q">“${q}”</span>${s.answer ? ' · answer kept' : ''}<span class="so-continuity-cta">reopen</span></button>`
-            + `<button class="so-continuity-x" type="button" aria-label="Dismiss">×</button>`;
+        strip.className = 'so-residue';
+        strip.innerHTML = `<button class="so-residue-open" type="button" aria-label="Reopen your last search">◂ <span class="so-residue-q">\u201c${q}\u201d</span>${a ? ` <span class="so-residue-sep">\u2192</span> <span class="so-residue-a">${a}</span>` : ''}<span class="so-residue-cta">reopen</span></button>`
+            + `<button class="so-residue-x" type="button" aria-label="Dismiss">×</button>`;
         document.body.appendChild(strip);
-        strip.querySelector('.so-continuity-open').addEventListener('click', async () => {
+        strip.querySelector('.so-residue-open').addEventListener('click', async () => {
             strip.remove();
             await openSearch();          // ensures the core is initialized
             core.restoreSession();
         });
-        strip.querySelector('.so-continuity-x').addEventListener('click', () => strip.remove());
+        strip.querySelector('.so-residue-x').addEventListener('click', () => {
+            try { sessionStorage.setItem('jh-residue-dismissed', '1'); } catch {}
+            strip.remove();
+        });
     }
 
     // ============================================
@@ -467,7 +472,7 @@
         setupNavTriggers();
         setupHeroSearch();
         checkUrlQuery();
-        maybeShowContinuity();
+        renderResidue();
         // Deliberately no engine detection here. It used to run on every page
         // load "for the nav indicator", which meant a visitor was asked for
         // permission to reach their own machine before they had asked the site

@@ -189,6 +189,16 @@ which stamps every `?v=` cache-bust ref across root `*.html` **and** the `Portfo
   an artifact rail pins the grounding chunks deterministically, the census line grounds
   local-model context, and the `scene_execute` tool has the model EMIT scene language
   that the same parser gates into the same plan card.
+- **Phase 10 — truth, memory, pieces**: chunks are audited claims (`CHUNK_AUDIT.md` —
+  new/edited chunks land with their audit section); the session survives as the
+  **residue sentence** (a standing 26px line docked at the bottom of every page:
+  question → answer clause, click = reopen restored, ✕ = dismiss for the session, any
+  new search resurrects it); **pieces** (`pieces` on chunks — John-owned frameable
+  hosts wake LIVE under a one-iframe budget, others render **departure cards** with
+  captured posters; every chunk `url` is same-origin, Enter never exits); the
+  **wording ladder** (micro → tldr → brief → full — density picks the wording inside
+  a constant LOD via `textFor`, stamped `data-txt` for morphs); **media dedupe** (one
+  src per render pass, pane wins). Spec + records: SEARCH_COMMAND_BAR.md Phase 10.
 - **Engine color coding**: WebGPU=blue, LMStudio=purple, Ollama=orange, Custom=green
 - AI toggle: users can disable LLM even when engine detected
 

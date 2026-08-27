@@ -2108,26 +2108,50 @@
         // regenerated to fake continuity; what you saw is what you kept.
         const SESSION_KEY = 'jh-search-session';
         const SESSION_TTL = 30 * 60 * 1000;
+        // 10g: the residue — the session at its most minimized tier, ONE
+        // line: query + the answer's first clause (selection, never
+        // generation), or the top result's micro when no answer exists.
+        // The shell renders it verbatim; it knows nothing about chunks.
+        function residueOf(answer) {
+            const a = (answer || '').trim();
+            if (a) {
+                const first = (a.match(/[^.!?]+[.!?]/) || [a])[0].trim();
+                return first.length > 90 ? first.slice(0, 90).trimEnd() + '…' : first;
+            }
+            const top = lastSearchResults && lastSearchResults[0];
+            return (top && top.micro) || '';
+        }
         function saveSession(answer, model) {
             try {
                 const a = (answer || '').trim();
                 if (!currentQueryRaw) return;
                 if (a.startsWith('Error:') || a === '(No answer generated.)') return;
+                // a query-only render never downgrades a kept ANSWER for the
+                // same query (the pre-navigation fill re-renders and would
+                // otherwise destroy the kept answer — bitten, logged)
+                if (!a) {
+                    let prev = null;
+                    try { prev = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); } catch {}
+                    if (prev && prev.query === currentQueryRaw && prev.answer) return;
+                }
                 sessionStorage.setItem(SESSION_KEY, JSON.stringify({
                     query: currentQueryRaw, answer: a, model: model || '',
+                    residue: residueOf(a),
                     pinnedId, fromPage: curPage, ts: Date.now(),
                 }));
+                // a fresh generation resurrects a dismissed residue
+                sessionStorage.removeItem('jh-residue-dismissed');
             } catch {}
         }
-        // A navigation is about to happen: make sure at least the query is
-        // kept (the postcard re-derives deterministically), and raise the
-        // one-shot flag the next page's shell reads to show the strip.
+        // A navigation is about to happen: make sure the session reflects
+        // the current query (the postcard re-derives deterministically).
+        // The residue sentence itself is STANDING chrome now (10g) — no
+        // one-shot flag; every page renders it while the session is fresh.
         function markContinuity() {
             try {
                 let s = null;
                 try { s = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); } catch {}
                 if (!s || s.query !== currentQueryRaw) saveSession('', '');
-                if (currentQueryRaw) sessionStorage.setItem('jh-search-continue', '1');
             } catch {}
         }
         // Reopen restored: query refilled, postcard re-derived (search is
@@ -2372,10 +2396,15 @@
             lastPieceRail = !!pieceRail;
             lastCmdMatches = lastScenePlan ? [] : matchCommands(rawQuery, null);
             const results = search(expanded);
+            // a real search un-dismisses the residue sentence (10g)
+            try { sessionStorage.removeItem('jh-residue-dismissed'); } catch {}
             sourcesSection.classList.add('visible');
             if (config.onResultsChange) config.onResultsChange(true);
             renderResults(results, hint);
             lastSearchResults = results; lastLlmQuery = originalQuery || rawQuery;
+            // every RENDERED query updates the session (10g): the residue
+            // sentence reflects what you last SAW, engine or no engine
+            saveSession('', '');
             // Semantic tier: BM25 rendered instantly above; the vectors refine
             // it in place. First real search is also what triggers the one-time
             // embedder load — until it lands, this is a no-op.
