@@ -38,7 +38,7 @@ const SITE_VERSION = m[1];
 // was never added here, and nothing said so. The AUDIT below is the answer —
 // the list decides what gets stamped, the audit decides what gets REPORTED, so
 // a forgotten asset is now loud instead of silent.
-const ASSETS = ['shared.css', 'jh-chrome.css', 'shared.js', 'jh-shapes.js', 'search-overlay.css', 'search-overlay.js', 'search-core.js', 'jh-chrome.js', 'shape-detection.js', 'fish-engine.js', 'playground-items.js', '_tokens.css', '_pairings.css'];
+const ASSETS = ['shared.css', 'jh-chrome.css', 'shared.js', 'jh-shapes.js', 'jh-strokes.js', 'search-overlay.css', 'search-overlay.js', 'search-core.js', 'jh-chrome.js', 'shape-detection.js', 'fish-engine.js', 'playground-items.js', '_tokens.css', '_pairings.css'];
 
 // Paths whose ?v= is a DIFFERENT counter and must not be stamped to the site
 // version. openprose/canvas-display/ is the client deliverable: its handoff

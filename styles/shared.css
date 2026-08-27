@@ -483,7 +483,13 @@ h1, h2, h3, h4, h5, h6 {
 =========================================== */
 .canvas-guide {
     position: absolute;
-    bottom: 2.5rem;
+    /* Clear of .canvas-controls, which is position:fixed at bottom:1rem and
+       ~32px tall — so its top edge sits ~48px off the viewport floor. At the
+       old 2.5rem the card bottom landed 4px above that line: not overlapping,
+       but reading as a collision, and on narrow viewports the 92vw card is
+       directly over the buttons horizontally. 4.25rem buys ~20px of daylight
+       and makes the old mobile-only override redundant. */
+    bottom: 4.25rem;
     left: 50%;
     transform: translateX(-50%);
     z-index: 6;
@@ -509,7 +515,7 @@ h1, h2, h3, h4, h5, h6 {
     transform: translateX(-50%) translateY(8px);
 }
 .canvas-guide .guide-title {
-    font-size: 0.65rem;
+    font-size: 0.75rem;
     letter-spacing: 0.2em;
     color: rgba(var(--cyan-rgb), 0.5);
     text-transform: uppercase;
@@ -527,7 +533,7 @@ h1, h2, h3, h4, h5, h6 {
     grid-template-columns: 1.35rem 1fr;
     align-items: baseline;
     gap: 0.5rem;
-    font-size: 0.72rem;
+    font-size: 0.83rem;
     line-height: 1.45;
     color: rgba(var(--cyan-rgb), 0.75);
     letter-spacing: 0.04em;
@@ -554,12 +560,6 @@ h1, h2, h3, h4, h5, h6 {
     height: 1.5em;
     stroke-width: 1.25px;
     overflow: visible;
-}
-.canvas-guide .guide-note {
-    font-size: 0.62rem;
-    line-height: 1.55;
-    color: rgba(var(--cyan-rgb), 0.45);
-    letter-spacing: 0.06em;
 }
 .canvas-guide .guide-close {
     position: absolute;
@@ -599,7 +599,7 @@ h1, h2, h3, h4, h5, h6 {
     border-radius: 999px;
     background: rgba(var(--cyan-dim-rgb), 0.1);
     color: rgba(var(--cyan-rgb), 0.95);
-    font-size: 0.7rem;
+    font-size: 0.8rem;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     text-decoration: none;
@@ -620,11 +620,10 @@ h1, h2, h3, h4, h5, h6 {
 }
 @media (max-width: 600px) {
     .canvas-guide {
-        bottom: 4.2rem;              /* clear of the fixed canvas controls */
         padding: 0.75rem 0.95rem 0.85rem;
         gap: 0.42rem;
     }
-    .canvas-guide .guide-row { font-size: 0.7rem; }
+    .canvas-guide .guide-row { font-size: 0.8rem; }
 }
 @media (prefers-reduced-motion: reduce) {
     .canvas-guide { transition: none; }

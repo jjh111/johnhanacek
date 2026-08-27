@@ -32,9 +32,10 @@
     <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.59">
 
     <!-- Model Viewer is loaded on approach, not at page load — see the
-         warm-up observer near the bottom of this file. The library is 239KB
-         and the two models it drives total ~13MB; none of it is needed above
-         the fold on a page whose hero is a drawing canvas. -->
+         warm-up observer near the bottom of this file. The library is ~240KB
+         gzipped and the two models it drives total 242KB — the library is the
+         heavier half now; none of it is needed above the fold on a page whose
+         hero is a drawing canvas. -->
 
     <!-- Structured Data for AI/Search -->
     <link rel="alternate" type="application/json" href="./john-hanacek.json" title="Structured data">
@@ -484,16 +485,19 @@
             <button class="guide-close" id="closeGuide" type="button" aria-label="Close instructions">&times;</button>
             <span class="guide-title">✎ &nbsp;draw the maze</span>
             <div class="guide-rows">
-                <span class="guide-row"><span class="guide-glyph">▢</span><span>draw a shape — its outline becomes a wall</span></span>
-                <span class="guide-row"><span class="guide-glyph">◠</span><span>draw a loop — a fish</span></span>
-                <span class="guide-row"><span class="guide-glyph">·</span><span>tap — drop food, and lead fish to it</span></span>
-                <span class="guide-row"><span class="guide-glyph">⌁</span><span>scribble across a wall — rub it out</span></span>
+                <span class="guide-row"><span class="guide-glyph" data-jh-stroke="square"></span><span>draw a shape — its outline becomes a wall</span></span>
+                <span class="guide-row"><span class="guide-glyph" data-jh-stroke="loop"></span><span>draw a loop — a fish</span></span>
+                <span class="guide-row"><span class="guide-glyph" data-jh-stroke="tap"></span><span>tap — drop food, and lead fish to it</span></span>
+                <span class="guide-row"><span class="guide-glyph" data-jh-stroke="scribble"></span><span>scribble across a wall — rub it out</span></span>
             </div>
-            <span class="guide-note">Walls are the line you drew, so a rectangle is a pen and a circle a ring tank — the inside stays open water. Erasing is literal: your stroke has to cross a wall a few times to rub it out, so a line drawn straight through is safe.</span>
             <a href="#intro" class="guide-cta">tap or swipe here to explore
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
             </a>
         </div>
+        <!-- Gesture marks for the guide rows above. Non-deferred and placed
+             AFTER the card so the fill happens during parse (same contract as
+             jh-shapes.js): no flash, no late swap. -->
+        <script src="./scripts/jh-strokes.js?v=1.59"></script>
 
         <!-- Canvas Controls -->
         <div class="canvas-controls">
@@ -3154,16 +3158,23 @@
 
     <!-- ============================================
          3D warm-up — load model-viewer on approach, not at page load.
-         The library is 239KB and the two .glb models total ~13MB
-         (Aerospace Award 2MB, BlackBox 10.9MB). Previously the library was
-         fetched on every visit whether or not anyone scrolled to the awards,
-         and the models only began downloading once you'd already arrived —
-         so you sat watching an empty box.
+         Previously the library was fetched on every visit whether or not
+         anyone scrolled to the awards, and the models only began downloading
+         once you'd already arrived — so you sat watching an empty box.
          Now nothing 3D is requested until the awards section is within roughly
          1.5 viewports, at which point the library and (via loading="eager")
          both models start together and are usually decoded before you get there.
          On metered or slow connections we skip the head start and let them load
-         on arrival, because 13MB of prefetch on cellular is a rude thing to do.
+         on arrival.
+
+         MEASURED 2026-08-27: library ~240KB gzipped (902KB raw), Aerospace
+         Award 158KB, BlackBox 84KB — ~480KB total. This comment used to say
+         the models alone were ~13MB, which was true of the pre-optimisation
+         GLBs and is the number the metered-connection branch was sized
+         against. That branch stays — not prefetching half a megabyte on
+         Save-Data still costs nothing — but the LIBRARY, not the geometry, is
+         now the heavy half. Optimise there first if this ever needs to be
+         faster; shrinking the models further would buy almost nothing.
     ============================================ -->
     <script>
     (function warmUp3D() {
