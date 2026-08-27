@@ -48,10 +48,12 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
   await page.waitForTimeout(1500);
   check('landed on design', /design\.html/.test(page.url()), page.url());
   const residue = page.locator('.so-residue');
-  check('residue sentence stands at the bottom', await residue.count() === 1);
+  check('residue sentence stands under the header', await residue.count() === 1);
   const residueText = await residue.textContent();
   check('residue carries the query and the answer clause', /who is john/.test(residueText)
     && residueText.length > 'who is john'.length + 5, residueText.trim().slice(0, 90));
+  // a kept answer is NOT dismissible — no ✕ on the line (John: it stands)
+  check('a kept answer has no dismiss control', await page.locator('.so-residue-x').count() === 0);
   // (overlay-open hiding is CSS: body.search-overlay-open .so-residue)
 
   // reopen restored
@@ -105,6 +107,8 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
   check('query-only residue appears after Enter-navigation', await residue.count() === 1);
   const t = await residue.textContent();
   check('residue carries the query and the top result micro', /nanome case study/.test(t) && t.length > 'nanome case study'.length + 5, t.trim());
+  // query-only (no answer) IS dismissible — the ✕ exists here
+  check('a bare query tease carries the dismiss control', await page.locator('.so-residue-x').count() === 1);
 
   // STANDING: a plain reload keeps the sentence (not a one-shot toast)
   await page.reload({ waitUntil: 'domcontentloaded' });

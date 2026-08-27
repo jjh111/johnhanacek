@@ -1252,12 +1252,15 @@ body.search-overlay-open
 .departure-chip::after { content: none; }   /* shared.css adds its own external arrow — the glyph here is the departure mark */
 
 /* ─── 10g: the residue sentence — the session's standing chrome ───
-   One line docked at the bottom edge (vim/tmux status-line register):
+   One line docked UNDER the fixed header (the nav's own band height):
    query → answer's first clause · reopen. Hidden while the overlay is
-   open (the overlay IS the expanded view); closing brings it back. */
+   open (the overlay IS the expanded view); closing brings it back.
+   Closable ONLY when the session carries no answer (a bare query tease
+   may be dismissed; a kept answer stands until TTL or a new search). */
 .so-residue {
     position: fixed;
-    bottom: 0;
+    top: calc(40px + env(safe-area-inset-top));
+    bottom: auto;
     left: 0;
     right: 0;
     z-index: 900;                    /* under the overlay's 2000 */
@@ -1268,7 +1271,8 @@ body.search-overlay-open
     background: rgba(var(--surface-rgb, 2, 10, 18), 0.72);
     backdrop-filter: blur(8px) saturate(1.1);
     -webkit-backdrop-filter: blur(8px) saturate(1.1);
-    border-top: 1px solid rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.18);
+    border-top: none;
+    border-bottom: 1px solid rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.18);
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.68rem;
     line-height: 26px;

@@ -451,15 +451,18 @@
         const a = escResidue(String(s.residue || '').slice(0, 110));
         const strip = document.createElement('div');
         strip.className = 'so-residue';
-        strip.innerHTML = `<button class="so-residue-open" type="button" aria-label="Reopen your last search">◂ <span class="so-residue-q">\u201c${q}\u201d</span>${a ? ` <span class="so-residue-sep">\u2192</span> <span class="so-residue-a">${a}</span>` : ''}<span class="so-residue-cta">reopen</span></button>`
-            + `<button class="so-residue-x" type="button" aria-label="Dismiss">×</button>`;
+        // ✕ exists ONLY when there's no kept answer — a bare query tease may
+        // be dismissed; a kept answer stands until TTL or a new search (John,
+        // 2026-08-27)
+        const x = s.answer ? '' : `<button class="so-residue-x" type="button" aria-label="Dismiss">×</button>`;
+        strip.innerHTML = `<button class="so-residue-open" type="button" aria-label="Reopen your last search">◂ <span class="so-residue-q">\u201c${q}\u201d</span>${a ? ` <span class="so-residue-sep">\u2192</span> <span class="so-residue-a">${a}</span>` : ''}<span class="so-residue-cta">reopen</span></button>${x}`;
         document.body.appendChild(strip);
         strip.querySelector('.so-residue-open').addEventListener('click', async () => {
             strip.remove();
             await openSearch();          // ensures the core is initialized
             core.restoreSession();
         });
-        strip.querySelector('.so-residue-x').addEventListener('click', () => {
+        if (x) strip.querySelector('.so-residue-x').addEventListener('click', () => {
             try { sessionStorage.setItem('jh-residue-dismissed', '1'); } catch {}
             strip.remove();
         });
