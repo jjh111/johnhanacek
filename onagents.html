@@ -48,17 +48,22 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@100;200;300;400;500&family=Cormorant+Garamond:wght@100;200;300;400;500&family=Raleway:wght@100;200;300;400;500&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
-    <!-- Site chrome. Loaded BEFORE the page's own <style> so the Void Terminal
-         rules below win every conflict at equal specificity — shared.css is here
-         for <jh-nav>/<jh-footer>, not to restyle the essay. The nav and footer
-         inherit this page's --cyan/--gold, so they read as part of it.
-         jh-chrome.css carries #nav itself and must be linked explicitly: it
-         used to arrive via an @import inside shared.css, and when that import
-         was removed this page was the one that never got its own link. The
-         nav then fell back to position:static and grew to 11,000px of stacked
-         shape SVGs, pushing the whole essay below the fold. -->
+    <!-- Site chrome ONLY — the same deal openprose.html has. This page brings
+         its own complete design language (Void Terminal) and wants nothing
+         from the portfolio's typography; it wanted shared.css purely to get
+         <jh-nav>/<jh-footer>, and since the chrome was split out that is
+         exactly what jh-chrome.css is.
+
+         Loading shared.css too was silently costly: its bare-element rules
+         (p/h2/section/main) applied to the essay, held inert only because the
+         tokens they referenced were missing. The moment this page got its
+         chrome link back they all switched on at once — a 66ch cap on every
+         paragraph, a "›" marker plus a flex hairline on every heading (which
+         breaks centring, since a flex:1 pseudo-element shoves the text left),
+         and the site's glass panel on all 24 sections. Dropping shared.css
+         removes that whole class of leak instead of patching it rule by rule.
+         The one thing this page used from it, .skip-link, is defined below. -->
     <link rel="stylesheet" href="./styles/jh-chrome.css?v=1.59">
-    <link rel="stylesheet" href="./styles/shared.css?v=1.59">
     <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.59">
     <style>
         /* ============================================
@@ -438,6 +443,26 @@
         /* ============================================
            TYPOGRAPHY
         ============================================ */
+
+        /* Skip link — the one thing this page used from shared.css, which it
+           no longer loads (see the head comment). Styled in this page's own
+           language rather than the portfolio's. */
+        .skip-link {
+            position: absolute;
+            top: 0; left: 0;
+            z-index: 1200;
+            padding: 0.6rem 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--text-bright);
+            background: var(--deep);
+            border: 1px solid var(--cyan-glow);
+            border-bottom-right-radius: 6px;
+            text-decoration: none;
+            transform: translateY(-130%);
+            transition: transform 0.16s ease;
+        }
+        .skip-link:focus { transform: translateY(0); outline: 2px solid var(--cyan); }
 
         /* Cinzel — Display headlines, stretched gothic */
         .display-title {
