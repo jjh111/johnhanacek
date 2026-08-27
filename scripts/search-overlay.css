@@ -944,7 +944,22 @@ body.search-overlay-open {
 .pc-l1 { padding: 0.18rem 0.4rem; border-radius: 3px; }
 .pc-l1:hover { background: rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.05); }
 .pc-l1-line { display: flex; align-items: baseline; min-width: 0; white-space: nowrap; }
-.pc-l1 .result-title { flex-shrink: 0; font-size: 0.95em; }
+/* The title must be able to SHRINK. `flex-shrink: 0` inside a nowrap flex row
+   meant an L1 line could never get narrower than title + page badge, however
+   little room there was — and .pc-micro beside it, being flex-basis 0, had
+   already collapsed to zero without helping. Measured in the two-column
+   workspace: 88px of horizontal overflow at a 900px viewport, 62px at 966px,
+   only clearing around 1120px. Because #so-sourcesSection sets overflow-y,
+   overflow-x computes to auto rather than visible, so the column grew a
+   horizontal scrollbar and could be SIDE-SCROLLED — which is why the text read
+   as cut off at its left edge rather than at its right.
+   Ellipsis rather than wrap: an L1 line is one line by construction. */
+.pc-l1 .result-title {
+    font-size: 0.95em;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 .pc-micro {
     overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0;
     color: var(--text-primary, #8cb8cc); font-size: 0.9em;
