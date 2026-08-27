@@ -561,6 +561,66 @@ h1, h2, h3, h4, h5, h6 {
     stroke-width: 1.25px;
     overflow: visible;
 }
+/* ── stepped onboarding (scripts/jh-guide.js) ────────────────────────────
+   `steps` shows one step at a time; `all` is the full reference list the ℹ
+   button reveals; `done` is the short acknowledging beat before the card
+   retires. A row with no data-step (design's erase) only ever appears in the
+   list — it is a repair action, not first-run material.
+
+   The step selectors are enumerated rather than generated because CSS cannot
+   compare one attribute against another. Four is one more than the three-step
+   ceiling, so adding a step does not silently render a blank card. */
+.canvas-guide[data-guide-mode="steps"] .guide-row,
+.canvas-guide[data-guide-mode="done"] .guide-row { display: none; }
+.canvas-guide[data-guide-mode="steps"][data-guide-step="1"] .guide-row[data-step="1"],
+.canvas-guide[data-guide-mode="steps"][data-guide-step="2"] .guide-row[data-step="2"],
+.canvas-guide[data-guide-mode="steps"][data-guide-step="3"] .guide-row[data-step="3"],
+.canvas-guide[data-guide-mode="steps"][data-guide-step="4"] .guide-row[data-step="4"] { display: grid; }
+
+.canvas-guide .guide-done-note { display: none; }
+.canvas-guide[data-guide-mode="done"] .guide-done-note {
+    display: grid;
+    grid-template-columns: 1.35rem 1fr;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-size: 0.83rem;
+    line-height: 1.45;
+    letter-spacing: 0.04em;
+    color: rgba(var(--cyan-rgb), 0.75);
+}
+
+.canvas-guide .guide-progress {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding-top: 0.1rem;
+}
+/* The list is the whole point in `all` mode; a step counter beside it would
+   be claiming a progression the visitor is no longer being walked through. */
+.canvas-guide[data-guide-mode="all"] .guide-progress { display: none; }
+.canvas-guide .guide-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    border: 1px solid rgba(var(--cyan-rgb), 0.35);
+    transition: background 0.25s ease, border-color 0.25s ease;
+}
+.canvas-guide .guide-dot.done {
+    background: rgba(var(--cyan-rgb), 0.55);
+    border-color: transparent;
+}
+.canvas-guide .guide-dot.current {
+    border-color: rgba(var(--cyan-rgb), 0.9);
+    box-shadow: 0 0 0 2px rgba(var(--cyan-rgb), 0.12);
+}
+.canvas-guide .guide-progress-label {
+    margin-left: 0.35rem;
+    font-size: 0.62rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(var(--cyan-rgb), 0.4);
+}
+
 .canvas-guide .guide-close {
     position: absolute;
     top: 0.3rem;
@@ -628,6 +688,7 @@ h1, h2, h3, h4, h5, h6 {
 @media (prefers-reduced-motion: reduce) {
     .canvas-guide { transition: none; }
     .canvas-guide .guide-cta svg { animation: none; }
+    .canvas-guide .guide-dot { transition: none; }
 }
 
 /* Sections 4 + 5 (navigation, shape navigation) moved to jh-chrome.css. */

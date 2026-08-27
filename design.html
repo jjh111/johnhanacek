@@ -484,12 +484,19 @@
         <div class="canvas-guide" id="mazeGuide" role="note" aria-label="How the fish maze works">
             <button class="guide-close" id="closeGuide" type="button" aria-label="Close instructions">&times;</button>
             <span class="guide-title">✎ &nbsp;draw the maze</span>
-            <div class="guide-rows">
-                <span class="guide-row"><span class="guide-glyph" data-jh-stroke="square"></span><span>draw a shape — its outline becomes a wall</span></span>
-                <span class="guide-row"><span class="guide-glyph" data-jh-stroke="loop"></span><span>draw a loop — a fish</span></span>
-                <span class="guide-row"><span class="guide-glyph" data-jh-stroke="tap"></span><span>tap — drop food, and lead fish to it</span></span>
+            <!-- Wall → fish → food is the maze in three moves: build it,
+                 populate it, then steer through it. Erase carries NO data-step
+                 deliberately — it is a repair action, not something you need in
+                 the first thirty seconds, so it appears only in the full list
+                 the ℹ button reveals. -->
+            <div class="guide-rows" aria-live="polite">
+                <span class="guide-row" data-step="1"><span class="guide-glyph" data-jh-stroke="square"></span><span>draw a shape — its outline becomes a wall</span></span>
+                <span class="guide-row" data-step="2"><span class="guide-glyph" data-jh-stroke="loop"></span><span>draw a loop — a fish</span></span>
+                <span class="guide-row" data-step="3"><span class="guide-glyph" data-jh-stroke="tap"></span><span>tap — drop food, and lead fish to it</span></span>
                 <span class="guide-row"><span class="guide-glyph" data-jh-stroke="scribble"></span><span>scribble across a wall — rub it out</span></span>
             </div>
+            <span class="guide-done-note"><span aria-hidden="true">✓</span><span>that's the maze — keep going, or hit ℹ for the rest</span></span>
+            <div class="guide-progress" data-jh-guide-progress aria-hidden="true"></div>
             <a href="#intro" class="guide-cta">tap or swipe here to explore
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
             </a>
@@ -498,6 +505,7 @@
              AFTER the card so the fill happens during parse (same contract as
              jh-shapes.js): no flash, no late swap. -->
         <script src="./scripts/jh-strokes.js?v=1.59"></script>
+        <script src="./scripts/jh-guide.js?v=1.59"></script>
 
         <!-- Canvas Controls -->
         <div class="canvas-controls">
@@ -2503,6 +2511,11 @@
             return erased;
         }
 
+        // Assigned by initMazeGuide() further down, read by the router below.
+        // Declared here so the reporting calls sit next to the decisions they
+        // report rather than being reconstructed from the stroke afterwards.
+        let mazeGuide = null;
+
         // v1.9 maze routing — priority order per FISH_DESIGN_MERGE:
         // 1. scratch-out → erase walls   2. loop → fish   3. dot → food/point
         // 4. clean shape → blueprint wall   5. fallback → fading stroke
@@ -2516,6 +2529,7 @@
             //    crosses nothing falls through to the rest of the router
             //    instead of being swallowed as a failed squiggle.
             if (eraseCrossedShapes(points) > 0) {
+                if (mazeGuide) mazeGuide.notify('erase');
                 currentStroke.fadeStart = 0;
                 finishStroke();
                 return;
@@ -2525,6 +2539,7 @@
             if (points.length > 5) {
                 const spawn = fishLayer.processStroke(points, ['fish']);
                 if (spawn && spawn.spawned) {
+                    if (mazeGuide) mazeGuide.notify('fish');
                     lastShapeTime = Date.now();
                     currentStroke.fadeStart = 0;
                     startAnimation();
@@ -2548,6 +2563,7 @@
                         // The system knows whether that's inside an enclosure
                         // (only fish penned in there can reach it) and says so.
                         fishLayer.addFood(center.x, center.y);
+                        if (mazeGuide) mazeGuide.notify('food');
                         const enclosed = insideEnclosure(center.x, center.y);
                         whisperLabels.push({ text: enclosed ? 'Food · enclosed' : 'Food', x: center.x, y: center.y, createdAt: Date.now() });
                     } else {
@@ -2577,6 +2593,7 @@
                 const shape = detectShape(currentStroke.points);
                 
                 if (shape && shape.confidence > 0.5) {
+                    if (mazeGuide) mazeGuide.notify('wall');
                     // Create recognized shape with ideal points
                     recognizedShapes.push({
                         ...shape,
@@ -2681,38 +2698,32 @@
         });
         fishLayer.setInfoLabels(document.getElementById('toggleLabels').checked);
 
-        // Maze guide — open on load, retires once you've drawn enough to have the
-        // idea. Same contract as index.html's draw hint: a pure in-memory counter,
-        // no storage, so it comes back on every visit rather than silently never
-        // appearing again for a returning visitor. The ℹ button toggles it back.
-        (function initMazeGuide() {
-            const guide = document.getElementById('mazeGuide');
-            const btn = document.getElementById('toggleGuide');
-            if (!guide) return;
-            const GUIDE_THRESHOLD = 8; // strokes before it retires itself
-            let strokeCount = 0;
-
-            const setOpen = (open) => {
-                guide.classList.toggle('hidden', !open);
-                if (btn) btn.classList.toggle('active', open);
-            };
-
-            if (btn) {
-                btn.classList.add('active'); // starts active — the card is open
-                btn.addEventListener('click', () => setOpen(guide.classList.contains('hidden')));
-            }
-            const closeBtn = document.getElementById('closeGuide');
-            if (closeBtn) closeBtn.addEventListener('click', () => setOpen(false));
-
-            // Count completed strokes, not presses, so it stays put while drawing.
-            canvas.addEventListener('pointerup', () => {
-                if (strokeCount >= GUIDE_THRESHOLD) return;
-                strokeCount++;
-                if (strokeCount >= GUIDE_THRESHOLD) {
-                    guide.classList.add('hidden');
-                    if (btn) btn.classList.remove('active');
-                }
+        // Maze guide — three steps, each cleared by actually doing the thing.
+        // The stepping, the ℹ/× contract, the dots and the retire rules are
+        // shared with index.html's card in scripts/jh-guide.js; what is local
+        // is WHERE the notifications come from, because only endDraw knows what
+        // a stroke on this canvas turned into. In-memory, no storage, so the
+        // card comes back on every visit.
+        //
+        // `mazeGuide` is read by endDraw's routing funnel below (hoisted var,
+        // assigned here) — each branch reports its own outcome, so the guide
+        // never re-derives what the router already decided.
+        mazeGuide = (function initMazeGuide() {
+            const el = document.getElementById('mazeGuide');
+            if (!el || !window.JHGuide) return null;
+            const g = window.JHGuide.init({
+                el,
+                toggle: document.getElementById('toggleGuide'),
+                close: document.getElementById('closeGuide'),
+                steps: [
+                    { key: 'wall', match: ['wall'] },
+                    { key: 'fish', match: ['fish'] },
+                    { key: 'food', match: ['food'] },
+                ],
             });
+            // Completed strokes, not presses, so it stays put while drawing.
+            canvas.addEventListener('pointerup', () => g.countStroke());
+            return g;
         })();
 
 

@@ -364,13 +364,20 @@
         <div class="canvas-guide" id="heroDrawHint" role="note" aria-label="How to draw on the canvas">
             <button class="guide-close" id="closeHint" type="button" aria-label="Close instructions">&times;</button>
             <span class="guide-title">✎ &nbsp;draw to interact</span>
-            <div class="guide-rows">
-                <span class="guide-row"><span class="guide-glyph" data-jh-stroke="loop"></span><span>draw a loop — a fish</span></span>
-                <span class="guide-row"><span class="guide-glyph" data-jh-stroke="square"></span><span>draw a square — coral</span></span>
-                <span class="guide-row"><span class="guide-glyph" data-jh-stroke="triangle"></span><span>draw a triangle — jellyfish</span></span>
-                <span class="guide-row"><span class="guide-glyph" data-jh-stroke="circle"></span><span>draw a circle — bubbles</span></span>
-                <span class="guide-row"><span class="guide-glyph" data-jh-stroke="tap"></span><span>tap anywhere — drop food</span></span>
+            <!-- DOM order is STEP order, because `all` mode renders this list
+                 verbatim: loop and tap are the two verbs that make the canvas
+                 answer you, so they lead. The three shape rows share step 3 —
+                 one thing to learn ("other shapes make other things"), three
+                 rows to show it. -->
+            <div class="guide-rows" aria-live="polite">
+                <span class="guide-row" data-step="1"><span class="guide-glyph" data-jh-stroke="loop"></span><span>draw a loop — a fish</span></span>
+                <span class="guide-row" data-step="2"><span class="guide-glyph" data-jh-stroke="tap"></span><span>tap anywhere — drop food</span></span>
+                <span class="guide-row" data-step="3"><span class="guide-glyph" data-jh-stroke="square"></span><span>draw a square — coral</span></span>
+                <span class="guide-row" data-step="3"><span class="guide-glyph" data-jh-stroke="triangle"></span><span>draw a triangle — jellyfish</span></span>
+                <span class="guide-row" data-step="3"><span class="guide-glyph" data-jh-stroke="circle"></span><span>draw a circle — bubbles</span></span>
             </div>
+            <span class="guide-done-note"><span aria-hidden="true">✓</span><span>that's the lot — the tank is yours</span></span>
+            <div class="guide-progress" data-jh-guide-progress aria-hidden="true"></div>
             <a href="#about" class="guide-cta" tabindex="-1">tap or swipe here to explore
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
             </a>
@@ -379,6 +386,7 @@
              AFTER the card so the fill happens during parse (same contract as
              jh-shapes.js): no flash, no late swap. -->
         <script src="./scripts/jh-strokes.js?v=1.59"></script>
+        <script src="./scripts/jh-guide.js?v=1.59"></script>
 
         <!-- Canvas Controls — fixed bottom-left -->
         <div class="canvas-controls">
@@ -703,13 +711,46 @@
         // Boot the shared fish engine on the hero canvas.
         // `hero` comes from the nav script above; QR helpers are declared below (hoisted).
         const { segmentsIntersect, distance, getLineScore } = window.ShapeDetect;
+
+        // Guide first: the engine takes its stroke hook at construction, so the
+        // controller has to exist before FishCanvas does.
+        //
+        // Three steps, each cleared by actually doing the thing. Everything
+        // shared with design.html's card (visibility, the ℹ/× contract, dots,
+        // retire rules) lives in scripts/jh-guide.js; the mapping below is the
+        // only page-specific part, because only this page knows what its
+        // strokes mean. In-memory, no storage: the card comes back on every
+        // visit rather than silently never appearing for a returning visitor.
+        const heroDrawHint = document.getElementById('heroDrawHint');
+        const heroGuide = (heroDrawHint && window.JHGuide) ? window.JHGuide.init({
+            el: heroDrawHint,
+            toggle: document.getElementById('toggleHint'),
+            close: document.getElementById('closeHint'),
+            steps: [
+                { key: 'fish',   match: ['fish'] },
+                { key: 'food',   match: ['food'] },
+                // one step, three shapes: any of them proves the idea
+                { key: 'shapes', match: ['coral', 'jellyfish', 'bubble'] },
+            ],
+        }) : null;
+
         const heroFish = window.heroFish = FishCanvas(document.getElementById('heroCanvas'), {
             onDrawingChange: (active) => hero.classList.toggle('drawing', active),
             onStroke: (classified) => {
+                if (!classified) return;
+                // The engine already classified this stroke, and `type` is
+                // exactly the vocabulary the steps are written against — so
+                // there is no second recognizer here and nothing to keep in sync.
+                if (heroGuide) heroGuide.notify(classified.type);
                 // Easter egg: two crossing STRAIGHT strokes form an "X" → reveal QR
-                if (classified && classified.type === 'line') registerLineForX(classified.points);
+                if (classified.type === 'line') registerLineForX(classified.points);
             }
         });
+
+        // Counted on completed strokes (pointerup), not on press, so the card
+        // stays put while you are mid-gesture. A tap that produces food never
+        // reaches onStroke as a miss, so this only backstops non-step strokes.
+        if (heroGuide) heroFish.canvas.addEventListener('pointerup', () => heroGuide.countStroke());
 
         // Debug toggle
         const debugToggle = document.getElementById('toggleDebug');
@@ -717,49 +758,6 @@
             debugToggle.addEventListener('change', (e) => {
                 heroFish.setDebug(e.target.checked);
             });
-        }
-
-        // Draw hint — always visible on page load, fades after enough draws this visit
-        // Pure in-memory counter: no storage — resets on every page load/refresh
-        const heroDrawHint = document.getElementById('heroDrawHint');
-        const hintToggleBtn = document.getElementById('toggleHint');
-        if (heroDrawHint) {
-            const HINT_THRESHOLD = 12;
-            let drawHintCount = 0; // always 0 at load — no persistence
-            let hintDismissed = false;
-
-            function bumpDrawHint() {
-                if (drawHintCount >= HINT_THRESHOLD) return;
-                drawHintCount++;
-                if (drawHintCount >= HINT_THRESHOLD) {
-                    heroDrawHint.classList.add('hidden');
-                    hintDismissed = true;
-                    if (hintToggleBtn) hintToggleBtn.classList.remove('active');
-                }
-            }
-
-            // Count on completed strokes (pointerup), not on press — keeps hint visible while drawing
-            heroFish.canvas.addEventListener('pointerup', bumpDrawHint);
-
-            // × dismisses it outright; the ℹ button brings it back
-            const closeHintBtn = document.getElementById('closeHint');
-            if (closeHintBtn) {
-                closeHintBtn.addEventListener('click', () => {
-                    heroDrawHint.classList.add('hidden');
-                    hintDismissed = true;
-                    if (hintToggleBtn) hintToggleBtn.classList.remove('active');
-                });
-            }
-
-            // ℹ button toggles hint visibility manually
-            if (hintToggleBtn) {
-                hintToggleBtn.classList.add('active'); // starts active since hint is visible
-                hintToggleBtn.addEventListener('click', () => {
-                    hintDismissed = !heroDrawHint.classList.contains('hidden');
-                    heroDrawHint.classList.toggle('hidden');
-                    hintToggleBtn.classList.toggle('active', !heroDrawHint.classList.contains('hidden'));
-                });
-            }
         }
 
         // ============================================
