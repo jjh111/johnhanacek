@@ -235,7 +235,13 @@ removed along with their CSS and the vestigial `?footer=` config.
 ## Shared Resources
 
 ```
-styles/shared.css         — design system (typography, cards, hero, grids, responsive); @imports jh-chrome.css
+styles/shared.css         — design system (typography, cards, hero, grids, responsive).
+                            Does NOT @import jh-chrome.css any more (that made the chrome a
+                            sequential round-trip). **Every page must link jh-chrome.css
+                            itself, BEFORE shared.css** — miss it and the page loses all
+                            design tokens and #nav falls back to position:static, growing
+                            to thousands of px of stacked shape SVGs that push the content
+                            below the fold. This bit onagents.html on 2026-08-27.
 styles/jh-chrome.css      — the chrome alone: design tokens + #nav + shape nav + body > footer.
                             Split out so a page with its OWN visual language can still wear the site
                             header/footer (openprose.html loads only this). Two rules keep it portable:
