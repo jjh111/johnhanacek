@@ -1939,10 +1939,20 @@
            so the essay's cyan stays cyan and its gold stays gold. Applied to
            the canvas alone, so surrounding cards and captions are untouched.
 
-           The container keeps a paper ground and rim, which means a canvas
-           that has not painted yet reads as an empty figure rather than a
-           black hole. */
-        :root[data-theme="light"] .applet-canvas,
+           CRITICAL: an inverted element's own CSS background is inverted too.
+           Giving these canvases a paper background (which is the obvious thing
+           to do, and what this rule did at first) hands invert() a light
+           colour to flip — and paints exactly the black rectangle it was meant
+           to remove. Roughly half the applets paint an opaque ground of their
+           own and were fine; the half that draw strokes on a transparent
+           ground showed the inverted CSS paper instead, which is why Concept
+           Space, Fitness Landscapes, Fractals and Recursive Representations
+           stayed black while their neighbours came right.
+
+           So the canvas stays transparent and the page's own paper shows
+           through it. Both kinds then land correctly: a painted dark ground
+           inverts to paper, and an unpainted one simply is paper. Framing
+           lives on containers, which are never inverted. */
         :root[data-theme="light"] #networkContainer {
             background: var(--deep);
             border: 1px solid rgba(18, 83, 108, 0.28);
@@ -1955,7 +1965,11 @@
            toolbox minis carry no class at all), so selecting the element and
            naming the exceptions is the only way to catch all of them. */
         :root[data-theme="light"] canvas {
-            filter: invert(1) hue-rotate(180deg);
+            /* contrast lifts the inverted ink back off the paper: strokes the
+               applets draw faintly against black inverted to a very pale grey
+               that the Fractals and Concept Space figures could not carry. */
+            filter: invert(1) hue-rotate(180deg) contrast(1.18);
+            background: transparent;
         }
         :root[data-theme="light"] .slot-reels {
             background: var(--deep);
@@ -2604,7 +2618,11 @@
 
             <!-- Ant pheromone trail simulation — live canvas -->
             <canvas id="antCanvas" class="applet-canvas" width="600" height="300"></canvas>
-            <div class="applet-label">pheromone landscape — foragers (white) follow trails · explorers (red) chart dark regions · gold = returning with resources</div>
+            <!-- No colour named for the foragers: red and gold survive the
+                 light-mode inversion (hue-rotate puts their hue back), but an
+                 achromatic white has no hue to restore and renders dark, so
+                 naming it would be wrong in one of the two themes. -->
+            <div class="applet-label">pheromone landscape — foragers follow trails · explorers (red) chart dark regions · gold = returning with resources</div>
 
             <div class="glass-card green" style="max-width:900px;">
                 <div class="cell-label green-label">From swarm intelligence</div>
