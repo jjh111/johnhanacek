@@ -906,12 +906,35 @@
             renderTierStrip();
         }
 
-        function setActiveEngine(engine) {
+        function setActiveEngine(engine, opts) {
+            const changed = activeEngine !== engine;
             activeEngine = engine;
             if (engine) aiEnabled = true;
             updateEngineBar();
             broadcastEngineState();
             localStorage.setItem('searchActiveEngine', engine || '');
+            // Picking an engine with a question already on screen must ANSWER
+            // it. Generation was only ever kicked from runQuery() — i.e. on
+            // INPUT — so selecting a model after typing relabelled the strip
+            // and did nothing else; only a reload, which replays the query out
+            // of session storage, appeared to "fix" it. The AI toggle right
+            // below already carries this exact clause; setActiveEngine simply
+            // never got it.
+            if (changed && (!opts || opts.generate !== false)) kickGeneration();
+        }
+
+        // NEVER SEND A PARTIAL. lastLlmQuery and lastSearchResults are both
+        // assigned together, after a search settles (and cleared together when
+        // the box empties), so gating on them means we can only ever fire on a
+        // complete query with real results behind it — never on a half-typed
+        // string, and never at boot-time engine restore, where no query exists
+        // yet. isGenerating keeps a second request from stacking on the first.
+        function kickGeneration(force) {
+            if (!aiEnabled || !hasAnyEngine()) return false;
+            if (!lastLlmQuery.trim() || lastSearchResults.length === 0) return false;
+            if (isGenerating && !force) return false;
+            doAIGeneration();
+            return true;
         }
 
         // Body data attribute drives the nav search indicator CSS
@@ -1365,6 +1388,10 @@
             fr.src = resolveHref(node.dataset.pieceSrc);
             fr.loading = 'lazy';
             fr.setAttribute('title', 'live demo');
+            // fade in on the page's OWN paint — until then the poster shows
+            // through the transparent frame (no white flash, unreachable
+            // hosts keep showing the poster)
+            fr.addEventListener('load', () => fr.classList.add('ready'));
             node.appendChild(fr);
             node.classList.add('pc-piece--woken');
             const k = node.querySelector('.pc-piece-kind');
@@ -2149,6 +2176,8 @@
         // one-shot flag; every page renders it while the session is fresh.
         function markContinuity() {
             try {
+                // an emptied box means reset, not continuity (10g revision)
+                if (!currentQueryRaw) { sessionStorage.removeItem(SESSION_KEY); return; }
                 let s = null;
                 try { s = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); } catch {}
                 if (!s || s.query !== currentQueryRaw) saveSession('', '');
@@ -2370,6 +2399,14 @@
             const aiActionsEl = el('aiActions');
 
             if (!rawQuery.trim()) {
+                // John, 2026-08-27: clearing the box CLOSES OUT AND RESETS the
+                // residue session. Distinguished from the overlay's open-time
+                // empty render by whether a query existed going in — opening
+                // the overlay on an empty input must NOT wipe the session.
+                if (currentQueryRaw) {
+                    try { sessionStorage.removeItem(SESSION_KEY); } catch {}
+                    try { sessionStorage.removeItem('jh-residue-dismissed'); } catch {}
+                }
                 sourcesSection.classList.remove('visible');
                 if (config.onResultsChange) config.onResultsChange(false);
                 answerEl.style.display = 'none'; delete answerEl.dataset.model;
@@ -2669,6 +2706,18 @@
                     const t = e.target.closest('[data-tier]');
                     if (!t) return;
                     const tier = t.dataset.tier;
+                    // THE FORCE: clicking the tier that is ALREADY active
+                    // re-runs the answer. setActiveEngine only kicks on a
+                    // CHANGE, so without this the active chip would be the one
+                    // dead control on the strip — and when a generation stalls,
+                    // re-clicking the model is the first thing a hand reaches
+                    // for. No new chrome, and the fluid path is untouched:
+                    // this only fires on a deliberate second click.
+                    const engineFor = { qwen: 'browser', local: 'local', custom: 'custom' }[tier];
+                    if (engineFor && activeEngine === engineFor && hasAnyEngine()) {
+                        kickGeneration(true);
+                        return;
+                    }
                     if (tier === 'qwen') {
                         if (modelReady) setActiveEngine('browser');
                         else { const b = el('enableBtn'); if (b && !b.disabled) b.click(); }
