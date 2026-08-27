@@ -902,6 +902,14 @@ expanding and collapsing.
 >   TTL honored); ALL TWELVE suites green (3+10 stumbled in sweeps;
 >   standalone green).
 
+> **10g revision (John, 2026-08-27, same day):** the bottom dock was
+> invisible in practice — the sentence now docks UNDER THE HEADER (the
+> nav band's own height, `top: calc(40px + env(safe-area-inset-top))`,
+> border-bottom instead of top). And it is NOT closable when the session
+> carries a kept ANSWER — ✕ renders only on a bare query tease (no
+> answer). A kept answer stands until TTL or a new search. Suite: kept
+> answer asserts no ✕; query-only asserts the ✕ present.
+
 ## Phase 7 — Behaviors (standing directives) [PLANNED, post-MVP]
 
 Placement is declarative and instantly verifiable; behavior is a promise over time —
