@@ -235,6 +235,16 @@
             overflow: hidden;
         }
 
+        /* Slide mode is a presentation: it owns the viewport. The site bar is
+           fixed at z-1000 and the slides sit at z-1 under it, so a deck run
+           at full height had its top 40px — the section label on most slides —
+           covered by the nav. Hide the chrome while presenting; leaving slide
+           mode brings it straight back. */
+        body.slide-mode #nav,
+        body.slide-mode .jh-return-chip {
+            display: none;
+        }
+
         body.slide-mode .slide {
             position: fixed;
             top: 0;
@@ -1917,26 +1927,53 @@
             border-color: rgba(138, 109, 28, 0.35);
         }
 
-        /* ---- the plates ----
-           Everything here draws from JS with bright-on-dark colours. Given an
-           opaque dark ground and a rim, they read as figures rather than as
-           patches the theme forgot. */
+        /* ---- the figures, in daylight ----
+           All 17 applets draw bright-on-dark from JS, with their palettes
+           hardcoded across hundreds of literals — there is no one place to
+           re-point them. They were previously framed as dark "plates", which
+           left the light page pocked with black rectangles.
+
+           Inverting the rendered output is the lever that actually themes
+           them: invert(1) turns the dark ground to paper and the bright ink
+           dark, and hue-rotate(180deg) puts the hues back where they started,
+           so the essay's cyan stays cyan and its gold stays gold. Applied to
+           the canvas alone, so surrounding cards and captions are untouched.
+
+           The container keeps a paper ground and rim, which means a canvas
+           that has not painted yet reads as an empty figure rather than a
+           black hole. */
         :root[data-theme="light"] .applet-canvas,
         :root[data-theme="light"] #networkContainer {
-            background: #071018;
-            border: 1px solid rgba(18, 83, 108, 0.35);
-            box-shadow: 0 2px 14px rgba(18, 83, 108, 0.16);
+            background: var(--deep);
+            border: 1px solid rgba(18, 83, 108, 0.28);
+            box-shadow: 0 2px 14px rgba(18, 83, 108, 0.12);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        /* Every figure canvas, by element — the classes are inconsistent
+           (.applet-canvas sits ON most canvases, .applet on one, and the
+           toolbox minis carry no class at all), so selecting the element and
+           naming the exceptions is the only way to catch all of them. */
+        :root[data-theme="light"] canvas {
+            filter: invert(1) hue-rotate(180deg);
         }
         :root[data-theme="light"] .slot-reels {
-            background: rgba(7, 16, 24, 0.92);
-            box-shadow: 0 2px 14px rgba(18, 83, 108, 0.18), inset 0 0 20px rgba(0, 0, 0, 0.5);
+            background: var(--deep);
+            box-shadow: 0 2px 14px rgba(18, 83, 108, 0.14), inset 0 0 20px rgba(18, 83, 108, 0.06);
         }
         :root[data-theme="light"] .reel {
-            background: rgba(7, 16, 24, 0.96);
+            background: var(--paper-warm, #f3f7f9);
             border-color: rgba(138, 109, 28, 0.45);
         }
-        /* The black hole is the essay's one true black. It stays black — a
-           light-mode black hole would be a contradiction, not a theme. */
+        /* Two exceptions. The black hole is the essay's one true black and
+           stays black — a light-mode black hole would be a contradiction, not
+           a theme. The starfield paints stars on a transparent ground, so
+           inverting it would hand the page a solid black sheet rather than a
+           lit sky; the light palette already re-grounds it. */
+        :root[data-theme="light"] #blackHoleCanvas,
+        :root[data-theme="light"] #starCanvas {
+            filter: none;
+        }
 
     </style>
     <script type="importmap">
@@ -1984,12 +2021,18 @@
                 <span></span>
             </button>
             <ul class="nav-right">
-                <li><a href="#slide-1">Hook</a></li>
+                <!-- The essay's five numbered sections, in order — nothing else.
+                     Four of the six links here used to point somewhere wrong:
+                     #slide-9 did not exist at all, and Solutions/Ecosystem/Forest
+                     Floor pointed at slides that had since been renamed, landing
+                     the reader mid-argument (Solutions opened on a *problem*).
+                     These targets are the sections' own anchors, so the nav and
+                     the section headers now tell the same story. -->
                 <li><a href="#slide-3">Problems</a></li>
-                <li><a href="#slide-9">Tried</a></li>
-                <li><a href="#slide-10">Solutions</a></li>
-                <li><a href="#slide-18">Ecosystem</a></li>
-                <li><a href="#slide-21">Forest Floor</a></li>
+                <li><a href="#slide-toolbox">Tried</a></li>
+                <li><a href="#slide-11">Solutions</a></li>
+                <li><a href="#slide-loop">Ecosystem</a></li>
+                <li><a href="#slide-24">Forest Floor</a></li>
             </ul>
         </div>
     </nav>
@@ -2142,7 +2185,7 @@
     ============================================= -->
     <section class="slide" id="slide-3">
         <div class="content-window" data-layout="single">
-            <div class="section-header problems">II. Problems</div>
+            <div class="section-header problems">I. Problems</div>
             <h2 class="display-title lg" style="text-align:center;">The Landscape</h2>
             <div class="gold-divider"></div>
             <p class="body-text" style="text-align:center; max-width:640px; margin-bottom:var(--space-xl);">
@@ -2192,7 +2235,7 @@
                     <div class="scale-level"><span class="level-name">Macro</span>Can't see across the agent network</div>
                 </div>
                 <p class="body-text" style="text-align:center; margin-top:var(--space-xs); color:var(--text-muted); font-style:italic;">
-                    Seven problems. One root: <strong style="color:var(--plasma-warm);">wrong metaphor, wrong architecture.</strong>
+                    These problems share a root: <strong style="color:var(--plasma-warm);">wrong metaphor, wrong architecture.</strong>
                 </p>
             </div>
         </div>
@@ -2347,7 +2390,7 @@
     ============================================= -->
     <section class="slide" id="slide-toolbox">
         <div class="content-window" data-layout="single">
-            <div class="section-header quickfixes">III. What's Been Tried</div>
+            <div class="section-header quickfixes">II. What's Been Tried</div>
             <h2 class="slide-heading gold-color" style="text-align:center;">The Current Toolbox</h2>
             <div style="display:flex; gap:var(--space-md); max-width:960px; flex-wrap:wrap;">
                 <div class="glass-card gold-accent" style="flex:1; min-width:240px;">
@@ -2626,7 +2669,7 @@
     ============================================= -->
     <section class="slide" id="slide-loop">
         <div class="content-window" data-layout="single">
-            <div class="section-header ecoviz">V. Ecosystem Visualization</div>
+            <div class="section-header ecoviz">IV. Ecosystem Visualization</div>
             <h2 class="display-title" style="text-align:center; font-size:clamp(1.6rem,3.5vw,2.6rem);">The Learning Loop</h2>
             <div class="gold-divider"></div>
 
@@ -2695,7 +2738,7 @@
     ============================================= -->
     <section class="slide" id="slide-21">
         <div class="content-window" data-layout="single">
-            <div class="section-header ecoviz">V. Ecosystem Visualization</div>
+            <div class="section-header ecoviz">IV. Ecosystem Visualization</div>
             <h2 class="display-title lg" style="text-align:center;">Recursive Representations</h2>
             <div class="gold-divider"></div>
 
@@ -2765,7 +2808,7 @@
     ============================================= -->
     <section class="slide slide-forest-transition" id="slide-24">
         <div class="content-window" data-layout="single">
-            <div class="section-header forest">VI. The Forest Floor</div>
+            <div class="section-header forest">V. The Forest Floor</div>
             <h2 class="display-title lg" style="text-align:center;">Down to the Valley</h2>
             <div class="gold-divider"></div>
 

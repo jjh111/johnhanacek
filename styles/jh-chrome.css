@@ -116,10 +116,23 @@
     --accent-ink-deep: var(--cyan-dim);
     --accent-warm: var(--gold);
 
-    /* Layout spine (applied in Phase 3) */
-    --content-max: 1100px;
+    /* ── Layout spine ──
+       ONE ladder, read by both the nav bar (.nav-inner, below) and the page
+       body (`main` in shared.css). They used to carry separate numbers and
+       drifted: the bar stopped at 1100px while main ran to 1300px, so on a
+       wide screen the header sat 100px inside the content it belongs to.
+       Change a width here and the header follows the content by construction.
+       A page with its own measure (openprose, onagents) overrides these and
+       its header re-aligns to it for free. */
+    --content-max: 800px;
+    --content-pad: var(--jh-space-md);
     --measure: 66ch;
 }
+@media (min-width: 900px) {
+    :root { --content-max: 900px; --content-pad: var(--jh-space-xl); }
+}
+@media (min-width: 1200px) { :root { --content-max: 1100px; } }
+@media (min-width: 1600px) { :root { --content-max: 1300px; } }
 
 /* ===========================================
    4. NAVIGATION
@@ -151,13 +164,15 @@
 }
 #nav.visible { transform: translateY(0); }
 
+/* Width AND padding both come from the spine, so the bar's first and last
+   items land on the same vertical lines as the content below them. */
 .nav-inner {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    max-width: 1100px;
+    max-width: var(--content-max);
     margin: 0 auto;
-    padding: 0 var(--jh-space-md);
+    padding: 0 var(--content-pad);
     height: 100%;
 }
 

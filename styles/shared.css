@@ -533,10 +533,27 @@ h1, h2, h3, h4, h5, h6 {
     letter-spacing: 0.04em;
     text-transform: none;
 }
+/* Gesture marks (scripts/jh-strokes.js) sit in the 1.35rem glyph column as
+   24×24 SVGs. Sized in `em` so they inherit .guide-row's font-size and shrink
+   with it on mobile without a second breakpoint. `align-self: start` — not the
+   row's baseline — so a row whose text wraps to two lines keeps its mark
+   beside line ONE instead of drifting to the middle of the block. */
 .canvas-guide .guide-glyph {
-    font-size: 0.95rem;
-    text-align: center;
+    align-self: start;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 1.45em;              /* == .guide-row line-height: one line box */
     color: rgba(var(--cyan-rgb), 0.55);
+}
+/* non-scaling-stroke on the paths means this width is CSS pixels, so all six
+   marks carry identical weight no matter how much their geometry was scaled
+   to fit the box. */
+.canvas-guide .guide-glyph svg {
+    width: 1.5em;
+    height: 1.5em;
+    stroke-width: 1.25px;
+    overflow: visible;
 }
 .canvas-guide .guide-note {
     font-size: 0.62rem;
@@ -731,9 +748,12 @@ li {
    7. MAIN LAYOUT & GRIDS
 =========================================== */
 main {
-    max-width: 800px;
+    /* Width + horizontal padding come from the shared layout spine in
+       jh-chrome.css, which the fixed nav bar reads too — that is what keeps
+       the header aligned to the content at every breakpoint. */
+    max-width: var(--content-max);
     margin: 0 auto;
-    padding: var(--space-md) var(--space-md) var(--space-xl);
+    padding: var(--space-md) var(--content-pad) var(--space-xl);
     position: relative;
     z-index: 10;
     /* Gaps between glass sections are transparent — clicks pass through to canvas */
@@ -1287,10 +1307,17 @@ section {
     padding-left: var(--space-md);
     border-left: 1px solid rgba(var(--cyan-dim-rgb), 0.2);
 }
+/* The year and the role title read as one line, so they are aligned on their
+   BASELINES, not their box tops. Box-top alignment (the default) looked wrong
+   because the two run at different sizes and line-heights — 14.4/20.2 against
+   17.6/29.9 — which drops the title's first line ~6px below the year even
+   though both boxes start at the same y. Baseline alignment is also immune to
+   either size changing later. Used by Work Experience and Awards alike. */
 .timeline-item {
     display: grid;
     grid-template-columns: 90px 1fr;
     gap: var(--space-md);
+    align-items: baseline;
     margin-bottom: var(--space-lg);
     padding-bottom: var(--space-md);
     position: relative;
@@ -1638,8 +1665,7 @@ section {
 /* Widescreen breakpoints */
 @media (min-width: 900px) {
     main {
-        max-width: 900px;
-        padding: var(--space-lg) var(--space-xl);
+        padding: var(--space-lg) var(--content-pad);
     }
 
     /* Widescreen split becomes 2 columns */
@@ -1649,7 +1675,6 @@ section {
 }
 
 @media (min-width: 1200px) {
-    main { max-width: 1100px; }
 
     /* Card grid goes to 3 columns if there are 3+ items */
     .card-grid.cols-3 {
@@ -1658,7 +1683,6 @@ section {
 }
 
 @media (min-width: 1600px) {
-    main { max-width: 1300px; }
 }
 
 /* Print */
