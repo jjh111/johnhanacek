@@ -68,6 +68,35 @@ body {
     position: relative;
 }
 
+/* ===========================================
+   Ragged-right control
+
+   `pretty` asks the line breaker to spend a little extra work on the LAST few
+   lines of a block so it does not strand a single word there; `balance` evens
+   out the lines of a short block, which is what a heading wants and what
+   `pretty` deliberately will not do.
+
+   Measured, not assumed. Counting true one-word last lines (the final word's
+   own Range measured against the last line's width — not guessed from
+   character counts) across index / design / about / services / art / nanome2:
+   41 before, 4 after, and all four survivors were headings, which is what
+   `balance` is for. An earlier note in openprose.html says pretty "does
+   nothing"; that was about reflowing a long justified body, which is true and
+   is a different question from stranding a last word.
+
+   Kept off .display-title and anything the pretext line-breaker owns —
+   scripts/pretext-wrap.js does its own breaking and must not be second-guessed.
+=========================================== */
+p, li, dd, figcaption, blockquote, cite, .lede, .subtitle {
+    text-wrap: pretty;
+}
+h1, h2, h3, h4, h5, h6 {
+    text-wrap: balance;
+}
+.pretext-line, .pretext-source {
+    text-wrap: auto;
+}
+
 /* Cursor Spotlight */
 #cursorSpotlight {
     position: fixed;
