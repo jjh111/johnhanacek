@@ -6,10 +6,8 @@
     <title>Search — John Hanacek</title>
     <meta name="description" content="AI-powered search across John Hanacek's portfolio — projects, skills, services, and more. Instant keyword search with optional LLM answers.">
 
-    <!-- Favicon -->
     <link rel="icon" type="image/png" href="./Assets/favicon-jhsigfrmpaper.png">
 
-    <!-- Open Graph / Social Share -->
     <meta property="og:title" content="Search — John Hanacek">
     <meta property="og:description" content="AI-powered search across John Hanacek's portfolio — projects, skills, services, and more.">
     <meta property="og:image" content="https://www.johnhanacek.com/Assets/socialgraph-jhcom.webp">
@@ -17,7 +15,6 @@
     <link rel="canonical" href="https://www.johnhanacek.com/search.html">
     <meta property="og:type" content="website">
 
-    <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Search — John Hanacek">
     <meta name="twitter:description" content="AI-powered search across John Hanacek's portfolio.">
@@ -30,7 +27,6 @@
     <link rel="stylesheet" href="./styles/shared.css?v=1.59">
     <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.59">
 
-    <!-- Structured Data -->
     <link rel="alternate" type="application/json" href="./john-hanacek.json" title="Structured data">
     <script type="application/ld+json">
     {
@@ -63,7 +59,6 @@
             --muted: #6a90a4;
             --border: rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.15);
             --border-hover: rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.3);
-            /* Engine colors */
             --engine-browser: #4dc9f6;
             --engine-lmstudio: #c084fc;
             --engine-ollama: #fb923c;
@@ -71,7 +66,6 @@
             --engine-color: var(--muted); /* set dynamically */
         }
 
-        /* Search page body — full width for nav, content constrained */
         body {
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.95rem;
@@ -82,15 +76,10 @@
             padding-top: 0;
         }
 
-        /* Search page: nav is always visible (no scroll-trigger) */
         #nav { opacity: 1; transform: none; pointer-events: auto; }
 
-        /* Footer within search page */
         footer { margin-top: var(--space-xl, 2.5rem); }
 
-        /* ─── Engine Bar (above search) ─── */
-        /* The command frame sticks under the fixed nav — the bar is never
-           off-screen. Glass ground so results scroll beneath it legibly. */
         .search-wrap {
             position: sticky;
             top: calc(40px + env(safe-area-inset-top));
@@ -142,7 +131,6 @@
         .status-dot.ready { background: var(--engine-color, #22c55e); }
         @keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
 
-        /* Engine info button + popover */
         .engine-info-btn {
             background: none; border: none; cursor: pointer;
             color: var(--muted); opacity: 0.5;
@@ -167,7 +155,6 @@
         }
         .engine-popover.open { display: block; }
 
-        /* Popover sections */
         .popover-section {
             padding: 0.45rem 0.55rem;
             border-radius: 4px;
@@ -231,7 +218,6 @@
         #progressBar { width: calc(100% - 1.15rem); height: 2px; background: rgba(var(--panel-rgb, 10, 22, 40),0.4); border-radius: 1px; margin-top: 0.1rem; display: none; margin-left: 1.15rem; }
         #progressFill { height: 100%; background: var(--cyan-dim); border-radius: 1px; width: 0%; transition: width 0.3s; }
 
-        /* Custom endpoint */
         .custom-endpoint-input {
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.68rem; width: 100%;
@@ -247,7 +233,6 @@
         .custom-endpoint-input:focus { border-color: rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.3); }
         .custom-endpoint-input::placeholder { color: var(--muted); opacity: 0.5; }
 
-        /* ─── Search Input ─── */
         .search-input-wrap { position: relative; }
         #searchInput {
             width: 100%;
@@ -275,7 +260,6 @@
         }
         .clear-btn:hover { opacity: 1; color: var(--text-bright); }
 
-        /* ─── AI Answer ─── */
         /* Answer + results live OUTSIDE .search-wrap in the markup — pin
            them to the same 660px column or they bleed to the viewport edge */
         .ai-answer-wrap { position: relative; margin: 0.6rem auto 0; max-width: 660px; padding: 0 1.5rem; }
@@ -332,7 +316,6 @@
         .ai-action-btn.linked::after { content: 'Link copied!'; }
         @keyframes fade-hint { 0%,60% { opacity: 1; } 100% { opacity: 0; } }
 
-        /* ─── Sources ─── */
         #sourcesSection { display: none; margin: 0.7rem auto 0; max-width: 660px; padding: 0 1.5rem; }
         #sourcesSection.visible { display: block; }
         .section-label {
@@ -423,7 +406,6 @@
 </head>
 <body>
 
-    <!-- Interactive Cursor Spotlight -->
     <div id="cursorSpotlight"></div>
 
     <a href="#searchInput" class="skip-link">Skip to search</a>
@@ -440,12 +422,10 @@
     </nav>
 
     <main class="search-wrap">
-        <!-- Search first -->
         <div class="search-input-wrap">
             <input type="text" id="searchInput" placeholder="Search, ask, or command..." autofocus aria-label="Search, ask, or command">
             <button id="clearBtn" class="clear-btn" aria-label="Clear search">&times;</button>
         </div>
-        <!-- The tier strip: the intelligence ladder, one legible line -->
         <div class="tier-strip-row">
             <div class="tier-strip" id="tierStrip" role="group" aria-label="Search intelligence tiers"></div>
             <button class="engine-info-btn" id="engineInfoBtn" aria-label="Engine details" title="Engine details">
@@ -494,7 +474,6 @@
         </div>
     </div>
 
-    <!-- AI Answer -->
     <div class="ai-answer-wrap">
         <div id="aiAnswer"></div>
         <div class="ai-actions" id="aiActions">
@@ -507,7 +486,6 @@
         </div>
     </main>
 
-    <!-- Sources (no "Results" label row — the postcard's byline carries the ⓘ) -->
     <div id="sourcesSection">
         <div id="searchResults" role="status" aria-live="polite"></div>
     </div>
@@ -536,7 +514,6 @@
             // opt-in, and the model weights only ever on Load (see core).
             core.checkEngines({ probeLocal: core.localOptedIn() });
 
-            // ── Popover toggle (page-style: floating, closes on outside click) ──
             let popoverOpen = false;
             document.getElementById('engineInfoBtn').addEventListener('click', (e) => {
                 e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
@@ -553,7 +530,6 @@
                 }
             });
 
-            // ── URL query param auto-search ──
             const initialQuery = new URLSearchParams(window.location.search).get('q');
             if (initialQuery) {
                 document.getElementById('searchInput').value = initialQuery;

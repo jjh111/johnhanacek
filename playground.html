@@ -64,9 +64,6 @@ header h1 { font-size: 13px; font-weight: 600; letter-spacing: 0.04em; }
 header h1 span { color: var(--ink3); font-weight: 400; }
 header .modes { display: flex; gap: 4px; margin-left: auto; }
 header .modes button.active { border-color: var(--teal); color: var(--teal); }
-/* Mode buttons read as a picture of what they do: a 4x3 plane, a 2x2 grid,
-   one whole page. The icon carries the meaning, so the word is the part
-   that yields when the bar gets narrow. */
 header .modes button { display: inline-flex; align-items: center; gap: 6px; }
 header .modes .mico { display: block; width: 14px; height: 10px; flex: none; }
 header .tb-group { display: none; align-items: center; gap: 4px; }
@@ -85,33 +82,20 @@ header button:hover { border-color: var(--ink3); }
 
 #plane {
   display: grid; gap: 16px; padding: 4px;
-  /* auto-fit (not auto-fill): empty tracks collapse, so few cards stretch
-     to fill the available width instead of parking beside phantom columns. */
   grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
   max-width: 1720px; margin: 0 auto;
 }
-/* Embeds sit flush: the host page frames the panel, so the 4px inset would
-   read as a hairline of dead paper inside the border. */
 body.embedded #plane { padding: 0; }
 #plane[data-cols="1"] { grid-template-columns: 1fr; }
 #plane[data-cols="2"] { grid-template-columns: repeat(2, 1fr); }
 #plane[data-cols="3"] { grid-template-columns: repeat(3, 1fr); }
 #plane[data-cols="4"] { grid-template-columns: repeat(4, 1fr); }
 #plane[data-cols="5"] { grid-template-columns: repeat(5, 1fr); }
-/* Narrow shells (phone embeds and phone standalone): 3+ columns become
-   postage stamps, so cap at two. The height handshake re-sizes the host
-   panel to whatever this wraps to. */
 @media (max-width: 640px) {
   #plane[data-cols="3"], #plane[data-cols="4"], #plane[data-cols="5"] {
     grid-template-columns: repeat(2, 1fr);
   }
-  /* Narrow shells: words out, controls in. The title goes entirely (the
-     site nav above — or the host page, embedded — already says what this
-     is), and paddings/gaps tighten so the mode buttons and toggles hold
-     one line without wrapping. */
   header h1, header .count, header .modes .mlabel { display: none; }
-  /* Controls fill the bar: space-between spreads each wrapped row so the
-     first and last control sit flush at the edges. */
   header { gap: 5px; padding: 6px 8px; flex-wrap: wrap; row-gap: 4px; justify-content: space-between; }
   header .modes { gap: 3px; margin-left: 0; }
   header button { padding: 3px 6px; font-size: 10px; }
@@ -119,7 +103,6 @@ body.embedded #plane { padding: 0; }
   header .tb-group label { display: none; }
   header .tb-group select { font-size: 10px !important; padding: 2px 3px !important; }
 }
-/* Canvas mode — free pan/zoom surface, the tool's signature view */
 body.mode-canvas #stage {
   position: fixed; inset: 47px 0 0 0;
   overflow: hidden; cursor: grab;
@@ -156,10 +139,6 @@ body.mode-canvas .card { position: absolute; width: 420px; }
   font-size: 10px; letter-spacing: 0.06em;
 }
 body.no-ratings .stars { display: none; }
-/* Corner control: the ⛶ that opens this card fullscreen. Was the words
-   "open ↗", which read as "leave for another page" — it does the opposite,
-   it brings the page here. An icon in the corner of every card also stays
-   legible when canvas mode shrinks the type past reading size. */
 .card .bar a {
   margin-left: auto; flex: none;
   font-size: 13px; line-height: 1;
@@ -176,28 +155,19 @@ body.no-ratings .stars { display: none; }
   background: var(--paper);
   touch-action: manipulation; -webkit-tap-highlight-color: transparent;
 }
-/* Canvas mode: the well is not clickable — the stage captures the pointer for
-   panning, so a click on a card never reaches it. The cursor said otherwise.
-   Here the card body is something you drag, double-click to zoom, or open via
-   the corner ⛶; grid mode keeps zoom-in, where a click really does focus. */
 body.mode-canvas .card .well { cursor: inherit; }
 .card .well iframe {
-  /* paper, not white — no flash against dark pages/mode */
   position: absolute; inset: 0; border: 0;
   width: 400%; height: 400%;
   transform: scale(0.25); transform-origin: top left;
   pointer-events: none; background: var(--paper);
-  /* Invisible until the page paints (.ready on load) — heavy pages boot
-     pure white; the well + "loading" hint hold the fort instead. */
   opacity: 0; transition: opacity 0.35s ease;
 }
 .card .well iframe.ready { opacity: 1; }
-/* Physical touch shield over every preview: iOS Safari does not honor
-   pointer-events:none on iframes, so touch-drags scrolled the SUBPAGES
-   instead of the page. A real element above the frame catches the gesture
-   (it belongs to the well, so tap-to-focus still works) and scroll chains
-   up like everywhere else. Interaction with a page happens in focus mode,
-   same as desktop: gated by the zoom click. */
+/* Physical touch shield over every preview: iOS Safari ignores
+   pointer-events:none on iframes, so touch-drags scrolled the SUBPAGES. A real
+   element above the frame catches the gesture and belongs to the well, so
+   tap-to-focus still works and scroll chains up normally. */
 .card .well::after { content: ''; position: absolute; inset: 0; z-index: 2; }
 .card .well .ph {
   position: absolute; inset: 0; display: flex; align-items: center;
@@ -210,7 +180,6 @@ body.mode-canvas .card .well { cursor: inherit; }
   overflow: hidden; min-height: 2.4em;
 }
 
-/* Focus overlay */
 #focus {
   position: fixed; inset: 0; z-index: 50; display: none;
   flex-direction: column; background: var(--paper);
@@ -244,7 +213,6 @@ body.mode-canvas .card .well { cursor: inherit; }
 #focus iframe.ready { opacity: 1; }
 #focus .keys { font-size: 10px; color: var(--ink3); flex: none; }
 
-/* Config-hidden chrome — for inline/iframe embeds (?header=0 etc.) */
 body.no-header header { display: none; }
 body.no-header.mode-canvas #stage { inset: 0; }
 body.no-nav #navigator { display: none; }
@@ -252,9 +220,6 @@ body.no-descs .card .desc, body.no-descs #focus .fdesc { display: none; }
 #ratings-toggle.on { border-color: var(--amber); color: var(--amber); }
 #descs-toggle.on { border-color: var(--teal); color: var(--teal); }
 
-/* Navigator — the minimap, ported from the working canvas. Active in every
-   mode: click/drag jumps, wheel zooms (canvas) / scrolls (grid) / steps
-   (focus). Collapsible via its header. */
 #navigator {
   position: fixed; bottom: 12px; right: 12px; z-index: 60;
   background: color-mix(in srgb, var(--paper) 92%, transparent);
@@ -272,8 +237,6 @@ body.no-descs .card .desc, body.no-descs #focus .fdesc { display: none; }
   color: var(--ink3);
 }
 #navigator .nav-header span:first-child {
-  /* The panel width follows the drawn map (set by navDraw) — the label must
-     yield, never hold the panel wider than the map. */
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
 }
 #navigator.collapsed { width: auto !important; }
@@ -306,19 +269,11 @@ body.no-descs .card .desc, body.no-descs #focus .fdesc { display: none; }
 .card.is-external .well { cursor: pointer; }
 .card.is-external .ph { color: var(--teal); text-align: center; padding: 0 1.5rem; line-height: 1.6; }
 
-/* ---- JHCOM CHROME -------------------------------------------------------
-   The tool was built to own the viewport. The site nav is fixed at 40px, so
-   the stage and header sit below it once the nav becomes visible.
-   Standalone, the nav IS visible from load (JS adds .visible — a tool page
-   has no hero to scroll past), and it carries the brand + theme toggles, so
-   the toolbar below stays purely tool controls. Embedded, the host page is
-   the chrome and the nav is dropped entirely. */
 body.embedded #nav { display: none; }
-/* Focus mode is role="dialog" aria-modal="true" — a modal belongs ABOVE the
-   page chrome, not under it. The site nav is z-index 1000 and the tool, built
-   to own the viewport, only asked for 50: the "← back" button landed inside
-   the nav's 40px band, where elementFromPoint returned a nav icon. It was not
-   merely hidden, it was unclickable, which is why fully-zoomed had no way out. */
+/* Focus mode is an aria-modal dialog, so it must sit ABOVE the page chrome.
+   The site nav is z-index 1000; at the tool's native 50 the "← back" button
+   landed inside the nav's 40px band and elementFromPoint returned a nav icon —
+   unclickable, so fully-zoomed had no way out. */
 #focus { z-index: 1100; }
 
 #nav.visible ~ header { top: calc(40px + env(safe-area-inset-top)); }
@@ -326,9 +281,6 @@ body.embedded #nav { display: none; }
 body.mode-canvas #nav.visible ~ main#stage { inset: calc(40px + env(safe-area-inset-top)) 0 0 0; }
 header, main#stage { transition: top 0.25s ease; }
 
-/* An item flagged `nested` is never woken — it embeds this same tool, and a
-   canvas inside a canvas runs two budgets against one device. The card says
-   so and sends you out to the page instead. */
 .card.is-nested .well { cursor: pointer; }
 .card.is-nested .ph { color: var(--amber); text-align: center; padding: 0 1.5rem; line-height: 1.6; }
 </style>
@@ -420,8 +372,6 @@ header, main#stage { transition: top 0.25s ease; }
   var EMBEDDED = (function () { try { return window.self !== window.top; } catch (e) { return true; } })();
   var CONFIG = (function () {
     var c = Object.assign(
-      // Embeds start quiet: ratings off unless the host page opts in
-      // (?ratings=1). Full-page visits keep stars on.
       { ratings: !EMBEDDED, header: true, nav: true, descs: false,
         mode: null, items: null, budget: 8, cols: null, sort: null, cats: null },
       window.CANVAS_CONFIG || {});
@@ -432,24 +382,16 @@ header, main#stage { transition: top 0.25s ease; }
     if (q.has('mode')) c.mode = q.get('mode');
     if (q.has('items')) c.items = q.get('items').split(',').map(function (s) { return s.trim(); });
     if (q.has('budget')) c.budget = Math.max(1, parseInt(q.get('budget'), 10) || c.budget);
-    // Phones: fewer live iframes per embed unless the host asked explicitly —
-    // several panels × 8 subframes is real memory and battery on mobile.
     else if (EMBEDDED && window.matchMedia && matchMedia('(pointer: coarse)').matches) c.budget = Math.min(c.budget, 4);
     if (q.has('cols')) c.cols = q.get('cols');
     if (q.has('sort')) c.sort = q.get('sort'); // 'date' | 'sequence'
-    // Filter state belongs in the URL for the same reason mode and items do:
-    // a filtered view is a thing you send someone.
     if (q.has('cat')) c.cats = q.get('cat').split(',').map(function (x) { return x.trim(); }).filter(Boolean);
-    // Starting view for canvas mode, per embed: ?zoom=0.65 boots zoomed out
-    // to that scale (top-left anchored), ?zoom=fit boots with everything in
-    // frame. Ignored outside canvas mode.
     if (q.has('zoom')) c.zoom = q.get('zoom');
     return c;
   })();
 
   var items = window.CANVAS_ITEMS || [];
   if (CONFIG.items) {
-    // Param order rules display order, so narrative sequences are URL-editable.
     items = CONFIG.items.map(function (n) {
       return items.find(function (it) { return it.name === n; });
     }).filter(Boolean);
@@ -472,7 +414,6 @@ header, main#stage { transition: top 0.25s ease; }
     });
     return seen;
   })();
-  // null = no filter (everything). A set = show only those.
   var activeCats = (function () {
     if (!CONFIG.cats || !CONFIG.cats.length) return null;
     var known = CONFIG.cats.filter(function (c) { return allCats.indexOf(c) !== -1; });
@@ -499,8 +440,6 @@ header, main#stage { transition: top 0.25s ease; }
       : filtered(baseItems).slice();
   }
 
-  // Filter chips. Clicking toggles one type; clicking the active sole type
-  // clears back to everything, so there is always a way back to the whole set.
   function renderFilters() {
     var box = document.getElementById('filter-group');
     if (!box || !allCats.length) return;
@@ -517,7 +456,6 @@ header, main#stage { transition: top 0.25s ease; }
     mk('all', !activeCats, function () { setCats(null); });
     allCats.forEach(function (c) {
       mk(c, !!(activeCats && activeCats.indexOf(c) !== -1), function (ev) {
-        // Shift-click accumulates; a plain click selects just this one.
         if (ev.shiftKey && activeCats) {
           var next = activeCats.slice();
           var i = next.indexOf(c);
@@ -534,9 +472,8 @@ header, main#stage { transition: top 0.25s ease; }
     box.appendChild(count);
   }
 
-  // Filters live in the query string; focus lives in the hash. Keeping them in
-  // separate halves of the URL means neither clobbers the other, which is what
-  // closeFocus() used to do (see below).
+  // Filters live in the query string; focus lives in the hash. Keep them in
+  // separate halves of the URL so neither clobbers the other.
   function syncUrl() {
     try {
       var q = new URLSearchParams(location.search);
@@ -569,8 +506,6 @@ header, main#stage { transition: top 0.25s ease; }
   if ([...liveSel.options].some(function (o) { return +o.value === maxLive; })) liveSel.value = String(maxLive);
   liveSel.addEventListener('change', function () {
     maxLive = Math.max(1, parseInt(liveSel.value, 10) || 8);
-    // Lowering takes effect immediately: sleep the farthest live cells over
-    // the new cap (previously only future wakes noticed the budget).
     var lives = liveCells();
     if (lives.length > maxLive) {
       lives.sort(function (a, b) { return cellDist(b) - cellDist(a); })
@@ -598,16 +533,11 @@ header, main#stage { transition: top 0.25s ease; }
     if (!req) { window.open(location.href, '_blank', 'noopener'); return; }
     var out = req.call(root);
     if (out && out.catch) out.catch(function () {
-      // Permission denied: fall back to a real new tab so the button delivers.
       window.open(location.href, '_blank', 'noopener');
     });
   }
-  // One fullscreen, two doors: the header ⛶ and the focus bar's ⛶, both far
-  // right in their bars.
   document.getElementById('fs-toggle').addEventListener('click', toggleFullscreen);
   document.getElementById('f-fs').addEventListener('click', toggleFullscreen);
-  // Esc inside the shell backs out of the host overlay (focus mode's own Esc
-  // handler runs first and stops here only when focus is closed).
   document.addEventListener('keydown', function (ev) {
     if (ev.key !== 'Escape' || !EMBEDDED) return;
     var f = document.getElementById('focus');
@@ -669,12 +599,6 @@ header, main#stage { transition: top 0.25s ease; }
   var grid = document.getElementById('plane');
   var stage = document.getElementById('stage');
 
-  // ---- site chrome + theme --------------------------------------------------
-  // Light/dark is the SITE's system (scripts/jh-chrome.js: sig + glyph
-  // toggles in the nav, 'jh-theme' key, OS-following) — the tool's tokens
-  // are bound to the site tokens above, so there is nothing page-local to
-  // toggle. Standalone, the nav shows from load; embedded, the host is the
-  // chrome (CSS drops #nav) and the theme still arrives via the storage key.
   if (!EMBEDDED) {
     var siteNav = document.getElementById('nav');
     if (siteNav) siteNav.classList.add('visible');
@@ -693,7 +617,6 @@ header, main#stage { transition: top 0.25s ease; }
     });
   });
 
-  // ---- grid + preview lifecycle (budgeted, LRU) -----------------------------
   var cells = [];
   var cellIO = null; // IntersectionObserver, created below; rebuilds re-observe
   function buildCards() {
@@ -727,9 +650,6 @@ header, main#stage { transition: top 0.25s ease; }
       card.querySelector('.stars').textContent = starsText(it.stars);
       card.querySelector('.desc').textContent = it.desc || '';
       var openA = card.querySelector('a');
-      // Plain click focuses (the original behaviour); cmd/ctrl/shift-click is
-      // the browser's own "new tab", which the visitor asked for — so that is
-      // the one that carries the way back.
       openA.href = withReturn(it.file);
       openA.addEventListener('click', function (ev) {
         if (ev.metaKey || ev.ctrlKey || ev.shiftKey) return;
@@ -752,10 +672,6 @@ header, main#stage { transition: top 0.25s ease; }
     }
   }
   if (CONFIG.sort === 'date') document.getElementById('grid-sort').value = 'date';
-  // Always run the pipeline at boot, not only for the date sort. It used to be
-  // called only inside that branch, so a ?cat= deep link lit the right chips
-  // and then rendered every card — the filter had never been applied to the
-  // list at all. Sorting and filtering are one pass; boot has to take it.
   applySort(CONFIG.sort === 'date' ? 'date' : 'sequence');
   buildCards();
   renderFilters();
@@ -779,9 +695,6 @@ header, main#stage { transition: top 0.25s ease; }
   // X-Frame-Options means the frame paints nothing at all.
   function neverWake(it) { return !!(it && (it.nested || it.external)); }
 
-  // Anything that genuinely opens in its own tab carries ?from=playground, so
-  // the shared chrome can offer a way back. Skipped for off-origin links,
-  // which are not ours to decorate.
   function withReturn(url) {
     if (/^[a-z]+:\/\//i.test(url)) return url;
     return url + (url.indexOf('?') === -1 ? '?' : '&') + 'from=playground';
@@ -808,8 +721,6 @@ header, main#stage { transition: top 0.25s ease; }
       c.iframe = document.createElement('iframe');
       c.iframe.loading = 'lazy';
       c.iframe.title = c.it.name + ' — live preview';
-      // Fade in only once the page has painted — heavy pages boot white, so
-      // the paper-colored well + "loading" hint hold until then.
       c.iframe.addEventListener('load', function (ev) {
         ev.target.classList.add('ready');
       });
@@ -858,11 +769,9 @@ header, main#stage { transition: top 0.25s ease; }
     cells.slice(0, maxLive).forEach(wakeCell);
   }
 
-  // ---- focus mode -----------------------------------------------------------
   var focusEl = document.getElementById('focus');
   var fFrame = document.getElementById('f-frame');
   fFrame.addEventListener('load', function () {
-    // about:blank (the unload navigation) must not fade in
     if (fFrame.src && fFrame.src.indexOf('about:blank') === -1) fFrame.classList.add('ready');
   });
   var fIdx = -1;
@@ -920,7 +829,6 @@ header, main#stage { transition: top 0.25s ease; }
     document.body.style.overflow = '';
     if (fIdx >= 0) lastFocusIdx = fIdx;
     fIdx = -1;
-    // Hand focus back to the card/well that opened the dialog.
     if (focusReturnTo && document.contains(focusReturnTo)) {
       try { focusReturnTo.focus(); } catch (e) {}
     }
@@ -941,7 +849,6 @@ header, main#stage { transition: top 0.25s ease; }
     else if (ev.key === 'ArrowLeft') openFocus(fIdx - 1);
     else if (ev.key === 'ArrowRight') openFocus(fIdx + 1);
     else if (ev.key === 'Tab') {
-      // keep Tab inside the modal bar
       var els = [...focusEl.querySelectorAll('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])')]
         .filter(function (el) { return el.offsetParent !== null; });
       if (!els.length) return;
@@ -951,7 +858,6 @@ header, main#stage { transition: top 0.25s ease; }
     }
   });
 
-  // ---- three views: canvas (pan/zoom) · grid · focus ----------------------
   var MODE_KEY = 'display-mode';
   var STATE_KEY = 'display-state';
   var viewMode = 'grid';
@@ -968,12 +874,6 @@ header, main#stage { transition: top 0.25s ease; }
       }));
     } catch (e) {}
   }
-  // 'auto' = fit the content without scroll, at the LARGEST card size that
-  // does: walk columns fewest-first (fewest columns = biggest cards) and take
-  // the first count whose whole grid fits the height budget. Standalone the
-  // budget is the window; embedded it is the host panel's ceiling, which the
-  // host posts as {cv:'ceiling'} (before it arrives, rows of four hold the
-  // fort). Nothing fits → width-driven auto-fit and the scroll break.
   var hostCeiling = 0;
   function autoColsFor() {
     var n = items.length;
@@ -1014,8 +914,6 @@ header, main#stage { transition: top 0.25s ease; }
   } else {
     applyCols('auto');
   }
-  // Auto re-fits when the viewport changes (standalone; embeds re-derive
-  // from item count, which does not change on resize).
   var autoColsTick = null;
   window.addEventListener('resize', function () {
     if (document.getElementById('grid-cols').value !== 'auto') return;
@@ -1051,8 +949,6 @@ header, main#stage { transition: top 0.25s ease; }
       : '';
   }
   function layoutCanvas() {
-    // Uniform aligned columns, like the original review canvas: adaptive
-    // column count for the viewport aspect, fixed slot pitch, no jitter.
     var CARD_W = 420, GAP = 8; // frames read as touching; 8px breathing room
     var aspect = Math.max(0.5, stage.clientWidth / Math.max(1, stage.clientHeight));
     var cols = Math.max(2, Math.min(8, Math.round(Math.sqrt(cells.length * aspect))));
@@ -1123,7 +1019,6 @@ header, main#stage { transition: top 0.25s ease; }
     if (typeof navDraw === 'function') navDraw();
   }
   function fitTopLeft() {
-    // First entry: 0th card pinned upper-left at 1:1, same as the big canvas.
     var first = cells[0] && cells[0].well.closest('.card');
     view.s = 1;
     view.x = 24 - (first ? parseFloat(first.style.left) || 0 : 0);
@@ -1176,7 +1071,6 @@ header, main#stage { transition: top 0.25s ease; }
     else if (ev.key === '3') setMode('focus');
   });
 
-  // Pan (pointer drag) + zoom (wheel, toward cursor) for canvas mode.
   var panning = false, px = 0, py = 0;
   window.__panDist = 0;
   stage.addEventListener('pointerdown', function (ev) {
@@ -1200,10 +1094,6 @@ header, main#stage { transition: top 0.25s ease; }
     stage.classList.remove('dragging');
     setTimeout(function () { window.__panDist = 0; }, 0);
   });
-  // Double-click zooms toward the cursor; with a modifier, away from it. The
-  // wheel is no longer the zoom when embedded (see below) and a single click
-  // cannot be one either — the pan capture eats it — so the gesture that is
-  // left, and that nothing else claims, is the double-click.
   var DBL_STEP = 1.6;
   stage.addEventListener('dblclick', function (ev) {
     if (viewMode !== 'canvas') return;
@@ -1216,20 +1106,16 @@ header, main#stage { transition: top 0.25s ease; }
 
   stage.addEventListener('wheel', function (ev) {
     if (viewMode !== 'canvas') return;
-    // Embedded, a plain wheel belongs to the host page. Standalone this is a
-    // canvas tool and the wheel is its zoom; inside an article it is a reader
-    // scrolling past, and swallowing that traps them wherever the cursor
-    // happens to cross the panel. Pinch-zoom still reaches us — browsers
-    // deliver it as a wheel with ctrlKey — so the gesture that MEANS zoom
-    // keeps working, and drag-to-pan and clicking cards are untouched.
+    // Embedded, a plain wheel belongs to the host page — swallowing it traps a
+    // reader wherever the cursor crosses the panel. Pinch-zoom still reaches us
+    // (browsers deliver it as a wheel with ctrlKey), so the gesture that MEANS
+    // zoom keeps working; drag-to-pan and card clicks are untouched.
     if (EMBEDDED && !ev.ctrlKey && !ev.metaKey) return;
     ev.preventDefault();
     var r = stage.getBoundingClientRect();
     zoomTo(view.s * Math.exp(-ev.deltaY * 0.0012), ev.clientX - r.left, ev.clientY - r.top);
   }, { passive: false });
 
-  // Restore last mode (focus restores as grid — a fullscreen page on arrival
-  // would hide that this is a canvas of many).
   if (CONFIG.mode === 'canvas' || CONFIG.mode === 'grid') {
     setMode(CONFIG.mode);
     if (CONFIG.mode === 'canvas' && CONFIG.zoom) {
@@ -1257,28 +1143,22 @@ header, main#stage { transition: top 0.25s ease; }
     } catch (e) { setMode('grid'); }
   }
 
-  // ---- navigator — minimap active in every mode ---------------------------
   var navCanvas = document.getElementById('nav-canvas');
   var navCtx = navCanvas.getContext('2d');
   var navW = 200, navH = 150, navScale = 1, navOX = 0, navOY = 0;
   function navGeometry(contentW, contentH) {
-    // Big-canvas convention: wide panel in canvas mode; narrow tall panel in
-    // grid/focus whose height follows the content's aspect (clamped).
     if (viewMode === 'canvas') { navW = 200; navH = 130; return; }
     navW = 110;
     navH = Math.max(70, Math.min(170, Math.round(navW * (contentH / Math.max(1, contentW)))));
   }
   function cardRects() {
     if (focusEl.classList.contains('open') || viewMode === 'focus') {
-      // Focus map = the deck itself: uniform tiles stacked in wrapped rows,
-      // independent of the (hidden) grid layout and scroll behind the overlay.
       var n = cells.length;
       var cols = Math.max(1, Math.round(Math.sqrt(n * 0.46)));
       return cells.map(function (c, i) {
         return { x: (i % cols) * 18, y: Math.floor(i / cols) * 12, w: 16, h: 10, c: c, i: i };
       });
     }
-    // Document-space (grid) or plane-space (canvas) rects per card.
     return cells.map(function (c, i) {
       var card = c.well.closest('.card');
       if (viewMode === 'canvas') {
@@ -1304,15 +1184,10 @@ header, main#stage { transition: top 0.25s ease; }
         minX = Math.min(minX, r.x); minY = Math.min(minY, r.y);
         maxX = Math.max(maxX, r.x + r.w); maxY = Math.max(maxY, r.y + r.h);
       });
-      // Focus rects are in abstract tile units — a document-scale pad would
-      // shrink them to specks.
       var pad = focusMap ? 2 : 40;
       minX -= pad; minY -= pad; maxX += pad; maxY += pad;
       navGeometry(maxX - minX, maxY - minY);
       navScale = Math.min(navW / (maxX - minX), navH / (maxY - minY));
-      // Tighten the panel to the drawn content — the geometry box is a MAX;
-      // without this, content with a different aspect leaves dead grey space
-      // beside (or under) the map.
       navW = Math.max(48, Math.round((maxX - minX) * navScale));
       navH = Math.max(36, Math.round((maxY - minY) * navScale));
       navOX = minX; navOY = minY;
@@ -1321,9 +1196,6 @@ header, main#stage { transition: top 0.25s ease; }
         navCanvas.width = navW * dpr; navCanvas.height = navH * dpr;
       }
       navCanvas.style.width = navW + 'px'; navCanvas.style.height = navH + 'px';
-      // Panel hugs the map: without an explicit width the header's label can
-      // hold the panel open wider than the canvas — dead grey space beside
-      // the map (+2 = the panel's own borders under border-box).
       document.getElementById('navigator').style.width = (navW + 2) + 'px';
       navCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
       navCtx.clearRect(0, 0, navW, navH);
@@ -1340,8 +1212,6 @@ header, main#stage { transition: top 0.25s ease; }
         }
       });
       navCtx.globalAlpha = 1;
-      // viewport rectangle — meaningless over the focus deck (the overlay is
-      // fullscreen; the teal ring on the current tile is the position cue)
       if (focusMap) return;
       var vx, vy, vw, vh;
       if (viewMode === 'canvas') {
@@ -1363,7 +1233,6 @@ header, main#stage { transition: top 0.25s ease; }
   function navJump(ev) {
     var pt = navPoint(ev);
     if (focusEl.classList.contains('open') || viewMode === 'focus') {
-      // snap focus to the card under/nearest the point
       var rects = cardRects(); var best = null, bd = Infinity;
       rects.forEach(function (r) {
         var d = Math.abs(r.x + r.w / 2 - pt.x) + Math.abs(r.y + r.h / 2 - pt.y);
@@ -1383,11 +1252,6 @@ header, main#stage { transition: top 0.25s ease; }
   navCanvas.addEventListener('pointermove', function (ev) { if (navDragging) navJump(ev); });
   navCanvas.addEventListener('pointerup', function () { navDragging = false; });
   navCanvas.addEventListener('wheel', function (ev) {
-    // The navigator keeps its wheel even when embedded, unlike the stage. The
-    // stage is most of the panel and you cross it by accident while reading;
-    // this is a small map in the corner you have to aim at, so a wheel here is
-    // already a deliberate act. Stepping the deck from the minimap is the nice
-    // part of the tool and there is nothing to protect the reader from.
     ev.preventDefault(); ev.stopPropagation();
     if (focusEl.classList.contains('open')) {
       openFocus((fIdx < 0 ? 0 : fIdx) + (ev.deltaY > 0 ? 1 : -1));
@@ -1406,7 +1270,6 @@ header, main#stage { transition: top 0.25s ease; }
   window.addEventListener('resize', navDraw, { passive: true });
   navDraw();
 
-  // Deep link: #<name> opens focus on load.
   var h = decodeURIComponent((location.hash || '').slice(1));
   if (h) {
     var idx = items.findIndex(function (it) { return it.name === h; });
