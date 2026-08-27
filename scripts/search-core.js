@@ -2251,9 +2251,10 @@
         // A model stopped by the cap ends wherever it happened to be — the
         // observed case ended "...collaborating with Open", mid-word, which
         // reads as a rendering fault rather than as a budget. Wind back to the
-        // last sentence that actually finished, and SAY that it was cut. A
-        // truncated answer is fine; a truncated answer pretending to be whole
-        // is not.
+        // last sentence that actually finished, and stop there. No notice: an
+        // answer that ends on a complete sentence simply reads as finished,
+        // and a label announcing the machinery is louder than the seam it
+        // explains. John's call, 2026-08-27.
         function endCleanly(text) {
             const t = (text || '').trim();
             if (!t) return t;
@@ -2261,8 +2262,7 @@
             const body = (m ? m[0] : t).trim();
             // Nothing finished at all — keep what there is rather than blanking
             // an answer the visitor can still read.
-            const kept = body.length >= t.length * 0.4 ? body : t;
-            return kept + '\n\n\u2014 stopped at the length limit.';
+            return body.length >= t.length * 0.4 ? body : t;
         }
 
         // ── Session memory (10b): the collapsed search ──
