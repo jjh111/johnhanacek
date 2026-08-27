@@ -30,8 +30,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=JetBrains+Mono:wght@300;400;500&family=Raleway:wght@200;300;400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./styles/jh-chrome.css?v=1.56">
-<link rel="stylesheet" href="./scripts/search-overlay.css?v=1.56">
+<link rel="stylesheet" href="./styles/jh-chrome.css?v=1.57">
+<link rel="stylesheet" href="./scripts/search-overlay.css?v=1.57">
 <style>
 /* The tool's own token names, bound to the SITE tokens from jh-chrome.css
    (loaded above) rather than to copied hex. Keeping the names means the
@@ -409,7 +409,7 @@ header, main#stage { transition: top 0.25s ease; }
   <div class="nav-body"><canvas id="nav-canvas" width="200" height="150"></canvas></div>
 </div>
 
-<script src="./scripts/playground-items.js?v=1.56"></script>
+<script src="./scripts/playground-items.js?v=1.57"></script>
 <script>
 (function () {
   'use strict';
@@ -1415,8 +1415,13 @@ header, main#stage { transition: top 0.25s ease; }
 })();
 </script>
 
-<script src="./scripts/jh-chrome.js?v=1.56" defer></script>
-<script src="./scripts/shared.js?v=1.56" defer></script>
-<script src="./scripts/search-overlay.js?v=1.56" defer></script>
+<!-- jh-chrome.js reads window.JHShapes.links at module scope, so this must
+     load first and NOT be deferred. Without it jh-chrome throws before it
+     defines anything and the page loses nav, footer and theme toggle
+     together — which is exactly what happened here. -->
+<script src="./scripts/jh-shapes.js?v=1.57"></script>
+<script src="./scripts/jh-chrome.js?v=1.57" defer></script>
+<script src="./scripts/shared.js?v=1.57" defer></script>
+<script src="./scripts/search-overlay.js?v=1.57" defer></script>
 </body>
 </html>

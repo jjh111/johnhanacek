@@ -14,7 +14,7 @@
   const SITE = {
     year: 2026,
     org: 'JHDesign LLC',
-    version: '1.56', // ← THE site version. Footer badge, ?v= cache-bust, and README all read this (run scripts/sync-version.mjs after bumping).
+    version: '1.57', // ← THE site version. Footer badge, ?v= cache-bust, and README all read this (run scripts/sync-version.mjs after bumping).
     versionNote: 'Made with Claude Code &amp; Open Code',
     github: 'https://github.com/jjh111/johnhanacek',
     githubLabel: 'github.com/jjh111/johnhanacek',
@@ -80,7 +80,16 @@
   // Shape SVGs + link metadata live in scripts/jh-shapes.js (single source —
   // the same data renders the hero shape-nav strips). Requires that file
   // loaded synchronously before this deferred script executes.
-  const NAV = window.JHShapes.links;
+  // Read defensively. This used to be a bare window.JHShapes.links, and when
+  // two pages were missed in the move to jh-shapes.js it threw at module scope
+  // — taking <jh-footer>, the theme toggle and the autoplay gate down with the
+  // nav, on pages whose only visible symptom was "the header is gone". A
+  // missing dependency should cost the thing that needs it, not everything
+  // defined after it.
+  if (!window.JHShapes) {
+    console.error('jh-chrome: scripts/jh-shapes.js must load (non-deferred) before this file. <jh-nav> will render empty.');
+  }
+  const NAV = (window.JHShapes && window.JHShapes.links) || [];
 
   class JHNav extends HTMLElement {
     connectedCallback() {

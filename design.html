@@ -27,9 +27,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Raleway:wght@100;200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles/jh-chrome.css?v=1.56">
-    <link rel="stylesheet" href="./styles/shared.css?v=1.56">
-    <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.56">
+    <link rel="stylesheet" href="./styles/jh-chrome.css?v=1.57">
+    <link rel="stylesheet" href="./styles/shared.css?v=1.57">
+    <link rel="stylesheet" href="./scripts/search-overlay.css?v=1.57">
 
     <!-- Model Viewer is loaded on approach, not at page load — see the
          warm-up observer near the bottom of this file. The library is 239KB
@@ -468,7 +468,7 @@
         <!-- Shape nav (hero). Markup rendered by scripts/jh-shapes.js
              (single source; included right below, sync = no flash). -->
         <nav class="shape-nav" aria-label="Page navigation" data-jh-hero-nav="search,home,design,art" data-current="design"></nav>
-        <script src="./scripts/jh-shapes.js?v=1.56"></script>
+        <script src="./scripts/jh-shapes.js?v=1.57"></script>
 
         <!-- Interactive Blueprint Canvas -->
         <canvas id="heroCanvas"></canvas>
@@ -1131,8 +1131,8 @@
     <!-- Hero Canvas Drawing Interaction -->
     <!-- Engines defer; the boot below waits for DOMContentLoaded, which fires
          after deferred scripts — order preserved, parser never blocks. -->
-    <script src="./scripts/shape-detection.js?v=1.56" defer></script>
-    <script src="./scripts/fish-engine.js?v=1.56" defer></script>
+    <script src="./scripts/shape-detection.js?v=1.57" defer></script>
+    <script src="./scripts/fish-engine.js?v=1.57" defer></script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         const canvas = document.getElementById('heroCanvas');
@@ -1247,7 +1247,17 @@
             Object.assign(colors, light ? BLUEPRINT.light : BLUEPRINT.dark);
         }
         applyBlueprintTheme();
-        window.addEventListener('jh-theme-change', applyBlueprintTheme);
+        window.addEventListener('jh-theme-change', function () {
+            applyBlueprintTheme();
+            // Swapping the palette is INVISIBLE on its own. animate() parks
+            // itself whenever hasActiveAnimation() is false, so an idle
+            // blueprint is holding a frame painted in the old colours, and it
+            // keeps holding it until the next stroke or reload — which is what
+            // made the toggle look stuck on this page. One frame fixes it:
+            // startAnimation() draws once and animate() re-parks itself if
+            // there is still nothing moving.
+            if (typeof startAnimation === 'function') startAnimation();
+        });
 
         // ============================================
         // Helper Functions + Shape Detection
@@ -3078,7 +3088,7 @@
         };
     });
     </script>
-<script src="./scripts/search-overlay.js?v=1.56" defer></script>
+<script src="./scripts/search-overlay.js?v=1.57" defer></script>
 <script>document.addEventListener('DOMContentLoaded',()=>{const t=document.querySelector('.nav-title');if(t)t.dataset.short='JH';document.querySelectorAll('.nav-right a').forEach(a=>{const w=a.textContent.trim().split(/\s+/);a.dataset.short=w.length>1?w.map(x=>x[0]).join('').toUpperCase().slice(0,2):a.textContent.trim().slice(0,2).toUpperCase()})});</script>
     <!-- Command bar: what this page can DO (consumed by scripts/search-core.js) -->
     <script>
@@ -3134,7 +3144,7 @@
             }
         );
     </script>
-    <script src="./scripts/jh-chrome.js?v=1.56" defer></script>
+    <script src="./scripts/jh-chrome.js?v=1.57" defer></script>
 
     <!-- ============================================
          3D warm-up — load model-viewer on approach, not at page load.
