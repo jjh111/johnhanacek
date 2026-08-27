@@ -69,6 +69,36 @@ const lodsOf = (page) => page.evaluate(() =>
     comfyLods.filter(l => l >= '2').length > compactLods.filter(l => l >= '2').length
     || comfyLods.includes('3') && !compactLods.includes('3'),
     `${compactLods.join(',')} → ${comfyLods.join(',')}`);
+
+  // 10e.3 — the wording ladder: micro < tldr < brief < full. LOD is
+  // structural; density picks the wording INSIDE a constant structure.
+  // 'jhana' has a dominant top hit whose dossier survives both densities
+  // (lod3 brief → lod3 full — a constant-lod pair to compare).
+  const captureTiers = () => page.evaluate(() => [...document.querySelectorAll('.pc-mod')].map(m => ({
+    id: m.dataset.id, lod: m.dataset.lod, txt: m.dataset.txt || '',
+    words: (m.querySelector('.pc-tldr, .pc-prose')?.textContent || '').trim(),
+  })));
+  await page.fill('#so-searchInput', 'jhana');
+  await page.waitForTimeout(900);
+  check('l2+/dossier modules carry a wording-tier stamp',
+    (await captureTiers()).every(m => Number(m.lod) < 2 || m.txt.length > 0));
+  const compactTiers = await captureTiers();          // compact: dossier shows BRIEF
+  await page.locator('.pc-density').click();
+  await page.waitForTimeout(600);
+  const comfyTiers = await captureTiers();            // comfortable: dossier shows FULL
+  const pairs = [];
+  for (const c of compactTiers) {
+    const k = comfyTiers.find(m => m.id === c.id && m.lod === c.lod && Number(m.lod) >= 3);
+    if (k) pairs.push([c, k]);
+  }
+  check('density flip changes WORDING at constant lod (brief → full)',
+    pairs.length > 0 && pairs.some(([c, k]) => c.words !== k.words),
+    pairs.length ? `${pairs[0][0].words.slice(0, 40)} ≠ ${pairs[0][1].words.slice(0, 40)}` : 'no constant-lod pair');
+  // derived brief is a SELECTION: whole sentences from the start of content —
+  // the compact dossier text must prefix the comfortable one
+  check('compact dossier wording is a sentence-selection prefix of full',
+    pairs.length > 0 && pairs.every(([c, k]) => k.words.startsWith(c.words.slice(0, 30))),
+    pairs.length ? `"${pairs[0][0].words.slice(0, 30)}…"` : 'no pair');
   await page.locator('.pc-density').click();  // restore compact
   await page.waitForTimeout(300);
 

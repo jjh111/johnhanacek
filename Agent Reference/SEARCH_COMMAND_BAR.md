@@ -725,6 +725,32 @@ density)` used by render AND allocator, with the morph diff extended to a
 >   array), workspace pane-wins assertion (pane id is `so-detailPane` on the
 >   overlay).
 
+> **10e.3 build record (2026-08-27):** the wording ladder shipped —
+> micro < tldr < brief < full.
+> - **Selection, never generation:** `deriveBrief` accumulates whole
+>   sentences of `content` to ~260ch (hard ceiling 300 — a whole sentence
+>   never pushes past), cached per content string. An authored `brief` field
+>   will override when John writes them; until then every microparagraph is
+>   a sentence-prefix of content (suite-asserted).
+> - **ONE selector:** `textFor(r, lod, density)` serves BOTH render and
+>   allocator `costOf` — compact L2=tldr, comfy L2=brief, compact L3
+>   prose=brief, comfy L3=full, L1 always micro. `tipFor` shows the next
+>   tier up on hover.
+> - **Morph:** modules carry `data-txt="tldr|brief|facts|full"`; the morph
+>   diff compares (lod, txt) so a density flip at CONSTANT lod still swaps
+>   the node. `fitKey` already includes density → fit budget resets.
+> - **Pane:** related strata read the microparagraph (up from tldr) — the
+>   tldr read as a fragment at pane width.
+> - **Suite trap (bitten twice):** the wording checks first used 'nanome' —
+>   its top hit is NOT dominant (many close matches), so comfy structurally
+>   promotes L2→L3 and no constant-lod pair exists; at 1100px even 'fish
+>   minigame' comfy sheds its dossier (the fit loop downgrades — doctrine
+>   working, not a bug). 'jhana' has a dominant short-content top hit whose
+>   dossier survives both densities → true constant-lod brief→full pair.
+>   Assertions: stamps exist on l2+, wording differs at constant lod,
+>   compact prose prefix-matches full (the derivation guarantee).
+> - phase8 + full sweep green (all twelve).
+
 ### 10f — externals: containerize uniformly, exit on purpose only [PLANNED 2026-08-26]
 Spec in `SEARCH_HANDOFF.md` §10f. The invariant: chunk `url` must be
 SAME-ORIGIN (it's where WE talk about the thing; `pieces` is where IT lives —

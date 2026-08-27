@@ -1159,6 +1159,53 @@
             };
         }
 
+        // ── The wording ladder (10e.3) ──────────────────────────────────
+        // LOD is STRUCTURAL (where a module sits); density picks the WORDING
+        // inside it. Tiers: micro < tldr < brief (microparagraph) < full.
+        // `brief` is authored or DERIVED BY SELECTION — whole sentences of
+        // `content` accumulated to ~260ch (never generation).
+        const briefCache = new Map();
+        function deriveBrief(content) {
+            if (!content) return '';
+            const cached = briefCache.get(content);
+            if (cached !== undefined) return cached;
+            const sentences = content.match(/[^.!?]+[.!?]+(?:\s|$)/g) || [content];
+            let out = sentences[0].trim();
+            for (let i = 1; i < sentences.length; i++) {
+                const next = out + ' ' + sentences[i].trim();
+                if (next.length > 300) break;   // hard ceiling — a whole sentence never pushes past
+                out = next;
+                if (out.length >= 260) break;   // target reached
+            }
+            briefCache.set(content, out);
+            return out;
+        }
+        function briefOf(r) { return r.brief || deriveBrief(r.content) || r.tldr || r.content || ''; }
+        // The ONE selector — render AND allocator must both ask this (they
+        // will drift if they choose wording independently; that class of bug
+        // is all over the records).
+        function textFor(r, lod, density) {
+            const comfy = density === 'comfortable';
+            if (lod === 1) return r.micro || '';
+            if (lod === 2) return comfy ? briefOf(r) : (r.tldr || r.content || '');
+            return comfy ? (r.content || '') : briefOf(r);   // lod 3 prose
+        }
+        // The tier stamp for morph diffs: a density flip that changes wording
+        // AT THE SAME lod must still swap the node.
+        function txtTier(r, lod, density) {
+            if (lod < 2) return '';
+            if (lod === 2) return density === 'comfortable' ? 'brief' : 'tldr';
+            if (r.facts && r.facts.length) return 'facts';
+            return density === 'comfortable' ? 'full' : 'brief';
+        }
+        // The hover tooltip shows the NEXT tier up from what renders.
+        function tipFor(r, lod, density) {
+            const comfy = density === 'comfortable';
+            if (lod === 1) return r.tldr || r.content || '';
+            if (lod === 2) return comfy ? (r.content || '') : briefOf(r);
+            return '';
+        }
+
         function ensurePretext() {
             if (pretextState !== 'idle') return;
             pretextState = 'loading';
@@ -1203,7 +1250,8 @@
             let budget = budgetLines != null ? budgetLines : m.budget;
             const dominant = results.length === 1 ||
                 (results[1] && results[0].score >= 1.5 * results[1].score);
-            const comfy = pcDensity() === 'comfortable';
+            const density = pcDensity();
+            const comfy = density === 'comfortable';
             // Workspace (9d): the list stays a compact waterfall — the detail
             // pane owns dossier depth, and pinning fills IT, not the list.
             const ws = workspaceOn();
@@ -1236,10 +1284,10 @@
                     const p0 = mod.r.pieces && mod.r.pieces[0];
                     const kind = p0 ? (p0.kind === 'demo' ? 'big' : 'small')
                         : (mod.r.video || mod.r.model3d || mod.r.image) ? 'big' : 'none';
-                    const lines = countLines(mod.r.content || '', width - 190, m);
+                    const lines = countLines(textFor(mod.r, 3, density), width - 190, m);
                     return Math.max(lines, kind === 'big' ? 9 : kind === 'small' ? 3 : 0) + 3;
                 }
-                if (mod.lod === 2) return countLines(mod.r.tldr || mod.r.content || '', width - 88, m) + 1;
+                if (mod.lod === 2) return countLines(textFor(mod.r, 2, density), width - 88, m) + 1;
                 if (mod.lod === 1) return 1;
                 return 0;
             };
@@ -1405,14 +1453,15 @@
             // media computed LAZILY per tier: the two scales are alternatives,
             // never both — computing the unused one would spend its seen-key
             // and suppress the used one (bitten, logged in the 10e.1 record).
+            const density = pcDensity();
             if (mod.lod === 3) {
                 // facts path must not touch the seen-set — pcFactRowsHtml
                 // spends the key itself (mediaBig here would poison it and
                 // starve the fact row of its media — bitten, logged)
                 const body = r.facts && r.facts.length
                     ? pcFactRowsHtml(r, seen)
-                    : `<div class="pc-dossier">${noMedia ? '' : pcMediaHtml(r, true, seen)}<div class="pc-prose">${r.content}</div></div>`;
-                return `<div class="result pc-mod pc-l3" data-id="${r.id}" data-lod="3">`
+                    : `<div class="pc-dossier">${noMedia ? '' : pcMediaHtml(r, true, seen)}<div class="pc-prose">${textFor(r, 3, density)}</div></div>`;
+                return `<div class="result pc-mod pc-l3" data-id="${r.id}" data-lod="3" data-txt="${txtTier(r, 3, density)}">`
                     + `<div class="result-header">${pcTitleHtml(r)}${pcPageBadge(r)}</div>`
                     + body
                     + pcFactsHtml(r, 2)
@@ -1420,10 +1469,10 @@
             }
             if (mod.lod === 2) {
                 const mediaSmall = noMedia ? '' : pcMediaHtml(r, false, seen);
-                return `<div class="result pc-mod pc-l2" data-id="${r.id}" data-lod="2" data-tip="${(r.content || '').replace(/"/g, '&quot;')}">`
+                return `<div class="result pc-mod pc-l2" data-id="${r.id}" data-lod="2" data-txt="${txtTier(r, 2, density)}" data-tip="${tipFor(r, 2, density).replace(/"/g, '&quot;')}">`
                     + `<div class="result-row">${mediaSmall}<div class="result-body">`
                     + `<div class="result-header">${pcTitleHtml(r)}${pcPageBadge(r)}</div>`
-                    + `<div class="pc-tldr">${r.tldr || r.content || ''}</div>`
+                    + `<div class="pc-tldr">${textFor(r, 2, density)}</div>`
                     + pcFactsHtml(r, 1)
                     + `</div></div></div>`;
             }
@@ -1576,7 +1625,9 @@
             let html = '';
             const seenMedia = new Set();   // the same portrait twice reads as a glitch
             const stratum = (c, depth) => {
-                const text = depth === 'full' ? (c.content || '') : (c.tldr || c.content || '');
+                // related strata ride the microparagraph tier (10e.3) — the
+                // tldr read as a fragment at pane width
+                const text = depth === 'full' ? (c.content || '') : (briefOf(c) || c.tldr || c.content || '');
                 const hasFacts = depth === 'full' && c.facts && c.facts.length;
                 const mediaKey = (c.pieces && c.pieces[0] && c.pieces[0].src) || c.video || c.model3d || c.image;
                 let mediaHtml = '';
@@ -1699,7 +1750,10 @@
                 srcsByMod.set(el2.dataset.id, s);
             }
             for (let i = 0; i < want.length; i++) {
-                if (String(want[i].lod) === live[i].dataset.lod) continue;
+                // 10e.3: a density flip changes WORDING at a constant lod —
+                // the data-txt tier stamp catches what the lod check misses
+                const wantTxt = txtTier(want[i].r, want[i].lod, pcDensity());
+                if (String(want[i].lod) === live[i].dataset.lod && wantTxt === (live[i].dataset.txt || '')) continue;
                 if (live[i].dataset.lod === '3' || want[i].lod === 3) dossierTouched = true;
                 const keep = harvestMedia(live[i]);   // the module's own live media
                 const noMedia = !!(paneIds && paneIds.has(want[i].r.id));
