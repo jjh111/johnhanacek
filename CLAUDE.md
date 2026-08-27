@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Portfolio website for John Hanacek showcasing work at the intersection of **Creativity, Curiosity, AI & Human Augmentation**.
 
 **Site Structure:**
-Each page is a standalone HTML document with embedded CSS and JavaScript. All pages share `styles/shared.css` (design system), the `<jh-nav>`/`<jh-footer>` chrome components (`scripts/jh-chrome.js`), and Google Fonts (Cinzel, Raleway, JetBrains Mono).
+Each page is a standalone HTML document with embedded CSS and JavaScript. All pages share `styles/shared.css` (design system), the `<jh-nav>`/`<jh-footer>` chrome components (`scripts/jh-chrome.js`), and Google Fonts (Raleway, JetBrains Mono).
 
 **Roadmap:** `Agent Reference/V2_RELEASE_PLAN.md` is the single source of truth for what's planned and decided. Currently: v1.7 "Foundation" ✅ → v1.8 "Unified Canvas Engine" ✅ → v1.9 "Fish Maze" ✅ (flagship, shipped). Next: v2.0 — Search Enrichment + QA/polish/tag.
 
@@ -60,9 +60,9 @@ Rendered by the `<jh-nav current="home|design|art|about|services|search">` compo
 - `current` attribute sets `class="active"` + `aria-current="page"`
 - Each page keeps its own `.nav-toggle` + `.nav-right` (per-page section TOC); mobile hamburger toggles it
 - Nav is fixed, appears after scrolling past hero section
-- Exception: `writing.html` has its own standalone chrome
+- `writing.html` wears the chrome too now (integrated 2026-08; keeps its own reader header/toggle, shares `jh-theme`)
 
-**Shape SVGs:** defined in `scripts/jh-chrome.js` (triangle, rounded-square, circle, diamond, star, hexagon, search magnifier).
+**Shape SVGs:** single-sourced in `scripts/jh-shapes.js` (triangle, rounded-square, circle, diamond, star, hexagon, search magnifier) — consumed by both `<jh-nav>` and the hero shape-nav strips via `data-jh-hero-nav` placeholders; nav-link metadata lives there too.
 
 ## Design System — "Deep Sea Terminal"
 
@@ -79,10 +79,10 @@ Rendered by the `<jh-nav current="home|design|art|about|services|search">` compo
 - `--border`: rgba(77, 201, 246, 0.2)
 
 **Typography:**
-- Headings: 'Cinzel' (serif, elegant)
-- Subheadings/Labels: 'Raleway' (thin weights 100-600)
+- Headings: 'Raleway' (thin weights 100-600)
+- Subheadings/Labels: 'Raleway'
 - Body/Code: 'JetBrains Mono' (monospace, primary body font)
-- Loaded from Google Fonts
+- Loaded from Google Fonts (Cinzel was retired — loaded for years but never referenced by any rule; only onagents.html still uses it)
 - Reference: `Assets/JH-brand-styleguide.html`
 
 **Accessibility:**
