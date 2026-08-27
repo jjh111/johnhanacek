@@ -206,15 +206,22 @@
 }
 
 /* Engine info button — chevron toggle */
+/* Outlined, not a bare glyph. These two sit at the panel's outer edge with
+   nothing around them, and a borderless icon at 0.5 opacity read as decoration
+   rather than as something you could press. */
 .search-overlay .engine-info-btn {
-    background: none; border: none; cursor: pointer;
-    color: var(--so-muted); opacity: 0.5;
-    padding: 0.35rem; border-radius: 3px;
+    background: none; cursor: pointer;
+    border: 1px solid rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.22);
+    color: var(--cyan-dim, #4dc9f6); opacity: 0.8;
+    width: 24px; height: 24px; padding: 0; border-radius: 5px;
     display: flex; align-items: center; justify-content: center;
-    transition: opacity 0.15s, transform 0.25s ease;
+    transition: opacity 0.15s, color 0.15s, border-color 0.15s, transform 0.25s ease;
     margin-left: auto;
 }
-.search-overlay .engine-info-btn:hover { opacity: 1; }
+.search-overlay .engine-info-btn:hover {
+    opacity: 1; color: var(--gold, #d4af37);
+    border-color: rgba(var(--gold-rgb, 212, 175, 55), 0.5);
+}
 .search-overlay .engine-info-btn.open {
     opacity: 0.8;
     transform: rotate(180deg);
@@ -421,10 +428,17 @@
 .search-overlay .ai-answer-wrap { position: relative; margin: 0.45rem 0 0; z-index: 1; }
 .search-overlay #so-aiAnswer {
     display: none;
-    padding: 0.8rem 1rem;
-    background: rgba(var(--surface-rgb, 2, 10, 18), 0.35);
-    border-left: 2px solid var(--engine-color, var(--so-gold));
-    border-radius: 0 5px 5px 0;
+    padding: 0.85rem 1.05rem;
+    /* A frosted surface of its own rather than a quoted sidebar. The 2px
+       engine-coloured left rule read as a blockquote — an aside to the
+       results. The answer is not an aside. It gets its own tinted glass,
+       and the engine colour survives as a whole-edge hairline instead of a
+       bar down one side. */
+    background: rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.055);
+    backdrop-filter: blur(10px) saturate(1.12);
+    -webkit-backdrop-filter: blur(10px) saturate(1.12);
+    border: 1px solid color-mix(in srgb, var(--engine-color, #4dc9f6) 26%, transparent);
+    border-radius: 10px;
     font-size: 0.88rem;
     font-weight: 400;
     line-height: 1.7;
@@ -793,25 +807,48 @@ body.search-overlay-open {
     color: var(--text-bright, #b8dced);
 }
 .postcard[data-density="comfortable"] { font-size: 14px; line-height: 22px; }
-.pc-head { display: flex; align-items: center; gap: 0.45rem; }
-.pc-head .cmdbar-group-label { margin: 0.2rem 0; flex: 1; }
-.pc-head-spacer { flex: 1; }
+/* Controls FIRST, label after. They used to trail a flex:1 spacer, which
+   parked them at the far right of the left column — the one edge that butts
+   against the detail pane, so they read as belonging to the pane rather than
+   to the list they actually govern. `order` moves them without touching the
+   markup the morph path keys on. */
+.pc-head { display: flex; align-items: center; gap: 0.4rem; }
+.pc-head .cmdbar-group-label { margin: 0.2rem 0; order: 2; }
+.pc-head-spacer { flex: 1; order: 3; }
+.pc-head .pc-info { order: 0; }
+.pc-head .pc-density { order: 1; margin-right: 0.15rem; }
 /* the fusion ⓘ — was the shells' "Results" label row */
+/* Was 0.7rem at 0.55 opacity — a control you had to hunt for. Matched to
+   .pc-density so the pair reads as one set of tools. */
 .pc-info {
-    color: var(--so-muted, var(--muted, #7a9aaa)); opacity: 0.55;
-    font-size: 0.7rem; cursor: help; line-height: 1;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px;
+    border: 1px solid rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.22);
+    border-radius: 4px;
+    color: var(--cyan-dim, #4dc9f6); opacity: 0.85;
+    font-size: 0.82rem; cursor: help; line-height: 1;
+    transition: opacity 0.15s, color 0.15s, border-color 0.15s;
 }
-.pc-info:hover, .pc-info:focus-visible { opacity: 1; outline: none; }
+.pc-info:hover, .pc-info:focus-visible {
+    opacity: 1; color: var(--gold, #d4af37);
+    border-color: rgba(var(--gold-rgb, 212, 175, 55), 0.5); outline: none;
+}
 /* morphed-in module: the swap reads as intentional, not as a flash */
 @keyframes pc-swap-in { from { opacity: 0.35; } to { opacity: 1; } }
 .pc-swap-in { animation: pc-swap-in 0.18s ease; }
 @media (prefers-reduced-motion: reduce) { .pc-swap-in { animation: none; } }
 .pc-density {
-    background: none; border: 1px solid rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.14); border-radius: 3px;
-    color: var(--so-muted, var(--muted, #7a9aaa)); cursor: pointer;
-    font-size: 0.72rem; line-height: 1; padding: 0.15rem 0.35rem; opacity: 0.7;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; padding: 0;
+    background: none; border: 1px solid rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.22); border-radius: 4px;
+    color: var(--cyan-dim, #4dc9f6); cursor: pointer;
+    font-size: 0.82rem; line-height: 1; opacity: 0.85;
+    transition: opacity 0.15s, color 0.15s, border-color 0.15s;
 }
-.pc-density:hover { opacity: 1; color: var(--gold, #d4af37); }
+.pc-density:hover {
+    opacity: 1; color: var(--gold, #d4af37);
+    border-color: rgba(var(--gold-rgb, 212, 175, 55), 0.5);
+}
 .pc-mod { cursor: default; }
 /* group eyebrows inside the postcard: present only when both local + site
    groups exist — and even then, tight */

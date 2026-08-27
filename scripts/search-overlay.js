@@ -199,8 +199,117 @@
     // ============================================
     // Shell Event Wiring (overlay-only concerns)
     // ============================================
+    // ═══ 9e addendum — the panel is only as tall as it needs to be ═══
+    // Workspace mode pinned the panel to 88vh whatever it held, so a short
+    // result set sat in a half-empty box.
+    //
+    // The obvious fix — height:auto — is a TRAP, and a quiet one. The detail
+    // pane derives its strata count from its own clientHeight (search-core.js,
+    // renderDetailPane), so auto-height makes that circular and it settles
+    // shallow: measured across six queries it cost up to 55% of the pane's
+    // content ("ai": 1358 chars -> 613) while looking perfectly fine on the
+    // short queries that fit either way.
+    //
+    // So this is two passes, and the ORDER is the whole trick:
+    //   1. before every render the inline height is cleared, so the core always
+    //      measures against the full 88vh and allocates the same depth it
+    //      always did;
+    //   2. after the render settles, the panel shrinks to what was actually
+    //      produced. Purely cosmetic, and gone again before the next render.
+    // Shrinking never feeds back into allocation because allocation has already
+    // happened and the next one starts from a cleared height.
+    const PANEL_MIN = 260;
+    let fitTimer = null, fitObserver = null, fitted = false;
+
+    function panelEl() { return overlayEl && overlayEl.querySelector('.search-overlay-panel'); }
+    function inWorkspace() { return overlayEl && overlayEl.classList.contains('so-workspace'); }
+
+    // Pass 1. Called before the core can re-render, so it never measures a
+    // panel we already shrank.
+    function releasePanelHeight() {
+        const panel = panelEl();
+        if (panel) panel.style.height = '';
+        fitted = false;
+    }
+
+    // Pass 2. Content height is the TALLER column, because the grid rows are
+    // sized by the tallest cell — measuring only the pane would clip the list.
+    function shrinkPanelToContent() {
+        const panel = panelEl();
+        if (!panel || !inWorkspace() || fitted) return;
+        const scroll = overlayEl.querySelector('.so-panel-scroll');
+        const frame = overlayEl.querySelector('.so-command-frame');
+        if (!scroll || !frame) return;
+        const list = overlayEl.querySelector('#so-sourcesSection');
+        const pane = overlayEl.querySelector('#so-detailPane');
+        const ai = overlayEl.querySelector('.ai-answer-wrap');
+        // scrollHeight is NO USE here: both columns are grid items stretched to
+        // the row, so when their content is shorter than the box scrollHeight
+        // just reports the stretched box back. Measure the real extent instead
+        // — the furthest child bottom relative to the container top.
+        const col = (e) => {
+            if (!e || e.offsetParent === null) return 0;
+            const top = e.getBoundingClientRect().top - e.scrollTop;
+            let max = 0;
+            for (const k of e.children) {
+                const bottom = k.getBoundingClientRect().bottom - top;
+                if (bottom > max) max = bottom;
+            }
+            const pad = parseFloat(getComputedStyle(e).paddingBottom || 0);
+            return max ? Math.ceil(max + pad) : 0;
+        };
+        const right = col(pane) + col(ai);
+        const content = Math.max(col(list), right);
+        if (!content) { releasePanelHeight(); return; }
+        const cs = getComputedStyle(scroll);
+        const chrome = frame.getBoundingClientRect().height
+                     + parseFloat(cs.paddingTop || 0) + parseFloat(cs.paddingBottom || 0);
+        const cap = Math.round(window.innerHeight * 0.88);
+        const want = Math.round(Math.min(cap, Math.max(PANEL_MIN, content + chrome + 2)));
+        // Only ever SHRINK. Growing here would race the cap and flicker.
+        if (want >= panel.getBoundingClientRect().height - 4) return;
+        panel.style.height = want + 'px';
+        // ONE fit per render cycle, released by the next input/resize. Without
+        // this the shrink re-wraps the prose, the wrap mutates the subtree, the
+        // observer fires and it shrinks again — measured stepping 550 -> 508 on
+        // a single query. Same shape as the core's own refitSteps guard.
+        fitted = true;
+        // A single self-correcting step, rather than a magic slack constant:
+        // child margins are not in the extent measurement, so if the shrink
+        // clipped anything, give exactly that many pixels back.
+        requestAnimationFrame(() => {
+            const over = Math.max(
+                (list && list.scrollHeight - list.clientHeight) || 0,
+                (pane && pane.scrollHeight - pane.clientHeight) || 0);
+            if (over > 0) panel.style.height = Math.min(cap, want + over + 2) + 'px';
+        });
+    }
+
+    function schedulePanelFit() {
+        clearTimeout(fitTimer);
+        // 450ms clears the core's own post-wrap refit (a 350ms timeout), so we
+        // measure the settled layout rather than an intermediate one.
+        fitTimer = setTimeout(shrinkPanelToContent, 450);
+    }
+
+    // Any mutation inside the results grid means a render happened. Cheaper and
+    // more reliable than trying to hook every path in the core that can redraw.
+    function watchForRenders() {
+        if (fitObserver) return;
+        const scroll = overlayEl.querySelector('.so-panel-scroll');
+        if (!scroll || typeof MutationObserver === 'undefined') return;
+        fitObserver = new MutationObserver(schedulePanelFit);
+        fitObserver.observe(scroll, { childList: true, subtree: true, characterData: true });
+        window.addEventListener('resize', () => { releasePanelHeight(); schedulePanelFit(); });
+    }
+
     function wireShellEvents() {
         const searchInput = document.getElementById('so-searchInput');
+
+        // Typing invalidates the fitted height BEFORE the core re-renders, so
+        // allocation always starts from the full panel (see pass 1 above).
+        searchInput.addEventListener('input', () => { releasePanelHeight(); schedulePanelFit(); });
+        watchForRenders();
 
         // Backdrop click → close
         overlayEl.querySelector('.search-overlay-backdrop').addEventListener('click', closeSearch);
@@ -229,6 +338,8 @@
         wsBtn.addEventListener('click', (e) => {
             e.preventDefault(); e.stopPropagation();
             const on = overlayEl.classList.toggle('so-workspace');
+            releasePanelHeight();
+            if (on) schedulePanelFit();
             wsBtn.classList.toggle('open', on);
             try { localStorage.setItem('jh-search-workspace', on ? '1' : ''); } catch {}
             core.renderCurrent();   // re-lay the surface for the new geometry
