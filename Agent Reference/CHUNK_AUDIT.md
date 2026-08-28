@@ -59,6 +59,27 @@ conversation, not from any page.
 
 ## B. External-world claims — page-backed, John vouches here
 
+> **VOUCHED 2026-08-27.** John reviewed this whole section and confirmed everything not listed
+> below. Three corrections came out of it, applied to the chunks and, where the page said it
+> too, to the page:
+>
+> 1. **Nanome, what shipped** — was "shipped a conversational AI interface for molecular
+>    analysis". John: "shipped XR+AI interface for molecular analysis **to customers**".
+>    Chunks 5 and 27 corrected, including 27's fact row.
+> 2. **EduLearn 2015 Barcelona** — John did **not** present in person. Nothing claimed he did,
+>    but "EduLearn 2015 Barcelona" next to his name implies attendance. Now reads "published in
+>    the EduLearn 2015 proceedings".
+> 3. **Kevin Kelly and HuffPost** — was the vague "Featured in Kevin Kelly's Technium and
+>    HuffPost". Actually: he **won Kelly's desirable-future contest** on The Technium (the
+>    index already carried Kelly's own line about it — "My $100 goes to him"), and the HuffPost
+>    piece is a **book review of Jeremy Rifkin's The Zero Marginal Cost Society**, published as
+>    "Beyond Network Feudalism". about.html was underselling both and now says so properly.
+>
+> Everything else in this section — the employment dates, the four awards with their years and
+> program names, both theses, the Atlantic Council title and program, the installations with
+> Danskey's spelling, the Fractal Futures channels, the coaching menu, and the OpenProse
+> engagement and its quoted numbers — stands as written.
+
 ### Chunk 4 — JH Design LLC
 - [ ] Independent design practice **since 2016**
 - [ ] Current client: **Muse.bio** (workshop facilitation, user personas) — "current" as of when?
@@ -334,3 +355,49 @@ point: they exist to answer design-interview questions the pages were never writ
   snapshot and keeps the old wording by rule.
 - [ ] nanome2.html labels the project **2023–2024** while employment is **2022–2024**. Both can
   be true — the redesign inside a longer tenure. Left as-is; flag if that reads wrong.
+
+---
+
+## J. Media match — Round 1 (2026-08-27)
+
+Every chunk's media was opened and looked at, not judged by filename; the two `.glb` files
+were read as glTF. Media are claims too — an image that shows the wrong work is the same kind
+of error as a wrong date.
+
+### Wrong, removed
+- [x] **12 Interactive Installations** carried `jhana-1.webp`, which shows the **Influence**
+  piece — a different work (chunk 13's), and a near-identical frame to chunk 13's own photo,
+  so it was a factual mismatch AND a visual duplicate. Removed. **No asset for Godish or God
+  Like exists anywhere in the repo** — both live only as YouTube/Vimeo embeds — so the chunk
+  is text-only until John supplies a still.
+- [x] **25 Agentic Coding & Prototyping** carried `openprose-casestudy.webp`, the OpenProse
+  brand mark over a mountain lake. It depicts nothing about agentic coding and duplicated
+  chunk 40's poster. Removed; the asset moved to chunk 42 where it belongs. **Still needs a
+  real visual** — nothing in Assets depicts the practice. Candidate: a capture of this site's
+  own search or fish canvas, which IS the proof.
+- [x] **28 What Makes John Unique** pointed at `BlackBox-Model.glb`. Reading the glTF: two
+  cubes and a plane, materials named `Material` and `Material.001`. It carries no information.
+  Removed; chunk is text-only.
+
+### Added — each verified to depict what its chunk claims
+- [x] **6 BadVR** gains `BadVR-AROC-hud.mp4` as video (keeps the MunichRE annotated still as
+  its image). AROC is now named in the chunk text, so the system should be visible.
+- [x] **4 JHDesign LLC** → `MusexJH.webp` — the Muse.Bio × JHDesign card; Muse.bio is a named
+  current client in that chunk.
+- [x] **14 Fractal Futures** → `fractal-future-logo.webp`
+- [x] **24 Research & Publications** → `edulearn-screenshot.webp` (EduLearn 2015 is the claim)
+- [x] **2 Contact & Social** → `jhqr.webp`
+- [x] **42 Review Canvas** → `openprose-casestudy.webp`
+- [x] **33 Beliefs & Philosophy** → `strange-loop-blackhole.webp` — the Hofstadter strange-loop
+  image, which belongs with beliefs rather than with "what makes John unique".
+- [x] **46 Research That Changed the Design** → `nanome2-spotlight.webp`, the Spotlight/Follow
+  storyboard. It first shared `nanome2casestudy.webp` with chunk 37; that was a dupe I
+  introduced and this fixes it.
+- [x] **11 Earth Star** re-pointed from the un-re-encoded `.jpeg` to `earthstar-painting.webp`.
+
+Re-encodes to the f775ced standard (cwebp q82): MusexJH 106K→26K · EDULEARN 315K→145K ·
+jhqr 20K→14K · strange loop 740K→173K · Earth Star painting 101K→28K.
+
+**After this round: zero duplicate assets across chunks, every referenced file exists, 18 of
+49 chunks carry media.** Two paths remain `%20`-encoded (chunks 7 and 21) — both load, left
+alone rather than churned.
