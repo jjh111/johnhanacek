@@ -40,17 +40,20 @@ brownie, hiking/camping — see §A.
 ### Chunk 30 — Personal: Cooking & Food
 The whole chunk is chunk-only (about.html has no cooking section). Sourced from
 conversation, not from any page.
-- [ ] Go-to dishes: albondigas soup, rice tahdig, leek-anchovy-lemon pasta, whole fish on the grill
-- [ ] "Has a brownie recipe memorized from scratch"
-- [ ] Keep the chunk at all? (It humanizes; it also answers questions the site itself can't corroborate.)
+- [x] Go-to dishes: albondigas soup, rice tahdig, leek-anchovy-lemon pasta, whole fish on the grill — **John confirmed 2026-08-27, keep as-is**
+- [x] "Has a brownie recipe memorized from scratch" — **confirmed, keep**
+- [x] Keep the chunk at all? — **yes, keep** (John, 2026-08-27)
 
 ### Chunk 31 — Personal: Gardening & Outdoors
 "Native plants" appears on-site only in other senses; hiking/camping are chunk-only.
-- [ ] Gardens with a focus on native California plants in San Diego
-- [ ] "Hikes and camps regularly"
+- [x] Gardens with a focus on native California plants in San Diego — **confirmed, keep**
+- [x] "Hikes and camps regularly" — **confirmed, keep**
 
 ### Chunk 32 — Location & Lifestyle
-- [ ] "UCSD alum who stayed" + the lifestyle summary (hiking, camping, photography across SoCal)
+- [x] "UCSD alum who stayed" — **REWRITTEN from John's own account (2026-08-27).** He is a
+  UCSD alum who went east for grad school in Washington, DC, toured with friends' band, then
+  came home to settle back by the ocean. "Who stayed" was wrong — he left and returned.
+  New content, micro ("Back by the ocean, on purpose.") and tldr applied.
 
 ---
 
@@ -135,37 +138,70 @@ conversation, not from any page.
 
 ---
 
+## B2. New claims entering the index — Round 1 (2026-08-27)
+
+Claims John supplied in conversation this round. They enter the index under the same rule as
+everything else: recorded here, sourced, and his to withdraw.
+
+- [x] **JHDesign LLC was formally founded in 2024**; John has operated as an independent
+  creator and designer **since 2014**. The index said "since 2016" in chunks 4, 23 and 26 —
+  wrong on the date AND conflicting with about.html, which already carried 2014–2024
+  Independent Designer / 2024–Present JHDesign LLC. Chunks corrected. Spelling is
+  **JHDesign LLC**, no space (chunks said "JH Design LLC"); swept.
+- [x] **AROC Situational Awareness system** at BadVR — John's name for the AR HUD he
+  designed there. NOT on any page today (only as an asset filename), so this is a
+  **chunk-only** claim resting on his word. Added to chunks 6 and 27. *If it should be
+  on-page too, that is a site edit not yet made.*
+- [x] **Nanome, JH Coaching OS and AROC are shipped products; MetaMedium and this site's
+  in-browser LLM search are experiments** (John, 2026-08-27). Chunk 27 restructured to say
+  exactly that, and retitled "Shipped Products & Experiments".
+- [x] **Chunk 34 technical detail** — the fish canvas's eight-level behavior priority stack,
+  three size classes, V-formation schooling and BFS navigation field, and the three search
+  tiers (BM25 field-boosted → all-MiniLM-L6-v2 int8 embeddings fused by reciprocal rank →
+  in-browser WebGPU or a local LMStudio/Ollama endpoint). Each verified against the code and
+  `Assets/FISH_SYSTEM_TECHNICAL.md`, not written from memory.
+
+---
+
 ## C. Consistency flags
 
-- [ ] **Nanome title**: chunk 5 says "**Primary** XR designer", chunk 26 says
-  "**Lead** designer at Nanome". Pick one (page uses which?).
-- [ ] **MetaMedium status**: chunk 3 calls it a "shipped interactive web
-  **prototype**"; chunk 27 counts it among "four shipped AI **products**".
-  Prototype or product — one word, both places.
-- [ ] **Nanome as "founding design engagement"** (chunk 4) vs employment
-  2022–24 (chunks 5/23). If Nanome was a job, "founding design" belongs to
-  OpenProse alone in chunk 4.
-- [ ] **Chunk 34 "no build tools, no npm"**: true of the shipped site, but the
-  repo does use npm dev-side (vector builder, QA suites). Suggest: "no
-  frameworks, no build step" (drop "no npm") — precise and still the point.
+- [x] **Nanome title** — John: "**Lead XR Product Designer**" (2026-08-27). Applied to
+  chunks 5, 26 and the chunk-23 facts row. about.html said "XR Product & Interaction
+  Designer" / "Primary XR Spatial Computing designer" — BOTH corrected on the page too, so
+  site and index now agree.
+- [x] **MetaMedium status** — John: "a **prototype and whitepaper**, a north star I work
+  towards and want to share with others by showing more than telling as demos" (2026-08-27).
+  Chunk 3 reworded; "shipped" dropped. Chunk 27 moves it out of the shipped list into
+  **experiments**.
+- [x] **Nanome as "founding design engagement"** — John: employed there as Lead XR Product
+  Designer (2026-08-27). Chunk 4 now reads "Recent founding design engagement: OpenProse."
+- [x] **Chunk 34 "no build tools, no npm"** — John: "get rid of this, the whole thing where
+  it says 'hand made' … I use claude code and open code, then we should say the state of it
+  currently. be explicit and accurate no flourish or judgmental type" (2026-08-27). The
+  "hand-built / no frameworks / no build step" framing is gone; the chunk now states what the
+  site IS and describes the fish steering system and the three search tiers technically.
 - [ ] **OpenProse "(2026)"** in the timeline reads oddly once 2026 is over —
-  fine now, flagging for the annual pass.
+  fine now, flagging for the annual pass. *(still open — annual pass)*
 
 ---
 
 ## D. Tone flags — John's call, not errors
 
-- [ ] Chunk 24 micro: "**Predicted answer-engines before ChatGPT.**" — the
-  boldest line in the index; keep only if the piece fully supports it.
-- [ ] Chunk 27 micro: "Four shipped AI products, **all real**." — "all real"
-  protests too much; suggest just "Four shipped AI products."
-- [ ] Chunk 28 micro: "Intelligence augmentation, **before it was cool**." —
-  cheeky-on-purpose; keep or straighten.
-- [ ] Chunk 35 micro: "Draw a loop, get a fish. **Really.**" — same register;
-  probably on-brand for the fish tank.
-- [ ] Chunk 1: "Has been prototyping in code for **over a decade**" + chunks
-  10/25 "**10+ years**" — consistent with about.html; confirm the count still
-  holds and pick one phrasing.
+- [x] Chunk 24 micro — John: soften to "writing about the coming Answer Engines in society
+  (in 2014)" (2026-08-27). Now "**Wrote about answer engines in 2014, eight years before
+  ChatGPT.**" — "predicted" dropped throughout the chunk. about.html said "written 10+ years
+  before ChatGPT"; 2014 → Nov 2022 is **eight**, so the page was corrected too.
+- [x] Chunk 27 micro — John: "ya 15 is goofy" → "**Shipped products: XR + AI, agentic
+  workflows, and web applications.**" Chunk restructured into shipped vs experiments; see §B
+  new-claims below.
+- [x] Chunk 28 micro — John: "silly" → "**Student of the rich history of intelligence
+  augmentation.**"
+- [x] Chunk 35 micro — John: "simpler" → "**Draw a loop, get a fish.**"
+- [x] Chunk 1 / 25 tenure — John: "Prototyping for over a decade, agentic programming since
+  2024, 10+ year creative coder and lifelong hacker and computer enthusiast" (2026-08-27).
+  Chunk 1 unchanged; chunk 25 now reads "10+ year creative coder. Prototyping in code for over
+  a decade; agentic programming since 2024." NOTE: the site's only "10+ years" was about a
+  publication, not tenure — the tenure claim is chunk-only and rests on John's word here.
 
 ---
 
