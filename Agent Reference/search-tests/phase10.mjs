@@ -23,7 +23,7 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
   await ctx.route('**://localhost:11434/**', r => r.abort());
   const page = await ctx.newPage();
   const errors = [];
-  page.on('console', m => { if (m.type() === 'error' && !/net::|Failed to load resource/.test(m.text())) errors.push(m.text()); });
+  page.on('console', m => { if (m.type() === 'error' && !/net::|Failed to load resource|Permissions policy/.test(m.text())) errors.push(m.text()); });
   page.on('pageerror', e => errors.push(String(e)));
   await page.goto(`${BASE}/index.html`, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(1500);
@@ -47,8 +47,13 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
   ]);
   await page.waitForTimeout(1500);
   check('landed on design', /design\.html/.test(page.url()), page.url());
+  // header view only: in the hero (nav hidden) the sentence stays hidden —
+  // CSS-hidden nodes still count(), so assert visibility
+  check('hidden in the hero area (nav not in view)', !(await page.locator('.so-residue').isVisible()));
+  await page.evaluate(() => window.scrollTo(0, 900));
+  await page.waitForTimeout(800);
   const residue = page.locator('.so-residue');
-  check('residue sentence stands under the header', await residue.count() === 1);
+  check('residue sentence stands under the header', await residue.isVisible());
   const residueText = await residue.textContent();
   check('residue carries the query and the answer clause', /who is john/.test(residueText)
     && residueText.length > 'who is john'.length + 5, residueText.trim().slice(0, 90));
@@ -72,10 +77,11 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
   check('honest byline: "from your last search"', restored.restoredFlag && /last search/.test(restored.byline), restored.byline);
   check('postcard re-derived deterministically', restored.postcard);
   // closing the overlay brings the sentence back — open/collapse is one object
-  await page.keyboard.press('Escape');   // clear the query (ladder rung)
-  await page.keyboard.press('Escape');   // close
+  // (⌘K closes WITHOUT clearing the box; Escape would clear it, which is the
+  // close-out-and-reset semantics and legitimately ends the session)
+  await page.keyboard.press('Meta+k');
   await page.waitForTimeout(600);
-  check('closing the overlay resurrects the sentence', await page.locator('.so-residue').count() === 1);
+  check('closing the overlay resurrects the sentence', await page.locator('.so-residue').isVisible());
 
   check('no console errors', errors.length === 0, errors.slice(0, 3).join(' | '));
   await ctx.close();
@@ -113,7 +119,7 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
   // STANDING: a plain reload keeps the sentence (not a one-shot toast)
   await page.reload({ waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(1200);
-  check('standing — the residue survives a plain reload', await page.locator('.so-residue').count() === 1);
+  check('standing — the residue survives a plain reload', await page.locator('.so-residue').isVisible());
 
   // ✕ dismisses for the SESSION: survives reloads and navigation
   await page.locator('.so-residue-x').click();
@@ -127,10 +133,9 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
   await page.waitForTimeout(800);
   await page.fill('#so-searchInput', 'fish minigame');
   await page.waitForTimeout(900);
-  await page.keyboard.press('Escape');   // clear query
-  await page.keyboard.press('Escape');   // close
+  await page.keyboard.press('Meta+k');   // close without clearing — the search stands
   await page.waitForTimeout(600);
-  check('a new search resurrects a dismissed sentence', await page.locator('.so-residue').count() === 1
+  check('a new search resurrects a dismissed sentence', await page.locator('.so-residue').isVisible()
     && /fish minigame/.test(await page.locator('.so-residue').textContent()));
 
   // TTL: a stale session never resurfaces
@@ -206,7 +211,7 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
   check('specific query is NOT hijacked by the piece sweep', await page.evaluate(() =>
     document.querySelector('.pc-mod')?.dataset.id === '35'));
   await page.click('.pc-mod[data-id="35"] .pc-piece--demo');
-  await page.waitForTimeout(2200);
+  await page.waitForTimeout(3600);   // fonts.ready + pretext wrap can outlast 2s cold
   const woven = await page.evaluate(() => ({
     lod: document.querySelector('.pc-mod[data-id="35"]')?.dataset.lod,
     live: !!document.querySelector('.pc-mod[data-id="35"] .pc-piece--woken iframe'),
@@ -244,7 +249,7 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
   await ctx.route('**://localhost:11434/**', r => r.abort());
   const page = await ctx.newPage();
   const errors = [];
-  page.on('console', m => { if (m.type() === 'error' && !/net::|Failed to load resource/.test(m.text())) errors.push(m.text()); });
+  page.on('console', m => { if (m.type() === 'error' && !/net::|Failed to load resource|Permissions policy/.test(m.text())) errors.push(m.text()); });
   page.on('pageerror', e => errors.push(String(e)));
   await page.goto(`${BASE}/index.html`, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(1200);
@@ -304,7 +309,8 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
   await ctx.route('**://localhost:11434/**', r => r.abort());
   const page = await ctx.newPage();
   const errors = [];
-  page.on('console', m => { if (m.type() === 'error' && !/net::|Failed to load resource/.test(m.text())) errors.push(m.text()); });
+  // framed external pages emit benign policy notices (compute-pressure)
+  page.on('console', m => { if (m.type() === 'error' && !/net::|Failed to load resource|Permissions policy/.test(m.text())) errors.push(m.text()); });
   page.on('pageerror', e => errors.push(String(e)));
   await page.goto(`${BASE}/index.html`, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(1200);
@@ -395,6 +401,69 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
   }
 
   check('no console errors (10f)', errors.length === 0, errors.slice(0, 3).join(' | '));
+  await ctx.close();
+}
+
+// ───────── 6. coherence — the trail, the verb taxonomy, density-scaled frames ─────────
+{
+  console.log('coherence:');
+  const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width: 1280, height: 920 } });
+  await ctx.route(/(localhost|127\.0\.0\.1):(1234|11434)/, r => r.abort());
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('console', m => { if (m.type() === 'error' && !/net::|Failed to load resource|Permissions policy/.test(m.text())) errors.push(m.text()); });
+  page.on('pageerror', e => errors.push(String(e)));
+  await page.goto(`${BASE}/about.html`, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(1200);
+  await page.keyboard.press('/');
+  await page.waitForTimeout(700);
+  await page.fill('#so-searchInput', 'fish minigame');
+  await page.waitForTimeout(1400);
+
+  // taxonomy: chips declare their verb
+  const verbs = await page.evaluate(() => ({
+    openArrow: [...document.querySelectorAll('.related-chip')].every(c => c.textContent.includes('↗')),
+    expandGlyph: getComputedStyle(document.querySelector('.pc-tail-item'), '::before').content.includes('⤢'),
+  }));
+  check('OPEN chips carry ↗ · EXPAND chips carry ⤢', verbs.openArrow && verbs.expandGlyph, JSON.stringify(verbs));
+
+  // pin+wake in one gesture → the trail shows BOTH segments. The piece is
+  // the deterministic driver: chunk 35 renders it at EVERY tier (small on
+  // L2, obstacle on L3), and wake pins the host either way.
+  await page.click('.pc-mod[data-id="35"] .pc-piece--demo');
+  await page.waitForTimeout(2400);
+  const trail1 = await page.evaluate(() => ({
+    segs: [...document.querySelectorAll('#so-trail .trail-seg')].map(s => s.querySelector('.trail-kind')?.textContent),
+    live: !!document.querySelector('.pc-piece--woken iframe'),
+  }));
+  check('pinning shows a trail segment', trail1.segs.includes('pinned'), JSON.stringify(trail1));
+
+  // density scales the frames: compact 264 → comfortable 352
+  const wCompact = await page.evaluate(() =>
+    document.querySelector('.pc-piece--demo')?.getBoundingClientRect().width || 0);
+  await page.click('.pc-density');
+  await page.waitForTimeout(600);
+  const wComfy = await page.evaluate(() =>
+    document.querySelector('.pc-piece--demo')?.getBoundingClientRect().width || 0);
+  check('density scales the frames (compact small, comfortable larger)',
+    wCompact > 0 && wCompact < 300 && wComfy >= 340, `${wCompact} → ${wComfy}`);
+  await page.click('.pc-density');   // restore compact
+  await page.waitForTimeout(500);
+
+  // the trail's ✕ buttons are each state's undo: live first, then the pin
+  await page.click('#so-trail .trail-x[data-trail="live"]');
+  await page.waitForTimeout(600);
+  const afterLive = await page.evaluate(() => ({
+    segs: [...document.querySelectorAll('#so-trail .trail-seg')].map(s => s.querySelector('.trail-kind')?.textContent),
+    iframes: document.querySelectorAll('.pc-piece iframe').length,
+  }));
+  check('the trail ✕ sleeps the live frame (pin remains)', afterLive.segs.includes('pinned') && afterLive.iframes === 0, JSON.stringify(afterLive));
+  await page.click('#so-trail .trail-x[data-trail="pin"]');
+  await page.waitForTimeout(900);
+  check('the trail ✕ is the undo (unpins, trail empties)',
+    document.querySelectorAll('#so-trail .trail-seg').length === 0);
+
+  check('no console errors (coherence)', errors.length === 0, errors.slice(0, 3).join(' | '));
   await ctx.close();
 }
 

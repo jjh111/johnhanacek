@@ -1321,11 +1321,13 @@ model-viewer.pc-obstacle--float { width: 170px; height: 170px; }
 
 
 
-/* the strip yields to the open overlay */
-body.search-overlay-open 
-
-/* a KEPT answer wears an honest byline, never the live eyebrow */
-#aiAnswer[data-restored]::before, #so-aiAnswer[data-restored]::before {
+/* a KEPT answer wears an honest byline, never the live eyebrow. The
+   double-attribute variants out-specify the [data-model] eyebrow rule —
+   a restored answer always carries data-model too. (The orphan
+   'body.search-overlay-open' selector that used to sit here — a casualty
+   of the strip's removal — merged into this rule's selector and broke it.) */
+#aiAnswer[data-restored]::before, #so-aiAnswer[data-restored]::before,
+#aiAnswer[data-restored][data-model]::before, #so-aiAnswer[data-restored][data-model]::before {
     content: 'from your last search';
 }
 
@@ -1481,3 +1483,62 @@ body.search-overlay-open .so-residue { display: none; }
     font-size: 0.8rem;
 }
 .so-residue-x:hover { color: var(--text-bright, #b8dced); }
+
+/* ─── Coherence pass: the verb taxonomy + the trail ───
+   Three chip verbs, one signal each: OPEN keeps ↗ (title link / related
+   chips / artifact rail), EXPAND wears ⤢ (tail items — they re-grade the
+   ladder here, they don't navigate), INERT stays muted (facts, meta). */
+.pc-tail-item { cursor: zoom-in; }
+.pc-tail-item::before {
+    content: '⤢ ';
+    opacity: 0.6;
+    color: rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.9);
+}
+.pc-mod { cursor: zoom-in; }   /* module body = expand here; links override */
+.pc-mod a, .pc-mod [data-piece-src], .pc-mod .result-video-wrap, .pc-mod model-viewer { cursor: pointer; }
+
+/* the trail — visible only when view state exists */
+.so-trail {
+    display: none;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.22rem 0.75rem;
+    border-bottom: 1px solid rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.12);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem;
+    line-height: 1.4;
+    color: var(--muted, #7a9aaa);
+    overflow: hidden;
+    white-space: nowrap;
+}
+.so-trail.visible { display: flex; }
+.trail-seg { display: inline-flex; align-items: center; gap: 0.35rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.trail-kind {
+    flex: none;
+    font-size: 0.56rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.85);
+    border: 1px solid rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.3);
+    border-radius: 3px;
+    padding: 0 0.3rem;
+}
+.trail-live .trail-kind { color: rgba(var(--gold-rgb, 212, 175, 55), 0.95); border-color: rgba(var(--gold-rgb, 212, 175, 55), 0.4); }
+.trail-label { color: var(--text-bright, #b8dced); overflow: hidden; text-overflow: ellipsis; }
+.trail-sep { color: var(--muted, #7a9aaa); flex: none; }
+.trail-x {
+    all: unset;
+    cursor: pointer;
+    flex: none;
+    color: var(--muted, #7a9aaa);
+    font-size: 0.7rem;
+    padding: 0 0.15rem;
+}
+.trail-x:hover { color: var(--text-bright, #b8dced); }
+
+/* density IS the frame scale: comfortable grows the wakeable card — the
+   virtual viewport grows with it (same 0.25 scale, more page visible) */
+[data-pc-density="comfortable"] .pc-piece--demo {
+    width: 352px;
+    height: 234px;
+}

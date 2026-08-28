@@ -736,6 +736,7 @@
         // Init — index + chunks + common event wiring
         // ============================================
         async function init() {
+            applyDensityFlag();
             if (typeof MiniSearch === 'undefined') {
                 await new Promise((resolve, reject) => {
                     const s = document.createElement('script');
@@ -933,6 +934,11 @@
         function kickGeneration(force) {
             if (!aiEnabled || !hasAnyEngine()) return false;
             if (!lastLlmQuery.trim() || lastSearchResults.length === 0) return false;
+            // the comment above says "never at boot-time engine restore, where
+            // no query exists yet" — the residue restore BROKE that assumption
+            // (a restored session HAS a query): a kept answer stands, never
+            // auto-regenerated under it (10b contract)
+            if (el('aiAnswer').dataset.restored && !force) return false;
             if (isGenerating && !force) return false;
             doAIGeneration();
             return true;
@@ -1263,7 +1269,8 @@
                 return `<a class="related-chip departure-chip${extraClass ? ' ' + extraClass : ''}" href="${c.url}" target="_blank" rel="me noopener" title="${c.title} — leaves the site; your search is kept">↗ ${host}</a>`;
             }
             const href = resolveHref(c.url.replace(/^\.\//, ''));
-            return `<a class="related-chip${extraClass ? ' ' + extraClass : ''}" href="${href}">↳ ${c.title}</a>`;
+            // the trailing ↗ marks every chip that OPENS a page (badge grammar)
+            return `<a class="related-chip${extraClass ? ' ' + extraClass : ''}" href="${href}">↳ ${c.title} ↗</a>`;
         }
 
         // <model-viewer> loads from CDN only when a 3D card first renders.
@@ -1296,6 +1303,10 @@
 
         function pcDensity() {
             try { return localStorage.getItem('jh-postcard-density') || 'compact'; } catch { return 'compact'; }
+        }
+        // the density is a GLOBAL semantic-zoom state — frames scale with it
+        function applyDensityFlag() {
+            document.documentElement.dataset.pcDensity = pcDensity();
         }
         function pcMetrics() {
             const comfy = pcDensity() === 'comfortable';
@@ -1497,6 +1508,7 @@
             const k = livePieceEl.querySelector('.pc-piece-kind');
             if (k) k.textContent = '▶ live';
             livePieceEl = null;
+            renderTrail();
         }
         function wakePiece(node) {
             if (livePieceEl === node) return;
@@ -1514,6 +1526,34 @@
             const k = node.querySelector('.pc-piece-kind');
             if (k) k.textContent = '✕';
             livePieceEl = node;
+            renderTrail();
+        }
+        // ── The view trail (10-series coherence) ────────────────────────
+        // Pin and wake are INVISIBLE state changes — the trail makes them
+        // visible: one slim line under the tier strip, rendered only when
+        // state exists (no filler). Every segment's ✕ is its undo.
+        function trailEsc(t) {
+            return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+        function renderTrail() {
+            const host = el('trail');
+            if (!host) return;
+            const segs = [];
+            if (pinnedId != null) {
+                const r = lastSearchResults.find(x => x.id === pinnedId) || chunks.find(c => c.id === pinnedId);
+                if (r) segs.push({ kind: 'pinned', label: r.title });
+            }
+            if (livePieceEl) {
+                const label = livePieceEl.querySelector('.pc-piece-title')?.textContent
+                    || (livePieceEl.dataset.pieceSrc || '').split('/').pop() || 'live';
+                segs.push({ kind: 'live', label });
+            }
+            if (!segs.length) { host.innerHTML = ''; host.classList.remove('visible'); return; }
+            host.classList.add('visible');
+            host.innerHTML = segs.map(s =>
+                `<span class="trail-seg trail-${s.kind}"><span class="trail-kind">${s.kind}</span><span class="trail-label">${trailEsc(s.label)}</span></span>`
+                + `<button class="trail-x" data-trail="${s.kind}" aria-label="Dismiss ${s.kind}">✕</button>`
+            ).join('<span class="trail-sep">›</span>');
         }
         function pcPieceHtml(piece, r, big) {
             if (!piece) return '';
@@ -2009,6 +2049,7 @@
             // Same query, same structure → surgical swap, no rebuild.
             if (sameQuery && results.length && morphPostcard(resultsEl, mods, tail.shown, m, paneSeedState)) {
                 renderDetailPane(results, paneSeedState);
+                renderTrail();
                 return;
             }
 
@@ -2117,6 +2158,7 @@
 
             applyDossierWrap(resultsEl, m, 'list');
             renderDetailPane(results, paneSeedState);
+            renderTrail();
             if (livePieceEl && !document.contains(livePieceEl)) livePieceEl = null;
         }
 
@@ -2227,7 +2269,7 @@
                 if (ext) return relatedChipHtml(r);
                 const href = resolveHref(r.url.replace(/^\.\//, ''));
                 const glyph = r.video ? '▸ ' : r.model3d ? '◆ ' : r.image ? '▣ ' : '';
-                return `<a class="related-chip" href="${href}">${glyph}${r.title}</a>`;
+                return `<a class="related-chip" href="${href}">${glyph}${r.title} ↗</a>`;
             }).join('');
             answerEl.appendChild(rail);
         }
@@ -2648,6 +2690,15 @@
                     wrap.replaceWith(v);
                 }
             }
+            // the trail sits in the command frame, outside the results host —
+            // its ✕ buttons are the undo for each view state
+            const trailHost = el('trail');
+            if (trailHost) trailHost.addEventListener('click', (e) => {
+                const tx = e.target.closest('[data-trail]');
+                if (!tx) return;
+                if (tx.dataset.trail === 'pin' && pinnedId != null) { pinnedId = null; renderResults(lastSearchResults, lastHint); }
+                else if (tx.dataset.trail === 'live') sleepLivePiece();
+            });
             for (const host of [el('searchResults'), el('aiAnswer'), el('detailPane')]) {
                 if (!host) continue;
                 host.addEventListener('click', (e) => {
@@ -2669,19 +2720,20 @@
                             const big = el('searchResults').querySelector(`.pc-mod[data-id="${homeMod.dataset.id}"] [data-piece-src]`);
                             if (big) wakePiece(big);
                         } else {
-                            wakePiece(pw);
                             // An OBSTACLE-scale piece already lives in a list
                             // dossier (dominant top hit) — wake-only used to
                             // leave the module UNPINNED, so the semantic
                             // refine's re-rank downgraded it to a lower tier
                             // UNDER the running demo (bitten: the suite's
                             // zoom-and-wake raced the embedder). Pin the host
-                            // so refines hold its depth. Pane strata manage
+                            // BEFORE waking — wakePiece renders the trail,
+                            // which must see the pin. Pane strata manage
                             // themselves (no .pc-mod ancestor).
                             const host = pw.closest('.pc-mod');
                             if (host && host.dataset.id && pinnedId == null) {
                                 pinnedId = Number(host.dataset.id);
                             }
+                            wakePiece(pw);
                         }
                         return;
                     }
@@ -2696,9 +2748,11 @@
                     const dens = e.target.closest('.pc-density');
                     if (dens) {
                         try { localStorage.setItem('jh-postcard-density', pcDensity() === 'compact' ? 'comfortable' : 'compact'); } catch {}
+                        applyDensityFlag();
                         renderResults(lastSearchResults, lastHint);
                         return;
                     }
+
                     // click a collapsed module (not its links/media) → pin to dossier
                     const mod = e.target.closest('.pc-mod, .pc-tail-item');
                     if (mod && mod.dataset.id && !e.target.closest('a, [data-video], model-viewer, button, [data-piece-src]')) {
@@ -2846,7 +2900,9 @@
                     answerEl.style.display = 'none'; delete answerEl.dataset.model;
                     el('aiActions').classList.remove('visible');
                 } else if (lastLlmQuery.trim() && lastSearchResults.length > 0) {
-                    doAIGeneration();
+                    // a RESTORED answer stands — auto-regen here would destroy
+                    // the kept state the visitor explicitly reopened (10b)
+                    if (!el('aiAnswer').dataset.restored) doAIGeneration();
                 }
             });
 

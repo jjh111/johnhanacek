@@ -28,11 +28,17 @@ const order = await page.evaluate(() => {
     scroll: scroll ? [...scroll.children].map(c => c.className.split(' ')[0] || c.id) : [],
   };
 });
+// the trail row slots between the strip and the engine popover — it renders
+// only when view state exists (pin/live), so the empty-state sequence reads
+// unchanged
 check('UX sequence: search first, then options, then results',
   order.frame[0] && order.frame[0].includes('search-input')
-  && order.frame[1].includes('tier-strip') && order.frame[2].includes('engine-settings')
+  && order.frame[1].includes('tier-strip') && order.frame[2].includes('so-trail')
+  && order.frame[3].includes('engine-settings')
   && order.scroll[0] && order.scroll[0].includes('ai-answer'),
   `frame: ${order.frame.join(' → ')} | scroll: ${order.scroll.join(' → ')}`);
+check('the view trail lives under the strip', order.frame.some(f => f.includes('so-trail')),
+  `frame: ${order.frame.join(' → ')}`);
 
 // signals with panel CLOSED
 check('strip signals with panel collapsed', await page.evaluate(() =>
