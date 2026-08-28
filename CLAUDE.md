@@ -164,15 +164,18 @@ which stamps every `?v=` cache-bust ref across root `*.html` **and** the `Portfo
   query specificity — LOD ladder (mention → one-liner → tldr sentence → dossier with prose
   pretext-wrapped BOTH sides of its media), allocated by pretext line-arithmetic. Chunks
   carry dev-authored `micro`/`tldr` fields (data, not runtime generation). Hover = shared
-  tooltip; click pins to dossier; compact/comfortable density toggle; empty state shows
-  page-aware suggestion chips.
+  tooltip; compact/comfortable density toggle; empty state shows page-aware suggestion
+  chips. **There is no second level** — nothing expands on click. The ladder IS the whole
+  surface: the lead arrives at dossier depth, the next at tldr, then one-liners, then the
+  tail, all deduped and fitted to the viewport.
 - **Production coherence (Phase 9)**: renders MORPH instead of rebuilding (same-query
   interactions swap only changed modules — keyed by `data-id`; new query = full render +
   scroll-to-top); the input + tier strip live in a never-scrolling command frame
   (`.so-command-frame` in the overlay, sticky `.search-wrap` on search.html); list-like
   chunks carry dev-authored `facts` arrays rendered as dossier ROWS (density toggle then
   reaches inside the dossier); one grammar — page badge = the nav link (`design ↗`),
-  clicks elsewhere zoom in place, ↑↓/Enter/4-rung-Esc on the keyboard; ⤢ workspace mode
+  module bodies are INERT (click-to-pin and its breadcrumb are gone), ↑↓/Enter and a
+  3-rung Esc on the keyboard; ⤢ workspace mode
   (≥900px, persisted) splits the overlay into list + a pretext META-PARAGRAPH pane
   (strata of chunks, media as both-sides wrap obstacles, empty state seeds the page's
   own story). **The panel NEVER scrolls** (9e doctrine): the line budget is fitted to

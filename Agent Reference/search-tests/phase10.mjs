@@ -393,10 +393,8 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
     await page2.keyboard.press('Enter');
     await page2.waitForTimeout(1000);
     const after = page2.url();
-    const pinned = await page2.evaluate(() =>
-      document.querySelector('.pc-mod[data-id="1"]')?.dataset.lod === '3');
-    check('Enter on an external top result pins the dossier — never exits',
-      after === before && pinned, `${before} → ${after} pinned=${pinned}`);
+    check('Enter on an external top result never exits the origin',
+      after === before, `${before} → ${after}`);
     await ctx2.close();
   }
 
@@ -407,7 +405,7 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
 // ───────── 6. coherence — the trail, the verb taxonomy, density-scaled frames ─────────
 {
   console.log('coherence:');
-  const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width: 1280, height: 920 } });
+  const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width: 1280, height: 1200 } });
   await ctx.route(/(localhost|127\.0\.0\.1):(1234|11434)/, r => r.abort());
   const page = await ctx.newPage();
   const errors = [];
@@ -423,25 +421,14 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
   // taxonomy: chips declare their verb
   const verbs = await page.evaluate(() => ({
     openArrow: [...document.querySelectorAll('.related-chip')].every(c => c.textContent.includes('↗')),
-    expandGlyph: getComputedStyle(document.querySelector('.pc-tail-item'), '::before').content.includes('⤢'),
+    inertTail: getComputedStyle(document.querySelector('.pc-tail-item')).cursor,
   }));
-  check('OPEN chips carry ↗ · EXPAND chips carry ⤢', verbs.openArrow && verbs.expandGlyph, JSON.stringify(verbs));
+  check('OPEN chips carry ↗ · nothing advertises expansion',
+    verbs.openArrow && verbs.inertTail !== 'zoom-in', JSON.stringify(verbs));
 
-  // pin+wake in one gesture → the trail shows BOTH segments. The piece is
-  // the deterministic driver: chunk 35 renders it at EVERY tier (small on
-  // L2, obstacle on L3), and wake pins the host either way.
-  await page.click('.pc-mod[data-id="35"] .pc-piece--demo');
-  await page.waitForTimeout(2400);
-  const trail1 = await page.evaluate(() => ({
-    crumbs: [...document.querySelectorAll('#so-trail .trail-crumb')].map(c => c.textContent),
-    root: !!document.querySelector('#so-trail [data-trail="root"]'),
-    current: document.querySelector('#so-trail .trail-crumb.is-current')?.textContent || null,
-    live: !!document.querySelector('.pc-piece--woken iframe'),
-  }));
-  check('the breadcrumb roots at "results" and ends where you are',
-    trail1.root && trail1.crumbs.length >= 2 && !!trail1.current, JSON.stringify(trail1));
-
-  // density scales the frames: compact 264 → comfortable 352
+  // Density scales the frames: compact 264 → comfortable 352. Measured on a
+  // SLEEPING piece — a woken one is mid-graft across the re-render and its
+  // node is briefly detached, which is the graft working, not a size change.
   const wCompact = await page.evaluate(() =>
     document.querySelector('.pc-piece--demo')?.getBoundingClientRect().width || 0);
   await page.click('.pc-density');
@@ -453,24 +440,23 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
   await page.click('.pc-density');   // restore compact
   await page.waitForTimeout(500);
 
-  // Walking back a crumb undoes everything after it: the pinned crumb sleeps
-  // the live frame and keeps the pin; the root clears the lot.
-  const pinnedCrumb = await page.$('#so-trail [data-trail="pinned"]');
-  if (pinnedCrumb) {
-    await pinnedCrumb.click();
-    await page.waitForTimeout(600);
-    const afterLive = await page.evaluate(() => ({
-      crumbs: [...document.querySelectorAll('#so-trail .trail-crumb')].map(c => c.textContent),
-      iframes: document.querySelectorAll('.pc-piece iframe').length,
-    }));
-    check('the pinned crumb sleeps the live frame (pin remains)',
-      afterLive.crumbs.length === 2 && afterLive.iframes === 0, JSON.stringify(afterLive));
-  }
-  await page.click('#so-trail [data-trail="root"]');
-  await page.waitForTimeout(900);
-  check('the root crumb is the undo (unpins, trail empties)',
-    await page.evaluate(() => document.querySelectorAll('#so-trail .trail-crumb').length === 0
-      && !document.getElementById('so-trail').classList.contains('visible')));
+  // waking a piece is the one view state left. Chunk 35 renders it at every
+  // tier, so the click lands whatever the ladder decided.
+  await page.click('.pc-mod[data-id="35"] .pc-piece--demo');
+  await page.waitForTimeout(2400);
+  check('a piece wakes live in place',
+    await page.evaluate(() => !!document.querySelector('.pc-piece--woken iframe')));
+
+  // The woken piece carries its own undo — its ▶ live chip sleeps it, and
+  // releases the iframe. There is no trail to do it from any more.
+  await page.click('.pc-piece--woken .pc-piece-kind');
+  await page.waitForTimeout(700);
+  check('the piece\u2019s own chip sleeps it and releases the iframe',
+    await page.evaluate(() => document.querySelectorAll('.pc-piece iframe').length === 0
+      && !document.querySelector('.pc-piece--woken')));
+
+  check('no trail element remains in the shell',
+    await page.evaluate(() => !document.getElementById('so-trail')));
 
   check('no console errors (coherence)', errors.length === 0, errors.slice(0, 3).join(' | '));
   await ctx.close();

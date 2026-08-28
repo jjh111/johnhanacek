@@ -63,15 +63,15 @@ const lodsOf = (page) => page.evaluate(() =>
   await page.locator('.pc-density').click();
   await page.waitForTimeout(500);
   const comfyLods = await lodsOf(page);
-  // Under the 9e no-scroll doctrine comfortable trades BREADTH for DEPTH —
-  // the top of the ladder gets a richer wording tier even if the field
-  // narrows to make room. Assert depth, not a tier-sum.
+  // The lead now ARRIVES at dossier depth in compact (there is no click-to-pin
+  // left to reach it), so density can no longer raise the top tier — it is
+  // already the ceiling. Density's job is the WORDING inside that tier and the
+  // frame scale, asserted just below and in phase10.
   const top = a => Math.max(...a.map(Number));
-  check('comfortable promotes wording tiers, not just size',
-    top(comfyLods) > top(compactLods), `${compactLods.join(',')} → ${comfyLods.join(',')}`);
-  check('comfortable shows at least one tldr/dossier beyond compact',
-    comfyLods.filter(l => l >= '2').length > compactLods.filter(l => l >= '2').length
-    || comfyLods.includes('3') && !compactLods.includes('3'),
+  check('the lead arrives at dossier depth without being asked',
+    top(compactLods) === 3, `${compactLods.join(',')} → ${comfyLods.join(',')}`);
+  check('density never COSTS depth (comfortable holds the ceiling)',
+    top(comfyLods) >= top(compactLods) || comfyLods.length < compactLods.length,
     `${compactLods.join(',')} → ${comfyLods.join(',')}`);
 
   // 10e.3 — the wording ladder: micro < tldr < brief < full. LOD is

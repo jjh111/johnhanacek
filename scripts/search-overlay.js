@@ -61,9 +61,6 @@
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                     </button>
                 </div>
-                <!-- 10-series coherence: the view trail — pin/live state made
-                     visible (renders only when state exists) -->
-                <div class="so-trail" id="so-trail"></div>
                 <!-- Engine details — compact, opened from the strip's chevron -->
                 <div class="engine-settings" id="so-engineSettings">
                     <div class="engine-settings-inner">

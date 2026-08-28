@@ -930,7 +930,7 @@ body.search-overlay-open {
 /* group eyebrows inside the postcard: present only when both local + site
    groups exist — and even then, tight */
 .postcard .cmdbar-group-label { margin: 0.4rem 0 0.15rem; }
-.pc-mod[data-tip] { cursor: pointer; }
+.pc-mod[data-tip] { cursor: help; }   /* hover reveals the next tier; nothing to click */
 .pc-sep { color: var(--so-muted, var(--muted, #7a9aaa)); opacity: 0.6; margin: 0 0.4rem; }
 .pc-glyph { color: var(--cyan-dim, #4dc9f6); font-size: 0.75em; }
 .pc-facts {
@@ -1483,51 +1483,13 @@ body.search-overlay-open .so-residue { display: none; }
 }
 .so-residue-x:hover { color: var(--text-bright, #b8dced); }
 
-/* ─── Coherence pass: the verb taxonomy + the trail ───
-   Three chip verbs, one signal each: OPEN keeps ↗ (title link / related
-   chips / artifact rail), EXPAND wears ⤢ (tail items — they re-grade the
-   ladder here, they don't navigate), INERT stays muted (facts, meta). */
-.pc-tail-item { cursor: zoom-in; }
-.pc-tail-item::before {
-    content: '⤢ ';
-    opacity: 0.6;
-    color: rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.9);
-}
-.pc-mod { cursor: zoom-in; }   /* module body = expand here; links override */
+/* ─── The verb taxonomy ───
+   Two verbs now that the surface has no second level: OPEN wears ↗ (title
+   link, related chips, artifact rail), INERT stays muted (module bodies,
+   tail items, facts, meta). Nothing on the surface expands, so nothing
+   advertises expansion — only what navigates takes a pointer. */
 .pc-mod a, .pc-mod [data-piece-src], .pc-mod .result-video-wrap, .pc-mod model-viewer { cursor: pointer; }
 
-/* the trail — visible only when view state exists */
-.so-trail {
-    display: none;
-    align-items: center;
-    gap: 0.45rem;
-    padding: 0.22rem 0.75rem;
-    border-bottom: 1px solid rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.12);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.62rem;
-    line-height: 1.4;
-    color: var(--muted, #7a9aaa);
-    overflow: hidden;
-    white-space: nowrap;
-}
-.so-trail.visible { display: flex; }
-/* Crumbs: ancestors are buttons that walk back, the last is where you are.
-   Only the ancestors shrink, so the current crumb stays readable. */
-.trail-crumb {
-    all: unset;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    color: var(--muted, #7a9aaa);
-}
-button.trail-crumb { cursor: pointer; }
-button.trail-crumb:hover,
-button.trail-crumb:focus-visible { color: var(--text-bright, #b8dced); text-decoration: underline; }
-button.trail-crumb:focus-visible { outline: 1px solid rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.5); outline-offset: 2px; }
-.trail-crumb.is-current { color: var(--text-bright, #b8dced); flex: 0 1 auto; }
-.trail-live.is-current { color: rgba(var(--gold-rgb, 212, 175, 55), 0.95); }
-.trail-sep { color: var(--muted, #7a9aaa); flex: none; opacity: 0.6; }
 
 /* density IS the frame scale: comfortable grows the wakeable card — the
    virtual viewport grows with it (same 0.25 scale, more page visible) */

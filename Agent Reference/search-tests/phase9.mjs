@@ -29,9 +29,10 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
   await page.fill('#so-searchInput', 'fish');
   await page.waitForTimeout(800);
 
-  // Pin a NON-dominant module. The morph invariant: any module whose TIER
-  // did not change keeps its DOM node (budget redistribution may legitimately
-  // re-tier several siblings — those are allowed to swap).
+  // The morph invariant, driven by the density toggle (the surviving same-query
+  // interaction now that click-to-pin is gone): any module whose TIER did not
+  // change keeps its DOM node. Budget redistribution may legitimately re-tier
+  // several siblings — those are allowed to swap.
   const setup = await page.evaluate(() => {
     const mods = [...document.querySelectorAll('.pc-mod')];
     const target = mods.find(m => m.dataset.lod !== '3');
@@ -40,11 +41,9 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
     return { targetId: target.dataset.id, baseLod: target.dataset.lod,
              before: mods.map(m => ({ id: m.dataset.id, lod: m.dataset.lod })) };
   });
-  check('a non-dominant module exists to pin', !!setup, JSON.stringify(setup && setup.before));
-  const pin = (id) => page.evaluate((i) => {
-    const n = document.querySelector(`.pc-mod[data-id="${i}"]`);
-    (n.querySelector('.pc-tldr, .pc-micro') || n).dispatchEvent(new MouseEvent('click', { bubbles: true }));
-  }, id);
+  check('a non-dominant module exists to re-grade', !!setup, JSON.stringify(setup && setup.before));
+  const regrade = () => page.click('.pc-density');
+  const density0 = await page.evaluate(() => document.querySelector('.postcard')?.dataset.density);
   const morphAudit = (before) => page.evaluate((prev) => {
     const out = { violations: [], swapped: 0, kept: 0 };
     for (const p of prev) {
@@ -55,20 +54,46 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
     }
     return out;
   }, before);
-  await pin(setup.targetId);
-  await page.waitForTimeout(350);
+  // The morph's real driver is a SAME-QUERY re-render (what a semantic refine
+  // does when the embedder lands): identical query, identical structure, so
+  // every module must keep its DOM node. Re-dispatching the same input value
+  // reproduces it deterministically.
+  await page.evaluate(() => {
+    const i = document.getElementById('so-searchInput');
+    i.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await page.waitForTimeout(500);
   const s1 = await morphAudit(setup.before);
-  const lod1 = await page.evaluate((i) => document.querySelector(`.pc-mod[data-id="${i}"]`)?.dataset.lod, setup.targetId);
-  check('pin: unchanged-tier siblings keep DOM identity', s1.violations.length === 0 && lod1 === '3',
-    JSON.stringify({ ...s1, pinnedLod: lod1 }));
-  await page.evaluate(() => [...document.querySelectorAll('.pc-mod')].forEach(m => { m.__witness = true; }));
-  const mid = await page.evaluate(() => [...document.querySelectorAll('.pc-mod')].map(m => ({ id: m.dataset.id, lod: m.dataset.lod })));
-  await pin(setup.targetId);   // unpin
+  check('same-query re-render morphs in place (every node kept)',
+    s1.violations.length === 0 && s1.kept > 0, JSON.stringify(s1));
+  // Round-trip: the DENSITY state must return, and with it the tiers. DOM
+  // identity is NOT asserted here — a density flip re-composes the tail, and
+  // a structural change is a legitimate full rebuild under the morph contract
+  // (only same-structure, same-query swaps promise node identity, above).
+  await regrade();
+  await page.waitForTimeout(450);
+  const flipped = await page.evaluate(() => document.querySelector('.postcard')?.dataset.density);
+  await regrade();
+  await page.waitForTimeout(450);
+  const round = await page.evaluate((i) => ({
+    density: document.querySelector('.postcard')?.dataset.density,
+    lod: document.querySelector(`.pc-mod[data-id="${i}"]`)?.dataset.lod,
+  }), setup.targetId);
+  check('density flips and round-trips, tiers with it',
+    flipped !== density0 && round.density === density0 && round.lod === setup.baseLod,
+    JSON.stringify({ density0, flipped, ...round, baseLod: setup.baseLod }));
+
+  // nothing on the surface expands any more: a module body is inert
+  const inert = await page.evaluate(() => {
+    const m = [...document.querySelectorAll('.pc-mod')].find(x => x.dataset.lod !== '3');
+    if (!m) return { skip: true };
+    const before = m.dataset.lod;
+    (m.querySelector('.pc-tldr, .pc-micro') || m).dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    return { before, after: document.querySelector(`.pc-mod[data-id="${m.dataset.id}"]`)?.dataset.lod };
+  });
   await page.waitForTimeout(350);
-  const s2 = await morphAudit(mid);
-  const lod2 = await page.evaluate((i) => document.querySelector(`.pc-mod[data-id="${i}"]`)?.dataset.lod, setup.targetId);
-  check('unpin morphs back, unchanged siblings still untouched', s2.violations.length === 0 && lod2 === setup.baseLod,
-    JSON.stringify({ ...s2, lod: lod2 }));
+  check('clicking a module body does nothing (no second level)',
+    inert.skip || inert.before === inert.after, JSON.stringify(inert));
 
   // scroll discipline: preserved on same-query interaction, reset on new query
   await page.fill('#so-searchInput', 'design');
@@ -79,27 +104,28 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
     return sc.scrollTop;
   });
   if (scrolled > 0) {
-    // The invariant is VIEWPORT stability, not a frozen scrollTop: pinning a
-    // module above the fold grows content, and scroll anchoring compensates
-    // by moving scrollTop so what the reader sees stays put.
+    // The invariant is VIEWPORT stability, not a frozen scrollTop: a re-grade
+    // changes content height, and scroll anchoring compensates by moving
+    // scrollTop so what the reader sees stays put.
     const beforeRect = await page.evaluate(() => {
       const t = document.querySelector('.pc-tail') || [...document.querySelectorAll('.pc-mod')].pop();
       t.__anchorWitness = true;
       return t.getBoundingClientRect().top;
     });
-    const pid = await page.evaluate(() => document.querySelector('.pc-mod')?.dataset.id);
-    await pin(pid);
+    await regrade();
     await page.waitForTimeout(350);
     const after2 = await page.evaluate(() => {
       const t = [...document.querySelectorAll('.pc-tail, .pc-mod')].find(n => n.__anchorWitness);
       return { top: t ? t.getBoundingClientRect().top : -999,
                scrollTop: document.querySelector('.so-panel-scroll').scrollTop };
     });
-    check('same-query pin keeps the viewport stable (no jump to top)',
+    check('same-query re-grade keeps the viewport stable (no jump to top)',
       after2.scrollTop > 0 && Math.abs(after2.top - beforeRect) < 6,
       `rect ${beforeRect.toFixed(0)} → ${after2.top.toFixed(0)}, scrollTop ${scrolled} → ${after2.scrollTop}`);
+    await regrade();   // restore density for the checks below
+    await page.waitForTimeout(300);
   } else {
-    check('same-query pin keeps the viewport stable (no jump to top)', true, 'results fit — vacuous');
+    check('same-query re-grade keeps the viewport stable (no jump to top)', true, 'results fit — vacuous');
   }
   await page.fill('#so-searchInput', 'metamedium');
   await page.waitForTimeout(800);
@@ -243,21 +269,8 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
   }));
   check('Esc rung 1: clears cursor, overlay stays, query stays', !esc1.cursor && esc1.open && esc1.query === 'nanome', JSON.stringify(esc1));
 
-  // Esc rung 2: unpin
-  await page.evaluate(() => {
-    const n = [...document.querySelectorAll('.pc-mod')].find(m => m.dataset.lod !== '3');
-    (n.querySelector('.pc-tldr, .pc-micro') || n).dispatchEvent(new MouseEvent('click', { bubbles: true }));
-  });
-  await page.waitForTimeout(350);
-  await page.keyboard.press('Escape');
-  await page.waitForTimeout(350);
-  const esc2 = await page.evaluate(() => ({
-    pinned3: [...document.querySelectorAll('.pc-mod')].filter(m => m.dataset.lod === '3').length,
-    open: document.getElementById('searchOverlay').getAttribute('aria-hidden') === 'false',
-  }));
-  check('Esc rung 2: unpins, overlay stays', esc2.open, JSON.stringify(esc2));
-
-  // Esc rung 3: clears the query; rung 4: closes
+  // Esc rung 2: clears the query; rung 3: closes. (The old unpin rung went
+  // with click-to-pin — there is no view state between cursor and query now.)
   await page.keyboard.press('Escape');
   await page.waitForTimeout(300);
   const esc3 = await page.evaluate(() => ({
@@ -325,19 +338,15 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
   check('pane composes a meta-paragraph (lead + related strata)', ws.strata >= 2, String(ws.strata));
   check('the list stays a compact waterfall (no dossier in list)', ws.listLods.every(l => l <= 2), ws.listLods.join(','));
 
-  const second = await page.evaluate(() => [...document.querySelectorAll('#so-searchResults .pc-mod')][1]?.dataset.id);
-  await page.evaluate((i) => {
-    const n = document.querySelector(`#so-searchResults .pc-mod[data-id="${i}"]`);
-    (n.querySelector('.pc-tldr, .pc-micro') || n).dispatchEvent(new MouseEvent('click', { bubbles: true }));
-  }, second);
-  await page.waitForTimeout(500);
-  const pinned = await page.evaluate(() => ({
+  // The pane seeds from the TOP result now that nothing can be pinned.
+  const top = await page.evaluate(() => [...document.querySelectorAll('#so-searchResults .pc-mod')][0]?.dataset.id);
+  const seeded = await page.evaluate(() => ({
     showing: document.getElementById('so-detailPane').dataset.showing,
     listLods: [...document.querySelectorAll('#so-searchResults .pc-mod')].map(m => +m.dataset.lod),
   }));
-  check('pinning fills the PANE, not the list',
-    pinned.showing.startsWith(second + '|') && pinned.listLods.every(l => l <= 2),
-    JSON.stringify(pinned));
+  check('the pane seeds from the top result, the list stays a waterfall',
+    seeded.showing.startsWith(top + '|') && seeded.listLods.every(l => l <= 2),
+    JSON.stringify({ top, ...seeded }));
 
   await page.click('#so-workspaceBtn');
   await page.waitForTimeout(500);
@@ -418,13 +427,16 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
   check('empty state seeds the pane (never an empty half-screen)', seed.strata.length >= 2, seed.strata.join(','));
   check('the pane obeys the no-scroll doctrine too', seed.paneOver <= 10, String(seed.paneOver));
   if (seed.strata.length > 1) {
+    // Strata are inert now: the pane is a reading surface, not a second
+    // level you steer. Clicking one must not re-seed the pane.
     await page.evaluate((id) => {
       const s = document.querySelector(`#so-detailPane .pc-meta-stratum[data-id="${id}"]`);
       (s.querySelector('.pc-prose, .pc-meta-prose') || s).dispatchEvent(new MouseEvent('click', { bubbles: true }));
     }, seed.strata[1]);
     await page.waitForTimeout(600);
-    check('clicking a related stratum promotes it to lead', await page.evaluate((id) =>
-      document.querySelector('#so-detailPane .pc-meta-stratum')?.dataset.id === id, seed.strata[1]));
+    check('clicking a related stratum does nothing (no second level)',
+      await page.evaluate((first) =>
+        document.querySelector('#so-detailPane .pc-meta-stratum')?.dataset.id === first, seed.strata[0]));
   }
   await page.evaluate(() => { try { localStorage.removeItem('jh-search-workspace'); } catch {} });
 

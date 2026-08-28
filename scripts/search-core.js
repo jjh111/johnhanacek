@@ -1268,6 +1268,10 @@
                 let host = c.url; try { host = new URL(c.url).hostname; } catch {}
                 return `<a class="related-chip departure-chip${extraClass ? ' ' + extraClass : ''}" href="${c.url}" target="_blank" rel="me noopener" title="${c.title} — leaves the site; your search is kept">↗ ${host}</a>`;
             }
+            // A chip that OPENS the page you are already reading is a no-op
+            // dressed as navigation — drop it rather than reload in place.
+            const target = c.url.replace(/^\.\//, '').replace(/\.html$/, '').replace(/#.*$/, '');
+            if ((target || 'index') === curPage) return '';
             const href = resolveHref(c.url.replace(/^\.\//, ''));
             // the trailing ↗ marks every chip that OPENS a page (badge grammar)
             return `<a class="related-chip${extraClass ? ' ' + extraClass : ''}" href="${href}">↳ ${c.title} ↗</a>`;
@@ -1297,7 +1301,6 @@
         // fields; the runtime only ever SELECTS, never generates.
         let pretextMod = null, pretextWrapMod = null, pretextState = 'idle';
         const preparedCache = new Map();
-        let pinnedId = null;          // click-expanded module (reset per query)
         let currentWrap = null;       // live pretext-wrap instance (destroy before re-render)
         let tipEl = null;             // the one shared hover-tooltip node
 
@@ -1409,25 +1412,28 @@
             const dominant = results.length === 1 ||
                 (results[1] && results[0].score >= 1.5 * results[1].score);
             const density = pcDensity();
-            const comfy = density === 'comfortable';
             // Workspace (9d): the list stays a compact waterfall — the detail
-            // pane owns dossier depth, and pinning fills IT, not the list.
+            // pane owns dossier depth.
             const ws = workspaceOn();
             results.forEach((r, i) => {
+                // Nested semantic zoom, top-down: the lead reads at full
+                // dossier depth, the next few at tldr, then one-liners, then
+                // the tail. Nothing expands on click any more, so the ladder
+                // is the whole story — the lead must ARRIVE at depth rather
+                // than wait to be opened.
                 let lod;
-                if (i === 0 && dominant) lod = 3;
-                else if (i === 0) lod = 2;
-                else if (i === 1 && dominant) lod = 2;
-                else if (i <= 3) lod = 1;
+                if (i === 0) lod = 3;
+                else if (i === 1) lod = 2;
+                else if (i === 2 && dominant) lod = 2;
+                else if (i <= 4) lod = 1;
                 else lod = 0;
-                // Density is SEMANTIC zoom, not type scale: comfortable
-                // promotes every module one full tier — micro one-liners
-                // become tldr sentences, the tldr becomes the dossier — and
-                // widens the L1 window into the tail. The budget pass below
-                // still downgrades whatever cannot fit, so the wording tier
-                // is what the toggle visibly changes.
-                if (comfy) lod = lod > 0 ? Math.min(3, lod + 1) : (i <= 5 ? 1 : 0);
-                if (!ws && pinnedId != null && r.id === pinnedId) lod = 3;
+                // Density picks the WORDING at a constant tier (10e.3, via
+                // textFor) and scales the wakeable frame — it does not promote
+                // the ladder. Promoting was 6a behaviour from when the lead
+                // started at L2; with the lead already at dossier depth it
+                // only added demand below, and on a short viewport the fit
+                // loop then flattened everything, so comfortable rendered
+                // LESS depth than compact.
                 if (ws) lod = Math.min(lod, 2);
                 mods.push({ r, lod });
             });
@@ -1445,18 +1451,45 @@
                     const kind = p0 ? ((p0.kind === 'demo' || (p0.kind === 'link' && isFrameable(p0.src))) ? 'big' : 'small')
                         : (mod.r.video || mod.r.model3d || mod.r.image) ? 'big' : 'none';
                     const lines = countLines(textFor(mod.r, 3, density), width - 190, m);
-                    return Math.max(lines, kind === 'big' ? 9 : kind === 'small' ? 3 : 0) + 3;
+                    // The frame scales with density (264px compact → 352px
+                    // comfortable), so its line-equivalent has to scale too —
+                    // a floor calibrated for compact under-charges comfortable
+                    // by a third, and the fit loop pays for the gap by
+                    // shrinking the budget until the whole ladder collapses.
+                    const comfyFloor = density === 'comfortable';
+                    const bigFloor = comfyFloor ? 13 : 9;
+                    const smallFloor = comfyFloor ? 5 : 3;
+                    return Math.max(lines, kind === 'big' ? bigFloor : kind === 'small' ? smallFloor : 0) + 3;
                 }
-                if (mod.lod === 2) return countLines(textFor(mod.r, 2, density), width - 88, m) + 1;
+                if (mod.lod === 2) {
+                    // L2 carries media too — a small piece for a media-less
+                    // chunk, otherwise a thumb (see pcMediaHtml's !big branch).
+                    // Charging only text let the fit loop measure pixels the
+                    // budget never paid for, so it shrank on every pass and
+                    // walked the whole ladder down to mentions.
+                    const hasMedia = (mod.r.pieces && mod.r.pieces.length)
+                        || mod.r.video || mod.r.model3d || mod.r.image;
+                    return countLines(textFor(mod.r, 2, density), width - 88, m) + 1
+                        + (hasMedia ? (density === 'comfortable' ? 5 : 3) : 0);
+                }
                 if (mod.lod === 1) return 1;
                 return 0;
             };
-            for (const mod of mods) {
-                if (mod.r.id === pinnedId) { budget -= costOf(mod); continue; } // pinned may overflow
-                let cost = costOf(mod);
-                while (mod.lod > 0 && cost > budget) { mod.lod--; cost = costOf(mod); }
-                if (mod.lod === 0 && cost > budget) { /* tail is ~free */ }
-                budget -= cost;
+            // Shed from the BOTTOM up. Charging top-down spent the budget on
+            // the lead first and then downgraded it when the total overran —
+            // so a tighter budget flattened the lead before it touched the
+            // tail, and comfortable could render LESS depth than compact.
+            // The ladder's promise is the other way round: the tail yields
+            // first, and the lead is the last thing to lose a tier.
+            const total = () => mods.reduce((s, m2) => s + costOf(m2), 0);
+            let guard = mods.length * 4;
+            while (total() > budget && guard-- > 0) {
+                let victim = null;
+                for (let k = mods.length - 1; k >= 0; k--) {
+                    if (mods[k].lod > 0) { victim = mods[k]; break; }
+                }
+                if (!victim) break;          // everything is already a mention
+                victim.lod--;
             }
             // What this ladder actually costs in line-units — the fit loop
             // scales the budget PROPORTIONALLY against measured pixels
@@ -1508,7 +1541,6 @@
             const k = livePieceEl.querySelector('.pc-piece-kind');
             if (k) k.textContent = '▶ live';
             livePieceEl = null;
-            renderTrail();
         }
         function wakePiece(node) {
             if (livePieceEl === node) return;
@@ -1526,41 +1558,6 @@
             const k = node.querySelector('.pc-piece-kind');
             if (k) k.textContent = '✕';
             livePieceEl = node;
-            renderTrail();
-        }
-        // ── The view trail (10-series coherence) ────────────────────────
-        // Pin and wake are INVISIBLE state changes — the trail makes them
-        // visible: one slim line under the tier strip, rendered only when
-        // state exists (no filler). Every segment's ✕ is its undo.
-        function trailEsc(t) {
-            return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        }
-        function renderTrail() {
-            const host = el('trail');
-            if (!host) return;
-            const segs = [];
-            if (pinnedId != null) {
-                const r = lastSearchResults.find(x => x.id === pinnedId) || chunks.find(c => c.id === pinnedId);
-                if (r) segs.push({ kind: 'pinned', label: r.title });
-            }
-            if (livePieceEl) {
-                const label = livePieceEl.querySelector('.pc-piece-title')?.textContent
-                    || (livePieceEl.dataset.pieceSrc || '').split('/').pop() || 'live';
-                segs.push({ kind: 'live', label });
-            }
-            if (!segs.length) { host.innerHTML = ''; host.classList.remove('visible'); return; }
-            host.classList.add('visible');
-            // A breadcrumb, not a row of chips: root › pinned › live. Clicking a
-            // crumb returns to THAT level and undoes every state after it, so the
-            // root is the undo for everything and the last crumb is where you are.
-            const crumbs = [`<button class="trail-crumb" data-trail="root">results</button>`];
-            segs.forEach((s, i) => {
-                const label = trailEsc(s.label);
-                crumbs.push(i === segs.length - 1
-                    ? `<span class="trail-crumb trail-${s.kind} is-current" aria-current="true">${label}</span>`
-                    : `<button class="trail-crumb trail-${s.kind}" data-trail="${s.kind}">${label}</button>`);
-            });
-            host.innerHTML = crumbs.join('<span class="trail-sep">›</span>');
         }
         function pcPieceHtml(piece, r, big) {
             if (!piece) return '';
@@ -1822,10 +1819,7 @@
         // morph path seeded the pane after the list, leaving the list one
         // pane-state behind — logged in the 10e.1 record).
         function paneSeed(results) {
-            let r = null;
-            if (results && results.length) r = results.find(x => x.id === pinnedId) || null;
-            if (!r && pinnedId != null) r = chunks.find(c => c.id === pinnedId) || null;
-            if (!r) r = (results && results[0]) || chunks.find(c => c.page === curPage) || chunks[0];
+            let r = (results && results[0]) || chunks.find(c => c.page === curPage) || chunks[0];
             if (!r) return null;
             const rel = relatedChunks(r.id, 4);
             return { r, rel, key: r.id + '|' + rel.map(c => c.id).join(',') };
@@ -2056,7 +2050,6 @@
             // Same query, same structure → surgical swap, no rebuild.
             if (sameQuery && results.length && morphPostcard(resultsEl, mods, tail.shown, m, paneSeedState)) {
                 renderDetailPane(results, paneSeedState);
-                renderTrail();
                 return;
             }
 
@@ -2165,7 +2158,6 @@
 
             applyDossierWrap(resultsEl, m, 'list');
             renderDetailPane(results, paneSeedState);
-            renderTrail();
             if (livePieceEl && !document.contains(livePieceEl)) livePieceEl = null;
         }
 
@@ -2214,8 +2206,6 @@
             if (n.classList.contains('cmd-card')) { executeCommand(n.dataset.cmd); return; }
             const a = n.querySelector('a.result-link');
             if (a) { markContinuity(); window.location.href = a.href; return; }
-            const id = Number(n.dataset.id);   // no link → commit = pin toggle
-            if (!isNaN(id)) { pinnedId = (pinnedId === id ? null : id); renderResults(lastSearchResults, lastHint); }
         }
         // Enter's semantics: the top thing on the surface, in surface order —
         // the cursor item if one is lit, the plan card's confirm (the visible
@@ -2230,10 +2220,10 @@
             if (lastSearchResults.length && lastSearchResults[0].url) {
                 const r = lastSearchResults[0];
                 const ext = /^https?:/i.test(r.url);
-                // 10f: Enter never leaves the origin. External top results
-                // PIN to their dossier — the departure card inside is the one
-                // deliberate exit (after the url sweep this is a pure guard).
-                if (ext) { pinnedId = r.id; renderResults(lastSearchResults, lastHint); return; }
+                // 10f: Enter never leaves the origin. Every chunk url is
+                // same-origin after the url sweep, so this is a pure guard —
+                // the departure card on the surface is the deliberate exit.
+                if (ext) return;
                 const href = resolveHref(r.url.replace(/^\.\//, ''));
                 markContinuity();
                 window.location.href = href;
@@ -2351,7 +2341,7 @@
                 sessionStorage.setItem(SESSION_KEY, JSON.stringify({
                     query: currentQueryRaw, answer: a, model: model || '',
                     residue: residueOf(a),
-                    pinnedId, fromPage: curPage, ts: Date.now(),
+                    fromPage: curPage, ts: Date.now(),
                 }));
                 // a fresh generation resurrects a dismissed residue
                 sessionStorage.removeItem('jh-residue-dismissed');
@@ -2379,7 +2369,6 @@
             const input = el('searchInput');
             if (input) input.value = s.query;
             doSearchOnly(s.query);
-            if (s.pinnedId != null) { pinnedId = s.pinnedId; renderResults(lastSearchResults, lastHint); }
             if (s.answer) {
                 const answerEl = el('aiAnswer');
                 answerEl.style.display = 'block';
@@ -2607,14 +2596,13 @@
                 aiActionsEl.classList.remove('visible');
                 lastSearchResults = []; lastLlmQuery = '';
                 currentQueryRaw = ''; lastFusionQuery = '';
-                lastCmdMatches = []; lastIntentCard = null; pinnedId = null;
+                lastCmdMatches = []; lastIntentCard = null;
                 lastScenePlan = null; lastSceneCensus = null; lastPieceRail = false;
                 clearBtn.style.display = 'none';
                 renderEmptyState();
                 return;
             }
             clearBtn.style.display = 'block';
-            if (rawQuery !== currentQueryRaw) pinnedId = null;
             // Set BEFORE renderResults: the renderer keys its same-query
             // morph/scroll decisions off currentQueryRaw — rendering first
             // left it one query stale until a semantic refine happened by.
@@ -2697,20 +2685,6 @@
                     wrap.replaceWith(v);
                 }
             }
-            // the trail sits in the command frame, outside the results host —
-            // its ✕ buttons are the undo for each view state
-            const trailHost = el('trail');
-            if (trailHost) trailHost.addEventListener('click', (e) => {
-                const tx = e.target.closest('[data-trail]');
-                if (!tx) return;
-                // Returning to a crumb undoes everything after it.
-                if (tx.dataset.trail === 'root') {
-                    sleepLivePiece();
-                    if (pinnedId != null) { pinnedId = null; renderResults(lastSearchResults, lastHint); }
-                } else if (tx.dataset.trail === 'pinned') {
-                    sleepLivePiece();   // back to the pinned level, pin intact
-                }
-            });
             for (const host of [el('searchResults'), el('aiAnswer'), el('detailPane')]) {
                 if (!host) continue;
                 host.addEventListener('click', (e) => {
@@ -2723,30 +2697,7 @@
                             // clicks inside a woken frame's chrome otherwise pass through
                             return;
                         }
-                        const homeMod = !pw.classList.contains('pc-obstacle') && pw.closest('.pc-mod');
-                        if (homeMod && homeMod.dataset.id) {
-                            // small piece inside a module: one gesture zooms
-                            // the module to dossier AND wakes the demo there
-                            pinnedId = Number(homeMod.dataset.id);
-                            renderResults(lastSearchResults, lastHint);
-                            const big = el('searchResults').querySelector(`.pc-mod[data-id="${homeMod.dataset.id}"] [data-piece-src]`);
-                            if (big) wakePiece(big);
-                        } else {
-                            // An OBSTACLE-scale piece already lives in a list
-                            // dossier (dominant top hit) — wake-only used to
-                            // leave the module UNPINNED, so the semantic
-                            // refine's re-rank downgraded it to a lower tier
-                            // UNDER the running demo (bitten: the suite's
-                            // zoom-and-wake raced the embedder). Pin the host
-                            // BEFORE waking — wakePiece renders the trail,
-                            // which must see the pin. Pane strata manage
-                            // themselves (no .pc-mod ancestor).
-                            const host = pw.closest('.pc-mod');
-                            if (host && host.dataset.id && pinnedId == null) {
-                                pinnedId = Number(host.dataset.id);
-                            }
-                            wakePiece(pw);
-                        }
+                        wakePiece(pw);
                         return;
                     }
                     const vid = e.target.closest('[data-video]');
@@ -2765,24 +2716,6 @@
                         return;
                     }
 
-                    // click a collapsed module (not its links/media) → pin to dossier
-                    const mod = e.target.closest('.pc-mod, .pc-tail-item');
-                    if (mod && mod.dataset.id && !e.target.closest('a, [data-video], model-viewer, button, [data-piece-src]')) {
-                        hideTip();
-                        const id = Number(mod.dataset.id);
-                        pinnedId = (pinnedId === id ? null : id);
-                        renderResults(lastSearchResults, lastHint);
-                        return;
-                    }
-                    // click a related stratum in the workspace pane → it
-                    // becomes the lead (semantic zoom inside the pane)
-                    const stratum = e.target.closest('.pc-meta-stratum');
-                    if (stratum && stratum.dataset.id && !e.target.closest('a, [data-video], model-viewer, button')) {
-                        hideTip();
-                        pinnedId = Number(stratum.dataset.id);
-                        if (lastSearchResults.length) renderResults(lastSearchResults, lastHint);
-                        else renderDetailPane([]);
-                    }
                 });
                 // hover LOD: the next level up, in the one shared tooltip node
                 if (window.matchMedia && window.matchMedia('(hover: hover)').matches) {
@@ -2831,7 +2764,6 @@
                 if (e.key === 'Escape') {
                     const consume = () => { e.preventDefault(); e.stopImmediatePropagation(); };
                     if (cursorIdx >= 0) { setCursor(-1); consume(); return; }
-                    if (pinnedId != null) { pinnedId = null; renderResults(lastSearchResults, lastHint); consume(); return; }
                     if (searchInput.value) {
                         searchInput.value = '';
                         clearTimeout(searchDebounce); clearTimeout(aiDebounce);
