@@ -57,22 +57,22 @@
     // Query Intent Mapping (regex fast path)
     // ============================================
     const QUERY_INTENTS = [
-        { patterns: [/should\s+\w*\s*(hire|work\s+with|contract|engage)/i, /is\s+he\s+(good|qualified|worth|a\s+good\s+fit)/i, /why\s+\w*\s*(hire|choose|pick)\s+him/i, /what\s+makes\s+him\s+(stand\s+out|different|unique|special)/i, /why\s+should\s+\w+\s+hire/i], expanded: 'unique differentiator skills expertise experience awards shipped products design AI leadership', hint: 'Showing expertise, awards, and what makes him unique' },
-        { patterns: [/what('s|\s+is)\s+his\s+background/i, /tell\s+me\s+about\s+(him|john|this\s+(guy|person))/i, /who\s+is\s+(he|john|this)/i, /what\s+does\s+he\s+do$/i, /^about$/i], expanded: 'about john hanacek innovator designer creator education career work history unique san diego', hint: 'Showing background and career overview' },
-        { patterns: [/what\s+has\s+he\s+(built|made|created|shipped|designed|launched|delivered)/i, /his\s+(projects|portfolio|work)/i, /show\s+me\s+his\s+work/i, /what\s+are\s+his\s+projects/i, /shipped\s+(any|AI|products?)/i, /has\s+he\s+shipped/i], expanded: 'shipped AI products nanome badvr avatarmedic holotriage metamedium coaching built', hint: 'Showing shipped products and projects' },
-        { patterns: [/what\s+are\s+his\s+(skills|abilities|strengths)/i, /what\s+can\s+he\s+do/i, /his\s+(expertise|capabilities|specialties)/i, /areas\s+of\s+expertise/i], expanded: 'expertise skills AI XR robotics design product LLM agent spatial computing coding engineering', hint: 'Showing skills and areas of expertise' },
-        { patterns: [/can\s+he\s+(code|program|write\s+code|develop|build|engineer)/i, /does\s+he\s+(code|program|write\s+code|develop|build)/i, /is\s+he\s+(technical|a\s+developer|an\s+engineer)/i, /coding|programming|technical\s+skills/i, /just\s+design/i], expanded: 'code coding programming engineer technical javascript html css python unity build ship prototype design engineering', hint: 'Showing design engineering and coding ability' },
-        { patterns: [/where\s+did\s+he\s+(go\s+to\s+school|study|graduate)/i, /his\s+education/i, /degree|university|college|school/i], expanded: 'education masters thesis Georgetown UCSD research publications', hint: 'Showing education and research' },
-        { patterns: [/has\s+he\s+won\s+(any|an)\s+(award|prize)/i, /awards?|recognition|achievement|accomplishment/i, /what\s+has\s+he\s+(won|achieved|accomplished)/i, /biggest\s+(accomplishment|achievement)/i], expanded: 'awards innovation aerospace nist microsoft founder institute accomplishment achievement won', hint: 'Showing awards and recognition' },
-        { patterns: [/schedul(e|ing)|book\s+(a\s+)?(call|meeting|session)|availability|set\s+up\s+a\s+(call|meeting|time)/i], expanded: 'services coaching intro call consultation contact email', hint: 'Showing how to book time with John', card: 'schedule' },
-        { patterns: [/how\s+(do\s+i|can\s+i|to)\s+(contact|reach|email|message)\s+(him|john)/i, /contact|email|linkedin|twitter|social/i, /send\s+(him|john)\s+a\s+message/i], expanded: 'contact email linkedin bluesky twitter social', hint: 'Showing contact information', card: 'contact' },
-        { patterns: [/what\s+does\s+he\s+(charge|cost)|pricing|rates?|how\s+much/i, /\bcosts?\b|\bprices?\b/i, /services?|consulting|coaching|freelance/i, /can\s+he\s+help\s+(me|us|with)/i, /i\s+need\s+help\s+with/i, /looking\s+for\s+a\s+designer/i], expanded: 'services coaching consulting design product workshops retainer sprint', hint: 'Showing services and engagement options', card: 'services' },
-        { patterns: [/has\s+he\s+(led|managed|run)\s+(teams?|people|a\s+company)/i, /leadership|management|team\s+lead/i, /manage\s+(people|teams?|reports)/i], expanded: 'leadership team managed led CEO founder cross-functional collaboration hire people', hint: 'Showing leadership and team experience' },
-        { patterns: [/his\s+(design\s+)?process/i, /how\s+does\s+he\s+(work|design|approach)/i, /methodology|workflow/i], expanded: 'process methodology design thinking research prototype iterate user-centered approach', hint: 'Showing design process and methodology' },
-        { patterns: [/where\s+(does\s+he|is\s+he)\s+(live|based|located)/i, /location|city|state|san\s+diego/i, /where\s+is\s+(he|john)/i], expanded: 'san diego california location lifestyle UCSD native plants gardening outdoors', hint: 'Showing location and lifestyle' },
-        { patterns: [/hobbies|hobby|personal|interests|outside\s+work|free\s+time|fun|for\s+fun/i, /what\s+does\s+he\s+(like|enjoy|do\s+for\s+fun)/i, /besides\s+work/i, /personal\s+(life|interests)/i], expanded: 'personal hobby cooking gardening native plants hiking camping photography food san diego outdoors', hint: 'Showing personal interests and hobbies' },
-        { patterns: [/cook(ing|s)?|food|recipe|chef|kitchen/i], expanded: 'cooking food personal hobby recipe albondigas tahdig pasta fish brownie', hint: 'Showing cooking interests' },
-        { patterns: [/garden(ing|s)?|plant(s|ing)?|native|nature|outdoor(s)?|hik(e|ing)|camp(ing)?/i], expanded: 'gardening native plants california outdoors hiking camping san diego nature', hint: 'Showing outdoor interests' },
+        { patterns: [/should\s+\w*\s*(hire|work\s+with|contract|engage)/i, /is\s+he\s+(good|qualified|worth|a\s+good\s+fit)/i, /why\s+\w*\s*(hire|choose|pick)\s+him/i, /what\s+makes\s+him\s+(stand\s+out|different|unique|special)/i, /why\s+should\s+\w+\s+hire/i], expanded: 'unique differentiator skills expertise experience awards shipped products design AI leadership', hint: 'Expertise, awards, and what makes him unique' },
+        { patterns: [/what('s|\s+is)\s+his\s+background/i, /tell\s+me\s+about\s+(him|john|this\s+(guy|person))/i, /who\s+is\s+(he|john|this)/i, /what\s+does\s+he\s+do$/i, /^about$/i], expanded: 'about john hanacek innovator designer creator education career work history unique san diego', hint: 'Background and career overview' },
+        { patterns: [/what\s+has\s+he\s+(built|made|created|shipped|designed|launched|delivered)/i, /his\s+(projects|portfolio|work)/i, /show\s+me\s+his\s+work/i, /what\s+are\s+his\s+projects/i, /shipped\s+(any|AI|products?)/i, /has\s+he\s+shipped/i], expanded: 'shipped AI products nanome badvr avatarmedic holotriage metamedium coaching built', hint: 'Shipped products and projects' },
+        { patterns: [/what\s+are\s+his\s+(skills|abilities|strengths)/i, /what\s+can\s+he\s+do/i, /his\s+(expertise|capabilities|specialties)/i, /areas\s+of\s+expertise/i], expanded: 'expertise skills AI XR robotics design product LLM agent spatial computing coding engineering', hint: 'Skills and areas of expertise' },
+        { patterns: [/can\s+he\s+(code|program|write\s+code|develop|build|engineer)/i, /does\s+he\s+(code|program|write\s+code|develop|build)/i, /is\s+he\s+(technical|a\s+developer|an\s+engineer)/i, /coding|programming|technical\s+skills/i, /just\s+design/i], expanded: 'code coding programming engineer technical javascript html css python unity build ship prototype design engineering', hint: 'Design engineering and coding ability' },
+        { patterns: [/where\s+did\s+he\s+(go\s+to\s+school|study|graduate)/i, /his\s+education/i, /degree|university|college|school/i], expanded: 'education masters thesis Georgetown UCSD research publications', hint: 'Education and research' },
+        { patterns: [/has\s+he\s+won\s+(any|an)\s+(award|prize)/i, /awards?|recognition|achievement|accomplishment/i, /what\s+has\s+he\s+(won|achieved|accomplished)/i, /biggest\s+(accomplishment|achievement)/i], expanded: 'awards innovation aerospace nist microsoft founder institute accomplishment achievement won', hint: 'Awards and recognition' },
+        { patterns: [/schedul(e|ing)|book\s+(a\s+)?(call|meeting|session)|availability|set\s+up\s+a\s+(call|meeting|time)/i], expanded: 'services coaching intro call consultation contact email', hint: 'How to book time with John', card: 'schedule' },
+        { patterns: [/how\s+(do\s+i|can\s+i|to)\s+(contact|reach|email|message)\s+(him|john)/i, /contact|email|linkedin|twitter|social/i, /send\s+(him|john)\s+a\s+message/i], expanded: 'contact email linkedin bluesky twitter social', hint: 'Contact information', card: 'contact' },
+        { patterns: [/what\s+does\s+he\s+(charge|cost)|pricing|rates?|how\s+much/i, /\bcosts?\b|\bprices?\b/i, /services?|consulting|coaching|freelance/i, /can\s+he\s+help\s+(me|us|with)/i, /i\s+need\s+help\s+with/i, /looking\s+for\s+a\s+designer/i], expanded: 'services coaching consulting design product workshops retainer sprint', hint: 'Services and engagement options', card: 'services' },
+        { patterns: [/has\s+he\s+(led|managed|run)\s+(teams?|people|a\s+company)/i, /leadership|management|team\s+lead/i, /manage\s+(people|teams?|reports)/i], expanded: 'leadership team managed led CEO founder cross-functional collaboration hire people', hint: 'Leadership and team experience' },
+        { patterns: [/his\s+(design\s+)?process/i, /how\s+does\s+he\s+(work|design|approach)/i, /methodology|workflow/i], expanded: 'process methodology design thinking research prototype iterate user-centered approach', hint: 'Design process and methodology' },
+        { patterns: [/where\s+(does\s+he|is\s+he)\s+(live|based|located)/i, /location|city|state|san\s+diego/i, /where\s+is\s+(he|john)/i], expanded: 'san diego california location lifestyle UCSD native plants gardening outdoors', hint: 'Location and lifestyle' },
+        { patterns: [/hobbies|hobby|personal|interests|outside\s+work|free\s+time|fun|for\s+fun/i, /what\s+does\s+he\s+(like|enjoy|do\s+for\s+fun)/i, /besides\s+work/i, /personal\s+(life|interests)/i], expanded: 'personal hobby cooking gardening native plants hiking camping photography food san diego outdoors', hint: 'Personal interests and hobbies' },
+        { patterns: [/cook(ing|s)?|food|recipe|chef|kitchen/i], expanded: 'cooking food personal hobby recipe albondigas tahdig pasta fish brownie', hint: 'Cooking interests' },
+        { patterns: [/garden(ing|s)?|plant(s|ing)?|native|nature|outdoor(s)?|hik(e|ing)|camp(ing)?/i], expanded: 'gardening native plants california outdoors hiking camping san diego nature', hint: 'Outdoor interests' },
         { patterns: [/XR|VR|AR|spatial|immersive|mixed\s+reality|virtual\s+reality/i], expanded: null, hint: null },
         { patterns: [/AI|machine\s+learning|LLM|agent|artificial\s+intelligence/i], expanded: null, hint: null },
     ];
@@ -1550,10 +1550,17 @@
             }
             if (!segs.length) { host.innerHTML = ''; host.classList.remove('visible'); return; }
             host.classList.add('visible');
-            host.innerHTML = segs.map(s =>
-                `<span class="trail-seg trail-${s.kind}"><span class="trail-kind">${s.kind}</span><span class="trail-label">${trailEsc(s.label)}</span></span>`
-                + `<button class="trail-x" data-trail="${s.kind}" aria-label="Dismiss ${s.kind}">✕</button>`
-            ).join('<span class="trail-sep">›</span>');
+            // A breadcrumb, not a row of chips: root › pinned › live. Clicking a
+            // crumb returns to THAT level and undoes every state after it, so the
+            // root is the undo for everything and the last crumb is where you are.
+            const crumbs = [`<button class="trail-crumb" data-trail="root">results</button>`];
+            segs.forEach((s, i) => {
+                const label = trailEsc(s.label);
+                crumbs.push(i === segs.length - 1
+                    ? `<span class="trail-crumb trail-${s.kind} is-current" aria-current="true">${label}</span>`
+                    : `<button class="trail-crumb trail-${s.kind}" data-trail="${s.kind}">${label}</button>`);
+            });
+            host.innerHTML = crumbs.join('<span class="trail-sep">›</span>');
         }
         function pcPieceHtml(piece, r, big) {
             if (!piece) return '';
@@ -2696,8 +2703,13 @@
             if (trailHost) trailHost.addEventListener('click', (e) => {
                 const tx = e.target.closest('[data-trail]');
                 if (!tx) return;
-                if (tx.dataset.trail === 'pin' && pinnedId != null) { pinnedId = null; renderResults(lastSearchResults, lastHint); }
-                else if (tx.dataset.trail === 'live') sleepLivePiece();
+                // Returning to a crumb undoes everything after it.
+                if (tx.dataset.trail === 'root') {
+                    sleepLivePiece();
+                    if (pinnedId != null) { pinnedId = null; renderResults(lastSearchResults, lastHint); }
+                } else if (tx.dataset.trail === 'pinned') {
+                    sleepLivePiece();   // back to the pinned level, pin intact
+                }
             });
             for (const host of [el('searchResults'), el('aiAnswer'), el('detailPane')]) {
                 if (!host) continue;

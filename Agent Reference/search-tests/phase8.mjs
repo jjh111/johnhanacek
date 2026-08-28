@@ -3,6 +3,10 @@ import { chromium } from 'playwright-core';
 const CHROMIUM = process.env.CHROMIUM_PATH ||
   `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1217/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing`;
 const BASE = 'http://127.0.0.1:4571';
+// Unset SHOTDIR used to concatenate as the string "undefined", writing shots
+// into a literal ./undefined/ directory. Defaults to temp so a bare run
+// never litters the repo — set SHOTDIR to keep the shots.
+const SHOTDIR = process.env.SHOTDIR || process.env.TMPDIR || '/tmp';
 const failures = [];
 function check(name, cond, detail = '') {
   console.log(`${cond ? '  ✓' : '  ✗'} ${name}${detail ? ' — ' + detail : ''}`);
@@ -136,7 +140,7 @@ const lodsOf = (page) => page.evaluate(() =>
   check('panel glass is light', probe.panelBgLum > 180, String(probe.panelBgLum));
   check('result text is ink-dark', probe.titleLum >= 0 && probe.titleLum < 120, String(probe.titleLum));
   check('tier strip readable on paper', probe.tierLum >= 0 && probe.tierLum < 150, String(probe.tierLum));
-  await page.screenshot({ path: process.env.SHOTDIR + '/light-overlay.png' });
+  await page.screenshot({ path: SHOTDIR + '/light-overlay.png' });
 
   check('no console errors', errors.length === 0, errors.slice(0, 3).join(' | '));
   await ctx.close();
@@ -156,7 +160,7 @@ const lodsOf = (page) => page.evaluate(() =>
     const p = document.querySelector('.postcard');
     return p && getComputedStyle(p).fontFamily.includes('JetBrains');
   }));
-  await page.screenshot({ path: process.env.SHOTDIR + '/dark-searchpage.png' });
+  await page.screenshot({ path: SHOTDIR + '/dark-searchpage.png' });
 
   await page.evaluate(() => { localStorage.setItem('jh-theme', 'light'); });
   await page.reload({ waitUntil: 'domcontentloaded' });
@@ -169,7 +173,7 @@ const lodsOf = (page) => page.evaluate(() =>
   });
   check('page ground is light', light.bodyLum > 180, String(light.bodyLum));
   check('result text is ink-dark', light.titleLum >= 0 && light.titleLum < 120, String(light.titleLum));
-  await page.screenshot({ path: process.env.SHOTDIR + '/light-searchpage.png' });
+  await page.screenshot({ path: SHOTDIR + '/light-searchpage.png' });
 
   check('no console errors', errors.length === 0, errors.slice(0, 3).join(' | '));
   await ctx.close();

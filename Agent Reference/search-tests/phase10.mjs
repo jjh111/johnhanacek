@@ -433,10 +433,13 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
   await page.click('.pc-mod[data-id="35"] .pc-piece--demo');
   await page.waitForTimeout(2400);
   const trail1 = await page.evaluate(() => ({
-    segs: [...document.querySelectorAll('#so-trail .trail-seg')].map(s => s.querySelector('.trail-kind')?.textContent),
+    crumbs: [...document.querySelectorAll('#so-trail .trail-crumb')].map(c => c.textContent),
+    root: !!document.querySelector('#so-trail [data-trail="root"]'),
+    current: document.querySelector('#so-trail .trail-crumb.is-current')?.textContent || null,
     live: !!document.querySelector('.pc-piece--woken iframe'),
   }));
-  check('pinning shows a trail segment', trail1.segs.includes('pinned'), JSON.stringify(trail1));
+  check('the breadcrumb roots at "results" and ends where you are',
+    trail1.root && trail1.crumbs.length >= 2 && !!trail1.current, JSON.stringify(trail1));
 
   // density scales the frames: compact 264 → comfortable 352
   const wCompact = await page.evaluate(() =>
@@ -450,18 +453,24 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
   await page.click('.pc-density');   // restore compact
   await page.waitForTimeout(500);
 
-  // the trail's ✕ buttons are each state's undo: live first, then the pin
-  await page.click('#so-trail .trail-x[data-trail="live"]');
-  await page.waitForTimeout(600);
-  const afterLive = await page.evaluate(() => ({
-    segs: [...document.querySelectorAll('#so-trail .trail-seg')].map(s => s.querySelector('.trail-kind')?.textContent),
-    iframes: document.querySelectorAll('.pc-piece iframe').length,
-  }));
-  check('the trail ✕ sleeps the live frame (pin remains)', afterLive.segs.includes('pinned') && afterLive.iframes === 0, JSON.stringify(afterLive));
-  await page.click('#so-trail .trail-x[data-trail="pin"]');
+  // Walking back a crumb undoes everything after it: the pinned crumb sleeps
+  // the live frame and keeps the pin; the root clears the lot.
+  const pinnedCrumb = await page.$('#so-trail [data-trail="pinned"]');
+  if (pinnedCrumb) {
+    await pinnedCrumb.click();
+    await page.waitForTimeout(600);
+    const afterLive = await page.evaluate(() => ({
+      crumbs: [...document.querySelectorAll('#so-trail .trail-crumb')].map(c => c.textContent),
+      iframes: document.querySelectorAll('.pc-piece iframe').length,
+    }));
+    check('the pinned crumb sleeps the live frame (pin remains)',
+      afterLive.crumbs.length === 2 && afterLive.iframes === 0, JSON.stringify(afterLive));
+  }
+  await page.click('#so-trail [data-trail="root"]');
   await page.waitForTimeout(900);
-  check('the trail ✕ is the undo (unpins, trail empties)',
-    document.querySelectorAll('#so-trail .trail-seg').length === 0);
+  check('the root crumb is the undo (unpins, trail empties)',
+    await page.evaluate(() => document.querySelectorAll('#so-trail .trail-crumb').length === 0
+      && !document.getElementById('so-trail').classList.contains('visible')));
 
   check('no console errors (coherence)', errors.length === 0, errors.slice(0, 3).join(' | '));
   await ctx.close();

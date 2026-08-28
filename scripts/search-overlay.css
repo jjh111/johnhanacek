@@ -1179,7 +1179,6 @@ model-viewer.pc-obstacle--float { width: 170px; height: 170px; }
 .search-overlay.so-workspace #so-sourcesSection {
     grid-column: 1; grid-row: 1 / span 2;
     overflow-y: auto; min-height: 0;
-    border-right: 1px solid rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.08);
     padding-right: 1rem;
 }
 .search-overlay.so-workspace #so-detailPane {
@@ -1512,29 +1511,23 @@ body.search-overlay-open .so-residue { display: none; }
     white-space: nowrap;
 }
 .so-trail.visible { display: flex; }
-.trail-seg { display: inline-flex; align-items: center; gap: 0.35rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.trail-kind {
-    flex: none;
-    font-size: 0.56rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.85);
-    border: 1px solid rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.3);
-    border-radius: 3px;
-    padding: 0 0.3rem;
-}
-.trail-live .trail-kind { color: rgba(var(--gold-rgb, 212, 175, 55), 0.95); border-color: rgba(var(--gold-rgb, 212, 175, 55), 0.4); }
-.trail-label { color: var(--text-bright, #b8dced); overflow: hidden; text-overflow: ellipsis; }
-.trail-sep { color: var(--muted, #7a9aaa); flex: none; }
-.trail-x {
+/* Crumbs: ancestors are buttons that walk back, the last is where you are.
+   Only the ancestors shrink, so the current crumb stays readable. */
+.trail-crumb {
     all: unset;
-    cursor: pointer;
-    flex: none;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     color: var(--muted, #7a9aaa);
-    font-size: 0.7rem;
-    padding: 0 0.15rem;
 }
-.trail-x:hover { color: var(--text-bright, #b8dced); }
+button.trail-crumb { cursor: pointer; }
+button.trail-crumb:hover,
+button.trail-crumb:focus-visible { color: var(--text-bright, #b8dced); text-decoration: underline; }
+button.trail-crumb:focus-visible { outline: 1px solid rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.5); outline-offset: 2px; }
+.trail-crumb.is-current { color: var(--text-bright, #b8dced); flex: 0 1 auto; }
+.trail-live.is-current { color: rgba(var(--gold-rgb, 212, 175, 55), 0.95); }
+.trail-sep { color: var(--muted, #7a9aaa); flex: none; opacity: 0.6; }
 
 /* density IS the frame scale: comfortable grows the wakeable card — the
    virtual viewport grows with it (same 0.25 scale, more page visible) */
