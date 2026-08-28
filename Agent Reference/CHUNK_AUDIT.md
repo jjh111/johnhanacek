@@ -286,3 +286,51 @@ text fields untouched, no re-embed needed):
   `model3d: BlackBox-Model.glb` (86 KB). John: "the media for what makes
   john unique should be the blackbox model." (Resolves the §10e.2 open
   question — the model's home is 28, not 9.)
+
+---
+
+## I. Interview chunks (43–49) — authored 2026-08-27 from John's own answers
+
+Seven chunks covering how John works, not what he shipped. Every line came from him in
+conversation on 2026-08-27; two draw on the case studies as noted. These are **chunk-only by
+nature** — the site does not say any of it — so they rest entirely on his word, which is the
+point: they exist to answer design-interview questions the pages were never written to answer.
+
+- [x] **43 Handling Disagreement** — best design at the level of authority he has; works with
+  engineering toward the same user outcome; compromise as a forcing function; defers only on
+  the impossible, and not before exhausting options.
+- [x] **44 Ambiguity and Constraint** — thrives in ambiguity; hunts unspoken structure inside
+  settled processes; generates standards as needed; revisits ambiguity even on narrow scope;
+  already knows what goes when a timeline halves. *(Titled "Ambiguity and Shrinking Timelines"
+  at first — the word "Timelines" carries the 3x title boost and stole "tell me about a TIME
+  you disagreed" from chunk 43. Retitled; the constraint story stays in the body.)*
+- [x] **45 Critique and Design Reviews** — playful critique, "how might we" against
+  solutionizing, expectations set going in, work kept outside the self, a good roast welcomed,
+  yes/no steered toward shared understanding.
+- [x] **46 Research That Changed the Design — Nanome** — sourced from nanome2.html, not from
+  memory: test criteria, multi-round testing with real pharma groups, qualitative coding into
+  four buckets, the "still have trouble moving around the structure" finding, and the pivot
+  that removed teleportation for Spotlight/Follow.
+- [x] **47 Working with AI** — "the ultimate omni-developer who is perhaps a bit too obedient";
+  definitions and expectations are the designer's job; verification systems over trust;
+  intentional steering between hand manipulation and vibe coding; sculpting rather than
+  painting; QA manual and non-negotiable; know every screen and state.
+- [x] **48 Failure and Resilience** — AvatarMEDIC too early and underfunded, own capital
+  exhausted, pivoted to a revenue-earning consultancy; failures as the lead of golden wisdom.
+  **Includes lifeguarding and having saved lives** — first on scene for a c-spine injury, large
+  surf rescues, and the preventative work. John confirmed he is comfortable with search saying
+  this (2026-08-27). The site mentions Junior Lifeguards instruction; the rescues are new.
+- [x] **49 What John Is Looking For** — seeking full-time and open to projects, biased toward
+  full time; early-stage startups, orthogonal work for established companies, continued
+  coaching; Lead or Senior Designer, founding designer for the right team; a founder's
+  experience with an IC's ruthlessness and a Director's vision. **The revenue-stability line
+  from the first draft was CUT at John's direction** — "in this era we still need to do
+  posturing".
+
+### Nanome title, resolved for the third time
+- [x] The job was labelled XR interaction designer; John was doing PM and lead design and owns
+  the title **Lead XR Product Designer** (2026-08-27). Applied to chunks 5/23/26, about.html,
+  design.html and nanome2.html (which had said "Lead Product Designer"). `Archive/` is a frozen
+  snapshot and keeps the old wording by rule.
+- [ ] nanome2.html labels the project **2023–2024** while employment is **2022–2024**. Both can
+  be true — the redesign inside a longer tenure. Left as-is; flag if that reads wrong.
