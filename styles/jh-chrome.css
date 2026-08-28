@@ -304,6 +304,26 @@
     filter: drop-shadow(0 0 8px var(--cyan-glow));
 }
 
+/* Hero pill AT REST: the shape fills its link box.
+   The box is 32px — .shape-link's min-height, which is what stops the pill
+   changing height when labels appear on hover, so it is load-bearing and stays.
+   The shape was 28px, and justify-content: flex-start pinned it to the top of
+   that box, leaving 4px of dead space beneath every shape; the row read as
+   sitting high in the pill rather than filling it. Matching the shape to the
+   box removes the gap at its source — nothing needs re-centring, because a 32px
+   shape in a 32px box has nowhere left to be offset. On hover the rule below
+   still shrinks it to 18px to make room for the text, which is the whole
+   gesture: full at rest, smaller to let the label in.
+   Scoped to .shape-nav on purpose. The fixed bar (.nav-left, 22px and centred)
+   and touch (@media hover:none, 20px with labels suppressed) both set their own
+   sizes and must keep them; this rule sits ahead of both in the cascade. */
+.shape-nav .shape-link .shape {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+}
+
 /* --- Shape labels (in flow, not absolute) --- */
 .shape-label {
     font-family: 'JetBrains Mono', monospace;
