@@ -80,12 +80,12 @@
      page's headings, main and typography. See styles/jh-chrome.css header.)
      Loaded BEFORE the page's own tokens so _tokens.css wins on every name they
      share; the chrome reads its own values through --jh- prefixed tokens. -->
-<link rel="stylesheet" href="./styles/jh-chrome.css?v=1.69">
-<link rel="stylesheet" href="./scripts/search-overlay.css?v=1.69">
+<link rel="stylesheet" href="./styles/jh-chrome.css?v=1.83">
+<link rel="stylesheet" href="./scripts/search-overlay.css?v=1.83">
 <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-<link rel="stylesheet" href="openprose/_tokens.css?v=1.69">
-<link rel="stylesheet" href="openprose/_pairings.css?v=1.69">
+<link rel="stylesheet" href="openprose/_tokens.css?v=1.83">
+<link rel="stylesheet" href="openprose/_pairings.css?v=1.83">
 <style>
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1421,13 +1421,21 @@ html[data-mode="dark"] .scratch-grid figure:not(.photo) .scratch-img {
   font-size: var(--fs-small, 0.82rem); /* one step up from caption for legibility (JH round-31) */
   line-height: 1.7;
   color: var(--ink-2);
-  overflow-x: auto;
-  white-space: pre;
+  /* WRAP, never scroll sideways. `white-space: pre` + `overflow-x: auto` meant
+     any line wider than the column became a horizontal scrollbar, and the
+     column is narrowest exactly where the band is still two-up: measured on
+     the review-state spec, 7px over at 1440, 70px at 1280, 163px at 1100 and
+     222px at 980 — so shortening a word only ever fixed the widest case. The
+     <=720px rule below already wrapped instead; this is that behaviour all the
+     way up, which is also the only option that keeps every character readable
+     (overflow-x: hidden would simply have eaten the ends of the lines). */
+  overflow-x: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
 }
 .spec-pre .k { color: var(--teal); }
 .spec-pre .c { color: var(--ink-4); }
 @media (max-width: 720px) {
-  .spec-pre { white-space: pre-wrap; overflow-wrap: break-word; }
 }
 
 .op-cols { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: var(--space-xl); align-items: center; }
@@ -1843,7 +1851,7 @@ system consumes it.
 <span class="k">name:</span> review-state-stays-coherent
 <span class="k">kind:</span> responsibility
 
-<span class="k">Criteria</span> · `agent-close.mjs --audit-all` must read OPEN=0 for every closed round
+<span class="k">Criteria</span> · `agent-close.mjs --audit-all` must read OPEN=0 for each closed round
 <span class="k">Constraints</span> · never close a comment to make the audit green — a clean audit is
               the <span class="k">result</span> of coherent state, not the goal to be gamed</pre>
       </div>
@@ -3859,10 +3867,10 @@ system consumes it.
   } catch (e) { /* un-wrapped is the original page */ }
 </script>
 
-<script src="./scripts/shared.js?v=1.69"></script>
-<script src="./scripts/search-overlay.js?v=1.69" defer></script>
-<script src="./scripts/jh-shapes.js?v=1.69"></script>
-<script src="./scripts/jh-chrome.js?v=1.69" defer></script>
+<script src="./scripts/shared.js?v=1.83"></script>
+<script src="./scripts/search-overlay.js?v=1.83" defer></script>
+<script src="./scripts/jh-shapes.js?v=1.83"></script>
+<script src="./scripts/jh-chrome.js?v=1.83" defer></script>
 
 </body>
 </html>
