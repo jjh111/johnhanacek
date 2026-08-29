@@ -401,3 +401,30 @@ jhqr 20K→14K · strange loop 740K→173K · Earth Star painting 101K→28K.
 **After this round: zero duplicate assets across chunks, every referenced file exists, 18 of
 49 chunks carry media.** Two paths remain `%20`-encoded (chunks 7 and 21) — both load, left
 alone rather than churned.
+
+---
+
+## K. Pieces, resolved (2026-08-27) — §F closed
+
+John: "the search should not surface little experiments, focus on stuff that's linked from the
+page." Each piece target was checked against what the ten public content pages actually link.
+
+### Removed — reachable only through the playground manifest
+- [x] **34** → `Assets/JH-brand-styleguide.html`. Internal brand reference, noindex.
+- [x] **35** → `fish-demo/index.html`. Internal engine testbed, noindex. The chunk itself stays:
+  the fish minigame is the homepage hero, it was the standalone testbed that had no business
+  in search.
+- [x] **38** → `tidepool.html`, the 2016 hypercube, `beach-beers.html`. Experiments; tidepool
+  and beach-beers are noindex-unlisted, so surfacing them contradicted their own status.
+
+### Kept — every one is linked from a real content page
+- [x] **3** MetaMedium — linked from index.html and design.html
+- [x] **11** earthstar.space — index, design, art
+- [x] **13** jhana.zone — art.html
+- [x] **14** fractalfuture.substack.com — index, design, art
+- [x] **15** smugmug — art.html
+
+**Standing rule from here:** a piece may only point at something a public content page links.
+The playground manifest is not that page — it is an index of everything, including things
+deliberately unlisted. Also verified in this pass: all 49 chunk urls resolve to a public page,
+none external, none unlisted.
