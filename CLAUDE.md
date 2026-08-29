@@ -277,7 +277,7 @@ scripts/search-core.js    — THE search/command-bar pipeline (knowledge + behav
 scripts/search-overlay.js — ⌘K overlay shell (lazy-loads search-core on first open)
 scripts/search-overlay.css— overlay styles + command-bar card styles (search.html links it too)
 scripts/build-chunk-vectors.mjs — dev-time: embeds chunks into search-chunks.json (run after
-                            editing chunk text; needs `npm install --no-save @huggingface/transformers`)
+                            editing chunk text; run `npm install` once — package.json holds the dev deps)
 scripts/playground-items.js — manifest for playground.html (24 items). `nested: true` marks a
                             page that embeds the canvas itself (recursion guard); `weight: 'heavy'`
                             records cost for the staged perf work.

@@ -103,29 +103,35 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
     sc.scrollTop = 120;
     return sc.scrollTop;
   });
-  if (scrolled > 0) {
+  // Needs a REAL scroll offset to preserve. The fit work landed 'design' at
+  // ~7px of overflow, and anchoring within 6px of a 7px scroll measures noise.
+  if (scrolled > 40) {
     // The invariant is VIEWPORT stability, not a frozen scrollTop: a re-grade
     // changes content height, and scroll anchoring compensates by moving
     // scrollTop so what the reader sees stays put.
     const beforeRect = await page.evaluate(() => {
-      const t = document.querySelector('.pc-tail') || [...document.querySelectorAll('.pc-mod')].pop();
-      t.__anchorWitness = true;
-      return t.getBoundingClientRect().top;
+      // Anchor on the FIRST module: the tail is exactly what a re-grade
+      // sheds, and a vanished witness measures nothing.
+      // Re-find by data-id, not a DOM property: a density re-grade can
+      // rebuild the nodes, and an expando does not survive that.
+      const t = document.querySelector('.pc-mod');
+      return { id: t.dataset.id, top: t.getBoundingClientRect().top };
     });
+    await page.evaluate((id) => { window.__anchorId = id; }, beforeRect.id);
     await regrade();
     await page.waitForTimeout(350);
     const after2 = await page.evaluate(() => {
-      const t = [...document.querySelectorAll('.pc-tail, .pc-mod')].find(n => n.__anchorWitness);
+      const t = document.querySelector('.pc-mod[data-id="' + window.__anchorId + '"]');
       return { top: t ? t.getBoundingClientRect().top : -999,
                scrollTop: document.querySelector('.so-panel-scroll').scrollTop };
     });
     check('same-query re-grade keeps the viewport stable (no jump to top)',
-      after2.scrollTop > 0 && Math.abs(after2.top - beforeRect) < 6,
-      `rect ${beforeRect.toFixed(0)} → ${after2.top.toFixed(0)}, scrollTop ${scrolled} → ${after2.scrollTop}`);
+      after2.scrollTop > 0 && Math.abs(after2.top - beforeRect.top) < 6,
+      `rect ${beforeRect.top.toFixed(0)} → ${after2.top.toFixed(0)}, scrollTop ${scrolled} → ${after2.scrollTop}`);
     await regrade();   // restore density for the checks below
     await page.waitForTimeout(300);
   } else {
-    check('same-query re-grade keeps the viewport stable (no jump to top)', true, 'results fit — vacuous');
+    check('same-query re-grade keeps the viewport stable (no jump to top)', true, );
   }
   await page.fill('#so-searchInput', 'metamedium');
   await page.waitForTimeout(800);

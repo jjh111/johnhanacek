@@ -53,6 +53,7 @@
                 </div>
                 <!-- The tier strip: the intelligence ladder, one legible line -->
                 <div class="tier-strip-row">
+                    <div class="pc-controls" id="so-pcControls"></div>
                     <div class="tier-strip" id="so-tierStrip" role="group" aria-label="Search intelligence tiers"></div>
                     <button class="engine-info-btn so-workspace-btn" id="so-workspaceBtn" aria-label="Workspace view" title="Workspace view">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
@@ -292,7 +293,13 @@
         // whatever any column has ever needed this query, plus whatever the
         // chrome needs right now
         contentFloor = Math.max(contentFloor, content);
-        const want = Math.round(Math.min(cap, Math.max(PANEL_MIN, contentFloor + chrome + 2)));
+        // Fit to the CAP, not to content. The pane derives its line budget from
+        // its own height while this sized the panel from the pane's content, so
+        // the two settled each other into a short box with a mostly empty right
+        // column. In workspace the pane is a READING surface and should get the
+        // room; each column scrolls itself, so the disclosure still has somewhere
+        // to go. contentFloor stays measured for the rAF correction below.
+        const want = Math.max(PANEL_MIN, cap);
         if (Math.abs(want - panel.getBoundingClientRect().height) < 2) return;
         panel.style.height = want + 'px';
         // One self-correcting step rather than a magic slack constant: child

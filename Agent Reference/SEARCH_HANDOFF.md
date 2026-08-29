@@ -65,7 +65,7 @@ strip), and **pieces** (site widgets wake as live iframes inside the prose).
 5. **Chunks are claims**: every chunk string is audited via `CHUNK_AUDIT.md`.
    New/edited chunks land WITH their audit section or not at all. After any
    content edit: `node scripts/build-chunk-vectors.mjs` (needs
-   `npm install --no-save @huggingface/transformers`), then re-run the offline
+   `npm install`), then re-run the offline
    labs to prove retrieval didn't drift.
 6. **Never hand-tune fusion**: the `hybridMerge` constants were tuned by
    `search-tests/fusionlab.mjs` + `intentlab.mjs`. Re-run the labs; don't nudge

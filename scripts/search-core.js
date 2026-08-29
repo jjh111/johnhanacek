@@ -1253,7 +1253,12 @@
                 const cv = chunkVecs.get(c.id);
                 if (!cv) continue;
                 const s = cosSim(v, cv);
-                if (s >= 0.45) out.push({ c, s });
+                // 0.45 was a hard gate in a space whose genuine neighbours sit
+                // at 0.37–0.45: for Earth Star the NEAREST chunk scored 0.447,
+                // so nothing qualified and the workspace pane rendered its lead
+                // over an empty column. The top-N cap already does the limiting;
+                // this floor only has to exclude the unrelated tail.
+                if (s >= 0.32) out.push({ c, s });
             }
             out.sort((a, b) => b.s - a.s);
             return out.slice(0, n).map(o => o.c);
@@ -1310,13 +1315,30 @@
         // the density is a GLOBAL semantic-zoom state — frames scale with it
         function applyDensityFlag() {
             document.documentElement.dataset.pcDensity = pcDensity();
+            renderPcControls();
+        }
+        // Surface-wide controls, docked in the never-scrolling command frame
+        // ahead of the tier strip so they are reachable whatever the results do.
+        function renderPcControls() {
+            const host = el('pcControls');
+            if (!host) return;
+            const compact = pcDensity() === 'compact';
+            host.innerHTML =
+                `<span class="pc-info" data-tip="${PC_INFO_TIP}" aria-label="How results are ranked" tabindex="0">ⓘ</span>`
+                + `<button class="pc-density" title="Density: ${compact ? 'micro — tap for full sentences' : 'full — tap for micro'}" aria-label="Toggle density">${compact ? '⊞' : '⊟'}</button>`;
         }
         function pcMetrics() {
             const comfy = pcDensity() === 'comfortable';
             return {
                 font: comfy ? '400 14px "JetBrains Mono", monospace' : '400 13px "JetBrains Mono", monospace',
                 lineHeight: comfy ? 22 : 20,
-                budget: comfy ? 24 : 16,
+                // Comfortable lines are TALLER, so the same panel holds fewer
+                // of them: 16 lines x 20px is 320px, and 320px of 22px lines is
+                // ~15. Seeding 24 claimed ~65% more height than compact in the
+                // same box — the fit loop, which only ever shrinks, answered by
+                // collapsing the ladder. Comfortable trades breadth for depth:
+                // fuller wording, fewer rungs.
+                budget: comfy ? 20 : 16,
             };
         }
 
@@ -1434,13 +1456,17 @@
                 // only added demand below, and on a short viewport the fit
                 // loop then flattened everything, so comfortable rendered
                 // LESS depth than compact.
-                if (ws) lod = Math.min(lod, 2);
+                // Workspace splits the labour: the left becomes an INDEX (one
+                // line each, so more of the field is visible at once) and the
+                // right pane carries the semantic expansion. Clamping the list
+                // at L2 made both halves try to be the reading surface, which
+                // is why the pane read as redundant next to it.
+                if (ws) lod = Math.min(lod, i === 0 ? 2 : 1);
                 mods.push({ r, lod });
             });
             // Budget pass: measure top-down, downgrade what does not fit.
             const costOf = (mod) => {
                 if (mod.lod === 3) {
-                    if (mod.r.facts && mod.r.facts.length) return mod.r.facts.length + 3;   // one line per fact row + head
                     // the floor follows what actually RENDERS: a demo piece /
                     // image / video / model is a 148-176px obstacle; a LINK
                     // piece is a small pill — charging it the big floor was
@@ -1459,7 +1485,16 @@
                     const comfyFloor = density === 'comfortable';
                     const bigFloor = comfyFloor ? 13 : 9;
                     const smallFloor = comfyFloor ? 5 : 3;
-                    return Math.max(lines, kind === 'big' ? bigFloor : kind === 'small' ? smallFloor : 0) + 3;
+                    const mediaFloor = kind === 'big' ? bigFloor : kind === 'small' ? smallFloor : 0;
+                    // Fact rows sit BESIDE the media, so the taller governs.
+                    // The facts branch used to return early and ignore media
+                    // entirely — the awards dossier carries a trophy, and the
+                    // unpaid frame was 50px of overflow the fit loop could not
+                    // see coming.
+                    if (mod.r.facts && mod.r.facts.length) {
+                        return Math.max(mod.r.facts.length + 3, mediaFloor + 3);
+                    }
+                    return Math.max(lines, mediaFloor) + 3;
                 }
                 if (mod.lod === 2) {
                     // L2 carries media too — a small piece for a media-less
@@ -1481,6 +1516,21 @@
             // tail, and comfortable could render LESS depth than compact.
             // The ladder's promise is the other way round: the tail yields
             // first, and the lead is the last thing to lose a tier.
+            // The lead must not eat the ladder. A dossier carrying a media frame
+            // costs most of a compact budget on its own, which left exactly one
+            // module and a tail — a card, not a ladder. Whenever something sits
+            // below it, the lead is capped at a share of the budget so the rungs
+            // beneath it survive.
+            if (mods.length > 1) {
+                // Reserve room for the rungs, don't cap by percentage: a media
+                // dossier costs ~12 of a 16-unit compact budget, so any share
+                // cap below ~80% banned L3 outright and the lead never arrived
+                // at depth. Three units is three one-liners underneath it.
+                const leadCap = Math.max(4, budget - 3);
+                // Never below L2 here: the lead giving up its dossier is fine,
+                // the lead reading shallower than the module beneath it is not.
+                while (mods[0].lod > 2 && costOf(mods[0]) > leadCap) mods[0].lod--;
+            }
             const total = () => mods.reduce((s, m2) => s + costOf(m2), 0);
             let guard = mods.length * 4;
             while (total() > budget && guard-- > 0) {
@@ -1528,8 +1578,13 @@
         function departureCardHtml(url, title, opts = {}) {
             let host = url;
             try { host = new URL(url).hostname; } catch {}
-            const poster = opts.poster ? `<img class="pc-piece-poster" src="${opts.poster}" alt="" loading="lazy">` : '';
-            return `<a class="pc-piece pc-piece--link${opts.big ? ' pc-obstacle' : ''}" href="${url}" target="_blank" rel="me noopener" title="Leaves the site — your search is kept">`
+            // A capture makes this a CARD, not a chip. The poster is a
+            // screenshot of the destination and needs real geometry to read as
+            // one — inside the chip's auto height it stretches to a ~37px
+            // sliver, and inside an unbounded obstacle it blows up to fill the
+            // column. `has-poster` gives it the demo card's dimensions.
+            const poster = opts.poster ? `<img class="pc-piece-poster" src="${resolveHref(opts.poster)}" alt="" decoding="async">` : '';
+            return `<a class="pc-piece pc-piece--link${opts.poster ? ' has-poster' : ''}${opts.big ? ' pc-obstacle' : ''}" href="${url}" target="_blank" rel="me noopener" title="Leaves the site — your search is kept">`
                 + `${poster}<span class="pc-piece-kind">↗</span><span class="pc-piece-title">${title || host}</span><span class="pc-piece-host">${host}</span></a>`;
         }
         let livePieceEl = null;
@@ -1565,13 +1620,13 @@
                 // John-owned frameable hosts wake LIVE — same budget, graft,
                 // and sleep-on-close semantics as same-origin demos
                 if (isFrameable(piece.src)) {
-                    const poster = r && r.image ? `<img class="pc-piece-poster" src="${r.image}" alt="" loading="lazy">` : (piece.poster ? `<img class="pc-piece-poster" src="${piece.poster}" alt="" loading="lazy">` : '');
+                    const poster = r && r.image ? `<img class="pc-piece-poster" src="${r.image}" alt="" decoding="async">` : (piece.poster ? `<img class="pc-piece-poster" src="${piece.poster}" alt="" decoding="async">` : '');
                     return `<span class="pc-piece pc-piece--demo${big ? ' pc-obstacle' : ''}" data-piece-src="${piece.src}" role="button" tabindex="0" aria-label="Wake live demo">`
                         + `${poster}<span class="pc-piece-kind">▶ live</span><span class="pc-piece-title">${piece.title || (r && r.title) || ''}</span></span>`;
                 }
                 return departureCardHtml(piece.src, piece.title, { big, poster: piece.poster });
             }
-            const poster = r && r.image ? `<img class="pc-piece-poster" src="${r.image}" alt="" loading="lazy">` : '';
+            const poster = r && r.image ? `<img class="pc-piece-poster" src="${r.image}" alt="" decoding="async">` : '';
             return `<span class="pc-piece pc-piece--demo${big ? ' pc-obstacle' : ''}" data-piece-src="${piece.src}" role="button" tabindex="0" aria-label="Wake live demo">`
                 + `${poster}<span class="pc-piece-kind">▶ live</span><span class="pc-piece-title">${piece.title || (r && r.title) || ''}</span></span>`;
         }
@@ -1802,13 +1857,20 @@
                 const obstacle = dossier.querySelector('.pc-obstacle');
                 const prose = dossier.querySelector('.pc-prose');
                 if (!obstacle || !prose) continue;
+                // wrapAround resolves ASYNCHRONOUSLY, so detailWraps is still
+                // empty while the first wrap is in flight — and the caller's
+                // "pretext arrived late" guard tests exactly that. A second
+                // render inside that window wrapped the same node again and
+                // painted the prose twice. The node carries its own claim.
+                if (prose.dataset.wrapped) continue;
+                prose.dataset.wrapped = '1';
                 obstacle.classList.add('pc-obstacle--float');
                 pretextWrapMod.wrapAround(prose, {
                     obstacles: [{ el: obstacle, shape: 'rect', hPad: 14, vPad: 4 }],
                     lineHeight: m.lineHeight,
                     font: m.font,
                     minSlot: 80,
-                }).then(w => { detailWraps.push(w); }).catch(() => {});
+                }).then(w => { detailWraps.push(w); }).catch(() => { delete prose.dataset.wrapped; });
             }
         }
         // The pane's seed, computable WITHOUT the pane: pinned (from the list
@@ -1857,8 +1919,12 @@
                 let cost = (hasFacts ? c.facts.length : countLines(text, width - 190, m)) + 2;
                 if (mediaHtml && !hasFacts) {
                     const p0 = c.pieces && c.pieces[0];
-                    const big = p0 ? p0.kind === 'demo' : true;   // link pills are small
-                    cost = Math.max(cost, big ? 11 : 4);
+                    // A departure card with a capture is card-sized too, not a
+                    // pill — and the frame scales with density. Under-charging
+                    // here is what pushed the pane past its own height.
+                    const big = p0 ? (p0.kind === 'demo' || !!p0.poster) : true;
+                    const comfy = pcDensity() === 'comfortable';
+                    cost = Math.max(cost, big ? (comfy ? 15 : 12) : (comfy ? 6 : 4));
                 }
                 if (cost > lines) return null;
                 lines -= cost;
@@ -2072,9 +2138,11 @@
                 let pc = `<div class="postcard" data-density="${pcDensity()}">`;
                 // ONE byline row: intent hint (only when one fired — a permanent
                 // "tl;dr" is filler, not signal) · fusion ⓘ · density toggle.
-                pc += `<div class="pc-head">${hint ? `<span class="cmdbar-group-label">${hint}</span>` : '<span class="pc-head-spacer"></span>'}`
-                    + `<span class="pc-info" data-tip="${PC_INFO_TIP}" aria-label="How results are ranked" tabindex="0">ⓘ</span>`
-                    + `<button class="pc-density" title="Density: ${pcDensity() === 'compact' ? 'micro — tap for full sentences' : 'full — tap for micro'}" aria-label="Toggle density">${pcDensity() === 'compact' ? '⊞' : '⊟'}</button></div>`;
+                // ⓘ and the density control live in the command frame (see
+                // renderPcControls), not here: they are surface-wide controls,
+                // and inside the scrolling postcard they scrolled away from the
+                // thing they control. The byline stays — it describes THIS render.
+                pc += `<div class="pc-head">${hint ? `<span class="cmdbar-group-label">${hint}</span>` : '<span class="pc-head-spacer"></span>'}</div>`;
                 if (lastPieceRail) {
                     const seen = new Set(); const rail = [];
                     for (const r2 of results.slice(0, 12)) {
@@ -2685,7 +2753,7 @@
                     wrap.replaceWith(v);
                 }
             }
-            for (const host of [el('searchResults'), el('aiAnswer'), el('detailPane')]) {
+            for (const host of [el('searchResults'), el('aiAnswer'), el('detailPane'), el('pcControls')]) {
                 if (!host) continue;
                 host.addEventListener('click', (e) => {
                     if (e.target.closest('a.result-link, a.result-page-link')) { markContinuity(); return; }

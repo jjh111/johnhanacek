@@ -429,12 +429,20 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
   // Density scales the frames: compact 264 → comfortable 352. Measured on a
   // SLEEPING piece — a woken one is mid-graft across the re-render and its
   // node is briefly detached, which is the graft working, not a size change.
-  const wCompact = await page.evaluate(() =>
-    document.querySelector('.pc-piece--demo')?.getBoundingClientRect().width || 0);
-  await page.click('.pc-density');
-  await page.waitForTimeout(600);
-  const wComfy = await page.evaluate(() =>
-    document.querySelector('.pc-piece--demo')?.getBoundingClientRect().width || 0);
+  // Set the density DIRECTLY rather than toggling from whatever the previous
+  // block left behind — the ladder lands on a different tier depending on the
+  // starting state, and the frame is only there to measure at some of them.
+  const widthAt = async (d) => {
+    await page.evaluate((dd) => {
+      try { localStorage.setItem('jh-postcard-density', dd); } catch {}
+      const i = document.getElementById('so-searchInput');
+      i.dispatchEvent(new Event('input', { bubbles: true }));
+    }, d);
+    await page.waitForTimeout(1500);
+    return page.evaluate(() => document.querySelector('.pc-piece--demo')?.getBoundingClientRect().width || 0);
+  };
+  const wCompact = await widthAt('compact');
+  const wComfy = await widthAt('comfortable');
   check('density scales the frames (compact small, comfortable larger)',
     wCompact > 0 && wCompact < 300 && wComfy >= 340, `${wCompact} → ${wComfy}`);
   await page.click('.pc-density');   // restore compact

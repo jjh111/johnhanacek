@@ -885,15 +885,15 @@ body.search-overlay-open {
 }
 .postcard[data-density="comfortable"] { font-size: 14px; line-height: 22px; }
 /* Controls FIRST, label after. They used to trail a flex:1 spacer, which
-   parked them at the far right of the left column — the one edge that butts
-   against the detail pane, so they read as belonging to the pane rather than
-   to the list they actually govern. `order` moves them without touching the
-   markup the morph path keys on. */
+   parked them at the far right of the left column. They now live in the
+   command frame instead (.pc-controls, ahead of the tier strip) — surface-wide
+   controls that must not scroll away from the surface they govern. */
 .pc-head { display: flex; align-items: center; gap: 0.4rem; }
-.pc-head .cmdbar-group-label { margin: 0.2rem 0; order: 2; }
-.pc-head-spacer { flex: 1; order: 3; }
-.pc-head .pc-info { order: 0; }
-.pc-head .pc-density { order: 1; margin-right: 0.15rem; }
+.pc-head .cmdbar-group-label { margin: 0.2rem 0; }
+.pc-head-spacer { flex: 1; }
+/* Leads the strip row, so the pair reads before the ladder it grades. */
+.pc-controls { display: flex; align-items: center; gap: 0.2rem; flex: none; }
+.pc-controls:empty { display: none; }
 /* the fusion ⓘ — was the shells' "Results" label row */
 /* Was 0.7rem at 0.55 opacity — a control you had to hunt for. Matched to
    .pc-density so the pair reads as one set of tools. */
@@ -1391,6 +1391,30 @@ model-viewer.pc-obstacle--float { width: 170px; height: 170px; }
 .pc-piece--link .pc-piece-title { position: static; margin: 0; background: none; padding: 0; }
 .pc-piece--link .pc-piece-host { font-size: 0.6rem; color: var(--so-muted, var(--muted, #7a9aaa)); }
 .pc-piece--link:hover .pc-piece-title { color: var(--gold, #d4af37); }
+/* A departure card carrying a capture is a CARD — the same geometry as a demo
+   piece. The chip form (auto width/height) squeezed the screenshot into a
+   ~37px sliver, and at obstacle scale it stretched to fill the column. */
+.pc-piece--link.has-poster {
+    flex-direction: column; align-items: stretch; justify-content: space-between;
+    width: 264px; height: 176px; padding: 0;
+}
+.pc-piece--link.has-poster .pc-piece-kind {
+    position: relative; align-self: flex-start; margin: 0.35rem; padding: 0.12rem 0.4rem;
+}
+.pc-piece--link.has-poster .pc-piece-title {
+    position: relative; align-self: flex-start; margin: 0.35rem 0.45rem;
+    background: rgba(var(--surface-rgb, 2, 10, 18), 0.6);
+    border-radius: 3px; padding: 0.1rem 0.3rem;
+    max-width: calc(100% - 0.9rem); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pc-piece--link.has-poster .pc-piece-host {
+    margin: 0 0.45rem 0.35rem; align-self: flex-start;
+    background: rgba(var(--surface-rgb, 2, 10, 18), 0.6);
+    border-radius: 3px; padding: 0.05rem 0.3rem;
+    max-width: calc(100% - 0.9rem); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pc-piece-rail .pc-piece--link.has-poster,
+.result-row .pc-piece--link.has-poster { width: 150px; height: 100px; }
 /* the rail: pieces collected from the top results, one strip, wraps (never scrolls) */
 .pc-piece-rail { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.25rem 0 0.4rem; }
 .pc-piece-rail .pc-piece--demo { width: 150px; height: 100px; }
