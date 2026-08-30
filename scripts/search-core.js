@@ -1352,7 +1352,23 @@
             if (!content) return '';
             const cached = briefCache.get(content);
             if (cached !== undefined) return cached;
-            const sentences = content.match(/[^.!?]+[.!?]+(?:\s|$)/g) || [content];
+            // Split ONLY at punctuation followed by whitespace/end. The old
+            // match() pattern could not cross a mid-token period ("sound.js",
+            // "web.zone"), so it restarted AFTER it — and the join(' ')
+            // re-spaced the fragments into "sound. js for web. zone." in the
+            // rendered brief. Selection must never alter the wording.
+            const sentences = [];
+            let segStart = 0;
+            const boundary = /[.!?]+(?=\s|$)/g;
+            let bm;
+            while ((bm = boundary.exec(content))) {
+                const piece = content.slice(segStart, bm.index + bm[0].length).trim();
+                if (piece) sentences.push(piece);
+                segStart = bm.index + bm[0].length;
+            }
+            const rest = content.slice(segStart).trim();
+            if (rest) sentences.push(rest);
+            if (!sentences.length) sentences.push(content);
             let out = sentences[0].trim();
             for (let i = 1; i < sentences.length; i++) {
                 const next = out + ' ' + sentences[i].trim();
@@ -1476,7 +1492,11 @@
                     // into the big demo card (10f), so it costs big
                     const kind = p0 ? ((p0.kind === 'demo' || (p0.kind === 'link' && isFrameable(p0.src))) ? 'big' : 'small')
                         : (mod.r.video || mod.r.model3d || mod.r.image) ? 'big' : 'none';
-                    const lines = countLines(textFor(mod.r, 3, density), width - 190, m);
+                    // the 190px reserve is the OBSTACLE column — a text-only
+                    // dossier renders its prose full-width, and charging it
+                    // the reserve over-counted its lines by ~35% (cost follows
+                    // what RENDERS, doctrine 7 — same fix as the pane's)
+                    const lines = countLines(textFor(mod.r, 3, density), kind === 'none' ? width - 10 : width - 190, m);
                     // The frame scales with density (264px compact → 352px
                     // comfortable), so its line-equivalent has to scale too —
                     // a floor calibrated for compact under-charges comfortable
@@ -1526,7 +1546,15 @@
                 // dossier costs ~12 of a 16-unit compact budget, so any share
                 // cap below ~80% banned L3 outright and the lead never arrived
                 // at depth. Three units is three one-liners underneath it.
-                const leadCap = Math.max(4, budget - 3);
+                // Derived from the density SEED budget, not the fit-shrunken
+                // one: keyed to the shrunken budget, a 31px overflow (1.5
+                // lines) walked the budget to 14, the cap to 11, and the whole
+                // 250px dossier died over a rounding error — leaving a 375px
+                // panel in a 900px viewport. The shed loop below already
+                // degrades bottom-up (the doctrine: the lead loses its tier
+                // LAST); the cap only exists to stop a dossier eating the
+                // rungs at full budget, so it holds still while fit shrinks.
+                const leadCap = Math.max(4, m.budget - 3);
                 // Never below L2 here: the lead giving up its dossier is fine,
                 // the lead reading shallower than the module beneath it is not.
                 while (mods[0].lod > 2 && costOf(mods[0]) > leadCap) mods[0].lod--;
@@ -1791,6 +1819,14 @@
             const obstacle = dossier && dossier.querySelector('.pc-obstacle');
             const prose = dossier && dossier.querySelector('.pc-prose');
             if (dossier && obstacle && prose) {
+                // wrapAround resolves ASYNCHRONOUSLY — the same race the pane
+                // fixed (wrapStrata): a morph landing while the first wrap is
+                // in flight sees currentWrap still null and wraps the same
+                // node AGAIN, painting the prose twice. The node claims
+                // itself. (Every destroy path replaces the node, so a claim
+                // never outlives its wrap.)
+                if (prose.dataset.wrapped) return;
+                prose.dataset.wrapped = '1';
                 obstacle.classList.add('pc-obstacle--float');
                 pretextWrapMod.wrapAround(prose, {
                     obstacles: [{ el: obstacle, shape: 'rect', hPad: 14, vPad: 4 }],
@@ -1803,7 +1839,7 @@
                     // fonts.ready / ResizeObserver relayouts can grow the wrap
                     // AFTER this resolves — one delayed re-check catches it
                     setTimeout(postWrapRefit, 350);
-                }).catch(() => {});
+                }).catch(() => { delete prose.dataset.wrapped; });
             }
         }
 
@@ -1883,8 +1919,23 @@
         function paneSeed(results) {
             let r = (results && results[0]) || chunks.find(c => c.page === curPage) || chunks[0];
             if (!r) return null;
-            const rel = relatedChunks(r.id, 4);
-            return { r, rel, key: r.id + '|' + rel.map(c => c.id).join(',') };
+            // A pool of 8, line-budget does the limiting: at 4 the pane
+            // routinely stopped ~250px short of its own height — the strata
+            // ran out of candidates, not room. What doesn't fit becomes chips.
+            const rel = relatedChunks(r.id, 8);
+            // When the cosine neighbourhood runs dry (a chunk with few
+            // neighbours above the floor), the query's OWN ranking continues
+            // the story — next-ranked results pad the pool.
+            if (rel.length < 8 && results) {
+                for (const c of results.slice(1)) {
+                    if (rel.length >= 8) break;
+                    if (c.id !== r.id && !rel.some(x => x.id === c.id)) rel.push(c);
+                }
+            }
+            // Density is in the key: the ⊞/⊟ flip rescales the pane's metrics
+            // (line height, frame scale, costs) — without it the flip
+            // early-returned on dataset.showing and the pane never re-rendered.
+            return { r, rel, key: r.id + '|' + rel.map(c => c.id).join(',') + '|' + pcDensity() };
         }
         function renderDetailPane(results, seed) {
             const pane = el('detailPane');
@@ -1916,7 +1967,10 @@
                 const mediaKey = (c.pieces && c.pieces[0] && c.pieces[0].src) || c.video || c.model3d || c.image;
                 let mediaHtml = '';
                 if (mediaKey && !seenMedia.has(mediaKey)) { mediaHtml = pcMediaHtml(c, true); seenMedia.add(mediaKey); }
-                let cost = (hasFacts ? c.facts.length : countLines(text, width - 190, m)) + 2;
+                // The 190px reserve is the OBSTACLE column — charging it to a
+                // text-only stratum over-counted its lines by ~35% and the
+                // pane under-filled by exactly that margin.
+                let cost = (hasFacts ? c.facts.length : countLines(text, mediaHtml ? width - 190 : width - 10, m)) + 2;
                 if (mediaHtml && !hasFacts) {
                     const p0 = c.pieces && c.pieces[0];
                     // A departure card with a capture is card-sized too, not a
@@ -2021,8 +2075,9 @@
             // per swap suppress everything EXCEPT the swapped module's own
             // (its media must survive the tier change — graftMedia re-homes
             // it). Pane-owned srcs suppress entirely (pane wins).
+            // slice(0, 4): only the likely strata suppress — see buildPc.
             const paneIds = (workspaceOn() && seed)
-                ? new Set([seed.r.id, ...seed.rel.map(c => c.id)])
+                ? new Set([seed.r.id, ...seed.rel.slice(0, 4).map(c => c.id)])
                 : null;
             const srcsByMod = new Map();
             for (const el2 of pcEl.querySelectorAll('.pc-mod')) {
@@ -2115,8 +2170,16 @@
 
             // Same query, same structure → surgical swap, no rebuild.
             if (sameQuery && results.length && morphPostcard(resultsEl, mods, tail.shown, m, paneSeedState)) {
-                renderDetailPane(results, paneSeedState);
-                return;
+                // The morph path skips the fit loop — fine while the ladder's
+                // pixel shape holds, but a density flip re-words every module
+                // at a taller line height with nobody measuring (and a text-
+                // only dossier gets no wrap, so postWrapRefit never fires
+                // either). Measure here; fall through to the fitted rebuild
+                // only when the morph actually overflowed the panel.
+                if (!(anchor && anchor.scrollHeight > anchor.clientHeight + m.lineHeight / 2)) {
+                    renderDetailPane(results, paneSeedState);
+                    return;
+                }
             }
 
             if (currentWrap) { try { currentWrap.destroy(); } catch {} currentWrap = null; }
@@ -2165,7 +2228,11 @@
                 // visual. dataset.showing = "leadId|rel,rel,rel".
                 let paneIds = null;
                 if (workspaceOn() && paneSeedState) {
-                    paneIds = new Set([paneSeedState.r.id, ...paneSeedState.rel.map(c => c.id)]);
+                    // Only the likely STRATA suppress (lead + the first few
+                    // related): the pool is bigger than the pane can seat, and
+                    // a chunk the pane demotes to a chip shows no media there —
+                    // suppressing its list visual too would drop it everywhere.
+                    paneIds = new Set([paneSeedState.r.id, ...paneSeedState.rel.slice(0, 4).map(c => c.id)]);
                 }
                 let localLabelDone = !localFirst, siteLabelDone = !localFirst;
                 for (const mod of ms) {

@@ -182,19 +182,27 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
   check('departure cards are doorways, never frames (allowlist pieces wake instead)',
     rail.framedExternals === 0);
 
-  // wake budget: ONE live iframe, ever
+  // wake budget: ONE live iframe, ever.
+  // Guarded, not relaxed: when the rail is starved (the piece-intent content
+  // call above), this records a FAILURE instead of throwing on a null click —
+  // an aborted suite silently skips every assertion after this line.
   const srcs = await page.evaluate(() =>
     [...document.querySelectorAll('.pc-piece-rail .pc-piece--demo')].map(p => p.dataset.pieceSrc));
-  await page.evaluate((s) => document.querySelector(`[data-piece-src="${s}"]`).click(), srcs[0]);
-  await page.waitForTimeout(700);
-  await page.evaluate((s) => document.querySelector(`[data-piece-src="${s}"]`).click(), srcs[1]);
-  await page.waitForTimeout(700);
-  const budget = await page.evaluate(() => ({
-    iframes: document.querySelectorAll('.pc-piece iframe').length,
-    woken: [...document.querySelectorAll('.pc-piece--woken')].map(p => p.dataset.pieceSrc),
-  }));
-  check('waking a second sleeps the first (budget of one)', budget.iframes === 1 && budget.woken[0] === srcs[1],
-    JSON.stringify(budget));
+  if (srcs.length >= 2) {
+    await page.evaluate((s) => document.querySelector(`[data-piece-src="${s}"]`).click(), srcs[0]);
+    await page.waitForTimeout(700);
+    await page.evaluate((s) => document.querySelector(`[data-piece-src="${s}"]`).click(), srcs[1]);
+    await page.waitForTimeout(700);
+    const budget = await page.evaluate(() => ({
+      iframes: document.querySelectorAll('.pc-piece iframe').length,
+      woken: [...document.querySelectorAll('.pc-piece--woken')].map(p => p.dataset.pieceSrc),
+    }));
+    check('waking a second sleeps the first (budget of one)', budget.iframes === 1 && budget.woken[0] === srcs[1],
+      JSON.stringify(budget));
+  } else {
+    check('waking a second sleeps the first (budget of one)', false,
+      `rail has ${srcs.length} demos — piece-intent content call (defbc51)`);
+  }
 
   // closing the overlay sleeps the live piece
   await page.keyboard.press('Escape');   // clear query
@@ -210,18 +218,27 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
   await page.waitForTimeout(900);
   check('specific query is NOT hijacked by the piece sweep', await page.evaluate(() =>
     document.querySelector('.pc-mod')?.dataset.id === '35'));
-  await page.click('.pc-mod[data-id="35"] .pc-piece--demo');
-  await page.waitForTimeout(3600);   // fonts.ready + pretext wrap can outlast 2s cold
-  const woven = await page.evaluate(() => ({
-    lod: document.querySelector('.pc-mod[data-id="35"]')?.dataset.lod,
-    live: !!document.querySelector('.pc-mod[data-id="35"] .pc-piece--woken iframe'),
-    wrapped: document.querySelectorAll('.pc-mod[data-id="35"] .pretext-line').length,
-    tipStuck: (() => { const t = document.querySelector('.pc-tip'); return !!t && t.style.display !== 'none'; })(),
-  }));
-  check('small piece click zooms the module and wakes the demo IN the dossier',
-    woven.lod === '3' && woven.live, JSON.stringify(woven));
-  check('prose stays pretext-wrapped around the LIVE demo', woven.wrapped > 3, String(woven.wrapped));
-  check('no stale tooltip after the gesture', !woven.tipStuck);
+  // Guarded like the budget clicks: chunk 35 lost its `pieces` entry in the
+  // 2026-08 media-match data pass, so the gesture has nothing to click. A
+  // failure names the data gap; a crash would strand every later section.
+  const hasPiece = await page.evaluate(() => !!document.querySelector('.pc-mod[data-id="35"] .pc-piece--demo'));
+  if (hasPiece) {
+    await page.click('.pc-mod[data-id="35"] .pc-piece--demo');
+    await page.waitForTimeout(3600);   // fonts.ready + pretext wrap can outlast 2s cold
+    const woven = await page.evaluate(() => ({
+      lod: document.querySelector('.pc-mod[data-id="35"]')?.dataset.lod,
+      live: !!document.querySelector('.pc-mod[data-id="35"] .pc-piece--woken iframe'),
+      wrapped: document.querySelectorAll('.pc-mod[data-id="35"] .pretext-line').length,
+      tipStuck: (() => { const t = document.querySelector('.pc-tip'); return !!t && t.style.display !== 'none'; })(),
+    }));
+    check('small piece click zooms the module and wakes the demo IN the dossier',
+      woven.lod === '3' && woven.live, JSON.stringify(woven));
+    check('prose stays pretext-wrapped around the LIVE demo', woven.wrapped > 3, String(woven.wrapped));
+    check('no stale tooltip after the gesture', !woven.tipStuck);
+  } else {
+    check('small piece click zooms the module and wakes the demo IN the dossier', false,
+      'chunk 35 carries no pieces — data gap from the media-match pass');
+  }
 
   check('no console errors', errors.length === 0, errors.slice(0, 3).join(' | '));
   await ctx.close();
@@ -443,13 +460,21 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
   };
   const wCompact = await widthAt('compact');
   const wComfy = await widthAt('comfortable');
+  // Relative, not absolute px: the compact OVERLAY now caps obstacle-scale
+  // cards (208/240) so a 264px card cannot crush the prose column into a
+  // sliver — the invariant is that comfortable renders a LARGER frame.
   check('density scales the frames (compact small, comfortable larger)',
-    wCompact > 0 && wCompact < 300 && wComfy >= 340, `${wCompact} → ${wComfy}`);
+    wCompact > 0 && wComfy > wCompact, `${wCompact} → ${wComfy}`);
   await page.click('.pc-density');   // restore compact
   await page.waitForTimeout(500);
 
-  // waking a piece is the one view state left. Chunk 35 renders it at every
-  // tier, so the click lands whatever the ladder decided.
+  // waking a piece is the one view state left. Guarded: chunk 35 carries no
+  // pieces since the media-match data pass — fail, don't crash the suite.
+  const wakeable = await page.evaluate(() => !!document.querySelector('.pc-mod[data-id="35"] .pc-piece--demo'));
+  if (!wakeable) {
+    check('a piece wakes live in place', false,
+      'chunk 35 carries no pieces — data gap from the media-match pass');
+  } else {
   await page.click('.pc-mod[data-id="35"] .pc-piece--demo');
   await page.waitForTimeout(2400);
   check('a piece wakes live in place',
@@ -462,6 +487,7 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
   check('the piece\u2019s own chip sleeps it and releases the iframe',
     await page.evaluate(() => document.querySelectorAll('.pc-piece iframe').length === 0
       && !document.querySelector('.pc-piece--woken')));
+  }
 
   check('no trail element remains in the shell',
     await page.evaluate(() => !document.getElementById('so-trail')));

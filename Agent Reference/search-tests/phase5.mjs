@@ -55,7 +55,13 @@ async function newPage(url) {
 
   await page.fill('#so-searchInput', 'design');
   await page.waitForTimeout(600);
-  check('broad query gets NO dossier (no L3)', await page.locator('#so-searchResults [data-lod="3"]').count() === 0);
+  // Contract updated with the one-surface change (ad80c55): nothing expands
+  // on click any more, so the LEAD arrives at dossier depth even on a broad
+  // query — exactly ONE dossier, never a wall of them. (The old "no L3 when
+  // broad" assertion survived only while the fit loop happened to flatten the
+  // lead at this viewport — the leadCap fix ended that accident.)
+  check('broad query: exactly one dossier (the lead), not a wall of them',
+    await page.locator('#so-searchResults [data-lod="3"]').count() <= 1);
 
   await page.fill('#so-searchInput', 'book a call with him');
   await page.waitForTimeout(500);

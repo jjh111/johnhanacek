@@ -45,7 +45,11 @@
     position: relative;
     width: 100%;
     max-width: min(520px, 92vw);
-    max-height: 70vh;
+    /* 78vh, not 70: at 70vh on a 900px screen a dossier-lead ladder ran 31px
+       over the cap and the fit loop flattened it — while half the viewport
+       sat empty around the panel. The px ceiling keeps very tall screens
+       from turning the palette into a tower. */
+    max-height: min(78vh, 860px);
     /* Flex column: .so-command-frame never scrolls (the bar IS the product);
        .so-panel-scroll owns the overflow beneath it. */
     display: flex;
@@ -1520,4 +1524,19 @@ body.search-overlay-open .so-residue { display: none; }
 [data-pc-density="comfortable"] .pc-piece--demo {
     width: 352px;
     height: 234px;
+}
+
+/* In the COMPACT overlay (not workspace, not search.html's 660px column) the
+   results column is ~470px — a 264px card as a wrap obstacle leaves a ~130px
+   prose sliver, ~12 characters a line. The card yields to the prose there;
+   the pane and the page shell keep the full card. (Rail/row cards are already
+   150x100 and unaffected.) */
+.search-overlay:not(.so-workspace) .pc-dossier .pc-piece--demo,
+.search-overlay:not(.so-workspace) .pc-dossier .pc-piece--link.has-poster {
+    width: 208px;
+    height: 138px;
+}
+.search-overlay:not(.so-workspace) [data-pc-density="comfortable"] .pc-dossier .pc-piece--demo {
+    width: 240px;
+    height: 160px;
 }

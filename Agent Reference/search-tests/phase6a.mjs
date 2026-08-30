@@ -39,10 +39,12 @@ check('graded field below (smaller tiers or tail)',
   await page.locator('[data-lod="1"], [data-lod="2"], .pc-tail-item').count() >= 1);
 check('tail run present', await page.locator('.pc-tail').count() === 1);
 
-// broad → waterfall, no dossier
+// broad → the lead still arrives at dossier depth (one-surface contract,
+// ad80c55: nothing expands on click, so the ladder leads with depth) — but
+// exactly ONE dossier, with a waterfall beneath it.
 await page.fill('#so-searchInput', 'design');
 await page.waitForTimeout(600);
-check('"design": no dossier, waterfall of modules', await page.locator('[data-lod="3"]').count() === 0
+check('"design": one dossier at most, waterfall beneath', await page.locator('[data-lod="3"]').count() <= 1
   && await page.locator('.pc-mod').count() >= 3);
 
 // hover tooltip (one shared node)
@@ -54,20 +56,15 @@ await page.waitForTimeout(200);
 const tip = await page.locator('.pc-tip').textContent().catch(() => '');
 check('hover shows next-LOD tooltip', (await page.locator('.pc-tip').isVisible()) && tip.length > 10, tip.slice(0, 40));
 
-// click-to-pin expands to dossier. Target the micro/prose TEXT, not edge
-// coordinates: the title (left) navigates and since 9c the page badge
-// (right) is a link too — the right-edge click used here before 9c would
-// now leave the page.
+// One surface, no second level (ad80c55): the pin is GONE — module bodies
+// are inert, and a click on the micro/prose text changes nothing.
 const l1id = await l1.getAttribute('data-id');
+const lodBefore = await page.locator(`[data-id="${l1id}"]`).first().getAttribute('data-lod');
 await l1.locator('.pc-micro').click();
 await page.waitForTimeout(500);
-check('click pins module to dossier', await page.locator(`[data-id="${l1id}"][data-lod="3"]`).count() === 1);
-await page.evaluate((id) => {
-  const n = document.querySelector(`[data-id="${id}"]`);
-  (n.querySelector('.pc-prose') || n).dispatchEvent(new MouseEvent('click', { bubbles: true }));
-}, l1id);
-await page.waitForTimeout(500);
-check('click again unpins', await page.locator(`[data-id="${l1id}"][data-lod="3"]`).count() === 0);
+check('module bodies are inert — a click changes no tier',
+  await page.locator(`[data-id="${l1id}"]`).first().getAttribute('data-lod') === lodBefore
+  && page.url().includes('index'));
 
 // density toggle persists
 await page.locator('.pc-density').click();
@@ -77,8 +74,11 @@ check('density persisted', await page.evaluate(() => localStorage.getItem('jh-po
 await page.locator('.pc-density').click();
 await page.waitForTimeout(300);
 
-// L2 uses tldr (not full content) and L1 shows micro
-await page.fill('#so-searchInput', 'nanome');
+// L2 uses tldr (not full content) and L1 shows micro. 'who is john' — its
+// text-only lead dossier is cheap enough that the L2 beneath it survives;
+// 'nanome' stopped qualifying when its lead gained a media dossier (13 of 16
+// units — the rung under it legitimately demotes to L1).
+await page.fill('#so-searchInput', 'who is john');
 await page.waitForTimeout(600);
 const l2text = await page.locator('.pc-l2 .pc-tldr').first().textContent().catch(() => '');
 check('L2 renders the tldr line', l2text.length > 0 && l2text.length < 200, `${l2text.length} chars`);

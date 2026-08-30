@@ -76,13 +76,18 @@ const lodsOf = (page) => page.evaluate(() =>
 
   // 10e.3 — the wording ladder: micro < tldr < brief < full. LOD is
   // structural; density picks the wording INSIDE a constant structure.
-  // 'jhana' has a dominant top hit whose dossier survives both densities
-  // (lod3 brief → lod3 full — a constant-lod pair to compare).
+  // The probe chunk needs content LONGER than the ~260ch brief window, or
+  // brief === full and no wording flip exists to observe. 'jhana' (chunk 13)
+  // stopped qualifying when the deriveBrief split was fixed: its content is
+  // short, and the old assertion only passed because the buggy splitter
+  // re-spaced "sound.js" into "sound. js" — a difference that WAS the bug.
+  // 'fish minigame' (chunk 35, 462ch) truncates for real, and its dossier
+  // survives both densities (lod3 brief → lod3 full — a constant-lod pair).
   const captureTiers = () => page.evaluate(() => [...document.querySelectorAll('.pc-mod')].map(m => ({
     id: m.dataset.id, lod: m.dataset.lod, txt: m.dataset.txt || '',
     words: (m.querySelector('.pc-tldr, .pc-prose')?.textContent || '').trim(),
   })));
-  await page.fill('#so-searchInput', 'jhana');
+  await page.fill('#so-searchInput', 'fish minigame');
   await page.waitForTimeout(900);
   check('l2+/dossier modules carry a wording-tier stamp',
     (await captureTiers()).every(m => Number(m.lod) < 2 || m.txt.length > 0));
