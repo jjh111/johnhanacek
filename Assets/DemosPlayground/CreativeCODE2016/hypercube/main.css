@@ -1,0 +1,87 @@
+/* Hypercube — 4D fidget spinner. Deep Sea Terminal palette.
+   This file 404'd for years (the page always linked it, it never existed);
+   the 2026 rebuild finally wrote it. */
+
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    background: #020a12;
+    color: #8cb8cc;
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+#hypercube-canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+    touch-action: none;   /* the canvas IS the controller — no scroll/zoom */
+    cursor: grab;
+}
+#hypercube-canvas:active { cursor: grabbing; }
+
+/* HUD — top strip: title left, toggles right */
+#hud {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 0.9rem;
+    pointer-events: none;   /* only the controls themselves take input */
+    font-size: 11px;
+    letter-spacing: 0.08em;
+}
+#hud .title { color: #7dd8f7; text-transform: uppercase; }
+#hud .title .dim { color: #7a9aaa; text-transform: none; letter-spacing: 0; }
+
+#hypercube-options {
+    display: flex;
+    gap: 0.9rem;
+    align-items: center;
+    pointer-events: auto;
+    margin: 0;
+}
+#hypercube-options label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: #7a9aaa;
+    cursor: pointer;
+}
+#hypercube-options input { accent-color: #4dc9f6; width: 12px; height: 12px; margin: 0; }
+#hypercube-options label:has(input:checked) { color: #b8dced; }
+
+#resetBtn {
+    pointer-events: auto;
+    background: none;
+    border: 1px solid rgba(77, 201, 246, 0.25);
+    border-radius: 4px;
+    color: #7dd8f7;
+    font: inherit;
+    padding: 0.15rem 0.5rem;
+    cursor: pointer;
+}
+#resetBtn:hover { border-color: #d4af37; color: #d4af37; }
+
+/* Bottom hint line */
+#hint {
+    position: fixed;
+    left: 0; right: 0; bottom: 0.55rem;
+    text-align: center;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    color: #7a9aaa;
+    opacity: 0.85;
+    pointer-events: none;
+}
+#hint b { color: #7dd8f7; font-weight: 500; }
+#hint .gold { color: #d4af37; }
+
+@media (max-width: 600px) {
+    #hud .title .dim { display: none; }
+    #hint { font-size: 9px; }
+}

@@ -114,7 +114,7 @@ window.CANVAS_ITEMS = [
     desc: 'Three synchronized 3D viewports with linked camera controls',
     weight: 'heavy', created: '2025-11-10T00:00:00-08:00' },
   { file: 'Assets/DemosPlayground/CreativeCODE2016/hypercube/hypercube.html', name: 'hypercube', cat: 'demos',
-    desc: '4D tesseract projected into 3D space, rotating in real time',
+    desc: '4D fidget spinner — dual-pad joysticks spin the tesseract through 3D and 4D planes, with momentum',
     created: '2016-05-01T00:00:00-07:00' },
   { file: 'Assets/DemosPlayground/CreativeCODE2016/DynaBoard1/Dynaboard1.html', name: 'dynaboard-v1', cat: 'demos',
     desc: 'Dynamic 3D board experiment — early spatial interface concept',

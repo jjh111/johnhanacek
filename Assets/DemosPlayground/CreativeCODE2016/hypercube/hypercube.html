@@ -1,62 +1,237 @@
-
 <!DOCTYPE html>
-<html>
-	<head>
-		<meta charset="UTF-8" />
-		<title>Hypercube Projection</title>
-		<link rel="stylesheet" type="text/css" href="main.css" />
-		<script type="text/javascript" src="hypersolid.js"></script>
-		<script type="text/javascript" src="hypersolid.shapebank.js"></script>
-	</head>
-	<body>
-		<canvas id="hypercube-canvas">Unfortunately, your browser does not support coolness.</canvas>
-		<table id="instructions">
-			<tr>
-				<td>drag left/right</td><td><strong>xz</strong> rotation</td>
-			</tr>
-			<tr>
-				<td>drag up/down</td><td><strong>yz</strong> rotation</td>
-			</tr>
-			<tr>
-				<td><span class="key">shift</span>+drag left/right</td><td><strong>xw</strong> rotation</td>
-			</tr>
-			<tr>
-				<td><span class="key">shift</span>+drag up/down</td><td><strong>yw</strong> rotation</td>
-			</tr>
-			<tr>
-				<td><span class="key">alt</span>+<span class="key">shift</span>+drag left/right</td><td><strong>xy</strong> rotation</td>
-			</tr>
-			<tr>
-				<td><span class="key">alt</span>+<span class="key">shift</span>+drag up/down</td><td><strong>zw</strong> rotation</td>
-			</tr>
-		</table>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+	<meta name="robots" content="noindex, nofollow" />
+	<title>Hypercube — 4D Fidget Spinner</title>
+	<link rel="stylesheet" type="text/css" href="main.css" />
+	<script type="text/javascript" src="hypersolid.js"></script>
+	<script type="text/javascript" src="hypersolid.shapebank.js"></script>
+</head>
+<body>
+	<canvas id="hypercube-canvas">Unfortunately, your browser does not support coolness.</canvas>
+
+	<div id="hud">
+		<span class="title">Hypercube <span class="dim">— 4D fidget spinner</span></span>
 		<form id="hypercube-options">
-			<table>
-				<tr>
-					<td><label><input type="checkbox" name="indices" />Indices</label></td>
-					<td><label><input type="checkbox" checked name="edges" />Edges</label></td>
-				</tr>
-				<tr>
-					<td><label><input type="checkbox" checked name="perspective" />Perspective</label></td>
-				</tr>
-			</table>
+			<label><input type="checkbox" checked name="edges" />edges</label>
+			<label><input type="checkbox" name="indices" />indices</label>
+			<label><input type="checkbox" checked name="perspective" />depth</label>
+			<button id="resetBtn" type="button" title="Reset orientation">⟲</button>
 		</form>
 	</div>
+
+	<div id="hint"><b>left pad</b> spins 3D (xz·yz) &nbsp;·&nbsp; <span class="gold">right pad</span> spins 4D (xw·yw) &nbsp;·&nbsp; flick and let go &nbsp;·&nbsp; double-tap to brake</div>
+
 	<script type="text/javascript">
-	/* <![CDATA[ */ (function() {
+	(function () {
+		'use strict';
 
-		Hypersolid.Viewport(Hypersolid.Hypercube(), document.getElementById('hypercube-canvas'), {
-			checkboxes: document.getElementById('hypercube-options'),
-			width: 1500,
-			height: 883,
-			scale: 2,
-			font: 'italic 10px sans-serif',
-			fontColor: '#000',
-			lineWidth: 4,
-			lineJoin: 'round'
-		}).draw();
+		// ── The shape: hypersolid.js is the untouched 2016 math engine.
+		// Everything below is the 2026 rebuild: the page renders and steers
+		// itself — virtual joysticks, momentum, site palette.
+		var shape = Hypersolid.Hypercube();
 
-	})(); // ]]>
+		var canvas = document.getElementById('hypercube-canvas');
+		var ctx = canvas.getContext('2d');
+		var form = document.getElementById('hypercube-options');
+		var opts = {
+			edges: form.elements.edges,
+			indices: form.elements.indices,
+			perspective: form.elements.perspective
+		};
+
+		var W = 0, H = 0, DPR = 1, bound = 0;
+		function resize() {
+			DPR = Math.min(window.devicePixelRatio || 1, 2);
+			W = canvas.clientWidth; H = canvas.clientHeight;
+			canvas.width = Math.round(W * DPR);
+			canvas.height = Math.round(H * DPR);
+			ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+			bound = Math.min(W, H) * 0.34;
+		}
+		window.addEventListener('resize', resize);
+		resize();
+
+		// ── Palette: w picks the hue (cyan = near hyper-face, gold = far),
+		// z picks presence (alpha + weight) — the site's own colors.
+		var CYAN = [125, 216, 247], GOLD = [212, 175, 55];
+		function wColor(t, a) { // t 0..1 across w, a alpha
+			var r = Math.round(CYAN[0] + (GOLD[0] - CYAN[0]) * t);
+			var g = Math.round(CYAN[1] + (GOLD[1] - CYAN[1]) * t);
+			var b = Math.round(CYAN[2] + (GOLD[2] - CYAN[2]) * t);
+			return 'rgba(' + r + ',' + g + ',' + b + ',' + a.toFixed(3) + ')';
+		}
+
+		var SCALE = 2; // math units from origin that reach the bound
+
+		function project() {
+			var vertices = shape.getVertices();
+			var persp = opts.perspective.checked;
+			var out = [];
+			for (var i = 0; i < vertices.length; i++) {
+				var v = vertices[i];
+				var zr = v.z / SCALE;
+				var m = persp ? (0.90 + zr * 0.30) : 1;
+				out[i] = {
+					x: W / 2 + m * bound * (v.x / SCALE),
+					y: H / 2 - m * bound * (v.y / SCALE),
+					a: 0.35 + 0.55 * (0.5 + zr / 2),          // depth → alpha
+					t: 0.5 + (v.w / SCALE) / 2                 // w → hue 0..1
+				};
+			}
+			return out;
+		}
+
+		function drawShape() {
+			var p = project();
+			if (opts.edges.checked) {
+				var edges = shape.getEdges();
+				ctx.lineWidth = 2;
+				ctx.lineJoin = 'round';
+				for (var i = 0; i < edges.length; i++) {
+					var a = p[edges[i][0]], b = p[edges[i][1]];
+					var grad = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
+					grad.addColorStop(0, wColor(a.t, a.a));
+					grad.addColorStop(1, wColor(b.t, b.a));
+					ctx.strokeStyle = grad;
+					ctx.beginPath();
+					ctx.moveTo(a.x, a.y);
+					ctx.lineTo(b.x, b.y);
+					ctx.stroke();
+				}
+			}
+			// vertex dots — always, they sell the depth
+			for (var j = 0; j < p.length; j++) {
+				ctx.fillStyle = wColor(p[j].t, Math.min(1, p[j].a + 0.15));
+				ctx.beginPath();
+				ctx.arc(p[j].x, p[j].y, 2.2, 0, Math.PI * 2);
+				ctx.fill();
+			}
+			if (opts.indices.checked) {
+				ctx.font = 'italic 10px ui-monospace, monospace';
+				ctx.fillStyle = 'rgba(184, 220, 237, 0.8)';
+				for (var k = 0; k < p.length; k++) ctx.fillText(String(k), p[k].x + 5, p[k].y - 5);
+			}
+		}
+
+		// ── Virtual joysticks: the screen halves ARE the controllers.
+		// Deflection sets angular VELOCITY (rate control); release keeps it —
+		// a rotational fidget spinner. Left pad drives the 3D planes (xz, yz),
+		// right pad the hyper planes (xw, yw).
+		var PAD_R = 52;                 // ring radius, px
+		var MAX_RATE = 2.6;             // rad/s at full deflection
+		var DAMPING = 0.9985;           // per-frame coast (long spin-down)
+		var vel = { xz: 0, yz: 0, xw: 0, yw: 0 };
+		var START_SPIN = { xz: 0.35, yz: 0.12, xw: 0.22, yw: 0 };
+		function startSpin() { vel.xz = START_SPIN.xz; vel.yz = START_SPIN.yz; vel.xw = START_SPIN.xw; vel.yw = START_SPIN.yw; }
+		startSpin();   // alive from the first frame
+
+		var pads = {};  // pointerId → {side, ox, oy, x, y}
+		var lastTap = { t: 0, x: 0, y: 0 };
+
+		canvas.addEventListener('pointerdown', function (e) {
+			e.preventDefault();
+			canvas.setPointerCapture(e.pointerId);
+			var side = e.clientX < W / 2 ? 'L' : 'R';
+			// one pad per side — a second finger on a claimed side is ignored
+			for (var id in pads) if (pads[id].side === side) return;
+			pads[e.pointerId] = { side: side, ox: e.clientX, oy: e.clientY, x: e.clientX, y: e.clientY, moved: false };
+
+			// double-tap brake: two quick stationary taps anywhere
+			var now = performance.now();
+			if (now - lastTap.t < 320 && Math.abs(e.clientX - lastTap.x) < 36 && Math.abs(e.clientY - lastTap.y) < 36) {
+				vel.xz = vel.yz = vel.xw = vel.yw = 0;
+			}
+			lastTap = { t: now, x: e.clientX, y: e.clientY };
+		});
+
+		canvas.addEventListener('pointermove', function (e) {
+			var pad = pads[e.pointerId];
+			if (!pad) return;
+			e.preventDefault();
+			pad.x = e.clientX; pad.y = e.clientY;
+			if (Math.abs(pad.x - pad.ox) + Math.abs(pad.y - pad.oy) > 6) pad.moved = true;
+		});
+
+		function releasePad(e) {
+			// velocity stays where the stick left it — the spinner keeps going
+			delete pads[e.pointerId];
+		}
+		canvas.addEventListener('pointerup', releasePad);
+		canvas.addEventListener('pointercancel', releasePad);
+
+		function padVelocities() {
+			for (var id in pads) {
+				var pad = pads[id];
+				var dx = Math.max(-1, Math.min(1, (pad.x - pad.ox) / PAD_R));
+				var dy = Math.max(-1, Math.min(1, (pad.y - pad.oy) / PAD_R));
+				if (pad.side === 'L') { vel.xz = dx * MAX_RATE; vel.yz = -dy * MAX_RATE; }
+				else { vel.xw = dx * MAX_RATE; vel.yw = -dy * MAX_RATE; }
+			}
+		}
+
+		function drawPad(cx, cy, nx, ny, active, label, gold) {
+			var ring = gold ? 'rgba(212, 175, 55, ' : 'rgba(125, 216, 247, ';
+			ctx.lineWidth = 1;
+			ctx.strokeStyle = ring + (active ? '0.55)' : '0.16)');
+			ctx.beginPath(); ctx.arc(cx, cy, PAD_R, 0, Math.PI * 2); ctx.stroke();
+			ctx.fillStyle = ring + (active ? '0.75)' : '0.22)');
+			ctx.beginPath(); ctx.arc(nx, ny, active ? 10 : 7, 0, Math.PI * 2); ctx.fill();
+			ctx.font = '10px ui-monospace, monospace';
+			ctx.textAlign = 'center';
+			ctx.fillStyle = ring + '0.5)';
+			ctx.fillText(label, cx, cy + PAD_R + 14);
+			ctx.textAlign = 'start';
+		}
+
+		function drawPads() {
+			var ghostY = H - Math.max(86, H * 0.16);
+			var seen = { L: false, R: false };
+			for (var id in pads) {
+				var pad = pads[id];
+				var dx = pad.x - pad.ox, dy = pad.y - pad.oy;
+				var d = Math.hypot(dx, dy) || 1;
+				var c = Math.min(d, PAD_R);
+				drawPad(pad.ox, pad.oy, pad.ox + dx / d * c, pad.oy + dy / d * c, true,
+					pad.side === 'L' ? 'xz · yz' : 'xw · yw', pad.side === 'R');
+				seen[pad.side] = true;
+			}
+			// ghost pads teach the layout while idle
+			if (!seen.L) drawPad(W * 0.18, ghostY, W * 0.18, ghostY, false, 'xz · yz', false);
+			if (!seen.R) drawPad(W * 0.82, ghostY, W * 0.82, ghostY, false, 'xw · yw', true);
+		}
+
+		document.getElementById('resetBtn').addEventListener('click', function () {
+			// fresh shape = identity orientation; keep the signature idle spin
+			shape = Hypersolid.Hypercube();
+			startSpin();
+		});
+
+		// ── The loop: integrate velocities, coast, draw.
+		var last = performance.now();
+		function frame(now) {
+			var dt = Math.min(0.05, (now - last) / 1000);
+			last = now;
+			padVelocities();
+			if (vel.xz) shape.rotate('xz', vel.xz * dt);
+			if (vel.yz) shape.rotate('yz', vel.yz * dt);
+			if (vel.xw) shape.rotate('xw', vel.xw * dt);
+			if (vel.yw) shape.rotate('yw', vel.yw * dt);
+			// coast only while no finger holds a pad on that side
+			var held = { L: false, R: false };
+			for (var id in pads) held[pads[id].side] = true;
+			if (!held.L) { vel.xz *= DAMPING; vel.yz *= DAMPING; }
+			if (!held.R) { vel.xw *= DAMPING; vel.yw *= DAMPING; }
+
+			ctx.clearRect(0, 0, W, H);
+			drawShape();
+			drawPads();
+			requestAnimationFrame(frame);
+		}
+		requestAnimationFrame(frame);
+	})();
 	</script>
-	</body>
+</body>
 </html>
