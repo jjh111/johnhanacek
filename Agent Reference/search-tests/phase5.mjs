@@ -68,11 +68,14 @@ async function newPage(url) {
   check('intent card renders above postcard', await page.locator('#so-searchResults .intent-card').count() === 1);
 
   // ───────── media + related on cards ─────────
+  // 'badvr', not 'nanome': chunk 37 gained a live demo PIECE (2026-08-30
+  // re-seed) and pieces outrank the video in pcMediaHtml — interactive-first
+  // is the doctrine, so the probe moves to a chunk whose video still leads.
   console.log('media cards:');
-  await page.fill('#so-searchInput', 'nanome');
+  await page.fill('#so-searchInput', 'badvr');
   await page.waitForTimeout(500);
-  check('nanome result has click-to-play poster', await page.locator('#so-searchResults [data-video]').count() > 0);
-  check('nanome card has a related chip', await page.locator('#so-searchResults .card-related').count() > 0);
+  check('badvr result has click-to-play poster', await page.locator('#so-searchResults [data-video]').count() > 0);
+  check('badvr card has a related chip', await page.locator('#so-searchResults .card-related').count() > 0);
   await page.locator('#so-searchResults [data-video]').first().click();
   await page.waitForTimeout(400);
   const vidSrc = await page.locator('#so-searchResults video.result-video').first().getAttribute('src').catch(() => null);

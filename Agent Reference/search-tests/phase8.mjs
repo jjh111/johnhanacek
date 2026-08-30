@@ -81,13 +81,16 @@ const lodsOf = (page) => page.evaluate(() =>
   // stopped qualifying when the deriveBrief split was fixed: its content is
   // short, and the old assertion only passed because the buggy splitter
   // re-spaced "sound.js" into "sound. js" — a difference that WAS the bug.
-  // 'fish minigame' (chunk 35, 462ch) truncates for real, and its dossier
-  // survives both densities (lod3 brief → lod3 full — a constant-lod pair).
+  // 'fish minigame' stopped qualifying too when chunk 35 regained its demo
+  // PIECE (2026-08-30 re-seed): the big-media floor prices its comfy dossier
+  // out and the lead sheds to L2 — no constant-lod pair. 'agentic coding'
+  // (chunk 25: 446ch, no media, no facts) truncates for real AND holds L3 at
+  // both densities (verified live: 25/3/brief → 25/3/full).
   const captureTiers = () => page.evaluate(() => [...document.querySelectorAll('.pc-mod')].map(m => ({
     id: m.dataset.id, lod: m.dataset.lod, txt: m.dataset.txt || '',
     words: (m.querySelector('.pc-tldr, .pc-prose')?.textContent || '').trim(),
   })));
-  await page.fill('#so-searchInput', 'fish minigame');
+  await page.fill('#so-searchInput', 'agentic coding');
   await page.waitForTimeout(900);
   check('l2+/dossier modules carry a wording-tier stamp',
     (await captureTiers()).every(m => Number(m.lod) < 2 || m.txt.length > 0));

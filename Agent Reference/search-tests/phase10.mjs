@@ -458,6 +458,12 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
     await page.waitForTimeout(1500);
     return page.evaluate(() => document.querySelector('.pc-piece--demo')?.getBoundingClientRect().width || 0);
   };
+  // Probe on a chunk whose dossier AFFORDS both densities: chunk 37's 356ch
+  // content + piece survives comfy's budget where fish minigame's 462ch sits
+  // on the boundary and legitimately sheds to a 150px row piece — that's the
+  // ladder working, not the frame scale failing.
+  await page.fill('#so-searchInput', 'nanome 2 case study');
+  await page.waitForTimeout(900);
   const wCompact = await widthAt('compact');
   const wComfy = await widthAt('comfortable');
   // Relative, not absolute px: the compact OVERLAY now caps obstacle-scale
@@ -467,6 +473,8 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
     wCompact > 0 && wComfy > wCompact, `${wCompact} → ${wComfy}`);
   await page.click('.pc-density');   // restore compact
   await page.waitForTimeout(500);
+  await page.fill('#so-searchInput', 'fish minigame');   // the wake test below targets chunk 35
+  await page.waitForTimeout(900);
 
   // waking a piece is the one view state left. Guarded: chunk 35 carries no
   // pieces since the media-match data pass — fail, don't crash the suite.

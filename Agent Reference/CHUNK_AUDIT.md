@@ -428,3 +428,20 @@ page." Each piece target was checked against what the ten public content pages a
 The playground manifest is not that page — it is an index of everything, including things
 deliberately unlisted. Also verified in this pass: all 49 chunk urls resolve to a public page,
 none external, none unlisted.
+
+### §G addendum — 2026-08-30, John-directed re-seed (this reverses part of the pass above)
+John: "fix up the pieces additively." Three demo pieces return, each with its case:
+- [x] **35** → `fish-demo/index.html` (`Fish minigame — live`). The live tank in the paragraph
+  was 10c's signature moment; the testbed is the demo OF the homepage hero's own engine, and
+  the engine it demos IS public content (index.html). Restored on John's word.
+- [x] **37** → `Assets/3d-sync-demo/index.html` (`Synchronized 3D viewports — live`). Embedded
+  by nanome2.html, a public content page — cleanly within the standing rule; it simply was
+  never mapped before.
+- [x] **38** → the hypercube (`Hypercube — 4D fidget spinner`). Removed above as an unfinished
+  experiment; John had it FINISHED this pass (mobile joystick rebuild, dual-pad 3D/4D rate
+  control with momentum, site palette, the missing main.css written). It is a resident demo of
+  the playground the chunk describes. Still noindex — surfaced as a piece, not a result.
+
+**Rule as refined:** a piece may point at something a public content page links or embeds, or
+at a finished playground-resident demo John has explicitly promoted. Unfinished or
+deliberately-unlisted experiments (tidepool, beach-beers) stay out.

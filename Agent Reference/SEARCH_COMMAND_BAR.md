@@ -984,6 +984,27 @@ expanding and collapsing.
 > all thirteen suites re-swept: phase1–9 ALL PASS, phase10 40✓ + the 5
 > known pieces-data failures.
 
+> **v2.0 close-out round (2026-08-30, John-directed):** pieces re-seeded
+> ADDITIVELY — 35 → `fish-demo/` (the live tank returns to the paragraph),
+> 37 → `Assets/3d-sync-demo/` (embedded by nanome2.html, cleanly in-rule),
+> 38 → the hypercube, REBUILT this pass into a finished mobile demo (dual
+> thumb-pads: left = 3D planes xz·yz, right = 4D planes xw·yw; deflection
+> sets angular velocity, release keeps it — a rotational fidget spinner —
+> double-tap brakes; site palette, the missing main.css finally written).
+> CHUNK_AUDIT §G addendum records the partial reversal of the earlier purge
+> and refines the rule: finished, John-promoted playground demos qualify.
+> One real bug found under the suite's probe: the frame-scale CSS keys off
+> the ROOT density stamp, which only the toggle click refreshed — any other
+> density change re-worded but never rescaled; renderResults stamps it now.
+> (Plus my own selector bug: the comfy overlay card cap had `[data-pc-density]`
+> positioned as a DESCENDANT of the overlay; it lives on <html>.) Suites
+> re-pointed where the DATA changed their premises: phase5's video probe →
+> 'badvr' (37's new piece outranks its video — interactive-first is the
+> doctrine), phase8's wording probe → 'agentic coding' (35's piece prices
+> its comfy dossier out), phase10's frame probe → 'nanome 2 case study' +
+> guarded piece sections now exercised for real. ALL THIRTEEN suites green
+> — phase10 fully, for the first time since the media-match data pass.
+
 ## Phase 7 — Behaviors (standing directives) [PLANNED, post-MVP]
 
 Placement is declarative and instantly verifiable; behavior is a promise over time —

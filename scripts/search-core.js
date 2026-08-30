@@ -2134,6 +2134,12 @@
         function renderResults(results, hint) {
             const resultsEl = el('searchResults');
             if (!resultsEl) return;
+            // The frame-scale CSS keys off the ROOT density stamp; only the
+            // toggle click used to refresh it, so a density set any other way
+            // (storage write + re-render) re-worded the text but never
+            // rescaled the frames. The render is the one place every path
+            // passes through — stamp it here, idempotently.
+            document.documentElement.dataset.pcDensity = pcDensity();
             ensurePretext();
             if (cursorIdx >= 0) setCursor(-1);   // a new surface is a new traversal
             const sameQuery = lastRenderedQuery === currentQueryRaw;
