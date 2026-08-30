@@ -1,5 +1,11 @@
 # Search / Command Bar — Agent Handoff Primer
 
+> **HISTORICAL (as of v2.0, 2026-08-30).** This primer's repo-state section describes
+> late August 2026; everything it lists as planned (10e/10f/10g) shipped, plus rounds
+> beyond it (one-surface/no-pin, instant-open, the coherence fixes). The doctrines and
+> harness traps below remain true and are still the fastest orientation — but for
+> current state read `SEARCH_COMMAND_BAR.md`'s build records from "Phase 10" down.
+
 *Written 2026-08-26 at the end of a long build arc. You are inheriting a working,
 tested system mid-polish. Read this first, then `SEARCH_COMMAND_BAR.md` (the
 umbrella plan — its inline `> build record` blocks are the institutional memory,

@@ -169,6 +169,16 @@ new canvas features on top.
   the chosen option; enriched cards degrade gracefully when media absent.
 
 ### v2.0 — "Release"
+> **✅ v2.0 SHIPPED (tagged 2026-08-30).** Search Enrichment outgrew its brief and became
+> the command-bar product (one pipeline, two shells, postcard LOD ladder, scene language,
+> session residue, pieces — full record in `SEARCH_COMMAND_BAR.md`). The close-out cycle:
+> instant-open (the shell reveals before the core loads), the fit-cliff and coherence
+> fixes, the v2 de-boxing (section borders and card left-rails removed, padding returned
+> to the text), the hypercube rebuilt as a mobile dual-pad 4D fidget spinner (its main.css
+> 404 finally fixed), Transfyr revealed on the client-work grid, pieces re-seeded
+> (fish-demo / 3d-sync / hypercube, audited in CHUNK_AUDIT §G), and docs reconciled.
+> All thirteen QA suites green at tag time. Remaining decisions live with John: the
+> CHUNK_AUDIT marks, the Vimeo re-host, jhana.zone DNS.
 - ~~Playground cleanup~~ — dropped per decision #5 (jh-deng-template rebuild supersedes).
 - **QA & polish:** accessibility sweep (focus, reduced-motion, contrast), perf pass, cross-browser
   (incl. Safari backdrop-filter), mobile.

@@ -9,7 +9,7 @@ Portfolio website for John Hanacek showcasing work at the intersection of **Crea
 **Site Structure:**
 Each page is a standalone HTML document with embedded CSS and JavaScript. All pages share `styles/shared.css` (design system), the `<jh-nav>`/`<jh-footer>` chrome components (`scripts/jh-chrome.js`), and Google Fonts (Raleway, JetBrains Mono).
 
-**Roadmap:** `Agent Reference/V2_RELEASE_PLAN.md` is the single source of truth for what's planned and decided. Currently: v1.7 "Foundation" ✅ → v1.8 "Unified Canvas Engine" ✅ → v1.9 "Fish Maze" ✅ (flagship, shipped). Next: v2.0 — Search Enrichment + QA/polish/tag.
+**Roadmap:** `Agent Reference/V2_RELEASE_PLAN.md` is the single source of truth for what's planned and decided. v1.7 "Foundation" ✅ → v1.8 "Unified Canvas Engine" ✅ → v1.9 "Fish Maze" ✅ → **v2.0 "Release" ✅ (tagged 2026-08-30)** — Search Enrichment became the full command-bar product (see `Agent Reference/SEARCH_COMMAND_BAR.md`), plus the QA/polish/de-boxing close-out. Next cycle: the bar as the site's interface (resource register, site-wide jumps, chunks-as-content compiler — planned in SEARCH_COMMAND_BAR.md discussions).
 
 ## Sitemap
 
@@ -213,7 +213,7 @@ removed along with their CSS and the vestigial `?footer=` config.
 
 - Three view modes: canvas (pan/zoom), grid, focus. `?mode=`, `?items=`,
   `?budget=`, `?zoom=`, `?cols=`, `?sort=` all URL-editable
-- Manifest: `scripts/playground-items.js` — 24 items, the whole site plus the
+- Manifest: `scripts/playground-items.js` — 34 items, the whole site plus the
   demo collection carried over from the old board
 - **Budgeted LRU lifecycle, not naive lazy-load.** `maxLive` iframes (8 by
   default), an IntersectionObserver at 400px, nearest-first wake, eviction with
@@ -278,7 +278,7 @@ scripts/search-overlay.js — ⌘K overlay shell (lazy-loads search-core on firs
 scripts/search-overlay.css— overlay styles + command-bar card styles (search.html links it too)
 scripts/build-chunk-vectors.mjs — dev-time: embeds chunks into search-chunks.json (run after
                             editing chunk text; run `npm install` once — package.json holds the dev deps)
-scripts/playground-items.js — manifest for playground.html (24 items). `nested: true` marks a
+scripts/playground-items.js — manifest for playground.html (34 items). `nested: true` marks a
                             page that embeds the canvas itself (recursion guard); `weight: 'heavy'`
                             records cost for the staged perf work.
 scripts/pretext-wrap.js   — flows running prose around obstacles on BOTH sides, which no CSS
