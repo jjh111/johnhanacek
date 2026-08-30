@@ -14,7 +14,6 @@
     window.__searchOverlayInit = true;
 
     // ── State ──
-    let initialized = false;
     let overlayEl = null;
     let core = null;
     let popoverOpen = false;
@@ -174,11 +173,31 @@
         if (infoBtn) infoBtn.classList.remove('open');
     }
 
-    async function ensureInitialized() {
-        if (initialized) return;
-        initialized = true;
-
+    // The SHELL is synchronous — pure DOM, no network — so the overlay can
+    // appear the instant it is asked for. The design philosophy is "present
+    // something instantly, then it gets smarter": awaiting the core (script
+    // fetch + chunks + MiniSearch build) before revealing made the search
+    // icon feel dead for the whole cold-cache load.
+    function ensureShell() {
+        if (overlayEl) return overlayEl;
         overlayEl = createOverlayDOM();
+        // Shell-only wiring that must work BEFORE the core arrives: the
+        // backdrop closes (Esc already works — the global keydown handler is
+        // core-free). Everything else waits for wireShellEvents.
+        overlayEl.querySelector('.search-overlay-backdrop').addEventListener('click', closeSearch);
+        return overlayEl;
+    }
+
+    let initPromise = null;
+    function ensureInitialized() {
+        if (initPromise) return initPromise;
+        ensureShell();
+        // A failed core load (offline, server blip) must not poison the
+        // promise forever — clear it so the NEXT open retries the fetch.
+        initPromise = initCore().catch(err => { initPromise = null; throw err; });
+        return initPromise;
+    }
+    async function initCore() {
         await loadCore();
 
         core = window.JHSearchCore.create({
@@ -196,6 +215,15 @@
         wireShellEvents();
         core.updateEngineBar();
         window.JHSearch = core;   // public handle (debugging, future tool-use tier)
+
+        // Catch up: the shell was live while the core loaded — anything the
+        // visitor already typed runs now, and an empty open gets its
+        // suggestion chips. (Skip if they closed the overlay mid-load.)
+        const inp = document.getElementById('so-searchInput');
+        if (inp && isOverlayOpen()) {
+            if (inp.value.trim()) core.runQuery(inp.value);
+            else core.doSearchOnly('');
+        }
     }
 
     // ============================================
@@ -348,8 +376,8 @@
         searchInput.addEventListener('input', () => { releasePanelHeight(); schedulePanelFit(); });
         watchForRenders();
 
-        // Backdrop click → close
-        overlayEl.querySelector('.search-overlay-backdrop').addEventListener('click', closeSearch);
+        // (Backdrop click → close is wired in ensureShell — it must work
+        // before the core arrives.)
 
         // Escape inside the input → close overlay. The CORE's Esc ladder
         // (cursor → pin → query) registered first and consumes its rungs via
@@ -394,15 +422,14 @@
     // Open / Close
     // ============================================
     async function openSearch(initialQuery) {
-        await ensureInitialized();
-
-        // First open is when engines get looked at. WebGPU and the model cache
-        // are checked either way (neither prompts); localhost is only probed
-        // for a visitor who has opted in before. Not awaited — the panel fills
-        // itself in as answers arrive, and BM25 needs none of it.
-        if (!core.enginesChecked) {
-            core.checkEngines({ probeLocal: core.localOptedIn() });
-        }
+        // Reveal FIRST, load underneath. The shell is pure DOM: the panel
+        // appears and the input takes focus in the same frame as the click,
+        // whatever the network is doing. The core arrives async and catches
+        // up on anything typed meanwhile (see initCore) — the surface is
+        // instant, then it gets smarter. Awaiting init here made the search
+        // icon feel dead for the whole cold-cache core load.
+        const hadCore = !!core;
+        ensureShell();
 
         previousFocus = document.activeElement;
 
@@ -427,21 +454,40 @@
         document.body.classList.add('search-overlay-open');
 
         const input = document.getElementById('so-searchInput');
-        if (typeof initialQuery === 'string' && initialQuery.trim()) {
-            input.value = initialQuery;
-            setTimeout(() => { core.runQuery(initialQuery); }, 50);
-        } else if (!input.value.trim()) {
-            core.doSearchOnly('');   // renders the try-these suggestion chips
-        }
-        // Focus after transition
+        if (typeof initialQuery === 'string' && initialQuery.trim()) input.value = initialQuery;
+        // Focus after transition — before the core exists, the focused input
+        // IS the instant surface
         requestAnimationFrame(() => { input.focus(); });
+
+        // A failed load leaves the shell open and typeable — the visitor loses
+        // the smarts, not the surface; the next open retries the fetch.
+        try { await ensureInitialized(); } catch { return; }
+        if (!core) return;
+
+        // First open is when engines get looked at. WebGPU and the model cache
+        // are checked either way (neither prompts); localhost is only probed
+        // for a visitor who has opted in before. Not awaited — the panel fills
+        // itself in as answers arrive, and BM25 needs none of it.
+        if (!core.enginesChecked) {
+            core.checkEngines({ probeLocal: core.localOptedIn() });
+        }
+
+        // On the FIRST open initCore's catch-up already ran the query (or the
+        // suggestion chips); only a re-open with a core in hand drives it here.
+        if (hadCore) {
+            if (typeof initialQuery === 'string' && initialQuery.trim()) {
+                setTimeout(() => { core.runQuery(initialQuery); }, 50);
+            } else if (!input.value.trim()) {
+                core.doSearchOnly('');   // renders the try-these suggestion chips
+            }
+        }
     }
 
     // aria-modal: Tab cycles inside the dialog instead of wandering the page
     // behind it. Selector picks up focusables in both panes; bound once.
     const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
     function trapTab(e) {
-        if (e.key !== 'Tab' || overlayEl.getAttribute('aria-hidden') !== 'false') return;
+        if (e.key !== 'Tab' || !overlayEl || overlayEl.getAttribute('aria-hidden') !== 'false') return;
         const focusables = [...overlayEl.querySelectorAll(FOCUSABLE)]
             .filter(el => el.offsetParent !== null || el === document.activeElement);
         if (!focusables.length) return;
@@ -608,7 +654,7 @@
         strip.querySelector('.so-residue-open').addEventListener('click', async () => {
             strip.remove();
             await openSearch();          // ensures the core is initialized
-            core.restoreSession();
+            if (core) core.restoreSession();
         });
         if (x) strip.querySelector('.so-residue-x').addEventListener('click', () => {
             try { sessionStorage.setItem('jh-residue-dismissed', '1'); } catch {}

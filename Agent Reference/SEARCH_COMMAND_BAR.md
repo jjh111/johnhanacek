@@ -910,6 +910,80 @@ expanding and collapsing.
 > answer). A kept answer stands until TTL or a new search. Suite: kept
 > answer asserts no ✕; query-only asserts the ✕ present.
 
+> **Coherence round (2026-08-30, John: "inconsistent semantic expand/contract,
+> pane underused, previews too large in the smaller pane"):** six render fixes,
+> all found by driving the live surface with the allocator's debug trace.
+> - **The fit cliff (the "inconsistent expand/contract").** `leadCap` was
+>   derived from the fit-SHRUNKEN budget: a 31px overflow (content 567 vs a
+>   536px cap) walked the budget 16→14, the cap to 11, and the whole 250px
+>   dossier died over a rounding error — 'badvr'/'who is john'/'fish minigame'
+>   all flattened to [2,2] while 'jhana' kept its L3, which is exactly the
+>   inconsistency John saw. The cap now derives from the density SEED budget
+>   (`m.budget`) and holds still while fit shrinks; the shed loop already
+>   degrades bottom-up, so the lead loses its tier LAST, as the doctrine says.
+> - **Doubled dossier prose in the LIST.** The pane's in-flight wrap race
+>   (defbc51, "the node claims itself") was never ported to
+>   `applyDossierWrap`: a morph landing while the first wrap was in flight saw
+>   `currentWrap` still null and wrapped the same node again — and wrapAround
+>   reads the container's textContent, so source+layer text concatenated and
+>   'jhana zone' painted its paragraph twice. Same fix: `prose.dataset.wrapped`
+>   claim, cleared on catch. (Every destroy path replaces the node, so a claim
+>   never outlives its wrap.)
+> - **The morph path never measured.** `morphPostcard` returns before the fit
+>   loop — fine while the pixel shape holds, but a density flip re-words every
+>   module at a taller line height with nobody measuring, and a TEXT-ONLY
+>   dossier gets no wrap so postWrapRefit never fires either: 123px of
+>   overflow stood. The morph branch now measures and falls through to the
+>   fitted rebuild only on overflow.
+> - **Cost follows what renders, twice more (doctrine 7).** L3 `costOf`
+>   charged EVERY dossier the 190px obstacle column — a text-only dossier
+>   renders full-width and was over-charged ~35% (same fix applied to the
+>   pane's strata cost). And the pane: rel pool 4→8 padded from the query's
+>   own ranking when the cosine neighbourhood runs dry, so the pane stops
+>   dying ~250px short of its own height with candidates left un-asked.
+>   Pane-wins suppression stays sliced to the likely strata (lead + 4).
+> - **`deriveBrief` mangled tokens.** The sentence regex couldn't cross a
+>   mid-token period ("sound.js", "web.zone") so it restarted AFTER it, and
+>   the join(' ') re-spaced fragments into "sound. js for web. zone." in
+>   rendered briefs. Splits only at punctuation-followed-by-whitespace now.
+>   **phase8's wording-flip check had been passing BECAUSE of this bug** (the
+>   re-spacing was the only brief≠full difference on short-content chunk 13);
+>   re-pointed at 'fish minigame' (462ch, truncates for real).
+> - **Space.** Panel `max-height` 70vh → `min(78vh, 860px)` (the 31px that
+>   killed dossiers was starvation next to a half-empty screen). Obstacle-
+>   scale piece/departure cards cap at 208×138 (comfy 240×160) inside the
+>   COMPACT overlay only — a 264px card left a ~130px prose sliver at palette
+>   width; pane and search.html keep the full card.
+> - **Density now reaches the pane** — `pcDensity()` joined the pane's
+>   showing-key; the flip used to early-return on `dataset.showing` and the
+>   pane never re-rendered.
+> - **Suites (same change):** phase5 + phase6a re-pointed at the one-surface
+>   contract (their "broad = no dossier" and click-to-pin assertions predate
+>   ad80c55 and had been passing only while the cliff flattened leads);
+>   phase10's piece sections GUARDED so a starved rail records failures
+>   instead of crashing the run (an aborted suite silently skips everything
+>   after it). phase1–9 ALL PASS. phase10 runs to completion with 5 failures,
+>   every one the same root: the 2026-08 media-match pass stripped `pieces`
+>   from the fish/experiment chunks (chunk 35 has none; the rail is starved)
+>   — a CONTENT call awaiting John, not a render bug.
+
+> **Instant-open micro-round (2026-08-30, John: "sometimes the search itself
+> is not clickable on a fresh page load… never delay, never blocker, only
+> something that can get smarter"):** the blocker was `openSearch` AWAITING
+> the whole core load (script fetch + chunks + MiniSearch build) before
+> revealing anything — on a cold cache the icon felt dead for the entire
+> load. Restructured: the SHELL is pure DOM and reveals in the same frame as
+> the click, input focused immediately; the core loads underneath and
+> catches up (runs whatever was typed meanwhile, or the suggestion chips) —
+> `ensureShell()` / `initCore()` split, catch-up guarded by `isOverlayOpen()`
+> so closing mid-load doesn't ghost-run a query. A failed core load no
+> longer poisons the init promise (next open retries) and leaves the shell
+> typeable rather than throwing. Also: `trapTab` ran on every document Tab
+> press and dereferenced a null `overlayEl` before first open — guarded.
+> Verified live (overlay visible while `window.JHSearchCore` still absent),
+> all thirteen suites re-swept: phase1–9 ALL PASS, phase10 40✓ + the 5
+> known pieces-data failures.
+
 ## Phase 7 — Behaviors (standing directives) [PLANNED, post-MVP]
 
 Placement is declarative and instantly verifiable; behavior is a promise over time —
