@@ -837,7 +837,10 @@ main model-viewer {
     pointer-events: auto;
 }
 
-/* Glass sections: sit above fixed fish canvas, content visible through tinted blur */
+/* Glass sections: sit above fixed fish canvas, content visible through tinted blur.
+   v2: borderless — the glass edge IS the edge. The 1px box (and the cards'
+   left rails) read as chrome the content had to live inside; the space goes
+   back to the text, with tighter horizontal padding. */
 section {
     margin-bottom: var(--space-xl);
     scroll-margin-top: 4rem;
@@ -845,8 +848,8 @@ section {
     backdrop-filter: blur(10px) saturate(1.05);
     -webkit-backdrop-filter: blur(10px) saturate(1.05);
     border-radius: 0.75rem;
-    border: 1px solid rgba(var(--cyan-dim-rgb), 0.08);
-    padding: var(--space-lg);
+    border: none;
+    padding: var(--space-lg) var(--space-md);
 }
 
 /* Grid Layouts */
@@ -908,24 +911,13 @@ section {
     border-radius: 4px;
     border: none;
     padding: var(--space-sm);
-    padding-left: calc(var(--space-md) + 1px);
     margin: var(--space-sm) 0;
     position: relative;
     overflow: hidden;
 }
-.content-card::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 1px;
-    background: linear-gradient(to bottom, rgba(var(--cyan-dim-rgb), 0.4), rgba(var(--cyan-dim-rgb), 0.05));
-    transition: width 0.3s ease;
-}
-.content-card:hover::after {
-    width: 2px;
-}
+/* v2: the left accent rail (::after gradient, widening on hover) is gone —
+   it was the last vertical line the content wore, and the padding-left that
+   cleared it goes back to the text. */
 
 .content-card h4 {
     margin-top: 0;
