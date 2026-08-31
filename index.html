@@ -291,6 +291,29 @@
             .qr-glass { transform: none; }
         }
 
+
+        /* About card portrait — index only.
+           The shared 220px portrait is 328px tall, and this card carries just
+           two paragraphs, so at wide widths the float ran 88px BELOW the last
+           line: the card looked bottom-padded when it was really the image
+           overhanging the text. about.html keeps the shared size — its card has
+           three paragraphs and the text is TALLER than the portrait there
+           (-115px at 1600), so shrinking it globally would only shorten the
+           image for no gain. 187px is 15% down and takes the overhang to 38px.
+           Bounded above 640px: the shared sheet drops the portrait to 160px and
+           un-floats it on mobile, and an id-scoped rule would have out-specified
+           that and left mobile LARGER than before. */
+        @media (min-width: 641px) {
+            #about .about-portrait {
+                max-width: 187px;
+                /* The shared 20px bottom margin only shows when the float is
+                   the tallest thing in the card, which here it is — 20px of
+                   nothing under the picture. At widths where the text runs
+                   longer it never rendered anyway, so dropping it costs
+                   nothing and saves the gap where it was visible. */
+                margin-bottom: 0;
+            }
+        }
     </style>
 </head>
 <body>
