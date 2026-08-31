@@ -813,7 +813,10 @@ body > footer .version {
     }
     .nav-right {
         position: absolute;
-        top: 34px;
+        /* Flush to the bar's own bottom rather than a hardcoded 34px — the bar
+           is 40px here and 46px once the mobile targets grow, and a number
+           can only be right for one of them. */
+        top: 100%;
         left: 0;
         right: 0;
         z-index: 1000;
@@ -857,19 +860,22 @@ body > footer .version {
    viewport with it.
 =========================================== */
 @media (max-width: 640px) {
+    /* Targets grew ~20%; the 40px bar no longer contains them. */
+    #nav { height: calc(46px + env(safe-area-inset-top)); }
+
     #nav .nav-title { display: none; }
 
     #nav .nav-left .shape-link,
     #nav .nav-left .shape-link.secondary {
         width: auto;
-        min-width: 34px;
-        height: 30px;
-        padding: 0 0.18rem;
+        min-width: 41px;
+        height: 36px;
+        padding: 0 0.22rem;
         justify-content: center;
     }
     #nav .nav-left .shape-link .shape,
     #nav .nav-left .shape-link.secondary .shape {
-        width: 15px; height: 15px; min-width: 15px; min-height: 15px;
+        width: 18px; height: 18px; min-width: 18px; min-height: 18px;
     }
     /* The label IS the resting state now — no opacity/height transition to
        wait on, and no hover rule can take it away again. */
@@ -878,7 +884,7 @@ body > footer .version {
         opacity: 1;
         height: auto;
         margin-top: 0.05rem;
-        font-size: 0.36rem;
+        font-size: 0.43rem;
         letter-spacing: 0.03em;
     }
     #nav .nav-left .shape-link { opacity: 0.75; }
@@ -886,7 +892,7 @@ body > footer .version {
     /* Hover shrinks the glyph to make room for a label that is already there. */
     #nav .nav-left .shape-link:hover .shape,
     #nav .nav-left .shape-link.secondary:hover .shape {
-        width: 15px; height: 15px; min-width: 15px; min-height: 15px;
+        width: 18px; height: 18px; min-width: 18px; min-height: 18px;
     }
     /* Home's label is the JH signature image. Beside the signature THEME BUTTON
        two glyphs to its left, that is the same mark twice in 90px — so on
@@ -896,7 +902,7 @@ body > footer .version {
     #nav .nav-left .shape-link[aria-label="Home"]::after {
         content: 'HOME';
         font-family: 'JetBrains Mono', monospace;
-        font-size: 0.36rem;
+        font-size: 0.43rem;
         font-weight: 500;
         letter-spacing: 0.03em;
         color: var(--cyan);
@@ -908,8 +914,44 @@ body > footer .version {
     #nav .nav-left { gap: 0.05rem; }
 }
 
+/* Phones ≤430px cannot hold seven full words at the larger size — the WORDS,
+   not the glyphs, are what overrun, and they push the hamburger and theme
+   button off the right edge (measured: 407px of content in a 390px viewport).
+   So the touch target keeps its full 36px height and the glyph its full 18px;
+   only the label tightens back to roughly its old size. */
+@media (max-width: 430px) {
+    #nav .nav-left .shape-link,
+    #nav .nav-left .shape-link.secondary {
+        min-width: 34px;
+        padding: 0 0.08rem;
+    }
+    #nav .nav-left .shape-link .shape-label,
+    #nav .nav-left .shape-link.secondary .shape-label,
+    #nav .nav-left .shape-link[aria-label="Home"]::after {
+        font-size: 0.37rem;
+        letter-spacing: 0.01em;
+    }
+}
+
+/* 320px (the SE-1 floor) overran the bar even before the targets grew — the
+   theme button sat 38px past the right edge at HEAD. One more step down. */
+@media (max-width: 340px) {
+    #nav .nav-left .shape-link,
+    #nav .nav-left .shape-link.secondary { min-width: 27px; padding: 0; }
+    #nav .nav-left .shape-link .shape,
+    #nav .nav-left .shape-link.secondary .shape,
+    #nav .nav-left .shape-link:hover .shape {
+        width: 16px; height: 16px; min-width: 16px; min-height: 16px;
+    }
+    #nav .nav-left .shape-link .shape-label,
+    #nav .nav-left .shape-link.secondary .shape-label,
+    #nav .nav-left .shape-link[aria-label="Home"]::after {
+        font-size: 0.32rem; letter-spacing: 0;
+    }
+    #nav .nav-left { gap: 0; }
+}
+
 @media (max-width: 480px) {
-    #nav { height: 34px; }
     /* Compact shapes for small screens */
     .nav-left .shape-link { width: 24px; height: 28px; padding: 0 0.05rem; }
     .nav-left .shape-link .shape { width: 16px; height: 16px; min-width: 16px; min-height: 16px; }
