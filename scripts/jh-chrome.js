@@ -65,9 +65,12 @@
       this.innerHTML =
         '<div class="footer-oval">' +
           '<p class="footer-signature"><img src="' + SITE.sig + '" alt="John Hanacek signature" loading="lazy"></p>' +
-          '<p class="version">Portfolio v' + SITE.version + '<br>' + SITE.versionNote + '</p>' +
+          // Version sits on its own line directly above the copyright; the
+          // made-with note moves to the end so it does not split the pair.
+          '<p class="version">Portfolio v' + SITE.version + '</p>' +
           '<p class="footer-copyright">© ' + SITE.year + ' John Hanacek · ' + SITE.org + '</p>' +
           '<p class="footer-github"><a href="' + SITE.github + '" target="_blank" rel="noopener">' + SITE.githubLabel + '</a></p>' +
+          '<p class="version version-note">' + SITE.versionNote + '</p>' +
         '</div>';
     }
   }
