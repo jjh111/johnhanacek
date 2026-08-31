@@ -229,10 +229,80 @@
       sync();
     });
   }
+  // ---- Nav fit -------------------------------------------------------------
+  // The bar's two halves are .nav-left (fixed: shapes + title) and .nav-right
+  // (the page's own section TOC, so its width differs per page). When the pair
+  // needs more room than the bar has, the TOC swaps to its data-short labels.
+  //
+  // This is measured, not guessed. A viewport breakpoint cannot be right for
+  // every page — index's full labels need 1086px, a page with more sections
+  // needs more — and the old 900px guess left the bar cut off from 901 to
+  // 1199px, which is exactly where it was clamped narrow with viewport to spare.
+  function initNavFit() {
+    const nav = document.getElementById('nav');
+    if (!nav) return;
+    const inner = nav.querySelector('.nav-inner');
+    const left = inner && inner.querySelector('.nav-left');
+    const right = inner && inner.querySelector('.nav-right');
+    if (!inner || !left || !right) return;
+
+    let queued = false;
+    function fit() {
+      queued = false;
+      // Measure UNCOMPACTED. Reading the width while compact would report that
+      // it fits, un-compact it, and oscillate on the next resize.
+      nav.classList.remove('nav-compact');
+      const cs = getComputedStyle(inner);
+      // clientWidth INCLUDES padding, and the padding here is the spine offset —
+      // up to 200px a side. Comparing against it was the difference between
+      // "fits" and "cut off" through the whole 1024-1150 band.
+      const avail = inner.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      // Below the hamburger breakpoint the TOC is a dropdown, so only the left
+      // half competes for the bar — but the title still has to fit, which is
+      // why this measures rather than returning early.
+      const menuMode = getComputedStyle(right).flexDirection === 'column';
+      // scrollWidth under-reports on these: .nav-left is overflow:visible, so a
+      // half that is too wide simply spills instead of growing its scroll box.
+      // At 390px that read as "fits" while the bar was 53px over the viewport.
+      const span = (el) => Math.max(el.scrollWidth, el.getBoundingClientRect().width);
+      const need = span(left) + (menuMode ? 0 : span(right));
+      // Only touch the class when the answer actually changes — the observers
+      // below watch the halves, and re-adding a class they are watching would
+      // otherwise chase its own tail.
+      if (need > avail) nav.classList.add('nav-compact');
+    }
+    function schedule() {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(fit);
+    }
+    // A single call at DOMContentLoaded measured too early and reported that
+    // everything fit — verified: the class was absent at load and correct after
+    // any resize. The bar's real width only exists once the shape SVGs and the
+    // webfont have sized, so watch the box instead of guessing a moment.
+    schedule();
+    if (typeof ResizeObserver !== 'undefined') {
+      // Watch BOTH HALVES, not just the bar. The bar is width:100% of a fixed
+      // element, so its own box never changes after first layout and its
+      // observer fires exactly once — too early, while the TOC is still
+      // narrower than it will end up. design.html was the proof: the numbers
+      // said compact and the class was absent, because nothing re-measured
+      // after the text settled.
+      const ro = new ResizeObserver(schedule);
+      ro.observe(inner);
+      ro.observe(left);
+      ro.observe(right);
+    }
+    window.addEventListener('resize', schedule);
+    window.addEventListener('load', schedule);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(schedule);
+  }
+
   function initChrome() {
     initTheme();
     initAutoplayGate();
     initReturnChip();
+    initNavFit();
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initChrome);

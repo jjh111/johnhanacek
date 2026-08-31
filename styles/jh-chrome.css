@@ -170,9 +170,15 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    max-width: var(--content-max);
+    /* The bar spans the VIEWPORT and reaches the spine with padding rather than
+       a max-width clamp. Clamping to --content-max meant that between 901 and
+       1199px the bar was boxed at 900px while the links needed 1086 — cut off,
+       with up to 300px of unused viewport either side. Padding gives the same
+       alignment when there is room and simply yields it when there is not. */
+    max-width: none;
+    width: 100%;
     margin: 0 auto;
-    padding: 0 var(--content-pad);
+    padding-inline: max(var(--content-pad), (100% - var(--content-max)) / 2);
     height: 100%;
 }
 
@@ -733,13 +739,18 @@ body > footer .version {
    CHROME RESPONSIVE
    Moved here from shared.css section 12 so the chrome travels whole.
 =========================================== */
+/* Compact nav — applied by MEASUREMENT, not by a viewport guess.
+   scripts/jh-chrome.js compares what the bar's two halves actually need
+   against the width it actually has and sets .nav-compact. A viewport
+   breakpoint could not do this correctly: every page carries its own
+   section TOC, so the width at which the full labels stop fitting differs
+   per page. index needs 1086px, a page with more sections needs more. */
+/* The title compacts on a media floor as well as on the class: below 900px it
+   always has to, that breakpoint is not page-dependent, and making it wait for
+   a measurement put a full-width title in a 390px bar for one frame. The class
+   covers the case the floor cannot — a wide viewport whose bar is still full. */
 @media (max-width: 900px) {
-    .nav-title {
-        font-size: 0;
-        line-height: 0;
-        display: inline-flex;
-        align-items: center;
-    }
+    .nav-title { font-size: 0; line-height: 0; display: inline-flex; align-items: center; }
     .nav-title::after {
         content: attr(data-short);
         font-family: 'Raleway', sans-serif;
@@ -750,31 +761,49 @@ body > footer .version {
         color: var(--text-primary);
     }
     .nav-title:hover::after { color: var(--jh-gold); }
-
-    /* Hide full link text, show 2-char abbreviation */
-    .nav-right a {
-        font-size: 0;
-        line-height: 0;
-        padding: 0 0.4rem;
-        display: inline-flex;
-        align-items: center;
-    }
-    .nav-right a::after {
-        content: attr(data-short);
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.6rem;
-        font-weight: 500;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        line-height: 1;
-        color: var(--muted);
-    }
-    .nav-right a:hover::after,
-    .nav-right a:focus::after { color: var(--jh-gold); }
-
-    /* Hamburger hidden at tablet — abbreviated links visible */
-    .nav-toggle { display: none; }
 }
+
+#nav.nav-compact .nav-title {
+    font-size: 0;
+    line-height: 0;
+    display: inline-flex;
+    align-items: center;
+}
+#nav.nav-compact .nav-title::after {
+    content: attr(data-short);
+    font-family: 'Raleway', sans-serif;
+    font-size: 1rem;
+    font-weight: 300;
+    letter-spacing: 0.05em;
+    line-height: 1;
+    color: var(--text-primary);
+}
+#nav.nav-compact .nav-title:hover::after { color: var(--jh-gold); }
+
+/* Hide full link text, show 2-char abbreviation */
+#nav.nav-compact .nav-right a {
+    font-size: 0;
+    line-height: 0;
+    padding: 0 0.4rem;
+    display: inline-flex;
+    align-items: center;
+}
+#nav.nav-compact .nav-right a::after {
+    content: attr(data-short);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    line-height: 1;
+    color: var(--muted);
+}
+#nav.nav-compact .nav-right a:hover::after,
+#nav.nav-compact .nav-right a:focus::after { color: var(--jh-gold); }
+
+/* Hamburger hidden at tablet — abbreviated links visible */
+#nav.nav-compact .nav-toggle { display: none; }
+
 
 @media (max-width: 768px) {
     .nav-toggle {
@@ -817,6 +846,66 @@ body > footer .version {
         width: min(80vw, 300px);
         padding: 1rem 1.5rem 0.9rem;
     }
+}
+
+/* ===========================================
+   MOBILE NAV — labels are the default, not a hover
+   A phone has no hover, so the shape labels were unreachable: the bar read as a
+   row of unlabelled glyphs. Below 640px the label is simply on, the touch
+   targets grow, and the "JH" lettering goes — the signature button beside it
+   already says whose site this is, and at 390px the bar was 3px over the
+   viewport with it.
+=========================================== */
+@media (max-width: 640px) {
+    #nav .nav-title { display: none; }
+
+    #nav .nav-left .shape-link,
+    #nav .nav-left .shape-link.secondary {
+        width: auto;
+        min-width: 34px;
+        height: 30px;
+        padding: 0 0.18rem;
+        justify-content: center;
+    }
+    #nav .nav-left .shape-link .shape,
+    #nav .nav-left .shape-link.secondary .shape {
+        width: 15px; height: 15px; min-width: 15px; min-height: 15px;
+    }
+    /* The label IS the resting state now — no opacity/height transition to
+       wait on, and no hover rule can take it away again. */
+    #nav .nav-left .shape-link .shape-label,
+    #nav .nav-left .shape-link.secondary .shape-label {
+        opacity: 1;
+        height: auto;
+        margin-top: 0.05rem;
+        font-size: 0.36rem;
+        letter-spacing: 0.03em;
+    }
+    #nav .nav-left .shape-link { opacity: 0.75; }
+    #nav .nav-left .shape-link.active { opacity: 1; }
+    /* Hover shrinks the glyph to make room for a label that is already there. */
+    #nav .nav-left .shape-link:hover .shape,
+    #nav .nav-left .shape-link.secondary:hover .shape {
+        width: 15px; height: 15px; min-width: 15px; min-height: 15px;
+    }
+    /* Home's label is the JH signature image. Beside the signature THEME BUTTON
+       two glyphs to its left, that is the same mark twice in 90px — so on
+       mobile Home wears a word like every other shape. The img is hidden rather
+       than removed so the markup stays one shape for every surface. */
+    #nav .nav-left .shape-link[aria-label="Home"] .shape-label-img { display: none; }
+    #nav .nav-left .shape-link[aria-label="Home"]::after {
+        content: 'HOME';
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.36rem;
+        font-weight: 500;
+        letter-spacing: 0.03em;
+        color: var(--cyan);
+        line-height: 1;
+        margin-top: 0.05rem;
+    }
+
+    /* 360px phones were 4px over. The gap is the cheapest 6px on the bar. */
+    #nav .nav-left { gap: 0.05rem; }
 }
 
 @media (max-width: 480px) {
