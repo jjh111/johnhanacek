@@ -15,7 +15,7 @@
     year: 2026,
     org: 'JHDesign LLC',
     version: '2.0', // ← THE site version. Footer badge, ?v= cache-bust, and README all read this (run scripts/sync-version.mjs after bumping).
-    versionNote: 'Made with Claude Code &amp; Open Code',
+    versionNote: 'Made with Claude Code &amp; OpenCode',
     github: 'https://github.com/jjh111/johnhanacek',
     githubLabel: 'github.com/jjh111/johnhanacek',
     sig: './Assets/JHsig.svg'
@@ -65,9 +65,9 @@
       this.innerHTML =
         '<div class="footer-oval">' +
           '<p class="footer-signature"><img src="' + SITE.sig + '" alt="John Hanacek signature" loading="lazy"></p>' +
+          '<p class="version">Portfolio v' + SITE.version + '<br>' + SITE.versionNote + '</p>' +
           '<p class="footer-copyright">© ' + SITE.year + ' John Hanacek · ' + SITE.org + '</p>' +
           '<p class="footer-github"><a href="' + SITE.github + '" target="_blank" rel="noopener">' + SITE.githubLabel + '</a></p>' +
-          '<p class="version">Portfolio v' + SITE.version + '<br>' + SITE.versionNote + '</p>' +
         '</div>';
     }
   }
