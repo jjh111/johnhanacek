@@ -14,7 +14,7 @@
   const SITE = {
     year: 2026,
     org: 'JHDesign LLC',
-    version: '2.0', // ← THE site version. Footer badge, ?v= cache-bust, and README all read this (run scripts/sync-version.mjs after bumping).
+    version: '2.01', // ← THE site version. Footer badge, ?v= cache-bust, and README all read this (run scripts/sync-version.mjs after bumping).
     versionNote: 'Made with Claude Code &amp; OpenCode',
     github: 'https://github.com/jjh111/johnhanacek',
     githubLabel: 'github.com/jjh111/johnhanacek',
@@ -247,11 +247,22 @@
     if (!inner || !left || !right) return;
 
     let queued = false;
+    // The widest the bar has been measured to need in its UNCOMPACTED state.
+    // Cached, because the compact state cannot be asked this question: the
+    // TOC is abbreviated there, so measuring while compact always answers
+    // "it fits" and releases the class immediately.
+    let needFull = 0;
+    let compact = false;
+    // Releasing needs MORE room than compacting did. Without this margin a bar
+    // parked exactly on the boundary compacts (contents shrink, so it fits),
+    // releases (contents grow, so it does not), and repeats every frame — the
+    // title and TOC visibly flickering forever. Observed between the tablet and
+    // desktop breakpoints. The band must exceed the width the swap itself
+    // moves, so no state change can ever be its own trigger.
+    const HYSTERESIS = 24;
+
     function fit() {
       queued = false;
-      // Measure UNCOMPACTED. Reading the width while compact would report that
-      // it fits, un-compact it, and oscillate on the next resize.
-      nav.classList.remove('nav-compact');
       const cs = getComputedStyle(inner);
       // clientWidth INCLUDES padding, and the padding here is the spine offset —
       // up to 200px a side. Comparing against it was the difference between
@@ -266,10 +277,18 @@
       // At 390px that read as "fits" while the bar was 53px over the viewport.
       const span = (el) => Math.max(el.scrollWidth, el.getBoundingClientRect().width);
       const need = span(left) + (menuMode ? 0 : span(right));
-      // Only touch the class when the answer actually changes — the observers
-      // below watch the halves, and re-adding a class they are watching would
-      // otherwise chase its own tail.
-      if (need > avail) nav.classList.add('nav-compact');
+
+      if (!compact) {
+        // Uncompacted, so this reading IS the full requirement. Keep the widest
+        // one seen: the webfont and the shape SVGs settle at different moments,
+        // and an early narrow reading must not become the standing answer.
+        needFull = Math.max(needFull, need);
+      }
+
+      const want = compact ? (avail < needFull + HYSTERESIS) : (need > avail);
+      if (want === compact) return;
+      compact = want;
+      nav.classList.toggle('nav-compact', want);
     }
     function schedule() {
       if (queued) return;
