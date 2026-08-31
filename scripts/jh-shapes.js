@@ -31,8 +31,10 @@
   // the fixed-bar <jh-nav> renders the full array (incl. the title entry).
   var LINKS = [
     { key: 'search', href: 'search.html', cls: 'shape-link search-icon', aria: 'Search',
-      svg: SVG.search, label: '',
-      // the hero strips caption the glyph; the fixed bar's does not
+      // The bar's search wears the same label as every other shape: hidden
+      // behind hover on desktop, at rest in the folded strip — where a bare
+      // magnifier was the one unlabelled item in a row of seven captions.
+      svg: SVG.search, label: '<span class="shape-label">SEARCH</span>',
       heroLabel: '<span class="shape-label">SEARCH</span>', hero: true },
     { key: 'home', href: 'index.html', cls: 'shape-link', aria: 'Home',
       svg: SVG.triangle, label: '<img class="shape-label shape-label-img" src="./Assets/JHsig.svg" alt="JH">', hero: true },

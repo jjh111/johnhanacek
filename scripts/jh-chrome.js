@@ -14,7 +14,7 @@
   const SITE = {
     year: 2026,
     org: 'JHDesign LLC',
-    version: '2.01', // ← THE site version. Footer badge, ?v= cache-bust, and README all read this (run scripts/sync-version.mjs after bumping).
+    version: '2.02', // ← THE site version. Footer badge, ?v= cache-bust, and README all read this (run scripts/sync-version.mjs after bumping).
     versionNote: 'Made with Claude Code &amp; OpenCode',
     github: 'https://github.com/jjh111/johnhanacek',
     githubLabel: 'github.com/jjh111/johnhanacek',
@@ -230,87 +230,98 @@
     });
   }
   // ---- Nav fit -------------------------------------------------------------
-  // The bar's two halves are .nav-left (fixed: shapes + title) and .nav-right
-  // (the page's own section TOC, so its width differs per page). When the pair
-  // needs more room than the bar has, the TOC swaps to its data-short labels.
+  // TWO states, one measured boundary. DESKTOP: shapes + "John Hanacek" + the
+  // page's full-word TOC in a row. MENU (.nav-menu): title gone, TOC folded
+  // into the hamburger dropdown, shape strip wearing its labels at fluid width
+  // (styles/jh-chrome.css owns both looks).
   //
-  // This is measured, not guessed. A viewport breakpoint cannot be right for
-  // every page — index's full labels need 1086px, a page with more sections
-  // needs more — and the old 900px guess left the bar cut off from 901 to
-  // 1199px, which is exactly where it was clamped narrow with viewport to spare.
+  // The boundary is measured, not guessed. A viewport breakpoint cannot be
+  // right for every page — index's full labels need ~1086px, design's ~1193 —
+  // so the bar swaps exactly when its own halves stop fitting, which lands in
+  // tablet territory per page. The 2-char abbreviation tier that used to sit
+  // between these states is gone: auto-generated codes collided (about.html
+  // rendered EX twice, for Experience and Expertise) and never read better
+  // than a hamburger. So is the 641–768 band where desktop-styled shapes with
+  // hover-only labels shared the bar with the hamburger.
   function initNavFit() {
     const nav = document.getElementById('nav');
     if (!nav) return;
     const inner = nav.querySelector('.nav-inner');
     const left = inner && inner.querySelector('.nav-left');
-    const right = inner && inner.querySelector('.nav-right');
-    if (!inner || !left || !right) return;
+    if (!inner || !left) return;
+    // Pages without a section TOC (playground, search, writing) still swap
+    // the title and strip; a toggle with nothing to open stays hidden.
+    const right = inner.querySelector('.nav-right');
+    const toggle = inner.querySelector('.nav-toggle');
+    if (!right) nav.classList.add('nav-no-toc');
 
     let queued = false;
-    // The widest the bar has been measured to need in its UNCOMPACTED state.
-    // Cached, because the compact state cannot be asked this question: the
-    // TOC is abbreviated there, so measuring while compact always answers
-    // "it fits" and releases the class immediately.
+    // The widest the bar has been measured to need in its DESKTOP state.
+    // Cached, because the menu state cannot be asked this question: the TOC
+    // is a dropdown there, so measuring while in menu always answers "it
+    // fits" — which is also how the hamburger once vanished on phones: a
+    // release check against a desktop-sized cache kept the old compact class
+    // latched, and a display:none rule keyed on it took the toggle with it.
     let needFull = 0;
-    let compact = false;
-    // Releasing needs MORE room than compacting did. Without this margin a bar
-    // parked exactly on the boundary compacts (contents shrink, so it fits),
-    // releases (contents grow, so it does not), and repeats every frame — the
-    // title and TOC visibly flickering forever. Observed between the tablet and
-    // desktop breakpoints. The band must exceed the width the swap itself
-    // moves, so no state change can ever be its own trigger.
+    let menu = false;
+    // Releasing needs MORE room than folding did. Without this margin a bar
+    // parked exactly on the boundary folds (contents shrink, so it fits),
+    // releases (contents grow, so it does not), and repeats every frame —
+    // the header visibly cycling between UI types. The band must exceed the
+    // width the swap itself moves, so no state change is its own trigger.
+    // navfittest.mjs in Agent Reference/maze-tests sweeps for regressions.
     const HYSTERESIS = 24;
 
     function fit() {
       queued = false;
       const cs = getComputedStyle(inner);
-      // clientWidth INCLUDES padding, and the padding here is the spine offset —
-      // up to 200px a side. Comparing against it was the difference between
-      // "fits" and "cut off" through the whole 1024-1150 band.
+      // clientWidth INCLUDES padding; subtract it so the halves are compared
+      // against the room they can actually occupy.
       const avail = inner.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-      // Below the hamburger breakpoint the TOC is a dropdown, so only the left
-      // half competes for the bar — but the title still has to fit, which is
-      // why this measures rather than returning early.
-      const menuMode = getComputedStyle(right).flexDirection === 'column';
-      // scrollWidth under-reports on these: .nav-left is overflow:visible, so a
-      // half that is too wide simply spills instead of growing its scroll box.
-      // At 390px that read as "fits" while the bar was 53px over the viewport.
+      // scrollWidth under-reports on these: .nav-left is overflow:visible, so
+      // a half that is too wide simply spills instead of growing its scroll
+      // box. At 390px that read as "fits" while the bar was 53px over.
       const span = (el) => Math.max(el.scrollWidth, el.getBoundingClientRect().width);
-      const need = span(left) + (menuMode ? 0 : span(right));
 
-      if (!compact) {
-        // Uncompacted, so this reading IS the full requirement. Keep the widest
-        // one seen: the webfont and the shape SVGs settle at different moments,
-        // and an early narrow reading must not become the standing answer.
-        needFull = Math.max(needFull, need);
+      if (!menu) {
+        // Desktop, so this reading IS the full requirement. Keep the widest
+        // one seen: the webfont and the shape SVGs settle at different
+        // moments, and an early narrow reading must not become the answer.
+        needFull = Math.max(needFull, span(left) + (right ? span(right) : 0));
       }
 
-      const want = compact ? (avail < needFull + HYSTERESIS) : (need > avail);
-      if (want === compact) return;
-      compact = want;
-      nav.classList.toggle('nav-compact', want);
+      const want = menu ? (avail < needFull + HYSTERESIS) : (needFull > avail);
+      if (want === menu) return;
+      menu = want;
+      nav.classList.toggle('nav-menu', want);
+      if (!want && right) {
+        // Leaving menu state: an open dropdown must not survive as a stale
+        // .open + aria-expanded on the desktop row.
+        right.classList.remove('open');
+        if (toggle) { toggle.classList.remove('active'); toggle.setAttribute('aria-expanded', 'false'); }
+      }
     }
     function schedule() {
       if (queued) return;
       queued = true;
       requestAnimationFrame(fit);
     }
-    // A single call at DOMContentLoaded measured too early and reported that
-    // everything fit — verified: the class was absent at load and correct after
-    // any resize. The bar's real width only exists once the shape SVGs and the
-    // webfont have sized, so watch the box instead of guessing a moment.
-    schedule();
+    // First fit runs SYNCHRONOUSLY: this script is deferred, so this happens
+    // before first paint and a phone never flashes the desktop row. The
+    // measurement may still be early (fonts, SVGs) — the observers below
+    // correct it — but early on a phone still answers "menu", which is right.
+    fit();
     if (typeof ResizeObserver !== 'undefined') {
       // Watch BOTH HALVES, not just the bar. The bar is width:100% of a fixed
       // element, so its own box never changes after first layout and its
       // observer fires exactly once — too early, while the TOC is still
       // narrower than it will end up. design.html was the proof: the numbers
-      // said compact and the class was absent, because nothing re-measured
+      // said fold and the class was absent, because nothing re-measured
       // after the text settled.
       const ro = new ResizeObserver(schedule);
       ro.observe(inner);
       ro.observe(left);
-      ro.observe(right);
+      if (right) ro.observe(right);
     }
     window.addEventListener('resize', schedule);
     window.addEventListener('load', schedule);

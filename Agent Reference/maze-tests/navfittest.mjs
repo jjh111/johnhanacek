@@ -31,7 +31,7 @@ async function sweep(pg, widths) {
     await pg.waitForTimeout(SETTLE_MS);
     const log = await pg.evaluate(() => window.__navLog.slice());
     const cls = await pg.evaluate(() => document.getElementById('nav').className);
-    states.push({ w, compact: cls.includes('nav-compact') });
+    states.push({ w, compact: cls.includes('nav-menu') });
     if (log.length > MAX_MUTATIONS) failures.push({ w, flips: log.length, tail: log.slice(0, 6) });
   }
   return { failures, states };

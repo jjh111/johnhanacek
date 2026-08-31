@@ -58,7 +58,8 @@ Rendered by the `<jh-nav current="home|design|art|about|services|search">` compo
 - Center: "John Hanacek" text link → index.html
 - Secondary shapes (right): About, Services, Play
 - `current` attribute sets `class="active"` + `aria-current="page"`
-- Each page keeps its own `.nav-toggle` + `.nav-right` (per-page section TOC); mobile hamburger toggles it
+- Each page keeps its own `.nav-toggle` + `.nav-right` (per-page section TOC)
+- **Two states, one measured boundary** (`initNavFit` in jh-chrome.js): DESKTOP (shapes + title + full-word TOC row) until the row stops fitting — per page, ~980px (about/art) to ~1290px (design) — then MENU (`.nav-menu` on `#nav`): title gone, TOC in the hamburger dropdown with full words, shape strip wearing its labels at one fluid size down to 320px. No abbreviation tier (the old auto 2-char codes collided: about.html rendered EX twice) and no viewport breakpoints for the swap; hysteresis prevents boundary flicker (regression suite: `Agent Reference/maze-tests/navfittest.mjs`). Pages without a `.nav-right` get `.nav-no-toc` (toggle hidden)
 - Nav is fixed, appears after scrolling past hero section
 - `writing.html` wears the chrome too now (integrated 2026-08; keeps its own reader header/toggle, shares `jh-theme`)
 
