@@ -19,8 +19,18 @@
     'use strict';
     if (window.JHSearchCore) return;
 
-    const MODEL_ID = "onnx-community/Qwen3.5-0.8B-ONNX";
-    const MODEL_DISPLAY_NAME = "Qwen 3.5";
+    // In-browser generation model. LFM2.5-350M replaced Qwen3.5-0.8B on
+    // 2026-09-01 after measuring both on the site's real RAG prompt in Chrome
+    // WebGPU on an M2 Max: Qwen took 48–109 s to its FIRST token on every
+    // query (prefill, not download — decode ran at ~25 tok/s once it started)
+    // and 69 s to load even from cache; LFM2.5 answers in 0.2–0.3 s to first
+    // token at 45–100 tok/s, loads from cache in under a second, and is 255 MB
+    // against 585. Text-only, so no vision tower rides along, and it runs on
+    // the generic pipeline() rather than a model-specific class.
+    // Research + numbers: Agent Reference/SEARCH_MODEL_RESEARCH.md.
+    const MODEL_ID = "onnx-community/LFM2.5-350M-ONNX";
+    const MODEL_DISPLAY_NAME = "LFM2.5";
+    const MODEL_SIZE_LABEL = "255MB";
     const RESULTS_PER_PAGE = 5;
 
     // ============================================
@@ -159,15 +169,17 @@
         let localServers = [];   // every local server that answered, with its full model list
         let localModel = null;
         let customModel = null;
-        let processor = null, llmModel = null, modelReady = false;
+        let llmModel = null, modelReady = false;
         let currentGenId = 0, isGenerating = false, pendingGen = null;
         let searchDebounce, aiDebounce, lastSearchResults = [], lastLlmQuery = '';
         let hasWebGPU = false;
         let modelIsCached = false;
         let enginesChecked = false;
 
-        // Transformers.js imports (lazy — nothing downloads until Load is clicked)
-        let AutoProcessor, Qwen3_5ForConditionalGeneration, TextStreamer;
+        // Transformers.js imports (lazy — nothing downloads until Load is clicked).
+        // llmModel holds the text-generation pipeline; `processor` is gone with
+        // the vision-language model that needed one.
+        let pipeline, TextStreamer;
 
         // ── Semantic tier (Tier 0.5) ──
         // Chunk vectors ship inside search-chunks.json (int8 base64, built by
@@ -789,7 +801,8 @@
         // ============================================
         // The Tier Strip — one line that IS the intelligence ladder
         // ============================================
-        // Left→right ascending: keyword → semantic → qwen → local (→ custom).
+        // Left→right ascending: keyword → semantic → lfm (in-browser; the seg key
+        // stays 'qwen' for the tests and CSS that grew up with it) → local (→ custom).
         // Facts render as facts (keyword/semantic are never buttons that lie),
         // loadable tiers wear their cost as their label ("qwen ↓585mb"), the
         // active generation engine glows in its color, and the whole state is
@@ -810,15 +823,15 @@
             else html += seg('semantic', '\u25cb', 'semantic', 'fact-off', semTitle);
             // qwen (in-browser generation)
             if (!hasWebGPU && enginesChecked) {
-                html += seg('qwen', '\u25cb', 'qwen', 'gone', 'in-browser model needs WebGPU \u2014 unavailable here');
+                html += seg('qwen', '\u25cb', 'lfm', 'gone', 'in-browser model needs WebGPU \u2014 unavailable here (Safari: onnxruntime cannot start its WebGPU backend)');
             } else if (browserLoadPct != null) {
-                html += seg('qwen', '\u25d0', `qwen ${browserLoadPct}%`, 'loading', 'loading Qwen 3.5\u2026', 'var(--engine-browser)');
+                html += seg('qwen', '\u25d0', `lfm ${browserLoadPct}%`, 'loading', `loading ${MODEL_DISPLAY_NAME}\u2026`, 'var(--engine-browser)');
             } else if (modelReady) {
                 const st = (activeEngine === 'browser' && aiEnabled) ? 'active' : 'ready';
-                html += seg('qwen', '\u25cf', 'qwen', st, 'Qwen 3.5 in-browser \u2014 tap to answer with it', 'var(--engine-browser)');
+                html += seg('qwen', '\u25cf', 'lfm', st, `${MODEL_DISPLAY_NAME} in-browser \u2014 tap to answer with it`, 'var(--engine-browser)');
             } else {
-                html += seg('qwen', '\u25cb', modelIsCached ? 'qwen \u26a1' : 'qwen \u2193585mb', 'load',
-                    modelIsCached ? 'Qwen 3.5 \u2014 cached, tap to load' : 'Qwen 3.5 in-browser \u2014 tap to download (585MB, WebGPU)', 'var(--engine-browser)');
+                html += seg('qwen', '\u25cb', modelIsCached ? 'lfm \u26a1' : `lfm \u2193${MODEL_SIZE_LABEL.toLowerCase()}`, 'load',
+                    modelIsCached ? `${MODEL_DISPLAY_NAME} \u2014 cached, tap to load` : `${MODEL_DISPLAY_NAME} in-browser \u2014 tap to download (${MODEL_SIZE_LABEL}, WebGPU)`, 'var(--engine-browser)');
             }
             // local
             if (localModel) {
@@ -969,14 +982,24 @@
             // iOS detection — Safari on iOS reports WebGPU but crashes loading models
             const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent)
                 || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            // Desktop Safari too: Safari 26 exposes a WebGPU adapter (with
+            // shader-f16, even) but onnxruntime-web's WebGPU backend cannot
+            // initialise on WebKit — every load, any model, ends in
+            // "no available backend found. ERR: [webgpu] TypeError:
+            // De().webgpuInit is not a function" (reproduced 2026-09-01 in
+            // WebKit with Transformers.js 4.2.0, the newest release). Better
+            // to say so up front than to let a visitor download 255 MB into an
+            // "Error — retry" that no retry can fix. Same override as iOS.
+            const isSafari = /Safari\//.test(navigator.userAgent) && !/Chrome|Chromium|CriOS|Edg\//.test(navigator.userAgent);
             const forceWebGPU = localStorage.getItem('jh-force-webgpu') === 'true';
+            const webgpuBlocked = (isIOS || isSafari) && !forceWebGPU;
 
-            if (isIOS && !forceWebGPU) {
-                log(`${logTag} iOS detected — WebGPU disabled (crashes Safari). Override: localStorage.setItem("jh-force-webgpu", "true")`);
+            if (webgpuBlocked) {
+                log(`${logTag} ${isIOS ? 'iOS' : 'Safari'} detected — in-browser WebGPU model disabled (${isIOS ? 'crashes Safari' : 'onnxruntime-web WebGPU backend does not initialise on WebKit'}). Override: localStorage.setItem("jh-force-webgpu", "true")`);
             }
 
             const webgpuBadge = el('webgpuBadge');
-            if (navigator.gpu && !(isIOS && !forceWebGPU)) {
+            if (navigator.gpu && !webgpuBlocked) {
                 const adapter = await navigator.gpu.requestAdapter();
                 if (adapter) {
                     hasWebGPU = true;
@@ -985,12 +1008,12 @@
                     if (webgpuBadge) { webgpuBadge.textContent = 'No adapter'; }
                 }
             } else {
-                if (webgpuBadge) { webgpuBadge.textContent = isIOS ? 'iOS — disabled' : 'No WebGPU'; }
+                if (webgpuBadge) { webgpuBadge.textContent = isIOS ? 'iOS — disabled' : (isSafari ? 'Safari — unsupported' : 'No WebGPU'); }
             }
 
             const btn = el('enableBtn');
             if (!hasWebGPU) {
-                if (btn) { btn.textContent = 'No WebGPU'; btn.disabled = true; }
+                if (btn) { btn.textContent = isSafari && !isIOS ? 'Not in Safari' : 'No WebGPU'; btn.disabled = true; }
             } else {
                 modelIsCached = await checkModelCache();
                 const cacheHint = el('cacheHint');
@@ -1002,7 +1025,7 @@
                     if (btn) { btn.textContent = 'Load \u26a1'; btn.classList.add('cached'); }
                     if (cacheHint) cacheHint.textContent = 'Cached — loads in seconds';
                 } else {
-                    if (btn) btn.textContent = 'Download 585MB';
+                    if (btn) btn.textContent = `Download ${MODEL_SIZE_LABEL}`;
                     if (cacheHint) cacheHint.textContent = '';
                 }
             }
@@ -1054,7 +1077,7 @@
                 for (const name of names) {
                     const cache = await caches.open(name);
                     const keys = await cache.keys();
-                    if (keys.filter(r => r.url.includes('Qwen3.5-0.8B-ONNX')).length >= 3) return true;
+                    if (keys.filter(r => r.url.includes(MODEL_ID.split('/').pop())).length >= 3) return true;
                 }
                 return false;
             } catch { return false; }
@@ -1141,6 +1164,31 @@
         async function checkLocalModels() {
             localServers = await checkLocalServers();
             return resolveLocalChoice(localServers);
+        }
+
+        // Why "Not found" — said out loud. Every failure a fetch to localhost
+        // can have arrives as the same opaque TypeError (connection refused,
+        // Chrome's local-network permission denied, Ollama's 403 without CORS
+        // headers, Safari's mixed-content block), so the browser cannot be
+        // asked which one it was. The environment CAN be read, and it names
+        // the cause in the two cases that matter most:
+        //  - Safari on the https site blocks http://localhost outright
+        //    ("[blocked] … requested insecure content" — verified in WebKit).
+        //    No setting fixes it; nothing on this page can reach a local server.
+        //  - Chrome on the https site asks for local-network permission, and
+        //    Ollama additionally answers 403 unless OLLAMA_ORIGINS admits the
+        //    site (verified with curl against a running Ollama).
+        function localProbeDiagnosis() {
+            const https = location.protocol === 'https:';
+            const ua = navigator.userAgent;
+            const isSafari = /Safari\//.test(ua) && !/Chrome|Chromium|CriOS|Edg\//.test(ua);
+            if (https && isSafari) {
+                return 'Safari blocks this https page from reaching http://localhost — a local model needs Chrome or Firefox here';
+            }
+            if (https) {
+                return 'nothing answered on :1234 / :11434 — allow the local-network prompt if one appeared; Ollama also needs OLLAMA_ORIGINS to include this site';
+            }
+            return 'nothing answered on :1234 / :11434 — is the server running with CORS on? (Ollama: OLLAMA_ORIGINS)';
         }
 
         // The picker. One row per model per server, so two running servers are
@@ -2693,11 +2741,12 @@
                     { role: "system", content: SYSTEM_PROMPT_BROWSER },
                     { role: "user", content: `Context:\n${context}\n\nQuestion: ${query}\n\nAnswer directly and concisely:` }
                 ];
-                const text = processor.apply_chat_template(messages, { add_generation_prompt: true, tokenizer_kwargs: { enable_thinking: false } });
-                const inputs = processor.tokenizer(text);
+                // The pipeline applies the chat template itself. (The Qwen-era
+                // enable_thinking:false kwarg is gone with the model — LFM2.5
+                // has no thinking mode; stripThink stays as a harmless guard.)
                 const isCurrent = () => genId === currentGenId; let outputText = '';
-                await llmModel.generate({ ...inputs, max_new_tokens: 128, do_sample: false, repetition_penalty: 1.15,
-                    streamer: new TextStreamer(processor.tokenizer, { skip_prompt: true, skip_special_tokens: true, callback_function: (token) => { if (!isCurrent()) return; outputText += token; writeAnswer(answerEl, outputText.trimStart()); } })
+                await llmModel(messages, { max_new_tokens: 128, do_sample: false, repetition_penalty: 1.15,
+                    streamer: new TextStreamer(llmModel.tokenizer, { skip_prompt: true, skip_special_tokens: true, callback_function: (token) => { if (!isCurrent()) return; outputText += token; writeAnswer(answerEl, outputText.trimStart()); } })
                 });
                 if (isCurrent()) { const f = outputText.trim(); writeAnswer(answerEl, f || '(No answer generated.)'); }
             } catch (err) { if (genId === currentGenId) { writeAnswer(answerEl, `Error: ${err.message}`); console.error(`${logTag} Generation error:`, err); } }
@@ -3051,6 +3100,11 @@
                 } else {
                     applyLocalModel();
                     detectBtn.textContent = 'Not found'; detectBtn.disabled = false;
+                    // The detail line carries the WHY — "Not found" alone sent
+                    // Safari users hunting for a server setting that cannot help.
+                    const detEl = el('localModelDetail');
+                    if (detEl) detEl.textContent = localProbeDiagnosis();
+                    log(`${logTag} Local: no server reachable — ${localProbeDiagnosis()}`);
                     setTimeout(() => { detectBtn.textContent = 'Detect'; }, 2000);
                 }
             });
@@ -3070,23 +3124,19 @@
                 // Lazy-load Transformers.js.
                 //
                 // Pinned to a real release, not a `next` pre-release: the page sat on
-                // 4.0.0-next.5 (2026-03-02) for months while 4.2.0 shipped.
+                // 4.0.0-next.5 (2026-03-02) for months while 4.2.0 shipped. 4.2.0 is
+                // still the newest release as of 2026-09-01.
                 //
-                // dtype is q4f16, not q4 — 585 MB against 718 MB for the same model.
-                // Measured, because fp16 on WebGPU is not automatically safe: the
-                // same path makes gemma-3-270m emit `<unused56>` forever
-                // (onnxruntime#26732). Qwen3.5 was loaded and generated at q4f16
-                // before this was committed, and answers correctly.
-                //
-                // The vision encoder is NOT droppable, however tempting: omitting it
-                // from dtype does not skip it, it falls back to the UNQUANTIZED
-                // vision_encoder.onnx (402 MB vs 62 MB at q4f16), i.e. dropping the
-                // key makes the download bigger. Losing the vision tower means
-                // moving to a text-only model — see SEARCH_MODEL_RESEARCH.md.
-                if (!AutoProcessor) {
+                // dtype q4f16: fp16 on WebGPU is not automatically safe — the same
+                // path makes gemma-3-270m emit `<unused56>` forever
+                // (onnxruntime#26732) — so the model was loaded and generated at
+                // q4f16 on real hardware before this was committed, and answers
+                // correctly. LFM2.5 is text-only, so the vision-encoder trap that
+                // haunted the Qwen build (omit the key and it downloads the
+                // UNQUANTIZED 402 MB tower) is gone with it.
+                if (!pipeline) {
                     const mod = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0');
-                    AutoProcessor = mod.AutoProcessor;
-                    Qwen3_5ForConditionalGeneration = mod.Qwen3_5ForConditionalGeneration;
+                    pipeline = mod.pipeline;
                     TextStreamer = mod.TextStreamer;
                 }
 
@@ -3101,12 +3151,10 @@
                 }
 
                 try {
-                    progress.textContent = 'Loading processor...';
-                    processor = await AutoProcessor.from_pretrained(MODEL_ID, { progress_callback: onProgress });
                     progress.textContent = 'Loading weights...';
-                    llmModel = await Qwen3_5ForConditionalGeneration.from_pretrained(MODEL_ID, { dtype: { embed_tokens: "q4f16", vision_encoder: "q4f16", decoder_model_merged: "q4f16" }, device: "webgpu", progress_callback: onProgress });
+                    llmModel = await pipeline('text-generation', MODEL_ID, { dtype: 'q4f16', device: 'webgpu', progress_callback: onProgress });
                     progress.textContent = 'Compiling shaders...';
-                    const warmup = processor.tokenizer("hi"); await llmModel.generate({ ...warmup, max_new_tokens: 1 });
+                    await llmModel([{ role: 'user', content: 'hi' }], { max_new_tokens: 1, do_sample: false });
                     const loadTime = ((Date.now() - loadStartTime) / 1000).toFixed(1);
                     modelReady = true; modelIsCached = true; browserLoadPct = null;
                     btn.textContent = '✓ Active'; btn.classList.remove('cached'); btn.classList.add('model-active');

@@ -86,7 +86,7 @@
                         <div id="so-browserModelSection" class="popover-section popover-section--compact" style="--section-color:var(--engine-browser);">
                             <div class="popover-section-header">
                                 <span class="popover-radio"></span>
-                                <span class="popover-section-name">Qwen 3.5</span>
+                                <span class="popover-section-name">LFM2.5</span>
                                 <span class="popover-section-badge badge-webgpu" id="so-webgpuBadge"></span>
                                 <button id="so-enableBtn">Load</button>
                             </div>

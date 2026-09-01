@@ -45,7 +45,7 @@ check('keyword is a fact, not a button', await page.evaluate(() =>
   document.querySelector('[data-tier="keyword"]').className.includes('fact-on')));
 check('qwen wears its cost as its label', await page.evaluate(() => {
   const t = document.querySelector('[data-tier="qwen"]').textContent;
-  return /585mb|⚡|%|qwen$/.test(t) || t.includes('qwen');
+  return /585mb|255mb|⚡|%|qwen$|lfm$/.test(t) || t.includes('qwen') || t.includes('lfm');
 }), await page.evaluate(() => document.querySelector('[data-tier="qwen"]').textContent.trim()));
 
 // old space-wasters are gone

@@ -5,7 +5,7 @@ Everything below is measured, not quoted: sizes come from the Hugging Face
 API (`?blobs=true`), request behaviour from Playwright route interception,
 and the q4f16 result from an actual load-and-generate run.
 
-**Status: steps 1 and 2 are DONE and shipped (v1.50). Step 3 is open.**
+**Status: steps 1 and 2 shipped (v1.50). Step 3 — the LFM2.5-350M swap — shipped 2026-09-01 (v2.05). See the measurements at the end.**
 
 ---
 
@@ -101,3 +101,59 @@ turned out to be wrong).
   to abort it and no user-facing "this is taking too long" path.
 - **iOS is excluded** from WebGPU on purpose (Safari reports support and then
   crashes). Override: `localStorage.setItem("jh-force-webgpu","true")`.
+
+
+---
+
+## 2026-09-01 — measured on real hardware, and the swap shipped
+
+Chrome (Chromium 148, WebGPU, Apple M2 Max, `shader-f16` present), the site's real
+RAG prompt (SYSTEM_PROMPT_BROWSER + top-5 chunks, ~2.5–3k chars), `max_new_tokens`
+128, `repetition_penalty` 1.15:
+
+| | Qwen3.5-0.8B q4f16 (was) | LFM2.5-350M q4f16 (now) |
+|---|---|---|
+| cold load (download) | 69.9 s (666 MB on the wire) | 45.7 s (255 MB) |
+| load from cache | **69.0 s** | **0.7–2.1 s** |
+| first token, query 1 | **109 s** | 0.29 s |
+| first token, query 2 | **47.9 s** | 0.23 s |
+| decode | ~25 tok/s | 44–100 tok/s |
+| answer | grounded, some drift | grounded, some drift |
+
+The Qwen problem was prefill, not download and not a one-time shader compile — the
+second query still took 48 s to its first token. Answer quality between the two is
+small-model quality either way (each hallucinated a detail once in three runs); LFM2.5
+is 150–400× faster to the first token, which is the whole difference between a tier
+people use and one they close.
+
+Code change: `pipeline('text-generation', MODEL_ID, { dtype: 'q4f16', device: 'webgpu' })`
+replaces `AutoProcessor` + `Qwen3_5ForConditionalGeneration`; generation passes the
+messages array straight to the pipeline (it applies the chat template), so the
+Qwen-specific `enable_thinking:false` kwarg is gone. `stripThink` stays as a harmless guard.
+
+### Safari: the WebGPU tier cannot run there — ORT, not the model
+
+Safari 26 exposes a WebGPU adapter (with `shader-f16`) and Playwright WebKit does too,
+but onnxruntime-web's WebGPU backend never initialises on WebKit. Every load, both
+models, ends in:
+
+```
+no available backend found. ERR: [webgpu] TypeError: De().webgpuInit is not a function
+```
+
+Transformers.js 4.2.0 (2026-04-22) is the newest release and ships ORT 1.26-dev, so
+there is no version to move to. `checkEngines` now treats desktop Safari like iOS: the
+tier reads "Safari — unsupported" / "Not in Safari" instead of downloading 255 MB into
+an "Error — retry" that no retry fixes. Same `jh-force-webgpu` override for when ORT
+catches up.
+
+### Local servers from the https site
+
+Also measured while here: Safari blocks `https://www.johnhanacek.com` → `http://localhost`
+as mixed content (`[blocked] … requested insecure content`), so LM Studio/Ollama
+detection can never succeed in Safari from the live site. Chrome asks for
+local-network permission instead (denied = the same opaque TypeError). And a running
+Ollama answers **403** to the site's origin unless `OLLAMA_ORIGINS` admits it, while LM
+Studio ships `Access-Control-Allow-Origin: *`. Detect's detail line now says which of
+these it is, by environment (`localProbeDiagnosis()`), since the fetch error itself
+cannot tell them apart.

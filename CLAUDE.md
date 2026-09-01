@@ -147,8 +147,13 @@ which stamps every `?v=` cache-bust ref across root `*.html` **and** the `Portfo
   place via two-mode reciprocal-rank fusion (constants in `hybridMerge` — tuned by
   `search-tests/fusionlab.mjs`, re-run it before touching them). Model choice + HF repo traps:
   `Agent Reference/SEARCH_EMBEDDER_RESEARCH.md`
-- **Tier 1**: In-browser Qwen3.5-0.8B via WebGPU (Transformers.js v4; LFM2.5 swap researched,
-  gated on device QA — SEARCH_MODEL_RESEARCH.md)
+- **Tier 1**: In-browser LFM2.5-350M (q4f16, 255 MB) via WebGPU on Transformers.js 4.2.0's
+  generic `pipeline('text-generation')`. Replaced Qwen3.5-0.8B on 2026-09-01: measured on the
+  real RAG prompt, Qwen took 48–109 s to its FIRST token every query (prefill) and 69 s to load
+  from cache; LFM2.5 is 0.2–0.3 s to first token, 45–100 tok/s, sub-second cache load.
+  **Not available in Safari** (desktop or iOS): onnxruntime-web's WebGPU backend never
+  initialises on WebKit (`De().webgpuInit is not a function`) — `checkEngines` says so up
+  front instead of downloading into an error. Numbers + Safari findings: SEARCH_MODEL_RESEARCH.md
 - **Tier 2**: Local LMStudio/Ollama. **Never probed on page load** — detection runs when the
   overlay first opens, localhost only after the visitor clicks Detect (or opted in before,
   `jh-local-llm-optin`). Embedding-only local models (nomic-embed etc.) are skipped.
