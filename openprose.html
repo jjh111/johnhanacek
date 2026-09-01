@@ -80,12 +80,12 @@
      page's headings, main and typography. See styles/jh-chrome.css header.)
      Loaded BEFORE the page's own tokens so _tokens.css wins on every name they
      share; the chrome reads its own values through --jh- prefixed tokens. -->
-<link rel="stylesheet" href="./styles/jh-chrome.css?v=2.02">
-<link rel="stylesheet" href="./scripts/search-overlay.css?v=2.02">
+<link rel="stylesheet" href="./styles/jh-chrome.css?v=2.03">
+<link rel="stylesheet" href="./scripts/search-overlay.css?v=2.03">
 <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-<link rel="stylesheet" href="openprose/_tokens.css?v=2.02">
-<link rel="stylesheet" href="openprose/_pairings.css?v=2.02">
+<link rel="stylesheet" href="openprose/_tokens.css?v=2.03">
+<link rel="stylesheet" href="openprose/_pairings.css?v=2.03">
 <style>
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1077,6 +1077,31 @@ html[data-mode="dark"] .mode-toggle:focus-visible {
   box-shadow: 0 24px 96px rgba(0, 0, 0, 0.5);
 }
 .embed-live.cv-overlay::backdrop { background: rgba(20, 17, 13, 0.55); }
+/* Touch shield over the CANVAS-mode embed. On a touch screen a swipe over
+   the panel is a pan to the tool inside, and the article stops scrolling at
+   the panel — iOS will not reliably chain the gesture out of an iframe
+   whatever touch-action the frame sets. The scroll-safe surface has to be a
+   HOST-document element: this button sits above the frame, so a swipe on it
+   scrolls the page like anywhere else, and a tap opens the viewport overlay
+   where every gesture belongs to the canvas. Coarse pointers only (JS). */
+.cv-touch-shield {
+  position: absolute; inset: 0; z-index: 3;
+  display: flex; align-items: flex-end; justify-content: center;
+  padding: var(--space-sm);
+  background: transparent; border: 0; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cv-touch-shield span {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem; letter-spacing: 0.04em;
+  color: var(--ink-2);
+  background: var(--paper-warm);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 0.45em 1em;
+  box-shadow: 0 2px 10px rgba(20, 17, 13, 0.12);
+}
+.embed-live.cv-overlay .cv-touch-shield { display: none; }
 .cv-scrim {
   position: fixed;
   inset: 0;
@@ -3780,6 +3805,22 @@ system consumes it.
     if (ev.key === 'Escape') closeOverlay();
   });
 
+  // Touch: shield the canvas-mode embed (see .cv-touch-shield CSS). The grid
+  // embeds don't pan and are left bare; only mode=canvas turns swipes into
+  // tool gestures. Tap anywhere on the panel = open the overlay.
+  if (window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches) {
+    document.querySelectorAll('.embed-live').forEach(function (el) {
+      if (!/mode=canvas/.test(el.getAttribute('data-src') || '')) return;
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'cv-touch-shield';
+      b.setAttribute('aria-label', 'Open the canvas fullscreen to explore');
+      b.innerHTML = '<span>⛶ tap to explore the canvas</span>';
+      b.addEventListener('click', function () { openOverlay(el); });
+      el.appendChild(b);
+    });
+  }
+
   var slot = document.getElementById('canvas-video-slot');
   if (slot && slot.dataset.yt) {
     var facade = slot.querySelector('.yt-facade');
@@ -3867,10 +3908,10 @@ system consumes it.
   } catch (e) { /* un-wrapped is the original page */ }
 </script>
 
-<script src="./scripts/shared.js?v=2.02"></script>
-<script src="./scripts/search-overlay.js?v=2.02" defer></script>
-<script src="./scripts/jh-shapes.js?v=2.02"></script>
-<script src="./scripts/jh-chrome.js?v=2.02" defer></script>
+<script src="./scripts/shared.js?v=2.03"></script>
+<script src="./scripts/search-overlay.js?v=2.03" defer></script>
+<script src="./scripts/jh-shapes.js?v=2.03"></script>
+<script src="./scripts/jh-chrome.js?v=2.03" defer></script>
 
 </body>
 </html>

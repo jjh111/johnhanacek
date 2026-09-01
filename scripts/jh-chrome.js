@@ -14,7 +14,7 @@
   const SITE = {
     year: 2026,
     org: 'JHDesign LLC',
-    version: '2.02', // ← THE site version. Footer badge, ?v= cache-bust, and README all read this (run scripts/sync-version.mjs after bumping).
+    version: '2.03', // ← THE site version. Footer badge, ?v= cache-bust, and README all read this (run scripts/sync-version.mjs after bumping).
     versionNote: 'Made with Claude Code &amp; OpenCode',
     github: 'https://github.com/jjh111/johnhanacek',
     githubLabel: 'github.com/jjh111/johnhanacek',

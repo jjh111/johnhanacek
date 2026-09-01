@@ -30,8 +30,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Raleway:wght@200;300;400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./styles/jh-chrome.css?v=2.02">
-<link rel="stylesheet" href="./scripts/search-overlay.css?v=2.02">
+<link rel="stylesheet" href="./styles/jh-chrome.css?v=2.03">
+<link rel="stylesheet" href="./scripts/search-overlay.css?v=2.03">
 <style>
 /* The tool's own token names, bound to the SITE tokens from jh-chrome.css
    (loaded above) rather than to copied hex. Keeping the names means the
@@ -361,7 +361,7 @@ header, main#stage { transition: top 0.25s ease; }
   <div class="nav-body"><canvas id="nav-canvas" width="200" height="150"></canvas></div>
 </div>
 
-<script src="./scripts/playground-items.js?v=2.02"></script>
+<script src="./scripts/playground-items.js?v=2.03"></script>
 <script>
 (function () {
   'use strict';
@@ -1071,17 +1071,43 @@ header, main#stage { transition: top 0.25s ease; }
     else if (ev.key === '3') setMode('focus');
   });
 
+  // Pan (drag) + zoom (wheel, dblclick, or two-finger PINCH). Touch pointers
+  // are tracked as a set so a second finger turns a pan into a pinch —
+  // without it touch had no zoom at all: the wheel is a trackpad gesture and
+  // dblclick needs a mouse. Ported from the openprose review-canvas engine.
   var panning = false, px = 0, py = 0;
+  var pts = {}, ptIds = [];
+  var pinchD = 0;
   window.__panDist = 0;
+  function pinchInfo() {
+    var a = pts[ptIds[0]], b = pts[ptIds[1]];
+    return { d: Math.hypot(a.x - b.x, a.y - b.y), x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  }
   stage.addEventListener('pointerdown', function (ev) {
     if (viewMode !== 'canvas') return;
     if (ev.target.closest('.bar')) return; // links/buttons in card bars stay clickable
-    panning = true; px = ev.clientX; py = ev.clientY;
+    if (ev.pointerType === 'touch') {
+      pts[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
+      ptIds.push(ev.pointerId);
+      if (ptIds.length === 2) { panning = false; pinchD = pinchInfo().d; }
+    }
+    if (ptIds.length < 2) { panning = true; px = ev.clientX; py = ev.clientY; }
     window.__panDist = 0;
     stage.classList.add('dragging');
     stage.setPointerCapture(ev.pointerId);
   });
   stage.addEventListener('pointermove', function (ev) {
+    if (pts[ev.pointerId]) { pts[ev.pointerId].x = ev.clientX; pts[ev.pointerId].y = ev.clientY; }
+    if (ptIds.length >= 2) {
+      var p = pinchInfo();
+      if (pinchD > 0 && p.d > 0) {
+        var r = stage.getBoundingClientRect();
+        zoomTo(view.s * (p.d / pinchD), p.x - r.left, p.y - r.top);
+        window.__panDist += Math.abs(p.d - pinchD); // a pinch is not a tap either
+      }
+      pinchD = p.d;
+      return;
+    }
     if (!panning) return;
     var dx = ev.clientX - px, dy = ev.clientY - py;
     px = ev.clientX; py = ev.clientY;
@@ -1089,11 +1115,24 @@ header, main#stage { transition: top 0.25s ease; }
     view.x += dx; view.y += dy;
     afterViewChange();
   });
-  stage.addEventListener('pointerup', function () {
-    panning = false;
-    stage.classList.remove('dragging');
-    setTimeout(function () { window.__panDist = 0; }, 0);
-  });
+  // pointercancel too — without the cleanup a browser-claimed gesture left
+  // `panning` latched true.
+  function releasePointer(ev) {
+    if (pts[ev.pointerId]) {
+      delete pts[ev.pointerId];
+      ptIds.splice(ptIds.indexOf(ev.pointerId), 1);
+    }
+    pinchD = ptIds.length >= 2 ? pinchInfo().d : 0; // re-base on the surviving pair
+    if (ptIds.length === 1) {
+      panning = true; px = pts[ptIds[0]].x; py = pts[ptIds[0]].y;
+    } else if (!ptIds.length) {
+      panning = false;
+      stage.classList.remove('dragging');
+      setTimeout(function () { window.__panDist = 0; }, 0);
+    }
+  }
+  stage.addEventListener('pointerup', releasePointer);
+  stage.addEventListener('pointercancel', releasePointer);
   var DBL_STEP = 1.6;
   stage.addEventListener('dblclick', function (ev) {
     if (viewMode !== 'canvas') return;
@@ -1282,9 +1321,9 @@ header, main#stage { transition: top 0.25s ease; }
      load first and NOT be deferred. Without it jh-chrome throws before it
      defines anything and the page loses nav, footer and theme toggle
      together — which is exactly what happened here. -->
-<script src="./scripts/jh-shapes.js?v=2.02"></script>
-<script src="./scripts/jh-chrome.js?v=2.02" defer></script>
-<script src="./scripts/shared.js?v=2.02" defer></script>
-<script src="./scripts/search-overlay.js?v=2.02" defer></script>
+<script src="./scripts/jh-shapes.js?v=2.03"></script>
+<script src="./scripts/jh-chrome.js?v=2.03" defer></script>
+<script src="./scripts/shared.js?v=2.03" defer></script>
+<script src="./scripts/search-overlay.js?v=2.03" defer></script>
 </body>
 </html>

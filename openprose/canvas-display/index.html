@@ -115,6 +115,12 @@ body.mode-canvas #stage.dragging { cursor: grabbing; }
    gives vertical drags back to the page; horizontal still pans the canvas,
    and taps still open cards. */
 body.embedded.mode-canvas #stage { touch-action: pan-y; }
+/* In the host's viewport overlay there is no article to scroll past — every
+   gesture belongs to the canvas again. (Inline on touch the host also lays
+   a shield over the frame: iOS does not reliably chain a swipe out of an
+   iframe whatever touch-action says, so the scroll-safe surface must be a
+   host-document element. The pan-y above stays for engines where it works.) */
+body.embedded.host-fs.mode-canvas #stage { touch-action: none; }
 body.mode-canvas #plane {
   display: block; max-width: none; padding: 0; margin: 0;
   transform-origin: 0 0; will-change: transform;
@@ -504,7 +510,14 @@ body.no-descs .card .desc, body.no-descs #focus .fdesc { display: none; }
     // reflow reposts the true height above.
     window.addEventListener('message', function (ev) {
       var d = ev.data;
-      if (d && d.cv === 'fs-state') { hostFs = !!d.on; if (!hostFs) focusOwnsFs = false; return; }
+      if (d && d.cv === 'fs-state') {
+        hostFs = !!d.on;
+        if (!hostFs) focusOwnsFs = false;
+        // The stage's touch-action reads this: fullscreen owns every finger,
+        // inline yields vertical swipes to the article.
+        document.body.classList.toggle('host-fs', hostFs);
+        return;
+      }
       if (!d || d.cv !== 'ceiling' || !(d.px > 0)) return;
       if (Math.abs(d.px - hostCeiling) < 2) return;
       hostCeiling = d.px;
@@ -952,18 +965,43 @@ body.no-descs .card .desc, body.no-descs #focus .fdesc { display: none; }
     else if (ev.key === '3') setMode('focus');
   });
 
-  // Pan (pointer drag) + zoom (wheel, toward cursor) for canvas mode.
+  // Pan (pointer drag) + zoom (wheel toward cursor, or two-finger PINCH) for
+  // canvas mode. Touch pointers are tracked as a set so a second finger turns
+  // a pan into a pinch — without it touch had no zoom at all: the wheel is a
+  // trackpad gesture and dblclick needs a mouse.
   var panning = false, px = 0, py = 0;
+  var pts = {}, ptIds = [];      // live touch pointers, insertion-ordered
+  var pinchD = 0;                // last two-finger distance (0 = not pinching)
   window.__panDist = 0;
+  function pinchInfo() {
+    var a = pts[ptIds[0]], b = pts[ptIds[1]];
+    return { d: Math.hypot(a.x - b.x, a.y - b.y), x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  }
   stage.addEventListener('pointerdown', function (ev) {
     if (viewMode !== 'canvas') return;
     if (ev.target.closest('.bar')) return; // links/buttons in card bars stay clickable
-    panning = true; px = ev.clientX; py = ev.clientY;
+    if (ev.pointerType === 'touch') {
+      pts[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
+      ptIds.push(ev.pointerId);
+      if (ptIds.length === 2) { panning = false; pinchD = pinchInfo().d; }
+    }
+    if (ptIds.length < 2) { panning = true; px = ev.clientX; py = ev.clientY; }
     window.__panDist = 0;
     stage.classList.add('dragging');
     stage.setPointerCapture(ev.pointerId);
   });
   stage.addEventListener('pointermove', function (ev) {
+    if (pts[ev.pointerId]) { pts[ev.pointerId].x = ev.clientX; pts[ev.pointerId].y = ev.clientY; }
+    if (ptIds.length >= 2) {
+      var p = pinchInfo();
+      if (pinchD > 0 && p.d > 0) {
+        var r = stage.getBoundingClientRect();
+        zoomTo(view.s * (p.d / pinchD), p.x - r.left, p.y - r.top);
+        window.__panDist += Math.abs(p.d - pinchD); // a pinch is not a tap either
+      }
+      pinchD = p.d;
+      return;
+    }
     if (!panning) return;
     var dx = ev.clientX - px, dy = ev.clientY - py;
     px = ev.clientX; py = ev.clientY;
@@ -971,11 +1009,27 @@ body.no-descs .card .desc, body.no-descs #focus .fdesc { display: none; }
     view.x += dx; view.y += dy;
     afterViewChange();
   });
-  stage.addEventListener('pointerup', function () {
-    panning = false;
-    stage.classList.remove('dragging');
-    setTimeout(function () { window.__panDist = 0; }, 0);
-  });
+  // pointercancel too: inline-embedded, touch-action pan-y lets the browser
+  // claim a vertical swipe mid-gesture — without the cleanup, `panning`
+  // stayed latched true after the cancel.
+  function releasePointer(ev) {
+    if (pts[ev.pointerId]) {
+      delete pts[ev.pointerId];
+      ptIds.splice(ptIds.indexOf(ev.pointerId), 1);
+    }
+    pinchD = ptIds.length >= 2 ? pinchInfo().d : 0; // re-base on the surviving pair
+    if (ptIds.length === 1) {
+      // Pinch down to one finger: that finger continues as a pan, re-based
+      // so the canvas doesn't jump by the distance to the lifted finger.
+      panning = true; px = pts[ptIds[0]].x; py = pts[ptIds[0]].y;
+    } else if (!ptIds.length) {
+      panning = false;
+      stage.classList.remove('dragging');
+      setTimeout(function () { window.__panDist = 0; }, 0);
+    }
+  }
+  stage.addEventListener('pointerup', releasePointer);
+  stage.addEventListener('pointercancel', releasePointer);
   // Double-click zooms toward the cursor; with a modifier, away from it. The
   // wheel is no longer the zoom when embedded (see below) and a single click
   // cannot be one either — the pan capture eats it — so the gesture that is

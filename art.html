@@ -25,9 +25,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@100;200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="./styles/jh-chrome.css?v=2.02">
-    <link rel="stylesheet" href="./styles/shared.css?v=2.02">
-    <link rel="stylesheet" href="./scripts/search-overlay.css?v=2.02">
+    <link rel="stylesheet" href="./styles/jh-chrome.css?v=2.03">
+    <link rel="stylesheet" href="./styles/shared.css?v=2.03">
+    <link rel="stylesheet" href="./scripts/search-overlay.css?v=2.03">
 
     <link rel="alternate" type="application/json" href="./john-hanacek.json" title="Structured data">
     <script type="application/ld+json">
@@ -230,7 +230,7 @@
 
     <header class="hero" id="top">
         <nav class="shape-nav" aria-label="Page navigation" data-jh-hero-nav="search,home,design,art" data-current="art"></nav>
-        <script src="./scripts/jh-shapes.js?v=2.02"></script>
+        <script src="./scripts/jh-shapes.js?v=2.03"></script>
 
         <canvas id="heroCanvas"></canvas>
 
@@ -524,7 +524,7 @@ Earth Star is live.</code>
         <jh-footer></jh-footer>
     </footer>
 
-    <script src="./scripts/shared.js?v=2.02"></script>
+    <script src="./scripts/shared.js?v=2.03"></script>
 
     <script>
 
@@ -906,18 +906,36 @@ Earth Star is live.</code>
             spawnRipple(e.clientX - rect.left, e.clientY - rect.top);
         }
 
-        function handleTouch(e) {
-            e.preventDefault();
+        // Touch: the ripple spawns on a completed TAP, not on touchstart.
+        // Cancelling touchstart made every swipe that began on exposed cosmos
+        // scroll-dead — and the canvas is fixed behind the whole page, so
+        // that was most of the first screen. A tap is judged at touchend
+        // (small travel, short hold); a swipe scrolls natively and spawns
+        // nothing. preventDefault on the tap's touchend suppresses the
+        // compatibility click that would double-spawn through handleClick.
+        let touchDown = null;
+        function handleTouchStart(e) {
             if (e.touches.length > 0) {
-                const rect = canvas.getBoundingClientRect();
-                const touch = e.touches[0];
-                spawnRipple(touch.clientX - rect.left, touch.clientY - rect.top);
+                touchDown = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() };
             }
+        }
+        function handleTouchEnd(e) {
+            if (!touchDown || e.changedTouches.length === 0) return;
+            const t = e.changedTouches[0];
+            const moved = Math.hypot(t.clientX - touchDown.x, t.clientY - touchDown.y);
+            const isTap = moved < 12 && Date.now() - touchDown.t < 600;
+            touchDown = null;
+            if (!isTap) return;
+            if (e.cancelable) e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            spawnRipple(t.clientX - rect.left, t.clientY - rect.top);
         }
 
         window.addEventListener('resize', resizeCanvas);
         canvas.addEventListener('click', handleClick);
-        canvas.addEventListener('touchstart', handleTouch, { passive: false });
+        canvas.addEventListener('touchstart', handleTouchStart, { passive: true });
+        canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+        canvas.addEventListener('touchcancel', function () { touchDown = null; });
 
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
@@ -1011,7 +1029,7 @@ Earth Star is live.</code>
             jhanaSlideshow.init();
         }
     </script>
-<script src="./scripts/search-overlay.js?v=2.02" defer></script>
-    <script src="./scripts/jh-chrome.js?v=2.02" defer></script>
+<script src="./scripts/search-overlay.js?v=2.03" defer></script>
+    <script src="./scripts/jh-chrome.js?v=2.03" defer></script>
 </body>
 </html>
