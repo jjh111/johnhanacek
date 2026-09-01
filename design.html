@@ -1115,7 +1115,15 @@
         let ripples = [];           // Tap ripple effects
         let particles = [];         // Recognition particle bursts
         let ambientParticles = [];  // Floating ambient particles
-        
+
+        // Read-only test handle (Agent Reference/maze-tests) — the state above is
+        // closure-local by design, so suites reach it only through these getters.
+        window.designDebug = {
+            get shapes() { return recognizedShapes; },
+            get labels() { return whisperLabels; },
+            pointInPoly: (x, y, poly) => pointInPoly(x, y, poly)
+        };
+
         const BLUEPRINT = {
             dark: {
                 bg: '#020a12',

@@ -15,7 +15,7 @@
 import { chromium } from 'playwright-core';
 
 const CH = process.env.CHROMIUM_PATH;
-const URL = 'http://127.0.0.1:1337/design.html';
+const URL = (process.env.BASE_URL || 'http://127.0.0.1:1337') + '/design.html';
 const b = await chromium.launch({ executablePath: CH });
 const page = await b.newPage({ viewport: { width: 1280, height: 900 } });
 const errs = [];
@@ -55,7 +55,7 @@ const HELPERS = () => {
     window.__hstroke(r, 22);
   };
   window.__walls = () => designFish.state.coral.filter(k => k.isExternal).length;
-  window.__shapes = () => recognizedShapes.length;
+  window.__shapes = () => window.designDebug.shapes.length;
   window.__clear = () => { document.getElementById('clearCanvas').click(); };
   // Scratch-out: N passes back and forth ACROSS the pen, rounded reversals.
   // Passes overshoot the left/right edges the way a hand does when scrubbing
