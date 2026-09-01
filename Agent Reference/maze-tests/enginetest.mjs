@@ -66,7 +66,7 @@ const misc = await page.evaluate(() => {
 });
 
 await page.waitForTimeout(800);
-const shot = '/tmp/claude-0/-home-user-johnhanacek/aa3f3153-416b-5024-a090-d2507c59e8ef/scratchpad/hero-after.png';
+const shot = (process.env.SHOT_DIR || '/tmp') + '/hero-after.png';
 await page.screenshot({ path: shot, clip: { x: 0, y: 0, width: 1280, height: 800 } });
 console.log(JSON.stringify({ boot, spawn, food, qr, misc, errs }));
 await b.close();
