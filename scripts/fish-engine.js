@@ -6455,28 +6455,17 @@
             return { x: e.clientX - rect.left, y: e.clientY - rect.top };
         }
         
-        // Touch gesture arbitration. The canvas is fixed behind the WHOLE
-        // page, so when every touchstart was cancelled, 71% of a phone's
-        // first screen (and every water gap between panels) was scroll-dead.
-        // touch-action: pan-y alone cannot fix it: the browser only takes
-        // the pan if the first cancelable touchmoves go UNCANCELLED, and the
-        // draw handler was cancelling them all. So the first ~12px of a
-        // touch stay neutral — no preventDefault, points collected — then
-        // the gesture commits: vertical-leaning becomes a page scroll (the
-        // pending stroke is discarded), anything else becomes drawing and
-        // is claimed with preventDefault from that move on. A tap never
-        // moves, so feeding is untouched.
-        const TOUCH_SLOP = 12;
-        let touchGesture = null; // null | 'pending' | 'draw' | 'scroll'
-        let touchStart = null;
-
+        // Touch belongs to the DRAWING, deliberately. index (and design's
+        // blueprint, which has its own copy of this contract) are demos whose
+        // whole point is that a finger draws — a square must not become a
+        // page scroll halfway down its first side. A scroll-vs-draw
+        // arbitration was tried here (2026-09-01) and reverted the same day:
+        // it broke vertical-leaning strokes, and the pages already carry the
+        // designed escape — the "view content" pill and the guide's
+        // tap-or-swipe CTA. Every touchstart is cancelled; the page scrolls
+        // from the chrome, the ovals, and the content panels above the water.
         function startDraw(e) {
-            if (e.touches) {
-                touchGesture = 'pending';
-                touchStart = getPos(e);
-            } else {
-                e.preventDefault(); // mouse: stop text-selection drags
-            }
+            e.preventDefault();
             isDrawing = true;
             emitDrawing(true);
             startAnimation(); // Ensure animation loop is running
@@ -6496,26 +6485,6 @@
                 cursorPos = getPos(e);
                 return;
             }
-            if (e.touches) {
-                if (touchGesture === 'scroll') return; // the page owns this one
-                if (touchGesture === 'pending') {
-                    const p = getPos(e);
-                    const dx = Math.abs(p.x - touchStart.x), dy = Math.abs(p.y - touchStart.y);
-                    if (dx + dy < TOUCH_SLOP) {
-                        currentStroke.points.push(p);
-                        cursorPos = p;
-                        return; // undecided — leave the event uncancelled
-                    }
-                    if (dy > dx) {
-                        touchGesture = 'scroll';
-                        cancelDraw(); // discard the pending stroke, scroll proceeds
-                        return;
-                    }
-                    touchGesture = 'draw';
-                }
-            }
-            // Once the browser owns a pan the moves arrive non-cancelable;
-            // trying anyway logs a console warning per move.
             if (e.cancelable) e.preventDefault();
             // Use coalesced events to capture all intermediate positions during fast strokes.
             // Without this, fast mouse/touch movement only samples at screen refresh rate (60fps)
@@ -6533,7 +6502,6 @@
             // mouse events — mousedown/mouseup would re-run this stroke as a
             // second one-point tap and drop a duplicate food.
             if (e && e.type === 'touchend' && e.cancelable) e.preventDefault();
-            touchGesture = null;
             if (!currentStroke) {
                 isDrawing = false;
                 return;
@@ -6564,7 +6532,6 @@
             }
             currentStroke = null;
             isDrawing = false;
-            if (touchGesture !== 'scroll') touchGesture = null;
             setTimeout(() => {
                 if (!isDrawing) emitDrawing(false);
             }, 500);
@@ -6846,16 +6813,13 @@
         canvas.addEventListener('touchstart', startDraw, { passive: false });
         canvas.addEventListener('touchmove', draw, { passive: false });
         canvas.addEventListener('touchend', endDraw, { passive: false });
-        // touchcancel = the browser took the gesture as a page scroll
-        // (touch-action: pan-y). The stroke it started must vanish
+        // touchcancel = the system interrupted the gesture (incoming call,
+        // notification shade, browser UI). The stroke it started must vanish
         // UNPROCESSED — endDraw here would classify its first point as a
-        // tap and every scroll swipe would drop food.
+        // tap and drop stray food.
         canvas.addEventListener('touchcancel', cancelDraw);
-        // Vertical swipes belong to the page, everything else to the water.
-        // Set here, not in CSS: it is a property of this input scheme, and
-        // every host of the interactive engine needs it or the fixed
-        // full-page canvas makes most of a phone's screen scroll-dead.
-        canvas.style.touchAction = 'pan-y';
+        // The drawing owns every finger on the water (see startDraw).
+        canvas.style.touchAction = 'none';
         }
         // Click to scare fish - check if click hit a fish
         function scareFishAtPoint(x, y) {
