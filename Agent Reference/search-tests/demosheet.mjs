@@ -23,7 +23,7 @@ async function shoot(name, { width = 1440, height = 900, theme = 'dark', page: p
     if (local) {
       await page.click('#so-engineInfoBtn'); await page.waitForTimeout(300);
       await page.click('#so-detectLocalBtn'); await page.waitForTimeout(3500);
-      await page.evaluate(() => { const o = [...document.querySelectorAll('#so-localPicker button, #so-localPicker [data-model], #so-localPicker label')].find(e => /0\.8b-mlx/i.test(e.textContent)); if (o) o.click(); });
+      await page.evaluate(() => { const sel = document.querySelector('#so-localPicker select.lp-select'); const o = sel && [...sel.options].find(e => /0\.8b-mlx/i.test(e.textContent)); if (o) { sel.value = o.value; sel.dispatchEvent(new Event('change', { bubbles: true })); } });
       await page.waitForTimeout(600);
       await page.click('#so-engineInfoBtn'); await page.waitForTimeout(300);
     }

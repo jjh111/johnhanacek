@@ -1033,12 +1033,19 @@
                     if (webgpuBadge) { webgpuBadge.textContent = 'No adapter'; }
                 }
             } else {
-                if (webgpuBadge) { webgpuBadge.textContent = isIOS ? 'iOS — disabled' : (isSafari ? 'Safari — unsupported' : 'No WebGPU'); }
+                if (webgpuBadge) {
+                    webgpuBadge.textContent = isIOS ? 'iOS — disabled' : (isSafari ? 'Safari — unsupported' : 'No WebGPU');
+                    // John (2026-08-31): say unsupported, and point at Chrome
+                    if (isSafari) webgpuBadge.title = 'Safari cannot run the in-browser model (its WebGPU runtime never initializes) — try this site in Chrome or Edge';
+                }
             }
 
             const btn = el('enableBtn');
             if (!hasWebGPU) {
-                if (btn) { btn.textContent = isSafari && !isIOS ? 'Not in Safari' : 'No WebGPU'; btn.disabled = true; }
+                if (btn) {
+                    btn.textContent = isSafari && !isIOS ? 'Not in Safari' : 'No WebGPU'; btn.disabled = true;
+                    if (isSafari) btn.title = 'Try in Chrome — the in-browser model needs a WebGPU runtime Safari does not provide yet';
+                }
             } else {
                 modelIsCached = await checkModelCache();
                 const cacheHint = el('cacheHint');
@@ -1226,25 +1233,37 @@
             if (!localServers.length) { box.innerHTML = ''; box.classList.remove('has-choice'); return; }
             const total = localServers.reduce((n, sv) => n + sv.models.length, 0);
             const skipped = localServers.reduce((n, sv) => n + sv.skipped.length, 0);
+            // ONE native <select>, servers as optgroups (John, 2026-08-31: "a
+            // better way to select… both detectable and manual, with a default
+            // chosen by the site — whatever hits — and then they can edit").
+            // Detection picks the first model that answered; the select shows
+            // it and swaps it in one gesture. A stack of buttons per model read
+            // as a list to scan, not a control to change.
             let html = '';
-            for (const sv of localServers) {
-                html += `<div class="lp-server"><span class="popover-section-badge badge-${sv.source.toLowerCase()}">${sv.source}</span>`
-                     + `<span class="lp-host">${sv.host}</span></div>`;
-                for (const m of sv.models) {
-                    const on = localModel && localModel.host === sv.host && localModel.name === m;
-                    html += `<button class="lp-model${on ? ' on' : ''}" data-lp-host="${sv.host}" data-lp-model="${encodeURIComponent(m)}">`
-                         + `<span class="lp-dot"></span><span class="lp-name">${m.split('/').pop()}</span></button>`;
+            if (total) {
+                html += `<label class="lp-select-wrap"><span class="lp-select-label">model</span><select class="lp-select" aria-label="Local model">`;
+                for (const sv of localServers) {
+                    if (!sv.models.length) continue;
+                    html += `<optgroup label="${sv.source} · ${sv.host}">`;
+                    for (const m of sv.models) {
+                        const on = localModel && localModel.host === sv.host && localModel.name === m;
+                        html += `<option value="${sv.host}|${encodeURIComponent(m)}"${on ? ' selected' : ''}>${m.split('/').pop()}</option>`;
+                    }
+                    html += `</optgroup>`;
                 }
+                html += `</select></label>`;
+            }
+            for (const sv of localServers) {
                 // An embedding-only server used to show NOTHING and explain
                 // nothing — you were left wondering why your running Ollama was
                 // invisible. Say it instead.
                 if (!sv.models.length && sv.skipped.length) {
-                    html += `<div class="lp-empty">only embedding models here — they cannot chat</div>`;
+                    html += `<div class="lp-empty">${sv.source} at ${sv.host}: only embedding models — they cannot chat</div>`;
                 }
             }
             if (skipped && total) html += `<div class="lp-empty">${skipped} embedding model${skipped > 1 ? 's' : ''} hidden</div>`;
             box.innerHTML = html;
-            box.classList.toggle('has-choice', total > 1 || localServers.length > 1);
+            box.classList.toggle('has-choice', total > 0);
         }
 
         // ONE place that reflects `localModel` into the section. Detection ran in
@@ -3038,13 +3057,16 @@
             // Popover section clicks (switch engine)
             el('localModelSection').addEventListener('click', (e) => {
                 if (e.target.id?.endsWith('detectLocalBtn') || e.target.closest('[id$="detectLocalBtn"]')) return;
-                const row = e.target.closest('.lp-model');
-                if (row) {
-                    e.stopPropagation();
-                    pickLocalModel(row.dataset.lpHost, decodeURIComponent(row.dataset.lpModel));
-                    return;
-                }
+                // the select handles itself on change — a click inside it must
+                // not also toggle the section's engine
+                if (e.target.closest('.lp-select-wrap')) { e.stopPropagation(); return; }
                 if (localModel) setActiveEngine('local');
+            });
+            el('localModelSection').addEventListener('change', (e) => {
+                const sel = e.target.closest('.lp-select');
+                if (!sel) return;
+                const [host, enc] = sel.value.split('|');
+                pickLocalModel(host, decodeURIComponent(enc));
             });
             el('browserModelSection').addEventListener('click', (e) => {
                 if (e.target.id?.endsWith('enableBtn') || e.target.closest('[id$="enableBtn"]')) return;

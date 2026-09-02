@@ -79,10 +79,12 @@ if (mode === 'local') {
   console.log('after Detect:', JSON.stringify(picker));
   // pick the small qwen if a picker exists
   const picked = await page.evaluate(() => {
-    const opts = [...document.querySelectorAll('#so-localPicker button, #so-localPicker [data-model], #so-localPicker option, #so-localPicker label')];
-    const want = opts.find(o => /0\.8b-mlx/i.test(o.textContent) || /0\.8b/i.test(o.textContent));
-    if (want) { want.click(); return want.textContent.trim(); }
-    return null;
+    const sel = document.querySelector('#so-localPicker select.lp-select');
+    if (!sel) return null;
+    const opt = [...sel.options].find(o => /0\.8b-mlx/i.test(o.textContent));
+    if (!opt) return null;
+    sel.value = opt.value; sel.dispatchEvent(new Event('change', { bubbles: true }));
+    return opt.textContent.trim();
   });
   console.log('picked:', picked);
   await page.waitForTimeout(800);

@@ -170,8 +170,23 @@
         // the panel is only as tall as the command frame (~183px) and clips
         // the dropdown at overflow:hidden: the picker, the LFM section and
         // the custom endpoint were simply never visible. Reserve the room.
+        reserveSettingsRoom();
+        // The section GROWS after opening — Detect adds the model picker, a
+        // download adds its progress bar — so a one-time measurement clipped
+        // "Custom endpoint" off the bottom again. Follow the content.
+        if (!settingsObserver && typeof ResizeObserver !== 'undefined') {
+            const inner = settings.querySelector('.engine-settings-inner');
+            if (inner) {
+                settingsObserver = new ResizeObserver(() => { if (popoverOpen) reserveSettingsRoom(); });
+                settingsObserver.observe(inner);
+            }
+        }
+    }
+    let settingsObserver = null;
+    function reserveSettingsRoom() {
         const panel = panelEl();
-        const inner = settings.querySelector('.engine-settings-inner');
+        const settings = document.getElementById('so-engineSettings');
+        const inner = settings && settings.querySelector('.engine-settings-inner');
         if (panel && inner) {
             panel.style.minHeight = Math.ceil(settings.offsetTop + inner.offsetHeight + 16) + 'px';
         }

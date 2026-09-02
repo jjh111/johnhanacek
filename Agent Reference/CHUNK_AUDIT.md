@@ -494,3 +494,6 @@ deliberately-unlisted experiments (tidepool, beach-beers) stay out.
   (built solo? with whom? year?) is NOT asserted — add a sentence. The host sends no
   framing headers → added to FRAMEABLE_HOSTS so the piece wakes live; confirm you own
   the property.
+- [x] **26** — John, 2026-08-31: "wish I could assert director but I was in startups so it
+  was implicit — Nanome was the big one." Content now says exactly that: director-level
+  scope in practice, most of all at Nanome, without the title. "Director" stays a tag.
