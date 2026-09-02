@@ -1575,3 +1575,24 @@ body.search-overlay-open .so-residue { display: none; }
     width: 240px;
     height: 160px;
 }
+
+/* ═══ strip + workspace at narrow widths (John, 2026-08-31) ═══ */
+/* The AI toggle is the strip's one control: pinned to the visible right edge
+   so no future overflow (a long model name, a cached stylesheet) can ever
+   clip it — the ladder's tail scrolls under it instead. */
+.tier-strip .tier-ai-on, .tier-strip .tier-ai-off {
+    position: sticky; right: 0;
+    background: rgba(var(--surface-rgb, 2, 10, 18), 0.92);
+    box-shadow: -6px 0 6px rgba(var(--surface-rgb, 2, 10, 18), 0.92);
+}
+/* ⤢ opens a two-pane workspace that only exists at ≥900px (workspaceOn in
+   the core gates on the same media query) — below it the button did nothing */
+@media (max-width: 899px) {
+    .search-overlay #so-workspaceBtn { display: none; }
+}
+/* phone: tighter tiers so more of each label survives before ellipsis */
+@media (max-width: 600px) {
+    .tier { padding: 0.14rem 0.22rem; letter-spacing: 0; }
+    .tier + .tier::before { margin-right: 0.15rem; }
+    .tier-dot { margin-right: 0.2rem; }
+}
