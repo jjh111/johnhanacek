@@ -82,6 +82,11 @@ await page.fill('#so-searchInput', 'who is john');
 await page.waitForTimeout(600);
 const l2text = await page.locator('.pc-l2 .pc-tldr').first().textContent().catch(() => '');
 check('L2 renders the tldr line', l2text.length > 0 && l2text.length < 200, `${l2text.length} chars`);
+// 'design' always seats one-liners under its lead; 'who is john' stopped
+// carrying an L1 once chunk 28 gained the headshot (its dossier costs more,
+// the rung beneath sheds — the ladder working).
+await page.fill('#so-searchInput', 'design');
+await page.waitForTimeout(600);
 check('L1 shows micro line', (await page.locator('.pc-micro').first().textContent().catch(() => '')).length > 5);
 
 check('no console errors', errors.length === 0, errors.slice(0, 3).join(' | '));

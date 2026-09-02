@@ -628,18 +628,32 @@
             // Stopwords are stripped for the COMMAND search only: with a
             // ~15-doc corpus and prefix matching on, a bare "a" prefix-matches
             // "art"/"about" across three boosted fields and fabricates hits.
+            const rawWords = (rawQuery || '').trim().split(/\s+/).filter(Boolean).length;
             const q = stripPronouns((rawQuery || '').trim())
                 .replace(/\b(a|an|the|to|with|for|of|in|on|at|me|my|it|is|do|can|could|would|you|please|i)\b/gi, ' ')
                 // generic command verbs appear in EVERY nav/section entry, so
                 // inside this corpus they carry no signal — the object does
                 .replace(/\b(go|open|show|jump|take|navigate)\b/gi, ' ')
+                // QUESTION words are noise here too: "Toggle logic view" hints
+                // "what are the fish thinking", so a bare "what" grazed it and
+                // the fish action rode along on "what has he shipped", "what
+                // awards has he won", "what does he cook"… — an aquarium
+                // control answering a hiring question. (A hint still matches
+                // on its content words — "fish thinking".)
+                .replace(/\b(what|what's|whats|how|who|where|when|why|which|does|did|has|have|had|he|his|him|she|her|are|was|were|be|been|tell|explain|about|there)\b/gi, (m) =>
+                    // "about" as the query's LAST word is the About page
+                    // ("about", "jump to about"); mid-sentence it is a
+                    // preposition ("tell me about the fish") and noise
+                    (/^about$/i.test(m) && /\babout\s*$/i.test(rawQuery || '')) ? m : ' ')
                 // single-char orphans: "who's" tokenizes to who + s, and a
                 // bare "s" prefix-matches Startle/Scare/Services/Section —
                 // fabricating action cards for informational queries
                 .replace(/\b\w\b/g, ' ')
                 .replace(/\s+/g, ' ').trim();
             if (!q) return [];
-            const bScore = new Map(cmdIndex.search(q).map(r => [r.id, r.score]));
+            const qTokens = q.split(' ').length;
+            const bScore = new Map(), bTerms = new Map();
+            for (const r of cmdIndex.search(q)) { bScore.set(r.id, r.score); bTerms.set(r.id, (r.terms || []).length); }
             const out = [];
             for (const c of matchableCommands()) {
                 // Keyword score scaled to roughly cosine range but NOT capped:
@@ -647,7 +661,11 @@
                 // the "ranking" degenerated to registration order.
                 let s = 0;
                 const b = bScore.get(c.id);
-                if (b) s = b / 8;
+                // A LONG query (3+ content words) must meet a command on at
+                // least two terms — one shared word inside a sentence is a
+                // graze, not an instruction. Short imperatives ("feed",
+                // "scare fish") still match on one.
+                if (b && !(qTokens >= 3 && (bTerms.get(c.id) || 0) < 2)) s = b / 8;
                 if (qv) {
                     const v = cmdVecs.get(c.id);
                     if (v) { const cs = cosSim(qv, v); if (cs >= 0.45 && cs > s) s = cs; }
@@ -1702,7 +1720,10 @@
                 }
                 return departureCardHtml(piece.src, piece.title, { big, poster: piece.poster });
             }
-            const poster = r && r.image ? `<img class="pc-piece-poster" src="${r.image}" alt="" decoding="async">` : '';
+            // the chunk's image, else the piece's own captured poster — a
+            // sleeping demo card with neither was a blank box wearing a label
+            const posterSrc = (r && r.image) || piece.poster;
+            const poster = posterSrc ? `<img class="pc-piece-poster" src="${resolveHref(posterSrc)}" alt="" decoding="async">` : '';
             return `<span class="pc-piece pc-piece--demo${big ? ' pc-obstacle' : ''}" data-piece-src="${piece.src}" role="button" tabindex="0" aria-label="Wake live demo">`
                 + `${poster}<span class="pc-piece-kind">▶ live</span><span class="pc-piece-title">${piece.title || (r && r.title) || ''}</span></span>`;
         }
@@ -2406,6 +2427,13 @@
                 if (btn && !btn.disabled) { btn.disabled = true; executeScene(lastScenePlan); return; }
             }
             if (lastCmdMatches.length) { executeCommand(lastCmdMatches[0].id); return; }
+            // A QUESTION is answered by the surface, not by leaving it. "why
+            // should I hire him" + Enter used to navigate to about.html — the
+            // most natural gesture in a demo threw the visitor off the answer
+            // (and off the streaming elaboration, when an engine was active).
+            // Destination-shaped queries ("nanome", "go to design") still
+            // commit; question-shaped ones hold the surface.
+            if (/\?\s*$|^(what|what's|whats|why|how|who|who's|whos|where|when|which|does|do|did|is|are|can|could|should|would|will|has|have|tell me|explain|describe)\b/i.test(currentQueryRaw || '')) return;
             if (lastSearchResults.length && lastSearchResults[0].url) {
                 const r = lastSearchResults[0];
                 const ext = /^https?:/i.test(r.url);
@@ -2646,6 +2674,12 @@
                     continue;
                 }
                 const c = commandByToolName(tc.name);
+                // NOTE: a model suggestion can coincide with a registry card
+                // already on the surface ("Scare the fish" twice). Tried
+                // suppressing the chip (2026-08-31): a tool-only reply then
+                // rendered an EMPTY elaboration box, which read worse than
+                // the agreement. The chip is the model's own act, confirm-
+                // first; the card is the grammar's. Both stay.
                 if (c && !seen.has(c.id) && seen.add(c.id)) chips.push(c);
             }
             if (!chips.length && !sceneHtml) return;

@@ -453,3 +453,23 @@ deliberately-unlisted experiments (tidepool, beach-beers) stay out.
   alike (verified live). The portrait depicts John; a chunk about what makes John
   unique is the one place it cannot be a wrong claim. The 10e.1 dedupe guard keeps 1
   and 28 from showing it twice in the same render (first occurrence wins).
+
+### §B addendum — 2026-08-31, Career Timeline (chunk 23) corrected on John's word
+- [x] OpenProse was a JHDesign LLC engagement, not a separate employer — folded under
+  JHDesign LLC (2024–now) in content, tldr and facts. Facts re-sorted reverse-
+  chronological by start year (JHDesign → Nanome → BadVR → AvatarMEDIC →
+  Collaborate.org → Independent 2014–24 → Georgetown). Content text changed →
+  vectors rebuilt.
+- [ ] **50 Resume — One-Page PDF** (NEW, 2026-08-31, stopgap until the v3 resource
+  register): 'resume' led the Career Timeline with no PDF anywhere in reach. url =
+  `Assets/JH_Resume_2026_onepage.pdf` (same-origin; the resumes in Assets/ are
+  intentionally public per CLAUDE.md). Content summarises the PDF's own header —
+  John: confirm the title/role wording matches the current PDF.
+- [x] **38** tags += hypercube/tesseract/3d-sync — 'hypercube' was fuzzy-matching
+  HoloTRIAGE instead of the playground chunk that carries the demo.
+- [x] **4 JHDesign LLC** — "stealth AI startups" → Transfyr, named, with the same
+  engagement description design.html's client grid now carries (page-backed).
+  'transfyr' returned NO RESULTS before this.
+- [x] **35 / 37 / 38 piece posters** (§H, captured 2026-08-31 headless at 1056×704 →
+  528w webp): `Assets/posters/fish-demo.webp`, `3d-sync-demo.webp`, `hypercube.webp`.
+  Sleeping demo cards for chunks without an image rendered as blank boxes.

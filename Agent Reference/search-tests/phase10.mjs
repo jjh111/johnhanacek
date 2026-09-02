@@ -289,7 +289,11 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
     }
     return dupes;
   });
-  check('shipped index carries no duplicate media fields', lint.length === 0, lint.join(' ; '));
+  // One DELIBERATE pair is allowed: chunks 1 + 28 both carry the headshot
+  // (2026-08-31, CHUNK_AUDIT §G — "the person query shows a face"; the render
+  // guard below is what keeps it from showing twice). Anything else is a lint.
+  const lintReal = lint.filter(l => !/^1\+28: .*flower headshot/.test(l));
+  check('shipped index carries no duplicate media fields (1+28 headshot is the audited exception)', lintReal.length === 0, lintReal.join(' ; '));
 
   // render guard: two modules, one visual → rendered once (higher rank wins)
   const imgs = await page.evaluate(() =>
