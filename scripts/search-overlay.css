@@ -1123,19 +1123,24 @@ model-viewer.pc-obstacle--float { width: 170px; height: 170px; }
 .tier {
     background: none; border: none; cursor: default;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.66rem; letter-spacing: 0.06em;
+    font-size: 0.66rem; letter-spacing: 0.04em;
     color: var(--tier-color, var(--so-muted, var(--muted, #7a9aaa)));
-    padding: 0.14rem 0.4rem; border-radius: 3px;
-    display: inline-flex; align-items: center; gap: 0.3rem;
+    padding: 0.14rem 0.3rem; border-radius: 3px;
+    display: inline-block; line-height: 1.4;
     transition: color 0.15s, background 0.15s, opacity 0.15s;
     white-space: nowrap;
+    /* Five tiers ran 33px past a 520px panel once LFM's cost label joined the
+       ladder, and overflow:hidden clipped the RIGHTMOST item — the AI toggle,
+       the one interactive control. Tiers are shrinkable and ellipsize under
+       pressure; the toggle never shrinks (below). */
+    min-width: 0; overflow: hidden; text-overflow: ellipsis;
 }
 .tier + .tier::before {
     content: '·';
     color: var(--so-muted, var(--muted, #7a9aaa));
-    opacity: 0.35; margin-right: 0.35rem;
+    opacity: 0.35; margin-right: 0.25rem;
 }
-.tier-dot { font-size: 0.6em; line-height: 1; }
+.tier-dot { font-size: 0.6em; line-height: 1; margin-right: 0.3rem; vertical-align: 0.1em; }
 /* facts: on = quiet confidence, off = waiting its turn, gone = not here */
 .tier-fact-on { color: var(--cyan-dim, #4dc9f6); opacity: 0.85; }
 .tier-fact-off { opacity: 0.5; }
@@ -1154,8 +1159,8 @@ model-viewer.pc-obstacle--float { width: 170px; height: 170px; }
     background: color-mix(in srgb, var(--tier-color, #4dc9f6) 10%, transparent);
     box-shadow: inset 0 -1px 0 var(--tier-color, #4dc9f6);
 }
-.tier-ai-on { cursor: pointer; color: var(--cyan-dim, #4dc9f6); opacity: 0.8; margin-left: auto; }
-.tier-ai-off { cursor: pointer; opacity: 0.45; margin-left: auto; }
+.tier-ai-on { cursor: pointer; color: var(--cyan-dim, #4dc9f6); opacity: 0.8; margin-left: auto; flex-shrink: 0; }
+.tier-ai-off { cursor: pointer; opacity: 0.45; margin-left: auto; flex-shrink: 0; }
 .tier-ai-on:hover, .tier-ai-off:hover { opacity: 1; }
 .tier-ai-on::before, .tier-ai-off::before { content: none !important; }
 

@@ -90,7 +90,7 @@
                                 <span class="popover-section-badge badge-webgpu" id="so-webgpuBadge"></span>
                                 <button id="so-enableBtn">Load</button>
                             </div>
-                            <div class="popover-section-detail" id="so-browserModelDetail">0.8B in-browser · WebGPU</div>
+                            <div class="popover-section-detail" id="so-browserModelDetail">350M in-browser · WebGPU</div>
                             <div class="cache-hint" id="so-cacheHint"></div>
                             <div id="so-progress"></div>
                             <div id="so-progressBar"><div id="so-progressFill"></div></div>
@@ -162,8 +162,19 @@
 
     function openSettings() {
         popoverOpen = true;
-        document.getElementById('so-engineSettings').classList.add('open');
+        const settings = document.getElementById('so-engineSettings');
+        settings.classList.add('open');
         document.getElementById('so-engineInfoBtn').classList.add('open');
+        // The disclosure FLOATS (absolute, so it never squeezes results) —
+        // which means nothing grows the panel to hold it. In the empty state
+        // the panel is only as tall as the command frame (~183px) and clips
+        // the dropdown at overflow:hidden: the picker, the LFM section and
+        // the custom endpoint were simply never visible. Reserve the room.
+        const panel = panelEl();
+        const inner = settings.querySelector('.engine-settings-inner');
+        if (panel && inner) {
+            panel.style.minHeight = Math.ceil(settings.offsetTop + inner.offsetHeight + 16) + 'px';
+        }
     }
     function closeSettings() {
         popoverOpen = false;
@@ -171,6 +182,8 @@
         if (settings) settings.classList.remove('open');
         const infoBtn = document.getElementById('so-engineInfoBtn');
         if (infoBtn) infoBtn.classList.remove('open');
+        const panel = panelEl();
+        if (panel) panel.style.minHeight = '';
     }
 
     // The SHELL is synchronous — pure DOM, no network — so the overlay can
