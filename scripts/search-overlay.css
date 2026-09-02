@@ -391,14 +391,26 @@
 }
 .lp-select {
     flex: 1; min-width: 0; max-width: 300px;
-    font-family: 'JetBrains Mono', monospace; font-size: 0.66rem;
+    font: 400 0.66rem/1.4 'JetBrains Mono', monospace; letter-spacing: 0.02em;
     color: var(--cyan, #7dd8f7);
-    background: rgba(var(--surface-rgb, 2, 10, 18), 0.6);
+    background-color: rgba(var(--surface-rgb, 2, 10, 18), 0.6);
     border: 1px solid rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.28);
-    border-radius: 4px; padding: 0.22rem 0.4rem; cursor: pointer;
+    border-radius: 4px; padding: 0.22rem 1.4rem 0.22rem 0.45rem; cursor: pointer;
+    /* the UA select (system font, light chrome) read as a foreign object in
+       the terminal — draw it ourselves, chevron included */
+    -webkit-appearance: none; appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' fill='none' stroke='%237dd8f7' stroke-width='1.5' stroke-linecap='round'/></svg>");
+    background-repeat: no-repeat; background-position: right 0.45rem center;
     color-scheme: dark;
 }
+.lp-select option, .lp-select optgroup { font-family: 'JetBrains Mono', monospace; background: #051018; color: #b8dced; }
 :root[data-theme="light"] .lp-select { color-scheme: light; }
+:root[data-theme="light"] .lp-select option, :root[data-theme="light"] .lp-select optgroup { background: #f2f6f8; color: #123a4c; }
+/* every engine row is a control — the radio circle is a promise */
+.search-overlay .popover-section, .search-overlay .popover-section-header { cursor: pointer; }
+.search-overlay .popover-section input, .search-overlay .popover-section select { cursor: auto; }
+@keyframes so-pulse-once { 0%, 100% { box-shadow: 0 0 0 0 rgba(var(--cyan-dim-rgb, 77, 201, 246), 0); } 50% { box-shadow: 0 0 0 4px rgba(var(--cyan-dim-rgb, 77, 201, 246), 0.35); } }
+.pulse-once { animation: so-pulse-once 0.9s ease; }
 .lp-select:hover { border-color: var(--engine-lmstudio, #c084fc); }
 .lp-select:focus-visible { outline: 2px solid var(--engine-lmstudio, #c084fc); outline-offset: 1px; }
 .lp-server {

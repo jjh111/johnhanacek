@@ -3060,7 +3060,11 @@
                 // the select handles itself on change — a click inside it must
                 // not also toggle the section's engine
                 if (e.target.closest('.lp-select-wrap')) { e.stopPropagation(); return; }
+                // The whole row is the control (John, 2026-08-31: "the little
+                // circle implies it can be clicked"). Detected → this engine;
+                // not yet → the row does what its button does.
                 if (localModel) setActiveEngine('local');
+                else { const d = el('detectLocalBtn'); if (d && !d.disabled) d.click(); }
             });
             el('localModelSection').addEventListener('change', (e) => {
                 const sel = e.target.closest('.lp-select');
@@ -3070,11 +3074,20 @@
             });
             el('browserModelSection').addEventListener('click', (e) => {
                 if (e.target.id?.endsWith('enableBtn') || e.target.closest('[id$="enableBtn"]')) return;
+                const btn = el('enableBtn');
                 if (modelReady) setActiveEngine('browser');
+                // cached → a row click loads it (seconds); NOT cached → a row
+                // click must not start a 255MB download by surprise — it
+                // hands focus to the Load button instead, which pulses
+                else if (btn && !btn.disabled) {
+                    if (modelIsCached) btn.click();
+                    else { btn.focus(); btn.classList.add('pulse-once'); setTimeout(() => btn.classList.remove('pulse-once'), 900); }
+                }
             });
             el('customSection').addEventListener('click', (e) => {
                 if (e.target.classList.contains('custom-endpoint-input')) return;
                 if (customModel) setActiveEngine('custom');
+                else { const i = el('customEndpoint'); if (i) i.focus(); }
             });
 
             // Custom endpoint
