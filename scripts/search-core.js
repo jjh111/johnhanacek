@@ -70,9 +70,16 @@
         { patterns: [/should\s+\w*\s*(hire|work\s+with|contract|engage)/i, /is\s+he\s+(good|qualified|worth|a\s+good\s+fit)/i, /why\s+\w*\s*(hire|choose|pick)\s+him/i, /what\s+makes\s+him\s+(stand\s+out|different|unique|special)/i, /why\s+should\s+\w+\s+hire/i], expanded: 'unique differentiator skills expertise experience awards shipped products design AI leadership', hint: 'Expertise, awards, and what makes him unique' },
         { patterns: [/what('s|\s+is)\s+his\s+background/i, /tell\s+me\s+about\s+(him|john|this\s+(guy|person))/i, /who\s+is\s+(he|john|this)/i, /what\s+does\s+he\s+do$/i, /^about$/i], expanded: 'about john hanacek innovator designer creator education career work history unique san diego', hint: 'Background and career overview' },
         { patterns: [/what\s+has\s+he\s+(built|made|created|shipped|designed|launched|delivered)/i, /his\s+(projects|portfolio|work)/i, /show\s+me\s+his\s+work/i, /what\s+are\s+his\s+projects/i, /shipped\s+(any|AI|products?)/i, /has\s+he\s+shipped/i], expanded: 'shipped AI products nanome badvr avatarmedic holotriage metamedium coaching built', hint: 'Shipped products and projects' },
+        // v2.1 "voice in the data": the orchestration essay's ideas are chunks
+        // 51–57; questions about how John THINKS route there, not to the bio
+        { patterns: [/what\s+does\s+(john|he)\s+think/i, /how\s+does\s+(john|he)\s+think/i, /his\s+(philosophy|approach|views?|take|thinking|principles?)\s+(on|about|to)/i, /(philosophy|principles?|beliefs?)\s+(on|about|of)\s+(ai|agents?|orchestration|design)/i, /agent\s+orchestration/i, /multi-?agent/i], expanded: 'philosophy how he thinks agents orchestration ecosystem harness stigmergy ratchet fractal attractor polychronic beliefs', hint: 'How John thinks' },
         { patterns: [/what\s+are\s+his\s+(skills|abilities|strengths)/i, /what\s+can\s+he\s+do/i, /his\s+(expertise|capabilities|specialties)/i, /areas\s+of\s+expertise/i], expanded: 'expertise skills AI XR robotics design product LLM agent spatial computing coding engineering', hint: 'Skills and areas of expertise' },
         { patterns: [/can\s+he\s+(code|program|write\s+code|develop|build|engineer)/i, /does\s+he\s+(code|program|write\s+code|develop|build)/i, /is\s+he\s+(technical|a\s+developer|an\s+engineer)/i, /coding|programming|technical\s+skills/i, /just\s+design/i], expanded: 'code coding programming engineer technical javascript html css python unity build ship prototype design engineering', hint: 'Design engineering and coding ability' },
-        { patterns: [/where\s+did\s+he\s+(go\s+to\s+school|study|graduate)/i, /his\s+education/i, /degree|university|college|school/i], expanded: 'education masters thesis Georgetown UCSD research publications', hint: 'Education and research' },
+        // expansion leads with the DEGREE words — "research publications" in
+        // here made chunk 24 (Research) outrank both schools for "where did he
+        // go to school"
+        { patterns: [/where\s+did\s+he\s+(go\s+to\s+school|study|graduate)/i, /his\s+education/i, /degree|university|college|school/i], expanded: 'education degree masters bachelors graduate school Georgetown UCSD university studied', hint: 'Education' },
+        { patterns: [/what\s+(tools|software|stack|programs?|apps?)\s+does\s+he\s+use/i, /his\s+(tools|toolset|tool\s*chain|tech\s+stack|software)/i, /what\s+does\s+he\s+(use|work\s+in|build\s+with)/i], expanded: 'skills tools software stack figma unity blender three.js claude code ollama obsidian coda', hint: 'Tools and stack' },
         { patterns: [/has\s+he\s+won\s+(any|an)\s+(award|prize)/i, /awards?|recognition|achievement|accomplishment/i, /what\s+has\s+he\s+(won|achieved|accomplished)/i, /biggest\s+(accomplishment|achievement)/i], expanded: 'awards innovation aerospace nist microsoft founder institute accomplishment achievement won', hint: 'Awards and recognition' },
         { patterns: [/schedul(e|ing)|book\s+(a\s+)?(call|meeting|session)|availability|set\s+up\s+a\s+(call|meeting|time)/i], expanded: 'services coaching intro call consultation contact email', hint: 'How to book time with John', card: 'schedule' },
         { patterns: [/how\s+(do\s+i|can\s+i|to)\s+(contact|reach|email|message)\s+(him|john)/i, /contact|email|linkedin|twitter|social/i, /send\s+(him|john)\s+a\s+message/i], expanded: 'contact email linkedin bluesky twitter social', hint: 'Contact information', card: 'contact' },
@@ -1661,7 +1668,9 @@
         // 2. Own + unframeable (Substack, SmugMug) → DEPARTURE CARD: local
         //    poster, title, hostname, explicit ↗. Leaving is labeled.
         // 3. Third-party → departure card, no allowlist entries, ever.
-        const FRAMEABLE_HOSTS = new Set(['jhana.zone', 'jjh111.github.io', 'earthstar.space']);
+        // teamreadi.xyz added 2026-08-31: John's product, sends no framing
+        // headers (checked) — CHUNK_AUDIT §I holds the ownership confirm
+        const FRAMEABLE_HOSTS = new Set(['jhana.zone', 'jjh111.github.io', 'earthstar.space', 'teamreadi.xyz']);
         function isFrameable(url) {
             try { return FRAMEABLE_HOSTS.has(new URL(url).hostname); } catch { return false; }
         }

@@ -473,3 +473,24 @@ deliberately-unlisted experiments (tidepool, beach-beers) stay out.
 - [x] **35 / 37 / 38 piece posters** (§H, captured 2026-08-31 headless at 1056×704 →
   528w webp): `Assets/posters/fish-demo.webp`, `3d-sync-demo.webp`, `hypercube.webp`.
   Sleeping demo cards for chunks without an image rendered as blank boxes.
+- [ ] **26 Leadership & Teams** — John (2026-08-31): "I do have director and lead level
+  experience, and have done PM." Added a leadership-levels sentence built ONLY from
+  page-backed titles (CEO / Lead XR Product Designer / UI/UX Design Lead / founding
+  designer) plus PM framing from existing claims (product strategy, pitching, PRD
+  handoffs). **John: which role carried the Director title, and where?** — the word
+  "director" is in the TAGS so the query lands, but is not asserted in the content
+  until you name the role.
+- [x] **37 / 6** tags += mixed reality / MR — 'mixed reality' was leading Beliefs &
+  Philosophy on semantic drift; both chunks' content already says MR/AR.
+
+### §I — "how I think" MVP set + READI (2026-08-31, John-confirm the wording)
+- [ ] **51–57** distilled from onagents.html slides 7 / 8 / 17 / 16 / 12 / 4 / 25 — content
+  is condensed from the slides' own sentences (page-backed by construction), each url
+  anchors its slide. John: read the seven `content`/`tldr` strings for VOICE — they are
+  your ideas in near-verbatim form, but the framing sentences ("John's core stance…")
+  are mine.
+- [ ] **58 READI — Emergency Resource Allocation** — content transcribed from the live
+  product's own header and legend (teamreadi.xyz, captured 2026-08-31). John: your role
+  (built solo? with whom? year?) is NOT asserted — add a sentence. The host sends no
+  framing headers → added to FRAMEABLE_HOSTS so the piece wakes live; confirm you own
+  the property.
