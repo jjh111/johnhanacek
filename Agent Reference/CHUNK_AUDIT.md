@@ -445,3 +445,11 @@ John: "fix up the pieces additively." Three demo pieces return, each with its ca
 **Rule as refined:** a piece may point at something a public content page links or embeds, or
 at a finished playground-resident demo John has explicitly promoted. Unfinished or
 deliberately-unlisted experiments (tidepool, beach-beers) stay out.
+
+### §G addendum — 2026-08-31, the person query shows a face
+- [x] **28** What Makes John Unique → the flower headshot. The media-match pass had left
+  28 text-only, and the headshot chunk (1) ranks into the tail for "who is john" — so
+  the site's most natural question rendered no visual at all, on desktop and phone
+  alike (verified live). The portrait depicts John; a chunk about what makes John
+  unique is the one place it cannot be a wrong claim. The 10e.1 dedupe guard keeps 1
+  and 28 from showing it twice in the same render (first occurrence wins).
