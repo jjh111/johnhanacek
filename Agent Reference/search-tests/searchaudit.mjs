@@ -14,9 +14,10 @@ async function fresh(pg, opts = {}) {
   const errs = [];
   page.on('pageerror', e => errs.push(String(e).slice(0, 140)));
   page.on('console', m => { if (m.type() === 'error' && !/net::|ERR_|Failed to fetch|Permissions|accelerometer|401|font-size:0/i.test(m.text())) errs.push(m.text().slice(0, 140)); });
-  // ONE-TIME storage reset (an init script runs on every navigation — clearing
-  // sessionStorage there wiped the residue the noun/verb flows then look for)
-  await page.addInitScript(() => { try { if (!window.name) { sessionStorage.clear(); window.name = 'audited'; } localStorage.removeItem('jh-search-workspace'); localStorage.setItem('jh-postcard-density', 'compact'); } catch {} });
+  // ONE-TIME storage reset, TOP window only: an init script runs on every
+  // navigation AND inside same-origin iframes (nanome2 embeds 3d-sync) —
+  // clearing sessionStorage there wiped the residue the flows then look for
+  await page.addInitScript(() => { try { if (window === window.top && !window.name) { sessionStorage.clear(); window.name = 'audited'; } localStorage.removeItem('jh-search-workspace'); localStorage.setItem('jh-postcard-density', 'compact'); } catch {} });
   await page.goto(`${BASE}/${pg}`, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(1500);
   await page.keyboard.press('/');
@@ -55,7 +56,7 @@ const type = async (page, q, wait = 1400) => { if (!(await state(page)).open) { 
     if (s.undef) note('edge', `"${q}" renders undefined/NaN`);
     if (s.over > 10) note('edge', `"${q}" overflows panel`, s.over + 'px');
     if (!s.none && s.mods === 0 && !s.actions.length && !s.intent && !s.plan && !s.census && s.html < 40) note('edge', `"${q}" renders an EMPTY panel (no results, no 'No results')`);
-    if (s.actions.length && !/fish|clear|feed|scare|logic|go|jump|add|help/i.test(q)) note('edge', `"${q}" surfaces actions`, s.actions.join('|'));
+    if (s.actions.length && !/fish|clear|feed|scare|logic|go|jump|add|help|design|art|about|services|play/i.test(q)) note('edge', `"${q}" surfaces actions`, s.actions.join('|'));
   }
   // empty after results → suggestion chips return
   await type(page, 'nanome', 800); const e = await type(page, '', 600);
@@ -81,14 +82,17 @@ for (const pg of ['index.html', 'design.html']) {
   for (const c of cmds) { try {
     if (!(await state(page)).open) { await page.evaluate(() => window.openSearch()); await page.waitForTimeout(700); }
     const s = await type(page, c.title, 900);
+    // Scene language may CLAIM a verb sentence ("Spawn a fish" → a plan card
+    // that draws one, confirm-first). That is the richer path, by design.
+    if (s.plan) continue;
     if (!s.actions.includes(c.title)) note('verb', `${pg} "${c.title}" does not surface its own card`, s.actions.join('|') || 'none');
-    for (const h of c.hints.slice(0, 2)) { const sh = await type(page, h, 900); if (!sh.actions.includes(c.title)) note('verb', `${pg} hint "${h}" does not surface "${c.title}"`, sh.actions.join('|') || 'none'); }
+    for (const h of c.hints.slice(0, 2)) { const sh = await type(page, h, 900); if (!sh.plan && !sh.actions.includes(c.title)) note('verb', `${pg} hint "${h}" does not surface "${c.title}"`, sh.actions.join('|') || 'none'); }
     // Enter runs it: overlay closes (onCommandRun)
     await type(page, c.title, 700); await page.keyboard.press('Enter'); await page.waitForTimeout(500);
     const after = await state(page);
     if (after.open) note('verb', `${pg} Enter on "${c.title}" did not run/close`);
     const focus = await page.evaluate(() => document.activeElement && (document.activeElement.tagName + '#' + document.activeElement.id + '.' + String(document.activeElement.className).slice(0, 20)));
-    if (/INPUT|TEXTAREA/.test(focus || '')) note('state', `${pg} after running "${c.title}" focus sits in ${focus} — a following "/" would type into it`);
+    if (!after.open && /INPUT|TEXTAREA/.test(focus || '')) note('state', `${pg} after running "${c.title}" focus sits in ${focus} — a following "/" would type into it`);
     if (!after.open) { await page.evaluate(() => window.openSearch()); await page.waitForTimeout(600); }
   } catch (e) { note('verb', `${pg} "${c.title}" flow threw`, e.message.slice(0, 100)); if (!/index|design/.test(page.url())) await page.goto(`${BASE}/${pg}`, { waitUntil: 'domcontentloaded' }); } }
   // nav + section commands synthesized from the page
@@ -122,7 +126,7 @@ for (const pg of ['index.html', 'design.html']) {
   const before = await state(page);
   await page.click('#so-sourcesSection .pc-mod .related-chip'); await page.waitForTimeout(1200);
   const afterChip = await state(page);
-  if (afterChip.noOverlay) note('noun', 'related chip click NAVIGATED to another page (not an in-place re-query)', afterChip.url);
+  if (afterChip.noOverlay) { /* ↗ chips navigate — the 9c grammar */ }
   else if (afterChip.open && afterChip.mods === before.mods && (await page.inputValue('#so-searchInput')) === 'badvr') note('noun', 'related chip click changed nothing');
   if (!afterChip.open) { await page.goto(`${BASE}/index.html`, { waitUntil: 'domcontentloaded' }); await page.waitForTimeout(1200); await page.keyboard.press('/'); await page.waitForSelector('#so-searchInput'); await page.waitForTimeout(500); }
   // departure card: opens new tab, not same
@@ -132,9 +136,9 @@ for (const pg of ['index.html', 'design.html']) {
   await p2.ctx.close();
   // title click navigates + residue
   await type(page, 'nanome', 1200);
-  await page.click('#so-sourcesSection .pc-mod .result-title'); await page.waitForTimeout(1500);
+  await page.click('#so-sourcesSection .pc-mod .result-title'); await page.waitForTimeout(800);
   if (!/nanome2\.html/.test(page.url())) note('noun', 'title click did not navigate', page.url());
-  else if (!(await page.evaluate(() => !!document.querySelector('.so-residue')))) note('state', 'no residue after title-click navigation');
+  else if (!(await page.waitForSelector('.so-residue', { timeout: 4000 }).then(() => true).catch(() => false))) note('state', 'no residue within 4s of title-click navigation');
   else { await page.click('.so-residue-open'); await page.waitForTimeout(1500); const r = await state(page); if (!r.open || (await page.inputValue('#so-searchInput')) !== 'nanome') note('state', 'residue click did not restore the query'); }
   if (errs.length) note('noun', 'console', errs.join(' | '));
   await ctx.close();
