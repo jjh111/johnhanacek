@@ -1102,23 +1102,39 @@ body > footer .version {
    Not a guide step (the guides tell the canvas's story); a slow breathing
    glow on the magnifier — hero strip and nav alike — that retires forever
    the first time the visitor opens the bar (search-overlay.js clears the
-   attribute and remembers in jh-search-seen). Coexists with the engine
-   state ring: the ring keeps its colour, the glow rides on the link. */
-html[data-search-hint="1"] .shape-link.search-icon {
-    animation: jh-search-hint 3.4s ease-in-out infinite;
-    border-radius: 999px;
-}
-html[data-search-hint="1"] .shape-link.search-icon .state-ring {
+   attribute and remembers in jh-search-seen). The edge that glows is the
+   state ring itself: at rest it is a 35% muted hairline, so the hint
+   brightens it to cyan, thickens it and lets it cast the light — a shadow
+   on the thin glyph alone was invisible. Engine colours resume once the
+   hint retires (the ring is cyan while hinting, whatever the engine). */
+html[data-search-hint="1"] .search-icon .state-ring {
     stroke: var(--cyan-dim, #4dc9f6);
-    opacity: 0.85;
+    fill: rgba(var(--cyan-dim-rgb), 0.12);
+    opacity: 1;
+    animation: jh-search-hint-ring 3.4s ease-in-out infinite;
 }
-@keyframes jh-search-hint {
+html[data-search-hint="1"] .shape-link.search-icon .shape {
+    animation: jh-search-hint-glyph 3.4s ease-in-out infinite;
+}
+/* The ring only changes its stroke; the light is cast by the <svg> itself —
+   a filter on an element INSIDE an svg is clipped to the svg viewport, which
+   squared off the halo. */
+@keyframes jh-search-hint-ring {
+    0%, 100% { stroke-opacity: 0.45; stroke-width: 1.5; }
+    50%      { stroke-opacity: 1;    stroke-width: 3; }
+}
+@keyframes jh-search-hint-glyph {
     0%, 100% { filter: drop-shadow(0 0 0 rgba(var(--cyan-dim-rgb), 0)); }
-    50%      { filter: drop-shadow(0 0 7px rgba(var(--cyan-dim-rgb), 0.85)) drop-shadow(0 0 14px rgba(var(--cyan-dim-rgb), 0.35)); }
+    50%      { filter: drop-shadow(0 0 4px rgba(var(--cyan-dim-rgb), 0.9)) drop-shadow(0 0 10px rgba(var(--cyan-dim-rgb), 0.5)); }
 }
 @media (prefers-reduced-motion: reduce) {
-    html[data-search-hint="1"] .shape-link.search-icon {
+    html[data-search-hint="1"] .search-icon .state-ring {
         animation: none;
-        filter: drop-shadow(0 0 5px rgba(var(--cyan-dim-rgb), 0.6));
+        stroke-opacity: 0.9;
+        stroke-width: 2.5;
+    }
+    html[data-search-hint="1"] .shape-link.search-icon .shape {
+        animation: none;
+        filter: drop-shadow(0 0 4px rgba(var(--cyan-dim-rgb), 0.6));
     }
 }
