@@ -190,6 +190,13 @@
            + 'opacity="0.45" vector-effect="non-scaling-stroke"/>';
     },
 
+    // the command bar: the site's own magnifier mark (jh-shapes draws the
+    // nav icon from the same geometry — a ring and a handle)
+    search: function () {
+      return '<circle cx="10" cy="10" r="6" fill="none" stroke="currentColor" vector-effect="non-scaling-stroke"/>'
+           + '<path d="M14.5 14.5L20 20" fill="none" stroke="currentColor" stroke-linecap="round" vector-effect="non-scaling-stroke"/>';
+    },
+
     // the zigzag AND the wall it crosses — the rule, not just the gesture
     scribble: function () {
       var wall = '<path d="M1.5 12L22.5 12" fill="none" stroke="currentColor" '

@@ -447,6 +447,7 @@
                 <span class="guide-row" data-step="1"><span class="guide-glyph" data-jh-stroke="square"></span><span>draw a shape — its outline becomes a wall</span></span>
                 <span class="guide-row" data-step="2"><span class="guide-glyph" data-jh-stroke="loop"></span><span>draw a loop — a fish</span></span>
                 <span class="guide-row" data-step="3"><span class="guide-glyph" data-jh-stroke="tap"></span><span>tap — drop food, and lead fish to it</span></span>
+                <span class="guide-row" data-step="4"><span class="guide-glyph" data-jh-stroke="search"></span><span>tap 🔍 or press / — ask the site anything</span></span>
                 <span class="guide-row"><span class="guide-glyph" data-jh-stroke="scribble"></span><span>scribble across a wall — rub it out</span></span>
             </div>
             <span class="guide-done-note"><span aria-hidden="true">✓</span><span>that's the maze — keep going, or hit ℹ for the rest</span></span>
@@ -2460,9 +2461,12 @@
                     { key: 'wall', match: ['wall'] },
                     { key: 'fish', match: ['fish'] },
                     { key: 'food', match: ['food'] },
+                    { key: 'search', match: ['search'] },
                 ],
             });
             canvas.addEventListener('pointerup', () => g.countStroke());
+            // opening the command bar completes the 'ask' step, whichever was showing
+            document.addEventListener('jh:search-open', () => g.notify('search'));
             return g;
         })();
 

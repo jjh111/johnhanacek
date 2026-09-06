@@ -381,6 +381,7 @@
                 <span class="guide-row" data-step="3"><span class="guide-glyph" data-jh-stroke="square"></span><span>draw a square — coral</span></span>
                 <span class="guide-row" data-step="3"><span class="guide-glyph" data-jh-stroke="triangle"></span><span>draw a triangle — jellyfish</span></span>
                 <span class="guide-row" data-step="3"><span class="guide-glyph" data-jh-stroke="circle"></span><span>draw a circle — bubbles</span></span>
+                <span class="guide-row" data-step="4"><span class="guide-glyph" data-jh-stroke="search"></span><span>tap 🔍 or press / — ask the site anything</span></span>
             </div>
             <span class="guide-done-note"><span aria-hidden="true">✓</span><span>that's the lot — the tank is yours</span></span>
             <div class="guide-progress" data-jh-guide-progress aria-hidden="true"></div>
@@ -700,8 +701,11 @@
                 { key: 'fish',   match: ['fish'] },
                 { key: 'food',   match: ['food'] },
                 { key: 'shapes', match: ['coral', 'jellyfish', 'bubble'] },
+                { key: 'search', match: ['search'] },
             ],
         }) : null;
+        // opening the command bar completes the 'ask' step, whichever step was showing
+        if (heroGuide) document.addEventListener('jh:search-open', () => heroGuide.notify('search'));
 
         const heroFish = window.heroFish = FishCanvas(document.getElementById('heroCanvas'), {
             onDrawingChange: (active) => hero.classList.toggle('drawing', active),

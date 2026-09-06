@@ -480,6 +480,8 @@
         void overlayEl.offsetHeight; // force style recalc
         overlayEl.setAttribute('aria-hidden', 'false');
         document.body.classList.add('search-overlay-open');
+        // the canvas guides listen for this — "ask the site" is a step they can complete
+        document.dispatchEvent(new CustomEvent('jh:search-open'));
 
         const input = document.getElementById('so-searchInput');
         if (typeof initialQuery === 'string' && initialQuery.trim()) input.value = initialQuery;
