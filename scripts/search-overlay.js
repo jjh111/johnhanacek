@@ -480,7 +480,9 @@
         void overlayEl.offsetHeight; // force style recalc
         overlayEl.setAttribute('aria-hidden', 'false');
         document.body.classList.add('search-overlay-open');
-        // the canvas guides listen for this — "ask the site" is a step they can complete
+        // first open retires the icon's breathing hint, for good
+        try { localStorage.setItem('jh-search-seen', '1'); } catch {}
+        delete document.documentElement.dataset.searchHint;
         document.dispatchEvent(new CustomEvent('jh:search-open'));
 
         const input = document.getElementById('so-searchInput');
@@ -697,6 +699,9 @@
     // ============================================
     function init() {
         try { document.documentElement.dataset.pcDensity = localStorage.getItem('jh-postcard-density') || 'compact'; } catch {}
+        // The search hint: a slow glow on the magnifier until the bar has
+        // been opened once on this device (the guides stay the canvas's).
+        try { if (!localStorage.getItem('jh-search-seen')) document.documentElement.dataset.searchHint = '1'; } catch {}
         setupNavTriggers();
         setupHeroSearch();
         checkUrlQuery();

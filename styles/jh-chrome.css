@@ -1097,3 +1097,28 @@ body > footer .version {
     color: var(--jh-gold, #d4af37);
 }
 @media print { .jh-return-chip { display: none; } }
+
+/* ── Search hint: the icon itself invites, until the first open ──
+   Not a guide step (the guides tell the canvas's story); a slow breathing
+   glow on the magnifier — hero strip and nav alike — that retires forever
+   the first time the visitor opens the bar (search-overlay.js clears the
+   attribute and remembers in jh-search-seen). Coexists with the engine
+   state ring: the ring keeps its colour, the glow rides on the link. */
+html[data-search-hint="1"] .shape-link.search-icon {
+    animation: jh-search-hint 3.4s ease-in-out infinite;
+    border-radius: 999px;
+}
+html[data-search-hint="1"] .shape-link.search-icon .state-ring {
+    stroke: var(--cyan-dim, #4dc9f6);
+    opacity: 0.85;
+}
+@keyframes jh-search-hint {
+    0%, 100% { filter: drop-shadow(0 0 0 rgba(var(--cyan-dim-rgb), 0)); }
+    50%      { filter: drop-shadow(0 0 7px rgba(var(--cyan-dim-rgb), 0.85)) drop-shadow(0 0 14px rgba(var(--cyan-dim-rgb), 0.35)); }
+}
+@media (prefers-reduced-motion: reduce) {
+    html[data-search-hint="1"] .shape-link.search-icon {
+        animation: none;
+        filter: drop-shadow(0 0 5px rgba(var(--cyan-dim-rgb), 0.6));
+    }
+}
