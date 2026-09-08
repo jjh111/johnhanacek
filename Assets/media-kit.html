@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Media kit — render rig</title>
+<!-- Unlisted render rig. Every <article class="board"> is one social graphic in the site's
+     own tokens; scripts/render-media-kit.mjs screenshots each at 2x into Assets/media-kit/.
+     Content is the site's audited content (services.html, about.html, search-chunks.json) —
+     edit it there first, then here, so a card never claims what the site doesn't. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@100;200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles/jh-chrome.css">
+<style>
+:root { color-scheme: dark; }
+html { background: #0a1520; }
+body { margin: 0; padding: 40px; font-family: 'JetBrains Mono', monospace; color: var(--text-primary); display: flex; flex-wrap: wrap; gap: 40px; align-items: flex-start; }
+.board { position: relative; box-sizing: border-box; overflow: hidden; flex: none; display: flex; flex-direction: column; background: var(--sea-deep);
+  background-image: radial-gradient(ellipse 80% 55% at 50% 0%, rgba(var(--cyan-dim-rgb), 0.10), transparent 70%), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(var(--gold-rgb), 0.05), transparent 70%);
+  color: var(--text-primary); --pad: 84px; padding: var(--pad); }
+.board::after { content: ''; position: absolute; inset: 28px; border: 1px solid rgba(var(--cyan-dim-rgb), 0.14); border-radius: 22px; pointer-events: none; }
+.board.square { width: 1080px; height: 1080px; }
+.board.portrait { width: 1080px; height: 1350px; }
+.board.wide { width: 1600px; height: 900px; --pad: 76px; }
+.b-head { display: flex; justify-content: space-between; align-items: center; }
+.eyebrow { font-size: 22px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--cyan-dim); }
+.strip { display: inline-flex; gap: 10px; }
+.strip svg { width: 26px; height: 26px; fill: none; stroke: rgba(var(--cyan-dim-rgb), 0.55); stroke-width: 1.6; }
+.b-body { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
+.b-foot { display: flex; justify-content: space-between; align-items: flex-end; }
+.b-foot .sig { height: 44px; opacity: 0.85; }
+.b-foot .url { font-size: 22px; letter-spacing: 0.12em; color: var(--muted); }
+h2, h3, blockquote { font-family: 'Raleway', sans-serif; margin: 0; }
+h2 { font-weight: 200; color: var(--text-subhead); font-size: 64px; line-height: 1.15; letter-spacing: 0.01em; }
+.wide h2 { font-size: 58px; }
+h3 { font-weight: 400; font-size: 20px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--cyan); margin-bottom: 22px; font-family: 'JetBrains Mono', monospace; }
+.lede { font-size: 24px; line-height: 1.6; color: var(--text-bright); margin: 26px 0 0; max-width: 34em; }
+.cta { margin: 40px 0 0; font-size: 24px; color: var(--text-bright); }
+.cta strong { color: var(--gold); font-weight: 500; }
+/* quotes */
+.quote .b-body { position: relative; }
+.qmark { display: block; font-family: 'Raleway', sans-serif; font-weight: 300; font-size: 200px; line-height: 0.55; height: 0.42em; margin: 0 0 18px -6px; color: rgba(var(--gold-rgb), 0.75); }
+blockquote { font-weight: 300; color: var(--text-subhead); font-size: 52px; line-height: 1.35; }
+.quote.short blockquote { font-size: 68px; line-height: 1.25; }
+.quote.mid blockquote { font-size: 58px; }
+.quote.long blockquote { font-size: 42px; line-height: 1.4; }
+.quote.portrait blockquote { font-size: 56px; }
+.quote.portrait.long blockquote { font-size: 46px; }
+.quote.portrait.short blockquote { font-size: 74px; }
+cite { display: block; font-style: normal; margin-top: 44px; padding-top: 26px; border-top: 1px solid rgba(var(--cyan-dim-rgb), 0.3); font-size: 24px; line-height: 1.5; }
+cite strong { color: var(--cyan); font-weight: 500; display: block; }
+cite span { color: var(--muted); }
+/* clients */
+.group + .group { margin-top: 48px; }
+.wall { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 28px 32px; }
+.wall.teams { grid-template-columns: 1fr 1fr; }
+.wall li { display: flex; flex-direction: column; gap: 8px; }
+.wm { font-family: 'Raleway', sans-serif; font-weight: 300; font-size: 44px; color: var(--text-subhead); line-height: 1.1; display: inline-flex; align-items: center; min-height: 56px; }
+.wm em { font-style: normal; color: var(--muted); }
+.wm-openprose { font-weight: 500; letter-spacing: 0.02em; }
+.wm-nanome { font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; font-size: 38px; }
+.wm-badvr { font-weight: 600; font-size: 42px; }
+.wm-avatar { font-weight: 200; letter-spacing: 0.04em; }
+.wm-collab { font-weight: 300; }
+.wm-muse { font-weight: 400; }
+.wm-svg { height: 42px; width: auto; color: var(--text-subhead); }
+.what { font-size: 18px; color: var(--muted); line-height: 1.4; }
+.wide .wall { grid-template-columns: repeat(3, 1fr); }
+.wide .wall.teams { grid-template-columns: repeat(4, 1fr); }
+.wide .group + .group { margin-top: 40px; }
+/* services */
+.tiers { list-style: none; margin: 40px 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 26px 40px; }
+.tiers li { display: flex; flex-direction: column; gap: 6px; padding-left: 20px; border-left: 2px solid rgba(var(--gold-rgb), 0.7); }
+.tiers .tier { font-size: 17px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); }
+.tiers strong { font-family: 'Raleway', sans-serif; font-weight: 500; font-size: 30px; color: var(--text-subhead); }
+.tiers li > span:last-child { font-size: 20px; color: var(--text-primary); line-height: 1.5; }
+.wide .tiers { grid-template-columns: repeat(4, 1fr); margin-top: 34px; }
+.wide .cta, .wide .lede { margin-top: 22px; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 40px; }
+.cols ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; }
+.cols li { font-size: 21px; line-height: 1.5; color: var(--text-bright); padding-left: 18px; border-left: 2px solid rgba(var(--cyan-dim-rgb), 0.5); }
+/* outcomes */
+.rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 20px; }
+.rows li { display: grid; grid-template-columns: 240px 1fr; gap: 24px; align-items: baseline; }
+.rows strong { font-family: 'Raleway', sans-serif; font-weight: 500; font-size: 28px; color: var(--text-subhead); }
+.rows span { font-size: 20px; line-height: 1.5; color: var(--text-primary); }
+.stats { list-style: none; margin: 0; padding: 0; display: flex; gap: 44px; flex-wrap: wrap; }
+.stats li { display: flex; flex-direction: column; padding-left: 20px; border-left: 1px solid rgba(var(--gold-rgb), 0.35); }
+.stats b { font-family: 'Raleway', sans-serif; font-weight: 200; font-size: 84px; line-height: 1; color: var(--gold); }
+.stats span { font-size: 17px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-top: 8px; max-width: 9em; line-height: 1.3; }
+.wide .rows li { grid-template-columns: 220px 1fr; }
+.wide .stats b { font-size: 72px; }
+/* awards */
+.tl { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 30px; position: relative; }
+.tl li { display: grid; grid-template-columns: 120px 1fr; column-gap: 28px; align-items: baseline; }
+.tl .yr { color: var(--gold); font-size: 24px; letter-spacing: 0.08em; }
+.tl strong { font-family: 'Raleway', sans-serif; font-weight: 500; font-size: 32px; color: var(--text-subhead); display: block; }
+.tl li > span:last-child { grid-column: 2; font-size: 20px; color: var(--muted); line-height: 1.5; }
+.wide .tl { gap: 20px; } .wide .tl strong { font-size: 28px; }
+/* cover */
+.three { list-style: none; margin: 48px 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 32px; }
+.three li { display: flex; flex-direction: column; gap: 10px; padding-top: 18px; border-top: 1px solid rgba(var(--cyan-dim-rgb), 0.4); }
+.three .k { font-family: 'Raleway', sans-serif; font-weight: 500; font-size: 30px; color: var(--cyan); }
+.three li > span:last-child { font-size: 20px; line-height: 1.5; color: var(--text-primary); }
+.wide .three { margin-top: 36px; }
+</style>
+</head>
+<body>
+
+<article class="board quote short" data-name="endorsement-dan-barrett" data-formats="square,portrait">
+<header class="b-head"><span class="eyebrow">What clients say</span><span class="strip" aria-hidden="true">
+<svg viewBox="0 0 40 40"><polygon points="20,8 34,32 6,32"/></svg>
+<svg viewBox="0 0 40 40"><rect x="6" y="6" width="28" height="28" rx="6"/></svg>
+<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="14"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,6 34,20 20,34 6,20"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,6 23,16 34,16 25,22 28,34 20,26 12,34 15,22 6,16 17,16"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,5 33,12.5 33,27.5 20,35 7,27.5 7,12.5"/></svg>
+</span></header>
+<div class="b-body"><span class="qmark">“</span><blockquote>I love collaborating with John. A man made for this moment.</blockquote>
+<cite><strong>Dan Barrett</strong><span>CEO, OpenProse</span></cite></div>
+<footer class="b-foot"><img class="sig" src="./JHsig.svg" alt="JH"><span class="url">johnhanacek.com</span></footer></article>
+<article class="board quote long" data-name="endorsement-sheila-zipfel" data-formats="square,portrait">
+<header class="b-head"><span class="eyebrow">What clients say</span><span class="strip" aria-hidden="true">
+<svg viewBox="0 0 40 40"><polygon points="20,8 34,32 6,32"/></svg>
+<svg viewBox="0 0 40 40"><rect x="6" y="6" width="28" height="28" rx="6"/></svg>
+<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="14"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,6 34,20 20,34 6,20"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,6 23,16 34,16 25,22 28,34 20,26 12,34 15,22 6,16 17,16"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,5 33,12.5 33,27.5 20,35 7,27.5 7,12.5"/></svg>
+</span></header>
+<div class="b-body"><span class="qmark">“</span><blockquote>He’s not only a true Visionary, but also an amazing listener with incredible intuition. I’ve never seen anyone able to so readily understand scientists, then design an experience they can scarcely imagine, but recognize as what they wanted.</blockquote>
+<cite><strong>Sheila Zipfel</strong><span>Product Manager, Nanome</span></cite></div>
+<footer class="b-foot"><img class="sig" src="./JHsig.svg" alt="JH"><span class="url">johnhanacek.com</span></footer></article>
+<article class="board quote long" data-name="endorsement-tommy-kronmark" data-formats="square,portrait">
+<header class="b-head"><span class="eyebrow">What clients say</span><span class="strip" aria-hidden="true">
+<svg viewBox="0 0 40 40"><polygon points="20,8 34,32 6,32"/></svg>
+<svg viewBox="0 0 40 40"><rect x="6" y="6" width="28" height="28" rx="6"/></svg>
+<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="14"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,6 34,20 20,34 6,20"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,6 23,16 34,16 25,22 28,34 20,26 12,34 15,22 6,16 17,16"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,5 33,12.5 33,27.5 20,35 7,27.5 7,12.5"/></svg>
+</span></header>
+<div class="b-body"><span class="qmark">“</span><blockquote>John recently led a customer journey mapping workshop for my team, and it was an outstanding experience. We came away with a deeper understanding of our customers and a clear appreciation for the impact of product design.</blockquote>
+<cite><strong>Tommy Kronmark</strong><span>COO, Muse.bio</span></cite></div>
+<footer class="b-foot"><img class="sig" src="./JHsig.svg" alt="JH"><span class="url">johnhanacek.com</span></footer></article>
+<article class="board quote long" data-name="endorsement-ben-s" data-formats="square,portrait">
+<header class="b-head"><span class="eyebrow">What clients say</span><span class="strip" aria-hidden="true">
+<svg viewBox="0 0 40 40"><polygon points="20,8 34,32 6,32"/></svg>
+<svg viewBox="0 0 40 40"><rect x="6" y="6" width="28" height="28" rx="6"/></svg>
+<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="14"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,6 34,20 20,34 6,20"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,6 23,16 34,16 25,22 28,34 20,26 12,34 15,22 6,16 17,16"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,5 33,12.5 33,27.5 20,35 7,27.5 7,12.5"/></svg>
+</span></header>
+<div class="b-body"><span class="qmark">“</span><blockquote>If you’re building with AI agents and want to skip the frustration curve, talk to John Hanacek. I’m crushing at work right now, and John is the secret ingredient who got me here.</blockquote>
+<cite><strong>Ben S</strong><span>Founder & CEO, I Hear Everything</span></cite></div>
+<footer class="b-foot"><img class="sig" src="./JHsig.svg" alt="JH"><span class="url">johnhanacek.com</span></footer></article>
+<article class="board quote mid" data-name="endorsement-hurriyet-ok" data-formats="square,portrait">
+<header class="b-head"><span class="eyebrow">What clients say</span><span class="strip" aria-hidden="true">
+<svg viewBox="0 0 40 40"><polygon points="20,8 34,32 6,32"/></svg>
+<svg viewBox="0 0 40 40"><rect x="6" y="6" width="28" height="28" rx="6"/></svg>
+<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="14"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,6 34,20 20,34 6,20"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,6 23,16 34,16 25,22 28,34 20,26 12,34 15,22 6,16 17,16"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,5 33,12.5 33,27.5 20,35 7,27.5 7,12.5"/></svg>
+</span></header>
+<div class="b-body"><span class="qmark">“</span><blockquote>I highly recommend John for roles requiring design leadership, systems thinking, and future-focused innovation.</blockquote>
+<cite><strong>Dr. Hurriyet Ok</strong><span>Professor, George Washington University</span></cite></div>
+<footer class="b-foot"><img class="sig" src="./JHsig.svg" alt="JH"><span class="url">johnhanacek.com</span></footer></article>
+<article class="board quote short" data-name="endorsement-inga-petryaevskaya" data-formats="square,portrait">
+<header class="b-head"><span class="eyebrow">What clients say</span><span class="strip" aria-hidden="true">
+<svg viewBox="0 0 40 40"><polygon points="20,8 34,32 6,32"/></svg>
+<svg viewBox="0 0 40 40"><rect x="6" y="6" width="28" height="28" rx="6"/></svg>
+<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="14"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,6 34,20 20,34 6,20"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,6 23,16 34,16 25,22 28,34 20,26 12,34 15,22 6,16 17,16"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,5 33,12.5 33,27.5 20,35 7,27.5 7,12.5"/></svg>
+</span></header>
+<div class="b-body"><span class="qmark">“</span><blockquote>Talented and very experienced designer!</blockquote>
+<cite><strong>Inga Petryaevskaya</strong><span>CEO, ShapesXR</span></cite></div>
+<footer class="b-foot"><img class="sig" src="./JHsig.svg" alt="JH"><span class="url">johnhanacek.com</span></footer></article>
+<article class="board quote short" data-name="endorsement-ben-reed" data-formats="square,portrait">
+<header class="b-head"><span class="eyebrow">What clients say</span><span class="strip" aria-hidden="true">
+<svg viewBox="0 0 40 40"><polygon points="20,8 34,32 6,32"/></svg>
+<svg viewBox="0 0 40 40"><rect x="6" y="6" width="28" height="28" rx="6"/></svg>
+<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="14"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,6 34,20 20,34 6,20"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,6 23,16 34,16 25,22 28,34 20,26 12,34 15,22 6,16 17,16"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,5 33,12.5 33,27.5 20,35 7,27.5 7,12.5"/></svg>
+</span></header>
+<div class="b-body"><span class="qmark">“</span><blockquote>I’ve never known someone who practices design thinking as well as John.</blockquote>
+<cite><strong>Ben Reed</strong><span>Illustrator and Designer</span></cite></div>
+<footer class="b-foot"><img class="sig" src="./JHsig.svg" alt="JH"><span class="url">johnhanacek.com</span></footer></article>
+<article class="board clients" data-name="clients" data-formats="square,wide">
+<header class="b-head"><span class="eyebrow">Worked with</span><span class="strip" aria-hidden="true">
+<svg viewBox="0 0 40 40"><polygon points="20,8 34,32 6,32"/></svg>
+<svg viewBox="0 0 40 40"><rect x="6" y="6" width="28" height="28" rx="6"/></svg>
+<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="14"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,6 34,20 20,34 6,20"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,6 23,16 34,16 25,22 28,34 20,26 12,34 15,22 6,16 17,16"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,5 33,12.5 33,27.5 20,35 7,27.5 7,12.5"/></svg>
+</span></header>
+<div class="b-body">
+<section class="group"><h3>Clients · JHDesign LLC</h3>
+<ul class="wall">
+<li><span class="wm wm-openprose">OpenProse</span><span class="what">Founding design · 2026</span></li>
+<li><span class="wm wm-muse">Muse<em>.bio</em></span><span class="what">Workshop · personas · journey maps</span></li>
+<li><span class="wm"><svg role="img" aria-label="Transfyr" class="wm-svg" viewBox="0 0 703 157" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M610.286 109.622L631.675 50.9906H646.839L611.95 139.619C610.192 144.119 608.608 147.552 607.195 149.877C605.741 152.27 603.894 154.082 601.644 155.262C599.38 156.45 596.454 157 592.947 157H577.512V143.757H589.301C591.589 143.757 593.157 143.513 594.112 143.114C595.142 142.684 595.805 141.926 596.4 141.013C597.091 140.061 597.972 138.321 599.037 135.703L599.044 135.686L602.653 127.203L573.047 50.9906H588.194L610.286 109.622Z" fill="currentColor"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M38.0459 18.6529C40.296 6.20864 54.8247 -3.67657 73.2751 1.32655L116.797 11.6341C123.681 13.2438 127.421 15.3987 130.169 18.11C134.801 22.6804 136.475 28.9391 135.917 35.3781C135.326 42.2095 131.712 46.7852 125.99 50.3298L75.7004 79.2048L151.158 100.795L101.433 120.151C115.354 120.151 127.429 133.957 119.248 146.871C112.989 156.752 97.9603 158.648 86.2809 155.38L35.4942 143.328C30.0897 141.974 24.6503 140.313 20.8326 136.831C16.0953 132.511 13.9888 124.405 15.6134 118.261C17.0002 113.017 21.5103 108.479 30.8655 103.822L71.3615 80.4872L0 59.4338L49.1679 41.3444C40.3666 38.4772 36.0331 27.6404 38.0459 18.6529ZM74.1708 81.3715C71.865 94.8136 75.2164 104.452 81.4662 110.861C86.6729 116.201 94.6827 119.103 100.79 117.495C106.897 115.887 110.663 110.884 111.392 105.135C112.318 97.8272 107.513 91.3076 98.1076 88.6655L74.1708 81.3715ZM60.2248 43.9506C51.8536 40.4879 41.452 44.5342 39.9941 54.1944C38.4958 64.1223 45.7639 70.0749 54.8248 72.9517L74.0591 78.7088C75.5573 66.7592 72.1102 48.8671 60.2248 43.9506Z" fill="currentColor"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M334.518 50.1435C344.224 50.1435 353.25 52.1455 358.681 57.0715C364.228 61.9167 366.932 69.4014 366.932 78.304V112.447C366.932 121.312 367.529 125.129 367.997 127.696H354.09C353.823 124.66 353.25 120.745 353.569 114.291C350.276 123.122 338.582 128.825 328.425 128.825C321.335 128.825 314.347 127.115 309.079 123.413C299.719 116.835 297.441 103.076 302.644 93.0504C305.82 86.9309 313.056 82.2771 327.364 81.2728L352.808 79.1972V77.0548C352.808 65.9045 343.912 62.0493 335.935 62.0493C327.293 62.0493 319.742 66.082 319.274 74.1852H304.191C304.191 59.4522 317.586 50.1435 334.518 50.1435ZM329.956 92.4455C320.947 93.2741 312.255 97.4258 314.942 107.925C316.479 113.93 323.3 116.312 329.3 116.312C344.295 116.312 352.808 107.54 352.808 92.4455V90.5127L329.956 92.4455Z" fill="currentColor"/>
+<path d="M484.423 49.9501C493.346 49.9501 500.703 52.0359 506.395 56.3085L506.666 56.5118C512.334 60.8113 515.448 66.9061 516.044 74.6718L516.139 75.9031H501.938L501.813 74.9015C501.368 71.3302 499.644 68.3847 496.565 66.0259C493.494 63.6739 489.618 62.4631 484.86 62.4631C479.959 62.4631 476.123 63.502 473.256 65.4757L473.246 65.4826L473.236 65.4894C470.41 67.3467 469.084 69.7319 469.083 72.7145C469.084 75.0196 469.74 76.6291 470.909 77.7217C472.196 78.9246 473.848 79.7651 475.912 80.215C478.199 80.6918 481.66 81.2232 486.315 81.806C492.869 82.5901 498.294 83.6725 502.571 85.067C507.014 86.4844 510.604 88.7798 513.287 91.9771C516.14 95.2588 517.506 99.644 517.506 105C517.506 109.722 516.117 113.914 513.331 117.531C510.568 121.118 506.849 123.862 502.215 125.779C497.588 127.693 492.478 128.641 486.902 128.641C477.008 128.64 468.916 126.36 462.733 121.69C456.595 116.977 453.484 110.395 453.382 102.092L453.368 100.935H467.576L467.624 102.028C467.803 106.155 469.572 109.498 473.009 112.125C476.557 114.764 481.159 116.127 486.902 116.127C492.015 116.127 496.01 115.131 498.979 113.239C502.014 111.269 503.409 108.828 503.409 105.876C503.409 103.155 502.689 101.246 501.41 99.9648C500.031 98.5834 498.192 97.6014 495.834 97.0565L495.825 97.0539C493.456 96.4844 490.006 95.9066 485.452 95.3242C478.998 94.5405 473.674 93.5074 469.5 92.2136C465.255 90.8974 461.767 88.8045 459.084 85.9101L459.07 85.8952C456.306 82.8069 454.986 78.6597 454.986 73.5908C454.986 68.9816 456.27 64.8514 458.846 61.2395L458.851 61.2304L458.858 61.222C461.517 57.6363 465.088 54.8872 469.531 52.9652C473.972 50.9472 478.943 49.9501 484.423 49.9501Z" fill="currentColor"/>
+<path d="M262.003 65.4469C263.607 61.1211 265.062 57.898 270.192 54.3873C273.842 52.194 278.791 51.1567 284.927 51.1567H300.676V65.1304H282.302C270.087 65.1304 263.607 75.0175 263.607 86.4762V127.948H249.364V51.1567H262.003V65.4469Z" fill="currentColor"/>
+<path d="M214.06 50.9785H239.908V64.222H214.06V107.224C214.06 110.219 214.626 112.111 215.509 113.167C216.46 114.094 218.213 114.7 221.086 114.7H240.835V127.943H220.357C213.231 127.943 207.845 126.364 204.514 122.921L204.501 122.907C201.299 119.485 199.817 114.221 199.817 107.37V64.222H186.399V50.9785H199.817V39.0695L214.06 30.8705V50.9785Z" fill="currentColor"/>
+<path d="M416.42 50.1741C435.707 50.1741 445.778 60.2191 445.778 78.9551V127.842H431.535V83.2191C431.535 76.6911 430.399 71.9114 427.585 68.4888C424.718 65.0012 420.109 62.9326 413.184 62.9326C406.591 62.9326 399.935 65.1023 395.763 70.5562C392.403 74.9494 391.23 79.9293 391.23 87.4831V127.842H376.987V51.0501H389.457V65.6216C393.508 55.8258 405.806 50.1741 416.42 50.1741Z" fill="currentColor"/>
+<path d="M664.327 65.2808C665.932 60.955 667.386 57.7319 672.516 54.2213C676.166 52.0279 681.116 50.9906 687.252 50.9906H703V64.9643H684.626C672.411 64.9643 665.932 74.8514 665.932 86.3101V127.782H651.689V50.9906H664.327V65.2808Z" fill="currentColor"/>
+<path d="M575.723 36.4656H554.568C551.771 36.4656 550.052 37.0796 549.103 38.0295C547.94 39.1943 547.541 40.7015 547.541 43.5028V50.9785H568.544V64.222H547.541V127.77H533.298V64.222H519.88V50.9785H533.298V43.7949C533.298 37.028 534.835 31.8093 538.141 28.3905C541.558 24.8614 546.882 23.2223 553.838 23.2223H575.723V36.4656Z" fill="currentColor"/>
+</svg></span><span class="what">Journey workshop · MVP handoff · demo support</span></li>
+</ul></section>
+<section class="group"><h3>Teams I shipped with</h3>
+<ul class="wall teams">
+<li><span class="wm wm-nanome">Nanome</span><span class="what">Lead XR Product Designer · 2022–24</span></li>
+<li><span class="wm wm-badvr">BadVR</span><span class="what">Immersive UX · 2021–22</span></li>
+<li><span class="wm wm-avatar">AvatarMEDIC</span><span class="what">Founding CEO · 2019–21</span></li>
+<li><span class="wm wm-collab">Collaborate<em>.org</em></span><span class="what">UI/UX Design Lead · 2015–18</span></li>
+</ul></section>
+</div>
+<footer class="b-foot"><img class="sig" src="./JHsig.svg" alt="JH"><span class="url">johnhanacek.com</span></footer></article>
+<article class="board services" data-name="services-coaching" data-formats="square,wide">
+<header class="b-head"><span class="eyebrow">AI coaching · The JH Coaching OS</span><span class="strip" aria-hidden="true">
+<svg viewBox="0 0 40 40"><polygon points="20,8 34,32 6,32"/></svg>
+<svg viewBox="0 0 40 40"><rect x="6" y="6" width="28" height="28" rx="6"/></svg>
+<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="14"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,6 34,20 20,34 6,20"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,6 23,16 34,16 25,22 28,34 20,26 12,34 15,22 6,16 17,16"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,5 33,12.5 33,27.5 20,35 7,27.5 7,12.5"/></svg>
+</span></header>
+<div class="b-body">
+<h2>Four ways in.</h2>
+<p class="lede">Live sessions, a private AI workspace that knows your business, and a system you keep.</p>
+<ul class="tiers">
+<li><span class="tier">Guided Coaching</span><strong>The core program</strong><span>4 sessions over 2 months. Zero to building with AI.</span></li>
+<li><span class="tier">Embedded Retainer</span><strong>Ongoing partnership</strong><span>Weekly or biweekly. AI deeply embedded in your work.</span></li>
+<li><span class="tier">Build Sprint</span><strong>1–2 week intensive</strong><span>Daily pairing. Fastest path from idea to shipped.</span></li>
+<li><span class="tier">Audit</span><strong>One-session deep dive</strong><span>Tools, workflows, AI readiness → a prioritized plan.</span></li>
+</ul>
+<p class="cta">Free intro call → <strong>hi@johnhanacek.com</strong></p>
+</div>
+<footer class="b-foot"><img class="sig" src="./JHsig.svg" alt="JH"><span class="url">johnhanacek.com</span></footer></article>
+<article class="board services design" data-name="services-design" data-formats="square,wide">
+<header class="b-head"><span class="eyebrow">Design & product services</span><span class="strip" aria-hidden="true">
+<svg viewBox="0 0 40 40"><polygon points="20,8 34,32 6,32"/></svg>
+<svg viewBox="0 0 40 40"><rect x="6" y="6" width="28" height="28" rx="6"/></svg>
+<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="14"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,6 34,20 20,34 6,20"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,6 23,16 34,16 25,22 28,34 20,26 12,34 15,22 6,16 17,16"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,5 33,12.5 33,27.5 20,35 7,27.5 7,12.5"/></svg>
+</span></header>
+<div class="b-body">
+<h2>From workshop to shipped product.</h2>
+<p class="lede">Founding designer and design engineering for teams building AI-native products, spatial computing, and robotics.</p>
+<div class="cols">
+<section><h3>Focused engagements</h3><ul>
+<li>Workshop facilitation — journey mapping, personas, design sprints</li>
+<li>Website design — new, refresh, landing page, design system</li>
+<li>MVP design & handoff — PRD, prototype, plan, demo support</li>
+</ul></section>
+<section><h3>Deep product work</h3><ul>
+<li>Founding design & product — 0→1, design engineering, strategy</li>
+<li>AI & agentic systems — orchestration, tool use, conversational UX</li>
+<li>Spatial computing & robotics — XR, teleoperation, digital twins</li>
+</ul></section>
+</div>
+<p class="cta">Demos delivered as working code → <strong>johnhanacek.com/services</strong></p>
+</div>
+<footer class="b-foot"><img class="sig" src="./JHsig.svg" alt="JH"><span class="url">johnhanacek.com</span></footer></article>
+<article class="board outcomes" data-name="outcomes" data-formats="square,wide">
+<header class="b-head"><span class="eyebrow">Outcomes</span><span class="strip" aria-hidden="true">
+<svg viewBox="0 0 40 40"><polygon points="20,8 34,32 6,32"/></svg>
+<svg viewBox="0 0 40 40"><rect x="6" y="6" width="28" height="28" rx="6"/></svg>
+<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="14"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,6 34,20 20,34 6,20"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,6 23,16 34,16 25,22 28,34 20,26 12,34 15,22 6,16 17,16"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,5 33,12.5 33,27.5 20,35 7,27.5 7,12.5"/></svg>
+</span></header>
+<div class="b-body">
+<section class="group"><h3>Shipped</h3><ul class="rows">
+<li><strong>Nanome</strong><span>XR + AI molecular interface, shipped to pharma customers. Research-led pivot: Spotlight/Follow replaced teleport navigation.</span></li>
+<li><strong>BadVR</strong><span>AROC situational-awareness AR HUD. Hand-tracking on Meta Quest and HoloLens 2.</span></li>
+<li><strong>JH Coaching OS</strong><span>Adaptive AI coaching product — agent, context docs, dashboard — concept to working software.</span></li>
+</ul></section>
+<section class="group nums"><h3>OpenProse founding design</h3>
+<ul class="stats">
+<li><b>2</b><span>months</span></li><li><b>5</b><span>logos</span></li><li><b>37</b><span>live homepage approaches</span></li><li><b>471</b><span>commits</span></li><li><b>1</b><span>canonical style</span></li>
+</ul></section>
+</div>
+<footer class="b-foot"><img class="sig" src="./JHsig.svg" alt="JH"><span class="url">johnhanacek.com</span></footer></article>
+<article class="board awards" data-name="awards" data-formats="square,wide">
+<header class="b-head"><span class="eyebrow">Awards & recognition</span><span class="strip" aria-hidden="true">
+<svg viewBox="0 0 40 40"><polygon points="20,8 34,32 6,32"/></svg>
+<svg viewBox="0 0 40 40"><rect x="6" y="6" width="28" height="28" rx="6"/></svg>
+<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="14"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,6 34,20 20,34 6,20"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,6 23,16 34,16 25,22 28,34 20,26 12,34 15,22 6,16 17,16"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,5 33,12.5 33,27.5 20,35 7,27.5 7,12.5"/></svg>
+</span></header>
+<div class="b-body"><ul class="tl">
+<li><span class="yr">2022</span><strong>R&amp;D Innovation Award</strong><span>Aerospace Medical Association · XR digital-twin robot control</span></li>
+<li><span class="yr">2021</span><strong>NIST CHARIoT Challenge · Phase 2 Winner</strong><span>A1R — augmented first responder</span></li>
+<li><span class="yr">2020</span><strong>Microsoft Reactor Hackathon Winner</strong><span>HoloTRIAGE — HoloLens 2 medical training</span></li>
+<li><span class="yr">2020</span><strong>Founder Institute Graduate</strong><span>San Francisco · as CEO of AvatarMEDIC</span></li>
+<li><span class="yr">2016</span><strong>“Most Meta”</strong><span>Georgetown CCT · voted by peers</span></li>
+</ul></div>
+<footer class="b-foot"><img class="sig" src="./JHsig.svg" alt="JH"><span class="url">johnhanacek.com</span></footer></article>
+<article class="board cover" data-name="offer" data-formats="square,wide">
+<header class="b-head"><span class="eyebrow">John Hanacek · JHDesign LLC</span><span class="strip" aria-hidden="true">
+<svg viewBox="0 0 40 40"><polygon points="20,8 34,32 6,32"/></svg>
+<svg viewBox="0 0 40 40"><rect x="6" y="6" width="28" height="28" rx="6"/></svg>
+<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="14"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,6 34,20 20,34 6,20"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,6 23,16 34,16 25,22 28,34 20,26 12,34 15,22 6,16 17,16"/></svg>
+<svg viewBox="0 0 40 40"><polygon points="20,5 33,12.5 33,27.5 20,35 7,27.5 7,12.5"/></svg>
+</span></header>
+<div class="b-body">
+<h2>AI coaching for founders.<br>Founding design for AI-native teams.</h2>
+<ul class="three">
+<li><span class="k">Coach</span><span>Live sessions + a private AI workspace you keep.</span></li>
+<li><span class="k">Design</span><span>Workshops, research, strategy, prototypes, handoff.</span></li>
+<li><span class="k">Build</span><span>Design engineering — demos delivered as working code.</span></li>
+</ul>
+<p class="cta">Free intro call → <strong>hi@johnhanacek.com</strong></p>
+</div>
+<footer class="b-foot"><img class="sig" src="./JHsig.svg" alt="JH"><span class="url">johnhanacek.com</span></footer></article>
+<script>
+  // ?format=square|portrait|wide picks the size class for every board that lists it;
+  // boards that don't list the format are hidden. Default shows squares.
+  const fmt = new URLSearchParams(location.search).get('format') || 'square';
+  document.querySelectorAll('.board').forEach(b => {
+    const ok = (b.dataset.formats || 'square').split(',').includes(fmt);
+    b.hidden = !ok; if (ok) b.classList.add(fmt);
+  });
+</script>
+</body>
+</html>

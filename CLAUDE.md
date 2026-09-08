@@ -43,6 +43,7 @@ These are intentional. All carry `<meta name="robots" content="noindex, nofollow
 | `Assets/JH-brand-styleguide.html` | Internal brand/design-token reference ("Deep Sea Terminal" styleguide v1.0). |
 | `Assets/DemosPlayground/test-llm.html`, `test-vision.html` | LLM/VLM proof-of-concept pages (Qwen 0.8B WebGPU + LMStudio/Ollama). |
 | `Assets/DemosPlayground/pretext-wrap-test.html` | Test rig for `scripts/pretext-wrap.js` — circle and ellipse obstacles with prose flowing both sides. |
+| `Assets/media-kit.html` | Render rig for the social media pack — one `<article class="board">` per graphic in the site's tokens (endorsements, clients, services, outcomes, awards, offer). `node scripts/render-media-kit.mjs` screenshots each at 2x into `Assets/media-kit/` (square / portrait / wide; `--light` for the light palette). Content is copied from the audited site content — change it on the page/chunks first. |
 
 **Never commit business/personal documents (invoices, contracts) to this repo — it is public and served.** Resumes in `Assets/` are intentionally public.
 
