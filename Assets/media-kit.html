@@ -9,6 +9,15 @@
      own tokens; scripts/render-media-kit.mjs screenshots each at 2x into Assets/media-kit/.
      Content is the site's audited content (services.html, about.html, search-chunks.json) —
      edit it there first, then here, so a card never claims what the site doesn't. -->
+<script>
+  // ?theme=light paints the light palette (must land before the engine reads it);
+  // ?board=<name> shows that board alone at 0,0 so a recorder can frame it.
+  (function () {
+    var q = new URLSearchParams(location.search);
+    if (q.get('theme') === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    if (q.get('board')) document.documentElement.classList.add('solo');
+  })();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@100;200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -16,6 +25,23 @@
 <style>
 :root { color-scheme: dark; }
 html { background: #0a1520; }
+html[data-theme="light"] { color-scheme: light; background: #d9e3e8; }
+html.solo body { padding: 0; gap: 0; }
+.board[hidden] { display: none !important; }   /* .board's display:flex would otherwise beat the UA [hidden] rule */
+/* The tank: the site's own fish engine, transparent, in the lower band of every
+   board — coral on the seabed, fish cruising above it, food when fed. Masked at
+   its top edge so it never competes with the copy. */
+.tank { position: absolute; left: 0; bottom: 0; width: 100%; height: 38%;   /* canvas is replaced: left+right alone won't stretch it */ z-index: 0; pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 40%); mask-image: linear-gradient(to bottom, transparent 0%, #000 40%); }
+.wide .tank { height: 48%; }
+/* the copy keeps out of the water: the body ends above the fish band */
+.board .b-body { padding-bottom: 230px; }
+.board.wide .b-body { padding-bottom: 190px; }
+.board > *:not(.tank) { position: relative; z-index: 1; }
+.board::after { z-index: 2; }
+html[data-theme="light"] .b-foot .sig { filter: invert(1) opacity(0.75); }
+html[data-theme="light"] .board { background-image: radial-gradient(ellipse 80% 55% at 50% 0%, rgba(var(--cyan-dim-rgb), 0.06), transparent 70%), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(var(--gold-rgb), 0.05), transparent 70%); }
+html[data-theme="light"] .board::after { border-color: rgba(var(--cyan-dim-rgb), 0.18); }
 body { margin: 0; padding: 40px; font-family: 'JetBrains Mono', monospace; color: var(--text-primary); display: flex; flex-wrap: wrap; gap: 40px; align-items: flex-start; }
 .board { position: relative; box-sizing: border-box; overflow: hidden; flex: none; display: flex; flex-direction: column; background: var(--sea-deep);
   background-image: radial-gradient(ellipse 80% 55% at 50% 0%, rgba(var(--cyan-dim-rgb), 0.10), transparent 70%), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(var(--gold-rgb), 0.05), transparent 70%);
@@ -25,31 +51,31 @@ body { margin: 0; padding: 40px; font-family: 'JetBrains Mono', monospace; color
 .board.portrait { width: 1080px; height: 1350px; }
 .board.wide { width: 1600px; height: 900px; --pad: 76px; }
 .b-head { display: flex; justify-content: space-between; align-items: center; }
-.eyebrow { font-size: 22px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--cyan-dim); }
+.eyebrow { font-size: 24px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--cyan-dim); }
 .strip { display: inline-flex; gap: 10px; }
 .strip svg { width: 26px; height: 26px; fill: none; stroke: rgba(var(--cyan-dim-rgb), 0.55); stroke-width: 1.6; }
 .b-body { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
 .b-foot { display: flex; justify-content: space-between; align-items: flex-end; }
 .b-foot .sig { height: 44px; opacity: 0.85; }
-.b-foot .url { font-size: 22px; letter-spacing: 0.12em; color: var(--muted); }
+.b-foot .url { font-size: 24px; letter-spacing: 0.12em; color: var(--muted); }
 h2, h3, blockquote { font-family: 'Raleway', sans-serif; margin: 0; }
-h2 { font-weight: 200; color: var(--text-subhead); font-size: 64px; line-height: 1.15; letter-spacing: 0.01em; }
-.wide h2 { font-size: 58px; }
-h3 { font-weight: 400; font-size: 20px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--cyan); margin-bottom: 22px; font-family: 'JetBrains Mono', monospace; }
-.lede { font-size: 24px; line-height: 1.6; color: var(--text-bright); margin: 26px 0 0; max-width: 34em; }
-.cta { margin: 40px 0 0; font-size: 24px; color: var(--text-bright); }
+h2 { font-weight: 200; color: var(--text-subhead); font-size: 70px; line-height: 1.15; letter-spacing: 0.01em; }
+.wide h2 { font-size: 64px; }
+h3 { font-weight: 400; font-size: 22px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--cyan); margin-bottom: 22px; font-family: 'JetBrains Mono', monospace; }
+.lede { font-size: 26px; line-height: 1.6; color: var(--text-bright); margin: 26px 0 0; max-width: 34em; }
+.cta { margin: 40px 0 0; font-size: 26px; color: var(--text-bright); }
 .cta strong { color: var(--gold); font-weight: 500; }
 /* quotes */
 .quote .b-body { position: relative; }
-.qmark { display: block; font-family: 'Raleway', sans-serif; font-weight: 300; font-size: 200px; line-height: 0.55; height: 0.42em; margin: 0 0 18px -6px; color: rgba(var(--gold-rgb), 0.75); }
-blockquote { font-weight: 300; color: var(--text-subhead); font-size: 52px; line-height: 1.35; }
-.quote.short blockquote { font-size: 68px; line-height: 1.25; }
-.quote.mid blockquote { font-size: 58px; }
-.quote.long blockquote { font-size: 42px; line-height: 1.4; }
-.quote.portrait blockquote { font-size: 56px; }
-.quote.portrait.long blockquote { font-size: 46px; }
-.quote.portrait.short blockquote { font-size: 74px; }
-cite { display: block; font-style: normal; margin-top: 44px; padding-top: 26px; border-top: 1px solid rgba(var(--cyan-dim-rgb), 0.3); font-size: 24px; line-height: 1.5; }
+.qmark { display: block; font-family: 'Raleway', sans-serif; font-weight: 300; font-size: 220px; line-height: 0.55; height: 0.42em; margin: 0 0 18px -6px; color: rgba(var(--gold-rgb), 0.75); }
+blockquote { font-weight: 300; color: var(--text-subhead); font-size: 58px; line-height: 1.35; }
+.quote.short blockquote { font-size: 74px; line-height: 1.25; }
+.quote.mid blockquote { font-size: 64px; }
+.quote.long blockquote { font-size: 46px; line-height: 1.4; }
+.quote.portrait blockquote { font-size: 62px; }
+.quote.portrait.long blockquote { font-size: 50px; }
+.quote.portrait.short blockquote { font-size: 82px; }
+cite { display: block; font-style: normal; margin-top: 44px; padding-top: 26px; border-top: 1px solid rgba(var(--cyan-dim-rgb), 0.3); font-size: 26px; line-height: 1.5; }
 cite strong { color: var(--cyan); font-weight: 500; display: block; }
 cite span { color: var(--muted); }
 /* clients */
@@ -57,53 +83,65 @@ cite span { color: var(--muted); }
 .wall { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 28px 32px; }
 .wall.teams { grid-template-columns: 1fr 1fr; }
 .wall li { display: flex; flex-direction: column; gap: 8px; }
-.wm { font-family: 'Raleway', sans-serif; font-weight: 300; font-size: 44px; color: var(--text-subhead); line-height: 1.1; display: inline-flex; align-items: center; min-height: 56px; }
+.wm { font-family: 'Raleway', sans-serif; font-weight: 300; font-size: 48px; color: var(--text-subhead); line-height: 1.1; display: inline-flex; align-items: center; min-height: 56px; }
 .wm em { font-style: normal; color: var(--muted); }
 .wm-openprose { font-weight: 500; letter-spacing: 0.02em; }
-.wm-nanome { font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; font-size: 38px; }
-.wm-badvr { font-weight: 600; font-size: 42px; }
+.wm-nanome { font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; font-size: 42px; }
+.wm-badvr { font-weight: 600; font-size: 46px; }
 .wm-avatar { font-weight: 200; letter-spacing: 0.04em; }
 .wm-collab { font-weight: 300; }
 .wm-muse { font-weight: 400; }
 .wm-svg { height: 42px; width: auto; color: var(--text-subhead); }
-.what { font-size: 18px; color: var(--muted); line-height: 1.4; }
+.what { font-size: 20px; color: var(--muted); line-height: 1.4; }
 .wide .wall { grid-template-columns: repeat(3, 1fr); }
 .wide .wall.teams { grid-template-columns: repeat(4, 1fr); }
 .wide .group + .group { margin-top: 40px; }
 /* services */
 .tiers { list-style: none; margin: 40px 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 26px 40px; }
 .tiers li { display: flex; flex-direction: column; gap: 6px; padding-left: 20px; border-left: 2px solid rgba(var(--gold-rgb), 0.7); }
-.tiers .tier { font-size: 17px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); }
-.tiers strong { font-family: 'Raleway', sans-serif; font-weight: 500; font-size: 30px; color: var(--text-subhead); }
-.tiers li > span:last-child { font-size: 20px; color: var(--text-primary); line-height: 1.5; }
+.tiers .tier { font-size: 18px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); }
+.tiers strong { font-family: 'Raleway', sans-serif; font-weight: 500; font-size: 32px; color: var(--text-subhead); }
+.tiers li > span:last-child { font-size: 22px; color: var(--text-primary); line-height: 1.5; }
 .wide .tiers { grid-template-columns: repeat(4, 1fr); margin-top: 34px; }
 .wide .cta, .wide .lede { margin-top: 22px; }
 .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 40px; }
 .cols ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; }
-.cols li { font-size: 21px; line-height: 1.5; color: var(--text-bright); padding-left: 18px; border-left: 2px solid rgba(var(--cyan-dim-rgb), 0.5); }
+.cols li { font-size: 24px; line-height: 1.5; color: var(--text-bright); padding-left: 18px; border-left: 2px solid rgba(var(--cyan-dim-rgb), 0.5); }
 /* outcomes */
 .rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 20px; }
 .rows li { display: grid; grid-template-columns: 240px 1fr; gap: 24px; align-items: baseline; }
-.rows strong { font-family: 'Raleway', sans-serif; font-weight: 500; font-size: 28px; color: var(--text-subhead); }
-.rows span { font-size: 20px; line-height: 1.5; color: var(--text-primary); }
+.rows strong { font-family: 'Raleway', sans-serif; font-weight: 500; font-size: 30px; color: var(--text-subhead); }
+.rows span { font-size: 22px; line-height: 1.5; color: var(--text-primary); }
 .stats { list-style: none; margin: 0; padding: 0; display: flex; gap: 44px; flex-wrap: wrap; }
 .stats li { display: flex; flex-direction: column; padding-left: 20px; border-left: 1px solid rgba(var(--gold-rgb), 0.35); }
-.stats b { font-family: 'Raleway', sans-serif; font-weight: 200; font-size: 84px; line-height: 1; color: var(--gold); }
-.stats span { font-size: 17px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-top: 8px; max-width: 9em; line-height: 1.3; }
+.stats b { font-family: 'Raleway', sans-serif; font-weight: 200; font-size: 92px; line-height: 1; color: var(--gold); }
+.stats span { font-size: 18px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-top: 8px; max-width: 9em; line-height: 1.3; }
 .wide .rows li { grid-template-columns: 220px 1fr; }
-.wide .stats b { font-size: 72px; }
+.wide .stats b { font-size: 80px; }
+.outcomes h2 { font-size: 58px; }
+.outcomes .stats { margin-top: 30px; gap: 28px; }
+.outcomes .stats li { padding-left: 16px; }
+.outcomes .stats b { font-size: 64px; }
+.outcomes .stats span { max-width: 9em; font-size: 15px; }
+.rows.synth { margin-top: 34px; gap: 16px; }
+.rows.synth li { grid-template-columns: 280px 1fr; }
+.rows.synth strong { font-size: 26px; }
+.rows.synth span { font-size: 19px; }
+.wide .rows.synth { margin-top: 30px; }
+.wide .rows.synth li { grid-template-columns: 280px 1fr; }
+.wide .outcomes .stats { margin-top: 26px; }
 /* awards */
 .tl { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 30px; position: relative; }
 .tl li { display: grid; grid-template-columns: 120px 1fr; column-gap: 28px; align-items: baseline; }
-.tl .yr { color: var(--gold); font-size: 24px; letter-spacing: 0.08em; }
-.tl strong { font-family: 'Raleway', sans-serif; font-weight: 500; font-size: 32px; color: var(--text-subhead); display: block; }
-.tl li > span:last-child { grid-column: 2; font-size: 20px; color: var(--muted); line-height: 1.5; }
-.wide .tl { gap: 20px; } .wide .tl strong { font-size: 28px; }
+.tl .yr { color: var(--gold); font-size: 26px; letter-spacing: 0.08em; }
+.tl strong { font-family: 'Raleway', sans-serif; font-weight: 500; font-size: 36px; color: var(--text-subhead); display: block; }
+.tl li > span:last-child { grid-column: 2; font-size: 22px; color: var(--muted); line-height: 1.5; }
+.wide .tl { gap: 20px; } .wide .tl strong { font-size: 30px; }
 /* cover */
 .three { list-style: none; margin: 48px 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 32px; }
 .three li { display: flex; flex-direction: column; gap: 10px; padding-top: 18px; border-top: 1px solid rgba(var(--cyan-dim-rgb), 0.4); }
-.three .k { font-family: 'Raleway', sans-serif; font-weight: 500; font-size: 30px; color: var(--cyan); }
-.three li > span:last-child { font-size: 20px; line-height: 1.5; color: var(--text-primary); }
+.three .k { font-family: 'Raleway', sans-serif; font-weight: 500; font-size: 32px; color: var(--cyan); }
+.three li > span:last-child { font-size: 22px; line-height: 1.5; color: var(--text-primary); }
 .wide .three { margin-top: 36px; }
 </style>
 </head>
@@ -120,6 +158,7 @@ cite span { color: var(--muted); }
 </span></header>
 <div class="b-body"><span class="qmark">“</span><blockquote>I love collaborating with John. A man made for this moment.</blockquote>
 <cite><strong>Dan Barrett</strong><span>CEO, OpenProse</span></cite></div>
+<canvas class="tank" aria-hidden="true"></canvas>
 <footer class="b-foot"><img class="sig" src="./JHsig.svg" alt="JH"><span class="url">johnhanacek.com</span></footer></article>
 <article class="board quote long" data-name="endorsement-sheila-zipfel" data-formats="square,portrait">
 <header class="b-head"><span class="eyebrow">What clients say</span><span class="strip" aria-hidden="true">
@@ -132,6 +171,7 @@ cite span { color: var(--muted); }
 </span></header>
 <div class="b-body"><span class="qmark">“</span><blockquote>He’s not only a true Visionary, but also an amazing listener with incredible intuition. I’ve never seen anyone able to so readily understand scientists, then design an experience they can scarcely imagine, but recognize as what they wanted.</blockquote>
 <cite><strong>Sheila Zipfel</strong><span>Product Manager, Nanome</span></cite></div>
+<canvas class="tank" aria-hidden="true"></canvas>
 <footer class="b-foot"><img class="sig" src="./JHsig.svg" alt="JH"><span class="url">johnhanacek.com</span></footer></article>
 <article class="board quote long" data-name="endorsement-tommy-kronmark" data-formats="square,portrait">
 <header class="b-head"><span class="eyebrow">What clients say</span><span class="strip" aria-hidden="true">
@@ -144,6 +184,7 @@ cite span { color: var(--muted); }
 </span></header>
 <div class="b-body"><span class="qmark">“</span><blockquote>John recently led a customer journey mapping workshop for my team, and it was an outstanding experience. We came away with a deeper understanding of our customers and a clear appreciation for the impact of product design.</blockquote>
 <cite><strong>Tommy Kronmark</strong><span>COO, Muse.bio</span></cite></div>
+<canvas class="tank" aria-hidden="true"></canvas>
 <footer class="b-foot"><img class="sig" src="./JHsig.svg" alt="JH"><span class="url">johnhanacek.com</span></footer></article>
 <article class="board quote long" data-name="endorsement-ben-s" data-formats="square,portrait">
 <header class="b-head"><span class="eyebrow">What clients say</span><span class="strip" aria-hidden="true">
@@ -156,6 +197,7 @@ cite span { color: var(--muted); }
 </span></header>
 <div class="b-body"><span class="qmark">“</span><blockquote>If you’re building with AI agents and want to skip the frustration curve, talk to John Hanacek. I’m crushing at work right now, and John is the secret ingredient who got me here.</blockquote>
 <cite><strong>Ben S</strong><span>Founder & CEO, I Hear Everything</span></cite></div>
+<canvas class="tank" aria-hidden="true"></canvas>
 <footer class="b-foot"><img class="sig" src="./JHsig.svg" alt="JH"><span class="url">johnhanacek.com</span></footer></article>
 <article class="board quote mid" data-name="endorsement-hurriyet-ok" data-formats="square,portrait">
 <header class="b-head"><span class="eyebrow">What clients say</span><span class="strip" aria-hidden="true">
@@ -168,6 +210,7 @@ cite span { color: var(--muted); }
 </span></header>
 <div class="b-body"><span class="qmark">“</span><blockquote>I highly recommend John for roles requiring design leadership, systems thinking, and future-focused innovation.</blockquote>
 <cite><strong>Dr. Hurriyet Ok</strong><span>Professor, George Washington University</span></cite></div>
+<canvas class="tank" aria-hidden="true"></canvas>
 <footer class="b-foot"><img class="sig" src="./JHsig.svg" alt="JH"><span class="url">johnhanacek.com</span></footer></article>
 <article class="board quote short" data-name="endorsement-inga-petryaevskaya" data-formats="square,portrait">
 <header class="b-head"><span class="eyebrow">What clients say</span><span class="strip" aria-hidden="true">
@@ -180,6 +223,7 @@ cite span { color: var(--muted); }
 </span></header>
 <div class="b-body"><span class="qmark">“</span><blockquote>Talented and very experienced designer!</blockquote>
 <cite><strong>Inga Petryaevskaya</strong><span>CEO, ShapesXR</span></cite></div>
+<canvas class="tank" aria-hidden="true"></canvas>
 <footer class="b-foot"><img class="sig" src="./JHsig.svg" alt="JH"><span class="url">johnhanacek.com</span></footer></article>
 <article class="board quote short" data-name="endorsement-ben-reed" data-formats="square,portrait">
 <header class="b-head"><span class="eyebrow">What clients say</span><span class="strip" aria-hidden="true">
@@ -192,6 +236,7 @@ cite span { color: var(--muted); }
 </span></header>
 <div class="b-body"><span class="qmark">“</span><blockquote>I’ve never known someone who practices design thinking as well as John.</blockquote>
 <cite><strong>Ben Reed</strong><span>Illustrator and Designer</span></cite></div>
+<canvas class="tank" aria-hidden="true"></canvas>
 <footer class="b-foot"><img class="sig" src="./JHsig.svg" alt="JH"><span class="url">johnhanacek.com</span></footer></article>
 <article class="board clients" data-name="clients" data-formats="square,wide">
 <header class="b-head"><span class="eyebrow">Worked with</span><span class="strip" aria-hidden="true">
@@ -227,6 +272,7 @@ cite span { color: var(--muted); }
 <li><span class="wm wm-collab">Collaborate<em>.org</em></span><span class="what">UI/UX Design Lead · 2015–18</span></li>
 </ul></section>
 </div>
+<canvas class="tank" aria-hidden="true"></canvas>
 <footer class="b-foot"><img class="sig" src="./JHsig.svg" alt="JH"><span class="url">johnhanacek.com</span></footer></article>
 <article class="board services" data-name="services-coaching" data-formats="square,wide">
 <header class="b-head"><span class="eyebrow">AI coaching · The JH Coaching OS</span><span class="strip" aria-hidden="true">
@@ -248,6 +294,7 @@ cite span { color: var(--muted); }
 </ul>
 <p class="cta">Free intro call → <strong>hi@johnhanacek.com</strong></p>
 </div>
+<canvas class="tank" aria-hidden="true"></canvas>
 <footer class="b-foot"><img class="sig" src="./JHsig.svg" alt="JH"><span class="url">johnhanacek.com</span></footer></article>
 <article class="board services design" data-name="services-design" data-formats="square,wide">
 <header class="b-head"><span class="eyebrow">Design & product services</span><span class="strip" aria-hidden="true">
@@ -275,6 +322,7 @@ cite span { color: var(--muted); }
 </div>
 <p class="cta">Demos delivered as working code → <strong>johnhanacek.com/services</strong></p>
 </div>
+<canvas class="tank" aria-hidden="true"></canvas>
 <footer class="b-foot"><img class="sig" src="./JHsig.svg" alt="JH"><span class="url">johnhanacek.com</span></footer></article>
 <article class="board outcomes" data-name="outcomes" data-formats="square,wide">
 <header class="b-head"><span class="eyebrow">Outcomes</span><span class="strip" aria-hidden="true">
@@ -286,16 +334,21 @@ cite span { color: var(--muted); }
 <svg viewBox="0 0 40 40"><polygon points="20,5 33,12.5 33,27.5 20,35 7,27.5 7,12.5"/></svg>
 </span></header>
 <div class="b-body">
-<section class="group"><h3>Shipped</h3><ul class="rows">
-<li><strong>Nanome</strong><span>XR + AI molecular interface, shipped to pharma customers. Research-led pivot: Spotlight/Follow replaced teleport navigation.</span></li>
-<li><strong>BadVR</strong><span>AROC situational-awareness AR HUD. Hand-tracking on Meta Quest and HoloLens 2.</span></li>
-<li><strong>JH Coaching OS</strong><span>Adaptive AI coaching product — agent, context docs, dashboard — concept to working software.</span></li>
-</ul></section>
-<section class="group nums"><h3>OpenProse founding design</h3>
+<h2>Twelve years designing where the ground is new.</h2>
 <ul class="stats">
-<li><b>2</b><span>months</span></li><li><b>5</b><span>logos</span></li><li><b>37</b><span>live homepage approaches</span></li><li><b>471</b><span>commits</span></li><li><b>1</b><span>canonical style</span></li>
-</ul></section>
+<li><b>12</b><span>years designing</span></li>
+<li><b>3</b><span>products shipped to customers</span></li>
+<li><b>3</b><span>award wins</span></li>
+<li><b>3</b><span>client teams · JHDesign LLC</span></li>
+<li><b>4</b><span>domains</span></li>
+</ul>
+<ul class="rows synth">
+<li><strong>Scientists in VR</strong><span>XR + AI molecular design shipped to pharma, and a research-led navigation pivot that became a Nanome 2 pillar.</span></li>
+<li><strong>Responders in AR</strong><span>Situational-awareness HUD on Quest and HoloLens 2; NIST CHARIoT winner; AsMA award for XR robot control.</span></li>
+<li><strong>Founders with AI</strong><span>An adaptive coaching OS, and founding design that went brand → live homepage in two months (37 approaches, 471 commits).</span></li>
+</ul>
 </div>
+<canvas class="tank" aria-hidden="true"></canvas>
 <footer class="b-foot"><img class="sig" src="./JHsig.svg" alt="JH"><span class="url">johnhanacek.com</span></footer></article>
 <article class="board awards" data-name="awards" data-formats="square,wide">
 <header class="b-head"><span class="eyebrow">Awards & recognition</span><span class="strip" aria-hidden="true">
@@ -313,6 +366,7 @@ cite span { color: var(--muted); }
 <li><span class="yr">2020</span><strong>Founder Institute Graduate</strong><span>San Francisco · as CEO of AvatarMEDIC</span></li>
 <li><span class="yr">2016</span><strong>“Most Meta”</strong><span>Georgetown CCT · voted by peers</span></li>
 </ul></div>
+<canvas class="tank" aria-hidden="true"></canvas>
 <footer class="b-foot"><img class="sig" src="./JHsig.svg" alt="JH"><span class="url">johnhanacek.com</span></footer></article>
 <article class="board cover" data-name="offer" data-formats="square,wide">
 <header class="b-head"><span class="eyebrow">John Hanacek · JHDesign LLC</span><span class="strip" aria-hidden="true">
@@ -332,7 +386,10 @@ cite span { color: var(--muted); }
 </ul>
 <p class="cta">Free intro call → <strong>hi@johnhanacek.com</strong></p>
 </div>
+<canvas class="tank" aria-hidden="true"></canvas>
 <footer class="b-foot"><img class="sig" src="./JHsig.svg" alt="JH"><span class="url">johnhanacek.com</span></footer></article>
+<script src="../scripts/shape-detection.js"></script>
+<script src="../scripts/fish-engine.js"></script>
 <script>
   // ?format=square|portrait|wide picks the size class for every board that lists it;
   // boards that don't list the format are hidden. Default shows squares.
@@ -341,6 +398,42 @@ cite span { color: var(--muted); }
     const ok = (b.dataset.formats || 'square').split(',').includes(fmt);
     b.hidden = !ok; if (ok) b.classList.add(fmt);
   });
+  const solo = new URLSearchParams(location.search).get('board');
+  if (solo) document.querySelectorAll('.board').forEach(b => { if (b.dataset.name !== solo) b.hidden = true; });
+
+  // ---- The tank. Same strokes the scene language feeds the real canvases. ----
+  const kit = {
+    square: (cx, cy, s) => { const h = s / 2, cs = [[-h,-h],[h,-h],[h,h],[-h,h]], pts = [];
+      for (let e = 0; e < 4; e++) { const [x1,y1] = cs[e], [x2,y2] = cs[(e+1)%4]; for (let i = 0; i < 7; i++) pts.push({ x: cx + x1 + (x2-x1)*i/7, y: cy + y1 + (y2-y1)*i/7 }); }
+      pts.push({ x: cx + cs[0][0], y: cy + cs[0][1] }); return pts; },
+    ichthys: (cx, cy, tier) => { const S = tier === 'large' ? 1.55 : tier === 'medium' ? 1.0 : 0.62;
+      const rx = 45*S, ry = 32*S, ov = 0.55, tx = 75*S, ty = 28*S, pts = [], a0 = ov, a1 = Math.PI*2 - ov;
+      const sx = cx + rx*Math.cos(a0), sy = cy + ry*Math.sin(a0);
+      for (let i = 0; i <= 3; i++) pts.push({ x: (cx+tx) + (sx-cx-tx)*i/4, y: (cy-ty) + (sy-cy+ty)*i/4 });
+      for (let i = 0; i <= 26; i++) { const a = a0 + (a1-a0)*i/26; pts.push({ x: cx + rx*Math.cos(a), y: cy + ry*Math.sin(a) }); }
+      const ex = cx + rx*Math.cos(a1), ey = cy + ry*Math.sin(a1);
+      for (let i = 1; i <= 4; i++) pts.push({ x: ex + (cx+tx-ex)*i/4, y: ey + (cy+ty-ey)*i/4 }); return pts; },
+  };
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  window.JH_TANKS = [];
+  document.querySelectorAll('.board:not([hidden]) .tank').forEach((c) => {
+    const f = FishCanvas(c, { transparent: true, seedFish: false });
+    const W = c.clientWidth, H = c.clientHeight;
+    const nCoral = W > 1200 ? 5 : 3;
+    for (let i = 0; i < nCoral; i++) {
+      const x = W * (0.3 + 0.42 * i / (nCoral - 1)) + rnd(-30, 30);
+      f.processStroke(kit.square(x, H - 30 - rnd(0, 20), rnd(60, 90)), ['coral']);
+    }
+    const fishPlan = W > 1200 ? ['medium','small','small','medium','small','large'] : ['small','medium','small','small','medium'];
+    fishPlan.forEach((tier, i) => {
+      const x = W * (0.1 + 0.8 * ((i * 0.618 + 0.2) % 1)), y = H * rnd(0.42, 0.68);
+      f.processStroke(kit.ichthys(x, y, tier), ['fish']);
+    });
+    window.JH_TANKS.push(f);
+  });
+  // feed(n): drop food where the fish are — the renderer calls it for stills and video
+  window.JH_FEED = (n = 2) => window.JH_TANKS.forEach(f => { const c = f.canvas;
+    for (let i = 0; i < n; i++) f.addFood(c.clientWidth * rnd(0.2, 0.8), c.clientHeight * rnd(0.3, 0.55)); });
 </script>
 </body>
 </html>
