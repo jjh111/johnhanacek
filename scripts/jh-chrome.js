@@ -14,11 +14,16 @@
   const SITE = {
     year: 2026,
     org: 'JHDesign LLC',
-    version: '2.07', // ← THE site version. Footer badge, ?v= cache-bust, and README all read this (run scripts/sync-version.mjs after bumping).
+    version: '2.08', // ← THE site version. Footer badge, ?v= cache-bust, and README all read this (run scripts/sync-version.mjs after bumping).
     versionNote: 'Made with Claude Code &amp; OpenCode',
     github: 'https://github.com/jjh111/johnhanacek',
     githubLabel: 'github.com/jjh111/johnhanacek',
-    sig: './Assets/JHsig.svg'
+    sig: './Assets/JHsig.svg',
+    // Cookieless visit counts. Empty = off. Set to the GoatCounter site code
+    // (the part before .goatcounter.com) and every page reports a pageview +
+    // referrer with no cookie, no fingerprint, no consent banner needed. The
+    // footer states it whenever it is on.
+    goatcounter: ''
   };
   window.JH_SITE = SITE;
 
@@ -71,6 +76,7 @@
           '<p class="footer-copyright">© ' + SITE.year + ' John Hanacek · ' + SITE.org + '</p>' +
           '<p class="footer-github"><a href="' + SITE.github + '" target="_blank" rel="noopener">' + SITE.githubLabel + '</a></p>' +
           '<p class="version version-note">' + SITE.versionNote + '</p>' +
+          (SITE.goatcounter ? '<p class="version version-note footer-privacy">Visits are counted without cookies (<a href="https://www.goatcounter.com" target="_blank" rel="noopener">GoatCounter</a>) · nothing about you is stored</p>' : '') +
         '</div>';
     }
   }
@@ -328,11 +334,43 @@
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(schedule);
   }
 
+  // ---- Analytics (opt-in by config) ---------------------------------------
+  function initAnalytics() {
+    if (!SITE.goatcounter || /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return;
+    var s = document.createElement('script');
+    s.async = true;
+    s.src = 'https://gc.zgo.at/count.js';
+    s.setAttribute('data-goatcounter', 'https://' + SITE.goatcounter + '.goatcounter.com/count');
+    document.head.appendChild(s);
+  }
+
+  // ---- Arrival: the section you were sent to says so ----------------------
+  // The command bar (and any deep link) lands on page#id. The target block
+  // glows briefly so the answer has a place, not just a scroll position.
+  function initArrival() {
+    var timer = null;
+    function mark() {
+      var id = decodeURIComponent((location.hash || '').slice(1));
+      if (!id) return;
+      var el = document.getElementById(id);
+      if (!el) return;
+      document.querySelectorAll('.jh-arrived').forEach(function (n) { n.classList.remove('jh-arrived'); });
+      void el.offsetWidth;
+      el.classList.add('jh-arrived');
+      clearTimeout(timer);
+      timer = setTimeout(function () { el.classList.remove('jh-arrived'); }, 3200);
+    }
+    window.addEventListener('hashchange', mark);
+    if (location.hash) setTimeout(mark, 60);
+  }
+
   function initChrome() {
     initTheme();
     initAutoplayGate();
     initReturnChip();
     initNavFit();
+    initArrival();
+    initAnalytics();
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initChrome);

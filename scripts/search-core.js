@@ -81,7 +81,10 @@
         { patterns: [/where\s+did\s+he\s+(go\s+to\s+school|study|graduate)/i, /his\s+education/i, /degree|university|college|school/i], expanded: 'education degree masters bachelors graduate school Georgetown UCSD university studied', hint: 'Education' },
         { patterns: [/what\s+(tools|software|stack|programs?|apps?)\s+does\s+he\s+use/i, /his\s+(tools|toolset|tool\s*chain|tech\s+stack|software)/i, /what\s+does\s+he\s+(use|work\s+in|build\s+with)/i], expanded: 'skills tools software stack figma unity blender three.js claude code ollama obsidian coda', hint: 'Tools and stack' },
         { patterns: [/has\s+he\s+won\s+(any|an)\s+(award|prize)/i, /awards?|recognition|achievement|accomplishment/i, /what\s+has\s+he\s+(won|achieved|accomplished)/i, /biggest\s+(accomplishment|achievement)/i], expanded: 'awards innovation aerospace nist microsoft founder institute accomplishment achievement won', hint: 'Awards and recognition' },
-        { patterns: [/schedul(e|ing)|book\s+(a\s+)?(call|meeting|session)|availability|set\s+up\s+a\s+(call|meeting|time)/i], expanded: 'services coaching intro call consultation contact email', hint: 'How to book time with John', card: 'schedule' },
+        { patterns: [/schedul(e|ing)|book\s+(a\s+)?(call|meeting|session)|set\s+up\s+a\s+(call|meeting|time)/i], expanded: 'services coaching intro call consultation contact email', hint: 'How to book time with John', card: 'schedule' },
+        // Hiring: the audience this month arrives from applications. One gold
+        // card — the resume PDF, the calendar — over the resume + looking-for chunks.
+        { patterns: [/\b(hire|hiring|recruit(ing|er)?|open\s+to\s+work|available|availability|full[-\s]?time|job|role|position|resume|r\u00e9sum\u00e9|\bcv\b|curriculum)\b/i, /looking\s+for\s+(work|a\s+job|a\s+role)/i, /is\s+he\s+(available|open|looking)/i], expanded: 'resume hire available full-time product design engineer looking for role lead designer founding designer', hint: 'Hiring John', card: 'hire' },
         { patterns: [/how\s+(do\s+i|can\s+i|to)\s+(contact|reach|email|message)\s+(him|john)/i, /contact|email|linkedin|twitter|social/i, /send\s+(him|john)\s+a\s+message/i], expanded: 'contact email linkedin bluesky twitter social', hint: 'Contact information', card: 'contact' },
         { patterns: [/what\s+does\s+he\s+(charge|cost)|pricing|rates?|how\s+much/i, /\bcosts?\b|\bprices?\b/i, /services?|consulting|coaching|freelance/i, /can\s+he\s+help\s+(me|us|with)/i, /i\s+need\s+help\s+with/i, /looking\s+for\s+a\s+designer/i], expanded: 'services coaching consulting design product workshops retainer sprint', hint: 'Services and engagement options', card: 'services' },
         { patterns: [/has\s+he\s+(led|managed|run)\s+(teams?|people|a\s+company)/i, /leadership|management|team\s+lead/i, /manage\s+(people|teams?|reports)/i], expanded: 'leadership team managed led CEO founder cross-functional collaboration hire people', hint: 'Leadership and team experience' },
@@ -721,9 +724,15 @@
             },
             schedule: {
                 title: 'Book an intro call',
-                body: 'Email a couple of times that work and what you want to cover — John will confirm one.',
-                cta: { label: 'Email to schedule', href: 'mailto:hi@johnhanacek.com?subject=Intro%20call' },
-                alt: { label: 'Coaching options', href: 'services.html#coaching' },
+                body: 'Free intro call — no pitch, just a conversation about what you are trying to do.',
+                cta: { label: 'Pick a time', href: 'https://calendar.app.google/gpSXKWuwxrGZ2HweA' },
+                alt: { label: 'Email instead', href: 'mailto:hi@johnhanacek.com?subject=Intro%20call' },
+            },
+            hire: {
+                title: 'Hiring John',
+                body: 'Product Design Engineer · AI, Web, 3D & XR. Open to full-time and project work, San Diego or remote, US citizen.',
+                cta: { label: 'One-page resume (PDF)', href: 'Assets/JH_Resume_2026_onepage.pdf' },
+                alt: { label: 'Book an intro call', href: 'https://calendar.app.google/gpSXKWuwxrGZ2HweA' },
             },
         };
 

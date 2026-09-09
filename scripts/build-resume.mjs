@@ -267,6 +267,68 @@ function jsonld() {
   return { path, J };
 }
 
+
+// ---------------------------------------------------------------- About page blocks (static HTML, rewritten between markers)
+function aboutBlocks() {
+  const link = (label, url) => url ? `<a href="${url}" target="_blank" rel="noopener">${esc(label)}</a>` : esc(label);
+  const item = (year, h4, company, lis) => `
+                <div class="timeline-item">
+                    <span class="year">${year}</span>
+                    <div class="timeline-content">
+                        <h4>${h4}</h4>
+                        ${company ? `<p class="company">${company}</p>` : ''}
+                        ${lis ? `<ul class="muted">${lis.map(l => `<li>${esc(l)}</li>`).join('')}</ul>` : ''}
+                    </div>
+                </div>`;
+  const experience = `\n            <div class="timeline">` + R.work.map(w => item(span(w).replace('now', 'Present'), esc(w.title), link(w.org, w.orgUrl), w.compressed ? [w.highlights[0].text] : (w.onePage || w.highlights.slice(0, 4).map(h => h.text)))).join('') + `\n            </div>\n            `;
+  const education = `\n            <div class="card-grid cols-2">` + R.education.map(e => `
+                <div class="content-card">
+                    <h4>${esc(e.school)}</h4>
+                    <p class="muted">${esc(e.location)} · ${e.start}–${e.end}</p>
+                    <p><strong>${esc(e.degree.split(',')[0])}</strong>${esc(e.degree.slice(e.degree.indexOf(',')))}</p>
+                    <p>${e.thesis?.title ? `Thesis: ${e.thesis.url ? `<a href="${e.thesis.url}" target="_blank" rel="noopener">“${esc(e.thesis.title)}”</a>` : `“${esc(e.thesis.title)}”`} — ${esc(e.thesis.note)}` : `Thesis: ${esc(e.thesis?.note || '')}`}${e.secondThesis ? ` Second thesis: ${esc(e.secondThesis)}.` : ''}</p>
+                    ${e.honors ? `<p class="muted">${esc(e.honors.join(' · '))}</p>` : ''}
+                </div>`).join('') + `\n            </div>\n            `;
+  const awards = `\n            <div class="timeline">` + R.awards.map(a => item(a.year, esc(a.title), link(a.org, a.url), null).replace('</h4>\n', `</h4>\n`).replace(/(<\/p>)(\s*<\/div>)/, `$1${a.for ? `<p class="muted">${esc(a.for)}</p>` : ''}$2`)).join('') + `\n            </div>\n            `;
+  const card = (h4, body, muted) => `
+                <div class="content-card">
+                    <h4>${h4}</h4>
+                    <p>${body}</p>
+                    ${muted ? `<p class="muted">${muted}</p>` : ''}
+                </div>`;
+  const pubs = R.publications;
+  const P = id => pubs.find(p => p.id === id);
+  const research = `\n            <div class="card-grid cols-2" id="talks">` +
+    R.talks.map(t => card(esc(t.event), `${link(t.title, t.url)}${t.video ? ` · <a href="${t.video}" target="_blank" rel="noopener">video</a>` : ''}`, t.videoTitle ? esc(t.videoTitle) : '')).join('') +
+    R.features.map(f => card(esc(f.title), `${esc(f.role)} · ${link('about the book', f.url)}`, `${esc(f.authors)} · ${f.year}`)).join('') +
+    `\n            </div>\n            <div class="card-grid cols-2" id="publications">` +
+    card('Master’s thesis', link(`“${R.education[0].thesis.title}”`, R.education[0].thesis.url), esc(R.education[0].thesis.note)) +
+    card('EDULEARN15, Barcelona', link(P('edulearn-2015').title, P('edulearn-2015').url), esc(P('edulearn-2015').authors)) +
+    card('Atlantic Council — Strategic Foresight', `${link('Internet as Answer Engine, Part I', P('atlantic-council-i').url)} · ${link('Part II', P('atlantic-council-ii').url)}`, 'March 2014 — answer engines displacing search, written eight years before ChatGPT') +
+    card('The Technium — Kevin Kelly', link(P('technium-haiku').title, P('technium-haiku').url), 'Winner of the 2014 desirable-future challenge') +
+    card('HuffPost', link(P('huffpost-feudalism').title, P('huffpost-feudalism').url), '2014 — the open internet and platform monopolism') +
+    card('The Problems of Agent Orchestration', `<a href="onagents.html">${esc(P('onagents-2026').title)}</a>`, '2026 — a ~37,000-word essay, released through the playground') +
+    card('Writing archive', link('jhanacek.net', P('writing-archive').url), 'Foresight and grad-school writing, 2012–2016') +
+    `\n            </div>\n            `;
+  // How I work: the "how John thinks" chunks are the source (audited claims); the page mirrors them
+  const chunks = (() => { const d = JSON.parse(readFileSync(resolve(ROOT, 'Assets/search-chunks.json'), 'utf8')); return Array.isArray(d) ? d : d.chunks; })();
+  const HOW = [43, 44, 45, 47, 48];
+  const how = `\n            <div class="card-grid cols-2">` + HOW.map(id => { const ch = chunks.find(x => x.id === id); return ch ? card(esc(ch.title), esc(ch.content), '') : ''; }).join('') + `\n            </div>\n            `;
+  return { experience, education, awards, research, 'how-i-work': how };
+}
+function applyAbout() {
+  const path = resolve(ROOT, 'about.html');
+  let html = readFileSync(path, 'utf8');
+  const blocks = aboutBlocks();
+  for (const [k, v] of Object.entries(blocks)) {
+    const re = new RegExp(`(<!-- resume:${k} -->)[\\s\\S]*?(<!-- /resume:${k} -->)`);
+    if (!re.test(html)) { console.warn('about.html: no marker for', k); continue; }
+    html = html.replace(re, `$1${v}$2`);
+  }
+  writeFileSync(path, html);
+  return Object.keys(blocks);
+}
+
 // ---------------------------------------------------------------- PDF
 async function pdfs() {
   const { chromium } = await import('playwright-core');
@@ -318,10 +380,11 @@ if (APPLY) {
   writeFileSync(resolve(ROOT, 'Assets/john-hanacek-resume.md'), markdown());
   execFileSync('cp', [`${OUT}/resume-designed.pdf`, resolve(ROOT, 'Assets/JH_Resume_2026_onepage.pdf')]);
   const changed = applyChunks(patches);
+  const aboutDone = applyAbout();
   writeFileSync(jlPath, JSON.stringify(J, null, 2) + '\n');
   const auditPath = resolve(ROOT, 'Agent Reference/CHUNK_AUDIT.md');
   const note = `\n\n## §J Resume compile — ${R.meta.updated}\n\nChunks ${Object.keys(patches).join(', ')} are COMPILED from \`Assets/resume.json\` by \`scripts/build-resume.mjs --apply\` (source: the 2026-09-09 interview; evidence links live in the JSON). Edit the JSON, not the chunk text. Rebuild vectors after each compile (\`node scripts/build-chunk-vectors.mjs\`).\n`;
   const audit = readFileSync(auditPath, 'utf8').replace(/\n*## §J Resume compile — [^\n]*\n\nChunks[^\n]*\n/g, '').replace(/\n+$/, '\n');
   writeFileSync(auditPath, audit + note);
-  console.log('applied to repo: resume.md, one-page PDF (no phone), chunks', changed.join(','), '+ john-hanacek.json + CHUNK_AUDIT §J. Now run: node scripts/build-chunk-vectors.mjs');
+  console.log('applied to repo: resume.md, one-page PDF (no phone), chunks', changed.join(','), '+ john-hanacek.json + CHUNK_AUDIT §J + about.html blocks', aboutDone.join(','), '. Now run: node scripts/build-chunk-vectors.mjs');
 }
