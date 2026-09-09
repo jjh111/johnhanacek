@@ -1915,6 +1915,18 @@
             return null;
         }
 
+        // The narrowest column the both-sides wrap may use. Below this a slot
+        // is not a column, it is a stack of fragments: the workspace pane's
+        // media obstacle is a fixed 264px however narrow the pane gets, so at
+        // 768px the slot beside it measured 115px and produced 55px lines —
+        // seven mono characters, breaking words mid-syllable
+        // ("visualizatio / n"). 200px is ~25 characters, which is about the
+        // floor for justified prose. Under it pretext-wrap simply declines the
+        // slot and the paragraph flows below the obstacle at full width, which
+        // is the honest layout for a pane that cannot hold two columns.
+        // This was already happening at 900px before the tablet gate moved.
+        const MIN_WRAP_SLOT = 200;
+
         function applyDossierWrap(container, m, slot) {
             // The dossier gets the signature: prose flowing on BOTH sides of
             // its media. Degrades honestly — a failed wrap leaves the plain
@@ -1938,7 +1950,7 @@
                     obstacles: [{ el: obstacle, shape: 'rect', hPad: 14, vPad: 4 }],
                     lineHeight: m.lineHeight,
                     font: m.font,
-                    minSlot: 80,
+                    minSlot: MIN_WRAP_SLOT,
                 }).then(w => {
                     currentWrap = w;
                     postWrapRefit();
@@ -1988,10 +2000,13 @@
             detailWraps = [];
         }
         function workspaceOn() {
-            // Below 900px the CSS collapses the pane away — the list must
-            // keep its dossiers there even with the class still latched.
+            // Below 768px the CSS collapses the pane away — the list must
+            // keep its dossiers there even with the class still latched. This
+            // width and search-overlay.css's two gates are ONE decision: the
+            // split's left column has a 280px floor, and 768 is the narrowest
+            // viewport that clears it. Move one, move all three.
             return !!(config.workspaceActive && config.workspaceActive() && el('detailPane')
-                && window.matchMedia && window.matchMedia('(min-width: 900px)').matches);
+                && window.matchMedia && window.matchMedia('(min-width: 768px)').matches);
         }
         function wrapStrata(pane, m) {
             if (pretextState !== 'ready') return;
@@ -2011,7 +2026,7 @@
                     obstacles: [{ el: obstacle, shape: 'rect', hPad: 14, vPad: 4 }],
                     lineHeight: m.lineHeight,
                     font: m.font,
-                    minSlot: 80,
+                    minSlot: MIN_WRAP_SLOT,
                 }).then(w => { detailWraps.push(w); }).catch(() => { delete prose.dataset.wrapped; });
             }
         }

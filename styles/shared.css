@@ -40,7 +40,7 @@ html { scroll-behavior: smooth; font-size: 100%; }
 }
 
 /* Selection in the site's palette (tokens in jh-chrome.css, per theme). */
-::selection { background: var(--selection-bg, rgba(77, 201, 246, 0.35)); color: var(--selection-ink, #e8f4ff); }
+::selection { background: var(--selection-bg, rgba(77, 201, 246, 0.35)); color: var(--selection-ink, #f0f8ff); }
 
 /* Slim scrollbar, token-colored — replaces the split-brain where only
    onagents/openprose styled scrollbars. Native width elsewhere is fine on
@@ -57,10 +57,21 @@ html { scroll-behavior: smooth; font-size: 100%; }
     ::-webkit-scrollbar-thumb:hover { background-color: rgba(var(--cyan-dim-rgb), 0.45); }
 }
 
+/* WEIGHT: the mono ladder moved up one step — running text 400 → 500, and
+   everything that was emphasis at 500 (h3, h4, strong, the year badges) → 600,
+   because lifting body alone would have flattened the hierarchy into one
+   weight. Raleway is untouched: its thin 200/300 display faces ARE the site's
+   voice, and the ask was legibility, not a new voice.
+
+   This is metrically free. JetBrains Mono is monospaced, so 400, 500 and 600
+   share an advance width — no line can rewrap because the ink got heavier,
+   which is why the weight change needed no refit anywhere. The 600 face is
+   newly REQUESTED too; .oval-scroll-label already asked for it and was being
+   synthesised by the browser. */
 body {
     font-family: 'JetBrains Mono', monospace;
     font-size: var(--text-base);
-    font-weight: 400;
+    font-weight: 500;
     line-height: 1.7;
     color: var(--text-primary);
     background: var(--sea-deep);
@@ -242,8 +253,8 @@ h1, h2, h3, h4, h5, h6 {
 /* Tagline / byline — a touch bigger than before */
 .hero .tagline {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.68rem;
-    font-weight: 400;
+    font-size: var(--text-2xs);
+    font-weight: 500;
     color: var(--cyan);
     letter-spacing: 0.2em;
     text-transform: uppercase;
@@ -253,9 +264,9 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .hero .byline {
-    font-size: 0.68rem;
+    font-size: var(--text-2xs);
     color: var(--muted);
-    font-weight: 400;
+    font-weight: 500;
     margin: 0;
     white-space: nowrap;
 }
@@ -293,7 +304,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 .oval-scroll-label {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.68rem;
+    font-size: var(--text-2xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.12em;
@@ -402,7 +413,7 @@ h1, h2, h3, h4, h5, h6 {
     flex-direction: column;
     align-items: center;
     gap: 0.2rem;
-    color: rgba(var(--cyan-rgb), 0.4);
+    color: var(--ink-faint);
     text-decoration: none;
     transition: color 0.2s;
     animation: bounce 2.5s ease-in-out infinite;
@@ -414,8 +425,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 .scroll-text {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.5rem;
-    font-weight: 500;
+    font-size: var(--text-4xs);
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.12em;
     color: inherit;
@@ -435,6 +446,84 @@ h1, h2, h3, h4, h5, h6 {
 }
 .canvas-controls:hover { opacity: 1; }
 
+/* Canvas toggle switch + info button.
+   Promoted from index.html and design.html, which carried BYTE-IDENTICAL
+   copies of the toggle (47 lines each, zero diff) and near-identical copies
+   of .info-btn differing only by `flex-shrink`. Both copies also failed AA
+   at exactly the same ratio, so every contrast fix had to be made twice and
+   remembered twice. One owner now; design.html keeps only its one genuine
+   difference, `.canvas-controls { left: 3.1rem; }`. */
+.canvas-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--text-2xs);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink-quiet);
+    cursor: pointer;
+}
+.canvas-toggle input { display: none; }
+.canvas-toggle:hover { color: var(--accent-ink); }
+.toggle-switch {
+    width: 28px;
+    height: 14px;
+    background: rgba(var(--panel-rgb), 0.6);
+    border: 1px solid rgba(var(--cyan-dim-rgb), 0.2);
+    border-radius: 7px;
+    position: relative;
+    transition: all 0.2s ease;
+}
+.toggle-switch::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 8px;
+    height: 8px;
+    background: rgba(var(--cyan-rgb), 0.4);
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+.canvas-toggle input:checked + .toggle-switch {
+    background: rgba(var(--cyan-dim-rgb), 0.15);
+    border-color: rgba(var(--cyan-dim-rgb), 0.4);
+}
+.canvas-toggle input:checked + .toggle-switch::after {
+    left: 16px;
+    background: rgba(var(--cyan-rgb), 0.9);
+    box-shadow: 0 0 6px rgba(var(--cyan-dim-rgb), 0.5);
+}
+
+.info-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--text-2xs);
+    font-weight: 500;
+    line-height: 1;
+    color: var(--ink-quiet);
+    background: rgba(var(--panel-rgb), 0.4);
+    border: 1px solid rgba(var(--cyan-dim-rgb), 0.2);
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;               /* design.html's one addition; harmless on index */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0;
+}
+.info-btn:hover,
+.info-btn.active {
+    color: var(--accent-ink);
+    border-color: rgba(var(--cyan-dim-rgb), 0.5);
+}
+.info-btn:hover { background: rgba(var(--panel-rgb), 0.7); }
+.info-btn.active { background: rgba(var(--cyan-dim-rgb), 0.12); }
+
 /* Draw hint — floating on canvas, fades after N interactions via JS */
 .hero-hint {
     position: absolute;
@@ -446,9 +535,9 @@ h1, h2, h3, h4, h5, h6 {
     align-items: center;
     gap: 0.4rem;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.75rem;
-    font-weight: 400;
-    color: rgba(var(--cyan-rgb), 0.38);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    color: var(--ink-faint);
     text-transform: uppercase;
     letter-spacing: 0.15em;
     pointer-events: none;
@@ -461,7 +550,7 @@ h1, h2, h3, h4, h5, h6 {
     transition: opacity 1.2s ease; /* fade only triggers when .hidden is added by JS */
 }
 .hero-hint .hint-icon {
-    font-size: 1rem;
+    font-size: var(--text-md);
     animation: pencil-wiggle 4s ease-in-out infinite;
 }
 /* Removed: .hero.drawing .hero-hint — JS handles fade via threshold, CSS suppression caused premature hide */
@@ -515,9 +604,9 @@ h1, h2, h3, h4, h5, h6 {
     transform: translateX(-50%) translateY(8px);
 }
 .canvas-guide .guide-title {
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     letter-spacing: 0.2em;
-    color: rgba(var(--cyan-rgb), 0.5);
+    color: var(--ink-quiet);
     text-transform: uppercase;
     padding-right: 1.6rem;   /* clear of the close button */
 }
@@ -533,9 +622,9 @@ h1, h2, h3, h4, h5, h6 {
     grid-template-columns: 1.35rem 1fr;
     align-items: baseline;
     gap: 0.5rem;
-    font-size: 0.83rem;
+    font-size: var(--text-xs);
     line-height: 1.45;
-    color: rgba(var(--cyan-rgb), 0.75);
+    color: var(--ink-quiet);
     letter-spacing: 0.04em;
     text-transform: none;
 }
@@ -583,7 +672,7 @@ h1, h2, h3, h4, h5, h6 {
     grid-template-columns: 1.35rem 1fr;
     align-items: baseline;
     gap: 0.5rem;
-    font-size: 0.83rem;
+    font-size: var(--text-xs);
     line-height: 1.45;
     letter-spacing: 0.04em;
     color: rgba(var(--cyan-rgb), 0.75);
@@ -615,10 +704,10 @@ h1, h2, h3, h4, h5, h6 {
 }
 .canvas-guide .guide-progress-label {
     margin-left: 0.35rem;
-    font-size: 0.62rem;
+    font-size: var(--text-3xs);
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: rgba(var(--cyan-rgb), 0.4);
+    color: var(--ink-faint);
 }
 
 .canvas-guide .guide-close {
@@ -636,7 +725,7 @@ h1, h2, h3, h4, h5, h6 {
     border-radius: 50%;
     color: rgba(var(--cyan-rgb), 0.45);
     font-family: 'JetBrains Mono', monospace;
-    font-size: 1rem;
+    font-size: var(--text-md);
     line-height: 1;
     cursor: pointer;
     pointer-events: auto;
@@ -659,7 +748,7 @@ h1, h2, h3, h4, h5, h6 {
     border-radius: 999px;
     background: rgba(var(--cyan-dim-rgb), 0.1);
     color: rgba(var(--cyan-rgb), 0.95);
-    font-size: 0.8rem;
+    font-size: var(--text-xs);
     letter-spacing: 0.12em;
     text-transform: uppercase;
     text-decoration: none;
@@ -683,7 +772,7 @@ h1, h2, h3, h4, h5, h6 {
         padding: 0.75rem 0.95rem 0.85rem;
         gap: 0.42rem;
     }
-    .canvas-guide .guide-row { font-size: 0.8rem; }
+    .canvas-guide .guide-row { font-size: var(--text-xs); }
     /* The pill is the only line here that must not wrap — a two-line CTA reads
        as a paragraph rather than a button. The copy carries most of the fix;
        these trim the ~15px that a 320px card was still short by, out of the
@@ -711,7 +800,9 @@ h1, h2, h3, h4, h5, h6 {
    The › marker and hairline stay — they are the terminal identity. */
 h2 {
     font-family: 'Raleway', sans-serif;
-    font-size: clamp(1.7rem, 3.2vw, 2.4rem);
+    /* Fluid, then scaled: the clamp answers to the viewport, the multiplier to
+       the type scale, so a tablet's +15% reaches the section headings too. */
+    font-size: calc(clamp(1.7rem, 3.2vw, 2.4rem) * var(--type-scale));
     font-weight: 300;
     margin-bottom: var(--space-md);
     letter-spacing: 0.08em;
@@ -739,7 +830,7 @@ h2::after {
 h3 {
     font-family: 'JetBrains Mono', monospace;
     font-size: var(--text-xl);
-    font-weight: 500;
+    font-weight: 600;
     margin: var(--space-md) 0 var(--space-sm);
     line-height: 1.25;
     color: var(--text-heading);
@@ -749,7 +840,7 @@ h3 {
 h4 {
     font-family: 'JetBrains Mono', monospace;
     font-size: var(--text-lg);
-    font-weight: 500;
+    font-weight: 600;
     margin: var(--space-sm) 0 var(--space-xs);
     color: var(--text-subhead);
     cursor: default;
@@ -764,7 +855,7 @@ p {
 }
 
 strong {
-    font-weight: 500;
+    font-weight: 600;
     color: var(--cyan);
     text-shadow: 0 0 8px var(--cyan-glow);
 }
@@ -929,11 +1020,28 @@ section {
    it was the last vertical line the content wore, and the padding-left that
    cleared it goes back to the text. */
 
+/* …and with the rail, the background and the border all gone, a card that is
+   its section's ONLY block has nothing left to draw. It contributes 12px of
+   padding and 12px of margin inside a panel that is already padded, plus one
+   more level of nesting — the container-inside-a-container on index's About
+   and I Believe. Zeroing it hands that space back to the text and makes the
+   markup's shape match what you actually see: one panel, one column of prose.
+
+   Only when it is ALONE. A card sitting beside others (a grid, the two
+   featured blocks) is still doing the work of holding them apart, and
+   :only-of-type says exactly that — one div among its siblings. Cards
+   carrying their own padding inline (nanome2's video frame) are untouched,
+   since an inline style outranks this. */
+section > .content-card:only-of-type {
+    padding: 0;
+    margin: 0;
+}
+
 .content-card h4 {
     margin-top: 0;
     font-family: 'JetBrains Mono', monospace;
     font-size: var(--text-lg);
-    font-weight: 500;
+    font-weight: 600;
     color: var(--text-subhead);
 }
 .content-card p {
@@ -959,14 +1067,14 @@ section {
 
 /* About card - large intro text */
 .content-card.about p {
-    font-size: clamp(1.1rem, 2vw, 1.4rem);
+    font-size: calc(clamp(1.1rem, 2vw, 1.4rem) * var(--type-scale));
     line-height: 1.7;
     color: var(--text-bright);
-    font-weight: 400;
+    font-weight: 500;
 }
 .content-card.about strong {
     color: var(--cyan);
-    font-weight: 500;
+    font-weight: 600;
     text-shadow: 0 0 8px var(--cyan-glow);
 }
 
@@ -996,7 +1104,7 @@ section {
 /* Endorsement card */
 .content-card.endorsement {
     font-size: var(--text-base);
-    font-weight: 400;
+    font-weight: 500;
     font-style: italic;
     line-height: 1.7;
     color: var(--text-bright);
@@ -1013,7 +1121,7 @@ section {
     font-family: 'JetBrains Mono', monospace;
     font-style: normal;
     font-size: var(--text-xs);
-    font-weight: 400;
+    font-weight: 500;
     color: var(--muted);
     margin-top: var(--space-sm);
 }
@@ -1111,6 +1219,17 @@ section {
 /* Compact variant */
 .card-featured-split.compact {
     padding: var(--space-md);
+    /* The split centres its columns, which is right when they are near enough
+       the same height and wrong the moment they are not: on the Earth Star card
+       the 275px seed panel floated in the middle of a 491px text column with
+       108px of dead space above AND below it, reading as a box that had come
+       loose from the layout. Top-aligned, the two columns start on the same
+       line — which is the only alignment a split of unequal columns can state.
+       Scoped to .compact so design.html's project splits, whose columns DO
+       match, keep their centring. */
+    align-items: start;
+    /* and the full-width figure below stops sitting 40px adrift of them */
+    row-gap: var(--space-md);
 }
 .card-featured-split.compact .project-info {
     gap: var(--space-md);
@@ -1124,6 +1243,33 @@ section {
 }
 .card-featured-split.compact .project-info p {
     font-size: var(--text-sm);
+}
+
+/* A figure that spans both columns and closes the card. Capped by VIEWPORT
+   height, not by width: full-bleed at 940px the Earth Star painting stood 701px
+   tall and made its card 1272px — taller than any laptop screen, so the
+   composition (mark, prose, seed phrase, painting) could never be read as one
+   thing. The cap keeps the painting the largest element on the card without
+   letting it become the card. max-width + auto width, not object-fit: a
+   contained image keeps its box at full width and letterboxes itself. */
+.card-featured-split > .split-figure {
+    grid-column: 1 / -1;
+    margin: var(--space-md) 0 0;
+    text-align: center;
+}
+.card-featured-split > .split-figure img {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    max-height: min(58vh, 560px);
+    border-radius: 8px;
+    margin: 0 auto;
+}
+.card-featured-split > .split-figure figcaption {
+    margin-top: 0.5rem;
+    font-size: var(--text-xs);
+    color: var(--muted);
+    font-style: italic;
 }
 
 /* ===========================================
@@ -1196,7 +1342,7 @@ section {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.65rem;
+    font-size: var(--text-2xs);
     color: rgba(var(--cyan-dim-rgb), 0.85);
     text-decoration: none;
     opacity: 0;
@@ -1244,7 +1390,7 @@ section {
 .umbrella-header h3 {
     font-family: 'JetBrains Mono', monospace;
     font-size: var(--text-lg);
-    font-weight: 500;
+    font-weight: 600;
     color: var(--cyan);
     margin-bottom: var(--space-xs);
 }
@@ -1262,7 +1408,7 @@ section {
     font-size: var(--text-xs);
     color: var(--gold);
     margin-left: var(--space-sm);
-    font-weight: 500;
+    font-weight: 600;
 }
 
 /* Seed phrase / copyable text */
@@ -1273,7 +1419,7 @@ section {
     border: 1px solid rgba(122, 229, 130, 0.2);
     border-radius: 4px;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.8rem;
+    font-size: var(--text-xs);
     line-height: 1.5;
     color: var(--green);
     white-space: pre-wrap;
@@ -1338,7 +1484,7 @@ section {
 .genealogy-item .year {
     font-family: 'JetBrains Mono', monospace;
     font-size: var(--text-sm);
-    font-weight: 500;
+    font-weight: 600;
     color: var(--gold);
     line-height: 1.4;
     padding-top: 2px;
@@ -1382,7 +1528,7 @@ section {
 .timeline-item .year {
     font-family: 'JetBrains Mono', monospace;
     font-size: var(--text-sm);
-    font-weight: 500;
+    font-weight: 600;
     color: var(--gold);
     line-height: 1.4;
 }
@@ -1434,7 +1580,7 @@ section {
 }
 .page-header h1 {
     font-family: 'Raleway', sans-serif;
-    font-size: clamp(2rem, 6vw, 3.5rem);
+    font-size: calc(clamp(2rem, 6vw, 3.5rem) * var(--type-scale));
     font-weight: 200;
     letter-spacing: 0.15em;
     color: var(--text-heading);
@@ -1639,7 +1785,7 @@ section {
     .genealogy-item .year { margin-bottom: var(--space-xs); }
 
     .timeline-item { grid-template-columns: 70px 1fr; gap: var(--space-sm); }
-    .timeline-item .year { font-size: 0.7rem; }
+    .timeline-item .year { font-size: var(--text-2xs); }
 
     .hero-oval {
         min-width: 0;
@@ -1652,7 +1798,15 @@ section {
         font-size: clamp(1.8rem, 8vw, 2.8rem);  /* larger so name fills oval width */
         white-space: nowrap;
     }
-    .hero .tagline, .hero .byline { font-size: 0.58rem; }
+    /* The tagline is 43 characters of nowrap mono at 0.2em tracking — ~34em
+       of unbreakable line — so on the narrowest phones it has always been
+       wider than the oval drawn around it, and the type bump widened the
+       miss (measured at 320px: 12px of spill before, 28px after, running
+       22px off the left edge of the screen). Below the width where the token
+       fits, the viewport sets the size instead, exactly as the h1's clamp
+       already does. 2.6vw is 34em of this string inside 92vw of screen. */
+    .hero .tagline { font-size: min(var(--text-3xs), 2.6vw); }
+    .hero .byline { font-size: var(--text-3xs); }
     .hero-sig-inline { height: 2.8rem; }
     .hero-hint { bottom: 8rem; }
 
@@ -1789,6 +1943,17 @@ section {
 }
 :root[data-theme="light"] .hero-content .jh-sig img {
     filter: invert(0.82) sepia(0.35) saturate(2) hue-rotate(155deg);
+}
+
+/* Artwork DRAWN FOR A DARK GROUND — white line art on transparency. The teal
+   inking above is for the JH signature, which is the site's own mark and wants
+   to land on the accent; a project's logotype wants to stay itself, so this one
+   just flips white to black, which is where such a mark was always going to sit
+   on paper. Measured before use: Earth Star's PNG is 33,754 opaque pixels and
+   every one of them is #ffffff, so nothing but the ink can change. Without this
+   the mark is INVISIBLE in light mode — not dim, gone. */
+:root[data-theme="light"] .logo-on-dark {
+    filter: invert(1);
 }
 
 /* (The canvases theme themselves now — fish engine, blueprint, cosmos all

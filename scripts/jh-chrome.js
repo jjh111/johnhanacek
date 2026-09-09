@@ -45,8 +45,17 @@
       return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
     },
     apply: function (mode, persist) {
-      if (mode === 'light') document.documentElement.setAttribute('data-theme', 'light');
-      else document.documentElement.removeAttribute('data-theme');
+      const root = document.documentElement;
+      // Transitions must not straddle the swap: an element with a transition
+      // on `color` keeps the OLD theme's resolved color forever (see
+      // .jh-theme-switching in jh-chrome.css). Drop it two frames later —
+      // one frame is not enough, the style has to be recomputed first.
+      root.classList.add('jh-theme-switching');
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { root.classList.remove('jh-theme-switching'); });
+      });
+      if (mode === 'light') root.setAttribute('data-theme', 'light');
+      else root.removeAttribute('data-theme');
       document.querySelectorAll('.jh-theme-btn').forEach(function (b) {
         const g = b.querySelector('.theme-glyph');
         if (g) g.textContent = mode === 'light' ? '◐' : '◑';

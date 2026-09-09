@@ -60,7 +60,7 @@ Rendered by the `<jh-nav current="home|design|art|about|services|search">` compo
 - Secondary shapes (right): About, Services, Play
 - `current` attribute sets `class="active"` + `aria-current="page"`
 - Each page keeps its own `.nav-toggle` + `.nav-right` (per-page section TOC)
-- **Two states, one measured boundary** (`initNavFit` in jh-chrome.js): DESKTOP (shapes + title + full-word TOC row) until the row stops fitting — per page, ~980px (about/art) to ~1290px (design) — then MENU (`.nav-menu` on `#nav`): title gone, TOC in the hamburger dropdown with full words, shape strip wearing its labels at one fluid size down to 320px. No abbreviation tier (the old auto 2-char codes collided: about.html rendered EX twice) and no viewport breakpoints for the swap; hysteresis prevents boundary flicker (regression suite: `Agent Reference/maze-tests/navfittest.mjs`). Pages without a `.nav-right` get `.nav-no-toc` (toggle hidden)
+- **Two states, one measured boundary** (`initNavFit` in jh-chrome.js): DESKTOP (shapes + title + full-word TOC row) until the row stops fitting — per page, ~1020px (art) to ~1340px (design), with index ~1220 and about/services ~1140 (v2.08 measurements: the +10% type moved every fold point, which is exactly what a measured boundary is for) — then MENU (`.nav-menu` on `#nav`): title gone, TOC in the hamburger dropdown with full words, shape strip wearing its labels at one fluid size down to 320px, in 44px-tall targets. On TOUCH the hero shape-nav pill wears the same grammar — labels on by default, a 22px glyph inside the folded bar's own 16–26px band, 44×44 targets — instead of the bare 20px glyphs it used to show while the bar an inch above it showed the same marks with words. No abbreviation tier (the old auto 2-char codes collided: about.html rendered EX twice) and no viewport breakpoints for the swap; hysteresis prevents boundary flicker (regression suite: `Agent Reference/maze-tests/navfittest.mjs`). Pages without a `.nav-right` get `.nav-no-toc` (toggle hidden)
 - Nav is fixed, appears after scrolling past hero section
 - `writing.html` wears the chrome too now (integrated 2026-08; keeps its own reader header/toggle, shares `jh-theme`)
 
@@ -68,27 +68,72 @@ Rendered by the `<jh-nav current="home|design|art|about|services|search">` compo
 
 ## Design System — "Deep Sea Terminal"
 
-**Color Palette (`:root` in shared.css):**
-- `--sea-deep`: #020a12 (page background)
-- `--sea-mid`: #051018
-- `--cyan`: #7dd8f7 (headings, accents)
-- `--cyan-dim`: #4dc9f6 (secondary accent)
+**Color Palette (`:root` in `styles/jh-chrome.css` — NOT shared.css):**
+- `--sea-deep`: #020a12 (page background) · `--sea-mid`: #051018
+- `--cyan`: #b2e8fa (headings, accents) · `--cyan-dim`: #4dc9f6 (borders/glows only)
 - `--gold`: #d4af37 (hover accent, highlights)
-- `--text-primary`: #8cb8cc (body text)
-- `--text-bright`: #b8dced (emphasized text)
-- `--text-heading`: #7dd8f7 (heading color)
-- `--muted`: #7a9aaa (dimmed text)
-- `--border`: rgba(77, 201, 246, 0.2)
+- `--text-primary`: #b0cedc (body) · `--text-bright`: #eaf5fa · `--text-heading`: #b2e8fa
+- `--muted`: #95aebb (dimmed text) · `--border`: rgba(var(--cyan-dim-rgb), 0.2)
+- `--ink-quiet`: #a5d5e6 · `--ink-faint`: #86bccf — see the alpha rule below
+
+**v2.08 ink brightness.** Every dark-mode TEXT token is its v2.07 value at **+15% HSL
+lightness** (hue and saturation held; capped at 97% — this palette has no pure white).
+`--cyan` is in that set because 14 of its 25 uses are `color:`, and `--cyan-rgb` with it
+because that triplet is almost entirely dimmed cyan text. `--cyan-dim` is NOT — it is
+never a text color, only borders and glows, so decoration weight is unchanged.
+
+**Two rules that keep the palette one palette:**
+1. **A page may ALIAS tokens; it must never RESTATE values.** `playground.html` is the
+   model (`--paper: var(--sea-deep)`); `writing.html` was the counter-example and is now
+   aliases only. A restated hex is a frozen copy that drifts silently — and worse, a
+   page's own `[data-theme="light"]` block (0,1,0) LOSES to jh-chrome's
+   `:root[data-theme="light"]` (0,2,0), so a hand-rolled light theme half-applies. That
+   is exactly what writing.html shipped: the site's cool ground with its own warm gold.
+2. **Never dim text with alpha.** `rgba(var(--cyan-rgb), 0.35)` reads as "quiet" but buys
+   it with contrast, and **alpha cannot be fixed by a theme** — the same 0.35 that is too
+   faint on black is too faint on paper. The canvas chrome failed AA in BOTH themes this
+   way (2.6–4.3:1 dark, 1.7–2.3:1 light). Use `--ink-quiet` / `--ink-faint`, which carry
+   a real per-theme value. Alpha on *borders, fills and glows* is fine.
+
+**Theme flips must not straddle a transition.** An element with a `transition` on `color`
+does not re-resolve a `var()`-derived color when `data-theme` flips — it keeps the old
+theme's computed value indefinitely. jh-chrome.js adds `.jh-theme-switching` around the
+attribute swap (dropped two frames later) and that class kills transitions. Loading into
+a theme was always fine; only the live toggle broke, which is why it went unnoticed —
+`contrasttest.mjs` now tests both paths for exactly this reason.
 
 **Typography:**
-- Headings: 'Raleway' (thin weights 100-600)
+- Headings: 'Raleway' (thin weights 200-600)
 - Subheadings/Labels: 'Raleway'
 - Body/Code: 'JetBrains Mono' (monospace, primary body font)
-- Loaded from Google Fonts (Cinzel was retired — loaded for years but never referenced by any rule; only onagents.html still uses it)
+- **ONE scale, ten steps** (`--text-4xs` … `--text-3xl` in jh-chrome.css) and **one
+  multiplier**, `--type-scale`. Every font-size on the site is a step — there is no
+  such thing as a literal `font-size: 0.62rem` any more (v2.08 folded 45 distinct
+  literals across ~160 declarations onto the ladder; 25 of them lived in the
+  0.4–0.95rem band where no two neighbours were tellable apart, which is what read
+  to visitors as "lots of fonts"). Step values are the historical ones, so the
+  SIZE lives entirely in the multiplier: 1.1 site-wide, **1.15 in the tablet band**
+  (601–1024px). Sizes derived from a step multiply by it explicitly (`h2`'s clamp,
+  the about-card clamp). The hero `h1` clamps are deliberately outside it — they
+  are fitted to the oval drawn around them and answer to vw.
+- **Weights move in one step, mono only.** Running text 400 → 500, everything that
+  was emphasis at 500 (h3, h4, `strong`, the year badges) → 600. Raleway keeps its
+  thin 200/300 display faces — that thinness is the voice. Free of layout risk:
+  JetBrains Mono's 400/500/600 share an advance width, so no line can rewrap.
+- Loaded from Google Fonts — **one request string on every page** (Raleway
+  200;300;400;500;600 + JetBrains Mono 400;500;600). Raleway 100 was loaded for
+  years and never used; JetBrains 600 was used (`.oval-scroll-label`) and never
+  loaded. writing.html and playground.html carried their own third and fourth
+  variants of the string. openprose.html keeps its own — it needs Raleway 300 only.
+  (Cinzel was retired; only onagents.html still uses it.)
 - Reference: `Assets/JH-brand-styleguide.html`
 
 **Accessibility:**
-- WCAG AA compliant color contrast
+- WCAG AA compliant color contrast — **verified, not assumed**: `Agent Reference/maze-tests/contrasttest.mjs`
+  sweeps 10 pages × both themes × both entry paths (loaded into a theme, and the real
+  `.jh-theme-btn` clicked) and exits non-zero on any failure. Currently 0. Run it after
+  any color, weight or size change; measuring by flipping `data-theme` from JS alone
+  reads mid-transition values and will lie to you.
 - Prefers-reduced-motion support
 - Skip-link for keyboard navigation
 - Semantic HTML with ARIA labels
@@ -183,7 +228,7 @@ which stamps every `?v=` cache-bust ref across root `*.html` **and** the `Portfo
   reaches inside the dossier); one grammar — page badge = the nav link (`design ↗`),
   module bodies are INERT (click-to-pin and its breadcrumb are gone), ↑↓/Enter and a
   3-rung Esc on the keyboard; ⤢ workspace mode
-  (≥900px, persisted) splits the overlay into list + a pretext META-PARAGRAPH pane
+  (≥768px, persisted) splits the overlay into list + a pretext META-PARAGRAPH pane
   (strata of chunks, media as both-sides wrap obstacles, empty state seeds the page's
   own story). **The panel NEVER scrolls** (9e doctrine): the line budget is fitted to
   the viewport by measure→shrink proportional to line-units spent, the tail caps at

@@ -504,8 +504,14 @@ deliberately-unlisted experiments (tidepool, beach-beers) stay out.
 - [x] **26** — John, 2026-08-31: "wish I could assert director but I was in startups so it
   was implicit — Nanome was the big one." Content now says exactly that: director-level
   scope in practice, most of all at Nanome, without the title. "Director" stays a tag.
+## §K Date hygiene — 2026-09-09
+
+- [x] **11 Earth Star — Worldbuilding** — dropped "Features an original painting from
+  2025." (John, 2026-09-09). The chunk is about the worldbuilding project, not about a
+  dated artefact; the painting's year belongs on the page's figcaption, which still
+  carries it, and stating it twice invites the two to drift. Vectors rebuilt.
 
 
 ## §J Resume compile — 2026-09-09
 
-Chunks 4, 21, 23, 26, 27 and 50 are COMPILED from `Assets/resume.json` by `scripts/build-resume.mjs --apply` (source: the 2026-09-09 interview; evidence links live in the JSON). Edit the JSON, not the chunk text. Rebuild vectors after each compile (`node scripts/build-chunk-vectors.mjs`).
+Chunks 4, 21, 23, 26, 27, 50 are COMPILED from `Assets/resume.json` by `scripts/build-resume.mjs --apply` (source: the 2026-09-09 interview; evidence links live in the JSON). Edit the JSON, not the chunk text. Rebuild vectors after each compile (`node scripts/build-chunk-vectors.mjs`).

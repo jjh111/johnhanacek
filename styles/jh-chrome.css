@@ -27,9 +27,17 @@
     color-scheme: dark;
     /* Selection in-palette: default UA blue clashes with the deep-sea ground. */
     --selection-bg: rgba(var(--cyan-dim-rgb), 0.35);
-    --selection-ink: var(--text-subhead, #e8f4ff);
+    --selection-ink: var(--text-subhead, #f0f8ff);
 
-    --cyan: #7dd8f7;
+    /* Ink brightness, v2.08: every dark-mode TEXT token is its v2.07 value at
+       +15% HSL lightness (hue and saturation held, so the sea palette is
+       unchanged — only its legibility moved). --cyan is in the set because 14
+       of its 25 uses are `color:`, and --cyan-rgb with it because that triplet
+       is almost entirely dimmed cyan text (the index/design canvas labels at
+       0.35–0.9 alpha, the dimmest copy on the site). --cyan-dim is NOT: it is
+       never a text color, only borders/glows, so decoration weight holds.
+       Lightness caps at 97% — this palette has no pure white. */
+    --cyan: #b2e8fa;
     --cyan-dim: #4dc9f6;
     --cyan-glow: rgba(var(--cyan-dim-rgb), 0.4);
     --jh-gold: #d4af37;
@@ -37,16 +45,16 @@
     --gold-glow: rgba(var(--gold-rgb), 0.3);
     --green: #b6ffba;
 
-    --text-primary: #8cb8cc;
-    --text-bright: #b8dced;
-    --text-heading: #7dd8f7;
-    --text-subhead: #e8f4ff;
+    --text-primary: #b0cedc;
+    --text-bright: #eaf5fa;
+    --text-heading: #b2e8fa;
+    --text-subhead: #f0f8ff;
 
     /* Semantic tokens */
     --accent: var(--cyan);
     --accent-hover: var(--gold);
-    --muted: #7a9aaa;
-    --muted-light: #8aabb8;
+    --muted: #95aebb;
+    --muted-light: #a8c1ca;
     --border: rgba(var(--cyan-dim-rgb), 0.2);
     --shadow: rgba(var(--cyan-dim-rgb), 0.15);
     /* Elevation shadows for the glass ovals / floating controls. On the deep-sea
@@ -56,14 +64,39 @@
     --elevation-soft: rgba(0, 0, 0, 0.35);
     --focus: var(--cyan);
 
-    /* Typography Scale */
-    --text-xs: 0.8rem;
-    --text-sm: 0.9rem;
-    --text-base: 1.1rem;
-    --text-lg: 1.2rem;
-    --text-xl: 1.35rem;
-    --text-2xl: 1.55rem;
-    --text-3xl: 2.5rem;
+    /* ── Typography scale ──────────────────────────────────────────────
+       TEN steps, and every font-size on the site is one of them.
+
+       Before this there were 45 distinct literal sizes across ~160
+       declarations, 25 of them inside the 0.4–0.95rem band where 0.55, 0.56,
+       0.58, 0.6, 0.62, 0.65, 0.66, 0.68, 0.7 and 0.72 all coexisted and no
+       two neighbours were tellable apart. THAT is what reads as "lots of
+       fonts" — not families (there are two, Raleway and JetBrains Mono) but a
+       scale nobody could hold in their head, so every new component invented
+       its own size.
+
+       --type-scale is the single lever. The step values below are the
+       HISTORICAL ones, so folding a stray literal onto its nearest step is a
+       ±4% move that nothing can see; the site-wide size bump lives entirely
+       in the multiplier, and a breakpoint that wants bigger type raises the
+       multiplier instead of restating ten sizes. Sizes derived from these
+       (the h2 clamp, the about-card clamp) multiply by it explicitly.
+
+       The hero h1 clamps are deliberately NOT scaled: they are fitted to the
+       viewport and to the oval drawn around them, so they answer to vw, not
+       to this. */
+    --type-scale: 1.1;              /* +10% over the v2.0 baseline */
+    --text-4xs: calc(0.55rem * var(--type-scale));   /* was 0.5–0.56  */
+    --text-3xs: calc(0.6rem  * var(--type-scale));   /* was 0.58–0.62 */
+    --text-2xs: calc(0.68rem * var(--type-scale));   /* was 0.65–0.72 */
+    --text-xs:  calc(0.8rem  * var(--type-scale));   /* was 0.75–0.83 */
+    --text-sm:  calc(0.9rem  * var(--type-scale));   /* was 0.85–0.95 */
+    --text-md:  calc(1rem    * var(--type-scale));   /* was 1–1.05    */
+    --text-base: calc(1.1rem * var(--type-scale));
+    --text-lg:  calc(1.2rem  * var(--type-scale));
+    --text-xl:  calc(1.35rem * var(--type-scale));
+    --text-2xl: calc(1.55rem * var(--type-scale));
+    --text-3xl: calc(2.5rem  * var(--type-scale));
 
     /* Spacing Scale */
     --space-xs: 0.375rem;
@@ -86,13 +119,14 @@
        theme swap can reach them. */
 
     /* RGB triplets for alpha composition: rgba(var(--cyan-rgb), 0.2) */
-    --cyan-rgb: 125, 216, 247;       /* --cyan     #7dd8f7 */
+    --cyan-rgb: 178, 232, 250;       /* --cyan     #b2e8fa */
     --cyan-dim-rgb: 77, 201, 246;    /* --cyan-dim #4dc9f6 */
     --gold-rgb: 212, 175, 55;        /* --gold     #d4af37 */
+    --green-rgb: 182, 255, 186;      /* --green    #b6ffba */
     --surface-rgb: 2, 10, 18;        /* --sea-deep #020a12 — page/glass ground */
     --panel-rgb: 10, 22, 40;         /* raised panel tint (canvas chrome, badges) */
     --sea-deep-rgb: var(--surface-rgb); /* legacy alias */
-    --ink-rgb: 140, 184, 204;        /* --text-primary #8cb8cc */
+    --ink-rgb: 176, 206, 220;        /* --text-primary #b0cedc */
 
     /* Surfaces */
     --surface: var(--sea-deep);
@@ -105,6 +139,17 @@
     --ink-2: rgba(var(--ink-rgb), 0.78);
     --ink-3: rgba(var(--ink-rgb), 0.55);
     --ink-4: rgba(var(--ink-rgb), 0.32);
+
+    /* Quiet cyan ink — REAL colors, not alpha washes.
+       The canvas chrome used to dim itself with rgba(var(--cyan-rgb), 0.35–0.5),
+       which reads as "quiet" but spends legibility to get there: measured, those
+       labels ran 2.6–4.3:1 on the deep-sea ground and 1.7–2.3:1 on Shallows —
+       under AA in BOTH themes, so it was never only a light-mode problem. Alpha
+       cannot be fixed by the theme either: the same 0.4 that is too faint on
+       black is too faint on paper. These two tiers keep the dimmed look and the
+       two-step hierarchy while clearing 4.5:1 everywhere they are used. */
+    --ink-quiet: #a5d5e6;   /* 12.57:1 on --sea-deep — the louder quiet tier */
+    --ink-faint: #86bccf;   /*  9.58:1 — the quietest tier that still passes */
 
     /* Rules (hairlines/borders) */
     --rule: rgba(var(--cyan-dim-rgb), 0.2);    /* == --border today */
@@ -133,6 +178,15 @@
 }
 @media (min-width: 1200px) { :root { --content-max: 1100px; } }
 @media (min-width: 1600px) { :root { --content-max: 1300px; } }
+
+/* Tablet band — above the phone breakpoint (600), up to iPad landscape.
+   A tablet is held further from the face than a phone and nearer than a
+   laptop, and it has the width to spend: type goes to +15% instead of the
+   +10% everything else gets. One declaration, because there is one scale;
+   the ten steps, the h2 clamp and the about clamp all follow. */
+@media (min-width: 601px) and (max-width: 1024px) {
+    :root { --type-scale: 1.15; }
+}
 
 /* ===========================================
    4. NAVIGATION
@@ -194,7 +248,7 @@
 
 .nav-title {
     font-family: 'Raleway', sans-serif;
-    font-size: 1.1rem;
+    font-size: var(--text-base);
     font-weight: 300;
     color: var(--text-bright);
     text-decoration: none;
@@ -243,7 +297,7 @@
 
 .nav-right a {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.8rem;
+    font-size: var(--text-xs);
     font-weight: 500;
     text-decoration: none;
     color: var(--muted);
@@ -257,7 +311,7 @@
 
 .nav-separator {
     color: var(--ink-4);
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     padding: 0 0.5rem;
     pointer-events: none;
 }
@@ -332,7 +386,7 @@
 /* --- Shape labels (in flow, not absolute) --- */
 .shape-label {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.6rem;
+    font-size: var(--text-3xs);
     font-weight: 500;
     color: var(--cyan);
     text-transform: uppercase;
@@ -413,7 +467,7 @@
     min-height: 14px;
 }
 .nav-left .shape-label {
-    font-size: 0.55rem;
+    font-size: var(--text-4xs);
     margin-top: 0;
     height: 0;
     overflow: hidden;
@@ -567,48 +621,92 @@ body[data-search-engine="custom"] .search-icon .state-ring {
    Must beat the .shape-link:not(:hover) rule that resets opacity to 0.
 =========================================== */
 @media (hover: none) and (pointer: coarse) {
-    /* Hero shape-nav: icons only on touch — labels hidden, pill stays compact */
+    /* HERO PILL ON TOUCH — the same grammar as the folded bar.
+       It used to be the exception: the bar an inch above it showed all seven
+       marks WITH their words, while the pill showed four of the SAME marks as
+       bare glyphs, in a different size again (20px against the bar's fluid
+       16–26px). One nav, two sizes, two label policies, on one screen. There
+       is no hover here to reveal anything, so the label is simply on.
+
+       The glyph is 22px — the +10% step up from 20, and inside the band the
+       bar's own --nav-glyph clamp already occupies, so the two agree at every
+       width instead of only by accident.
+
+       The BOX is 44×44, which is the platform thumb minimum and what the old
+       40×32 was short of in both directions. `overflow: hidden` was what
+       actually clipped the label away; it goes. Four items at 44px is 194px
+       with the pill's padding — comfortable even on a 320px phone, so this is
+       the largest target the space allows, not merely a bigger one. */
+    .shape-nav {
+        --hero-glyph: 22px;
+        padding: 0.4rem 0.5rem;
+    }
     .shape-nav .shape-link,
     .shape-nav .shape-link.secondary,
     .shape-nav .shape-link.search-icon {
-        height: 32px;
-        overflow: hidden;
-        min-width: 40px;
+        width: auto;
+        min-width: 44px;
+        min-height: 44px;
+        height: auto;
+        overflow: visible;
         justify-content: center;
     }
-
-    /* Keep shapes a clean consistent size */
     .shape-nav .shape-link .shape,
     .shape-nav .shape-link.secondary .shape,
     .shape-nav .shape-link.search-icon .shape {
-        width: 20px; height: 20px;
-        min-width: 20px; min-height: 20px;
+        width: var(--hero-glyph); height: var(--hero-glyph);
+        min-width: var(--hero-glyph); min-height: var(--hero-glyph);
     }
-
-    /* Labels stay hidden on touch hero nav — icons are self-explanatory */
+    /* The label IS the resting state. !important because the hover-reveal
+       rules it replaces are themselves written against :not(:hover), which on
+       a touch device is permanently true. */
     .shape-nav .shape-link .shape-label,
-    .shape-nav .shape-link .shape-label-img,
-    .shape-nav .shape-link:not(:hover) .shape-label,
-    .shape-nav .shape-link:not(:hover) .shape-label-img {
-        opacity: 0 !important;
-        height: 0 !important;
-        margin: 0 !important;
-        overflow: hidden !important;
+    .shape-nav .shape-link:not(:hover) .shape-label {
+        opacity: 1 !important;
+        height: auto !important;
+        margin-top: 0.1rem !important;
+        font-size: var(--text-4xs);
+        letter-spacing: 0.02em;
+    }
+    /* Home wears the WORD here, exactly as it does in the folded bar: its
+       label is the JH signature, and on index the same signature is already
+       drawn at full size in the oval directly below the pill. */
+    .shape-nav .shape-link[aria-label="Home"] .shape-label-img,
+    .shape-nav .shape-link[aria-label="Home"]:not(:hover) .shape-label-img {
+        display: none !important;
+    }
+    .shape-nav .shape-link[aria-label="Home"]::after {
+        content: 'HOME';
+        font-family: 'JetBrains Mono', monospace;
+        font-size: var(--text-4xs);
+        font-weight: 500;
+        letter-spacing: 0.02em;
+        color: var(--cyan);
+        line-height: 1;
+        margin-top: 0.1rem;
     }
 
-    /* Navbar: compact shapes, labels always visible */
+    /* Navbar, DESKTOP-WIDTH row on a touch device — a tablet in landscape
+       whose page has not folded yet. Labels are always visible here too, and
+       the glyph used to shrink to 12px to make room for them: half the size of
+       the same mark on the same tablet's folded bar (--nav-glyph runs 16–26px)
+       and barely over half the hero pill's. Three sizes of one mark, decided
+       by which surface you happened to be looking at.
+       18px is the smallest that sits inside the folded bar's own band, so the
+       tablet's two bar states now agree; the strip stays narrow enough that
+       the fold point is still measured, not forced (navfittest sweeps it). */
     .nav-left .shape-link,
     .nav-left .shape-link.secondary,
     .nav-left .shape-link.search-icon {
         height: auto;
         overflow: visible;
-        min-width: 32px;
+        min-width: 34px;
     }
     .nav-left .shape-link .shape,
     .nav-left .shape-link.secondary .shape,
     .nav-left .shape-link.search-icon .shape {
-        width: 12px; height: 12px;
-        min-width: 12px; min-height: 12px;
+        width: 18px; height: 18px;
+        min-width: 18px; min-height: 18px;
     }
     .nav-left .shape-link .shape-label,
     .nav-left .shape-link .shape-label-img,
@@ -723,8 +821,8 @@ body > footer a:hover {
 }
 body > footer .version {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.6rem;
-    font-weight: 400;
+    font-size: var(--text-3xs);
+    font-weight: 500;
     color: var(--muted);
     opacity: 0.5;
     margin-top: 0.25rem;
@@ -788,7 +886,7 @@ body > footer .version {
 #nav.nav-menu .nav-right.open { display: flex; }
 #nav.nav-menu .nav-right li { height: auto; }
 #nav.nav-menu .nav-right a {
-    font-size: 0.85rem;
+    font-size: var(--text-sm);
     line-height: 1.4;
     padding: 0.65rem 1.25rem;
     display: block;
@@ -824,7 +922,11 @@ body > footer .version {
 #nav.nav-menu .nav-left .shape-link.secondary {
     width: auto;
     min-width: var(--nav-item);
-    height: 38px;
+    /* The bar is 46px; the target takes 44 of them, which is the platform
+       thumb minimum and the most the space can give. It was 38 — the strip's
+       widths were already computed to the pixel while its HEIGHT was left
+       eight pixels short of the standard for no reason but habit. */
+    height: 44px;
     padding: 0;
     justify-content: center;
 }
@@ -878,6 +980,27 @@ body > footer .version {
     #nav { display: none; }
 }
 
+/* ── Theme flip: suppress transitions for one frame ──────────────────
+   An element carrying a transition on `color` (or on `all`) does NOT
+   re-resolve a var()-derived color when data-theme flips — it keeps the
+   previous theme's computed value indefinitely, until something else
+   forces it to repaint. So toggling the theme at runtime left elements
+   stranded in the OTHER theme's ink: measured on search.html, the footer
+   github link sat at 1.20:1 and the suggestion chips at 1.14:1 on the
+   Shallows ground — invisible text, reachable by one click of the toggle.
+
+   Loading straight into a theme was always fine; only the live flip broke,
+   which is why it survived so long. jh-chrome.js adds this class around the
+   attribute swap and drops it two frames later. Killing the transition makes
+   every color re-resolve at once, and the flip reads as instant rather than
+   as a half-second smear of one palette into the other. */
+:root.jh-theme-switching,
+:root.jh-theme-switching *,
+:root.jh-theme-switching *::before,
+:root.jh-theme-switching *::after {
+    transition: none !important;
+}
+
 /* ===========================================
    THEME — "Shallows" light palette
    (Design Refresh Phase 4)
@@ -927,6 +1050,11 @@ body > footer .version {
     --cyan-rgb: 22, 96, 124;
     --cyan-dim-rgb: 18, 83, 108;
     --gold-rgb: 122, 96, 22;
+    --green-rgb: 47, 125, 56;        /* --green #2f7d38 */
+    /* Quiet ink, Shallows side: darker rather than lighter, same two tiers.
+       6.68:1 and 5.34:1 on the light panel the canvas chrome sits on. */
+    --ink-quiet: #2d5b6d;
+    --ink-faint: #3a6a7d;
     --surface-rgb: 238, 244, 246;
     --panel-rgb: 248, 251, 252;
     --ink-rgb: 53, 82, 95;
@@ -1004,7 +1132,7 @@ body > footer .version {
     border: 1px solid var(--rule);
     border-radius: 50%;
     color: var(--accent-ink);
-    font-size: 0.9rem;
+    font-size: var(--text-sm);
     line-height: 1;
     cursor: pointer;
     flex-shrink: 0;
@@ -1040,7 +1168,7 @@ body > footer .version {
     border: 1px solid rgba(var(--cyan-dim-rgb), 0.18);
     border-radius: 50%;
     color: var(--accent-ink);
-    font-size: 1.15rem;
+    font-size: var(--text-base);
     line-height: 1;
     cursor: pointer;
     box-shadow:
@@ -1065,7 +1193,7 @@ body > footer .version {
 
 @media (max-width: 480px) {
     .nav-sig-toggle img { height: 18px; }
-    .nav-theme-toggle { width: 24px; height: 24px; font-size: 0.8rem; margin-left: 0.3rem; }
+    .nav-theme-toggle { width: 24px; height: 24px; font-size: var(--text-xs); margin-left: 0.3rem; }
 }
 
 /* --- Return chip — rendered by jh-chrome.js when ?from=playground ---------
@@ -1080,14 +1208,14 @@ body > footer .version {
     display: inline-flex;
     align-items: center;
     padding: 0.4rem 0.85rem;
-    border: 1px solid rgba(125, 216, 247, 0.35);
+    border: 1px solid rgba(178, 232, 250, 0.35);
     border-radius: 999px;
     background: rgba(2, 10, 18, 0.82);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    color: #7dd8f7;
+    color: #b2e8fa;
     font-family: 'JetBrains Mono', ui-monospace, monospace;
-    font-size: 0.72rem;
+    font-size: var(--text-2xs);
     letter-spacing: 0.04em;
     text-decoration: none;
     transition: border-color 0.2s ease, color 0.2s ease;

@@ -42,6 +42,7 @@ node mazetest.mjs
 | `walltest.mjs` | Containment soak + squiggle realism + clean-shape non-triggers. |
 | `foodtest.mjs` | Food placement near line walls; diagonal-line containment. |
 | `zigedge.mjs` | Squiggle edge cases (sharp zigzag, tiny scribble). |
+| `contrasttest.mjs` | WCAG AA text contrast across 10 pages × both themes × **two paths**: loaded straight into a theme, and loaded in the other theme then the real `.jh-theme-btn` clicked. The toggle path is not redundant — it is what caught the stuck-transition bug (an element with a transition on `color` keeps the previous theme's resolved color when `data-theme` flips, so it strands in the other palette's ink; fixed by `.jh-theme-switching` in jh-chrome.css). Exits non-zero on any failure. `PAGES=index,design node contrasttest.mjs` narrows it. |
 
 Notes:
 - **Erase is crossing-based as of v1.10 of this work** (a stroke erases a wall it crosses ≥3
