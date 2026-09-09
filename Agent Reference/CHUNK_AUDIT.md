@@ -460,11 +460,18 @@ deliberately-unlisted experiments (tidepool, beach-beers) stay out.
   chronological by start year (JHDesign → Nanome → BadVR → AvatarMEDIC →
   Collaborate.org → Independent 2014–24 → Georgetown). Content text changed →
   vectors rebuilt.
-- [ ] **50 Resume — One-Page PDF** (NEW, 2026-08-31, stopgap until the v3 resource
+- [x] **50 Resume — One-Page PDF** (NEW, 2026-08-31, stopgap until the v3 resource
   register): 'resume' led the Career Timeline with no PDF anywhere in reach. url =
   `Assets/JH_Resume_2026_onepage.pdf` (same-origin; the resumes in Assets/ are
   intentionally public per CLAUDE.md). Content summarises the PDF's own header —
   John: confirm the title/role wording matches the current PDF.
+  CLOSED 2026-09-08: reconciled against the Aug 15 one-page PDF (the newest of three
+  resume artifacts; see `Assets/john-hanacek-resume.md` for the single truth). Content
+  now carries the PDF's own headline (AI, XR & Robotics Interface Innovator),
+  Nanome's Pfizer/Novartis clients, AvatarMEDIC CEO/CTO, MetaMedium, and the
+  reconciled JHDesign framing (LLC est. 2024, practice since 2014). PDF file
+  replaced with the Aug 15 version (it carries John's phone number — already
+  public via the prior Feb PDF). Content text changed → vectors rebuilt.
 - [x] **38** tags += hypercube/tesseract/3d-sync — 'hypercube' was fuzzy-matching
   HoloTRIAGE instead of the playground chunk that carries the demo.
 - [x] **4 JHDesign LLC** — "stealth AI startups" → Transfyr, named, with the same
@@ -497,3 +504,8 @@ deliberately-unlisted experiments (tidepool, beach-beers) stay out.
 - [x] **26** — John, 2026-08-31: "wish I could assert director but I was in startups so it
   was implicit — Nanome was the big one." Content now says exactly that: director-level
   scope in practice, most of all at Nanome, without the title. "Director" stays a tag.
+
+
+## §J Resume compile — 2026-09-09
+
+Chunks 4, 21, 23, 26, 27 and 50 are COMPILED from `Assets/resume.json` by `scripts/build-resume.mjs --apply` (source: the 2026-09-09 interview; evidence links live in the JSON). Edit the JSON, not the chunk text. Rebuild vectors after each compile (`node scripts/build-chunk-vectors.mjs`).
