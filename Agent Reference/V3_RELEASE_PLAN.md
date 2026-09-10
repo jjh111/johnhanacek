@@ -388,16 +388,16 @@ sequencing sections that follow it; they are kept for the record.
 
 | # | Work | Owner | Notes |
 |---|---|---|---|
-| 1 | **v2.5 Funnel, phases A–D** | agent | one page, structure + copy; before any compiler touches services.html |
+| 1 | **v2.5 Funnel, phases A–D** | agent | MERGED 2026-09-09 (lede/funnel-v25, reviewed MERGE AS IS, all gates green). Open from the review, John's calls: (a) quotes live in the wall, not the tracks — the brief said so, plan question 11 said the opposite, so the shared tail is still 37–47% of the document, not the ~25% target; (b) the other-track strip sits between testimonials and Fit, not below the tail; (c) the TOC keeps both track links (aria-current only). |
 | 2 | v2.5 phase E — coaching-track outcomes | **John** | the design track proves; coaching only describes |
-| 3 | v2.5 phase F — can the calendar booking carry a track? | agent (research) | primary CTA is unattributable today |
+| 3 | v2.5 phase F — calendar attribution | **John** (5 min) | RESOLVED 2026-09-09: the `calendar.app.google` short link 302s and drops any query string, so no parameter survives into a booking; Google documents no prefill for appointment schedules; multiple booking pages are paid-Workspace only. Do this instead: Calendar → Appointment schedules → Edit → Booking form → Add an item → required multiple-choice "Which are you here about?" (AI coaching for founders / Founding design for teams). Answer lands in the event. Keep the per-track mailto subjects. |
 | 4 | **Deep Sea Terminal audit, parts 1–2** | parallel session (in progress 2026-09-09) | type scale + weight ladder in shared.css / jh-chrome.css / search-overlay.css. **Report to be checked into `Agent Reference/`** — it is the record of what part 3 must finish |
-| 5 | Audit part 3 — the v2 port that never finished: **token literals** | agent | measured 2026-09-09: 41 raw palette literals in `scripts/search-overlay.css`, 25 in `design.html` inline CSS, 9 in `styles/jh-chrome.css`, 4 in index, 5 in art. Target: zero outside the token block; every colour is a token so light mode cannot break again |
+| 5 | Audit part 3 — token literals — **MERGED 2026-09-09 (v2.09)**: overlay 43 → 0, shared 1 → 0, jh-chrome down to the two token blocks; engine tokens with light values; `--ink-affirm`. Left by design: canvas JS palettes, theme-color bootstraps, the `.lp-select` data-URI chevron, two markup attrs in design.html (510, 549). | agent | measured 2026-09-09: 41 raw palette literals in `scripts/search-overlay.css`, 25 in `design.html` inline CSS, 9 in `styles/jh-chrome.css`, 4 in index, 5 in art. Target: zero outside the token block; every colour is a token so light mode cannot break again |
 | 6 | Daylight branch fate | **John** | `worktree-daylight` / DESIGN_REFRESH_PLAN phases 1–4 mostly shipped inside v2 (tokens, light/dark). Decide: salvage what remains into part 3, then delete the worktree and branch |
 | 7 | GoatCounter site code | **John** | the whole analytics switch; wired in v2.08 |
-| 8 | Anchor ratchet 16 → 0 | agent | case studies + playground + writing get section ids; personal chunks 30–32 → an "off the clock" line on About or search-only (**John**) |
-| 9 | Blok Dok card on design.html | agent | eleven photos already in `Assets/blokdok/`, entry in resume.json |
-| 10 | How I Work cards → one paragraph each on the page | agent | chunks keep the full text |
+| 8 | Anchor ratchet — **16 → 3 MERGED 2026-09-09 (v2.09)**; the three left are the personal chunks 30–32 awaiting John's ruling | agent | case studies + playground + writing get section ids; personal chunks 30–32 → an "off the clock" line on About or search-only (**John**) |
+| 9 | Blok Dok card — **MERGED 2026-09-09** at the end of `#pastwork` (chronological; John may move it to `#projects`) | agent | eleven photos already in `Assets/blokdok/`, entry in resume.json |
+| 10 | How I Work cards — **MERGED 2026-09-09**: two sentences + "more →" into the bar | agent | chunks keep the full text |
 | 11 | Lane resumes on demand + LinkedIn sync | agent / **John** | `build-resume.mjs --lane=…` already exists; John pastes the LinkedIn blocks |
 | 12 | Search polish leftovers | agent | trophy camera-orbit, long-answer fold, phone tier strip density |
 
