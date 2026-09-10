@@ -36,6 +36,9 @@ node phase9.mjs   # Phase 9 (all four slices): 9a stable surface (morph not
                   # unrolled, density reaches inside the dossier) · 9c grammar
                   # (badge links, ↑↓ cursor, Enter commits, 4-rung Esc ladder)
                   # · 9d workspace (⤢ two-pane, pin fills the pane, persisted)
+node quoteqa.mjs  # the testimonial surface: ranking report (informational) +
+                  # LAYOUT pass/fail at 390/505/768/1280 × both themes and the
+                  # ⤢ pane. Exits non-zero on a defect. RANKING_ONLY=1 skips it.
 ```
 
 Notes:
@@ -55,3 +58,15 @@ Notes:
   page renders the LIGHT theme in these suites. Any dark-mode assertion or
   screenshot must pass `colorScheme: 'dark'` to `browser.newContext()`
   (phase8 does); a "dark baseline" captured without it is silently light.
+- `quoteqa.mjs`'s layout half exists because **every** layout bug in the §M
+  endorsement pass was invisible at desktop width and three of them shipped: a
+  fact row inheriting the workspace pane's 19.36px reading size, flex rows
+  running under a `float: right` poster, a `flex-shrink:0` title measuring 488px
+  in a 431px row (horizontal scrollbar on the document), and the sticky command
+  frame reserving 0px of flow while rendering at `top:40px`, so it painted over
+  the lead title at scrollY 0. Its five checks are those, generalised. Note the
+  second one only counts content escaping a box whose `overflow-x` is
+  **visible** — truncating with `overflow:hidden` + ellipsis is the design, and
+  an earlier draft that flagged both produced nothing but false positives.
+  Verified to have teeth: pointed at the pre-fix tree it reports 74 defects
+  across all five kinds; on the fixed tree, clean.
