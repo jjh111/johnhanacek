@@ -400,9 +400,84 @@ sequencing sections that follow it; they are kept for the record.
 | 10 | How I Work cards — **MERGED 2026-09-09**: two sentences + "more →" into the bar | agent | chunks keep the full text |
 | 11 | Lane resumes on demand + LinkedIn sync | agent / **John** | `build-resume.mjs --lane=…` already exists; John pastes the LinkedIn blocks |
 | 12 | Search polish leftovers | agent | trophy camera-orbit, long-answer fold, phone tier strip density |
+| 13 | **v2.10 "One Pair" — font coherence (audit part 4)** | agent | full module below; the intent-card Cinzel bug fixed 2026-09-10 (b1a3e8f) |
 
 Exit: services page converts by track; no raw palette literal outside token blocks; anchorcheck at 0;
 GoatCounter counting; resume, LinkedIn and site say the same thing.
+
+## v2.10 — "One Pair" (the font coherence pass — Deep Sea Terminal audit, part 4)
+
+Found 2026-09-10 in the visual-feedback passes, the same day the intent card
+rendered its title in the browser's default serif: the site's font families are
+still restated as ~170 literal declarations, and the one place that restated a
+RETIRED family ('Cinzel' in `scripts/search-overlay.css`) failed silently — the
+exact failure mode the part-3 token purge just closed for colours. Fonts get the
+same treatment. Fixed already: `.intent-card-title` → 'JetBrains Mono'
+(b1a3e8f); the gold stayed.
+
+### Diagnosis (measured 2026-09-10, site-wide sweep)
+
+1. **The bug class is closed, not the mechanism.** After the fix, every
+   non-canonical family reference lives in a world that actually loads it:
+   onagents/tidepool load their Cinzel+Cormorant string; openprose's 700 weights
+   are real (its `_pairings.css` @imports JBM/Plex/Space with full ranges and
+   declares local Kecal faces); beach-beers' Georgia is a system font. Nothing
+   on a standard page references an unloaded family — but nothing PREVENTS the
+   next one either.
+2. **~170 literal family declarations.** 'JetBrains Mono' ×144 (incl. 10 with a
+   `,monospace` spacing variant and one `'JetBrains Mono', ui-monospace` stack),
+   'Raleway' ×26, plus the openprose-world `var(--type-*)` aliases. The palette
+   rule ("a page may ALIAS tokens; it must never RESTATE values") applies to
+   type: two tokens in jh-chrome.css — `--font-mono`, `--font-display` — and
+   every standard page + shared stylesheet reads them.
+3. **One off-ladder literal inside the chrome itself**: `styles/jh-chrome.css`
+   `.nav-left .shape-link.secondary .shape-label { font-size: 0.4rem }` — the
+   v2.08 fold missed it. Fold to `--text-4xs` or document as a deliberate
+   micro-label. WARNING: it sits in the shape strip, so changing it moves the
+   measured nav boundary — `navfittest.mjs` is the gate, not a nice-to-have.
+4. **Two declared exceptions to document** (so future audits stop re-flagging
+   them): (a) the postcard's fixed-px density system (`search-overlay.css`
+   13px/14px + 20px/22px line heights) — fixed px is load-bearing for the
+   never-scrolls line arithmetic; (b) em-relative inline glyphs (↗ 0.55em,
+   `kbd` 0.85em, `.tier-dot` 0.6em, `.citation-author` 0.9em) — proportional by
+   intent, not off-ladder accidents.
+5. **Mono-400 spot check** (17 `font-weight: 400` uses across design, search,
+   playground, writing): the v2.08 doctrine moved mono running text to 500;
+   separate mono-400 drift from legal Raleway-400 selector by selector, bump
+   the drift.
+6. **Loading layer is already coherent** (verified byte-identical across all 9
+   standard pages + 404): Raleway 200;300;400;500;600 + JBM 400;500;600. No
+   Raleway 100 ghosts; JBM 600 loaded-and-used. Keep it byte-identical through
+   this milestone — the fonts string is not part of the codemod.
+7. **Own worlds stay own** (record only): openprose px engine type, onagents
+   literals + Cinzel world (noindex), tidepool, beach-beers, playground's
+   9–13px review-canvas engine type. Never fold them into the site ladder.
+
+### Phases
+
+- **1 — Family tokens + codemod.** Define `--font-mono` / `--font-display` in
+  the jh-chrome.css token block; script the substitution across `styles/*.css`,
+  `scripts/search-overlay.css` and the standard pages' inline CSS; kill the
+  spacing variants and the one-off stack in the same pass. Diff-review
+  declaration counts before/after (target: zero family literals outside the
+  token block and the own-world pages).
+- **2 — The chrome stray + convention comments.** The 0.4rem shape-label →
+  `--text-4xs` (or a documented micro-label ruling); a short comment block in
+  shared.css declaring the em-glyph convention; a comment on the postcard px
+  block naming the line-arithmetic reason.
+- **3 — Mono-400 selector sweep.** Classify all 17; bump mono drift to 500
+  (JetBrains weights share advance width — no rewrap risk).
+- **4 — Gates.** `navfittest.mjs` green (both engines — phase 2 moved the
+  boundary); `contrasttest.mjs` green (weight bumps change no colors); fonts
+  strings byte-identical; spot screenshots light+dark; one commit per phase.
+
+### Exit criteria
+
+Zero font-family literals outside the token blocks and the own-world pages; the
+chrome uses its own ladder at every size; the two exceptions carry their
+documented reasons inline; no unloaded-family reference anywhere a future edit
+can silently revive (the tokens make that structurally impossible on standard
+pages).
 
 ### P1 — "Proof" (after P0, before v3)
 
