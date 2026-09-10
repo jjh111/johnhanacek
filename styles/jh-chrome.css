@@ -27,7 +27,7 @@
     color-scheme: dark;
     /* Selection in-palette: default UA blue clashes with the deep-sea ground. */
     --selection-bg: rgba(var(--cyan-dim-rgb), 0.35);
-    --selection-ink: var(--text-subhead, #f0f8ff);
+    --selection-ink: var(--text-subhead);
 
     /* Ink brightness, v2.08: every dark-mode TEXT token is its v2.07 value at
        +15% HSL lightness (hue and saturation held, so the sea palette is
@@ -44,6 +44,21 @@
     --gold: var(--jh-gold);
     --gold-glow: rgba(var(--gold-rgb), 0.3);
     --green: #b6ffba;
+
+    /* ── Engine accents ────────────────────────────────────────────────
+       The search bar's runtime colours, worn in two places: the nav's
+       search state-ring (below in this file) and the command bar's badges
+       and section rules (scripts/search-overlay.css, search.html). They
+       are deliberately NOT part of the sea palette — their whole job is to
+       tell four runtimes apart at a glance, so they must stay distinct
+       from cyan and from each other. Named here, with light values below,
+       because before this the same four hexes were restated in three
+       files and the nav ring had no light theme at all. */
+    --engine-browser: var(--cyan-dim);   /* WebGPU  — blue   */
+    --engine-lmstudio: #c084fc;          /* LMStudio— purple */
+    --engine-ollama: #fb923c;            /* Ollama  — orange */
+    --engine-custom: #4ade80;            /* Custom  — green  */
+    --engine-ready: #22c55e;             /* "cached / ready" wash on the load buttons */
 
     --text-primary: #b0cedc;
     --text-bright: #eaf5fa;
@@ -127,6 +142,10 @@
     --panel-rgb: 10, 22, 40;         /* raised panel tint (canvas chrome, badges) */
     --sea-deep-rgb: var(--surface-rgb); /* legacy alias */
     --ink-rgb: 176, 206, 220;        /* --text-primary #b0cedc */
+    --engine-lmstudio-rgb: 192, 132, 252;  /* --engine-lmstudio #c084fc */
+    --engine-ollama-rgb: 251, 146, 60;     /* --engine-ollama   #fb923c */
+    --engine-custom-rgb: 74, 222, 128;     /* --engine-custom   #4ade80 */
+    --engine-ready-rgb: 34, 197, 94;       /* --engine-ready    #22c55e */
 
     /* Surfaces */
     --surface: var(--sea-deep);
@@ -150,6 +169,13 @@
        two-step hierarchy while clearing 4.5:1 everywhere they are used. */
     --ink-quiet: #a5d5e6;   /* 12.57:1 on --sea-deep — the louder quiet tier */
     --ink-faint: #86bccf;   /*  9.58:1 — the quietest tier that still passes */
+
+    /* Affirmative emphasis ink — the "this is the working part" green in
+       design.html's diagram captions (and the same hue the blueprint
+       minimap draws with). A denser, cooler green than --green, which is
+       the soft mint used for status dots; it was a bare hex with a bare
+       light override sitting in a page's <style> block. */
+    --ink-affirm: #10b981;
 
     /* Rules (hairlines/borders) */
     --rule: rgba(var(--cyan-dim-rgb), 0.2);    /* == --border today */
@@ -576,39 +602,39 @@
 /* ── Search state ring: engine indicator ── */
 .search-icon .state-ring {
     stroke: var(--muted);
-    fill: rgba(122, 154, 170, 0.1);
+    fill: color-mix(in srgb, var(--muted) 10%, transparent);
     opacity: 0.35;
     transition: stroke 0.3s, fill 0.3s, opacity 0.3s, filter 0.3s;
 }
 body[data-search-engine="webgpu-available"] .search-icon .state-ring {
-    stroke: #4dc9f6;
+    stroke: var(--engine-browser);
     fill: rgba(var(--cyan-dim-rgb), 0.6);
     opacity: 0.7;
     animation: search-ring-pulse 3s ease-in-out infinite;
 }
 body[data-search-engine="webgpu-active"] .search-icon .state-ring {
-    stroke: #4dc9f6;
+    stroke: var(--engine-browser);
     fill: rgba(var(--cyan-dim-rgb), 0.6);
     opacity: 1;
     filter: drop-shadow(0 0 3px rgba(var(--cyan-dim-rgb), 0.5));
 }
 body[data-search-engine="lmstudio"] .search-icon .state-ring {
-    stroke: #c084fc;
-    fill: rgba(192, 132, 252, 0.6);
+    stroke: var(--engine-lmstudio);
+    fill: rgba(var(--engine-lmstudio-rgb), 0.6);
     opacity: 1;
-    filter: drop-shadow(0 0 3px rgba(192, 132, 252, 0.5));
+    filter: drop-shadow(0 0 3px rgba(var(--engine-lmstudio-rgb), 0.5));
 }
 body[data-search-engine="ollama"] .search-icon .state-ring {
-    stroke: #fb923c;
-    fill: rgba(251, 146, 60, 0.6);
+    stroke: var(--engine-ollama);
+    fill: rgba(var(--engine-ollama-rgb), 0.6);
     opacity: 1;
-    filter: drop-shadow(0 0 3px rgba(251, 146, 60, 0.5));
+    filter: drop-shadow(0 0 3px rgba(var(--engine-ollama-rgb), 0.5));
 }
 body[data-search-engine="custom"] .search-icon .state-ring {
-    stroke: #4ade80;
-    fill: rgba(74, 222, 128, 0.6);
+    stroke: var(--engine-custom);
+    fill: rgba(var(--engine-custom-rgb), 0.6);
     opacity: 1;
-    filter: drop-shadow(0 0 3px rgba(74, 222, 128, 0.5));
+    filter: drop-shadow(0 0 3px rgba(var(--engine-custom-rgb), 0.5));
 }
 @keyframes search-ring-pulse {
     0%, 100% { filter: drop-shadow(0 0 1px rgba(var(--cyan-dim-rgb), 0.15)); opacity: 0.5; }
@@ -1023,13 +1049,24 @@ body > footer .version {
 
     --cyan: #16607c;
     --cyan-dim: #12536c;
-    --cyan-glow: rgba(18, 83, 108, 0.14);
+    --cyan-glow: rgba(var(--cyan-dim-rgb), 0.14);
     /* #8a6d1c measured 4.41:1 on --sea-deep — under AA for normal text, and
        this gold IS text: year badges, section labels, "View the Case Study".
        #7a6016 clears it at 5.38 and is indistinguishable as a hue. */
     --jh-gold: #7a6016;
-    --gold-glow: rgba(138, 109, 28, 0.16);
+    --gold-glow: rgba(var(--gold-rgb), 0.16);
     --green: #2f7d38;
+
+    /* Engine accents, Shallows side: same hues at ink weight — the bright
+       terminal colours smudge on paper. --engine-browser stays a hair
+       bluer than --cyan-dim so the WebGPU badge is still tellable from an
+       ordinary cyan rule on a light ground. */
+    --engine-browser: #0f6a95;
+    --engine-lmstudio: #7c3aed;
+    --engine-ollama: #b45309;
+    --engine-custom: #15803d;
+    --engine-ready: #15803d;
+    --ink-affirm: #0c6e50;
 
     --text-primary: #35525f;
     --text-bright: #1b3644;
@@ -1042,10 +1079,10 @@ body > footer .version {
        --text-primary (7.49), which is what "muted" has to mean. */
     --muted: #546b77;
     --muted-light: #52707e;
-    --border: rgba(18, 83, 108, 0.28);
-    --shadow: rgba(18, 83, 108, 0.15);
-    --elevation: rgba(18, 83, 108, 0.18);
-    --elevation-soft: rgba(18, 83, 108, 0.14);
+    --border: rgba(var(--cyan-dim-rgb), 0.28);
+    --shadow: rgba(var(--cyan-dim-rgb), 0.15);
+    --elevation: rgba(var(--cyan-dim-rgb), 0.18);
+    --elevation-soft: rgba(var(--cyan-dim-rgb), 0.14);
 
     --cyan-rgb: 22, 96, 124;
     --cyan-dim-rgb: 18, 83, 108;
@@ -1058,10 +1095,14 @@ body > footer .version {
     --surface-rgb: 238, 244, 246;
     --panel-rgb: 248, 251, 252;
     --ink-rgb: 53, 82, 95;
+    --engine-lmstudio-rgb: 124, 58, 237;   /* #7c3aed */
+    --engine-ollama-rgb: 180, 83, 9;       /* #b45309 */
+    --engine-custom-rgb: 21, 128, 61;      /* #15803d */
+    --engine-ready-rgb: 21, 128, 61;       /* #15803d */
 
     color-scheme: light;
     --selection-bg: rgba(var(--cyan-dim-rgb), 0.25);
-    --selection-ink: var(--text-subhead, #0d2531);
+    --selection-ink: var(--text-subhead);
 }
 
 /* White-filled signature assets: ink them in light mode. The invert lands
@@ -1208,12 +1249,12 @@ body > footer .version {
     display: inline-flex;
     align-items: center;
     padding: 0.4rem 0.85rem;
-    border: 1px solid rgba(178, 232, 250, 0.35);
+    border: 1px solid rgba(var(--cyan-rgb), 0.35);
     border-radius: 999px;
-    background: rgba(2, 10, 18, 0.82);
+    background: rgba(var(--surface-rgb), 0.82);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    color: #b2e8fa;
+    color: var(--text-heading);
     font-family: 'JetBrains Mono', ui-monospace, monospace;
     font-size: var(--text-2xs);
     letter-spacing: 0.04em;
@@ -1221,8 +1262,8 @@ body > footer .version {
     transition: border-color 0.2s ease, color 0.2s ease;
 }
 .jh-return-chip:hover {
-    border-color: var(--jh-gold, #d4af37);
-    color: var(--jh-gold, #d4af37);
+    border-color: var(--jh-gold);
+    color: var(--jh-gold);
 }
 @media print { .jh-return-chip { display: none; } }
 
@@ -1236,7 +1277,7 @@ body > footer .version {
    on the thin glyph alone was invisible. Engine colours resume once the
    hint retires (the ring is cyan while hinting, whatever the engine). */
 html[data-search-hint="1"] .search-icon .state-ring {
-    stroke: var(--cyan-dim, #4dc9f6);
+    stroke: var(--cyan-dim);
     fill: rgba(var(--cyan-dim-rgb), 0.12);
     opacity: 1;
     animation: jh-search-hint-ring 3.4s ease-in-out infinite;
