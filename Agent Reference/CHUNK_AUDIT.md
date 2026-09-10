@@ -511,7 +511,39 @@ deliberately-unlisted experiments (tidepool, beach-beers) stay out.
   dated artefact; the painting's year belongs on the page's figcaption, which still
   carries it, and stating it twice invites the two to drift. Vectors rebuilt.
 
-
 ## §J Resume compile — 2026-09-09
 
 Chunks 4, 21, 23, 26, 27, 50 are COMPILED from `Assets/resume.json` by `scripts/build-resume.mjs --apply` (source: the 2026-09-09 interview; evidence links live in the JSON). Edit the JSON, not the chunk text. Rebuild vectors after each compile (`node scripts/build-chunk-vectors.mjs`).
+
+## §K Anchor homes — 2026-09-09 (`url` fields only, no claim changed)
+
+Thirteen chunks dropped visitors at the top of a page. Each now lands on the block
+where its claim actually lives — no empty anchors were invented: twelve reuse ids
+the pages already had, and the one new id (`#tiers` on search.html) names the tier
+strip, which is literally what the chunk describes. No `content`, `micro`, `tldr`
+or `facts` text changed, so vectors were NOT rebuilt.
+
+| chunk | title | url |
+|---|---|---|
+| 3  | MetaMedium — AI Beyond Chat | `design.html#projects` |
+| 5  | Nanome — XR Molecular Design | `nanome2.html#overview` (role & responsibilities) |
+| 15 | Photography & Multimedia | `art.html#photography` |
+| 33 | Beliefs & Philosophy | `index.html#believe` |
+| 34 | This Website — Architecture & Tech | `index.html#top` (the hero, where the engine runs) |
+| 35 | Fish Minigame — Interactive Canvas | `index.html#heroCanvas` |
+| 36 | AI Search System | `search.html#tiers` **(new id)** |
+| 37 | Nanome 2 — VR Molecular Design Case Study | `nanome2.html#process` |
+| 38 | Playground — Interactive Demos | `playground.html#stage` |
+| 39 | Writing — Notes & Learning Resources | `writing.html#fileList` |
+| 40 | OpenProse — Founding Design Case Study | `openprose.html#openprose` |
+| 42 | JHDesign Review Canvas | `openprose.html#canvas-tool` |
+| 58 | READI — Emergency Resource Allocation | `playground.html?items=teamreadi#stage` |
+
+Chunk 27's Blok Dok line stays on `about.html#experience`: facts carry `t`/`d`/`y`
+only, so there is no fact-level link to aim at the new `design.html#blokdok` card.
+
+Still homeless (`BASELINE = 3` in `search-tests/anchorcheck.mjs`): the personal
+chunks **30 (cooking), 31 (gardening), 32 (location)**. about.html has no
+off-the-clock block, and an anchor with nothing behind it is the failure this check
+exists to catch. John's ruling pending — an "off the clock" section on About, or
+search-only.
