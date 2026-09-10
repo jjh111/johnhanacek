@@ -53,7 +53,7 @@ function setup() {
   frameRate(24);
   cnv = createCanvas(1500, 883);
   noCursor();
-  img = loadImage("assets/halfalonec.png")
+  img = loadImage("halfalonec.png")
   fill(0);
   noStroke();
   rect(0, 0, width, height);
