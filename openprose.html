@@ -90,12 +90,12 @@
      page's headings, main and typography. See styles/jh-chrome.css header.)
      Loaded BEFORE the page's own tokens so _tokens.css wins on every name they
      share; the chrome reads its own values through --jh- prefixed tokens. -->
-<link rel="stylesheet" href="./styles/jh-chrome.css?v=2.09">
-<link rel="stylesheet" href="./scripts/search-overlay.css?v=2.09">
+<link rel="stylesheet" href="./styles/jh-chrome.css?v=2.10">
+<link rel="stylesheet" href="./scripts/search-overlay.css?v=2.10">
 <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-<link rel="stylesheet" href="openprose/_tokens.css?v=2.09">
-<link rel="stylesheet" href="openprose/_pairings.css?v=2.09">
+<link rel="stylesheet" href="openprose/_tokens.css?v=2.10">
+<link rel="stylesheet" href="openprose/_pairings.css?v=2.10">
 <style>
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -551,6 +551,13 @@ html[data-mode="dark"] .sections-frosted {
   margin-bottom: 3rem;
   line-height: 1.7;
   text-wrap: pretty; /* no orphan last word on the lede */
+}
+/* §V's running prose reads as a folio spread on desktop: two balanced
+   columns, folding back to one under 1000px (and with JS off — this is
+   pure CSS). break-inside keeps each paragraph whole. */
+@media (min-width: 1000px) {
+  .lede-cols { column-count: 2; column-gap: var(--space-xl); }
+  .lede-cols .lede { margin-top: 0; max-width: none; break-inside: avoid-column; }
 }
 
 
@@ -1141,9 +1148,17 @@ body.cv-overlay-open { overflow: hidden; }
   gap: var(--space-2xs);
   width: 100%; border: 0; cursor: pointer;
   padding: var(--space-xs) var(--space-md);
-  background: var(--paper-warm);
+  /* The real frame sits underneath; the facade is a paper scrim over it,
+     opaque enough that the play circle and meta stay legible on any frame. */
+  background: rgba(245, 240, 232, 0.85);
   color: var(--ink-2); font: inherit; text-align: center;
   transition: background 0.2s ease;
+}
+html[data-mode="dark"] .video-slot .yt-facade { background: rgba(20, 17, 13, 0.72); }
+.video-slot .vs-poster {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover; display: block;
 }
 .video-slot .yt-facade:hover { background: var(--paper-elev); }
 .video-slot .yt-facade:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: -4px; }
@@ -1844,6 +1859,7 @@ system consumes it.
       <div class="tool-main">
         <div class="cs-figure tool-film">
           <div class="video-slot yt" id="canvas-video-slot" data-yt="TZ7pjo_y_MA">
+            <img class="vs-poster" src="openprose/page-assets/handoff-highlights-poster.jpg" alt="" aria-hidden="true">
             <button type="button" class="yt-facade" aria-label="Play: highlight reel cut from the end-of-project handoff video (1 min 26 sec, opens the YouTube player)">
               <span class="yt-play" aria-hidden="true"></span>
               <span class="yt-title">Highlight reel</span>
@@ -1930,20 +1946,7 @@ system consumes it.
   <div class="inner">
     <div class="section-kicker">III Breadth</div>
     <h2><em>137</em> total brand approaches.</h2>
-    <p class="lede">Two months of parallel explorations looking for the best surface area. Every approach is a working page. The 72 direction-* pages cover 19 distinct directions — the biggest being delta/machine (11 variants), mu/bloom (9), beta/tufte-mono (9), eta/organism (7), and lambda/inkwell (5).</p>
-    <p class="lede" style="margin-top: var(--space-sm);">The canvas below is a subset: <em>37</em> of the core aesthetics that stuck around the longest, and that seem like an interesting ground to base further work from.</p>
-    <div class="cs-figure">
-      <!-- footer=0 on every embed here — the shell's own footer renders as a
-           56px band of bare paper inside the panel. The standalone link keeps
-           its footer. -->
-      <div class="embed-live natural" data-src="openprose/canvas-display/?v=36&footer=0&mode=canvas&zoom=0.65" data-auto>
-        <iframe title="The 37 core approaches in the Review Canvas, live" loading="lazy" allowfullscreen allow="fullscreen"></iframe>
-      </div>
-      <div class="embed-bar">
-        <span>The 37 core aesthetics in the Review Canvas Lite — the subset the rest of this section reads. Modes, comments (✎) and fullscreen in its header.</span>
-        <a href="openprose/canvas-display/?v=36" target="_blank" rel="noopener">open the canvas ↗</a>
-      </div>
-    </div>
+    <p class="lede">Two months of parallel explorations looking for the best surface area. Every approach is a working page. The <strong>72</strong> direction-* pages cover <strong>19</strong> distinct directions — the biggest being delta/machine (<strong>11</strong> variants), mu/bloom (<strong>9</strong>), beta/tufte-mono (<strong>9</strong>), eta/organism (<strong>7</strong>), and lambda/inkwell (<strong>5</strong>).</p>
     <div class="cs-figure">
       <div class="embed-live natural" data-fit data-src="openprose/canvas-display/?v=36&ratings=1&footer=0&nav=0&cols=4&items=approach-f-v2,approach-d2-gothic-humanist,approach-h-warm-editorial,approach-i-editorial-saas,approach-j-tufte-v2,approach-f-v5-openprose,approach-m-dan-accordion" data-auto style="aspect-ratio: 15 / 8;">
         <iframe title="Top-rated brand approaches, live canvas" loading="lazy" allowfullscreen allow="fullscreen"></iframe>
@@ -2021,11 +2024,13 @@ system consumes it.
   <div class="inner">
     <div class="section-kicker">V The Evolution</div>
     <h2>Make the page feel <em>alive</em>.</h2>
+    <div class="lede-cols">
     <p class="lede">Aiming to become more interactive: a surface that responds.</p>
-    <p class="lede" style="margin-top: var(--space-sm);">I went in a handful of directions, different metaphors. Cellular automata were interesting; then, as I made UI to mess with the parameters, I found settings that evoked ripples and water.</p>
-    <p class="lede" style="margin-top: var(--space-sm);">While I was working on this project over the two months, I went on a quick vacation to La Paz, where I swam with a <em>Whale Shark</em> for the first time. As a palette cleanser, with the power of Arrow letting me generate clean SVGs from images plus some manual touchups, the little Whale Shark was born, combined with him eating the cellular automata.</p>
-    <p class="lede" style="margin-top: var(--space-sm);">From there I went into trying black hole motifs: pure vibe-coded 2D versions alongside a port of <a href="https://github.com/vlwkaos/threejs-blackhole" target="_blank" rel="noopener">vlwkaos/threejs-blackhole</a>.</p>
-    <p class="lede" style="margin-top: var(--space-sm);">A fun idea, but ultimately just a moment of creative madness that helped me transition back into refining the cellular automata style.</p>
+    <p class="lede">I went in a handful of directions, different metaphors. Cellular automata were interesting; then, as I made UI to mess with the parameters, I found settings that evoked ripples and water.</p>
+    <p class="lede">While I was working on this project over the two months, I went on a quick vacation to La Paz, where I swam with a <em>Whale Shark</em> for the first time. As a palette cleanser, with the power of Arrow letting me generate clean SVGs from images plus some manual touchups, the little Whale Shark was born, combined with him eating the cellular automata.</p>
+    <p class="lede">From there I went into trying black hole motifs: pure vibe-coded 2D versions alongside a port of <a href="https://github.com/vlwkaos/threejs-blackhole" target="_blank" rel="noopener">vlwkaos/threejs-blackhole</a>.</p>
+    <p class="lede">A fun idea, but ultimately just a moment of creative madness that helped me transition back into refining the cellular automata style.</p>
+    </div>
     <div class="cs-figure">
       <div class="embed-live natural" data-fit data-src="openprose/canvas-display/?v=36&footer=0&nav=0&items=direction-eta-organism-homepage-kecal,direction-delta-machine-homepage-rain-infinite,direction-nu-tideline,direction-rho-blackhole-hero-physics,direction-rho-blackhole-hero-threejs,direction-mu-bloom" data-auto style="aspect-ratio: 15 / 8;">
         <iframe title="The mediums, live canvas" loading="lazy" allowfullscreen allow="fullscreen"></iframe>
@@ -2116,6 +2121,19 @@ system consumes it.
       <div class="embed-bar">
         <span>The canonical set: the logo collection, the pinned styleguide, and the homepage concept that lands it.</span>
         <a href="openprose/canvas-display/?v=36&footer=0&nav=0&items=logo-collection,direction-styleguide,direction-canonical-homepage" target="_blank" rel="noopener">open ↗</a>
+      </div>
+    </div>
+    <p class="lede" style="margin-top: var(--space-lg);">The canvas below is a subset: <em>37</em> of the core aesthetics that stuck around the longest and seem like an interesting ground to base further work from.</p>
+    <div class="cs-figure">
+      <!-- footer=0 on every embed here — the shell's own footer renders as a
+           56px band of bare paper inside the panel. The standalone link keeps
+           its footer. -->
+      <div class="embed-live natural" data-src="openprose/canvas-display/?v=36&footer=0&mode=canvas&zoom=0.65" data-auto>
+        <iframe title="The 37 core approaches in the Review Canvas, live" loading="lazy" allowfullscreen allow="fullscreen"></iframe>
+      </div>
+      <div class="embed-bar">
+        <span>The 37 core aesthetics in the Review Canvas Lite — the subset the distillation above worked from. Modes, comments (✎) and fullscreen in its header.</span>
+        <a href="openprose/canvas-display/?v=36" target="_blank" rel="noopener">open the canvas ↗</a>
       </div>
     </div>
   </div>
@@ -3939,10 +3957,10 @@ system consumes it.
   } catch (e) { /* un-wrapped is the original page */ }
 </script>
 
-<script src="./scripts/shared.js?v=2.09"></script>
-<script src="./scripts/search-overlay.js?v=2.09" defer></script>
-<script src="./scripts/jh-shapes.js?v=2.09"></script>
-<script src="./scripts/jh-chrome.js?v=2.09" defer></script>
+<script src="./scripts/shared.js?v=2.10"></script>
+<script src="./scripts/search-overlay.js?v=2.10" defer></script>
+<script src="./scripts/jh-shapes.js?v=2.10"></script>
+<script src="./scripts/jh-chrome.js?v=2.10" defer></script>
 
 </body>
 </html>
