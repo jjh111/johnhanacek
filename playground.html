@@ -52,6 +52,16 @@
 html, body { background: var(--paper); color: var(--ink); font-family: var(--mono); }
 body { font-size: 13px; line-height: 1.55; }
 
+/* playground.html does NOT load shared.css (it only wears the chrome), so the
+   skip-link arrived unstyled: a 20px block in normal flow that pushed the
+   toolbar down under the 40px fixed nav and clipped its top half. */
+.skip-link {
+  position: absolute; top: -100%; left: 50%; transform: translateX(-50%);
+  background: var(--paper-warm); color: var(--ink);
+  padding: 8px 14px; z-index: 9999;
+}
+.skip-link:focus { top: calc(40px + env(safe-area-inset-top)); }
+
 header {
   position: sticky; top: 0; z-index: 20;
   display: flex; align-items: center; gap: 12px;
@@ -104,7 +114,7 @@ body.embedded #plane { padding: 0; }
   header .tb-group select { font-size: 10px !important; padding: 2px 3px !important; }
 }
 body.mode-canvas #stage {
-  position: fixed; inset: 47px 0 0 0;
+  position: fixed; inset: var(--stage-top, 47px) 0 0 0;
   overflow: hidden; cursor: grab;
   touch-action: none;
 }
@@ -281,9 +291,11 @@ body.embedded #nav { display: none; }
    unclickable, so fully-zoomed had no way out. */
 #focus { z-index: 1100; }
 
-#nav.visible ~ header { top: calc(40px + env(safe-area-inset-top)); }
-#nav.visible ~ main#stage { top: calc(40px + env(safe-area-inset-top)); }
-body.mode-canvas #nav.visible ~ main#stage { inset: calc(40px + env(safe-area-inset-top)) 0 0 0; }
+#nav.visible ~ header {
+  top: calc(40px + env(safe-area-inset-top));
+  margin-top: calc(40px + env(safe-area-inset-top));
+}
+body:not(.mode-canvas) #nav.visible ~ main#stage { top: calc(40px + env(safe-area-inset-top)); }
 header, main#stage { transition: top 0.25s ease; }
 
 .card.is-nested .well { cursor: pointer; }
@@ -493,8 +505,12 @@ header, main#stage { transition: top 0.25s ease; }
     activeCats = next;
     applySort(lastSort);
     buildCards();
+    if (viewMode === 'canvas') { layoutCanvas(); afterViewChange(); }
+    if (typeof drainCells === 'function') drainCells();
     renderFilters();
+    syncStageTop(); // the item count can rewrap the toolbar
     syncUrl();
+    if (typeof navDraw === 'function') navDraw();
   }
   var maxLive = CONFIG.budget;
   document.body.classList.toggle('embedded', EMBEDDED);
@@ -920,6 +936,8 @@ header, main#stage { transition: top 0.25s ease; }
     applyCols('auto');
   }
   var autoColsTick = null;
+  syncStageTop();
+  window.addEventListener('resize', syncStageTop, { passive: true });
   window.addEventListener('resize', function () {
     if (document.getElementById('grid-cols').value !== 'auto') return;
     if (autoColsTick) return;
@@ -953,6 +971,18 @@ header, main#stage { transition: top 0.25s ease; }
       ? 'translate(' + view.x + 'px,' + view.y + 'px) scale(' + view.s + ')'
       : '';
   }
+  // The canvas stage is fixed below the chrome, and the chrome is not a fixed
+  // height: the site nav adds 40px, and the toolbar wraps to two rows on any
+  // width where its groups no longer fit on one. Measure the real bottom edge
+  // rather than trusting the one-row constant.
+  function syncStageTop() {
+    var h = document.querySelector('header');
+    var navEl = document.getElementById('nav');
+    var navH = navEl && navEl.classList.contains('visible') ? navEl.offsetHeight : 0;
+    var headH = document.body.classList.contains('no-header') || !h ? 0 : h.offsetHeight;
+    document.documentElement.style.setProperty('--stage-top', (navH + headH) + 'px');
+  }
+
   function layoutCanvas() {
     var CARD_W = 420, GAP = 8; // frames read as touching; 8px breathing room
     var aspect = Math.max(0.5, stage.clientWidth / Math.max(1, stage.clientHeight));
@@ -1039,6 +1069,7 @@ header, main#stage { transition: top 0.25s ease; }
     document.body.classList.toggle('mode-canvas', m === 'canvas');
     document.getElementById('zoom-group').classList.toggle('visible', m === 'canvas');
     document.getElementById('cols-group').classList.toggle('visible', m === 'grid');
+    syncStageTop(); // the zoom/cols groups swap, which can change the row count
     if (m === 'canvas') {
       layoutCanvas();
       if (entering && !hasSavedCanvasView) fitTopLeft();
