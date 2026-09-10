@@ -310,10 +310,19 @@ function aboutBlocks() {
     card('The Problems of Agent Orchestration', `<a href="onagents.html">${esc(P('onagents-2026').title)}</a>`, '2026 — a ~37,000-word essay, released through the playground') +
     card('Writing archive', link('jhanacek.net', P('writing-archive').url), 'Foresight and grad-school writing, 2012–2016') +
     `\n            </div>\n            `;
-  // How I work: the "how John thinks" chunks are the source (audited claims); the page mirrors them
+  // How I work: the "how John thinks" chunks are the source (audited claims); the page mirrors them.
+  // The page shows the OPENING of each claim — the first two sentences — and hands the rest to the
+  // command bar. Five full chunks side by side read as walls of prose that nobody finishes; the
+  // chunk keeps every word, and `more →` is a real search for the card's own title.
   const chunks = (() => { const d = JSON.parse(readFileSync(resolve(ROOT, 'Assets/search-chunks.json'), 'utf8')); return Array.isArray(d) ? d : d.chunks; })();
   const HOW = [43, 44, 45, 47, 48];
-  const how = `\n            <div class="card-grid cols-2">` + HOW.map(id => { const ch = chunks.find(x => x.id === id); return ch ? card(esc(ch.title), esc(ch.content), '') : ''; }).join('') + `\n            </div>\n            `;
+  const openingOf = s => { const m = String(s).match(/[^.!?]+[.!?]+(?:\s+|$)/g); return m ? m.slice(0, 2).join('').trim() : String(s); };
+  const how = `\n            <div class="card-grid cols-2">` + HOW.map(id => {
+    const ch = chunks.find(x => x.id === id);
+    if (!ch) return '';
+    const more = `<a href="search.html?q=${encodeURIComponent(ch.title)}">more →</a>`;
+    return card(esc(ch.title), `${esc(openingOf(ch.content))} ${more}`, '');
+  }).join('') + `\n            </div>\n            `;
   return { experience, education, awards, research, 'how-i-work': how };
 }
 function applyAbout() {
