@@ -587,8 +587,46 @@ mobile QA passes; a11y sweeps. Small fixes ride whatever cycle is open.
 12. v2.5 slot: run it fifth as written, or pull phases A–D forward ahead of v2.2/v2.3
     (they are one page, no shared script, and the funnel is what converts)?
 
+## Inherited plans — unreconciled (added 2026-09-10)
+
+Three plan docs in this folder predate the v2 rebuilds and read as live to-do
+lists when they are not. Recorded here so the reconciliation is a decision
+rather than an archaeology exercise; none of them should be actioned without
+first checking whether the thing they describe still exists.
+
+- **`ART_HERO_ENHANCEMENT_PLAN.md`** — 2026-03-23, five phases (star layers,
+  nebula, a Web Audio component, ripple bursts, an interaction reward system),
+  7 unchecked. Never started, and art.html's hero has moved since. Decide:
+  revive whole, cherry-pick the sound component, or drop.
+- **`MULTIPLAYER_CURSORS_PLAN.md`** — 2026-05-04, 19 unchecked. Same question,
+  plus: does a portfolio want a multiplayer surface at all, or was this a
+  MetaMedium idea that wandered in?
+- **`PLAYGROUND_CLEANUP.md`** — DELETED 2026-09-10, obsolete rather than
+  pending. It planned to cull five stub cards and apply six canvas fixes to
+  the hand-built board; that board was replaced wholesale by the OpenProse
+  review-canvas engine, and all five `card-*` ids it names are gone. Its one
+  fix that was NOT playground-specific — the 3d-sync splash listener holding
+  `{ once: true }` — is already fixed in `Assets/3d-sync-demo/js/main.js`.
+
+## Wishlist — the 2015 hypercube port
+
+`Assets/DemosPlayground/CreativeCODE2016/hypercube translation/sketch.js` is
+John's own hand-port of the Processing hypercube to JavaScript, from 2015, and
+it was never finished: it still carries a Java constructor (`Tesseract(){}`), a
+Processing type declaration (`float (mouseX, mouseY, z, w, perspZ, perspW,
+size)`), and Processing array literals (`[ x: 1, y: 1, z: 1, w: 1 ]`). It has
+never been valid JavaScript, so no amount of path-fixing will run it — the
+2026-09-10 p5 pass repaired the other three sketches beside it and left this
+one alone deliberately.
+
+**John wants to see it run.** The finished behaviour already exists twice for
+reference: `hypercube_processing/hypercube_processing.pde` is the original, and
+`hypercube/hypersolid.js` is a working JS tesseract. The repair is a real port
+of the .pde, not a patch of the half-translation — worth its own small session,
+and worth keeping the 2015 file beside it as the artefact it is.
+
 11. **Deep Sea Terminal audit report** — check it into `Agent Reference/` so part 3 has a record to finish against.
-12. **Daylight branch** — salvage into audit part 3, then delete `worktree-daylight` and its branch, or keep?
+12. ~~**Daylight branch**~~ — RESOLVED 2026-09-10. Fully merged into main (0 commits ahead); branch and worktree deleted in the repo-cleanup pass. Nothing to salvage.
 13. **GoatCounter site code** — the analytics switch.
 14. **Personal chunks 30–32** — an "off the clock" line on About, or search-only.
 15. **Coaching-track outcomes** (v2.5 phase E) — the coaching side has one quote and no results.

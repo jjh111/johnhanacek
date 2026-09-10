@@ -1,5 +1,9 @@
 # Art Hero Enhancement Plan
 
+> **FROZEN / UNRECONCILED.** Written 2026-03-23 and never started. The site has
+> moved since; do not action this without checking what still exists. Tracked
+> for a decision in `Agent Reference/V3_RELEASE_PLAN.md` → "Inherited plans".
+
 ## Overview
 
 Enhance the `art.html` hero canvas with improved interactivity, visual beauty, and an audio component. The goal is a subtle, beautiful cosmic experience that rewards interaction without being cheesy or performance-heavy.

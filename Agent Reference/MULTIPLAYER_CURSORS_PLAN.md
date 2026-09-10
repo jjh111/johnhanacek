@@ -1,4 +1,8 @@
 # Multiplayer Cursors — Live Visitor Presence
+
+> **FROZEN / UNRECONCILED.** Written 2026-05-04 and never started. The site has
+> moved since; do not action this without checking what still exists. Tracked
+> for a decision in `Agent Reference/V3_RELEASE_PLAN.md` → "Inherited plans".
 *Last updated: April 2026*
 
 Add real-time multiplayer cursors to the index.html hero canvas, letting site visitors see each other's cursors as they explore the fish ecosystem. Creates a subtle "someone else is here" awareness — like seeing flashlights in an aquarium.

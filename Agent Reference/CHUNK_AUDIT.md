@@ -510,11 +510,6 @@ deliberately-unlisted experiments (tidepool, beach-beers) stay out.
   2025." (John, 2026-09-09). The chunk is about the worldbuilding project, not about a
   dated artefact; the painting's year belongs on the page's figcaption, which still
   carries it, and stating it twice invites the two to drift. Vectors rebuilt.
-
-## §J Resume compile — 2026-09-09
-
-Chunks 4, 21, 23, 26, 27, 50 are COMPILED from `Assets/resume.json` by `scripts/build-resume.mjs --apply` (source: the 2026-09-09 interview; evidence links live in the JSON). Edit the JSON, not the chunk text. Rebuild vectors after each compile (`node scripts/build-chunk-vectors.mjs`).
-
 ## §K Anchor homes — 2026-09-09 (`url` fields only, no claim changed)
 
 Thirteen chunks dropped visitors at the top of a page. Each now lands on the block
@@ -547,3 +542,8 @@ chunks **30 (cooking), 31 (gardening), 32 (location)**. about.html has no
 off-the-clock block, and an anchor with nothing behind it is the failure this check
 exists to catch. John's ruling pending — an "off the clock" section on About, or
 search-only.
+
+
+## §J Resume compile — 2026-09-09
+
+Chunks 4, 21, 23, 26, 27, 50 are COMPILED from `Assets/resume.json` by `scripts/build-resume.mjs --apply` (source: the 2026-09-09 interview; evidence links live in the JSON). Edit the JSON, not the chunk text. Rebuild vectors after each compile (`node scripts/build-chunk-vectors.mjs`).

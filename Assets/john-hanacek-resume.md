@@ -8,7 +8,7 @@ hi@johnhanacek.com · [johnhanacek.com](https://www.johnhanacek.com) · [LinkedI
 
 ## Summary
 
-Product design engineer, 14 years, across AI, web, 3D and XR. Shipped Nanome 2's XR and AI molecular design tools to pharma customers, an AR situational-awareness HUD for first responders, and a portfolio site whose search runs a language model in the browser. Founding design for early-stage teams through JHDesign LLC. Prototypes in code (JavaScript, Three.js, WebGL, WebGPU) and in Unity.
+Product design engineer, 14 years, across AI, web, 3D and XR. Shipped Nanome 2's XR molecular design tool to pharma customers, background in AR situational-awareness HUDs for first responders, and a portfolio site whose search runs a language model in the browser. Founding design for early-stage teams through JHDesign LLC. Prototypes in code (JavaScript, Three.js, WebGL, WebGPU) and in Unity.
 
 ---
 
@@ -25,15 +25,15 @@ Founding design, product design and agentic coaching for startups and R&D teams.
 - JH Coaching OS: designed and shipped an AI coaching product. A personalized agent, curated materials, context documents the agent reads, and a dashboard. Coaching founders and executives on Claude Code and agentic workflows.
 - Context engineering for clients: private context and design systems that keep their AI tools coherent over time, including cleanup passes on existing setups.
 - Subcontractor on a 5G program (BlueHalo division, now AeroVironment) with Dr. Hurriyet Ok; ongoing DoD proposals.
-- ShapesXR: wrote a spatial design blog series; alpha tester since launch; informal advisor.
+- ShapesXR: wrote a spatial design blog series; user since launch.
 
 ### Lead XR Product Designer
 **Nanome Inc.** · 2022–2024 · San Diego
 
 Molecular design platform for pharma researchers in VR, desktop and web.
 
-- Led product design for Nanome 2 on Meta Quest, the companion web portal and the Mara AI assistant. All three shipped.
-- Ran about 24 alpha and beta test sessions with scientists at customers including Pfizer, Novartis and academic labs, three to four users per session. Coded the feedback qualitatively into bugs, how-might-we questions, feature evidence and usability patterns, and turned it into development cycles.
+- Led product design for Nanome 2 on Meta Quest along with the companion web portal and integration with the Nanome MARA AI assistant.
+- Ran around 24 alpha and beta test sessions with groups of scientists working at customer sites including Pfizer, Novartis and academic labs, three to four users per session. Coded the feedback qualitatively into bugs, how-might-we questions, feature evidence and usability patterns, and turned it into development cycles.
 - Replaced teleport navigation with Spotlight/Follow: labeled cursors and a shared, non-rivalrous molecule, so collaborators keep independent viewpoints while sharing focus. It became a pillar of Nanome 2.
 - Consolidated Nanome 1's feature set into a new interface layout and wrist-based UI, and designed the information architecture for projects inside the app.
 - Acted as product lead inside a PM, project manager and design triad: user interviews, the PRD template and tracking system, the internal knowledge base in Coda, and team-wide workshops.
@@ -79,7 +79,7 @@ Medtech startup: remote trauma intervention through XR telepresence and robotics
 ### Designer, Photographer, Product Maker
 **Independent practice (JHphotography, JHDesign)** · 2012–2024 · San Diego
 
-Media, web and product design under two DBAs before the LLC.
+Media, web and product design under DBAs before the LLC.
 
 - Blok Dok (2013): designed, made and sold a wooden iPhone dock. Product, packaging, labels, instructions and product photography.
 - Websites, packaging, photography and media design for small businesses; XR and spatial computing subject-matter consulting; 3D scanning and modeling.
@@ -157,7 +157,7 @@ Thesis: Remotely piloted aircraft and just war theory, closing on ground robotic
 - **EDULEARN15 Proceedings, Barcelona, pp. 1020–1028 (2015)** — [Capturing, Tracing, and Visualizing the Spread of Technology-Enhanced Instructional Strategies](https://www.researchgate.net/publication/324877076_Capturing_Tracing_and_Visualizing_the_Spread_of_Technology-Enhanced_Instructional_Strategies) — D. Davis, J. Hanacek, A. Myers, S. Mulroney, S. Pennestri, Y. Vovides
 - **Atlantic Council, Strategic Foresight (2014)** — [Internet as Answer Engine, Part I](https://www.atlanticcouncil.org/blogs/futuresource/internet-as-answer-engine-part-i/)
 - **Atlantic Council, Strategic Foresight (2014)** — [Internet as Answer Engine, Part II](https://www.atlanticcouncil.org/blogs/futuresource/internet-as-answer-engine-part-ii/)
-- **HuffPost (2014)** — [Beyond Network Feudalism](http://www.huffingtonpost.com/john-hanacek/beyond-network-feudalism_b_5173249.html)
+- **HuffPost (2014)** — [Beyond Network Feudalism](https://www.huffpost.com/entry/beyond-network-feudalism_b_5173249)
 - **The Technium (Kevin Kelly) (2014)** — [A Desirable Future: Haiku](https://kk.org/thetechnium/a-desirable-future-haiku/)
 - **johnhanacek.com (essay, ~37k words) (2026)** — [The Problems of Agent Orchestration](https://www.johnhanacek.com/onagents.html)
 - **jhanacek.net** — [Writing archive (2012–2016 foresight and grad-school writing)](https://jhanacek.net/writing-4)
