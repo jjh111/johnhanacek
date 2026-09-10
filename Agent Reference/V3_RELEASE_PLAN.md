@@ -542,18 +542,21 @@ mobile QA passes; a11y sweeps. Small fixes ride whatever cycle is open.
 
 | Item | Owner | State |
 |---|---|---|
-| Delete dead branches (`feature/nav-responsive…`, `claude/check-earth-star…`, `claude/strip-think-tags…`, `claude/personal-site-review…` — all fully merged/orphaned), daylight worktree+branch, the 2026-08-04 stash | **John** (permission layer blocks the agent) | commands handed over 2026-08-30 |
-| `Assets/Transfyr_Lockup_Black (1).svg` untracked original | John | delete when convenient (inlined copy shipped) |
+| ~~Delete dead branches, daylight worktree+branch, the 2026-08-04 stash~~ | John | **DONE 2026-09-10.** All four remote branches deleted, three worktrees and six local branches removed, stash dropped, `prepurge-main-archive` retired. `.git` 225 MB → 150 MB (loose objects 3,721/216 MiB → 0; the branches held 43.7 MB the tag was wrongly credited with). Full pre-cleanup bundle at `~/Documents/GitHub/_jh-prerewrite/`. |
+| `Assets/Transfyr-lockup.svg` | **John — differs from plan** | The ledger said delete. Committed instead, renamed, as the SOURCE for the lockup that ships inlined on design.html and services.html (verified identical: same viewBox, same nine paths). Reverse with `git rm` if you'd rather the repo held no unshipped source. |
 | CHUNK_AUDIT.md marks (§A–F, §G, §H) | John | folds into v2.1 |
 | Vimeo God Like — re-host as own copy | John | swap in via f775ced standard + audit |
 | jhana.zone dead parking A record | John (registrar) | blocks poster capture; hits visitors |
 | fish-demo/fish.js rebase onto fish-engine | John (source is local-only) | when convenient |
-| phase6a full modernization to the one-surface contract | agent | minimal re-point done; rewrite pending |
+| phase6a full modernization to the one-surface contract | agent | 2026-09-10: hover + inert-body checks now follow whichever small tier exists, and the L2 check asserts the invariant across five queries instead of pinning to one (it had been re-pinned twice already). Full rewrite still pending. |
 | Deferred from v2: LFM2.5 embedder swap (device-QA gated), Ollama tool-use, Phase 7 fish behaviors | agent + John | unchanged; Phase 7 behaviors should land AFTER v2.4 (recognition/placement first — behaviors tune better on a truthful spawn) |
 | services.html funnel: naming collisions + duplicated quotes (v2.5 phases B) | agent | measured 2026-09-09; pure subtraction, no ruling needed |
 | Chunk 18 `url` still points at legacy `services.html#design-services` | agent + John | update to `#design` under the CHUNK_AUDIT rule; legacy remap stays as the net |
 | Coaching-track outcomes + figures (v2.5 phase E) | **John** | the design track proves with three named outcomes; coaching has one quote and no results |
 | Google appointment-scheduling: can a booking carry a track parameter? | agent (research) | gates v2.5 phase F; the primary CTA is currently unattributable |
+
+| Repo history rewrite — 98.1 MB of dead binaries in main's own history | **John** (classifier blocks the agent) | Prepared 2026-09-10, not run: `~/Documents/GitHub/_jh-prerewrite/HOW-TO-RUN.md`, with a verified 172 MB bundle and the pre-rewrite tree hash. **Regenerate the blob list first** — it was computed before the stale branches were deleted. Rewrites every SHA; needs a force-push and a re-clone anywhere else. |
+| Visual Art demo reel not showing (John, 2026-09-10) | agent + **John** | Not reproduced: the video is live and embeddable (oembed 200, "JH Artist Overview"), the markup is byte-identical to the eight embeds that work, geometry correct at 956×538. Need one detail from John — blank rectangle, or "Video unavailable"? That separates YouTube from us. |
 
 ## Decisions John owes this plan
 
