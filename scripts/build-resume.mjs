@@ -342,9 +342,33 @@ function applyAbout() {
 async function pdfs() {
   const { chromium } = await import('playwright-core');
   const CHROMIUM = process.env.CHROMIUM_PATH || `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1217/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing`;
-  const PORT = 4597;
+  // Serve ROOT ourselves — and PROVE it. A stale http.server left listening on our port
+  // (agent worktrees do this) silently steals the bind, and every page then renders that
+  // server's 404 into a real-looking PDF. On 2026-09-10 that shipped a 404 as the site's
+  // resume. So: find a genuinely free port, then refuse to render until a sentinel served
+  // from OUR root comes back verbatim.
+  const { createServer } = await import('node:net');
+  const isFree = port => new Promise(res => {
+    const s = createServer();
+    s.once('error', () => res(false));
+    s.once('listening', () => s.close(() => res(true)));
+    s.listen(port, '127.0.0.1');
+  });
+  let PORT = 0;
+  for (let p = 4597; p < 4617; p++) if (await isFree(p)) { PORT = p; break; }
+  if (!PORT) throw new Error('no free port in 4597-4616 — stale servers? `lsof -nP -iTCP -sTCP:LISTEN | grep python`');
+  const token = `resume-build-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  writeFileSync(`${OUT}/.sentinel`, token);
   const server = spawn('python3', ['-m', 'http.server', String(PORT), '--bind', '127.0.0.1'], { cwd: ROOT, stdio: 'ignore' });
-  await new Promise(r => setTimeout(r, 700));
+  let ours = false;
+  for (let i = 0; i < 40 && !ours; i++) {
+    await new Promise(r => setTimeout(r, 100));
+    try {
+      const r = await fetch(`http://127.0.0.1:${PORT}/.local/out/.sentinel`);
+      ours = r.ok && (await r.text()).trim() === token;
+    } catch { /* not up yet */ }
+  }
+  if (!ours) { server.kill(); throw new Error(`port ${PORT} is not serving this repo — another server answered. Kill it and retry.`); }
   const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true });
   const made = [];
   try {
@@ -352,7 +376,12 @@ async function pdfs() {
       writeFileSync(`${OUT}/${file}.html`, html(mode, withPhone));
       const ctx = await browser.newContext({ viewport: { width: 816, height: 1056 }, deviceScaleFactor: 3 });
       const page = await ctx.newPage();
-      await page.goto(`http://127.0.0.1:${PORT}/.local/out/${file}.html`, { waitUntil: 'load', timeout: 60000 });
+      const resp = await page.goto(`http://127.0.0.1:${PORT}/.local/out/${file}.html`, { waitUntil: 'load', timeout: 60000 });
+      if (!resp || !resp.ok()) throw new Error(`${file}.html served ${resp ? resp.status() : 'nothing'} — refusing to print it`);
+      // Belt and braces: an error page can still arrive with a 200. Only a page that
+      // carries the name we just wrote is allowed to become a PDF.
+      const named = await page.evaluate(() => document.querySelector('.page .name')?.textContent?.trim() || '');
+      if (named !== R.basics.name) throw new Error(`${file}.html rendered "${named || '(no .name)'}" instead of ${R.basics.name} — refusing to print it`);
       await page.evaluate(() => document.fonts.ready);
       if (mode !== 'long') {
         // fit to one page: shrink the root scale until the content clears the page
