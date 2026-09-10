@@ -1012,6 +1012,13 @@ body.search-overlay-open {
     display: flex; align-items: baseline; gap: 0.5rem;
     padding: 0.16rem 0.4rem; border-radius: 3px;
     font-variant-numeric: tabular-nums; min-width: 0;
+    /* Own your size. This carried none, so it inherited — 14px in the results
+       list, but 19.36px inside the workspace pane, whose meta-paragraph is set
+       at --text-base for reading. A fact row rendered there came out at display
+       size, dominating the stratum and colliding with the media obstacle beside
+       it. The row is the same component in both surfaces and should read the
+       same in both; --text-xs is what the list was already giving it. */
+    font-size: var(--text-xs);
 }
 .pc-fact-row:hover { background: rgba(var(--cyan-dim-rgb), 0.05); }
 .pc-fact-row--media { align-items: center; }
@@ -1029,6 +1036,29 @@ body.search-overlay-open {
 .pc-fact-media .result-thumb { width: 56px; height: 56px; }
 .pc-fact-media .result-model { width: 84px; height: 84px; }
 .pc-fact-media--loose { float: right; margin: 0 0 0.3rem 0.6rem; }
+
+/* A loose media float and the fact rows share one .pc-fact-list, but a flex
+   container does not see floats — the rows laid out full width and ran
+   UNDERNEATH the poster (measured: title 369→748, poster 511→775). Give each
+   row a block formatting context so it shrinks beside the float instead, and
+   let the title wrap rather than overflow the narrowed box (it is flex-shrink:0
+   by default so a short label is not squeezed by a long detail). Scoped with
+   :has() to lists that actually carry a float, so the fact chunks without one
+   keep their current layout exactly. Only chunk 15 has both today. */
+.pc-fact-list:has(.pc-fact-media--loose) .pc-fact-row { overflow: hidden; }
+.pc-fact-list:has(.pc-fact-media--loose) .pc-fact-t { flex-shrink: 1; min-width: 0; }
+
+/* ...but a float only earns its keep if what flows beside it is still a column.
+   The poster is 264px; in the pane's right column at tablet widths that leaves
+   ~130px, and a name came out five lines tall. Same floor the prose wrap already
+   uses (MIN_WRAP_SLOT = 200 in search-core.js): under it, stop floating and let
+   the media take its own row. 464px = the 264px poster + that 200px floor. */
+@media (max-width: 900px) {
+    .pc-fact-list:has(.pc-fact-row) .pc-fact-media--loose {
+        float: none;
+        margin: 0.4rem 0 0.3rem;
+    }
+}
 
 /* L3 dossier — prose wraps BOTH sides of the media obstacle */
 .pc-l3 {
