@@ -607,3 +607,23 @@ be the person's, the org's, or both, and `kind` + `engagement` for placement.
 Three quotes existed in two lengths, with design.html holding the long version
 and resume.json having canonicalized the trim — both are now kept, and no page's
 rendering changed. Vectors rebuilt.
+
+## §N The approach count — 2026-09-10 (John's word)
+
+The OpenProse engagement claim "37 approaches" was an undercount. John pulled the
+real number from the local repo agent: **137 total brand approaches** (the 72
+`direction-*` pages covering 19 distinct directions — delta/machine 11 variants,
+mu/bloom 9, beta/tufte-mono 9, eta/organism 7, lambda/inkwell 5). The 37 stays
+meaningful as the OTHER number: the core subset that stuck around the longest,
+which the Review Canvas shows and which the distillation worked from.
+
+- [x] **40 OpenProse — Founding Design Case Study** — content, `micro` and
+  `tldr` move 37 → 137 as the total (content: "137 total brand approaches were
+  built as working pages…"; micro "137 working homepages, distilled to one";
+  tldr "5 logos, 137 total brand approaches across 471 commits"). The same
+  change rides the rendered claims: index.html featured card, nanome2.html,
+  services.html design outcome, about.html experience, `resume.json`, and
+  `media-kit.html`. openprose.html's finalists line now says "the thirty-seven
+  CORE approaches" so the subset meaning of 37 survives intact. Vectors
+  rebuilt; `openprose/HANDOFF.md` untouched — its "37 live brand experiments"
+  describes what the canvas itself carries, which is still the core set.
