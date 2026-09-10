@@ -547,3 +547,16 @@ search-only.
 ## §J Resume compile — 2026-09-09
 
 Chunks 4, 21, 23, 26, 27, 50 are COMPILED from `Assets/resume.json` by `scripts/build-resume.mjs --apply` (source: the 2026-09-09 interview; evidence links live in the JSON). Edit the JSON, not the chunk text. Rebuild vectors after each compile (`node scripts/build-chunk-vectors.mjs`).
+
+## §L "meta" belongs to MetaMedium — 2026-09-10
+
+- [x] **3 MetaMedium — AI Beyond Chat** — tags gain the bare token `meta`
+  (John, 2026-09-10: "would make more sense to bring metamedium there"). The
+  query "meta" was leading with chunk 51, *Harness vs Ecosystem — a brittle
+  metaphor*: MiniSearch prefix-matches `meta` against both `metamedium` and
+  `metaphor`, and 51 carried `metaphor` in its TITLE as well as its tags, which
+  the 3× title boost settled in its favour. Fixed in the data rather than the
+  ranking — on this site "meta" IS MetaMedium, and the fusion constants stay
+  where fusionlab put them. Measured after: fusionlab byte-identical (21/22
+  top3, 5/5 keyword-top1, same three misses), intentlab 5/5, phase3/5/6a/9/10
+  all pass. Vectors rebuilt.

@@ -47,10 +47,18 @@ await page.waitForTimeout(600);
 check('"design": one dossier at most, waterfall beneath', await page.locator('[data-lod="3"]').count() <= 1
   && await page.locator('.pc-mod').count() >= 3);
 
-// hover tooltip (one shared node)
+// hover tooltip (one shared node).
+// The smaller tier here is whatever the allocator left room for, NOT
+// necessarily L1. This test used to hardcode [data-lod="1"] and hung on
+// `.hover()` the moment "meta" started leading with MetaMedium again: its
+// piece is frameable, so the lead wakes at dossier scale and the no-scroll
+// doctrine spends the L1 field on that depth — exactly the trade the
+// 'graded field below' check above already allows for. Measured for "meta":
+// one L3, one L2, no L1, five tail items. So take the first small module of
+// either tier, which is what "the next rung down" has always meant.
 await page.fill('#so-searchInput', 'meta');
 await page.waitForTimeout(600);
-const l1 = page.locator('[data-lod="1"]').first();
+const l1 = page.locator('[data-lod="1"], [data-lod="2"]').first();
 await l1.hover();
 await page.waitForTimeout(200);
 const tip = await page.locator('.pc-tip').textContent().catch(() => '');
@@ -60,7 +68,7 @@ check('hover shows next-LOD tooltip', (await page.locator('.pc-tip').isVisible()
 // are inert, and a click on the micro/prose text changes nothing.
 const l1id = await l1.getAttribute('data-id');
 const lodBefore = await page.locator(`[data-id="${l1id}"]`).first().getAttribute('data-lod');
-await l1.locator('.pc-micro').click();
+await l1.locator('.pc-micro, .pc-tldr').first().click();   // L1 wears .pc-micro, L2 wears .pc-tldr
 await page.waitForTimeout(500);
 check('module bodies are inert — a click changes no tier',
   await page.locator(`[data-id="${l1id}"]`).first().getAttribute('data-lod') === lodBefore
@@ -74,14 +82,25 @@ check('density persisted', await page.evaluate(() => localStorage.getItem('jh-po
 await page.locator('.pc-density').click();
 await page.waitForTimeout(300);
 
-// L2 uses tldr (not full content) and L1 shows micro. 'who is john' — its
-// text-only lead dossier is cheap enough that the L2 beneath it survives;
-// 'nanome' stopped qualifying when its lead gained a media dossier (13 of 16
-// units — the rung under it legitimately demotes to L1).
-await page.fill('#so-searchInput', 'who is john');
-await page.waitForTimeout(600);
-const l2text = await page.locator('.pc-l2 .pc-tldr').first().textContent().catch(() => '');
-check('L2 renders the tldr line', l2text.length > 0 && l2text.length < 200, `${l2text.length} chars`);
+// L2 uses tldr (not full content) and L1 shows micro.
+//
+// The INVARIANT is "an L2, wherever one appears, renders the tldr line rather
+// than full content" — it is not a claim about which query yields an L2. That
+// allocation drifts every time a lead chunk gains or loses weight, and this
+// check has been re-pinned twice already: 'nanome' lost its L2 when its lead
+// gained a media dossier, then 'who is john' lost its own (measured 2026-09-10:
+// one L3, no L2, one L1, eight tail). Re-pinning a third time would just queue
+// up a fourth. So ask several queries and assert on the first L2 any of them
+// produces; only a corpus with NO L2 anywhere is a real failure.
+let l2text = '', l2from = '';
+for (const q of ['meta', 'design', 'who is john', 'nanome', 'fish']) {
+  await page.fill('#so-searchInput', q);
+  await page.waitForTimeout(600);
+  const t = await page.locator('.pc-l2 .pc-tldr').first().textContent().catch(() => '');
+  if (t && t.length) { l2text = t; l2from = q; break; }
+}
+check('L2 renders the tldr line', l2text.length > 0 && l2text.length < 200,
+  l2from ? `"${l2from}": ${l2text.length} chars` : 'no query produced an L2');
 // 'design' always seats one-liners under its lead; 'who is john' stopped
 // carrying an L1 once chunk 28 gained the headshot (its dossier costs more,
 // the rung beneath sheds — the ladder working).
