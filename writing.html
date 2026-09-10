@@ -119,6 +119,11 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            /* The brand row is all white-space:nowrap; at 390px it needs 306px
+               and the count needs 61 — 1.5px more than the row has. Let the
+               count drop to its own line instead of hanging off the edge. */
+            flex-wrap: wrap;
+            gap: var(--space-xs) var(--space-sm);
             padding: var(--space-md) var(--space-md) var(--space-sm);
             border-bottom: 1px solid var(--border-subtle);
             margin-bottom: var(--space-lg);
@@ -888,11 +893,17 @@
     <div id="fileList"></div>
     </main>
 
-    <footer>
-        <jh-footer></jh-footer>
-    </footer>
-
 </div>
+
+<!-- Direct child of <body> on purpose: the chrome's footer rules are all
+     `body > footer …` (layout, centering, and the .version type step). Nested
+     inside .container they did not match, so the oval sat left-aligned and the
+     version line rendered at inherited 19px with the oval's white-space:nowrap
+     still applied — 396px of text in a 298px oval, which was the 19px of
+     horizontal scroll at 390. -->
+<footer>
+    <jh-footer></jh-footer>
+</footer>
 
 <nav id="nav" role="navigation" aria-label="Main navigation">
     <div class="nav-inner">

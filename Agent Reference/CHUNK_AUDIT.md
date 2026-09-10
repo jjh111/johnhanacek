@@ -560,3 +560,50 @@ Chunks 4, 21, 23, 26, 27, 50 are COMPILED from `Assets/resume.json` by `scripts/
   where fusionlab put them. Measured after: fusionlab byte-identical (21/22
   top3, 5/5 keyword-top1, same three misses), intentlab 5/5, phase3/5/6a/9/10
   all pass. Vectors rebuilt.
+
+## §M The quotes become findable — 2026-09-10
+
+Ten attributed endorsements were on the site and **none of them were in the
+index**. Kevin Kelly appeared twice, but only as a fact about a contest he ran
+(21, 24) — never his words. So "what do clients say", "is he any good", "who
+vouches for him" could not be answered by the bar, which is the one question a
+portfolio's strongest content exists to answer.
+
+- [x] **NEW 59 What clients say** — `services.html#testimonials`. The seven
+  endorsements that render on that page, as `facts` rows (the Phase 9 list-chunk
+  shape), each verified byte-for-byte against the rendered HTML before it was
+  written. Quote text is the SHORT variant where the page shows one, so the
+  dossier row matches what a visitor sees when they follow the link.
+- [x] **14 Fractal Futures** — gains David Brin's blurb. Brin previously lived in
+  exactly one place, art.html's markup, and was in no compiled source at all:
+  not resume.json, not the media kit, not a chunk. A sci-fi author blurbing the
+  fiction is a distinctive credential; the README already boasted of it while
+  the site could not answer a question about it.
+- [x] **15 Photography & Multimedia** — gains Désirée Sterling's endorsement
+  (new, John-supplied 2026-09-10; photography client, Founder of White Lotus
+  Chi). Photography is framed as an art rather than a service track (John's
+  call), so the quote lands with the craft on art.html and NOT on services.html.
+- [x] **24 Research & Publications** — gains Kevin Kelly's actual sentence. The
+  chunk already stated he ran the contest and John won it; it now carries what
+  he said.
+
+**Deliberately not indexed.** Dr. Susan Jewell's endorsement stays out of 59:
+it renders only on design.html, not on `services.html#testimonials`, so
+including it would make the chunk claim more than the page it points at — and
+John's read (2026-09-10) is that it carries less weight for the portfolio than
+Hurriyet Ok's and wants more testing first. Reversible in one line.
+
+**Removed from the endorsement set** (not a chunk change): the *Spatial Design:
+Breaking the 2D Paradigm* card on design.html. It sat under "What People Say"
+styled as a testimonial, but the text quoted is the book thanking all of its
+contributors — it says nothing about John. The credit already lives correctly on
+about.html and in `resume.json` `features`, so removing the miscategorized
+duplicate loses nothing and stops it borrowing testimonial authority.
+
+`Assets/resume.json` `endorsements` is now the source of truth for all eleven:
+full `quote` plus the `short` trim where pages use one (the same `short`
+convention already on `awards`), `role`/`org`/`orgUrl`/`url` split so a link can
+be the person's, the org's, or both, and `kind` + `engagement` for placement.
+Three quotes existed in two lengths, with design.html holding the long version
+and resume.json having canonicalized the trim — both are now kept, and no page's
+rendering changed. Vectors rebuilt.

@@ -4,13 +4,23 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>
+  /* Theme bootstrap, before first paint. This page keeps its own palette on
+     `data-mode`, but the SITE theme is one preference: it reads the shared
+     'jh-theme' key (scripts/jh-chrome.js owns the toggle and persistence) and
+     stamps BOTH attributes — data-mode for this page's warm/dark palette,
+     data-theme for the chrome that rides on top of it. It must read exactly
+     what initTheme() resolves from, or the pre-paint stamp and the chrome
+     disagree and the page flashes; so the old page-private
+     'openprose-canonical-mode' key is gone rather than kept as a fallback. */
   (function () {
-    try {
-      var stored = localStorage.getItem('openprose-canonical-mode');
-      var m = stored || (window.matchMedia &&
-        window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-      document.documentElement.setAttribute('data-mode', m);
-    } catch (e) {}
+    var m;
+    try { m = localStorage.getItem('jh-theme'); } catch (e) {}
+    if (m !== 'light' && m !== 'dark') {
+      m = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+    }
+    document.documentElement.setAttribute('data-mode', m);
+    if (m === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    else document.documentElement.removeAttribute('data-theme');
   })();
 </script>
 <title>Design Exploration · OpenProse × JHDesign</title>
@@ -1728,8 +1738,11 @@ html[data-mode="dark"] .h2-sig { filter: invert(1); }
   <button class="brand-logo" id="brand-logo" type="button" aria-label="Switch to dark mode">
     <svg viewBox="0 0 142 142" aria-hidden="true"><use href="#opStyle"/></svg>
   </button>
-  <button class="mode-toggle" id="mode-toggle" type="button" aria-label="Toggle dark mode">
-    <span aria-hidden="true">◐</span>
+  <!-- .jh-theme-btn / .theme-glyph: this IS the site theme button on this page.
+       The chrome does not inject its own here (THEME.foreign), so it adopts
+       this one — same class contract, same glyph, same shared preference. -->
+  <button class="mode-toggle jh-theme-btn" id="mode-toggle" type="button" aria-label="Toggle dark mode">
+    <span class="theme-glyph" aria-hidden="true">◐</span>
   </button>
 </nav>
 
@@ -3410,12 +3423,21 @@ system consumes it.
 </script>
 
 <script>
+/* Theme. One preference, two attributes.
+   jh-chrome.js owns the site theme (the 'jh-theme' key, the .jh-theme-btn
+   contract, persistence and the transition guard); this page owns the palette
+   that hangs off `data-mode`. So the buttons here delegate to JH_THEME and this
+   block's only remaining job is to MIRROR data-theme onto data-mode — which also
+   keeps the symmetry canvas's data-mode MutationObserver firing as before.
+   The chrome is deferred, so JH_THEME is not here yet at parse time; the click
+   handlers look it up when they fire, and the standalone path below is the
+   fallback for a page served without the chrome. */
 (function () {
-  var KEY = 'openprose-canonical-mode';
+  var KEY  = 'jh-theme'; // one preference, site-wide — see the head bootstrap
   var btn  = document.getElementById('mode-toggle');
   var logo = document.getElementById('brand-logo'); // top-left disc = 2nd toggle
   if (!btn) return;
-  var glyph = btn && (btn.querySelector('span[aria-hidden="true"]') || btn);
+  var glyph = btn.querySelector('.theme-glyph') || btn.querySelector('span[aria-hidden="true"]') || btn;
   function applyMode(m, persist) {
     document.documentElement.setAttribute('data-mode', m);
     var label = m === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
@@ -3426,7 +3448,15 @@ system consumes it.
   }
   var current = document.documentElement.getAttribute('data-mode') === 'dark' ? 'dark' : 'light';
   applyMode(current, false);
+  // The chrome flipped data-theme — follow it with data-mode. (It also updates
+  // the glyph and aria-label itself, via the .jh-theme-btn class on the button.)
+  window.addEventListener('jh-theme-change', function (e) {
+    var m = (e.detail && e.detail.theme) === 'light' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-mode', m);
+    if (logo) logo.setAttribute('aria-label', m === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+  });
   function flip() {
+    if (window.JH_THEME) { window.JH_THEME.toggle(); return; } // shared preference
     var cur = document.documentElement.getAttribute('data-mode') === 'dark' ? 'dark' : 'light';
     applyMode(cur === 'dark' ? 'light' : 'dark', true);
   }

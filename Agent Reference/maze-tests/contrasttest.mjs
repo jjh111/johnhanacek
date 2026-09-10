@@ -45,6 +45,19 @@ const SWEEP = () => {
 };
 
 const b = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH });
+// NAVIGATION: domcontentloaded, not load.
+// 'load' waits for every third-party iframe to finish, and art.html frames
+// nine of them (YouTube x6, Vimeo, Sketchfab, jhana.zone) while playground
+// frames a boardful. Under the contention of a full sweep that blew the 30s
+// budget on a different page every run — art.html one time, playground.html
+// the next — so the one guard CLAUDE.md tells you to run after any colour,
+// weight or size change was failing for reasons that had nothing to do with
+// colour. Measured alone, playground.html reaches 'load' in 12.4s and
+// 'domcontentloaded' in 226ms.
+// Nothing is lost: SWEEP reads computed styles, which need the stylesheet and
+// the inline theme bootstrap, both settled at DOMContentLoaded, and every
+// navigation here is already followed by an explicit 1400-1600ms settle.
+
 const results = [];
 let total = 0;
 
@@ -53,9 +66,9 @@ for (const name of PAGES) {
   for (const theme of ['dark', 'light']) {
     // ── path 1: loaded straight into the theme ──────────────────────
     let page = await b.newPage({ viewport: { width: 1280, height: 900 } });
-    await page.goto(url, { waitUntil: 'load' });
+    await page.goto(url, { waitUntil: 'domcontentloaded' });
     await page.evaluate(t => { try { localStorage.setItem('jh-theme', t); } catch (e) {} }, theme);
-    await page.reload({ waitUntil: 'load' });
+    await page.reload({ waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(1600);
     const loadFails = await page.evaluate(SWEEP);
     await page.close();
@@ -63,9 +76,9 @@ for (const name of PAGES) {
     // ── path 2: loaded in the OTHER theme, then the real toggle clicked ──
     const other = theme === 'light' ? 'dark' : 'light';
     page = await b.newPage({ viewport: { width: 1280, height: 900 } });
-    await page.goto(url, { waitUntil: 'load' });
+    await page.goto(url, { waitUntil: 'domcontentloaded' });
     await page.evaluate(t => { try { localStorage.setItem('jh-theme', t); } catch (e) {} }, other);
-    await page.reload({ waitUntil: 'load' });
+    await page.reload({ waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(1400);
     const hasBtn = await page.evaluate(() => !!document.querySelector('.jh-theme-btn'));
     let toggleFails = [];

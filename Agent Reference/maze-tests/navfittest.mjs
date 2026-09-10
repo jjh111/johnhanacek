@@ -61,7 +61,14 @@ async function runEngine(name, launch) {
   for (const page of PAGES) {
     const ctx = await browser.newContext({ viewport: { width: 1400, height: 900 } });
     const pg = await ctx.newPage();
-    await pg.goto(`${BASE}/${page}`, { waitUntil: 'load' });
+    // domcontentloaded + fonts.ready, not 'load'. This suite measures TEXT
+    // WIDTHS, and 'load' never guaranteed webfonts anyway — it guarantees
+    // iframes, of which art.html has nine (YouTube x6, Vimeo, Sketchfab,
+    // jhana.zone). Under sweep contention that blew the 30s budget on
+    // art.html while proving nothing about the nav. document.fonts.ready is
+    // the guarantee this suite actually needs, and it is a stronger one.
+    await pg.goto(`${BASE}/${page}`, { waitUntil: 'domcontentloaded' });
+    await pg.evaluate(() => document.fonts.ready);
     await pg.evaluate(() => {
       window.__navLog = [];
       const nav = document.getElementById('nav');

@@ -35,7 +35,11 @@
   // ('jh-theme', shared with writing.html) is written ONLY on an explicit
   // toggle — an auto-detected OS preference is never frozen into storage,
   // so the site keeps following the OS until the visitor picks a side.
-  // openprose.html runs its own data-mode theming and is left alone.
+  // `foreign` = the page carries its own palette attribute (openprose's
+  // data-mode). It shares this state and this key — its own #mode-toggle wears
+  // .jh-theme-btn and delegates here, and it mirrors data-theme back onto
+  // data-mode — but the chrome injects no toggle of its own into its bar and
+  // leaves its media-scoped theme-color metas alone.
   // Declared before the custom elements: define() upgrades synchronously,
   // so JHNav's connectedCallback reads THEME during the define call.
   const THEME = {
@@ -61,9 +65,14 @@
         if (g) g.textContent = mode === 'light' ? '◐' : '◑';
         b.setAttribute('aria-label', mode === 'light' ? 'Switch to dark theme' : 'Switch to light theme');
       });
-      let m = document.querySelector('meta[name="theme-color"]');
-      if (!m) { m = document.createElement('meta'); m.name = 'theme-color'; document.head.appendChild(m); }
-      m.content = mode === 'light' ? '#eef4f6' : '#020a12';
+      // The chrome's browser-bar color is the chrome's palette. A foreign-palette
+      // page (openprose) declares its own media-scoped theme-color metas — writing
+      // the deep-sea value into them would paint its warm paper cyan.
+      if (!THEME.foreign) {
+        let m = document.querySelector('meta[name="theme-color"]');
+        if (!m) { m = document.createElement('meta'); m.name = 'theme-color'; document.head.appendChild(m); }
+        m.content = mode === 'light' ? '#eef4f6' : '#020a12';
+      }
       if (persist) { try { localStorage.setItem(THEME.KEY, mode); } catch (e) {} }
       window.dispatchEvent(new CustomEvent('jh-theme-change', { detail: { theme: mode } }));
     },
@@ -131,27 +140,34 @@
   if (!customElements.get('jh-nav')) customElements.define('jh-nav', JHNav);
 
   function initTheme() {
-    if (THEME.foreign) return;
-    // Right-edge toggle balances the bar; appended after the page's .nav-right.
-    const inner = document.querySelector('#nav .nav-inner');
-    if (inner && !inner.querySelector('.nav-theme-toggle')) {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'nav-theme-toggle jh-theme-btn';
-      b.innerHTML = '<span class="theme-glyph" aria-hidden="true">◑</span>';
-      b.addEventListener('click', THEME.toggle);
-      inner.appendChild(b);
-    }
-    // Hero pages: standalone glass toggle, upper right, sibling of the
-    // shape-nav pill it visually pairs with.
-    const hero = document.querySelector('.hero');
-    if (hero && hero.querySelector('nav.shape-nav') && !hero.querySelector('.hero-theme-toggle')) {
-      const hb = document.createElement('button');
-      hb.type = 'button';
-      hb.className = 'hero-theme-toggle jh-theme-btn';
-      hb.innerHTML = '<span class="theme-glyph" aria-hidden="true">◑</span>';
-      hb.addEventListener('click', THEME.toggle);
-      hero.appendChild(hb);
+    // A foreign-themed page (openprose, with its own data-mode palette) supplies
+    // its OWN .jh-theme-btn and does not want the chrome's furniture bolted into
+    // its bar. It still shares the site's theme STATE: `foreign` gates the button
+    // injection below, not the resolve/persist/OS-follow that follows it. It used
+    // to gate the whole function, which is why openprose never stamped data-theme
+    // and had nothing to click.
+    if (!THEME.foreign) {
+      // Right-edge toggle balances the bar; appended after the page's .nav-right.
+      const inner = document.querySelector('#nav .nav-inner');
+      if (inner && !inner.querySelector('.nav-theme-toggle')) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'nav-theme-toggle jh-theme-btn';
+        b.innerHTML = '<span class="theme-glyph" aria-hidden="true">◑</span>';
+        b.addEventListener('click', THEME.toggle);
+        inner.appendChild(b);
+      }
+      // Hero pages: standalone glass toggle, upper right, sibling of the
+      // shape-nav pill it visually pairs with.
+      const hero = document.querySelector('.hero');
+      if (hero && hero.querySelector('nav.shape-nav') && !hero.querySelector('.hero-theme-toggle')) {
+        const hb = document.createElement('button');
+        hb.type = 'button';
+        hb.className = 'hero-theme-toggle jh-theme-btn';
+        hb.innerHTML = '<span class="theme-glyph" aria-hidden="true">◑</span>';
+        hb.addEventListener('click', THEME.toggle);
+        hero.appendChild(hb);
+      }
     }
     // Resolve initial state (the head bootstrap already stamped the
     // attribute; this syncs glyphs/labels and covers pages without it).
