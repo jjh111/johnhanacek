@@ -1048,6 +1048,18 @@ body.search-overlay-open {
 .pc-fact-list:has(.pc-fact-media--loose) .pc-fact-row { overflow: hidden; }
 .pc-fact-list:has(.pc-fact-media--loose) .pc-fact-t { flex-shrink: 1; min-width: 0; }
 
+/* A fact title is flex-shrink:0 so a short label is not squeezed by a long
+   detail — but that also means it cannot wrap, and a long one takes the row
+   (and the page) wider than the viewport: "Dr. Hurriyet Ok — Professor, George
+   Washington University" measured a 488px scrollWidth in a 431px row at 505px
+   wide, which put a horizontal scrollbar on the whole document. Where the row
+   is genuinely cramped, let it wrap instead: the detail drops to its own line
+   and the title breaks normally. Desktop keeps the single-line row. */
+@media (max-width: 700px) {
+    .pc-fact-row { flex-wrap: wrap; }
+    .pc-fact-t { flex-shrink: 1; min-width: 0; }
+}
+
 /* ...but a float only earns its keep if what flows beside it is still a column.
    The poster is 264px; in the pane's right column at tablet widths that leaves
    ~130px, and a name came out five lines tall. Same floor the prose wrap already

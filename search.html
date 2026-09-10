@@ -86,10 +86,21 @@
 
         .search-wrap {
             position: sticky;
+            /* The sticky offset must be RESERVED IN FLOW, not just applied.
+               With body padding-top:0 this box's flow position was 0 while
+               `top` rendered it at 40 — sticky pushes an element down to its
+               threshold when flow would put it above, so the frame sat 40px
+               lower than the space it occupied and painted (z-index 300) over
+               the first 40px of results. At narrow widths, where the tier strip
+               wraps and the frame grows to 136px, that 40px reached the lead
+               module's title: measured title top 161 against frame bottom 176,
+               at scrollY 0 on an unscrollable page. The fixed #nav already
+               covers 0–40, so reserving it here costs nothing visually and the
+               frame renders exactly where it did before. */
             top: calc(40px + env(safe-area-inset-top));
             z-index: 300;
             max-width: 660px;
-            margin: 0 auto;
+            margin: calc(40px + env(safe-area-inset-top)) auto 0;
             padding: 2.2rem 1.5rem 0.7rem;
             background: rgba(var(--surface-rgb, 2, 10, 18), 0.92);
             backdrop-filter: blur(8px);
