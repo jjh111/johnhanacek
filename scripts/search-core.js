@@ -2318,7 +2318,7 @@
             // No "Actions" label — the run-chip on the cards already says it.
             if (lastCmdMatches.length) html += lastCmdMatches.map(renderCmdCard).join('');
             if (results.length === 0) {
-                html += `<div class="result" style="color:${mutedColor};font-family:Raleway,sans-serif;font-size:0.85rem;">${html ? 'No other results.' : 'No results found.'}</div>`;
+                html += `<div class="result" style="color:${mutedColor};font-family:var(--font-display);font-size:0.85rem;">${html ? 'No other results.' : 'No results found.'}</div>`;
                 resultsEl.innerHTML = html;
                 renderDetailPane([], paneSeedState);
                 return;

@@ -100,6 +100,27 @@
        The hero h1 clamps are deliberately NOT scaled: they are fitted to the
        viewport and to the oval drawn around them, so they answer to vw, not
        to this. */
+    /* ── The two families ──────────────────────────────────────────────
+       There are two, and they are named here once. The palette rule ("a page
+       may ALIAS tokens; it must never RESTATE values") applies to type: the
+       site's ~140 literal family declarations were 140 frozen copies, and the
+       day one of them named a RETIRED family ('Cinzel' in the search overlay,
+       fixed in b1a3e8f) it failed silently in the browser's default serif —
+       nothing anywhere could have caught it. A token can only name a family
+       the fonts string actually loads, which makes that class of bug
+       structurally impossible on a standard page.
+
+       The fallback stacks are richer than the bare `monospace` / `sans-serif`
+       most of those literals carried; they matter only when the webfont fails,
+       and then they matter a lot.
+
+       Pages with their OWN design language (openprose, onagents, tidepool,
+       beach-beers) keep their own families on purpose and are not folded here.
+       playground.html aliases --mono to --font-mono: its type SIZES are its
+       review-canvas engine's, but the family is the site's. */
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --font-display: 'Raleway', system-ui, sans-serif;
+
     --type-scale: 1.1;              /* +10% over the v2.0 baseline */
     --text-4xs: calc(0.55rem * var(--type-scale));   /* was 0.5–0.56  */
     --text-3xs: calc(0.6rem  * var(--type-scale));   /* was 0.58–0.62 */
@@ -273,7 +294,7 @@
 }
 
 .nav-title {
-    font-family: 'Raleway', sans-serif;
+    font-family: var(--font-display);
     font-size: var(--text-base);
     font-weight: 300;
     color: var(--text-bright);
@@ -322,7 +343,7 @@
 }
 
 .nav-right a {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-mono);
     font-size: var(--text-xs);
     font-weight: 500;
     text-decoration: none;
@@ -411,7 +432,7 @@
 
 /* --- Shape labels (in flow, not absolute) --- */
 .shape-label {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-mono);
     font-size: var(--text-3xs);
     font-weight: 500;
     color: var(--cyan);
@@ -703,7 +724,7 @@ body[data-search-engine="custom"] .search-icon .state-ring {
     }
     .shape-nav .shape-link[aria-label="Home"]::after {
         content: 'HOME';
-        font-family: 'JetBrains Mono', monospace;
+        font-family: var(--font-mono);
         font-size: var(--text-4xs);
         font-weight: 500;
         letter-spacing: 0.02em;
@@ -798,7 +819,7 @@ body > footer { pointer-events: none; }
 }
 
 .footer-title {
-    font-family: 'Raleway', sans-serif;
+    font-family: var(--font-display);
     font-size: var(--text-lg);
     font-weight: 300;
     letter-spacing: 0.1em;
@@ -846,7 +867,7 @@ body > footer a:hover {
     text-decoration-color: var(--jh-gold);
 }
 body > footer .version {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-mono);
     font-size: var(--text-3xs);
     font-weight: 500;
     color: var(--muted);
@@ -985,7 +1006,7 @@ body > footer .version {
 #nav.nav-menu .nav-left .shape-link[aria-label="Home"] .shape-label-img { display: none; }
 #nav.nav-menu .nav-left .shape-link[aria-label="Home"]::after {
     content: 'HOME';
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-mono);
     font-size: var(--nav-label);
     font-weight: 500;
     letter-spacing: 0.02em;
@@ -1255,7 +1276,7 @@ body > footer .version {
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     color: var(--text-heading);
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-family: var(--font-mono);
     font-size: var(--text-2xs);
     letter-spacing: 0.04em;
     text-decoration: none;
