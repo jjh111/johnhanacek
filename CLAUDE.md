@@ -410,3 +410,9 @@ suite breaks at launch with "Executable doesn't exist". That happened on
 killed two gate runs mid-sweep. Recovery without any download:
 `CHROMIUM_PATH=<path to a Chrome for Testing binary>` overrides the lookup, and
 every suite honours it.
+
+**After a push, prove the deploy** — there is no CI: `node scripts/check-live.mjs`
+fetches every page in the sitemap and asserts each `?v=` ref matches `SITE.version`,
+then validates the resume PDF by magic bytes (the 404-page-as-resume incident) and
+that both JSON artifacts parse. `--base http://127.0.0.1:1337` runs the same checks
+against a local server. Exits non-zero on any disagreement.
