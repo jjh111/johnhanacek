@@ -1201,6 +1201,27 @@ body > footer .version {
     transform: scale(1.06);
 }
 
+/* The ◐/◑ glyph sits LOW in its ring, and no line-height can lift it: flex
+   centring centres the LINE BOX, and where the baseline falls inside that box
+   is the font's business, not the box's. JetBrains Mono leaves the glyph's ink
+   centre below the button's centre — 1.3px in the nav's 28px button, which
+   reads as a sag against a perfect circle.
+
+   The two nudges are not one number in em because the offset is NOT a constant
+   fraction of the font size: the line box is built from the font's ascent and
+   descent as rounded AT THAT SIZE (16/5 at 15.84px, 20/6 at 19.36px), so the
+   ratio moves with the rounding. Each is measured from the rendered pixels —
+   the ink bbox of an 8x-DPI screenshot against the button's own box — and each
+   verified back to 0.00px afterwards, in both themes.
+
+   Scoped to the chrome's OWN two buttons: openprose.html loads this file and
+   styles its theme button itself, and jh-chrome does not reach into a host
+   page's furniture. */
+.nav-theme-toggle .theme-glyph,
+.hero-theme-toggle .theme-glyph { display: block; }
+.nav-theme-toggle  .theme-glyph { transform: translateY(-0.087em); }  /* 1.38px @ 15.84px */
+.hero-theme-toggle .theme-glyph { transform: translateY(-0.045em); }  /* 0.87px @ 19.36px */
+
 .nav-theme-toggle {
     display: flex;
     align-items: center;
