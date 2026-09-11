@@ -37,7 +37,7 @@ const VOUCH = {
 };
 const EXPECT_VOUCH = {
   coaching: { benS: true, sheila: false, tommy: false, dan: false, inga: true, hurriyet: true, benReed: true },
-  design:   { benS: false, sheila: true,  tommy: true,  dan: true,  inga: true, hurriyet: true, benReed: true },
+  design:   { benS: false, sheila: true,  tommy: false, dan: false, inga: true, hurriyet: true, benReed: true },
 };
 
 const SNAP = (VOUCH) => {
@@ -72,6 +72,13 @@ const SNAP = (VOUCH) => {
       book: vis(document.getElementById('book')),
     },
     vouchers,
+    inline: (() => {
+      const q = n => { const el = [...document.querySelectorAll('#design .client-quote')].find(x => x.textContent.includes(n)); return !!el && vis(el); };
+      return { openprose: q('Dan Barrett'), muse: q('Tommy Kronmark') };
+    })(),
+    clientBlocks: [...document.querySelectorAll('#design .client-work .outcome')].filter(vis).length,
+    pastBlocks: [...document.querySelectorAll('#design .past-experience .outcome')].filter(vis).length,
+    fitCards: [...document.querySelectorAll('#fit .content-card')].filter(vis).length,
     ids: (() => { const seen = new Set(), dup = []; document.querySelectorAll('[id]').forEach(e => { if (seen.has(e.id)) dup.push(e.id); seen.add(e.id); }); return dup; })(),
     hscroll: document.documentElement.scrollWidth - document.documentElement.clientWidth,
   };
@@ -102,6 +109,15 @@ function expectTrack(s, track, label, withVouch = true) {
   if (s.tabs[other].sel) bad.push(other + ' tab selected');
   if (!s.tabs[track].vis || !s.tabs[other].vis) bad.push('a tab control hidden');
   if (!s.tail.testimonials || !s.tail.fit || !s.tail.book) bad.push('a tail section hidden');
+  if (s.fitCards !== 2) bad.push('fit has ' + s.fitCards + ' cards (want Good fit + Not a fit only)');
+  if (track === 'design') {
+    if (!s.inline.openprose || !s.inline.muse) bad.push('a client quote hidden on the design tab');
+    if (s.clientBlocks !== 3) bad.push('client work blocks=' + s.clientBlocks + ' want 3');
+    if (s.pastBlocks !== 2) bad.push('past experience blocks=' + s.pastBlocks + ' want 2');
+  } else {
+    if (s.inline.openprose || s.inline.muse) bad.push('a design client quote visible on the coaching tab');
+    if (s.clientBlocks || s.pastBlocks) bad.push('design blocks visible on the coaching tab');
+  }
   if (withVouch) for (const [k, want] of Object.entries(EXPECT_VOUCH[track])) if (s.vouchers[k] !== want) bad.push('voucher ' + k + '=' + s.vouchers[k] + ' want ' + want);
   bad.length ? fail(label, bad.join('; ')) : ok(label);
 }
@@ -111,7 +127,10 @@ function expectBoth(s, label) {
   if (!s.coaching.body || !s.design.body) bad.push('a track hidden in both-state');
   if (s.tabs.coaching.sel || s.tabs.design.sel) bad.push('a tab selected in both-state');
   if (!s.tail.testimonials || !s.tail.fit || !s.tail.book) bad.push('a tail section hidden');
-  for (const k of Object.keys(VOUCH)) if (!s.vouchers[k]) bad.push('voucher ' + k + ' hidden');
+  if (!s.inline.openprose || !s.inline.muse) bad.push('a client quote hidden in both-state');
+  if (s.clientBlocks !== 3 || s.pastBlocks !== 2) bad.push('client/past blocks wrong in both-state');
+  if (s.fitCards !== 2) bad.push('fit has ' + s.fitCards + ' cards');
+  for (const k of Object.keys(VOUCH)) if ((EXPECT_VOUCH.coaching[k] || EXPECT_VOUCH.design[k]) && !s.vouchers[k]) bad.push('voucher ' + k + ' hidden');
   bad.length ? fail(label, bad.join('; ')) : ok(label);
 }
 

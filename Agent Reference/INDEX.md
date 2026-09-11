@@ -66,7 +66,7 @@ once from the repo root. Post-push: `node scripts/check-live.mjs`.
 ## Current state (2026-09-10)
 
 - ✅ v2.0 released and tagged 2026-08-30; the v2.07–v2.10 arc since.
-- ✅ v2.5 Funnel phases A–D merged (chooser shipped); **re-cut as two tabs 2026-09-10** (sticky bar under the header, default Design Services, per-tab voices, `?track=both` hidden escape; servicetest rewritten); v2.09 P0 batch merged (anchors 16→3, token purge, Blok Dok, How I Work).
+- ✅ v2.5 Funnel phases A–D merged (chooser shipped); **re-cut as two tabs 2026-09-10** (sticky bar under the header, default Design Services, per-tab voices, `?track=both` hidden escape; servicetest rewritten); **2026-09-11 tweaks**: proof strip under the intro, CTA row removed, client work with inline quotes (OpenProse/Muse.bio), Past experience block (Nanome/BadVR), fit trimmed to Good fit / Not a fit; v2.09 P0 batch merged (anchors 16→3, token purge, Blok Dok, How I Work).
 - ✅ v2.10 "One Pair" closed: 141 family literals → `--font-mono`/`--font-display`, version stamp shipped, full build record in the V3 plan.
 - ✅ Toolchain resolved: pinned browsers installed (1.62.1 → chromium-1234), 38 suites/rigs resolve via playwright, `scripts/check-live.mjs` verifies every deploy.
 - ✅ Gate baseline 2026-09-10: contrasttest 0 AA · navfittest green both engines · servicetest green · quoteqa clean · anchorcheck 3 (John-blocked). One known red: sitetest art.html Vimeo 401 (re-host decision).
