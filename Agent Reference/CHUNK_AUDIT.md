@@ -542,12 +542,6 @@ chunks **30 (cooking), 31 (gardening), 32 (location)**. about.html has no
 off-the-clock block, and an anchor with nothing behind it is the failure this check
 exists to catch. John's ruling pending — an "off the clock" section on About, or
 search-only.
-
-
-## §J Resume compile — 2026-09-09
-
-Chunks 4, 21, 23, 26, 27, 50 are COMPILED from `Assets/resume.json` by `scripts/build-resume.mjs --apply` (source: the 2026-09-09 interview; evidence links live in the JSON). Edit the JSON, not the chunk text. Rebuild vectors after each compile (`node scripts/build-chunk-vectors.mjs`).
-
 ## §L "meta" belongs to MetaMedium — 2026-09-10
 
 - [x] **3 MetaMedium — AI Beyond Chat** — tags gain the bare token `meta`
@@ -627,3 +621,7 @@ which the Review Canvas shows and which the distillation worked from.
   CORE approaches" so the subset meaning of 37 survives intact. Vectors
   rebuilt; `openprose/HANDOFF.md` untouched — its "37 live brand experiments"
   describes what the canvas itself carries, which is still the core set.
+
+## §J Resume compile — 2026-09-09
+
+Chunks 4, 21, 23, 26, 27, 50 are COMPILED from `Assets/resume.json` by `scripts/build-resume.mjs --apply` (source: the 2026-09-09 interview; evidence links live in the JSON). Edit the JSON, not the chunk text. Rebuild vectors after each compile (`node scripts/build-chunk-vectors.mjs`).

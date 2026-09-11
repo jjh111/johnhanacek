@@ -43,7 +43,7 @@ These are intentional. All carry `<meta name="robots" content="noindex, nofollow
 | `Assets/JH-brand-styleguide.html` | Internal brand/design-token reference ("Deep Sea Terminal" styleguide v1.0). |
 | `Assets/DemosPlayground/test-llm.html`, `test-vision.html` | LLM/VLM proof-of-concept pages (Qwen 0.8B WebGPU + LMStudio/Ollama). |
 | `Assets/DemosPlayground/pretext-wrap-test.html` | Test rig for `scripts/pretext-wrap.js` — circle and ellipse obstacles with prose flowing both sides. |
-| `Assets/media-kit.html` | Render rig for the social media pack — one `<article class="board">` per graphic in the site's tokens (endorsements, clients, services, outcomes, awards, offer). `node scripts/render-media-kit.mjs` screenshots each at 2x into `Assets/media-kit/` (square / portrait / wide; `--light` for the light palette). Content is copied from the audited site content — change it on the page/chunks first. |
+| `Assets/media-kit.html` | Render rig for the social media pack — 13 boards in the site's tokens (7 endorsements, clients, services ×2, outcomes, awards, offer). **The copy lives in `Assets/media-kit.json`** — edit that file, never board markup; the rig only draws. `node scripts/render-media-kit.mjs` screenshots each at 2x into `Assets/media-kit/` (square / portrait / wide; `--light`, `--only=`, `--video` for 12 s MP4s). Both rigs serve the repo via `scripts/serve-verified.mjs` (port-probe + sentinel proof — the 2026-09-10 404-resume incident). |
 
 **Never commit business/personal documents (invoices, contracts) to this repo — it is public and served.** Resumes in `Assets/` are intentionally public.
 
@@ -330,6 +330,18 @@ scripts/search-overlay.js — ⌘K overlay shell (lazy-loads search-core on firs
 scripts/search-overlay.css— overlay styles + command-bar card styles (search.html links it too)
 scripts/build-chunk-vectors.mjs — dev-time: embeds chunks into search-chunks.json (run after
                             editing chunk text; run `npm install` once — package.json holds the dev deps)
+Assets/resume.json         — THE single career source (v2.07): lanes, evidence-backed highlights,
+                            awards, talks, publications, projects. Edit this, never the outputs.
+scripts/build-resume.mjs   — compiles resume.json: designed one-page PDF (fish-tank margin),
+                            ATS twin, 3-page CV, markdown, LinkedIn blocks; `--apply` also writes
+                            the served PDF (no phone — the application PDF stays in .local/out/),
+                            chunks 4/21/23/26/27/50, john-hanacek.json and about.html resume blocks
+                            between `<!-- resume:* -->` markers. `--lane=` picks emphasis. Run
+                            build-chunk-vectors.mjs after. Serves itself via serve-verified.mjs.
+scripts/serve-verified.mjs — shared by both render rigs: probe a genuinely free port, then PROVE
+                            the server is ours (sentinel round-trip) before rendering anything.
+                            Exists because a stale server once rendered its 404 into the live
+                            resume PDF (2026-09-10).
 scripts/playground-items.js — manifest for playground.html (34 items). `nested: true` marks a
                             page that embeds the canvas itself (recursion guard); `weight: 'heavy'`
                             records cost for the staged perf work.
@@ -355,6 +367,7 @@ llms.txt                  — AI-readable site summary
 CNAME                     — www.johnhanacek.com (GitHub Pages)
 Assets/
   search-chunks.json      — search index
+  media-kit.json          — the media pack's copy (13 boards); media-kit.html only draws it
   favicon-jhsigfrmpaper.png
   JHsig.svg               — signature used in nav + footer + hero (vector; white fill baked in)
   footer-JHsig.png        — superseded raster signature; still referenced by the frozen Archive/ snapshots, so it stays

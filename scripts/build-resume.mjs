@@ -109,8 +109,14 @@ li { margin: 0.08rem 0; line-height: 1.3; font-size: 0.93rem; }
 .three { columns: 3; column-gap: 1.2rem; }
 .three li { break-inside: avoid; font-size: 0.86rem; }
 .two li { break-inside: avoid; }
-.tank { position: absolute; left: 0; right: 0; bottom: 0; height: 1.15in; -webkit-mask-image: linear-gradient(to bottom, transparent, #000 45%); mask-image: linear-gradient(to bottom, transparent, #000 45%); }
+.tank { position: absolute; left: 0; right: 0; bottom: 0; height: 1.15in; }
 .tank canvas { width: 100%; height: 100%; display: block; }
+/* The fade is a painted gradient, not a CSS mask: a mask-image on the canvas
+   forces the PDF export into a soft-mask transparency group that some viewers
+   composite as white boxes over the coral (fish vanish with it). A plain
+   white→transparent gradient is ordinary paint — identical on screen, robust
+   in every PDF renderer. */
+.tank::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, #fff 0%, rgba(255, 255, 255, 0) 60%); pointer-events: none; }
 </style></head><body><div class="page">
 <header>
   <h1 class="name">${esc(R.basics.name)}</h1>
@@ -141,7 +147,7 @@ ${ats ? '' : `<script src="../../scripts/shape-detection.js"></script><script sr
   const fish = (cx, cy, S) => { const rx = 45*S, ry = 32*S, ov = 0.55, tx = 75*S, ty = 28*S, pts = [], a0 = ov, a1 = Math.PI*2 - ov; const sx = cx + rx*Math.cos(a0), sy = cy + ry*Math.sin(a0); for (let i = 0; i <= 3; i++) pts.push({ x: (cx+tx) + (sx-cx-tx)*i/4, y: (cy-ty) + (sy-cy+ty)*i/4 }); for (let i = 0; i <= 26; i++) { const a = a0 + (a1-a0)*i/26; pts.push({ x: cx + rx*Math.cos(a), y: cy + ry*Math.sin(a) }); } const ex = cx + rx*Math.cos(a1), ey = cy + ry*Math.sin(a1); for (let i = 1; i <= 4; i++) pts.push({ x: ex + (cx+tx-ex)*i/4, y: ey + (cy+ty-ey)*i/4 }); return pts; };
   [0.17, 0.5, 0.83].forEach(x => f.processStroke(sq(W * x + rnd(-10, 10), H - 4, rnd(96, 112)), ['coral']));
   [[0.08, 0.5], [0.3, 0.62], [0.4, 0.42], [0.62, 0.56], [0.7, 0.36], [0.93, 0.6]].forEach(([x, y], i) => f.processStroke(fish(W * x, H * y, i % 3 === 1 ? 0.52 : 0.42), ['fish']));
-  window.JH_FEED = () => f.addFood(W * 0.45, H * 0.5);
+  window.JH_FEED = () => f.addFood(W * 0.45, H * 0.8);
 </script>`}
 </body></html>`;
 }

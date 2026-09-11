@@ -4,8 +4,11 @@
 //   node scripts/render-media-kit.mjs --only=clients,offer
 //   node scripts/render-media-kit.mjs --video        → Assets/media-kit/video/*.mp4 (12 s, fish fed twice)
 //   node scripts/render-media-kit.mjs --video --only=offer --format=wide --light
-// Serves the repo itself on an ephemeral port (the rig loads ../styles and ../scripts,
-// so it needs http, not file://). ffmpeg is required for --video (webm → mp4).
+// Serves the repo itself on a probed ephemeral port (the rig loads ../styles and ../scripts,
+// so it needs http, not file://). The port is proven OURS before anything renders: a stale
+// server that steals the bind would otherwise paint its 404 into every PNG/MP4 (that bug
+// shipped a 404 as the live resume via build-resume on 2026-09-10). ffmpeg is required
+// for --video (webm → mp4).
 import { chromium } from 'playwright-core';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, renameSync, rmSync } from 'node:fs';

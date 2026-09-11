@@ -19,7 +19,7 @@ Product design engineer, 14 years, across AI, web, 3D and XR. Shipped Nanome 2's
 
 Founding design, product design and agentic coaching for startups and R&D teams. Deliverables ship as working code.
 
-- OpenProse (2026): two-month founding design engagement. Brand, five logo directions, 37 homepage approaches built as live pages across 471 commits, distilled to one canonical style, plus the review canvas tooling used to run the exploration.
+- OpenProse (2026): two-month founding design engagement. Brand, five logo directions, 137 homepage approaches built as live pages across 471 commits, distilled to one canonical style, plus the review canvas tooling used to run the exploration.
 - Muse.bio (2024, 2026): facilitated a user-journey and personas workshop to align the team; then designed a FigJam workshop the team ran at its own all-hands, coached the organizers, and built a Claude Code + Figma MCP system that ingests the workshop output into structured results. Handed the whole system off for continued use.
 - Transfyr (2025): MVP platform design handoff. Prototypes generated as HTML with Claude and brought into Figma for the handoff the team wanted; synthetic data for their parallel demo build; QA alongside their independent developer.
 - JH Coaching OS: designed and shipped an AI coaching product. A personalized agent, curated materials, context documents the agent reads, and a dashboard. Coaching founders and executives on Claude Code and agentic workflows.
