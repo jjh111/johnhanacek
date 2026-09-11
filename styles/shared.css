@@ -1731,6 +1731,96 @@ code, kbd, samp, pre {
     border: 1px dashed rgba(var(--cyan-dim-rgb), 0.12);
 }
 
+/* ── Proof strip: the client / team logo row ────────────────────
+   Lives here, not in a page, because index.html and services.html
+   both wear it and a second copy is how the sizes silently diverge.
+   The MARKUP stays per-page on purpose: these are client names, and
+   this site is read by crawlers that do not run scripts. ── */
+.proof-strip {
+    padding-top: var(--space-xs);
+}
+.proof-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-xs) var(--space-lg);
+    margin-bottom: var(--space-sm);
+}
+.proof-label {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--gold);
+    flex-basis: 100%;
+}
+@media (min-width: 769px) {
+    .proof-label { flex-basis: 7rem; }
+}
+.wordmark {
+    font-family: var(--font-display);
+    font-weight: 300;
+    font-size: calc(clamp(1.15rem, 2vw, 1.5rem) * var(--type-scale));
+    letter-spacing: 0.04em;
+    color: var(--text-bright);
+    white-space: nowrap;
+}
+.wordmark svg {
+    display: inline-block;
+    height: 0.95em;
+    width: auto;
+    vertical-align: -0.08em;
+    color: var(--text-bright);
+}
+/* Two kinds of logo sit in this row. Transfyr and Nanome supplied the
+   whole LOCKUP, so the artwork is the name and no text follows it.
+   BadVR and AvatarMEDIC supplied the MARK alone, so it stands next to
+   the name it does not spell. */
+.wordmark .mark {
+    display: inline-block;
+    height: 0.8em;
+    width: auto;
+    vertical-align: -0.04em;
+    margin-right: 0.38em;
+}
+/* Three mechanisms in this row, one per REASON, not per file type.
+   Artwork that arrived as paths is inlined and reads currentColor.
+   Artwork that arrived as pixels but must still follow the theme is
+   used as a MASK with the colour painted underneath: the file supplies
+   the letterform through its alpha channel — antialiasing and all —
+   while currentColor supplies the ink. That is the same result an
+   inline SVG gives, reached from a file that never had paths to
+   inline. Spans, not imgs: masking an <img> still paints the brand
+   colour through. (A third mechanism, greyscale-by-filter, is what
+   BadVR wore while it stayed grey; nothing needs it now.) */
+.wordmark .mark-muse,
+.wordmark .mark-badvr { background: currentColor; }
+.wordmark .mark-muse {
+    aspect-ratio: 360 / 64;
+    -webkit-mask: url("../Assets/muse-wordmark.png") no-repeat center / contain;
+    mask: url("../Assets/muse-wordmark.png") no-repeat center / contain;
+}
+.wordmark .mark-badvr {
+    aspect-ratio: 120 / 72;
+    -webkit-mask: url("../Assets/badvr-mark.png") no-repeat center / contain;
+    mask: url("../Assets/badvr-mark.png") no-repeat center / contain;
+}
+
+/* A lockup stands in for the whole name, so it is sized against the
+   word it replaces, not against the marks that merely accompany one.
+   Nanome's export crops tighter than Transfyr's, so the same cap
+   height costs it more em. */
+.wordmark .mark-full {
+    display: inline-block;
+    height: 0.78em;
+    width: auto;
+    vertical-align: -0.02em;
+}
+.wordmark .mark-nanome { height: 1.08em; vertical-align: -0.17em; }
+/* The canonical OpenProse signet — the logo, not the logotype, since
+   the logotype would say the name the text already says. */
+.wordmark .mark-op { height: 1.4em; vertical-align: -0.36em; margin-right: 0.3em; }
+
 /* ===========================================
    11. ANIMATIONS
 =========================================== */
