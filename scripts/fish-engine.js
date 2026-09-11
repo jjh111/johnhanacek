@@ -5650,7 +5650,7 @@
 
                 // Label
                 ctx.setLineDash([]);
-                ctx.font = '9px JetBrains Mono';
+                ctx.font = '9px JetBrains Mono, monospace';
                 ctx.fillStyle = 'rgba(122, 229, 130, 0.7)';
                 ctx.fillText('food', fd.x + 10, fd.y + 3);
             });
@@ -5782,7 +5782,7 @@
 
                     // Small label showing force delta
                     if (deltaMag > 0.02) {
-                        ctx.font = '7px JetBrains Mono';
+                        ctx.font = '7px JetBrains Mono, monospace';
                         ctx.fillStyle = targetColor;
                         ctx.fillText((delta * 57.3).toFixed(0) + '°', targetX + 3, targetY);
                     }
@@ -5842,7 +5842,7 @@
 
                 // Labels
                 ctx.setLineDash([]);
-                ctx.font = '9px JetBrains Mono';
+                ctx.font = '9px JetBrains Mono, monospace';
                 const labelX = f.x + collisionW + 10;
 
                 // Size category label (SMALL/MEDIUM/LARGE) - sizeCategory already defined above
@@ -5917,7 +5917,7 @@
                     ctx.stroke();
 
                     // Label
-                    ctx.font = '8px JetBrains Mono';
+                    ctx.font = '8px JetBrains Mono, monospace';
                     ctx.fillStyle = ctx.strokeStyle;
                     const eaLabel = ea.emergency ? 'EMERGENCY' : (ea.anticipating ? 'anticipate' : 'avoid');
                     ctx.fillText(eaLabel, f.x - 20, f.y - collisionH - 5);
@@ -5932,7 +5932,7 @@
                     ctx.fillRect(f.x - barWidth/2, f.y + collisionH + 5, barWidth, barHeight);
                     ctx.fillStyle = 'rgba(255, 150, 0, 0.8)';
                     ctx.fillRect(f.x - barWidth/2, f.y + collisionH + 5, filled, barHeight);
-                    ctx.font = '7px JetBrains Mono';
+                    ctx.font = '7px JetBrains Mono, monospace';
                     ctx.fillStyle = 'rgba(255, 150, 0, 0.6)';
                     ctx.fillText('flip', f.x - barWidth/2 - 15, f.y + collisionH + 10);
                 }
@@ -5955,7 +5955,7 @@
                     ctx.arc(ft.x, ft.y, 8, 0, Math.PI * 2);
                     ctx.stroke();
                     // Slot number
-                    ctx.font = '10px JetBrains Mono';
+                    ctx.font = '10px JetBrains Mono, monospace';
                     ctx.fillStyle = 'rgba(0, 255, 255, 0.8)';
                     ctx.fillText(ft.slot.toString(), ft.x - 3, ft.y + 4);
                 }
@@ -5980,7 +5980,7 @@
                     ctx.stroke();
                     ctx.fill();
                     // Label
-                    ctx.font = '8px JetBrains Mono';
+                    ctx.font = '8px JetBrains Mono, monospace';
                     ctx.fillStyle = 'rgba(255, 200, 50, 0.9)';
                     ctx.fillText('🍕', ft.x - 5, ft.y + 4);
                 }
@@ -5999,7 +5999,7 @@
                     ctx.stroke();
                     ctx.setLineDash([]);
                     if (label) {
-                        ctx.font = '8px JetBrains Mono';
+                        ctx.font = '8px JetBrains Mono, monospace';
                         ctx.fillStyle = col;
                         ctx.fillText(label, f.x - 8, f.y - rad - 3);
                     }
@@ -6046,7 +6046,7 @@
                         ctx.moveTo(f.x, f.y);
                         ctx.lineTo(f.x + Math.cos(f.wallSteer) * 40, f.y + Math.sin(f.wallSteer) * 40);
                         ctx.stroke();
-                        ctx.font = '8px JetBrains Mono';
+                        ctx.font = '8px JetBrains Mono, monospace';
                         ctx.fillStyle = 'rgba(255, 170, 60, 0.95)';
                         ctx.fillText('avoid', f.x + Math.cos(f.wallSteer) * 44, f.y + Math.sin(f.wallSteer) * 44);
                     }
@@ -6061,7 +6061,7 @@
                         ctx.lineTo(f.x + Math.cos(f.cruiseAngle) * 52, f.y + Math.sin(f.cruiseAngle) * 52);
                         ctx.stroke();
                         ctx.setLineDash([]);
-                        ctx.font = '8px JetBrains Mono';
+                        ctx.font = '8px JetBrains Mono, monospace';
                         ctx.fillStyle = 'rgba(180, 140, 255, 0.85)';
                         ctx.fillText('cruise', f.x + Math.cos(f.cruiseAngle) * 56, f.y + Math.sin(f.cruiseAngle) * 56);
                     }
@@ -6092,7 +6092,7 @@
                     ctx.moveTo(f.x, f.y);
                     ctx.lineTo(f.x + Math.cos(f.debugRoutedAngle) * L, f.y + Math.sin(f.debugRoutedAngle) * L);
                     ctx.stroke();
-                    ctx.font = '8px JetBrains Mono';
+                    ctx.font = '8px JetBrains Mono, monospace';
                     ctx.fillStyle = 'rgba(255, 120, 255, 0.9)';
                     ctx.fillText('route', f.x + Math.cos(f.debugRoutedAngle) * (L + 4) - 6,
                                           f.y + Math.sin(f.debugRoutedAngle) * (L + 4));
@@ -6105,7 +6105,7 @@
                     ctx.beginPath();
                     ctx.arc(f.x, f.y, 16 + (1 - k) * 26, 0, Math.PI * 2);
                     ctx.stroke();
-                    ctx.font = '9px JetBrains Mono';
+                    ctx.font = '9px JetBrains Mono, monospace';
                     ctx.fillStyle = 'rgba(255, 235, 120, 0.95)';
                     ctx.fillText('LEAP', f.x + 10, f.y - 16);
                 }
@@ -6151,7 +6151,7 @@
                     ctx.arc(rd.x, rd.y, 12, 0, Math.PI * 2);
                     ctx.stroke();
                     ctx.fill();
-                    ctx.font = '8px JetBrains Mono';
+                    ctx.font = '8px JetBrains Mono, monospace';
                     ctx.fillStyle = 'rgba(255, 160, 60, 0.9)';
                     ctx.fillText('🏁', rd.x - 5, rd.y + 4);
                 }
@@ -6166,7 +6166,7 @@
                         case 'returning': behaviorColor = 'rgba(255, 100, 100, 0.8)'; break;
                         default: behaviorColor = 'rgba(150, 150, 150, 0.8)';
                     }
-                    ctx.font = '8px JetBrains Mono';
+                    ctx.font = '8px JetBrains Mono, monospace';
                     ctx.fillStyle = behaviorColor;
                     ctx.fillText(f.debugBehavior, labelX, f.y + 38);
 
@@ -6194,7 +6194,7 @@
                         // Overlap amount
                         const midX = (f.x + col.ox) / 2;
                         const midY = (f.y + col.oy) / 2;
-                        ctx.font = '8px JetBrains Mono';
+                        ctx.font = '8px JetBrains Mono, monospace';
                         ctx.fillStyle = 'rgba(255, 100, 200, 0.8)';
                         ctx.fillText(col.overlap.toFixed(0), midX, midY);
                     });
@@ -6264,7 +6264,7 @@
                 ctx.stroke();
 
                 // Label with reason
-                ctx.font = '10px JetBrains Mono';
+                ctx.font = '10px JetBrains Mono, monospace';
                 ctx.fillStyle = schoolColor;
                 const reasonLabel = reason === 'fleeing' ? 'SCHOOL:FLEE' :
                                     reason === 'food' ? 'SCHOOL:FOOD' : 'SCHOOL:PATROL';
