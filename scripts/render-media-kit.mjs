@@ -7,14 +7,14 @@
 // Serves the repo itself on an ephemeral port (the rig loads ../styles and ../scripts,
 // so it needs http, not file://). ffmpeg is required for --video (webm → mp4).
 import { chromium } from 'playwright-core';
-import { spawn, execFileSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { mkdirSync, renameSync, rmSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { serveVerified } from './serve-verified.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = resolve(ROOT, 'Assets/media-kit');
-const PORT = 4593;
 const args = process.argv.slice(2);
 const flag = (k) => (args.find(a => a.startsWith(`--${k}=`)) || '').slice(k.length + 3);
 const only = flag('only').split(',').filter(Boolean);
@@ -26,8 +26,8 @@ const CHROMIUM = process.env.CHROMIUM_PATH ||
   `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1217/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing`;
 
 mkdirSync(OUT, { recursive: true });
-const server = spawn('python3', ['-m', 'http.server', String(PORT), '--bind', '127.0.0.1'], { cwd: ROOT, stdio: 'ignore' });
-await new Promise(r => setTimeout(r, 700));
+const srv = await serveVerified(ROOT);           // proves we own the port before anything renders
+const PORT = srv.port;
 const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true });
 const url = (format, theme, board) => `http://127.0.0.1:${PORT}/Assets/media-kit.html?format=${format}${theme === 'light' ? '&theme=light' : ''}${board ? `&board=${board}` : ''}`;
 let n = 0;
@@ -41,7 +41,9 @@ try {
       await page.waitForTimeout(2200);                       // let the fish spread out
       await page.evaluate(() => window.JH_FEED && window.JH_FEED(2));
       await page.waitForTimeout(900);                        // a fish turns toward the food
-      for (const board of await page.$$('.board:not([hidden])')) {
+      const boards = await page.$$('.board:not([hidden])');
+      if (!boards.length) throw new Error(`no boards on ${format}/${theme} — the rig did not load. Nothing was written; the PNGs on disk are still the old ones.`);
+      for (const board of boards) {
         const name = await board.getAttribute('data-name');
         if (only.length && !only.includes(name)) continue;
         const file = `${OUT}/${name}--${format}${theme === 'light' ? '-light' : ''}.png`;
@@ -80,6 +82,6 @@ try {
   }
 } finally {
   await browser.close();
-  server.kill();
+  srv.stop();
 }
 console.log(`${n} files`);

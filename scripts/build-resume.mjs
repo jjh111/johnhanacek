@@ -13,9 +13,10 @@
 // never into Assets/. Same template, one column, real headings and lists — the ATS twin is the same
 // DOM with the art removed, so the wording can never drift between the two.
 import { readFileSync, writeFileSync, mkdirSync, existsSync, appendFileSync } from 'node:fs';
-import { spawn, execFileSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { serveVerified } from './serve-verified.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = resolve(ROOT, '.local/out');
@@ -342,33 +343,8 @@ function applyAbout() {
 async function pdfs() {
   const { chromium } = await import('playwright-core');
   const CHROMIUM = process.env.CHROMIUM_PATH || `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1217/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing`;
-  // Serve ROOT ourselves — and PROVE it. A stale http.server left listening on our port
-  // (agent worktrees do this) silently steals the bind, and every page then renders that
-  // server's 404 into a real-looking PDF. On 2026-09-10 that shipped a 404 as the site's
-  // resume. So: find a genuinely free port, then refuse to render until a sentinel served
-  // from OUR root comes back verbatim.
-  const { createServer } = await import('node:net');
-  const isFree = port => new Promise(res => {
-    const s = createServer();
-    s.once('error', () => res(false));
-    s.once('listening', () => s.close(() => res(true)));
-    s.listen(port, '127.0.0.1');
-  });
-  let PORT = 0;
-  for (let p = 4597; p < 4617; p++) if (await isFree(p)) { PORT = p; break; }
-  if (!PORT) throw new Error('no free port in 4597-4616 — stale servers? `lsof -nP -iTCP -sTCP:LISTEN | grep python`');
-  const token = `resume-build-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  writeFileSync(`${OUT}/.sentinel`, token);
-  const server = spawn('python3', ['-m', 'http.server', String(PORT), '--bind', '127.0.0.1'], { cwd: ROOT, stdio: 'ignore' });
-  let ours = false;
-  for (let i = 0; i < 40 && !ours; i++) {
-    await new Promise(r => setTimeout(r, 100));
-    try {
-      const r = await fetch(`http://127.0.0.1:${PORT}/.local/out/.sentinel`);
-      ours = r.ok && (await r.text()).trim() === token;
-    } catch { /* not up yet */ }
-  }
-  if (!ours) { server.kill(); throw new Error(`port ${PORT} is not serving this repo — another server answered. Kill it and retry.`); }
+  const srv = await serveVerified(ROOT);
+  const PORT = srv.port;
   const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true });
   const made = [];
   try {
@@ -401,7 +377,7 @@ async function pdfs() {
       made.push(file);
       await ctx.close();
     }
-  } finally { await browser.close(); server.kill(); }
+  } finally { await browser.close(); srv.stop(); }
   return made;
 }
 
