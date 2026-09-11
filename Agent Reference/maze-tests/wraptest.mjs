@@ -1,6 +1,6 @@
 import { chromium } from 'playwright-core';
 const PORT = process.env.PORT || 56150;
-const b = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH });
+const b = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || chromium.executablePath() });
 const p = await (await b.newContext({ viewport:{width:1000,height:1200} })).newPage();
 const errs = [];
 p.on('pageerror', e => errs.push(e.message));

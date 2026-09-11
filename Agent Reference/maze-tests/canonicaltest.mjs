@@ -1,5 +1,5 @@
 import { chromium } from 'playwright-core';
-const b = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH });
+const b = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || chromium.executablePath() });
 
 const NEW = { paper: 'rgb(247, 242, 235)', ink: '#26211d', body: '1.1rem', caption: '0.68rem' };
 const OLD = { paper: 'rgb(245, 240, 232)', ink: '#2a2520', body: '1rem',   caption: '0.62rem' };

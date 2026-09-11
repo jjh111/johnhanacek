@@ -629,6 +629,7 @@ mobile QA passes; a11y sweeps. Small fixes ride whatever cycle is open.
 
 | Repo history rewrite — 98.1 MB of dead binaries in main's own history | **John** (classifier blocks the agent) | Prepared 2026-09-10, not run: `~/Documents/GitHub/_jh-prerewrite/HOW-TO-RUN.md`, with a verified 172 MB bundle and the pre-rewrite tree hash. **Regenerate the blob list first** — it was computed before the stale branches were deleted. Rewrites every SHA; needs a force-push and a re-clone anywhere else. |
 | Visual Art demo reel not showing (John, 2026-09-10) | agent + **John** | Not reproduced: the video is live and embeddable (oembed 200, "JH Artist Overview"), the markup is byte-identical to the eight embeds that work, geometry correct at 956×538. Need one detail from John — blank rectangle, or "Video unavailable"? That separates YouTube from us. |
+| Playwright browser-path rot (part of the test-browser trap) | agent | **RESOLVED 2026-09-10.** The pinned installer was run (`npm run browsers`: 1.62.1 → chromium-1234 + headless shell 1234; the bare install's 1243 is leftover). All 38 suites/rigs now resolve `CHROMIUM_PATH \|\| chromium.executablePath()` — zero hand-spelled cache paths left (was 21 files × 3 dialects). navfittest sweeps Chromium unconditionally; both READMEs + CLAUDE.md teach the pinned install. Proof: contrasttest (index) and search phase1 green with no env override. |
 
 ## Decisions John owes this plan
 

@@ -22,8 +22,7 @@ const formats = flag('format') ? flag('format').split(',') : ['square', 'portrai
 const themes = args.includes('--light') ? (args.includes('--video') ? ['light'] : ['dark', 'light']) : ['dark'];
 const VIDEO = args.includes('--video');
 const SIZE = { square: [1080, 1080], portrait: [1080, 1350], wide: [1600, 900] };
-const CHROMIUM = process.env.CHROMIUM_PATH ||
-  `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1217/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing`;
+const CHROMIUM = process.env.CHROMIUM_PATH || chromium.executablePath();
 
 mkdirSync(OUT, { recursive: true });
 const srv = await serveVerified(ROOT);           // proves we own the port before anything renders

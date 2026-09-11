@@ -4,8 +4,7 @@
 //   node userqa.mjs local      → + LMStudio generation via Detect (needs :1234)
 //   node userqa.mjs lfm        → + in-browser LFM load/first-token benchmark
 import { chromium } from 'playwright-core';
-const CHROMIUM = process.env.CHROMIUM_PATH ||
-  `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1217/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing`;
+const CHROMIUM = process.env.CHROMIUM_PATH || chromium.executablePath();
 const BASE = 'http://127.0.0.1:4571';
 const mode = process.argv[2] || '';
 const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true,

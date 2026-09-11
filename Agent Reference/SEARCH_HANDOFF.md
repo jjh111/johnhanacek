@@ -94,7 +94,7 @@ Harness traps (all bitten, all recorded):
 - Suites need a `node_modules` with `playwright-core` NEXT TO the suite files
   (ESM ignores NODE_PATH). Copy suites to a scratch dir with node_modules, or
   npm-install in the repo root.
-- `CHROMIUM_PATH` env or the default `chromium-1217` cache path.
+- `CHROMIUM_PATH` env, else `chromium.executablePath()` (playwright-core's own answer).
 - Headless Chromium reports `prefers-color-scheme: light` → un-forced pages
   render the LIGHT theme. Dark assertions need `colorScheme: 'dark'` on the
   context.

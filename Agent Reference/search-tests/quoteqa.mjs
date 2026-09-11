@@ -117,7 +117,7 @@ const AUDIT = () => {
 };
 
 /* ── part A: ranking ────────────────────────────────────────────────────── */
-const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH });
+const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || chromium.executablePath() });
 let page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
 
 console.log('\n  RANKING — top 3, and which endorser names reach the screen\n');

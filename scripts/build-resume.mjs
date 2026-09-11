@@ -342,7 +342,7 @@ function applyAbout() {
 // ---------------------------------------------------------------- PDF
 async function pdfs() {
   const { chromium } = await import('playwright-core');
-  const CHROMIUM = process.env.CHROMIUM_PATH || `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1217/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing`;
+  const CHROMIUM = process.env.CHROMIUM_PATH || chromium.executablePath();
   const srv = await serveVerified(ROOT);
   const PORT = srv.port;
   const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true });

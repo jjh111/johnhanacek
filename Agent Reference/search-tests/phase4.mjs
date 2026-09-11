@@ -1,8 +1,7 @@
 // Phase 4 QA — tool-use over the registry via a mock OpenAI endpoint
 import { chromium } from 'playwright-core';
 
-const CHROMIUM = process.env.CHROMIUM_PATH ||
-  `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1217/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing`;
+const CHROMIUM = process.env.CHROMIUM_PATH || chromium.executablePath();
 const BASE = 'http://127.0.0.1:4571';
 
 const failures = [];

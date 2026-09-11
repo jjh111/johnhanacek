@@ -104,9 +104,5 @@ async function runEngine(name, launch) {
 
 let bad = 0;
 bad += await runEngine('webkit', () => webkit.launch());
-if (process.env.CHROMIUM_PATH) {
-  bad += await runEngine('chromium', () => chromium.launch({ executablePath: process.env.CHROMIUM_PATH }));
-} else {
-  console.log('(chromium skipped — set CHROMIUM_PATH to sweep it too)');
-}
+bad += await runEngine('chromium', () => chromium.launch({ executablePath: process.env.CHROMIUM_PATH || chromium.executablePath() }));
 process.exit(bad ? 1 : 0);

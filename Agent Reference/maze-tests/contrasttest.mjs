@@ -44,7 +44,7 @@ const SWEEP = () => {
             .sort((a, b) => a.ratio - b.ratio);
 };
 
-const b = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH });
+const b = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || chromium.executablePath() });
 // NAVIGATION: domcontentloaded, not load.
 // 'load' waits for every third-party iframe to finish, and art.html frames
 // nine of them (YouTube x6, Vimeo, Sketchfab, jhana.zone) while playground

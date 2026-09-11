@@ -7,8 +7,7 @@
 import { chromium } from 'playwright-core';
 import { mkdirSync } from 'fs';
 
-const CHROMIUM = process.env.CHROMIUM_PATH ||
-  `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1217/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing`;
+const CHROMIUM = process.env.CHROMIUM_PATH || chromium.executablePath();
 const OUT = new URL('../Assets/posters/', import.meta.url).pathname;
 mkdirSync(OUT, { recursive: true });
 

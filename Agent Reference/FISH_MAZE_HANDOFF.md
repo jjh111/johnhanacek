@@ -158,8 +158,8 @@ zero console errors; 404 ambient fish follows cursor.
 ## Running the tests locally
 
 See `Agent Reference/maze-tests/README.md`. Short version: serve the repo root
-(`python3 -m http.server 1337`), `npm i playwright-core` anywhere, set `CHROMIUM_PATH` to a
-Chrome/Chromium binary (or install one via playwright), `node mazetest.mjs` etc.
+(`python3 -m http.server 1337`), `npm install` + `npm run browsers` from the repo root
+(the suites resolve the browser themselves; `CHROMIUM_PATH` overrides), `node mazetest.mjs` etc.
 
 ## House rules
 

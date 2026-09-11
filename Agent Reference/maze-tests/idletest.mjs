@@ -17,7 +17,7 @@
  */
 import { chromium } from 'playwright-core';
 
-const b = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH });
+const b = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || chromium.executablePath() });
 const errs = [];
 const HELPERS = () => {
   const c = document.getElementById('heroCanvas');

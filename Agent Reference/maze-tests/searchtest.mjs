@@ -9,7 +9,7 @@ import { chromium } from 'playwright-core';
 
 const ROOT = process.env.SITE_ROOT;
 const b = await chromium.launch({
-  executablePath: process.env.CHROMIUM_PATH,
+  executablePath: process.env.CHROMIUM_PATH || chromium.executablePath(),
   args: ['--enable-unsafe-webgpu', '--enable-features=Vulkan']
 });
 const fails = [];

@@ -23,7 +23,7 @@
 import { chromium } from 'playwright-core';
 
 const BASE = process.env.BASE || 'http://127.0.0.1:4571';
-const CHROMIUM = process.env.CHROMIUM_PATH || `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1217/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing`;
+const CHROMIUM = process.env.CHROMIUM_PATH || chromium.executablePath();
 const PAGE = BASE + '/services.html';
 const MEASURE = process.argv.includes('--measure');
 const SWEEP_WIDTHS = [390, 768, 1440];

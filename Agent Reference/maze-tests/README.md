@@ -10,15 +10,23 @@ and assert against engine state (`window.heroFish` on index, `window.designFish`
 # 1. serve the repo root (fetch()es and canvases need HTTP)
 python3 -m http.server 1337
 
-# 2. anywhere with node ≥18:
-npm init -y && npm install playwright-core
+# 2. once, from the repo root (package.json pins playwright-core):
+npm install
+npm run browsers          # the PINNED installer — see the warning below
 
-# 3. point the tests at a Chromium/Chrome binary
-export CHROMIUM_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"  # example
-# (or: npx playwright install chromium, then use its printed path)
-
+# 3. run any suite; it resolves the browser itself
 node mazetest.mjs
 ```
+
+The suites resolve the browser as `CHROMIUM_PATH || chromium.executablePath()` —
+playwright-core's own answer for the version installed here, so no suite spells
+a cache path by hand. `CHROMIUM_PATH` remains the override (recovery, or a
+system Chrome). **Never run a bare `npx playwright install`:** it fetches the
+LATEST playwright's browsers and *deletes* the build the installed
+`playwright-core` needs, so every suite dies at launch with "Executable doesn't
+exist" — on 2026-09-10 it removed a working 1217, installed 1243, matched
+neither, and killed two gate runs mid-sweep. Recovery without a download: point
+`CHROMIUM_PATH` at any Chrome for Testing binary.
 
 `linkcheck.py` needs no server: `SITE_ROOT=/path/to/repo python3 linkcheck.py`
 (defaults to cwd).
@@ -32,7 +40,7 @@ node mazetest.mjs
 | `humantest.mjs` | **The important one.** Human-sampled strokes (sparse ~60Hz, rounded reversals): erase matrix {2,3,4,6 passes} × {fast,slow} × {wide,tight}, non-scratch gestures that must NOT erase, and a 30s parking soak. Exits non-zero on failure. |
 | `latchtest.mjs` | The blueprint canvas must never latch itself to 0×0 (see below). Exits non-zero on failure. |
 | `sitetest.mjs` | Every page loads: component nav + footer version, canonicals, zero console errors. Reads the expected version from `scripts/jh-chrome.js`, so it needs `SITE_ROOT` set. |
-| `navfittest.mjs` | The nav bar settles at every viewport width: sweeps each page wide→narrow→wide counting class flips, with a 5px fine pass across every compact/hamburger boundary it finds. Catches the `initNavFit` measure-toggle feedback loop (~60 flips/sec at 1224–1260px on design.html before the needFull+hysteresis fix) that no screenshot can. Runs in WebKit (`webkit.launch()`, no path needed); set `CHROMIUM_PATH` to sweep Chromium too, `BASE` to point at a non-1337 server. Exits non-zero on failure. |
+| `navfittest.mjs` | The nav bar settles at every viewport width: sweeps each page wide→narrow→wide counting class flips, with a 5px fine pass across every compact/hamburger boundary it finds. Catches the `initNavFit` measure-toggle feedback loop (~60 flips/sec at 1224–1260px on design.html before the needFull+hysteresis fix) that no screenshot can. Runs in WebKit (`webkit.launch()`) and Chromium (resolved path), so both engines are swept; `BASE` to point at a non-1337 server. Exits non-zero on failure. |
 | `linkcheck.py` | Every local href/src/poster resolves (catches deleted-asset refs). Known false positives: `${r.image}`, `$2` template literals. |
 | `enginetest.mjs` | index.html: boot spawns, loop→fish, dot→food, QR easter egg, debug/scare APIs. |
 | `mazetest.mjs` | design.html: seed fish, square→wall+obstacles, loop→fish, tap→food, squiggle-erase, Clear keeps fish. |

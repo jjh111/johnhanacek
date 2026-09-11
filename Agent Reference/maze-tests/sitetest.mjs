@@ -28,7 +28,7 @@ const NO_FOOTER = ['openprose.html'];
 // on this list — a dead embed is a real finding.
 const THIRD_PARTY = [/^Permissions policy violation:/, /font-size:0;color:transparent/];
 
-const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
+const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || chromium.executablePath() });
 
 let failures = 0;
 for (const p of [...STANDARD, ...OTHER]) {

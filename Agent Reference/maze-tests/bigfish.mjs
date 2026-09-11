@@ -1,5 +1,5 @@
 import { chromium } from 'playwright-core';
-const b = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH });
+const b = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || chromium.executablePath() });
 const p = await (await b.newContext({viewport:{width:1280,height:860}})).newPage();
 p.on('pageerror', e => console.log('PAGEERROR', e.message));
 await p.goto('http://localhost:1337/design.html', {waitUntil:'load'});
