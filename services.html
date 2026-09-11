@@ -296,12 +296,43 @@
             vertical-align: -0.04em;
             margin-right: 0.38em;
         }
-        /* The BadVR mark is a raster in its own brand red — it cannot follow
-           currentColor, so it is treated instead: one grey, both themes, as
-           the brand asked. Greyscale alone resolves that red to ~#424242,
-           which disappears into the deep-sea ground; the brightness lift is
-           what keeps it a mark rather than a smudge. */
-        .wordmark .mark-raster { filter: grayscale(1) brightness(1.75); }
+        /* Three mechanisms in this row, one per REASON, not per file type.
+           Artwork that arrived as paths is inlined and reads currentColor.
+           Artwork that arrived as pixels but must still follow the theme is
+           used as a MASK with the colour painted underneath: the file supplies
+           the letterform through its alpha channel — antialiasing and all —
+           while currentColor supplies the ink. That is the same result an
+           inline SVG gives, reached from a file that never had paths to
+           inline. Spans, not imgs: masking an <img> still paints the brand
+           colour through. (A third mechanism, greyscale-by-filter, is what
+           BadVR wore while it stayed grey; nothing needs it now.) */
+        .wordmark .mark-muse,
+        .wordmark .mark-badvr { background: currentColor; }
+        .wordmark .mark-muse {
+            aspect-ratio: 360 / 64;
+            -webkit-mask: url("./Assets/muse-wordmark.png") no-repeat center / contain;
+            mask: url("./Assets/muse-wordmark.png") no-repeat center / contain;
+        }
+        .wordmark .mark-badvr {
+            aspect-ratio: 120 / 72;
+            -webkit-mask: url("./Assets/badvr-mark.png") no-repeat center / contain;
+            mask: url("./Assets/badvr-mark.png") no-repeat center / contain;
+        }
+
+        /* A lockup stands in for the whole name, so it is sized against the
+           word it replaces, not against the marks that merely accompany one.
+           Nanome's export crops tighter than Transfyr's, so the same cap
+           height costs it more em. */
+        .wordmark .mark-full {
+            display: inline-block;
+            height: 0.78em;
+            width: auto;
+            vertical-align: -0.02em;
+        }
+        .wordmark .mark-nanome { height: 0.98em; vertical-align: -0.16em; }
+        /* The canonical OpenProse signet — the logo, not the logotype, since
+           the logotype would say the name the text already says. */
+        .wordmark .mark-op { height: 1.1em; vertical-align: -0.2em; margin-right: 0.3em; }
 
         /* ── Tracks: exactly one is mounted at a time ─────────────────── */
         .track-head {
@@ -563,8 +594,8 @@
             <div id="proof" class="proof-strip" aria-label="Who I've worked with">
             <div class="proof-row">
                 <span class="proof-label">Clients</span>
-                <span class="wordmark">OpenProse</span>
-                <span class="wordmark">Muse.bio</span>
+                <span class="wordmark"><svg class="mark mark-op" aria-hidden="true" focusable="false" viewBox="0 0 142 142" fill="currentColor"><g transform="translate(4.4 4.45) scale(0.94)"><path d="M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z"/></g></svg>OpenProse</span>
+                <span class="wordmark"><span class="mark-full mark-muse" role="img" aria-label="Muse.bio"></span></span>
                 <span class="wordmark"><svg role="img" aria-label="Transfyr" viewBox="0 0 703 157" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path d="M610.286 109.622L631.675 50.9906H646.839L611.95 139.619C610.192 144.119 608.608 147.552 607.195 149.877C605.741 152.27 603.894 154.082 601.644 155.262C599.38 156.45 596.454 157 592.947 157H577.512V143.757H589.301C591.589 143.757 593.157 143.513 594.112 143.114C595.142 142.684 595.805 141.926 596.4 141.013C597.091 140.061 597.972 138.321 599.037 135.703L599.044 135.686L602.653 127.203L573.047 50.9906H588.194L610.286 109.622Z" fill="currentColor"/>
 <path fill-rule="evenodd" clip-rule="evenodd" d="M38.0459 18.6529C40.296 6.20864 54.8247 -3.67657 73.2751 1.32655L116.797 11.6341C123.681 13.2438 127.421 15.3987 130.169 18.11C134.801 22.6804 136.475 28.9391 135.917 35.3781C135.326 42.2095 131.712 46.7852 125.99 50.3298L75.7004 79.2048L151.158 100.795L101.433 120.151C115.354 120.151 127.429 133.957 119.248 146.871C112.989 156.752 97.9603 158.648 86.2809 155.38L35.4942 143.328C30.0897 141.974 24.6503 140.313 20.8326 136.831C16.0953 132.511 13.9888 124.405 15.6134 118.261C17.0002 113.017 21.5103 108.479 30.8655 103.822L71.3615 80.4872L0 59.4338L49.1679 41.3444C40.3666 38.4772 36.0331 27.6404 38.0459 18.6529ZM74.1708 81.3715C71.865 94.8136 75.2164 104.452 81.4662 110.861C86.6729 116.201 94.6827 119.103 100.79 117.495C106.897 115.887 110.663 110.884 111.392 105.135C112.318 97.8272 107.513 91.3076 98.1076 88.6655L74.1708 81.3715ZM60.2248 43.9506C51.8536 40.4879 41.452 44.5342 39.9941 54.1944C38.4958 64.1223 45.7639 70.0749 54.8248 72.9517L74.0591 78.7088C75.5573 66.7592 72.1102 48.8671 60.2248 43.9506Z" fill="currentColor"/>
@@ -579,9 +610,9 @@
             </div>
             <div class="proof-row">
                 <span class="proof-label">Teams</span>
-                <span class="wordmark"><svg role="img" aria-label="Nanome" viewBox="0 0 5114 1051" xmlns="http://www.w3.org/2000/svg" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
-<g fill="currentColor" fill-rule="nonzero" id="Nanome-Logo" transform="matrix(1,0,0,1,9.44912,-1129.35)">
-<g id="Layer-1" transform="matrix(9.73735,0,0,9.73735,-3418.25,-2209.79)">
+                <span class="wordmark"><svg class="mark-nanome" role="img" aria-label="Nanome" viewBox="0 0 5077 841" xmlns="http://www.w3.org/2000/svg" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+<g fill="currentColor" fill-rule="nonzero" id="Nanome-Logo" transform="matrix(0.992694,0,0,0.799916,9.38008,-903.388)">
+<g id="Layer-1" transform="matrix(9.80902,0,0,12.173,-3453.17,-3171.29)">
 <g transform="matrix(1,0,0,1,517.661,437.43)">
 <path d="M0,-68.296L11.508,-68.296L46.123,-16.653L46.123,-68.296L56.227,-68.296L56.227,0L45.469,0L10.197,-52.484L10.197,0L0,0L0,-68.296Z"/>
 </g>
@@ -609,12 +640,11 @@
 </g>
 </g>
 </svg></span>
-                <span class="wordmark"><img class="mark mark-raster" src="./Assets/badvr-mark.png" alt="" aria-hidden="true" width="120" height="72" loading="lazy" decoding="async">BadVR</span>
+                <span class="wordmark"><span class="mark mark-badvr" aria-hidden="true"></span>BadVR</span>
                 <span class="wordmark"><svg class="mark" aria-hidden="true" focusable="false" fill="currentColor" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 802.2 232.2">
 <g> <g> <path d="M15,232.2c-3.4,0-6.8-1.1-9.6-3.5c-6.4-5.3-7.3-14.7-2-21.1L171.1,5.4c2.8-3.4,6.9-5.3,11.3-5.4c4.4-0.1,8.5,1.7,11.5,5 l181.6,202.2c5.5,6.2,5,15.6-1.1,21.2c-6.2,5.5-15.6,5-21.2-1.1L183.1,38L26.5,226.7C23.6,230.3,19.3,232.2,15,232.2z"/> <path d="M369,232.2c-2.2,0-4.5-0.5-6.7-1.6c-7.4-3.7-10.4-12.7-6.8-20.1L455.9,8.3c2.5-5,7.6-8.2,13.2-8.3 c5.6-0.1,10.8,3,13.5,7.9l108.8,202.2c3.9,7.3,1.2,16.4-6.1,20.3c-7.3,3.9-16.4,1.2-20.3-6.1l-95-176.6l-87.4,176.2 C379.8,229.1,374.5,232.2,369,232.2z"/> <path d="M578,232.2c-2.2,0-4.5-0.5-6.7-1.6c-7.4-3.7-10.4-12.7-6.8-20.1L665,8.3c2.5-5,7.6-8.2,13.2-8.3c5.6-0.1,10.8,3,13.5,7.9 l108.8,202.2c3.9,7.3,1.2,16.4-6.1,20.3c-7.3,3.9-16.4,1.2-20.3-6.1L679,47.6l-87.5,176.2C588.8,229.1,583.5,232.2,578,232.2z"/> <path d="M195,158.7H84.4c-8.3,0-15-6.7-15-15s6.7-15,15-15H195c8.3,0,15,6.7,15,15S203.3,158.7,195,158.7z"/> </g>
 </g>
 </svg>AvatarMEDIC</span>
-                <span class="wordmark">Collaborate.org</span>
             </div>
         </div>
 
