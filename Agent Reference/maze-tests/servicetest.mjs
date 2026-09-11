@@ -32,11 +32,11 @@ const section = (t) => console.log('\n— ' + t);
 
 // Who vouches for which track. Untagged voices serve both tabs.
 const VOUCH = {
-  benS: 'Ben S', sheila: 'Sheila Zipfel', tommy: 'Tommy Kronmark', dan: 'Dan Barrett',
+  benS: 'Ben Shapiro', sheila: 'Sheila Zipfel', tommy: 'Tommy Kronmark', dan: 'Dan Barrett',
   inga: 'Inga Petryaevskaya', hurriyet: 'Dr. Hurriyet Ok', benReed: 'Ben Reed',
 };
 const EXPECT_VOUCH = {
-  coaching: { benS: true, sheila: false, tommy: false, dan: false, inga: true, hurriyet: true, benReed: true },
+  coaching: { benS: true, sheila: false, tommy: false, dan: false, inga: true, hurriyet: true, benReed: false },
   design:   { benS: false, sheila: true,  tommy: false, dan: false, inga: true, hurriyet: true, benReed: true },
 };
 
@@ -72,6 +72,7 @@ const SNAP = (VOUCH) => {
       book: vis(document.getElementById('book')),
     },
     vouchers,
+    firstVouch: (() => { const el = [...document.querySelectorAll('#testimonials .endorsement')].find(vis); return el ? el.textContent.trim() : ''; })(),
     inline: (() => {
       const q = n => { const el = [...document.querySelectorAll('#design .client-quote')].find(x => x.textContent.includes(n)); return !!el && vis(el); };
       return { openprose: q('Dan Barrett'), muse: q('Tommy Kronmark') };
@@ -119,6 +120,8 @@ function expectTrack(s, track, label, withVouch = true) {
     if (s.clientBlocks || s.pastBlocks) bad.push('design blocks visible on the coaching tab');
   }
   if (withVouch) for (const [k, want] of Object.entries(EXPECT_VOUCH[track])) if (s.vouchers[k] !== want) bad.push('voucher ' + k + '=' + s.vouchers[k] + ' want ' + want);
+  const lead = track === 'coaching' ? 'Ben Shapiro' : 'Sheila Zipfel';
+  if (!s.firstVouch.includes(lead)) bad.push('lead vouch is "' + s.firstVouch.slice(0, 24) + '" want ' + lead);
   bad.length ? fail(label, bad.join('; ')) : ok(label);
 }
 function expectBoth(s, label) {
@@ -130,6 +133,7 @@ function expectBoth(s, label) {
   if (!s.inline.openprose || !s.inline.muse) bad.push('a client quote hidden in both-state');
   if (s.clientBlocks !== 3 || s.pastBlocks !== 2) bad.push('client/past blocks wrong in both-state');
   if (s.fitCards !== 2) bad.push('fit has ' + s.fitCards + ' cards');
+  if (!s.firstVouch.includes('Ben Shapiro')) bad.push('both-state lead vouch is "' + s.firstVouch.slice(0, 24) + '"');
   for (const k of Object.keys(VOUCH)) if ((EXPECT_VOUCH.coaching[k] || EXPECT_VOUCH.design[k]) && !s.vouchers[k]) bad.push('voucher ' + k + ' hidden');
   bad.length ? fail(label, bad.join('; ')) : ok(label);
 }
