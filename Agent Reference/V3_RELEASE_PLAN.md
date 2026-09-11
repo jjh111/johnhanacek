@@ -400,7 +400,7 @@ sequencing sections that follow it; they are kept for the record.
 | 10 | How I Work cards — **MERGED 2026-09-09**: two sentences + "more →" into the bar | agent | chunks keep the full text |
 | 11 | Lane resumes on demand + LinkedIn sync | agent / **John** | `build-resume.mjs --lane=…` already exists; John pastes the LinkedIn blocks |
 | 12 | Search polish leftovers | agent | trophy camera-orbit, long-answer fold, phone tier strip density |
-| 13 | **v2.10 "One Pair" — font coherence (audit part 4)** | agent | full module below; the intent-card Cinzel bug fixed 2026-09-10 (b1a3e8f) |
+| 13 | **v2.10 "One Pair" — font coherence (audit part 4)** — **MERGED 2026-09-10**: all 4 phases; 141 literals → 2 tokens; exit criteria verified | agent | build record in the module below, incl. 3 corrections to this plan's own diagnosis |
 
 Exit: services page converts by track; no raw palette literal outside token blocks; anchorcheck at 0;
 GoatCounter counting; resume, LinkedIn and site say the same thing.
@@ -455,6 +455,68 @@ same treatment. Fixed already: `.intent-card-title` → 'JetBrains Mono'
 
 ### Phases
 
+**BUILD RECORD — phases 1 and 2 landed 2026-09-10.** What the plan got right,
+and the three things it did not:
+
+1. **The count was 141, not ~170** — 118 mono + 23 display, once the sweep is
+   scoped to the standard-page world. The larger figure counted the openprose
+   subtree, Archive and vendored p5 alongside the site.
+2. **A version bump is part of this change, not housekeeping after it.** Folding
+   families onto tokens makes every page depend on `jh-chrome.css` defining
+   them. A visitor holding `jh-chrome.css?v=2.09` in cache while fetching the
+   new HTML resolves `var(--font-mono)` to nothing, and font-family falls all
+   the way back to the UA default: the WHOLE PAGE in Times. Reproduced on
+   playground, writing and search before the stamp, gone after it. Any future
+   token that pages depend on carries the same rule — bump and
+   `sync-version.mjs` in the SAME commit as the codemod, never the one after.
+   (Site is now v2.10.)
+3. **`<button>` does not inherit font-family.** Seven chrome and overlay
+   controls plus bare `code` were the only elements left on a standard page
+   rendering in a family the site never chose (the UA's Arial). Invisible
+   because they carry glyphs and a signature image rather than words — but the
+   exact drift class this milestone exists to close, so they were folded in
+   phase 2 with the reason stated inline. Verified: across all ten standard
+   pages, ZERO rendered elements now resolve to anything but the two families.
+4. **Diagnosis item 4(b) was wrong about `kbd`** — it is `font-size: inherit`
+   (`.so-keyboard-hint kbd`) and `--text-4xs` (`.cmd-kbd`), never 0.85em. The
+   em-convention comment in shared.css cites the real cases instead:
+   ↗ 0.55em, `.tier-dot` 0.6em, `.pc-fact-y` 0.85em, `.citation-author` 0.9em.
+5. **The 0.4rem chrome stray was documented, not folded** (phase 2's stated
+   alternative). It is a FIT constraint: the secondary shape links are 38px wide
+   and must hold the word SERVICES, while the ladder's smallest step is 0.605rem
+   at the current multiplier. It is also deliberately outside `--type-scale` —
+   a label fitted to a fixed box must not grow when the site's type does.
+
+**Phase 3's answer was simpler than the plan expected.** The plan asked to
+"separate mono-400 drift from legal Raleway-400 selector by selector". Measured:
+there is no Raleway-400 to separate — all 12 survivors resolve to MONO at 400.
+The reason is structural and worth keeping: `font-weight: 400` appears **zero**
+times in shared.css, jh-chrome.css and search-overlay.css, and **all 12** live in
+per-page INLINE `<style>` blocks. v2.08 swept the shared stylesheets and never
+reached inline CSS, so these are leftovers by construction, not taste choices.
+Bumped 11 to 500 (design 2, writing 6, search 3). One kept: playground.html's
+`header h1 span`, where 400-against-500 is how the title's suffix reads as a
+suffix — its review-canvas type world is not governed by the site ladder, and
+the survivor now says so inline.
+
+**The canvas residual — half closed, half open.** 25 `ctx.font` strings in
+design.html and `scripts/fish-engine.js` name 'JetBrains Mono' literally. A
+canvas font string cannot read a CSS custom property, so they are outside the
+codemod by mechanism, not by oversight.
+
+*Closed in phase 4:* **16 of them carried no generic family at all** ('8px
+JetBrains Mono'). That parses, but when the webfont is missing the canvas falls
+back to its default proportional face rather than to a monospace one — and these
+strings label a grid whose alignment assumes fixed advance width. All 19 now end
+in `, monospace`. Verified: the engine parses, index.html's hero canvas paints,
+no page errors.
+
+*Still open:* the family is still SPELLED in 25 places, so a future rename has 25
+sites to miss. Closing that means reading the family once from computed style at
+init and composing the strings in JS — worth doing, but it touches a per-frame
+render path and wants its own change with its own verification, not a tail-end
+of this one.
+
 - **1 — Family tokens + codemod.** Define `--font-mono` / `--font-display` in
   the jh-chrome.css token block; script the substitution across `styles/*.css`,
   `scripts/search-overlay.css` and the standard pages' inline CSS; kill the
@@ -471,7 +533,17 @@ same treatment. Fixed already: `.intent-card-title` → 'JetBrains Mono'
   boundary); `contrasttest.mjs` green (weight bumps change no colors); fonts
   strings byte-identical; spot screenshots light+dark; one commit per phase.
 
-### Exit criteria
+### Exit criteria — VERIFIED 2026-09-10
+
+    family literals outside the token blocks (10 standard pages + shared css) : 0
+    unique Google-Fonts request strings across those 10 pages                 : 1
+    mono-400 drift remaining                                                  : 0
+       (one deliberate survivor, playground's own type world, documented inline)
+    rendered elements resolving to a family that is not one of the two        : 0
+       (measured in-browser across all ten pages, after the button fix)
+    contrasttest                                                              : 0 AA failures
+    navfittest                                                                : 12/12 sweeps,
+       every fold point identical to before the milestone
 
 Zero font-family literals outside the token blocks and the own-world pages; the
 chrome uses its own ladder at every size; the two exceptions carry their

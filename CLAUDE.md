@@ -395,3 +395,17 @@ Each page is a standalone HTML file with:
 - Videos compressed to web bitrates (1280w, H.264 CRF 27, muted-autoplay embeds have no audio track)
 
 **Local dev:** `python3 -m http.server 1337` from the repo root (writing.html and search need HTTP, not file://).
+
+**Running the test suites** (`Agent Reference/maze-tests/`, `search-tests/`):
+install the browsers with the installer PINNED to the same version as the
+library — `npx playwright@<playwright-core version> install chromium webkit`
+(as of 2026-09-10 that is 1.62.1, and `package.json` pins it exactly; note
+package.json is gitignored, so this is per-machine).
+
+**Never run a bare `npx playwright install`.** It fetches the LATEST playwright's
+browsers and *deletes* the build the installed `playwright-core` needs, so every
+suite breaks at launch with "Executable doesn't exist". playwright-core launches
+exactly one build (1.62.1 → 1234) and no other. That happened on 2026-09-10: it
+removed a working 1217, installed 1243, matched neither, and killed two gate runs
+mid-sweep. Recovery without any download: `CHROMIUM_PATH=<path to a Chrome for
+Testing binary>` overrides the lookup, and every suite honours it.
