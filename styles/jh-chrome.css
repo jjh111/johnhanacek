@@ -587,6 +587,14 @@
     min-width: 14px;
     min-height: 14px;
 }
+/* DELIBERATE off-ladder literal (audit part 4, v2.10 — do not fold).
+   The secondary shape links are 38px wide and must hold the word SERVICES.
+   That is a FIT constraint, not a taste choice: the ladder's smallest step
+   (--text-4xs, 0.605rem at the current multiplier) overflows the shape. It is
+   also deliberately NOT multiplied by --type-scale — a label fitted to a fixed
+   38px box must not grow when the site's type does, and the tablet band's 1.15
+   would push it out. If the shape width changes, re-fit this number and re-run
+   navfittest.mjs: it sits in the strip the nav's fold point is measured from. */
 .nav-left .shape-link.secondary .shape-label {
     font-size: 0.4rem;
 }
@@ -1160,6 +1168,16 @@ body > footer .version {
    .hero-theme-toggle — standalone glass pill, upper-right of hero pages
    All carry .jh-theme-btn; scripts/jh-chrome.js wires the click + glyph.
 =========================================== */
+/* A <button> does NOT inherit font-family — the UA gives it its own (Arial on
+   this platform), so these three chrome controls were the only elements on a
+   standard page still rendering in a family the site never chose. They carry
+   glyphs (◑) and a signature image rather than words, which is why it went
+   unseen; it is the same drift the family tokens close everywhere else. */
+.nav-sig-toggle,
+.nav-theme-toggle,
+.hero-theme-toggle {
+    font-family: var(--font-mono);
+}
 .nav-sig-toggle {
     display: flex;
     align-items: center;

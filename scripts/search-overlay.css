@@ -216,6 +216,9 @@
 /* Outlined, not a bare glyph. These two sit at the panel's outer edge with
    nothing around them, and a borderless icon at 0.5 opacity read as decoration
    rather than as something you could press. */
+/* search.html renders this button in its own shell, OUTSIDE .search-overlay,
+   so the family has to be set unscoped or that copy keeps the UA's Arial. */
+.engine-info-btn { font-family: var(--font-mono); }
 .search-overlay .engine-info-btn {
     background: none; cursor: pointer;
     border: 1px solid rgba(var(--cyan-dim-rgb), 0.22);
@@ -913,7 +916,17 @@ body.search-overlay-open {
    Microdense, density-adaptive result surface. Ink ramp (bright → primary →
    muted → ghost) carries hierarchy; middots separate fields; numbers are
    tabular. Ported grammar: OpenProse brand explorations (smallmult cards,
-   two-token axes, one shared tooltip node). */
+   two-token axes, one shared tooltip node).
+
+   DELIBERATE fixed px, not off-ladder drift (audit part 4, v2.10 — do not
+   fold onto the rem ladder). The 9e doctrine is that this panel NEVER scrolls:
+   the renderer fits the surface by counting LINE-UNITS and shrinking the tail
+   until the budget is met. That arithmetic needs a line-height it can trust,
+   and 13/20 and 14/22 are integers in the same unit the layout is measured in.
+   A rem step would make both operands depend on the root size and the tablet
+   band's --type-scale, so the budget would silently change under the fitter on
+   exactly the viewports where there is least room to be wrong. The density
+   toggle IS this pair — it is the ladder for this surface. */
 .postcard {
     font-size: 13px; line-height: 20px;
     font-family: var(--font-mono);
@@ -951,6 +964,7 @@ body.search-overlay-open {
 .pc-swap-in { animation: pc-swap-in 0.18s ease; }
 @media (prefers-reduced-motion: reduce) { .pc-swap-in { animation: none; } }
 .pc-density {
+    font-family: var(--font-mono);
     display: inline-flex; align-items: center; justify-content: center;
     width: 22px; height: 22px; padding: 0;
     background: none; border: 1px solid rgba(var(--cyan-dim-rgb), 0.22); border-radius: 4px;

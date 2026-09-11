@@ -883,6 +883,18 @@ a:hover {
     text-decoration-color: var(--gold);
 }
 
+/* ── The em convention (audit part 4, v2.10) ───────────────────────────
+   A font-size in `em` is NOT an off-ladder literal and future audits should
+   stop flagging it. The ladder sizes TEXT; these size a GLYPH OR A CLAUSE
+   AGAINST the text it sits in — the ↗ external-link mark below (0.55em), the
+   search bar's tier dot (0.6em), its .pc-fact-y trailing year (0.85em) and
+   .citation-author (0.9em). Their whole requirement is to stay proportional to
+   their host
+   wherever that host lands on the ladder, which is exactly what a step cannot
+   do. Rule of thumb: if the number would have to change when the surrounding
+   text changes size, it belongs in em; if it is a size in its own right, it
+   belongs on the ladder. */
+
 /* External link icon */
 a[target="_blank"]::after {
     content: "\2197";
@@ -1052,6 +1064,12 @@ section > .content-card:only-of-type {
 .content-card p:last-child { margin-bottom: 0; }
 
 /* Watermark number (optional) */
+/* DELIBERATE off-ladder literal (audit part 4, v2.10 — do not fold).
+   This is the card's watermark numeral, not text: a decorative figure sitting
+   behind the content at ~6% opacity. It is sized to the CARD, not to a reading
+   size, and the ladder's top step (--text-3xl) is less than half of it. Folding
+   it onto a step would shrink the mark to something that reads as small type
+   rather than as a watermark. */
 .content-card::before {
     content: attr(data-num);
     position: absolute;
@@ -1634,7 +1652,13 @@ section > .content-card:only-of-type {
     position: relative;
     display: block;
 }
+/* Buttons and the code elements do not inherit font-family from the page (see
+   the note in jh-chrome.css) — without this they take the UA's own. */
+code, kbd, samp, pre {
+    font-family: var(--font-mono);
+}
 .video-gate-btn {
+    font-family: var(--font-mono);
     position: absolute;
     right: 0.6rem;
     bottom: 0.6rem;
