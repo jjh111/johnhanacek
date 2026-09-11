@@ -2014,6 +2014,26 @@
                 const obstacle = dossier.querySelector('.pc-obstacle');
                 const prose = dossier.querySelector('.pc-prose');
                 if (!obstacle || !prose) continue;
+                // The obstacle yields before the prose does. A 264px demo card
+                // on a ~460px pane (the narrow end of the ≥768px workspace
+                // band) leaves a 168px left slot — under the wrap floor — so
+                // carveSlots rejects the only slot and every line lands under
+                // the absolutely-positioned media: the pane reads as "frames
+                // without text wrap". Scale the card down (the same yield the
+                // compact overlay makes at 208px) until the slot clears the
+                // floor; 148px guarantees one for any pane the split allows.
+                // Measured, not breakpointed — the real numbers live here.
+                const avail = prose.clientWidth;
+                const w0 = obstacle.getBoundingClientRect().width;
+                if (avail && w0 && avail - w0 - 28 < MIN_WRAP_SLOT) {
+                    const w = Math.max(148, avail - MIN_WRAP_SLOT - 28);
+                    obstacle.style.width = w + 'px';
+                    if (obstacle.classList.contains('pc-piece--demo') || obstacle.classList.contains('pc-piece--link')) {
+                        obstacle.style.height = Math.round(w * 2 / 3) + 'px';
+                    } else if (obstacle.tagName === 'MODEL-VIEWER') {
+                        obstacle.style.height = w + 'px';
+                    }
+                }
                 // wrapAround resolves ASYNCHRONOUSLY, so detailWraps is still
                 // empty while the first wrap is in flight — and the caller's
                 // "pretext arrived late" guard tests exactly that. A second
@@ -2027,7 +2047,14 @@
                     lineHeight: m.lineHeight,
                     font: m.font,
                     minSlot: MIN_WRAP_SLOT,
-                }).then(w => { detailWraps.push(w); }).catch(() => { delete prose.dataset.wrapped; });
+                }).then(w => { detailWraps.push(w); }).catch(() => {
+                    delete prose.dataset.wrapped;
+                    // A failed wrap must not strand the prose UNDER the
+                    // absolutely-positioned media — hand the layout back to
+                    // the base float:right, which the CSS keeps as the
+                    // no-pretext look for exactly this reason.
+                    obstacle.classList.remove('pc-obstacle--float');
+                });
             }
         }
         // The pane's seed, computable WITHOUT the pane: pinned (from the list
