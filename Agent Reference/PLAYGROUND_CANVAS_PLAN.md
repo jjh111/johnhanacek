@@ -1,7 +1,7 @@
 # Playground → site Review Canvas
 
-> Status: PLAN, not started · Author: drafted 2026-08-24 from a measured read of
-> `openprose/canvas-display/` and the current `playground.html`.
+> Status: BUILT — shipped with v2.0 on the OpenProse review-canvas engine; this
+> doc remains the plan of record (manifest: `scripts/playground-items.js`).
 
 Replace `playground.html` with a Review Canvas of the whole site — every page
 plus the demo collection — wearing the standard `<jh-nav>` / `<jh-footer>`

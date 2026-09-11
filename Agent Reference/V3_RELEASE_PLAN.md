@@ -1,9 +1,10 @@
 # Portfolio v2 → v3 Release Plan
 
-> Status: DRAFT awaiting John's ratify · Baseline: v2.0 (tagged 2026-08-30) · Author:
-> consolidated 2026-08-31 from the v2 close-out, the SEARCH_COMMAND_BAR next-cycle
-> discussions, and John's direction: "v3 where the site becomes more modular and
-> data-driven and agent compatible."
+> Status: OPERATIVE — ratified by execution (v2.5 A–D and v2.10 shipped; site at
+> v2.10, 2026-09-10) · Baseline: v2.0 (tagged 2026-08-30) · Author: consolidated
+> 2026-08-31 from the v2 close-out, the SEARCH_COMMAND_BAR next-cycle discussions,
+> and John's direction: "v3 where the site becomes more modular and data-driven and
+> agent compatible."
 
 ## Context & Goals
 
@@ -391,9 +392,9 @@ sequencing sections that follow it; they are kept for the record.
 | 1 | **v2.5 Funnel, phases A–D** | agent | MERGED 2026-09-09 (lede/funnel-v25, reviewed MERGE AS IS, all gates green). Open from the review, John's calls: (a) quotes live in the wall, not the tracks — the brief said so, plan question 11 said the opposite, so the shared tail is still 37–47% of the document, not the ~25% target; (b) the other-track strip sits between testimonials and Fit, not below the tail; (c) the TOC keeps both track links (aria-current only). |
 | 2 | v2.5 phase E — coaching-track outcomes | **John** | the design track proves; coaching only describes |
 | 3 | v2.5 phase F — calendar attribution | **John** (5 min) | RESOLVED 2026-09-09: the `calendar.app.google` short link 302s and drops any query string, so no parameter survives into a booking; Google documents no prefill for appointment schedules; multiple booking pages are paid-Workspace only. Do this instead: Calendar → Appointment schedules → Edit → Booking form → Add an item → required multiple-choice "Which are you here about?" (AI coaching for founders / Founding design for teams). Answer lands in the event. Keep the per-track mailto subjects. |
-| 4 | **Deep Sea Terminal audit, parts 1–2** | parallel session (in progress 2026-09-09) | type scale + weight ladder in shared.css / jh-chrome.css / search-overlay.css. **Report to be checked into `Agent Reference/`** — it is the record of what part 3 must finish |
+| 4 | **Deep Sea Terminal audit, parts 1–2** | parallel session | **CLOSED 2026-09-10** — parts 3 (v2.09) and 4 (v2.10 "One Pair") finished the work; no separate report was filed, so the build records in this plan are the record. |
 | 5 | Audit part 3 — token literals — **MERGED 2026-09-09 (v2.09)**: overlay 43 → 0, shared 1 → 0, jh-chrome down to the two token blocks; engine tokens with light values; `--ink-affirm`. Left by design: canvas JS palettes, theme-color bootstraps, the `.lp-select` data-URI chevron, two markup attrs in design.html (510, 549). | agent | measured 2026-09-09: 41 raw palette literals in `scripts/search-overlay.css`, 25 in `design.html` inline CSS, 9 in `styles/jh-chrome.css`, 4 in index, 5 in art. Target: zero outside the token block; every colour is a token so light mode cannot break again |
-| 6 | Daylight branch fate | **John** | `worktree-daylight` / DESIGN_REFRESH_PLAN phases 1–4 mostly shipped inside v2 (tokens, light/dark). Decide: salvage what remains into part 3, then delete the worktree and branch |
+| 6 | Daylight branch fate | John | **RESOLVED 2026-09-10** — branch fully merged (0 commits ahead); worktree and branch deleted in the repo-cleanup pass. Nothing to salvage. |
 | 7 | GoatCounter site code | **John** | the whole analytics switch; wired in v2.08 |
 | 8 | Anchor ratchet — **16 → 3 MERGED 2026-09-09 (v2.09)**; the three left are the personal chunks 30–32 awaiting John's ruling | agent | case studies + playground + writing get section ids; personal chunks 30–32 → an "off the clock" line on About or search-only (**John**) |
 | 9 | Blok Dok card — **MERGED 2026-09-09** at the end of `#pastwork` (chronological; John may move it to `#projects`) | agent | eleven photos already in `Assets/blokdok/`, entry in resume.json |
@@ -404,6 +405,21 @@ sequencing sections that follow it; they are kept for the record.
 
 Exit: services page converts by track; no raw palette literal outside token blocks; anchorcheck at 0;
 GoatCounter counting; resume, LinkedIn and site say the same thing.
+
+### Gate baseline — 2026-09-10 (first run with the browser resolution fixed)
+
+| Gate | Result |
+|---|---|
+| `contrasttest` (10 pages × 2 themes × 2 paths) | **0 AA failures** |
+| `navfittest` (6 pages × WebKit + Chromium) | **green, 12/12 sweeps** — boundaries: design 1310–1370, index 1190–1250, art 990–1050, about/services 1110–1170, openprose 1030–1090 |
+| `servicetest` (funnel contract, print, 24 loads × themes) | **ALL GREEN** |
+| `quoteqa` (layout, 4 viewports × 2 themes + workspace) | **LAYOUT CLEAN** |
+| `anchorcheck` | **OK — 3 (baseline)** — the personal chunks 30–32 |
+| `sitetest` | **1 known failure** — art.html Vimeo 401 (re-host decision, ledger) |
+
+Run it after any color/weight/size, chrome, or funnel change; compare boundary
+bands before accepting a nav result. This is the dated reference the next
+"all gates green" claim is measured against.
 
 ## v2.10 — "One Pair" (the font coherence pass — Deep Sea Terminal audit, part 4)
 
@@ -622,10 +638,10 @@ mobile QA passes; a11y sweeps. Small fixes ride whatever cycle is open.
 | fish-demo/fish.js rebase onto fish-engine | John (source is local-only) | when convenient |
 | phase6a full modernization to the one-surface contract | agent | 2026-09-10: hover + inert-body checks now follow whichever small tier exists, and the L2 check asserts the invariant across five queries instead of pinning to one (it had been re-pinned twice already). Full rewrite still pending. |
 | Deferred from v2: LFM2.5 embedder swap (device-QA gated), Ollama tool-use, Phase 7 fish behaviors | agent + John | unchanged; Phase 7 behaviors should land AFTER v2.4 (recognition/placement first — behaviors tune better on a truthful spawn) |
-| services.html funnel: naming collisions + duplicated quotes (v2.5 phases B) | agent | measured 2026-09-09; pure subtraction, no ruling needed |
-| Chunk 18 `url` still points at legacy `services.html#design-services` | agent + John | update to `#design` under the CHUNK_AUDIT rule; legacy remap stays as the net |
+| ~~services.html funnel: naming collisions + duplicated quotes (v2.5 phases B)~~ | agent | **MERGED 2026-09-09** with phases A–D. Verified 2026-09-10: one name per product, one card grammar, Sheila/Tommy once as quotes (other mentions are wall-refs). |
+| ~~Chunk 18 `url` → legacy `services.html#design-services`~~ | agent | **DONE 2026-09-10** — url is `services.html#design`; the legacy remap stays as the net. |
 | Coaching-track outcomes + figures (v2.5 phase E) | **John** | the design track proves with three named outcomes; coaching has one quote and no results |
-| Google appointment-scheduling: can a booking carry a track parameter? | agent (research) | gates v2.5 phase F; the primary CTA is currently unattributable |
+| ~~Google appointment-scheduling: can a booking carry a track parameter?~~ | agent (research) | **RESOLVED 2026-09-09** — a required booking-form multiple-choice item carries the track (P0 #3); no URL parameter survives. |
 
 | Repo history rewrite — 98.1 MB of dead binaries in main's own history | **John** (classifier blocks the agent) | Prepared 2026-09-10, not run: `~/Documents/GitHub/_jh-prerewrite/HOW-TO-RUN.md`, with a verified 172 MB bundle and the pre-rewrite tree hash. **Regenerate the blob list first** — it was computed before the stale branches were deleted. Rewrites every SHA; needs a force-push and a re-clone anywhere else. |
 | Visual Art demo reel not showing (John, 2026-09-10) | agent + **John** | Not reproduced: the video is live and embeddable (oembed 200, "JH Artist Overview"), the markup is byte-identical to the eight embeds that work, geometry correct at 956×538. Need one detail from John — blank rectangle, or "Video unavailable"? That separates YouTube from us. |
@@ -634,35 +650,24 @@ mobile QA passes; a11y sweeps. Small fixes ride whatever cycle is open.
 
 ## Decisions John owes this plan
 
-1. Ratify the milestone cut (or reorder — v2.2 and v2.3 are swappable).
+1. ~~Ratify the milestone cut~~ — **ratified by execution** (v2.5 A–D merged, v2.10 all phases shipped); the remaining order (P1 → P2) stands as written.
 2. teamready.xyz: frameable (you set headers) or poster-card?
 3. The "how I think" chunk set: agent drafts from the essay for your marks, or you
    write seeds and the agent structures them?
 4. Playground default view: featured-only, or featured-first-with-all-visible?
 5. Resource register Enter-grammar exception (from the v3 arc) — confirm.
-6. v2.4: does index.html ALSO drop the large-fish upper-half spawn teleport
+6. **Moot while True Ink (v2.4) is deferred past v3.0 (2026-09-09).** v2.4: does index.html ALSO drop the large-fish upper-half spawn teleport
    (recommended: spawn where drawn everywhere, territory behavior migrates the fish),
    or gate it on floorAffinity so the aquarium keeps today's spawn feel?
-7. v2.4 stroke corpus: John records real strokes via the capture snippet (best
+7. **Moot while True Ink (v2.4) is deferred past v3.0.** v2.4 stroke corpus: John records real strokes via the capture snippet (best
    signal, ~15 min on desktop + phone), or synthetic-only to start?
-8. v2.4 stroke→fish morph animation: worth the polish pass, or spawn-in-place is
+8. **Moot while True Ink (v2.4) is deferred past v3.0.** v2.4 stroke→fish morph animation: worth the polish pass, or spawn-in-place is
    enough?
-9. v2.4 slot: run it fourth as written, pull it earlier, or interleave it while
+9. **Moot while True Ink (v2.4) is deferred past v3.0.** v2.4 slot: run it fourth as written, pull it earlier, or interleave it while
    v2.1 waits on your chunk marks?
-10. v2.5 pre-choice default: what does a visitor see at bare `services.html`, before
-    they have chosen? Today it silently defaults to coaching, so the coaching door is
-    a no-op and the design track is hidden from every un-chosen arrival (crawlers
-    included). Options: (a) a short chooser — both tracks folded to equal summary
-    strips, tail hidden until a door is picked, which is the most faithful reading of
-    "funnel them in"; (b) keep coaching as the default; (c) show everything until a
-    choice is made. Recommended (a). Your "chosen only" ruling settles what happens
-    AFTER the choice, not before it.
-11. v2.5 quote strategy: keep the quotes inside the tracks and cut the wall down to
-    the voices that belong to neither (Inga, Hurriyet Ok, Ben Reed), or strip the
-    in-track quotes and keep the wall whole? Recommended the former — a quote does
-    more work next to the thing it vouches for.
-12. v2.5 slot: run it fifth as written, or pull phases A–D forward ahead of v2.2/v2.3
-    (they are one page, no shared script, and the funnel is what converts)?
+10. ~~v2.5 pre-choice default~~ — **RESOLVED 2026-09-09**: the chooser shipped. Bare load folds both tracks to equal summary strips and hides the tail until a door is picked; `servicetest` asserts every entry URL. "Chosen only" governs after the choice.
+11. ~~v2.5 quote strategy~~ — **RESOLVED toward the wall** (John's brief, per the P0 #1 review): quotes stay in "What clients say", the tracks point to them. The open consequence is P0 #1 note (a) — the shared tail is still 37–47%, not the ~25% target.
+12. ~~v2.5 slot~~ — **EXECUTED**: phases A–D merged 2026-09-09.
 
 ## Inherited plans — unreconciled (added 2026-09-10)
 
@@ -701,9 +706,3 @@ reference: `hypercube_processing/hypercube_processing.pde` is the original, and
 `hypercube/hypersolid.js` is a working JS tesseract. The repair is a real port
 of the .pde, not a patch of the half-translation — worth its own small session,
 and worth keeping the 2015 file beside it as the artefact it is.
-
-11. **Deep Sea Terminal audit report** — check it into `Agent Reference/` so part 3 has a record to finish against.
-12. ~~**Daylight branch**~~ — RESOLVED 2026-09-10. Fully merged into main (0 commits ahead); branch and worktree deleted in the repo-cleanup pass. Nothing to salvage.
-13. **GoatCounter site code** — the analytics switch.
-14. **Personal chunks 30–32** — an "off the clock" line on About, or search-only.
-15. **Coaching-track outcomes** (v2.5 phase E) — the coaching side has one quote and no results.
