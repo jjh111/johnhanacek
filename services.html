@@ -167,63 +167,49 @@
             color: var(--cyan);
         }
 
-        /* ── The fork: two doors ──────────────────────────────────────── */
-        .fork {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: var(--space-md);
-            margin: var(--space-lg) 0 var(--space-md);
-        }
-        .door {
+        /* ── The tab bar: one control, pinned under the header ──────────
+           Sticky inside <main>, so it pins at the nav's height once the
+           page scrolls past it and stays for the rest of the content.
+           Services is a page-header page: the nav is visible from the
+           first pixel (shared.js), so the offset is always occupied. */
+        .track-tabs {
+            position: sticky;
+            top: var(--nav-h, 40px);
+            z-index: 900;
             display: flex;
-            flex-direction: column;
-            gap: 0.35rem;
-            padding: var(--space-md) var(--space-md) var(--space-md) var(--space-md);
-            border-radius: 8px;
-            background: rgba(var(--cyan-dim-rgb), 0.06);
-            text-decoration: none;
-            color: var(--text-primary);
-            transition: background 0.2s ease, color 0.2s ease;
+            margin: 0 0 var(--space-lg);
+            background: rgba(var(--surface-rgb), 0.92);
+            backdrop-filter: blur(8px) saturate(1.05);
+            -webkit-backdrop-filter: blur(8px) saturate(1.05);
+            border-bottom: 1px solid rgba(var(--cyan-dim-rgb), 0.12);
         }
-        .door:hover { text-shadow: none; }
-        .door-for {
-            font-family: var(--font-mono);
-            font-size: var(--text-xs);
-            text-transform: uppercase;
-            letter-spacing: 0.15em;
-            color: var(--cyan);
-        }
-        .door-title {
-            font-family: var(--font-display);
-            font-weight: 200;
-            font-size: calc(clamp(1.45rem, 2.6vw, 1.9rem) * var(--type-scale));
-            line-height: 1.2;
-            color: var(--text-subhead);
-            transition: color 0.2s ease;
-        }
-        .door-outcome {
-            font-family: var(--font-mono);
-            font-size: var(--text-sm);
-            line-height: 1.55;
-            color: var(--text-primary);
-        }
-        .door-go {
-            font-family: var(--font-mono);
-            font-size: var(--text-xs);
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
+        /* JS off: no bar. A control that cannot switch is worse than none. */
+        html:not([data-track]) .track-tabs { display: none; }
+        .track-tab {
+            flex: 1 1 0;
+            min-width: 0;
+            min-height: 44px;
+            padding: 0.55rem 1rem;
+            background: none;
+            border: 0;
+            border-bottom: 2px solid transparent;
             color: var(--muted);
-            margin-top: 0.4rem;
-            transition: color 0.2s ease;
+            font-family: var(--font-mono);
+            font-size: var(--text-xs);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            cursor: pointer;
+            transition: color 0.2s ease, border-color 0.2s ease;
         }
-        .door:hover, .door:focus-visible {
-            background: rgba(var(--gold-rgb), 0.08);
+        .track-tab:hover { color: var(--text-bright); }
+        .track-tab[aria-selected="true"] { color: var(--gold); border-bottom-color: var(--gold); }
+        .track-tab:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
+        .track-tab-short { display: none; }
+        @media (max-width: 600px) {
+            .track-tab-full { display: none; }
+            .track-tab-short { display: inline; }
         }
-        .door:hover .door-title, .door:focus-visible .door-title,
-        .door:hover .door-go, .door:focus-visible .door-go { color: var(--gold); }
-        .door.chosen .door-for { color: var(--gold); }
-        .door.chosen .door-go { color: var(--gold); }
-        .door.chosen .door-go::before { content: '● '; }
+        @media print { .track-tabs { display: none; } }
 
         /* ── Proof strip: typographic wordmarks ───────────────────────── */
         .proof-strip {
@@ -263,42 +249,18 @@
             color: var(--text-bright);
         }
 
-        /* ── Tracks: the chosen one first, the other folded to a strip ── */
+        /* ── Tracks: exactly one is mounted at a time ─────────────────── */
         .track-head {
             display: flex;
             flex-wrap: wrap;
             align-items: baseline;
             gap: var(--space-xs) var(--space-md);
         }
-        .track-head h2 { margin-bottom: 0; }
-        /* The badge is one word-group: on a phone it drops under the title
-           whole instead of stacking three lines beside it. The shared h2 is
-           a flex row (› title — hairline), so the badge-carrying heading
-           must be allowed to wrap or that can never happen — and it was a
-           98px horizontal scroll at 390px. */
-        #coaching .track-head h2 { flex-wrap: wrap; }
+        .track-head h2 { margin-bottom: 0; flex-wrap: wrap; }
         .track-head h2 .year-badge { white-space: nowrap; }
-        .track-summary {
-            flex-basis: 100%;
-            display: none;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: var(--space-sm) var(--space-md);
-            font-size: var(--text-base);
-            color: var(--text-primary);
-            margin: var(--space-xs) 0 0;
-        }
-        .track-summary p { margin: 0; flex: 1 1 24ch; }
-        .track-open {
-            padding: 0.5rem 1.1rem;
-            font-size: var(--text-xs);
-        }
-        .track[data-collapsed] .track-summary { display: flex; }
-        .track[data-collapsed] .track-body { display: none; }
-        .track:not([data-collapsed]) .track-open { display: none; }
         .track-body { margin-top: var(--space-md); }
         @media (prefers-reduced-motion: no-preference) {
-            .track:not([data-collapsed]) .track-body { animation: track-in 0.35s ease-out; }
+            .track .track-body { animation: track-in 0.35s ease-out; }
             @keyframes track-in {
                 from { opacity: 0; transform: translateY(6px); }
                 to   { opacity: 1; transform: none; }
@@ -309,82 +271,19 @@
         }
         .track-cta p { margin-bottom: 0; }
 
-        /* ── The fork is content, never anchors ─────────────────────────
+        /* ── The tabs are content, never anchors ────────────────────────
            html[data-track] is the ONLY switch, and JS is its only writer:
-             (absent)   JS off / a crawler — everything shows. Never the reverse.
-             chooser    bare load: both tracks folded to equal summary strips,
-                        tail hidden until a door is picked. No remembered choice.
-             coaching   chosen: the other track's content is display:none — real
-                        hiding, assistive tech reads one track — and its strip
-                        waits after the wall instead of interrupting between
-                        CTA and proof.
-             design     mirror.
-             both       ?track=both, or any shared deep link: everything shows.
-           Interactive controls carry data-door, never data-track, so the
-           doors and Open buttons survive in every state. */
+             (absent)   JS off / a crawler — everything shows, no bar.
+             coaching   the coaching track; design content is display:none
+                        (real hiding — assistive tech reads one track).
+             design     the bare-load default.
+             both       ?track=both — the hidden escape; everything shows,
+                        no tab selected. Nothing in the UI links to it.
+           A third track (writing/consulting) is one more pair of these
+           selectors plus a section, a tab button, and its tagged voices;
+           the JS iterates the tabs and never names them. */
         html[data-track="coaching"] [data-track="design"],
         html[data-track="design"] [data-track="coaching"] { display: none; }
-        html[data-track="chooser"] #testimonials,
-        html[data-track="chooser"] #fit,
-        html[data-track="chooser"] #book { display: none; }
-
-        /* ── "Viewing: X · switch" — the persistent status ────────────── */
-        .track-status {
-            display: none;
-            align-items: baseline;
-            gap: 0.35em;
-            font-family: var(--font-mono);
-            font-size: var(--text-xs);
-            color: var(--muted);
-        }
-        .track-status .now {
-            color: var(--gold);
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-        }
-        .track-status a { color: var(--cyan); }
-        html[data-track="coaching"] #coaching .track-status,
-        html[data-track="design"] #design .track-status { display: inline-flex; }
-
-        /* ── The other door's strip — after the wall, not mid-conversion ─ */
-        .also-strip {
-            display: none;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: var(--space-sm) var(--space-lg);
-            padding: var(--space-md);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            background: rgba(var(--cyan-dim-rgb), 0.06);
-        }
-        html[data-track="coaching"] .also-strip[data-for="design"],
-        html[data-track="design"] .also-strip[data-for="coaching"] { display: flex; }
-        .also-copy {
-            display: flex;
-            flex-direction: column;
-            gap: 0.35rem;
-            flex: 1 1 24rem;
-        }
-        .also-name {
-            font-family: var(--font-display);
-            font-weight: 300;
-            font-size: calc(clamp(1.15rem, 2vw, 1.5rem) * var(--type-scale));
-            line-height: 1.2;
-            color: var(--text-subhead);
-        }
-        .also-desc {
-            font-family: var(--font-mono);
-            font-size: var(--text-sm);
-            line-height: 1.55;
-            color: var(--text-primary);
-        }
-        .also-both {
-            flex-basis: 100%;
-            font-family: var(--font-mono);
-            font-size: var(--text-xs);
-            color: var(--muted);
-        }
-        .also-both a { color: var(--cyan); }
 
         /* ── Tracks reference the wall; the wall keeps each voice once ─── */
         .wall-ref {
@@ -396,6 +295,14 @@
         }
         .wall-ref strong { color: var(--text-bright); font-weight: 500; }
         .wall-ref a { color: var(--cyan); }
+
+        /* ── Anchor landings clear nav + tab bar ──────────────────────── */
+        main > section,
+        .tracks > section {
+            scroll-margin-top: calc(var(--nav-h, 40px) + var(--tabs-h, 44px) + var(--space-sm));
+        }
+        /* The intro is a signpost, not a chapter: compact card, no air. */
+        #intro .content-card { padding: var(--space-sm) var(--space-md); }
 
         /* ── Design outcomes: eyebrow + line, no boxes ────────────────── */
         .outcomes {
@@ -596,22 +503,7 @@
             <h2>Two ways to work with me</h2>
 
             <div class="content-card about">
-                <p><strong>Founders and executives</strong> come to me to actually use AI in their own work — live sessions, a private workspace, a system that adapts to their business. <strong>Teams building AI-native products</strong> bring me in as a founding designer, from workshop to shipped product.</p>
-            </div>
-
-            <div class="fork" role="group" aria-label="Choose a track">
-                <a class="door" href="#coaching" data-door="coaching">
-                    <span class="door-for">For founders &amp; executives</span>
-                    <span class="door-title">AI coaching</span>
-                    <span class="door-outcome">Walk away with a working AI setup that knows your business, and the skills to keep building on it.</span>
-                    <span class="door-go">See the coaching track</span>
-                </a>
-                <a class="door" href="#design" data-door="design">
-                    <span class="door-for">For AI-native teams</span>
-                    <span class="door-title">Founding design</span>
-                    <span class="door-outcome">Walk away with a shipped product, a validated direction, or a working prototype — designed and engineered.</span>
-                    <span class="door-go">See the design track</span>
-                </a>
+                <p><strong>Founders and executives</strong> learn to actually use AI in their own work. <strong>AI-native teams</strong> bring me in to design and ship.</p>
             </div>
 
             <div class="cta-row">
@@ -620,6 +512,15 @@
             </div>
             <p class="ask-line">Or ask the site — press <kbd>/</kbd> and type what you're trying to do.</p>
         </section>
+
+        <div class="track-tabs" role="tablist" aria-label="Service tracks">
+            <button class="track-tab" role="tab" id="tab-coaching" data-tab="coaching" aria-selected="false" aria-controls="coaching">
+                <span class="track-tab-full">AI Coaching</span><span class="track-tab-short">Coaching</span>
+            </button>
+            <button class="track-tab" role="tab" id="tab-design" data-tab="design" aria-selected="true" aria-controls="design">
+                <span class="track-tab-full">Design Services</span><span class="track-tab-short">Design</span>
+            </button>
+        </div>
 
         <section id="proof" class="proof-strip" aria-label="Who I've worked with">
             <div class="proof-row">
@@ -648,14 +549,9 @@
         </section>
 
         <div class="tracks">
-        <section id="coaching" class="track" data-track="coaching">
+        <section id="coaching" class="track" data-track="coaching" role="tabpanel" aria-labelledby="tab-coaching">
             <div class="track-head">
                 <h2>AI Coaching <span class="year-badge">The JH Coaching OS</span></h2>
-                <p class="track-status"><span class="now">Viewing: AI Coaching</span> · <a href="#design">switch to Founding design</a></p>
-                <div class="track-summary">
-                    <p>For founders and executives: live sessions plus a private AI workspace that learns your business.</p>
-                    <button type="button" class="cta-btn track-open" data-door="coaching" aria-expanded="false" aria-controls="coaching-body">Open</button>
-                </div>
             </div>
 
             <div class="track-body" id="coaching-body">
@@ -749,14 +645,9 @@
             </div>
         </section>
 
-        <section id="design" class="track" data-track="design">
+        <section id="design" class="track" data-track="design" role="tabpanel" aria-labelledby="tab-design">
             <div class="track-head">
                 <h2>Founding Design &amp; Product</h2>
-                <p class="track-status"><span class="now">Viewing: Founding design</span> · <a href="#coaching">switch to AI coaching</a></p>
-                <div class="track-summary">
-                    <p>For teams building AI-native products, spatial computing, and robotics: from workshop to shipped product.</p>
-                    <button type="button" class="cta-btn track-open" data-door="design" aria-expanded="false" aria-controls="design-body">Open</button>
-                </div>
             </div>
 
             <div class="track-body" id="design-body">
@@ -875,11 +766,11 @@
             <h2>What clients say</h2>
 
             <div class="columns-2">
-                <div class="content-card endorsement short">
+                <div class="content-card endorsement short" data-track="design">
                     <p>"I love collaborating with John. A man made for this moment."</p>
                     <cite><strong><a href="https://www.linkedin.com/in/irl-danb/" target="_blank" rel="noopener">Dan Barrett</a></strong>, CEO <a href="https://prose.md" target="_blank" rel="noopener">OpenProse</a></cite>
                 </div>
-                <div class="content-card endorsement">
+                <div class="content-card endorsement" data-track="design">
                     <p>"He's not only a true Visionary, but also an amazing listener with incredible intuition. I've never seen anyone able to so readily understand scientists, then design an experience they can scarcely imagine, but recognize as what they wanted."</p>
                     <cite><strong><a href="https://www.linkedin.com/in/sheila-zipfel/" target="_blank" rel="noopener">Sheila Zipfel</a></strong>, Product Manager, <a href="https://spatialandimmersivedesign.substack.com/p/xr-product-design-case-study-nanome" target="_blank" rel="noopener">Nanome</a></cite>
                 </div>
@@ -887,11 +778,11 @@
                     <p>"Talented and very experienced designer!"</p>
                     <cite><strong><a href="https://www.linkedin.com/in/ipetryaevskaya/" target="_blank" rel="noopener">Inga Petryaevskaya</a></strong>, CEO <a href="https://www.shapesxr.com" target="_blank" rel="noopener">ShapesXR</a></cite>
                 </div>
-                <div class="content-card endorsement">
+                <div class="content-card endorsement" data-track="design">
                     <p>"John recently led a customer journey mapping workshop for my team, and it was an outstanding experience. We came away with a deeper understanding of our customers and a clear appreciation for the impact of product design."</p>
                     <cite><strong><a href="https://www.linkedin.com/in/tommy-kronmark/" target="_blank" rel="noopener">Tommy Kronmark</a></strong>, COO <a href="https://www.mycells.bio" target="_blank" rel="noopener">Muse.bio</a></cite>
                 </div>
-                <div class="content-card endorsement">
+                <div class="content-card endorsement" data-track="coaching">
                     <p>"If you're building with AI agents and want to skip the frustration curve, talk to John Hanacek. I'm crushing at work right now, and John is the secret ingredient who got me here."</p>
                     <cite><strong>Ben S</strong>, <a href="https://www.linkedin.com/in/benjshap" target="_blank" rel="noopener">Founder/CEO of I Hear Everything</a></cite>
                 </div>
@@ -905,26 +796,6 @@
                 </div>
             </div>
         </section>
-
-        <aside class="also-strip" data-for="design" aria-label="The other track: Founding Design &amp; Product">
-            <div class="also-copy">
-                <span class="door-for">The other door — for AI-native teams</span>
-                <strong class="also-name">Founding Design &amp; Product</strong>
-                <span class="also-desc">Walk away with a shipped product, a validated direction, or a working prototype — designed and engineered.</span>
-            </div>
-            <button type="button" class="cta-btn track-open" data-door="design" aria-expanded="false" aria-controls="design-body">Open</button>
-            <span class="also-both">or <a href="?track=both">view both tracks</a></span>
-        </aside>
-
-        <aside class="also-strip" data-for="coaching" aria-label="The other track: AI Coaching">
-            <div class="also-copy">
-                <span class="door-for">The other door — for founders &amp; executives</span>
-                <strong class="also-name">AI Coaching</strong>
-                <span class="also-desc">Walk away with a working AI setup that knows your business, and the skills to keep building on it.</span>
-            </div>
-            <button type="button" class="cta-btn track-open" data-door="coaching" aria-expanded="false" aria-controls="coaching-body">Open</button>
-            <span class="also-both">or <a href="?track=both">view both tracks</a></span>
-        </aside>
 
         <section id="fit">
             <h2>Is this a fit?</h2>
@@ -977,71 +848,73 @@
     </footer>
 
     <script>
-    /* The funnel. Both tracks stay in the DOM in source order (JS off: the
+    /* The tab bar. Both tracks stay in the DOM in source order (JS off: the
        whole page — direction is load-bearing). With JS, ONE root attribute
        does all the work and the DOM is never moved:
-         chooser    bare load: both tracks folded to equal summary strips,
-                    the tail hidden until a door is picked. No pre-opened
-                    track, no remembered choice — the URL is the only state
-                    (John's ruling: chosen only, URL only).
-         coaching | design   chosen only: the other track's content is
-                    display:none (real hiding), its summary strip waits after
-                    the wall. What is chosen is what prints.
-         both       ?track=both or a shared deep link — everything shows.
+         coaching | design   exactly one track is mounted; the other is
+                    display:none (real hiding — one track for assistive tech).
+         both       ?track=both — the hidden escape; everything shows, no tab
+                    selected. Nothing in the UI links to it.
+       The buttons are data-driven: adding a third track (writing / consulting)
+       is a section + a button + its tagged content, no change to this script.
        #coaching / #design (or ?track=) pick; legacy #design-services and
        #endorsements are remapped on load; the anchor set never changes. */
     (function () {
-        var TRACK = { coaching: document.getElementById('coaching'), design: document.getElementById('design') };
-        if (!TRACK.coaching || !TRACK.design) return;
         var root = document.documentElement;
+        var SECTIONS = Array.prototype.slice.call(document.querySelectorAll('.track[data-track]'));
+        if (SECTIONS.length < 2) return;
+        var NAMES = SECTIONS.map(function (s) { return s.getAttribute('data-track'); });
+        var DEFAULT = 'design';
         var LEGACY = { 'design-services': 'design', 'endorsements': 'testimonials' };
-        var current = null; // 'chooser' | 'coaching' | 'design' | 'both'
+        var tabs = Array.prototype.slice.call(document.querySelectorAll('.track-tab'));
+        var bar = document.querySelector('.track-tabs');
+        var current = null; // null | a track name | 'both'
+
+        function isTrack(n) { return NAMES.indexOf(n) >= 0; }
+
+        function measure() {
+            var nav = document.getElementById('nav');
+            if (nav) root.style.setProperty('--nav-h', nav.getBoundingClientRect().height + 'px');
+            if (bar) root.style.setProperty('--tabs-h', bar.offsetHeight + 'px');
+        }
 
         function apply(name) {
             if (name === current) return;
             current = name;
             root.setAttribute('data-track', name);
-            Object.keys(TRACK).forEach(function (k) {
-                var sec = TRACK[k];
-                if (name === 'chooser') sec.setAttribute('data-collapsed', '');
-                else sec.removeAttribute('data-collapsed');
-                var open = name === 'both' || k === name;
-                sec.querySelectorAll('.track-open').forEach(function (btn) {
-                    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-                });
+            tabs.forEach(function (t) {
+                t.setAttribute('aria-selected', t.getAttribute('data-tab') === name ? 'true' : 'false');
             });
-            var chosen = (name === 'coaching' || name === 'design') ? name : null;
-            document.querySelectorAll('.door').forEach(function (d) {
-                d.classList.toggle('chosen', d.getAttribute('data-door') === chosen);
-            });
-            document.querySelectorAll('.nav-right a[href="#coaching"], .nav-right a[href="#design"]').forEach(function (a) {
-                if (chosen && a.getAttribute('href') === '#' + chosen) a.setAttribute('aria-current', 'true');
+            document.querySelectorAll('.nav-right a').forEach(function (a) {
+                if (isTrack(name) && a.getAttribute('href') === '#' + name) a.setAttribute('aria-current', 'true');
                 else a.removeAttribute('aria-current');
             });
         }
 
-        function writeHash(name) {
+        function writeHash(name, push) {
             var params = new URLSearchParams(location.search);
             params.delete('track');
             var q = params.toString();
-            history.replaceState(null, '', location.pathname + (q ? '?' + q : '') + '#' + name);
+            var url = location.pathname + (q ? '?' + q : '') + '#' + name;
+            if (push && history.pushState) history.pushState(null, '', url);
+            else history.replaceState(null, '', url);
         }
 
         // Reads the URL: a track anchor (or ?track=) chooses; a shared anchor
-        // must resolve to something visible, so it shows the whole page
-        // unless a track is already chosen. Returns { state, target, rewrite }.
+        // lands inside the current (or default) track. Unknown ?track= values
+        // cannot choose. Returns { state, target, rewrite }.
         function readLocation() {
             var raw = location.hash.replace(/^#/, '');
             var h = LEGACY[raw] || raw;
             var mapped = h !== raw;
             var q = new URLSearchParams(location.search).get('track');
-            if (h === 'coaching' || h === 'design') return { state: h, target: h, rewrite: mapped ? h : null };
-            if (q === 'coaching' || q === 'design') return { state: q, target: TRACK[h] || document.getElementById(h) ? h : null, rewrite: mapped ? h : null };
+            if (isTrack(h)) return { state: h, target: h, rewrite: mapped ? h : null };
+            if (isTrack(q)) return { state: q, target: document.getElementById(h) ? h : null, rewrite: mapped ? h : null };
             if (q === 'both') return { state: 'both', target: document.getElementById(h) ? h : null, rewrite: mapped ? h : null };
             if (h && document.getElementById(h)) {
-                return { state: (current === 'coaching' || current === 'design') ? current : 'both', target: h, rewrite: mapped ? h : null };
+                return { state: isTrack(current) ? current : DEFAULT, target: h, rewrite: mapped ? h : null };
             }
-            return { state: 'chooser' };
+            return { state: DEFAULT };
         }
 
         function landOn(name) {
@@ -1051,13 +924,7 @@
             });
         }
 
-        // Initial state
-        var loc = readLocation();
-        apply(loc.state);
-        if (loc.rewrite) writeHash(loc.rewrite);
-        if (loc.target) landOn(loc.target);
-
-        window.addEventListener('hashchange', function () {
+        function sync() {
             var prev = current;
             var l = readLocation();
             if (l.state) apply(l.state);
@@ -1065,23 +932,42 @@
             // The browser's own fragment scroll ran before the state changed
             // the layout; re-land on the heading once it settles.
             if (l.target && l.state !== prev) landOn(l.target);
-        });
+        }
+
+        // Initial state
+        var loc = readLocation();
+        apply(loc.state);
+        if (loc.rewrite) writeHash(loc.rewrite);
+        if (loc.target) landOn(loc.target);
+        measure();
+        window.addEventListener('resize', measure);
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure);
+
+        window.addEventListener('hashchange', sync);
+        // pushState does not fire hashchange; back/forward do fire popstate.
+        window.addEventListener('popstate', sync);
 
         document.addEventListener('click', function (e) {
-            var el = e.target.closest('.door, .track-open');
-            if (!el) return;
-            var name = el.getAttribute('data-door');
-            if (!TRACK[name]) return;
+            var tab = e.target.closest('.track-tab');
+            if (!tab) return;
+            var name = tab.getAttribute('data-tab');
+            if (!isTrack(name) || name === current) return;
             e.preventDefault();
             apply(name);
-            writeHash(name);
-            if (el.classList.contains('track-open')) {
-                var h2 = TRACK[name].querySelector('h2');
-                if (h2) { h2.setAttribute('tabindex', '-1'); h2.focus({ preventScroll: true }); }
-            }
-            // A switch from the also-strip (after the wall) travels back up
-            // to the track it opens; a chooser-strip Open opens in place.
-            if (el.closest('.also-strip')) landOn(name);
+            writeHash(name, true);
+        });
+
+        // Arrow keys move selection with wrapping, the tablist convention.
+        if (bar) bar.addEventListener('keydown', function (e) {
+            if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+            var i = tabs.indexOf(document.activeElement);
+            if (i < 0) i = tabs.findIndex(function (t) { return t.getAttribute('aria-selected') === 'true'; });
+            if (i < 0) i = 0;
+            var n = (i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+            e.preventDefault();
+            tabs[n].focus();
+            var name = tabs[n].getAttribute('data-tab');
+            if (name !== current) { apply(name); writeHash(name, true); }
         });
     })();
     </script>

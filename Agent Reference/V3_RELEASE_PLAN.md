@@ -338,6 +338,15 @@ Every one of these writes the URL, so state stays shareable and back/forward wor
   reports what email already does. Needs a check of what Google appointment scheduling
   actually supports before a mechanism is promised.
 
+**BUILD RECORD — 2026-09-10: re-cut as two tabs (supersedes the chooser, doors, folded strips, status line, also-strips, and `?track=both` links above).** John's call after living with the five-state mechanism: "a jumbled mess." What replaced it:
+
+- **One sticky bar, after a compacted intro card.** Two tabs — *AI Coaching* / *Design Services* (phone: *Coaching* / *Design*) — live as a direct child of `<main>`, so they pin under the header (offset = the nav's MEASURED height — 40px desktop, 46px at the menu breakpoint — read as `--nav-h`, never assumed) and stay for the rest of the content. `--tabs-h` is measured too, and `scroll-margin-top` clears nav + bar on every landing.
+- **The state model is two, not five.** `data-track="coaching|design"`, always one active; a bare load defaults to **design** (John's ruling 2026-09-10). `?track=both` survives as the hidden show-everything escape — no tab selected, nothing links to it. The chooser, folded strips, Open buttons, "Viewing" status, and both also-strips are gone.
+- **The tail is per tab now.** Testimonials are tagged (design: Dan Barrett, Sheila Zipfel, Tommy Kronmark; coaching: Ben S; Inga / Hurriyet Ok / Ben Reed untagged, both tabs). Fit was already paired; intro, proof, contact stay shared. Each tab shows only its related content.
+- **A third tab is a content change, not a mechanism change.** The script iterates `.track[data-track]` and `.track-tab` and never names a track; the bar flexes. (Forward note from John: *writing / consulting* may be next.)
+- **Instrument first:** `servicetest.mjs` was rewritten for this contract before the page (red → green). It now asserts exactly-one-track, the voucher matrix, sticky geometry (`bar.top === nav height` at two scroll depths), entry URLs, JS-off (whole page, no dead control), labels, print, and the sweep.
+- Gates: servicetest ALL GREEN · contrasttest services 0 AA · sitetest back to its one known red (`art.html` Vimeo 401). sitetest's own `waitUntil: 'load'` was flaking on the nine-embed pages (the failing set moved between runs) — now `domcontentloaded` + settle, matching contrasttest.
+
 ### Exit criteria
 
 A design visitor never reads coaching vocabulary; a coaching visitor never reads design
@@ -389,7 +398,7 @@ sequencing sections that follow it; they are kept for the record.
 
 | # | Work | Owner | Notes |
 |---|---|---|---|
-| 1 | **v2.5 Funnel, phases A–D** | agent | MERGED 2026-09-09 (lede/funnel-v25, reviewed MERGE AS IS, all gates green). Open from the review, John's calls: (a) quotes live in the wall, not the tracks — the brief said so, plan question 11 said the opposite, so the shared tail is still 37–47% of the document, not the ~25% target; (b) the other-track strip sits between testimonials and Fit, not below the tail; (c) the TOC keeps both track links (aria-current only). |
+| 1 | **v2.5 Funnel, phases A–D** | agent | MERGED 2026-09-09 (lede/funnel-v25, reviewed MERGE AS IS, all gates green). **Re-cut as two tabs 2026-09-10 — see the build record in the v2.5 module; the review notes (a)–(c) are superseded.** |
 | 2 | v2.5 phase E — coaching-track outcomes | **John** | the design track proves; coaching only describes |
 | 3 | v2.5 phase F — calendar attribution | **John** (5 min) | RESOLVED 2026-09-09: the `calendar.app.google` short link 302s and drops any query string, so no parameter survives into a booking; Google documents no prefill for appointment schedules; multiple booking pages are paid-Workspace only. Do this instead: Calendar → Appointment schedules → Edit → Booking form → Add an item → required multiple-choice "Which are you here about?" (AI coaching for founders / Founding design for teams). Answer lands in the event. Keep the per-track mailto subjects. |
 | 4 | **Deep Sea Terminal audit, parts 1–2** | parallel session | **CLOSED 2026-09-10** — parts 3 (v2.09) and 4 (v2.10 "One Pair") finished the work; no separate report was filed, so the build records in this plan are the record. |

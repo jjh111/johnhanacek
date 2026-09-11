@@ -59,8 +59,15 @@ for (const p of [...STANDARD, ...OTHER]) {
   page.on('console', onConsole);
 
   try {
-    const resp = await page.goto(`${BASE}/${p}`, { waitUntil: 'load', timeout: 30000 });
-    await page.waitForTimeout(1500); // let deferred scripts + components run
+    // 'domcontentloaded', not 'load': 'load' waits for every third-party
+    // iframe, and art.html frames nine of them (YouTube x6, a Vimeo embed that
+    // 401s, Sketchfab, jhana.zone). One hanging embed times the whole page out
+    // and a timeout tells you nothing about the page itself — the failing set
+    // moved between runs (art, nanome2, playground). contrasttest made the same
+    // move for the same reason; the settle still gives deferred scripts and
+    // embeds time to report.
+    const resp = await page.goto(`${BASE}/${p}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.waitForTimeout(2500);
     const status = resp.status();
 
     const external = (t) => t.includes('googleapis') || t.includes('gstatic') || t.includes('ERR_');
