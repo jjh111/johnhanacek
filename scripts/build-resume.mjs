@@ -8,6 +8,9 @@
 //                                              `node scripts/build-chunk-vectors.mjs` after), and
 //                                              john-hanacek.json. Commit is still yours.
 //   --lane=designEngineer|productDesigner|foundingDesigner|xr   (summary + bullet emphasis; default designEngineer)
+//                                              An unknown lane is an error, not a silent fallback. --apply
+//                                              REFUSES a non-default lane unless you add --force-lane: the
+//                                              public surfaces carry no lane in their names.
 //
 // The application PDF (with the phone from .local/private.json) is ALWAYS written to .local/out/ and
 // never into Assets/. Same template, one column, real headings and lists — the ATS twin is the same
@@ -23,8 +26,34 @@ const OUT = resolve(ROOT, '.local/out');
 mkdirSync(OUT, { recursive: true });
 const args = process.argv.slice(2);
 const APPLY = args.includes('--apply');
-const LANE = (args.find(a => a.startsWith('--lane=')) || '--lane=designEngineer').slice(7);
+const DEFAULT_LANE = 'designEngineer';                 // the lane the PUBLIC surfaces are written in
+const LANE = (args.find(a => a.startsWith('--lane=')) || `--lane=${DEFAULT_LANE}`).slice(7);
 const R = JSON.parse(readFileSync(resolve(ROOT, 'Assets/resume.json'), 'utf8'));
+
+// A lane changes the summary and which highlights survive, so a wrong one is a different
+// person on the page. Two ways that used to pass silently, both closed here.
+const LANES = Object.keys(R.lanes).filter(k => !k.startsWith('$'));
+if (!LANES.includes(LANE)) {
+  console.error(`unknown lane "${LANE}". Known lanes: ${LANES.join(', ')}`);
+  process.exit(1);                                     // it used to fall back to designEngineer without a word
+}
+// --apply writes the PUBLIC surfaces: the served PDF, Assets/john-hanacek-resume.md, the career
+// chunks the site search answers from, john-hanacek.json, the about.html blocks and the case-study
+// figures on nanome2/openprose. None of those carry the lane in their name, so a lane build applied
+// by muscle memory would republish John as someone else with no trace.
+if (APPLY && LANE !== DEFAULT_LANE && !args.includes('--force-lane')) {
+  console.error(`refusing to --apply the "${LANE}" lane.
+
+--apply writes the PUBLIC resume, the search chunks, john-hanacek.json, the about.html
+blocks and the case-study figures — all in the ${DEFAULT_LANE} lane, and none of them
+carry the lane in their filename.
+
+  build it for an application   node scripts/build-resume.mjs --lane=${LANE}
+                                (.local/out/resume-apply.pdf — has the phone, never published)
+  publish the public lane       node scripts/build-resume.mjs --apply
+  really publish this lane      add --force-lane`);
+  process.exit(1);
+}
 const PRIV = existsSync(resolve(ROOT, '.local/private.json')) ? JSON.parse(readFileSync(resolve(ROOT, '.local/private.json'), 'utf8')) : {};
 const YEAR = new Date().getFullYear();
 const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -32,7 +61,7 @@ const span = w => `${w.start}–${w.end ?? 'now'}`;
 const host = u => { try { return new URL(u).host.replace(/^www\./, ''); } catch { return u; } };
 
 // ---------------------------------------------------------------- selections
-const lane = R.lanes[LANE] || R.lanes.designEngineer;
+const lane = R.lanes[LANE];            // validated above — no silent fallback
 const roles = R.work.filter(w => !w.compressed);
 const earlier = R.work.filter(w => w.compressed);
 const bulletsFor = (w, mode) => {
