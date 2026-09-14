@@ -336,7 +336,13 @@ scripts/build-resume.mjs   — compiles resume.json: designed one-page PDF (fish
                             ATS twin, 3-page CV, markdown, LinkedIn blocks; `--apply` also writes
                             the served PDF (no phone — the application PDF stays in .local/out/),
                             chunks 4/21/23/26/27/50, john-hanacek.json and about.html resume blocks
-                            between `<!-- resume:* -->` markers. `--lane=` picks emphasis. Run
+                            between `<!-- resume:* -->` markers — and the case-study figures, from
+                            `figures` on `work[id=nanome]` / `clients[OpenProse]`, into the same
+                            markers on nanome2.html (`nanome-testing`, `nanome-pivot`) and
+                            openprose.html (`op-approaches`, `op-breadth-duration`, `op-duration`,
+                            `op-distillation`, `op-colophon`), so a number lives once; a meta
+                            description cannot hold a comment, so those stay hand-written and the
+                            compiler only WARNs when they disagree. `--lane=` picks emphasis. Run
                             build-chunk-vectors.mjs after. Serves itself via serve-verified.mjs.
 scripts/serve-verified.mjs — shared by both render rigs: probe a genuinely free port, then PROVE
                             the server is ours (sentinel round-trip) before rendering anything.
