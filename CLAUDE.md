@@ -272,7 +272,7 @@ removed along with their CSS and the vestigial `?footer=` config.
 
 - Three view modes: canvas (pan/zoom), grid, focus. `?mode=`, `?items=`,
   `?budget=`, `?zoom=`, `?cols=`, `?sort=` all URL-editable
-- Manifest: `scripts/playground-items.js` — 33 items, the whole site plus the
+- Manifest: `scripts/playground-items.js` — 31 items, the whole site plus the
   demo collection carried over from the old board
 - **Budgeted LRU lifecycle, not naive lazy-load.** `maxLive` iframes (8 by
   default), an IntersectionObserver at 400px, nearest-first wake, eviction with
@@ -293,12 +293,15 @@ removed along with their CSS and the vestigial `?footer=` config.
   (`Assets/posters/<hostname>.webp`, derived never declared; `onerror` falls
   back to the hostname line) and opens in a new tab. Shares the
   `neverWake()` predicate with `nested`
-- **`featured: true`** (2026-09-14) — seven items lead the default sequence order
-  (READI, fish demo, 3D sync, hypercube, the 2015 hypercube port, OpenProse,
-  HoloTRIAGE): a stable
-  partition in `featuredFirst()`, no chip, no param; `date` sort and `?items=`
-  are exempt. HoloTRIAGE is `Assets/DemosPlayground/holotriage.html`, a
-  wrapper for the reel design.html already plays
+- **`featured: true`** (2026-09-14) — six items lead the default sequence order,
+  the most complex first, then the webs (John's ruling): 3D sync, fish demo,
+  hypercube, the 2015 hypercube port, READI, OpenProse. A stable partition in
+  `featuredFirst()`, no chip, no param; `date` sort and `?items=` are exempt
+- **Types** are `site · case study · tools · experiments · demos · external`.
+  `demos` is software you can use wherever it is hosted (READI, MetaMedium);
+  `external` is writing and portfolios (the Substacks, the photography). The
+  header carries no ratings toggle and no second item count (the chips say
+  "N items"); the sort reads `seq` / `date made`
 - **Focus mode is `z-index: 1100`, above the site nav's 1000.** It is an
   `aria-modal` dialog; at the tool's native z-50 the `← back` button landed
   inside the fixed nav's 40px band and `elementFromPoint` returned a nav icon,
@@ -366,7 +369,7 @@ scripts/serve-verified.mjs — shared by both render rigs: probe a genuinely fre
                             the server is ours (sentinel round-trip) before rendering anything.
                             Exists because a stale server once rendered its 404 into the live
                             resume PDF (2026-09-10).
-scripts/playground-items.js — manifest for playground.html (33 items). `featured: true` leads
+scripts/playground-items.js — manifest for playground.html (31 items). `featured: true` leads
                             the default sequence sort (stable partition; `date` and `?items=` exempt). `nested: true` marks a
                             page that embeds the canvas itself (recursion guard); `weight: 'heavy'`
                             records cost for the staged perf work.

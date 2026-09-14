@@ -330,7 +330,7 @@ header, main#stage { transition: top 0.25s ease; }
 <nav id="nav"><div class="nav-inner"><jh-nav current="play"></jh-nav></div></nav>
 
 <header>
-  <h1>Playground <span>· review canvas</span></h1>
+  <h1>Playground</h1>
   <nav class="modes" aria-label="View mode">
     <button type="button" data-mode-btn="canvas" title="canvas · key 1"><svg class="mico" viewBox="0 0 14 10" fill="currentColor" aria-hidden="true" focusable="false"><rect x="0" y="0" width="2.98" height="2.87"/><rect x="3.67" y="0" width="2.98" height="2.87"/><rect x="7.35" y="0" width="2.98" height="2.87"/><rect x="11.02" y="0" width="2.98" height="2.87"/><rect x="0" y="3.57" width="2.98" height="2.87"/><rect x="3.67" y="3.57" width="2.98" height="2.87"/><rect x="7.35" y="3.57" width="2.98" height="2.87"/><rect x="11.02" y="3.57" width="2.98" height="2.87"/><rect x="0" y="7.13" width="2.98" height="2.87"/><rect x="3.67" y="7.13" width="2.98" height="2.87"/><rect x="7.35" y="7.13" width="2.98" height="2.87"/><rect x="11.02" y="7.13" width="2.98" height="2.87"/></svg><span class="mlabel">canvas</span></button>
     <button type="button" data-mode-btn="grid" class="active" title="grid · key 2"><svg class="mico" viewBox="0 0 14 10" fill="currentColor" aria-hidden="true" focusable="false"><rect x="0" y="0" width="6.5" height="4.5"/><rect x="7.5" y="0" width="6.5" height="4.5"/><rect x="0" y="5.5" width="6.5" height="4.5"/><rect x="7.5" y="5.5" width="6.5" height="4.5"/></svg><span class="mlabel">grid</span></button>
@@ -367,13 +367,11 @@ header, main#stage { transition: top 0.25s ease; }
   <div class="tb-group visible" id="sort-group">
     <label for="grid-sort" style="color: var(--ink3); font-size: 11px;">sort</label>
     <select id="grid-sort" style="font: inherit; font-size: 11px; color: var(--ink2); background: var(--paper); border: 1px solid var(--rule); border-radius: 5px; padding: 2px 6px;">
-      <option value="sequence" selected>sequence</option>
+      <option value="sequence" selected>seq</option>
       <option value="date">date made</option>
     </select>
   </div>
-  <span class="count" id="count"></span>
   <button id="descs-toggle" type="button" aria-label="Show or hide review comments" title="comments">✎</button>
-  <button id="ratings-toggle" type="button" class="on" aria-label="Show or hide ratings" title="ratings">★</button>
   <button id="fs-toggle" type="button" aria-label="Toggle fullscreen" title="fullscreen">⛶</button>
 </header>
 
@@ -644,12 +642,9 @@ header, main#stage { transition: top 0.25s ease; }
       }
     });
   }
-  var ratingsBtn = document.getElementById('ratings-toggle');
-  ratingsBtn.classList.toggle('on', CONFIG.ratings);
-  ratingsBtn.addEventListener('click', function () {
-    var off = document.body.classList.toggle('no-ratings');
-    ratingsBtn.classList.toggle('on', !off);
-  });
+  // The ratings toggle and the second item count left the header 2026-09-14
+  // (John): the chips already say "N items", and a public playground has no
+  // reviewers to rate. `CONFIG.ratings` still gates the stars for embeds.
   var descsBtn = document.getElementById('descs-toggle');
   descsBtn.classList.toggle('on', CONFIG.descs);
   descsBtn.addEventListener('click', function () {
@@ -747,7 +742,6 @@ header, main#stage { transition: top 0.25s ease; }
       grid.appendChild(card);
       cells.push({ it: it, well: well, iframe: null, live: false, near: false, lastNear: 0 });
     });
-    document.getElementById('count').textContent = items.length;
     if (cellIO) {
       cellIO.disconnect();
       cells.forEach(function (c) { cellIO.observe(c.well); });

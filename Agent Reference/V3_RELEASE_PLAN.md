@@ -477,15 +477,19 @@ under the Bio), chunks 30–32 land there, **anchorcheck ratchet 3 → 0**. Stil
 J2 Vimeo (his file), J5 calendar question (inside Google Calendar), J6 LinkedIn paste,
 J7 inherited plans.
 
-**Lede A — playground curation (agent, `5c8fa91`).** `featured: true` in the manifest;
-`featuredFirst()` is a stable partition inside the sequence sort only (`date` and
-`?items=` exempt); no chip, no param. Featured order: READI → fish demo → 3D sync →
-hypercube → hypercube-2015 (added at integration) → OpenProse → HoloTRIAGE. External
-cards derive a poster from the hostname (`Assets/posters/<host>.webp`, `onerror` falls
-back to the hostname line) — plan decision 2 resolved as "poster card". HoloTRIAGE is a
-new wrapper page `Assets/DemosPlayground/holotriage.html` around the reel design.html
-already plays. The three Substack posters that were missing were captured (§G addendum
-in CHUNK_AUDIT); the four dated ones were restored, not re-shot.
+**Lede A — playground curation (agent, `5c8fa91`; re-cut after John's first look).**
+`featured: true` in the manifest; `featuredFirst()` is a stable partition inside the
+sequence sort only (`date` and `?items=` exempt); no chip, no param. John's ruling on
+the order: the most complex things first, then the webs — 3D sync → fish demo →
+hypercube → hypercube-2015 → READI → OpenProse. The HoloTRIAGE wrapper page and
+dynaboard-v1 are gone (31 items). A new type `external` holds the writing and
+portfolios (Substacks, photography, Earth Star); `demos` stays software you can use
+wherever it is hosted. External cards derive a poster from the hostname
+(`Assets/posters/<host>.webp`, `onerror` falls back to the hostname line) — plan
+decision 2 resolved as "poster card"; the three missing Substack posters were captured
+(§G addendum in CHUNK_AUDIT), the four dated ones restored. Header: "review canvas"
+dropped from the title, the second item count and the ratings toggle removed, the sort
+reads `seq`.
 
 **Lede B — figures compile (agent, `275d999` + integration).** `resume.json` gains
 `figures` on `work[nanome]` (24 sessions, 3–4 users, Pfizer/Novartis/academic labs, the
@@ -516,6 +520,17 @@ tier strip ≤600px: fact tiers are dots only; the loadable tier and the AI togg
 their words (affordances). `.content-card[id]` gets the section's `scroll-margin-top`
 so an arrival target's heading clears the fixed nav. Chunk schema: `track` on 16/17
 (coaching) and 4/18/40/41/42 (design), documented in `_meta.fields`; not read at runtime.
+
+**Also from John's first look (2026-09-14):** design.html's three client cards now share
+one media aspect (New Client's placeholder was 3:1, so its caption sat a row above the
+others), Transfyr's line says what `resume.json` says (MVP handoff, synthetic demo data,
+QA — no "workshopping"), and the R&D project title spans the split instead of wrapping to
+two display lines in its narrow column. The fish demo crashed on every frame after a
+particle died: `1 − 50×0.02` is `−2e-15` in floating point, `arc()` throws on a negative
+radius, the throw aborted the `filter` mid-pass so the dead particle was never removed,
+and the pretext text stopped reflowing (the CRASH line at the foot). All three radii in
+the bundle are clamped at 0; the same fix is in John's local `fish-src.js` (gitignored)
+so the next rebuild keeps it; `fish.js?v=15`.
 
 **Side quest — the 2015 hypercube (agent, `a75c0eb`).** `hypercube translation/port.html`
 + `port.js` port the .pde line-by-line (each block cites its .pde range). Three findings

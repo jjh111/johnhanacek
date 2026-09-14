@@ -46,25 +46,26 @@
  *                  step. Adding a type means tagging an item with it; a new
  *                  value grows a new chip by itself.
  *
- * Types (Aug 2026 revision, John): site · case study · tools · experiments ·
- * demos. The old `ideas` style-reference set is parked at the bottom, out of
- * view — uncomment an entry to bring it back.
+ * Types (Aug 2026 revision, John; `external` added 2026-09-14): site · case
+ * study · tools · experiments · demos · external. `demos` is software you can
+ * use, wherever it is hosted (READI and MetaMedium live off-site and are still
+ * demos); `external` is writing and portfolios — the Substacks, the photography.
+ * The old `ideas` style-reference set is parked at the bottom, out of view —
+ * uncomment an entry to bring it back.
  *
  * `created` drives the date sort. Dates are first-appearance, approximate for
  * the older demos carried over from the hand-built board.
  */
 window.CANVAS_ITEMS = [
   // ---- featured — the first minute ----------------------------------------
-  // Order here IS the order on the canvas. See `featured` above.
-  { file: 'https://teamreadi.xyz', name: 'teamreadi', cat: 'demos',
-    desc: 'READI — live product site',
-    featured: true, external: true, created: '2026-08-26T00:00:00-07:00' },
-  { file: 'fish-demo/index.html', name: 'fish-demo', cat: 'demos',
-    desc: 'The fish minigame on its own — standalone extraction of the shared engine',
-    featured: true, weight: 'heavy', created: '2026-04-15T00:00:00-07:00' },
+  // Order here IS the order on the canvas (John, 2026-09-14: the most complex
+  // things first, then the webs). See `featured` above.
   { file: 'Assets/3d-sync-demo/index.html', name: '3d-sync-demo', cat: 'demos',
     desc: 'Three synchronized 3D viewports with linked camera controls',
     featured: true, weight: 'heavy', created: '2025-11-10T00:00:00-08:00' },
+  { file: 'fish-demo/index.html', name: 'fish-demo', cat: 'demos',
+    desc: 'The fish minigame on its own — standalone extraction of the shared engine',
+    featured: true, weight: 'heavy', created: '2026-04-15T00:00:00-07:00' },
   { file: 'Assets/DemosPlayground/CreativeCODE2016/hypercube/hypercube.html', name: 'hypercube', cat: 'demos',
     desc: '4D fidget spinner — dual-pad joysticks spin the tesseract through 3D and 4D planes, with momentum',
     featured: true, created: '2016-05-01T00:00:00-07:00' },
@@ -73,16 +74,13 @@ window.CANVAS_ITEMS = [
   { file: 'Assets/DemosPlayground/CreativeCODE2016/hypercube%20translation/port.html', name: 'hypercube-2015', cat: 'demos',
     desc: 'The 2015 Processing hypercube, ported to p5 — the pointer’s quadrant picks which of the six 4D rotation planes spin',
     featured: true, created: '2015-11-01T00:00:00-08:00' },
+  { file: 'https://teamreadi.xyz', name: 'teamreadi', cat: 'demos',
+    desc: 'READI — live product site',
+    featured: true, external: true, created: '2026-08-26T00:00:00-07:00' },
   // Poster-only. See `nested` above.
   { file: 'openprose.html', name: 'openprose', cat: 'case study',
     desc: 'OpenProse — founding design case study. Opens in its own tab: this page embeds six review canvases of its own.',
     featured: true, nested: true, weight: 'heavy', created: '2026-08-14T00:00:00-07:00' },
-  // The clip itself is Assets/Avatarmedic-Holotriageclip-1.mp4 (design.html
-  // plays the same file); the wrapper exists so the canvas has a page to frame.
-  // `created` is the build year, like the 2016 demos below.
-  { file: 'Assets/DemosPlayground/holotriage.html', name: 'holotriage', cat: 'demos',
-    desc: 'HoloTRIAGE — AR triage training on HoloLens 2, AvatarMEDIC 2020. Microsoft Reactor Hackathon winner.',
-    featured: true, created: '2020-06-01T00:00:00-07:00' },
 
   // ---- the site itself ----------------------------------------------------
   { file: 'index.html', name: 'index', cat: 'site',
@@ -150,26 +148,24 @@ window.CANVAS_ITEMS = [
   { file: 'Assets/DemosPlayground/aethereal-flight/index.html', name: 'cyberbird', cat: 'demos',
     desc: 'Radical aerial flight simulator in 3D space',
     weight: 'heavy', created: '2025-11-01T00:00:00-07:00' },
-  { file: 'Assets/DemosPlayground/CreativeCODE2016/DynaBoard1/Dynaboard1.html', name: 'dynaboard-v1', cat: 'demos',
-    desc: 'Dynamic 3D board experiment — early spatial interface concept',
-    created: '2016-04-01T00:00:00-07:00' },
-  // Work that lives off-site (external: poster + hostname card, own tab)
-  { file: 'https://earthstar.space', name: 'earth-star', cat: 'demos',
+
+  // ---- external — writing and portfolios that live off-site (poster + hostname card, own tab)
+  { file: 'https://earthstar.space', name: 'earth-star', cat: 'external',
     desc: 'Earth Star — regenerative-future worldbuilding & research project',
     external: true, created: '2026-08-26T00:00:00-07:00' },
-  { file: 'https://fractalfuture.substack.com', name: 'fractal-futures', cat: 'demos',
+  { file: 'https://fractalfuture.substack.com', name: 'fractal-futures', cat: 'external',
     desc: 'Fractal Futures — original science fiction (also as ebook & Kindle)',
     external: true, created: '2026-08-26T00:00:00-07:00' },
-  { file: 'https://johnhanacek.smugmug.com', name: 'photography', cat: 'demos',
+  { file: 'https://johnhanacek.smugmug.com', name: 'photography', cat: 'external',
     desc: 'Photography portfolio',
     external: true, created: '2026-08-26T00:00:00-07:00' },
-  { file: 'https://johnhanacek.substack.com', name: 'substack', cat: 'demos',
+  { file: 'https://johnhanacek.substack.com', name: 'substack', cat: 'external',
     desc: 'Main Substack — essays and updates',
     external: true, created: '2026-08-26T00:00:00-07:00' },
-  { file: 'https://spatialandimmersivedesign.substack.com', name: 'spatial-design', cat: 'demos',
+  { file: 'https://spatialandimmersivedesign.substack.com', name: 'spatial-design', cat: 'external',
     desc: 'Spatial & Immersive Design — XR design writing',
     external: true, created: '2026-08-26T00:00:00-07:00' },
-  { file: 'https://jhanazone.substack.com', name: 'jhanazone', cat: 'demos',
+  { file: 'https://jhanazone.substack.com', name: 'jhanazone', cat: 'external',
     desc: 'Jhana Zone — personal Substack',
     external: true, created: '2026-08-26T00:00:00-07:00' },
 
