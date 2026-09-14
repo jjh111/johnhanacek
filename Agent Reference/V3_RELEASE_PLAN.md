@@ -386,6 +386,87 @@ page. Worth deciding the schema field now even though the compiler is later. Goa
   'linkedin' / 'awards' / 'go to design' each resolve in one keystroke path; an AI
   agent given the site can answer "how does John think" from the published data alone.
 
+## Dev plan — 2026-09-14 (supersedes "Priority order" below; that section stays as the record)
+
+**State at v2.14.** check-live ALL PASS; twelve pages × 3 widths × 2 themes: zero overflow,
+zero same-origin errors; search battery behaves as designed; gate baseline (2026-09-10) green.
+The only defect on the site is the Vimeo 401 on art.html and playground.html. P0 "Employable"
+is closed except for John's items. The resume, chunks, JSON-LD and About compile from
+`Assets/resume.json`; the media pack compiles from `Assets/media-kit.json`.
+
+**Working rules that stay:** agents work in worktrees on disjoint files; one version bump per
+landed batch; `check-live` after every push; every suite run wrapped in the Bash tool's own
+timeout (macOS has no `timeout`), never `navfittest` / `contrasttest` / `searchaudit` inside a
+review agent's budget without a hard cap — the 2026-09-10 fix agent burned 67 minutes in a
+nav sweep and produced nothing.
+
+### John's items (with the context each one needs)
+
+| # | Item | Context |
+|---|---|---|
+| J1 | **GoatCounter site code** | The analytics switch is `SITE.goatcounter` in `scripts/jh-chrome.js` (wired v2.08, empty). Sign up at goatcounter.com (free for personal sites), pick a site code, paste it there. Cookieless, no banner; the footer states it. Until then the site counts nothing. |
+| J2 | **Vimeo re-host** | `player.vimeo.com/video/194577325` answers 401 in every headless pass and is the only console noise on the site. Re-encode your own copy with the standard in `.gitignore` (1280w, H.264 CRF 27, `+faststart`) and swap the embed for a `<video>` with a poster, like the other reels. Closes sitetest's one known red. |
+| J3 | **Coaching-track outcomes** | ANSWERED 2026-09-14: clients leave with a chief-of-staff agent set up around their own work (what everyone asks for first), or with the skills to build software; every engagement is tailored to their interests and goals. Now in `resume.json` (JH Coaching OS highlight) and the compiled resume. **Agent lede C puts it on the coaching tab.** |
+| J4 | **Personal chunks 30–32** | Three search chunks exist with no page to land on: 30 cooking (albondigas, tahdig, pasta, the fish brownie), 31 gardening and outdoors (native plants, hiking, camping), 32 location and lifestyle (San Diego, UCSD). The anchor gate's last three. Two options: (A) an "Off the clock" paragraph under the Bio on About — two or three sentences, the chunks point at `about.html#off-the-clock`, the ratchet reaches 0; (B) keep them search-only, the ratchet stays at 3 by design. Recommendation: A — it is the one humanizing line the site lacks, and it costs a paragraph. |
+| J5 | **Calendar booking question** | The "Book a free intro call" button sends visitors to a Google Calendar appointment page. The short link drops any parameter at its redirect, so a booking cannot tell you which tab the visitor came from. Fix inside Google Calendar (five minutes): Settings → Appointment schedules → Edit the schedule → Booking form → Add an item → a required multiple-choice "Which are you here about?" with "AI coaching for founders" and "Founding design for teams" → Save. The answer lands in the event. Keep the per-track mail subjects as they are. |
+| J6 | **LinkedIn paste blocks** | Regenerated 2026-09-14 from the compiled source (`.local/out/linkedin.md`): headline, About, one block per role. Paste them so LinkedIn, resume and site say the same thing. |
+| J7 | Inherited plans | `ART_HERO_ENHANCEMENT_PLAN.md` and `MULTIPLAYER_CURSORS_PLAN.md`: keep or drop. Recommendation: drop both until v4 asks whether the site becomes the canvas. |
+
+### Batch 1 — "Proof" (three ledes, worktrees, one bump)
+
+**Lede A — Playground v1 curation.** `scripts/playground-items.js` + `playground.html` only.
+A featured set leads: READI, the fish demo, the 3D sync demo, the hypercube, the OpenProse
+review canvas, HoloTRIAGE; the rest sidelined behind the existing type filters. No new
+mechanism. Resolves plan decisions 2 (teamready.xyz: poster card unless John sets frame
+headers) and 4 (featured-first, all reachable). Gate: sitetest for playground, a 390/1440
+headless pass.
+
+**Lede B — Case studies compile their figures; chunks learn `track`.** `nanome2.html` and
+`openprose.html` read their numbers (137 approaches, 471 commits, ~24 sessions, the pivot)
+from `resume.json` between `<!-- resume:* -->` markers via `build-resume.mjs`, the way About
+does, so a number lives once. The chunk schema gains `track: "coaching" | "design" | null`
+(the v2.5 interaction note) so the future compiler can fork content, not anchors. Gate:
+anchorcheck, the compile is idempotent (run twice, no diff).
+
+**Lede C — Search polish leftovers + the coaching tab's outcomes.** `scripts/search-core.js`,
+`scripts/search-overlay.css`, `services.html` (coaching tab only), `Assets/search-chunks.json`
+(chunk 16/17 text only, then vectors). (1) The coaching tab gets an outcomes block parallel to
+the design tab's Client work, from J3's answer: "You leave with a chief-of-staff agent set up
+around your own work — or the skills to build software. Tailored to your interests and
+goals." (2) Chunks 16/17 carry the same sentence so "what do I get from coaching" answers it.
+(3) Trophy model edge-on in the awards dossier (`camera-orbit`). (4) Long elaborations push
+the postcard below the fold: a "results ↓" affordance or a cap. (5) Phone tier strip: dots-only
+option ≤600px. (6) "blok dok" should lead with a Blok Dok fact row, not fall back to the
+shipped-products chunk: give chunk 27's Blok Dok fact a `url` to `design.html#blokdok`, or a
+tiny chunk of its own with audit. Gates: searchaudit (capped), servicetest, contrasttest on
+services only.
+
+### Batch 2 — v3.0 "The Data-Driven Site" (the About mechanism, everywhere)
+
+1. **The site record.** `Assets/resume.json` grows into `Assets/site.json` (or stays and gains
+   sections): projects, clients (with logo file + voice), endorsements (already), pieces,
+   playground manifest, case-study figures. One JSON, one compiler.
+2. **Compile the proof surfaces.** design.html's client/work cards, services.html's clients
+   strip and testimonial wall, the media-kit boards, the JSON-LD — all between markers.
+3. **Chunks generated, never hand-edited.** `CHUNK_AUDIT.md` becomes the evidence table;
+   `build-chunk-vectors` runs inside the compile.
+4. **Exit:** anchorcheck at 0; every fact on the site traceable to one JSON path; an agent
+   given only the published data can answer "how does John think" and "what has he shipped".
+5. **First visitor experiment — "Ask a question".** An opt-in toggle in the bar sends the
+   query text, nothing else, to a store John can read. **Decision needed first:** Supabase
+   (plugin configured; needs authorizing) with insert-only rules, or a Cloudflare Worker + KV.
+   "How did you find me" chips ride along. Guestbook stays OPEN (population question).
+
+### Side quest, any time — the 2015 hypercube port
+
+A real port of `hypercube_processing.pde` to a p5 sketch beside the 2015 half-translation
+(kept as the artefact). One session; high delight; the exact design-and-dev range the site
+argues for. Lands on the playground's featured set.
+
+### Deferred, unchanged
+
+True Ink (v2.4) and the Phase 7 fish behaviours after v3.0; the guestbook; v4 "The Canvas".
+
 ## Priority order (2026-09-09 — "get me employed and clients")
 
 John's ruling: the site's job right now is to be a portfolio that shows how advanced a

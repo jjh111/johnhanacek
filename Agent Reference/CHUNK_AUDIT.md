@@ -622,6 +622,6 @@ which the Review Canvas shows and which the distillation worked from.
   rebuilt; `openprose/HANDOFF.md` untouched — its "37 live brand experiments"
   describes what the canvas itself carries, which is still the core set.
 
-## §J Resume compile — 2026-09-09
+## §J Resume compile — 2026-09-14
 
 Chunks 4, 21, 23, 26, 27, 50 are COMPILED from `Assets/resume.json` by `scripts/build-resume.mjs --apply` (source: the 2026-09-09 interview; evidence links live in the JSON). Edit the JSON, not the chunk text. Rebuild vectors after each compile (`node scripts/build-chunk-vectors.mjs`).

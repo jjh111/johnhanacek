@@ -8,7 +8,7 @@ hi@johnhanacek.com · [johnhanacek.com](https://www.johnhanacek.com) · [LinkedI
 
 ## Summary
 
-Product design engineer, 14 years, across AI, web, 3D and XR. Shipped Nanome 2's XR molecular design tool to pharma customers, background in AR situational-awareness HUDs for first responders, and a portfolio site whose search runs a language model in the browser. Founding design for early-stage teams through JHDesign LLC. Prototypes in code (JavaScript, Three.js, WebGL, WebGPU) and in Unity.
+Product design engineer, 14 years, across AI, web, 3D and XR. Shipped Nanome 2's XR molecular design tool to pharma customers and an AR situational-awareness HUD for first responders, and built a portfolio site whose search runs a language model in the browser. Founding design for early-stage teams through JHDesign LLC. Prototypes in code (JavaScript, Three.js, WebGL, WebGPU) and in Unity.
 
 ---
 
@@ -22,7 +22,7 @@ Founding design, product design and agentic coaching for startups and R&D teams.
 - OpenProse (2026): two-month founding design engagement. Brand, five logo directions, 137 homepage approaches built as live pages across 471 commits, distilled to one canonical style, plus the review canvas tooling used to run the exploration.
 - Muse.bio (2024, 2026): facilitated a user-journey and personas workshop to align the team; then designed a FigJam workshop the team ran at its own all-hands, coached the organizers, and built a Claude Code + Figma MCP system that ingests the workshop output into structured results. Handed the whole system off for continued use.
 - Transfyr (2025): MVP platform design handoff. Prototypes generated as HTML with Claude and brought into Figma for the handoff the team wanted; synthetic data for their parallel demo build; QA alongside their independent developer.
-- JH Coaching OS: designed and shipped an AI coaching product. A personalized agent, curated materials, context documents the agent reads, and a dashboard. Coaching founders and executives on Claude Code and agentic workflows.
+- JH Coaching OS: designed and shipped an AI coaching product. A personalized agent, curated materials, context documents the agent reads, and a dashboard. Clients leave with a working chief-of-staff agent set up around their own work, or with the skills to build software; every engagement is tailored to the client's interests and goals.
 - Context engineering for clients: private context and design systems that keep their AI tools coherent over time, including cleanup passes on existing setups.
 - Subcontractor on a 5G program (BlueHalo division, now AeroVironment) with Dr. Hurriyet Ok; ongoing DoD proposals.
 - ShapesXR: wrote a spatial design blog series; user since launch.
