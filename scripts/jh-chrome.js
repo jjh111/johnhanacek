@@ -23,7 +23,7 @@
     // (the part before .goatcounter.com) and every page reports a pageview +
     // referrer with no cookie, no fingerprint, no consent banner needed. The
     // footer states it whenever it is on.
-    goatcounter: ''
+    goatcounter: 'jjh111'
   };
   window.JH_SITE = SITE;
 
