@@ -37,6 +37,11 @@ brownie, hiking/camping — see §A.
 
 ## A. Chunk-only claims — the site never says these
 
+**2026-09-14: no longer chunk-only.** about.html gained an "Off the clock" block
+(`#off-the-clock`, under the Bio) that states the three chunks' claims in one
+paragraph; chunks 30–32 now land there and the anchor ratchet is at 0. The
+paragraph and the chunks must say the same things — edit both.
+
 ### Chunk 30 — Personal: Cooking & Food
 The whole chunk is chunk-only (about.html has no cooking section). Sourced from
 conversation, not from any page.
@@ -126,9 +131,16 @@ conversation, not from any page.
 
 ### Chunk 16 — JH Coaching OS
 - [ ] "Designed and **shipped**" — in active client use?
+- [x] **2026-09-14, from John:** the outcome sentence — clients leave with a chief-of-staff
+  agent set up around their own work ("what everyone wants first"), or with the skills to
+  build software; every engagement is tailored to their interests and goals. Added to the
+  chunk, to `resume.json` (JH Coaching OS highlight, evidence `interview:2026-09-14`), and
+  to the coaching tab on services.html (`#coaching-outcomes`).
 
 ### Chunk 17 — Coaching Packages
 - [ ] Guided Coaching (4 sessions / 2 months) · Embedded Retainer · Build Sprint (1–2 wk) · Audit — **is this the current offer?** (Search quotes it as today's menu.)
+- [x] 2026-09-14: carries the same outcome sentence as chunk 16 so "what do I get from
+  coaching" answers from either.
 
 ### Chunks 19 + 20 — Education
 - [ ] Georgetown MA in CCT, **2014–2016**; thesis on AI-powered conversational interfaces; **second thesis** on technology standardization

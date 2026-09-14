@@ -299,7 +299,7 @@
                 merged.push({
                     id: c.id, title: c.title, content: c.content, page: c.page,
                     image: c.image, url: c.url, type: c.type,
-                    video: c.video, model3d: c.model3d,
+                    video: c.video, model3d: c.model3d, model3dOrbit: c.model3dOrbit,
                     micro: c.micro, tldr: c.tldr, facts: c.facts, pieces: c.pieces, score,
                 });
             }
@@ -795,7 +795,7 @@
 
             miniSearchInstance = new MiniSearch({
                 fields: ['title', 'content', 'tags'],
-                storeFields: ['title', 'content', 'page', 'image', 'url', 'type', 'video', 'model3d', 'micro', 'tldr', 'facts', 'pieces'],
+                storeFields: ['title', 'content', 'page', 'image', 'url', 'type', 'video', 'model3d', 'model3dOrbit', 'micro', 'tldr', 'facts', 'pieces'],
                 searchOptions: { boost: { title: 3, tags: 2 }, fuzzy: 0.2, prefix: true }
             });
 
@@ -847,7 +847,7 @@
             const strip = el('tierStrip');
             if (!strip) return;
             const seg = (tier, dot, label, state, title, color) =>
-                `<button type="button" class="tier tier-${state}" data-tier="${tier}" title="${title}"${color ? ` style="--tier-color:${color}"` : ''}><span class="tier-dot">${dot}</span>${label}</button>`;
+                `<button type="button" class="tier tier-${state}" data-tier="${tier}" title="${title}"${color ? ` style="--tier-color:${color}"` : ''}><span class="tier-dot">${dot}</span><span class="tier-label">${label}</span></button>`;
             let html = '';
             html += seg('keyword', '\u25cf', 'keyword', 'fact-on', 'BM25 keyword match \u2014 always on');
             const semTitle = 'meaning match \u2014 ~24MB on-device, loads with your first search';
@@ -1803,7 +1803,12 @@
                 const spin = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? '' : ' auto-rotate';
                 // data-mv keeps the RAW chunk path on the node — morph's
                 // seen-set harvest reads data attrs, not resolved srcs
-                return `<model-viewer class="result-model${big ? ' pc-obstacle' : ''}" src="${resolveHref(r.model3d)}" data-mv="${r.model3d}"${spin} camera-controls loading="lazy"></model-viewer>`;
+                // `model3dOrbit` is the chunk's own opening pose ("90deg 85deg auto"
+                // = the plaque face-on). Without it model-viewer opens at 0°, which
+                // for a wall plaque is its BACK — a dark board until the auto-rotate
+                // brought the face around, and forever under reduced motion.
+                const orbit = r.model3dOrbit ? ` camera-orbit="${r.model3dOrbit}"` : '';
+                return `<model-viewer class="result-model${big ? ' pc-obstacle' : ''}" src="${resolveHref(r.model3d)}" data-mv="${r.model3d}"${spin}${orbit} camera-controls loading="lazy"></model-viewer>`;
             }
             if (r.image) return `<img class="result-thumb${big ? ' pc-obstacle' : ''}" src="${r.image}" alt="" loading="lazy" />`;
             return '';
@@ -1848,7 +1853,10 @@
                 const own = f.media && media && !mediaPlaced;
                 if (own) mediaPlaced = true;
                 return `<div class="pc-fact-row${own ? ' pc-fact-row--media' : ''}"${f.d ? ` data-tip="${f.d.replace(/"/g, '&quot;')}"` : ''}>`
-                    + `<span class="pc-fact-t">${f.t}</span>`
+                    // A fact with a `url` is a deep link of its own (Blok Dok → the
+                    // card on design.html), so "blok dok" lands on the thing, not
+                    // on the shipped-products chunk it happens to live in.
+                    + `<span class="pc-fact-t">${f.url ? `<a class="pc-fact-link" href="${resolveHref(f.url.replace(/^\.\//, ''))}">${f.t} ↗</a>` : f.t}</span>`
                     + (f.d ? `<span class="pc-fact-d">${f.d}</span>` : '')
                     + (f.y ? `<span class="pc-fact-y">${f.y}</span>` : '')
                     + (own ? `<span class="pc-fact-media">${media}</span>` : '')
