@@ -1153,7 +1153,10 @@ model-viewer.pc-obstacle--float { width: 170px; height: 170px; }
 
 /* pretext classes (duplicated from shared.css so overlay pages that skip
    shared.css — openprose — still render the wrap correctly) */
-.pretext-source { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* Full-size, transparent ink — not a one-pixel clip, which Safari Reader skips
+   (2026-09-14; the reasoning is in shared.css next to the same rule). This copy
+   exists because the overlay is loaded on pages that don't load shared.css. */
+.pretext-source { position: absolute; inset: 0; overflow: hidden; color: transparent; -webkit-text-fill-color: transparent; text-shadow: none; pointer-events: none; user-select: none; -webkit-user-select: none; }
 .pretext-layer { position: absolute; inset: 0; pointer-events: none; }
 .pretext-line { position: absolute; top: 0; left: 0; white-space: nowrap; will-change: transform; }
 

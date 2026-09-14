@@ -90,12 +90,12 @@
      page's headings, main and typography. See styles/jh-chrome.css header.)
      Loaded BEFORE the page's own tokens so _tokens.css wins on every name they
      share; the chrome reads its own values through --jh- prefixed tokens. -->
-<link rel="stylesheet" href="./styles/jh-chrome.css?v=2.15">
-<link rel="stylesheet" href="./scripts/search-overlay.css?v=2.15">
+<link rel="stylesheet" href="./styles/jh-chrome.css?v=2.16">
+<link rel="stylesheet" href="./scripts/search-overlay.css?v=2.16">
 <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-<link rel="stylesheet" href="openprose/_tokens.css?v=2.15">
-<link rel="stylesheet" href="openprose/_pairings.css?v=2.15">
+<link rel="stylesheet" href="openprose/_tokens.css?v=2.16">
+<link rel="stylesheet" href="openprose/_pairings.css?v=2.16">
 <style>
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1634,15 +1634,20 @@ html[data-mode="dark"] .h2-sig { filter: invert(1); }
 
 /* pretext wrap (scripts/pretext-wrap.js) — §II intro ledes. Line-layer support
    classes mirrored from shared.css, which this page deliberately doesn't load.
-   Real prose stays in .pretext-source (clipped to a pixel, still in the a11y
-   tree and find-in-page); the aria-hidden lines above it are the rendering.
-   Without JS the paragraph renders as it always did. */
+   Real prose stays in .pretext-source at full size, painted transparent (a
+   one-pixel clip made Safari Reader skip these paragraphs, 2026-09-14 — see
+   shared.css for the reasoning); the aria-hidden lines above it are the
+   rendering. Without JS the paragraph renders as it always did. */
 .pretext-source {
   position: absolute;
-  width: 1px; height: 1px;
+  inset: 0;
   overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  text-shadow: none;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 .pretext-layer { position: absolute; inset: 0; pointer-events: none; }
 .pretext-line {
@@ -3957,10 +3962,10 @@ system consumes it.
   } catch (e) { /* un-wrapped is the original page */ }
 </script>
 
-<script src="./scripts/shared.js?v=2.15"></script>
-<script src="./scripts/search-overlay.js?v=2.15" defer></script>
-<script src="./scripts/jh-shapes.js?v=2.15"></script>
-<script src="./scripts/jh-chrome.js?v=2.15" defer></script>
+<script src="./scripts/shared.js?v=2.16"></script>
+<script src="./scripts/search-overlay.js?v=2.16" defer></script>
+<script src="./scripts/jh-shapes.js?v=2.16"></script>
+<script src="./scripts/jh-chrome.js?v=2.16" defer></script>
 
 </body>
 </html>

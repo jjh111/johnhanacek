@@ -21,7 +21,8 @@
  *      attribute, which makes the copy invisible to every tool that edits
  *      pages — this reads the element's own text.
  *   3. Accessible by construction. The positioned line layer is aria-hidden
- *      and the untouched prose is retained, visually clipped but present, so
+ *      and the untouched prose is retained at full size in transparent ink
+ *      (not clipped to a pixel — Safari Reader skips a pixel-sized box), so
  *      screen readers get continuous sentences and find-in-page still hits.
  *      The demo's per-line divs read as fragments.
  *   4. It waits for fonts. Metrics move when a webfont lands; the original
@@ -167,8 +168,9 @@ export async function wrapAround(el, opts = {}) {
 
     const prepared = prepareWithSegments(text, font);
 
-    // Keep the real prose. Clipped out of sight, still in the accessibility
-    // tree and still findable — the visual layer is decoration over it.
+    // Keep the real prose. Full-size box, transparent ink (.pretext-source):
+    // in the accessibility tree, findable, and visible to reader modes that
+    // judge by geometry — the visual layer is decoration over it.
     const source = document.createElement('div');
     source.className = 'pretext-source';
     source.textContent = text;

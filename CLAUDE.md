@@ -381,7 +381,12 @@ scripts/pretext-wrap.js   — flows running prose around obstacles on BOTH sides
                             imported, so pages that don't wrap pay nothing. Extracted from
                             direction-lambda-inkwell-concept.html and generalised (any shape, DOM as
                             source of truth, aria-hidden line layer over a retained prose copy,
-                            re-layout on document.fonts.ready + ResizeObserver).
+                            re-layout on document.fonts.ready + ResizeObserver). The retained copy
+                            (`.pretext-source`) is FULL-SIZE in transparent ink, never clipped to a
+                            pixel: Safari Reader judges by geometry and skipped the §II ledes on
+                            openprose.html until 2026-09-14. Three copies of that rule exist
+                            (shared.css, search-overlay.css, openprose.html's inline block) — the
+                            overlay's wins the cascade on openprose, so change all three together.
                             Demo/test: Assets/DemosPlayground/pretext-wrap-test.html
 scripts/pretext/          — vendored copy of the pretext text-measurement + line-breaking engine
                             (see VENDORED.md). Also usable measurement-only: prepare() + layout()
