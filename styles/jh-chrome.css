@@ -631,8 +631,9 @@
 /* ── Search state ring: engine indicator ── */
 .search-icon .state-ring {
     stroke: var(--muted);
-    fill: color-mix(in srgb, var(--muted) 10%, transparent);
-    opacity: 0.35;
+    stroke-width: 2;                 /* v2.18: the resting ring is findable, not a rumour */
+    fill: color-mix(in srgb, var(--muted) 16%, transparent);
+    opacity: 0.55;
     transition: stroke 0.3s, fill 0.3s, opacity 0.3s, filter 0.3s;
 }
 body[data-search-engine="webgpu-available"] .search-icon .state-ring {
@@ -666,8 +667,8 @@ body[data-search-engine="custom"] .search-icon .state-ring {
     filter: drop-shadow(0 0 3px rgba(var(--engine-custom-rgb), 0.5));
 }
 @keyframes search-ring-pulse {
-    0%, 100% { filter: drop-shadow(0 0 1px rgba(var(--cyan-dim-rgb), 0.15)); opacity: 0.5; }
-    50% { filter: drop-shadow(0 0 6px rgba(var(--cyan-dim-rgb), 0.5)); opacity: 0.85; }
+    0%, 100% { filter: drop-shadow(0 0 1px rgba(var(--cyan-dim-rgb), 0.2)); opacity: 0.6; }
+    50% { filter: drop-shadow(0 0 8px rgba(var(--cyan-dim-rgb), 0.6)); opacity: 1; }
 }
 
 /* ===========================================
@@ -968,8 +969,15 @@ body > footer .version {
     --nav-glyph: clamp(16px, calc(var(--nav-item) * 0.46), 26px);
     /* JetBrains Mono advances 0.6em, and SERVICES is the longest word at
        8 characters — so a label fits its item while font-size stays under
-       item/5.3. Capped before it starts reading as body copy. */
-    --nav-label: clamp(0.31rem, calc(var(--nav-item) / 5.3), 0.6rem);
+       item/5.3. Capped before it starts reading as body copy.
+       The FLOOR is 0.56rem = 9px (v2.18). The old 0.31rem floor let a 390px
+       phone render every label at 5.8px — seven glyphs with dust under them,
+       which is worse than no label. Items are width:auto, so SERVICES simply
+       takes the room it needs (measured 2026-09-14: the strip still ends
+       before the hamburger from 360px up). Below 360 the seven words cannot
+       fit at a legible size at all, so the strip goes glyph-only there
+       (the rule after this block) rather than shipping 7px labels. */
+    --nav-label: clamp(0.56rem, calc(var(--nav-item) / 5.3), 0.6rem);
     gap: 0;
 }
 
@@ -1007,6 +1015,14 @@ body > footer .version {
 }
 #nav.nav-menu .nav-left .shape-link { opacity: 0.75; }
 #nav.nav-menu .nav-left .shape-link.active { opacity: 1; }
+/* The 320px phone: seven legible words plus the chrome need ~345px, so the
+   page would scroll sideways. Glyphs alone, 44px targets, the words in the
+   hamburger's TOC and on the hero pill. */
+@media (max-width: 359px) {
+    #nav.nav-menu .nav-left .shape-link .shape-label,
+    #nav.nav-menu .nav-left .shape-link.secondary .shape-label,
+    #nav.nav-menu .nav-left .shape-link[aria-label="Home"]::after { display: none; }
+}
 /* Home's label is the JH signature image. Beside the signature THEME BUTTON
    two glyphs to its left, that is the same mark twice in 90px — so folded,
    Home wears a word like every other shape. The img is hidden rather than
@@ -1349,12 +1365,12 @@ html[data-search-hint="1"] .shape-link.search-icon .shape {
    a filter on an element INSIDE an svg is clipped to the svg viewport, which
    squared off the halo. */
 @keyframes jh-search-hint-ring {
-    0%, 100% { stroke-opacity: 0.45; stroke-width: 1.5; }
-    50%      { stroke-opacity: 1;    stroke-width: 3; }
+    0%, 100% { stroke-opacity: 0.6; stroke-width: 2; }
+    50%      { stroke-opacity: 1;   stroke-width: 3.5; }
 }
 @keyframes jh-search-hint-glyph {
-    0%, 100% { filter: drop-shadow(0 0 0 rgba(var(--cyan-dim-rgb), 0)); }
-    50%      { filter: drop-shadow(0 0 4px rgba(var(--cyan-dim-rgb), 0.9)) drop-shadow(0 0 10px rgba(var(--cyan-dim-rgb), 0.5)); }
+    0%, 100% { filter: drop-shadow(0 0 1px rgba(var(--cyan-dim-rgb), 0.2)); }
+    50%      { filter: drop-shadow(0 0 6px rgba(var(--cyan-dim-rgb), 0.95)) drop-shadow(0 0 16px rgba(var(--cyan-dim-rgb), 0.6)); }
 }
 @media (prefers-reduced-motion: reduce) {
     html[data-search-hint="1"] .search-icon .state-ring {
@@ -1372,13 +1388,16 @@ html[data-search-hint="1"] .shape-link.search-icon .shape {
    A brief glow along the block's own edge (the search-hint language), then
    gone. Reduced motion gets a steady tint that fades with the class. */
 .jh-arrived {
-    animation: jh-arrive 3.2s ease-out 1;
+    animation: jh-arrive 3.8s ease-out 1;
     border-radius: 6px;
 }
+/* v2.18: brighter peak, and it HOLDS — the old curve was at full strength for
+   a third of a second and read as a flicker if you were still scrolling. */
 @keyframes jh-arrive {
-    0%   { box-shadow: 0 0 0 0 rgba(var(--cyan-dim-rgb), 0), inset 0 0 0 0 rgba(var(--cyan-dim-rgb), 0); }
-    12%  { box-shadow: 0 0 0 6px rgba(var(--cyan-dim-rgb), 0.28), inset 0 0 40px rgba(var(--cyan-dim-rgb), 0.10); }
-    100% { box-shadow: 0 0 0 10px rgba(var(--cyan-dim-rgb), 0), inset 0 0 0 0 rgba(var(--cyan-dim-rgb), 0); }
+    0%   { box-shadow: 0 0 0 0 rgba(var(--cyan-dim-rgb), 0), 0 0 0 rgba(var(--cyan-dim-rgb), 0), inset 0 0 0 0 rgba(var(--cyan-dim-rgb), 0); }
+    10%  { box-shadow: 0 0 0 7px rgba(var(--cyan-dim-rgb), 0.4), 0 0 28px rgba(var(--cyan-dim-rgb), 0.45), inset 0 0 48px rgba(var(--cyan-dim-rgb), 0.16); }
+    45%  { box-shadow: 0 0 0 7px rgba(var(--cyan-dim-rgb), 0.3), 0 0 22px rgba(var(--cyan-dim-rgb), 0.3), inset 0 0 40px rgba(var(--cyan-dim-rgb), 0.12); }
+    100% { box-shadow: 0 0 0 12px rgba(var(--cyan-dim-rgb), 0), 0 0 0 rgba(var(--cyan-dim-rgb), 0), inset 0 0 0 0 rgba(var(--cyan-dim-rgb), 0); }
 }
 @media (prefers-reduced-motion: reduce) {
     .jh-arrived { animation: none; box-shadow: 0 0 0 4px rgba(var(--cyan-dim-rgb), 0.22); }

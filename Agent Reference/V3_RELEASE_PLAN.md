@@ -554,6 +554,28 @@ posters (they capture the subscribe wall — acceptable, or dismiss it in
 Pfizer/Novartis (audited facts, but on a public case study — his call); the hypercube
 port's feel. Then `git merge --no-ff sprint/v2.15-proof`, push, `check-live`.
 
+### v2.18 — "Phone legibility and the glow" (2026-09-14, after v2.15–2.17 shipped)
+
+Measured first: folded-nav labels were **5.8px at 390 and 5.1px at 320** (the
+`--nav-label` floor was 0.31rem — the one off-ladder literal the v2.10 audit left
+alone); the search page badge 9.7px; the postcard opened compact on touch, hiding
+every fact description behind hover tips a thumb cannot reach; the search ring
+rested at 35% / 1.5px and the arrival glow peaked at 28% for a third of a second.
+
+Shipped: `--nav-label` floor 0.56rem (9px), items width:auto so SERVICES takes its
+room (strip ends before the hamburger from 360 up: gap 0 at 360, 10 at 390, 22 at
+430); **glyph-only below 360px** (seven words + chrome need ~345px). Badge one step
+up (3xs) and two on phones (2xs). Touch opens comfortable density; the visitor's
+toggle still wins. Ring at rest 55% / 2px with a 16% fill; engine pulse to 8px;
+hint pulse 2→3.5px with a 6/16px halo; arrival peaks at 40% with an outer 28px
+glow, holds through 45%, 3.8s. Gates: contrast 0 failures (index/about/search/
+services), nav-fit green, phone sweep 66 loads clean.
+
+Known and untouched: **every page reports a 24px horizontal overflow at 320px**
+(scrollWidth 344), on the live site too, with no element box past the edge — a
+pseudo-element or transform somewhere shared; find it with a 320 sweep that walks
+`::before/::after` boxes. Not a v2.18 regression.
+
 ### Deferred, unchanged
 
 True Ink (v2.4) and the Phase 7 fish behaviours after v3.0; the guestbook; v4 "The Canvas".

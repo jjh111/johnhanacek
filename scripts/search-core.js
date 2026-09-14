@@ -1411,7 +1411,11 @@
         let tipEl = null;             // the one shared hover-tooltip node
 
         function pcDensity() {
-            try { return localStorage.getItem('jh-postcard-density') || 'compact'; } catch { return 'compact'; }
+            // A coarse pointer cannot hover the fact tips that compact density
+            // hides the detail behind, so touch opens comfortable (v2.18). The
+            // visitor's own toggle still wins once they have used it.
+            const fallback = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) ? 'comfortable' : 'compact';
+            try { return localStorage.getItem('jh-postcard-density') || fallback; } catch { return fallback; }
         }
         // the density is a GLOBAL semantic-zoom state — frames scale with it
         function applyDensityFlag() {
