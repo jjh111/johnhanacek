@@ -377,6 +377,12 @@ function openproseBlocks() {
   };
 }
 
+// nanome2.html's "more case studies" OpenProse card restated the same two figures — the fourth copy.
+function opCardBlocks() {
+  const F = figuresOf('clients[name=OpenProse]', R.clients.find(c => c.name === 'OpenProse'));
+  return { 'op-card': `${F.approaches} approaches and ${words(F.logoFamilies)} logo families, narrowed to one.` };
+}
+
 // A meta description cannot hold an HTML comment, so those numbers stay hand-written.
 // This is the guard rail: it reads every meta `content` and every JSON-LD "description"
 // on the page and WARNs when a number there disagrees with the figures.
@@ -474,7 +480,7 @@ if (APPLY) {
   execFileSync('cp', [`${OUT}/resume-designed.pdf`, resolve(ROOT, 'Assets/JH_Resume_2026_onepage.pdf')]);
   const changed = applyChunks(patches);
   const aboutDone = applyBlocks('about.html', aboutBlocks());
-  const nanomeDone = applyBlocks('nanome2.html', nanome2Blocks());
+  const nanomeDone = applyBlocks('nanome2.html', { ...nanome2Blocks(), ...opCardBlocks() });
   const openproseDone = applyBlocks('openprose.html', openproseBlocks());
   writeFileSync(jlPath, JSON.stringify(J, null, 2) + '\n');
   const auditPath = resolve(ROOT, 'Agent Reference/CHUNK_AUDIT.md');

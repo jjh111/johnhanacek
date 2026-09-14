@@ -211,7 +211,14 @@ which stamps every `?v=` cache-bust ref across root `*.html` **and** the `Portfo
   OpenAI tools; a tool call renders as a confirm chip — never auto-run.
 - **BYOM**: Custom endpoint input with OpenAI-compatible API probing
 - **Chunks**: `Assets/search-chunks.json` — flat factual text, field-boosted, each with a
-  verified `url` (titles render as links) and a precomputed `vec`
+  verified `url` (titles render as links) and a precomputed `vec`. Schema notes live in
+  `_meta.fields`: `track` ("coaching" | "design", absent = both — the v2.5 fork key, not yet
+  read at runtime), `facts[].url` (a fact row that is its own deep link — Blok Dok →
+  `design.html#blokdok`), `model3dOrbit` (a model-viewer's opening pose; the awards plaque
+  is face-on at "90deg 85deg auto", not its back). **Every chunk has an anchor** —
+  `search-tests/anchorcheck.mjs` ratchet is 0 since 2026-09-14 (the personal chunks land on
+  `about.html#off-the-clock`); an arrival-target `.content-card[id]` carries the section's
+  `scroll-margin-top` so its heading clears the fixed nav
 - **The Postcard (6a)**: results render as ONE microdense surface whose density adapts to
   query specificity — LOD ladder (mention → one-liner → tldr sentence → dossier with prose
   pretext-wrapped BOTH sides of its media), allocated by pretext line-arithmetic. Chunks
@@ -265,7 +272,7 @@ removed along with their CSS and the vestigial `?footer=` config.
 
 - Three view modes: canvas (pan/zoom), grid, focus. `?mode=`, `?items=`,
   `?budget=`, `?zoom=`, `?cols=`, `?sort=` all URL-editable
-- Manifest: `scripts/playground-items.js` — 34 items, the whole site plus the
+- Manifest: `scripts/playground-items.js` — 32 items, the whole site plus the
   demo collection carried over from the old board
 - **Budgeted LRU lifecycle, not naive lazy-load.** `maxLive` iframes (8 by
   default), an IntersectionObserver at 400px, nearest-first wake, eviction with
@@ -282,8 +289,15 @@ removed along with their CSS and the vestigial `?footer=` config.
   tagging an item. Click selects one, shift-click accumulates, `all` clears.
   State lives in `?cat=a,b` so a filtered view is shareable
 - `external: true` marks an off-origin URL — never framed (X-Frame-Options
-  would paint a blank), card shows the hostname, opens in a new tab. Shares the
+  would paint a blank), card shows the poster captured for that host
+  (`Assets/posters/<hostname>.webp`, derived never declared; `onerror` falls
+  back to the hostname line) and opens in a new tab. Shares the
   `neverWake()` predicate with `nested`
+- **`featured: true`** (2026-09-14) — six items lead the default sequence order
+  (READI, fish demo, 3D sync, hypercube, OpenProse, HoloTRIAGE): a stable
+  partition in `featuredFirst()`, no chip, no param; `date` sort and `?items=`
+  are exempt. HoloTRIAGE is `Assets/DemosPlayground/holotriage.html`, a
+  wrapper for the reel design.html already plays
 - **Focus mode is `z-index: 1100`, above the site nav's 1000.** It is an
   `aria-modal` dialog; at the tool's native z-50 the `← back` button landed
   inside the fixed nav's 40px band and `elementFromPoint` returned a nav icon,
@@ -316,6 +330,9 @@ styles/jh-chrome.css      — the chrome alone: design tokens + #nav + shape nav
                             openprose's body sets and which otherwise revives the font-size:0 the
                             compact <900px nav title relies on.
 scripts/jh-chrome.js      — <jh-nav> + <jh-footer> components; JH_SITE identity + THE site version.
+                            Also the ANALYTICS switch: `SITE.goatcounter` ('jjh111' since v2.15) injects the
+                            GoatCounter beacon — cookieless, no fingerprint, no banner; the footer says so;
+                            never on localhost. Empty string turns it off.
                             Also the site-wide AUTOPLAY GATE: under prefers-reduced-motion or on a
                             coarse pointer, every <video autoplay> is stripped of autoplay, keeps its
                             poster, and gets a corner play/pause control (.video-gate in shared.css).
@@ -338,7 +355,7 @@ scripts/build-resume.mjs   — compiles resume.json: designed one-page PDF (fish
                             chunks 4/21/23/26/27/50, john-hanacek.json and about.html resume blocks
                             between `<!-- resume:* -->` markers — and the case-study figures, from
                             `figures` on `work[id=nanome]` / `clients[OpenProse]`, into the same
-                            markers on nanome2.html (`nanome-testing`, `nanome-pivot`) and
+                            markers on nanome2.html (`nanome-testing`, `nanome-pivot`, `op-card`) and
                             openprose.html (`op-approaches`, `op-breadth-duration`, `op-duration`,
                             `op-distillation`, `op-colophon`), so a number lives once; a meta
                             description cannot hold a comment, so those stay hand-written and the
@@ -348,7 +365,8 @@ scripts/serve-verified.mjs — shared by both render rigs: probe a genuinely fre
                             the server is ours (sentinel round-trip) before rendering anything.
                             Exists because a stale server once rendered its 404 into the live
                             resume PDF (2026-09-10).
-scripts/playground-items.js — manifest for playground.html (34 items). `nested: true` marks a
+scripts/playground-items.js — manifest for playground.html (32 items). `featured: true` leads
+                            the default sequence sort (stable partition; `date` and `?items=` exempt). `nested: true` marks a
                             page that embeds the canvas itself (recursion guard); `weight: 'heavy'`
                             records cost for the staged perf work.
 scripts/pretext-wrap.js   — flows running prose around obstacles on BOTH sides, which no CSS
