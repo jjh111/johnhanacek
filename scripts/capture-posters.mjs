@@ -18,6 +18,11 @@ const TARGETS = [
   'https://earthstar.space',
   'https://fractalfuture.substack.com',
   'https://johnhanacek.smugmug.com',
+  // The playground's external cards (2026-09-14) derive a poster from the
+  // hostname too; these three had none, so every playground load 404'd thrice.
+  'https://johnhanacek.substack.com',
+  'https://spatialandimmersivedesign.substack.com',
+  'https://jhanazone.substack.com',
 ];
 
 const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true });

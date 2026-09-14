@@ -68,6 +68,11 @@ window.CANVAS_ITEMS = [
   { file: 'Assets/DemosPlayground/CreativeCODE2016/hypercube/hypercube.html', name: 'hypercube', cat: 'demos',
     desc: '4D fidget spinner — dual-pad joysticks spin the tesseract through 3D and 4D planes, with momentum',
     featured: true, created: '2016-05-01T00:00:00-07:00' },
+  // The Processing original of the one above, finally ported (2026-09-14). The
+  // folder name carries a space, and iframe.src takes `file` raw — hence %20.
+  { file: 'Assets/DemosPlayground/CreativeCODE2016/hypercube%20translation/port.html', name: 'hypercube-2015', cat: 'demos',
+    desc: 'The 2015 Processing hypercube, ported to p5 — the pointer’s quadrant picks which of the six 4D rotation planes spin',
+    featured: true, created: '2015-11-01T00:00:00-08:00' },
   // Poster-only. See `nested` above.
   { file: 'openprose.html', name: 'openprose', cat: 'case study',
     desc: 'OpenProse — founding design case study. Opens in its own tab: this page embeds six review canvases of its own.',

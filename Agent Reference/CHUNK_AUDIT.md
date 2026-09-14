@@ -287,6 +287,15 @@ text fields untouched, no re-embed needed):
   same visual, the lower-ranked renders text-only; in workspace the side pane
   owns its lead chunk's visual and the list yields.
 
+### §G addendum — 2026-09-14, three Substack posters
+The playground's external cards now derive a poster from the hostname, and three
+hosts had none (every playground load 404'd three times). Captured with
+`scripts/capture-posters.mjs` (targets added there): `johnhanacek.substack.com`,
+`spatialandimmersivedesign.substack.com`, `jhanazone.substack.com`. Same claim
+rule as the rest of §G — dated here, refreshed when John says the destination
+changed. The four existing posters were NOT re-shot (the script re-captures
+everything; their 2026-08-27 captures were restored from git).
+
 ## H. Externals containerized (10f) — authored 2026-08-27
 
 - [ ] 13's `url` re-pointed `https://jhana.zone` → `art.html#installations`
