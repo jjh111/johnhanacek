@@ -412,7 +412,7 @@ nav sweep and produced nothing.
 | J6 | **LinkedIn paste blocks** | Regenerated 2026-09-14 from the compiled source (`.local/out/linkedin.md`): headline, About, one block per role. Paste them so LinkedIn, resume and site say the same thing. |
 | J7 | Inherited plans | `ART_HERO_ENHANCEMENT_PLAN.md` and `MULTIPLAYER_CURSORS_PLAN.md`: keep or drop. Recommendation: drop both until v4 asks whether the site becomes the canvas. |
 
-### Batch 1 — "Proof" (three ledes, worktrees, one bump)
+### Batch 1 — "Proof" (three ledes, worktrees, one bump) — **BUILT 2026-09-14 on `sprint/v2.15-proof`, see the build record below**
 
 **Lede A — Playground v1 curation.** `scripts/playground-items.js` + `playground.html` only.
 A featured set leads: READI, the fish demo, the 3D sync demo, the hypercube, the OpenProse
@@ -462,6 +462,97 @@ services only.
 A real port of `hypercube_processing.pde` to a p5 sketch beside the 2015 half-translation
 (kept as the artefact). One session; high delight; the exact design-and-dev range the site
 argues for. Lands on the playground's featured set.
+
+### Build record — 2026-09-14, `sprint/v2.15-proof` (v2.15; QA before merge)
+
+John's word: "proceed as deep into the plan as you can as a branch … then we check QA
+before merge." One session, three Opus worktree agents (A, B, hypercube), the integrator
+did C and the merges. Every suite call ran under the Bash tool's timeout; navfittest was
+not run (no chrome or type change), contrasttest ran on the three pages C touched.
+
+**John's items closed:** J1 GoatCounter — `SITE.goatcounter = 'jjh111'` (footer states
+it; never on localhost). J3 coaching outcomes — on the tab, in chunks 16/17, in the
+résumé. J4 — option A taken on the branch: `about.html#off-the-clock` (one paragraph
+under the Bio), chunks 30–32 land there, **anchorcheck ratchet 3 → 0**. Still John's:
+J2 Vimeo (his file), J5 calendar question (inside Google Calendar), J6 LinkedIn paste,
+J7 inherited plans.
+
+**Lede A — playground curation (agent, `5c8fa91`; re-cut after John's first look).**
+`featured: true` in the manifest; `featuredFirst()` is a stable partition inside the
+sequence sort only (`date` and `?items=` exempt); no chip, no param. John's ruling on
+the order: the most complex things first, then the webs — 3D sync → fish demo →
+hypercube → hypercube-2015 → READI → OpenProse. The HoloTRIAGE wrapper page and
+dynaboard-v1 are gone (31 items). A new type `external` holds the writing and
+portfolios (Substacks, photography, Earth Star); `demos` stays software you can use
+wherever it is hosted. External cards derive a poster from the hostname
+(`Assets/posters/<host>.webp`, `onerror` falls back to the hostname line) — plan
+decision 2 resolved as "poster card"; the three missing Substack posters were captured
+(§G addendum in CHUNK_AUDIT), the four dated ones restored. Header: "review canvas"
+dropped from the title, the second item count and the ratings toggle removed, the sort
+reads `seq`.
+
+**Lede B — figures compile (agent, `275d999` + integration).** `resume.json` gains
+`figures` on `work[nanome]` (24 sessions, 3–4 users, Pfizer/Novartis/academic labs, the
+teleport → Spotlight/Follow pivot) and `clients[OpenProse]` (137 / 37 / 5 / 471 / 130 /
+6 / 1 / two months). `applyAbout()` became `applyBlocks(file, blocks)`; eight markers on
+nanome2.html (`nanome-testing`, `nanome-pivot`, `op-card`) and openprose.html
+(`op-approaches`, `op-breadth-duration`, `op-duration`, `op-distillation`, `op-colophon`)
+wrap the smallest markup that carries a number. Meta descriptions cannot hold a comment,
+so `checkMetaFigures()` WARNs when they disagree. nanome2's testing paragraph now states
+the figures it never had; every openprose block compiled byte-identical. Idempotent (two
+`--apply` runs, identical diff). The PDF's bytes churn on every compile (the tank art is
+randomised) while its text is identical — restored from git each time. Chunk 27's Blok
+Dok fact carries `url: design.html#blokdok`. Left hand-typed by design: the breadth
+lede's 72/19/11/9/9/7/5 counts; the prose restatements inside resume.json's own lane
+summary and JHDesign highlight (they feed the PDF — a later pass).
+
+**Lede C — search polish + the coaching tab (integrator, `59ef29a`).** Coaching tab:
+"What you leave with" outcomes list (chief-of-staff agent / the skills to build software)
+in the design tab's Client-work grammar, and the walk-away line says the same. Chunks
+16/17 carry the sentence ("what do I get from coaching" leads 17/16 once the semantic
+tier is up; BM25 alone leads with 18 through the services intent expansion, by design).
+Fact rows can link (`facts[].url`, `.pc-fact-link`): "blok dok" now lands on the card.
+The awards plaque opened on its BACK (model-viewer's 0° is the plaque's reverse; under
+reduced motion it never turned) — `model3dOrbit: "90deg 85deg auto"` on chunk 21, read
+by the renderer. The elaboration seam sits ABOVE the postcard in both shells; a 600-token
+answer pushed the facts below the fold — capped at 38vh, scrolls inside itself. Phone
+tier strip ≤600px: fact tiers are dots only; the loadable tier and the AI toggle keep
+their words (affordances). `.content-card[id]` gets the section's `scroll-margin-top`
+so an arrival target's heading clears the fixed nav. Chunk schema: `track` on 16/17
+(coaching) and 4/18/40/41/42 (design), documented in `_meta.fields`; not read at runtime.
+
+**Also from John's first look (2026-09-14):** design.html's three client cards now share
+one media aspect (New Client's placeholder was 3:1, so its caption sat a row above the
+others), Transfyr's line says what `resume.json` says (MVP handoff, synthetic demo data,
+QA — no "workshopping"), and the R&D project title spans the split instead of wrapping to
+two display lines in its narrow column. The fish demo crashed on every frame after a
+particle died: `1 − 50×0.02` is `−2e-15` in floating point, `arc()` throws on a negative
+radius, the throw aborted the `filter` mid-pass so the dead particle was never removed,
+and the pretext text stopped reflowing (the CRASH line at the foot). All three radii in
+the bundle are clamped at 0; the same fix is in John's local `fish-src.js` (gitignored)
+so the next rebuild keeps it; `fish.js?v=15`.
+
+**Side quest — the 2015 hypercube (agent, `a75c0eb`).** `hypercube translation/port.html`
++ `port.js` port the .pde line-by-line (each block cites its .pde range). Three findings
+worth keeping: the .pde's `persp()` never read the mouse (class fields shadow the
+globals and are never set — so the 2015 hand-port's "float (mouseX…)" line was chasing
+a value that was always 0); `turn()` aliases its temp and contracts the figure by
+~1e-4 per call, which is why the original rebuilds on press; the pointer's quadrant is
+the control panel the sketch never got. Liberties: site tokens, full-window canvas,
+touch via p5's own routing, reduced motion, opens at centre. The 2015 files stay as the
+artefact; README beside them.
+
+**Gates on the branch:** anchorcheck OK at 0 · servicetest ALL GREEN · contrasttest
+about/services/search 0 AA failures · 78-load sweep (13 pages × 3 widths × 2 themes)
+zero same-origin errors and zero overflow (art's Vimeo 401 excepted, J2) · check-live
+`--base` local ALL PASS · figures compile idempotent · vectors rebuilt (59).
+
+**QA for John before merge:** the coaching tab copy (two outcomes + walk-away); the
+"Off the clock" paragraph wording; the playground's featured order and the Substack
+posters (they capture the subscribe wall — acceptable, or dismiss it in
+`capture-posters.mjs` later); the plaque pose; nanome2's testing paragraph now naming
+Pfizer/Novartis (audited facts, but on a public case study — his call); the hypercube
+port's feel. Then `git merge --no-ff sprint/v2.15-proof`, push, `check-live`.
 
 ### Deferred, unchanged
 

@@ -12,10 +12,10 @@ import { dirname, resolve } from 'node:path';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 // 2026-09-09: 33 → 16 after the how-i-work, bio, experience and design homes;
 // 16 → 3 after the case-study, index, playground, writing, search and openprose
-// homes. The three left are the personal chunks (30/31/32) — about.html has no
-// "off the clock" block for them to land on, and inventing an empty anchor is
-// exactly what this check exists to prevent. John's call; drop to 0 when it lands.
-const BASELINE = 3;
+// homes. 2026-09-14: 3 → 0 — the personal chunks (30/31/32) land on
+// about.html#off-the-clock, a real paragraph that says what they say. Every
+// chunk now has a block to arrive on; this number only ever stays at zero.
+const BASELINE = 0;
 
 const data = JSON.parse(readFileSync(resolve(ROOT, 'Assets/search-chunks.json'), 'utf8'));
 const chunks = Array.isArray(data) ? data : data.chunks;

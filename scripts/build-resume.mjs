@@ -233,7 +233,7 @@ function chunkPatches() {
         { t: 'OpenProse', d: 'founding design, brand to live homepage in two months' },
         { t: 'MetaMedium', d: 'experiment — AI-interpreted drawing interface' },
         { t: 'This site\'s search', d: 'experiment — retrieval + in-browser LFM2.5 on WebGPU' },
-        { t: 'Blok Dok', d: '2013 — wooden iPhone dock, designed, made and sold' },
+        { t: 'Blok Dok', d: '2013 — wooden iPhone dock, designed, made and sold', url: 'design.html#blokdok' },
       ],
     },
     50: {
@@ -332,17 +332,95 @@ function aboutBlocks() {
   }).join('') + `\n            </div>\n            `;
   return { experience, education, awards, research, 'how-i-work': how };
 }
-function applyAbout() {
-  const path = resolve(ROOT, 'about.html');
+
+// ---------------------------------------------------------------- Case-study blocks (a number lives once)
+// The case studies used to restate the résumé's figures by hand, so the same count could
+// drift between openprose.html, the JSON and the chunks. Now every figure is a named value
+// on its own entry in resume.json (`work[id=nanome].figures`, `clients[OpenProse].figures`)
+// and the pages carry the SMALLEST possible markup between `<!-- resume:<key> -->` markers.
+// Markers are HTML comments, so they can live inside a <p> — but never inside an attribute,
+// which is why the meta/og/twitter descriptions stay hand-written and are only CHECKED
+// (see checkMetaFigures).
+const ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+const words = n => (n < 20 ? ONES[n] : TENS[Math.floor(n / 10)] + (n % 10 ? `-${ONES[n % 10]}` : ''));
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const listOf = a => (a.length > 1 ? `${a.slice(0, -1).join(', ')} and ${a[a.length - 1]}` : a[0]);
+const figuresOf = (what, where) => { const f = where?.figures; if (!f) throw new Error(`resume.json: ${what} has no figures block`); return f; };
+
+function nanome2Blocks() {
+  const F = figuresOf('work[id=nanome]', R.work.find(w => w.id === 'nanome'));
+  const sessions = `${F.sessions.approx ? 'around ' : ''}${F.sessions.value} ${F.sessions.note}`;
+  return {
+    'nanome-testing': `we ran ${sessions} with real pharmaceutical company user groups at ${esc(listOf(F.sites))}, ${esc(F.usersPerSession)} users per session—both existing Nanome 1 users and new users`,
+    'nanome-pivot': `removing ${esc(F.pivot.from)} entirely and introducing the <strong>${esc(F.pivot.to)}</strong> paradigm`,
+  };
+}
+
+function openproseBlocks() {
+  // openprose.html brings its own design language (IBM Plex + Kecal, warm paper) and its own
+  // classes. These builders reproduce its markup exactly — they compile numbers, never styling.
+  const F = figuresOf('clients[name=OpenProse]', R.clients.find(c => c.name === 'OpenProse'));
+  const counts = [
+    [F.commits, 'commits'],
+    [F.pages, 'total pages'],
+    [F.permutationPages, 'permutation styleguide pages'],
+    [F.logoFamilies, 'logos'],
+    [F.distillations, 'distillation'],
+  ];
+  return {
+    'op-approaches': `<em>${F.approaches}</em> total brand approaches.`,
+    'op-breadth-duration': `${cap(words(F.durationMonths))} months`,
+    'op-duration': `${words(F.durationMonths)} months`,
+    'op-distillation': `${words(F.coreApproaches)} core approaches, ${words(F.logoFamilies)} families`,
+    'op-colophon': `\n${counts.map(([n, label]) => `          <span><strong>${n}</strong> ${label}</span>`).join('\n')}\n        `,
+  };
+}
+
+// nanome2.html's "more case studies" OpenProse card restated the same two figures — the fourth copy.
+function opCardBlocks() {
+  const F = figuresOf('clients[name=OpenProse]', R.clients.find(c => c.name === 'OpenProse'));
+  return { 'op-card': `${F.approaches} approaches and ${words(F.logoFamilies)} logo families, narrowed to one.` };
+}
+
+// A meta description cannot hold an HTML comment, so those numbers stay hand-written.
+// This is the guard rail: it reads every meta `content` and every JSON-LD "description"
+// on the page and WARNs when a number there disagrees with the figures.
+function checkMetaFigures() {
+  const F = figuresOf('clients[name=OpenProse]', R.clients.find(c => c.name === 'OpenProse'));
+  const checks = [
+    ['openprose.html', [
+      { re: /(\d+) brand approaches/g, want: String(F.approaches), key: 'approaches' },
+      { re: /([a-z-]+|\d+) logo families/g, want: words(F.logoFamilies), key: 'logoFamilies' },
+    ]],
+  ];
+  let bad = 0;
+  for (const [file, claims] of checks) {
+    const src = readFileSync(resolve(ROOT, file), 'utf8');
+    const texts = [
+      ...[...src.matchAll(/<meta[^>]*\scontent="([^"]*)"/g)].map(m => m[1]),
+      ...[...src.matchAll(/"description":\s*"((?:[^"\\]|\\.)*)"/g)].map(m => m[1]),
+    ];
+    for (const t of texts) for (const c of claims) for (const m of t.matchAll(c.re)) {
+      if (m[1] !== c.want) { bad++; console.warn(`  WARN ${file}: “${m[0]}” disagrees with figures.${c.key} (${c.want}) — meta descriptions are hand-written, fix this one by hand.`); }
+    }
+  }
+  if (!bad) console.log('  meta descriptions agree with figures');
+  return bad;
+}
+
+function applyBlocks(file, blocks) {
+  const path = resolve(ROOT, file);
   let html = readFileSync(path, 'utf8');
-  const blocks = aboutBlocks();
+  const done = [];
   for (const [k, v] of Object.entries(blocks)) {
     const re = new RegExp(`(<!-- resume:${k} -->)[\\s\\S]*?(<!-- /resume:${k} -->)`);
-    if (!re.test(html)) { console.warn('about.html: no marker for', k); continue; }
-    html = html.replace(re, `$1${v}$2`);
+    if (!re.test(html)) { console.warn(`${file}: no marker for`, k); continue; }
+    html = html.replace(re, (_, open, close) => open + v + close);
+    done.push(k);
   }
   writeFileSync(path, html);
-  return Object.keys(blocks);
+  return done;
 }
 
 // ---------------------------------------------------------------- PDF
@@ -394,17 +472,21 @@ const patches = chunkPatches();
 writeFileSync(`${OUT}/chunks-proposed.json`, JSON.stringify(patches, null, 2));
 const { path: jlPath, J } = jsonld();
 writeFileSync(`${OUT}/john-hanacek.json`, JSON.stringify(J, null, 2) + '\n');
+checkMetaFigures();
 const made = await pdfs();
 console.log('wrote .local/out/:', ['john-hanacek-resume.md', 'linkedin.md', 'chunks-proposed.json', 'john-hanacek.json', ...made.map(m => m + '.pdf')].join(', '));
 if (APPLY) {
   writeFileSync(resolve(ROOT, 'Assets/john-hanacek-resume.md'), markdown());
   execFileSync('cp', [`${OUT}/resume-designed.pdf`, resolve(ROOT, 'Assets/JH_Resume_2026_onepage.pdf')]);
   const changed = applyChunks(patches);
-  const aboutDone = applyAbout();
+  const aboutDone = applyBlocks('about.html', aboutBlocks());
+  const nanomeDone = applyBlocks('nanome2.html', { ...nanome2Blocks(), ...opCardBlocks() });
+  const openproseDone = applyBlocks('openprose.html', openproseBlocks());
   writeFileSync(jlPath, JSON.stringify(J, null, 2) + '\n');
   const auditPath = resolve(ROOT, 'Agent Reference/CHUNK_AUDIT.md');
   const note = `\n\n## §J Resume compile — ${R.meta.updated}\n\nChunks ${Object.keys(patches).join(', ')} are COMPILED from \`Assets/resume.json\` by \`scripts/build-resume.mjs --apply\` (source: the 2026-09-09 interview; evidence links live in the JSON). Edit the JSON, not the chunk text. Rebuild vectors after each compile (\`node scripts/build-chunk-vectors.mjs\`).\n`;
   const audit = readFileSync(auditPath, 'utf8').replace(/\n*## §J Resume compile — [^\n]*\n\nChunks[^\n]*\n/g, '').replace(/\n+$/, '\n');
   writeFileSync(auditPath, audit + note);
-  console.log('applied to repo: resume.md, one-page PDF (no phone), chunks', changed.join(','), '+ john-hanacek.json + CHUNK_AUDIT §J + about.html blocks', aboutDone.join(','), '. Now run: node scripts/build-chunk-vectors.mjs');
+  console.log('applied to repo: resume.md, one-page PDF (no phone), chunks', changed.join(','), '+ john-hanacek.json + CHUNK_AUDIT §J + about.html blocks', aboutDone.join(','),
+    '+ nanome2.html', nanomeDone.join(','), '+ openprose.html', openproseDone.join(','), '. Now run: node scripts/build-chunk-vectors.mjs');
 }

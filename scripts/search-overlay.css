@@ -562,6 +562,13 @@
     white-space: pre-wrap;
     padding-right: 3.5rem;
     font-family: var(--font-mono);
+    /* The seam sits ABOVE the postcard. A 600-token elaboration is ~30
+       lines, which pushed the deterministic answer below the fold — the
+       model's words hiding the facts they elaborate. Cap the box; it
+       scrolls inside itself and the postcard stays where it was. */
+    max-height: 38vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
 }
 .search-overlay #so-aiAnswer[data-model]::after {
     content: attr(data-model);
@@ -1037,6 +1044,8 @@ body.search-overlay-open {
 .pc-fact-row:hover { background: rgba(var(--cyan-dim-rgb), 0.05); }
 .pc-fact-row--media { align-items: center; }
 .pc-fact-t { color: var(--text-bright); flex-shrink: 0; }
+.pc-fact-link { color: inherit; text-decoration: none; border-bottom: 1px dotted rgba(var(--cyan-dim-rgb), 0.5); }
+.pc-fact-link:hover { color: var(--gold); border-bottom-color: currentColor; }
 .pc-fact-d {
     color: var(--text-primary); font-size: 0.9em;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -1649,5 +1658,12 @@ body.search-overlay-open .so-residue { display: none; }
 @media (max-width: 600px) {
     .tier { padding: 0.14rem 0.22rem; letter-spacing: 0; }
     .tier + .tier::before { margin-right: 0.15rem; }
+    /* Dots only. Five labelled tiers never fit a phone row, and ellipsis
+       made "keyw…" and "seman…" of the two that always apply. The facts
+       become their dots (the title still explains each); the two that are
+       AFFORDANCES keep their words — a loadable tier's label IS its cost,
+       and the AI toggle is the one control on the strip. */
+    .tier-fact-on .tier-label, .tier-fact-off .tier-label, .tier-gone .tier-label, .tier-loading .tier-label { display: none; }
+    .tier-fact-on .tier-dot, .tier-fact-off .tier-dot, .tier-gone .tier-dot, .tier-loading .tier-dot { margin-right: 0; font-size: 0.85em; }
     .tier-dot { margin-right: 0.2rem; }
 }

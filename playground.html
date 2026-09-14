@@ -30,8 +30,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@200;300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./styles/jh-chrome.css?v=2.14">
-<link rel="stylesheet" href="./scripts/search-overlay.css?v=2.14">
+<link rel="stylesheet" href="./styles/jh-chrome.css?v=2.15">
+<link rel="stylesheet" href="./scripts/search-overlay.css?v=2.15">
 <style>
 /* The tool's own token names, bound to the SITE tokens from jh-chrome.css
    (loaded above) rather than to copied hex. Keeping the names means the
@@ -284,9 +284,27 @@ header { flex-wrap: wrap; row-gap: 4px; }
 #filter-group .fcount { color: var(--ink3); font-size: 10.5px; padding-left: 4px; }
 
 /* An external link is a card that can never be woken — most sites refuse to
-   be framed, so a live attempt shows a silent blank rather than a page. */
+   be framed, so a live attempt shows a silent blank rather than a page. What
+   it CAN show is the poster captured for that host: the picture says what the
+   site looks like, the line under it says where the click goes. The image sits
+   below the well's touch shield (z 2) so the whole well stays one tap target;
+   the label sits above it on a tinted plate — alpha on a FILL, never on the
+   text, which keeps its full-strength token in both themes. */
 .card.is-external .well { cursor: pointer; }
 .card.is-external .ph { color: var(--teal); text-align: center; padding: 0 1.5rem; line-height: 1.6; }
+.card.is-external .poster {
+  position: absolute; inset: 0; z-index: 1;
+  width: 100%; height: 100%;
+  object-fit: cover; object-position: top center;
+  background: var(--paper);
+}
+.card.is-external.has-poster .ph {
+  top: auto; z-index: 3;
+  padding: 5px 10px; line-height: 1.4;
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  backdrop-filter: blur(4px);
+  border-top: 1px solid var(--rule);
+}
 
 body.embedded #nav { display: none; }
 /* Focus mode is an aria-modal dialog, so it must sit ABOVE the page chrome.
@@ -312,7 +330,7 @@ header, main#stage { transition: top 0.25s ease; }
 <nav id="nav"><div class="nav-inner"><jh-nav current="play"></jh-nav></div></nav>
 
 <header>
-  <h1>Playground <span>· review canvas</span></h1>
+  <h1>Playground</h1>
   <nav class="modes" aria-label="View mode">
     <button type="button" data-mode-btn="canvas" title="canvas · key 1"><svg class="mico" viewBox="0 0 14 10" fill="currentColor" aria-hidden="true" focusable="false"><rect x="0" y="0" width="2.98" height="2.87"/><rect x="3.67" y="0" width="2.98" height="2.87"/><rect x="7.35" y="0" width="2.98" height="2.87"/><rect x="11.02" y="0" width="2.98" height="2.87"/><rect x="0" y="3.57" width="2.98" height="2.87"/><rect x="3.67" y="3.57" width="2.98" height="2.87"/><rect x="7.35" y="3.57" width="2.98" height="2.87"/><rect x="11.02" y="3.57" width="2.98" height="2.87"/><rect x="0" y="7.13" width="2.98" height="2.87"/><rect x="3.67" y="7.13" width="2.98" height="2.87"/><rect x="7.35" y="7.13" width="2.98" height="2.87"/><rect x="11.02" y="7.13" width="2.98" height="2.87"/></svg><span class="mlabel">canvas</span></button>
     <button type="button" data-mode-btn="grid" class="active" title="grid · key 2"><svg class="mico" viewBox="0 0 14 10" fill="currentColor" aria-hidden="true" focusable="false"><rect x="0" y="0" width="6.5" height="4.5"/><rect x="7.5" y="0" width="6.5" height="4.5"/><rect x="0" y="5.5" width="6.5" height="4.5"/><rect x="7.5" y="5.5" width="6.5" height="4.5"/></svg><span class="mlabel">grid</span></button>
@@ -349,13 +367,11 @@ header, main#stage { transition: top 0.25s ease; }
   <div class="tb-group visible" id="sort-group">
     <label for="grid-sort" style="color: var(--ink3); font-size: 11px;">sort</label>
     <select id="grid-sort" style="font: inherit; font-size: 11px; color: var(--ink2); background: var(--paper); border: 1px solid var(--rule); border-radius: 5px; padding: 2px 6px;">
-      <option value="sequence" selected>sequence</option>
+      <option value="sequence" selected>seq</option>
       <option value="date">date made</option>
     </select>
   </div>
-  <span class="count" id="count"></span>
   <button id="descs-toggle" type="button" aria-label="Show or hide review comments" title="comments">✎</button>
-  <button id="ratings-toggle" type="button" class="on" aria-label="Show or hide ratings" title="ratings">★</button>
   <button id="fs-toggle" type="button" aria-label="Toggle fullscreen" title="fullscreen">⛶</button>
 </header>
 
@@ -382,7 +398,7 @@ header, main#stage { transition: top 0.25s ease; }
   <div class="nav-body"><canvas id="nav-canvas" width="200" height="150"></canvas></div>
 </div>
 
-<script src="./scripts/playground-items.js?v=2.14"></script>
+<script src="./scripts/playground-items.js?v=2.15"></script>
 <script>
 (function () {
   'use strict';
@@ -448,6 +464,23 @@ header, main#stage { transition: top 0.25s ease; }
     return list.filter(function (it) { return activeCats.indexOf(it.cat) !== -1; });
   }
 
+  // ---- featured ----------------------------------------------------------
+  // The playground is the first surface a hiring manager clicks, and 32 equal
+  // cards make them hunt. Items flagged `featured` in the manifest lead the
+  // default 'sequence' order — stable partition, so featured keep their manifest
+  // order among themselves and everything else keeps its manifest order behind
+  // them. That is the WHOLE mechanism: no chip, no mode, no URL param, and the
+  // derived type filters are untouched (a filtered view simply leads with
+  // whichever featured items survive the filter). 'date' is deliberately exempt
+  // — a chronological read that quietly wasn't chronological would be a lie.
+  // An explicit ?items= list is exempt too: that IS a hand-picked order, and
+  // re-sorting someone's curation is not curation.
+  function featuredFirst(list) {
+    if (CONFIG.items) return list;
+    var lead = list.filter(function (it) { return it.featured; });
+    if (!lead.length || lead.length === list.length) return list;
+    return lead.concat(list.filter(function (it) { return !it.featured; }));
+  }
   var lastSort = 'sequence';
   function applySort(mode) {
     lastSort = mode;
@@ -458,7 +491,7 @@ header, main#stage { transition: top 0.25s ease; }
           if (da > db) return 1;
           return (canonIdx[a.name] || 0) - (canonIdx[b.name] || 0);
         })
-      : filtered(baseItems).slice();
+      : featuredFirst(filtered(baseItems).slice());
   }
 
   function renderFilters() {
@@ -609,12 +642,9 @@ header, main#stage { transition: top 0.25s ease; }
       }
     });
   }
-  var ratingsBtn = document.getElementById('ratings-toggle');
-  ratingsBtn.classList.toggle('on', CONFIG.ratings);
-  ratingsBtn.addEventListener('click', function () {
-    var off = document.body.classList.toggle('no-ratings');
-    ratingsBtn.classList.toggle('on', !off);
-  });
+  // The ratings toggle and the second item count left the header 2026-09-14
+  // (John): the chips already say "N items", and a public playground has no
+  // reviewers to rate. `CONFIG.ratings` still gates the stars for embeds.
   var descsBtn = document.getElementById('descs-toggle');
   descsBtn.classList.toggle('on', CONFIG.descs);
   descsBtn.addEventListener('click', function () {
@@ -668,6 +698,28 @@ header, main#stage { transition: top 0.25s ease; }
         var host = (function () { try { return new URL(it.file).hostname.replace(/^www\./, ''); }
                                   catch (e) { return 'external'; } })();
         card.querySelector('.ph').textContent = host + ' — opens externally ↗';
+        // An external card can never be woken, so its well was the one card in
+        // the deck showing a sentence where every other one shows a page. If a
+        // poster was captured for that host (Assets/posters/<hostname>.webp,
+        // written by scripts/capture-posters.mjs) put it there and dock the
+        // hostname line under it. Derived from the hostname, never declared —
+        // the same rule the chips follow — and `onerror` IS the fallback: a host
+        // with no capture drops the image and leaves exactly the line that was
+        // there before, so adding a poster is only ever adding a file.
+        (function (well, ph) {
+          var poster = document.createElement('img');
+          poster.className = 'poster';
+          poster.alt = '';            // decorative: the name and hostname carry it
+          poster.loading = 'lazy';
+          poster.decoding = 'async';
+          poster.addEventListener('load', function () { card.classList.add('has-poster'); });
+          poster.addEventListener('error', function () {
+            poster.remove();
+            card.classList.remove('has-poster');
+          });
+          poster.src = 'Assets/posters/' + host + '.webp';
+          well.insertBefore(poster, ph);
+        })(card.querySelector('.well'), card.querySelector('.ph'));
       }
       if (it.cat) card.dataset.cat = it.cat;
       if (it.weight === 'heavy') card.classList.add('is-heavy');
@@ -690,7 +742,6 @@ header, main#stage { transition: top 0.25s ease; }
       grid.appendChild(card);
       cells.push({ it: it, well: well, iframe: null, live: false, near: false, lastNear: 0 });
     });
-    document.getElementById('count').textContent = items.length;
     if (cellIO) {
       cellIO.disconnect();
       cells.forEach(function (c) { cellIO.observe(c.well); });
@@ -1361,9 +1412,9 @@ header, main#stage { transition: top 0.25s ease; }
      load first and NOT be deferred. Without it jh-chrome throws before it
      defines anything and the page loses nav, footer and theme toggle
      together — which is exactly what happened here. -->
-<script src="./scripts/jh-shapes.js?v=2.14"></script>
-<script src="./scripts/jh-chrome.js?v=2.14" defer></script>
-<script src="./scripts/shared.js?v=2.14" defer></script>
-<script src="./scripts/search-overlay.js?v=2.14" defer></script>
+<script src="./scripts/jh-shapes.js?v=2.15"></script>
+<script src="./scripts/jh-chrome.js?v=2.15" defer></script>
+<script src="./scripts/shared.js?v=2.15" defer></script>
+<script src="./scripts/search-overlay.js?v=2.15" defer></script>
 </body>
 </html>

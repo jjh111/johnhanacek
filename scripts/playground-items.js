@@ -1,8 +1,22 @@
 /*
  * playground-items.js — the manifest behind playground.html.
  *
- * Mirrors the shape canvas-display expects (`file`, `name`, `desc`), plus two
+ * Mirrors the shape canvas-display expects (`file`, `name`, `desc`), plus the
  * fields this site needs that the OpenProse brand set never did:
+ *
+ *   featured: true  Lead with this. The playground is the first thing a hiring
+ *                  manager clicks, and a flat list of 35 cards makes them hunt
+ *                  for the work worth their first minute. A featured item sorts
+ *                  to the FRONT of the default `sequence` order — in manifest
+ *                  order among themselves, everything else keeping its manifest
+ *                  order behind them. It is only an ORDER: no chip, no mode, no
+ *                  URL param, and `date` (a chronological read) ignores it
+ *                  entirely. A filtered view leads with whichever featured items
+ *                  survive the filter. The six live in their own block at the
+ *                  top of this file so their order reads in one place instead of
+ *                  being inferred from flags scattered through five sections —
+ *                  each still carries its own `cat`, so the derived type chips
+ *                  are exactly what they were.
  *
  *   nested: true   The page ITSELF embeds canvas-display. Waking it live nests
  *                  the tool inside itself, each copy running its own iframe
@@ -20,23 +34,54 @@
  *
  *   external: true  An off-origin URL. Also never woken — most sites send
  *                  X-Frame-Options, so a live attempt paints a silent blank
- *                  rather than a page. The card shows the hostname and opens
- *                  in a new tab. Shares the `neverWake()` predicate with
- *                  `nested`: two reasons, one rule.
+ *                  rather than a page. The card shows its captured poster
+ *                  (Assets/posters/<hostname>.webp, from capture-posters.mjs)
+ *                  with the hostname beneath it, and opens in a new tab. A host
+ *                  with no capture falls back to the hostname line alone.
+ *                  Shares the `neverWake()` predicate with `nested`: two
+ *                  reasons, one rule.
  *
  *   cat: '…'       The type. The filter vocabulary is DERIVED from whatever
  *                  values appear here — there is no separate list to keep in
  *                  step. Adding a type means tagging an item with it; a new
  *                  value grows a new chip by itself.
  *
- * Types (Aug 2026 revision, John): site · case study · tools · experiments ·
- * demos. The old `ideas` style-reference set is parked at the bottom, out of
- * view — uncomment an entry to bring it back.
+ * Types (Aug 2026 revision, John; `external` added 2026-09-14): site · case
+ * study · tools · experiments · demos · external. `demos` is software you can
+ * use, wherever it is hosted (READI and MetaMedium live off-site and are still
+ * demos); `external` is writing and portfolios — the Substacks, the photography.
+ * The old `ideas` style-reference set is parked at the bottom, out of view —
+ * uncomment an entry to bring it back.
  *
  * `created` drives the date sort. Dates are first-appearance, approximate for
  * the older demos carried over from the hand-built board.
  */
 window.CANVAS_ITEMS = [
+  // ---- featured — the first minute ----------------------------------------
+  // Order here IS the order on the canvas (John, 2026-09-14: the most complex
+  // things first, then the webs). See `featured` above.
+  { file: 'Assets/3d-sync-demo/index.html', name: '3d-sync-demo', cat: 'demos',
+    desc: 'Three synchronized 3D viewports with linked camera controls',
+    featured: true, weight: 'heavy', created: '2025-11-10T00:00:00-08:00' },
+  { file: 'fish-demo/index.html', name: 'fish-demo', cat: 'demos',
+    desc: 'The fish minigame on its own — standalone extraction of the shared engine',
+    featured: true, weight: 'heavy', created: '2026-04-15T00:00:00-07:00' },
+  { file: 'Assets/DemosPlayground/CreativeCODE2016/hypercube/hypercube.html', name: 'hypercube', cat: 'demos',
+    desc: '4D fidget spinner — dual-pad joysticks spin the tesseract through 3D and 4D planes, with momentum',
+    featured: true, created: '2016-05-01T00:00:00-07:00' },
+  // The Processing original of the one above, finally ported (2026-09-14). The
+  // folder name carries a space, and iframe.src takes `file` raw — hence %20.
+  { file: 'Assets/DemosPlayground/CreativeCODE2016/hypercube%20translation/port.html', name: 'hypercube-2015', cat: 'demos',
+    desc: 'The 2015 Processing hypercube, ported to p5 — the pointer’s quadrant picks which of the six 4D rotation planes spin',
+    featured: true, created: '2015-11-01T00:00:00-08:00' },
+  { file: 'https://teamreadi.xyz', name: 'teamreadi', cat: 'demos',
+    desc: 'READI — live product site',
+    featured: true, external: true, created: '2026-08-26T00:00:00-07:00' },
+  // Poster-only. See `nested` above.
+  { file: 'openprose.html', name: 'openprose', cat: 'case study',
+    desc: 'OpenProse — founding design case study. Opens in its own tab: this page embeds six review canvases of its own.',
+    featured: true, nested: true, weight: 'heavy', created: '2026-08-14T00:00:00-07:00' },
+
   // ---- the site itself ----------------------------------------------------
   { file: 'index.html', name: 'index', cat: 'site',
     desc: 'Homepage — fish minigame hero, portfolio intro',
@@ -70,10 +115,6 @@ window.CANVAS_ITEMS = [
   { file: 'nanome2.html', name: 'nanome2', cat: 'case study',
     desc: 'Nanome 2 — XR product design case study',
     created: '2026-02-14T00:00:00-08:00' },
-  // Poster-only. See `nested` above.
-  { file: 'openprose.html', name: 'openprose', cat: 'case study',
-    desc: 'OpenProse — founding design case study. Opens in its own tab: this page embeds six review canvases of its own.',
-    nested: true, weight: 'heavy', created: '2026-08-14T00:00:00-07:00' },
 
   // ---- tools --------------------------------------------------------------
   { file: 'Assets/DemosPlayground/sna-drawing-demo.html', name: 'social-network-viz', cat: 'tools',
@@ -104,41 +145,27 @@ window.CANVAS_ITEMS = [
   { file: 'https://jjh111.github.io/MetaMedium/', name: 'metamedium', cat: 'demos',
     desc: 'MetaMedium — drawing-as-programming parsing system, live build',
     external: true, created: '2026-08-26T00:00:00-07:00' },
-  { file: 'https://teamreadi.xyz', name: 'teamreadi', cat: 'demos',
-    desc: 'READI — live product site',
-    external: true, created: '2026-08-26T00:00:00-07:00' },
   { file: 'Assets/DemosPlayground/aethereal-flight/index.html', name: 'cyberbird', cat: 'demos',
     desc: 'Radical aerial flight simulator in 3D space',
     weight: 'heavy', created: '2025-11-01T00:00:00-07:00' },
-  { file: 'Assets/3d-sync-demo/index.html', name: '3d-sync-demo', cat: 'demos',
-    desc: 'Three synchronized 3D viewports with linked camera controls',
-    weight: 'heavy', created: '2025-11-10T00:00:00-08:00' },
-  { file: 'Assets/DemosPlayground/CreativeCODE2016/hypercube/hypercube.html', name: 'hypercube', cat: 'demos',
-    desc: '4D fidget spinner — dual-pad joysticks spin the tesseract through 3D and 4D planes, with momentum',
-    created: '2016-05-01T00:00:00-07:00' },
-  { file: 'Assets/DemosPlayground/CreativeCODE2016/DynaBoard1/Dynaboard1.html', name: 'dynaboard-v1', cat: 'demos',
-    desc: 'Dynamic 3D board experiment — early spatial interface concept',
-    created: '2016-04-01T00:00:00-07:00' },
-  { file: 'fish-demo/index.html', name: 'fish-demo', cat: 'demos',
-    desc: 'The fish minigame on its own — standalone extraction of the shared engine',
-    weight: 'heavy', created: '2026-04-15T00:00:00-07:00' },
-  // Work that lives off-site (external: hostname card, opens in its own tab)
-  { file: 'https://earthstar.space', name: 'earth-star', cat: 'demos',
+
+  // ---- external — writing and portfolios that live off-site (poster + hostname card, own tab)
+  { file: 'https://earthstar.space', name: 'earth-star', cat: 'external',
     desc: 'Earth Star — regenerative-future worldbuilding & research project',
     external: true, created: '2026-08-26T00:00:00-07:00' },
-  { file: 'https://fractalfuture.substack.com', name: 'fractal-futures', cat: 'demos',
+  { file: 'https://fractalfuture.substack.com', name: 'fractal-futures', cat: 'external',
     desc: 'Fractal Futures — original science fiction (also as ebook & Kindle)',
     external: true, created: '2026-08-26T00:00:00-07:00' },
-  { file: 'https://johnhanacek.smugmug.com', name: 'photography', cat: 'demos',
+  { file: 'https://johnhanacek.smugmug.com', name: 'photography', cat: 'external',
     desc: 'Photography portfolio',
     external: true, created: '2026-08-26T00:00:00-07:00' },
-  { file: 'https://johnhanacek.substack.com', name: 'substack', cat: 'demos',
+  { file: 'https://johnhanacek.substack.com', name: 'substack', cat: 'external',
     desc: 'Main Substack — essays and updates',
     external: true, created: '2026-08-26T00:00:00-07:00' },
-  { file: 'https://spatialandimmersivedesign.substack.com', name: 'spatial-design', cat: 'demos',
+  { file: 'https://spatialandimmersivedesign.substack.com', name: 'spatial-design', cat: 'external',
     desc: 'Spatial & Immersive Design — XR design writing',
     external: true, created: '2026-08-26T00:00:00-07:00' },
-  { file: 'https://jhanazone.substack.com', name: 'jhanazone', cat: 'demos',
+  { file: 'https://jhanazone.substack.com', name: 'jhanazone', cat: 'external',
     desc: 'Jhana Zone — personal Substack',
     external: true, created: '2026-08-26T00:00:00-07:00' },
 
