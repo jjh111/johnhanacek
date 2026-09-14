@@ -363,8 +363,12 @@ scripts/build-resume.mjs   — compiles resume.json: designed one-page PDF (fish
                             openprose.html (`op-approaches`, `op-breadth-duration`, `op-duration`,
                             `op-distillation`, `op-colophon`), so a number lives once; a meta
                             description cannot hold a comment, so those stay hand-written and the
-                            compiler only WARNs when they disagree. `--lane=` picks emphasis. Run
-                            build-chunk-vectors.mjs after. Serves itself via serve-verified.mjs.
+                            compiler only WARNs when they disagree. `--lane=` picks emphasis — an unknown
+                            lane is an ERROR (it used to fall back to designEngineer in silence) and
+                            `--apply` REFUSES any lane but designEngineer unless you add `--force-lane`,
+                            because none of the public surfaces carry the lane in their name. Guard
+                            suite: `npm run test:lane`. Run build-chunk-vectors.mjs after. Serves
+                            itself via serve-verified.mjs.
 scripts/serve-verified.mjs — shared by both render rigs: probe a genuinely free port, then PROVE
                             the server is ours (sentinel round-trip) before rendering anything.
                             Exists because a stale server once rendered its 404 into the live
@@ -384,9 +388,15 @@ scripts/pretext-wrap.js   — flows running prose around obstacles on BOTH sides
                             re-layout on document.fonts.ready + ResizeObserver). The retained copy
                             (`.pretext-source`) is FULL-SIZE in transparent ink, never clipped to a
                             pixel: Safari Reader judges by geometry and skipped the §II ledes on
-                            openprose.html until 2026-09-14. Three copies of that rule exist
-                            (shared.css, search-overlay.css, openprose.html's inline block) — the
-                            overlay's wins the cascade on openprose, so change all three together.
+                            openprose.html until 2026-09-14. The line layer holds NO text nodes:
+                            each run is an empty <span>/<strong> whose text is `data-text`, painted
+                            by `::before { content: attr(data-text) }` — Safari Reader ignores
+                            aria-hidden and read every wrapped paragraph twice. Three copies of
+                            both rules exist (shared.css, search-overlay.css, openprose.html's
+                            inline block) — the overlay's wins the cascade on openprose, so change
+                            all three together. openprose.html also declares itself ONE article
+                            (`<main itemscope Article>` > `<article itemprop=articleBody>`) so a
+                            reader takes the whole case study, not the densest section.
                             Demo/test: Assets/DemosPlayground/pretext-wrap-test.html
 scripts/pretext/          — vendored copy of the pretext text-measurement + line-breaking engine
                             (see VENDORED.md). Also usable measurement-only: prepare() + layout()

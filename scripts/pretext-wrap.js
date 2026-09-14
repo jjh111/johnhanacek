@@ -21,6 +21,9 @@
  *      attribute, which makes the copy invisible to every tool that edits
  *      pages — this reads the element's own text.
  *   3. Accessible by construction. The positioned line layer is aria-hidden
+ *      and carries NO text nodes — every line is CSS generated content
+ *      (`content: attr(data-text)`), because Safari Reader ignores aria-hidden
+ *      and would otherwise read the paragraph twice, once as broken lines —
  *      and the untouched prose is retained at full size in transparent ink
  *      (not clipped to a pixel — Safari Reader skips a pixel-sized box), so
  *      screen readers get continuous sentences and find-in-page still hits.
@@ -149,20 +152,30 @@ export async function wrapAround(el, opts = {}) {
     }
     if (!text) throw new Error('pretext-wrap: nothing to lay out');
 
-    const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;' };
-    const esc = s => s.replace(/[&<>]/g, c => ESC[c]);
+    // A line is NEVER a text node. Each run — plain or emphasised — is an
+    // empty element whose text lives in data-text and is painted by CSS
+    // (`.pretext-line [data-text]::before { content: attr(data-text) }`).
+    // Reader modes and extractors walk DOM text, and Safari's ignores
+    // aria-hidden: with real text here it showed every wrapped paragraph
+    // twice (2026-09-14), the second time as line fragments. Generated
+    // content is invisible to them and identical on screen; the emphasis tag
+    // still wraps the run, so the page's strong/em styling inherits into the
+    // pseudo-element as before.
+    const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
+    const esc = s => s.replace(/[&<>"]/g, c => ESC[c]);
+    const run = (tag, s) => '<' + tag + ' data-text="' + esc(s) + '"></' + tag + '>';
     function lineMarkup(lineText, lineStart) {
         const lineEnd = lineStart + lineText.length;
         const hits = styleRuns.filter(r => r.start < lineEnd && r.end > lineStart);
-        if (!hits.length) return null;
+        if (!hits.length) return run('span', lineText);
         let html = '', pos = lineStart;
         for (const r of hits) {
             const s = Math.max(r.start, lineStart), e = Math.min(r.end, lineEnd);
-            if (s > pos) html += esc(text.slice(pos, s));
-            html += '<' + r.tag + '>' + esc(text.slice(s, e)) + '</' + r.tag + '>';
+            if (s > pos) html += run('span', text.slice(pos, s));
+            html += run(r.tag, text.slice(s, e));
             pos = e;
         }
-        if (pos < lineEnd) html += esc(text.slice(pos, lineEnd));
+        if (pos < lineEnd) html += run('span', text.slice(pos, lineEnd));
         return html;
     }
 
@@ -263,20 +276,13 @@ export async function wrapAround(el, opts = {}) {
         for (let i = 0; i < Math.max(out.length, lastCount); i++) {
             const d = lineDiv(i);
             if (i < out.length) {
-                let html = null;
+                let at = -1;
                 if (styleRuns.length) {
-                    const at = text.indexOf(out[i].text, searchFrom);
-                    if (at !== -1) {
-                        html = lineMarkup(out[i].text, at);
-                        searchFrom = at + out[i].text.length;
-                    }
+                    at = text.indexOf(out[i].text, searchFrom);
+                    if (at !== -1) searchFrom = at + out[i].text.length;
                 }
-                if (html !== null) {
-                    if (d.dataset.ptHtml !== html) { d.innerHTML = html; d.dataset.ptHtml = html; }
-                } else if (d.textContent !== out[i].text || d.dataset.ptHtml) {
-                    d.textContent = out[i].text;
-                    delete d.dataset.ptHtml;
-                }
+                const html = at !== -1 ? lineMarkup(out[i].text, at) : run('span', out[i].text);
+                if (d.dataset.ptHtml !== html) { d.innerHTML = html; d.dataset.ptHtml = html; }
                 d.style.transform = `translate(${out[i].x}px, ${out[i].y}px)`;
                 d.style.display = 'block';
             } else {
