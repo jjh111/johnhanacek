@@ -284,9 +284,27 @@ header { flex-wrap: wrap; row-gap: 4px; }
 #filter-group .fcount { color: var(--ink3); font-size: 10.5px; padding-left: 4px; }
 
 /* An external link is a card that can never be woken — most sites refuse to
-   be framed, so a live attempt shows a silent blank rather than a page. */
+   be framed, so a live attempt shows a silent blank rather than a page. What
+   it CAN show is the poster captured for that host: the picture says what the
+   site looks like, the line under it says where the click goes. The image sits
+   below the well's touch shield (z 2) so the whole well stays one tap target;
+   the label sits above it on a tinted plate — alpha on a FILL, never on the
+   text, which keeps its full-strength token in both themes. */
 .card.is-external .well { cursor: pointer; }
 .card.is-external .ph { color: var(--teal); text-align: center; padding: 0 1.5rem; line-height: 1.6; }
+.card.is-external .poster {
+  position: absolute; inset: 0; z-index: 1;
+  width: 100%; height: 100%;
+  object-fit: cover; object-position: top center;
+  background: var(--paper);
+}
+.card.is-external.has-poster .ph {
+  top: auto; z-index: 3;
+  padding: 5px 10px; line-height: 1.4;
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  backdrop-filter: blur(4px);
+  border-top: 1px solid var(--rule);
+}
 
 body.embedded #nav { display: none; }
 /* Focus mode is an aria-modal dialog, so it must sit ABOVE the page chrome.
@@ -448,6 +466,23 @@ header, main#stage { transition: top 0.25s ease; }
     return list.filter(function (it) { return activeCats.indexOf(it.cat) !== -1; });
   }
 
+  // ---- featured ----------------------------------------------------------
+  // The playground is the first surface a hiring manager clicks, and 32 equal
+  // cards make them hunt. Items flagged `featured` in the manifest lead the
+  // default 'sequence' order — stable partition, so featured keep their manifest
+  // order among themselves and everything else keeps its manifest order behind
+  // them. That is the WHOLE mechanism: no chip, no mode, no URL param, and the
+  // derived type filters are untouched (a filtered view simply leads with
+  // whichever featured items survive the filter). 'date' is deliberately exempt
+  // — a chronological read that quietly wasn't chronological would be a lie.
+  // An explicit ?items= list is exempt too: that IS a hand-picked order, and
+  // re-sorting someone's curation is not curation.
+  function featuredFirst(list) {
+    if (CONFIG.items) return list;
+    var lead = list.filter(function (it) { return it.featured; });
+    if (!lead.length || lead.length === list.length) return list;
+    return lead.concat(list.filter(function (it) { return !it.featured; }));
+  }
   var lastSort = 'sequence';
   function applySort(mode) {
     lastSort = mode;
@@ -458,7 +493,7 @@ header, main#stage { transition: top 0.25s ease; }
           if (da > db) return 1;
           return (canonIdx[a.name] || 0) - (canonIdx[b.name] || 0);
         })
-      : filtered(baseItems).slice();
+      : featuredFirst(filtered(baseItems).slice());
   }
 
   function renderFilters() {
@@ -668,6 +703,28 @@ header, main#stage { transition: top 0.25s ease; }
         var host = (function () { try { return new URL(it.file).hostname.replace(/^www\./, ''); }
                                   catch (e) { return 'external'; } })();
         card.querySelector('.ph').textContent = host + ' — opens externally ↗';
+        // An external card can never be woken, so its well was the one card in
+        // the deck showing a sentence where every other one shows a page. If a
+        // poster was captured for that host (Assets/posters/<hostname>.webp,
+        // written by scripts/capture-posters.mjs) put it there and dock the
+        // hostname line under it. Derived from the hostname, never declared —
+        // the same rule the chips follow — and `onerror` IS the fallback: a host
+        // with no capture drops the image and leaves exactly the line that was
+        // there before, so adding a poster is only ever adding a file.
+        (function (well, ph) {
+          var poster = document.createElement('img');
+          poster.className = 'poster';
+          poster.alt = '';            // decorative: the name and hostname carry it
+          poster.loading = 'lazy';
+          poster.decoding = 'async';
+          poster.addEventListener('load', function () { card.classList.add('has-poster'); });
+          poster.addEventListener('error', function () {
+            poster.remove();
+            card.classList.remove('has-poster');
+          });
+          poster.src = 'Assets/posters/' + host + '.webp';
+          well.insertBefore(poster, ph);
+        })(card.querySelector('.well'), card.querySelector('.ph'));
       }
       if (it.cat) card.dataset.cat = it.cat;
       if (it.weight === 'heavy') card.classList.add('is-heavy');

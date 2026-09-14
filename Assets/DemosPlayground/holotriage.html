@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>HoloTRIAGE — AvatarMEDIC</title>
+<!-- Unlisted: this page exists so playground.html has something to frame for a
+     piece of work whose only artefact is a video clip. It links the chrome
+     STYLESHEET for the site's tokens but wears no nav and no footer — inside a
+     420px card that chrome would be all you could see. Deliberately dark in
+     both themes: it is a lightbox around a clip, and the clip is dark. -->
+<link rel="icon" type="image/png" href="../favicon-jhsigfrmpaper.png">
+<link rel="stylesheet" href="../../styles/jh-chrome.css">
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--sea-deep, #020a12);
+    color: var(--text-primary, #b0cedc);
+    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    display: flex; flex-direction: column;
+  }
+  .stage {
+    flex: 1; min-height: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: clamp(8px, 2vw, 28px);
+  }
+  video {
+    max-width: 100%; max-height: 100%;
+    width: auto; height: auto;
+    display: block;
+    border: 1px solid var(--border, rgba(77, 201, 246, 0.2));
+    border-radius: 6px;
+    background: #000;
+  }
+  figcaption {
+    flex: none;
+    padding: clamp(8px, 1.6vw, 16px) clamp(10px, 2vw, 28px);
+    border-top: 1px solid var(--border, rgba(77, 201, 246, 0.2));
+    background: var(--sea-mid, #051018);
+    color: var(--ink-quiet, #a5d5e6);
+    font-size: clamp(0.72rem, 1.5vw, 0.95rem);
+    line-height: 1.5;
+    text-align: center;
+  }
+  figcaption b { color: var(--text-heading, #b2e8fa); font-weight: 600; }
+  figure { display: contents; }
+</style>
+</head>
+<body>
+
+<figure>
+  <div class="stage">
+    <video id="clip" muted loop playsinline controls preload="metadata"
+           poster="../holotriage-poster.webp"
+           aria-label="HoloTRIAGE demo clip — AR triage training on HoloLens 2">
+      <source src="../Avatarmedic-Holotriageclip-1.mp4" type="video/mp4">
+    </video>
+  </div>
+  <figcaption><b>HoloTRIAGE</b> — AvatarMEDIC, 2020: AR triage training on HoloLens 2</figcaption>
+</figure>
+
+<script>
+// The site-wide autoplay gate lives in jh-chrome.js, which this page does not
+// load (no nav, no footer). Same ruling, restated: under reduced motion the
+// clip never starts itself — the poster stands and the controls are the way in.
+(function () {
+  var v = document.getElementById('clip');
+  if (!v) return;
+  try {
+    if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  } catch (e) {}
+  v.autoplay = true;
+  var p = v.play();
+  if (p && p.catch) p.catch(function () {});  // a refused autoplay is not an error
+})();
+</script>
+
+</body>
+</html>
