@@ -14,7 +14,7 @@
   const SITE = {
     year: 2026,
     org: 'JHDesign LLC',
-    version: '2.18', // ← THE site version. Footer badge, ?v= cache-bust, and README all read this (run scripts/sync-version.mjs after bumping).
+    version: '2.19', // ← THE site version. Footer badge, ?v= cache-bust, and README all read this (run scripts/sync-version.mjs after bumping).
     versionNote: 'Made with Claude Code &amp; OpenCode',
     github: 'https://github.com/jjh111/johnhanacek',
     githubLabel: 'github.com/jjh111/johnhanacek',
@@ -94,7 +94,7 @@
           '<p class="footer-copyright">© ' + SITE.year + ' John Hanacek · ' + SITE.org + '</p>' +
           '<p class="footer-github"><a href="' + SITE.github + '" target="_blank" rel="noopener">' + SITE.githubLabel + '</a></p>' +
           '<p class="version version-note">' + SITE.versionNote + '</p>' +
-          (SITE.goatcounter ? '<p class="version version-note footer-privacy">Visits are counted without cookies (<a href="https://www.goatcounter.com" target="_blank" rel="noopener">GoatCounter</a>) · nothing about you is stored</p>' : '') +
+          (SITE.goatcounter ? '<p class="version version-note footer-privacy">Visits are <a href="https://www.goatcounter.com" target="_blank" rel="noopener" title="GoatCounter — no cookies, nothing about you is stored">counted</a> without cookies</p>' : '') +
         '</div>';
     }
   }
