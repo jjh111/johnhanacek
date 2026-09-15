@@ -62,6 +62,10 @@ const host = u => { try { return new URL(u).host.replace(/^www\./, ''); } catch 
 
 // ---------------------------------------------------------------- selections
 const lane = R.lanes[LANE];            // validated above — no silent fallback
+// Per-lane headline override: lanes.headline wins, else the global basics.headline.
+// The headline is the first line a screener reads; a story lane should not lead with
+// "DESIGN ENGINEER". Falls back silently by design — a lane without one wants the global.
+const headline = lane.headline || R.basics.headline;
 const roles = R.work.filter(w => !w.compressed);
 const earlier = R.work.filter(w => w.compressed);
 const bulletsFor = (w, mode) => {
@@ -149,7 +153,7 @@ li { margin: 0.08rem 0; line-height: 1.3; font-size: 0.93rem; }
 </style></head><body><div class="page">
 <header>
   <h1 class="name">${esc(R.basics.name)}</h1>
-  <p class="headline">${esc(R.basics.headline)}</p>
+  <p class="headline">${esc(headline)}</p>
   <p class="contact">${contact.map(c => `<span>${esc(c)}</span>`).join('')}</p>
 </header>
 <h2>Summary</h2>
@@ -184,7 +188,7 @@ ${ats ? '' : `<script src="../../scripts/shape-detection.js"></script><script sr
 // ---------------------------------------------------------------- Markdown (long form)
 function markdown() {
   const L = [];
-  L.push(`# ${R.basics.name}`, '', `**${R.basics.headline}**`, '',
+  L.push(`# ${R.basics.name}`, '', `**${headline}**`, '',
     [R.basics.email, `[${host(R.basics.website)}](${R.basics.website})`, ...R.basics.links.map(l => `[${l.label}](${l.url})`)].join(' · '), '', '---', '',
     '## Summary', '', lane.summary, '', '---', '', '## Work Experience', '');
   for (const w of R.work) {
@@ -214,7 +218,7 @@ function markdown() {
 
 // ---------------------------------------------------------------- LinkedIn paste blocks
 function linkedin() {
-  const L = ['# LinkedIn paste blocks', '', '## Headline (≤220 chars)', '', R.basics.headline + ' · Independent, JHDesign LLC · ex-Nanome, BadVR · AvatarMEDIC co-founder', '', '## About', '', lane.summary, '', R.basics.availability, ''];
+  const L = ['# LinkedIn paste blocks', '', '## Headline (≤220 chars)', '', headline + ' · Independent, JHDesign LLC · ex-Nanome, BadVR · AvatarMEDIC co-founder', '', '## About', '', lane.summary, '', R.basics.availability, ''];
   for (const w of R.work.filter(w => !w.compressed)) {
     L.push(`## ${w.title} — ${w.org} (${span(w)})`, '', ...(w.onePage || w.highlights.map(h => h.text)).map(t => `• ${t}`), '');
   }
@@ -266,7 +270,7 @@ function chunkPatches() {
       ],
     },
     50: {
-      content: `John's one-page resume (${YEAR}) is available as a PDF: ${R.basics.headline}. ${lane.summary} Career: ${R.work.filter(w => !w.compressed).map(w => `${w.title}, ${w.org} (${span(w)})`).join('; ')}. MA Georgetown CCT (2016), BA UC San Diego (2012). Open the PDF to read or download it.`,
+      content: `John's one-page resume (${YEAR}) is available as a PDF: ${headline}. ${lane.summary} Career: ${R.work.filter(w => !w.compressed).map(w => `${w.title}, ${w.org} (${span(w)})`).join('; ')}. MA Georgetown CCT (2016), BA UC San Diego (2012). Open the PDF to read or download it.`,
       tldr: `The one-page ${YEAR} resume as a PDF — open it to read or download.`,
       micro: `One-page PDF resume, ${YEAR}.`,
     },
