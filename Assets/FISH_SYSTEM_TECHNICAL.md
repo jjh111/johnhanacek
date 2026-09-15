@@ -349,3 +349,38 @@ formationOffsets = [
 - **Debug Viz:** `/index.html` lines ~3065-3450
 - **Design Doc:** `/Assets/FISH_MINIGAME_DESIGN.md`
 - **Technical Ref:** `/Assets/FISH_SYSTEM_TECHNICAL.md` (this file)
+
+## Population caps and the 2026-09-15 bench
+
+`computeEntityLimits()` in `scripts/fish-engine.js` (mobile = canvas under 600px):
+
+| | desktop | mobile |
+|---|---|---|
+| large | 2 | 1 |
+| medium | 11 (was 6) | 9 (was 4) |
+| small | 14 (was 9) | 11 (was 6) |
+| total (`MAX_FISH`, the three summed) | 27 | 21 |
+
+John raised small and medium by five each. Before shipping that, the engine was
+benched past its caps (a throwaway copy with caps ×4, ichthys strokes fed through
+`processStroke`, every rAF callback timed for 3 s at each population, headless
+Chromium 1234 with software rasterisation on an M-series Mac):
+
+| fish | desktop mean / p95 / max ms | phone (390 wide) mean / p95 / max ms |
+|---|---|---|
+| 10–12 | 0.24 / 0.3 / 0.5 | 0.28 / 0.4 / 0.6 |
+| 21–22 | 0.41 / 0.6 / 0.8 | 0.40 / 0.6 / 0.9 |
+| 27 | 0.53 / 0.7 / 0.9 | — |
+| 41–44 | 0.80 / 1.1 / 1.5 | 0.75 / 1.0 / 1.8 |
+| 64 | 1.3 / 1.8 / 2.4 | — |
+
+Cost is close to linear at ~0.02 ms per fish per frame; the shipped caps spend
+about half a millisecond of a 16.7 ms frame (8.3 ms at 120 Hz). Even three times
+the caps stays under 2 ms here. Software rasterisation makes the DRAW half
+pessimistic against a real GPU; the SIM half is JavaScript and scales with the
+CPU — a low-end phone may be 5–10× slower than this Mac, which still leaves the
+mobile cap around 3–4 ms. Performance is not what limits the population;
+readability of the tank is. If a real device ever disagrees, the right mechanism
+is not a wider width heuristic but an in-engine frame-time monitor (EMA of the
+rAF callback cost; step the caps down a tier when it stays over a budget for a
+couple of seconds) — recorded here as the next step, not built.

@@ -913,9 +913,9 @@
             return {
                 MAX_JELLYFISH:   isMobile ? 1 : 2,
                 MAX_LARGE_FISH:  isMobile ? 1 : 2,  // 1 on mobile, 2 on desktop
-                MAX_MEDIUM_FISH: isMobile ? 4 : 6,
-                MAX_SMALL_FISH:  isMobile ? 6 : 9,
-                MAX_FISH:        isMobile ? 11 : 16,
+                MAX_MEDIUM_FISH: isMobile ? 9 : 11,   // +5 each 2026-09-15 (John); see the bench
+                MAX_SMALL_FISH:  isMobile ? 11 : 14,  // note in FISH_SYSTEM_TECHNICAL.md
+                MAX_FISH:        isMobile ? 21 : 27,  // = the three class caps summed
                 MAX_CORAL:       isMobile ? 4 : 6,
                 MAX_BUBBLES:     isMobile ? 12 : 20,
                 MAX_FOOD:        isMobile ? 8 : 12,
