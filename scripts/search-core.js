@@ -1860,7 +1860,7 @@
                     // A fact with a `url` is a deep link of its own (Blok Dok → the
                     // card on design.html), so "blok dok" lands on the thing, not
                     // on the shipped-products chunk it happens to live in.
-                    + `<span class="pc-fact-t">${f.url ? `<a class="pc-fact-link" href="${resolveHref(f.url.replace(/^\.\//, ''))}">${f.t} ↗</a>` : f.t}</span>`
+                    + `<span class="pc-fact-t">${f.url ? `<a class="pc-fact-link" href="${resolveHref(f.url.replace(/^\.\//, ''))}"${/^https?:/i.test(f.url) ? ' target="_blank" rel="noopener"' : ''}>${f.t} ↗</a>` : f.t}</span>`
                     + (f.d ? `<span class="pc-fact-d">${f.d}</span>` : '')
                     + (f.y ? `<span class="pc-fact-y">${f.y}</span>` : '')
                     + (own ? `<span class="pc-fact-media">${media}</span>` : '')

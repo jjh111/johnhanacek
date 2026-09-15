@@ -62,6 +62,12 @@ conversation, not from any page.
 
 ---
 
+### Chunk 2 — Contact & Social (facts added 2026-09-15)
+- [x] Facts rows with `url` so every handle is a link in the dossier (John: "need to be
+  clickable"): mailto, LinkedIn /in/johnhanacek, Bluesky @johnhanacek.bsky.social,
+  X @johnhanacek, GitHub jjh111 — the same five index.html#contact lists. External
+  fact links open in a new tab.
+
 ## B. External-world claims — page-backed, John vouches here
 
 > **VOUCHED 2026-08-27.** John reviewed this whole section and confirmed everything not listed
