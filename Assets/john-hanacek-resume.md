@@ -35,7 +35,7 @@ Molecular design platform for pharma researchers in VR, desktop and web.
 - Led product design for Nanome 2 on Meta Quest along with the companion web portal and integration with the Nanome MARA AI assistant.
 - Ran around 24 alpha and beta test sessions with groups of scientists working at customer sites including Pfizer, Novartis and academic labs, three to four users per session. Coded the feedback qualitatively into bugs, how-might-we questions, feature evidence and usability patterns, and turned it into development cycles.
 - Replaced teleport navigation with Spotlight/Follow: labeled cursors and a shared, non-rivalrous molecule, so collaborators keep independent viewpoints while sharing focus. It became a pillar of Nanome 2.
-- Consolidated Nanome 1's feature set into a new interface layout and wrist-based UI, and designed the information architecture for projects inside the app.
+- Consolidated Nanome 1's feature set into a new interface layout, and designed the information architecture for projects inside the app.
 - Acted as product lead inside a PM, project manager and design triad: user interviews, the PRD template and tracking system, the internal knowledge base in Coda, and team-wide workshops.
 - Art directed look development and production.
 - Supervised the visionOS beta.
@@ -62,7 +62,7 @@ Medtech startup: remote trauma intervention through XR telepresence and robotics
 - Built the robot demo in Unity, the visual design, animatics and composite shots single-handedly, including a digital-twin prototype of a robotic medical assistant for nursing homes that won the Aerospace Medical Association's R&D Innovation Award (2022).
 - HoloTRIAGE: AR first-aid triage training on the unreleased HoloLens 2, three victims with scenario props; won Microsoft's Reactor hackathon (2020).
 - A1R, Augmented First Responder: lead product designer with a project manager and a developer; NIST CHARIoT Challenge Phase 2 winner (2021).
-- SAR 5G: lead designer and asset creator on a search-and-rescue coordination app for Magic Leap One and 5G; AT&T 5G Hackathon winner, Best VR/AR/MR solution (2019).
+- SAR 5G: lead designer and asset creator on a search-and-rescue coordination app for Magic Leap One and 5G; AT&T 5G Hackathon winner, Best 5G use case (2019).
 - Took part in analog astronaut missions to gather data for the concept; pivoted the company to consultancy before stepping away.
 - Brand, content and the company website.
 
@@ -84,6 +84,8 @@ Media, web and product design under DBAs before the LLC.
 - Blok Dok (2013): designed, made and sold a wooden iPhone dock. Product, packaging, labels, instructions and product photography.
 - Websites, packaging, photography and media design for small businesses; XR and spatial computing subject-matter consulting; 3D scanning and modeling.
 - Foresight writing on answer engines and the open internet (Atlantic Council, HuffPost, The Technium), 2014.
+- CGI compositing and 3D animation for screen and XR in After Effects, Blender and Unity; interactive media art across experiential and web formats.
+- Actor in two IMDb-listed short films: Terrorist Number Four (Bentley Brown, 2018) and Blink If You Can Hear Me (Nathan Danskey, 2015), a single-shot experimental film built on the reflective properties of the human eye.
 
 ### Primary Photographer
 **Qualcomm Institute (Calit2), UC San Diego** · 2010–2012
