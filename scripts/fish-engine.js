@@ -3189,7 +3189,7 @@
                             const dy = myTargetY - f.y;
                             const dist = Math.sqrt(dx * dx + dy * dy);
                             const phase = this.schoolPhase || 'schooling';
-                            const SCHOOL_SPEED = IDLE_SPEED * 2.2 * (this.schoolSpeedMod || 1);
+                            const SCHOOL_SPEED = IDLE_SPEED * 1.85 * (this.schoolSpeedMod || 1);   // ≈50 px/s measured (John, 2026-09-15: 60 was a touch busy)
 
                             // FOOD SLOWDOWN: ease off when the school is closing on food
                             let foodSpeedMod = 1.0;

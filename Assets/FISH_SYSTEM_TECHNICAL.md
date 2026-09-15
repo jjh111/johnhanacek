@@ -435,7 +435,7 @@ After (same harness, 60 s):
 |---|---|---|
 | coherence while schooling | **0.94** (0.89 mid-turn) | 0.77 |
 | pairs touching while schooling | **8%** | 19% (six 90 px fish on a 390 px canvas) |
-| fish speed | 60 px/s | 59 px/s |
+| fish speed | 50 px/s (v2.22; 60 in v2.21) | 59 px/s |
 | scatter → reform cycles per minute | 3 | 2 |
 
 Gates: idletest, foodtest, enginetest green; design.html loads clean. The phone
