@@ -384,3 +384,60 @@ readability of the tank is. If a real device ever disagrees, the right mechanism
 is not a wider width heuristic but an in-engine frame-time monitor (EMA of the
 rAF callback cost; step the caps down a tier when it stays over a budget for a
 couple of seconds) — recorded here as the next step, not built.
+
+## Medium-fish schooling, rewritten 2026-09-15
+
+John: "the medium fish are pretty listless … we always wanted it to actually school
+so turning together, then scatter, then reform. right now they just bump into
+each other." Measured before touching anything (`maze-tests/schooltest.mjs`, seven
+medium fish on index.html, 40 s): heading coherence **0.25**, some pair touching in
+**84%** of samples, fish speed **25 px/s**, the school reason stuck on `regrouping`,
+and no scatter ever. Four causes, all structural:
+
+1. Every idle medium fish moved at `IDLE_SPEED` (0.5 px/frame = 30 px/s): the
+   controller's `f.currentSpeed` was computed and never read for non-large fish.
+2. Formation slots hung off the school WAYPOINT, so whenever the school was far
+   from it every slot collapsed onto one point and every fish steered for it.
+3. Slots were 45 px apart for fish ~90 px long, and medium-medium separation
+   reached 110 px — neighbours were repelled from their own slots.
+4. The school patrolled four fixed corners of a small box with a 0.02 heading
+   blend, so it mostly stood still; the only scatter was a predator.
+
+What replaced it (`drawFishEntities`, the school section and the medium branch):
+
+- **Pace is real**: `speed = f.currentSpeed × speedMult × turnSlowdown` for idle
+  mediums; school speed 2.2×IDLE with a slow breathing cycle, ×1.5 while reforming.
+  Velocity smoothing for idle mediums is 0.86/0.14 so a pace change lands in
+  frames, not seconds.
+- **Slots ride the smoothed centre**, offsets re-centred so the V's centroid is the
+  centre; units in body lengths — `ua` along the heading (≥ a body length, never
+  squeezed) and `ux` across it (narrowed on a phone: the V becomes an echelon).
+  Thirteen slots so the cap of eleven never wraps onto a taken one.
+- **One heading**: every member blends 0.15 toward `schoolHeading + crab`, where
+  the crab angle (≤ 0.35 rad, gain lateral/220) is the ONLY use of the slot's
+  across-heading error. The along error is paid in pace (1 + along/240, clamped
+  0.7–1.35). Low gains on purpose: the heading answers ~25 frames late (turn rate
+  + cap), and hot gains hunted across the slot line ±170 px.
+- **The school heading turns at ≤ 0.018 rad/frame** toward a fresh random
+  waypoint (6–9 s apart, always a real journey away), with a slow wander.
+- **Phases**: `schooling` (9–15 s, then 12–22 s) → `scatter` (1.1–1.6 s: each fish
+  its own ray out of the centre at 5.5×, commitment cleared) → `regroup` (until the
+  max pairwise spread is back under 1.1× the formation span, or 5 s) → schooling.
+  Two or more members fleeing (predator, tap) jumps straight to `regroup`.
+  `window.debugSchoolPhase` exposes it; scattered/reformed thresholds scale with
+  `SCHOOL_SPAN = min(420, 0.45w)`.
+- Medium-medium separation reaches 1.6× touching distance (was 2.5× bodyWidth),
+  and the buffer-zone collision steer for two mediums is 0.035 (was 0.06).
+
+After (same harness, 60 s):
+
+| | desktop 1440×900, 7 fish | phone 390×844, 6 fish |
+|---|---|---|
+| coherence while schooling | **0.94** (0.89 mid-turn) | 0.77 |
+| pairs touching while schooling | **8%** | 19% (six 90 px fish on a 390 px canvas) |
+| fish speed | 60 px/s | 59 px/s |
+| scatter → reform cycles per minute | 3 | 2 |
+
+Gates: idletest, foodtest, enginetest green; design.html loads clean. The phone
+figure is geometry, not behaviour: fish drawn by a finger are smaller than the
+harness's 88 px strokes, and the cap there is nine.

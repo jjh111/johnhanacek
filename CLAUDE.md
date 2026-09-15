@@ -163,7 +163,7 @@ which stamps every `?v=` cache-bust ref across root `*.html` **and** the `Portfo
 - **Layered Behavior System**: Priority stack (Edge Avoidance → Heading Commitment → State Behaviors → Collision → Formation → Wander)
 - **Three Fish Categories**: Small (<35px), Medium (35-60px), Large (>60px)
 - **Small Fish**: Home in coral, flee from predators, behavior locking
-- **Medium Fish**: V-formation schooling with stable slot assignments
+- **Medium Fish**: V-formation schooling with stable slot assignments — rewritten 2026-09-15: slots ride the school's smoothed centre in body units, one shared heading (capped turn, so turns are arcs), lateral-only slot steering with pace paying the along error, and a school phase clock **schooling → scatter → regroup** (also fired by a predator or a tap). `maze-tests/schooltest.mjs` measures coherence/spacing/phases; FISH_SYSTEM_TECHNICAL.md has the numbers
 - **Large Fish**: Solitary, territorial, dominance challenges
 - Design doc: `Assets/FISH_MINIGAME_DESIGN.md`
 

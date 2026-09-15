@@ -1519,7 +1519,8 @@
             this.schoolSpreadCounter = (this.schoolSpreadCounter || 0) + 1;
             const shouldCalcSpread = this.schoolSpreadCounter % 30 === 0;
 
-            const SCHOOL_SCATTER_THRESHOLD = 200; // School is "scattered" if spread > this
+            const SCHOOL_SPAN = Math.min(420, w * 0.45);   // a full V of seven spans about this (max pairwise)
+            const SCHOOL_SCATTER_THRESHOLD = SCHOOL_SPAN * 1.4; // "scattered" only well past its own shape
             let maxSchoolSpread = this.cachedMaxSchoolSpread || 0;
 
             if (shouldCalcSpread && mediumCount > 1) {
@@ -1660,19 +1661,18 @@
                 this.schoolTargetTimer = (this.schoolTargetTimer || 0) - deltaTime;
 
                 if (!this.schoolTarget || this.schoolTargetTimer <= 0) {
-                    // REDUCED: 4-6 seconds per waypoint (was 8-12s)
-                    this.schoolTargetTimer = 4000 + Math.random() * 2000;
-
-                    // Patrol pattern - predictable movement
-                    this.schoolPatrolIndex = ((this.schoolPatrolIndex || 0) + 1) % 4;
-                    const patrolPoints = [
-                        { x: w * 0.3, y: h * 0.35 },
-                        { x: w * 0.7, y: h * 0.35 },
-                        { x: w * 0.7, y: h * 0.5 },
-                        { x: w * 0.3, y: h * 0.5 },
-                    ];
-                    rawTargetX = patrolPoints[this.schoolPatrolIndex].x;
-                    rawTargetY = patrolPoints[this.schoolPatrolIndex].y;
+                    this.schoolTargetTimer = 6000 + Math.random() * 3000;
+                    // A fresh waypoint somewhere in the school's band, always a real
+                    // journey away from where the school is now (2026-09-15: the four
+                    // fixed corners of a small box read as listless — the school
+                    // shuffled between them and mostly stood still).
+                    let px = rawTargetX, py = rawTargetY;
+                    for (let tries = 0; tries < 8; tries++) {
+                        px = w * (0.18 + Math.random() * 0.64);
+                        py = h * (0.22 + Math.random() * 0.36);
+                        if (Math.hypot(px - schoolCenterX, py - schoolCenterY) > Math.min(w, h) * 0.35) break;
+                    }
+                    rawTargetX = px; rawTargetY = py;
                 }
             }
 
@@ -1784,13 +1784,42 @@
                 const distToTarget = Math.sqrt(dx * dx + dy * dy);
 
                 if (distToTarget > 30) {
-                    // Steer school toward target
+                    // Steer school toward target — a CAPPED turn rate, so a change of
+                    // direction is an arc the eye can follow (a 180° turn takes ~3 s),
+                    // plus a slow wander so a straight leg still breathes.
                     const targetHeading = Math.atan2(dy, dx);
-                    this.schoolHeading = this.schoolHeading || targetHeading;
-                    this.schoolHeading += angleDiff(targetHeading, this.schoolHeading) * 0.02;
+                    if (this.schoolHeading === undefined) this.schoolHeading = targetHeading;
+                    this.schoolWander = Math.max(-0.006, Math.min(0.006, (this.schoolWander || 0) + (Math.random() - 0.5) * 0.0012));
+                    const want = angleDiff(targetHeading, this.schoolHeading) * 0.06 + this.schoolWander;
+                    const SCHOOL_TURN_CAP = 0.018;
+                    this.schoolHeading += Math.max(-SCHOOL_TURN_CAP, Math.min(SCHOOL_TURN_CAP, want));
                     this.schoolLastMovedAt = now; // Track last meaningful movement
                 }
                 // When close to target, maintain current heading (don't spin)
+
+                // ---- SCHOOL PHASES: school → scatter → reform (2026-09-15) ----
+                // The school holds formation, then bursts apart — on its own clock, or
+                // because a predator or a tap sent the members fleeing — and reforms.
+                // Phase is shared state every medium fish reads; the fish loop does
+                // the steering, this only decides which phase the school is in.
+                if (!this.schoolPhase) { this.schoolPhase = 'schooling'; this.schoolPhaseTimer = 9000 + Math.random() * 6000; }
+                this.schoolPhaseTimer -= deltaTime;
+                const fleeingMediums = fish.reduce((n, f) => { const b2 = f.bodyWidth || 20; return n + (b2 >= SMALL_THRESHOLD && b2 < MEDIUM_THRESHOLD && f.state === 'fleeing' ? 1 : 0); }, 0);
+                if (this.schoolPhase === 'schooling') {
+                    if (mediumCount >= 3 && this.schoolPhaseTimer <= 0 && schoolTargetReason === 'patrol') {
+                        this.schoolPhase = 'scatter'; this.schoolPhaseTimer = 1100 + Math.random() * 500;
+                    } else if (fleeingMediums >= 2) {
+                        this.schoolPhase = 'regroup'; this.schoolPhaseTimer = 5000;
+                    }
+                } else if (this.schoolPhase === 'scatter') {
+                    if (this.schoolPhaseTimer <= 0) { this.schoolPhase = 'regroup'; this.schoolPhaseTimer = 5000; }
+                } else if (this.schoolPhase === 'regroup') {
+                    const reformed = maxSchoolSpread < SCHOOL_SPAN * 1.1 && fleeingMediums === 0;
+                    if (reformed || this.schoolPhaseTimer <= 0) { this.schoolPhase = 'schooling'; this.schoolPhaseTimer = 12000 + Math.random() * 10000; }
+                }
+                // The school's pace breathes on a slow cycle; regrouping hurries.
+                this.schoolSpeedMod = (0.95 + 0.25 * Math.sin(now / 3500)) * (this.schoolPhase === 'regroup' ? 1.5 : 1);
+                window.debugSchoolPhase = this.schoolPhase;
 
                 // ---- STAGNATION DETECTION: inject randomness if school is stuck ----
                 // If school center hasn't moved toward target in 6+ seconds, nudge the waypoint
@@ -3100,15 +3129,26 @@
 
                             // Formation offsets - V-shape behind leader
                             // WIDER spacing to prevent collisions and spinning
+                            // Slots in BODY units: a medium fish is ~2×bodyWidth long, and the
+                            // old pixel offsets (45px apart) put neighbours inside each other.
+                            // Thirteen slots so the cap of eleven never wraps onto a taken one.
+                            // u ≈ 1.1 body lengths, so neighbouring slots sit ~1.4 lengths apart
+                            // (a fish is ~2×bodyWidth long); on a narrow canvas the unit shrinks so
+                            // the whole V still fits across it.
+                            // Two units: ALONG the heading (never squeezed below a body length)
+                            // and ACROSS it (narrowed on a phone so the V fits the canvas — the
+                            // school becomes a long echelon there rather than a wide V).
+                            const ua = Math.max(48, Math.min(110, (f.bodyWidth || 45) * 2.2, Math.max(w, h) / 11));
+                            const ux = Math.max(36, Math.min(110, (f.bodyWidth || 45) * 2.2, w / 9));
                             const formationOffsets = [
-                                { x: 0, y: 0 },           // Leader
-                                { x: -45, y: 35 },        // Left wing 1 (was -30, 25)
-                                { x: -45, y: -35 },       // Right wing 1 (was -30, -25)
-                                { x: -85, y: 60 },        // Left wing 2 (was -55, 45)
-                                { x: -85, y: -60 },       // Right wing 2 (was -55, -45)
-                                { x: -120, y: 30 },       // Back left (was -80, 20)
-                                { x: -120, y: -30 },      // Back right (was -80, -20)
-                                { x: -150, y: 0 },        // Tail (was -100, 0)
+                                { x: 0, y: 0 },
+                                { x: -1.0 * ua, y:  0.75 * ux }, { x: -1.0 * ua, y: -0.75 * ux },
+                                { x: -2.0 * ua, y:  1.5 * ux },  { x: -2.0 * ua, y: -1.5 * ux },
+                                { x: -2.8 * ua, y:  0.7 * ux },  { x: -2.8 * ua, y: -0.7 * ux },
+                                { x: -3.6 * ua, y: 0 },
+                                { x: -3.6 * ua, y:  1.4 * ux },  { x: -3.6 * ua, y: -1.4 * ux },
+                                { x: -4.4 * ua, y:  0.6 * ux },  { x: -4.4 * ua, y: -0.6 * ux },
+                                { x: -5.0 * ua, y: 0 },
                             ];
 
                             const slot = f.formationSlot % formationOffsets.length;
@@ -3125,10 +3165,22 @@
 
                             // Target position = school target + rotated formation offset
                             // Clamp formation targets to safe zone so fish don't get pushed to edges
+                            // ---- SLOT: relative to the school's smoothed CENTRE, not the waypoint ----
+                            // Slots hung off the waypoint used to collapse onto one point whenever
+                            // the school was far from it — every fish steering for the same spot is
+                            // how they bumped. Offsets are re-centred so the formation's centroid IS
+                            // the centre, and the whole shape travels because every member swims
+                            // the school heading (2026-09-15 rewrite).
                             const FORM_SAFE_MARGIN = 80; // Keep formation slots this far from canvas edges
-                            const target = this.schoolTarget || { x: w * 0.5, y: h * 0.45 };
-                            const myTargetX = Math.max(FORM_SAFE_MARGIN, Math.min(w - FORM_SAFE_MARGIN, target.x + rotatedOffsetX));
-                            const myTargetY = Math.max(FORM_SAFE_MARGIN, Math.min(h - FORM_SAFE_MARGIN, target.y + rotatedOffsetY));
+                            const nSlots = Math.max(1, Math.min(mediumCount, formationOffsets.length));
+                            let meanOffX = 0, meanOffY = 0;
+                            for (let k = 0; k < nSlots; k++) { meanOffX += formationOffsets[k].x; meanOffY += formationOffsets[k].y; }
+                            meanOffX /= nSlots; meanOffY /= nSlots;
+                            const relX = offset.x - meanOffX, relY = offset.y - meanOffY;
+                            const slotOffX = relX * cos - relY * sin;
+                            const slotOffY = relX * sin + relY * cos;
+                            const myTargetX = Math.max(FORM_SAFE_MARGIN, Math.min(w - FORM_SAFE_MARGIN, schoolCenterX + slotOffX));
+                            const myTargetY = Math.max(FORM_SAFE_MARGIN, Math.min(h - FORM_SAFE_MARGIN, schoolCenterY + slotOffY));
 
                             // Store for debug
                             f.debugFormationTarget = { x: myTargetX, y: myTargetY, slot: slot };
@@ -3136,126 +3188,62 @@
                             const dx = myTargetX - f.x;
                             const dy = myTargetY - f.y;
                             const dist = Math.sqrt(dx * dx + dy * dy);
+                            const phase = this.schoolPhase || 'schooling';
+                            const SCHOOL_SPEED = IDLE_SPEED * 2.2 * (this.schoolSpeedMod || 1);
 
-                            // ---- UNIFIED SCHOOL HEADING ----
-                            // ALL medium fish follow the SAME school heading
-                            // Position correction is secondary and very gentle
-
-                            // PRIMARY: Match school heading (this is what makes them move together)
-                            f.targetHeading += angleDiff(schoolHeading, f.targetHeading) * 0.04;
-
-                            // ---- PHASE 7: Dynamic Leadership ----
-                            // Non-leaders also blend toward the current leader's heading
-                            // This creates more organic, flowing movement
-                            const leader = this.schoolLeader;
-                            if (leader && leader.id !== f.id && leader.heading !== undefined) {
-                                // Blend toward leader's heading (gentle influence)
-                                f.targetHeading += angleDiff(leader.heading, f.targetHeading) * 0.015;
-                                f.debugIsLeader = false;
-                            } else if (leader && leader.id === f.id) {
-                                f.debugIsLeader = true;
-                            }
-
-                            // ---- SCHOOL COHESION: Always pull toward global school center ----
-                            // Use the smoothed global school center (not per-fish neighbor average).
-                            // Per-fish cohesion breaks down when fish are farther than perception range —
-                            // they end up with medCohCount=0 and just swim in parallel forever.
-                            // Global center is always known regardless of inter-fish distance.
-                            const distToSchoolCenter = Math.sqrt(
-                                (schoolCenterX - f.x)**2 + (schoolCenterY - f.y)**2
-                            );
-
-                            // ---- REGROUPING BURST: When far from school, override heading to regroup ----
-                            const REGROUP_THRESHOLD = 80;   // Trigger burst this far from school center
-                            const CRITICAL_THRESHOLD = 150; // Emergency: fully commit heading to regroup
-
-                            // SECONDARY: Gentle drift toward formation slot (suppressed during regroup)
-                            // When far from school center, skip slot correction — regrouping takes full priority
-                            const slotAngle = Math.atan2(dy, dx);
-                            const slotAngleDiff = Math.abs(angleDiff(slotAngle, schoolHeading));
-                            const farFromSchool = distToSchoolCenter > REGROUP_THRESHOLD;
-
-                            // Reduce slot pull weight near canvas edges so edge avoidance wins
-                            const nearEdge = f.x < 120 || f.x > w - 120 || f.y < 120 || f.y > h - 120;
-                            const slotWeight = nearEdge ? 0.004 : 0.01;
-                            // Skip slot pull if fish is in coral emergency — coral escape takes priority
-                            if (!farFromSchool && slotAngleDiff < Math.PI * 0.5 && dist > 40 && !f.inCoralEmergency) {
-                                // Slot is ahead of us and we're close to school - gentle correction
-                                f.targetHeading += angleDiff(slotAngle, f.targetHeading) * slotWeight;
-                            }
-                            // If regrouping or slot is behind us, skip - getting back to school first
-
-                            let regroupingBurst = false;
-
-                            // Skip all school cohesion/regroup if in coral emergency — escape takes full priority
-                            if (distToSchoolCenter > REGROUP_THRESHOLD && !f.inCoralEmergency) {
-                                regroupingBurst = true;
-                                const cohAngle = Math.atan2(schoolCenterY - f.y, schoolCenterX - f.x);
-
-                                if (distToSchoolCenter > CRITICAL_THRESHOLD) {
-                                    // Emergency: ignore school heading, rush directly back
-                                    f.targetHeading = cohAngle; // Full override
-                                    f.committedHeading = cohAngle;
-                                    f.reversalPressure = 0;
-                                } else {
-                                    // Strong pull — urgency scales 0→1 over the threshold range
-                                    const cohUrgency = (distToSchoolCenter - REGROUP_THRESHOLD) / (CRITICAL_THRESHOLD - REGROUP_THRESHOLD);
-                                    const cohStrength = 0.10 + cohUrgency * 0.15; // 0.10–0.25
-                                    f.targetHeading += angleDiff(cohAngle, f.targetHeading) * cohStrength;
-                                }
-                            } else if (distToSchoolCenter > 35 && !f.inCoralEmergency) {
-                                // Gentle maintenance cohesion when close — prevents drift
-                                const cohAngle = Math.atan2(schoolCenterY - f.y, schoolCenterX - f.x);
-                                const cohUrgency = (distToSchoolCenter - 35) / (REGROUP_THRESHOLD - 35);
-                                const cohStrength = 0.015 + cohUrgency * 0.025; // 0.015–0.04
-                                f.targetHeading += angleDiff(cohAngle, f.targetHeading) * cohStrength;
-                            }
-
-                            // Soft velocity alignment with nearby school members (local, short range)
-                            let medAlignVx = 0, medAlignVy = 0, medAlignCount = 0;
-                            fish.forEach(other => {
-                                if (other.id === f.id) return;
-                                const otherBw = other.bodyWidth || 20;
-                                if (otherBw < SMALL_THRESHOLD || otherBw >= MEDIUM_THRESHOLD) return;
-                                const odx = other.x - f.x;
-                                const ody = other.y - f.y;
-                                const od = Math.sqrt(odx * odx + ody * ody);
-                                if (od < 200 && od > 0) {
-                                    medAlignVx += other.vx || 0;
-                                    medAlignVy += other.vy || 0;
-                                    medAlignCount++;
-                                }
-                            });
-                            if (medAlignCount > 0) {
-                                const avgAngle = Math.atan2(medAlignVy / medAlignCount, medAlignVx / medAlignCount);
-                                f.targetHeading += angleDiff(avgAngle, f.targetHeading) * 0.008;
-                            }
-
-                            // Speed based on distance (faster to catch up, slower when in position)
-                            // REGROUPING BURST: Speed scales with how far we are from school center
-                            let speedMod;
-                            if (regroupingBurst) {
-                                // Scale from 1.75× at threshold to 2.5× at critical and beyond
-                                const regroupUrgency = Math.min(1, (distToSchoolCenter - REGROUP_THRESHOLD) / (CRITICAL_THRESHOLD - REGROUP_THRESHOLD));
-                                speedMod = 1.75 + regroupUrgency * 0.75; // 1.75→2.5
-                            } else {
-                                speedMod = dist < 20 ? 0.6 : (dist < 50 ? 0.85 : (dist < 100 ? 1.0 : 1.15));
-                            }
-
-                            // FOOD SLOWDOWN: Reduce speed when school is approaching food
+                            // FOOD SLOWDOWN: ease off when the school is closing on food
                             let foodSpeedMod = 1.0;
                             if (this.schoolTargetReason === 'food' && this.schoolTarget) {
-                                const distToFood = Math.sqrt(
-                                    (f.x - this.schoolTarget.x) ** 2 +
-                                    (f.y - this.schoolTarget.y) ** 2
-                                );
-                                if (distToFood < 100) {
-                                    // Slow down to 50-100% based on proximity
-                                    foodSpeedMod = 0.5 + (distToFood / 100) * 0.5;
-                                }
+                                const distToFood = Math.sqrt((f.x - this.schoolTarget.x) ** 2 + (f.y - this.schoolTarget.y) ** 2);
+                                if (distToFood < 100) foodSpeedMod = 0.5 + (distToFood / 100) * 0.5;
                             }
 
-                            f.currentSpeed = IDLE_SPEED * speedMod * foodSpeedMod;
+                            if (phase === 'scatter') {
+                                // ---- SCATTER: every fish its own ray out of the centre, then let go ----
+                                if (f.scatterAngle === undefined) {
+                                    const base = Math.atan2(f.y - schoolCenterY, f.x - schoolCenterX);
+                                    f.scatterAngle = (isFinite(base) ? base : Math.random() * Math.PI * 2) + (Math.random() - 0.5) * 0.9;
+                                    f.committedHeading = f.scatterAngle;
+                                    f.reversalPressure = 0;
+                                    f.vx = Math.cos(f.scatterAngle) * 2.4;
+                                    f.vy = Math.sin(f.scatterAngle) * 2.4;
+                                }
+                                f.targetHeading += angleDiff(f.scatterAngle, f.targetHeading) * 0.3;
+                                f.currentSpeed = IDLE_SPEED * 5.5 * foodSpeedMod;
+                            } else {
+                                f.scatterAngle = undefined;
+                                // PRIMARY: turn WITH the school. One strong blend, the same for
+                                // every member, is what makes a turn read as one animal.
+                                f.targetHeading += angleDiff(schoolHeading, f.targetHeading) * 0.18;
+
+                                // SECONDARY: converge on the slot SIDEWAYS. Only the error across the
+                                // school heading turns the fish — a crab angle of up to ~35° toward
+                                // its slot line — so every member still points the school's way and
+                                // a slot that is behind never makes a fish turn round. The error
+                                // along the heading is paid in pace, below. Far off (or reforming
+                                // after a scatter) the fish steers straight for the slot instead.
+                                const lateral = -dx * sin + dy * cos;   // +: slot is to the left of the heading
+                                const slotAngle = Math.atan2(dy, dx);
+                                if (!f.inCoralEmergency) {
+                                    if (phase === 'regroup' || dist > 360) {
+                                        f.targetHeading += angleDiff(slotAngle, f.targetHeading) * 0.22;
+                                        f.committedHeading = f.targetHeading; f.reversalPressure = 0;
+                                    } else if (dist > 10) {
+                                        // Low gain on purpose: the heading answers a request ~25
+                                        // frames late (turn rate + cap), so a hot gain hunted
+                                        // across the slot line ±170px. Measured 2026-09-15.
+                                        const crab = Math.max(-0.35, Math.min(0.35, lateral / 220));
+                                        f.targetHeading += angleDiff(schoolHeading + crab, f.targetHeading) * 0.15;
+                                    }
+                                }
+
+                                // SPEED falls a fish into place: slot ahead along the heading → hurry,
+                                // slot behind → ease off. Heading stays shared; only pace differs.
+                                const along = dx * cos + dy * sin;
+                                let speedMod = Math.max(0.7, Math.min(1.35, 1 + along / 240));
+                                if (phase === 'regroup') speedMod = Math.max(speedMod, 1.3);
+                                f.currentSpeed = SCHOOL_SPEED * speedMod * foodSpeedMod;
+                            }
                         } // end skipFormationThisFrame guard for medium fish
                         } else {
                             // ---- SMALL and LARGE fish: Use wanderTimer system ----
@@ -3562,7 +3550,7 @@
                             } else {
                                 // BUFFER: Normal overlap - moderate steering
                                 // Large-vs-large: halve the steer to reduce oscillation during challenge/retreat
-                                const baseSteeer = bothMedium ? 0.06 : bothLarge ? 0.022 : 0.045;
+                                const baseSteeer = bothMedium ? 0.035 : bothLarge ? 0.022 : 0.045;
                                 const steerStrength = baseSteeer * collisionReduction;
                                 const overlapFactor = Math.min(1.5, overlap / 15);
                                 f.targetHeading += angleDiff(avoidAngle, f.heading) * steerStrength * (1 + overlapFactor);
@@ -3579,11 +3567,13 @@
                     // Uses size-based separation range
                     // STRENGTHENED for medium fish to prevent bunching up
                     const bothMediumSep = isMedium && otherSize === 'medium';
-                    const softSepRange = Math.max(comfortDist, effectiveSepRange);
+                    // Medium-medium: separation reaches only a little past touching. The
+                    // old 2.5×bodyWidth range (~110px) repelled members from their own
+                    // slots, which sit 45–80px apart — the school could never settle.
+                    const softSepRange = bothMediumSep ? minDist * 1.6 : Math.max(comfortDist, effectiveSepRange);
                     if (d < softSepRange && d >= minDist) {
                         const strength = 1 - (d / softSepRange);
-                        // Stronger multiplier for medium-medium to keep school spread
-                        const forceMult = bothMediumSep ? 2.0 : ((d < comfortDist) ? 1.5 : 1.0);
+                        const forceMult = bothMediumSep ? 1.4 : ((d < comfortDist) ? 1.5 : 1.0);
                         sepX += (dx / d) * strength * forceMult;
                         sepY += (dy / d) * strength * forceMult;
                     }
@@ -4347,6 +4337,11 @@
                         ? 0.4 + 0.6 * (approachDist / 50)  // ramps 0.4→1.0 over 50px
                         : 1.0;
                     speed = SEEK_SPEED * speedMult * turnSlowdown * approachSlowdown;
+                } else if (isMedium && f.currentSpeed) {
+                    // The school controller sets the pace (2026-09-15). Before this branch
+                    // existed its currentSpeed was computed and never read — every idle
+                    // medium fish moved at IDLE_SPEED, 30 px/s, whatever the school did.
+                    speed = f.currentSpeed * speedMult * turnSlowdown;
                 } else if (isLarge) {
                     // Large fish cruise faster (tuna-like)
                     // Boost speed when avoiding edges — prevents lazy drift into wall
@@ -4383,6 +4378,11 @@
                     smoothNew = 0.25 + burstFade * 0.15; // 0.40→0.25
                 } else if (isSeeking) {
                     smoothOld = 0.78; smoothNew = 0.22; // Quick acceleration to food
+                } else if (isMedium && f.state === 'idle') {
+                    // A schooling fish pays its slot error in pace; 0.95/0.05 took ~20
+                    // frames to change speed, so it crowded its neighbour before it
+                    // could ease off (2026-09-15).
+                    smoothOld = 0.86; smoothNew = 0.14;
                 } else if (needsEdgeAvoid && avoidStrength > 0.05) {
                     // Edge urgency — velocity must follow heading quickly
                     // Graduated: stronger avoidance = faster velocity change
