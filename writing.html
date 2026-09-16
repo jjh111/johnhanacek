@@ -111,37 +111,11 @@
         #writing-main { pointer-events: auto; }
 
 
-        /* ── Category sidebars ─────────────────────────────────────────
-           A feathered strip on the reader's left edge, color-coded by
-           the open article's category. Feathered = the vertical gradient
-           rises from transparent through a mid-brightness band and back
-           to transparent, so it glows without hard ends. */
-        .panel-sidebar {
-            position: absolute;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            width: 5px;
-            pointer-events: none;
-            --sb: var(--cyan-dim);
-        }
-        .panel-sidebar::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(
-                to bottom,
-                transparent 0%,
-                color-mix(in srgb, var(--sb) 45%, transparent) 18%,
-                var(--sb) 50%,
-                color-mix(in srgb, var(--sb) 45%, transparent) 82%,
-                transparent 100%
-            );
-        }
-        .content-panel[data-cat="published"]  .panel-sidebar { --sb: var(--gold); }
-        .content-panel[data-cat="eduos"]      .panel-sidebar { --sb: var(--cyan-dim); }
-        .content-panel[data-cat="metamedium"] .panel-sidebar { --sb: var(--gold); }
-        .content-panel[data-cat="grad"]       .panel-sidebar { --sb: var(--green); }
+        /* Opened reader: the article title carries the category color. */
+        .content-panel[data-cat="published"]  #panelBody h1 { color: var(--gold); }
+        .content-panel[data-cat="eduos"]      #panelBody h1 { color: var(--cyan); }
+        .content-panel[data-cat="metamedium"] #panelBody h1 { color: var(--gold); }
+        .content-panel[data-cat="grad"]       #panelBody h1 { color: var(--green); }
 
         /* Date line shown under the title in the opened reader view */
         .panel-date {
@@ -329,8 +303,23 @@
 
         .file-card:hover::after { width: 3px; }
 
-        .file-card.cat-eduos::after    { background: linear-gradient(to bottom, var(--p1-color), rgba(var(--cyan-dim-rgb),0.1)); }
-        .file-card.cat-metamedium::after { background: linear-gradient(to bottom, var(--p2-color), rgba(var(--gold-rgb),0.1)); }
+        /* Every card wears the feathered category color: transparent at
+           both ends, mid-brightness in the middle — same grammar as the
+           reader sidebar, so list and reader speak one language. */
+        .file-card::after {
+            background: linear-gradient(
+                to bottom,
+                transparent 0%,
+                color-mix(in srgb, var(--card-accent) 55%, transparent) 20%,
+                var(--card-accent) 50%,
+                color-mix(in srgb, var(--card-accent) 55%, transparent) 80%,
+                transparent 100%
+            );
+        }
+        .file-card.cat-published::after  { --card-accent: var(--gold); }
+        .file-card.cat-eduos::after      { --card-accent: var(--cyan-dim); }
+        .file-card.cat-metamedium::after { --card-accent: var(--gold); }
+        .file-card.cat-grad::after       { --card-accent: var(--green); }
 
         .file-name {
             font-size: var(--text-sm);
@@ -369,15 +358,10 @@
            .nav-inner, so the close button was not merely clipped, it was
            unclickable, and Esc was the only way out. Below the search overlay's
            2000, which must still open over the reader. */
-        .panel-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(var(--surface-rgb), 0.6);
-            z-index: 1099;
-        }
-
-        .panel-overlay.open { display: block; }
+        /* NON-BLOCKING READER (local experiment): the dim overlay is gone —
+           the page behind stays visible, scrollable and clickable, so other
+           items can be opened and ⌘K used while the panel is up. */
+        .panel-overlay { display: none !important; }
 
         .content-panel {
             display: none;
@@ -389,6 +373,7 @@
             height: 100vh;
             background: var(--sea-deep);
             border-left: 1px solid var(--border);
+            box-shadow: -12px 0 40px rgba(0, 0, 0, 0.5);
             z-index: 1100;
             overflow: hidden;
         }
@@ -772,7 +757,6 @@
 <div class="panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
 
 <div class="content-panel" id="contentPanel" role="dialog" aria-modal="true" aria-label="Reading panel" aria-hidden="true">
-    <div class="panel-sidebar" aria-hidden="true"></div>
     <div class="panel-header">
         <div class="panel-nav-row">
             <button class="nav-btn" id="btnBack" onclick="navBack()" disabled title="Back (Alt+Left)">&#8592;</button>
@@ -1044,7 +1028,7 @@ function openFile(path, skipHistory) {
     document.getElementById('contentPanel').dataset.cat = openEntry ? openEntry.cat : '';
     document.getElementById('contentPanel').classList.add('open');
     document.getElementById('panelOverlay').classList.add('open');
-    document.body.style.overflow = 'hidden';
+    // background stays scrollable in the non-blocking reader
     // Dialog semantics: focus moves in, Esc/Tab handled, focus returns on close.
     panelReturnFocus = document.activeElement;
     const panel = document.getElementById('contentPanel');
@@ -1074,11 +1058,10 @@ function openFile(path, skipHistory) {
 }
 
 function closePanel() {
-    document.getElementById('contentPanel').dataset.cat = '';
     document.getElementById('contentPanel').classList.remove('open');
     document.getElementById('panelOverlay').classList.remove('open');
     document.getElementById('contentPanel').setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
+    // (no body lock to release in the non-blocking reader)
     if (panelReturnFocus && document.contains(panelReturnFocus)) {
         try { panelReturnFocus.focus(); } catch (e) {}
     }
@@ -1202,7 +1185,7 @@ function updateFooterNav(path) {
 }
 
 document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { closePanel(); return; }
+    if (e.key === 'Escape' && !document.body.classList.contains('search-overlay-open')) { closePanel(); return; }
     if (!currentPath) return;
 
     if (e.altKey && e.key === 'ArrowLeft') { e.preventDefault(); navBack(); }
