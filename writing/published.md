@@ -20,7 +20,11 @@ On the political economy of the open internet: platform monopolism, network effe
 
 **The Technium (Kevin Kelly), 2014**
 
-A 100-year-future scenario in 100 words, selected by Kevin Kelly — co-founder of *Wired* — as his top choice: "my choice for the most plausible vision of a future I desire goes to John Hanacek's scenario. I think I'd like to live there, and I think it is plausible in 100 years."
+A 100-year-future scenario in 100 words, submitted to Kevin Kelly's "100 Years in the Future in 100 words" challenge — and selected as the winner:
+
+> "My choice for the most plausible vision of a future I desire goes to John Hanacek's scenario. I think I'd like to live there, and I think it is plausible in 100 years."
+> 
+> — [Kevin Kelly](https://kk.org/), co-founder of *Wired*
 
 ## Research
 
@@ -36,7 +40,11 @@ Published research on technology adoption in education — combining social netw
 
 **Kindle ([Amazon](https://www.amazon.com/dp/B0CDVJWGXL)) · [Ebook (Gumroad)](https://jhana.gumroad.com/l/qvtza) · [Serial on Substack](https://fractalfuture.substack.com)**
 
-A collection of 19 original short stories — mostly science fiction, a few never before published — ruminating on bright and dark possibilities down a turbulent river of time. "A series of thoughtful ruminations on bright and dark possibilities that lie ahead of us." — [David Brin](https://www.davidbrin.com/), science fiction author.
+A collection of 19 original short stories — mostly science fiction, a few never before published — ruminating on bright and dark possibilities down a turbulent river of time.
+
+> "A series of thoughtful ruminations on bright and dark possibilities that lie ahead of us, down a turbulent river of time."
+> 
+> — [David Brin](https://www.davidbrin.com/), science fiction author
 
 ## Blogs & Ongoing Writing
 
