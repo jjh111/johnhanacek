@@ -114,7 +114,7 @@ function proseIssues(label, text) {
   const t = text.replace(/"[^"]{12,}"/g, ' ').replace(/“[^”]{12,}”/g, ' ').replace(/AI Beyond Chat|Beyond Network Feudalism/g, ' ');
   if (t.includes('—')) out.push({ label, kind: 'em dash', strict: true });
   for (const [re, name] of BANNED) if (re.test(t)) out.push({ label, kind: `construction: ${name}`, strict: true });
-  for (const sent of t.split(/(?<=[.!?])\s+/)) {
+  for (const sent of t.split(/(?<=[.!?])\s+| · /)) {
     const words = sent.trim().split(/\s+/).filter(Boolean).length;
     if (words > 25) out.push({ label, kind: `${words}-word sentence`, strict: false });
     if ((sent.match(/;/g) || []).length >= 2) out.push({ label, kind: 'semicolon chain', strict: false });
@@ -306,29 +306,29 @@ function chunkPatches() {
   return {
     4: {
       title: 'JHDesign LLC: Founding Designer',
-      content: 'Independent designer since 2012 (media, web and product design under the JHphotography and JHDesign names), incorporated as JHDesign LLC in 2024. Serves startups and R&D teams. Clients: OpenProse (founding design, 2026), Muse.bio (workshop facilitation, personas and journey mapping in 2024; a FigJam workshop plus a Claude Code and Figma MCP ingestion system in 2026), Transfyr (user-journey workshop, MVP design handoff with PRD and prototype, synthetic demo data and QA, 2025). Works across biotech and pharma, medtech and first response, spatial computing and AI.',
+      content: 'Independent designer since 2012 under the JHphotography and JHDesign names. JHDesign LLC since 2024. Serves startups and R&D teams. Clients: OpenProse, founding design (2026). Muse.bio, personas and journey-mapping workshops (2024), then a FigJam workshop with a Claude Code and Figma MCP ingestion system (2026). Transfyr, MVP design handoff with PRD and prototype, synthetic demo data and QA (2025). Works across biotech and pharma, medtech and first response, spatial computing and AI.',
       tldr: 'JHDesign LLC serves startups and R&D teams: founding design for OpenProse, workshops and tooling for Muse.bio, MVP handoff for Transfyr.',
     },
     21: {
-      content: `Awards and recognition: ${A.map(a => `${a.title}, ${a.org} (${a.year})${a.for ? `, ${a.for}` : ''}`).join('. ')}. Contributor, interviewed as an expert, to Spatial Design: Breaking the 2D Paradigm (Dominique Wu, 2024). Lightning Round speaker at AWE USA 2024; mentor at XRDC 2024 (Meta, ShapesXR, IDEO).`,
+      content: `Awards and recognition: ${A.map(a => `${a.title}, ${a.org} (${a.year})${a.for ? `, ${a.for}` : ''}`).join('. ')}. Contributor, interviewed as an expert, to Spatial Design: Breaking the 2D Paradigm (Dominique Wu, 2024). Lightning Round speaker at AWE USA 2024. Mentor at XRDC 2024.`,
       tldr: 'AsMA R&D Innovation Award (2022) · NIST CHARIoT Phase 2 (2021) · Microsoft Reactor (2020) · AT&T 5G Hackathon (2019) · FI SF grad · Most Meta · Kevin Kelly challenge (2014).',
       micro: 'AsMA, NIST, Microsoft, AT&T 5G, Founder Institute.',
       tags: 'awards innovation aerospace nist microsoft att 5g hackathon founder institute kevin kelly technium awe xrdc book spatial design accomplishment won speaker talk',
       facts: awardsFacts,
     },
     23: {
-      content: `${R.work.filter(w => !w.compressed).map(w => `${w.org} (${span(w)}): ${w.title}${w.summary ? `: ${w.summary.replace(/\.$/, '')}` : ''}`).join('. ')}. Independent media and design practice since 2012 under the JHphotography and JHDesign names; JHDesign LLC registered 2024. Earlier: ${earlier.map(w => `${w.title}, ${w.org} (${span(w)})`).join('; ')}.`,
-      tldr: 'JHDesign LLC (24–now; OpenProse 26, Muse.bio 24/26, Transfyr 25), Nanome (22–24), BadVR (21–22), AvatarMEDIC CEO/CTO (19–21), Collaborate.org (15–18); independent since 2012.',
+      content: `${R.work.filter(w => !w.compressed).map(w => `${w.org} (${span(w)}): ${w.title}${w.summary ? `: ${w.summary.replace(/\.$/, '')}` : ''}`).join('. ')}. Independent media and design practice since 2012 under the JHphotography and JHDesign names. JHDesign LLC registered 2024. Earlier: ${earlier.map(w => `${w.title}, ${w.org} (${span(w)})`).join('. ')}.`,
+      tldr: 'JHDesign LLC (24–now: OpenProse 26, Muse.bio 24/26, Transfyr 25), Nanome (22–24), BadVR (21–22), AvatarMEDIC CEO/CTO (19–21), Collaborate.org (15–18). Independent since 2012.',
       micro: 'JHDesign ← Nanome ← BadVR ← AvatarMEDIC ← Georgetown.',
       facts: timelineFacts,
     },
     26: {
-      content: 'Leadership: co-founded AvatarMEDIC and led it as CEO/CTO (product strategy, pitching, engineering direction, fundraising) with co-founder Susan Ip-Jewell MD. At Nanome, Lead XR Product Designer and de facto product lead inside a PM, project manager and design triad: ran user interviews, wrote the PRD template and tracking system, designed the internal Coda knowledge base, organized team-wide workshops and translated feedback into development cycles; art directed look development and production. UI/UX Design Lead at Collaborate.org. Runs client engagements and workshops through JHDesign LLC, and hands teams systems they operate themselves (Muse.bio). Product management experience: roadmaps and pitching as AvatarMEDIC CEO; MVP scoping and PRD handoffs for JHDesign clients (Transfyr). Startup titles ran lean; the scope was director-level in practice, most of all at Nanome.',
-      tldr: 'Led AvatarMEDIC as CEO/CTO; product lead for Nanome 2 inside a PM–PjM–design triad; runs client engagements and workshops through JHDesign LLC.',
+      content: 'Leadership: co-founded AvatarMEDIC and led it as CEO/CTO with co-founder Susan Ip-Jewell MD: product strategy, pitching, engineering direction, fundraising. At Nanome, Lead XR Product Designer and product lead inside a PM, project manager and design triad: user interviews, the PRD template and tracking system, the Coda knowledge base, team workshops, feedback turned into development cycles. Art directed look development and production. UI/UX Design Lead at Collaborate.org. Runs client engagements and workshops through JHDesign LLC and hands teams systems they operate themselves (Muse.bio). Product management: roadmaps and pitching as AvatarMEDIC CEO, MVP scoping and PRD handoffs for JHDesign clients (Transfyr). Startup titles ran lean. The scope was director-level in practice, most of all at Nanome.',
+      tldr: 'Led AvatarMEDIC as CEO/CTO. Product lead for Nanome 2 inside a PM, project manager and design triad. Runs client engagements and workshops through JHDesign LLC.',
       micro: 'Founder-led teams; product lead at Nanome.',
     },
     27: {
-      content: 'Shipped products: (1) AROC situational-awareness AR HUD at BadVR, hand tracking on Meta Quest and HoloLens 2. (2) Nanome 2 on Meta Quest, its companion web portal and the MARA AI assistant, to pharma customers. (3) JH Coaching OS, an adaptive AI coaching product with agent, materials, context docs and dashboard. (4) A workshop system for Muse.bio: FigJam workshop plus a Claude Code + Figma MCP ingestion tool, handed off. (5) OpenProse founding design: brand and a live homepage in two months. Experiments: MetaMedium, an AI-interpreted drawing interface; this site\'s command bar (BM25 + MiniLM retrieval, LFM2.5 in the browser on WebGPU, local-model support, scene language for the canvases); READI, a live emergency-resource dashboard; Blok Dok (2013), a wooden iPhone dock designed, made and sold.',
+      content: 'Shipped products: (1) AROC situational-awareness AR HUD at BadVR, hand tracking on Meta Quest and HoloLens 2. (2) Nanome 2 on Meta Quest, its companion web portal and the MARA AI assistant, to pharma customers. (3) JH Coaching OS, an adaptive AI coaching product with agent, materials, context docs and dashboard. (4) A workshop system for Muse.bio: FigJam workshop plus a Claude Code + Figma MCP ingestion tool, handed off. (5) OpenProse founding design: brand and a live homepage in two months. Experiments: MetaMedium, an AI-interpreted drawing interface. This site\'s command bar: BM25 and MiniLM retrieval, LFM2.5 in the browser on WebGPU, local-model support, scene language for the canvases. READI, a live emergency-resource dashboard. Blok Dok (2013), a wooden iPhone dock designed, made and sold.',
       tldr: 'Shipped: AROC (BadVR), Nanome 2 + web portal + MARA AI, JH Coaching OS, the Muse.bio workshop system, OpenProse. Experiments: MetaMedium, this site\'s search, READI.',
       micro: 'Shipped: XR + AI, agentic tools, web products.',
       tags: 'shipped AI products built delivered LLM agent launched output nanome aroc coaching os openprose muse readi metamedium blok dok',
@@ -345,7 +345,7 @@ function chunkPatches() {
     },
     50: {
       title: 'Resume: One-Page PDF',
-      content: `John's one-page resume (${YEAR}) is available as a PDF: ${headline}. ${lane.summary} Career: ${R.work.filter(w => !w.compressed).map(w => `${w.title}, ${w.org} (${span(w)})`).join('; ')}. MA Georgetown CCT (2016), BA UC San Diego (2012). Open the PDF to read or download it.`,
+      content: `John's one-page resume (${YEAR}) is available as a PDF: ${headline}. ${lane.summary} Career: ${R.work.filter(w => !w.compressed).map(w => `${w.title}, ${w.org} (${span(w)})`).join('. ')}. MA Georgetown CCT (2016), BA UC San Diego (2012). Open the PDF to read or download it.`,
       tldr: `The one-page ${YEAR} resume as a PDF. Open it to read or download.`,
       micro: `One-page PDF resume, ${YEAR}.`,
     },
@@ -401,7 +401,7 @@ function aboutBlocks() {
                     <h4>${esc(e.school)}</h4>
                     <p class="muted">${esc(e.location)} · ${e.start}–${e.end}</p>
                     <p><strong>${esc(e.degree.split(',')[0])}</strong>${esc(e.degree.slice(e.degree.indexOf(',')))}</p>
-                    <p>${e.thesis?.title ? `Thesis: ${e.thesis.url ? `<a href="${e.thesis.url}" target="_blank" rel="noopener">“${esc(e.thesis.title)}”</a>` : `“${esc(e.thesis.title)}”`} — ${esc(e.thesis.note)}` : `Thesis: ${esc(e.thesis?.note || '')}`}${e.secondThesis ? ` Second thesis: ${esc(e.secondThesis)}.` : ''}</p>
+                    <p>${e.thesis?.title ? `Thesis: ${e.thesis.url ? `<a href="${e.thesis.url}" target="_blank" rel="noopener">“${esc(e.thesis.title)}”</a>` : `“${esc(e.thesis.title)}”`}: ${esc(e.thesis.note)}` : `Thesis: ${esc(e.thesis?.note || '')}`}${e.secondThesis ? ` Second thesis: ${esc(e.secondThesis)}.` : ''}</p>
                     ${e.honors ? `<p class="muted">${esc(e.honors.join(' · '))}</p>` : ''}
                 </div>`).join('') + `\n            </div>\n            `;
   const awards = `\n            <div class="timeline">` + R.awards.map(a => item(a.year, esc(a.title), link(a.org, a.url), null).replace('</h4>\n', `</h4>\n`).replace(/(<\/p>)(\s*<\/div>)/, `$1${a.for ? `<p class="muted">${esc(a.for)}</p>` : ''}$2`)).join('') + `\n            </div>\n            `;

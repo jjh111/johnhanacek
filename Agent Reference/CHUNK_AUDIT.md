@@ -648,11 +648,6 @@ which the Review Canvas shows and which the distillation worked from.
   CORE approaches" so the subset meaning of 37 survives intact. Vectors
   rebuilt; `openprose/HANDOFF.md` untouched — its "37 live brand experiments"
   describes what the canvas itself carries, which is still the core set.
-
-## §J Resume compile — 2026-09-16
-
-Chunks 4, 21, 23, 26, 27, 50 are COMPILED from `Assets/resume.json` by `scripts/build-resume.mjs --apply` (source: the 2026-09-09 interview; evidence links live in the JSON). Edit the JSON, not the chunk text. Rebuild vectors after each compile (`node scripts/build-chunk-vectors.mjs`).
-
 ## L. Prose pass — 2026-09-16 (house rules)
 
 John's ruling: terse prose, fewer words, no em dashes, no negation-constructivist sentences. Kinds below: `separator` (title " — " → ": "), `dash`, `semicolon`, `negation`, `cut` (flourish or degree word deleted), `split` (long sentence broken). Compiled chunks 4/21/23/26/27/50 untouched. Quoted endorsements kept verbatim in 14 (David Brin), 15 (Désirée Sterling) and 59 (all seven) — the three surviving "not only"/"never" hits are all inside those quotes. `_meta.fields.prose` now records the rules. Vectors NOT rebuilt here; run `node scripts/build-chunk-vectors.mjs`.
@@ -712,3 +707,8 @@ John's ruling: terse prose, fewer words, no em dashes, no negation-constructivis
 - index.html — dash ×7: five hero guide rows, the done-note, and the "Currently building MetaMedium" line
 - design.html — dash ×8: four maze guide rows, the done-note, the AsMA award line, both thesis lines
 - art.html — dash ×5: the Writing & Worldbuilding intro, "A Desirable Future in 100 Words", the Earth Star alt text and figcaption, the Granite Omnistump caption
+- Integrator follow-ups (2026-09-16): 17 tldr keeps the coaching outcome (chief-of-staff agent or the skills to build software); 36 names LFM2.5-350M (Qwen was replaced 2026-09-01) and says local models are detected on request, never probed on load.
+
+## §J Resume compile — 2026-09-16
+
+Chunks 4, 21, 23, 26, 27, 50 are COMPILED from `Assets/resume.json` by `scripts/build-resume.mjs --apply` (source: the 2026-09-09 interview; evidence links live in the JSON). Edit the JSON, not the chunk text. Rebuild vectors after each compile (`node scripts/build-chunk-vectors.mjs`).
