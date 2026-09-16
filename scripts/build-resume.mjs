@@ -109,8 +109,9 @@ const SKIP_KEYS = new Set(['evidence', '$comment', 'note', 'titleNote', 'quote',
 function proseIssues(label, text) {
   const out = [];
   if (!text || typeof text !== 'string') return out;
-  // strip quoted speech: other people's words
-  const t = text.replace(/"[^"]{12,}"/g, ' ').replace(/“[^”]{12,}”/g, ' ');
+  // strip quoted speech (other people's words) and proper names that happen to
+  // carry a banned word (MetaMedium's "AI Beyond Chat", the HuffPost title)
+  const t = text.replace(/"[^"]{12,}"/g, ' ').replace(/“[^”]{12,}”/g, ' ').replace(/AI Beyond Chat|Beyond Network Feudalism/g, ' ');
   if (t.includes('—')) out.push({ label, kind: 'em dash', strict: true });
   for (const [re, name] of BANNED) if (re.test(t)) out.push({ label, kind: `construction: ${name}`, strict: true });
   for (const sent of t.split(/(?<=[.!?])\s+/)) {
