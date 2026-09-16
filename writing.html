@@ -111,6 +111,38 @@
         #writing-main { pointer-events: auto; }
 
 
+        /* ── Category sidebars ─────────────────────────────────────────
+           A feathered strip on the reader's left edge, color-coded by
+           the open article's category. Feathered = the vertical gradient
+           rises from transparent through a mid-brightness band and back
+           to transparent, so it glows without hard ends. */
+        .panel-sidebar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 5px;
+            pointer-events: none;
+            --sb: var(--cyan-dim);
+        }
+        .panel-sidebar::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(
+                to bottom,
+                transparent 0%,
+                color-mix(in srgb, var(--sb) 45%, transparent) 18%,
+                var(--sb) 50%,
+                color-mix(in srgb, var(--sb) 45%, transparent) 82%,
+                transparent 100%
+            );
+        }
+        .content-panel[data-cat="published"]  .panel-sidebar { --sb: var(--gold); }
+        .content-panel[data-cat="eduos"]      .panel-sidebar { --sb: var(--cyan-dim); }
+        .content-panel[data-cat="metamedium"] .panel-sidebar { --sb: var(--gold); }
+        .content-panel[data-cat="grad"]       .panel-sidebar { --sb: var(--green); }
+
         /* Date line shown under the title in the opened reader view */
         .panel-date {
             font-size: var(--text-2xs, 0.7rem);
@@ -740,6 +772,7 @@
 <div class="panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
 
 <div class="content-panel" id="contentPanel" role="dialog" aria-modal="true" aria-label="Reading panel" aria-hidden="true">
+    <div class="panel-sidebar" aria-hidden="true"></div>
     <div class="panel-header">
         <div class="panel-nav-row">
             <button class="nav-btn" id="btnBack" onclick="navBack()" disabled title="Back (Alt+Left)">&#8592;</button>
@@ -1007,6 +1040,8 @@ function openFile(path, skipHistory) {
     const body = document.getElementById('panelBody');
     body.innerHTML = `<p style="color:var(--muted);font-style:italic;">Loading...</p>`;
 
+    const openEntry = fileIndex.find(f => f.path === path);
+    document.getElementById('contentPanel').dataset.cat = openEntry ? openEntry.cat : '';
     document.getElementById('contentPanel').classList.add('open');
     document.getElementById('panelOverlay').classList.add('open');
     document.body.style.overflow = 'hidden';
@@ -1039,6 +1074,7 @@ function openFile(path, skipHistory) {
 }
 
 function closePanel() {
+    document.getElementById('contentPanel').dataset.cat = '';
     document.getElementById('contentPanel').classList.remove('open');
     document.getElementById('panelOverlay').classList.remove('open');
     document.getElementById('contentPanel').setAttribute('aria-hidden', 'true');
