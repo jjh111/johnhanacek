@@ -92,7 +92,9 @@ The creator of Scriptographer, Jurg Lehni has since moved the efforts into a jav
 
 ### Examples - The Pen Innovation Awaits
 
-https://www.youtube.com/embed/T4bdFEXONyc https://www.youtube.com/embed/zh_-HUdQwowhttps://youtu.be/ZAAXvY9uiVU https://www.youtube.com/embed/uEja_cxrGCghttps://www.youtube.com/embed/VLQcW6SpJ88 https://www.youtube.com/embed/fvr5epZ8BEc
+https://www.youtube.com/embed/T4bdFEXONyc https://www.youtube.com/embed/zh_-HUdQwow
+https://youtu.be/ZAAXvY9uiVU https://www.youtube.com/embed/uEja_cxrGCg
+https://www.youtube.com/embed/VLQcW6SpJ88 https://www.youtube.com/embed/fvr5epZ8BEc
 
 Digitizer pens are critically under-utilized input devices. The systems I have found, along with my personal experience using my Microsoft Surface Pro 4, show a world where using a computer is much more personal and even more powerful. For an entire list go to the pen-based interface section of the bibliography.
 

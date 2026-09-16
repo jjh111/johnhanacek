@@ -111,6 +111,26 @@
         #writing-main { pointer-events: auto; }
 
 
+        /* Video embeds (the grad blogs embedded YouTube/Vimeo inline) */
+        .video-embed {
+            position: relative;
+            width: 100%;
+            padding-bottom: 56.25%;  /* 16:9 */
+            height: 0;
+            margin: var(--space-md, 1.5rem) 0;
+            border-radius: 4px;
+            overflow: hidden;
+            border: 1px solid var(--border-subtle);
+            background: rgba(var(--cyan-dim-rgb), 0.04);
+        }
+        .video-embed iframe {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+
         /* Opened reader: the article title carries the category color. */
         .content-panel[data-cat="published"]  #panelBody h1 { color: var(--gold); }
         .content-panel[data-cat="eduos"]      #panelBody h1 { color: var(--cyan); }
@@ -900,6 +920,8 @@ function renderMarkdown(text) {
         s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>');
         s = s.replace(/\[\[([^\]]+)\]\]/g, '<strong>$1</strong>');
         s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+        // bare video URLs left inline become plain links
+        s = s.replace(/(^|\s)(https:\/\/(?:www\.)?(?:youtube\.com\/[^\s<]+|youtu\.be\/[^\s<]+|player\.vimeo\.com\/[^\s<]+))(?=$|\s)/g, '$1<a href="$2" target="_blank">$2</a>');
         return s;
     }
 
@@ -944,6 +966,23 @@ function renderMarkdown(text) {
             if (!html.endsWith('</ol>')) html += '<ol>';
             else html = html.replace(/<\/ol>$/, '');
             html += `<li>${inlineFormat(line.replace(/^\s*\d+\.\s/, ''))}</li></ol>`;
+        } else if (/^\s*(?:https:\/\/(?:www\.)?(?:youtube\.com\/(?:embed\/|watch\?(?:.*&)?v=|live\/)|youtu\.be\/|player\.vimeo\.com\/video\/)[A-Za-z0-9_-]+[^\s]*)(?:\s+https:\/\/\S+)*\s*$/.test(line)) {
+            // Video URL(s) alone on a line — the blogs embedded these as iframes.
+            // Render each as a lazy 16:9 embed card. Multiple URLs on one line
+            // (the Coda paste glued them with nbsp) each get their own player.
+            const vids = line.trim().split(/\s+|\xa0/).filter(u => /^https:\/\//.test(u));
+            for (const u of vids) {
+                let src = null, cap = '';
+                let m = u.match(/youtube\.com\/embed\/([A-Za-z0-9_-]{6,})/) || u.match(/youtube\.com\/watch\?(?:.*&)?v=([A-Za-z0-9_-]{6,})/) || u.match(/youtu\.be\/([A-Za-z0-9_-]{6,})/);
+                if (m) { src = 'https://www.youtube-nocookie.com/embed/' + m[1]; cap = 'YouTube video'; }
+                else if ((m = u.match(/vimeo\.com\/video\/(\d+)/))) { src = 'https://player.vimeo.com/video/' + m[1]; cap = 'Vimeo video'; }
+                if (src) {
+                    html += `<div class="video-embed" data-url="${u}"><iframe src="${src}" title="${cap}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`;
+                } else {
+                    html += `<p>${inlineFormat(u)}</p>`;
+                }
+            }
+            continue;
         } else if (/^\s*!\[[^\]]*\]\([^)]+\)\s*$/.test(line)) {
             // standalone image line — render as a figure so it doesn't inherit paragraph rhythm
             const m = line.match(/^\s*!\[([^\]]*)\]\(([^)\s]+)[^)]*\)\s*$/);
