@@ -710,6 +710,7 @@
 
 <script>
 const fileIndex = [
+    { path: 'writing/published.md', name: 'Published Work', desc: 'The calling card — Atlantic Council, HuffPost, research, Fractal Futures, and the blogs, with links out', cat: 'published', tags: ['foresight', 'research', 'fiction'], slug: 'published', prov: 'human' },
     { path: 'writing/eduos-plea.md', name: 'Students as Sovereign Participants or Peasant Users?', desc: 'Whichever vendor controls the AI in classrooms controls the world', cat: 'eduos', tags: ['education', 'sovereignty'], slug: 'eduos-plea', prov: 'mixed' },
     { path: 'writing/eduos-classroom.md', name: 'The Classroom That Owns Itself', desc: 'Why schools need open source AI — from Engelbart to the present', cat: 'eduos', tags: ['education', 'ai', 'open-source'], slug: 'eduos-classroom', prov: 'mixed' },
     { path: 'writing/eduos-quickstart.md', name: 'Sovereign Stack Pilot Guide', desc: 'How school districts can experiment with owning their infrastructure', cat: 'eduos', tags: ['education', 'technical', 'pilot'], slug: 'eduos-quickstart', prov: 'mixed' },
@@ -738,8 +739,9 @@ const categories = {
     eduos: { title: 'EduOS', icon: '&#x203A;', desc: 'Open source AI infrastructure for schools — sovereign computing in education' },
     metamedium: { title: 'MetaMedium', icon: '&#x203A;', desc: 'Drawing as computation — a canvas where marks become meaning and meaning becomes executable' },
     grad: { title: 'Graduate School \u2014 Georgetown CCT', icon: '&#x203A;', desc: 'Masters thesis, essays, and blog posts from the Communication, Culture & Technology program, 2015\u20132016 \u2014 published exactly as written' },
+    published: { title: 'Published', icon: '&#x203A;', desc: 'Work published beyond this site \u2014 the calling card' },
 };
-const catOrder = ['eduos', 'metamedium', 'grad'];
+const catOrder = ['published', 'eduos', 'metamedium', 'grad'];
 
 let navHistory = [];
 let navHistoryIndex = -1;
@@ -777,9 +779,9 @@ function renderFiles() {
 
         files.forEach(f => {
             const tags = f.tags.map(t => `<span class="file-tag tag-cyan">${t}</span>`).join('');
-            const prov = f.prov === 'human'
+            const prov = cat === 'published' ? '' : (f.prov === 'human'
                 ? '<span class="prov-badge prov-human" title="Written by John \u2014 published as-is, typos and all">\u270d human</span>'
-                : '<span class="prov-badge prov-mixed" title="Mixed human + AI prose \u2014 ideas John\u2019s, wording partly AI-assisted">\u2726 mixed ai + human</span>';
+                : '<span class="prov-badge prov-mixed" title="Mixed human + AI prose \u2014 ideas John\u2019s, wording partly AI-assisted">\u2726 mixed ai + human</span>');
 
             const date = f.date ? `<span class="file-date">${fmtDate(f.date)}</span>` : '';
             html += `<div class="file-card cat-${cat}" onclick="openFile('${f.path}')">
