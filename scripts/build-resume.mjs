@@ -72,18 +72,78 @@ const lane = R.lanes[LANE];            // validated above — no silent fallback
 const headline = lane.headline || R.basics.headline;
 const roles = R.work.filter(w => !w.compressed);
 const earlier = R.work.filter(w => w.compressed);
+// ONE text per fact. The one-page, the LinkedIn blocks and the About timeline all
+// take the highlights flagged `lead: true` (up to three per role); the long CV takes
+// every highlight. The old hand-written `onePage` arrays drifted from the highlights
+// they compressed (2026-09-16: one read "product traces visualization design
+// engineering"), so they are gone. A role with no lead flags falls back to the lane
+// filter, then to its first three highlights.
 const bulletsFor = (w, mode) => {
   if (mode === 'long') return w.highlights.map(h => h.text);
-  if (w.onePage) return w.onePage;
+  const lead = w.highlights.filter(h => h.lead);
+  if (lead.length) return lead.slice(0, 3).map(h => h.text);
   const picked = w.highlights.filter(h => !h.lanes.length || h.lanes.includes(LANE));
   return (picked.length ? picked : w.highlights).slice(0, 3).map(h => h.text);
 };
 const skillLines = [
-  ['Design & research', ['Figma', 'FigJam', 'Blender', 'Unity / C#', 'ShapesXR', 'Adobe Creative Suite'], 'User research, usability testing, qualitative coding, 3D interaction design, design systems, brand, workshops, PRD and MVP scoping'],
+  ['Design & research', ['Figma', 'FigJam', 'Blender', 'Unity / C#', 'ShapesXR', 'Adobe Creative Suite'], 'User research, usability testing, qualitative coding, 3D interaction, design systems, brand, workshops, PRDs'],
   ['Code', ['JavaScript', 'TypeScript', 'React', 'HTML / CSS', 'Three.js', 'WebGL / GLSL', 'WebGPU', 'Node.js', 'Playwright', 'Git'], null],
-  ['AI & agentic', ['Claude Code', 'Opencode', 'Hermes Agent', 'LM Studio', 'Ollama', 'MCP (Blender, Figma)'], 'Context engineering, agent orchestration, tool-use design, retrieval-augmented generation, conversational UX'],
-  ['XR & robotics', ['Meta Quest', 'HoloLens 2', 'Magic Leap One', 'visionOS'], 'Digital twins and teleoperation (Unity), 3D scanning and photogrammetry'],
+  ['AI & agentic', ['Claude Code', 'Opencode', 'Hermes Agent', 'LM Studio', 'Ollama', 'MCP (Blender, Figma)'], 'Context engineering, agent orchestration, tool-use design, RAG, conversational UX'],
+  ['XR & robotics', ['Meta Quest', 'HoloLens 2', 'Magic Leap One', 'visionOS'], 'Digital twins, teleoperation, 3D scanning'],
 ];
+
+
+// ---------------------------------------------------------------- Prose lint (house rules, 2026-09-16)
+// John's ruling: terse, clear prose; fewer words; no em dashes; no sentences built on
+// what a thing is NOT. The résumé source is held STRICTLY (an em dash or a banned
+// construction refuses --apply); long sentences and semicolon chains are warned; the
+// search chunks are warned on every rule (the prose pass owns them). Quoted
+// endorsements are other people's words and are skipped.
+const BANNED = [
+  [/\brather than\b/i, 'rather than'], [/\binstead of\b/i, 'instead of'], [/\bnot (?:just|only)\b/i, 'not just/only'],
+  [/\bbeyond\b/i, 'beyond'], [/\bwithout\b/i, 'without'], [/\b(?:doesn|isn|aren|wasn|don)'t\b/i, "n't construction"],
+  [/\bsingle-handedly\b/i, 'single-handedly'], [/\bdeeply\b/i, 'deeply'], [/\bfluidly\b/i, 'fluidly'], [/\bseamlessly\b/i, 'seamlessly'],
+  [/\bpassionate\b/i, 'passionate'], [/\bsuperpower\b/i, 'superpower'], [/\bwhat I learned\b/i, 'what I learned'], [/\btruly\b/i, 'truly'],
+];
+const SKIP_KEYS = new Set(['evidence', '$comment', 'note', 'titleNote', 'quote', 'short', 'url', 'altUrl', 'orgUrl', 'video', 'source', 'isbn', 'images', 'tags', 'vec']);
+function proseIssues(label, text) {
+  const out = [];
+  if (!text || typeof text !== 'string') return out;
+  // strip quoted speech: other people's words
+  const t = text.replace(/"[^"]{12,}"/g, ' ').replace(/“[^”]{12,}”/g, ' ');
+  if (t.includes('—')) out.push({ label, kind: 'em dash', strict: true });
+  for (const [re, name] of BANNED) if (re.test(t)) out.push({ label, kind: `construction: ${name}`, strict: true });
+  for (const sent of t.split(/(?<=[.!?])\s+/)) {
+    const words = sent.trim().split(/\s+/).filter(Boolean).length;
+    if (words > 25) out.push({ label, kind: `${words}-word sentence`, strict: false });
+    if ((sent.match(/;/g) || []).length >= 2) out.push({ label, kind: 'semicolon chain', strict: false });
+  }
+  return out;
+}
+function checkProse() {
+  const issues = [];
+  const walk = (o, path) => {
+    if (typeof o === 'string') { if (o.length > 30 && !/^https?:/.test(o)) issues.push(...proseIssues(path, o)); }
+    else if (Array.isArray(o)) o.forEach((v, i) => walk(v, `${path}[${i}]`));
+    else if (o && typeof o === 'object') for (const k of Object.keys(o)) { if (SKIP_KEYS.has(k)) continue; walk(o[k], path ? `${path}.${k}` : k); }
+  };
+  walk({ basics: { headline: R.basics.headline, availability: R.basics.availability, selfDescription: R.basics.selfDescription }, lanes: R.lanes, work: R.work, clients: R.clients, education: R.education, awards: R.awards, talks: R.talks, projects: R.projects, skills: R.skills }, '');
+  const strict = issues.filter(i => i.strict);
+  const soft = issues.filter(i => !i.strict);
+  console.log(`  prose (resume.json): ${strict.length} strict, ${soft.length} soft`);
+  for (const i of strict) console.warn(`    STRICT ${i.label}: ${i.kind}`);
+  for (const i of soft.slice(0, 12)) console.warn(`    warn   ${i.label}: ${i.kind}`);
+  if (soft.length > 12) console.warn(`    …and ${soft.length - 12} more soft warnings`);
+  // chunks: warn only — the compiled six are checked through resume.json above
+  try {
+    const data = JSON.parse(readFileSync(resolve(ROOT, 'Assets/search-chunks.json'), 'utf8'));
+    const list = Array.isArray(data) ? data : data.chunks;
+    let n = 0;
+    for (const c of list) for (const k of ['title', 'content', 'tldr', 'micro']) for (const i of proseIssues(`chunk ${c.id}.${k}`, c[k])) { n++; if (n <= 8) console.warn(`    chunk  ${i.label}: ${i.kind}`); }
+    if (n) console.warn(`  prose (chunks): ${n} issue(s)${n > 8 ? ', first 8 shown' : ''}`);
+  } catch {}
+  return strict.length;
+}
 
 // ---------------------------------------------------------------- HTML
 function html(mode, withPhone) {
@@ -92,26 +152,34 @@ function html(mode, withPhone) {
   const contact = [R.basics.email, withPhone && PRIV.phone, host(R.basics.website), 'linkedin.com/in/johnhanacek', 'github.com/jjh111', R.basics.workMode, R.basics.citizenship].filter(Boolean);
   const role = w => `
     <section class="role">
-      <div class="role-head"><h3>${esc(w.title)}<span class="org"> · ${esc(w.org)}</span></h3><span class="dates">${span(w)}${w.location ? ` · ${esc(w.location)}` : ''}</span></div>
+      <div class="role-head"><h3>${esc(w.title)}<span class="org"> · ${esc(w.org)}</span>${ats ? `<span class="dates"> · ${esc(span(w))}${w.location ? ` · ${esc(w.location)}` : ''}</span>` : ''}</h3>${ats ? '' : `<span class="dates">${esc(span(w))}${w.location ? ` · ${esc(w.location)}` : ''}</span>`}</div>
       <ul>${bulletsFor(w, mode).map(t => `<li>${esc(t)}</li>`).join('')}</ul>
     </section>`;
+  // ^ ATS mode: dates inline in the h3 text run (same paint block as the title)
+  // so raw text order keeps header and dates adjacent for proximity parsers.
+  // The designed modes keep the right-aligned flexbox date column (looks better,
+  // and human readers parse it fine — only naive ATS portals read raw order).
   const earlierLine = one ? 'Photographer, Qualcomm Institute (Calit2) and UCSD Guardian; Ocean Lifeguard, California State Parks (2007–2012)' : earlier.map(w => `${esc(w.title)}, ${esc(w.org)} (${span(w)})`).join(' · ');
-  const awards = R.awards.map(a => `<li><span class="y">${a.year}</span> ${one ? esc(a.short || a.title) : `${esc(a.title)}, ${esc(a.org)}${a.for ? ` — ${esc(a.for)}` : ''}`}</li>`).join('');
-  const talksLine = [`AWE USA 2024 Lightning Round`, `XRDC 2024 mentor (Meta, ShapesXR, IDEO)`, `contributor, <em>Spatial Design: Breaking the 2D Paradigm</em> (2024)`, `EDULEARN15 paper on the spread of technology-enhanced teaching`, `Atlantic Council foresight essays on answer engines (2014)`].join(' · ');
+  const awards = R.awards.map(a => `<li><span class="y">${a.year}</span> ${one ? esc(a.short || a.title) : `${esc(a.title)}, ${esc(a.org)}${a.for ? `: ${esc(a.for)}` : ''}`}</li>`).join('');
+  // ATS mode: single-column awards. The 3-column layout paints year+text as
+  // separate blocks in raw text order (column by column, not award by award),
+  // which fragments each award into unparseable pieces.
+  const awardsHtml = ats ? `<ul>${awards}</ul>` : `<ul class="${one ? 'three' : ''}">${awards}</ul>`;
+  const talksLine = [`AWE USA 2024 Lightning Round`, `XRDC 2024 mentor`, `contributor, <em>Spatial Design: Breaking the 2D Paradigm</em> (2024)`, `EDULEARN15 paper`, `Atlantic Council essays on answer engines (2014)`].join(' · ');
   const talks = [
     ...R.talks.map(t => `<li><span class="y">${t.year}</span> ${esc(t.title)}, ${esc(t.event)}</li>`),
     ...R.features.map(f => `<li><span class="y">${f.year}</span> Contributor, <em>${esc(f.title)}</em> (${esc(f.authors)})</li>`),
   ].join('');
-  const pubs = R.publications.filter(p => p.year && p.id !== 'writing-archive').map(p => `<li><span class="y">${String(p.year).slice(0, 4)}</span> ${esc(p.title)}${p.authors ? ` — ${esc(p.authors)}` : ''}. <em>${esc(p.venue)}</em></li>`).join('');
+  const pubs = R.publications.filter(p => p.year && p.id !== 'writing-archive').map(p => `<li><span class="y">${String(p.year).slice(0, 4)}</span> ${esc(p.title)}${p.authors ? `, ${esc(p.authors)}` : ''}. <em>${esc(p.venue)}</em></li>`).join('');
   const edu = R.education.map(e => `
     <section class="role">
-      <div class="role-head"><h3>${esc(e.degree)}<span class="org"> · ${esc(e.school)}</span></h3><span class="dates">${e.start}–${e.end}</span></div>
+      <div class="role-head"><h3>${esc(e.degree)}<span class="org"> · ${esc(e.school)}</span>${ats ? `<span class="dates"> · ${e.start}–${e.end}</span>` : ''}</h3>${ats ? '' : `<span class="dates">${e.start}–${e.end}</span>`}</div>
       ${one ? (e.thesis?.title ? `<p class="note">Thesis: “${esc(e.thesis.title)}”${e.honors ? ` · ${esc(e.honors[0])}` : ''}</p>` : '') :
         `<p class="note">${e.thesis?.title ? `Thesis: “${esc(e.thesis.title)}”. ` : 'Thesis: '}${esc(e.thesis?.note || '')}${e.secondThesis ? ` Second thesis: ${esc(e.secondThesis)}.` : ''}${e.honors ? ` ${esc(e.honors.join('; '))}.` : ''}</p>`}
     </section>`).join('');
   const projects = R.projects.map(p => `<li><strong>${esc(p.name)}</strong>${p.period ? ` (${esc(p.period)})` : ''}: ${esc(p.summary)}</li>`).join('');
   const art = ats ? '' : `<div class="tank" aria-hidden="true"><canvas id="tank"></canvas></div>`;
-  return `<!doctype html><html lang="en" data-theme="light"><head><meta charset="utf-8"><title>John Hanacek — Resume</title>
+  return `<!doctype html><html lang="en" data-theme="light"><head><meta charset="utf-8"><title>John Hanacek Resume</title>
 <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../styles/jh-chrome.css">
 <style>
@@ -170,7 +238,7 @@ ${edu}
 <h2>Skills</h2>
 <div class="skills"><ul>${skillLines.map(([k, tools, practice]) => `<li><b>${k}:</b> ${practice ? esc(practice) + '. ' : ''}<span class="tools">${tools.join(' · ')}</span></li>`).join('')}</ul></div>
 <h2>Awards</h2>
-<ul class="${one ? 'three' : ''}">${awards}</ul>
+${awardsHtml}
 ${one ? `<h2>Talks & writing</h2><p class="earlier">${talksLine}</p>` : `<h2>Talks & features</h2><ul>${talks}</ul><h2>Publications</h2><ul>${pubs}</ul><h2>Projects</h2><ul>${projects}</ul>`}
 ${art}
 </div>
@@ -203,19 +271,19 @@ function markdown() {
   L.push('---', '', '## Education', '');
   for (const e of R.education) {
     L.push(`### ${e.degree}`, `**${e.school}** · ${e.location} · ${e.start}–${e.end}`, '');
-    if (e.thesis) L.push(`${e.thesis.title ? `Thesis: [“${e.thesis.title}”](${e.thesis.url || ''}) — ` : 'Thesis: '}${e.thesis.note}${e.secondThesis ? ` Second thesis: ${e.secondThesis}.` : ''}${e.honors ? ` ${e.honors.join('; ')}.` : ''}`, '');
+    if (e.thesis) L.push(`${e.thesis.title ? `Thesis: [“${e.thesis.title}”](${e.thesis.url || ''}): ` : 'Thesis: '}${e.thesis.note}${e.secondThesis ? ` Second thesis: ${e.secondThesis}.` : ''}${e.honors ? ` ${e.honors.join('; ')}.` : ''}`, '');
   }
   L.push('---', '', '## Skills', '', `**Domains:** ${R.skills.domains.join(' · ')}`, '', `**Technologies:** ${R.skills.technologies.join(' · ')}`, '', `**Practice:** ${R.skills.practice.join(' · ')}`, '');
-  for (const [k, tools, practice] of skillLines) L.push(`**${k}:** ${tools.join(', ')}${practice ? ` — ${practice}` : ''}`, '');
+  for (const [k, tools, practice] of skillLines) L.push(`**${k}:** ${tools.join(', ')}${practice ? `. ${practice}` : ''}`, '');
   L.push('---', '', '## Awards & Recognition', '', '| Year | Award | Organization |', '|------|-------|--------------|');
-  for (const a of R.awards) L.push(`| ${a.year} | ${a.title}${a.for ? ` — ${a.for}` : ''} | ${a.url ? `[${a.org}](${a.url})` : a.org} |`);
+  for (const a of R.awards) L.push(`| ${a.year} | ${a.title}${a.for ? `: ${a.for}` : ''} | ${a.url ? `[${a.org}](${a.url})` : a.org} |`);
   L.push('', '## Talks & Features', '');
-  for (const t of R.talks) L.push(`- **${t.event} (${t.year})** — ${t.title}${t.url ? ` · [event](${t.url})` : ''}${t.video ? ` · [video](${t.video})` : ''}`);
-  for (const f of R.features) L.push(`- **${f.title}** (${f.year}) — ${f.role}; by ${f.authors} · [about the book](${f.url})`);
+  for (const t of R.talks) L.push(`- **${t.event} (${t.year})**: ${t.title}${t.url ? ` · [event](${t.url})` : ''}${t.video ? ` · [video](${t.video})` : ''}`);
+  for (const f of R.features) L.push(`- **${f.title}** (${f.year}): ${f.role}, by ${f.authors} · [about the book](${f.url})`);
   L.push('', '## Research & Publications', '');
-  for (const p of R.publications) L.push(`- **${p.venue}${p.year ? ` (${String(p.year).slice(0, 4)})` : ''}** — [${p.title}](${p.url})${p.authors ? ` — ${p.authors}` : ''}`);
+  for (const p of R.publications) L.push(`- **${p.venue}${p.year ? ` (${String(p.year).slice(0, 4)})` : ''}**: [${p.title}](${p.url})${p.authors ? `, ${p.authors}` : ''}`);
   L.push('', '## Projects', '');
-  for (const p of R.projects) L.push(`- **${p.name}**${p.period ? ` (${p.period})` : ''} — ${p.summary}${p.url ? ` · [${host(p.url)}](${p.url})` : ''}`);
+  for (const p of R.projects) L.push(`- **${p.name}**${p.period ? ` (${p.period})` : ''}: ${p.summary}${p.url ? ` · [${host(p.url)}](${p.url})` : ''}`);
   L.push('', '---', '', `*${R.basics.availability}*`, `*© ${YEAR} John Hanacek · JHDesign LLC · compiled from Assets/resume.json*`, '');
   return L.join('\n');
 }
@@ -224,7 +292,7 @@ function markdown() {
 function linkedin() {
   const L = ['# LinkedIn paste blocks', '', '## Headline (≤220 chars)', '', headline + ' · Independent, JHDesign LLC · ex-Nanome, BadVR · AvatarMEDIC co-founder', '', '## About', '', lane.summary, '', R.basics.availability, ''];
   for (const w of R.work.filter(w => !w.compressed)) {
-    L.push(`## ${w.title} — ${w.org} (${span(w)})`, '', ...(w.onePage || w.highlights.map(h => h.text)).map(t => `• ${t}`), '');
+    L.push(`## ${w.title}, ${w.org} (${span(w)})`, '', ...bulletsFor(w, 'one').map(t => `• ${t}`), '');
   }
   return L.join('\n');
 }
@@ -232,12 +300,13 @@ function linkedin() {
 // ---------------------------------------------------------------- chunks
 function chunkPatches() {
   const A = R.awards;
-  const awardsFacts = A.map(a => ({ t: a.title, d: `${a.org}${a.for ? ` — ${a.for}` : ''}`, y: a.year, ...(a.year === '2022' ? { media: true } : {}) }));
-  const timelineFacts = R.work.filter(w => !w.compressed).map(w => ({ t: w.org, d: w.id === 'jhdesign-llc' ? `${w.title} — OpenProse (26), Muse.bio (24, 26), Transfyr (25)` : w.title, y: span(w).replace(/20(\d\d)/g, '$1') }));
+  const awardsFacts = A.map(a => ({ t: a.title, d: `${a.org}${a.for ? `: ${a.for}` : ''}`, y: a.year, ...(a.year === '2022' ? { media: true } : {}) }));
+  const timelineFacts = R.work.filter(w => !w.compressed).map(w => ({ t: w.org, d: w.id === 'jhdesign-llc' ? `${w.title}: OpenProse (26), Muse.bio (24, 26), Transfyr (25)` : w.title, y: span(w).replace(/20(\d\d)/g, '$1') }));
   return {
     4: {
+      title: 'JHDesign LLC: Founding Designer',
       content: 'Independent designer since 2012 (media, web and product design under the JHphotography and JHDesign names), incorporated as JHDesign LLC in 2024. Serves startups and R&D teams. Clients: OpenProse (founding design, 2026), Muse.bio (workshop facilitation, personas and journey mapping in 2024; a FigJam workshop plus a Claude Code and Figma MCP ingestion system in 2026), Transfyr (user-journey workshop, MVP design handoff with PRD and prototype, synthetic demo data and QA, 2025). Works across biotech and pharma, medtech and first response, spatial computing and AI.',
-      tldr: 'JHDesign LLC serves startups and R&D teams — founding design for OpenProse, workshops and tooling for Muse.bio, MVP handoff for Transfyr.',
+      tldr: 'JHDesign LLC serves startups and R&D teams: founding design for OpenProse, workshops and tooling for Muse.bio, MVP handoff for Transfyr.',
     },
     21: {
       content: `Awards and recognition: ${A.map(a => `${a.title}, ${a.org} (${a.year})${a.for ? `, ${a.for}` : ''}`).join('. ')}. Contributor, interviewed as an expert, to Spatial Design: Breaking the 2D Paradigm (Dominique Wu, 2024). Lightning Round speaker at AWE USA 2024; mentor at XRDC 2024 (Meta, ShapesXR, IDEO).`,
@@ -247,7 +316,7 @@ function chunkPatches() {
       facts: awardsFacts,
     },
     23: {
-      content: `${R.work.filter(w => !w.compressed).map(w => `${w.org} (${span(w)}): ${w.title}${w.summary ? ` — ${w.summary.replace(/\.$/, '')}` : ''}`).join('. ')}. Independent media and design practice since 2012 under the JHphotography and JHDesign names; JHDesign LLC registered 2024. Earlier: ${earlier.map(w => `${w.title}, ${w.org} (${span(w)})`).join('; ')}.`,
+      content: `${R.work.filter(w => !w.compressed).map(w => `${w.org} (${span(w)}): ${w.title}${w.summary ? `: ${w.summary.replace(/\.$/, '')}` : ''}`).join('. ')}. Independent media and design practice since 2012 under the JHphotography and JHDesign names; JHDesign LLC registered 2024. Earlier: ${earlier.map(w => `${w.title}, ${w.org} (${span(w)})`).join('; ')}.`,
       tldr: 'JHDesign LLC (24–now; OpenProse 26, Muse.bio 24/26, Transfyr 25), Nanome (22–24), BadVR (21–22), AvatarMEDIC CEO/CTO (19–21), Collaborate.org (15–18); independent since 2012.',
       micro: 'JHDesign ← Nanome ← BadVR ← AvatarMEDIC ← Georgetown.',
       facts: timelineFacts,
@@ -263,19 +332,20 @@ function chunkPatches() {
       micro: 'Shipped: XR + AI, agentic tools, web products.',
       tags: 'shipped AI products built delivered LLM agent launched output nanome aroc coaching os openprose muse readi metamedium blok dok',
       facts: [
-        { t: 'AROC — BadVR', d: 'situational-awareness AR HUD, hand tracking on Quest and HoloLens 2' },
+        { t: 'AROC (BadVR)', d: 'situational-awareness AR HUD, hand tracking on Quest and HoloLens 2' },
         { t: 'Nanome 2 + web portal + MARA AI', d: 'XR and AI molecular design, shipped to pharma customers' },
         { t: 'JH Coaching OS', d: 'adaptive AI coaching product with dashboard' },
         { t: 'Muse.bio workshop system', d: 'FigJam workshop + Claude Code / Figma MCP ingestion, handed off' },
         { t: 'OpenProse', d: 'founding design, brand to live homepage in two months' },
-        { t: 'MetaMedium', d: 'experiment — AI-interpreted drawing interface' },
-        { t: 'This site\'s search', d: 'experiment — retrieval + in-browser LFM2.5 on WebGPU' },
-        { t: 'Blok Dok', d: '2013 — wooden iPhone dock, designed, made and sold', url: 'design.html#blokdok' },
+        { t: 'MetaMedium', d: 'experiment: AI-interpreted drawing interface' },
+        { t: 'This site\'s search', d: 'experiment: retrieval + in-browser LFM2.5 on WebGPU' },
+        { t: 'Blok Dok', d: '2013: wooden iPhone dock, designed, made and sold', url: 'design.html#blokdok' },
       ],
     },
     50: {
+      title: 'Resume: One-Page PDF',
       content: `John's one-page resume (${YEAR}) is available as a PDF: ${headline}. ${lane.summary} Career: ${R.work.filter(w => !w.compressed).map(w => `${w.title}, ${w.org} (${span(w)})`).join('; ')}. MA Georgetown CCT (2016), BA UC San Diego (2012). Open the PDF to read or download it.`,
-      tldr: `The one-page ${YEAR} resume as a PDF — open it to read or download.`,
+      tldr: `The one-page ${YEAR} resume as a PDF. Open it to read or download.`,
       micro: `One-page PDF resume, ${YEAR}.`,
     },
   };
@@ -304,7 +374,7 @@ function jsonld() {
   J.jobTitle = ['Product Design Engineer', 'Product Designer', 'Design Engineer', 'Founding Designer'];
   J.description = lane.summary;
   J.knowsAbout = [...R.skills.technologies, ...R.skills.practice, 'MetaMedium', 'Creative coding', 'WebGL and GLSL shader programming', 'three.js'];
-  J.award = R.awards.map(a => `${a.title} — ${a.org} (${a.year})`);
+  J.award = R.awards.map(a => `${a.title}, ${a.org} (${a.year})`);
   if (J.worksFor) J.worksFor.description = 'Independent product design engineering: founding design, product design, workshops and agentic coaching for startups and R&D teams.';
   J.sameAs = Array.from(new Set([...(J.sameAs || []), 'https://jhanacek.net/writing-4']));
   J.lastUpdated = R.meta.updated;
@@ -324,7 +394,7 @@ function aboutBlocks() {
                         ${lis ? `<ul class="muted">${lis.map(l => `<li>${esc(l)}</li>`).join('')}</ul>` : ''}
                     </div>
                 </div>`;
-  const experience = `\n            <div class="timeline">` + R.work.map(w => item(span(w).replace('now', 'Present'), esc(w.title), link(w.org, w.orgUrl), w.compressed ? [w.highlights[0].text] : (w.onePage || w.highlights.slice(0, 4).map(h => h.text)))).join('') + `\n            </div>\n            `;
+  const experience = `\n            <div class="timeline">` + R.work.map(w => item(span(w).replace('now', 'Present'), esc(w.title), link(w.org, w.orgUrl), w.compressed ? [w.highlights[0].text] : bulletsFor(w, 'one'))).join('') + `\n            </div>\n            `;
   const education = `\n            <div class="card-grid cols-2">` + R.education.map(e => `
                 <div class="content-card">
                     <h4>${esc(e.school)}</h4>
@@ -348,10 +418,10 @@ function aboutBlocks() {
     `\n            </div>\n            <div class="card-grid cols-2" id="publications">` +
     card('Master’s thesis', link(`“${R.education[0].thesis.title}”`, R.education[0].thesis.url), esc(R.education[0].thesis.note)) +
     card('EDULEARN15, Barcelona', link(P('edulearn-2015').title, P('edulearn-2015').url), esc(P('edulearn-2015').authors)) +
-    card('Atlantic Council — Strategic Foresight', `${link('Internet as Answer Engine, Part I', P('atlantic-council-i').url)} · ${link('Part II', P('atlantic-council-ii').url)}`, 'March 2014 — answer engines displacing search, written eight years before ChatGPT') +
-    card('The Technium — Kevin Kelly', link(P('technium-haiku').title, P('technium-haiku').url), 'Winner of the 2014 desirable-future challenge') +
-    card('HuffPost', link(P('huffpost-feudalism').title, P('huffpost-feudalism').url), '2014 — the open internet and platform monopolism') +
-    card('The Problems of Agent Orchestration', `<a href="onagents.html">${esc(P('onagents-2026').title)}</a>`, '2026 — a ~37,000-word essay, released through the playground') +
+    card('Atlantic Council: Strategic Foresight', `${link('Internet as Answer Engine, Part I', P('atlantic-council-i').url)} · ${link('Part II', P('atlantic-council-ii').url)}`, 'March 2014: answer engines displacing search, eight years before ChatGPT') +
+    card('The Technium (Kevin Kelly)', link(P('technium-haiku').title, P('technium-haiku').url), 'Winner of the 2014 desirable-future challenge') +
+    card('HuffPost', link(P('huffpost-feudalism').title, P('huffpost-feudalism').url), '2014: the open internet and platform monopolism') +
+    card('The Problems of Agent Orchestration', `<a href="onagents.html">${esc(P('onagents-2026').title)}</a>`, '2026: a 37,000-word essay, released through the playground') +
     card('Writing archive', link('jhanacek.net', P('writing-archive').url), 'Foresight and grad-school writing, 2012–2016') +
     `\n            </div>\n            `;
   // How I work: the "how John thinks" chunks are the source (audited claims); the page mirrors them.
@@ -389,7 +459,7 @@ function nanome2Blocks() {
   const F = figuresOf('work[id=nanome]', R.work.find(w => w.id === 'nanome'));
   const sessions = `${F.sessions.approx ? 'around ' : ''}${F.sessions.value} ${F.sessions.note}`;
   return {
-    'nanome-testing': `we ran ${sessions} with real pharmaceutical company user groups at ${esc(listOf(F.sites))}, ${esc(F.usersPerSession)} users per session—both existing Nanome 1 users and new users`,
+    'nanome-testing': `we ran ${sessions} with real pharmaceutical company user groups at ${esc(listOf(F.sites))}, ${esc(F.usersPerSession)} users per session, both existing Nanome 1 users and new users`,
     'nanome-pivot': `removing ${esc(F.pivot.from)} entirely and introducing the <strong>${esc(F.pivot.to)}</strong> paradigm`,
   };
 }
@@ -488,7 +558,10 @@ async function pdfs() {
       await page.evaluate(() => document.fonts.ready);
       if (mode !== 'long') {
         // fit to one page: shrink the root scale until the content clears the page
-        const limit = Math.round(11 * 96) - (mode === 'ats' ? 43 : 98);
+        // The tank is 1.15in (110px) tall and its top 60% is a white fade — a line
+        // that ends inside that band prints half-erased (the 2026-09-16 talks line).
+        // Designed modes stop 8px above the tank; ATS has no tank.
+        const limit = Math.round(11 * 96) - (mode === 'ats' ? 43 : 118);
         let s = 1;
         for (let i = 0; i < 40; i++) {
           const h = await page.evaluate(() => Math.max(...[...document.querySelectorAll('.page > *:not(.tank)')].map(e => e.getBoundingClientRect().bottom)));
@@ -518,6 +591,8 @@ const patches = chunkPatches();
 writeFileSync(`${OUT}/chunks-proposed${S}.json`, JSON.stringify(patches, null, 2));
 const { path: jlPath, J } = jsonld();
 writeFileSync(`${OUT}/john-hanacek${S}.json`, JSON.stringify(J, null, 2) + '\n');
+const proseStrict = checkProse();
+if (APPLY && proseStrict) { console.error(`refusing to --apply: ${proseStrict} strict prose issue(s) in Assets/resume.json (em dashes or banned constructions). Fix the JSON.`); process.exit(1); }
 checkMetaFigures();
 const made = await pdfs();
 console.log(`wrote .local/out/ [${LANE} lane]:`, [`john-hanacek-resume${S}.md`, `linkedin${S}.md`, `chunks-proposed${S}.json`, `john-hanacek${S}.json`, ...made.map(m => m + '.pdf')].join(', '));

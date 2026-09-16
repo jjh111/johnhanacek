@@ -353,6 +353,13 @@ scripts/build-chunk-vectors.mjs — dev-time: embeds chunks into search-chunks.j
                             editing chunk text; run `npm install` once — package.json holds the dev deps)
 Assets/resume.json         — THE single career source (v2.07): lanes, evidence-backed highlights,
                             awards, talks, publications, projects. Edit this, never the outputs.
+                            Highlights flagged `lead: true` (≤3 per role) ARE the one-page, LinkedIn
+                            and About bullets; the long CV takes every highlight. (The hand-written
+                            `onePage` arrays drifted and are gone, 2026-09-16.) House prose rules,
+                            linted by the compiler: one clause per sentence, no em dashes, no sentence
+                            built on what a thing is not, fact then stop, name never summarize. An em
+                            dash or a banned construction in the JSON REFUSES `--apply`; long sentences
+                            and semicolon chains warn; the chunks are warned on every rule.
 scripts/build-resume.mjs   — compiles resume.json: designed one-page PDF (fish-tank margin),
                             ATS twin, 3-page CV, markdown, LinkedIn blocks; `--apply` also writes
                             the served PDF (no phone — the application PDF stays in .local/out/),
