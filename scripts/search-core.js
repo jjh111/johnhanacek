@@ -1784,8 +1784,14 @@
                 return pcPieceHtml(r.pieces[0], r, true);
             }
             // small scale: a media-less chunk still shows its piece as the
-            // visual (tapping it zooms the module AND wakes the demo)
-            if (!big && r.pieces && r.pieces.length && !r.video && !r.model3d && !r.image) {
+            // visual (tapping it zooms the module AND wakes the demo).
+            // The `!r.image` guard used to send chunks with BOTH an image and
+            // a piece (Influence: jhana-3.webp + the live jhana.zone frame)
+            // to a 72px static thumb at row scale — on a phone the lead's
+            // interactive frame shrank to "too small to see". A piece outranks
+            // flat media at row scale too: 150x100 beats 72x72, and the piece
+            // IS the thing the row is about.
+            if (!big && r.pieces && r.pieces.length && !r.video && !r.model3d) {
                 const pk = 'P:' + r.pieces[0].src;
                 if (seen && seen.has(pk)) return '';
                 if (seen) seen.add(pk);
@@ -1949,6 +1955,26 @@
             const obstacle = dossier && dossier.querySelector('.pc-obstacle');
             const prose = dossier && dossier.querySelector('.pc-prose');
             if (dossier && obstacle && prose) {
+                // THE YIELD (the pane's wrapStrata has it; the list was missing
+                // it — that was the "art frame crashes into other content"
+                // report): at narrow widths the fixed 208px card left a prose
+                // slot under MIN_WRAP_SLOT, so the wrap declined and full-width
+                // lines painted under the absolutely-positioned card — or
+                // where the wrap held, ~27px gutters read as a collision.
+                // Measured, not breakpointed: shrink the card until the slot
+                // clears the floor (piece cards keep 2:3 aspect; thumbs and
+                // model-viewers go square), same yield the pane makes.
+                const avail = prose.clientWidth;
+                const w0 = obstacle.getBoundingClientRect().width;
+                if (avail && w0 && avail - w0 - 28 < MIN_WRAP_SLOT) {
+                    const w = Math.max(148, avail - MIN_WRAP_SLOT - 28);
+                    obstacle.style.width = w + 'px';
+                    if (obstacle.classList.contains('pc-piece--demo') || obstacle.classList.contains('pc-piece--link')) {
+                        obstacle.style.height = Math.round(w * 2 / 3) + 'px';
+                    } else if (obstacle.tagName === 'MODEL-VIEWER') {
+                        obstacle.style.height = w + 'px';
+                    }
+                }
                 // wrapAround resolves ASYNCHRONOUSLY — the same race the pane
                 // fixed (wrapStrata): a morph landing while the first wrap is
                 // in flight sees currentWrap still null and wraps the same

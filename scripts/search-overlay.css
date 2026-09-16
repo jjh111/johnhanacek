@@ -1534,6 +1534,16 @@ model-viewer.pc-obstacle--float { width: 170px; height: 170px; }
 /* a small in-module piece sits where a thumb would */
 .result-row .pc-piece--demo { width: 150px; height: 100px; }
 .result-row .pc-piece--demo .pc-piece-title { font-size: var(--text-3xs); }
+/* ONE list scale for floating pieces: the overlay list runs 208x138 (compact
+   postcard), search.html's full-width shell had the same component at
+   264x176 — the "frames are inconsistent sizes" report. A list is a list:
+   208 everywhere. The workspace detail pane keeps 264 (detail context, and
+   its strata yield already owns its own geometry). search.html's results
+   live OUTSIDE .search-wrap (in #sourcesSection, see that file's note), so
+   the selector follows the section, not the sticky input frame. */
+#sourcesSection .pc-piece.pc-obstacle--float { width: 208px; height: 138px; }
+/* ...and the dossier min-height follows the smaller card (was tuned to 264) */
+#sourcesSection .pc-dossier:has(.pc-piece.pc-obstacle--float) { min-height: 180px; }
 
 /* specificity pin: a piece serving as wrap obstacle is absolute like any
    other obstacle (.pc-piece's own position:relative loses deterministically) */
