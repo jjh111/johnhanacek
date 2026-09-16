@@ -116,9 +116,9 @@ What I think we need is a prototyping environment where we can bring in everythi
 
 From an interface perspective, Ribeiro, Andre, and Takeo Igarashi’s paper titled,  “Sketch-Editing Games: Human-Machine Communication, Game Theory and Applications” offers an interesting paradigm for allowing the computer and human user to “converse” with each other in order to agree on what object to create.
 
-![image.png](https://codahosted.io/docs/D_lXK3DTPV/blobs/bl-DFseRjBnC5/66b027977014f09fc66ce313aa35f226d63c8df7c72fc88efdf7983a56f74d2c88a9f1913c6bd166dc1298b49229fc2f7c240a927a5f9ac619069f3807fa7631c945058111d8c391c4de796f5f344d329b788c79c40a9e6f6a5d4cdeef7d054c0056f964)
+![image.png](../Assets/grad/img03.png)
 
-![image.png](https://codahosted.io/docs/D_lXK3DTPV/blobs/bl-pg5WMvy9j0/a1e31d962322b4722f149b7029b17a3e3f3db12ae83b04a148050b772975c869db43e5a1fd2d043a842d33d237ccace1ed913c8a2107a528cee1ab68e892ef934e5e08643fe0bb75ea532bafd9429d17de57ca81c7d9e2ff884cc0e8f7277859b29b908c)
+![image.png](../Assets/grad/img13.png)
 
   
 
@@ -168,7 +168,7 @@ The whole sequence that they present is:
 
 > Running various operations on the blend itself
 
-![image.gif](https://codahosted.io/docs/D_lXK3DTPV/blobs/bl-glJSGUAiUF/d2da35163bb72b73b53ffce6f085244083092e261c09917cdef72276191d133af5aec646ca1c97a6eee9d7a120227e17a475a5c71299034163a0b9a44e0d3421e3c3aa86e4aaa6a1206424086c3581334e3e257b6f6f3a2be9fe43d45d3f7e73323dcafa)
+![image.gif](../Assets/grad/img11.png)
 
 The diagram showing the essential aspects of their theory.
 
@@ -200,7 +200,7 @@ All this will surely update as I learn more. I feel as though a weight is being 
 
   
 
-![image.png](https://codahosted.io/docs/D_lXK3DTPV/blobs/bl-0F1fv1J1yd/bb10ea2810f09c4484b18b62d575db5adc0ed5e6863c53f3b90db47a59bb45c7b5e28bff956ad3fea222062274c122581c401f32f7aeded3e1b0e0f4bfe205b6d5b484b6c6e17fbdb617e4db8197911602d6f2283319e2b86f0bfd9d919aef78cfd48098)
+![image.png](../Assets/grad/img00.png)
 
 ## Bibliography
 

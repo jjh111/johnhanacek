@@ -36,7 +36,7 @@ Section 1: What kind of computers do public school students have?
 
 Computers and the Internet are features of modern life. [In public school systems, the percentage of schools with internet access has gone from 8% to 98% in 2008.](https://nces.ed.gov/programs/digest/d12/tables/dt12_120.asp)
 
-![image.png](https://codahosted.io/docs/D_lXK3DTPV/blobs/bl-g3aK4TqpIB/c972f1f286bc154d83e6479450f9f8311ea8c999824e1c9ac24a5eef27e961924bff0ac1a101d7bb1c344349fe9ed23817e6a5a153e0adb2582a8b3e65ed8f95b343cfb68d3dfe64b91f5d43d29d1c974f4f1331214577b1e5ad37aa748b1d93a9560031)
+![image.png](../Assets/grad/img10.png)
 
 Not all computer paradigms are the same, and trends in modern consumer devices leave some worry as to clarity of pathways by which students may learn to become computational thinkers. In the modern computer device market there have emerged two broad class of devices. The traditional Personal Computer (PC) and the “Computational Appliance”.
 
@@ -46,7 +46,7 @@ The traditional PC often features free-floating windowed content and application
 
 The Computational Appliance is not a full PC, it cannot install software from anywhere and it limits the users ability to modify its internal logic. In both iOS and ChromeOS the ability of students to modify and view the internal logic of the device is limited. This design decision is understandable but sub-optimal if our pedagogical goal is to foster proactive [STEAM](http://stemtosteam.org/) (Science, Technology, Engineering, Arts+Design, and Math) students. Only by taking ownership of concepts and tools do students transition into practioners.
 
-![image.png](https://codahosted.io/docs/D_lXK3DTPV/blobs/bl-wPOwoNMkzx/3974ed0adf76d043fb552dbfff1cbad4f7b6598f3c2c8550b6550c2f6b47ff03b9a4d61455cee0a8ce2e7edc73dd1544091e4f96514c28d64a654df47cce944acd9153d8cd678f62e9993c8e271e4e64ecd98894b9e1228d59e3de27f7e410a3a902de99)
+![image.png](../Assets/grad/img17.png)
 
 What kind of computer is in the classroom today? Mostly computational appliances.
 
@@ -126,9 +126,9 @@ https://www.youtube.com/embed/uEja_cxrGCg?feature=oembed
 
 From an interface perspective, Ribeiro, Andre, and Takeo Igarashi’s paper titled,  “Sketch-Editing Games: Human-Machine Communication, Game Theory and Applications” offers an interesting paradigm for allowing the computer and human user to “converse” with each other in order to agree on what object to create.
 
-![image.png](https://codahosted.io/docs/D_lXK3DTPV/blobs/bl-DFseRjBnC5/66b027977014f09fc66ce313aa35f226d63c8df7c72fc88efdf7983a56f74d2c88a9f1913c6bd166dc1298b49229fc2f7c240a927a5f9ac619069f3807fa7631c945058111d8c391c4de796f5f344d329b788c79c40a9e6f6a5d4cdeef7d054c0056f964)
+![image.png](../Assets/grad/img03.png)
 
-![image.png](https://codahosted.io/docs/D_lXK3DTPV/blobs/bl-pg5WMvy9j0/a1e31d962322b4722f149b7029b17a3e3f3db12ae83b04a148050b772975c869db43e5a1fd2d043a842d33d237ccace1ed913c8a2107a528cee1ab68e892ef934e5e08643fe0bb75ea532bafd9429d17de57ca81c7d9e2ff884cc0e8f7277859b29b908c)
+![image.png](../Assets/grad/img13.png)
 
   
 
@@ -164,15 +164,15 @@ The idea is to create a substrate by which programs can be called into the envir
 
 The environment ought to allow and assist the creation of “traditional” media, along with allowing users to discover whether what they are drawing has a programmatic component in the library.
 
-![image.png](https://codahosted.io/docs/D_lXK3DTPV/blobs/bl-uJYhiCLdc1/4447dc17a9e19b20e41234fb3e4dd2c69c44e14df22b53a376bba9aad073efb57b6931edfb13414acc69d47e8fabe816fd7bebc4a93e89c0cebb4f566e09af6c902daca534616301c7637561a9f36c1224e6f2a5884739f124bfbbdbb72256571f17a8c0)
+![image.png](../Assets/grad/img16.png)
 
 The environment would allow users to view the internal logic of called programs as a tooltip that supports copy/paste & editing. There could also be a meta-whiteboard within the chalktalk environment that would allow the user to go from program to sketch directly. We can begin breaking down the distinction between previously coded assets and sketches through the use of a meta-whiteboard widget that can be invoked through a certain sketch.
 
-![image.png](https://codahosted.io/docs/D_lXK3DTPV/blobs/bl-R3HHRYaoLb/5958985ac56b4a2303aef8201ab77f4705b621a3933ba8a3c1727f83a3105a21d8560e9658ba0c8a86e1b660ac0b4b5c13567e90c9a3fe9b15f3bc3ed5f4940658d2c9159377c6cbc3444b54c94c90ad4cec5998b29d35500f88535924cc39d404059152)
+![image.png](../Assets/grad/img04.png)
 
 In this way the “frontend” and “backend” concepts of the environment become blurred and facilitate exploration of machine interpretable code through human drawing. Moving forward we can go beyond just code/draw, draw/code of explicit objects and toward discovery of novel forms. Combining the discovery aspects of Juxtapose with a more compact interface like ShadowDraw and the “shape editing” paradigm of Sketch Games could allow for students in a chalktalk environment to search through the libraries of available programs and primitives. By sketching simple shapes, more complex forms can be presented as suggestions as the working sketch progresses.
 
-![image.png](https://codahosted.io/docs/D_lXK3DTPV/blobs/bl-lohSTQBC1A/3007772df52d64637145481c3dacdbacdd51b260cda5d684300837ba7813a5c9597cc428fa659e0eae15309699acfdbae9087c859c8117c481e56d496149ee3e16219256b766e5981e7a69e8c67d44068f231b45ed81b06406ba07ca74fa4ab59ef921cc)
+![image.png](../Assets/grad/img12.png)
 
 The current chalktalk interpreter would need a complete overhaul to support this, since it is currently interested in converting a sketch only once, not continuously querying it. It will have to be overhauled though since this kind of negotiated suggestive search will be essential as the size of the backend program library grows. With hundreds or thousands, then millions of programs that could possibly be called there would be no way to remember all of them, let alone discover them, without the ability to iterate on a single sketch.
 

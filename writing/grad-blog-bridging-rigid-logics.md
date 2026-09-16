@@ -40,7 +40,7 @@ Researchers Lake, Salakutdinov and Tenenbaum instantiated a “machine learning�
 
 “In short, BPL can construct new programs by reusing the pieces of existing ones, capturing the causal and compositional properties of real-world generative processes operating on multiple scales.”
 
-![image.png](https://codahosted.io/docs/D_lXK3DTPV/blobs/bl-YZK_MgdEqv/ee939dd173e4933d76fc55c87771fc25bce0961ad7070fa8fc1f35c50aca08bd4b5aba9d6f23e807b1d8a0ae72c57eaaacf9d0955f6c2eeb77353013a42614895cd137564b61393a56c7c17069cac6066be8bdccb2f6ecf720367d7752246a02f9a9ddc0)
+![image.png](../Assets/grad/img08.png)
 
 Finding this paper feels profound to me. Lake et al have been able to create a learning system that does not need huge amounts of data, but rather using smaller stochastic programs to represent concepts and building them compositionally from parts, subparts and spatial/temporal relations.
 
@@ -50,7 +50,7 @@ I am floored by this paper. Professor if you know of other work in this domain p
 
 Using the BPL method, concepts are represented as probabalistic relational programs, so anything entered by the human operator (or theoretically by other BPL-taught machines) becomes instantly absorbed into a formal logic and is combinatorial at a mathematically grounded and sound level.
 
-![image.png](https://codahosted.io/docs/D_lXK3DTPV/blobs/bl-6nGNH-Cx6W/a0ff80b109e0d6ab7b32f635a05a3786e06c320784ff3ccd9382cc6cef02519a75478a38471dbea7449714ac962eb14d3a9eb41a6b41c3510bbad860a19eac0e4500f51a5827ba993fd27a76aac92df503ce4d0e72cb5cd387340761a8838cd163bddcc3)
+![image.png](../Assets/grad/img02.png)
 
 The key of BPL is that, like human beings, it allows the computer to start working on relational categorization after just one example. This is how “machine learning” can go from tool of the corporation toward tool of the individual. We individuals do not have thousands or millions of datapoints to give to our personal computers, but we do have individual ideas that we can sketch to them.
 

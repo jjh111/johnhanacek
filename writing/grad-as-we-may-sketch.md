@@ -25,7 +25,7 @@ What happens in a world with ambient computation and representation capabilities
 
 [https://folk.computer/notes/tableshots](https://folk.computer/notes/tableshots)
 
-![image.png](https://codahosted.io/docs/D_lXK3DTPV/blobs/bl-sdSeirq6R-/f0c3dece0f001abe9fd853487e1b31ecbcf282ec23cbf4b8e9f5797ce5fc025eeccef3af6df63323217819d544b7c504916a3881e20dcf66b7ec60fd7d26ab835d9fee9977a6a0b18e0ca54f5c933219f4efd3a5efed04f138deb7b6585796152e4248b1)
+![image.png](../Assets/grad/img15.png)
 
 Harness the power of drawing into computers to let a blank canvas become running code, bridge fuzzy expression with rigid logics into an extensible by default play/work-space for all ages.
 
@@ -45,8 +45,8 @@ As 3D technologies continue to mature I can see a path of tablets mixed with gla
 
 I love computing's affordances, yet the interface is not yet complete - now it's time to bring the computer to life at the depth of mind with the speed and intuitive action of our hands.
 
-![image.png](https://codahosted.io/docs/D_lXK3DTPV/blobs/bl-2V1N5QKTDi/478983bf19175251dce20449f51e6668fb7498af0d800a5b5d2fdf00f833735f9afa16663e54eedd0e4b279f082cb1d40673902c2f4a5ddbc80910359667a8d0ce360ba2528a457597f5fa6babe9fe4e2fa7f13f0fd6f85a94b8c2259b367b4784d1667b)
+![image.png](../Assets/grad/img01.png)
 
-![image.png](https://codahosted.io/docs/D_lXK3DTPV/blobs/bl-d8I0NbvcuA/8b3a2a19d41f363abb8f7dba99db213d9689757a0ebd482764b32b27921f8d2a568b60344299ba8f5d7a159f2443dffd8712f220acca69607636024ae37eeab8e9b7f8fc4fe9d979380e97e5c96b0b430bc27aa49d5d7ae5081a40c52d68f8e4020630b2)
+![image.png](../Assets/grad/img09.png)
 
-![image.png](https://codahosted.io/docs/D_lXK3DTPV/blobs/bl-XGVPfvf8Dz/6c90430d56e05bf28dd28eb2eabbc99600b0a56d1b4533215b4d10acb1a8f9467ded57620adfc1967cfa0d2d9302de52719425b26b91a0654f05e97ab737029051b3200c518f5d128e9d9ef52b6f1c128f3108873c93a9fd84e0c0c31b395f7649b282ba)
+![image.png](../Assets/grad/img07.png)
