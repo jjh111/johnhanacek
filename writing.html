@@ -111,6 +111,17 @@
         #writing-main { pointer-events: auto; }
 
 
+        /* Date line shown under the title in the opened reader view */
+        .panel-date {
+            font-size: var(--text-2xs, 0.7rem);
+            color: var(--muted);
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin-bottom: var(--space-xs, 0.75rem);
+            padding-bottom: var(--space-xs, 0.75rem);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
         /* Reader images (grad posts embed Coda-doc screenshots) */
         .md-figure {
             margin: var(--space-md, 1.5rem) 0;
@@ -924,7 +935,10 @@ function openFile(path, skipHistory) {
             return r.text();
         })
         .then(text => {
-            body.innerHTML = `<div class="md">${renderMarkdown(text)}</div>`;
+            const dateLine = entry && entry.date
+                ? `<div class="panel-date">${fmtDate(entry.date)}</div>`
+                : '';
+            body.innerHTML = `<div class="md">${dateLine}${renderMarkdown(text)}</div>`;
             body.scrollTop = 0;
         })
         .catch(() => {
