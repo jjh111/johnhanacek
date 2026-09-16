@@ -476,6 +476,7 @@
             flex: 1;
             overflow-y: auto;
             padding: var(--space-lg) var(--space-md);
+            padding-left: var(--space-xl, 2.5rem);  /* a bit more room off the spine */
         }
 
         .panel-footer {
@@ -1149,10 +1150,33 @@ function downloadCurrent() {
     if (!currentPath) return;
     const entry = fileIndex.find(f => f.path === currentPath);
     const filename = entry ? (entry.slug + '.md') : currentPath.split('/').pop();
+
+    // Authorship watermark prepended to every download: who wrote it, its
+    // provenance class, and where the canonical copy lives.
+    const PROV = {
+        human: { label: 'human-written', note: 'Written by John Hanacek and published verbatim \u2014 spelling errors and all.' },
+        mixed: { label: 'mixed human + AI', note: 'Ideas and structure by John Hanacek; prose drafted with AI assistance.' },
+    };
+    const prov = PROV[(entry && entry.prov) || 'human'];
+    const title = entry ? entry.name : filename;
+    const date = entry && entry.date ? ` (${fmtDate(entry.date)})` : '';
+    const watermark = [
+        '---',
+        `# ${title}${date}`,
+        '',
+        `**Author:** John Hanacek  `,
+        `**Provenance:** ${prov.label} \u2014 ${prov.note}`,
+        `**Source:** [johnhanacek.com/writing](https://www.johnhanacek.com/writing.html) \u2014 the canonical, up-to-date copy lives there.`,
+        '',
+        '*This file was downloaded from johnhanacek.com. If you found it elsewhere, check there for the original.*',
+        '---',
+        '',
+    ].join('\n');
+
     fetch(currentPath)
         .then(r => r.text())
         .then(text => {
-            const blob = new Blob([text], { type: 'text/markdown' });
+            const blob = new Blob([watermark + text], { type: 'text/markdown' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
             a.download = filename;
