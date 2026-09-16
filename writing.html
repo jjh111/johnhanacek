@@ -427,6 +427,25 @@
            designed. Sizes stay per-button; only the grammar is shared. */
         .nav-btn,
         .download-btn,
+        .panel-theme-btn {
+            font-family: var(--font-mono);
+            background: rgba(var(--cyan-dim-rgb), 0.08);
+            border: 1px solid rgba(var(--cyan-dim-rgb), 0.3);
+            border-radius: 4px;
+            color: var(--ink-quiet);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+        .panel-theme-btn:hover {
+            background: rgba(var(--cyan-dim-rgb), 0.16);
+            border-color: rgba(var(--cyan-dim-rgb), 0.45);
+            color: var(--text-bright);
+        }
+
         .panel-close {
             font-family: var(--font-mono);
             background: rgba(var(--cyan-dim-rgb), 0.08);
@@ -788,6 +807,7 @@
                 <button class="crumb crumb-root" onclick="closePanel()" style="background:none;border:none;color:inherit;font:inherit;cursor:pointer;padding:0;">Writing</button>
             </div>
             <button class="download-btn" id="btnDownload" onclick="downloadCurrent()" title="Download as .md">&#8595; <span id="downloadLabel">Download</span></button>
+            <button class="panel-theme-btn jh-theme-btn" onclick="(function(){var t=window.JH_THEME;t.apply(t.current()==='light'?'dark':'light',true);})()" title="Switch light/dark (reader shares the site theme)" aria-label="Switch theme"><span class="theme-glyph">&#9680;</span></button>
             <button class="panel-close" onclick="closePanel()" title="Close (Esc)">&times;</button>
         </div>
     </div>
@@ -1068,6 +1088,8 @@ function openFile(path, skipHistory) {
     document.getElementById('contentPanel').dataset.cat = openEntry ? openEntry.cat : '';
     document.getElementById('contentPanel').classList.add('open');
     document.getElementById('panelOverlay').classList.add('open');
+    const themeGlyph = document.querySelector('#contentPanel .theme-glyph');
+    if (themeGlyph) themeGlyph.textContent = document.documentElement.getAttribute('data-theme') === 'light' ? '\u25D0' : '\u25D1';
     // background stays scrollable in the non-blocking reader
     // Dialog semantics: focus moves in, Esc/Tab handled, focus returns on close.
     panelReturnFocus = document.activeElement;
