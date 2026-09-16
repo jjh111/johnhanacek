@@ -191,15 +191,29 @@
         .page-header h1 .jh-sig img {
             height: 1.1em;  /* sig scales with the smaller h1 but stays legible */
         }
+        /* At the halved size the sig's baseline sits high inside its box
+           (its glyphs live in the upper part of the em). Nudge it down to
+           the cap-line so it reads centered against "Writing". */
+        .page-header h1 .jh-sig {
+            transform: translateY(0.18em);
+        }
         .header-count {
             margin-top: 0;   /* count joins the h1 row via flex-wrap below */
         }
         .page-header {
             flex-direction: row;
             flex-wrap: wrap;
-            align-items: baseline;
+            align-items: center;   /* was baseline: let the count self-center */
             justify-content: center;
             gap: 0 0.75rem;
+        }
+        .page-header .header-count {
+            align-self: center;
+        }
+        /* The h1 row must never clip the sig's ascenders: the sig box is
+           1.1em tall inside a line-height-1 h1, so give the row room. */
+        .page-header h1 {
+            line-height: 1.4;
         }
 
 
@@ -712,8 +726,10 @@
             <span></span>
         </button>
         <ul class="nav-right">
+            <li><a href="#cat-published">Published</a></li>
             <li><a href="#cat-eduos">EduOS</a></li>
             <li><a href="#cat-metamedium">MetaMedium</a></li>
+            <li><a href="#cat-grad">Graduate School</a></li>
         </ul>
     </div>
 </nav>
@@ -924,6 +940,46 @@ function renderMarkdown(text) {
     return html;
 }
 
+// ── Reader context for the command bar (⌘K) ────────────────────────
+// While an article is open, the bar offers "on this page" jumps built
+// from the article's own h2/h3 headings, plus reader controls. They are
+// registered into window.JH_COMMANDS on open and removed on close; the
+// core re-indexes on registry change, so nothing else to keep in step.
+let panelCmdIds = [];
+function refreshPanelCommands() {
+    // drop any previous panel commands
+    const q = (window.JH_COMMANDS = window.JH_COMMANDS || []);
+    for (const id of panelCmdIds) {
+        const i = q.findIndex(c => c && c.id === id);
+        if (i >= 0) q.splice(i, 1);
+    }
+    panelCmdIds = [];
+    if (!currentPath) return;  // panel closed: bar falls back to page-level
+    const entry = fileIndex.find(f => f.path === currentPath);
+    const label = entry ? entry.name : currentPath.split('/').pop();
+    const heads = [...document.querySelectorAll('#panelBody h2, #panelBody h3')].slice(0, 12);
+    for (const h of heads) {
+        if (!h.id) h.id = 'ph-' + Math.abs([...h.textContent].reduce((a, c) => (a * 31 + c.charCodeAt(0)) | 0, 7));
+        const id = 'panel.section.' + h.id;
+        q.push({
+            id, page: 'writing',
+            title: 'Jump to \u201c' + h.textContent.trim().slice(0, 40) + '\u201d',
+            detail: 'Section of \u201c' + label.slice(0, 50) + '\u201d',
+            tags: 'jump section ' + h.textContent.trim().toLowerCase(),
+            hints: ['jump to ' + h.textContent.trim().toLowerCase(), h.textContent.trim().toLowerCase()],
+        });
+        panelCmdIds.push(id);
+    }
+    q.push({
+        id: 'panel.close', page: 'writing',
+        title: 'Close the reader', detail: 'Back to the writing index',
+        tags: 'close reader exit article back index',
+        hints: ['close the reader', 'exit the article', 'back to the index'],
+        run: () => closePanel(),
+    });
+    panelCmdIds.push('panel.close');
+}
+
 function openFile(path, skipHistory) {
     currentPath = path;
 
@@ -968,6 +1024,7 @@ function openFile(path, skipHistory) {
                 : '';
             body.innerHTML = `<div class="md">${dateLine}${renderMarkdown(text)}</div>`;
             body.scrollTop = 0;
+            if (typeof refreshPanelCommands === 'function') refreshPanelCommands();
         })
         .catch(() => {
             body.innerHTML = `<div class="md">
@@ -988,6 +1045,7 @@ function closePanel() {
     }
     panelReturnFocus = null;
     currentPath = null;
+    if (typeof refreshPanelCommands === 'function') refreshPanelCommands();
     // Clear hash. window.history spelled out on purpose: a bare `history`
     // here silently resolved to the nav-history ARRAY declared at the top of
     // this script, so every panel close threw TypeError and the #slug was
