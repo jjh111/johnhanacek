@@ -652,3 +652,63 @@ which the Review Canvas shows and which the distillation worked from.
 ## §J Resume compile — 2026-09-16
 
 Chunks 4, 21, 23, 26, 27, 50 are COMPILED from `Assets/resume.json` by `scripts/build-resume.mjs --apply` (source: the 2026-09-09 interview; evidence links live in the JSON). Edit the JSON, not the chunk text. Rebuild vectors after each compile (`node scripts/build-chunk-vectors.mjs`).
+
+## L. Prose pass — 2026-09-16 (house rules)
+
+John's ruling: terse prose, fewer words, no em dashes, no negation-constructivist sentences. Kinds below: `separator` (title " — " → ": "), `dash`, `semicolon`, `negation`, `cut` (flourish or degree word deleted), `split` (long sentence broken). Compiled chunks 4/21/23/26/27/50 untouched. Quoted endorsements kept verbatim in 14 (David Brin), 15 (Désirée Sterling) and 59 (all seven) — the three surviving "not only"/"never" hits are all inside those quotes. `_meta.fields.prose` now records the rules. Vectors NOT rebuilt here; run `node scripts/build-chunk-vectors.mjs`.
+
+- 2 — semicolon (tldr)
+- 3 — separator, negation ("rather than descriptions", "beyond text chat"), dash
+- 5 — separator, dash, cut ("closely")
+- 6 — separator, semicolon
+- 7 — separator, dash (micro, tldr)
+- 8 — separator, dash
+- 9 — dash
+- 11 — separator
+- 12 — dash
+- 13 — separator, dash, piece title
+- 14 — separator (Brin quote untouched)
+- 15 — dash (fact label)
+- 16 — separator, semicolon, dash
+- 17 — split, cut (tldr to one sentence)
+- 18 — dash
+- 19 — separator, dash, semicolon
+- 20 — separator, dash, semicolon
+- 22 — dash (fact row)
+- 24 — semicolon, cut (tldr relisted as four named credits)
+- 25 — semicolon, dash, cut ("this site is the working proof")
+- 28 — dash, split, cut ("rich")
+- 29 — semicolon
+- 30 — separator, dash
+- 31 — separator, dash, semicolon, split
+- 32 — dash, split, cut
+- 33 — dash, semicolon, split
+- 34 — separator, dash, negation ("instead of only steering off them"), split ×3
+- 35 — separator, dash, split, piece title
+- 36 — dash, negation ("no server needed"), cut ("entirely")
+- 37 — separator, dash, cut ("complete"), piece title
+- 38 — separator, dash, piece title
+- 39 — separator, dash, split
+- 40 — separator, negation ("rather than mockups"), split ×2
+- 41 — separator, dash (micro, tldr), negation ("not static mockups"), semicolon ×2 in facts
+- 42 — separator, dash, negation ("without conflict"), split ×2
+- 43 — dash, negation ("rather than handing over a spec", "but not before"), cut ("actually")
+- 44 — dash, semicolon, split ×3
+- 45 — dash, negation ("does not get attached", "rather than surviving it"), split ×2, cut
+- 46 — separator, dash, split ×4, cut ("fundamental", "entirely")
+- 47 — dash, negation ("rather than simply trusting it", "will not compromise"), split ×3, cut ("ultimate")
+- 48 — semicolon, split ×2, tldr to one sentence
+- 49 — dash, semicolon, split ×2
+- 51 — separator, dash, negation ("think ecosystem, not harness")
+- 52 — title negation ("Ratchet, Don't Loop" → "The RLM Ratchet", the essay's own slide label), dash ×4, negation ("Evolution doesn't loop", "not retry but", "no forward progress", "instead of O(n²)")
+- 53 — separator, dash ×3, negation ("not by mapping terrain but", "rather than commands")
+- 54 — dash ×2, semicolon chain, negation ("instead of O(n²)", "never the whole tree")
+- 55 — title negation ("Attractor Basins, Not Rigid Plans" → "Attractor Basins"), dash ×2, negation ("instead of specifying", "without centralized control", "No rigid plans", micro "not the behavior")
+- 56 — separator, dash ×2, negation ("can't adapt", "doesn't force one clock", "no one is listening")
+- 57 — separator, dash ×5, semicolon chain, negation ("aren't assigned", "isn't repetition but")
+- 58 — separator, dash, semicolon chain, piece title
+- 59 — dash ×7 (fact labels only; every quote left verbatim, "not only"/"never" ×3 deliberately kept)
+- about.html — Bio ¶3: two em dashes split into three sentences; "Off the clock": one sentence split into four, colon for the parenthetical
+- index.html — dash ×7: five hero guide rows, the done-note, and the "Currently building MetaMedium" line
+- design.html — dash ×8: four maze guide rows, the done-note, the AsMA award line, both thesis lines
+- art.html — dash ×5: the Writing & Worldbuilding intro, "A Desirable Future in 100 Words", the Earth Star alt text and figcaption, the Granite Omnistump caption
