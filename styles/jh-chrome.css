@@ -266,11 +266,18 @@
 }
 #nav.visible { transform: translateY(0); }
 
-/* The bar spans the viewport with FIXED padding — it does not chase the
-   prose spine. Spine-locked padding made the usable width a staircase that
-   plateaued at 900px from 980 to 1199px viewport: up to ~220px sat idle in
-   the margins exactly where the full labels needed it. A header owns its own
-   edges; the content below keeps its spine. */
+/* The bar's side padding is a SHARE of the margin, not the spine and not a
+   fixed inset. Spine-locked padding once made the usable width a staircase
+   that plateaued at 900px from 980 to 1199px, with ~220px idle exactly where
+   the full labels needed it; a fixed 40px then left the header's ends 600px
+   from the content on a 2560px screen. --nav-pad grows only past 1628px,
+   at 1px per 3.2px of width, floored at the page padding: 40px at every
+   width where a page can fold (a first cut that grew from 1200px pushed
+   design.html's fold from ~1370 to ~1460 — a 1440 laptop got the hamburger),
+   then ~130px at 1920, ~330px at 2560, ~600px at 3440: the ends sit about
+   halfway between the screen edge and the content edge (John, 2026-09-16).
+   The menu-state strip arithmetic reads the same token. */
+#nav { --nav-pad: max(var(--content-pad), calc((100vw - 1500px) / 3.2)); }
 .nav-inner {
     display: flex;
     align-items: center;
@@ -278,7 +285,7 @@
     max-width: none;
     width: 100%;
     margin: 0 auto;
-    padding-inline: var(--content-pad);
+    padding-inline: var(--nav-pad);
     height: 100%;
 }
 
@@ -965,7 +972,7 @@ body > footer .version {
    point where the glyph and the word stop growing the extra width becomes
    spacing between targets — the one thing a thumb always wants more of. */
 #nav.nav-menu .nav-left {
-    --nav-item: max(27px, calc((100vw - (2 * var(--content-pad) + 133px)) / 7));
+    --nav-item: max(27px, calc((100vw - (2 * var(--nav-pad) + 133px)) / 7));
     --nav-glyph: clamp(16px, calc(var(--nav-item) * 0.46), 26px);
     /* JetBrains Mono advances 0.6em, and SERVICES is the longest word at
        8 characters — so a label fits its item while font-size stays under
