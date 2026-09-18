@@ -164,6 +164,15 @@
             border-bottom: 1px solid var(--border-subtle);
         }
 
+        /* Provenance line: the same badge the card wears, at the top of the
+           open reader — under the date when one exists, first when not. */
+        .panel-prov {
+            margin-bottom: var(--space-xs, 0.75rem);
+            line-height: 1;
+        }
+        .panel-prov .prov-badge { margin-left: 0; }
+        .panel-date + .panel-prov { margin-top: -0.2rem; }
+
         /* Reader images (grad posts embed Coda-doc screenshots) */
         .md-figure {
             margin: var(--space-md, 1.5rem) 0;
@@ -1150,7 +1159,17 @@ function openFile(path, skipHistory) {
             const dateLine = entry && entry.date
                 ? `<div class="panel-date">${fmtDate(entry.date)}</div>`
                 : '';
-            body.innerHTML = `<div class="md">${dateLine}${renderMarkdown(text)}</div>`;
+            // Provenance badge at the top of the open reader, mirroring the
+            // card's badge (human = gold ✍, mixed = cyan ✦).
+            const PROV_META = {
+                human: { cls: 'prov-human', label: '\u270d human' },
+                mixed: { cls: 'prov-mixed', label: '\u2726 mixed ai + human' },
+            };
+            const provMeta = entry && PROV_META[entry.prov];
+            const provLine = provMeta
+                ? `<div class="panel-prov"><span class="prov-badge ${provMeta.cls}" title="${provMeta.cls === 'prov-human' ? 'Written by John \u2014 published as-is, typos and all' : 'Mixed human + AI prose \u2014 ideas John\u2019s, wording partly AI-assisted'}">${provMeta.label}</span></div>`
+                : '';
+            body.innerHTML = `<div class="md">${dateLine}${provLine}${renderMarkdown(text)}</div>`;
             body.scrollTop = 0;
             if (typeof refreshPanelCommands === 'function') refreshPanelCommands();
             // Same-origin widget embeds: size frames to their content. Two
