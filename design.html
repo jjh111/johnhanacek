@@ -379,7 +379,7 @@
             <button class="guide-close" id="closeGuide" type="button" aria-label="Close instructions">&times;</button>
             <span class="guide-title">✎ &nbsp;draw the maze</span>
             <div class="guide-rows" aria-live="polite">
-                <span class="guide-row" data-step="1"><span class="guide-glyph" data-jh-stroke="square"></span><span>draw a shape: its outline becomes a wall</span></span>
+                <span class="guide-row" data-step="1"><span class="guide-glyph" data-jh-stroke="square"></span><span>draw a shape: its outline becomes a wall — squares become coral, shelter for small fish</span></span>
                 <span class="guide-row" data-step="2"><span class="guide-glyph" data-jh-stroke="loop"></span><span>draw a loop: a fish</span></span>
                 <span class="guide-row" data-step="3"><span class="guide-glyph" data-jh-stroke="tap"></span><span>tap: drop food, and lead fish to it</span></span>
                 <span class="guide-row"><span class="guide-glyph" data-jh-stroke="scribble"></span><span>scribble across a wall: rub it out</span></span>
@@ -399,7 +399,7 @@
         <div class="canvas-controls">
             <button class="info-btn" id="toggleGuide" aria-label="Toggle maze instructions" title="How this works">i</button>
             <span class="controls-label" aria-hidden="true">clear</span>
-            <button class="canvas-btn" id="clearCanvas" title="Remove the walls, keep the fish">Walls</button>
+            <button class="canvas-btn" id="clearCanvas" title="Remove the walls and coral, keep the fish">Walls</button>
             <button class="canvas-btn" id="clearFish" title="Empty the tank, keep the walls">Fish</button>
             <label class="canvas-toggle">
                 <input type="checkbox" id="toggleLabels">
@@ -1040,7 +1040,25 @@
             floorAffinity: false,
             fishHue: 'full',
             foodLifetime: 20000,
-            annotateAt: (x, y) => insideEnclosure(x, y) ? 'enclosed' : ''
+            // ---- Ecosystem opts (v1.11) ----
+            // predation: large fish really eat small fish — pursuit, the mouth,
+            // growth of the survivors, coral bloom on a death. The drawn
+            // rectangle stays a wall; only this flag turns the reef wild.
+            // foodHorizon: pellets within 140px of sheltering coral keep an
+            // extra 10s (hoard scent) — stores, not snacks.
+            predation: true,
+            foodHorizon: 140,
+            // "enclosed" = the engine's room model says this water is sealed off
+            // (any wall combo — lines, rings, triangles — at large-fish
+            // clearance). Falls back to the polygon test before the first
+            // field build (annotateAt can fire before any wall exists).
+            annotateAt: (x, y) => {
+                if (fishLayer && typeof fishLayer.navEnclosedAt === 'function') {
+                    ensureMazeField();
+                    return fishLayer.navEnclosedAt(x, y) ? 'enclosed' : '';
+                }
+                return insideEnclosure(x, y) ? 'enclosed' : '';
+            }
         });
         
         const TIMING = {
@@ -1786,6 +1804,46 @@
                     return;
                 }
 
+                // ---- CORAL: shelter squares read as reef, not barrier ----
+                // Same outline, different voice: a faint fill so the interior
+                // reads as "body", corner buds, and a soft green-tinged glow
+                // instead of the wall's hard blue. Bloom growth rings light up
+                // when a fish dies nearby (engine sets bloomUntil).
+                if (shape.type === 'rectangle') {
+                    const isCoral = shape.coral === true;
+                    ctx.strokeStyle = isCoral ? 'rgba(122, 229, 130, 0.75)' : 'rgba(96, 165, 250, 0.9)';
+                    if (isCoral) {
+                        ctx.fillStyle = 'rgba(122, 229, 130, 0.07)';
+                        ctx.fill();
+                        ctx.shadowColor = 'rgba(122, 229, 130, 0.35)';
+                        // Fresh growth after a nearby death — engine bloom
+                        if (shape.bloomUntil && Date.now() < shape.bloomUntil) {
+                            const left = (shape.bloomUntil - Date.now()) / 8000;
+                            ctx.shadowColor = 'rgba(122, 229, 130, ' + (0.35 + 0.3 * left).toFixed(2) + ')';
+                        }
+                    }
+                    ctx.beginPath();
+                    ctx.moveTo(points[0].x, points[0].y);
+                    for (let i = 1; i < points.length; i++) {
+                        ctx.lineTo(points[i].x, points[i].y);
+                    }
+                    ctx.closePath();
+                    ctx.stroke();
+                    // Corner buds
+                    if (isCoral) {
+                        const bs = 3 + 1.5 * morphEase;
+                        for (const p of [points[0], points[14], points[29], points[44]]) {
+                            if (!p) continue;
+                            ctx.beginPath();
+                            ctx.arc(p.x, p.y, bs, 0, Math.PI * 2);
+                            ctx.fillStyle = 'rgba(122, 229, 130, 0.8)';
+                            ctx.fill();
+                        }
+                    }
+                    ctx.shadowBlur = 0;
+                    return;
+                }
+
                 ctx.beginPath();
                 ctx.moveTo(points[0].x, points[0].y);
                 for (let i = 1; i < points.length; i++) {
@@ -2112,17 +2170,20 @@
         }
 
         // Push the current walls into the fish engine as obstacles. Engine
-        // obstacles are coral-style: x = center, y = BOTTOM edge. Walls also
-        // act as shelter — small fish home in them like coral.
+        // obstacles are coral-style: x = center, y = BOTTOM edge. Rectangles
+        // become coral (shelter, not barrier — see the coralKind note in
+        // chainAlong); lines/arrows/circles stay walls.
         // (Note: line/arrow walls use their bounding box, so diagonals read
         // as a fat block to the fish — acceptable for v1.9.)
         function syncObstacles() {
             const obs = [];
             let oid = 0;
-            // Emit a chain of 24px blocks every ~14px along a polyline —
-            // the wall IS the drawn outline, its interior stays open water.
-            // A rectangle is a pen, a circle is a ring tank, a line a barrier.
-            const chainAlong = (pts, closed) => {
+            // Drawn rectangles (squares) become CORAL, not walls: sheltering
+            // solids the minnows can hide in — never barriers. Same outline
+            // chain, different SOLID_KINDS row, so a pen needs three lines or a
+            // circle. The engine's rim_patrol clusters small fish around them,
+            // exactly like engine-drawn coral on the aquarium page.
+            const chainAlong = (pts, closed, kind = 'wall') => {
                 const path = closed ? pts.concat([pts[0]]) : pts;
                 let carry = 0;
                 for (let i = 1; i < path.length; i++) {
@@ -2137,7 +2198,8 @@
                             x: ax + dx * d / segLen,
                             y: ay + dy * d / segLen + 12,
                             width: 24,
-                            height: 24
+                            height: 24,
+                            kind                  // 'coralKind' for rectangles, 'wall' otherwise
                         });
                         d += 14;
                     }
@@ -2147,9 +2209,16 @@
             recognizedShapes.forEach(s => {
                 if (s.type === 'dot') return;
                 if ((s.type === 'line' || s.type === 'arrow') && s.start && s.end) {
-                    chainAlong([s.start, s.end], false);
+                    chainAlong([s.start, s.end], false, 'wall');
                 } else if (s.idealPoints && s.idealPoints.length > 2) {
-                    chainAlong(s.idealPoints, true);
+                    // A chain along the ideal outline leaves the last tip
+                    // segment open (numPoints lands mid-side). Close it by
+                    // chaining back to the start — no gap for small fish to
+                    // slip through. RECTANGLES ARE CORAL (shelter, never
+                    // barriers — squares are the reef); circles/triangles
+                    // stay walls, so a pen is three lines or a circle.
+                    const kind = s.type === 'rectangle' ? 'coralKind' : 'wall';
+                    chainAlong(s.idealPoints.concat([s.idealPoints[0]]), false, kind);
                 } else {
                     const b = shapeBounds(s);
                     obs.push({
@@ -2162,6 +2231,20 @@
                 }
             });
             fishLayer.setObstacles(obs);
+            // Mirror the engine's coral state back onto the drawn shapes:
+            // bloomUntil lights up the square's own rendering (growth ring)
+            // right after a nearby fish is eaten.
+            const extCoral = fishLayer.state.coral.filter(c => c.isExternal);
+            recognizedShapes.forEach(s => {
+                if (s.type !== 'rectangle') { s.coral = false; return; }
+                // External coral keeps host ids in order — match by centre.
+                const match = extCoral.find(c =>
+                    Math.abs(c.x - s.center.x) < 1 && Math.abs(c.y - (s.bounds.maxY ?? shapeBounds(s).maxY)) < 40);
+                if (match) {
+                    s.coral = true;
+                    if (match.bloomUntil) s.bloomUntil = match.bloomUntil;
+                }
+            });
         }
 
         function pointInPoly(px, py, poly) {
@@ -2179,6 +2262,13 @@
                 s.type !== 'dot' && s.type !== 'line' && s.type !== 'arrow' &&
                 s.idealPoints && s.idealPoints.length > 2 &&
                 pointInPoly(px, py, s.idealPoints));
+        }
+
+        // Make sure the engine's nav field reflects the current walls. The
+        // engine rebuilds lazily inside the animation loop; annotating a tap
+        // ("Food · enclosed?") happens outside it, so force the check.
+        function ensureMazeField() {
+            if (fishLayer && typeof fishLayer.ensureNavField === 'function') fishLayer.ensureNavField();
         }
 
         // Scratch-out erase. RELATIONAL, not gestural: count intersections
@@ -2288,7 +2378,8 @@
                     if (fishLayer.state.fish.length > 0) {
                         fishLayer.addFood(center.x, center.y);
                         if (mazeGuide) mazeGuide.notify('food');
-                        const enclosed = insideEnclosure(center.x, center.y);
+                        ensureMazeField();
+                        const enclosed = fishLayer.navEnclosedAt(center.x, center.y);
                         whisperLabels.push({ text: enclosed ? 'Food · enclosed' : 'Food', x: center.x, y: center.y, createdAt: Date.now() });
                     } else {
                         recognizedShapes.push({

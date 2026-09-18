@@ -105,6 +105,10 @@
             // homing/haven target, lifts medium-fish cruise lanes, soft avoid
             // buffer, drawn by the engine
             coral: { blocks: false, shelters: true,  raisesLane: true,  softBuffer: true,  engineRenders: true  },
+            // same capabilities as engine coral, but drawn by the host page
+            // (the maze's coral squares): shelters minnows, never blocks,
+            // renders nothing — the host draws its own reef
+            coralKind: { blocks: false, shelters: true,  raisesLane: true,  softBuffer: true,  engineRenders: false },
             // hard barrier only: fish swim close (tight, size-based standoff)
             // and can NEVER pass through. Host page draws it.
             wall:  { blocks: true,  shelters: false, raisesLane: false, softBuffer: false, engineRenders: false }
@@ -253,6 +257,33 @@
                     f.wallContactSince = nowW;
                 }
             }
+
+            // ---- Wall-follow: along the walls, forward motion ------------------
+            // Sliding handles the instant of contact, but a fish whose goal lies
+            // THROUGH a wall still keeps re-aiming into it: every steering layer
+            // writes targetHeading back toward the food, the slide drags the
+            // velocity tangent, and the fish crawls the face at a bad angle,
+            // grinding progress until the give-up timers fire. When a wall is
+            // near and the fish is roughly parallel to it, commit the heading to
+            // the FORWARD tangent — same direction it is already going, so it
+            // never fights the fish — and keep it there for ~0.7s. The result
+            // reads as deliberate wall-following: the fish sweeps along the face
+            // and rounds the corner instead of inching across it. Tighter
+            // commitment for non-seekers; seekers get a lighter nudge so food
+            // steering still owns the turn.
+            if (f.wallNear && lastSlide !== null && !f.eaten) {
+                const parallel = Math.abs(angleDiff(lastSlide, f.heading)) < Math.PI / 3;
+                if (parallel) {
+                    f.wallFollowUntil = nowW + 700;
+                    f.wallFollowHeading = lastSlide;
+                }
+            }
+            if (f.wallFollowUntil && nowW < f.wallFollowUntil && f.wallFollowHeading != null) {
+                const followBlend = (f.state === 'seeking' || f.state === 'fleeing' || f.state === 'retreating')
+                    ? 0.05 : 0.2;
+                f.targetHeading += angleDiff(f.wallFollowHeading, f.targetHeading) * followBlend;
+                if (followsCruise) f.cruiseAngle += angleDiff(f.wallFollowHeading, f.cruiseAngle) * followBlend;
+            }
         }
 
         // ---- Navigation field ----------------------------------------------
@@ -297,10 +328,29 @@
             return bw >= MEDIUM_THRESHOLD ? 'large' : bw >= SMALL_THRESHOLD ? 'medium' : 'small';
         }
         // Cheap change-detector: count plus id sum catches add, remove and swap.
+        // FOOD HORIZON: only pellets the strong swimmers cannot reach count as
+        // "the future" — the reef's unspoiled stores. Reachable pellets are
+        // eaten within seconds, so they must NOT invalidate the cache; the
+        // pile-of-rot signature moves only when the unreachable set does.
         function navSignature() {
-            let s = food.length * 1e7;
-            for (let i = 0; i < food.length; i++) s += (+food[i].id || 0);
-            return s + wallRects.length * 1e13;
+            let s = food.length * 1e13;
+            let unreachableSum = 0, unreachableCount = 0;
+            if (navRegions && food.length) {
+                for (let i = 0; i < food.length; i++) {
+                    const fd = food[i];
+                    if (navFoodReachable(NAV_PROBE_FISH, fd)) continue;
+                    unreachableSum += (+fd.id || 0);
+                    unreachableCount++;
+                }
+            }
+            // Reachability of the whole pile: when NOTHING is unreachable, the
+            // count is 0 — but the count itself is a state change (a pellet
+            // crossing the horizon must rebuild the fields, or sealed fish
+            // never learn the stores exist). Encode the count separately.
+            s += unreachableCount * 1e9;
+            s += unreachableSum * 1e3;
+            s += wallRects.length;
+            return s;
         }
 
         // Measure a room once, at build time, so idling costs nothing per frame.
@@ -337,7 +387,29 @@
             };
             const a = farthestFrom(cells[0]);
             const b = farthestFrom(a);
-            return { id, cells, rim, minX, maxX, minY, maxY, axisA: a, axisB: b, size: cells.length };
+            // A room touching the canvas border is open water; a room that
+            // doesn't is genuinely sealed in by walls on every side. This is
+            // what "enclosed" MEANS, for any wall combo — line pens, rings,
+            // triangles — not just single drawn polygons.
+            let touchesBorder = false;
+            for (let i = 0; i < cells.length && !touchesBorder; i++) {
+                const c = cells[i], cx = c % navCols, cy = (c / navCols) | 0;
+                if (cx === 0 || cy === 0 || cx === navCols - 1 || cy === navRows - 1) touchesBorder = true;
+            }
+            return { id, cells, rim, minX, maxX, minY, maxY, axisA: a, axisB: b, size: cells.length, touchesBorder };
+        }
+
+        // Is the water at (x, y) sealed off from the rest of the tank, at the
+        // most conservative size class (large-fish clearance)? Rooms that
+        // touch the canvas edge are open water; sealed rooms are enclosures.
+        function navEnclosedAt(x, y) {
+            if (!navRegions || !wallRects.length) return false;
+            const R = navRegions.large || navRegions[Object.keys(navRegions)[0]];
+            if (!R) return false;
+            const id = navRoomIdAtPoint('large', x, y);
+            if (id === null) return false;
+            const room = R.list[id];
+            return room ? !room.touchesBorder : false;
         }
 
         function navCellCenter(idx) {
@@ -698,6 +770,9 @@
 
         // Does a straight swim to (tx,ty) cut through a wall? Cheap segment vs
         // AABB slab test. Recomputed per fish a few times a second, not per frame.
+        // Endpoints sitting in a wall's clearance band belong to no room and
+        // their route reads `here < 0`; never call that blocked — it's the
+        // pellet-resting-on-the-wall case and the fish is already next to it.
         function navLineBlocked(x0, y0, tx, ty) {
             const dx = tx - x0, dy = ty - y0;
             for (let i = 0; i < wallRects.length; i++) {
@@ -774,6 +849,10 @@
         // Large-fish territory / challenge
         const TERRITORY_RANGE = 200;
         const HUNT_RANGE = 120;
+        // Pursuit pace while in the 'hunting' state — a real chase, faster than
+        // food-seeking but a hair under a fleeing minnow's burst so a healthy
+        // small fish can still win the first second of a tail chase.
+        const HUNT_SPEED = 2.6;
         const CHALLENGE_COOLDOWN = 8000; // 8s — challenges are rare confrontations, not constant chasing
         const LARGE_FISH_AVOIDANCE_RANGE = 280; // Idle large fish steer away from each other beyond this
 
@@ -1251,6 +1330,32 @@
         const FISH_SVG_CENTER_Y = 316;     // Center Y: (120 + 512) / 2
         const FISH_SVG_NOSE_X = 1069;      // Nose position (rightmost point)
 
+        // ---- FOOD HORIZON ------------------------------------------------------
+        // A reef doesn't eat everything the moment it appears: pellets that
+        // drift beyond the big fish are remembered as stores. The probe fish is
+        // a phantom MEDIUM-TIER swimmer — reachability for it is exactly
+        // "could the shoal's strong swimmers get there" (the small-tier field
+        // is strictly more permissive, so it never answers no on their behalf).
+        // It exists so the signature can ask navFoodReachable without a real
+        // fish in hand.
+        const NAV_PROBE_FISH = { bodyWidth: MEDIUM_THRESHOLD + 1 };
+        // How far a pellet may sit from its nearest sheltering solid before it
+        // stops smelling like a hoard. Default matches nothing — pages opt in
+        // per-instance with opts.foodHorizon (px; 140 ≈ a pen's throw).
+        const HOARD_SENSE_RANGE = opts.foodHorizon || 0;
+        function scentNearestHoard(x, y, excludeId) {
+            if (!HOARD_SENSE_RANGE) return null;
+            let best = null, bestD = Infinity;
+            coral.forEach(c => {
+                if (!c.settled || !c.shape) return;
+                if (!solidCaps(c).shelters) return;
+                const d = Math.sqrt((c.x - x) ** 2 + (c.y - y) ** 2);
+                if (d < bestD) { bestD = d; best = c; }
+            });
+            if (!best || bestD > HOARD_SENSE_RANGE) return null;
+            return { coral: best, dist: bestD, excludeId };
+        }
+
         // Create the Path2D object once
         let fishPath2D = null;
         try {
@@ -1588,7 +1693,11 @@
                 if (!canSchoolFlee) return;
                 const angleToSchool = Math.atan2(-dy, -dx);
                 const facingDiff = Math.abs(angleDiff(angleToSchool, other.heading || 0));
-                if (facingDiff < Math.PI * 0.45 && d < threatDist) {
+                // Aroused water: a hunt ANYWHERE within earshot doubles the
+                // school's reaction arc — the flock knows blood is in the water
+                // before the hunter points at them.
+                const huntArousal = opts.predation && other.state === 'hunting';
+                if ((facingDiff < Math.PI * (huntArousal ? 0.9 : 0.45)) && d < threatDist) {
                     threat = other;
                     threatDist = d;
                 }
@@ -2206,7 +2315,16 @@
                         const staggerMs = (lockedDist / DETECT_RANGE) * 600;
                         if (!f.foodStaggerUntil || f.foodStaggerLastFoodId !== lockedFood.id) {
                             // New food appeared — set per-fish stagger window
-                            f.foodStaggerUntil = now + staggerMs;
+                            // FOOD HORIZON: a pellet inside the hoard-sense ring
+                            // is IN the reef already. Its "reachability window"
+                            // (frustration/ignore bookkeeping, whose clocks use
+                            // the field) only makes sense if the field actually
+                            // has a route to it — a fish hugging the shelter
+                            // reads `here < 0` in its own cell, and giving up
+                            // from that would strand the very stores this
+                            // system keeps. Give hoard pellets a settled 900ms
+                            // window instead of a rushed one.
+                            f.foodStaggerUntil = now + (lockedFood.hoard ? Math.max(staggerMs, 900) : staggerMs);
                             f.foodStaggerLastFoodId = lockedFood.id;
                         }
                         if (now < f.foodStaggerUntil) {
@@ -2426,13 +2544,38 @@
                         // BLEND toward prey instead of snapping
                         f.targetHeading += angleDiff(huntAngle, f.targetHeading) * 0.06;
 
+                        // ---- PURSUIT: the hunt has to actually move ----
+                        // The state previously only turned the hunter; cruise
+                        // speed then parked an ambusher a body length from its
+                        // prey and the "hunt" was theatre. Tail-chase pace,
+                        // tuned by the chase clock: fresh hunts burst (small
+                        // prey can't outswim the first second), long chases
+                        // settle to a fast cruise so cornered prey can still
+                        // win by outlasting.
+                        const huntElapsed = 2500 + (f.energy || 0.5) * 1500 - f.huntTimer;
+                        const pursuitSpeed = huntElapsed < 1100
+                            ? HUNT_SPEED * 1.5
+                            : HUNT_SPEED * (0.95 + 0.25 * Math.sin(now / 400 + f.id));
+                        f.currentSpeed = pursuitSpeed;
+                        f.targetVx = Math.cos(f.targetHeading) * pursuitSpeed;
+                        f.targetVy = Math.sin(f.targetHeading) * pursuitSpeed;
+                        f.vx = (f.vx || 0) + (f.targetVx - (f.vx || 0)) * 0.25;
+                        f.vy = (f.vy || 0) + (f.targetVy - (f.vy || 0)) * 0.25;
+
                         // Check if close enough to eat
                         const EAT_PREY_RANGE = 30;
                         if (preyDist < EAT_PREY_RANGE) {
                             // Mark for removal AFTER forEach — never splice inside forEach (causes blink/skip)
                             if (!prey.eaten) {
-                                prey.eaten = true;
-                                f.lastAteAt = now;
+                                // Without `predation` the hunt is a dominance
+                                // chase: contact scatters the minnow unharmed.
+                                // With it, contact is a mouth — the minnow is
+                                // gone and the reef grows hungrier.
+                                if (opts.predation) {
+                                    prey.eaten = true;
+                                    prey.lastPreyBW = prey.bodyWidth || 20; // for the growth pass
+                                    f.lastAteAt = now;
+                                }
                                 for (let i = 0; i < 8; i++) {
                                     const a = (i / 8) * Math.PI * 2;
                                     particles.push({
@@ -2448,7 +2591,32 @@
                             // Restore horizontal cruise after hunt
                             if (isLarge) {
                                 f.cruiseAngle = Math.cos(f.heading) > 0 ? 0 : Math.PI;
-                                f.cruiseTimer = 3000;
+                                // ---- SATIATION: a eaten fish is a real meal ----
+                                // Post-hunt the big fish rests where it is instead
+                                // of immediately cruising off, and with `predation`
+                                // on, a genuine kill buys a long satiated drift.
+                                // Only fires when the hunt actually consumed a fish
+                                // (lastAteAt set by the eat clause above).
+                                const justAte = opts.predation
+                                    ? f.lastAteAt && now - f.lastAteAt < 300
+                                    : false;
+                                f.cruiseTimer = justAte ? 6000 + Math.random() * 3000 : 3000;
+                                if (justAte) {
+                                    f.restTimer = 3000 + Math.random() * 3000;
+                                    // ---- CORAL BLOOM: prey becomes reef ----
+                                    // A death leaves nutrients. Nearby sheltering
+                                    // coral, whichever page drew it, puts out new
+                                    // growth — the minnow's body feeds the reef.
+                                    if (opts.predation) {
+                                        coral.forEach(c => {
+                                            if (!c.settled || !c.shape) return;
+                                            if (!solidCaps(c).shelters) return;
+                                            const cd = Math.sqrt((c.x - f.x) ** 2 + (c.y - f.y) ** 2);
+                                            if (cd < 320 && c.bloomUntil === undefined) c.bloomUntil = 0;
+                                            if (cd < 320) c.bloomUntil = Math.max(c.bloomUntil || 0, now + 8000);
+                                        });
+                                    }
+                                }
                             }
                         }
                     } else {
@@ -2689,8 +2857,18 @@
 
                             // Check for small fish prey (only when not seeking food)
                             if (f.state !== 'seeking' && otherBw < SMALL_THRESHOLD && d < HUNT_RANGE && d < preyDist) {
-                                prey = other;
-                                preyDist = d;
+                                // Horizontal bias: a chase that runs straight up
+                                // or down pins both fish against the canvas's
+                                // short axis and grinds there. Preferring prey
+                                // whose chase line is flatter keeps pursuit in
+                                // the wide axis where cruisers swim well.
+                                const chaseDy = Math.abs(other.y - f.y);
+                                const chaseDx = Math.abs(other.x - f.x);
+                                const flatBonus = chaseDy < chaseDx ? d * 0.55 : d;
+                                if (flatBonus < preyDist) {
+                                    prey = other;
+                                    preyDist = flatBonus;
+                                }
                             }
                         });
 
@@ -2979,8 +3157,11 @@
                             const d = Math.sqrt(dx * dx + dy * dy);
                             if (d > DANGER_RANGE_FAR) return;
 
-                            // Always react if very close
-                            if (d < DANGER_RANGE_CLOSE) {
+                            // A committed hunter is the loudest threat in the
+                            // water: prey reacts to it from full range regardless
+                            // of facing, instead of waiting for eye contact.
+                            const hunterComing = opts.predation && other.state === 'hunting' && other.huntTarget === f.id;
+                            if (!hunterComing && d < DANGER_RANGE_CLOSE) {
                                 if (d < predatorDist) { predator = other; predatorDist = d; }
                                 return;
                             }
@@ -2988,7 +3169,7 @@
                             // Farther away: only react if predator is facing toward us (within 90°)
                             const angleToMe = Math.atan2(-dy, -dx); // Angle from predator to me
                             const facingDiff = Math.abs(angleDiff(angleToMe, other.heading || 0));
-                            if (facingDiff < Math.PI * 0.5 && d < predatorDist) {
+                            if ((facingDiff < Math.PI * 0.5 || hunterComing) && d < predatorDist) {
                                 predator = other;
                                 predatorDist = d;
                             }
@@ -3026,6 +3207,24 @@
                                 f.targetHeading = biasedAngle;
                                 f.fleeTowardCoral = false;
                             }
+                        }
+                    }
+
+                    // ---- CORAL LEECH: fleeing minnows lose speed over coral ----
+                    // The haven is a place, not a teleport: bursting INTO the
+                    // stalks bleeds velocity fast (fronds, drag, adrenaline),
+                    // so a fish that reaches shelter visibly slows down while
+                    // its flee timer runs out inside the reef.
+                    if (isSmall && f.state === 'fleeing') {
+                        const overShelter = coral.some(c => {
+                            if (!c.settled || !c.shape) return false;
+                            if (!solidCaps(c).shelters) return false;
+                            const cw = (c.shape.width || 50) * 0.5, ch = c.shape.height || 60;
+                            return Math.abs(f.x - c.x) < cw && f.y > c.y - ch && f.y < c.y + 20;
+                        });
+                        if (overShelter) {
+                            f.vx *= 0.88;
+                            f.vy *= 0.88;
                         }
                     }
 
@@ -4712,6 +4911,23 @@
             // Remove fish that have finished dissolving (800ms fade complete) OR been eaten by hunter.
             // IMPORTANT: never splice inside forEach — that skips the next fish and causes a 1-frame blink.
             // Instead mark f.eaten = true during the loop, then filter here after the loop completes.
+            if (opts.predation && fish.some(f => f.eaten)) {
+                // ---- GROWTH: the eaten minnow feeds the survivors ----
+                // Biomass is conserved, not deleted: every remaining fish under
+                // the medium threshold gets a fraction of the dead fish's width
+                // added to its own. Small fish get proportionally more (a fry
+                // converts food to length far faster than a near-adult), so a
+                // fed-through shoal gradually walks its smallest members up
+                // toward the medium class — nobody tiers up mid-session, but
+                // the reef's minnows are visibly fatter for the grazing.
+                fish.forEach(f => {
+                    if (f.eaten) return;
+                    const fw = f.bodyWidth || 20;
+                    if (fw >= MEDIUM_THRESHOLD) return;
+                    const deadBW = f.lastPreyBW;
+                    f.bodyWidth = Math.min(SMALL_THRESHOLD - 2, fw + (deadBW || fw) * 0.04);
+                });
+            }
             fish = fish.filter(f => {
                 if (f.eaten) return false;          // Hunted and eaten
                 if (!f.dissolving) return true;      // Normal fish
@@ -4726,11 +4942,67 @@
 
             coral.forEach((c, ci) => {
                 if (!c.shape) return;
+                // Bloom rendering for HOST-drawn sheltering solids (the maze's
+                // coral squares): the engine doesn't draw them, but new growth
+                // after a nearby death should still be visible — a ring of soft
+                // new buds around the square, fading over the bloom window.
+                if (!solidCaps(c).engineRenders && solidCaps(c).shelters && c.bloomUntil) {
+                    const bloomLeft = c.bloomUntil - now;
+                    if (bloomLeft > 0) {
+                        const t = 1 - bloomLeft / 8000;                 // 0 fresh → 1 spent
+                        const cw = (c.shape.width || 50) * 0.5;
+                        const ch = c.shape.height || 60;
+                        const growth = Math.min(1, 1.6 - t);            // buds swell then fade
+                        ctx.save();
+                        ctx.globalAlpha = Math.max(0, 0.55 * growth * Math.min(1, bloomLeft / 2000));
+                        ctx.strokeStyle = 'rgba(122, 229, 130, 0.9)';   // new-growth green
+                        ctx.lineWidth = 2;
+                        for (let b = 0; b < 6; b++) {
+                            const a = (b / 6) * Math.PI * 2 + c.id;
+                            const r = (cw + ch) * 0.35 + 6 + 8 * growth;
+                            const bx = c.x + Math.cos(a) * (cw * 0.7 + 10 * growth);
+                            const by = c.y - ch * 0.5 + Math.sin(a) * (ch * 0.4 + 8 * growth);
+                            ctx.beginPath();
+                            ctx.arc(bx, by, 2.5 + 3 * growth, 0, Math.PI * 2);
+                            ctx.stroke();
+                        }
+                        ctx.restore();
+                    }
+                }
                 if (!solidCaps(c).engineRenders) return; // host page draws its own solids (maze walls)
 
                 const shape = c.shape;
                 const color = aquaColors.coral[c.id % aquaColors.coral.length];
                 const altColor = aquaColors.coral[(c.id + 1) % aquaColors.coral.length];
+
+                // ---- BLOOM GROWTH (engine coral) ----
+                // A death nearby leaves nutrients: fresh shoots ring the base.
+                // Rendered only when the page opted into `predation` — with the
+                // flag off this code never draws and the aquarium is unchanged.
+                if (opts.predation && c.bloomUntil && c.settled) {
+                    const bloomLeft = c.bloomUntil - now;
+                    if (bloomLeft > 0) {
+                        const t = 1 - bloomLeft / 8000;
+                        const growth = Math.min(1, 1.6 - t);
+                        ctx.save();
+                        ctx.globalAlpha = Math.max(0, 0.5 * growth * Math.min(1, bloomLeft / 2000));
+                        ctx.strokeStyle = 'rgba(122, 229, 130, 0.9)';
+                        ctx.lineWidth = 2.5;
+                        for (let b = 0; b < 5; b++) {
+                            const a = (b / 5) * Math.PI * 2 + c.id * 1.7;
+                            const bx = c.x + Math.cos(a) * (shape.width * 0.42 + 9 * growth);
+                            const by = c.y - 2 - Math.abs(Math.sin(a)) * (6 + 10 * growth);
+                            ctx.beginPath();
+                            ctx.moveTo(bx, by);
+                            ctx.quadraticCurveTo(
+                                bx + Math.cos(a) * 4, by - 8 * growth - 3,
+                                bx + Math.cos(a) * 7 * growth, by - 14 * growth - 4
+                            );
+                            ctx.stroke();
+                        }
+                        ctx.restore();
+                    }
+                }
 
                 // Sink to bottom with space-filling behavior
                 if (!c.settled) {
@@ -5263,12 +5535,17 @@
             const now = Date.now();
             food = food.filter(f => {
                 const age = now - f.createdAt;
-                if (age > FOOD_LIFETIME) return false;
+                // FOOD HORIZON: hoard pellets keep beyond the surface lifetime —
+                // the reef remembers where its stores are. Extra keep is half
+                // the base lifetime (e.g. +10s on design.html), then the normal
+                // 3s fade runs against the EXTENDED clock.
+                const lifetime = FOOD_LIFETIME + (f.hoard ? FOOD_LIFETIME * 0.5 : 0);
+                if (age > lifetime) return false;
 
                 // Fade out in last 3 seconds
                 let opacity = 1;
-                if (age > FOOD_LIFETIME - 3000) {
-                    opacity = (FOOD_LIFETIME - age) / 3000;
+                if (age > lifetime - 3000) {
+                    opacity = (lifetime - age) / 3000;
                 }
 
                 ctx.save();
@@ -6552,7 +6829,12 @@
                         x: classified.center.x,
                         y: classified.center.y,
                         createdAt: now,
-                        inBubble: false // Updated each frame in drawBubbleEntities()
+                        inBubble: false, // Updated each frame in drawBubbleEntities()
+                        // FOOD HORIZON: pellets near sheltering coral read as
+                        // stores, not snacks — they keep for extra seconds
+                        // beyond the surface lifetime. Set once at spawn; the
+                        // renderer decides how much of it survives decay.
+                        hoard: scentNearestHoard(classified.center.x, classified.center.y, id)
                     });
 
                     // Ripple feedback
@@ -6899,19 +7181,29 @@
                 }
                 wallRects = [];
                 (list || []).forEach((o, i) => {
+                    // Per-solid kind: the host decides what each outline is.
+                    // 'coralKind' = sheltering reef square (never blocks);
+                    // 'wall' = hard barrier; anything else stays a wall.
+                    const kind = SOLID_KINDS[o.kind] ? o.kind : 'wall';
                     coral.push({
                         id: 'ext-' + (o.id != null ? o.id : i),
-                        kind: 'wall',        // blocks only — see SOLID_KINDS
+                        kind,                // blocks-only wall vs sheltering reef — see SOLID_KINDS
                         isExternal: true,    // marker: supplied by the host page
                         x: o.x, y: o.y,
                         settled: true,
                         shape: { width: o.width, height: o.height }
                     });
-                    // o.y is the wall's BOTTOM edge (coral convention)
-                    wallRects.push({
-                        minX: o.x - o.width / 2, maxX: o.x + o.width / 2,
-                        minY: o.y - o.height,    maxY: o.y
-                    });
+                    // o.y is the wall's BOTTOM edge (coral convention).
+                    // Sheltering solids stay OUT of wallRects entirely: fish
+                    // may overlap them, so there is nothing to contain — and
+                    // keeping the nav grid free of phantom blockers preserves
+                    // the rooms a drawn pen still depends on.
+                    if (solidCaps({ kind }).blocks) {
+                        wallRects.push({
+                            minX: o.x - o.width / 2, maxX: o.x + o.width / 2,
+                            minY: o.y - o.height,    maxY: o.y
+                        });
+                    }
                 });
                 markNavDirty();
                 startAnimation();
@@ -6926,6 +7218,10 @@
                 startAnimation();
             },
             classifyStroke,
+            ensureNavField,
+            // "Is this water sealed off?" — engine's own room model answers for
+            // any wall combo (lines, rings, triangles), not just one polygon.
+            navEnclosedAt,
             state: {
                 get fish() { return fish; },
                 get coral() { return coral; },
