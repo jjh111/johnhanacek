@@ -112,20 +112,19 @@
 
 
         /* Generated-widget embeds (e.g. the MetaMedium lineage timeline):
-           same-origin iframe; the widget measures itself and posts its
-           height back, and the frame sizes to fit (no fixed aspect). */
+           same-origin iframe; the widget posts its height and the reader
+           ALSO polls the frame's document directly, so a lost message can
+           never leave a blank sliver. Visible from the start. */
         .embed-iframe {
             display: block;
             width: 100%;
-            height: 60px;
+            height: 420px;
+            min-height: 420px;
             border: 1px solid var(--border-subtle);
             border-radius: 6px;
             margin: var(--space-md, 1.5rem) 0;
             background: var(--sea-deep);
-            opacity: 0;
-            transition: opacity 0.3s ease;
         }
-        .embed-iframe.jh-ready { opacity: 1; }
 
         /* Video embeds (the grad blogs embedded YouTube/Vimeo inline) */
         .video-embed {
@@ -1027,11 +1026,13 @@ function renderMarkdown(text) {
             continue;
         } else if (/^\s*@iframe:(\S+)\s*$/.test(line)) {
             // @iframe:path — self-contained widget (same-origin), rendered as
-            // a themed iframe. The widget posts its height via message and
-            // the frame grows to fit; theme is inherited at render time.
+            // a themed iframe. The widget posts its height via message AND the
+            // reader polls the frame directly (resizeFallback below); either
+            // path sizes the frame, so a lost message can't blank it. Theme is
+            // inherited at render time (dark is the base = no param).
             const src = line.match(/^\s*@iframe:(\S+)\s*$/)[1];
             const iframeTheme = document.documentElement.getAttribute('data-theme') === 'light' ? '?theme=light' : '';
-            html += `<iframe class="embed-iframe" src="${src}${iframeTheme}" title="Embedded widget" loading="lazy" scrolling="no"></iframe>`;
+            html += `<iframe class="embed-iframe" src="${src}${iframeTheme}" title="Embedded widget" scrolling="no"></iframe>`;
         } else if (/^\s*!\[[^\]]*\]\([^)]+\)\s*$/.test(line)) {
             // standalone image line — render as a figure so it doesn't inherit paragraph rhythm
             const m = line.match(/^\s*!\[([^\]]*)\]\(([^)\s]+)[^)]*\)\s*$/);
@@ -1110,6 +1111,8 @@ function openFile(path, skipHistory) {
     document.getElementById('downloadLabel').textContent = 'Download';
 
     const body = document.getElementById('panelBody');
+    // Retire any embed watchers from the previous article before the DOM goes.
+    body.dispatchEvent(new Event('panel-body-cleared'));
     body.innerHTML = `<p style="color:var(--muted);font-style:italic;">Loading...</p>`;
 
     const openEntry = fileIndex.find(f => f.path === path);
@@ -1137,19 +1140,37 @@ function openFile(path, skipHistory) {
             body.innerHTML = `<div class="md">${dateLine}${renderMarkdown(text)}</div>`;
             body.scrollTop = 0;
             if (typeof refreshPanelCommands === 'function') refreshPanelCommands();
-            // Same-origin widget embeds post their height back; keep the
-            // listener scoped to this render (removed when the panel closes
-            // or a new article replaces the body content).
-            window.addEventListener('message', function mesh(e) {
+            // Same-origin widget embeds: size frames to their content. Two
+            // paths on purpose — the widget posts its height (instant), and a
+            // slow poll reads the frame document directly (recovers from a
+            // lost or delayed message so the embed can never sit blank).
+            // Poll self-terminates when the panel closes or the DOM changes.
+            const resizeEmbeds = () => {
+                document.querySelectorAll('#panelBody iframe.embed-iframe').forEach(f => {
+                    try {
+                        const d = f.contentDocument;
+                        if (!d || !d.body || !d.body.children.length) return;
+                        const h = Math.max(
+                            d.documentElement.scrollHeight,
+                            d.body ? d.body.scrollHeight : 0
+                        );
+                        if (h > 0) f.style.height = h + 'px';
+                    } catch (err) { /* not ready yet */ }
+                });
+            };
+            const embedTimer = setInterval(resizeEmbeds, 1500);
+            const embedObserver = new MutationObserver(resizeEmbeds);
+            embedObserver.observe(body, { childList: true, subtree: true });
+            const onMsg = (e) => {
                 if (e && e.data && e.data.type === 'jh-embed-height' && e.source) {
                     const frame = [...document.querySelectorAll('#panelBody iframe.embed-iframe')]
                         .find(f => f.contentWindow === e.source);
-                    if (frame && e.data.height > 0) {
-                        frame.style.height = e.data.height + 'px';
-                        frame.classList.add('jh-ready');
-                    }
+                    if (frame && e.data.height > 0) frame.style.height = e.data.height + 'px';
                 }
-            });
+            };
+            window.addEventListener('message', onMsg);
+            const stopEmbedWatch = () => { clearInterval(embedTimer); embedObserver.disconnect(); window.removeEventListener('message', onMsg); };
+            body.addEventListener('panel-body-cleared', stopEmbedWatch, { once: true });
         })
         .catch(() => {
             body.innerHTML = `<div class="md">
@@ -1161,6 +1182,7 @@ function openFile(path, skipHistory) {
 }
 
 function closePanel() {
+    document.getElementById('panelBody').dispatchEvent(new Event('panel-body-cleared'));
     document.getElementById('contentPanel').classList.remove('open');
     document.getElementById('panelOverlay').classList.remove('open');
     document.getElementById('contentPanel').setAttribute('aria-hidden', 'true');
