@@ -132,6 +132,7 @@
         }
 
         /* Opened reader: the article title carries the category color. */
+        .content-panel[data-cat="inspirations"] #panelBody h1 { color: var(--cyan); }
         .content-panel[data-cat="published"]  #panelBody h1 { color: var(--gold); }
         .content-panel[data-cat="eduos"]      #panelBody h1 { color: var(--cyan); }
         .content-panel[data-cat="metamedium"] #panelBody h1 { color: var(--gold); }
@@ -336,6 +337,7 @@
                 transparent 100%
             );
         }
+        .file-card.cat-inspirations::after { --card-accent: var(--cyan-dim); }
         .file-card.cat-published::after  { --card-accent: var(--gold); }
         .file-card.cat-eduos::after      { --card-accent: var(--cyan-dim); }
         .file-card.cat-metamedium::after { --card-accent: var(--gold); }
@@ -786,6 +788,7 @@
             <span></span>
         </button>
         <ul class="nav-right">
+            <li><a href="#cat-inspirations">Inspirations</a></li>
             <li><a href="#cat-published">Published</a></li>
             <li><a href="#cat-eduos">EduOS</a></li>
             <li><a href="#cat-metamedium">MetaMedium</a></li>
@@ -826,6 +829,7 @@
 
 <script>
 const fileIndex = [
+    { path: 'writing/inspirations.md', name: 'Inspirations', desc: 'A signpost, not an archive — the talks I keep returning to (Bret Victor, Ken Perlin) and why they matter to MetaMedium', cat: 'inspirations', tags: ['talks', 'bret-victor', 'ken-perlin'], slug: 'inspirations', prov: 'human' },
     { path: 'writing/published.md', name: 'Published Work', desc: 'The calling card — Atlantic Council, HuffPost, research, Fractal Futures, and the blogs, with links out', cat: 'published', tags: ['foresight', 'research', 'fiction'], slug: 'published', prov: 'human' },
     { path: 'writing/eduos-plea.md', name: 'Students as Sovereign Participants or Peasant Users?', desc: 'Whichever vendor controls the AI in classrooms controls the world', cat: 'eduos', tags: ['education', 'sovereignty'], slug: 'eduos-plea', prov: 'mixed' },
     { path: 'writing/eduos-classroom.md', name: 'The Classroom That Owns Itself', desc: 'Why schools need open source AI — from Engelbart to the present', cat: 'eduos', tags: ['education', 'ai', 'open-source'], slug: 'eduos-classroom', prov: 'mixed' },
@@ -852,12 +856,13 @@ const fileIndex = [
 ];
 
 const categories = {
+    inspirations: { title: 'Inspirations', icon: '&#x203A;', desc: 'The talks that shaped this site — a signpost with marginalia, pointing out to the talks themselves' },
     eduos: { title: 'EduOS', icon: '&#x203A;', desc: 'Open source AI infrastructure for schools — sovereign computing in education' },
     metamedium: { title: 'MetaMedium', icon: '&#x203A;', desc: 'Drawing as computation — a canvas where marks become meaning and meaning becomes executable' },
     grad: { title: 'Graduate School \u2014 Georgetown CCT', icon: '&#x203A;', desc: 'Masters thesis, essays, and blog posts from the Communication, Culture & Technology program, 2015\u20132016 \u2014 published exactly as written' },
     published: { title: 'Published', icon: '&#x203A;', desc: 'Work published beyond this site \u2014 the calling card' },
 };
-const catOrder = ['published', 'eduos', 'metamedium', 'grad'];
+const catOrder = ['inspirations', 'published', 'eduos', 'metamedium', 'grad'];
 
 let navHistory = [];
 let navHistoryIndex = -1;
@@ -895,7 +900,7 @@ function renderFiles() {
 
         files.forEach(f => {
             const tags = f.tags.map(t => `<span class="file-tag tag-cyan">${t}</span>`).join('');
-            const prov = cat === 'published' ? '' : (f.prov === 'human'
+            const prov = (cat === 'published' || cat === 'inspirations') ? '' : (f.prov === 'human'
                 ? '<span class="prov-badge prov-human" title="Written by John \u2014 published as-is, typos and all">\u270d human</span>'
                 : '<span class="prov-badge prov-mixed" title="Mixed human + AI prose \u2014 ideas John\u2019s, wording partly AI-assisted">\u2726 mixed ai + human</span>');
 
