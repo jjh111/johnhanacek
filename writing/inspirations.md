@@ -56,3 +56,11 @@ https://www.youtube.com/watch?v=ZZi3I_NCiUk
 - **Drawing is the interface.** Perlin's air-drawings and Victor's demand to *draw* the representations agree: direct manipulation of the picture is how behavior gets authored — MetaMedium's whole premise.
 - **Natives inherit the medium.** Super Mario Bros. wasn't modeled on chess; gestural language won't be modeled on English. Our job is the possibilities. The kids make the language.
 - **Where it points:** the MetaMedium section on this page is the attempt to build the thing these talks describe.
+
+## The Lineage
+
+These talks don't come from nowhere. The MetaMedium whitepaper opens with a lineage — every thread from Licklider's 1960 man-computer symbiosis memo to MetaMedium itself, tagged as *visions*, *recognition*, or *intelligence*. Two of the four talks above are already nodes in it: Victor's *Inventing on Principle* (2012) and Perlin's ChalkTalk (2015), marked there as "the direct ancestor." The whole timeline lives here:
+
+@iframe:../Assets/lineage-timeline.html
+
+The full project — the whitepaper, the recognition pipeline (marks become features become shapes become compositions become meaning become executable), and the live canvas demos — is at [jjh111.github.io/MetaMedium](https://jjh111.github.io/MetaMedium/), with the repo at [github.com/jjh111/MetaMedium](https://github.com/jjh111/MetaMedium).

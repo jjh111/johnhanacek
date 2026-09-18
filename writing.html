@@ -111,6 +111,22 @@
         #writing-main { pointer-events: auto; }
 
 
+        /* Generated-widget embeds (e.g. the MetaMedium lineage timeline):
+           same-origin iframe; the widget measures itself and posts its
+           height back, and the frame sizes to fit (no fixed aspect). */
+        .embed-iframe {
+            display: block;
+            width: 100%;
+            height: 60px;
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            margin: var(--space-md, 1.5rem) 0;
+            background: var(--sea-deep);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .embed-iframe.jh-ready { opacity: 1; }
+
         /* Video embeds (the grad blogs embedded YouTube/Vimeo inline) */
         .video-embed {
             position: relative;
@@ -1009,6 +1025,13 @@ function renderMarkdown(text) {
                 }
             }
             continue;
+        } else if (/^\s*@iframe:(\S+)\s*$/.test(line)) {
+            // @iframe:path — self-contained widget (same-origin), rendered as
+            // a themed iframe. The widget posts its height via message and
+            // the frame grows to fit; theme is inherited at render time.
+            const src = line.match(/^\s*@iframe:(\S+)\s*$/)[1];
+            const iframeTheme = document.documentElement.getAttribute('data-theme') === 'light' ? '?theme=light' : '';
+            html += `<iframe class="embed-iframe" src="${src}${iframeTheme}" title="Embedded widget" loading="lazy" scrolling="no"></iframe>`;
         } else if (/^\s*!\[[^\]]*\]\([^)]+\)\s*$/.test(line)) {
             // standalone image line — render as a figure so it doesn't inherit paragraph rhythm
             const m = line.match(/^\s*!\[([^\]]*)\]\(([^)\s]+)[^)]*\)\s*$/);
@@ -1114,6 +1137,19 @@ function openFile(path, skipHistory) {
             body.innerHTML = `<div class="md">${dateLine}${renderMarkdown(text)}</div>`;
             body.scrollTop = 0;
             if (typeof refreshPanelCommands === 'function') refreshPanelCommands();
+            // Same-origin widget embeds post their height back; keep the
+            // listener scoped to this render (removed when the panel closes
+            // or a new article replaces the body content).
+            window.addEventListener('message', function mesh(e) {
+                if (e && e.data && e.data.type === 'jh-embed-height' && e.source) {
+                    const frame = [...document.querySelectorAll('#panelBody iframe.embed-iframe')]
+                        .find(f => f.contentWindow === e.source);
+                    if (frame && e.data.height > 0) {
+                        frame.style.height = e.data.height + 'px';
+                        frame.classList.add('jh-ready');
+                    }
+                }
+            });
         })
         .catch(() => {
             body.innerHTML = `<div class="md">
