@@ -13,6 +13,18 @@
  *   });
  *   game.setDebug(true); game.scareFishAt(x, y); game.state.fish; ...
  *
+ * Host hooks (opt-in; without them nothing below runs):
+ *   steer(f, now)          → { heading, speed } | null — take the wheel of a calm
+ *                            fish for a frame (fleeing / seeking / hunting stay ours)
+ *   schoolTarget(c, now)   → { x, y, pace? } | null — where a calm school patrols
+ *                            (pace scales its speed on the way); a threat, food and
+ *                            regrouping still come first
+ *   calmSchool: true       — the school stops reading large fish as predators (no
+ *                            school flee, no scatter from them); for a host that
+ *                            choreographs both, so they can share the water
+ *   The sizzle reel (Assets/sizzle-reel-2.html) uses all three so its fish swim over
+ *   and look at what is on screen.
+ *
  * Usage — ambient single fish (404 page):
  *   FishCanvas.ambient(canvasEl);
  *
@@ -1567,7 +1579,7 @@
             let threat = null;
             let threatDist = Infinity;
 
-            fish.forEach(other => {
+            if (!opts.calmSchool) fish.forEach(other => {
                 const otherBw = other.bodyWidth || 20;
                 if (otherBw < 60) return;  // Only large fish are threats
                 // Large fish focused on each other (challenging/retreating) are not a school threat
@@ -1657,7 +1669,16 @@
             }
 
             // Priority 3: Patrol smoothly when no threats or food
-            if (schoolTargetReason === 'patrol') {
+            // A host page may choose the patrol waypoint (opts.schoolTarget, opt-in);
+            // it replaces only the random pick, so threats, food and regrouping above
+            // still come first and the scatter/regroup phases still run.
+            const hostWaypoint = schoolTargetReason === 'patrol' && mediumCount > 0 && opts.schoolTarget
+                ? opts.schoolTarget({ x: schoolCenterX, y: schoolCenterY }, now) : null;
+            this.schoolHostPace = hostWaypoint && hostWaypoint.pace ? hostWaypoint.pace : 1;
+            if (hostWaypoint) {
+                rawTargetX = hostWaypoint.x;
+                rawTargetY = hostWaypoint.y;
+            } else if (schoolTargetReason === 'patrol') {
                 this.schoolTargetTimer = (this.schoolTargetTimer || 0) - deltaTime;
 
                 if (!this.schoolTarget || this.schoolTargetTimer <= 0) {
@@ -1818,7 +1839,7 @@
                     if (reformed || this.schoolPhaseTimer <= 0) { this.schoolPhase = 'schooling'; this.schoolPhaseTimer = 12000 + Math.random() * 10000; }
                 }
                 // The school's pace breathes on a slow cycle; regrouping hurries.
-                this.schoolSpeedMod = (0.95 + 0.25 * Math.sin(now / 3500)) * (this.schoolPhase === 'regroup' ? 1.5 : 1);
+                this.schoolSpeedMod = (0.95 + 0.25 * Math.sin(now / 3500)) * (this.schoolPhase === 'regroup' ? 1.5 : 1) * (this.schoolHostPace || 1);
                 window.debugSchoolPhase = this.schoolPhase;
 
                 // ---- STAGNATION DETECTION: inject randomness if school is stuck ----
@@ -1938,6 +1959,10 @@
                     ctx.restore();
                     return; // skip all AI/physics for dissolving fish
                 }
+
+                // A host-steered fish (opts.steer) turns from here: the engine's own turn this
+                // frame (cruise lanes clamp large fish to ±12° of horizontal) is discarded.
+                const headingAtStart = f.heading, bendAtStart = f.bendAmount || 0;
 
                 // ---- Fish AI: seek visible food (not inside bubbles) ----
                 // Calculate mouth position - 78% toward nose from center
@@ -3032,7 +3057,7 @@
                     // ---- MEDIUM FISH: Scatter from large fish ----
                     // Two-zone: always flee when very close, facing check required at medium range
                     // canChangeState gate is bypassed in the close zone (emergency scatter)
-                    if (isMedium && f.state === 'idle') {
+                    if (isMedium && f.state === 'idle' && !opts.calmSchool) {
                         let threat = null;
                         let threatDist = Infinity;
                         const SCATTER_CLOSE = 90;   // Always scatter regardless of facing or cooldown
@@ -4350,6 +4375,26 @@
                 } else {
                     speed = IDLE_SPEED * speedMult * turnSlowdown;
                 }
+                // ---- HOST STEER (opt-in): a host page may take the wheel of a calm fish ----
+                // opts.steer(f, now) → { heading, speed } or null. Fleeing, seeking and
+                // hunting stay the engine's; the turn is capped like any other, so the
+                // host gets arcs, not snaps.
+                let hostSteered = false;
+                if (opts.steer && f.state !== 'fleeing' && f.state !== 'seeking' && f.state !== 'hunting') {
+                    const hs = opts.steer(f, now);
+                    if (hs) {
+                        const want = angleDiff(hs.heading, headingAtStart);
+                        const cap = MAX_TURN_PER_FRAME * 1.5;
+                        const turn = Math.max(-cap, Math.min(cap, want * 0.1));
+                        f.heading = headingAtStart + turn;
+                        f.targetHeading = f.committedHeading = f.heading;
+                        if (f.cruiseAngle !== undefined) f.cruiseAngle = f.heading;
+                        f.bendAmount = bendAtStart * 0.7 + (turn / cap) * 0.3;   // curls while it turns, straight when not
+                        f.spinTime = 0;                                          // the host is steering: not stuck
+                        speed = hs.speed * speedMult;
+                        hostSteered = true;
+                    }
+                }
                 // ---- VELOCITY SMOOTHING: Blend for smooth movement ----
                 const targetVx = Math.cos(f.heading) * speed;
                 const targetVy = Math.sin(f.heading) * speed;
@@ -4378,6 +4423,8 @@
                     smoothNew = 0.25 + burstFade * 0.15; // 0.40→0.25
                 } else if (isSeeking) {
                     smoothOld = 0.78; smoothNew = 0.22; // Quick acceleration to food
+                } else if (hostSteered) {
+                    smoothOld = 0.88; smoothNew = 0.12; // velocity follows the host's heading
                 } else if (isMedium && f.state === 'idle') {
                     // A schooling fish pays its slot error in pace; 0.95/0.05 took ~20
                     // frames to change speed, so it crowded its neighbour before it

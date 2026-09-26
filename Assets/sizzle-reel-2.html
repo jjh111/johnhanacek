@@ -65,9 +65,12 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 .sea { inset: -80px; pointer-events: none;
   background: radial-gradient(ellipse 70% 55% at 50% 0%, rgba(var(--cyan-dim-rgb), 0.10), transparent 70%),
               radial-gradient(ellipse 55% 45% at 100% 100%, rgba(var(--gold-rgb), 0.05), transparent 70%); }
-/* The tank: a fixed band along the bottom for the whole cut, its top edge dissolving into the sea. */
-#tank { left: 0; top: 720px; width: 1920px; height: 360px; pointer-events: none;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 26%); mask-image: linear-gradient(to bottom, transparent 0%, #000 26%); }
+/* The tank: a fixed band along the bottom for the whole cut, its top edge dissolving into the sea.
+   The canvas itself runs from mid-frame down, but the mask keeps its upper part invisible: the
+   engine keeps fish ~100 px off every edge and looks 180 px ahead, so a canvas only as tall as the
+   visible band would be all edge, and fish looking up would be steered back down. */
+#tank { left: 0; top: 540px; width: 1920px; height: 540px; pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 22%, #000 38%); mask-image: linear-gradient(to bottom, transparent 22%, #000 38%); }
 .vignette { inset: 0; pointer-events: none; background: radial-gradient(ellipse 80% 85% at 50% 42%, transparent 58%, rgba(0, 0, 0, 0.45) 100%); }
 
 /* ── the glass: hero oval → command bar → hero oval ── */
@@ -150,9 +153,21 @@ p, h1, h2, h3 { margin: 0; }
 .lrow .yr { font: 300 36px/1 var(--font-display); color: var(--gold); font-variant-numeric: lining-nums tabular-nums; }
 .lrow .aw { font: 500 22px/1.2 var(--font-mono); color: var(--text-bright); }
 
-/* answer */
-.ans { font: 200 72px/1.1 var(--font-display); color: var(--text-subhead); letter-spacing: 0.005em; }
+/* the drawn fish's own data record: freehand in, structured data out */
+#chipLead { left: 0; top: 0; width: 1920px; height: 1080px; overflow: visible; pointer-events: none; opacity: 0; }
+#chipLead line { stroke: rgba(var(--cyan-dim-rgb), 0.6); stroke-width: 1; }
+#chipLead circle { fill: var(--cyan); }
+#chip { opacity: 0; display: flex; flex-direction: column; gap: 3px; padding: 7px 10px 8px; border-radius: 6px; white-space: pre; pointer-events: none;
+  font: 500 13px/1.25 var(--font-mono); background: rgba(var(--surface-rgb), 0.72); border: 1px solid rgba(var(--cyan-dim-rgb), 0.38); }
+#chip b { font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--cyan); }
+#chip span { color: var(--ink-quiet); font-variant-numeric: tabular-nums; }
+
+/* answer: the thesis, John's own line, then the numbers */
+.ans { font: 200 84px/1.1 var(--font-display); color: var(--text-subhead); letter-spacing: 0.005em; }
 .ans.gold { color: var(--gold); }
+.sup { font: 500 26px/1.45 var(--font-mono); color: var(--ink-quiet); }
+.qt2 em, .qt3 em { font-style: normal; color: var(--gold); }
+.endline { font: 500 26px/1 var(--font-mono); letter-spacing: 0.06em; color: var(--ink-quiet); white-space: nowrap; }
 
 /* results */
 .rows { left: 400px; top: 196px; width: 1120px; display: flex; flex-direction: column; gap: 12px; }
@@ -289,6 +304,8 @@ p, h1, h2, h3 { margin: 0; }
     <div class="sea"></div>
     <canvas id="tank" aria-hidden="true"></canvas>
     <div class="vignette"></div>
+    <svg id="chipLead" viewBox="0 0 1920 1080" aria-hidden="true"><line/><circle r="3.5"/></svg>
+    <div id="chip" aria-hidden="true"><b></b><span></span></div>
     <div id="glass"><div class="ping"></div></div>
     <div id="bar"><span class="mag"></span><span class="q"><span class="qt"></span><i class="caret"></i></span><span class="kbd">⌘K</span></div>
     <div id="tiers"></div>
@@ -309,7 +326,7 @@ p, h1, h2, h3 { margin: 0; }
   const CLOCK = window.__reelClock;
   const W = 1920, H = 1080, CX = 960;
   const STEP = 1000 / 60;
-  const TANK_Y = 720, TANK_H = 360;
+  const TANK_Y = 540, TANK_H = 540;
   const COL_Y = 457;                                 // copy columns centre here, clear of bar and tank
   const stage = document.getElementById('stage');
   const camera = document.getElementById('camera');
@@ -456,7 +473,59 @@ p, h1, h2, h3 { margin: 0; }
   seedRandom(parseInt(Q.get('seed') || EDIT.seed || 1, 10));
   const tankEl = document.getElementById('tank');
   tankEl.getBoundingClientRect = () => ({ x: 0, y: 0, left: 0, top: 0, right: W, bottom: TANK_H, width: W, height: TANK_H });
-  const tank = FishCanvas(tankEl, { transparent: true, seedFish: false, seedJellyfish: false });
+  // ── attention: what the fish look at ──────────────────────────────────
+  // Freehand fish, structured data: each builder says what on screen matters and
+  // when ({ t0, t1, x, y }, stage px). The fish drawn in the opening swims to a
+  // spot just left of it and tilts its nose up at it; the school gathers to the
+  // right. The two never swap sides, so they travel in parallel and the big fish
+  // never cuts through the school (which would read as a predator and scatter it).
+  // Both go through the engine's opt-in host hooks: every turn is the engine's arc.
+  const ATTN = [];
+  const look = (t0, t1, x, y) => ATTN.push({ t0, t1, x, y });
+  let reelT = 0, BIG = null;                   // the reel's clock as the tank sees it; the opening's fish
+  const SPOT_Y = 322, SCHOOL_Y = 296;          // tank px (stage 862 / 836); 296 is as deep as the engine lets a school waypoint go
+  const BIG_DX = -250, SCHOOL_DX = 210;        // where each stands, relative to the thing
+  const attnAt = t => { let a = null; for (const x of ATTN) if (t >= x.t0 && t < x.t1 && (!a || x.t0 >= a.t0)) a = x; return a; };
+  const angDiff = (a, b) => { let d = a - b; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; };
+  // a heading with its tilt held to ±m of horizontal; straight up keeps the side it faces
+  const clampTilt = (a, m, cur) => {
+    let c = Math.cos(a); const sn = Math.sin(a);
+    if (Math.abs(c) < 0.25 && cur != null) c = Math.cos(cur) >= 0 ? 0.25 : -0.25;
+    const e = Math.max(-m, Math.min(m, Math.atan2(sn, Math.abs(c))));
+    return c >= 0 ? e : Math.PI - e;
+  };
+  function steerBig(f) {
+    if (f !== BIG) return null;
+    const A = attnAt(reelT);
+    if (!A) return null;
+    const sx = Math.max(140, Math.min(W - 140, A.x + BIG_DX));
+    const dx = sx - f.x, dy = SPOT_Y - f.y, d = Math.hypot(dx, dy);
+    if (d > (f.reelAtSpot ? 130 : 46)) {       // swim over, faster the further it has to go
+      f.reelAtSpot = false;
+      let speed = Math.min(2.4, 0.9 + d / 200);
+      // Courtesy: the school is slower and always to its right. If it is still in the way,
+      // drift behind it instead of cutting through (a large fish closing in reads as a
+      // predator, and the school would scatter).
+      let n = 0, cx = 0, cy = 0;
+      for (const m of tank.state.fish) if (m !== f && m.bodyWidth >= 35 && m.bodyWidth < 60) { cx += m.x; cy += m.y; n++; }
+      if (n) { cx /= n; cy /= n; if (Math.sign(cx - f.x) === Math.sign(dx) && Math.hypot(cx - f.x, cy - f.y) < 300) speed = 0.3; }
+      const heading = clampTilt(Math.atan2(dy, dx), 0.5);
+      // a big turn is made nearly on the spot, not at cruising speed (that reads as rearing up)
+      speed *= Math.max(0.22, Math.cos(Math.min(Math.PI, Math.abs(angDiff(heading, f.heading))) / 2));
+      return { heading, speed };
+    }
+    f.reelAtSpot = true;                       // there: nose up at the thing, barely moving
+    return { heading: clampTilt(Math.atan2((A.y - TANK_Y) - f.y, A.x - f.x), 0.62, f.heading), speed: 0.12 };
+  }
+  // The school's waypoint sweeps slowly left and right under the thing: a school parked on a
+  // fixed point circles it (its turn rate is capped) and rides up behind the copy.
+  function schoolSpot(c) {
+    const A = attnAt(reelT);
+    if (!A) return null;
+    const x = Math.max(160, Math.min(W - 160, A.x + SCHOOL_DX + 170 * Math.sin(reelT * 0.55)));
+    return { x, y: SCHOOL_Y, pace: 1 + Math.min(1, Math.abs(x - c.x) / 500) };   // hurry when far
+  }
+  const tank = FishCanvas(tankEl, { transparent: true, seedFish: false, seedJellyfish: false, steer: steerBig, schoolTarget: schoolSpot, calmSchool: true });
   const inTank = pts => pts.map(p => ({ x: p.x, y: p.y - TANK_Y }));   // stage → tank coordinates
   function spawnStroke(stagePts, kind, heading) {
     tank.processStroke(inTank(stagePts), [kind]);
@@ -546,7 +615,7 @@ p, h1, h2, h3 { margin: 0; }
       bts.forEach((x, i) => {
         const next = bts[i + 1];
         const bin = i === 0 ? tin + 0.36 : base + x.b.at + 0.12;
-        const bout = next ? base + next.b.at - 0.08 : tout;
+        const bout = next ? base + next.b.at - 0.3 : tout;   // gone before the next beat rises into the same slot
         lines(x.lines, t, bin, bout, { stagger: 0.06 });
         lines(x.cite, t, bin + 0.28, bout);
         x.stats.forEach((s, j) => s(t, bin + 0.14 + j * 0.12, bout));
@@ -574,7 +643,7 @@ p, h1, h2, h3 { margin: 0; }
       const g1 = inner(el, '.g1'), g2 = inner(el, '.g2');
       const D0 = 0.2, D1 = 0.95, DONE = D0 + D1, OUT = sc.dur - 0.45;
       let born = null;
-      at(sc.start + DONE, () => { born = spawnStroke(pts, 'fish', Math.PI); });
+      at(sc.start + DONE, () => { born = BIG = spawnStroke(pts, 'fish', Math.PI); });
       return (lt) => {
         const k = seg(lt, D0, D1, E.inOutCubic);
         paths.forEach(p => { p.style.strokeDashoffset = fx(L * (1 - k)); });
@@ -597,6 +666,7 @@ p, h1, h2, h3 { margin: 0; }
       const write = sigWriter(sig);
       LAYOUT.push(() => { tt.style.top = (380 - tt.offsetHeight / 2 + 6) + 'px'; });
       const OUT = sc.dur - 0.65;
+      look(sc.start + 0.3, sc.end, 960, 390);
       return (lt) => {
         write(lt, 0.2, 0.7);
         sig.style.opacity = (0.88 * (1 - seg(lt, OUT - 0.05, 0.2))).toFixed(3);
@@ -608,13 +678,16 @@ p, h1, h2, h3 { margin: 0; }
     },
 
     answer(sc, q) {
-      const el = segEl(sc, `<div class="ansb" style="left:96px;top:206px">${sc.lines.map((l, i) => maskLine(l, 'ans' + (i === 0 ? ' gold' : ''))).join('')}</div>
-        <div class="stats astats" style="left:96px;top:500px">${sc.stats.map(s => `<div class="stat"><span class="num"></span>${maskLine(s.label, 'lab')}</div>`).join('')}</div>`);
-      const ls = inner(el, '.ansb > .lm');
+      const el = segEl(sc, `<div class="ansb" style="left:96px;top:192px">${sc.lines.map((l, i) => maskLine(l, 'ans' + (i === 0 ? ' gold' : ''))).join('')}</div>
+        ${sc.support ? `<div style="left:96px;top:400px">${maskLine(sc.support, 'sup')}</div>` : ''}
+        <div class="stats astats" style="left:96px;top:488px">${sc.stats.map(s => `<div class="stat"><span class="num"></span>${maskLine(s.label, 'lab')}</div>`).join('')}</div>`);
+      const ls = inner(el, '.ansb > .lm'), sup = inner(el, '.lm.sup');
       const stats = [...el.querySelectorAll('.stat')].map((s, j) => statMotion(s, sc.stats[j].n));
       const IN = q.enter - sc.start + 0.04, OUT = sc.dur - 0.32;
+      look(sc.start + IN, sc.end, 620, 560);
       return (lt) => {
         lines(ls, lt, IN, OUT, { stagger: 0.075, dur: 0.65 });
+        lines(sup, lt, IN + 0.3, OUT, { dur: 0.6 });
         stats.forEach((s, j) => s(lt, sc.stats[j].at, OUT + j * 0.03));
       };
     },
@@ -652,6 +725,8 @@ p, h1, h2, h3 { margin: 0; }
       let THUMB = { x: 424, y: 196, w: 160, h: 90 };
       LAYOUT.push(() => { THUMB = box(thumbs[0]); });
       const ROW_IN = q.enter - t0 + 0.04, OUT = sc.end - 0.34;
+      look(t0 + ROW_IN, starts[0], 820, 400);
+      look(starts[0], sc.end, WIN.x + WIN.w / 2, WIN.y + WIN.h / 2);
       return (lt, t) => {
         // the result list: the first thumbnail is the window itself, until it dives
         rows.forEach((r, i) => {
@@ -698,6 +773,7 @@ p, h1, h2, h3 { margin: 0; }
       const win = el.querySelector('.win'), media = win.querySelector('.media'), col = el.querySelector('.col');
       const caps = inner(win, '.c3'), badge = win.querySelector('.wbadge');
       const IN = q.enter + 0.04, OUT = sc.end - 0.32;
+      look(IN, sc.end, R.x + R.w / 2, R.y + R.h / 2);
       const vis = sc.beats.filter(b => b.video || b.img);
       const layers = vis.map((b, j) => mediaLayer(media, b, j === 0 ? IN - 0.1 : sc.start + b.at, vis[j + 1] ? sc.start + vis[j + 1].at + 0.4 : sc.end + 0.2));
       const motion = columnMotion(col, sc, sc.start);
@@ -712,7 +788,7 @@ p, h1, h2, h3 { margin: 0; }
         layers.forEach((L, j) => L.update(t, j === 0 ? 1 : seg(t, sc.start + vis[j].at, 0.35, E.outCubic)));
         caps.forEach((c, i) => {
           const nb = sc.beats[i + 1];
-          lines([c], t, i === 0 ? IN + 0.45 : sc.start + sc.beats[i].at + 0.15, nb ? sc.start + nb.at - 0.05 : OUT - 0.05);
+          lines([c], t, i === 0 ? IN + 0.45 : sc.start + sc.beats[i].at + 0.15, nb ? sc.start + nb.at - 0.25 : OUT - 0.05);
         });
         pop(badge, t, IN + 0.4, OUT - 0.05, { from: 0.8, rise: 0 });
         motion(t, IN + 0.1, OUT);
@@ -722,9 +798,10 @@ p, h1, h2, h3 { margin: 0; }
     scene(sc, q) {
       const G = JHStrokes.points;
       const icon = k => `<svg viewBox="0 0 24 24">${JHStrokes.marks[k === 'square' ? 'square' : 'loop']()}</svg>`;
-      // where the command's strokes land: three small loops mid-water, two squares that sink to the seabed
-      const FISH = [[620, 872], [770, 926], [905, 866]], CORAL = [[1195, 1000, 92], [1395, 1006, 82]];
-      const strokes = FISH.map(([x, y]) => ({ pts: G.loop(x, y, 0.62), kind: 'fish' }))
+      // where the command's strokes land: four medium loops to the right of the big fish, so the
+      // school forms clear of it; two squares out in the corners that sink to the seabed
+      const FISH = [[1180, 872], [1305, 930], [1430, 866], [1555, 924]], CORAL = [[330, 1000, 92], [1730, 1006, 82]];
+      const strokes = FISH.map(([x, y]) => ({ pts: G.loop(x, y, 1.0), kind: 'fish' }))
         .concat(CORAL.map(([x, y, s]) => ({ pts: G.square(x, y, s), kind: 'coral' })));
       const rowOf = strokes.map(s => sc.plan.findIndex(p => (p.glyph === 'square') === (s.kind === 'coral')));
       const strip = '0123456789'.split('').map(d => `<i>${d}</i>`).join('');
@@ -745,7 +822,8 @@ p, h1, h2, h3 { margin: 0; }
       LAYOUT.push(() => { const b = box(go); GO.x = b.x + b.w / 2; GO.y = b.y + b.h / 2; });
       const draw = strokes.map((s, i) => ({ a: TAP + 0.15 + i * 0.1, d: s.kind === 'fish' ? 0.2 : 0.24 }));
       const born = draw.map(dd => dd.a + dd.d);
-      draw.forEach((dd, i) => at(sc.start + born[i], () => spawnStroke(strokes[i].pts, strokes[i].kind, strokes[i].kind === 'fish' ? (i % 2 ? 0 : Math.PI) : null)));
+      draw.forEach((dd, i) => at(sc.start + born[i], () => spawnStroke(strokes[i].pts, strokes[i].kind, strokes[i].kind === 'fish' ? Math.PI : null)));
+      look(sc.start + IN, sc.end, 960, 350);
       const DONE = Math.max(...born), OUT = sc.dur - 0.32;
       return (lt) => {
         pop(plan, lt, IN, OUT, { from: 0.94, rise: 16 });
@@ -789,6 +867,7 @@ p, h1, h2, h3 { margin: 0; }
         ${pageBadge(sc, 'free')}${columnMarkup(it, 96, 900)}`);
       const port = el.querySelector('.port'), ring = el.querySelector('.ring circle'), col = el.querySelector('.col'), badge = el.querySelector('.wbadge');
       const IN = q.enter + 0.04, OUT = sc.end - 0.32;
+      look(IN, sc.end, C.x, C.y);
       const layers = sc.beats.map((b, j) => mediaLayer(port, b, j === 0 ? IN : sc.start + b.at, sc.beats[j + 1] ? sc.start + sc.beats[j + 1].at + 0.4 : sc.end + 0.2));
       const motion = columnMotion(col, it, sc.start);
       const RL = 2 * Math.PI * (C.r + 12);
@@ -817,6 +896,7 @@ p, h1, h2, h3 { margin: 0; }
       const panel = el.querySelector('.panel'), eb = inner(el, '.lm.eyebrow');
       const heads = inner(el, '.lm.grp'), items = [...el.querySelectorAll('.wall li')];
       const IN = q.enter - sc.start + 0.04, OUT = sc.dur - 0.32;
+      look(sc.start + IN, sc.end, 960, 416);
       return (lt) => {
         pop(panel, lt, IN, OUT, { from: 0.96, rise: 18 });
         lines(eb, lt, IN + 0.15, OUT);
@@ -826,19 +906,30 @@ p, h1, h2, h3 { margin: 0; }
     },
 
     quotes(sc, q) {
+      const n = sc.quotes.length;
+      const pager = `<b><span class="od"><span class="ods">${sc.quotes.map((_, i) => `<i>${i + 1}</i>`).join('')}</span></span></b> / ${n}  ·  ${q.text}`;
       const el = segEl(sc, sc.quotes.map(qq => `<div class="qb" style="left:160px;top:0;width:1600px">
           <div>${qq.lines.map(l => maskLine(l, 'qt2' + (qq.lines.length < 3 ? ' big' : ''))).join('')}</div>
-          <div class="rule"></div>${maskLine(`<strong>${qq.cite[0]}</strong><span> · ${qq.cite[1]}</span>`, 'cite')}</div>`).join(''));
+          <div class="rule"></div>${maskLine(`<strong>${qq.cite[0]}</strong><span> · ${qq.cite[1]}</span>`, 'cite')}</div>`).join('')
+        + `<div class="status" style="left:auto;right:400px;top:146px">${pager}</div>`);
       const blocks = [...el.querySelectorAll('.qb')].map(b => ({ b, ls: inner(b, '.qt2'), rule: b.querySelector('.rule'), cs: inner(b, '.cite') }));
+      const pg = el.querySelector('.status'), pgStrip = pg.querySelector('.ods');
       LAYOUT.push(() => blocks.forEach(({ b }) => { b.style.top = (440 - b.offsetHeight / 2) + 'px'; }));
-      const first = q.enter - sc.start + 0.04;
-      return (lt) => blocks.forEach((x, i) => {
-        const qq = sc.quotes[i], next = sc.quotes[i + 1];
-        const tin = i === 0 ? first : qq.at + 0.1, tout = next ? next.at - 0.06 : sc.dur - 0.34;
-        lines(x.ls, lt, tin, tout, { stagger: 0.07, dur: 0.65 });
-        x.rule.style.transform = `scaleX(${(seg(lt, tin + 0.3, 0.5, E.outExpo) * (1 - seg(lt, tout, 0.25, E.inExpo))).toFixed(3)})`;
-        lines(x.cs, lt, tin + 0.36, tout);
-      });
+      const first = q.enter - sc.start + 0.04, OUT = sc.dur - 0.34;
+      look(sc.start + first, sc.end, 960, 440);
+      return (lt) => {
+        blocks.forEach((x, i) => {
+          const qq = sc.quotes[i], next = sc.quotes[i + 1];
+          const tin = i === 0 ? first : qq.at + 0.1, tout = next ? next.at - 0.3 : OUT;
+          lines(x.ls, lt, tin, tout, { stagger: 0.07, dur: 0.65 });
+          x.rule.style.transform = `scaleX(${(seg(lt, tin + 0.3, 0.5, E.outExpo) * (1 - seg(lt, tout, 0.25, E.inExpo))).toFixed(3)})`;
+          lines(x.cs, lt, tin + 0.36, tout);
+        });
+        // the pager rolls to the next voice as each one lands
+        let k = 0; for (let i = 1; i < n; i++) k += seg(lt, sc.quotes[i].at, 0.45, E.outExpo);
+        pgStrip.style.transform = `translate3d(0,${fx(-k)}em,0)`;
+        pg.style.opacity = (seg(lt, first + 0.3, 0.25) * (1 - seg(lt, OUT, 0.2))).toFixed(3);
+      };
     },
 
     offer(sc, q) {
@@ -849,11 +940,12 @@ p, h1, h2, h3 { margin: 0; }
           ${maskLine('Work with John', 'eyebrow')}
           <div>${h.map(l => maskLine(l, 'oh')).join('')}</div>
           <div class="three">${three.map(x => `<div><i class="trule"></i>${maskLine(x.k, 'k')}<div>${x.lines.map(l => maskLine(l, 'v')).join('')}</div></div>`).join('')}</div>
-          ${maskLine(`${bd.cta.lead}<strong>${bd.cta.strong}</strong>`, 'cta')}</div>`);
+          ${maskLine(`${(sc.cta || bd.cta).lead}<strong>${(sc.cta || bd.cta).strong}</strong>`, 'cta')}</div>`);
       const card = el.querySelector('.intent'), eb = inner(el, '.lm.eyebrow'), hs = inner(el, '.oh');
       const cols = [...el.querySelectorAll('.three > div')].map(c => ({ rule: c.querySelector('.trule'), ls: inner(c, '.lm') }));
       const cta = inner(el, '.lm.cta');
       const IN = q.enter - sc.start + 0.04, OUT = sc.dur - 0.34;
+      look(sc.start + IN, sc.end, 960, 436);
       return (lt) => {
         pop(card, lt, IN, OUT, { from: 0.95, rise: 18 });
         lines(eb, lt, IN + 0.15, OUT);
@@ -870,12 +962,13 @@ p, h1, h2, h3 { margin: 0; }
       const bd = boardNamed(sc.board);
       const el = segEl(sc, `
         <nav class="pill" aria-hidden="true">${['search', 'triangle', 'roundedSquare', 'circle', 'diamond', 'star', 'hexagon'].map(k => `<span class="ic">${glyphSvg(k)}</span>`).join('')}</nav>
-        <div class="endc">${sigMarkup()}<div class="lm url">${maskLetters(MK.meta.site)}</div>${maskLine(`${bd.cta.lead}<strong>${bd.cta.strong}</strong>`, 'cta')}</div>
+        <div class="endc">${sigMarkup()}<div class="lm url">${maskLetters(MK.meta.site)}</div>${maskLine(sc.line, 'endline')}</div>
         <svg class="ink" viewBox="0 0 ${W} ${H}"><circle class="ripple r0" r="10"/><circle class="ripple r1" r="10"/><circle class="nib c0" r="9"/><circle class="nib c1" r="9"/></svg>`);
       const pill = el.querySelector('.pill'), icons = [...pill.querySelectorAll('.ic')], endc = el.querySelector('.endc');
       const sig = el.querySelector('.sig'), write = sigWriter(sig), url = el.querySelector('.url'), letters = [...url.querySelectorAll('.li')];
-      const cta = inner(el, '.lm.cta');
-      const TAPS = [{ t: 2.1, x: 860, y: 930 }, { t: 2.6, x: 1090, y: 905 }];
+      const cta = inner(el, '.lm.endline');
+      look(sc.start + 0.4, sc.end, 960, 430);
+      const TAPS = [{ t: 2.0, x: 760, y: 900 }, { t: 2.45, x: 1170, y: 890 }];
       TAPS.forEach(tp => at(sc.start + tp.t, () => tank.addFood(tp.x, tp.y - TANK_Y)));
       const taps = TAPS.map((tp, i) => ({ tp, c: el.querySelector('.c' + i), r: el.querySelector('.r' + i) }));
       LAYOUT.push(() => {
@@ -979,6 +1072,25 @@ p, h1, h2, h3 { margin: 0; }
       if (on) x.tg.forEach((b, i) => pop(b, t, x.enter + 0.04 + i * 0.07, x.last ? null : x.clear, { from: 0.7, rise: 0, dur: 0.35, durOut: 0.15 }));
     });
   }
+  // The drawn fish's record, read live off the engine: freehand stroke in, structured data out.
+  const chipEl = document.getElementById('chip'), chipB = chipEl.querySelector('b'), chipS = chipEl.querySelector('span');
+  const leadEl = document.getElementById('chipLead'), leadLine = leadEl.querySelector('line'), leadDot = leadEl.querySelector('circle');
+  const OPEN = SC[0];
+  function paintChip(t) {
+    const v = BIG ? seg(t, OPEN.start + 1.25, 0.3, E.outCubic) * (1 - seg(t, title.end - 0.75, 0.3, E.inCubic)) : 0;
+    chipEl.style.opacity = leadEl.style.opacity = v.toFixed(3);
+    if (v <= 0) return;
+    const x = BIG.x, y = BIG.y + TANK_Y, bw = Math.round(BIG.bodyWidth || 0);
+    const cx = x + 58, cy = y + 40;
+    chipEl.style.left = fx(cx) + 'px'; chipEl.style.top = fx(cy) + 'px';
+    leadLine.setAttribute('x1', fx(x)); leadLine.setAttribute('y1', fx(y));
+    leadLine.setAttribute('x2', fx(cx)); leadLine.setAttribute('y2', fx(cy + 12));
+    leadDot.setAttribute('cx', fx(x)); leadDot.setAttribute('cy', fx(y));
+    const deg = Math.round(((BIG.heading * 180 / Math.PI) % 360 + 360) % 360);
+    const pxs = Math.round(Math.hypot(BIG.vx || 0, BIG.vy || 0) * 60);
+    chipB.textContent = `fish · ${bw >= 60 ? 'large' : bw >= 35 ? 'medium' : 'small'} · ${bw} px`;
+    chipS.textContent = `heading ${String(deg).padStart(3, ' ')}° · ${String(pxs).padStart(3, ' ')} px/s`;
+  }
   function paintCamera(t) {
     const k = seg(t, 1.2, 1.1, E.inOutExpo);
     const s = lerp(2.1, 1, k), fxp = lerp(924, 960, k), fyp = lerp(895, 540, k);
@@ -1001,12 +1113,13 @@ p, h1, h2, h3 { margin: 0; }
   // ── one moment ────────────────────────────────────────────────────────
   let firedT = -1;
   function simulate(t) {                        // the tank's side: events, on every 60 Hz tick
-    if (t < firedT) { tank.clearFish(); tank.state.coral.length = 0; firedT = -1; }
+    reelT = t;
+    if (t < firedT) { tank.clearFish(); tank.state.coral.length = 0; firedT = -1; BIG = null; }
     for (const ev of EVENTS) if (ev.t > firedT && ev.t <= t) ev.run();
     firedT = t;
   }
   function paint(t) {                           // the picture's side: a pure function of t
-    paintCamera(t); paintGlass(t); paintBar(t);
+    paintCamera(t); paintGlass(t); paintBar(t); paintChip(t);
     for (const sc of SC) {
       const on = t >= sc.start - 0.02 && t <= sc.end + 0.02;
       sc.el.classList.toggle('on', on);
