@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Sizzle reel — render rig</title>
+<!-- Unlisted render rig, sibling of media-kit.html. A 70-second reel of the portfolio in the
+     site's own language: the Deep Sea ground, the glass oval, the six nav shapes, and ONE tank of
+     the real fish engine that lives through every scene — the reel opens by drawing the loop the
+     site's guide asks for, and that loop is the fish that swims the rest of it.
+
+     THE EDIT LIVES IN media-kit.json → `reel` (scenes, copy, clip in-points, timings). This page
+     only knows how things MOVE. The copy obeys the media kit's evidence rule.
+
+     One grammar carries the whole cut: a single shape — the "actor" — unfolds out of a nav mark
+     into a window onto the work, folds back into the mark, and morphs into the next chapter's
+     mark. Design opens Nanome, Play the prototypes, Services the client work, Art the art,
+     About the credits, Services the offer, Home the end card.
+
+     Two clocks:
+       live (default)  plays in real time. space = pause, ←/→ = 5 s, R = restart, ?t=17.5 starts
+                       there. The DOM side seeks cleanly; the fish are a simulation and rebuild
+                       from their spawn points when you jump backwards.
+       ?render=1       a virtual clock the renderer steps (scripts/render-sizzle-reel.mjs calls
+                       REEL.frame(t), then screenshots). The MP4 is frame-exact and smooth however
+                       slow the machine, and ?seed= grows the same tank every time. -->
+<script>
+  // Installed before anything reads the time. In render mode the renderer owns the clock:
+  // Date.now and performance.now return virtual time and requestAnimationFrame queues until the
+  // next tick, so the fish engine — which measures its own frame delta with Date.now — simulates
+  // at exactly 60 Hz whatever the capture speed.
+  (function () {
+    if (!new URLSearchParams(location.search).has('render')) return;
+    var vt = 0, epoch = Date.UTC(2026, 8, 26), next = 1, queue = new Map();
+    Date.now = function () { return epoch + vt; };
+    performance.now = function () { return vt; };
+    window.requestAnimationFrame = function (cb) { var id = next++; queue.set(id, cb); return id; };
+    window.cancelAnimationFrame = function (id) { queue.delete(id); };
+    window.__reelClock = {
+      now: function () { return vt; },
+      tick: function (ms) {
+        vt += ms;
+        var run = Array.from(queue.values());
+        queue.clear();
+        for (var i = 0; i < run.length; i++) run[i](vt);
+      }
+    };
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@200;300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles/jh-chrome.css">
+<style>
+:root { color-scheme: dark; }
+html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+
+/* The stage is always 1920×1080 CSS px. Live mode scales it to the window; the renderer
+   opens a 1920×1080 viewport so the scale is 1 and every coordinate below is a pixel. */
+#stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden;
+  transform-origin: 0 0; background: var(--sea-deep); color: var(--text-primary);
+  font-family: var(--font-mono); -webkit-font-smoothing: antialiased; }
+#stage > * { position: absolute; }
+.sea { inset: -80px; pointer-events: none;
+  background: radial-gradient(ellipse 70% 55% at 50% 0%, rgba(var(--cyan-dim-rgb), 0.10), transparent 70%),
+              radial-gradient(ellipse 55% 45% at 100% 100%, rgba(var(--gold-rgb), 0.05), transparent 70%); }
+#tank { left: 0; top: 0; width: 1920px; height: 1080px; pointer-events: none; }
+/* Below the copy on purpose: the vignette darkens the sea and the fish at the frame's edge,
+   never the words. */
+.vignette { inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse 78% 82% at 50% 46%, transparent 58%, rgba(0, 0, 0, 0.5) 100%); }
+#scenes { inset: 0; }
+#actor { left: 0; top: 0; width: 1920px; height: 1080px; overflow: visible; pointer-events: none; }
+#actor path { fill: none; stroke-linejoin: round; stroke-linecap: round; }
+#blackout { inset: 0; background: #000; pointer-events: none; }
+
+/* display, not visibility: a child that sets visibility:visible shows through a hidden parent.
+   #scenes.measuring keeps every scene laid out (invisibly) until the one layout pass has run. */
+.scene { position: absolute; inset: 0; display: none; }
+.scene.on { display: block; }
+#scenes.measuring .scene { display: block; visibility: hidden; }
+.scene > * { position: absolute; }
+.w, .c { display: inline-block; }
+p, h1, h2, h3 { margin: 0; }
+
+/* ── type: every size is a pixel on a 1080p frame, weights are the site's ── */
+.eyebrow { font: 500 23px/1.2 var(--font-mono); letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--cyan); margin: 0 0 22px; white-space: nowrap; }
+.headline { font: 200 88px/1.06 var(--font-display); color: var(--text-subhead); letter-spacing: 0.005em; text-wrap: balance; }
+.rule { width: 72px; height: 1px; background: rgba(var(--gold-rgb), 0.85); margin: 30px 0 28px; transform-origin: 0 50%; }
+.line { font: 500 30px/1.5 var(--font-mono); color: var(--text-bright); }
+.line.caption { font-size: 27px; color: var(--ink-quiet); }
+.slot { display: grid; }
+.slot > * { grid-area: 1 / 1; }
+
+/* ── glass: the hero oval's recipe from shared.css ── */
+.glass { background: rgba(var(--surface-rgb), 0.55);
+  backdrop-filter: blur(8px) saturate(1.1); -webkit-backdrop-filter: blur(8px) saturate(1.1); }
+.glass::before { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(to bottom, rgba(var(--cyan-dim-rgb), 0.08) 0%, transparent 50%); }
+.oval { border-radius: 50%; display: flex; flex-direction: column; align-items: center;
+  filter: drop-shadow(0 8px 40px var(--elevation)); }
+.oval-line { left: 0; top: 0; width: 1920px; height: 1080px; overflow: visible; pointer-events: none; }
+.oval-line path { fill: none; stroke: rgba(var(--cyan-dim-rgb), 0.34); stroke-width: 1.2; }
+
+.sig { display: block; width: 184px; height: 92px; overflow: visible; }
+.sig .ink { fill: var(--text-bright); }
+.sig mask path { fill: none; stroke: #fff; stroke-width: 6.5; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ── open ── */
+.open .ink { left: 0; top: 0; width: 1920px; height: 1080px; overflow: visible; }
+.open .ink path { fill: none; stroke: var(--cyan-dim); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.open .ink-glow { filter: blur(7px); }
+.open .ink-glow path { stroke: rgba(var(--cyan-dim-rgb), 0.55); stroke-width: 10; }
+.open .ink circle { fill: var(--gold); }
+.open .ink-glow circle { fill: rgba(var(--gold-rgb), 0.9); }
+.guide { left: 0; right: 0; top: 640px; text-align: center; font: 500 28px/1 var(--font-mono);
+  letter-spacing: 0.14em; color: var(--ink-quiet); }
+.guide span { display: inline-block; }
+.guide .g2 { color: var(--gold); }
+
+/* ── title / end ── */
+.title .oval { padding: 52px 150px 66px; }
+.name { font: 200 118px/1.12 var(--font-display); letter-spacing: 0.12em; padding-left: 0.12em;
+  color: var(--text-heading); white-space: nowrap; margin: 4px 0 14px;
+  text-shadow: 0 0 40px var(--cyan-glow), 0 2px 10px rgba(0, 0, 0, 0.8); }
+.tagline { font: 500 26px/1 var(--font-mono); letter-spacing: 0.2em; text-transform: uppercase; white-space: nowrap;
+  color: var(--cyan); text-shadow: 0 0 12px var(--cyan-glow); }
+.tagline > span { display: inline-block; }
+.tagline .dot { color: var(--ink-faint); margin: 0 0.5em; }
+.end .oval { padding: 46px 140px 58px; }
+.url { font: 200 86px/1.15 var(--font-display); letter-spacing: 0.06em; padding-left: 0.06em; color: var(--text-heading);
+  white-space: nowrap; margin: 6px 0 16px; text-shadow: 0 0 40px var(--cyan-glow), 0 2px 10px rgba(0, 0, 0, 0.8); }
+.cta { font: 500 30px/1 var(--font-mono); color: var(--text-bright); white-space: nowrap; }
+.cta strong { color: var(--gold); font-weight: 500; }
+.pill { display: flex; gap: 20px; align-items: center; padding: 14px 26px; border-radius: 999px;
+  border: 1px solid rgba(var(--cyan-dim-rgb), 0.18); }
+.pill .ic { width: 34px; height: 34px; display: block; color: var(--cyan-dim); }
+.pill .ic svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.pill .ic svg * { fill: none; stroke: currentColor; stroke-width: 1.8; vector-effect: non-scaling-stroke; }
+.pill .ic svg .state-ring { stroke-opacity: 0.35; }
+
+/* ── thesis ── */
+.th { left: 0; right: 0; margin: 0 auto; width: fit-content; text-align: center; font: 200 92px/1.14 var(--font-display); letter-spacing: 0.005em; }
+.th1 { color: var(--gold); }
+.th2 { color: var(--text-subhead); }
+.row { left: 0; right: 0; margin: 0 auto; width: fit-content; display: flex; gap: 52px; }
+.row .rg { display: block; width: 64px; height: 64px; }
+.row svg { display: block; width: 64px; height: 64px; overflow: visible; filter: drop-shadow(0 0 8px rgba(var(--cyan-dim-rgb), 0.55)); }
+.row path { fill: rgba(var(--cyan-dim-rgb), 0.07); stroke: rgba(var(--cyan-dim-rgb), 0.95); stroke-width: 2.6;
+  vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+
+/* ── chapters ── */
+.win { overflow: hidden; background: #01070d; }
+.win .layer { position: absolute; inset: 0; overflow: hidden; }
+.win .layer > video, .win .layer > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.win-shadow { border-radius: 18px; box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 0, 0, 0.2); }
+.col { width: 700px; }
+.chips { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin-top: 30px; }
+.chip { display: inline-flex; gap: 14px; align-items: baseline; font: 500 21px/1 var(--font-mono); color: var(--text-bright);
+  padding: 11px 20px 11px 18px; border: 1px solid rgba(var(--gold-rgb), 0.45); border-radius: 999px; white-space: nowrap; }
+.chip b { color: var(--gold); font-weight: 600; }
+.stats { display: flex; gap: 44px; margin-top: 26px; }
+.stat b { display: block; font: 200 96px/1 var(--font-display); color: var(--gold);
+  font-variant-numeric: lining-nums tabular-nums; font-feature-settings: "lnum" 1, "tnum" 1; }
+.stat span { display: block; margin-top: 10px; font: 500 18px/1.3 var(--font-mono); letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--muted); }
+.qmark { display: block; font: 300 150px/0.6 var(--font-display); color: rgba(var(--gold-rgb), 0.75);
+  height: 0.42em; margin: 0 0 14px -6px; }
+.quote { font: 300 62px/1.2 var(--font-display); color: var(--text-subhead); }
+.cite { font: 500 24px/1.5 var(--font-mono); margin-top: 28px; padding-top: 18px;
+  border-top: 1px solid rgba(var(--cyan-dim-rgb), 0.3); }
+.cite strong { display: block; color: var(--cyan); font-weight: 500; }
+.cite span { color: var(--muted); }
+
+/* ── logos: the media kit's client wall, on a glass panel ── */
+.panel { overflow: hidden; }
+.panel-in { position: absolute; inset: 0; padding: 40px 56px 46px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+.panel .eyebrow { margin-bottom: 30px; }
+.group + .group { margin-top: 40px; }
+.panel .what { display: none; }          /* a 5 s proof beat: the marks, not their small print */
+.group h3 { font: 500 19px/1 var(--font-mono); letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-quiet); margin: 0 0 20px; }
+.wall { list-style: none; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; gap: 84px; }
+.wall.teams { gap: 52px; }
+.wall li { display: flex; flex-direction: column; gap: 8px; }
+.wm { font-family: var(--font-display); font-weight: 300; font-size: 50px; color: var(--text-subhead); line-height: 1.1;
+  display: inline-flex; align-items: center; min-height: 54px; white-space: nowrap; }
+.wm em { font-style: normal; color: var(--muted); }
+.wm-collab { font-weight: 300; }
+.wm-svg { height: 44px; width: auto; color: var(--text-subhead); }
+.wm .mark { display: inline-block; height: 0.8em; width: auto; vertical-align: -0.04em; margin-right: 0.38em; }
+.wm .mark-muse, .wm .mark-badvr { background: currentColor; }
+.wm .mark-muse { aspect-ratio: 360 / 64; -webkit-mask: url("./muse-wordmark.png") no-repeat center / contain; mask: url("./muse-wordmark.png") no-repeat center / contain; }
+.wm .mark-badvr { aspect-ratio: 120 / 72; -webkit-mask: url("./badvr-mark.png") no-repeat center / contain; mask: url("./badvr-mark.png") no-repeat center / contain; }
+.wm .mark-full { display: inline-block; height: 0.78em; width: auto; vertical-align: -0.02em; }
+.wm .mark-nanome { height: 1.08em; vertical-align: -0.17em; }
+.wm .mark-op { height: 1.4em; vertical-align: -0.36em; margin-right: 0.3em; }
+.what { font: 500 19px/1.4 var(--font-mono); color: var(--muted); }
+
+/* ── offer ── */
+.offer-h { left: 0; right: 0; margin: 0 auto; width: fit-content; text-align: center; font: 200 80px/1.16 var(--font-display); color: var(--text-subhead); letter-spacing: 0.005em; }
+.offer-k { left: 0; right: 0; margin: 0 auto; width: fit-content; text-align: center; font: 500 26px/1 var(--font-mono); letter-spacing: 0.34em;
+  text-transform: uppercase; color: var(--gold); padding-left: 0.34em; }
+.offer-k > span { display: inline-block; }
+.offer-k .dot { color: var(--ink-faint); margin: 0 0.25em; }
+
+/* ── live-mode controls (never in a render) ── */
+#hud { position: fixed; left: 0; right: 0; bottom: 0; padding: 14px 20px 16px; display: flex; gap: 18px; align-items: center;
+  font: 500 12px/1 var(--font-mono); letter-spacing: 0.08em; color: var(--ink-faint);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent); transition: opacity 0.4s; }
+#hud[hidden] { display: none; }
+#hud.idle { opacity: 0; }
+#hud .bar { flex: 1; height: 3px; background: rgba(var(--cyan-dim-rgb), 0.18); border-radius: 2px; cursor: pointer; position: relative; }
+#hud .bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--cyan-dim); border-radius: 2px; }
+#hud .time { color: var(--cyan); min-width: 7ch; }
+#err { position: fixed; inset: 0; margin: 0; padding: 20px; color: #ff6b6b; font: 14px/1.5 monospace; background: #000; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<div id="stage" role="img" aria-label="Sizzle reel of John Hanacek's portfolio">
+  <div class="sea"></div>
+  <canvas id="tank" aria-hidden="true"></canvas>
+  <div class="vignette"></div>
+  <div id="scenes" class="measuring"></div>
+  <svg id="actor" viewBox="0 0 1920 1080" aria-hidden="true"><path/></svg>
+  <div id="blackout"></div>
+</div>
+<div id="hud" hidden><span class="time">0.0</span><div class="bar"><i></i></div><span>space pause · ←/→ 5 s · R restart</span></div>
+<script src="../scripts/shape-detection.js"></script>
+<script src="../scripts/jh-shapes.js"></script>
+<script src="../scripts/jh-strokes.js"></script>
+<script src="../scripts/fish-engine.js"></script>
+<script>
+(async function () {
+  'use strict';
+  const Q = new URLSearchParams(location.search);
+  const RENDER = Q.has('render');
+  const CLOCK = window.__reelClock;
+  const W = 1920, H = 1080, CX = 960, CY = 540;
+  const STEP = 1000 / 60;                  // the engine is tuned per 60 Hz frame; it always gets one
+  const stage = document.getElementById('stage');
+  const scenesEl = document.getElementById('scenes');
+  const actorSvg = document.getElementById('actor');
+  const actorPath = actorSvg.querySelector('path');
+  const blackout = document.getElementById('blackout');
+  const sea = stage.querySelector('.sea');
+
+  // ── math ──────────────────────────────────────────────────────────────
+  const clamp01 = x => x < 0 ? 0 : x > 1 ? 1 : x;
+  const lerp = (a, b, k) => a + (b - a) * k;
+  const E = {
+    lin: x => x,
+    inOutSine: x => -(Math.cos(Math.PI * x) - 1) / 2,
+    outCubic: x => 1 - Math.pow(1 - x, 3),
+    inCubic: x => x * x * x,
+    outQuint: x => 1 - Math.pow(1 - x, 5),
+    outExpo: x => x >= 1 ? 1 : 1 - Math.pow(2, -10 * x),
+    inOutCubic: x => x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2,
+    inOutQuart: x => x < 0.5 ? 8 * x * x * x * x : 1 - Math.pow(-2 * x + 2, 4) / 2,
+  };
+  // progress of a segment that starts at a and lasts d, eased — THE primitive; everything is one
+  const seg = (t, a, d, ease = E.lin) => ease(clamp01((t - a) / d));
+  const fx = n => n.toFixed(2);
+
+  function seedRandom(seed) {                // mulberry32: the tank grows the same way every run
+    let s = seed >>> 0;
+    Math.random = function () {
+      s = (s + 0x6D2B79F5) >>> 0;
+      let t = s;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // Catmull-Rom through the points: strokes read as drawn by a hand, not plotted
+  function smooth(pts) {
+    const P = pts.map(p => Array.isArray(p) ? { x: p[0], y: p[1] } : p);
+    let d = `M${fx(P[0].x)} ${fx(P[0].y)}`;
+    for (let i = 0; i < P.length - 1; i++) {
+      const p0 = P[i - 1] || P[i], p1 = P[i], p2 = P[i + 1], p3 = P[i + 2] || p2;
+      d += `C${fx(p1.x + (p2.x - p0.x) / 6)} ${fx(p1.y + (p2.y - p0.y) / 6)} ${fx(p2.x - (p3.x - p1.x) / 6)} ${fx(p2.y - (p3.y - p1.y) / 6)} ${fx(p2.x)} ${fx(p2.y)}`;
+    }
+    return d;
+  }
+
+  // ── text: words (and the name's letters) become spans that rise into focus ──
+  function words(el) {
+    const out = [];
+    (function walk(node) {
+      for (const child of [...node.childNodes]) {
+        if (child.nodeType === 3) {
+          const frag = document.createDocumentFragment();
+          for (const part of child.textContent.split(/(\s+)/)) {
+            if (!part) continue;
+            if (/^\s+$/.test(part)) { frag.appendChild(document.createTextNode(' ')); continue; }
+            const s = document.createElement('span'); s.className = 'w'; s.textContent = part;
+            frag.appendChild(s); out.push(s);
+          }
+          child.replaceWith(frag);
+        } else if (child.nodeType === 1 && child.tagName !== 'BR') walk(child);
+      }
+    })(el);
+    return out;
+  }
+  function letters(el) {
+    const text = el.textContent; el.textContent = '';
+    const out = [];
+    for (const ch of text) {
+      if (ch === ' ') { el.appendChild(document.createTextNode(' ')); continue; }
+      const s = document.createElement('span'); s.className = 'c'; s.textContent = ch;
+      el.appendChild(s); out.push(s);
+    }
+    return out;
+  }
+  // In: a staggered rise out of soft focus. Out: quicker, lighter, upward. Pure f(t).
+  function reveal(spans, t, tin, tout, o) {
+    o = o || {};
+    const st = o.stagger != null ? o.stagger : 0.07, d = o.dur || 0.8, rise = o.rise != null ? o.rise : 18;
+    const blur = o.blur != null ? o.blur : 6, sto = o.staggerOut != null ? o.staggerOut : 0.02, dO = o.durOut || 0.42;
+    for (let i = 0; i < spans.length; i++) {
+      const a = seg(t, tin + i * st, d, E.outCubic);
+      const b = tout == null ? 0 : seg(t, tout + i * sto, dO, E.inCubic);
+      const s = spans[i].style;
+      s.opacity = (a * (1 - b)).toFixed(3);
+      s.transform = `translate3d(0,${fx((1 - E.outQuint(clamp01((t - tin - i * st) / d))) * rise - b * 10)}px,0)`;
+      const bl = (1 - a) * blur + b * 2;
+      s.filter = bl > 0.05 ? `blur(${fx(bl)}px)` : 'none';
+    }
+  }
+  function fade(el, t, tin, dIn, tout, dOut, rise) {
+    const a = seg(t, tin, dIn, E.outCubic), b = tout == null ? 0 : seg(t, tout, dOut || 0.4, E.inCubic);
+    el.style.opacity = (a * (1 - b)).toFixed(3);
+    if (rise) el.style.transform = `translate3d(0,${fx((1 - a) * rise - b * 8)}px,0)`;
+    return a * (1 - b);
+  }
+  function eyebrow(el, t, tin, tout) {        // the tracking settles as it arrives, like the name
+    const a = seg(t, tin, 1.1, E.outExpo), b = tout == null ? 0 : seg(t, tout, 0.4, E.inCubic);
+    el.style.opacity = (a * (1 - b)).toFixed(3);
+    el.style.letterSpacing = (0.22 + 0.22 * (1 - a)).toFixed(4) + 'em';
+  }
+
+  // ── shapes: the site's own marks, resampled so any one can become any other ──
+  const N = 480;                            // dense enough that an 18 px corner stays round
+  function resample(pts, n) {               // closed outline → n points, even by arc length, from pts[0]
+    const segs = []; let total = 0;
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[i], b = pts[(i + 1) % pts.length], l = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      segs.push([a, b, l]); total += l;
+    }
+    const out = []; let si = 0, acc = 0;
+    for (let k = 0; k < n; k++) {
+      const target = total * k / n;
+      while (si < segs.length - 1 && acc + segs[si][2] < target) { acc += segs[si][2]; si++; }
+      const [a, b, l] = segs[si], u = l ? (target - acc) / l : 0;
+      out.push([a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u]);
+    }
+    return out;
+  }
+  // every outline starts at its top-centre and runs clockwise, so a morph never twists
+  function roundRectPts(x, y, w, h, r) {
+    const pts = [], arc = (cx, cy, a0, a1) => { for (let i = 0; i < 12; i++) { const a = lerp(a0, a1, i / 12); pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); } };
+    pts.push([x + w / 2, y]);
+    arc(x + w - r, y + r, -Math.PI / 2, 0);
+    arc(x + w - r, y + h - r, 0, Math.PI / 2);
+    arc(x + r, y + h - r, Math.PI / 2, Math.PI);
+    arc(x + r, y + r, Math.PI, Math.PI * 1.5);
+    return pts;
+  }
+  function circlePts(cx, cy, r) {
+    const pts = [];
+    for (let i = 0; i < 96; i++) { const a = -Math.PI / 2 + i / 96 * Math.PI * 2; pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); }
+    return pts;
+  }
+  const unit = {};
+  function glyphUnit(key) {                  // read straight out of jh-shapes.js — one source for the marks
+    if (unit[key]) return unit[key];
+    const doc = new DOMParser().parseFromString(JHShapes.svg[key], 'image/svg+xml');
+    const poly = doc.querySelector('polygon'), rect = doc.querySelector('rect'), circ = doc.querySelector('circle');
+    let pts;
+    if (poly) pts = poly.getAttribute('points').trim().split(/\s+/).map(p => p.split(',').map(Number));
+    else if (rect) { const g = n => +rect.getAttribute(n); pts = roundRectPts(g('x'), g('y'), g('width'), g('height'), g('rx')); }
+    else { const g = n => +circ.getAttribute(n); pts = circlePts(g('cx'), g('cy'), g('r')); }
+    return (unit[key] = resample(pts, N));
+  }
+  const glyph = (key, cx = CX, cy = CY, size = 128) => ({ k: 'glyph', key, cx, cy, size, g: 1 });
+  const rectShape = (r, rad = 18) => ({ k: 'rect', x: r.x, y: r.y, w: r.w, h: r.h, r: rad, g: 0 });
+  const circleShape = (cx, cy, r) => ({ k: 'circle', cx, cy, r, g: 0 });
+  const polyCache = new WeakMap();
+  function polyOf(s) {
+    if (polyCache.has(s)) return polyCache.get(s);
+    let p;
+    if (s.k === 'glyph') { const u = glyphUnit(s.key), k = s.size / 40; p = u.map(q => [s.cx + (q[0] - 20) * k, s.cy + (q[1] - 20) * k]); }
+    else if (s.k === 'rect') p = resample(roundRectPts(s.x, s.y, s.w, s.h, s.r), N);
+    else p = resample(circlePts(s.cx, s.cy, s.r), N);
+    polyCache.set(s, p);
+    return p;
+  }
+  const pathOf = poly => 'M' + poly.map(q => fx(q[0]) + ' ' + fx(q[1])).join('L') + 'Z';
+  const clipOf = (poly, ox, oy) => 'polygon(' + poly.map(q => fx(q[0] - ox) + 'px ' + fx(q[1] - oy) + 'px').join(',') + ')';
+
+  // The actor: one outline for the whole reel. Keyframes are appended by the scenes; between
+  // keyframes it holds; alpha keys decide when it is on screen at all.
+  const AK = [], AA = [];
+  const actorKey = (a, b, from, to, ease) => AK.push({ a, b, from, to, ease: ease || E.inOutCubic });
+  const actorAlpha = (a, b, from, to) => AA.push({ a, b, from, to });
+  function actorAt(t) {
+    let alpha = 0;
+    for (const k of AA) if (t >= k.a) alpha = t >= k.b ? k.to : lerp(k.from, k.to, (t - k.a) / (k.b - k.a || 1));
+    let cur = null;
+    for (const k of AK) if (t >= k.a) cur = k;
+    if (!cur || alpha <= 0) return { alpha: 0 };
+    const k = cur.ease(clamp01((t - cur.a) / (cur.b - cur.a || 1)));
+    const A = polyOf(cur.from), B = polyOf(cur.to);
+    const poly = k >= 1 ? B : k <= 0 ? A : A.map((p, i) => [lerp(p[0], B[i][0], k), lerp(p[1], B[i][1], k)]);
+    return { alpha, poly, g: lerp(cur.from.g, cur.to.g, k), key: cur, k };
+  }
+  function drawActor(a) {
+    if (!a.alpha) { actorSvg.style.opacity = 0; return; }
+    const g = a.g;
+    actorSvg.style.opacity = a.alpha.toFixed(3);
+    actorSvg.style.filter = g > 0.02 ? `drop-shadow(0 0 ${fx(10 * g)}px rgba(77, 201, 246, ${fx(0.55 * g)}))` : 'none';
+    actorPath.setAttribute('d', pathOf(a.poly));
+    actorPath.style.stroke = `rgba(77, 201, 246, ${fx(lerp(0.3, 0.95, g))})`;
+    actorPath.style.strokeWidth = fx(lerp(1.1, 2.6, g));
+    actorPath.style.fill = `rgba(77, 201, 246, ${fx(0.07 * g)})`;
+  }
+
+  // ── the edit ──────────────────────────────────────────────────────────
+  const MK = await fetch('./media-kit.json').then(r => { if (!r.ok) throw new Error('media-kit.json ' + r.status); return r.json(); });
+  const REEL = MK.reel;
+  if (!REEL || !REEL.scenes) throw new Error('media-kit.json has no `reel` block');
+  const boardNamed = name => { const b = MK.boards.find(x => x.name === name); if (!b) throw new Error('reel: no board named ' + name); return b; };
+  let acc = 0;
+  const SC = REEL.scenes.map((s, i) => { const o = Object.assign({}, s, { i, start: acc, end: acc + s.dur }); acc += s.dur; return o; });
+  const DURATION = acc;
+
+  const SIG_D = await fetch('./JHsig.svg').then(r => r.text())
+    .then(s => new DOMParser().parseFromString(s, 'image/svg+xml').querySelector('path').getAttribute('d'));
+  // Pen paths traced over the signature (150×75 viewBox): the J and its long crossbar in one
+  // movement, then the H's two downstrokes. A fat stroke along each, drawn on as a MASK, writes
+  // the filled signature in the order a hand signs it.
+  const SIG_PEN = [
+    [[16.5, 39.5], [20, 34.5], [25, 28.2], [30, 22.8], [36, 17.6], [42, 13.6], [48, 10.6], [54, 8.5], [59, 7.9], [63, 8.7], [65.6, 11.6], [66.2, 16], [65.6, 21], [64, 26.4], [62.1, 31.3], [60.3, 35.6], [57.8, 40.6], [54.4, 45.6], [49, 51.5], [42, 57.4], [34, 62.6], [25, 67.1], [16, 70.7], [9, 72.3], [4.6, 71.6], [2.6, 68.8], [3.8, 65.4], [7.2, 61.9], [12.2, 58.4], [19, 54.6], [27, 50.8], [35, 47.4], [43, 44.3], [51, 41.3], [57.6, 38.9], [62.2, 36.9], [68, 34.7], [75, 32.4], [82, 30.5], [90, 28.3], [98, 25.8], [106, 23.5], [114, 21.4], [122, 19.5], [130, 17.5], [138, 15.4], [144, 13.9], [147.8, 13.2]],
+    [[81.4, 5.2], [79.8, 6.2], [78.8, 8.6], [78.1, 12.5], [77.6, 18], [77.1, 25], [76.7, 32], [76.9, 40], [77.7, 47], [79, 52], [80.8, 56], [82.9, 59.3]],
+    [[93, 1.6], [92.1, 5], [91.6, 10], [91.1, 18], [90.7, 26], [90.9, 34], [91.7, 42], [93, 48.5], [94.8, 54], [97, 58.6]],
+  ];
+  let sigN = 0;
+  function sigMarkup() {
+    const id = 'sigpen' + (sigN++);
+    return `<svg class="sig" viewBox="0 0 150 75" aria-hidden="true"><defs><mask id="${id}" maskUnits="userSpaceOnUse" x="-8" y="-8" width="166" height="91">${SIG_PEN.map(p => `<path d="${smooth(p)}"/>`).join('')}</mask></defs><path class="ink" d="${SIG_D}" mask="url(#${id})"/></svg>`;
+  }
+  function sigWriter(svg) {                   // constant pen speed, a short lift between strokes
+    const pens = [...svg.querySelectorAll('mask path')], lens = pens.map(p => p.getTotalLength());
+    const total = lens.reduce((a, b) => a + b, 0), LIFT = 0.1;
+    pens.forEach((p, i) => { p.style.strokeDasharray = `${lens[i]} ${lens[i]}`; });
+    return (t, t0, dur) => {
+      const run = dur - LIFT * (pens.length - 1);
+      let at = t0;
+      pens.forEach((p, i) => {
+        const d = run * lens[i] / total, k = seg(t, at, d, E.inOutSine);
+        p.style.strokeDashoffset = fx(lens[i] * (1 - k));
+        at += d + LIFT;
+      });
+    };
+  }
+
+  // ── the tank: the site's fish engine, transparent, under every scene ──
+  seedRandom(parseInt(Q.get('seed') || REEL.seed || 1, 10));
+  const tankEl = document.getElementById('tank');
+  // The engine sizes itself from its canvas's on-screen box. Live mode shrinks the stage with a
+  // transform, which would shrink the engine's world with it and turn a large fish into a medium
+  // one — so the canvas reports the stage's true size and the tank is the same tank at any zoom.
+  tankEl.getBoundingClientRect = () => ({ x: 0, y: 0, left: 0, top: 0, right: W, bottom: H, width: W, height: H });
+  const tank = FishCanvas(tankEl, { transparent: true, seedFish: false, seedJellyfish: false });
+  const loopPts = (x, y, s) => JHStrokes.points.loop(x, y, s);
+  function fishAt(x, y, scale, heading) {
+    tank.processStroke(loopPts(x, y, scale), ['fish']);
+    const f = tank.state.fish[tank.state.fish.length - 1];
+    if (f && heading != null) {
+      f.heading = f.targetHeading = f.cruiseAngle = heading;
+      f.vx = Math.cos(heading) * 0.4; f.vy = Math.sin(heading) * 0.4;
+    }
+    return f;
+  }
+  const coralAt = (x, s) => tank.processStroke(JHStrokes.points.square(x, 1032, s), ['coral']);
+  const food = (x, y) => tank.addFood(x, y);
+
+  // ── scene builders ────────────────────────────────────────────────────
+  const MEDIA = [];                          // { el, from, start, end } — every clip, for seeking
+  const EVENTS = [];                         // { t, run } — tank choreography, absolute seconds
+  const LAYOUT = [];                         // measured after the fonts land
+  const at = (sc, lt, run) => EVENTS.push({ t: sc.start + lt, run });
+  let prevShape = null;                      // the mark the actor holds as a scene begins
+
+  function sceneEl(type, html) {
+    const el = document.createElement('section');
+    el.className = 'scene ' + type;
+    el.innerHTML = html;
+    scenesEl.appendChild(el);
+    return el;
+  }
+  const box = (el, pad = 0) => {             // stage-space box of a laid-out element
+    let x = 0, y = 0, n = el;
+    while (n && n !== stage) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; }
+    return { x: x - pad, y: y - pad, w: el.offsetWidth + pad * 2, h: el.offsetHeight + pad * 2 };
+  };
+
+  // Morph into this scene's mark at centre (if it differs), then unfold into `target`. Folds back at the end.
+  // The mark the actor should land on as a scene ends: the NEXT scene's, so the shape change rides
+  // the fold itself (a window shrinking into a hexagon) instead of idling at centre as a small icon.
+  const nextMark = sc => { const n = SC[sc.i + 1]; return glyph(n && n.shape ? n.shape : sc.shape); };
+  // Returns U0, the moment the unfold begins: everything that writes itself after keys off it.
+  function opensInto(sc, target) {
+    const g = glyph(sc.shape);
+    const morph = prevShape && prevShape.key !== sc.shape;
+    if (morph) actorKey(sc.start, sc.start + 0.45, prevShape, g);
+    const U0 = morph ? 0.6 : 0.25;
+    actorKey(sc.start + U0, sc.start + U0 + 0.95, g, target, E.inOutQuart);
+    prevShape = nextMark(sc);
+    actorKey(sc.end - 0.9, sc.end, target, prevShape, E.inOutCubic);
+    return U0;
+  }
+
+  function mediaFor(sc, beats, host) {
+    // One layer per beat that brings media. A later layer fades in ON TOP of the one below, which
+    // stays whole until it is covered — a crossfade with no dip to black.
+    const withMedia = beats.filter(b => b.video || b.img);
+    return withMedia.map((b, i) => {
+      const next = withMedia[i + 1];
+      const start = sc.start + b.at, end = next ? sc.start + next.at + 0.7 : sc.end;
+      const layer = document.createElement('div'); layer.className = 'layer';
+      let m;
+      if (b.video) {
+        m = document.createElement('video');
+        m.muted = true; m.playsInline = true; m.preload = 'auto'; m.loop = false;
+        m.setAttribute('muted', ''); m.setAttribute('playsinline', '');
+        m.src = b.video;
+        MEDIA.push({ el: m, from: b.from || 0, start, end });
+      } else {
+        m = new Image(); m.decoding = 'async'; m.alt = ''; m.src = b.img;
+      }
+      const focus = b.focus || [0.5, 0.5];
+      m.style.objectPosition = b.pan ? '0% 50%' : `${focus[0] * 100}% ${focus[1] * 100}%`;
+      m.style.transformOrigin = `${focus[0] * 100}% ${focus[1] * 100}%`;
+      layer.appendChild(m);
+      host.appendChild(layer);
+      const zoom = b.zoom || (b.video ? [1.02, 1.07] : [1.03, 1.1]);
+      return {
+        update(t) {                          // t: absolute
+          const on = t >= start - 0.05 && t <= end + 0.05;
+          layer.style.visibility = on ? 'visible' : 'hidden';
+          if (!on) return;
+          layer.style.opacity = i === 0 ? 1 : seg(t, start, 0.7, E.inOutSine).toFixed(3);
+          const k = seg(t, start, end - start, E.inOutSine);
+          m.style.transform = `scale(${lerp(zoom[0], zoom[1], k).toFixed(4)})`;
+          if (b.pan) m.style.objectPosition = `${fx(k * 100)}% 50%`;
+        }
+      };
+    });
+  }
+
+  const BUILD = {
+    open(sc) {
+      const S = 2.4, cx = 924, cy = 468;     // a large loop: a large fish, centred on the frame
+      const pts = loopPts(cx, cy, S), d = smooth(pts);
+      const el = sceneEl('open', `
+        <svg class="ink ink-glow" viewBox="0 0 ${W} ${H}"><path d="${d}"/><circle r="10"/></svg>
+        <svg class="ink" viewBox="0 0 ${W} ${H}"><path d="${d}"/><circle r="5.5"/></svg>
+        <p class="guide"><span class="g1">${sc.caption}</span><span class="g2">${sc.reveal}</span></p>`);
+      const [glowSvg, inkSvg] = el.querySelectorAll('.ink');
+      const paths = [...el.querySelectorAll('.ink path')], pens = [...el.querySelectorAll('.ink circle')];
+      const L = paths[1].getTotalLength();
+      paths.forEach(p => { p.style.strokeDasharray = `${L} ${L}`; });
+      const g1 = el.querySelector('.g1'), g2 = el.querySelector('.g2');
+      const DRAW_A = 0.7, DRAW_D = 1.65, DONE = DRAW_A + DRAW_D;
+      // The drawn loop IS the fish: the stroke goes to the engine exactly as a finger would give it.
+      // Facing left, as the loop was drawn (its tail crosses on the right).
+      let born = null, freed = false;
+      at(sc, DONE, () => { born = fishAt(cx, cy, S, Math.PI); freed = false; });
+      const HOLD = 0.7, AWAY = Math.PI + 0.5;   // then up and to the left, clear of the name to come
+      return (lt) => {
+        if (born && lt < DONE + HOLD) {        // hold it level while the ink dissolves into it
+          born.heading = born.targetHeading = born.cruiseAngle = Math.PI;
+          born.vx = -0.3; born.vy = 0;
+        } else if (born && !freed) {
+          freed = true;
+          born.targetHeading = born.cruiseAngle = AWAY;
+          born.vx = Math.cos(AWAY) * 0.9; born.vy = Math.sin(AWAY) * 0.9;
+        }
+        const k = seg(lt, DRAW_A, DRAW_D, E.inOutSine);
+        paths.forEach(p => { p.style.strokeDashoffset = fx(L * (1 - k)); });
+        const pt = paths[1].getPointAtLength(L * k);
+        pens.forEach(c => { c.setAttribute('cx', fx(pt.x)); c.setAttribute('cy', fx(pt.y)); c.style.opacity = (seg(lt, 0.45, 0.3) * (1 - seg(lt, DONE - 0.05, 0.25))).toFixed(3); });
+        // the ink flares as the engine takes it, then dissolves into the body it became
+        const flare = Math.sin(Math.PI * seg(lt, DONE - 0.1, 0.5));
+        const gone = seg(lt, DONE + 0.05, 0.55, E.inOutSine);
+        inkSvg.style.opacity = (1 - gone).toFixed(3);
+        glowSvg.style.opacity = ((0.75 + 0.5 * flare) * (1 - gone)).toFixed(3);
+        fade(g1, lt, 0.95, 0.7, 4.15, 0.5, 10);
+        fade(g2, lt, DONE + 0.15, 0.6, 4.15, 0.5);
+      };
+    },
+
+    title(sc) {
+      const el = sceneEl('title', `
+        <div class="oval glass">${sigMarkup()}<h1 class="name">${sc.name}</h1>
+          <p class="tagline">${sc.tagline.map((g, i) => (i ? '<span class="dot">·</span>' : '') + `<span class="tg">${g}</span>`).join('')}</p></div>
+        <svg class="oval-line" viewBox="0 0 ${W} ${H}"><path/><path/></svg>`);
+      const oval = el.querySelector('.oval'), name = el.querySelector('.name');
+      const chars = letters(name), tags = [...el.querySelectorAll('.tagline > span')];
+      const halves = [...el.querySelectorAll('.oval-line path')], line = el.querySelector('.oval-line'), sig = el.querySelector('.sig');
+      const write = sigWriter(sig);
+      let HL = 1;
+      LAYOUT.push(() => {
+        oval.style.left = (CX - oval.offsetWidth / 2) + 'px';
+        oval.style.top = (CY - oval.offsetHeight / 2) + 'px';
+        const b = box(oval), rx = b.w / 2, ry = b.h / 2, cx = b.x + rx, cy = b.y + ry;
+        // two halves from the top centre, meeting at the bottom: the oval draws itself symmetrically
+        halves[0].setAttribute('d', `M${cx} ${cy - ry}A${rx} ${ry} 0 0 1 ${cx} ${cy + ry}`);
+        halves[1].setAttribute('d', `M${cx} ${cy - ry}A${rx} ${ry} 0 0 0 ${cx} ${cy + ry}`);
+        HL = halves[0].getTotalLength();
+        halves.forEach(h => { h.style.strokeDasharray = `${HL} ${HL}`; });
+        const core = box(name, 0), tb = box(el.querySelector('.tagline'));
+        sc.walls = [{ x: core.x - 30, y: core.y - 110, w: core.w + 60, h: tb.y + tb.h - core.y + 140 }];
+      });
+      // a school arrives while the name does — drawn in the corner, out of the way
+      [[200, 930], [330, 975], [150, 1010]].forEach(([x, y], i) => at(sc, 1.2 + i * 0.22, () => fishAt(x, y, 1.0, 0)));
+      [[1700, 960], [1790, 1000]].forEach(([x, y], i) => at(sc, 4.2 + i * 0.3, () => fishAt(x, y, 0.62, Math.PI)));
+      const OUT = sc.dur - 0.95;
+      return (lt) => {
+        const draw = seg(lt, 0, 1.15, E.inOutCubic), gone = seg(lt, OUT + 0.25, 0.6, E.inCubic);
+        halves.forEach(h => { h.style.strokeDashoffset = fx(HL * (1 - draw)); });
+        line.style.opacity = (1 - gone).toFixed(3);
+        oval.style.opacity = (seg(lt, 0.35, 0.9, E.inOutSine) * (1 - gone)).toFixed(3);
+        write(lt, 0.6, 1.3);
+        sig.style.opacity = (0.85 * (1 - seg(lt, OUT + 0.1, 0.45))).toFixed(3);
+        reveal(chars, lt, 1.3, OUT, { stagger: 0.045, dur: 0.95, rise: 14, blur: 10, staggerOut: 0.012 });
+        name.style.letterSpacing = (0.12 + 0.12 * (1 - seg(lt, 1.3, 1.9, E.outExpo))).toFixed(4) + 'em';
+        reveal(tags, lt, 2.4, OUT - 0.1, { stagger: 0.14, dur: 0.8, rise: 10, blur: 4 });
+      };
+    },
+
+    thesis(sc) {
+      const el = sceneEl('thesis', `<p class="th th1">${sc.lines[0]}</p><p class="th th2">${sc.lines[1]}</p>
+        <div class="row">${['triangle', 'roundedSquare', 'circle', 'diamond', 'star', 'hexagon'].map(k =>
+          `<span class="rg"><svg viewBox="0 0 40 40" data-k="${k}"><path d="${pathOf(glyphUnit(k))}" pathLength="1"/></svg></span>`).join('')}</div>`);
+      const l1 = el.querySelector('.th1'), l2 = el.querySelector('.th2'), row = el.querySelector('.row');
+      const w1 = words(l1), w2 = words(l2), marks = [...row.querySelectorAll('.rg')];
+      const HAND = 3.8;                       // the Design mark leaves the row and becomes the actor
+      const centre = glyph('roundedSquare');
+      prevShape = centre;
+      LAYOUT.push(() => {
+        l1.style.top = '318px'; l2.style.top = (318 + l1.offsetHeight) + 'px';
+        row.style.top = '716px';
+        const m = box(marks[1]), size = m.w;
+        const from = glyph('roundedSquare', m.x + size / 2, m.y + size / 2, size);
+        actorKey(sc.start + HAND, sc.start + HAND, from, from);
+        actorAlpha(sc.start + HAND, sc.start + HAND, 1, 1);
+        actorKey(sc.start + HAND + 0.25, sc.end, from, centre, E.inOutCubic);
+        const ta = box(l1, 24), tb = box(l2, 24);
+        sc.walls = [ta, tb, box(row, 24)];
+      });
+      at(sc, 1.6, () => food(1500, 930));
+      return (lt) => {
+        reveal(w1, lt, 0.2, 3.55, { stagger: 0.09, dur: 1.0, rise: 22, blur: 8 });
+        reveal(w2, lt, 0.6, 3.6, { stagger: 0.08, dur: 1.0, rise: 22, blur: 8 });
+        marks.forEach((m, i) => {
+          const p = m.querySelector('path');
+          p.style.strokeDasharray = '1 1';
+          p.style.strokeDashoffset = fx(1 - seg(lt, 1.5 + i * 0.11, 0.65, E.inOutCubic));
+          const fill = seg(lt, 1.9 + i * 0.11, 0.5);
+          p.style.fillOpacity = fill.toFixed(3);
+          m.style.opacity = i === 1 ? (lt < HAND ? 1 : 0) : (1 - seg(lt, HAND - 0.2, 0.5, E.inCubic)).toFixed(3);
+        });
+      };
+    },
+
+    chapter(sc) {
+      const right = sc.side !== 'left';
+      const R = { x: right ? 820 : 100, y: 259, w: 1000, h: 562 };
+      const beats = sc.beats;
+      const el = sceneEl('chapter', `
+        <div class="win-shadow" style="left:${R.x}px;top:${R.y}px;width:${R.w}px;height:${R.h}px"></div>
+        <div class="win" style="left:${R.x}px;top:${R.y}px;width:${R.w}px;height:${R.h}px"></div>
+        <div class="col" style="left:${right ? 100 : 1160}px">
+          <p class="eyebrow">${sc.eyebrow}</p><h2 class="headline">${sc.headline}</h2><div class="rule"></div>
+          <div class="slot">${beats.map(b => b.quote ? quoteMarkup(boardNamed(b.quote)) :
+            `<div class="bt"><p class="line">${b.line}</p>${b.stats ? `<div class="stats">${b.stats.map(s => `<div class="stat"><b>0</b><span>${s.label}</span></div>`).join('')}</div>` : ''}</div>`).join('')}</div>
+          ${sc.chips ? `<div class="chips">${sc.chips.map(c => `<span class="chip"><b>${c.yr}</b>${c.text}</span>`).join('')}</div>` : ''}
+        </div>`);
+      return chapterMotion(sc, el, rectShape(R), R, right, beats);
+    },
+
+    art(sc) {
+      const C = { cx: 1330, cy: 540, r: 330 };
+      const R = { x: C.cx - C.r, y: C.cy - C.r, w: C.r * 2, h: C.r * 2 };
+      const el = sceneEl('art', `
+        <div class="win" style="left:${R.x}px;top:${R.y}px;width:${R.w}px;height:${R.h}px"></div>
+        <div class="col" style="left:100px;width:780px">
+          <p class="eyebrow">${sc.eyebrow}</p><h2 class="headline">${sc.headline}</h2><div class="rule"></div>
+          <div class="slot">${sc.beats.map(b => `<div class="bt"><p class="line caption">${b.line}</p></div>`).join('')}</div>
+        </div>`);
+      return chapterMotion(sc, el, circleShape(C.cx, C.cy, C.r), R, true, sc.beats);
+    },
+
+    logos(sc) {
+      const b = boardNamed(sc.board);
+      const P = { x: 140, y: 150, w: 1640, h: 440 };
+      const el = sceneEl('logos', `
+        <div class="panel glass" style="left:${P.x}px;top:${P.y}px;width:${P.w}px;height:${P.h}px"><div class="panel-in">
+          <p class="eyebrow">${b.eyebrow}</p>
+          ${b.groups.map(g => `<section class="group"><h3>${g.heading}</h3><ul class="wall${g.wall ? ' ' + g.wall : ''}">${g.items.map(itemHTML).join('')}</ul></section>`).join('')}
+        </div></div>`);
+      const panel = el.querySelector('.panel');
+      const eb = el.querySelector('.eyebrow'), heads = [...el.querySelectorAll('.group h3')], items = [...el.querySelectorAll('.wall li')];
+      const U0 = opensInto(sc, rectShape(P, 22));
+      sc.walls = [{ x: P.x - 20, y: P.y - 20, w: P.w + 40, h: P.h + 40 }];
+      at(sc, 0.6, () => coralAt(640, 84));
+      at(sc, 1.0, () => coralAt(1290, 76));
+      at(sc, 2.3, () => food(960, 880));
+      const OUT = sc.dur - 1.0;
+      return (lt, a) => {
+        const inWin = lt >= U0 - 0.05;
+        panel.style.visibility = inWin && a.poly ? 'visible' : 'hidden';
+        if (a.poly) panel.style.clipPath = clipOf(a.poly, P.x, P.y);
+        panel.style.opacity = (seg(lt, U0 + 0.25, 0.55) * (1 - seg(lt, OUT + 0.25, 0.5))).toFixed(3);
+        eyebrow(eb, lt, U0 + 0.5, OUT);
+        heads.forEach((h, i) => fade(h, lt, U0 + 0.65 + i * 0.45, 0.6, OUT, 0.35, 8));
+        items.forEach((it, i) => fade(it, lt, U0 + 0.75 + i * 0.11 + (i > 2 ? 0.2 : 0), 0.7, OUT + i * 0.015, 0.35, 14));
+      };
+    },
+
+    offer(sc) {
+      const b = boardNamed(sc.board);
+      const el = sceneEl('offer', `<h2 class="offer-h">${b.h2}</h2>
+        <p class="offer-k">${b.three.map((x, i) => (i ? '<span class="dot">·</span>' : '') + `<span class="k">${x.k}</span>`).join('')}</p>`);
+      const h = el.querySelector('.offer-h'), kk = el.querySelector('.offer-k');
+      const hw = words(h), ks = [...kk.querySelectorAll('.k, .dot')];
+      const star = glyph('star'), up = glyph('star', CX, 268, 44);
+      if (prevShape && prevShape.key !== 'star') actorKey(sc.start, sc.start + 0.4, prevShape, star);
+      actorKey(sc.start + 0.25, sc.start + 1.05, star, up, E.inOutCubic);
+      prevShape = nextMark(sc);
+      actorKey(sc.end - 0.8, sc.end, up, prevShape, E.inOutCubic);
+      LAYOUT.push(() => {
+        h.style.top = '360px'; kk.style.top = (360 + h.offsetHeight + 64) + 'px';
+        sc.walls = [box(h, 26), box(kk, 26)];
+      });
+      at(sc, 1.2, () => food(420, 930));
+      const OUT = sc.dur - 0.85;
+      return (lt) => {
+        reveal(hw, lt, 0.75, OUT, { stagger: 0.07, dur: 0.9, rise: 18, blur: 7 });
+        reveal(ks, lt, 2.3, OUT - 0.05, { stagger: 0.16, dur: 0.8, rise: 10, blur: 4 });
+      };
+    },
+
+    end(sc) {
+      const b = boardNamed(sc.board);
+      const el = sceneEl('end', `
+        <div class="oval glass">${sigMarkup()}<p class="url">${MK.meta.site}</p><p class="cta">${b.cta.lead}<strong>${b.cta.strong}</strong></p></div>
+        <svg class="oval-line" viewBox="0 0 ${W} ${H}"><path/><path/></svg>
+        <nav class="pill glass" aria-hidden="true">${['search', 'triangle', 'roundedSquare', 'circle', 'diamond', 'star', 'hexagon']
+          .map(k => `<span class="ic" data-k="${k}">${JHShapes.svg[k]}</span>`).join('')}</nav>`);
+      const oval = el.querySelector('.oval'), pill = el.querySelector('.pill');
+      const url = el.querySelector('.url'), cta = el.querySelector('.cta');
+      const uw = letters(url), cw = words(cta);
+      const halves = [...el.querySelectorAll('.oval-line path')], icons = [...pill.querySelectorAll('.ic')];
+      const write = sigWriter(el.querySelector('.sig'));
+      const tri = glyph('triangle');
+      if (prevShape && prevShape.key !== 'triangle') actorKey(sc.start, sc.start + 0.4, prevShape, tri);
+      let HL = 1;
+      LAYOUT.push(() => {
+        oval.style.left = (CX - oval.offsetWidth / 2) + 'px';
+        oval.style.top = '170px';
+        pill.style.left = (CX - pill.offsetWidth / 2) + 'px';
+        pill.style.top = (170 + oval.offsetHeight + 44) + 'px';
+        const o = box(oval), rx = o.w / 2, ry = o.h / 2, cx = o.x + rx, cy = o.y + ry;
+        halves[0].setAttribute('d', `M${cx} ${cy - ry}A${rx} ${ry} 0 0 1 ${cx} ${cy + ry}`);
+        halves[1].setAttribute('d', `M${cx} ${cy - ry}A${rx} ${ry} 0 0 0 ${cx} ${cy + ry}`);
+        HL = halves[0].getTotalLength();
+        halves.forEach(hh => { hh.style.strokeDasharray = `${HL} ${HL}`; });
+        // the Home mark lands exactly on its own slot in the pill, and hands over to it
+        const slot = box(icons[1]);
+        actorKey(sc.start + 0.3, sc.start + 1.3, tri, glyph('triangle', slot.x + slot.w / 2, slot.y + slot.h / 2, slot.w), E.inOutCubic);
+        actorAlpha(sc.start + 1.3, sc.start + 1.65, 1, 0);
+        sc.walls = [{ x: o.x + 60, y: o.y, w: o.w - 120, h: o.h }, box(pill, 16)];
+      });
+      at(sc, 0.25, () => coralAt(430, 88));
+      at(sc, 0.55, () => coralAt(1510, 80));
+      at(sc, 1.5, () => food(900, 930));
+      at(sc, 2.9, () => food(1060, 905));
+      return (lt) => {
+        const draw = seg(lt, 0.3, 1.1, E.inOutCubic);
+        halves.forEach(hh => { hh.style.strokeDashoffset = fx(HL * (1 - draw)); });
+        oval.style.opacity = seg(lt, 0.6, 0.8, E.inOutSine).toFixed(3);
+        write(lt, 0.95, 1.25);
+        el.querySelector('.sig').style.opacity = 0.85;
+        reveal(uw, lt, 1.25, null, { stagger: 0.035, dur: 0.9, rise: 12, blur: 8 });
+        url.style.letterSpacing = (0.06 + 0.1 * (1 - seg(lt, 1.25, 1.6, E.outExpo))).toFixed(4) + 'em';
+        reveal(cw, lt, 2.0, null, { stagger: 0.06, dur: 0.8, rise: 10, blur: 4 });
+        pill.style.opacity = seg(lt, 1.0, 0.6, E.inOutSine).toFixed(3);
+        icons.forEach((ic, i) => {
+          if (i === 1) { ic.style.opacity = seg(lt, 1.3, 0.35).toFixed(3); return; }
+          fade(ic, lt, 1.15 + i * 0.07, 0.5, null, 0, 6);
+        });
+      };
+    },
+  };
+
+  // Chapters and art share one choreography: the actor unfolds into the window, the column
+  // writes itself, beats swap line and footage together, then everything folds back to the mark.
+  function chapterMotion(sc, el, target, R, right, beats) {
+    const win = el.querySelector('.win'), shadow = el.querySelector('.win-shadow');
+    const col = el.querySelector('.col');
+    const eb = col.querySelector('.eyebrow'), head = col.querySelector('.headline'), rule = col.querySelector('.rule');
+    const hw = words(head);
+    const bts = [...col.querySelectorAll('.slot > *')].map((node, i) => {
+      const b = beats[i];
+      if (b.quote) {
+        return { b, qm: node.querySelector('.qmark'), qw: words(node.querySelector('.quote')), cite: node.querySelector('.cite') };
+      }
+      return { b, lw: words(node.querySelector('.line')), stats: [...node.querySelectorAll('.stat')] };
+    });
+    const chips = [...col.querySelectorAll('.chip')];
+    const layers = mediaFor(sc, beats, win);
+    const U0 = opensInto(sc, target), U1 = U0 + 0.95;
+    LAYOUT.push(() => {
+      col.style.top = (CY - col.offsetHeight / 2) + 'px';
+      sc.walls = [{ x: R.x - 24, y: R.y - 24, w: R.w + 48, h: R.h + 48 }, box(col, 44)];
+    });
+    at(sc, 2.2, () => right ? food(380, 952) : food(1540, 952));
+    const OUT = sc.dur - 1.0;
+    return (lt, a) => {
+      const t = sc.start + lt;
+      const open = lt >= U0 - 0.05 && lt <= sc.dur;
+      win.style.visibility = open && a.poly ? 'visible' : 'hidden';
+      if (a.poly) win.style.clipPath = clipOf(a.poly, R.x, R.y);
+      win.style.opacity = (seg(lt, U0 + 0.25, 0.6, E.inOutSine) * (1 - seg(lt, sc.dur - 0.85, 0.45, E.inCubic))).toFixed(3);
+      if (shadow) shadow.style.opacity = (Math.pow(seg(lt, U1 - 0.35, 0.4), 2) * (1 - seg(lt, sc.dur - 0.9, 0.2))).toFixed(3);
+      layers.forEach(L => L.update(t));
+      eyebrow(eb, lt, U0 + 0.5, OUT - 0.05);
+      reveal(hw, lt, U0 + 0.65, OUT, { stagger: 0.075, dur: 0.9, rise: 22, blur: 8 });
+      const r = seg(lt, U0 + 1.05, 0.7, E.outCubic) * (1 - seg(lt, OUT + 0.05, 0.35));
+      rule.style.transform = `scaleX(${r.toFixed(3)})`;
+      bts.forEach((x, i) => {
+        const next = beats[i + 1];
+        const tin = i === 0 ? U0 + 1.25 : x.b.at + 0.35, tout = next ? next.at - 0.05 : OUT + 0.05;
+        if (x.lw) {
+          reveal(x.lw, lt, tin, tout, { stagger: 0.035, dur: 0.75, rise: 12, blur: 4, staggerOut: 0.012, durOut: 0.35 });
+          x.stats.forEach((s, j) => {
+            const st = x.b.stats[j], v = fade(s, lt, tin + 0.45 + j * 0.15, 0.6, tout + j * 0.03, 0.35, 12);
+            if (v > 0) s.querySelector('b').textContent = Math.round(st.n * seg(lt, tin + 0.45 + j * 0.15, 1.7, E.outExpo));
+          });
+        } else {
+          fade(x.qm, lt, tin, 0.6, tout, 0.35, 10);
+          reveal(x.qw, lt, tin + 0.2, tout, { stagger: 0.05, dur: 0.85, rise: 16, blur: 6 });
+          fade(x.cite, lt, tin + 0.9, 0.7, tout, 0.35, 8);
+        }
+      });
+      chips.forEach((c, i) => fade(c, lt, sc.chips[i].at, 0.6, OUT + i * 0.03, 0.35, 10));
+    };
+  }
+
+  function quoteMarkup(b) {
+    return `<div class="bt"><span class="qmark">“</span><p class="quote">${b.quote}</p>
+      <p class="cite"><strong>${b.cite.name}</strong><span>${b.cite.role}</span></p></div>`;
+  }
+  // Client wall items: the media kit's doctrine — inline SVG reads currentColor, pixel logos are masks.
+  const MARKS = { muse: { cls: 'mark-full mark-muse', aria: 'Muse.Bio' }, badvr: { cls: 'mark mark-badvr', aria: null } };
+  function itemHTML(it) {
+    const mark = k => { const M = MARKS[k]; return M.aria ? `<span class="${M.cls}" role="img" aria-label="${M.aria}"></span>` : `<span class="${M.cls}" aria-hidden="true"></span>`; };
+    const inner = it.svg ? (MK.svgs[it.svg] || '') + (it.label || '') : it.mark ? mark(it.mark) + (it.label || '') : (it.label || '');
+    return `<li><span class="wm ${it.labelClass || ''}">${inner}</span><span class="what">${it.what}</span></li>`;
+  }
+
+  // ── build, in edit order (the actor's keyframes depend on it) ──
+  for (const sc of SC) {
+    if (!BUILD[sc.type]) throw new Error('reel: unknown scene type ' + sc.type);
+    sc.update = BUILD[sc.type](sc);
+    sc.el = scenesEl.lastElementChild;
+  }
+  EVENTS.sort((a, b) => a.t - b.t);
+
+  // ── readiness: fonts, pictures, clips — then measure ──
+  const ready = (async () => {
+    await document.fonts.ready;
+    await Promise.all(['200 80px Raleway', '300 54px Raleway', '500 20px "JetBrains Mono"', '600 20px "JetBrains Mono"']
+      .map(f => document.fonts.load(f).catch(() => null)));
+    await Promise.all([...stage.querySelectorAll('img')].map(i => i.decode().catch(() => null)));
+    await Promise.all(MEDIA.map(({ el }) => el.readyState >= 2 ? null : new Promise(res => {
+      el.addEventListener('loadeddata', res, { once: true });
+      el.addEventListener('error', res, { once: true });
+      setTimeout(res, 20000);
+    })));
+    LAYOUT.forEach(f => f());
+    scenesEl.classList.remove('measuring');
+    AK.sort((a, b) => a.a - b.a);
+    AA.sort((a, b) => a.a - b.a);
+  })();
+
+  // ── one frame of the reel at time t (seconds) ──
+  let firedT = -1, wallScene = -1;
+  function resetTank() {                       // live-mode jump backwards: regrow the tank from the edit
+    tank.clearFish();
+    tank.state.coral.length = 0;
+    firedT = -1; wallScene = -1;
+  }
+  // The tank's side of a moment: choreography events and walls. Runs on EVERY 60 Hz tick, so a
+  // jump (a still, --from) grows exactly the tank a straight play-through would.
+  function simulate(t) {
+    if (t < firedT) resetTank();
+    for (const ev of EVENTS) if (ev.t > firedT && ev.t <= t) ev.run();
+    firedT = t;
+    // walls lead their scene by 1.6 s: the fish clear the space before the copy or the window lands
+    const cur = SC.find(s => t + 1.6 >= s.start && t + 1.6 < s.end) || SC[SC.length - 1];
+    if (cur.i !== wallScene) {                 // fish swim around the copy and the footage, never across
+      wallScene = cur.i;
+      tank.setObstacles((cur.walls || []).map(r => ({ x: r.x + r.w / 2, y: r.y + r.h, width: r.w, height: r.h })));
+    }
+  }
+  // The picture's side: the actor and every scene, a pure function of t.
+  function paint(t) {
+    const a = actorAt(t);
+    drawActor(a);
+    for (const sc of SC) {
+      const on = t >= sc.start - 0.02 && t <= sc.end + 0.02;
+      sc.el.classList.toggle('on', on);
+      if (on) sc.update(t - sc.start, a.alpha ? a : { alpha: 0 });
+    }
+    blackout.style.opacity = (1 - seg(t, 0, 0.9, E.inOutSine)).toFixed(3);
+    sea.style.transform = `translate3d(${fx(Math.sin(t * 0.09) * 40)}px,${fx(Math.cos(t * 0.07) * 22)}px,0)`;
+  }
+
+  function seekVideo(v, time) {
+    return new Promise(res => {
+      const done = () => { clearTimeout(timer); res(); };
+      const timer = setTimeout(done, 4000);
+      v.addEventListener('seeked', done, { once: true });
+      v.currentTime = time;
+    });
+  }
+  const clipTime = (m, t) => Math.min(m.from + Math.max(0, t - m.start), (m.el.duration || 1e9) - 0.05);
+
+  if (RENDER) {
+    let ticks = 0;
+    MEDIA.forEach(m => m.el.pause());
+    window.REEL = {
+      duration: DURATION,
+      ready,
+      debug: { scenes: SC, tank },           // for a harness to inspect walls and fish; the renderer never needs it
+      async frame(t) {
+        const want = Math.round(t * 60);
+        while (ticks < want) { simulate((ticks + 1) / 60); tank.startAnimation(); CLOCK.tick(STEP); ticks++; }
+        simulate(t);
+        paint(t);
+        const waits = [];
+        for (const m of MEDIA) {
+          if (t < m.start - 0.2 || t > m.end + 0.2) continue;
+          const ct = clipTime(m, t);
+          if (Math.abs(m.el.currentTime - ct) > 1e-4) waits.push(seekVideo(m.el, ct));
+        }
+        await Promise.all(waits);
+      }
+    };
+    return;
+  }
+
+  // ── live mode ──
+  try { await ready; } catch (e) { console.error(e); }
+  const hud = document.getElementById('hud'), bar = hud.querySelector('.bar'), fill = bar.querySelector('i'), clock = hud.querySelector('.time');
+  hud.hidden = false;
+  const fit = () => {
+    const s = Math.min(innerWidth / W, innerHeight / H);
+    stage.style.transform = `translate(${fx((innerWidth - W * s) / 2)}px,${fx((innerHeight - H * s) / 2)}px) scale(${s.toFixed(5)})`;
+  };
+  fit(); addEventListener('resize', fit);
+  let playing = true, base = performance.now() - (parseFloat(Q.get('t')) || 0) * 1000, held = 0;
+  const now = () => playing ? (performance.now() - base) / 1000 : held;
+  const seekTo = s => { s = Math.max(0, Math.min(DURATION, s)); if (playing) base = performance.now() - s * 1000; else held = s; };
+  addEventListener('keydown', e => {
+    if (e.key === ' ') { e.preventDefault(); if (playing) { held = now(); playing = false; } else { playing = true; seekTo(held >= DURATION ? 0 : held); } }
+    else if (e.key === 'ArrowRight') seekTo(now() + 5);
+    else if (e.key === 'ArrowLeft') seekTo(now() - 5);
+    else if (e.key === 'r' || e.key === 'R') { playing = true; seekTo(0); }
+  });
+  bar.addEventListener('click', e => { const r = bar.getBoundingClientRect(); seekTo((e.clientX - r.left) / r.width * DURATION); });
+  let idle; const wake = () => { hud.classList.remove('idle'); clearTimeout(idle); idle = setTimeout(() => hud.classList.add('idle'), 2200); };
+  addEventListener('mousemove', wake); wake();
+  (function loop() {
+    let t = now();
+    if (t >= DURATION) { t = DURATION; if (playing) { held = t; playing = false; } }
+    simulate(t);
+    tank.startAnimation();                     // an empty tank idles; the motes should not
+    paint(t);
+    for (const m of MEDIA) {
+      const on = t >= m.start - 0.25 && t <= m.end + 0.25;
+      if (!on || !playing) { if (!m.el.paused) m.el.pause(); if (!on) continue; }
+      const ct = clipTime(m, t);
+      if (Math.abs(m.el.currentTime - ct) > 0.3) m.el.currentTime = ct;
+      if (playing && m.el.paused) m.el.play().catch(() => {});
+    }
+    fill.style.width = (t / DURATION * 100).toFixed(2) + '%';
+    clock.textContent = t.toFixed(1);
+    requestAnimationFrame(loop);
+  })();
+})().catch(err => {
+  const pre = document.createElement('pre'); pre.id = 'err';
+  pre.textContent = 'sizzle-reel rig failed: ' + (err && err.stack || err) + '\nFix Assets/media-kit.json (the `reel` block) or its fetch path and reload. Nothing was rendered.';
+  document.body.appendChild(pre);
+  console.error(err);
+});
+</script>
+</body>
+</html>

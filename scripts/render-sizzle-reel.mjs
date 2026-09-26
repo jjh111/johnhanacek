@@ -1,0 +1,133 @@
+// Renders Assets/sizzle-reel.html to MP4, one frame at a time, on the rig's virtual clock.
+//   node scripts/render-sizzle-reel.mjs                         → Assets/media-kit/video/sizzle-reel.mp4 (1920×1080, 60 fps)
+//   node scripts/render-sizzle-reel.mjs --fps=30                → half the frames, for a quick proof
+//   node scripts/render-sizzle-reel.mjs --from=17.5 --to=27.5   → one scene while you cut (the tank is
+//                                                                 still simulated from 0, so it matches)
+//   node scripts/render-sizzle-reel.mjs --stills=2.4,9,21       → PNGs at those seconds, no video
+//   node scripts/render-sizzle-reel.mjs --seed=11               → grow a different tank
+//   --crf=18 (x264 quality, lower is better) · --out=path.mp4
+//
+// Why frame by frame: a screen recording (render-media-kit.mjs --video) keeps whatever the
+// browser manages in real time, so a heavy frame is a dropped frame. Here the rig's clock only
+// moves when REEL.frame(t) is called: the fish engine gets exactly one 60 Hz tick per 1/60 s of
+// reel, every clip is SEEKED to its exact frame, and only then is the page captured. A slow
+// machine makes the same film, just later.
+//
+// Chromium as Playwright ships it cannot decode H.264, so every .mp4 the rig asks for is answered
+// with a short-GOP VP9 transcode from .local/sizzle-cache/ (made on first use, reused while the
+// source file is unchanged). The page itself keeps pointing at the real .mp4 files.
+// Needs ffmpeg with libx264 and libvpx-vp9. Output lands in Assets/media-kit/ (gitignored).
+import { chromium } from 'playwright-core';
+import { spawn, execFileSync } from 'node:child_process';
+import { mkdirSync, existsSync, statSync, writeFileSync, readFileSync } from 'node:fs';
+import { once } from 'node:events';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve, basename } from 'node:path';
+import { serveVerified } from './serve-verified.mjs';
+
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const CACHE = resolve(ROOT, '.local/sizzle-cache');
+const args = process.argv.slice(2);
+const flag = (k, d) => { const a = args.find(x => x.startsWith(`--${k}=`)); return a ? a.slice(k.length + 3) : d; };
+const FPS = +flag('fps', 60);
+const FROM = +flag('from', 0);
+const TO = flag('to', null);
+const SEED = flag('seed', null);
+const CRF = flag('crf', '18');
+const STILLS = flag('stills', '').split(',').filter(Boolean).map(Number).sort((a, b) => a - b);
+const OUT = resolve(ROOT, flag('out', 'Assets/media-kit/video/sizzle-reel.mp4'));
+const CHROMIUM = process.env.CHROMIUM_PATH || chromium.executablePath();
+if (!(FPS > 0 && FPS <= 60 && 60 % FPS === 0)) throw new Error('--fps must divide 60 (60, 30, 20, 15…): the engine ticks at 60 Hz');
+
+mkdirSync(CACHE, { recursive: true });
+function webmFor(mp4) {
+  const st = statSync(mp4);
+  const out = resolve(CACHE, `${basename(mp4, '.mp4').replace(/[^\w.-]+/g, '_')}-${st.size}-${Math.round(st.mtimeMs)}.webm`);
+  if (!existsSync(out)) {
+    console.log(`transcoding ${basename(mp4)} → VP9 (first use only)`);
+    execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', mp4, '-an', '-c:v', 'libvpx-vp9', '-g', '6',
+      '-crf', '20', '-b:v', '0', '-deadline', 'good', '-cpu-used', '4', '-row-mt', '1', out]);
+  }
+  return out;
+}
+// Transcode every clip the edit names BEFORE the browser starts: done inside the route handler,
+// a long encode would block Node's event loop mid-load and time the page out.
+const reel = JSON.parse(readFileSync(resolve(ROOT, 'Assets/media-kit.json'), 'utf8')).reel;
+for (const sc of reel.scenes) for (const b of sc.beats || []) if (b.video) webmFor(resolve(ROOT, 'Assets', b.video));
+
+const srv = await serveVerified(ROOT);            // proves the port is ours before a frame is drawn
+// The page loads its type from Google Fonts. Where outbound HTTPS must go through a proxy (a CI
+// box, a cloud session), hand Chromium the proxy for https:// only, so the local http server the
+// rig is served from stays direct.
+const proxy = process.env.HTTPS_PROXY || process.env.https_proxy;
+const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true,
+  args: proxy ? [`--proxy-server=https=${new URL(proxy).host}`] : [] });
+let ff = null;
+try {
+  const ctx = await browser.newContext({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1, colorScheme: 'dark' });
+  await ctx.route(/\.mp4(\?.*)?$/i, route => {
+    const file = resolve(ROOT, decodeURIComponent(new URL(route.request().url()).pathname.slice(1)));
+    if (!existsSync(file)) return route.continue();
+    return route.fulfill({ path: webmFor(file), contentType: 'video/webm' });
+  });
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+  const url = `http://127.0.0.1:${srv.port}/Assets/sizzle-reel.html?render=1${SEED ? '&seed=' + SEED : ''}`;
+  await page.goto(url, { waitUntil: 'load', timeout: 120000 });
+  // polling by interval: in render mode the rig owns requestAnimationFrame, so rAF polling never fires
+  await page.waitForFunction(() => window.REEL || document.getElementById('err'), null, { timeout: 60000, polling: 100 });
+  const failed = await page.$eval('#err', e => e.textContent).catch(() => null);
+  if (failed) throw new Error(failed);
+  await page.evaluate(() => window.REEL.ready);
+  // A reel in fallback fonts is worse than no reel: refuse instead of rendering Times.
+  const fonts = await page.evaluate(() => ['200 80px Raleway', '500 20px "JetBrains Mono"'].map(f => document.fonts.check(f)));
+  if (fonts.includes(false)) throw new Error('web fonts did not load (Raleway / JetBrains Mono) — check the network, nothing was rendered');
+  if (errors.length) throw new Error('the rig reported errors before the first frame:\n  ' + errors.join('\n  '));
+  const duration = await page.evaluate(() => window.REEL.duration);
+  const end = Math.min(duration, TO == null ? duration : +TO);
+  const cdp = await ctx.newCDPSession(page);
+  const capture = async () => Buffer.from((await cdp.send('Page.captureScreenshot', { format: 'png', optimizeForSpeed: true })).data, 'base64');
+  const frame = t => page.evaluate(t => window.REEL.frame(t), t);
+
+  if (STILLS.length) {
+    const dir = resolve(dirname(OUT), 'stills');
+    mkdirSync(dir, { recursive: true });
+    for (const t of STILLS) {
+      await frame(t);
+      const file = resolve(dir, `sizzle-${t.toFixed(2)}s.png`);
+      writeFileSync(file, await capture());
+      console.log('wrote', file.replace(ROOT + '/', ''));
+    }
+  } else {
+    mkdirSync(dirname(OUT), { recursive: true });
+    ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'png', '-i', '-',
+      // PNG frames are RGB; tag and convert as BT.709 so the deep-sea blacks don't shift in players
+      '-vf', 'scale=out_color_matrix=bt709:out_range=tv', '-pix_fmt', 'yuv420p',
+      '-c:v', 'libx264', '-preset', 'slow', '-crf', CRF, '-x264-params', 'aq-mode=3',
+      '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv',
+      '-movflags', '+faststart', OUT], { stdio: ['pipe', 'inherit', 'inherit'] });
+    const frames = Math.round((end - FROM) * FPS);
+    const t0 = Date.now();
+    for (let i = 0; i < frames; i++) {
+      const t = FROM + i / FPS;
+      await frame(t);
+      if (!ff.stdin.write(await capture())) await once(ff.stdin, 'drain');
+      if (i % FPS === FPS - 1 || i === frames - 1) {
+        const rate = (i + 1) / ((Date.now() - t0) / 1000);
+        process.stdout.write(`\r  ${t.toFixed(1)} s  frame ${i + 1}/${frames}  ${rate.toFixed(1)} fps  eta ${Math.round((frames - i - 1) / rate)} s   `);
+      }
+      if (errors.length) throw new Error(`the rig reported errors at ${t.toFixed(2)} s:\n  ` + errors.join('\n  '));
+    }
+    ff.stdin.end();
+    const [code] = await once(ff, 'close');
+    if (code !== 0) throw new Error('ffmpeg exited ' + code);
+    ff = null;
+    console.log(`\nwrote ${OUT.replace(ROOT + '/', '')} (${(statSync(OUT).size / 1e6).toFixed(1)} MB, ${(end - FROM).toFixed(1)} s at ${FPS} fps)`);
+  }
+} finally {
+  if (ff) ff.kill();
+  await browser.close();
+  srv.stop();
+}
