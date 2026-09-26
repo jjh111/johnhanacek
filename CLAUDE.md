@@ -45,6 +45,7 @@ These are intentional. All carry `<meta name="robots" content="noindex, nofollow
 | `Assets/DemosPlayground/pretext-wrap-test.html` | Test rig for `scripts/pretext-wrap.js` — circle and ellipse obstacles with prose flowing both sides. |
 | `Assets/media-kit.html` | Render rig for the social media pack — 13 boards in the site's tokens (7 endorsements, clients, services ×2, outcomes, awards, offer). **The copy lives in `Assets/media-kit.json`** — edit that file, never board markup; the rig only draws. `node scripts/render-media-kit.mjs` screenshots each at 2x into `Assets/media-kit/` (square / portrait / wide; `--light`, `--only=`, `--video` for 12 s MP4s). Both rigs serve the repo via `scripts/serve-verified.mjs` (port-probe + sentinel proof — the 2026-09-10 404-resume incident). |
 | `Assets/sizzle-reel.html` | 70 s portfolio sizzle reel (1920×1080), the media kit's moving sibling. **The edit lives in `media-kit.json` → `reel`** (scenes, copy, clip in-points, seconds on a 96 BPM grid) under the boards' evidence rule; the rig only knows how things move. One grammar: a single outline, the "actor", unfolds out of each chapter's nav mark (jh-shapes.js) into the window onto the work and folds into the next chapter's mark; one tank of the real fish engine runs underneath, and the opening loop IS the fish that swims the reel. Plays live in a browser (space, ←/→, `?t=`); `node scripts/render-sizzle-reel.mjs` renders it frame-exact on a virtual clock (`?render=1`: Date.now/rAF owned by the renderer, engine ticked at 60 Hz, every clip seeked) into `Assets/media-kit/video/sizzle-reel.mp4` — `--fps=30`, `--from=/--to=` to cut one scene, `--stills=` for PNGs. Chromium can't decode H.264, so clips are served as VP9 transcodes cached in `.local/sizzle-cache/`. |
+| `Assets/sizzle-reel-2.html` | Cut 2 of the reel: exactly 60 s on a 120 BPM grid. Cut 1 stays as it was. **The edit lives in `media-kit.json` → `reel2`.** The site's own command bar narrates: the hero oval collapses into the bar, each section is a question typed over the last one's selection (who is john?, what has he shipped?, add 3 small fish and 2 coral…), and the last answer opens the bar back into the oval. The fish tank is a fixed band along the bottom for the whole cut, with no walls. Fish arrive only when the story makes them: the opening loop, and the scene-language command, which spawns through the real stroke recognizer while its plan card turns into a counting receipt. Motion grammar: lines slide up out of their own clip; the work pushes in from the right inside one window; counters roll like an odometer. `node scripts/render-sizzle-reel.mjs --cut=2` renders it (same flags as cut 1) into `Assets/media-kit/video/sizzle-reel-2.mp4`. |
 
 **Never commit business/personal documents (invoices, contracts) to this repo — it is public and served.** Resumes in `Assets/` are intentionally public.
 
@@ -418,8 +419,9 @@ llms.txt                  — AI-readable site summary
 CNAME                     — www.johnhanacek.com (GitHub Pages)
 Assets/
   search-chunks.json      — search index
-  media-kit.json          — the media pack's copy (13 boards) and the sizzle reel's edit (`reel`);
-                            media-kit.html and sizzle-reel.html only draw them
+  media-kit.json          — the media pack's copy (13 boards) and the sizzle reel's edits (`reel`,
+                            cut 1, and `reel2`, cut 2); media-kit.html and the two sizzle-reel
+                            rigs only draw them
   favicon-jhsigfrmpaper.png
   JHsig.svg               — signature used in nav + footer + hero (vector; white fill baked in)
   footer-JHsig.png        — superseded raster signature; still referenced by the frozen Archive/ snapshots, so it stays

@@ -1,5 +1,7 @@
 // Renders Assets/sizzle-reel.html to MP4, one frame at a time, on the rig's virtual clock.
 //   node scripts/render-sizzle-reel.mjs                         → Assets/media-kit/video/sizzle-reel.mp4 (1920×1080, 60 fps)
+//   node scripts/render-sizzle-reel.mjs --cut=2                 → cut 2 instead: Assets/sizzle-reel-2.html, the `reel2`
+//                                                                 edit, → Assets/media-kit/video/sizzle-reel-2.mp4
 //   node scripts/render-sizzle-reel.mjs --fps=30                → half the frames, for a quick proof
 //   node scripts/render-sizzle-reel.mjs --from=17.5 --to=27.5   → one scene while you cut (the tank is
 //                                                                 still simulated from 0, so it matches)
@@ -35,7 +37,12 @@ const TO = flag('to', null);
 const SEED = flag('seed', null);
 const CRF = flag('crf', '18');
 const STILLS = flag('stills', '').split(',').filter(Boolean).map(Number).sort((a, b) => a - b);
-const OUT = resolve(ROOT, flag('out', 'Assets/media-kit/video/sizzle-reel.mp4'));
+// Each cut is a rig page plus its own edit in media-kit.json. Cut 1 stays renderable as it was.
+const CUTS = { 1: { page: 'Assets/sizzle-reel.html', edit: 'reel', name: 'sizzle-reel' },
+               2: { page: 'Assets/sizzle-reel-2.html', edit: 'reel2', name: 'sizzle-reel-2' } };
+const CUT = CUTS[flag('cut', '1')];
+if (!CUT) throw new Error(`--cut must be one of ${Object.keys(CUTS).join(', ')}`);
+const OUT = resolve(ROOT, flag('out', `Assets/media-kit/video/${CUT.name}.mp4`));
 const CHROMIUM = process.env.CHROMIUM_PATH || chromium.executablePath();
 if (!(FPS > 0 && FPS <= 60 && 60 % FPS === 0)) throw new Error('--fps must divide 60 (60, 30, 20, 15…): the engine ticks at 60 Hz');
 
@@ -52,8 +59,9 @@ function webmFor(mp4) {
 }
 // Transcode every clip the edit names BEFORE the browser starts: done inside the route handler,
 // a long encode would block Node's event loop mid-load and time the page out.
-const reel = JSON.parse(readFileSync(resolve(ROOT, 'Assets/media-kit.json'), 'utf8')).reel;
-for (const sc of reel.scenes) for (const b of sc.beats || []) if (b.video) webmFor(resolve(ROOT, 'Assets', b.video));
+// Cut 2 nests beats inside a scene's items, so walk both.
+const reel = JSON.parse(readFileSync(resolve(ROOT, 'Assets/media-kit.json'), 'utf8'))[CUT.edit];
+for (const sc of reel.scenes) for (const b of [sc, ...(sc.items || [])].flatMap(x => x.beats || [])) if (b.video) webmFor(resolve(ROOT, 'Assets', b.video));
 
 const srv = await serveVerified(ROOT);            // proves the port is ours before a frame is drawn
 // The page loads its type from Google Fonts. Where outbound HTTPS must go through a proxy (a CI
@@ -74,7 +82,7 @@ try {
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-  const url = `http://127.0.0.1:${srv.port}/Assets/sizzle-reel.html?render=1${SEED ? '&seed=' + SEED : ''}`;
+  const url = `http://127.0.0.1:${srv.port}/${CUT.page}?render=1${SEED ? '&seed=' + SEED : ''}`;
   await page.goto(url, { waitUntil: 'load', timeout: 120000 });
   // polling by interval: in render mode the rig owns requestAnimationFrame, so rAF polling never fires
   await page.waitForFunction(() => window.REEL || document.getElementById('err'), null, { timeout: 60000, polling: 100 });
@@ -96,7 +104,7 @@ try {
     mkdirSync(dir, { recursive: true });
     for (const t of STILLS) {
       await frame(t);
-      const file = resolve(dir, `sizzle-${t.toFixed(2)}s.png`);
+      const file = resolve(dir, `${CUT.name.replace('-reel', '')}-${t.toFixed(2)}s.png`);
       writeFileSync(file, await capture());
       console.log('wrote', file.replace(ROOT + '/', ''));
     }

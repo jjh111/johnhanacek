@@ -1,5 +1,5 @@
 {
-  "$comment": "THE content source for the media kit (Assets/media-kit.html) and, in `reel`, for the sizzle reel (Assets/sizzle-reel.html). Every board's copy lives here — edit THIS file, never the board markup in the rig. Render: node scripts/render-media-kit.mjs (PNGs) / --video (MP4s). Strings may carry small inline markup (<em>, <strong>, <br>) — nothing else. Items may use label (text), svg (key into svgs{} — inline artwork reading currentColor, theme-safe), mark (key into the rig's MARKS map — pixel files used as CSS masks over currentColor, exactly the services.html doctrine) or img (a plain file path). Evidence rule unchanged: a card never claims what the site doesn't; the copy mirrors services.html, about.html and Assets/resume.json — change it there first when the two disagree.",
+  "$comment": "THE content source for the media kit (Assets/media-kit.html) and, in `reel` and `reel2`, for the two cuts of the sizzle reel (Assets/sizzle-reel.html, Assets/sizzle-reel-2.html). Every board's copy lives here — edit THIS file, never the board markup in the rig. Render: node scripts/render-media-kit.mjs (PNGs) / --video (MP4s). Strings may carry small inline markup (<em>, <strong>, <br>) — nothing else. Items may use label (text), svg (key into svgs{} — inline artwork reading currentColor, theme-safe), mark (key into the rig's MARKS map — pixel files used as CSS masks over currentColor, exactly the services.html doctrine) or img (a plain file path). Evidence rule unchanged: a card never claims what the site doesn't; the copy mirrors services.html, about.html and Assets/resume.json — change it there first when the two disagree.",
   "meta": {
     "updated": "2026-09-26",
     "site": "johnhanacek.com",
@@ -333,6 +333,65 @@
       { "type": "logos", "dur": 5, "shape": "diamond", "board": "clients" },
       { "type": "offer", "dur": 5, "shape": "star", "board": "offer" },
       { "type": "end", "dur": 5, "shape": "triangle", "board": "offer" }
+    ]
+  },
+  "reel2": {
+    "$comment": "Cut 2 of the sizzle reel (cut 1 is `reel` above, kept as it was). Assets/sizzle-reel-2.html draws it and node scripts/render-sizzle-reel.mjs --cut=2 renders it. The site's command bar narrates: every section is a question a visitor would type, answered from the same audited copy the search chunks, resume.json and the boards carry, under the boards' evidence rule. Exactly 60 s on a 120 BPM grid (a beat is 0.5 s, a bar 2 s); scene `dur` and every `at` are seconds. Lines are arrays because every break is designed, never left to wrap. Quotes may be verbatim excerpts of an endorsement in resume.json.",
+    "seed": 7,
+    "scenes": [
+      { "type": "open", "dur": 2.5, "caption": "draw a loop", "reveal": ": a fish" },
+      { "type": "title", "dur": 4, "name": "John Hanacek", "tagline": ["Design engineer", "Product designer", "Artist"] },
+      { "type": "answer", "dur": 4.5, "query": "who is john?", "tiers": ["BM25", "MiniLM", "LFM2.5 · WebGPU"],
+        "lines": ["A capital-D Designer:", "solves problems people experience", "but can’t see at first."],
+        "stats": [ { "at": 0.9, "n": 14, "label": "years designing" }, { "at": 1.05, "n": 3, "label": "products shipped" },
+                   { "at": 1.2, "n": 3, "label": "award wins" }, { "at": 1.35, "n": 4, "label": "domains: AI, web, 3D, XR" } ] },
+      { "type": "results", "dur": 13.5, "query": "what has he shipped?", "tiers": ["BM25", "MiniLM"],
+        "rows": [
+          { "page": "nanome2", "shape": "roundedSquare", "title": "Nanome 2 + MARA AI", "micro": "XR + AI molecular design, shipped to pharma." },
+          { "page": "design", "shape": "roundedSquare", "title": "AROC HUD · BadVR", "micro": "Hand-tracked AR HUD for Quest and HoloLens 2.", "thumb": "./badvr-hud-poster.webp" },
+          { "page": "openprose", "shape": "roundedSquare", "title": "OpenProse", "micro": "137 working homepages, distilled to one.", "thumb": "./openprose-loop-poster.webp" },
+          { "page": "services", "shape": "star", "title": "JH Coaching OS", "micro": "An AI coach that adapts to your business." }
+        ],
+        "items": [
+          { "dur": 4.5, "page": "nanome2", "shape": "roundedSquare", "eyebrow": "Nanome · Lead XR product designer · 2022–24", "headline": ["Scientists", "in VR"],
+            "beats": [
+              { "at": 0, "video": "./nanome-hero.mp4", "from": 6.2, "line": ["XR + AI molecular design,", "shipped to pharma."] },
+              { "at": 2.35, "img": "./nanome2-beforeafter.webp", "pan": true, "line": ["Nanome 1 → Nanome 2,", "rebuilt from the ground up."] } ] },
+          { "dur": 2.5, "page": "design", "shape": "roundedSquare", "eyebrow": "BadVR · Immersive UX · 2021–22", "headline": ["Responders", "in AR"],
+            "beats": [ { "at": 0, "img": "./badvr-hud-poster.webp", "zoom": [1.0, 1.08], "line": ["Situational-awareness HUD", "on Quest and HoloLens 2."] } ] },
+          { "dur": 4.5, "page": "openprose", "shape": "roundedSquare", "eyebrow": "OpenProse · Founding design · 2026", "headline": ["Founders", "with AI"],
+            "beats": [
+              { "at": 0, "video": "./openprose-loop.mp4", "from": 5.5, "lead": "Brand to live homepage in two months.",
+                "stats": [ { "n": 137, "label": "live approaches" }, { "n": 471, "label": "commits" } ] },
+              { "at": 2.1, "quote": ["“A man made", "for this moment.”"], "cite": ["Dan Barrett", "CEO, OpenProse"] } ] }
+        ] },
+      { "type": "feature", "dur": 5.5, "query": "what has he won?", "tiers": ["BM25", "MiniLM"], "page": "design", "shape": "roundedSquare",
+        "eyebrow": "AvatarMEDIC · Founding CEO · 2019–21", "headline": ["Telepresence", "medicine"],
+        "beats": [
+          { "at": 0, "video": "./Avatarmedic-Holotriageclip-1.mp4", "from": 4.0, "caption": "HoloTRIAGE: medical triage training on HoloLens 2" },
+          { "at": 3.0, "video": "./AvatarMEDIC -Clinic-concept.mp4", "from": 21.5, "caption": "A digital-twin robotic medical assistant" } ],
+        "awards": [
+          { "at": 1.0, "yr": "2020", "text": "Microsoft Reactor Hackathon winner" },
+          { "at": 1.2, "yr": "2021", "text": "NIST CHARIoT Challenge, Phase 2 winner" },
+          { "at": 3.2, "yr": "2022", "text": "AsMA R&D Innovation Award" } ] },
+      { "type": "scene", "dur": 4.5, "query": "add 3 small fish and 2 coral", "tiers": ["scene language"],
+        "plan": [ { "n": 3, "what": "small fish", "glyph": "loop" }, { "n": 2, "what": "coral", "glyph": "square" } ],
+        "receipt": "read from the canvas" },
+      { "type": "art", "dur": 5, "query": "show me his art", "tiers": ["BM25", "MiniLM"], "page": "art", "shape": "circle",
+        "eyebrow": "Art · writing · installations", "headline": ["Imagination is", "within reality."],
+        "beats": [
+          { "at": 0, "img": "./earthstar-painting.webp", "focus": [0.62, 0.5], "zoom": [1.0, 1.12], "line": ["Earth Star", "original painting, 2025"] },
+          { "at": 2.6, "img": "./jhana-1.webp", "focus": [0.72, 0.53], "zoom": [1.6, 1.15], "line": ["Influence", "interactive installation, 2016"] } ] },
+      { "type": "logos", "dur": 4, "query": "who has he worked with?", "tiers": ["BM25", "MiniLM"], "board": "clients" },
+      { "type": "quotes", "dur": 5.5, "query": "what do people say?", "tiers": ["BM25", "MiniLM"],
+        "quotes": [
+          { "at": 0, "lines": ["“I’ve never known someone", "who practices design thinking", "as well as John.”"], "cite": ["Ben Reed", "Illustrator and designer"] },
+          { "at": 2.6, "lines": ["“I think I’d like", "to live there.”"], "cite": ["Kevin Kelly", "Founder of Wired, on John’s winning future scenario"] } ] },
+      { "type": "offer", "dur": 5.5, "query": "how do i work with john?", "tiers": ["intent"], "board": "offer",
+        "three": [ { "k": "Coach", "lines": ["Live sessions + a private", "AI workspace you keep."] },
+                   { "k": "Design", "lines": ["Workshops, research, strategy,", "prototypes, handoff."] },
+                   { "k": "Build", "lines": ["Design engineering —", "demos delivered as working code."] } ] },
+      { "type": "end", "dur": 5.5, "board": "offer" }
     ]
   },
   "svgs": {
