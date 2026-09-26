@@ -476,16 +476,22 @@ p, h1, h2, h3 { margin: 0; }
   // ── attention: what the fish look at ──────────────────────────────────
   // Freehand fish, structured data: each builder says what on screen matters and
   // when ({ t0, t1, x, y }, stage px). The fish drawn in the opening swims to a
-  // spot just left of it and tilts its nose up at it; the school gathers to the
-  // right. The two never swap sides, so they travel in parallel and the big fish
-  // never cuts through the school (which would read as a predator and scatter it).
+  // spot beside it (on whichever side it already is, so it travels as little as
+  // it can) and tilts its nose up at it; the school sweeps along the other side.
   // Both go through the engine's opt-in host hooks: every turn is the engine's arc.
   const ATTN = [];
   const look = (t0, t1, x, y) => ATTN.push({ t0, t1, x, y });
   let reelT = 0, BIG = null;                   // the reel's clock as the tank sees it; the opening's fish
   const SPOT_Y = 322, SCHOOL_Y = 296;          // tank px (stage 862 / 836); 296 is as deep as the engine lets a school waypoint go
-  const BIG_DX = -250, SCHOOL_DX = 210;        // where each stands, relative to the thing
+  const BIG_DX = 250, SCHOOL_DX = 210;         // how far to either side of the thing each one stands
   const attnAt = t => { let a = null; for (const x of ATTN) if (t >= x.t0 && t < x.t1 && (!a || x.t0 >= a.t0)) a = x; return a; };
+  const sideOf = A => {                        // decided once, from where the big fish is when it notices
+    if (A.side === undefined) {
+      A.side = BIG && BIG.x > A.x ? 1 : -1;
+      if (A.x + A.side * BIG_DX < 140 || A.x + A.side * BIG_DX > W - 140) A.side = -A.side;
+    }
+    return A.side;
+  };
   const angDiff = (a, b) => { let d = a - b; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; };
   // a heading with its tilt held to ±m of horizontal; straight up keeps the side it faces
   const clampTilt = (a, m, cur) => {
@@ -498,7 +504,7 @@ p, h1, h2, h3 { margin: 0; }
     if (f !== BIG) return null;
     const A = attnAt(reelT);
     if (!A) return null;
-    const sx = Math.max(140, Math.min(W - 140, A.x + BIG_DX));
+    const sx = Math.max(140, Math.min(W - 140, A.x + sideOf(A) * BIG_DX));
     const dx = sx - f.x, dy = SPOT_Y - f.y, d = Math.hypot(dx, dy);
     if (d > (f.reelAtSpot ? 130 : 46)) {       // swim over, faster the further it has to go
       f.reelAtSpot = false;
@@ -522,7 +528,7 @@ p, h1, h2, h3 { margin: 0; }
   function schoolSpot(c) {
     const A = attnAt(reelT);
     if (!A) return null;
-    const x = Math.max(160, Math.min(W - 160, A.x + SCHOOL_DX + 170 * Math.sin(reelT * 0.55)));
+    const x = Math.max(160, Math.min(W - 160, A.x - sideOf(A) * SCHOOL_DX + 170 * Math.sin(reelT * 0.55)));
     return { x, y: SCHOOL_Y, pace: 1 + Math.min(1, Math.abs(x - c.x) / 500) };   // hurry when far
   }
   const tank = FishCanvas(tankEl, { transparent: true, seedFish: false, seedJellyfish: false, steer: steerBig, schoolTarget: schoolSpot, calmSchool: true });
@@ -725,8 +731,7 @@ p, h1, h2, h3 { margin: 0; }
       let THUMB = { x: 424, y: 196, w: 160, h: 90 };
       LAYOUT.push(() => { THUMB = box(thumbs[0]); });
       const ROW_IN = q.enter - t0 + 0.04, OUT = sc.end - 0.34;
-      look(t0 + ROW_IN, starts[0], 820, 400);
-      look(starts[0], sc.end, WIN.x + WIN.w / 2, WIN.y + WIN.h / 2);
+      look(t0 + ROW_IN, sc.end, WIN.x + WIN.w / 2, WIN.y + WIN.h / 2);   // head for where the work will open
       return (lt, t) => {
         // the result list: the first thumbnail is the window itself, until it dives
         rows.forEach((r, i) => {
@@ -798,9 +803,9 @@ p, h1, h2, h3 { margin: 0; }
     scene(sc, q) {
       const G = JHStrokes.points;
       const icon = k => `<svg viewBox="0 0 24 24">${JHStrokes.marks[k === 'square' ? 'square' : 'loop']()}</svg>`;
-      // where the command's strokes land: four medium loops to the right of the big fish, so the
-      // school forms clear of it; two squares out in the corners that sink to the seabed
-      const FISH = [[1180, 872], [1305, 930], [1430, 866], [1555, 924]], CORAL = [[330, 1000, 92], [1730, 1006, 82]];
+      // where the command's strokes land: four medium loops left of the card, clear of the big fish
+      // (it watches the card from the right, coming from the art); two squares out in the corners
+      const FISH = [[470, 872], [595, 930], [720, 866], [845, 924]], CORAL = [[300, 1000, 92], [1730, 1006, 82]];
       const strokes = FISH.map(([x, y]) => ({ pts: G.loop(x, y, 1.0), kind: 'fish' }))
         .concat(CORAL.map(([x, y, s]) => ({ pts: G.square(x, y, s), kind: 'coral' })));
       const rowOf = strokes.map(s => sc.plan.findIndex(p => (p.glyph === 'square') === (s.kind === 'coral')));
@@ -1114,7 +1119,7 @@ p, h1, h2, h3 { margin: 0; }
   let firedT = -1;
   function simulate(t) {                        // the tank's side: events, on every 60 Hz tick
     reelT = t;
-    if (t < firedT) { tank.clearFish(); tank.state.coral.length = 0; firedT = -1; BIG = null; }
+    if (t < firedT) { tank.clearFish(); tank.state.coral.length = 0; firedT = -1; BIG = null; ATTN.forEach(a => { delete a.side; }); }
     for (const ev of EVENTS) if (ev.t > firedT && ev.t <= t) ev.run();
     firedT = t;
   }
