@@ -17,7 +17,8 @@
 //
 // Chromium as Playwright ships it cannot decode H.264, so every .mp4 the rig asks for is answered
 // with a short-GOP VP9 transcode from .local/sizzle-cache/ (made on first use, reused while the
-// source file is unchanged). The page itself keeps pointing at the real .mp4 files.
+// source file is unchanged), with byte ranges so the page can seek it. The page itself keeps
+// pointing at the real .mp4 files.
 // Needs ffmpeg with libx264 and libvpx-vp9. Output lands in Assets/media-kit/ (gitignored).
 import { chromium } from 'playwright-core';
 import { spawn, execFileSync } from 'node:child_process';
@@ -73,10 +74,24 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
 let ff = null;
 try {
   const ctx = await browser.newContext({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1, colorScheme: 'dark' });
+  // Clips are answered with byte ranges. A media element only seeks a progressive file it can
+  // range-request: served whole (and python's http.server answers no ranges either), `seekable`
+  // is empty and every seek snaps back to 0, so each clip filmed as its first frame. Until
+  // 2026-09-26 both cuts did exactly that, and only the CSS push-in moved.
+  const clips = new Map();
   await ctx.route(/\.mp4(\?.*)?$/i, route => {
     const file = resolve(ROOT, decodeURIComponent(new URL(route.request().url()).pathname.slice(1)));
     if (!existsSync(file)) return route.continue();
-    return route.fulfill({ path: webmFor(file), contentType: 'video/webm' });
+    const webm = webmFor(file);
+    if (!clips.has(webm)) clips.set(webm, readFileSync(webm));
+    const buf = clips.get(webm), size = buf.length;
+    const headers = { 'Content-Type': 'video/webm', 'Accept-Ranges': 'bytes' };
+    const r = /^bytes=(\d*)-(\d*)$/.exec(route.request().headers().range || '');
+    if (!r || (r[1] === '' && r[2] === '')) return route.fulfill({ status: 200, headers, body: buf });
+    const from = r[1] === '' ? Math.max(0, size - +r[2]) : +r[1];
+    const to = r[1] !== '' && r[2] !== '' ? Math.min(+r[2], size - 1) : size - 1;
+    if (from >= size || from > to) return route.fulfill({ status: 416, headers: { ...headers, 'Content-Range': `bytes */${size}` }, body: '' });
+    return route.fulfill({ status: 206, headers: { ...headers, 'Content-Range': `bytes ${from}-${to}/${size}` }, body: buf.subarray(from, to + 1) });
   });
   const page = await ctx.newPage();
   const errors = [];
@@ -102,8 +117,15 @@ try {
   if (STILLS.length) {
     const dir = resolve(dirname(OUT), 'stills');
     mkdirSync(dir, { recursive: true });
+    let prev = -1;
     for (const t of STILLS) {
+      // A clip that only just became visible has been seeked but not yet painted, so a lone
+      // frame shows its pane black. Run the three frames before it first, as the film does.
+      // (on the engine's own 60 Hz grid: an off-grid time can read as a hair earlier than the last tick)
+      const f = Math.round(t * 60);
+      for (let k = 3; k >= 1; k--) if ((f - k) / 60 > prev) await frame((f - k) / 60);
       await frame(t);
+      prev = t;
       const file = resolve(dir, `${CUT.name.replace('-reel', '')}-${t.toFixed(2)}s.png`);
       writeFileSync(file, await capture());
       console.log('wrote', file.replace(ROOT + '/', ''));

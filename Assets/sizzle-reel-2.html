@@ -78,7 +78,7 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   border: 1px solid rgba(var(--cyan-dim-rgb), 0.24); filter: drop-shadow(0 8px 40px var(--elevation)); pointer-events: none; }
 #glass::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(to bottom, rgba(var(--cyan-dim-rgb), 0.08), transparent 55%); }
 #glass .ping { position: absolute; inset: -1px; border-radius: inherit; box-shadow: 0 0 0 1px rgba(var(--cyan-dim-rgb), 0.9), 0 0 24px rgba(var(--cyan-dim-rgb), 0.55); opacity: 0; }
-#bar { left: 400px; top: 56px; width: 1120px; height: 76px; display: flex; align-items: center; gap: 22px; padding: 0 28px; box-sizing: border-box; opacity: 0; }
+#bar { left: 96px; top: 56px; width: 1728px; height: 76px; display: flex; align-items: center; gap: 22px; padding: 0 28px; box-sizing: border-box; opacity: 0; }
 #bar .mag { width: 34px; height: 34px; color: var(--cyan); flex: none; }
 #bar .mag svg { width: 100%; height: 100%; display: block; overflow: visible; }
 #bar .mag svg * { fill: none; stroke: currentColor; vector-effect: non-scaling-stroke; }
@@ -88,7 +88,7 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 #bar .qt.sel { background: rgba(var(--cyan-dim-rgb), 0.38); }
 #bar .caret { display: inline-block; width: 2px; height: 42px; background: var(--cyan); margin-left: 3px; box-shadow: 0 0 10px rgba(var(--cyan-dim-rgb), 0.7); }
 #bar .kbd { font: 500 17px/1 var(--font-mono); color: var(--ink-faint); border: 1px solid rgba(var(--cyan-dim-rgb), 0.3); border-radius: 6px; padding: 7px 9px; letter-spacing: 0.04em; }
-#tiers { left: 400px; top: 146px; width: 1120px; height: 30px; }
+#tiers { left: 96px; top: 146px; width: 1728px; height: 30px; }
 .tg { position: absolute; left: 0; top: 0; display: flex; gap: 10px; }
 .tier { display: inline-flex; align-items: center; gap: 8px; font: 500 15px/1 var(--font-mono); letter-spacing: 0.12em; color: var(--ink-quiet);
   padding: 6px 12px; border-radius: 999px; border: 1px solid rgba(var(--cyan-dim-rgb), 0.32); background: rgba(var(--surface-rgb), 0.5); }
@@ -162,7 +162,10 @@ p, h1, h2, h3 { margin: 0; }
 #chip b { font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--cyan); }
 #chip span { color: var(--ink-quiet); font-variant-numeric: tabular-nums; }
 
-/* answer: the thesis, John's own line, then the numbers */
+/* answer: the thesis, John's own line, then the numbers, as one block */
+.ansc { display: flex; flex-direction: column; }
+.ansc .supw { margin-top: 24px; }
+.ansc .astats { margin-top: 50px; }
 .ans { font: 200 84px/1.1 var(--font-display); color: var(--text-subhead); letter-spacing: 0.005em; }
 .ans.gold { color: var(--gold); }
 .sup { font: 500 26px/1.45 var(--font-mono); color: var(--ink-quiet); }
@@ -170,7 +173,7 @@ p, h1, h2, h3 { margin: 0; }
 .endline { font: 500 26px/1 var(--font-mono); letter-spacing: 0.06em; color: var(--ink-quiet); white-space: nowrap; }
 
 /* results */
-.rows { left: 400px; top: 196px; width: 1120px; display: flex; flex-direction: column; gap: 12px; }
+.rows { left: 96px; top: 204px; width: 780px; display: flex; flex-direction: column; gap: 12px; }
 .row { display: flex; gap: 24px; align-items: center; height: 96px; }
 .thumb { width: 160px; height: 90px; border-radius: 9px; overflow: hidden; flex: none; background: #01070d; position: relative; }
 .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -181,6 +184,7 @@ p, h1, h2, h3 { margin: 0; }
 .thumb.tile svg * { fill: none; stroke: currentColor; stroke-width: 1.8; vector-effect: non-scaling-stroke; }
 .meta { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .badge { display: inline-flex; gap: 9px; align-items: center; font: 500 15px/1 var(--font-mono); letter-spacing: 0.14em; color: var(--cyan); }
+.lm.badge > .li { display: inline-flex; gap: 9px; align-items: center; }   /* the mask holds one line: the glyph's gap lives on it */
 .badge svg, .wbadge svg { width: 15px; height: 15px; overflow: visible; }
 .badge svg *, .wbadge svg * { fill: none; stroke: currentColor; stroke-width: 1.6; vector-effect: non-scaling-stroke; }
 .rtitle { font: 300 34px/1.1 var(--font-display); color: var(--text-bright); white-space: nowrap; }
@@ -193,19 +197,19 @@ p, h1, h2, h3 { margin: 0; }
 .layer { position: absolute; inset: 0; overflow: hidden; }
 .layer > video, .layer > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 /* the page a result lives on, badged as the search results badge it */
-.wbadge { position: absolute; left: 18px; top: 16px; z-index: 2; display: inline-flex; gap: 9px; align-items: center; padding: 8px 13px 8px 11px; border-radius: 999px;
+.wbadge { position: absolute; left: 24px; top: 22px; z-index: 2; display: inline-flex; gap: 9px; align-items: center; padding: 8px 13px 8px 11px; border-radius: 999px;
   font: 500 15px/1 var(--font-mono); letter-spacing: 0.14em; color: var(--cyan); background: rgba(2, 10, 18, 0.66); border: 1px solid rgba(var(--cyan-dim-rgb), 0.32);
   transform-origin: 0 50%; }
 .wbadge.free { transform-origin: 50% 50%; }
 /* a lower third inside a window */
-.cap3 { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding: 90px 30px 24px; background: linear-gradient(to top, rgba(1, 7, 13, 0.88), rgba(1, 7, 13, 0.5) 55%, transparent); }
+.cap3 { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding: 90px 24px 22px; background: linear-gradient(to top, rgba(1, 7, 13, 0.88), rgba(1, 7, 13, 0.5) 55%, transparent); }
 .c3 { font: 500 23px/1.3 var(--font-mono); color: var(--text-bright); }
 .port { border-radius: 50%; overflow: hidden; background: #01070d; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55); }
 .ring { overflow: visible; pointer-events: none; }
 .ring circle { fill: none; stroke: rgba(var(--cyan-dim-rgb), 0.4); stroke-width: 1.2; }
 
 /* plan card (scene language) → receipt */
-.plan { left: 610px; top: 206px; width: 700px; padding: 30px 36px 34px; box-sizing: border-box; border-radius: 20px;
+.plan { left: 610px; top: 307px; width: 700px; padding: 30px 36px 34px; box-sizing: border-box; border-radius: 20px;
   background: rgba(var(--surface-rgb), 0.62); border: 1px solid rgba(var(--gold-rgb), 0.45); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5); transform-origin: 50% 0; }
 .plan .ptop { display: flex; justify-content: space-between; align-items: baseline; font: 500 17px/1 var(--font-mono); letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); }
 .plan .ptop .lang { color: var(--ink-faint); letter-spacing: 0.12em; }
@@ -253,12 +257,12 @@ p, h1, h2, h3 { margin: 0; }
 .pill .ic svg .state-ring { stroke-opacity: 0.35; }
 
 /* logos: the media kit's client wall */
-.panel { left: 136px; top: 196px; width: 1648px; height: 440px; border-radius: 22px; overflow: hidden;
+.panel { left: 96px; top: 204px; width: 1728px; height: 506px; border-radius: 22px; overflow: hidden;
   background: rgba(var(--surface-rgb), 0.55); border: 1px solid rgba(var(--cyan-dim-rgb), 0.2); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5); }
-.panel-in { position: absolute; inset: 0; padding: 40px 56px 46px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
-.panel .eyebrow { margin-bottom: 30px; }
-.group + .group { margin-top: 40px; }
-.grp { font: 500 19px/1 var(--font-mono); letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-quiet); margin-bottom: 20px; }
+.panel-in { position: absolute; inset: 0; padding: 44px 64px 48px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+.panel .eyebrow { margin-bottom: 36px; }
+.group + .group { margin-top: 52px; }
+.grp { font: 500 19px/1 var(--font-mono); letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-quiet); margin-bottom: 24px; }
 .panel .what { display: none; }
 .wall { list-style: none; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; gap: 84px; }
 .wall.teams { gap: 52px; }
@@ -274,12 +278,12 @@ p, h1, h2, h3 { margin: 0; }
 .wm .mark-op { height: 1.4em; vertical-align: -0.36em; margin-right: 0.3em; }
 
 /* intent card (how do I work with John?) */
-.intent { left: 280px; top: 196px; width: 1360px; height: 520px; border-radius: 22px; box-sizing: border-box; padding: 40px 56px 44px;
+.intent { left: 96px; top: 204px; width: 1728px; height: 506px; border-radius: 22px; box-sizing: border-box; padding: 40px 64px 42px;
   background: rgba(var(--surface-rgb), 0.6); border: 1px solid rgba(var(--gold-rgb), 0.5); box-shadow: 0 0 60px rgba(var(--gold-rgb), 0.06), 0 30px 80px rgba(0, 0, 0, 0.5);
   display: flex; flex-direction: column; transform-origin: 50% 0; }
 .intent .eyebrow { color: var(--gold); margin-bottom: 20px; }
 .intent .oh { font: 200 64px/1.12 var(--font-display); color: var(--text-subhead); }
-.three { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin: 36px 0 32px; }
+.three { display: grid; grid-template-columns: repeat(3, 1fr); gap: 64px; margin: 34px 0 28px; }
 .three > div { position: relative; display: flex; flex-direction: column; gap: 12px; padding-top: 18px; }
 .trule { position: absolute; left: 0; right: 0; top: 0; height: 1px; background: rgba(var(--cyan-dim-rgb), 0.45); transform-origin: 0 50%; }
 .three .k { font: 500 32px/1 var(--font-display); color: var(--cyan); }
@@ -564,8 +568,13 @@ p, h1, h2, h3 { margin: 0; }
       m = document.createElement('video');
       m.muted = true; m.playsInline = true; m.preload = 'auto';
       m.setAttribute('muted', ''); m.setAttribute('playsinline', '');
-      m.src = b.video;
-      MEDIA.push({ el: m, from: b.from || 0, start, end });
+      // A clip only seeks if its server answers byte ranges. The renderer does; python's
+      // http.server does not, and a clip it serves plays from 0 whatever `from` says. So live,
+      // play it from a blob, which always seeks.
+      if (RENDER) m.src = b.video;
+      else fetch(b.video).then(r => r.ok ? r.blob() : Promise.reject(r.status)).then(bl => { m.src = URL.createObjectURL(bl); }, () => { m.src = b.video; });
+      m.loop = !!b.loop;                        // a clip shorter than its beat (the AROC HUD is 1.3 s) repeats
+      MEDIA.push({ el: m, from: b.from || 0, start, end, loop: !!b.loop });
     } else { m = new Image(); m.decoding = 'async'; m.alt = ''; m.src = b.img; }
     const focus = b.focus || [0.5, 0.5];
     m.style.objectPosition = b.pan ? '0% 50%' : `${focus[0] * 100}% ${focus[1] * 100}%`;
@@ -684,13 +693,14 @@ p, h1, h2, h3 { margin: 0; }
     },
 
     answer(sc, q) {
-      const el = segEl(sc, `<div class="ansb" style="left:96px;top:192px">${sc.lines.map((l, i) => maskLine(l, 'ans' + (i === 0 ? ' gold' : ''))).join('')}</div>
-        ${sc.support ? `<div style="left:96px;top:400px">${maskLine(sc.support, 'sup')}</div>` : ''}
-        <div class="stats astats" style="left:96px;top:488px">${sc.stats.map(s => `<div class="stat"><span class="num"></span>${maskLine(s.label, 'lab')}</div>`).join('')}</div>`);
+      const el = segEl(sc, `<div class="ansc" style="left:96px"><div class="ansb">${sc.lines.map((l, i) => maskLine(l, 'ans' + (i === 0 ? ' gold' : ''))).join('')}</div>
+        ${sc.support ? `<div class="supw">${maskLine(sc.support, 'sup')}</div>` : ''}
+        <div class="stats astats">${sc.stats.map(s => `<div class="stat"><span class="num"></span>${maskLine(s.label, 'lab')}</div>`).join('')}</div></div>`);
+      centreColumn(el.querySelector('.ansc'));
       const ls = inner(el, '.ansb > .lm'), sup = inner(el, '.lm.sup');
       const stats = [...el.querySelectorAll('.stat')].map((s, j) => statMotion(s, sc.stats[j].n));
       const IN = q.enter - sc.start + 0.04, OUT = sc.dur - 0.32;
-      look(sc.start + IN, sc.end, 620, 560);
+      look(sc.start + IN, sc.end, 560, COL_Y);
       return (lt) => {
         lines(ls, lt, IN, OUT, { stagger: 0.075, dur: 0.65 });
         lines(sup, lt, IN + 0.3, OUT, { dur: 0.6 });
@@ -709,7 +719,7 @@ p, h1, h2, h3 { margin: 0; }
       const pager = `<b><span class="od"><span class="ods">${items.map((_, i) => `<i>${i + 1}</i>`).join('')}</span></span></b> / ${items.length}  ·  ${q.text}`;
       const el = segEl(sc, `<div class="rows">${rowsHtml}</div>${items.map(it => columnMarkup(it, 96, 780)).join('')}
         <div class="win">${panes}</div>
-        <div class="status" style="left:auto;right:400px;top:146px">${pager}</div>`);
+        <div class="status" style="left:auto;right:96px;top:146px">${pager}</div>`);
       const rows = [...el.querySelectorAll('.row')];
       const thumbs = rows.map(r => r.querySelector('.thumb'));
       const metaLines = rows.map(r => inner(r, '.meta > .lm'));
@@ -774,7 +784,7 @@ p, h1, h2, h3 { margin: 0; }
     feature(sc, q) {
       const R = { x: 96, y: 204, w: 900, h: 506 };
       const el = segEl(sc, `<div class="win" style="left:${R.x}px;top:${R.y}px;width:${R.w}px;height:${R.h}px"><div class="media"></div>
-          <div class="cap3"><div class="slot">${sc.beats.map(b => maskLine(b.caption, 'c3')).join('')}</div></div>${pageBadge(sc)}</div>${columnMarkup(sc, 1040, 784)}`);
+          <div class="cap3"><div class="slot">${sc.beats.map(b => maskLine(b.caption, 'c3')).join('')}</div></div>${pageBadge(sc)}</div>${columnMarkup(sc, 1044, 780)}`);
       const win = el.querySelector('.win'), media = win.querySelector('.media'), col = el.querySelector('.col');
       const caps = inner(win, '.c3'), badge = win.querySelector('.wbadge');
       const IN = q.enter + 0.04, OUT = sc.end - 0.32;
@@ -824,11 +834,12 @@ p, h1, h2, h3 { margin: 0; }
       paths.forEach((p, i) => { p.style.strokeDasharray = `${lens[i]} ${lens[i]}`; });
       const cur = el.querySelector('.cur'), ripple = el.querySelector('.ripple');
       const IN = q.enter - sc.start + 0.04, TAP = IN + 0.75, GO = { x: 0, y: 0 };
+      LAYOUT.push(() => { plan.style.top = (COL_Y - plan.offsetHeight / 2) + 'px'; });
       LAYOUT.push(() => { const b = box(go); GO.x = b.x + b.w / 2; GO.y = b.y + b.h / 2; });
       const draw = strokes.map((s, i) => ({ a: TAP + 0.15 + i * 0.1, d: s.kind === 'fish' ? 0.2 : 0.24 }));
       const born = draw.map(dd => dd.a + dd.d);
       draw.forEach((dd, i) => at(sc.start + born[i], () => spawnStroke(strokes[i].pts, strokes[i].kind, strokes[i].kind === 'fish' ? Math.PI : null)));
-      look(sc.start + IN, sc.end, 960, 350);
+      look(sc.start + IN, sc.end, 960, COL_Y);
       const DONE = Math.max(...born), OUT = sc.dur - 0.32;
       return (lt) => {
         pop(plan, lt, IN, OUT, { from: 0.94, rise: 16 });
@@ -865,7 +876,7 @@ p, h1, h2, h3 { margin: 0; }
     },
 
     art(sc, q) {
-      const C = { x: 1450, y: 457, r: 250 };
+      const C = { x: 1824 - 250, y: COL_Y, r: 250 };
       const it = Object.assign({ quiet: true }, sc);
       const el = segEl(sc, `<div class="port" style="left:${C.x}px;top:${C.y}px;width:0;height:0"></div>
         <svg class="ring" style="left:${C.x - C.r - 16}px;top:${C.y - C.r - 16}px;width:${(C.r + 16) * 2}px;height:${(C.r + 16) * 2}px" viewBox="0 0 ${(C.r + 16) * 2} ${(C.r + 16) * 2}"><circle cx="${C.r + 16}" cy="${C.r + 16}" r="${C.r + 12}"/></svg>
@@ -878,7 +889,7 @@ p, h1, h2, h3 { margin: 0; }
       const RL = 2 * Math.PI * (C.r + 12);
       ring.style.strokeDasharray = `${RL} ${RL}`;
       centreColumn(col);
-      LAYOUT.push(() => { badge.style.left = (C.x - badge.offsetWidth / 2) + 'px'; badge.style.top = (C.y + C.r + 30) + 'px'; });
+      LAYOUT.push(() => { badge.style.left = (C.x - badge.offsetWidth / 2) + 'px'; badge.style.top = (C.y + C.r - badge.offsetHeight / 2) + 'px'; });
       return (lt, t) => {
         const a = seg(t, IN, 0.6, E.outExpo), b = seg(t, OUT, 0.3, E.inExpo);
         const d = 2 * C.r * a * (1 - b * 0.15);
@@ -901,7 +912,7 @@ p, h1, h2, h3 { margin: 0; }
       const panel = el.querySelector('.panel'), eb = inner(el, '.lm.eyebrow');
       const heads = inner(el, '.lm.grp'), items = [...el.querySelectorAll('.wall li')];
       const IN = q.enter - sc.start + 0.04, OUT = sc.dur - 0.32;
-      look(sc.start + IN, sc.end, 960, 416);
+      look(sc.start + IN, sc.end, 960, COL_Y);
       return (lt) => {
         pop(panel, lt, IN, OUT, { from: 0.96, rise: 18 });
         lines(eb, lt, IN + 0.15, OUT);
@@ -916,12 +927,12 @@ p, h1, h2, h3 { margin: 0; }
       const el = segEl(sc, sc.quotes.map(qq => `<div class="qb" style="left:160px;top:0;width:1600px">
           <div>${qq.lines.map(l => maskLine(l, 'qt2' + (qq.lines.length < 3 ? ' big' : ''))).join('')}</div>
           <div class="rule"></div>${maskLine(`<strong>${qq.cite[0]}</strong><span> · ${qq.cite[1]}</span>`, 'cite')}</div>`).join('')
-        + `<div class="status" style="left:auto;right:400px;top:146px">${pager}</div>`);
+        + `<div class="status" style="left:auto;right:96px;top:146px">${pager}</div>`);
       const blocks = [...el.querySelectorAll('.qb')].map(b => ({ b, ls: inner(b, '.qt2'), rule: b.querySelector('.rule'), cs: inner(b, '.cite') }));
       const pg = el.querySelector('.status'), pgStrip = pg.querySelector('.ods');
-      LAYOUT.push(() => blocks.forEach(({ b }) => { b.style.top = (440 - b.offsetHeight / 2) + 'px'; }));
+      LAYOUT.push(() => blocks.forEach(({ b }) => { b.style.top = (COL_Y - b.offsetHeight / 2) + 'px'; }));
       const first = q.enter - sc.start + 0.04, OUT = sc.dur - 0.34;
-      look(sc.start + first, sc.end, 960, 440);
+      look(sc.start + first, sc.end, 960, COL_Y);
       return (lt) => {
         blocks.forEach((x, i) => {
           const qq = sc.quotes[i], next = sc.quotes[i + 1];
@@ -950,7 +961,7 @@ p, h1, h2, h3 { margin: 0; }
       const cols = [...el.querySelectorAll('.three > div')].map(c => ({ rule: c.querySelector('.trule'), ls: inner(c, '.lm') }));
       const cta = inner(el, '.lm.cta');
       const IN = q.enter - sc.start + 0.04, OUT = sc.dur - 0.34;
-      look(sc.start + IN, sc.end, 960, 436);
+      look(sc.start + IN, sc.end, 960, COL_Y);
       return (lt) => {
         pop(card, lt, IN, OUT, { from: 0.95, rise: 18 });
         lines(eb, lt, IN + 0.15, OUT);
@@ -1038,7 +1049,7 @@ p, h1, h2, h3 { margin: 0; }
   const title = SC.find(s => s.type === 'title'), end = SC.find(s => s.type === 'end');
   const OVAL = { cx: 960, cy: 380, w: 1200, h: 380, rx: 600, ry: 190 };
   const LENS = Object.assign({}, OVAL, { h: 2, ry: 1 });
-  const BAR = { cx: 960, cy: 94, w: 1120, h: 76, rx: 38, ry: 38 };
+  const BAR = { cx: 960, cy: 94, w: 1728, h: 76, rx: 38, ry: 38 };
   const EOVAL = { cx: 960, cy: 430, w: 1160, h: 360, rx: 580, ry: 180 };
   const GK = [
     { a: title.start, b: title.start + 0.55, from: LENS, to: OVAL, ease: E.outExpo },
@@ -1119,9 +1130,10 @@ p, h1, h2, h3 { margin: 0; }
   let firedT = -1;
   function simulate(t) {                        // the tank's side: events, on every 60 Hz tick
     reelT = t;
-    if (t < firedT) { tank.clearFish(); tank.state.coral.length = 0; firedT = -1; BIG = null; ATTN.forEach(a => { delete a.side; }); }
+    // a rewind regrows the tank from nothing; a hair's floating-point wobble is not a rewind
+    if (t < firedT - 1e-6) { tank.clearFish(); tank.state.coral.length = 0; firedT = -1; BIG = null; ATTN.forEach(a => { delete a.side; }); }
     for (const ev of EVENTS) if (ev.t > firedT && ev.t <= t) ev.run();
-    firedT = t;
+    firedT = Math.max(firedT, t);              // never backwards, or an event could fire twice
   }
   function paint(t) {                           // the picture's side: a pure function of t
     paintCamera(t); paintGlass(t); paintBar(t); paintChip(t);
@@ -1135,7 +1147,16 @@ p, h1, h2, h3 { margin: 0; }
   function seekVideo(v, time) {
     return new Promise(res => { const done = () => { clearTimeout(timer); res(); }; const timer = setTimeout(done, 4000); v.addEventListener('seeked', done, { once: true }); v.currentTime = time; });
   }
-  const clipTime = (m, t) => Math.min(m.from + Math.max(0, t - m.start), (m.el.duration || 1e9) - 0.05);
+  // where a clip should be at reel time t: it runs from `from` at its layer's start, and a looping
+  // clip wraps at its own end instead of holding the last frame
+  const clipTime = (m, t) => {
+    const d = m.el.duration || 1e9, run = Math.max(0, t - m.start);
+    return m.loop ? Math.min(m.from + run % Math.max(0.1, d - m.from), d - 0.01) : Math.min(m.from + run, d - 0.05);
+  };
+  const clipDrift = (m, ct) => {             // how far a playing clip is off, the short way round a loop
+    const e = Math.abs(m.el.currentTime - ct), p = (m.el.duration || 1e9) - m.from;
+    return m.loop ? Math.min(e, p - e) : e;
+  };
 
   if (RENDER) {
     let ticks = 0;
@@ -1188,7 +1209,7 @@ p, h1, h2, h3 { margin: 0; }
       const on = t >= m.start - 0.25 && t <= m.end + 0.25;
       if (!on || !playing) { if (!m.el.paused) m.el.pause(); if (!on) continue; }
       const ct = clipTime(m, t);
-      if (Math.abs(m.el.currentTime - ct) > 0.3) m.el.currentTime = ct;
+      if (clipDrift(m, ct) > 0.3) m.el.currentTime = ct;
       if (playing && m.el.paused) m.el.play().catch(() => {});
     }
     fill.style.width = (t / DURATION * 100).toFixed(2) + '%';
