@@ -501,6 +501,12 @@ p, h1, h2, h3 { margin: 0; }
     scenesEl.appendChild(el);
     return el;
   }
+  // One wall around several boxes. Two walls with a thin gap between them are a trap: a small fish
+  // slips into the gap and gets held there, right behind the words (the offer's two lines did this).
+  const union = (...bs) => {
+    const x = Math.min(...bs.map(b => b.x)), y = Math.min(...bs.map(b => b.y));
+    return { x, y, w: Math.max(...bs.map(b => b.x + b.w)) - x, h: Math.max(...bs.map(b => b.y + b.h)) - y };
+  };
   const box = (el, pad = 0) => {             // stage-space box of a laid-out element
     let x = 0, y = 0, n = el;
     while (n && n !== stage) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; }
@@ -745,7 +751,7 @@ p, h1, h2, h3 { margin: 0; }
       actorKey(sc.end - 0.8, sc.end, up, prevShape, E.inOutCubic);
       LAYOUT.push(() => {
         h.style.top = '360px'; kk.style.top = (360 + h.offsetHeight + 64) + 'px';
-        sc.walls = [box(h, 26), box(kk, 26)];
+        sc.walls = [union(box(h, 26), box(kk, 26))];
       });
       at(sc, 1.2, () => food(420, 930));
       const OUT = sc.dur - 0.85;
@@ -784,7 +790,7 @@ p, h1, h2, h3 { margin: 0; }
         const slot = box(icons[1]);
         actorKey(sc.start + 0.3, sc.start + 1.3, tri, glyph('triangle', slot.x + slot.w / 2, slot.y + slot.h / 2, slot.w), E.inOutCubic);
         actorAlpha(sc.start + 1.3, sc.start + 1.65, 1, 0);
-        sc.walls = [{ x: o.x + 60, y: o.y, w: o.w - 120, h: o.h }, box(pill, 16)];
+        sc.walls = [union({ x: o.x + 60, y: o.y, w: o.w - 120, h: o.h }, box(pill, 16))];
       });
       at(sc, 0.25, () => coralAt(430, 88));
       at(sc, 0.55, () => coralAt(1510, 80));
