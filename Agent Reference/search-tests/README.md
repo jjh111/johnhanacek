@@ -37,6 +37,16 @@ node phase9.mjs   # Phase 9 (all four slices): 9a stable surface (morph not
                   # unrolled, density reaches inside the dossier) · 9c grammar
                   # (badge links, ↑↓ cursor, Enter commits, 4-rung Esc ladder)
                   # · 9d workspace (⤢ two-pane, pin fills the pane, persisted)
+node phase11-inquiry.mjs  # Phase 11: the inquiry composer — a paragraph in the
+                  # bar / services textarea → on-device brief card → mailto.
+                  # Parse, meaning pass, Enter-never-sends, corrections reach
+                  # the message, questions stay searches, overlay, 390px.
+                  # --webkit repeats the services shell in Safari's engine.
+node inquirylab.mjs  # OFFLINE + pass/fail: 13 fixture
+                  # paragraphs (62 fields), questions-about-John negatives, and
+                  # EVERY query in this folder as a false-positive gate. It
+                  # calibrated the thresholds in inquiry-core.js (T) — re-run
+                  # it before moving any of them. --scores prints the table.
 node quoteqa.mjs  # the testimonial surface: ranking report (informational) +
                   # LAYOUT pass/fail at 390/505/768/1280 × both themes and the
                   # ⤢ pane. Exits non-zero on a defect. RANKING_ONLY=1 skips it.

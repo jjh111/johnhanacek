@@ -19,6 +19,24 @@
     'use strict';
     if (window.JHSearchCore) return;
 
+    // The inquiry composer (scripts/inquiry-core.js) rides alongside the core.
+    // Its URL is derived from THIS script's, so the ?v= cache-bust carries
+    // over and neither shell has to know the file exists.
+    const SELF_SRC = (document.currentScript && document.currentScript.src) || '';
+    let inquiryLoading = null;
+    function ensureInquiryCore(cb) {
+        if (window.JHInquiry) { cb(); return; }
+        if (!inquiryLoading) {
+            inquiryLoading = new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = SELF_SRC ? SELF_SRC.replace(/search-core\.js/, 'inquiry-core.js') : 'scripts/inquiry-core.js';
+                s.onload = resolve; s.onerror = reject;
+                document.head.appendChild(s);
+            });
+        }
+        inquiryLoading.then(cb, () => {});
+    }
+
     // In-browser generation model. LFM2.5-350M replaced Qwen3.5-0.8B on
     // 2026-09-01 after measuring both on the site's real RAG prompt in Chrome
     // WebGPU on an M2 Max: Qwen took 48–109 s to its FIRST token on every
@@ -238,6 +256,16 @@
             return s;
         }
 
+        // One embedder, several callers (search refine, command vectors, the
+        // inquiry composer). Calls are serialized so two never run on the
+        // same session at once.
+        let semQueue = Promise.resolve();
+        function semEmbed(text) {
+            const run = semQueue.then(() => semanticEx(text, { pooling: 'mean', normalize: true })).then(o => o.data);
+            semQueue = run.catch(() => {});
+            return run;
+        }
+
         function ensureSemantic() {
             if (semanticState !== 'idle' || !chunkVecs) return;
             semanticState = 'loading';
@@ -253,6 +281,7 @@
                     document.body.dataset.searchSemantic = 'ready';
                     renderTierStrip();
                     log(`${logTag} Semantic tier ready (MiniLM 384d · WASM)`);
+                    feedInquiry();
                     if (currentQueryRaw) refineSemantic(currentQueryRaw, ++semanticGen);
                 } catch (err) {
                     semanticState = 'failed';
@@ -312,7 +341,7 @@
             try {
                 const naturalQuery = (rawQuery || '').trim();
                 if (!naturalQuery) return;
-                const out = await semanticEx(naturalQuery, { pooling: 'mean', normalize: true });
+                const out = { data: await semEmbed(naturalQuery) };
                 if (gen !== semanticGen || rawQuery !== currentQueryRaw) return; // stale
                 // The fusion's BM25 leg: intent-expanded query when the
                 // grammar fired (its expansion IS knowledge), pronoun-stripped
@@ -322,7 +351,8 @@
                 // action's hints match here even when keywords whiffed.
                 await ensureCmdVecs();
                 if (gen !== semanticGen || rawQuery !== currentQueryRaw) return;
-                lastCmdMatches = matchCommands(naturalQuery, out.data);
+                // A message to John carries no command cards (see doSearchOnly).
+                lastCmdMatches = inqMode === 'brief' ? [] : matchCommands(naturalQuery, out.data);
                 if (!merged.length && !lastCmdMatches.length) return;
                 renderResults(merged, lastHint);
                 lastSearchResults = merged;
@@ -571,6 +601,51 @@
         let lastCmdMatches = [];
         let lastIntentCard = null;
 
+        // ── Inquiry composer (Agent Reference/INQUIRY_COMPOSER_PLAN.md) ──
+        // A paragraph from someone reaching out becomes a message to John:
+        // inquiry-core.js parses it on-device into a brief card; Send opens
+        // the visitor's own mail app. No model ever touches it.
+        let inqMode = null;            // null | 'offer' (a link) | 'brief' (the card)
+        let inqForced = '';            // the query the visitor asked to send anyway
+        let inqComposer = null;
+        let inqLoadAsked = false;
+        const inqPage = location.pathname.split('/').pop() || 'index.html';
+        function loadInquiryCore() {
+            if (inqLoadAsked) return;
+            inqLoadAsked = true;
+            ensureInquiryCore(() => {
+                feedInquiry();
+                if (currentQueryRaw) doSearchOnly(currentQueryRaw);
+            });
+        }
+        function feedInquiry() {
+            const J = window.JHInquiry;
+            if (!J) return;
+            if (chunkVecs) J.setCorpus(chunks, chunkVecs);
+            if (semanticState === 'ready' && semanticEx) J.setEmbedder(semEmbed);
+        }
+        function inquiryMode(rawQuery) {
+            if (!window.JHInquiry) { loadInquiryCore(); return null; }
+            const t = (rawQuery || '').trim();
+            if (inqForced && inqForced === t) return 'brief';
+            return window.JHInquiry.detect(t);
+        }
+        function ensureComposer() {
+            if (!inqComposer) {
+                inqComposer = window.JHInquiry.composer({
+                    page: inqPage, showWords: true,
+                    resolveHref: (u) => resolveHref(String(u || '').replace(/^\.\//, '')),
+                });
+            }
+            return inqComposer;
+        }
+        function attachInquiry(resultsEl, focus) {
+            if (!inqComposer) return;
+            const host = inqMode === 'brief' ? resultsEl.querySelector('[data-inq-host]') : null;
+            inqComposer.attach(host);
+            if (host && focus) inqComposer.restoreFocus(focus);
+        }
+
         // The pages can be navigated and the page's own TOC can be jumped —
         // synthesized from the DOM (the per-page .nav-right list every page
         // already maintains), so there is no anchor JSON to keep in step.
@@ -627,7 +702,7 @@
                 if (cmdVecs.has(c.id)) continue;
                 try {
                     const text = `${c.title}. ${(c.hints || []).join('. ')}`;
-                    const out = await semanticEx(text, { pooling: 'mean', normalize: true });
+                    const out = { data: await semEmbed(text) };
                     cmdVecs.set(c.id, Float32Array.from(out.data));
                 } catch { /* command just stays keyword-matched */ }
             }
@@ -812,6 +887,7 @@
                     chunkVecs = new Map(withVecs.map(c => [c.id, decodeVec(c.vec, c.vecScale)]));
                 }
                 log(`${logTag} Loaded ${chunks.length} chunks${chunkVecs ? ` (${chunkVecs.size} with vectors)` : ''}`);
+                loadInquiryCore();
             } catch (err) {
                 console.error(`${logTag} Failed to load search index:`, err);
             }
@@ -2320,6 +2396,7 @@
         function renderResults(results, hint) {
             const resultsEl = el('searchResults');
             if (!resultsEl) return;
+            const inqFocus = inqComposer && inqMode === 'brief' ? inqComposer.captureFocus() : null;
             // The frame-scale CSS keys off the ROOT density stamp; only the
             // toggle click used to refresh it, so a density set any other way
             // (storage write + re-render) re-worded the text but never
@@ -2377,6 +2454,10 @@
             if (currentWrap) { try { currentWrap.destroy(); } catch {} currentWrap = null; }
 
             let html = '';
+            // The card's HTML goes in whole (not an empty host) so the fit
+            // loop below measures its height with everything else.
+            if (inqMode === 'brief' && inqComposer) html += `<div class="inq-host" data-inq-host>${inqComposer.html()}</div>`;
+            else if (inqMode === 'offer') html += `<div class="inq-offer"><button type="button" class="inq-link" data-inq-force>Send this to John as a message</button></div>`;
             if (lastScenePlan) html += renderPlanCard(lastScenePlan);
             if (lastSceneCensus) html += renderCensusHtml();
             if (lastIntentCard) html += renderIntentCard(lastIntentCard);
@@ -2385,6 +2466,7 @@
             if (results.length === 0) {
                 html += `<div class="result" style="color:${mutedColor};font-family:var(--font-display);font-size:0.85rem;">${html ? 'No other results.' : 'No results found.'}</div>`;
                 resultsEl.innerHTML = html;
+                attachInquiry(resultsEl, inqFocus);
                 renderDetailPane([], paneSeedState);
                 return;
             }
@@ -2479,6 +2561,7 @@
                 }
                 fitBudget = budget;
             }
+            attachInquiry(resultsEl, inqFocus);
 
             if (sameQuery) { if (anchor) anchor.scrollTop = saved; else window.scrollTo(0, saved); }
             else if (anchor) anchor.scrollTop = 0;
@@ -2539,6 +2622,9 @@
         // parse IS the confirm), the first action, else the top result.
         function commitTop() {
             if (cursorIdx >= 0) { const it = cursorItems()[cursorIdx]; if (it) { commitItem(it); return; } }
+            // Enter never sends a message: it moves focus to Send, which the
+            // visitor presses deliberately.
+            if (inqMode === 'brief' && inqComposer) { inqComposer.focusSend(); return; }
             if (lastScenePlan && !lastScenePlan.receipts) {
                 const btn = el('searchResults') && el('searchResults').querySelector('[data-scene-run]');
                 if (btn && !btn.disabled) { btn.disabled = true; executeScene(lastScenePlan); return; }
@@ -2939,6 +3025,8 @@
                 currentQueryRaw = ''; lastFusionQuery = '';
                 lastCmdMatches = []; lastIntentCard = null;
                 lastScenePlan = null; lastSceneCensus = null; lastPieceRail = false;
+                inqMode = null; inqForced = '';
+                if (inqComposer) inqComposer.attach(null);
                 clearBtn.style.display = 'none';
                 renderEmptyState();
                 return;
@@ -2955,6 +3043,14 @@
             lastIntentCard = card || null;
             lastPieceRail = !!pieceRail;
             lastCmdMatches = lastScenePlan ? [] : matchCommands(rawQuery, null);
+            // The brief card supersedes the doorway card and command matches:
+            // it IS the doorway, with the visitor's own words in it.
+            inqMode = inquiryMode(rawQuery);
+            if (inqMode === 'brief') {
+                lastScenePlan = null; lastSceneCensus = null;
+                lastIntentCard = null; lastCmdMatches = [];
+                ensureComposer().update(rawQuery);
+            }
             const results = search(expanded);
             // a real search un-dismisses the residue sentence (10g)
             try { sessionStorage.removeItem('jh-residue-dismissed'); } catch {}
@@ -2980,6 +3076,8 @@
         }
 
         function doAIGeneration() {
+            // A message to John is never answered by a model (plan, decision 3).
+            if (inqMode === 'brief') return;
             if (!lastLlmQuery.trim() || lastSearchResults.length === 0) return;
             if ((activeEngine === 'local' && localModel) || (activeEngine === 'custom' && customModel)) {
                 const model = activeEngine === 'local' ? localModel : customModel;
@@ -3030,6 +3128,12 @@
                 if (!host) continue;
                 host.addEventListener('click', (e) => {
                     if (e.target.closest('a.result-link, a.result-page-link')) { markContinuity(); return; }
+                    if (e.target.closest('[data-inq-force]')) {
+                        inqForced = (currentQueryRaw || '').trim();
+                        doSearchOnly(currentQueryRaw);
+                        return;
+                    }
+                    if (e.target.closest('[data-inq-card]')) return;   // the card handles its own clicks
                     const pw = e.target.closest('[data-piece-src]');
                     if (pw) {
                         hideTip();

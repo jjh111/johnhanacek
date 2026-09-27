@@ -24,9 +24,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@200;300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles/jh-chrome.css?v=2.27">
-    <link rel="stylesheet" href="./styles/shared.css?v=2.27">
-    <link rel="stylesheet" href="./scripts/search-overlay.css?v=2.27">
+    <link rel="stylesheet" href="./styles/jh-chrome.css?v=2.28">
+    <link rel="stylesheet" href="./styles/shared.css?v=2.28">
+    <link rel="stylesheet" href="./scripts/search-overlay.css?v=2.28">
 
     <link rel="alternate" type="application/json" href="./john-hanacek.json" title="Structured data">
     <script type="application/ld+json">
@@ -449,6 +449,27 @@
             font-family: var(--font-mono);
             font-size: var(--text-sm);
         }
+
+        /* ── Inquiry composer (scripts/inquiry-core.js; card styles live in
+           search-overlay.css, shared with the command bar) ── */
+        .inq-compose .inq-prompt {
+            display: block; margin-bottom: 0.35rem;
+            font-family: var(--font-display); font-size: var(--text-lg);
+            color: var(--text-heading);
+        }
+        .inq-compose .inq-hint { margin: 0 0 var(--space-sm); color: var(--text-primary); }
+        .inq-compose textarea {
+            display: block; width: 100%; box-sizing: border-box; min-height: 8rem;
+            font-family: var(--font-mono); font-size: var(--text-sm); line-height: 1.55;
+            color: var(--text-bright);
+            background: rgba(var(--cyan-dim-rgb), 0.04);
+            border: 1px solid rgba(var(--cyan-dim-rgb), 0.28); border-radius: 6px;
+            padding: 0.75rem 0.85rem; resize: vertical;
+        }
+        .inq-compose textarea::placeholder { color: var(--ink-faint); opacity: 1; }
+        .inq-compose textarea:focus { outline: none; border-color: rgba(var(--gold-rgb), 0.6); }
+        .inq-compose #inqCard:not(:empty) { margin-top: var(--space-sm); }
+        .inq-compose .inq-card { margin-bottom: 0; }
 
         @media (max-width: 768px) {
             .os-strip { grid-template-columns: repeat(2, 1fr); }
@@ -884,6 +905,13 @@
         <section id="book">
             <h2>Get in touch</h2>
 
+            <div class="content-card inq-compose">
+                <label for="inqText" class="inq-prompt">Tell me what you're working on</label>
+                <p class="inq-hint">A few sentences is enough. This page turns them into a message you check before it goes anywhere.</p>
+                <textarea id="inqText" rows="5" placeholder="We're a small team building… We need help with… by…"></textarea>
+                <div id="inqCard" aria-live="polite"></div>
+            </div>
+
             <div class="content-card">
                 <p>Free intro call to talk about what you're trying to do.</p>
                 <div class="cta-row">
@@ -1029,9 +1057,34 @@
     })();
     </script>
 
-    <script src="./scripts/shared.js?v=2.27"></script>
-<script src="./scripts/search-overlay.js?v=2.27" defer></script>
-    <script src="./scripts/jh-shapes.js?v=2.27"></script>
-    <script src="./scripts/jh-chrome.js?v=2.27" defer></script>
+    <script src="./scripts/shared.js?v=2.28"></script>
+<script src="./scripts/search-overlay.js?v=2.28" defer></script>
+    <script src="./scripts/inquiry-core.js?v=2.28" defer></script>
+    <script>
+    // Shell B of the inquiry composer (plan: Agent Reference/INQUIRY_COMPOSER_PLAN.md).
+    // The textarea's words are parsed on-device into an editable brief; Send
+    // opens the visitor's mail app. The draft survives a reload in this tab.
+    document.addEventListener('DOMContentLoaded', function () {
+        var ta = document.getElementById('inqText'), host = document.getElementById('inqCard');
+        if (!ta || !host || !window.JHInquiry) return;
+        var KEY = 'jh-inquiry-draft', timer = 0;
+        var composer = JHInquiry.composer({
+            page: 'services.html', showWords: false, autoEmbed: true,
+            corpusUrl: 'Assets/search-chunks.json',
+            onSent: function () { try { sessionStorage.removeItem(KEY); } catch (e) {} },
+        });
+        composer.attach(host);
+        function sync() {
+            var v = ta.value;
+            // The card waits for a few words; one word is not a brief yet.
+            composer.update((v.match(/\S+/g) || []).length >= 3 ? v : '');
+            try { if (v.trim()) sessionStorage.setItem(KEY, v); else sessionStorage.removeItem(KEY); } catch (e) {}
+        }
+        ta.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(sync, 250); });
+        try { var d = sessionStorage.getItem(KEY); if (d) { ta.value = d; sync(); } } catch (e) {}
+    });
+    </script>
+    <script src="./scripts/jh-shapes.js?v=2.28"></script>
+    <script src="./scripts/jh-chrome.js?v=2.28" defer></script>
 </body>
 </html>

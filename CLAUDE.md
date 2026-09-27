@@ -261,6 +261,18 @@ which stamps every `?v=` cache-bust ref across root `*.html` **and** the `Portfo
   **wording ladder** (micro → tldr → brief → full — density picks the wording inside
   a constant LOD via `textFor`, stamped `data-txt` for morphs); **media dedupe** (one
   src per render pass, pane wins). Spec + records: SEARCH_COMMAND_BAR.md Phase 10.
+- **Inquiry composer (Phase 11, v2.28)**: `scripts/inquiry-core.js` turns a paragraph from
+  someone reaching out into a message to John. `detect()` gates it (≥14 words with first-person
+  need language, or an email; questions about John never — 0 of every search-test query), the
+  grammar parse fills the brief instantly, and MiniLM (the semantic tier's WASM embedder, so it
+  works in Safari) matches each sentence to the ten offers services.html names and the paragraph
+  to case studies, upgrading the card in place. The card is editable, Send opens the visitor's
+  own mail app (`mailto:`, full text to the clipboard past ~1,900 chars), Copy is the fallback.
+  **No model writes a word**: their paragraph goes verbatim, generation is suppressed in brief
+  mode, Enter only focuses Send. Two shells: the command bar (search-core loads inquiry-core
+  beside itself) and services.html `#book` (textarea, sessionStorage draft). GoatCounter gets
+  count-only events. Thresholds in `T` were calibrated by `search-tests/inquirylab.mjs`; plan +
+  build record: `Agent Reference/INQUIRY_COMPOSER_PLAN.md`
 - **Engine color coding**: WebGPU=blue, LMStudio=purple, Ollama=orange, Custom=green
 - AI toggle: users can disable LLM even when engine detected
 
