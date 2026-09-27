@@ -1,10 +1,14 @@
 // Renders Assets/sizzle-reel.html to MP4, one frame at a time, on the rig's virtual clock.
 //   node scripts/render-sizzle-reel.mjs                         → Assets/media-kit/video/sizzle-reel.mp4 (1920×1080, 60 fps)
-//   node scripts/render-sizzle-reel.mjs --cut=2                 → cut 2 instead: Assets/sizzle-reel-2.html, the `reel2`
-//                                                                 edit, → Assets/media-kit/video/sizzle-reel-2.mp4
+//   node scripts/render-sizzle-reel.mjs --cut=2                 → cut 2 instead: Assets/sizzle-reel-2.html playing its
+//                                                                 script, Assets/sizzle-reel-2.script.txt,
+//                                                                 → Assets/media-kit/video/sizzle-reel-2.mp4
 //   node scripts/render-sizzle-reel.mjs --fps=30                → half the frames, for a quick proof
-//   node scripts/render-sizzle-reel.mjs --from=17.5 --to=27.5   → one scene while you cut (the tank is
+//   node scripts/render-sizzle-reel.mjs --from=17.5 --to=27.5   → a stretch while you cut (the tank is
 //                                                                 still simulated from 0, so it matches)
+//   node scripts/render-sizzle-reel.mjs --cut=2 --scene=results → one scene, by its kind or its number (6).
+//                                                                 A part renders to its own file
+//                                                                 (…-scene6-results.mp4), never over the cut's
 //   node scripts/render-sizzle-reel.mjs --stills=2.4,9,21       → PNGs at those seconds, no video
 //   node scripts/render-sizzle-reel.mjs --seed=11               → grow a different tank
 //   --crf=18 (x264 quality, lower is better) · --out=path.mp4
@@ -26,6 +30,7 @@ import { mkdirSync, existsSync, statSync, writeFileSync, readFileSync } from 'no
 import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, basename } from 'node:path';
+import { createRequire } from 'node:module';
 import { serveVerified } from './serve-verified.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -33,17 +38,33 @@ const CACHE = resolve(ROOT, '.local/sizzle-cache');
 const args = process.argv.slice(2);
 const flag = (k, d) => { const a = args.find(x => x.startsWith(`--${k}=`)); return a ? a.slice(k.length + 3) : d; };
 const FPS = +flag('fps', 60);
-const FROM = +flag('from', 0);
-const TO = flag('to', null);
+let FROM = +flag('from', 0);
+let TO = flag('to', null);
 const SEED = flag('seed', null);
 const CRF = flag('crf', '18');
 const STILLS = flag('stills', '').split(',').filter(Boolean).map(Number).sort((a, b) => a - b);
-// Each cut is a rig page plus its own edit in media-kit.json. Cut 1 stays renderable as it was.
+// Each cut is a rig page plus its edit: cut 1's is a block of media-kit.json (it stays renderable
+// as it was), cut 2's is a plain-text script that scripts/reel-script.js reads.
 const CUTS = { 1: { page: 'Assets/sizzle-reel.html', edit: 'reel', name: 'sizzle-reel' },
-               2: { page: 'Assets/sizzle-reel-2.html', edit: 'reel2', name: 'sizzle-reel-2' } };
+               2: { page: 'Assets/sizzle-reel-2.html', script: 'Assets/sizzle-reel-2.script.txt', name: 'sizzle-reel-2' } };
 const CUT = CUTS[flag('cut', '1')];
 if (!CUT) throw new Error(`--cut must be one of ${Object.keys(CUTS).join(', ')}`);
-const OUT = resolve(ROOT, flag('out', `Assets/media-kit/video/${CUT.name}.mp4`));
+// the edit (a script with a mistake stops here, with its line numbers, before a browser starts)
+const reel = CUT.script
+  ? createRequire(import.meta.url)('./reel-script.js').parse(readFileSync(resolve(ROOT, CUT.script), 'utf8')).edit
+  : JSON.parse(readFileSync(resolve(ROOT, 'Assets/media-kit.json'), 'utf8'))[CUT.edit];
+// --scene=6 or --scene=results: that scene alone, timed from the edit
+let part = '';
+const SCENE = flag('scene', null);
+if (SCENE != null) {
+  let t = 0;
+  const spans = reel.scenes.map((s, i) => { const r = { i, type: s.type, start: t, end: t + s.dur }; t += s.dur; return r; });
+  const hit = /^\d+$/.test(SCENE) ? spans[+SCENE - 1] : spans.find(x => x.type === SCENE);
+  if (!hit) throw new Error(`--scene=${SCENE}: the scenes are ${spans.map(x => `${x.i + 1} ${x.type}`).join(', ')}`);
+  FROM = hit.start; TO = String(hit.end); part = `-scene${hit.i + 1}-${hit.type}`;
+} else if (FROM > 0 || TO != null) part = `-${FROM}-${TO == null ? 'end' : TO}s`;
+// a part of the cut never lands on the full cut's file unless --out says so
+const OUT = resolve(ROOT, flag('out', `Assets/media-kit/video/${CUT.name}${part}.mp4`));
 const CHROMIUM = process.env.CHROMIUM_PATH || chromium.executablePath();
 if (!(FPS > 0 && FPS <= 60 && 60 % FPS === 0)) throw new Error('--fps must divide 60 (60, 30, 20, 15…): the engine ticks at 60 Hz');
 
@@ -61,7 +82,6 @@ function webmFor(mp4) {
 // Transcode every clip the edit names BEFORE the browser starts: done inside the route handler,
 // a long encode would block Node's event loop mid-load and time the page out.
 // Cut 2 nests beats inside a scene's items, so walk both.
-const reel = JSON.parse(readFileSync(resolve(ROOT, 'Assets/media-kit.json'), 'utf8'))[CUT.edit];
 for (const sc of reel.scenes) for (const b of [sc, ...(sc.items || [])].flatMap(x => x.beats || [])) if (b.video) webmFor(resolve(ROOT, 'Assets', b.video));
 
 const srv = await serveVerified(ROOT);            // proves the port is ours before a frame is drawn

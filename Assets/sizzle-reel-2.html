@@ -8,7 +8,10 @@
 <!-- Unlisted render rig: cut 2 of the sizzle reel. Cut 1 (Assets/sizzle-reel.html, media-kit.json →
      `reel`) is kept as it was; this is the second pass on the same material, exactly 60 s.
 
-     THE EDIT LIVES IN media-kit.json → `reel2`. This page only knows how things move.
+     THE EDIT LIVES IN Assets/sizzle-reel-2.script.txt, a plain-text script: every word on screen
+     and when it happens (scripts/reel-script.js reads it; `node scripts/reel-script.js check`
+     prints its cue sheet). This page only knows how things move. Live, it is the script's
+     preview: save the script, reload, and it comes back to the same moment.
 
      The site's own command bar narrates. The hero oval collapses into the bar, and every section
      is a question a visitor would type — who is john?, what has he shipped?, add 3 small fish and
@@ -299,6 +302,9 @@ p, h1, h2, h3 { margin: 0; }
 #hud .bar { flex: 1; height: 3px; background: rgba(var(--cyan-dim-rgb), 0.18); border-radius: 2px; cursor: pointer; position: relative; }
 #hud .bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--cyan-dim); border-radius: 2px; }
 #hud .time { color: var(--cyan); min-width: 7ch; }
+#hud .bar b { position: absolute; top: -4px; bottom: -4px; width: 1px; background: var(--ink-faint); pointer-events: none; }
+#hud .scene { color: var(--ink-quiet); width: 42ch; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#hud .scene.loop { color: var(--gold); }
 #err { position: fixed; inset: 0; margin: 0; padding: 20px; color: #ff6b6b; font: 14px/1.5 monospace; background: #000; white-space: pre-wrap; }
 </style>
 </head>
@@ -317,11 +323,12 @@ p, h1, h2, h3 { margin: 0; }
   </div>
   <div id="blackout"></div>
 </div>
-<div id="hud" hidden><span class="time">0.0</span><div class="bar"><i></i></div><span>space pause · ←/→ 5 s · R restart</span></div>
+<div id="hud" hidden><span class="time">0.0</span><span class="scene"></span><div class="bar"><i></i></div><span>space pause · ←/→ 5 s · [ ] scene · L loop · R restart</span></div>
 <script src="../scripts/shape-detection.js"></script>
 <script src="../scripts/jh-shapes.js"></script>
 <script src="../scripts/jh-strokes.js"></script>
 <script src="../scripts/fish-engine.js"></script>
+<script src="../scripts/reel-script.js"></script>
 <script>
 (async function () {
   'use strict';
@@ -443,10 +450,11 @@ p, h1, h2, h3 { margin: 0; }
   const place = (el, r) => { el.style.left = fx(r.x) + 'px'; el.style.top = fx(r.y) + 'px'; el.style.width = fx(r.w) + 'px'; el.style.height = fx(r.h) + 'px'; };
 
   // ── the edit ──────────────────────────────────────────────────────────
-  const MK = await fetch('./media-kit.json').then(r => { if (!r.ok) throw new Error('media-kit.json ' + r.status); return r.json(); });
-  const EDIT = MK.reel2;
-  if (!EDIT || !EDIT.scenes) throw new Error('media-kit.json has no `reel2` block');
-  const boardNamed = name => { const b = MK.boards.find(x => x.name === name); if (!b) throw new Error('reel2: no board named ' + name); return b; };
+  // read fresh every load: a reload after saving the script shows the save
+  const fresh = (url, as) => fetch(url, { cache: 'no-store' }).then(r => { if (!r.ok) throw new Error(url + ' ' + r.status); return r[as](); });
+  const MK = await fresh('./media-kit.json', 'json');       // the boards (clients, offer) and the site's name
+  const EDIT = ReelScript.parse(await fresh('./sizzle-reel-2.script.txt', 'text')).edit;
+  const boardNamed = name => { const b = MK.boards.find(x => x.name === name); if (!b) throw new Error('cut 2: no board named ' + name); return b; };
   let acc = 0;
   const SC = EDIT.scenes.map((s, i) => { const o = Object.assign({}, s, { i, start: acc, end: acc + s.dur }); acc += s.dur; return o; });
   const DURATION = Math.round(acc * 1000) / 1000;
@@ -810,7 +818,7 @@ p, h1, h2, h3 { margin: 0; }
       };
     },
 
-    scene(sc, q) {
+    command(sc, q) {                             // scene language: a typed sentence becomes a school
       const G = JHStrokes.points;
       const icon = k => `<svg viewBox="0 0 24 24">${JHStrokes.marks[k === 'square' ? 'square' : 'loop']()}</svg>`;
       // where the command's strokes land: four medium loops left of the card, clear of the big fish
@@ -956,7 +964,7 @@ p, h1, h2, h3 { margin: 0; }
           ${maskLine('Work with John', 'eyebrow')}
           <div>${h.map(l => maskLine(l, 'oh')).join('')}</div>
           <div class="three">${three.map(x => `<div><i class="trule"></i>${maskLine(x.k, 'k')}<div>${x.lines.map(l => maskLine(l, 'v')).join('')}</div></div>`).join('')}</div>
-          ${maskLine(`${(sc.cta || bd.cta).lead}<strong>${(sc.cta || bd.cta).strong}</strong>`, 'cta')}</div>`);
+          ${maskLine(`${(sc.cta || bd.cta).lead.trim()} <strong>${(sc.cta || bd.cta).strong}</strong>`, 'cta')}</div>`);
       const card = el.querySelector('.intent'), eb = inner(el, '.lm.eyebrow'), hs = inner(el, '.oh');
       const cols = [...el.querySelectorAll('.three > div')].map(c => ({ rule: c.querySelector('.trule'), ls: inner(c, '.lm') }));
       const cta = inner(el, '.lm.cta');
@@ -1039,7 +1047,7 @@ p, h1, h2, h3 { margin: 0; }
 
   // ── build every scene, in edit order ──────────────────────────────────
   for (const sc of SC) {
-    if (!BUILD[sc.type]) throw new Error('reel2: unknown scene type ' + sc.type);
+    if (!BUILD[sc.type]) throw new Error('cut 2: unknown scene type ' + sc.type);
     sc.update = BUILD[sc.type](sc, queryOf(sc));
     sc.el = scenesEl.lastElementChild;
   }
@@ -1180,27 +1188,41 @@ p, h1, h2, h3 { margin: 0; }
     return;
   }
 
-  // ── live mode ─────────────────────────────────────────────────────────
+  // ── live mode: the script's preview ───────────────────────────────────
+  // The scrub bar carries a tick per scene; [ and ] jump a scene, L loops the one you are on.
+  // Where you are (and the loop) ride in the URL's #hash, so saving the script and reloading
+  // comes back to the same moment: edit, save, reload is the whole loop.
   try { await ready; } catch (e) { console.error(e); }
   const hud = document.getElementById('hud'), bar = hud.querySelector('.bar'), fill = bar.querySelector('i'), clock = hud.querySelector('.time');
+  const sceneEl = hud.querySelector('.scene');
   hud.hidden = false;
   const fit = () => { const s = Math.min(innerWidth / W, innerHeight / H);
     stage.style.transform = `translate(${fx((innerWidth - W * s) / 2)}px,${fx((innerHeight - H * s) / 2)}px) scale(${s.toFixed(5)})`; };
   fit(); addEventListener('resize', fit);
-  let playing = true, base = performance.now() - (parseFloat(Q.get('t')) || 0) * 1000, held = 0;
+  SC.forEach(sc => { const b = document.createElement('b'); b.style.left = (sc.start / DURATION * 100).toFixed(3) + '%'; bar.appendChild(b); });
+  const sceneAt = t => { let s = SC[0]; for (const x of SC) if (t >= x.start - 1e-6) s = x; return s; };
+  const HASH = new URLSearchParams(location.hash.slice(1));
+  let loopSc = SC[parseInt(HASH.get('loop'), 10)] || null;
+  let playing = true, base = performance.now() - (parseFloat(HASH.get('t') || Q.get('t')) || 0) * 1000, held = 0;
   const now = () => playing ? (performance.now() - base) / 1000 : held;
   const seekTo = s => { s = Math.max(0, Math.min(DURATION, s)); if (playing) base = performance.now() - s * 1000; else held = s; };
+  const jump = sc => { if (!sc) return; if (loopSc) loopSc = sc; seekTo(sc.start); };
   addEventListener('keydown', e => {
     if (e.key === ' ') { e.preventDefault(); if (playing) { held = now(); playing = false; } else { playing = true; seekTo(held >= DURATION ? 0 : held); } }
     else if (e.key === 'ArrowRight') seekTo(now() + 5);
     else if (e.key === 'ArrowLeft') seekTo(now() - 5);
-    else if (e.key === 'r' || e.key === 'R') { playing = true; seekTo(0); }
+    else if (e.key === ']') jump(SC[sceneAt(now()).i + 1]);
+    else if (e.key === '[') { const t = now(), sc = sceneAt(t); jump(t - sc.start > 0.5 || !sc.i ? sc : SC[sc.i - 1]); }  // like a player: the start first, then the one before
+    else if (e.key === 'l' || e.key === 'L') loopSc = loopSc ? null : sceneAt(now());
+    else if (e.key === 'r' || e.key === 'R') { playing = true; loopSc = null; seekTo(0); }
   });
+  let hashAt = -1, hashLoop = null;
   bar.addEventListener('click', e => { const r = bar.getBoundingClientRect(); seekTo((e.clientX - r.left) / r.width * DURATION); });
   let idle; const wake = () => { hud.classList.remove('idle'); clearTimeout(idle); idle = setTimeout(() => hud.classList.add('idle'), 2200); };
   addEventListener('mousemove', wake); wake();
   (function loop() {
     let t = now();
+    if (loopSc && playing && (t >= loopSc.end || t < loopSc.start - 0.05)) { seekTo(loopSc.start); t = loopSc.start; }
     if (t >= DURATION) { t = DURATION; if (playing) { held = t; playing = false; } }
     simulate(t);
     tank.startAnimation();
@@ -1214,11 +1236,20 @@ p, h1, h2, h3 { margin: 0; }
     }
     fill.style.width = (t / DURATION * 100).toFixed(2) + '%';
     clock.textContent = t.toFixed(1);
+    const cur = sceneAt(t), what = cur.query || cur.name || cur.caption || cur.line || '';
+    sceneEl.textContent = `${cur.i + 1}/${SC.length} ${cur.type}${what ? ' · ' + what : ''}${loopSc ? ' · looping' : ''}`;
+    sceneEl.classList.toggle('loop', !!loopSc);
+    if (Math.abs(t - hashAt) >= 0.25 || loopSc !== hashLoop) {   // a few times a second, never a history entry
+      history.replaceState(null, '', `#t=${t.toFixed(2)}${loopSc ? '&loop=' + loopSc.i : ''}`);
+      hashAt = t; hashLoop = loopSc;
+    }
     requestAnimationFrame(loop);
   })();
 })().catch(err => {
   const pre = document.createElement('pre'); pre.id = 'err';
-  pre.textContent = 'sizzle-reel-2 rig failed: ' + (err && err.stack || err) + '\nFix Assets/media-kit.json (the `reel2` block) or its fetch path and reload. Nothing was rendered.';
+  pre.textContent = err && err.errors
+    ? 'Assets/sizzle-reel-2.script.txt has ' + err.errors.length + ' mistake' + (err.errors.length > 1 ? 's' : '') + ':\n\n  ' + err.errors.join('\n  ') + '\n\nFix the script and reload. Nothing was drawn.'
+    : 'sizzle-reel-2 rig failed: ' + (err && err.stack || err) + '\nCheck Assets/sizzle-reel-2.script.txt (node scripts/reel-script.js check) and reload. Nothing was drawn.';
   document.body.appendChild(pre);
   console.error(err);
 });
