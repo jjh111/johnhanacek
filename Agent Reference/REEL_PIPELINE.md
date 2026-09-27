@@ -67,6 +67,40 @@ Built by medium-effort subagents, each owning its files, verified by its own tes
 5. **Integration and demo.** Every suite end to end, a full `--jobs --deliver` render against
    the master, and a screen recording of the timeline editing a copy of the script.
 
+## Built (2026-09-27)
+
+All five packages landed, built by medium-effort subagents, then reviewed. Every suite in
+`Agent Reference/reel-tests/` passes: scripttest (25), devservertest (30), timelinetest (25),
+cuestest and rendertest.
+
+- **The loop:** `node scripts/reel-dev.mjs`, open the page it prints, press E. A drag or an
+  edit saves the file, and the preview is back at the same moment, paused if it was, in about
+  0.3 s. Before the fixes below it took about 2.8 s, while the preview waited for its clips.
+- **Cues:** with no cues written, the film is unchanged. The one-time proof against stills
+  from the pre-cue rig gave 10 of 11 byte-identical, the 11th off only by decode noise.
+  `cuestest` now checks that every cue written out at its default films the same as none,
+  and that each cue moves its moment.
+- **--jobs:** a full `--jobs=3 --deliver` film matched the one-page master everywhere except
+  1.3 s of logo edges after a chunk that began mid-scene (36 dB). Chunks now start at scene
+  cuts, and every frame of a 10 s test range is 45 dB or better. Speed on this 4-core box:
+  about 1.2-1.4×.
+- **Fixes from review:**
+  - The live preview no longer waits for clips.
+  - The dev server lets the browser keep media (ETag, 304).
+  - Pause survives a save (`#t=…&pause=1`).
+  - `REEL_LIVE.reserveBottom(px)` replaces a stylesheet `!important` override.
+  - The tests carry no machine paths.
+
+Known, not yet fixed:
+- After a reload, the live preview grows its tank at the moment it lands, so a fish can wear
+  a different colour than in the film (colour follows spawn order). Films are exact. The fix
+  is to fast-forward the tank on a virtual clock at load, as the renderer does.
+- Tier chips pop at the question's Enter; `cue in` moves the answer, not the chips.
+- Dragging an item's edge changes two lines, its ITEM and its results SCENE, because items
+  hang from the scene's end, so the items before it stay put.
+- Browser tests serve clips as VP9 stand-ins through Playwright, so reloads there take about
+  2.5 s. Through the real server with real H.264 it is about 0.3 s.
+
 ## Later
 
 Square and vertical layouts from the same script; scene-specific cues (line staggers, the

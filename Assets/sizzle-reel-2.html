@@ -678,7 +678,7 @@ p, h1, h2, h3 { margin: 0; }
       const main = el.querySelector('.main'), glow = el.querySelector('.glow'), L = main.getTotalLength();
       paths.forEach(p => { p.style.strokeDasharray = `${L} ${L}`; });
       const g1 = inner(el, '.g1'), g2 = inner(el, '.g2');
-      const D0 = 0.2, D1 = 0.95, DONE = D0 + D1, OUT = sc.dur - 0.45;
+      const D0 = 0.2, D1 = 0.95, DONE = D0 + D1, OUT = sc.dur - ReelScript.cue(sc, 'out');   // cue out: when the guide leaves
       let born = null;
       at(sc.start + DONE, () => { born = BIG = spawnStroke(pts, 'fish', Math.PI); });
       // the new fish holds its heading until it has swum clear of the loop it was drawn as
@@ -703,7 +703,7 @@ p, h1, h2, h3 { margin: 0; }
       const letters = [...name.querySelectorAll('.li')], tags = inner(el, '.tag > .lm'), dots = [...el.querySelectorAll('.tag .dot')];
       const write = sigWriter(sig);
       LAYOUT.push(() => { tt.style.top = (380 - tt.offsetHeight / 2 + 6) + 'px'; });
-      const OUT = sc.dur - 0.65;
+      const OUT = sc.dur - ReelScript.cue(sc, 'out');   // cue out: when the name leaves
       look(sc.start + 0.3, sc.end, 960, 390);
       return (lt) => {
         write(lt, 0.2, 0.7);
@@ -722,7 +722,8 @@ p, h1, h2, h3 { margin: 0; }
       centreColumn(el.querySelector('.ansc'));
       const ls = inner(el, '.ansb > .lm'), sup = inner(el, '.lm.sup');
       const stats = [...el.querySelectorAll('.stat')].map((s, j) => statMotion(s, sc.stats[j].n));
-      const IN = q.enter - sc.start + 0.04, OUT = sc.dur - 0.32;
+      // cues in / out: the answer arrives after the question's Enter, leaves before the cut
+      const IN = q.enter - sc.start + ReelScript.cue(sc, 'in'), OUT = sc.dur - ReelScript.cue(sc, 'out');
       look(sc.start + IN, sc.end, 560, COL_Y);
       return (lt) => {
         lines(ls, lt, IN, OUT, { stagger: 0.075, dur: 0.65 });
@@ -763,7 +764,7 @@ p, h1, h2, h3 { margin: 0; }
       cols.forEach(centreColumn);
       let THUMB = { x: 424, y: 196, w: 160, h: 90 };
       LAYOUT.push(() => { THUMB = box(thumbs[0]); });
-      const ROW_IN = q.enter - t0 + 0.04, OUT = sc.end - 0.34;
+      const ROW_IN = q.enter - t0 + ReelScript.cue(sc, 'in'), OUT = sc.end - ReelScript.cue(sc, 'out');   // cues in / out
       look(t0 + ROW_IN, sc.end, WIN.x + WIN.w / 2, WIN.y + WIN.h / 2);   // head for where the work will open
       return (lt, t) => {
         // the result list: the first thumbnail is the window itself, until it dives
@@ -810,7 +811,7 @@ p, h1, h2, h3 { margin: 0; }
           <div class="cap3"><div class="slot">${sc.beats.map(b => maskLine(b.caption, 'c3')).join('')}</div></div>${pageBadge(sc)}</div>${columnMarkup(sc, 1044, 780)}`);
       const win = el.querySelector('.win'), media = win.querySelector('.media'), col = el.querySelector('.col');
       const caps = inner(win, '.c3'), badge = win.querySelector('.wbadge');
-      const IN = q.enter + 0.04, OUT = sc.end - 0.32;
+      const IN = q.enter + ReelScript.cue(sc, 'in'), OUT = sc.end - ReelScript.cue(sc, 'out');   // cues in / out
       look(IN, sc.end, R.x + R.w / 2, R.y + R.h / 2);
       const vis = sc.beats.filter(b => b.video || b.img);
       const layers = vis.map((b, j) => mediaLayer(media, b, j === 0 ? IN - 0.1 : sc.start + b.at, vis[j + 1] ? sc.start + vis[j + 1].at + 0.4 : sc.end + 0.2));
@@ -856,14 +857,14 @@ p, h1, h2, h3 { margin: 0; }
       const paths = [...el.querySelectorAll('.ink path')], lens = paths.map(p => p.getTotalLength());
       paths.forEach((p, i) => { p.style.strokeDasharray = `${lens[i]} ${lens[i]}`; });
       const cur = el.querySelector('.cur'), ripple = el.querySelector('.ripple');
-      const IN = q.enter - sc.start + 0.04, TAP = IN + 0.75, GO = { x: 0, y: 0 };
+      const IN = q.enter - sc.start + ReelScript.cue(sc, 'in'), TAP = IN + 0.75, GO = { x: 0, y: 0 };   // cue in: the plan card
       LAYOUT.push(() => { plan.style.top = (COL_Y - plan.offsetHeight / 2) + 'px'; });
       LAYOUT.push(() => { const b = box(go); GO.x = b.x + b.w / 2; GO.y = b.y + b.h / 2; });
       const draw = strokes.map((s, i) => ({ a: TAP + 0.15 + i * 0.1, d: s.kind === 'fish' ? 0.2 : 0.24 }));
       const born = draw.map(dd => dd.a + dd.d);
       draw.forEach((dd, i) => at(sc.start + born[i], () => spawnStroke(strokes[i].pts, strokes[i].kind, strokes[i].kind === 'fish' ? Math.PI : null)));
       look(sc.start + IN, sc.end, 960, COL_Y);
-      const DONE = Math.max(...born), OUT = sc.dur - 0.32;
+      const DONE = Math.max(...born), OUT = sc.dur - ReelScript.cue(sc, 'out');   // cue out
       return (lt) => {
         pop(plan, lt, IN, OUT, { from: 0.94, rise: 16 });
         // Plan → Receipt: the header, each count and the action row all turn over on the tap
@@ -905,7 +906,7 @@ p, h1, h2, h3 { margin: 0; }
         <svg class="ring" style="left:${C.x - C.r - 16}px;top:${C.y - C.r - 16}px;width:${(C.r + 16) * 2}px;height:${(C.r + 16) * 2}px" viewBox="0 0 ${(C.r + 16) * 2} ${(C.r + 16) * 2}"><circle cx="${C.r + 16}" cy="${C.r + 16}" r="${C.r + 12}"/></svg>
         ${pageBadge(sc, 'free')}${columnMarkup(it, 96, 900)}`);
       const port = el.querySelector('.port'), ring = el.querySelector('.ring circle'), col = el.querySelector('.col'), badge = el.querySelector('.wbadge');
-      const IN = q.enter + 0.04, OUT = sc.end - 0.32;
+      const IN = q.enter + ReelScript.cue(sc, 'in'), OUT = sc.end - ReelScript.cue(sc, 'out');   // cues in / out
       look(IN, sc.end, C.x, C.y);
       const layers = sc.beats.map((b, j) => mediaLayer(port, b, j === 0 ? IN : sc.start + b.at, sc.beats[j + 1] ? sc.start + sc.beats[j + 1].at + 0.4 : sc.end + 0.2));
       const motion = columnMotion(col, it, sc.start);
@@ -934,7 +935,7 @@ p, h1, h2, h3 { margin: 0; }
       </div></div>`);
       const panel = el.querySelector('.panel'), eb = inner(el, '.lm.eyebrow');
       const heads = inner(el, '.lm.grp'), items = [...el.querySelectorAll('.wall li')];
-      const IN = q.enter - sc.start + 0.04, OUT = sc.dur - 0.32;
+      const IN = q.enter - sc.start + ReelScript.cue(sc, 'in'), OUT = sc.dur - ReelScript.cue(sc, 'out');   // cues in / out
       look(sc.start + IN, sc.end, 960, COL_Y);
       return (lt) => {
         pop(panel, lt, IN, OUT, { from: 0.96, rise: 18 });
@@ -954,7 +955,7 @@ p, h1, h2, h3 { margin: 0; }
       const blocks = [...el.querySelectorAll('.qb')].map(b => ({ b, ls: inner(b, '.qt2'), rule: b.querySelector('.rule'), cs: inner(b, '.cite') }));
       const pg = el.querySelector('.status'), pgStrip = pg.querySelector('.ods');
       LAYOUT.push(() => blocks.forEach(({ b }) => { b.style.top = (COL_Y - b.offsetHeight / 2) + 'px'; }));
-      const first = q.enter - sc.start + 0.04, OUT = sc.dur - 0.34;
+      const first = q.enter - sc.start + ReelScript.cue(sc, 'in'), OUT = sc.dur - ReelScript.cue(sc, 'out');   // cues in / out: the first voice, the last
       look(sc.start + first, sc.end, 960, COL_Y);
       return (lt) => {
         blocks.forEach((x, i) => {
@@ -983,7 +984,7 @@ p, h1, h2, h3 { margin: 0; }
       const card = el.querySelector('.intent'), eb = inner(el, '.lm.eyebrow'), hs = inner(el, '.oh');
       const cols = [...el.querySelectorAll('.three > div')].map(c => ({ rule: c.querySelector('.trule'), ls: inner(c, '.lm') }));
       const cta = inner(el, '.lm.cta');
-      const IN = q.enter - sc.start + 0.04, OUT = sc.dur - 0.34;
+      const IN = q.enter - sc.start + ReelScript.cue(sc, 'in'), OUT = sc.dur - ReelScript.cue(sc, 'out');   // cues in / out
       look(sc.start + IN, sc.end, 960, COL_Y);
       return (lt) => {
         pop(card, lt, IN, OUT, { from: 0.95, rise: 18 });
@@ -1049,7 +1050,8 @@ p, h1, h2, h3 { margin: 0; }
   QS.forEach((sc, k) => {
     const t0 = sc.start + (k === 0 ? 0.1 : -0.08);
     const times = []; let tt = t0;
-    for (let i = 0; i < sc.query.length; i++) { tt += (1 / 40) * (0.6 + 0.8 * hash01(i + 31 * sc.i)); times.push(tt); }
+    const CPS = ReelScript.cue(sc, 'typing');     // cue typing: characters a second, jittered per key
+    for (let i = 0; i < sc.query.length; i++) { tt += (1 / CPS) * (0.6 + 0.8 * hash01(i + 31 * sc.i)); times.push(tt); }
     const last = k === QS.length - 1;
     const q = { sc, text: sc.query, times, t0, typed: tt, enter: tt + 0.06, clear: last ? Infinity : sc.end - 0.3, last, tiers: sc.tiers || [] };
     const g = document.createElement('div'); g.className = 'tg';
@@ -1142,7 +1144,9 @@ p, h1, h2, h3 { margin: 0; }
     await Promise.all(['200 80px Raleway', '300 40px Raleway', '500 32px Raleway', '500 20px "JetBrains Mono"', '600 20px "JetBrains Mono"']
       .map(f => document.fonts.load(f).catch(() => null)));
     await Promise.all([...stage.querySelectorAll('img')].map(i => i.decode().catch(() => null)));
-    await Promise.all(MEDIA.map(({ el }) => el.readyState >= 2 ? null : new Promise(res => {
+    // A render waits for every clip. The live preview does not: each save reloads it, and a
+    // preview that waited for its clips sat black for seconds per edit; a clip shows when it lands.
+    if (RENDER) await Promise.all(MEDIA.map(({ el }) => el.readyState >= 2 ? null : new Promise(res => {
       el.addEventListener('loadeddata', res, { once: true }); el.addEventListener('error', res, { once: true }); setTimeout(res, 20000);
     })));
     LAYOUT.forEach(f => f());
@@ -1211,8 +1215,9 @@ p, h1, h2, h3 { margin: 0; }
   const hud = document.getElementById('hud'), bar = hud.querySelector('.bar'), fill = bar.querySelector('i'), clock = hud.querySelector('.time');
   const sceneEl = hud.querySelector('.scene');
   hud.hidden = false;
-  const fit = () => { const s = Math.min(innerWidth / W, innerHeight / H);
-    stage.style.transform = `translate(${fx((innerWidth - W * s) / 2)}px,${fx((innerHeight - H * s) / 2)}px) scale(${s.toFixed(5)})`; };
+  let reserved = 0;                              // px at the bottom a tool keeps (the timeline)
+  const fit = () => { const h = Math.max(1, innerHeight - reserved), s = Math.min(innerWidth / W, h / H);
+    stage.style.transform = `translate(${fx((innerWidth - W * s) / 2)}px,${fx((h - H * s) / 2)}px) scale(${s.toFixed(5)})`; };
   fit(); addEventListener('resize', fit);
   SC.forEach(sc => { const b = document.createElement('b'); b.style.left = (sc.start / DURATION * 100).toFixed(3) + '%'; bar.appendChild(b); });
   // `node scripts/reel-dev.mjs` answers /__reel/ping; a plain static server does not
@@ -1220,7 +1225,8 @@ p, h1, h2, h3 { margin: 0; }
   const sceneAt = t => { let s = SC[0]; for (const x of SC) if (t >= x.start - 1e-6) s = x; return s; };
   const HASH = new URLSearchParams(location.hash.slice(1));
   let loopSc = SC[parseInt(HASH.get('loop'), 10)] || null;
-  let playing = true, base = performance.now() - (parseFloat(HASH.get('t') || Q.get('t')) || 0) * 1000, held = 0;
+  const T0 = parseFloat(HASH.get('t') || Q.get('t')) || 0;
+  let playing = !HASH.has('pause'), base = performance.now() - T0 * 1000, held = T0;   // paused stays paused across a save
   const now = () => playing ? (performance.now() - base) / 1000 : held;
   const seekTo = s => { s = Math.max(0, Math.min(DURATION, s)); if (playing) base = performance.now() - s * 1000; else held = s; };
   const jump = sc => { if (!sc) return; if (loopSc) loopSc = sc; seekTo(sc.start); };
@@ -1235,7 +1241,7 @@ p, h1, h2, h3 { margin: 0; }
     else if (e.key === 'l' || e.key === 'L') loopSc = loopSc ? null : sceneAt(now());
     else if (e.key === 'r' || e.key === 'R') { playing = true; loopSc = null; seekTo(0); }
   });
-  let hashAt = -1, hashLoop = null;
+  let hashAt = -1, hashLoop = null, hashPlaying = null;
   // The preview's API, for the timeline (scripts/reel-timeline.js) and anything else that drives
   // it: read the script and where things are, move the playhead, and save a changed script,
   // through the dev server when it runs, else as this tab's draft. Either way the page reloads
@@ -1246,6 +1252,7 @@ p, h1, h2, h3 { margin: 0; }
     scenes: SC, duration: DURATION,
     now, seek: seekTo, isPlaying: () => playing, setPlaying: p => { if (!!p !== playing) toggle(); },
     onFrame: fn => { frameFns.push(fn); },
+    reserveBottom: px => { reserved = Math.max(0, +px || 0); fit(); },
     async save(text) {
       try { ReelScript.parse(text); } catch (e) { return { ok: false, errors: e.errors || [e.message] }; }
       if (DEV) {
@@ -1293,9 +1300,9 @@ p, h1, h2, h3 { margin: 0; }
     const cur = sceneAt(t), what = cur.query || cur.name || cur.caption || cur.line || '';
     sceneEl.textContent = `${cur.i + 1}/${SC.length} ${cur.type}${what ? ' · ' + what : ''}${loopSc ? ' · looping' : ''}`;
     sceneEl.classList.toggle('loop', !!loopSc);
-    if (Math.abs(t - hashAt) >= 0.25 || loopSc !== hashLoop) {   // a few times a second, never a history entry
-      history.replaceState(null, '', `#t=${t.toFixed(2)}${loopSc ? '&loop=' + loopSc.i : ''}`);
-      hashAt = t; hashLoop = loopSc;
+    if (Math.abs(t - hashAt) >= 0.25 || loopSc !== hashLoop || playing !== hashPlaying) {   // a few times a second, never a history entry
+      history.replaceState(null, '', `#t=${t.toFixed(2)}${loopSc ? '&loop=' + loopSc.i : ''}${playing ? '' : '&pause=1'}`);
+      hashAt = t; hashLoop = loopSc; hashPlaying = playing;
     }
     for (const fn of frameFns) fn(t);
     requestAnimationFrame(loop);

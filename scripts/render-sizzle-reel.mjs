@@ -14,6 +14,17 @@
 //   node scripts/render-sizzle-reel.mjs --stills=2.4,9,21       → PNGs at those seconds, no video
 //   node scripts/render-sizzle-reel.mjs --seed=11               → grow a different tank
 //   --crf=18 (x264 quality, lower is better) · --out=path.mp4
+//   node scripts/render-sizzle-reel.mjs --cut=2 --jobs=3        → the frames in 3 contiguous chunks, each in its own
+//                                                                 page and its own x264, joined without re-encoding
+//                                                                 (stills ignore it). Chunks join seamlessly because
+//                                                                 the rig keeps all tank work in EVENTS and TICKS,
+//                                                                 never in paint: a page that skips to its chunk
+//                                                                 grows the same tank as one that painted every frame.
+//   node scripts/render-sizzle-reel.mjs --cut=2 --deliver       → also, next to the MP4: <name>-web.mp4 (two-pass
+//                                                                 x264 to 14 MB at most, or a copy if the master fits),
+//                                                                 <name>-poster.jpg (--poster=<seconds>; default the
+//                                                                 middle of the title scene, else 1 s) and
+//                                                                 <name>-chapters.json (one chapter per scene of the edit)
 //
 // Why frame by frame: a screen recording (render-media-kit.mjs --video) keeps whatever the
 // browser manages in real time, so a heavy frame is a dropped frame. Here the rig's clock only
@@ -28,7 +39,7 @@
 // Needs ffmpeg with libx264 and libvpx-vp9. Output lands in Assets/media-kit/ (gitignored).
 import { chromium } from 'playwright-core';
 import { spawn, execFileSync } from 'node:child_process';
-import { mkdirSync, existsSync, statSync, writeFileSync, readFileSync } from 'node:fs';
+import { mkdirSync, existsSync, statSync, writeFileSync, readFileSync, rmSync, copyFileSync, mkdtempSync } from 'node:fs';
 import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, basename } from 'node:path';
@@ -44,6 +55,9 @@ let FROM = +flag('from', 0);
 let TO = flag('to', null);
 const SEED = flag('seed', null);
 const CRF = flag('crf', '18');
+const JOBS = Math.max(1, Math.floor(+flag('jobs', 1)) || 1);
+const DELIVER = args.includes('--deliver');
+const POSTER = flag('poster', null);
 const STILLS = flag('stills', '').split(',').filter(Boolean).map(Number).sort((a, b) => a - b);
 // Each cut is a rig page plus its edit: cut 1's is a block of media-kit.json (it stays renderable
 // as it was), cut 2's is a plain-text script that scripts/reel-script.js reads.
@@ -100,28 +114,35 @@ const srv = await serveVerified(ROOT);            // proves the port is ours bef
 const proxy = process.env.HTTPS_PROXY || process.env.https_proxy;
 const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true,
   args: proxy ? [`--proxy-server=https=${new URL(proxy).host}`] : [] });
-let ff = null;
-try {
+const rel = f => f.replace(ROOT + '/', '');
+const mb = f => `${(statSync(f).size / 1e6).toFixed(1)} MB`;
+
+// Clips are answered with byte ranges. A media element only seeks a progressive file it can
+// range-request: served whole (and python's http.server answers no ranges either), `seekable`
+// is empty and every seek snaps back to 0, so each clip filmed as its first frame. Until
+// 2026-09-26 both cuts did exactly that, and only the CSS push-in moved.
+// One buffer per clip, shared by every chunk's page.
+const clips = new Map();
+function answerClip(route) {
+  const file = resolve(ROOT, decodeURIComponent(new URL(route.request().url()).pathname.slice(1)));
+  if (!existsSync(file)) return route.continue();
+  const webm = webmFor(file);
+  if (!clips.has(webm)) clips.set(webm, readFileSync(webm));
+  const buf = clips.get(webm), size = buf.length;
+  const headers = { 'Content-Type': 'video/webm', 'Accept-Ranges': 'bytes' };
+  const r = /^bytes=(\d*)-(\d*)$/.exec(route.request().headers().range || '');
+  if (!r || (r[1] === '' && r[2] === '')) return route.fulfill({ status: 200, headers, body: buf });
+  const from = r[1] === '' ? Math.max(0, size - +r[2]) : +r[1];
+  const to = r[1] !== '' && r[2] !== '' ? Math.min(+r[2], size - 1) : size - 1;
+  if (from >= size || from > to) return route.fulfill({ status: 416, headers: { ...headers, 'Content-Range': `bytes */${size}` }, body: '' });
+  return route.fulfill({ status: 206, headers: { ...headers, 'Content-Range': `bytes ${from}-${to}/${size}` }, body: buf.subarray(from, to + 1) });
+}
+
+// One rig: its own context and page, loaded, checked and ready for REEL.frame. A parallel
+// render opens one per chunk, all on the same verified server.
+async function openRig() {
   const ctx = await browser.newContext({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1, colorScheme: 'dark' });
-  // Clips are answered with byte ranges. A media element only seeks a progressive file it can
-  // range-request: served whole (and python's http.server answers no ranges either), `seekable`
-  // is empty and every seek snaps back to 0, so each clip filmed as its first frame. Until
-  // 2026-09-26 both cuts did exactly that, and only the CSS push-in moved.
-  const clips = new Map();
-  await ctx.route(/\.mp4(\?.*)?$/i, route => {
-    const file = resolve(ROOT, decodeURIComponent(new URL(route.request().url()).pathname.slice(1)));
-    if (!existsSync(file)) return route.continue();
-    const webm = webmFor(file);
-    if (!clips.has(webm)) clips.set(webm, readFileSync(webm));
-    const buf = clips.get(webm), size = buf.length;
-    const headers = { 'Content-Type': 'video/webm', 'Accept-Ranges': 'bytes' };
-    const r = /^bytes=(\d*)-(\d*)$/.exec(route.request().headers().range || '');
-    if (!r || (r[1] === '' && r[2] === '')) return route.fulfill({ status: 200, headers, body: buf });
-    const from = r[1] === '' ? Math.max(0, size - +r[2]) : +r[1];
-    const to = r[1] !== '' && r[2] !== '' ? Math.min(+r[2], size - 1) : size - 1;
-    if (from >= size || from > to) return route.fulfill({ status: 416, headers: { ...headers, 'Content-Range': `bytes */${size}` }, body: '' });
-    return route.fulfill({ status: 206, headers: { ...headers, 'Content-Range': `bytes ${from}-${to}/${size}` }, body: buf.subarray(from, to + 1) });
-  });
+  await ctx.route(/\.mp4(\?.*)?$/i, answerClip);
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
@@ -138,12 +159,106 @@ try {
   if (fonts.includes(false)) throw new Error('web fonts did not load (Raleway / JetBrains Mono) — check the network, nothing was rendered');
   if (errors.length) throw new Error('the rig reported errors before the first frame:\n  ' + errors.join('\n  '));
   const duration = await page.evaluate(() => window.REEL.duration);
-  const end = Math.min(duration, TO == null ? duration : +TO);
   const cdp = await ctx.newCDPSession(page);
   const capture = async () => Buffer.from((await cdp.send('Page.captureScreenshot', { format: 'png', optimizeForSpeed: true })).data, 'base64');
   const frame = t => page.evaluate(t => window.REEL.frame(t), t);
+  return { ctx, errors, duration, capture, frame };
+}
 
+// The master's encode, the same for a whole film and for every chunk of one
+const x264 = out => ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'png', '-i', '-',
+  // PNG frames are RGB; tag and convert as BT.709 so the deep-sea blacks don't shift in players
+  '-vf', 'scale=out_color_matrix=bt709:out_range=tv', '-pix_fmt', 'yuv420p',
+  '-c:v', 'libx264', '-preset', 'slow', '-crf', CRF, '-x264-params', 'aq-mode=3',
+  '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv',
+  '-movflags', '+faststart', out];
+const ffs = new Set();                            // every live encoder, so a failure can kill them all
+let abort = null;                                 // the first chunk's failure stops the others
+
+// Frames [a, b) of the film into `out`, through its own ffmpeg. A chunk that starts after 0
+// first runs the three frames before its first (REEL.frame simulates the tank from 0 on the
+// way): a clip that only just became visible is seeked but not painted until then, and its
+// first frame would show the pane black.
+// REEL_RENDER_FAIL_AT=<frame> is a test hook: the chunk holding that frame throws there.
+const FAIL_AT = process.env.REEL_RENDER_FAIL_AT == null ? -1 : +process.env.REEL_RENDER_FAIL_AT;
+async function renderChunk(rig, a, b, out, tick) {
+  const ff = spawn('ffmpeg', x264(out), { stdio: ['pipe', 'inherit', 'inherit'] });
+  ffs.add(ff);
+  ff.stdin.on('error', () => {});                 // a killed or failed encoder shows as its exit code, below
+  const closed = once(ff, 'close');
+  try {
+    for (let k = 3; k >= 1; k--) if (a - k >= 0 && FROM + (a - k) / FPS > 0) await rig.frame(FROM + (a - k) / FPS);
+    for (let i = a; i < b; i++) {
+      if (abort) throw new Error('stopped: another chunk failed');
+      const t = FROM + i / FPS;
+      await rig.frame(t);
+      if (i === FAIL_AT) throw new Error(`REEL_RENDER_FAIL_AT: failing on purpose at frame ${i}`);
+      if (!ff.stdin.write(await rig.capture())) await Promise.race([once(ff.stdin, 'drain'), closed]);
+      if (ff.exitCode != null) throw new Error('ffmpeg exited ' + ff.exitCode);
+      if (rig.errors.length) throw new Error(`the rig reported errors at ${t.toFixed(2)} s:\n  ` + rig.errors.join('\n  '));
+      tick(t);
+    }
+    ff.stdin.end();
+    const [code] = await closed;
+    if (code !== 0) throw new Error('ffmpeg exited ' + code);
+  } finally { if (ff.exitCode == null) ff.kill('SIGKILL'); ffs.delete(ff); }
+}
+
+// ffmpeg for everything after the master: fails loudly with its own message
+const ffmpeg = argv => execFileSync('ffmpeg', ['-y', '-loglevel', 'error', ...argv], { stdio: ['ignore', 'inherit', 'inherit'] });
+
+// --deliver: the web copy, the poster and the chapter list, read from the master and the edit
+function deliver(out, filmDur) {
+  const stem = resolve(dirname(out), basename(out, '.mp4'));
+  const web = stem + '-web.mp4', poster = stem + '-poster.jpg', chapters = stem + '-chapters.json';
+  // A master that already fits is the web copy; otherwise two passes land on the budget
+  // (3% under it for the container and x264's overshoot). REEL_WEB_CAP_BYTES lowers the budget
+  // so a test can drive the two-pass path with a few seconds of film.
+  const CAP = +process.env.REEL_WEB_CAP_BYTES || 14e6;
+  if (statSync(out).size <= CAP) copyFileSync(out, web);
+  else {
+    const rate = Math.floor(CAP * 8 / filmDur * 0.97);
+    const logs = mkdtempSync(resolve(dirname(out), '.x264-2pass-'));
+    try {
+      const common = r => ['-i', out, '-an', '-pix_fmt', 'yuv420p', '-c:v', 'libx264', '-preset', 'slow', '-b:v', String(r),
+        '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv',
+        '-passlogfile', resolve(logs, 'pass')];
+      ffmpeg([...common(rate), '-pass', '1', '-f', 'null', '/dev/null']);
+      // x264 lands near the rate, not under it: on a short film it can overshoot the 3%. Then
+      // pass 2 runs again at the rate scaled by how far over it came (pass 1's log still holds).
+      let r = rate;
+      for (let k = 0; k < 3; k++) {
+        ffmpeg([...common(r), '-pass', '2', '-movflags', '+faststart', web]);
+        if (statSync(web).size <= CAP) break;
+        if (k === 2) console.log(`web copy: still ${mb(web)} after three tries, over the ${(CAP / 1e6).toFixed(1)} MB budget`);
+        r = Math.floor(r * CAP / statSync(web).size * 0.97);
+      }
+    } finally { rmSync(logs, { recursive: true, force: true }); }
+  }
+  // The poster, in film seconds. The edit's title is the natural cover; a part that does not
+  // hold the time asked for takes its nearest frame instead.
+  let t = 0; const spans = reel.scenes.map(s => { const r = { s, start: t }; t += s.dur; return r; });
+  const title = spans.find(x => x.s.type === 'title');
+  const want = POSTER != null ? +POSTER : title ? title.start + title.s.dur / 2 : 1;
+  const at = Math.min(Math.max(want - FROM, 0), Math.max(0, filmDur - 1 / FPS));
+  if (at !== want - FROM) console.log(`poster: ${want} s is outside this render, using ${(FROM + at).toFixed(2)} s`);
+  // JPEG is BT.601 full range; the master is BT.709 tv range, so say both or the blacks lift
+  ffmpeg(['-ss', at.toFixed(4), '-i', out, '-frames:v', '1', '-vf', 'scale=in_color_matrix=bt709:in_range=tv:out_color_matrix=bt601:out_range=pc',
+    '-pix_fmt', 'yuvj420p', '-q:v', '2', poster]);
+  // The chapters are the edit's scenes, in the edit's seconds (a part carries its own span too)
+  const what = s => s.query || s.name || s.caption || s.line || '';
+  writeFileSync(chapters, JSON.stringify({ duration: +t.toFixed(3),
+    ...(part ? { part: { from: FROM, to: +(FROM + filmDur).toFixed(3) } } : {}),
+    chapters: spans.map(x => ({ t: +x.start.toFixed(3), kind: x.s.type, what: what(x.s) })) }, null, 2) + '\n');
+  for (const f of [web, poster, chapters]) console.log(`wrote ${rel(f)} (${mb(f)})`);
+}
+
+const rigs = [];
+let partsDir = null;
+try {
   if (STILLS.length) {
+    if (JOBS > 1 || DELIVER) console.log('stills: --jobs and --deliver do not apply');
+    const rig = await openRig(); rigs.push(rig);
     const dir = resolve(dirname(OUT), 'stills');
     mkdirSync(dir, { recursive: true });
     let prev = -1;
@@ -152,41 +267,65 @@ try {
       // frame shows its pane black. Run the three frames before it first, as the film does.
       // (on the engine's own 60 Hz grid: an off-grid time can read as a hair earlier than the last tick)
       const f = Math.round(t * 60);
-      for (let k = 3; k >= 1; k--) if ((f - k) / 60 > prev) await frame((f - k) / 60);
-      await frame(t);
+      for (let k = 3; k >= 1; k--) if ((f - k) / 60 > prev) await rig.frame((f - k) / 60);
+      await rig.frame(t);
       prev = t;
       const file = resolve(dir, `${CUT.name.replace('-reel', '')}-${t.toFixed(2)}s.png`);
-      writeFileSync(file, await capture());
-      console.log('wrote', file.replace(ROOT + '/', ''));
+      writeFileSync(file, await rig.capture());
+      console.log('wrote', rel(file));
     }
   } else {
     mkdirSync(dirname(OUT), { recursive: true });
-    ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'png', '-i', '-',
-      // PNG frames are RGB; tag and convert as BT.709 so the deep-sea blacks don't shift in players
-      '-vf', 'scale=out_color_matrix=bt709:out_range=tv', '-pix_fmt', 'yuv420p',
-      '-c:v', 'libx264', '-preset', 'slow', '-crf', CRF, '-x264-params', 'aq-mode=3',
-      '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv',
-      '-movflags', '+faststart', OUT], { stdio: ['pipe', 'inherit', 'inherit'] });
+    // every chunk's page loads at once; the first says how long the film is
+    rigs.push(...await Promise.all(Array.from({ length: JOBS }, openRig)));
+    const duration = rigs[0].duration;
+    const end = Math.min(duration, TO == null ? duration : +TO);
     const frames = Math.round((end - FROM) * FPS);
-    const t0 = Date.now();
-    for (let i = 0; i < frames; i++) {
-      const t = FROM + i / FPS;
-      await frame(t);
-      if (!ff.stdin.write(await capture())) await once(ff.stdin, 'drain');
-      if (i % FPS === FPS - 1 || i === frames - 1) {
-        const rate = (i + 1) / ((Date.now() - t0) / 1000);
-        process.stdout.write(`\r  ${t.toFixed(1)} s  frame ${i + 1}/${frames}  ${rate.toFixed(1)} fps  eta ${Math.round((frames - i - 1) / rate)} s   `);
-      }
-      if (errors.length) throw new Error(`the rig reported errors at ${t.toFixed(2)} s:\n  ` + errors.join('\n  '));
+    const n = Math.max(1, Math.min(JOBS, frames));
+    const cuts = Array.from({ length: n + 1 }, (_, k) => Math.floor(k * frames / n));
+    // Chunks start where the film cuts: each inner boundary moves to the nearest scene start.
+    // A page opened mid-scene rasterises a layer still animating in a hair differently for a
+    // second (logo edges on the client wall, 36 dB against the one-page film); at a cut,
+    // everything on screen is starting fresh in both.
+    let at = 0;
+    const sceneFrames = reel.scenes.map(s => { const f = Math.round((at - FROM) * FPS); at += s.dur; return f; });
+    for (let k = 1; k < n; k++) {
+      const even = Math.floor(k * frames / n), next = Math.floor((k + 1) * frames / n);
+      const near = sceneFrames.filter(f => f > cuts[k - 1] && f < next).sort((x, y) => Math.abs(x - even) - Math.abs(y - even))[0];
+      if (near != null) cuts[k] = near;
     }
-    ff.stdin.end();
-    const [code] = await once(ff, 'close');
-    if (code !== 0) throw new Error('ffmpeg exited ' + code);
-    ff = null;
-    console.log(`\nwrote ${OUT.replace(ROOT + '/', '')} (${(statSync(OUT).size / 1e6).toFixed(1)} MB, ${(end - FROM).toFixed(1)} s at ${FPS} fps)`);
+    if (n > 1) console.log(`${n} jobs, cut at ${cuts.slice(1, -1).map(f => (FROM + f / FPS).toFixed(2) + ' s').join(', ')}`);
+    // one combined progress line: frames done of all, the whole render's rate
+    const t0 = Date.now();
+    let done = 0;
+    const tick = t => {
+      done++;
+      if (done % FPS && done !== frames) return;
+      const rate = done / ((Date.now() - t0) / 1000);
+      process.stdout.write(`\r  ${n > 1 ? `${n} jobs` : `${t.toFixed(1)} s`}  frame ${done}/${frames}  ${rate.toFixed(1)} fps  eta ${Math.round((frames - done) / rate)} s   `);
+    };
+    if (n === 1) await renderChunk(rigs[0], 0, frames, OUT, tick);    // one job writes the master directly, as it always has
+    else {
+      // parts live in a temp folder next to OUT and never outlive the render, whatever happens
+      partsDir = mkdtempSync(resolve(dirname(OUT), `.${basename(OUT, '.mp4')}-parts-`));
+      const parts = cuts.slice(0, -1).map((_, k) => resolve(partsDir, `part${k}.mp4`));
+      const runs = parts.map((p, k) => renderChunk(rigs[k], cuts[k], cuts[k + 1], p, tick).catch(e => {
+        // the first failure stops the rest: their encoders die now, their pages when the browser closes
+        if (!abort) { abort = e; for (const f of ffs) f.kill('SIGKILL'); for (const r of rigs) r.ctx.close().catch(() => {}); }
+        throw e;
+      }));
+      await Promise.allSettled(runs);
+      if (abort) throw abort;
+      writeFileSync(resolve(partsDir, 'list.txt'), parts.map(p => `file '${p.replace(/'/g, "'\\''")}'`).join('\n') + '\n');
+      try { ffmpeg(['-f', 'concat', '-safe', '0', '-i', resolve(partsDir, 'list.txt'), '-c', 'copy', '-movflags', '+faststart', OUT]); }
+      catch (e) { rmSync(OUT, { force: true }); throw e; }
+    }
+    console.log(`\nwrote ${rel(OUT)} (${mb(OUT)}, ${(frames / FPS).toFixed(1)} s at ${FPS} fps${n > 1 ? `, ${n} jobs` : ''}) in ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+    if (DELIVER) deliver(OUT, frames / FPS);
   }
 } finally {
-  if (ff) ff.kill();
+  for (const f of ffs) f.kill('SIGKILL');
+  if (partsDir) rmSync(partsDir, { recursive: true, force: true });
   await browser.close();
   srv.stop();
 }
