@@ -18,6 +18,14 @@
 // scene. Indentation and [bracketed] timecodes are for the reader and are ignored (`fmt`
 // refreshes the brackets). A line starting with # is a note.
 //
+// Inside a scene, `cue <name> <seconds>` moves one of its joints (CUES below: when the answer
+// arrives after the question's Enter, when the content leaves, how fast the question types);
+// a scene that writes none keeps the rig's own timing.
+//
+// Tools edit a script the way a person would, one line at a time: parse() says which line
+// holds what (`marks` for SCENE/ITEM/@ lines, `fields` for every other line), and setDur,
+// setAt, setField and setCue change that line and nothing else.
+//
 // One file, three hosts. The rig loads it as a classic script (window.ReelScript), the
 // renderer requires it, and run directly it is the command line:
 //   node scripts/reel-script.js check [file]   parse, print the cue sheet and the total
@@ -93,6 +101,14 @@
     pair:  { read: v => parts(v, 2, 2, '"name | role"'), write: a => a.join(' | ') },
     cta:   { read: v => { const p = parts(v, 2, 2, '"the lead | the gold part"'); return { lead: p[0], strong: p[1] }; },
              write: c => `${c.lead} | ${c.strong}` },
+    // one named timing point: collected into an object, { out: 0.5 }, not a list
+    cue:   { many: true, map: true,
+             read: v => {
+               const m = /^(\w+)\s+(\S+)$/.exec(words(v));
+               if (!m) throw new Error('should read "out 0.5": the name of a timing point, then its value');
+               return [m[1], number(m[2], `the ${m[1]} cue`)];
+             },
+             write: ([k, x]) => `${k} ${x}` },
   };
 
   // ── what each part of a reel holds, in the order it is written ────────
@@ -121,6 +137,26 @@
     end:     { fields: [['board', 'board', 'str'], ['line', 'line', 'str']], need: ['board', 'line'] },
   };
   const ITEM = { fields: HEAD, beats: ['beats', BEAT], need: ['eyebrow', 'headline', 'beats'] };
+  Object.values(SCENES).forEach(d => d.fields.push(['cue', 'cues', 'cue']));
+
+  // ── named timing points inside a scene ────────────────────────────────
+  // A scene's choreography keeps its shape; a cue moves one of its joints. A scene that does
+  // not write a cue takes the default, which is the rig's own timing, so writing none changes
+  // nothing. `asks`: only for scenes that type a question.
+  const OUT = { open: 0.45, title: 0.65, results: 0.34, quotes: 0.34, offer: 0.34 };
+  const CUES = {
+    typing: { about: 'characters a second the question is typed at', def: () => 40, asks: true, min: 1 },
+    in:     { about: 'seconds from the question\'s Enter to the answer starting to arrive', def: () => 0.04, asks: true },
+    out:    { about: 'seconds before the scene ends that its content starts to leave', def: t => (OUT[t] != null ? OUT[t] : 0.32), skip: ['end'] },
+  };
+  const asks = type => !!SCENES[type] && SCENES[type].fields.some(f => f[0] === 'query');
+  const cueNames = type => Object.keys(CUES).filter(k => (!CUES[k].asks || asks(type)) && !(CUES[k].skip || []).includes(type));
+  // a scene's cue: what it writes, or the default
+  function cue(sc, name) {
+    const c = CUES[name];
+    if (!c) throw new Error(`there is no "${name}" cue`);
+    return sc.cues && sc.cues[name] != null ? sc.cues[name] : c.def(sc.type);
+  }
 
   const a = w => (/^[aeiou]/i.test(w) ? 'an ' : 'a ') + w;
   // a rig name as the script says it, for messages
@@ -133,17 +169,20 @@
   };
 
   // ── reading ───────────────────────────────────────────────────────────
-  // Returns { edit, warnings, marks }. `edit` is what the rig draws; `marks` says which line
-  // opened each scene, item and beat. Every mistake is collected, then thrown as one Error
-  // whose message has a "line N: …" row for each.
+  // Returns { edit, warnings, marks, fields }. `edit` is what the rig draws. `marks` has one
+  // { ln, obj, kind: 'scene'|'item'|'beat', scene, owner } per line that opens a part (`scene`
+  // is the scene it is in, `owner` what holds a beat). `fields` has one
+  // { ln, owner, key, jsonKey, index, kind } per field line: `index` is its place among its
+  // owner's lines of that key (a cue's is its name), null for a field given once. Every mistake
+  // is collected, then thrown as one Error whose message has a "line N: …" row for each.
   function parse(src) {
-    const errors = [], warnings = [], marks = [];
+    const errors = [], warnings = [], marks = [], fields = [];
     const fail = (ln, msg) => errors.push({ ln, msg });
     const edit = { scenes: [] };
     let scene = null, item = null, beat = null;          // what the next field belongs to
     // after a SCENE line naming no kind, its lines go nowhere: one mistake, not one per line
     const LOST = { fields: [] };
-    const part = (obj, def, label) => ({ obj, def, label, seen: new Set(), fields: new Map(def.fields.map(([k, j, kind]) => [k, { j, kind: KINDS[kind] }])) });
+    const part = (obj, def, label) => ({ obj, def, label, seen: new Set(), fields: new Map(def.fields.map(([k, j, kind]) => [k, { j, kind: KINDS[kind], name: kind }])) });
 
     String(src).split('\n').forEach((raw, i) => {
       const ln = i + 1;
@@ -160,7 +199,7 @@
           const obj = { type: rest[0], dur: 0 };
           edit.scenes.push(obj);
           scene = part(obj, def, `${obj.type} scene`);
-          marks.push({ ln, obj });
+          marks.push({ ln, obj, kind: 'scene', scene: obj, owner: null });
           obj.dur = number(rest[1], 'a scene\'s length');
           if (!(obj.dur > 0)) throw new Error('a scene\'s length should be more than 0');
         } else if (scene && scene.def === LOST) {
@@ -170,7 +209,7 @@
           const obj = { dur: 0 };
           (scene.obj.items = scene.obj.items || []).push(obj);
           item = part(obj, ITEM, 'item'); beat = null;
-          marks.push({ ln, obj });
+          marks.push({ ln, obj, kind: 'item', scene: scene.obj, owner: scene.obj });
           obj.dur = number(rest[0], 'an item\'s length');
           if (!(obj.dur > 0)) throw new Error('an item\'s length should be more than 0');
         } else if (head[0] === '@') {
@@ -181,7 +220,7 @@
           const [key, fields] = owner.def.beats;
           (owner.obj[key] = owner.obj[key] || []).push(obj);
           beat = part(obj, { fields }, 'beat');
-          marks.push({ ln, obj });
+          marks.push({ ln, obj, kind: 'beat', scene: scene.obj, owner: owner.obj });
         } else if (head === 'seed' && !scene) {
           edit.seed = number(value, 'the seed');
         } else if (!scene) {
@@ -194,12 +233,23 @@
           if (!p) throw new Error(`"${head}" is not a field here. ${open.map(x => `${a(x.label).replace(/^a/, 'A')} takes ${[...x.fields.keys()].join(', ')}`).join('. ')}.`);
           if (p === scene) item = beat = null; else if (p === item) beat = null;
           const f = p.fields.get(head), v = f.kind.read(value);
-          if (f.kind.many) (p.obj[f.j] = p.obj[f.j] || []).push(v);
-          else {
+          let index = null;
+          if (f.kind.map) {                             // a cue: named, once each, and only where it applies
+            const [k, x] = v, type = p.obj.type, o = p.obj[f.j] = p.obj[f.j] || {};
+            if (!CUES[k]) throw new Error(`there is no "${k}" cue; ${a(type)} scene has ${cueNames(type).join(', ') || 'none'}`);
+            if (!cueNames(type).includes(k)) throw new Error(`${a(type)} scene has no ${k} cue${CUES[k].asks && !asks(type) ? ': it types no question' : ''}`);
+            if (k in o) throw new Error(`the ${k} cue is already given for this scene`);
+            if (CUES[k].min != null && x < CUES[k].min) throw new Error(`the ${k} cue should be at least ${CUES[k].min}`);
+            o[k] = x; index = k;
+          } else if (f.kind.many) {
+            const list = p.obj[f.j] = p.obj[f.j] || [];
+            list.push(v); index = list.length - 1;
+          } else {
             if (p.seen.has(head)) throw new Error(`"${head}" is already given for this ${p.label}`);
             if (v !== false) p.obj[f.j] = v;
           }
           p.seen.add(head);
+          fields.push({ ln, owner: p.obj, key: head, jsonKey: f.j, index, kind: f.name });
         }
       } catch (e) {
         fail(ln, e.message);
@@ -239,11 +289,11 @@
       const rows = errors.sort((x, y) => x.ln - y.ln).map(x => x.ln ? `line ${x.ln}: ${x.msg}` : x.msg);
       const e = new Error(rows.join('\n')); e.errors = rows; throw e;
     }
-    return { edit, warnings, marks };
+    return { edit, warnings, marks, fields };
   }
 
   // ── when things happen, in seconds from the top of the reel ───────────
-  function cues(edit) {
+  function spans(edit) {
     let t = 0;
     return edit.scenes.map(sc => {
       const c = { start: t, end: t + sc.dur };
@@ -262,7 +312,7 @@
   };
   // every scene, item and beat with the words its [bracket] shows
   function stamps(edit) {
-    const when = cues(edit), out = new Map();
+    const when = spans(edit), out = new Map();
     edit.scenes.forEach((sc, i) => {
       const c = when[i], def = SCENES[sc.type];
       out.set(sc, `${tc(c.start)} → ${tc(c.end)}`);
@@ -282,7 +332,7 @@
       if (v == null || v === false) return;
       if (kind === 'flag') { out.push(pad + k); return; }
       const key = (pad + k).padEnd(pad.length + 9);
-      (K.many ? v : [v]).forEach(x => out.push(key + K.write(x)));
+      (K.map ? Object.entries(v) : K.many ? v : [v]).forEach(x => out.push(key + K.write(x)));
     });
   }
   // the whole script, written fresh from an edit (how cut 2 moved out of media-kit.json)
@@ -320,7 +370,7 @@
 
   // ── the cue sheet: everything that happens, in the order it happens ───
   function cueSheet(edit) {
-    const when = cues(edit), out = [];
+    const when = spans(edit), out = [];
     const clip = p => p.replace(/^\.\//, '');
     const gist = b => [
       b.video ? `video ${clip(b.video)}${b.from != null ? ' from ' + b.from : ''}${b.loop ? ' (loop)' : ''}` : b.img ? `img ${clip(b.img)}` : '',
@@ -337,12 +387,66 @@
       });
       cs.sort((a, b) => a[0] - b[0]);
       const label = sc.query || sc.name || sc.caption || sc.line || '';
-      out.push(`${tc(c.start).padEnd(9)}${sc.type.toUpperCase()} ${sc.dur} s${label ? '  ' + label : ''}`);
+      const moved = sc.cues ? '  (cue ' + Object.entries(sc.cues).map(([k, x]) => `${k} ${x}`).join(', ') + ')' : '';
+      out.push(`${tc(c.start).padEnd(9)}${sc.type.toUpperCase()} ${sc.dur} s${label ? '  ' + label : ''}${moved}`);
       cs.forEach(([t, depth, what]) => out.push(`${tc(t).padEnd(9)}${'  '.repeat(depth)}${what}`));
     });
     const total = when.length ? when[when.length - 1].end : 0;
     out.push('', `total ${tc(total)} (${+total.toFixed(3)} s, ${Math.round(total * 60)} frames at 60 fps)`);
     return out.join('\n');
+  }
+
+  // ── changing a script the way a person would, one line at a time ──────
+  // Each takes the script and a line number from parse(src).marks or .fields, changes that line
+  // (setCue may add or remove one), refreshes the [bracketed] timecodes and returns the new
+  // script. A change that would break the script throws parse's error, lines and all.
+  const num = n => { const x = Number(n); if (!Number.isFinite(x)) throw new Error(`"${n}" is not a number`); return String(+x.toFixed(3)); };
+  function setLine(src, ln, change) {
+    const lines = String(src).split('\n'), i = ln - 1;
+    if (!(i >= 0 && i < lines.length)) throw new Error(`there is no line ${ln}`);
+    const cr = lines[i].endsWith('\r') ? '\r' : '';
+    lines[i] = change(lines[i].replace(/\r$/, '')) + cr;
+    return retime(lines.join('\n'));
+  }
+  // a scene's or an item's length, on its SCENE or ITEM line
+  const setDur = (src, ln, dur) => setLine(src, ln, s => {
+    const m = /^(\s*)(SCENE\s+\S+|ITEM)\s+\S+(.*)$/.exec(s);
+    if (!m) throw new Error(`line ${ln} is not a SCENE or ITEM line`);
+    return `${m[1]}${m[2]} ${num(dur)}${m[3]}`;
+  });
+  // a beat's time, on its @ line
+  const setAt = (src, ln, at) => setLine(src, ln, s => {
+    const m = /^(\s*)@\s*[^\s[]+(.*)$/.exec(s);
+    if (!m) throw new Error(`line ${ln} is not an @ beat line`);
+    return `${m[1]}@${num(at)}${m[2]}`;
+  });
+  // the words after a field's name (the name and its spacing stay)
+  const setField = (src, ln, value) => setLine(src, ln, s => {
+    const m = /^(\s*[^\s#@]\S*\s+)\S.*$/.exec(s);
+    if (!m || /^\s*(SCENE|ITEM)\b/.test(s)) throw new Error(`line ${ln} is not a field with words to change`);
+    const v = String(value).replace(/\s+/g, ' ').trim();
+    if (!v) throw new Error('a field needs some words');
+    return m[1] + v;
+  });
+  // a scene's cue: rewritten where it is, added after the scene's own lines, or (value null) removed
+  function setCue(src, sceneLn, name, value) {
+    const { marks, fields } = parse(src);
+    const scene = marks.find(m => m.ln === sceneLn && m.kind === 'scene');
+    if (!scene) throw new Error(`line ${sceneLn} is not a SCENE line`);
+    if (!cueNames(scene.obj.type).includes(name)) throw new Error(`${a(scene.obj.type)} scene has no ${name} cue`);
+    const own = fields.filter(f => f.owner === scene.obj);
+    const there = own.find(f => f.key === 'cue' && f.index === name);
+    if (there && value != null) return setField(src, there.ln, `${name} ${num(value)}`);
+    const lines = String(src).split('\n');
+    if (there) lines.splice(there.ln - 1, 1);
+    else if (value != null) {
+      const firstChild = Math.min(...marks.filter(m => m.scene === scene.obj && m.kind !== 'scene').map(m => m.ln), Infinity);
+      const before = own.filter(f => f.ln < firstChild).map(f => f.ln);
+      const after = before.length ? Math.max(...before) : sceneLn;
+      const indent = own.length ? /^\s*/.exec(lines[own[0].ln - 1])[0] : '  ';
+      lines.splice(after, 0, `${indent}${'cue'.padEnd(9)}${name} ${num(value)}`);
+    } else return src;
+    return retime(lines.join('\n'));
   }
 
   // ── the command line ──────────────────────────────────────────────────
@@ -376,5 +480,5 @@
     if (notes.length) console.log('\n' + notes.map(w => 'warning: ' + w).join('\n'));
   }
 
-  return { parse, format, retime, cues, cueSheet, SCENES, main };
+  return { parse, format, retime, spans, cueSheet, SCENES, CUES, cue, cueNames, setDur, setAt, setField, setCue, main };
 });

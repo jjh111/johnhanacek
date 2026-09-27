@@ -3,6 +3,8 @@
 //   node scripts/render-sizzle-reel.mjs --cut=2                 → cut 2 instead: Assets/sizzle-reel-2.html playing its
 //                                                                 script, Assets/sizzle-reel-2.script.txt,
 //                                                                 → Assets/media-kit/video/sizzle-reel-2.mp4
+//   node scripts/render-sizzle-reel.mjs --script=Assets/x.script.txt → any script through cut 2's player
+//                                                                 (→ Assets/media-kit/video/x.mp4)
 //   node scripts/render-sizzle-reel.mjs --fps=30                → half the frames, for a quick proof
 //   node scripts/render-sizzle-reel.mjs --from=17.5 --to=27.5   → a stretch while you cut (the tank is
 //                                                                 still simulated from 0, so it matches)
@@ -47,7 +49,14 @@ const STILLS = flag('stills', '').split(',').filter(Boolean).map(Number).sort((a
 // as it was), cut 2's is a plain-text script that scripts/reel-script.js reads.
 const CUTS = { 1: { page: 'Assets/sizzle-reel.html', edit: 'reel', name: 'sizzle-reel' },
                2: { page: 'Assets/sizzle-reel-2.html', script: 'Assets/sizzle-reel-2.script.txt', name: 'sizzle-reel-2' } };
-const CUT = CUTS[flag('cut', '1')];
+// --script=Assets/name.script.txt plays another script through cut 2's player: a new cut is a new script
+const SCRIPT_FLAG = flag('script', null);
+const CUT = SCRIPT_FLAG ? (() => {
+  const f = resolve(ROOT, SCRIPT_FLAG);
+  if (!/^[\w.-]+\.script\.txt$/.test(basename(f)) || dirname(f) !== resolve(ROOT, 'Assets')) throw new Error('--script must name a .script.txt file in Assets/');
+  if (!existsSync(f)) throw new Error(`--script: there is no ${SCRIPT_FLAG}`);
+  return { page: CUTS[2].page, script: 'Assets/' + basename(f), name: basename(f, '.script.txt'), query: 'script=' + basename(f) };
+})() : CUTS[flag('cut', '1')];
 if (!CUT) throw new Error(`--cut must be one of ${Object.keys(CUTS).join(', ')}`);
 // the edit (a script with a mistake stops here, with its line numbers, before a browser starts)
 const reel = CUT.script
@@ -117,7 +126,7 @@ try {
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-  const url = `http://127.0.0.1:${srv.port}/${CUT.page}?render=1${SEED ? '&seed=' + SEED : ''}`;
+  const url = `http://127.0.0.1:${srv.port}/${CUT.page}?render=1${CUT.query ? '&' + CUT.query : ''}${SEED ? '&seed=' + SEED : ''}`;
   await page.goto(url, { waitUntil: 'load', timeout: 120000 });
   // polling by interval: in render mode the rig owns requestAnimationFrame, so rAF polling never fires
   await page.waitForFunction(() => window.REEL || document.getElementById('err'), null, { timeout: 60000, polling: 100 });

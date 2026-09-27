@@ -453,7 +453,17 @@ p, h1, h2, h3 { margin: 0; }
   // read fresh every load: a reload after saving the script shows the save
   const fresh = (url, as) => fetch(url, { cache: 'no-store' }).then(r => { if (!r.ok) throw new Error(url + ' ' + r.status); return r[as](); });
   const MK = await fresh('./media-kit.json', 'json');       // the boards (clients, offer) and the site's name
-  const EDIT = ReelScript.parse(await fresh('./sizzle-reel-2.script.txt', 'text')).edit;
+  // The script: ?script=name.script.txt plays another cut through this same player (a file next
+  // to this page); without it, cut 2's own. Live, an unsaved draft of it (the timeline keeps one
+  // when there is no dev server to save through) is played instead, and says so.
+  const SCRIPT = /^[\w.-]+\.script\.txt$/.test(Q.get('script') || '') ? Q.get('script') : 'sizzle-reel-2.script.txt';
+  const SCRIPT_PATH = 'Assets/' + SCRIPT, DRAFT_KEY = 'reel-draft:' + SCRIPT_PATH;
+  let DRAFT = null;
+  if (!RENDER) try { DRAFT = sessionStorage.getItem(DRAFT_KEY); } catch (e) { /* storage blocked: no drafts */ }
+  window.__reelDraft = DRAFT != null ? DRAFT_KEY : null;     // lets the error screen offer to discard it
+  const SRC = DRAFT != null ? DRAFT : await fresh('./' + SCRIPT, 'text');
+  const PARSED = ReelScript.parse(SRC);
+  const EDIT = PARSED.edit;
   const boardNamed = name => { const b = MK.boards.find(x => x.name === name); if (!b) throw new Error('cut 2: no board named ' + name); return b; };
   let acc = 0;
   const SC = EDIT.scenes.map((s, i) => { const o = Object.assign({}, s, { i, start: acc, end: acc + s.dur }); acc += s.dur; return o; });
@@ -556,6 +566,10 @@ p, h1, h2, h3 { margin: 0; }
   // ── registries the scenes fill ────────────────────────────────────────
   const MEDIA = [], EVENTS = [], LAYOUT = [], QUERIES = [];
   const at = (t, run) => EVENTS.push({ t, run });
+  // Work on the tank that must happen after every engine tick, painted or not. Anything that
+  // touches a fish lives here or in EVENTS, never in a scene's picture: a still, a part of the
+  // cut or a parallel chunk paints only some frames, and must still grow the film's tank.
+  const TICKS = [];
   function segEl(sc, html) {
     const el = document.createElement('section');
     el.className = 'seg ' + sc.type;
@@ -667,6 +681,8 @@ p, h1, h2, h3 { margin: 0; }
       const D0 = 0.2, D1 = 0.95, DONE = D0 + D1, OUT = sc.dur - 0.45;
       let born = null;
       at(sc.start + DONE, () => { born = BIG = spawnStroke(pts, 'fish', Math.PI); });
+      // the new fish holds its heading until it has swum clear of the loop it was drawn as
+      TICKS.push(t => { if (born && t - sc.start < DONE + 0.45) { born.heading = born.targetHeading = born.cruiseAngle = Math.PI; born.vx = -0.3; born.vy = 0; } });
       return (lt) => {
         const k = seg(lt, D0, D1, E.inOutCubic);
         paths.forEach(p => { p.style.strokeDashoffset = fx(L * (1 - k)); });
@@ -675,7 +691,6 @@ p, h1, h2, h3 { margin: 0; }
         const flare = Math.sin(Math.PI * seg(lt, DONE - 0.08, 0.4)), gone = seg(lt, DONE + 0.05, 0.4, E.inOutSine);
         main.style.opacity = (1 - gone).toFixed(3);
         glow.style.opacity = ((0.7 + 0.6 * flare) * (1 - gone)).toFixed(3);
-        if (born && lt < DONE + 0.45) { born.heading = born.targetHeading = born.cruiseAngle = Math.PI; born.vx = -0.3; born.vy = 0; }
         lines(g1, lt, 0.22, OUT, { dur: 0.5 });
         lines(g2, lt, DONE + 0.06, OUT, { dur: 0.45 });
       };
@@ -1174,7 +1189,7 @@ p, h1, h2, h3 { margin: 0; }
       debug: { scenes: SC, tank, queries: QUERIES },
       async frame(t) {
         const want = Math.round(t * 60);
-        while (ticks < want) { simulate((ticks + 1) / 60); tank.startAnimation(); CLOCK.tick(STEP); ticks++; }
+        while (ticks < want) { simulate((ticks + 1) / 60); tank.startAnimation(); CLOCK.tick(STEP); ticks++; for (const fn of TICKS) fn(ticks / 60); }
         simulate(t); paint(t);
         const waits = [];
         for (const m of MEDIA) {
@@ -1200,6 +1215,8 @@ p, h1, h2, h3 { margin: 0; }
     stage.style.transform = `translate(${fx((innerWidth - W * s) / 2)}px,${fx((innerHeight - H * s) / 2)}px) scale(${s.toFixed(5)})`; };
   fit(); addEventListener('resize', fit);
   SC.forEach(sc => { const b = document.createElement('b'); b.style.left = (sc.start / DURATION * 100).toFixed(3) + '%'; bar.appendChild(b); });
+  // `node scripts/reel-dev.mjs` answers /__reel/ping; a plain static server does not
+  const DEV = await fetch('/__reel/ping', { cache: 'no-store' }).then(r => r.ok, () => false);
   const sceneAt = t => { let s = SC[0]; for (const x of SC) if (t >= x.start - 1e-6) s = x; return s; };
   const HASH = new URLSearchParams(location.hash.slice(1));
   let loopSc = SC[parseInt(HASH.get('loop'), 10)] || null;
@@ -1207,8 +1224,10 @@ p, h1, h2, h3 { margin: 0; }
   const now = () => playing ? (performance.now() - base) / 1000 : held;
   const seekTo = s => { s = Math.max(0, Math.min(DURATION, s)); if (playing) base = performance.now() - s * 1000; else held = s; };
   const jump = sc => { if (!sc) return; if (loopSc) loopSc = sc; seekTo(sc.start); };
+  const toggle = () => { if (playing) { held = now(); playing = false; } else { playing = true; seekTo(held >= DURATION ? 0 : held); } };
   addEventListener('keydown', e => {
-    if (e.key === ' ') { e.preventDefault(); if (playing) { held = now(); playing = false; } else { playing = true; seekTo(held >= DURATION ? 0 : held); } }
+    if (e.target.closest && e.target.closest('input, textarea, select, [contenteditable]')) return;   // typing in the timeline
+    if (e.key === ' ') { e.preventDefault(); toggle(); }
     else if (e.key === 'ArrowRight') seekTo(now() + 5);
     else if (e.key === 'ArrowLeft') seekTo(now() - 5);
     else if (e.key === ']') jump(SC[sceneAt(now()).i + 1]);
@@ -1217,6 +1236,40 @@ p, h1, h2, h3 { margin: 0; }
     else if (e.key === 'r' || e.key === 'R') { playing = true; loopSc = null; seekTo(0); }
   });
   let hashAt = -1, hashLoop = null;
+  // The preview's API, for the timeline (scripts/reel-timeline.js) and anything else that drives
+  // it: read the script and where things are, move the playhead, and save a changed script,
+  // through the dev server when it runs, else as this tab's draft. Either way the page reloads
+  // at the same moment.
+  const frameFns = [];
+  window.REEL_LIVE = {
+    file: SCRIPT_PATH, src: SRC, parsed: PARSED, draft: DRAFT != null, dev: DEV,
+    scenes: SC, duration: DURATION,
+    now, seek: seekTo, isPlaying: () => playing, setPlaying: p => { if (!!p !== playing) toggle(); },
+    onFrame: fn => { frameFns.push(fn); },
+    async save(text) {
+      try { ReelScript.parse(text); } catch (e) { return { ok: false, errors: e.errors || [e.message] }; }
+      if (DEV) {
+        const r = await fetch('/__reel/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ file: SCRIPT_PATH, text }) }).catch(e => ({ ok: false, status: e.message }));
+        const j = r.json ? await r.json().catch(() => ({})) : {};
+        if (!r.ok) return { ok: false, errors: j.errors || ['the dev server did not save it (' + r.status + ')'] };
+        try { sessionStorage.removeItem(DRAFT_KEY); } catch (e) { /* nothing to clear */ }
+        location.reload();
+        return { ok: true, via: 'file' };
+      }
+      try { sessionStorage.setItem(DRAFT_KEY, text); } catch (e) { return { ok: false, errors: ['this browser keeps no drafts here (storage is blocked); run node scripts/reel-dev.mjs to save to the file'] }; }
+      location.reload();
+      return { ok: true, via: 'draft' };
+    },
+    discardDraft() { try { sessionStorage.removeItem(DRAFT_KEY); } catch (e) { /* nothing to clear */ } location.reload(); },
+    download(text) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([text == null ? SRC : text], { type: 'text/plain' }));
+      a.download = SCRIPT; document.body.appendChild(a); a.click(); a.remove();
+    },
+  };
+  // with the dev server, a save from any editor reloads the preview (a draft here is kept)
+  if (DEV) new EventSource('/__reel/events?file=' + encodeURIComponent(SCRIPT_PATH)).addEventListener('change', () => { if (DRAFT == null) location.reload(); });
+  const tl = document.createElement('script'); tl.src = '../scripts/reel-timeline.js'; tl.onerror = () => tl.remove(); document.head.appendChild(tl);
   bar.addEventListener('click', e => { const r = bar.getBoundingClientRect(); seekTo((e.clientX - r.left) / r.width * DURATION); });
   let idle; const wake = () => { hud.classList.remove('idle'); clearTimeout(idle); idle = setTimeout(() => hud.classList.add('idle'), 2200); };
   addEventListener('mousemove', wake); wake();
@@ -1226,6 +1279,7 @@ p, h1, h2, h3 { margin: 0; }
     if (t >= DURATION) { t = DURATION; if (playing) { held = t; playing = false; } }
     simulate(t);
     tank.startAnimation();
+    for (const fn of TICKS) fn(t);
     paint(t);
     for (const m of MEDIA) {
       const on = t >= m.start - 0.25 && t <= m.end + 0.25;
@@ -1243,6 +1297,7 @@ p, h1, h2, h3 { margin: 0; }
       history.replaceState(null, '', `#t=${t.toFixed(2)}${loopSc ? '&loop=' + loopSc.i : ''}`);
       hashAt = t; hashLoop = loopSc;
     }
+    for (const fn of frameFns) fn(t);
     requestAnimationFrame(loop);
   })();
 })().catch(err => {
@@ -1250,6 +1305,13 @@ p, h1, h2, h3 { margin: 0; }
   pre.textContent = err && err.errors
     ? 'Assets/sizzle-reel-2.script.txt has ' + err.errors.length + ' mistake' + (err.errors.length > 1 ? 's' : '') + ':\n\n  ' + err.errors.join('\n  ') + '\n\nFix the script and reload. Nothing was drawn.'
     : 'sizzle-reel-2 rig failed: ' + (err && err.stack || err) + '\nCheck Assets/sizzle-reel-2.script.txt (node scripts/reel-script.js check) and reload. Nothing was drawn.';
+  if (window.__reelDraft) {
+    const b = document.createElement('button');
+    b.textContent = 'This is an unsaved draft: discard it and reload';
+    b.style.cssText = 'display:block;margin-top:18px;font:inherit;padding:8px 12px';
+    b.onclick = () => { try { sessionStorage.removeItem(window.__reelDraft); } catch (e) { /* ok */ } location.reload(); };
+    pre.appendChild(b);
+  }
   document.body.appendChild(pre);
   console.error(err);
 });
