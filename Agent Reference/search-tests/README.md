@@ -44,6 +44,12 @@ node phase11-inquiry.mjs  # Phase 11: the inquiry composer — a paragraph in th
                   # --webkit repeats the services shell in Safari's engine.
                   # Section 6 runs the RELAY route against a mock Apps Script
                   # (302 → echo, like Google's) on :9913.
+node servicetest.mjs  # service coherence on the REAL pipeline: service seekers lead
+                  # with offers (16/17/18/41), not What John Is Looking For (49);
+                  # "inquire"/"send a message"/"message john: …" open the card,
+                  # doorway cards carry "Write John a message", questions about
+                  # John never raise it, and under a card the results are its
+                  # track's offers. Relay pinned off: sends nothing.
 node relaytest.mjs  # the Apps Script inquiry relay (../inquiry-relay/Code.gs) under
                   # node with Google's services stubbed: honeypot + too-fast
                   # dropped silently, bad email/short/long/foreign-body

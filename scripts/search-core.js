@@ -102,6 +102,11 @@
         { patterns: [/schedul(e|ing)|book\s+(a\s+)?(call|meeting|session)|set\s+up\s+a\s+(call|meeting|time)/i], expanded: 'services coaching intro call consultation contact email', hint: 'How to book time with John', card: 'schedule' },
         // Hiring: the audience this month arrives from applications. One gold
         // card — the resume PDF, the calendar — over the resume + looking-for chunks.
+        // Hiring John FOR something (a project, consulting, a sprint) is a
+        // services question, not a full-time one: "hire john for a project"
+        // used to fire the hiring intent and lead with What John Is Looking
+        // For. Measured by search-tests/servicetest.mjs.
+        { patterns: [/\bhire\s+(him|john|you)\s+(for|to)\b(?!.*\b(full[-\s]?time|role|position|job|w-?2)\b)/i, /\bwork\s+with\s+(him|john|you)\b/i, /what\s+(does|can|could)\s+(he|john)\s+(offer|do\s+for)/i, /can\s+(he|john)\s+help\b/i], expanded: 'services coaching consulting design product workshops retainer sprint deliverables', hint: 'Services and engagement options', card: 'services' },
         { patterns: [/\b(hire|hiring|recruit(ing|er)?|open\s+to\s+work|available|availability|full[-\s]?time|job|role|position|resume|r\u00e9sum\u00e9|\bcv\b|curriculum)\b/i, /looking\s+for\s+(work|a\s+job|a\s+role)/i, /is\s+he\s+(available|open|looking)/i], expanded: 'resume hire available full-time product design engineer looking for role lead designer founding designer', hint: 'Hiring John', card: 'hire' },
         { patterns: [/how\s+(do\s+i|can\s+i|to)\s+(contact|reach|email|message)\s+(him|john)/i, /contact|email|linkedin|twitter|social/i, /send\s+(him|john)\s+a\s+message/i], expanded: 'contact email linkedin bluesky twitter social', hint: 'Contact information', card: 'contact' },
         { patterns: [/what\s+does\s+he\s+(charge|cost)|pricing|rates?|how\s+much/i, /\bcosts?\b|\bprices?\b/i, /services?|consulting|coaching|freelance/i, /can\s+he\s+help\s+(me|us|with)/i, /i\s+need\s+help\s+with/i, /looking\s+for\s+a\s+designer/i], expanded: 'services coaching consulting design product workshops retainer sprint', hint: 'Services and engagement options', card: 'services' },
@@ -635,10 +640,37 @@
                 inqComposer = window.JHInquiry.composer({
                     page: inqPage, showWords: true,
                     resolveHref: (u) => resolveHref(String(u || '').replace(/^\.\//, '')),
+                    // The meaning pass (or the visitor) settled the track or
+                    // offer: re-query what sits around the card.
+                    onRefine: (v) => {
+                        if (inqMode !== 'brief' || !v) return;
+                        const q = inquirySearchQuery(v);
+                        if (q === lastFusionQuery) return;
+                        lastFusionQuery = q; lastIntentFired = true;
+                        const results = search(q);
+                        lastSearchResults = results;
+                        renderResults(results, lastHint);
+                        if (semanticState === 'ready') refineSemantic(currentQueryRaw, ++semanticGen);
+                    },
                 });
             }
             return inqComposer;
         }
+        // What sits around a message card: the offers for its track, not
+        // whatever the paragraph's words happen to match ("What John Is
+        // Looking For" was leading under coaching briefs).
+        const INQ_TRACK_QUERY = {
+            coaching: 'coaching packages guided coaching audit build sprint retainer chief of staff coaching os',
+            design: 'design product services deliverables prototype founding designer client work',
+            hiring: 'hiring availability full time lead designer resume looking for role',
+            unsure: 'services coaching design product workshops deliverables',
+        };
+        function inquirySearchQuery(v) {
+            if (!v) return INQ_TRACK_QUERY.unsure;
+            const offer = v.offer && window.JHInquiry ? (window.JHInquiry.OFFERS.find(o => o.id === v.offer) || {}).name || '' : '';
+            return [INQ_TRACK_QUERY[v.track] || INQ_TRACK_QUERY.unsure, offer, ...(v.domains || [])].join(' ').trim();
+        }
+
         function attachInquiry(resultsEl, focus) {
             if (!inqComposer) return;
             const host = inqMode === 'brief' ? resultsEl.querySelector('[data-inq-host]') : null;
@@ -820,7 +852,9 @@
             if (!c) return '';
             const ext = c.alt.href.startsWith('http');
             const altTitle = ext ? ' title="Leaves the site — your search is kept"' : '';
-            return `<div class="intent-card"><div class="intent-card-title">${c.title}</div><div class="intent-card-body">${c.body}</div><div class="intent-card-actions"><a class="intent-cta" href="${resolveHref(c.cta.href)}">${c.cta.label}</a><a class="intent-alt" href="${resolveHref(c.alt.href)}"${ext ? ' target="_blank" rel="me noopener"' : ''}${altTitle}>${c.alt.label}</a></div></div>`;
+            // Every doorway also offers the message itself, right here in the bar.
+            const write = window.JHInquiry ? `<button type="button" class="intent-alt intent-write" data-inq-start>Write John a message</button>` : '';
+            return `<div class="intent-card"><div class="intent-card-title">${c.title}</div><div class="intent-card-body">${c.body}</div><div class="intent-card-actions"><a class="intent-cta" href="${resolveHref(c.cta.href)}">${c.cta.label}</a><a class="intent-alt" href="${resolveHref(c.alt.href)}"${ext ? ' target="_blank" rel="me noopener"' : ''}${altTitle}>${c.alt.label}</a>${write}</div></div>`;
         }
 
         function renderCmdCard(c) {
@@ -2496,7 +2530,7 @@
             // The card's HTML goes in whole (not an empty host) so the fit
             // loop below measures its height with everything else.
             if (inqMode === 'brief' && inqComposer) html += `<div class="inq-host" data-inq-host>${inqComposer.html()}</div>`;
-            else if (inqMode === 'offer') html += `<div class="inq-offer"><button type="button" class="inq-link" data-inq-force>Send this to John as a message</button></div>`;
+            else if (inqMode === 'offer' && !lastIntentCard) html += `<div class="inq-offer"><button type="button" class="inq-link" data-inq-force>Send this to John as a message</button></div>`;
             if (lastScenePlan) html += renderPlanCard(lastScenePlan);
             if (lastSceneCensus) html += renderCensusHtml();
             if (lastIntentCard) html += renderIntentCard(lastIntentCard);
@@ -3078,7 +3112,7 @@
             const scene = parseScene(rawQuery);
             lastScenePlan = scene && scene.kind === 'plan' ? scene : null;
             lastSceneCensus = scene && scene.kind === 'query' ? scene : null;
-            const { query: expanded, hint, originalQuery, card, pieceRail } = expandQuery(rawQuery);
+            let { query: expanded, hint, originalQuery, card, pieceRail } = expandQuery(rawQuery);
             lastIntentCard = card || null;
             lastPieceRail = !!pieceRail;
             lastCmdMatches = lastScenePlan ? [] : matchCommands(rawQuery, null);
@@ -3089,6 +3123,10 @@
                 lastScenePlan = null; lastSceneCensus = null;
                 lastIntentCard = null; lastCmdMatches = [];
                 ensureComposer().update(rawQuery);
+                expanded = inquirySearchQuery(inqComposer.view());
+                originalQuery = rawQuery;   // trust the expansion in the fusion
+                hint = 'Around your message: what John offers';
+                pieceRail = false; lastPieceRail = false;
             }
             const results = search(expanded);
             // a real search un-dismisses the residue sentence (10g)
@@ -3170,6 +3208,17 @@
                     if (e.target.closest('[data-inq-force]')) {
                         inqForced = (currentQueryRaw || '').trim();
                         doSearchOnly(currentQueryRaw);
+                        return;
+                    }
+                    if (e.target.closest('[data-inq-start]')) {
+                        // The bar becomes the message: the command prefix raises
+                        // the prompt card, and whatever is typed after it parses.
+                        const inp = el('searchInput');
+                        inp.value = 'Message John: ';
+                        inp.focus();
+                        try { inp.setSelectionRange(inp.value.length, inp.value.length); } catch {}
+                        inp.dispatchEvent(new Event('input', { bubbles: true }));
+                        doSearchOnly(inp.value);
                         return;
                     }
                     if (e.target.closest('[data-inq-card]')) return;   // the card handles its own clicks

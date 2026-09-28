@@ -63,7 +63,19 @@ const FIXTURES = [
     ['short with email',
      'Could you help us with a landing page? We launch soon. sam@acme.co',
      { detect: 'brief', email: 'sam@acme.co', offer: ['website'] }],
+    ['consulting on agentic AI (John, 2026-09-28)',
+     'i want to hire him for consulting on how to use agentic AI in my business',
+     { detect: 'brief', track: 'coaching' }],
+    ['command prefix is stripped',
+     "message john: we're a small studio building an AI note-taking app and need help with the onboarding design by March",
+     { detect: 'brief', track: 'design', timeline: 'March', wordsStartWith: "we're a small studio", offer: ['e2e', 'mvp'] }],
+    ['inquire, mid-sentence',
+     'I would like to inquire about coaching for my leadership team',
+     { detect: 'brief', track: 'coaching' }],
 ];
+
+// Asked for by name with nothing after it: the card opens as a prompt.
+const COMMANDS = ['inquire', 'send a message', 'send john a message', 'message john', 'Message John: ', 'get in touch', 'contact john', 'email john'];
 
 const NEGATIVES = [
     'what did john do at nanome and how did he design the wrist based menu',
@@ -73,13 +85,20 @@ const NEGATIVES = [
     'why should I hire him for a founding designer role at an AI startup',
     'what does he charge for coaching and how many sessions are in a package',
     'is john available for full-time work and would he relocate to san francisco',
+    'should i hire him for a founding designer role',
+    'how do i contact him',
+    'what does inquire mean',
+    'contact',
+    'services',
 ];
 
 // Every quoted query in the existing search test suites.
 function harvestQueries() {
     const out = new Set();
     for (const f of fs.readdirSync(HERE)) {
-        if (!f.endsWith('.mjs') || f === 'inquirylab.mjs' || f === 'mock-llm.mjs') continue;
+        // The composer's own suites quote its TRIGGERS on purpose; the gate is
+        // for every other query the bar has ever been tested with.
+        if (!f.endsWith('.mjs') || ['inquirylab.mjs', 'mock-llm.mjs', 'servicetest.mjs', 'phase11-inquiry.mjs', 'relaytest.mjs'].includes(f)) continue;
         const src = fs.readFileSync(path.join(HERE, f), 'utf8');
         for (const m of src.matchAll(/\[\s*'([^'\n]{3,160})'/g)) out.add(m[1]);
         for (const m of src.matchAll(/\.fill\([^,]+,\s*'([^'\n]{3,160})'\)/g)) out.add(m[1]);
@@ -114,7 +133,7 @@ console.log('── 1. fixtures');
 let fieldHits = 0, fieldTotal = 0;
 for (const [label, text, exp] of FIXTURES) {
     const d = I.detect(text);
-    const b0 = I.parse(text);
+    const b0 = I.parse(I.stripCommand(text));
     const b1 = await I.refine(b0);
     const v = I.view(b1, {});
     const got = [];
@@ -125,6 +144,7 @@ for (const [label, text, exp] of FIXTURES) {
     for (const k of ['name', 'org', 'role', 'timeline', 'email', 'budget', 'stage', 'position', 'location']) {
         if (exp[k]) f(k, has(v[k], exp[k]), v[k]);
     }
+    if (exp.wordsStartWith) f('command stripped', v.text.startsWith(exp.wordsStartWith), v.text.slice(0, 30));
     if (exp.noStage) f('stage (none stated)', !v.stage, v.stage);   // "no idea where to start" is not a stage
     if (exp.domain) f('domain', v.domains.some(x => has(x, exp.domain)), v.domains);
     if (exp.related) f('related', v.related.some(r => has(r.title, exp.related)), v.related.map(r => r.title + ' ' + r.score));
@@ -132,6 +152,13 @@ for (const [label, text, exp] of FIXTURES) {
     if (SHOW_SCORES) console.log('      scores', JSON.stringify(b1._scores.slice(0, 4)), 'related', JSON.stringify(b1.related.map(r => [r.title.slice(0, 24), r.score])));
 }
 console.log(`   field accuracy ${fieldHits}/${fieldTotal}`);
+
+console.log('── 1b. commands open the prompt');
+for (const q of COMMANDS) {
+    const ok = I.detect(q) === 'brief' && !I.stripCommand(q).trim();
+    check('command opens the prompt: ' + q, ok);
+    console.log(`${ok ? '  ✓' : '  ✗'} ${JSON.stringify(q)}`);
+}
 
 console.log('── 2. negatives (questions about John)');
 for (const q of NEGATIVES) {

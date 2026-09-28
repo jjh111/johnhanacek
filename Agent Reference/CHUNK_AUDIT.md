@@ -373,7 +373,9 @@ point: they exist to answer design-interview questions the pages were never writ
   coaching; Lead or Senior Designer, founding designer for the right team; a founder's
   experience with an IC's ruthlessness and a Director's vision. **The revenue-stability line
   from the first draft was CUT at John's direction** — "in this era we still need to do
-  posturing".
+  posturing". *2026-09-28:* tags narrowed to hiring terms (dropped `startups consulting
+  coaching`, which made this lead service queries like "work with john"); content
+  unchanged, so no claim changed. Measured by `search-tests/servicetest.mjs`.
 
 ### Nanome title, resolved for the third time
 - [x] The job was labelled XR interaction designer; John was doing PM and lead design and owns

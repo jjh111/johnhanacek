@@ -67,10 +67,10 @@
     const OFFERS = [
         { id: 'audit', track: 'coaching', name: 'Audit',
           lex: /\b(audit|assess(ment)?|where (do i|to|should i) start|readiness|action plan)\b/i,
-          ex: ["I don't know where to start with AI", 'Review how my team uses AI tools and tell us what to fix first', 'A one-time assessment of our workflows and AI readiness'] },
+          ex: ["I don't know where to start with AI", 'Review how my team uses AI tools and tell us what to fix first', 'A one-time assessment of our workflows and AI readiness', 'Advice on our AI strategy and which tools to adopt'] },
         { id: 'guided', track: 'coaching', name: 'Guided Coaching',
           lex: /\b(coach(ing|es)?|mentor(ing|ship)?|teach me|learn (to|how)|upskill|get up to speed|from (zero|scratch))\b/i,
-          ex: ['I want to learn how to use AI agents in my own work', 'Coaching sessions to get comfortable with Claude Code', 'Teach me to build software with AI'] },
+          ex: ['I want to learn how to use AI agents in my own work', 'Coaching sessions to get comfortable with Claude Code', 'Teach me to build software with AI', 'Consulting on how to use agentic AI in my business'] },
         { id: 'sprint', track: 'coaching', name: 'Build Sprint',
           lex: /\b(sprint|intensive|pair(ing)?|build it (together|with me))\b/i,
           ex: ['Help me build my specific project over a couple of intense weeks', 'A week of daily pairing to ship my tool', 'Build this with me quickly, side by side'] },
@@ -88,7 +88,7 @@
           ex: ['Design and prototype the first version of our app', 'We need an MVP designed and handed off to our engineers', 'A clickable prototype to show investors'] },
         { id: 'e2e', track: 'design', name: 'End-to-End Product Design',
           lex: /\b(end[- ]to[- ]end|founding designer|design lead|head of design|product design(er)?|zero to one|0 ?(to|→) ?1|design system)\b/i,
-          ex: ['We are looking for a founding designer to own the product', 'End to end product design from research to shipped interface', 'Build our design system and lead product design'] },
+          ex: ['We are looking for a founding designer to own the product', 'End to end product design from research to shipped interface', 'Build our design system and lead product design', 'Design the onboarding and core flows of our app'] },
         { id: 'agentic', track: 'design', name: 'AI & Agentic Systems',
           lex: /\b(agents?|agentic|llms?|multi[- ]agent|tool use|chatbots?|copilots?|ai (features?|assistants?|products?)|rag)\b/i,
           ex: ['Design the experience of an AI agent for our users', 'Our product uses LLMs and the assistant experience is confusing', 'An interface for orchestrating multiple AI agents'] },
@@ -99,7 +99,9 @@
     const OFFER_BY_ID = Object.fromEntries(OFFERS.map(o => [o.id, o]));
 
     const TRACK_WORDS = {
-        coaching: /\b(coach(ing)?|mentor\w*|learn|teach|upskill|my own work|for myself|productivity|chief of staff|claude code|use ai (in|for) my|get (my|our) team using)\b/gi,
+        // "hire him for consulting on how to use agentic AI" is coaching: the
+        // visitor wants to learn to use it, not a product designed.
+        coaching: /\b(coach(ing)?|mentor\w*|learn|teach|upskill|my own work|for myself|productivity|chief of staff|claude code|use ai (in|for) my|get (my|our) team using|how to (use|build with|work with|get started with|adopt)|consult(ing|ation|ant)?)\b/gi,
         design: /\b(design(er|ing)?|ux|ui|interface|app|product|user experience|figma|brand(ing)?|logo|prototype|mvp|website|landing page)\b/gi,
         hiring: /\b(hiring|recruit(er|ing)?|full[- ]time|position|opening|job|candidate|interview|talent|headcount|salary|compensation|w-?2|join (our|the) team)\b/gi,
     };
@@ -151,17 +153,35 @@
     const NEED = /\b(we'?re (building|making|working|looking|trying|hiring|a |an )|we are (building|making|working|looking|trying|hiring)|we (have|need|want)\b|our (team|company|startup|product|app|platform|studio|agency|clients?|founders?)\b|i need\b|i want\b|i'?m (looking|hoping|trying|building|working on|interested|reaching)|i am (looking|hoping|trying|building|interested|reaching)|looking for (a|an|someone|help|support)\b|help (us|me)\b|could you|would you|can you help|are you (available|open|interested)|interested in (working|hiring|your|coaching)|i'?d (like|love)|we'?d (like|love)|work(ing)? with you|hire you|reach(ing)? out)/i;
     const ABOUT_JOHN = /^(what|who|where|when|which|why|how)\b.*\b(john|he|his|him)\b|^(does|did|is|has|was|can|could|would|will|should)\s+(john|he)\b/i;
 
+    // Asked for BY NAME at the start: "inquire", "send a message", "message
+    // john: …", "get in touch". Always the card; the command itself is
+    // stripped, and with nothing after it the card is a prompt to keep typing.
+    const COMMAND = /^\s*(?:inquire|inquiry|enquire|enquiry|send\s+(?:a\s+|an\s+)?(?:message|note|email|inquiry)(?:\s+to\s+(?:john|him))?|send\s+(?:john|him)\s+(?:a\s+|an\s+)?(?:message|note|email)|message\s+(?:john|him)|write\s+(?:to\s+)?(?:john|him)|contact\s+(?:john|him)|email\s+(?:john|him)|get\s+in\s+touch(?:\s+with\s+(?:john|him))?|reach\s+out(?:\s+to\s+(?:john|him))?)\b\s*[:,.\-–—]?\s*/i;
+    // Asking to reach John anywhere in the text.
+    const ASK = /\b(inquire|inquiry|inquiring|enquire|send (?:a |him a |john a )?(?:message|note)|message (?:john|him)|write to (?:john|him)|contact (?:john|him|you)|email (?:john|him|you)|get in touch|reach(?:ing)? out|hire (?:john|him|you)|work with (?:john|him|you)|consult(?:ing|ation)? (?:with|for|on)|engage (?:john|him|you))\b/i;
+    // A question ABOUT John (third person) is a search, whatever it mentions:
+    // "should i hire him for a founding designer role", "how do i contact him".
+    const QUESTION_ABOUT = /^(should|can|could|would|will|do|does|is|are|may)\s+(i|we)\b.*\b(john|him|he|his)\b/i;
+
     function wordCount(t) { return (t.match(/\S+/g) || []).length; }
+
+    function stripCommand(text) {
+        const t = String(text || '');
+        const m = t.match(COMMAND);
+        return m ? t.slice(m[0].length) : t;
+    }
 
     function detect(text) {
         const t = String(text || '').trim();
+        if (!t) return null;
+        if (COMMAND.test(t)) return 'brief';
         const words = wordCount(t);
-        if (words < 8) return null;
         const email = EMAIL.test(t);
         const need = NEED.test(t);
-        if (ABOUT_JOHN.test(t) && !email) return words >= 18 ? 'offer' : null;
-        if ((need && words >= 14) || (email && words >= 8)) return 'brief';
-        if (words >= 18 || need) return 'offer';
+        const ask = ASK.test(t);
+        if ((ABOUT_JOHN.test(t) || QUESTION_ABOUT.test(t)) && !email) return words >= 18 ? 'offer' : null;
+        if ((ask && words >= 8) || (need && words >= 14) || (email && words >= 8)) return 'brief';
+        if (words >= 18 || ((need || ask) && words >= 3)) return 'offer';
         return null;
     }
 
@@ -533,7 +553,9 @@
             : v.offerStrength === 'weak' ? '<span class="inq-mark inq-mark--weak" title="A loose match. Change it if it is wrong">◐</span>'
             : v.offerStrength === 'words' ? '<span class="inq-mark inq-mark--weak" title="Matched by your words">◐</span>' : '';
 
-        let rows = '<div class="inq-row inq-row--lead"><span class="inq-k">Looking for</span><span class="inq-lead">' + trackSel + '<span class="inq-arrow">→</span>' + offerSel + mark + '</span></div>';
+        // The arrow, offer and mark travel as one unit, so a narrow card breaks
+        // the line between the two pickers and never strands "→" or "◐".
+        let rows = '<div class="inq-row inq-row--lead"><span class="inq-k">Looking for</span><span class="inq-lead">' + trackSel + '<span class="inq-offer-line"><span class="inq-arrow">→</span>' + offerSel + mark + '</span></span></div>';
         const missing = [];
         for (const f of fieldsFor(v)) {
             const val = v[f] || '';
@@ -591,6 +613,17 @@
             + '</div>' + foot + '</div>';
     }
 
+    // The card before there is anything to parse: the visitor asked to write
+    // John a message ("message john", "inquire", the intent cards' button).
+    function renderPrompt(opts) {
+        const form = opts.resolveHref ? opts.resolveHref('services.html#book') : 'services.html#book';
+        return '<div class="inq-card inq-prompt" data-inq-card>'
+            + '<div class="inq-head"><span class="inq-title">Message to John</span><span class="cmdbar-group-label">write it right here</span></div>'
+            + '<p class="inq-prompt-body">Keep typing: who you are, what you need, and when. It becomes a message you check before anything sends.</p>'
+            + (opts.page === 'services.html' ? '' : '<div class="inq-actions"><a class="intent-alt" href="' + esc(form) + '">or use the form on the services page</a></div>')
+            + '</div>';
+    }
+
     // Count-only events (GoatCounter is cookieless; only the event NAME is sent).
     function count(name) {
         try {
@@ -624,7 +657,7 @@
     // attach() moves the card and its state to the new host. ──
     function composer(opts) {
         opts = Object.assign({ page: '', showWords: true, autoEmbed: false, corpusUrl: null, resolveHref: null, onSent: null, endpoint: '' }, opts || {});
-        const st = { text: '', brief: null, refined: null, ov: {}, open: new Set(), ui: 'draft', clipped: false, host: null, gen: 0, counted: false, timer: 0, relay: false, shownAt: 0, error: '' };
+        const st = { text: '', brief: null, refined: null, ov: {}, open: new Set(), ui: 'draft', clipped: false, host: null, gen: 0, counted: false, timer: 0, relay: false, shownAt: 0, error: '', prompt: false };
 
         function current() { return st.brief ? view(st.refined || st.brief, st.ov) : null; }
 
@@ -632,7 +665,7 @@
             const host = st.host;
             if (!host) return;
             const v = current();
-            if (!v) { host.innerHTML = ''; return; }
+            if (!v) { host.innerHTML = st.prompt ? renderPrompt(opts) : ''; return; }
             // Keep focus and caret across re-renders (a refine can land while
             // the visitor is typing in a field).
             const a = typeof document !== 'undefined' ? document.activeElement : null;
@@ -666,6 +699,7 @@
             if (f === 'track') delete st.ov.offer;
             st.ui = 'draft';
             render();
+            if ((f === 'track' || f === 'offer') && opts.onRefine) opts.onRefine(current());
         }
         function onClick(e) {
             const add = e.target.closest('[data-inq-add]');
@@ -776,7 +810,10 @@
                 text = String(text || '');
                 if (text.trim() === st.text.trim()) return;
                 st.text = text;
-                st.brief = text.trim() ? parse(text) : null;
+                // "message john: we're building…" parses only what follows.
+                const body = stripCommand(text);
+                st.prompt = !body.trim() && COMMAND.test(text);
+                st.brief = body.trim() ? parse(body) : null;
                 st.refined = null;
                 st.ui = 'draft';
                 render();
@@ -786,7 +823,8 @@
             reset() { st.text = ''; st.brief = null; st.refined = null; st.ov = {}; st.open.clear(); st.ui = 'draft'; render(); },
             // The card's current HTML, for hosts that must measure it before
             // attaching (the command bar's fit loop counts its height).
-            html() { const v = current(); if (!v) return ''; st.relay = !!relayEndpoint(opts); return renderCard(v, st, opts); },
+            html() { const v = current(); if (!v) return st.prompt ? renderPrompt(opts) : ''; st.relay = !!relayEndpoint(opts); return renderCard(v, st, opts); },
+            view() { return current(); },
             // A host that rebuilds its DOM calls these around the rebuild so a
             // visitor typing in a card field keeps their place.
             captureFocus() {
@@ -819,6 +857,7 @@
                         if (!r || gen !== st.gen) return;
                         st.refined = r;
                         render();
+                        if (opts.onRefine) opts.onRefine(current());
                     }).catch(err => console.warn('[Inquiry] refine failed:', err && err.message || err));
                 }, 350);
             },
@@ -831,6 +870,6 @@
     root.JHInquiry = {
         detect, parse, refine, view, compose, renderCard, composer,
         setEmbedder, setCorpus, ensureEmbedder, ensureCorpus, embedderReady,
-        OFFERS, TRACKS, T, TO, relayEndpoint,
+        OFFERS, TRACKS, T, TO, relayEndpoint, stripCommand,
     };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -859,9 +859,9 @@ body.search-overlay-open {
 
 .result-link { color: var(--text-primary); text-decoration: none; }
 .result-link:hover { color: var(--gold); text-decoration: underline; text-underline-offset: 2px; }
-.result-link-ext::after { content: ' ↗'; font-size: 0.7em; opacity: 0.7; }
+.result-link-ext::after { content: ' \2197 '; font-size: 0.7em; opacity: 0.7; }
 /* 9c grammar: titles DECLARE that they navigate (hover underline + ↗) */
-.pc-mod .result-link:not(.result-link-ext):hover::after { content: ' ↗'; font-size: 0.75em; opacity: 0.7; }
+.pc-mod .result-link:not(.result-link-ext):hover::after { content: ' \2197 '; font-size: 0.75em; opacity: 0.7; }
 /* the page badge is the explicit nav affordance */
 .result-page-link { text-decoration: none; transition: color 0.15s, background 0.15s; }
 .result-page-link:hover {
@@ -1240,7 +1240,7 @@ model-viewer.pc-obstacle--float { width: 170px; height: 170px; }
     min-width: 0; overflow: hidden; text-overflow: ellipsis;
 }
 .tier + .tier::before {
-    content: '·';
+    content: '\00b7 ';
     color: var(--so-muted, var(--muted));
     opacity: 0.35; margin-right: 0.25rem;
 }
@@ -1730,6 +1730,9 @@ body.search-overlay-open .so-residue { display: none; }
    per-theme value); alpha is only on borders and fills. */
 .inq-card {
     position: relative;
+    /* The card sizes its own layout to ITS width, not the viewport's: in the
+       ⤢ workspace list or the tablet band it can be 270px on a wide screen. */
+    container-type: inline-size;
     border: 1px solid rgba(var(--gold-rgb), 0.3); border-radius: 6px;
     background: rgba(var(--gold-rgb), 0.04);
     padding: 0.7rem 0.85rem; margin-bottom: 0.45rem;
@@ -1757,7 +1760,9 @@ body.search-overlay-open .so-residue { display: none; }
 .inq-v:focus { outline: none; border-bottom-color: var(--gold); }
 select.inq-v { width: auto; max-width: 100%; justify-self: start; cursor: pointer; }
 select.inq-v option { background: var(--sea-mid); color: var(--text-bright); }
-.inq-lead { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; min-width: 0; }
+.inq-lead { display: flex; align-items: center; gap: 0.4rem 0.5rem; flex-wrap: wrap; min-width: 0; }
+.inq-offer-line { display: inline-flex; align-items: center; gap: 0.4rem; min-width: 0; max-width: 100%; }
+.inq-offer-line select { min-width: 0; }
 .inq-arrow { color: var(--ink-quiet); }
 .inq-mark { color: var(--gold); font-size: var(--text-2xs); cursor: help; }
 .inq-mark--weak { color: var(--ink-quiet); }
@@ -1808,10 +1813,25 @@ select.inq-v option { background: var(--sea-mid); color: var(--text-bright); }
     text-decoration: none; border-bottom: 1px dotted rgba(var(--gold-rgb), 0.55);
 }
 .inq-offer .inq-link::after { content: ' \2192'; }
-@media (max-width: 420px) {
+/* Narrow card: labels stack above their values, each picker gets a full
+   line, and the arrow + offer + mark stay together on the second. */
+@container (max-width: 440px) {
     .inq-rows { grid-template-columns: 1fr; row-gap: 0; }
-    .inq-k { margin-top: 0.35rem; }
+    .inq-k { margin-top: 0.45rem; }
+    .inq-lead { flex-direction: column; align-items: stretch; gap: 0.3rem; }
+    .inq-lead > select, .inq-offer-line { width: 100%; }
+    .inq-offer-line select { flex: 1 1 auto; width: auto; }
+    .inq-head { flex-direction: column; gap: 0.1rem; }
 }
+.inq-prompt-body { margin: 0.2rem 0 0.1rem; font-family: var(--font-display); font-size: var(--text-xs); color: var(--text-bright); line-height: 1.55; }
+.inq-prompt .inq-actions { margin-top: 0.5rem; }
+/* "Write John a message" on the doorway cards: a quiet third action. */
+.intent-write {
+    background: none; border: 0; padding: 0; cursor: pointer;
+    font-family: var(--font-mono); font-size: var(--text-2xs);
+    color: var(--cyan-dim); border-bottom: 1px dotted rgba(var(--cyan-dim-rgb), 0.35);
+}
+.intent-write:hover, .intent-write:focus-visible { color: var(--gold); outline: none; }
 @media (pointer: coarse) {
     .inq-v { min-height: 36px; }
     .inq-add, .inq-btn, .inq-actions .intent-cta { min-height: 40px; display: inline-flex; align-items: center; }

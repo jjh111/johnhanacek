@@ -260,3 +260,34 @@ deployed Apps Script does (302 → echo, CORS on both), all pass, plus the earli
 sections unchanged and the WebKit pass. Not provable here: Google's real redirect
 and Gmail delivery. Step 7 of the relay README (the health-check URL) and one real
 test inquiry after deploy settle that.
+
+---
+
+## Build record — 2026-09-28, later: coherence, triggers, layout (v2.31)
+
+From John's live testing. Baseline first (`servicetest.mjs` on the real pipeline), then fixes:
+
+- **"What John Is Looking For" led service queries.** Baseline: it led "hire john for a
+  project", "work with john", "what does he offer", and sat second under "can he help my
+  startup". Causes: the hiring intent fired on any "hire"; chunk 49's tags included
+  `startups consulting coaching`. Fixes: a services-bound intent ahead of hiring ("hire
+  him FOR …" unless it names full-time/role/job, "work with john", "what does he offer",
+  "can he help"); chunk 49 tags narrowed to hiring terms and its vector rebuilt (only 49's
+  vector changed). Now 13/13: every service seeker has an offer in its top 3 and none is
+  led by 49; the two hiring questions still get 49.
+- **Triggering.** Commands by name open the card (prompt state when empty); "Write John a
+  message" on every doorway card; `ASK` phrases ("hire him", "work with you", "consult
+  on…") raise the card at 8+ words and a link below that; third-person questions about
+  John never do. Lab: 71/71 fields, 8 commands, 12 negatives, 0 of 71 other queries.
+- **Parsing.** "hire him for consulting on how to use agentic AI" read as design; it is
+  coaching (the visitor wants to learn to use it): coaching words gain "how to use …" and
+  "consult…", and Guided Coaching / Audit / End-to-End gained exemplars. Scores now
+  0.83 Guided Coaching for that sentence; "help with the onboarding design" of an app lands
+  End-to-End (it matched nothing before).
+- **Around a card** the results are re-queried from the brief's track + offer; the coaching
+  brief now leads with 17, 16 (and no 49), the design brief with 41.
+- **Layout.** The card is a size container: under 440px its labels stack and each picker
+  gets a full line, the arrow, offer and mark kept together. The tier strip's labels had
+  gone gold uppercase on services.html because that page had its own `.tier-label` class;
+  renamed `.fit-label`. CSS `content:` values are ASCII-escaped (a charset-less local
+  server rendered `·` as `Â·`).

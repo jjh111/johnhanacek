@@ -279,7 +279,14 @@ which stamps every `?v=` cache-bust ref across root `*.html` **and** the `Portfo
   mode, Enter only focuses Send. Two shells: the command bar (search-core loads inquiry-core
   beside itself) and services.html `#book` (textarea, sessionStorage draft). GoatCounter gets
   count-only events. Thresholds in `T` were calibrated by `search-tests/inquirylab.mjs`; plan +
-  build record: `Agent Reference/INQUIRY_COMPOSER_PLAN.md`
+  build record: `Agent Reference/INQUIRY_COMPOSER_PLAN.md`. **Asked for by name** (v2.31): a
+  leading command ("inquire", "send a message", "message john: …", "get in touch") always opens
+  the card, stripped before parsing, and with nothing after it the card is a prompt to keep
+  typing; every doorway intent card (services/contact/schedule/hire) carries **Write John a
+  message**, which puts `Message John: ` in the bar. Questions ABOUT John ("should i hire him…",
+  "how do i contact him") never raise it. **Around a card** the postcard is re-queried from the
+  brief's track + offer ("Around your message: what John offers"), not from the paragraph's
+  words. `search-tests/servicetest.mjs` guards all of it on the real pipeline
 - **The tier strip collapses to icons when its labels don't fit** — MEASURED (`fitTierStrip` in
   search-core: the tiers' summed natural widths vs the strip, re-run by a ResizeObserver), not a
   viewport rule, because the tablet type scale truncated "keyword" to "KEY…" in a 494px row. Icon
