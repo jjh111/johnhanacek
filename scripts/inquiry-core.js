@@ -619,7 +619,7 @@
         const form = opts.resolveHref ? opts.resolveHref('services.html#book') : 'services.html#book';
         return '<div class="inq-card inq-prompt" data-inq-card>'
             + '<div class="inq-head"><span class="inq-title">Message to John</span><span class="cmdbar-group-label">write it right here</span></div>'
-            + '<p class="inq-prompt-body">Keep typing: who you are, what you need, and when. It becomes a message you check before anything sends.</p>'
+            + '<p class="inq-prompt-body">Keep typing and fill in the details to check before sending.</p>'
             + (opts.page === 'services.html' ? '' : '<div class="inq-actions"><a class="intent-alt" href="' + esc(form) + '">or use the form on the services page</a></div>')
             + '</div>';
     }
