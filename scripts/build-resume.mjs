@@ -11,10 +11,11 @@
 //                                              An unknown lane is an error, not a silent fallback. --apply
 //                                              REFUSES a non-default lane unless you add --force-lane: the
 //                                              public surfaces carry no lane in their names. Non-default
-//                                              lanes write LANE-SUFFIXED filenames (resume-apply-<lane>.pdf,
-//                                              resume-apply-<lane>.md, ...) so concurrent lane builds in
-//                                              .local/out/ can never crash into each other — last build wins
-//                                              only within a lane.
+//                                              lanes write LANE-SUFFIXED filenames (JohnHanacek-resume-apply-<lane>.pdf,
+//                                              ...) so concurrent lane builds in .local/out/ can never
+//                                              crash into each other — last build wins only within a lane.
+//                                              All outputs lead with JohnHanacek- so anything attached or
+//                                              uploaded names its owner first.
 //
 // The application PDF (with the phone from .local/private.json) is ALWAYS written to .local/out/ and
 // never into Assets/. Same template, one column, real headings and lists — the ATS twin is the same
@@ -53,7 +54,7 @@ blocks and the case-study figures — all in the ${DEFAULT_LANE} lane, and none 
 carry the lane in their filename.
 
   build it for an application   node scripts/build-resume.mjs --lane=${LANE}
-                                (.local/out/resume-apply-${LANE}.pdf — has the phone, never published)
+                                (.local/out/JohnHanacek-resume-apply-${LANE}.pdf — has the phone, never published)
   publish the public lane       node scripts/build-resume.mjs --apply
   really publish this lane      add --force-lane`);
   process.exit(1);
@@ -86,7 +87,7 @@ const bulletsFor = (w, mode) => {
   return (picked.length ? picked : w.highlights).slice(0, 3).map(h => h.text);
 };
 const skillLines = [
-  ['Design & research', ['Figma', 'FigJam', 'Blender', 'Unity / C#', 'ShapesXR', 'Adobe Creative Suite'], 'User research, usability testing, qualitative coding, 3D interaction, design systems, brand, workshops, PRDs'],
+  ['Design & research', ['Figma', 'FigJam', 'Blender', 'Unity / C#', 'ShapesXR', 'Adobe Creative Suite', 'Coda'], 'User research, usability testing, qualitative coding, 3D interaction, design systems, brand, workshops, PRDs'],
   ['Code', ['JavaScript', 'TypeScript', 'React', 'HTML / CSS', 'Three.js', 'WebGL / GLSL', 'WebGPU', 'Node.js', 'Playwright', 'Git'], null],
   ['AI & agentic', ['Claude Code', 'Opencode', 'Hermes Agent', 'LM Studio', 'Ollama', 'MCP (Blender, Figma)'], 'Context engineering, agent orchestration, tool-use design, RAG, conversational UX'],
   ['XR & robotics', ['Meta Quest', 'HoloLens 2', 'Magic Leap One', 'visionOS'], 'Digital twins, teleoperation, 3D scanning'],
@@ -328,7 +329,7 @@ function chunkPatches() {
       micro: 'Founder-led teams; product lead at Nanome.',
     },
     27: {
-      content: 'Shipped products: (1) AROC situational-awareness AR HUD at BadVR, hand tracking on Meta Quest and HoloLens 2. (2) Nanome 2 on Meta Quest, its companion web portal and the MARA AI assistant, to pharma customers. (3) JH Coaching OS, an adaptive AI coaching product with agent, materials, context docs and dashboard. (4) A workshop system for Muse.bio: FigJam workshop plus a Claude Code + Figma MCP ingestion tool, handed off. (5) OpenProse founding design: brand and a live homepage in two months. Experiments: MetaMedium, an AI-interpreted drawing interface. This site\'s command bar: BM25 and MiniLM retrieval, LFM2.5 in the browser on WebGPU, local-model support, scene language for the canvases. READI, a live emergency-resource dashboard. Blok Dok (2013), a wooden iPhone dock designed, made and sold.',
+      content: 'Shipped products: (1) AROC situational-awareness AR HUD at BadVR, hand tracking on Meta Quest and HoloLens 2. (2) Nanome 2 on Meta Quest, its companion web portal and the MARA AI assistant, to pharma customers. (3) JH Coaching OS, an adaptive AI coaching product with agent, materials, context docs and dashboard. (4) A workshop system for Muse.bio: FigJam workshop plus a Claude Code + Figma MCP ingestion tool, handed off. (5) OpenProse founding design: brand and a live homepage, delivered as code. Experiments: MetaMedium, an AI-interpreted drawing interface. This site\'s command bar: BM25 and MiniLM retrieval, LFM2.5 in the browser on WebGPU, local-model support, scene language for the canvases. READI, a live emergency-resource dashboard. Blok Dok (2013), a wooden iPhone dock designed, made and sold.',
       tldr: 'Shipped: AROC (BadVR), Nanome 2 + web portal + MARA AI, JH Coaching OS, the Muse.bio workshop system, OpenProse. Experiments: MetaMedium, this site\'s search, READI.',
       micro: 'Shipped: XR + AI, agentic tools, web products.',
       tags: 'shipped AI products built delivered LLM agent launched output nanome aroc coaching os openprose muse readi metamedium blok dok',
@@ -337,7 +338,7 @@ function chunkPatches() {
         { t: 'Nanome 2 + web portal + MARA AI', d: 'XR and AI molecular design, shipped to pharma customers' },
         { t: 'JH Coaching OS', d: 'adaptive AI coaching product with dashboard' },
         { t: 'Muse.bio workshop system', d: 'FigJam workshop + Claude Code / Figma MCP ingestion, handed off' },
-        { t: 'OpenProse', d: 'founding design, brand to live homepage in two months' },
+        { t: 'OpenProse', d: 'founding design: brand and a live homepage, delivered as code' },
         { t: 'MetaMedium', d: 'experiment: AI-interpreted drawing interface' },
         { t: 'This site\'s search', d: 'experiment: retrieval + in-browser LFM2.5 on WebGPU' },
         { t: 'Blok Dok', d: '2013: wooden iPhone dock, designed, made and sold', url: 'design.html#blokdok' },
@@ -533,12 +534,12 @@ function applyBlocks(file, blocks) {
 
 // ---------------------------------------------------------------- PDF
 async function pdfs() {
-  // Lane-suffixed filenames for non-default lanes: concurrent builds of different
-  // lanes share .local/out/ and the last build wins, so an untagged resume-apply.pdf
-  // could silently be another lane's summary/headline. Same rule below for the
-  // markdown/linkedin/JSON-LD sidecars.
+  // Filenames lead with JohnHanacek- so anything that leaves this folder (an
+  // upload, an email attachment) identifies its owner before the word "resume".
+  // Lane-suffix for non-default lanes keeps concurrent lane builds in
+  // .local/out/ from crashing into each other — last build wins only within a lane.
   const S = LANE === DEFAULT_LANE ? '' : `-${LANE}`;
-  const f = name => `${name}${S}`;
+  const f = name => `JohnHanacek-${name}${S}`;
   const { chromium } = await import('playwright-core');
   const CHROMIUM = process.env.CHROMIUM_PATH || chromium.executablePath();
   const srv = await serveVerified(ROOT);
@@ -583,23 +584,24 @@ async function pdfs() {
 }
 
 // ---------------------------------------------------------------- run
-// Sidecars carry the lane suffix too — a productDesigner markdown must never be
-// mistaken for the designEngineer one by a later session reading .local/out/.
+// Sidecars carry the same JohnHanacek- prefix and the lane suffix — a
+// productDesigner markdown must never be mistaken for the designEngineer one
+// by a later session reading .local/out/.
 const S = LANE === DEFAULT_LANE ? '' : `-${LANE}`;
-writeFileSync(`${OUT}/john-hanacek-resume${S}.md`, markdown());
-writeFileSync(`${OUT}/linkedin${S}.md`, linkedin());
+writeFileSync(`${OUT}/JohnHanacek-resume${S}.md`, markdown());
+writeFileSync(`${OUT}/JohnHanacek-linkedin${S}.md`, linkedin());
 const patches = chunkPatches();
 writeFileSync(`${OUT}/chunks-proposed${S}.json`, JSON.stringify(patches, null, 2));
 const { path: jlPath, J } = jsonld();
-writeFileSync(`${OUT}/john-hanacek${S}.json`, JSON.stringify(J, null, 2) + '\n');
+writeFileSync(`${OUT}/JohnHanacek${S}.json`, JSON.stringify(J, null, 2) + '\n');
 const proseStrict = checkProse();
 if (APPLY && proseStrict) { console.error(`refusing to --apply: ${proseStrict} strict prose issue(s) in Assets/resume.json (em dashes or banned constructions). Fix the JSON.`); process.exit(1); }
 checkMetaFigures();
 const made = await pdfs();
-console.log(`wrote .local/out/ [${LANE} lane]:`, [`john-hanacek-resume${S}.md`, `linkedin${S}.md`, `chunks-proposed${S}.json`, `john-hanacek${S}.json`, ...made.map(m => m + '.pdf')].join(', '));
+console.log(`wrote .local/out/ [${LANE} lane]:`, [`JohnHanacek-resume${S}.md`, `JohnHanacek-linkedin${S}.md`, `chunks-proposed${S}.json`, `JohnHanacek${S}.json`, ...made.map(m => m + '.pdf')].join(', '));
 if (APPLY) {
   writeFileSync(resolve(ROOT, 'Assets/john-hanacek-resume.md'), markdown());
-  execFileSync('cp', [`${OUT}/resume-designed${S}.pdf`, resolve(ROOT, 'Assets/JH_Resume_2026_onepage.pdf')]);
+  execFileSync('cp', [`${OUT}/JohnHanacek-resume-designed${S}.pdf`, resolve(ROOT, 'Assets/JH_Resume_2026_onepage.pdf')]);
   const changed = applyChunks(patches);
   const aboutDone = applyBlocks('about.html', aboutBlocks());
   const nanomeDone = applyBlocks('nanome2.html', { ...nanome2Blocks(), ...opCardBlocks() });
