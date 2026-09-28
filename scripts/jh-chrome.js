@@ -28,7 +28,7 @@
     // app. Set to the deployed Apps Script web-app URL (…/exec) and Send posts
     // straight to John's Gmail instead. Deploy steps and the relay source:
     // Agent Reference/inquiry-relay/. Not a secret: it is a public endpoint.
-    inquiryEndpoint: ''
+    inquiryEndpoint: 'https://script.google.com/macros/s/AKfycbz1kU84mtnPTUxIR8XEus-LuNXLlBgllme8Q63N0r8NWIl84pYqlu51XnHv2-6Rr83J/exec'
   };
   window.JH_SITE = SITE;
 
