@@ -28,6 +28,15 @@ var LIMITS = {
   globalPerHour: 30,
 };
 
+// Run THIS once from the editor (function dropdown → authorize → Run). It
+// uses exactly the permissions a send needs, so Google asks for them, and
+// the Execution log proves they took: it prints today's remaining quota and
+// the address inquiries will go to.
+function authorize() {
+  Logger.log('Mail quota left today: ' + MailApp.getRemainingDailyQuota()
+    + ' · inquiries go to: ' + recipient_());
+}
+
 function doGet() {
   return json_({ ok: true, service: 'johnhanacek.com inquiry relay' });
 }

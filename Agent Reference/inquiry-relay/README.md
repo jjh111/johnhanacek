@@ -23,7 +23,31 @@ the mail-app route, so nothing breaks while this is undeployed.
 7. Check it: open the URL in a browser. It should answer
    `{"ok":true,"service":"johnhanacek.com inquiry relay"}`.
 
-## If Send fails with a CORS error in the browser
+## If Send fails with a CORS error in the browser — the reliable fix
+
+Seen 2026-09-28 twice, including after running `doGet` from the editor: the
+URL answered GET, but every real send returned Google's HTML error page, "You
+do not have permission to call MailApp.getRemainingDailyQuota". That page
+carries no CORS header, so a browser reports it as CORS. The fix pins the
+permissions down so nothing is left to Google's guesswork:
+
+1. Replace the editor's code with the current [`Code.gs`](./Code.gs). It adds
+   an `authorize` function.
+2. **Project Settings** (gear, left rail) → tick **Show "appsscript.json"
+   manifest file in editor**. Back in the editor, open `appsscript.json` and
+   replace it with [`appsscript.json`](./appsscript.json). It declares the two
+   permissions a send needs: send mail as you, and read your own address.
+3. Pick **authorize** in the function dropdown → **Run** → **Review
+   permissions → your account → Advanced → Go to … (unsafe) → Allow**. The
+   Execution log must print `Mail quota left today: 100 · inquiries go to:
+   <your gmail>`. If it prints an error, the permission is still missing.
+4. **Deploy → Manage deployments** → pencil on the existing deployment →
+   Version: **New version** → **Deploy**. Same URL.
+
+### Earlier, shorter note
+
+The script is not authorized to send mail yet. Deploying does not always ask
+for the Gmail scope; running a function in the editor does.
 
 The script is not authorized to send mail yet. Deploying does not always ask
 for the Gmail scope; running a function in the editor does. Open the script,
