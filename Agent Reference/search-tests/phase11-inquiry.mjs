@@ -181,6 +181,109 @@ await servicesShell(browser, 'chromium');
   check('card fits 390px without horizontal overflow', o.card && o.page, JSON.stringify(o));
   await ctx.close();
 }
+// ───────── 6. the relay route (SITE.inquiryEndpoint set) ─────────
+// A mock of a deployed Apps Script web app: the POST answers 302 to an echo
+// URL and the GET there carries the JSON, the way Google's does. CORS on both.
+{
+  console.log('relay route (mock Apps Script):');
+  const http = await import('node:http');
+  const got = [];
+  const server = http.createServer((req, res) => {
+    const cors = { 'Access-Control-Allow-Origin': '*' };
+    if (req.method === 'POST' && req.url.startsWith('/exec')) {
+      let raw = '';
+      req.on('data', c => raw += c);
+      req.on('end', () => {
+        let p = {}; try { p = JSON.parse(raw); } catch {}
+        got.push({ p, type: req.headers['content-type'] });
+        const out = /^rate@/.test(p.email || '') ? { ok: false, error: 'rate' } : { ok: true, sent: true };
+        res.writeHead(302, { ...cors, Location: '/echo?r=' + encodeURIComponent(JSON.stringify(out)) });
+        res.end();
+      });
+      return;
+    }
+    if (req.method === 'GET' && req.url.startsWith('/echo')) {
+      const r = decodeURIComponent(new URL(req.url, 'http://x').searchParams.get('r'));
+      res.writeHead(200, { ...cors, 'Content-Type': 'application/json' });
+      res.end(r);
+      return;
+    }
+    res.writeHead(404, cors); res.end();
+  });
+  await new Promise(r => server.listen(9913, '127.0.0.1', r));
+
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  await ctx.addInitScript(() => { window.JH_INQUIRY_ENDPOINT = 'http://127.0.0.1:9913/exec'; });
+  const page = await ctx.newPage();
+  const errs = [];
+  page.on('pageerror', e => errs.push(String(e)));
+  await page.goto(`${BASE}/services.html`, { waitUntil: 'networkidle' });
+  await typeInto(page, '#inqText', ROBOTICS);
+  await page.waitForSelector('#inqCard .inq-card', { timeout: 8000 });
+  const pre = await page.evaluate(() => {
+    const em = document.querySelector('#inqCard [data-inq-field="email"]');
+    const send = document.querySelector('#inqCard [data-inq-act="send"]');
+    return { email: !!em, ph: em && em.placeholder, tag: send.tagName, disabled: send.disabled, note: (document.querySelector('#inqCard .inq-note') || {}).textContent || '' };
+  });
+  check('relay: email row shown and asked for', pre.email && pre.ph === 'so John can reply', JSON.stringify(pre));
+  check('relay: Send is a button, disabled without an email', pre.tag === 'BUTTON' && pre.disabled && /Add your email/.test(pre.note));
+  await page.fill('#inqCard [data-inq-field="email"]', 'dana@example.com');
+  await page.dispatchEvent('#inqCard [data-inq-field="email"]', 'input');
+  check('relay: a valid email enables Send, caret stays in the field', await page.evaluate(() =>
+    !document.querySelector('#inqCard [data-inq-act="send"]').disabled && document.activeElement.dataset.inqField === 'email'));
+  await page.click('#inqCard [data-inq-act="send"]');
+  await page.waitForSelector('#inqCard .inq-receipt--sent', { timeout: 10000 }).catch(() => {});
+  const sentTxt = await page.evaluate(() => (document.querySelector('#inqCard .inq-receipt') || {}).textContent || '');
+  check('relay: Sent receipt names the reply address', /Sent\. It is in John’s inbox, and he will reply to dana@example\.com/.test(sentTxt), sentTxt);
+  const p0 = got[0] ? got[0].p : {};
+  check('relay: posted as text/plain (no CORS preflight)', got[0] && /^text\/plain/.test(got[0].type), got[0] && got[0].type);
+  check('relay: payload carries email, subject, verbatim text, page', p0.email === 'dana@example.com' && /^\[Inquiry · Design\]/.test(p0.subject) && p0.text.includes('operators hate it') && p0.body.includes('operators hate it') && p0.page === 'services.html', JSON.stringify({ e: p0.email, s: p0.subject, pg: p0.page }));
+  // Sent ~1 s after the card appeared: the page must hold the post past the
+  // relay's 3 s bot threshold, or a real person would be silently dropped.
+  check('relay: honeypot empty, and a fast Send is held past 3 s', p0.website === '' && typeof p0.elapsed === 'number' && p0.elapsed >= 3000, String(p0.elapsed));
+  check('relay: Send cannot fire twice', await page.evaluate(() => document.querySelector('#inqCard [data-inq-act="send"]').disabled));
+  check('relay: draft cleared after send', await page.evaluate(() => !sessionStorage.getItem('jh-inquiry-draft')));
+  // a refusal falls back to the mail app and Copy
+  await page.fill('#inqCard [data-inq-field="email"]', 'rate@example.com');
+  await page.dispatchEvent('#inqCard [data-inq-field="email"]', 'input');
+  await page.click('#inqCard [data-inq-act="send"]');
+  await page.waitForSelector('#inqCard [data-inq-act="mailto"]', { timeout: 10000 }).catch(() => {});
+  const fail = await page.evaluate(() => {
+    const r = document.querySelector('#inqCard .inq-receipt');
+    const m = document.querySelector('#inqCard [data-inq-act="mailto"]');
+    return { txt: r ? r.textContent : '', href: m ? m.getAttribute('href') : '' };
+  });
+  check('relay: a refusal says why and offers the mail app', /Too many messages/.test(fail.txt) && fail.href.startsWith('mailto:hi@johnhanacek.com'), fail.txt);
+  check('relay: no page errors', errs.length === 0, errs.join(' | '));
+  await ctx.close();
+
+  // relay unreachable → the same fallback
+  const ctx2 = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  await ctx2.addInitScript(() => { window.JH_INQUIRY_ENDPOINT = 'http://127.0.0.1:9/exec'; });
+  const p2 = await ctx2.newPage();
+  await p2.goto(`${BASE}/services.html`, { waitUntil: 'networkidle' });
+  await typeInto(p2, '#inqText', COACHING);   // carries its own email
+  await p2.waitForSelector('#inqCard .inq-card', { timeout: 8000 });
+  await p2.click('#inqCard [data-inq-act="send"]');
+  await p2.waitForSelector('#inqCard [data-inq-act="mailto"]', { timeout: 25000 }).catch(() => {});
+  check('relay down: the connection failure falls back to the mail app', /connection failed/.test(await p2.evaluate(() => (document.querySelector('#inqCard .inq-receipt') || {}).textContent || '')));
+  await ctx2.close();
+
+  // in the bar, Enter with no email lands on the email field
+  const ctx3 = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  await ctx3.addInitScript(() => { window.JH_INQUIRY_ENDPOINT = 'http://127.0.0.1:9913/exec'; });
+  const p3 = await ctx3.newPage();
+  await p3.goto(`${BASE}/search.html`, { waitUntil: 'networkidle' });
+  await p3.waitForFunction(() => !!window.JHInquiry, null, { timeout: 15000 });
+  await typeInto(p3, '#searchInput', ROBOTICS);
+  await p3.waitForSelector('#searchResults .inq-card', { timeout: 8000 });
+  await p3.focus('#searchInput');
+  await p3.keyboard.press('Enter');
+  check('relay, bar: Enter goes to the missing email, sends nothing', await p3.evaluate(() => document.activeElement && document.activeElement.dataset.inqField === 'email') && got.length === 2);
+  await ctx3.close();
+  server.close();
+}
+
 await browser.close();
 
 if (process.argv.includes('--webkit')) {

@@ -6,8 +6,13 @@
 // A visitor writes what they need. This file parses it ON THEIR DEVICE into a
 // brief (track, offer, who, stage, timeline, budget), renders that brief as an
 // editable card, and composes the message. Nothing leaves the page until the
-// visitor presses Send, which opens their own mail app (or Copy, which puts
-// the message on their clipboard). There is no server and no third party.
+// visitor presses Send. Two delivery routes:
+//   relay    — when SITE.inquiryEndpoint (scripts/jh-chrome.js) names a
+//              deployed Google Apps Script (Agent Reference/inquiry-relay/),
+//              Send POSTs the composed message and John's own Gmail sends it
+//              to John's own Gmail, Reply-To the visitor. Email is required.
+//   mail app — with no endpoint (or when the relay fails), Send opens the
+//              visitor's mail app; Copy puts the message on their clipboard.
 //
 // Two layers, instant then smarter:
 //   L0 — grammar + lexicon. Synchronous, runs everywhere, renders on the
@@ -505,14 +510,14 @@
         return f;
     }
 
-    function inputHtml(field, value) {
+    function inputHtml(field, value, required) {
         if (field === 'stage') {
             return '<select class="inq-v" data-inq-field="stage" aria-label="Stage">'
                 + STAGE_OPTS.map(([k, l]) => '<option value="' + k + '"' + (k === value ? ' selected' : '') + '>' + l + '</option>').join('')
                 + '</select>';
         }
         const type = field === 'email' ? 'email' : 'text';
-        return '<input class="inq-v" type="' + type + '" data-inq-field="' + field + '" value="' + esc(value) + '" placeholder="not stated" aria-label="' + FIELD_LABEL[field] + '" autocomplete="' + (field === 'email' ? 'email' : field === 'name' ? 'name' : field === 'org' ? 'organization' : 'off') + '">';
+        return '<input class="inq-v" type="' + type + '" data-inq-field="' + field + '" value="' + esc(value) + '" placeholder="' + (required ? 'so John can reply' : 'not stated') + '"' + (required ? ' required' : '') + ' aria-label="' + FIELD_LABEL[field] + '" autocomplete="' + (field === 'email' ? 'email' : field === 'name' ? 'name' : field === 'org' ? 'organization' : 'off') + '">';
     }
 
     function renderCard(v, st, opts) {
@@ -532,7 +537,8 @@
         const missing = [];
         for (const f of fieldsFor(v)) {
             const val = v[f] || '';
-            if (val || st.open.has(f)) rows += '<div class="inq-row"><span class="inq-k">' + FIELD_LABEL[f] + '</span>' + inputHtml(f, val) + '</div>';
+            const forced = f === 'email' && st.relay;   // the relay needs somewhere to reply
+            if (val || st.open.has(f) || forced) rows += '<div class="inq-row"><span class="inq-k">' + (forced ? 'Your email' : FIELD_LABEL[f]) + '</span>' + inputHtml(f, val, forced) + '</div>';
             else missing.push(f);
         }
         if (v.domains && v.domains.length) rows += '<div class="inq-row"><span class="inq-k">Domain</span><input class="inq-v" type="text" data-inq-field="domains" value="' + esc(v.domains.join(', ')) + '" aria-label="Domain"></div>';
@@ -548,20 +554,38 @@
             ? '<blockquote class="inq-words" title="Sent in full, exactly as written">' + esc(v.text) + '</blockquote>'
             : '';
         let foot;
-        if (st.ui === 'opened') {
+        const emailOk = EMAIL_OK.test(String(v.email || '').trim());
+        if (st.relay && st.ui === 'sending') {
+            foot = '<div class="inq-receipt" role="status">Sending…</div>';
+        } else if (st.relay && st.ui === 'sent') {
+            foot = '<div class="inq-receipt inq-receipt--sent" role="status">Sent. It is in John’s inbox, and he will reply to ' + esc(v.email) + '.</div>';
+        } else if (st.relay && st.ui === 'failed') {
+            const m = compose(v, { page: opts.page });
+            foot = '<div class="inq-receipt" role="status">That did not go through. ' + esc(RELAY_ERRORS[st.error] || 'The connection failed.')
+                + ' <a class="inq-link" href="' + esc(m.mailto) + '" data-inq-act="mailto">Send it from your mail app</a> or <button type="button" class="inq-link" data-inq-act="copy">copy the message</button>.</div>';
+        } else if (st.ui === 'opened') {
             foot = '<div class="inq-receipt" role="status">Your mail app should now show this message, addressed to ' + TO + '. It reaches John when you press send there.'
                 + (st.clipped ? ' Your full words are on your clipboard. Paste them into the body.' : '')
                 + ' Nothing opened? <button type="button" class="inq-link" data-inq-act="copy">Copy the message</button> and email it from anywhere.</div>';
         } else if (st.ui === 'copied') {
             foot = '<div class="inq-receipt" role="status">Copied. Paste it into an email to ' + TO + ' or a LinkedIn message.</div>';
+        } else if (st.relay && !emailOk) {
+            foot = '<div class="inq-note">Add your email so John can reply. Nothing leaves this page until you press Send.</div>';
+        } else if (st.relay) {
+            foot = '<div class="inq-note">Parsed on your device. Send delivers it straight to John’s inbox. Nothing leaves this page before that.</div>';
         } else {
             foot = '<div class="inq-note">Parsed on your device. Nothing leaves this page until you press Send.</div>';
         }
+        const sendBtn = st.relay
+            ? '<button type="button" class="intent-cta" data-inq-act="send"' + (emailOk && st.ui !== 'sending' && st.ui !== 'sent' ? '' : ' disabled') + '>' + (st.ui === 'sent' ? 'Sent' : 'Send to John') + '</button>'
+            : '<a class="intent-cta" data-inq-act="send" href="mailto:' + TO + '">Send to John</a>';
+        // A field no person sees or fills. Bots fill every field.
+        const trap = st.relay ? '<div class="inq-hp" aria-hidden="true"><label>Leave this empty <input type="text" name="hp_field" data-inq-hp tabindex="-1" autocomplete="off"></label></div>' : '';
         return '<div class="inq-card" data-inq-card>'
             + '<div class="inq-head"><span class="inq-title">Message to John</span><span class="cmdbar-group-label">the parse, before anything sends</span></div>'
             + '<div class="inq-rows">' + rows + '</div>' + add + words
-            + '<div class="inq-actions">'
-            + '<a class="intent-cta" data-inq-act="send" href="mailto:' + TO + '">Send to John</a>'
+            + trap + '<div class="inq-actions">'
+            + sendBtn
             + '<button type="button" class="inq-btn" data-inq-act="copy">Copy message</button>'
             + '<a class="intent-alt" href="' + CALENDAR + '" target="_blank" rel="noopener" title="Leaves the site">Book a call</a>'
             + '</div>' + foot + '</div>';
@@ -574,12 +598,30 @@
         } catch (e) {}
     }
 
+    // Where Send posts, when anywhere. Read lazily: jh-chrome.js (which sets
+    // JH_SITE) is deferred, and a test can set JH_INQUIRY_ENDPOINT first.
+    function relayEndpoint(opts) {
+        return (opts && opts.endpoint) || root.JH_INQUIRY_ENDPOINT
+            || (root.JH_SITE && root.JH_SITE.inquiryEndpoint) || '';
+    }
+    // Same shape the relay accepts (Agent Reference/inquiry-relay/Code.gs).
+    const EMAIL_OK = /^[^\s@<>"',;:()\[\]\\]+@[^\s@<>"',;:()\[\]\\]+\.[A-Za-z]{2,}$/;
+    // Keep in step with LIMITS.minComposeMs in the relay, plus a margin.
+    const MIN_COMPOSE_MS = 3200;
+    const RELAY_ERRORS = {
+        email: 'The email address looks incomplete.',
+        short: 'The message is too short to send.',
+        long: 'The message is too long for the relay.',
+        rate: 'Too many messages from this address in the last hour.',
+        quota: 'The relay has reached its daily limit.',
+    };
+
     // ── The composer: one live card bound to a host element. The command bar
     // rebuilds its results on every full render, so the host can change;
     // attach() moves the card and its state to the new host. ──
     function composer(opts) {
-        opts = Object.assign({ page: '', showWords: true, autoEmbed: false, corpusUrl: null, resolveHref: null, onSent: null }, opts || {});
-        const st = { text: '', brief: null, refined: null, ov: {}, open: new Set(), ui: 'draft', clipped: false, host: null, gen: 0, counted: false, timer: 0 };
+        opts = Object.assign({ page: '', showWords: true, autoEmbed: false, corpusUrl: null, resolveHref: null, onSent: null, endpoint: '' }, opts || {});
+        const st = { text: '', brief: null, refined: null, ov: {}, open: new Set(), ui: 'draft', clipped: false, host: null, gen: 0, counted: false, timer: 0, relay: false, shownAt: 0, error: '' };
 
         function current() { return st.brief ? view(st.refined || st.brief, st.ov) : null; }
 
@@ -593,6 +635,8 @@
             const a = typeof document !== 'undefined' ? document.activeElement : null;
             const focusField = a && host.contains(a) && a.dataset ? a.dataset.inqField : null;
             const sel = focusField && typeof a.selectionStart === 'number' ? [a.selectionStart, a.selectionEnd] : null;
+            st.relay = !!relayEndpoint(opts);
+            if (!st.shownAt) st.shownAt = Date.now();
             host.innerHTML = renderCard(v, st, opts);
             if (focusField) {
                 const n = host.querySelector('[data-inq-field="' + focusField + '"]');
@@ -604,8 +648,13 @@
         function onInput(e) {
             const f = e.target.dataset && e.target.dataset.inqField;
             if (!f || e.target.tagName === 'SELECT') return;
+            const wasOk = EMAIL_OK.test(String((current() || {}).email || '').trim());
             st.ov[f] = e.target.value;
-            if (st.ui !== 'draft') { st.ui = 'draft'; }
+            const leaving = st.ui !== 'draft' && st.ui !== 'sending';
+            if (leaving) st.ui = 'draft';
+            // Send's enabled state follows the email; repaint only when it flips
+            // (render keeps the caret), or when a receipt has to clear.
+            if (st.relay && ((f === 'email' && wasOk !== EMAIL_OK.test(e.target.value.trim())) || leaving)) render();
         }
         function onChange(e) {
             const f = e.target.dataset && e.target.dataset.inqField;
@@ -628,6 +677,17 @@
             const act = e.target.closest('[data-inq-act]');
             if (!act) return;
             const msg = compose(current(), { page: opts.page });
+            if (act.dataset.inqAct === 'send' && st.relay) {
+                e.preventDefault();
+                sendViaRelay(msg);
+                return;
+            }
+            if (act.dataset.inqAct === 'mailto') {
+                // The relay failed; the visitor chose the mail-app route.
+                act.setAttribute('href', msg.mailto);
+                count('inquiry-send-fallback');
+                return;
+            }
             if (act.dataset.inqAct === 'send') {
                 // The anchor's own default action opens the mail app; set its
                 // href now so it carries the latest corrections.
@@ -645,6 +705,46 @@
                 if (navigator.clipboard) navigator.clipboard.writeText(msg.full).then(done, done);
                 else done();
             }
+        }
+        function sendViaRelay(msg) {
+            const v = current();
+            const email = String(v.email || '').trim();
+            if (st.ui === 'sending' || !EMAIL_OK.test(email)) return;
+            const hp = st.host && st.host.querySelector('[data-inq-hp]');
+            st.ui = 'sending'; st.error = '';
+            render();
+            // The relay silently drops anything posted under 3 s after the card
+            // appeared (a bot's pace). A person who restores a draft and sends
+            // at once must never be dropped, so the page waits out the rest.
+            const hold = Math.max(0, MIN_COMPOSE_MS - (Date.now() - st.shownAt));
+            setTimeout(() => post(email, v, msg, hp ? hp.value : ''), hold);
+        }
+        function post(email, v, msg, trap) {
+            const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+            const timer = setTimeout(() => ctl && ctl.abort(), 20000);
+            // text/plain keeps this a "simple" request: no CORS preflight,
+            // which an Apps Script web app cannot answer.
+            fetch(relayEndpoint(opts), {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({
+                    email, name: v.name || '', subject: msg.subject, body: msg.body, text: v.text,
+                    page: opts.page, elapsed: Date.now() - st.shownAt, website: trap,
+                }),
+                signal: ctl ? ctl.signal : undefined,
+            }).then(r => r.json()).then(res => {
+                if (res && res.ok) {
+                    st.ui = 'sent';
+                    count('inquiry-sent');
+                    if (opts.onSent) opts.onSent(msg);
+                } else {
+                    st.ui = 'failed'; st.error = (res && res.error) || '';
+                    count('inquiry-send-failed');
+                }
+            }).catch(() => {
+                st.ui = 'failed'; st.error = 'network';
+                count('inquiry-send-failed');
+            }).then(() => { clearTimeout(timer); render(); });
         }
         function onKey(e) {
             // Enter in a card field commits the field, never the search bar's top result.
@@ -683,7 +783,7 @@
             reset() { st.text = ''; st.brief = null; st.refined = null; st.ov = {}; st.open.clear(); st.ui = 'draft'; render(); },
             // The card's current HTML, for hosts that must measure it before
             // attaching (the command bar's fit loop counts its height).
-            html() { const v = current(); return v ? renderCard(v, st, opts) : ''; },
+            html() { const v = current(); if (!v) return ''; st.relay = !!relayEndpoint(opts); return renderCard(v, st, opts); },
             // A host that rebuilds its DOM calls these around the rebuild so a
             // visitor typing in a card field keeps their place.
             captureFocus() {
@@ -698,7 +798,13 @@
                 n.focus();
                 if (f.sel && n.setSelectionRange) try { n.setSelectionRange(f.sel[0], f.sel[1]); } catch (e) {}
             },
-            focusSend() { const s = st.host && st.host.querySelector('[data-inq-act="send"]'); if (s) s.focus(); return !!s; },
+            focusSend() {
+                const s = st.host && st.host.querySelector('[data-inq-act="send"]');
+                // A disabled Send cannot take focus; the email it waits for can.
+                const target = s && s.disabled ? st.host.querySelector('[data-inq-field="email"]') : s;
+                if (target) target.focus();
+                return !!target;
+            },
             state() { return { text: st.text, brief: st.brief, refined: st.refined, view: current(), ui: st.ui }; },
             message() { const v = current(); return v ? compose(v, { page: opts.page }) : null; },
             _refine() {
@@ -722,6 +828,6 @@
     root.JHInquiry = {
         detect, parse, refine, view, compose, renderCard, composer,
         setEmbedder, setCorpus, ensureEmbedder, ensureCorpus, embedderReady,
-        OFFERS, TRACKS, T, TO,
+        OFFERS, TRACKS, T, TO, relayEndpoint,
     };
 })(typeof window !== 'undefined' ? window : globalThis);

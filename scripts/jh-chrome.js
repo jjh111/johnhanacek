@@ -14,7 +14,7 @@
   const SITE = {
     year: 2026,
     org: 'JHDesign LLC',
-    version: '2.28', // ← THE site version. Footer badge, ?v= cache-bust, and README all read this (run scripts/sync-version.mjs after bumping).
+    version: '2.29', // ← THE site version. Footer badge, ?v= cache-bust, and README all read this (run scripts/sync-version.mjs after bumping).
     versionNote: 'Made with Claude Code &amp; OpenCode',
     github: 'https://github.com/jjh111/johnhanacek',
     githubLabel: 'github.com/jjh111/johnhanacek',
@@ -23,7 +23,12 @@
     // (the part before .goatcounter.com) and every page reports a pageview +
     // referrer with no cookie, no fingerprint, no consent banner needed. The
     // footer states it whenever it is on.
-    goatcounter: 'jjh111'
+    goatcounter: 'jjh111',
+    // The inquiry card's delivery route. Empty = Send opens the visitor's mail
+    // app. Set to the deployed Apps Script web-app URL (…/exec) and Send posts
+    // straight to John's Gmail instead. Deploy steps and the relay source:
+    // Agent Reference/inquiry-relay/. Not a secret: it is a public endpoint.
+    inquiryEndpoint: ''
   };
   window.JH_SITE = SITE;
 

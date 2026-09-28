@@ -42,6 +42,12 @@ node phase11-inquiry.mjs  # Phase 11: the inquiry composer — a paragraph in th
                   # Parse, meaning pass, Enter-never-sends, corrections reach
                   # the message, questions stay searches, overlay, 390px.
                   # --webkit repeats the services shell in Safari's engine.
+                  # Section 6 runs the RELAY route against a mock Apps Script
+                  # (302 → echo, like Google's) on :9913.
+node relaytest.mjs  # the Apps Script inquiry relay (../inquiry-relay/Code.gs) under
+                  # node with Google's services stubbed: honeypot + too-fast
+                  # dropped silently, bad email/short/long/foreign-body
+                  # refused, 3/address + 30/total per hour, quota, Reply-To.
 node inquirylab.mjs  # OFFLINE + pass/fail: 13 fixture
                   # paragraphs (62 fields), questions-about-John negatives, and
                   # EVERY query in this folder as a false-positive gate. It

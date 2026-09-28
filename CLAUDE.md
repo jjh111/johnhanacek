@@ -266,8 +266,15 @@ which stamps every `?v=` cache-bust ref across root `*.html` **and** the `Portfo
   need language, or an email; questions about John never — 0 of every search-test query), the
   grammar parse fills the brief instantly, and MiniLM (the semantic tier's WASM embedder, so it
   works in Safari) matches each sentence to the ten offers services.html names and the paragraph
-  to case studies, upgrading the card in place. The card is editable, Send opens the visitor's
-  own mail app (`mailto:`, full text to the clipboard past ~1,900 chars), Copy is the fallback.
+  to case studies, upgrading the card in place. The card is editable. **Delivery is one switch,
+  `SITE.inquiryEndpoint` in jh-chrome.js**: empty → Send opens the visitor's mail app (`mailto:`,
+  full text to the clipboard past ~1,900 chars); set to the deployed Apps Script URL → Send POSTs
+  (text/plain, no preflight) and John's Gmail sends it to John's Gmail, Reply-To the visitor, email
+  required, honeypot + 3 s floor (the page holds a fast Send past it) + 3/address and 30/hour
+  limits; any failure falls back to the mail app and Copy. It sends to the script OWNER, not hi@,
+  because hi@ is a Namecheap forward into the same Gmail and Gmail files self-sent forwards under
+  Sent only. Relay source + deploy steps: `Agent Reference/inquiry-relay/` (tested by
+  `search-tests/relaytest.mjs`).
   **No model writes a word**: their paragraph goes verbatim, generation is suppressed in brief
   mode, Enter only focuses Send. Two shells: the command bar (search-core loads inquiry-core
   beside itself) and services.html `#book` (textarea, sessionStorage draft). GoatCounter gets

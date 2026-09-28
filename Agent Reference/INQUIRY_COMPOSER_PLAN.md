@@ -223,3 +223,40 @@ Related work: Nanome scored 0.66 for a molecular-VR brief; unrelated case studie
   predates this work.
 
 **Not built:** P3 (server send) and P4 (model summary), per decisions 1 and 3.
+
+---
+
+## Build record — 2026-09-28: P3, the relay (awaiting John's deploy)
+
+John confirmed hi@johnhanacek.com forwards to Gmail, which made the Google Apps
+Script route the pick: free, no new company holding the text, and mail sent by his
+own account lands in his inbox. Measured context: DNS and mail are at Namecheap
+(`eforward*` MX, no DMARC), which rules out Cloudflare's own sender (it needs
+Cloudflare DNS).
+
+**One switch.** `SITE.inquiryEndpoint` in `scripts/jh-chrome.js`. Empty (as
+committed) = the mail-app route, unchanged. Set to the `/exec` URL = the relay.
+
+**The relay** (`Agent Reference/inquiry-relay/Code.gs`, deploy steps in its README):
+sends to the script owner's Gmail with the visitor as Reply-To. Not to hi@: Gmail
+files a message you sent to yourself through a forward under Sent only, never Inbox.
+Refuses a missing or malformed email, a paragraph under 20 or over 6,000 characters,
+and a body that does not contain the paragraph. Silently drops the honeypot and
+anything posted under 3 s. Limits 3 per address and 30 in total per hour, plus
+Gmail's own 100 a day. No secrets in the file.
+
+**The page.** Send becomes a button, disabled until the email is valid; the email row
+is always shown ("so John can reply"). POST is `text/plain` so no CORS preflight is
+needed. States: Sending… → "Sent. It is in John's inbox, and he will reply to X." or
+a failure that names the reason and offers "Send it from your mail app" and Copy.
+The page holds a fast Send until 3.2 s after the card appeared, because the relay's
+silent bot drop would otherwise swallow a real person who restored a draft and sent
+at once (found by the test: it clicked at 1.4 s). GoatCounter counts
+`inquiry-sent` / `inquiry-send-failed` / `inquiry-send-fallback`.
+
+**Measured.** `relaytest.mjs` 23/23 (the relay under node, Google stubbed).
+`phase11-inquiry.mjs` section 6: 13 checks against a mock that answers the way a
+deployed Apps Script does (302 → echo, CORS on both), all pass, plus the earlier
+sections unchanged and the WebKit pass. Not provable here: Google's real redirect
+and Gmail delivery. Step 7 of the relay README (the health-check URL) and one real
+test inquiry after deploy settle that.
