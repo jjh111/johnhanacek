@@ -25,6 +25,10 @@
 //                                                                 <name>-poster.jpg (--poster=<seconds>; default the
 //                                                                 middle of the title scene, else 1 s) and
 //                                                                 <name>-chapters.json (one chapter per scene of the edit)
+//   node scripts/render-sizzle-reel.mjs --cut=2 --format=square  → the same script in a 1080×1080 frame (vertical: 1080×1920),
+//                                                                 → sizzle-reel-2-square.mp4. Every output of a format is
+//                                                                 suffixed (parts, stills, --deliver's), so the wide files
+//                                                                 are never overwritten; every other flag works with it
 //   node scripts/render-sizzle-reel.mjs --cut=2 --audio-only    → just the soundtrack: <name>-music.wav
 //   --mute                                                      → no soundtrack in the MP4
 //
@@ -66,6 +70,12 @@ const CRF = flag('crf', '18');
 const JOBS = Math.max(1, Math.floor(+flag('jobs', 1)) || 1);
 const DELIVER = args.includes('--deliver');
 const POSTER = flag('poster', null);
+// --format: the rig lays the same script out for another frame (its FORMATS table)
+const FORMATS = { wide: [1920, 1080], square: [1080, 1080], vertical: [1080, 1920] };
+const FORMAT = flag('format', 'wide');
+if (!FORMATS[FORMAT]) throw new Error(`--format must be one of ${Object.keys(FORMATS).join(', ')}`);
+const [VW, VH] = FORMATS[FORMAT];
+const FMT = FORMAT === 'wide' ? '' : '-' + FORMAT;
 const STILLS = flag('stills', '').split(',').filter(Boolean).map(Number).sort((a, b) => a - b);
 // Each cut is a rig page plus its edit: cut 1's is a block of media-kit.json (it stays renderable
 // as it was), cut 2's is a plain-text script that scripts/reel-script.js reads.
@@ -80,6 +90,7 @@ const CUT = SCRIPT_FLAG ? (() => {
   return { page: CUTS[2].page, script: 'Assets/' + basename(f), name: basename(f, '.script.txt'), query: 'script=' + basename(f) };
 })() : CUTS[flag('cut', '1')];
 if (!CUT) throw new Error(`--cut must be one of ${Object.keys(CUTS).join(', ')}`);
+if (FMT && !CUT.script) throw new Error('--format: only cut 2 (a script) has square and vertical layouts');
 // the edit (a script with a mistake stops here, with its line numbers, before a browser starts)
 const reel = CUT.script
   ? createRequire(import.meta.url)('./reel-script.js').parse(readFileSync(resolve(ROOT, CUT.script), 'utf8')).edit
@@ -107,7 +118,7 @@ if (SCENE != null) {
   FROM = hit.start; TO = String(hit.end); part = `-scene${hit.i + 1}-${hit.type}`;
 } else if (FROM > 0 || TO != null) part = `-${FROM}-${TO == null ? 'end' : TO}s`;
 // a part of the cut never lands on the full cut's file unless --out says so
-const OUT = resolve(ROOT, flag('out', `Assets/media-kit/video/${CUT.name}${part}.mp4`));
+const OUT = resolve(ROOT, flag('out', `Assets/media-kit/video/${CUT.name}${part}${FMT}.mp4`));
 const CHROMIUM = process.env.CHROMIUM_PATH || chromium.executablePath();
 if (!(FPS > 0 && FPS <= 60 && 60 % FPS === 0)) throw new Error('--fps must divide 60 (60, 30, 20, 15…): the engine ticks at 60 Hz');
 
@@ -161,13 +172,13 @@ function answerClip(route) {
 // One rig: its own context and page, loaded, checked and ready for REEL.frame. A parallel
 // render opens one per chunk, all on the same verified server.
 async function openRig() {
-  const ctx = await browser.newContext({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1, colorScheme: 'dark' });
+  const ctx = await browser.newContext({ viewport: { width: VW, height: VH }, deviceScaleFactor: 1, colorScheme: 'dark' });
   await ctx.route(/\.mp4(\?.*)?$/i, answerClip);
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-  const url = `http://127.0.0.1:${srv.port}/${CUT.page}?render=1${CUT.query ? '&' + CUT.query : ''}${SEED ? '&seed=' + SEED : ''}`;
+  const url = `http://127.0.0.1:${srv.port}/${CUT.page}?render=1${CUT.query ? '&' + CUT.query : ''}${FMT ? '&format=' + FORMAT : ''}${SEED ? '&seed=' + SEED : ''}`;
   await page.goto(url, { waitUntil: 'load', timeout: 120000 });
   // polling by interval: in render mode the rig owns requestAnimationFrame, so rAF polling never fires
   await page.waitForFunction(() => window.REEL || document.getElementById('err'), null, { timeout: 60000, polling: 100 });
@@ -178,6 +189,9 @@ async function openRig() {
   const fonts = await page.evaluate(() => ['200 80px Raleway', '500 20px "JetBrains Mono"'].map(f => document.fonts.check(f)));
   if (fonts.includes(false)) throw new Error('web fonts did not load (Raleway / JetBrains Mono) — check the network, nothing was rendered');
   if (errors.length) throw new Error('the rig reported errors before the first frame:\n  ' + errors.join('\n  '));
+  // the frame the rig laid out must be the one we film (cut 1's rig knows only wide, and says nothing)
+  const size = await page.evaluate(() => window.REEL.size || null);
+  if (size && (size[0] !== VW || size[1] !== VH)) throw new Error(`the rig laid out ${size.join('×')}, not ${VW}×${VH} (--format=${FORMAT})`);
   const duration = await page.evaluate(() => window.REEL.duration);
   const cdp = await ctx.newCDPSession(page);
   const capture = async () => Buffer.from((await cdp.send('Page.captureScreenshot', { format: 'png', optimizeForSpeed: true })).data, 'base64');
@@ -327,7 +341,7 @@ try {
       for (let k = 3; k >= 1; k--) if ((f - k) / 60 > prev) await rig.frame((f - k) / 60);
       await rig.frame(t);
       prev = t;
-      const file = resolve(dir, `${CUT.name.replace('-reel', '')}-${t.toFixed(2)}s.png`);
+      const file = resolve(dir, `${CUT.name.replace('-reel', '')}${FMT}-${t.toFixed(2)}s.png`);
       writeFileSync(file, await rig.capture());
       console.log('wrote', rel(file));
     }

@@ -101,6 +101,59 @@ Known, not yet fixed:
 - Browser tests serve clips as VP9 stand-ins through Playwright, so reloads there take about
   2.5 s. Through the real server with real H.264 it is about 0.3 s.
 
+## Formats: square and vertical (built 2026-09-28)
+
+The same script plays in three frames: `?format=wide` (1920×1080, the default and the frame
+the cut was made in), `square` (1080×1080) and `vertical` (1080×1920). Nothing in the script
+knows about formats.
+
+- **One table.** `FORMATS` at the top of the rig's script holds every rect a scene uses, per
+  format: side margins `M`, the bar and tier rows, the copy centre `colY`, the tank band
+  (`tankY`, `tankH`) and the fish depths in it (`spotY`, `schoolY`), the opening loop and its
+  guide, the title and end ovals and the nav pill, each scene's windows, columns, port, panel,
+  offer card and plan card, the command's strokes and the end card's taps. Wide's entries are
+  the numbers the rig always had, so wide films as it did.
+- **The type lives in the stylesheet**, under `#stage.narrow` (both new frames),
+  `#stage.square` and `#stage.vertical`. Wide's rules are untouched.
+- **The grid:** 72 px margins and one 936 px band in both narrow frames. The bar spans the
+  band; tier chips and the pager sit on the row under it; every window, card and panel sits on
+  the margins; copy centres on the band's middle (square 487, vertical 825).
+- **Square keeps the wide split**, narrower: copy left (450) and the work right (450×540), the
+  art's port on the right. The result list spans the whole band before the window dives out
+  of its first thumbnail. The tank starts at 620 and shows from about 795.
+- **Vertical stacks the split:** what was left goes on top. The result list, then each
+  result's copy, sit above the window. The feature's window sits above its copy, and the art's
+  port above its column. The tank is the bottom third (canvas from 1040, 880 tall; the
+  choreographed fish sit around 1520-1570). The plan card spans the band.
+- **Legibility:** at 1080 wide a frame plays at about a third of its size on a phone, so
+  nothing that reads as copy is under 27 px (result snippets 27, copy lines 28 in square and
+  34 in vertical, cites 28-30), labels are 20-26 px, and the fish's data chip 16.
+- **Wrap before shrink.** In a narrow frame a masked line may wrap (its mask slides the
+  wrapped block as one): eyebrows, copy lines, the answer's support line, stat labels, cites,
+  window captions, award rows, the offer's lines and headline, the end line and the quotes.
+  Headlines, balanced quotes, cites and the end line use `text-wrap: balance`, copy lines
+  `pretty`. A cite breaks after its dot, never before it. The title's tagline stacks its three
+  parts. The answer's four stats stay in one row with their labels wrapped. The client wall
+  wraps its logos onto more rows. The offer's three columns become three rows.
+- **Shrunk a step**, where wrapping alone did not fit the band: headlines (square 64,
+  vertical 96, from 92), the answer (square 70), the name (92-100 from 116), the URL (80-84),
+  the quotes in square (54/62) and vertical (64/80), the square's column quote (48) and the
+  offer headline (square 46, vertical 66), the logos (44-50 from 50) and the data chip (16).
+- **The fish** look at the same things, at the format's coordinates. In a narrow frame the
+  data chip hangs on whichever side of the fish the camera still shows, or under it.
+- **Renderer:** `--format=square|vertical` sets the viewport and the page query, refuses if the
+  rig laid out a different size (`REEL.size`), and suffixes every output: the film
+  (`sizzle-reel-2-square.mp4`), parts, stills (`sizzle-2-square-12.00s.png`) and `--deliver`'s.
+  Every other flag works with it. Cut 1 has no formats.
+- **Live:** `?format=` works in the preview, the stage scales to fit the window, and the HUD
+  and the timeline (E) work as in wide.
+- **Test:** `Agent Reference/reel-tests/formattest.mjs`: the stage size per format; every half
+  second, every settled piece of copy inside the frame and its margins, unclipped, apart from
+  the others and off the work; wide stills against stills from the rig before formats (all
+  byte-identical or noise; the stills that show a clip are judged outside its window, because
+  the unchanged rig decodes a video frame differently from run to run); the live preview with
+  the timeline. `--layout-only` skips the renders.
+
 ## Music (2026-09-28)
 
 John asked for music made by synths you can see and play, with editable effects, drawing on
@@ -162,6 +215,6 @@ instrument or section is a few lines of text); the music has been checked by mea
 
 ## Later
 
-Square and vertical layouts from the same script; scene-specific cues (line staggers, the
-push); moving cut 1 onto the one player; a music track in the timeline (sections under the
-scenes); stems out of the renderer.
+Scene-specific cues (line staggers, the push); moving cut 1 onto the one player; a music track
+in the timeline (sections under the scenes); stems out of the renderer; per-format cues, should
+a narrow frame ever need its own timing.
