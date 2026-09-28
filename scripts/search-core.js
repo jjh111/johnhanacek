@@ -919,11 +919,48 @@
         // legible with the detail panel closed. Clicks proxy to the existing
         // panel controls, so consent semantics (Detect = opt-in) are unchanged.
         let browserLoadPct = null;
+        // Icons for the collapsed strip (fitTierStrip): 16px line glyphs in
+        // the tier's own color. keyword = lines of text, semantic = a graph of
+        // meanings, lfm = a chip, local = a laptop, custom = a link, ai = power.
+        const TIER_ICON = {
+            keyword: '<path d="M2.5 4h11M2.5 8h11M2.5 12h7"/>',
+            semantic: '<circle cx="4" cy="11.5" r="1.7"/><circle cx="12" cy="11.5" r="1.7"/><circle cx="8" cy="4.2" r="1.7"/><path d="M4.9 10 7.1 5.8M11.1 10 8.9 5.8M5.8 11.5h4.4"/>',
+            qwen: '<rect x="4.2" y="4.2" width="7.6" height="7.6" rx="1.4"/><path d="M6.6 1.8v2.4M9.4 1.8v2.4M6.6 11.8v2.4M9.4 11.8v2.4M1.8 6.6h2.4M1.8 9.4h2.4M11.8 6.6h2.4M11.8 9.4h2.4"/>',
+            local: '<rect x="3" y="3.2" width="10" height="7.3" rx="1.1"/><path d="M1.5 12.8h13"/>',
+            custom: '<path d="M6.6 9.4l2.8-2.8M7.2 4.6l1-1a2.5 2.5 0 0 1 3.6 3.6l-1 1M8.8 11.4l-1 1a2.5 2.5 0 0 1-3.6-3.6l1-1"/>',
+            ai: '<path d="M8 1.9v5.2"/><path d="M4.7 4.3a5 5 0 1 0 6.6 0"/>',
+        };
+        const tierIcon = (tier) => `<svg class="tier-icon" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${TIER_ICON[tier] || ''}</svg>`;
+
+        // Labels when they fit, icons when they don't. MEASURED, like the nav
+        // (initNavFit), because the answer depends on the panel width AND the
+        // type scale: the tablet band's 1.15 multiplier truncated "keyword" to
+        // "KEY…" in a 494px row that a viewport rule never caught. Each tier's
+        // scrollWidth is its natural width even while flex-shrunk, so the sum
+        // is what the labels need. Toggling the class never changes the
+        // strip's own width (flex:1, basis 0), so it cannot oscillate.
+        let tierFitObserver = null;
+        function fitTierStrip(strip) {
+            if (!strip || !strip.clientWidth) return;   // hidden: wait for the observer
+            strip.classList.remove('tier-strip--icons');
+            const gap = parseFloat(getComputedStyle(strip).columnGap) || 0;
+            let need = 0;
+            for (const t of strip.children) need += t.scrollWidth;
+            need += gap * Math.max(0, strip.children.length - 1);
+            strip.classList.toggle('tier-strip--icons', need > strip.clientWidth + 1);
+            if (!tierFitObserver && typeof ResizeObserver !== 'undefined') {
+                tierFitObserver = new ResizeObserver(() => fitTierStrip(strip));
+                tierFitObserver.observe(strip);
+            }
+        }
+
         function renderTierStrip() {
             const strip = el('tierStrip');
             if (!strip) return;
-            const seg = (tier, dot, label, state, title, color) =>
-                `<button type="button" class="tier tier-${state}" data-tier="${tier}" title="${title}"${color ? ` style="--tier-color:${color}"` : ''}><span class="tier-dot">${dot}</span><span class="tier-label">${label}</span></button>`;
+            // `note` survives the icon collapse: a loadable tier's cost (↓) or
+            // progress (37%) is information an icon alone would drop.
+            const seg = (tier, dot, label, state, title, color, note) =>
+                `<button type="button" class="tier tier-${state}" data-tier="${tier}" title="${title}" aria-label="${label}: ${title}"${color ? ` style="--tier-color:${color}"` : ''}>${tierIcon(tier)}<span class="tier-dot">${dot}</span><span class="tier-label">${label}</span>${note ? `<span class="tier-note">${note}</span>` : ''}</button>`;
             let html = '';
             html += seg('keyword', '\u25cf', 'keyword', 'fact-on', 'BM25 keyword match \u2014 always on');
             const semTitle = 'meaning match \u2014 ~24MB on-device, loads with your first search';
@@ -935,13 +972,14 @@
             if (!hasWebGPU && enginesChecked) {
                 html += seg('qwen', '\u25cb', 'lfm', 'gone', 'in-browser model needs WebGPU \u2014 unavailable here (Safari: onnxruntime cannot start its WebGPU backend)');
             } else if (browserLoadPct != null) {
-                html += seg('qwen', '\u25d0', `lfm ${browserLoadPct}%`, 'loading', `loading ${MODEL_DISPLAY_NAME}\u2026`, 'var(--engine-browser)');
+                html += seg('qwen', '\u25d0', `lfm ${browserLoadPct}%`, 'loading', `loading ${MODEL_DISPLAY_NAME}\u2026`, 'var(--engine-browser)', `${browserLoadPct}%`);
             } else if (modelReady) {
                 const st = (activeEngine === 'browser' && aiEnabled) ? 'active' : 'ready';
                 html += seg('qwen', '\u25cf', 'lfm', st, `${MODEL_DISPLAY_NAME} in-browser \u2014 tap to answer with it`, 'var(--engine-browser)');
             } else {
                 html += seg('qwen', '\u25cb', modelIsCached ? 'lfm \u26a1' : `lfm \u2193${MODEL_SIZE_LABEL.toLowerCase()}`, 'load',
-                    modelIsCached ? `${MODEL_DISPLAY_NAME} \u2014 cached, tap to load` : `${MODEL_DISPLAY_NAME} in-browser \u2014 tap to download (${MODEL_SIZE_LABEL}, WebGPU)`, 'var(--engine-browser)');
+                    modelIsCached ? `${MODEL_DISPLAY_NAME} \u2014 cached, tap to load` : `${MODEL_DISPLAY_NAME} in-browser \u2014 tap to download (${MODEL_SIZE_LABEL}, WebGPU)`, 'var(--engine-browser)',
+                    modelIsCached ? '\u26a1' : '\u2193');
             }
             // local
             if (localModel) {
@@ -957,6 +995,7 @@
             }
             html += seg('ai', aiEnabled ? '\u23fb' : '\u25cb', aiEnabled ? 'ai on' : 'ai off', aiEnabled ? 'ai-on' : 'ai-off', 'toggle AI answers');
             strip.innerHTML = html;
+            fitTierStrip(strip);
         }
 
         function updateEngineBar() {

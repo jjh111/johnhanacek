@@ -280,6 +280,13 @@ which stamps every `?v=` cache-bust ref across root `*.html` **and** the `Portfo
   beside itself) and services.html `#book` (textarea, sessionStorage draft). GoatCounter gets
   count-only events. Thresholds in `T` were calibrated by `search-tests/inquirylab.mjs`; plan +
   build record: `Agent Reference/INQUIRY_COMPOSER_PLAN.md`
+- **The tier strip collapses to icons when its labels don't fit** — MEASURED (`fitTierStrip` in
+  search-core: the tiers' summed natural widths vs the strip, re-run by a ResizeObserver), not a
+  viewport rule, because the tablet type scale truncated "keyword" to "KEY…" in a 494px row. Icon
+  mode: 16px line glyphs (lines/graph/chip/laptop/link/power) in each tier's state color, the
+  state dot as a badge, a one-glyph note for a loadable tier's cost (↓ / ⚡ / 37%), name in
+  title + aria-label. Desktop at the default overlay width also collapses (its labels needed
+  410px of 384 and were already ellipsizing). ⓘ is hidden on touch (hover-only tooltip)
 - **Engine color coding**: WebGPU=blue, LMStudio=purple, Ollama=orange, Custom=green
 - AI toggle: users can disable LLM even when engine detected
 

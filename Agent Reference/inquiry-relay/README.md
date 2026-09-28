@@ -23,6 +23,17 @@ the mail-app route, so nothing breaks while this is undeployed.
 7. Check it: open the URL in a browser. It should answer
    `{"ok":true,"service":"johnhanacek.com inquiry relay"}`.
 
+## If Send fails with a CORS error in the browser
+
+The script is not authorized to send mail yet. Deploying does not always ask
+for the Gmail scope; running a function in the editor does. Open the script,
+pick **doGet** in the function dropdown, click **Run**, then **Review
+permissions → your account → Advanced → Go to … (unsafe) → Allow**. No
+redeploy is needed. (Seen 2026-09-28: the deployed URL answered GET but a
+real POST returned Google's HTML error page, "You do not have permission to
+call MailApp.getRemainingDailyQuota", which carries no CORS header, so the
+browser reported CORS.)
+
 ## Optional
 
 - **A Gmail filter** on `subject:"[Inquiry"` OR `subject:"[Hiring]"` → label

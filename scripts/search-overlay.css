@@ -1676,14 +1676,42 @@ body.search-overlay-open .so-residue { display: none; }
     .result-page { font-size: var(--text-2xs); }   /* the badge is the nav affordance — thumb-readable */
     .tier { padding: 0.14rem 0.22rem; letter-spacing: 0; }
     .tier + .tier::before { margin-right: 0.15rem; }
-    /* Dots only. Five labelled tiers never fit a phone row, and ellipsis
-       made "keyw…" and "seman…" of the two that always apply. The facts
-       become their dots (the title still explains each); the two that are
-       AFFORDANCES keep their words — a loadable tier's label IS its cost,
-       and the AI toggle is the one control on the strip. */
-    .tier-fact-on .tier-label, .tier-fact-off .tier-label, .tier-gone .tier-label, .tier-loading .tier-label { display: none; }
-    .tier-fact-on .tier-dot, .tier-fact-off .tier-dot, .tier-gone .tier-dot, .tier-loading .tier-dot { margin-right: 0; font-size: 0.85em; }
+    /* (The dots-only rule that lived here is gone: collapsing is now
+       MEASURED by fitTierStrip in search-core, see .tier-strip--icons.) */
     .tier-dot { margin-right: 0.2rem; }
+}
+
+/* ═══ The collapsed strip — icons when the labels don't fit ═══
+   search-core's fitTierStrip adds .tier-strip--icons when the tiers' natural
+   widths overflow the row. Each tier becomes its 16px glyph in its own state
+   color, the state dot rides as a badge, and the name moves to title +
+   aria-label. A loadable tier keeps a one-glyph note (↓ cost, ⚡ cached,
+   37% progress). */
+.tier-icon, .tier-note { display: none; }
+.tier-strip--icons { gap: 0.1rem; }
+.tier-strip--icons .tier {
+    position: relative; overflow: visible;
+    display: inline-flex; align-items: center; gap: 0.12rem;
+    padding: 0.3rem 0.38rem;
+}
+.tier-strip--icons .tier + .tier::before { content: none; }
+.tier-strip--icons .tier-label { display: none; }
+.tier-strip--icons .tier-icon { display: block; width: 15px; height: 15px; flex: none; }
+.tier-strip--icons .tier-dot {
+    position: absolute; top: 0.08rem; right: 0.1rem;
+    margin: 0; font-size: 6px; line-height: 1;
+}
+.tier-strip--icons .tier-ai-on .tier-dot, .tier-strip--icons .tier-ai-off .tier-dot { display: none; }
+/* The toggle's backdrop exists so overflowing labels scroll UNDER it; with
+   icons nothing overflows, and the box read as a stray dark tile. */
+.tier-strip--icons .tier-ai-on, .tier-strip--icons .tier-ai-off { background: none; box-shadow: none; }
+.tier-strip--icons .tier-note { display: inline; font-size: var(--text-4xs); line-height: 1; }
+@media (pointer: coarse) {
+    .tier-strip--icons .tier { padding: 0.45rem 0.5rem; }
+    .tier-strip--icons .tier-icon { width: 17px; height: 17px; }
+    /* ⓘ explains the ranking in a hover tooltip; a touch screen has no hover,
+       so on a phone it was a mark that did nothing. */
+    .pc-controls .pc-info { display: none; }
 }
 
 /* ═══ Inquiry composer — a paragraph becomes a message to John ═══

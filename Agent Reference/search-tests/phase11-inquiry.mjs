@@ -31,12 +31,20 @@ async function typeInto(page, sel, text) {
   await page.dispatchEvent(sel, 'input');
 }
 
+// Sections 1-5 test the MAIL-APP route, whatever the site config names:
+// JH_INQUIRY_ENDPOINT = '' pins it. Section 6 tests the relay.
+async function mailRoute(br, opts) {
+  const c = await br.newContext(opts);
+  await c.addInitScript(() => { window.JH_INQUIRY_ENDPOINT = ''; });
+  return c;
+}
+
 const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true });
 
 // ───────── 1. search.html: a paragraph raises the brief card ─────────
 {
   console.log('search.html — the card:');
-  const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width: 1280, height: 920 } });
+  const ctx = await mailRoute(browser, { colorScheme: 'dark', viewport: { width: 1280, height: 920 } });
   const page = await ctx.newPage();
   const errs = [];
   page.on('pageerror', e => errs.push(String(e)));
@@ -91,7 +99,7 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
 // ───────── 2. search.html: questions stay searches ─────────
 {
   console.log('search.html — questions:');
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 920 } });
+  const ctx = await mailRoute(browser, { viewport: { width: 1280, height: 920 } });
   const page = await ctx.newPage();
   await page.goto(`${BASE}/search.html`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => !!window.JHInquiry, null, { timeout: 15000 });
@@ -110,7 +118,7 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
 // ───────── 3. the ⌘K overlay on another page ─────────
 {
   console.log('overlay (about.html):');
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const ctx = await mailRoute(browser, { viewport: { width: 1280, height: 900 } });
   const page = await ctx.newPage();
   await page.goto(`${BASE}/about.html`, { waitUntil: 'networkidle' });
   await page.keyboard.press(process.platform === 'darwin' ? 'Meta+k' : 'Control+k');
@@ -128,7 +136,7 @@ const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true
 // ───────── 4. services.html: the textarea shell ─────────
 async function servicesShell(b, label) {
   console.log(`services.html — ${label}:`);
-  const ctx = await b.newContext({ viewport: { width: 1280, height: 900 } });
+  const ctx = await mailRoute(b, { viewport: { width: 1280, height: 900 } });
   const page = await ctx.newPage();
   const errs = [];
   page.on('pageerror', e => errs.push(String(e)));
@@ -169,7 +177,7 @@ await servicesShell(browser, 'chromium');
 // ───────── 5. phone width: nothing overflows ─────────
 {
   console.log('services.html — 390px:');
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const ctx = await mailRoute(browser, { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const page = await ctx.newPage();
   await page.goto(`${BASE}/services.html`, { waitUntil: 'networkidle' });
   await typeInto(page, '#inqText', ROBOTICS);

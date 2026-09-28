@@ -600,9 +600,12 @@
 
     // Where Send posts, when anywhere. Read lazily: jh-chrome.js (which sets
     // JH_SITE) is deferred, and a test can set JH_INQUIRY_ENDPOINT first.
+    // A string JH_INQUIRY_ENDPOINT overrides the site config, and '' pins the
+    // mail-app route (the test suite uses both).
     function relayEndpoint(opts) {
-        return (opts && opts.endpoint) || root.JH_INQUIRY_ENDPOINT
-            || (root.JH_SITE && root.JH_SITE.inquiryEndpoint) || '';
+        if (opts && opts.endpoint) return opts.endpoint;
+        if (typeof root.JH_INQUIRY_ENDPOINT === 'string') return root.JH_INQUIRY_ENDPOINT;
+        return (root.JH_SITE && root.JH_SITE.inquiryEndpoint) || '';
     }
     // Same shape the relay accepts (Agent Reference/inquiry-relay/Code.gs).
     const EMAIL_OK = /^[^\s@<>"',;:()\[\]\\]+@[^\s@<>"',;:()\[\]\\]+\.[A-Za-z]{2,}$/;
