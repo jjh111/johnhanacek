@@ -101,7 +101,67 @@ Known, not yet fixed:
 - Browser tests serve clips as VP9 stand-ins through Playwright, so reloads there take about
   2.5 s. Through the real server with real H.264 it is about 0.3 s.
 
+## Music (2026-09-28)
+
+John asked for music made by synths you can see and play, with editable effects, drawing on
+his like-every-cloud repo. That repo's Sound Lab (`soundlab.html`) and `src/audio/synthVoice.ts`
+supplied the vocabulary: a sound is a **patch as data** (osc/noise voices → filter → envelope,
+one LFO on gain, filter or pitch), procedural drums and air, tape wow/flutter/age/hiss as a
+treatment, and one home key so accents never clash (frequent sounds quiet and atonal, rare ones
+in key). The reel's music is that vocabulary written as a score.
+
+- **The score is the music.** `Assets/sizzle-reel-2.score.txt`, next to the script and named
+  after it (a new cut copies both). Plain text in the script's style: `TEMPO`, `KEY`, `CHORDS`;
+  `SYNTH <name>` and `DRUM <name>` blocks (`voice`, `filter`, `env`, `lfo`, `play`, `steps`,
+  `notes`, `len`, `level`, `pan`, `send`; drums `kind`, `tune`, `decay`, `tone`); `FX` blocks
+  (reverb, delay, tape, drive, comp, master); one `SECTION` per scene, by kind or number, with
+  the tracks it plays (`name:0.5` for half level), its chords and an optional filter `sweep`.
+  Its header is the manual.
+- **Cut to the picture.** Steps are sixteenths (0.125 s at 120 BPM). A pattern and a chord
+  progression start again at every cut, so each section's downbeat is its cut, even in a
+  7-beat scene. A chord that repeats is held, not struck again.
+- **The edit plays its own sound effects.** A track with `on key|space|enter|clear|cut|item|beat`
+  plays at every such moment. The keys are `ReelScript.queries(edit)`, the rig's typing times,
+  moved out of the rig so both read one list (the test proves the move is bit-exact).
+- **`scripts/reel-music.js`** (UMD, pure): `parse` → `{ score, warnings, blocks, fields }`, mistakes
+  thrown as `line N: …` rows; `moments(edit, ReelScript)`; `arrange(score, scenes, moments)` →
+  `{ events, sections, sweeps, duration }`; `setLine`, `setArg`, `toggleTrack`, `setTrackLevel`
+  change one line and re-parse. CLI: `check` (the arrangement, section by section), `json`.
+- **`scripts/reel-synth.js`** (browser): `create(ctx, score)` builds the graph once (per-track
+  gain, pan, reverb and delay sends; music bus → sweep filter; sfx bus; drive → tape → comp →
+  master; seeded noise, a generated impulse response); notes are built per event. `Player`
+  schedules 0.3 s ahead of the preview's clock and restarts on any seek, loop or pause.
+  `renderOffline` mixes the film in an `OfflineAudioContext`, feeding notes a second ahead
+  (all at once, the graph renders in quadratic time: 100 s for the 60 s cut; fed, about 18 s).
+- **The synth rack, `scripts/reel-rack.js`.** M opens it at the right (`REEL_LIVE.reserveRight`),
+  and the preview shrinks beside it. An arrangement matrix (sections across, instruments down,
+  click a cell), then one module per instrument (voices with wave pictures, play mode, filter,
+  envelope with its shape, LFO, mix; step grid with a playhead; ▶ audition; mute and solo, not
+  saved), then the effects. Knobs drag, wheel, or take a typed value. Every control is one line
+  of the score through the `set*` helpers: heard at once, saved when you let go (dev server, or a
+  draft in the tab), one undo step per gesture. The preview never reloads for music; a save from
+  a text editor reaches the rack through `/__reel/events`. Meters are dim and move only while
+  the rack is open (the Sound Lab removed its scope for flicker on mini-LED screens).
+- **The film carries it.** The renderer arranges the score in Node, mixes it in a blank page of
+  the same browser, writes `<name>-music.wav` next to the MP4 and muxes it in as 192 kb/s AAC
+  (the web copy keeps it at 128 kb/s). A part carries its own stretch. `--audio-only` mixes the
+  soundtrack alone in seconds; `--mute` leaves it out. The log gives peak and integrated LUFS
+  (the cut sits at about -16 LUFS, peak -3.4 dBFS).
+- **Deterministic enough.** Two mixes agree to within a few 16-bit steps (-70 dBFS and far
+  below): Chromium sums a node's inputs in an order that varies run to run, so float sums differ
+  in the seventh digit. Everything else (noise, reverb, the clock) is seeded or offline.
+- **Test:** `Agent Reference/reel-tests/musictest.mjs` (reader, arrangement on the grid, keys
+  at the rig's times, one-line edits, mistakes by line, the offline mix's length, levels, fade
+  and repeatability, a muxed part, dev-server saves, and the rack end to end: M, a knob drag,
+  a step, a cell, three undos back to the original bytes).
+
+Known limits: live notes already sounding when you seek come back in from their attack; the
+rack edits values, not the score's structure beyond voices, play mode and steps (a new
+instrument or section is a few lines of text); the music has been checked by measurement
+(levels, spectrum, loudness), and taste is John's to tune in the rack.
+
 ## Later
 
 Square and vertical layouts from the same script; scene-specific cues (line staggers, the
-push); music cut to the 120 BPM grid; moving cut 1 onto the one player.
+push); moving cut 1 onto the one player; a music track in the timeline (sections under the
+scenes); stems out of the renderer.

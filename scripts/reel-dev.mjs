@@ -6,6 +6,10 @@
 // on GET /__reel/events for any change to that file on disk, so a save from any text editor
 // reloads the preview at the same moment. Without it the rig still plays, and edits stay a draft.
 //
+// The same goes for a script's score (Assets/<name>.score.txt, the music): the synth rack saves
+// it through /__reel/save, parsed by scripts/reel-music.js, and listens on /__reel/events so a
+// save from a text editor reaches the rack (which updates in place; the preview does not reload).
+//
 // A save is parsed with scripts/reel-script.js before a byte is written: a script with a mistake
 // answers 422 with the parser's "line N: …" rows and leaves the file alone. A good one first
 // copies the file it replaces to .local/reel-backups/ (the newest 20 per script; .local is
@@ -29,9 +33,10 @@ import { fileURLToPath } from 'node:url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const ReelScript = createRequire(import.meta.url)('./reel-script.js');
+const ReelMusic = createRequire(import.meta.url)('./reel-music.js');
 const BACKUPS = path.join(ROOT, '.local', 'reel-backups');
 const KEEP = 20, MAX_BODY = 2 * 1024 * 1024;
-const SCRIPT_RE = /^Assets\/[\w.-]+\.script\.txt$/;
+const SCRIPT_RE = /^Assets\/[\w.-]+\.(script|score)\.txt$/;       // a script, or its score (the music)
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith(`--${k}=`)); return a ? a.slice(k.length + 3) : d; };
 const PORT = parseInt(arg('port', '1337'), 10);
 
@@ -53,7 +58,7 @@ const send = (res, code, body, type = 'text/plain; charset=utf-8', extra = {}) =
 };
 const json = (res, code, obj) => send(res, code, JSON.stringify(obj), 'application/json; charset=utf-8');
 
-// A script path from a client is trusted only if it is exactly Assets/<name>.script.txt.
+// A path from a client is trusted only if it is exactly Assets/<name>.script.txt or .score.txt.
 const scriptPath = f => (typeof f === 'string' && SCRIPT_RE.test(f) && !f.includes('..')) ? path.join(ROOT, f) : null;
 
 // ── static files ─────────────────────────────────────────────────────────
@@ -137,10 +142,11 @@ function save(req, res) {
     let body;
     try { body = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { return json(res, 400, { ok: false, errors: ['the body is not JSON'] }); }
     const file = scriptPath(body && body.file);
-    if (!file) return json(res, 400, { ok: false, errors: ['file should be Assets/<name>.script.txt'] });
+    if (!file) return json(res, 400, { ok: false, errors: ['file should be Assets/<name>.script.txt or Assets/<name>.score.txt'] });
     if (typeof body.text !== 'string') return json(res, 400, { ok: false, errors: ['text should be the whole script as a string'] });
     let parsed;
-    try { parsed = ReelScript.parse(body.text); } catch (e) {
+    const isScore = body.file.endsWith('.score.txt');
+    try { parsed = isScore ? ReelMusic.parse(body.text) : ReelScript.parse(body.text); } catch (e) {
       log(`refused ${body.file}: ${(e.errors || [e.message]).length} mistake(s)`);
       return json(res, 422, { ok: false, errors: e.errors || [e.message] });
     }
@@ -152,6 +158,10 @@ function save(req, res) {
     } catch (e) {
       log(`error saving ${body.file}: ${e.message}`);
       return json(res, 500, { ok: false, errors: [`could not write the file: ${e.message}`] });
+    }
+    if (isScore) {
+      log(`saved ${body.file} (${parsed.score.tracks.length} tracks)`);
+      return json(res, 200, { ok: true, warnings: parsed.warnings });
     }
     const sp = ReelScript.spans(parsed.edit), total = sp.length ? sp[sp.length - 1].end : 0;
     log(`saved ${body.file} (${total} s${parsed.warnings.length ? `, ${parsed.warnings.length} warning(s)` : ''})`);
@@ -165,7 +175,7 @@ function save(req, res) {
 // ~150 ms, then believe only a real change of mtime or size.
 function events(req, res, q) {
   const rel = q.get('file'), file = scriptPath(rel);
-  if (!file) return json(res, 400, { ok: false, errors: ['file should be Assets/<name>.script.txt'] });
+  if (!file) return json(res, 400, { ok: false, errors: ['file should be Assets/<name>.script.txt or Assets/<name>.score.txt'] });
   const stamp = () => { try { const s = fs.statSync(file); return `${s.mtimeMs}:${s.size}`; } catch { return 'missing'; } };
   let last = stamp(), timer = null, watcher;
   res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive' });

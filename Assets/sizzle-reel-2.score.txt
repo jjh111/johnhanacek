@@ -1,0 +1,270 @@
+# SIZZLE REEL · CUT 2 · THE MUSIC
+#
+# The score for Assets/sizzle-reel-2.script.txt: a script's music is the .score.txt with
+# its name. Every sound is made here, by synths and drum voices built from numbers, on
+# the script's own 120 BPM grid. There are no samples.
+#
+# SYNTH     A voice-built instrument (the patch vocabulary of like-every-cloud's
+#           SynthVoice): "voice <wave> <cents> <level>" per oscillator (sine, triangle,
+#           square, saw, noise; 1200 cents is an octave), then "filter <type> <Hz> <Q>",
+#           "env <attack> <decay> <sustain> <release>" (seconds, sustain 0-1) and
+#           "lfo <gain|filter|pitch> <Hz> <depth>". "play" says what it plays:
+#             chord <octave>        the section's chord, held for the bar
+#             root <octave>         the chord's root on the steps
+#             arp <octave> <up|down|updown>   the chord's notes in turn on the steps
+#             notes                 the "notes" line, one per step (. rests)
+#             hit <octave>          the chord once, on the section's downbeat
+#             rise <beats>          a sweep up into the next section
+#             chime <octave>        the chord rolled upwards (a sound effect)
+#             note <name>           one note (a sound effect)
+# DRUM      A drum voice: "kind" kick, snare, clap, hat, openhat, shaker, tick or boom;
+#           "tune" (Hz), "decay" (s), "tone" (Hz).
+# STEPS     Sixteen to a bar, a sixteenth is 0.125 s: X loud, x, o soft, . rest. A pattern
+#           loops, and starts again at every cut, so each section's downbeat is its cut.
+# MIX       "level" 0-1, "pan" -1 left to 1 right, "send <reverb> <delay>" 0-1 each.
+# SFX       Sound effects the edit plays itself: "on key|space|enter|clear|cut|item|beat"
+#           plays a SYNTH or DRUM voice at every such moment of the reel (each key of a
+#           typed question, its Enter, the select-all before the next one, ...).
+# FX        reverb (size s, decay, tone Hz, return), delay (time in beats, feedback, tone
+#           Hz, return), tape (wow, flutter, age Hz, hiss), drive (amount), comp (threshold
+#           dB, ratio, attack, release), master (level, fade in s, fade out s).
+# SECTION   One per scene of the script, by its kind or its number: "play" the tracks it
+#           plays (name:0.5 plays one at half level), "chords" one a bar from the cut
+#           (else the CHORDS line), "sweep <from Hz> <to Hz>" filters the music across it.
+#
+# PLAY      node scripts/reel-dev.mjs, open the page it prints, press M: the synth rack.
+#           Every knob, step and cell there edits a line of this file. Saving this file
+#           from any editor updates the rack without a reload.
+# CHECK     node scripts/reel-music.js check      the arrangement: sections, notes, mistakes
+# FILM      node scripts/render-sizzle-reel.mjs --cut=2 renders it into the MP4.
+
+TEMPO  120
+KEY    A minor
+CHORDS Am F C G
+
+# ── the band ──────────────────────────────────────────────────────────────
+
+SYNTH pad
+  voice    saw -9 0.45
+  voice    saw 9 0.45
+  voice    sine -1200 0.35
+  filter   lowpass 1300 0.7
+  env      0.7 0.6 0.75 1.4
+  lfo      filter 0.18 380
+  play     chord 3
+  level    0.1
+  send     0.55 0.12
+
+SYNTH bass
+  voice    saw 0 0.6
+  voice    square -1200 0.4
+  filter   lowpass 420 5
+  env      0.004 0.2 0.5 0.08
+  play     root 2
+  steps    x..x..x.x..x.x..
+  len      2
+  level    0.33
+  pan      0
+  send     0 0
+
+SYNTH arp
+  voice    square 0 0.35
+  voice    triangle 1200 0.3
+  filter   lowpass 2600 3
+  env      0.002 0.16 0 0.12
+  play     arp 4 updown
+  steps    x.xx.x.xx.xx.x.x
+  level    0.24
+  pan      0.25
+  send     0.3 0.4
+
+SYNTH glass
+  voice    sine 0 0.5
+  voice    sine 1200 0.18
+  env      0.01 0.35 0 0.6
+  play     arp 5 up
+  steps    x...x.x...x...x.
+  level    0.17
+  pan      -0.3
+  send     0.6 0.5
+
+SYNTH lead
+  voice    triangle 0 0.55
+  voice    sine 1200 0.2
+  filter   lowpass 3200 1
+  env      0.03 0.25 0.6 0.35
+  lfo      pitch 5.5 14
+  play     notes
+  notes    E5 . . . C5 . D5 . E5 . . . G5 . . . | A5 . . . G5 . E5 . D5 . . . C5 . D5 .
+  len      3
+  level    0.2
+  pan      -0.1
+  send     0.35 0.3
+
+SYNTH riser
+  voice    noise 0 0.7
+  voice    saw 0 0.15
+  filter   bandpass 5200 2
+  env      0.05 0 1 0.08
+  play     rise 4
+  level    0.2
+  send     0.4 0
+
+DRUM boom
+  kind     boom
+  tune     42
+  decay    1.4
+  level    0.7
+  send     0.3 0
+
+DRUM kick
+  kind     kick
+  tune     52
+  decay    0.32
+  steps    X...x...X...x...
+  level    0.56
+
+DRUM snare
+  kind     clap
+  tone     1300
+  decay    0.18
+  steps    ....x.......x..o
+  level    0.7
+  send     0.3 0.08
+
+DRUM hat
+  kind     hat
+  tone     8200
+  decay    0.045
+  steps    ..x...x...x...xo
+  level    0.36
+  pan      0.2
+
+DRUM shaker
+  kind     shaker
+  tone     6200
+  decay    0.05
+  steps    oxoxoxoxoxoxoxox
+  level    0.2
+  pan      -0.25
+
+# ── what the edit plays itself ────────────────────────────────────────────
+
+DRUM keys
+  kind     tick
+  tune     2600
+  decay    0.025
+  on       key
+  level    0.2
+
+DRUM space
+  kind     tick
+  tune     1500
+  decay    0.035
+  on       space
+  level    0.12
+
+DRUM select
+  kind     tick
+  tune     4200
+  decay    0.02
+  on       clear
+  level    0.08
+
+SYNTH enter
+  voice    sine 0 0.5
+  voice    triangle 1200 0.2
+  env      0.002 0.22 0 0.45
+  play     chime 5
+  on       enter
+  level    0.2
+  send     0.45 0.35
+
+SYNTH pop
+  voice    sine 0 0.6
+  env      0.002 0.1 0 0.2
+  play     note E6
+  on       beat
+  level    0.13
+  send     0.3 0.2
+
+# ── the effects ──────────────────────────────────────────────────────────
+
+FX reverb
+  size     2.8
+  decay    3
+  tone     5200
+  return   0.5
+
+FX delay
+  time     0.75
+  feedback 0.38
+  tone     2800
+  return   0.32
+
+FX tape
+  wow      0.25
+  flutter  0.15
+  age      9000
+  hiss     0.04
+
+FX drive
+  amount   0.18
+
+FX comp
+  threshold -16
+  ratio    3
+  attack   0.01
+  release  0.2
+
+FX master
+  level    1
+  fade     0 1.8
+
+# ── the arrangement: one section per scene ───────────────────────────────
+
+SECTION open
+  play     glass pad:0.6 riser
+  chords   Am
+  sweep    500 2600
+
+SECTION title
+  play     boom pad glass:0.6 arp:0.5
+  chords   Am F
+
+SECTION answer
+  play     kick hat bass pad arp
+  chords   Am F C
+
+SECTION art
+  play     pad glass bass:0.7 hat:0.6
+  chords   F C G
+
+SECTION command
+  play     kick hat bass arp pad riser
+  chords   Am G
+  sweep    700 6000
+
+SECTION results
+  play     boom kick snare hat shaker bass arp pad
+
+SECTION feature
+  play     kick snare hat bass pad lead arp:0.6
+  chords   F G Am
+
+SECTION logos
+  play     pad bass:0.6 hat glass
+  chords   C G
+  sweep    900 2200
+
+SECTION quotes
+  play     pad glass kick:0.5 hat:0.5 bass:0.6
+  chords   F C Am G F
+
+SECTION offer
+  play     boom kick snare hat shaker bass arp lead pad
+  chords   Am F C
+
+SECTION end
+  play     boom pad glass
+  chords   Am9

@@ -158,6 +158,25 @@
     return sc.cues && sc.cues[name] != null ? sc.cues[name] : c.def(sc.type);
   }
 
+  // ── the questions, typed ──────────────────────────────────────────────
+  // When each key of each question lands, its Enter, and the select-all before the next one:
+  // the rig draws the bar from this and the score plays its keys from it, so both agree.
+  // Each question starts just before its section's downbeat, so its answer lands a few hundred
+  // ms after the cut; keys are jittered per key, the same jitter on every run.
+  const hash01 = i => { let h = Math.imul(i ^ 0x9e3779b9, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
+  function queries(edit) {
+    const when = spans(edit), asked = [];
+    edit.scenes.forEach((sc, i) => { if (sc.query) asked.push([sc, i]); });
+    return asked.map(([sc, i], k) => {
+      const t0 = when[i].start + (k === 0 ? 0.1 : -0.08);
+      const times = []; let tt = t0;
+      const CPS = cue(sc, 'typing');
+      for (let j = 0; j < sc.query.length; j++) { tt += (1 / CPS) * (0.6 + 0.8 * hash01(j + 31 * i)); times.push(tt); }
+      const last = k === asked.length - 1;
+      return { scene: i, text: sc.query, times, t0, typed: tt, enter: tt + 0.06, clear: last ? Infinity : when[i].end - 0.3, last };
+    });
+  }
+
   const a = w => (/^[aeiou]/i.test(w) ? 'an ' : 'a ') + w;
   // a rig name as the script says it, for messages
   const said = (k, def) => {
@@ -480,5 +499,5 @@
     if (notes.length) console.log('\n' + notes.map(w => 'warning: ' + w).join('\n'));
   }
 
-  return { parse, format, retime, spans, cueSheet, SCENES, CUES, cue, cueNames, setDur, setAt, setField, setCue, main };
+  return { parse, format, retime, spans, queries, cueSheet, SCENES, CUES, cue, cueNames, setDur, setAt, setField, setCue, main };
 });

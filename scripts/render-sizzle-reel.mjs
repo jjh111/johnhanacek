@@ -25,6 +25,14 @@
 //                                                                 <name>-poster.jpg (--poster=<seconds>; default the
 //                                                                 middle of the title scene, else 1 s) and
 //                                                                 <name>-chapters.json (one chapter per scene of the edit)
+//   node scripts/render-sizzle-reel.mjs --cut=2 --audio-only    → just the soundtrack: <name>-music.wav
+//   --mute                                                      → no soundtrack in the MP4
+//
+// The soundtrack: a script's music is the .score.txt with its name (Assets/sizzle-reel-2.score.txt).
+// When there is one, the film's audio is mixed offline by the same synths the preview plays
+// (scripts/reel-music.js arranges the score against the edit, scripts/reel-synth.js plays it in
+// an OfflineAudioContext), written next to the MP4 as <name>-music.wav and muxed in as AAC.
+// A part (--from/--to, --scene) carries its own stretch of the soundtrack.
 //
 // Why frame by frame: a screen recording (render-media-kit.mjs --video) keeps whatever the
 // browser manages in real time, so a heavy frame is a dropped frame. Here the rig's clock only
@@ -38,8 +46,8 @@
 // pointing at the real .mp4 files.
 // Needs ffmpeg with libx264 and libvpx-vp9. Output lands in Assets/media-kit/ (gitignored).
 import { chromium } from 'playwright-core';
-import { spawn, execFileSync } from 'node:child_process';
-import { mkdirSync, existsSync, statSync, writeFileSync, readFileSync, rmSync, copyFileSync, mkdtempSync } from 'node:fs';
+import { spawn, spawnSync, execFileSync } from 'node:child_process';
+import { mkdirSync, existsSync, statSync, writeFileSync, readFileSync, rmSync, copyFileSync, mkdtempSync, renameSync } from 'node:fs';
 import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, basename } from 'node:path';
@@ -76,6 +84,18 @@ if (!CUT) throw new Error(`--cut must be one of ${Object.keys(CUTS).join(', ')}`
 const reel = CUT.script
   ? createRequire(import.meta.url)('./reel-script.js').parse(readFileSync(resolve(ROOT, CUT.script), 'utf8')).edit
   : JSON.parse(readFileSync(resolve(ROOT, 'Assets/media-kit.json'), 'utf8'))[CUT.edit];
+// the score, when the script has one: read and arranged now, so a score with a mistake also
+// stops here, before a browser starts
+const MUTE = args.includes('--mute'), AUDIO_ONLY = args.includes('--audio-only');
+const SCORE = CUT.script ? CUT.script.replace(/\.script\.txt$/, '.score.txt') : null;
+const music = SCORE && existsSync(resolve(ROOT, SCORE)) && !MUTE ? (() => {
+  const req = createRequire(import.meta.url), RM = req('./reel-music.js'), RS = req('./reel-script.js');
+  const parsed = RM.parse(readFileSync(resolve(ROOT, SCORE), 'utf8'));
+  const when = RS.spans(reel);
+  const scenes = when.map((c, i) => ({ type: reel.scenes[i].type, start: c.start, end: c.end }));
+  return { parsed, A: RM.arrange(parsed.score, scenes, RM.moments(reel, RS)) };
+})() : null;
+if (AUDIO_ONLY && !music) throw new Error(`--audio-only: ${SCORE ? (MUTE ? '--mute says no music' : `there is no ${SCORE}`) : 'cut 1 has no score'}`);
 // --scene=6 or --scene=results: that scene alone, timed from the edit
 let part = '';
 const SCENE = flag('scene', null);
@@ -217,18 +237,19 @@ function deliver(out, filmDur) {
   const CAP = +process.env.REEL_WEB_CAP_BYTES || 14e6;
   if (statSync(out).size <= CAP) copyFileSync(out, web);
   else {
-    const rate = Math.floor(CAP * 8 / filmDur * 0.97);
+    const AUDIO = music ? 128000 : 0;              // the web copy keeps the soundtrack, at 128 kb/s
+    const rate = Math.floor(CAP * 8 / filmDur * 0.97) - AUDIO;
     const logs = mkdtempSync(resolve(dirname(out), '.x264-2pass-'));
     try {
-      const common = r => ['-i', out, '-an', '-pix_fmt', 'yuv420p', '-c:v', 'libx264', '-preset', 'slow', '-b:v', String(r),
+      const common = (r, pass) => ['-i', out, ...(music && pass === 2 ? ['-c:a', 'aac', '-b:a', String(AUDIO)] : ['-an']), '-pix_fmt', 'yuv420p', '-c:v', 'libx264', '-preset', 'slow', '-b:v', String(r),
         '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv',
         '-passlogfile', resolve(logs, 'pass')];
-      ffmpeg([...common(rate), '-pass', '1', '-f', 'null', '/dev/null']);
+      ffmpeg([...common(rate, 1), '-pass', '1', '-f', 'null', '/dev/null']);
       // x264 lands near the rate, not under it: on a short film it can overshoot the 3%. Then
       // pass 2 runs again at the rate scaled by how far over it came (pass 1's log still holds).
       let r = rate;
       for (let k = 0; k < 3; k++) {
-        ffmpeg([...common(r), '-pass', '2', '-movflags', '+faststart', web]);
+        ffmpeg([...common(r, 2), '-pass', '2', '-movflags', '+faststart', web]);
         if (statSync(web).size <= CAP) break;
         if (k === 2) console.log(`web copy: still ${mb(web)} after three tries, over the ${(CAP / 1e6).toFixed(1)} MB budget`);
         r = Math.floor(r * CAP / statSync(web).size * 0.97);
@@ -253,10 +274,46 @@ function deliver(out, filmDur) {
   for (const f of [web, poster, chapters]) console.log(`wrote ${rel(f)} (${mb(f)})`);
 }
 
+// The soundtrack of [from, to), mixed offline in a blank page of the same browser: the score's
+// synths in an OfflineAudioContext, returned as a 16-bit WAV. Seeded noise, so the same score
+// mixes the same bytes every time.
+async function renderMusic(from, to, wav) {
+  const ctx = await browser.newContext();
+  try {
+    const page = await ctx.newPage();
+    for (const f of ['reel-music.js', 'reel-synth.js']) await page.addScriptTag({ content: readFileSync(resolve(ROOT, 'scripts', f), 'utf8') });
+    const t0 = Date.now();
+    const res = await page.evaluate(async ({ parsed, A, from, to }) => {
+      const buf = await ReelSynth.renderOffline(parsed, A, { from, to });
+      const bytes = new Uint8Array(ReelSynth.toWav(buf));
+      let bin = ''; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+      return { b64: btoa(bin), stats: ReelSynth.stats(buf) };
+    }, { parsed: { score: music.parsed.score }, A: music.A, from, to });
+    writeFileSync(wav, Buffer.from(res.b64, 'base64'));
+    const st = res.stats;
+    console.log(`wrote ${rel(wav)} (${mb(wav)}, ${(to - from).toFixed(1)} s mixed in ${((Date.now() - t0) / 1000).toFixed(1)} s, peak ${st.peakDb.toFixed(1)} dBFS, rms ${st.rmsDb.toFixed(1)} dBFS)`);
+    if (st.peak >= 0.999) console.log('music: the mix touches 0 dBFS; lower FX master level or a track');
+    // loudness as the platforms measure it (web video sits around -16 to -14 LUFS)
+    const lufs = [...(spawnSync('ffmpeg', ['-hide_banner', '-nostats', '-i', wav, '-af', 'ebur128', '-f', 'null', '-'], { encoding: 'utf8' }).stderr || '').matchAll(/I:\s+(-?[\d.]+) LUFS/g)].pop();   // the summary's, last
+    if (lufs) console.log(`music: ${lufs[1]} LUFS integrated`);
+  } finally { await ctx.close(); }
+}
+// the soundtrack into the MP4, in place (the video stream is copied, not re-encoded)
+function mux(out, wav) {
+  const tmp = out.replace(/\.mp4$/, '.mux-tmp.mp4');
+  try { ffmpeg(['-i', out, '-i', wav, '-map', '0:v', '-map', '1:a', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', tmp]); }
+  catch (e) { rmSync(tmp, { force: true }); throw e; }
+  renameSync(tmp, out);
+}
+const wavFor = out => out.replace(/\.mp4$/, '-music.wav');
+
 const rigs = [];
 let partsDir = null;
 try {
-  if (STILLS.length) {
+  if (AUDIO_ONLY) {
+    mkdirSync(dirname(OUT), { recursive: true });
+    await renderMusic(FROM, Math.min(music.A.duration, TO == null ? music.A.duration : +TO), wavFor(OUT));
+  } else if (STILLS.length) {
     if (JOBS > 1 || DELIVER) console.log('stills: --jobs and --deliver do not apply');
     const rig = await openRig(); rigs.push(rig);
     const dir = resolve(dirname(OUT), 'stills');
@@ -321,6 +378,7 @@ try {
       catch (e) { rmSync(OUT, { force: true }); throw e; }
     }
     console.log(`\nwrote ${rel(OUT)} (${mb(OUT)}, ${(frames / FPS).toFixed(1)} s at ${FPS} fps${n > 1 ? `, ${n} jobs` : ''}) in ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+    if (music) { await renderMusic(FROM, FROM + frames / FPS, wavFor(OUT)); mux(OUT, wavFor(OUT)); console.log(`muxed the soundtrack into ${rel(OUT)} (${mb(OUT)})`); }
     if (DELIVER) deliver(OUT, frames / FPS);
   }
 } finally {

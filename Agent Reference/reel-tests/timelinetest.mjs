@@ -112,7 +112,7 @@ try {
   const n = await page.locator('#reel-tl .tl-sc').count();
   check(await page.locator('#reel-tl').isVisible() && n === 11, 'E opens the panel with 11 scene blocks', `visible ${await page.locator('#reel-tl').isVisible()}, ${n} blocks`);
   const hint = await page.locator('#hud > span:last-child').textContent();
-  check(/E timeline$/.test(hint), 'the HUD hint names E', hint);
+  check(/· E timeline\b/.test(hint), 'the HUD hint names E', hint);
   await page.waitForTimeout(600);                  // fonts settle before the picture
   await page.screenshot({ path: path.join(SHOTS, 'timeline-panel.png') });
 

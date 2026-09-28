@@ -367,7 +367,6 @@ p, h1, h2, h3 { margin: 0; }
   };
   const seg = (t, a, d, ease = E.lin) => ease(clamp01((t - a) / d));
   const fx = n => n.toFixed(2);
-  const hash01 = i => { let h = Math.imul(i ^ 0x9e3779b9, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
   function seedRandom(seed) {
     let s = seed >>> 0;
     Math.random = function () { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -1046,14 +1045,10 @@ p, h1, h2, h3 { margin: 0; }
   // ── the command bar's queries ─────────────────────────────────────────
   // Each question is typed over the last one's selection (select-all, then type), starting just
   // before its section's downbeat so its answer lands a few hundred ms after the cut.
-  const QS = SC.filter(s => s.query);
-  QS.forEach((sc, k) => {
-    const t0 = sc.start + (k === 0 ? 0.1 : -0.08);
-    const times = []; let tt = t0;
-    const CPS = ReelScript.cue(sc, 'typing');     // cue typing: characters a second, jittered per key
-    for (let i = 0; i < sc.query.length; i++) { tt += (1 / CPS) * (0.6 + 0.8 * hash01(i + 31 * sc.i)); times.push(tt); }
-    const last = k === QS.length - 1;
-    const q = { sc, text: sc.query, times, t0, typed: tt, enter: tt + 0.06, clear: last ? Infinity : sc.end - 0.3, last, tiers: sc.tiers || [] };
+  // (the key times are ReelScript.queries: the score plays its keys from the same list)
+  ReelScript.queries(EDIT).forEach(Q => {
+    const sc = SC[Q.scene];
+    const q = { sc, text: Q.text, times: Q.times, t0: Q.t0, typed: Q.typed, enter: Q.enter, clear: Q.clear, last: Q.last, tiers: sc.tiers || [] };
     const g = document.createElement('div'); g.className = 'tg';
     g.innerHTML = q.tiers.map(name => `<span class="tier ${TIERCLASS[name] || ''}"><i></i>${name}</span>`).join('');
     tiersEl.appendChild(g);
@@ -1215,9 +1210,9 @@ p, h1, h2, h3 { margin: 0; }
   const hud = document.getElementById('hud'), bar = hud.querySelector('.bar'), fill = bar.querySelector('i'), clock = hud.querySelector('.time');
   const sceneEl = hud.querySelector('.scene');
   hud.hidden = false;
-  let reserved = 0;                              // px at the bottom a tool keeps (the timeline)
-  const fit = () => { const h = Math.max(1, innerHeight - reserved), s = Math.min(innerWidth / W, h / H);
-    stage.style.transform = `translate(${fx((innerWidth - W * s) / 2)}px,${fx((h - H * s) / 2)}px) scale(${s.toFixed(5)})`; };
+  let reserved = 0, reservedR = 0;                // px a tool keeps: at the bottom (the timeline), at the right (the synth rack)
+  const fit = () => { const w = Math.max(1, innerWidth - reservedR), h = Math.max(1, innerHeight - reserved), s = Math.min(w / W, h / H);
+    stage.style.transform = `translate(${fx((w - W * s) / 2)}px,${fx((h - H * s) / 2)}px) scale(${s.toFixed(5)})`; };
   fit(); addEventListener('resize', fit);
   SC.forEach(sc => { const b = document.createElement('b'); b.style.left = (sc.start / DURATION * 100).toFixed(3) + '%'; bar.appendChild(b); });
   // `node scripts/reel-dev.mjs` answers /__reel/ping; a plain static server does not
@@ -1253,6 +1248,7 @@ p, h1, h2, h3 { margin: 0; }
     now, seek: seekTo, isPlaying: () => playing, setPlaying: p => { if (!!p !== playing) toggle(); },
     onFrame: fn => { frameFns.push(fn); },
     reserveBottom: px => { reserved = Math.max(0, +px || 0); fit(); },
+    reserveRight: px => { reservedR = Math.max(0, +px || 0); fit(); },
     async save(text) {
       try { ReelScript.parse(text); } catch (e) { return { ok: false, errors: e.errors || [e.message] }; }
       if (DEV) {
@@ -1277,6 +1273,10 @@ p, h1, h2, h3 { margin: 0; }
   // with the dev server, a save from any editor reloads the preview (a draft here is kept)
   if (DEV) new EventSource('/__reel/events?file=' + encodeURIComponent(SCRIPT_PATH)).addEventListener('change', () => { if (DRAFT == null) location.reload(); });
   const tl = document.createElement('script'); tl.src = '../scripts/reel-timeline.js'; tl.onerror = () => tl.remove(); document.head.appendChild(tl);
+  // the music: the score's synths under the preview, and the rack that plays them (M)
+  ['reel-music.js', 'reel-synth.js', 'reel-rack.js'].reduce((p, f) => p.then(() => new Promise((ok, no) => {
+    const el = document.createElement('script'); el.src = '../scripts/' + f; el.onload = ok; el.onerror = no; document.head.appendChild(el);
+  })), Promise.resolve()).catch(e => console.error('the synth rack did not load', e));
   bar.addEventListener('click', e => { const r = bar.getBoundingClientRect(); seekTo((e.clientX - r.left) / r.width * DURATION); });
   let idle; const wake = () => { hud.classList.remove('idle'); clearTimeout(idle); idle = setTimeout(() => hud.classList.add('idle'), 2200); };
   addEventListener('mousemove', wake); wake();
