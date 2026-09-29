@@ -8,7 +8,7 @@ hi@johnhanacek.com · [johnhanacek.com](https://www.johnhanacek.com) · [LinkedI
 
 ## Summary
 
-Product design engineer across AI, web, 3D and XR. Shipped Nanome 2's XR molecular design tool to pharma customers and an AR situational-awareness HUD for first responders. Built a portfolio site whose search runs a language model in the browser. Founding design for early-stage teams through JHDesign LLC. Prototypes in JavaScript, Three.js, WebGPU and Unity.
+Product design engineer across AI, web, 3D and XR. Shipped Nanome 2's XR molecular design tool to pharma customers and an AR situational-awareness HUD for first responders. Founding design for early-stage teams through JHDesign LLC.
 
 ---
 
@@ -19,10 +19,10 @@ Product design engineer across AI, web, 3D and XR. Shipped Nanome 2's XR molecul
 
 Founding design, product design and agentic coaching for startups and R&D teams. Deliverables ship as working code.
 
-- OpenProse (2026): founding design in two months. Brand, five logo directions, 137 homepage approaches as live pages across 471 commits, one canonical style.
-- Muse.bio (2024, 2026): user-journey and personas workshops. Built a Claude Code + Figma MCP system that turns workshop output into structured results. Handed off.
+- OpenProse (2026): founding design. Brand, design system and trace visualization experiments, delivered as code.
+- Muse.bio (2024, 2026): user-journey and personas workshops. Built a Claude Code + Figma MCP system that turns workshop output into structured results, then handed the whole system off.
 - Transfyr (2025): MVP platform design handoff. Prototypes as Claude-generated HTML brought into Figma, synthetic data for the demo build, QA with their developer.
-- JH Coaching OS: shipped an AI coaching product (agent, materials, context docs, dashboard). Clients leave with a chief-of-staff agent around their own work, or the skills to build software.
+- JH Coaching OS: shipped an AI coaching product: agent, curated materials, context docs and dashboard. Clients leave with a working chief-of-staff agent or the skills to build their own.
 - Context engineering for clients: private context and design systems that keep their AI tools coherent, including cleanup of existing setups.
 - Subcontractor on a 5G program (BlueHalo division, now AeroVironment) with Dr. Hurriyet Ok. Ongoing DoD proposals.
 - ShapesXR: wrote a spatial design blog series. User since launch.
@@ -32,7 +32,7 @@ Founding design, product design and agentic coaching for startups and R&D teams.
 
 Molecular design platform for pharma researchers in VR, desktop and web.
 
-- Led product design for Nanome 2 on Meta Quest, the companion web portal and the MARA AI assistant. All shipped. Supervised the visionOS beta.
+- Led product design for Nanome 2 release on Meta Quest, the companion web portal integrated with AI assistant. Supervised the visionOS beta.
 - Ran 24 alpha and beta sessions with scientists at Pfizer, Novartis and academic labs. Coded the feedback into bugs, questions, evidence and patterns.
 - Replaced teleport navigation with Spotlight/Follow: labeled cursors and a shared, non-rivalrous molecule. A pillar of Nanome 2.
 - Consolidated Nanome 1's features into a new layout and wrist UI. Designed the information architecture for projects in the app.
@@ -46,10 +46,10 @@ Molecular design platform for pharma researchers in VR, desktop and web.
 
 Immersive data visualization for public safety and enterprise.
 
-- Designed the AROC situational-awareness AR HUD and its modular layout grid, with hand tracking on Meta Quest and HoloLens 2. Shipped.
+- Designed the AROC situational-awareness AR HUD and its modular layout grid, with hand tracking on Meta Quest and HoloLens 2.
 - Bluetooth signal visualization for the SeeSignal app.
-- Insurance damage-assessment demo over a simulated New York for Munich Re: design, recorded demo content, manuals.
-- Product design for a VR meteorology app.
+- Insurance damage-assessment VR demo - simulated New York for Munich Re.
+- Product design for VR meteorology app.
 - Interface prototypes, specs and production assets. Developer handoff. Research and internal knowledge management.
 
 ### Founding CEO/CTO, Co-Founder
@@ -125,7 +125,7 @@ Thesis: Remotely piloted aircraft and just war theory, closing on ground robotic
 
 **Practice:** User research and usability testing · Qualitative coding · 3D interaction design · Product design and prototyping · Design systems · Brand identity and logotype · Workshop facilitation · Product management, PRD and MVP scoping · Context engineering · Agent orchestration · Tool-use design · Retrieval-augmented generation · Conversational UX · Digital twins and teleoperation · 3D scanning and photogrammetry
 
-**Design & research:** Figma, FigJam, Blender, Unity / C#, ShapesXR, Adobe Creative Suite. User research, usability testing, qualitative coding, 3D interaction, design systems, brand, workshops, PRDs
+**Design & research:** Figma, FigJam, Blender, Unity / C#, ShapesXR, Adobe Creative Suite, Coda. User research, usability testing, qualitative coding, 3D interaction, design systems, brand, workshops, PRDs
 
 **Code:** JavaScript, TypeScript, React, HTML / CSS, Three.js, WebGL / GLSL, WebGPU, Node.js, Playwright, Git
 
