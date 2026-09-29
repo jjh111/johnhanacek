@@ -310,6 +310,50 @@ should be scared off by it). The coral could run wider along the bottom.
   pinned the 60 s cut's numbers; they now read them from the script (the cut's total, the answer's
   length, cue moments counted from their scenes), so an edit in the editor cannot break them.
 
+## Buttons, scene cards and Export (2026-09-29)
+
+John, the same evening: the beats row did not make sense and its small marks could not be
+selected; the items row was empty for every scene but one; the out marks floated apart from their
+scenes; the timeline should zoom and its targets be bigger; how does the video get exported? And:
+"give me interface controls, not just keyboard shortcuts."
+
+- **Every key is a button.** The HUD has a transport (restart, scene back, -5 s, play, +5 s, scene
+  forward, loop) and a tools slot. A tool adds its own button with
+  `REEL_LIVE.addTool({ id, label, key, title, order, cls, onClick })`, which returns the button;
+  the timeline, the rack and Export mark theirs `aria-pressed` while open. One table (`DO`) is
+  behind the buttons and the keys, and every tooltip names its key. A mouse click leaves no focus
+  behind, so space stays the preview's.
+- **Scenes are cards.** Everything that belongs to a scene sits inside its card: its items (only
+  results scenes have them; the gutter says so), its moments, and its out. Beats are now
+  **moments**, the word "beats" having a musical meaning in an editor with a synth rack. A moment
+  is any @ time: a beat's own line, or the @ that leads a stat or an award. `setAt` rewrites both,
+  so the stats and awards drag like the rest. Each moment is a 24 px target: a diamond for a
+  picture or clip, a square for a quote, a circle for a stat or award, named where there is room.
+  Moments that crowd take a second row. The out is the hatched end of its card, with its handle
+  on the "out" row at the card's foot. At fit zoom it used to sit on the card's resize grip; the
+  grip now stops above that row.
+- **Zoom**, from the whole reel (fit) to 360 px a second: the − fit + buttons, ⌘/Ctrl + wheel or
+  a pinch (around the pointer), or `-` `=` `0`. The wheel scrolls a zoomed timeline. The view
+  follows the playhead while it plays. A card scrolled half out keeps its name in view. The zoom
+  and the scroll survive the reload a save causes. Clicking a moment, an item or an out opens its
+  scene in the inspector with that line lit. Undo and Redo are buttons.
+- **Export** (`scripts/reel-export.js`), one panel with three paths. On the dev server it
+  renders there: `POST /__reel/render` { file, formats, fps } runs the renderer per format, one job
+  at a time, behind the save's guard (JSON only, this server's pages only); `GET` reports each
+  film's frame, frames and seconds left, read off the renderer's own progress line; `POST
+  /__reel/render/cancel` stops it. The films are linked when done. On claude.ai, "Ask Claude to
+  render" posts a comment and sends it to Claude (`comments.sendToClaude`, from the click). The
+  artifact wakes the Claude session watching it. The request names the formats, the frame rate and
+  the saved version (a six-character hash of the script). Claude renders it, uploads each film
+  (Artifact, `asset: true`) and writes `films/latest`, and the panel lists those films with Open
+  and Download. When no Claude session can receive the comment, the button copies the request
+  and the panel says why. Anywhere else, it gives the renderer's command.
+- **Tests:** timelinetest (37: the HUD's buttons, zoom, a stat dragged and undone by the Undo
+  button, a moment's click, Export), devservertest (42: the render guards, one job at a time,
+  progress, cancel; the render is started for real, then stopped), hosttest (the films listed, one
+  comment sent naming formats and version, the no-session fallback), scripttest (`setAt` on a
+  stat).
+
 ## Later
 
 Scene-specific cues (line staggers, the push); moving cut 1 onto the one player; a music track

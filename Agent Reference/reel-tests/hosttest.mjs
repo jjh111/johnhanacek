@@ -66,10 +66,15 @@ const FAKE = () => {
     async set(d) { await gate(); localStorage.setItem(K + path, JSON.stringify(d)); },
     async delete() { await gate(); localStorage.removeItem(K + path); },
   });
-  window.__saved = [];
+  window.__saved = []; window.__sent = [];
+  // comments: whether a comment can reach Claude ('fake-can-send', else available), and what was sent
+  const canSend = localStorage.getItem('fake-can-send') || 'available';
+  const comments = { canSendToClaude: async () => canSend, anchorFor: async () => ({ path: 'body', x: 1, y: 1 }),
+    sendToClaude: async ({ text }) => { if (canSend !== 'available') throw { code: 'claude_unavailable', message: 'no' }; window.__sent.push(text); return { threadId: 't1', commentId: 'c1' }; } };
   window.claude = { use: async name => name === 'db' ? { doc }
     : name === 'permissions' ? { state: async n => n === 'db' ? consent : 'unavailable', request: async () => ({ db: consent }) }
-    : name === 'downloads' ? { save: async r => { window.__saved.push(r); return { status: 'saved' }; } } : null };
+    : name === 'downloads' ? { save: async r => { window.__saved.push(r); return { status: 'saved' }; } }
+    : name === 'comments' ? comments : null };
   // an init script can run before <html> exists: stamp the theme as soon as it does
   const light = () => document.documentElement && document.documentElement.setAttribute('data-theme', 'light');
   light(); document.addEventListener('readystatechange', light);
@@ -154,6 +159,40 @@ try {
     await page.waitForSelector('#reel-late', { timeout: 10000 }).catch(() => null);
     const late = await page.evaluate(() => !!document.getElementById('reel-late'));
     ok(!first && took < 8 && late, `a slow store never holds the reel (started in ${took.toFixed(1)} s on the file), and the saved version is offered when it arrives`);
+    ok(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.join(' | ') : ''));
+  }
+
+  // ── Export on claude.ai: the films Claude made, and asking Claude for more ──
+  {
+    const { page, errs } = await fresh();
+    await page.goto(URL0); await started(page);
+    await page.evaluate(() => {
+      localStorage.setItem('fake-standing', 'granted');
+      localStorage.setItem('fake-db:films/latest', JSON.stringify({ renderedAt: '2026-09-29T21:00:00Z', from: 'abc123',
+        items: [{ format: 'wide', url: 'films/sizzle-reel-2.mp4', mb: 12.5, seconds: 63.5, fps: 60 }] }));
+    });
+    await page.reload(); await started(page);
+    await page.locator('#hud [data-tool="export"]').click();
+    await page.waitForFunction(() => document.querySelectorAll('#reel-ex .ex-film').length > 0 && /^Ask/.test(document.querySelector('#reel-ex .ex-go').textContent), null, { timeout: 10000 }).catch(() => {});
+    const ex = await page.evaluate(() => ({ mode: REEL_EXPORT.mode, films: [...document.querySelectorAll('#reel-ex .ex-film')].map(f => f.textContent.replace(/\s+/g, ' ')),
+      links: [...document.querySelectorAll('#reel-ex .ex-film a')].map(a => a.getAttribute('href')), go: document.querySelector('#reel-ex .ex-go').textContent }));
+    ok(ex.mode === 'host' && ex.films.length === 1 && /wide/.test(ex.films[0]) && /12\.5 MB/.test(ex.films[0]) && ex.links.includes('films/sizzle-reel-2.mp4'),
+      `Export lists the films Claude made, each to open and download (${ex.films.join(' | ')})`);
+    ok(/^Ask Claude to render the film$/.test(ex.go), `and offers to ask Claude for more (${ex.go})`);
+    await page.locator('#reel-ex .ex-go').click();
+    await page.waitForFunction(() => window.__sent.length > 0, null, { timeout: 5000 }).catch(() => {});
+    const sent = await page.evaluate(() => ({ sent: window.__sent, say: document.querySelector('#reel-ex .ex-say').textContent, version: REEL_EXPORT.version }));
+    ok(sent.sent.length === 1 && sent.sent[0] === `Render my reel from the editor: wide at 60 fps, from my saved version (${sent.version}).` && /^Sent to Claude/.test(sent.say),
+      `Ask Claude sends one comment to Claude, naming the formats and the version ("${sent.sent[0]}")`);
+    await page.keyboard.press('Escape');
+    ok(await page.evaluate(() => document.getElementById('reel-ex').hidden), 'Esc shuts the panel');
+    // no Claude session watching the page: the button copies the request, and says why
+    await page.evaluate(() => localStorage.setItem('fake-can-send', 'no_session'));
+    await page.reload(); await started(page);
+    await page.keyboard.press('x');
+    await page.waitForFunction(() => /^Copy the request$/.test(document.querySelector('#reel-ex .ex-go').textContent), null, { timeout: 5000 }).catch(() => {});
+    const nos = await page.evaluate(() => ({ go: document.querySelector('#reel-ex .ex-go').textContent, text: document.querySelector('#reel-ex .ex-panel').textContent }));
+    ok(/^Copy the request$/.test(nos.go) && /No Claude session is watching this page right now/.test(nos.text), 'with no Claude session watching, X opens it and the button copies the request instead, saying why');
     ok(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.join(' | ') : ''));
   }
 

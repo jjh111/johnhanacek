@@ -7,10 +7,13 @@
 // It writes <out>/index.html (the page, as the Artifact tool publishes it: no doctype, html,
 // head or body of its own, its title first) and every file beside it, and prints
 // <out>/files.json, the map the Artifact tool's `files` takes (published path → source file).
-// Publish it with capabilities { db: {}, user: {}, downloads: true }. After John edits, read
-// files/sizzle-reel-2.script.txt and files/sizzle-reel-2.score.txt from its store, write them
-// over the repo's, check them (node scripts/reel-script.js check, node scripts/reel-music.js
-// check) and render.
+// Publish it with capabilities { db: {}, downloads: true, comments: {}, assets: {} }: db keeps
+// saves, downloads offers the files, comments lets Export send Claude a render request, assets
+// holds the films Claude uploads. After John edits, read files/sizzle-reel-2.script.txt and
+// files/sizzle-reel-2.score.txt from its store, write them over the repo's, check them (node
+// scripts/reel-script.js check, node scripts/reel-music.js check) and render. For a request from
+// Export: render the formats it names, upload each film (Artifact, asset: true) and write
+// films/latest = { renderedAt, from: <the version it names>, items: [{ format, url, mb, seconds, fps }] }.
 //
 // What changes on the way: ../scripts and ../styles become scripts/ and styles/ (a published
 // page cannot climb above itself); a media file with a space in its name is published with an

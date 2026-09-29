@@ -23,9 +23,18 @@
 // after a save always reads the new version. Media is sent no-cache with an ETag, so the
 // browser keeps its clips and a reload re-asks for them, answered 304 at no cost.
 //
+// It renders, too: the editor's Export (scripts/reel-export.js) asks POST /__reel/render for a
+// film of the script in any of its formats, and this server runs scripts/render-sizzle-reel.mjs
+// for each in turn. GET /__reel/render says how far it has got (frame, frames, seconds left) and,
+// for each film done, where it is (Assets/media-kit/video/, served here like any file); POST
+// /__reel/render/cancel stops it. One job at a time. The same guard as a save: this server's own
+// pages only, as JSON.
+//
 // Listens on 127.0.0.1 only: it writes files. If the port is busy it tries the next 20.
 import http from 'node:http';
 import fs from 'node:fs';
+import os from 'node:os';
+import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
@@ -197,12 +206,85 @@ function events(req, res, q) {
   req.on('close', () => { clearInterval(beat); clearTimeout(timer); if (watcher) watcher.close(); });
 }
 
+// ── rendering: the editor's Export ──────────────────────────────────────
+// A job renders one script in the formats asked for, one film after another, by running the
+// renderer as a person would; its progress is read off the renderer's own lines.
+const FORMATS = ['wide', 'square', 'vertical'];
+const JOBS = Math.max(1, Math.min(3, os.cpus().length - 1));      // the renderer's --jobs: chunks in parallel
+let job = null, jobChild = null;
+const jobView = () => job && { ...job, items: job.items.map(({ log: _, ...it }) => it) };
+function guard(req, res) {                                          // the save's guard (see save())
+  const origin = req.headers.origin, host = req.headers.host;
+  if (origin && origin !== `http://${host}`) { json(res, 403, { ok: false, errors: ['only pages this server serves may render'] }); return false; }
+  if (!/^application\/json\b/i.test(req.headers['content-type'] || '')) { json(res, 415, { ok: false, errors: ['send JSON'] }); return false; }
+  return true;
+}
+function renderStart(req, res) {
+  if (!guard(req, res)) return;
+  const chunks = [];
+  req.on('data', c => { if (chunks.length < 64) chunks.push(c); });
+  req.on('end', () => {
+    let b;
+    try { b = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { return json(res, 400, { ok: false, errors: ['the body is not JSON'] }); }
+    const file = scriptPath(b && b.file);
+    if (!file || !b.file.endsWith('.script.txt')) return json(res, 400, { ok: false, errors: ['file should be Assets/<name>.script.txt'] });
+    if (!fs.existsSync(file)) return json(res, 400, { ok: false, errors: [`there is no ${b.file}`] });
+    const formats = Array.isArray(b.formats) ? [...new Set(b.formats)] : [];
+    if (!formats.length || formats.some(f => !FORMATS.includes(f))) return json(res, 400, { ok: false, errors: [`formats should be some of ${FORMATS.join(', ')}`] });
+    const fps = b.fps == null ? 60 : +b.fps;
+    if (![60, 30].includes(fps)) return json(res, 400, { ok: false, errors: ['fps should be 60 or 30'] });
+    if (job && job.state === 'running') return json(res, 409, { ok: false, errors: ['a render is running: wait for it, or stop it'], job: jobView() });
+    try { ReelScript.parse(fs.readFileSync(file, 'utf8')); } catch (e) { return json(res, 422, { ok: false, errors: e.errors || [e.message] }); }
+    job = { id: Date.now().toString(36), file: b.file, fps, startedAt: new Date().toISOString(), state: 'running',
+      items: formats.sort((a, c) => FORMATS.indexOf(a) - FORMATS.indexOf(c)).map(format => ({ format, state: 'waiting' })) };
+    log(`render ${b.file}: ${formats.join(', ')} at ${fps} fps`);
+    runNext();
+    json(res, 202, { ok: true, job: jobView() });
+  });
+}
+function runNext() {
+  const it = job.items.find(i => i.state === 'waiting');
+  if (!it) { job.state = job.items.every(i => i.state === 'done') ? 'done' : 'failed'; job.endedAt = new Date().toISOString(); log(`render ${job.state}`); return; }
+  it.state = 'running'; it.log = '';
+  const args = [path.join(HERE, 'render-sizzle-reel.mjs'), `--script=${job.file}`, `--fps=${job.fps}`, `--jobs=${JOBS}`];
+  if (it.format !== 'wide') args.push(`--format=${it.format}`);
+  const child = jobChild = spawn(process.execPath, args, { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] });
+  const read = d => {
+    it.log = (it.log + d).slice(-4000);
+    const all = [...it.log.matchAll(/frame (\d+)\/(\d+)\s+[\d.]+ fps\s+eta (\d+) s/g)], m = all[all.length - 1];
+    if (m) { it.frame = +m[1]; it.frames = +m[2]; it.eta = +m[3]; }
+    const w = /wrote (\S+\.mp4) \(([\d.]+) MB, ([\d.]+) s at (\d+) fps\)/.exec(it.log);
+    if (w && !it.file) { it.file = w[1]; it.url = '/' + w[1]; it.mb = +w[2]; it.seconds = +w[3]; }
+  };
+  child.stdout.on('data', read); child.stderr.on('data', read);
+  child.on('exit', code => {
+    jobChild = null;
+    if (job.state === 'cancelled') { it.state = 'cancelled'; job.items.forEach(i => { if (i.state === 'waiting') i.state = 'cancelled'; }); return; }
+    it.state = code === 0 && it.file ? 'done' : 'failed';
+    if (it.state === 'failed') it.error = (it.log.trim().split('\n').filter(l => /error|Error|must|no /.test(l)).pop() || `the renderer stopped (${code})`).slice(0, 300);
+    log(`render ${it.format}: ${it.state}${it.file ? ' → ' + it.file : ''}`);
+    runNext();
+  });
+}
+function renderCancel(req, res) {
+  if (!guard(req, res)) return;
+  if (!job || job.state !== 'running') return json(res, 200, { ok: true, job: jobView() });
+  job.state = 'cancelled'; job.endedAt = new Date().toISOString();
+  if (jobChild) jobChild.kill('SIGTERM');
+  log('render cancelled');
+  json(res, 200, { ok: true, job: jobView() });
+}
+process.on('exit', () => { if (jobChild) jobChild.kill('SIGTERM'); });
+['SIGINT', 'SIGTERM'].forEach(s => process.on(s, () => process.exit(0)));
+
 const server = http.createServer((req, res) => {
   let u;
   try { u = new URL(req.url, 'http://127.0.0.1'); } catch { return send(res, 400, 'bad url'); }
   if (u.pathname === '/__reel/ping') return json(res, 200, { ok: true, server: 'reel-dev' });
   if (u.pathname === '/__reel/save') return req.method === 'POST' ? save(req, res) : send(res, 405, 'POST only', undefined, { Allow: 'POST' });
   if (u.pathname === '/__reel/events') return events(req, res, u.searchParams);
+  if (u.pathname === '/__reel/render') return req.method === 'POST' ? renderStart(req, res) : json(res, 200, { ok: true, job: jobView(), formats: FORMATS });
+  if (u.pathname === '/__reel/render/cancel') return req.method === 'POST' ? renderCancel(req, res) : send(res, 405, 'POST only', undefined, { Allow: 'POST' });
   if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'GET or HEAD only', undefined, { Allow: 'GET, HEAD' });
   try { serveStatic(req, res, u.pathname); } catch (e) { log(`error serving ${u.pathname}: ${e.message}`); if (!res.headersSent) send(res, 500, 'error'); }
 });

@@ -399,16 +399,31 @@ p, h1, h2, h3 { margin: 0; }
 #stage.vertical .endline { font-size: 34px; }
 
 /* live-mode controls (never in a render) */
-#hud { position: fixed; left: 0; right: 0; bottom: 0; padding: 14px 20px 16px; display: flex; gap: 18px; align-items: center;
+#hud { position: fixed; left: 0; right: 0; bottom: 0; padding: 10px 16px 12px; display: flex; gap: 14px; align-items: center;
   font: 500 12px/1 var(--font-mono); letter-spacing: 0.08em; color: var(--ink-faint);
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent); transition: opacity 0.4s; }
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.78), rgba(0, 0, 0, 0.35) 70%, transparent); transition: opacity 0.4s; }
 #hud[hidden] { display: none; }
-#hud.idle { opacity: 0; }
+#hud.idle:not(:hover):not(:focus-within) { opacity: 0; }
+/* every key is also a button: the transport on the left, the tools (timeline, synths, export) on the right */
+#hud button { font: 500 11px/1 var(--font-mono); letter-spacing: 0.04em; color: var(--text-bright); background: rgba(var(--cyan-dim-rgb), 0.08);
+  border: 1px solid rgba(var(--cyan-dim-rgb), 0.32); border-radius: 6px; height: 30px; min-width: 30px; padding: 0 9px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px; cursor: pointer; white-space: nowrap; }
+#hud button:hover, #hud button:focus-visible { border-color: var(--gold); color: var(--gold); outline: none; }
+#hud button[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); background: rgba(var(--gold-rgb), 0.12); }
+#hud button svg { width: 14px; height: 14px; flex: none; }
+#hud .tp { display: flex; gap: 4px; flex: none; }
+#hud .tp .pp { min-width: 42px; }
+#hud .pp .i-play, #hud .pp.paused .i-pause { display: none; }
+#hud .pp.paused .i-play { display: block; }
+#hud .tools { display: flex; gap: 6px; align-items: center; flex: none; }
+#hud .tools .go { border-color: rgba(var(--gold-rgb), 0.6); color: var(--gold); }
+#hud kbd { font: 500 10px/1 var(--font-mono); color: var(--ink-faint); border: 1px solid rgba(var(--cyan-dim-rgb), 0.3); border-radius: 3px; padding: 2px 4px; }
+#hud button:hover kbd { color: inherit; }
 #hud .bar { flex: 1; height: 3px; background: rgba(var(--cyan-dim-rgb), 0.18); border-radius: 2px; cursor: pointer; position: relative; }
 #hud .bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--cyan-dim); border-radius: 2px; }
 #hud .time { color: var(--cyan); min-width: 7ch; }
 #hud .bar b { position: absolute; top: -4px; bottom: -4px; width: 1px; background: var(--ink-faint); pointer-events: none; }
-#hud .scene { color: var(--ink-quiet); width: 42ch; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#hud .scene { color: var(--ink-quiet); flex: 0 1 36ch; min-width: 6ch; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #hud .scene.loop { color: var(--gold); }
 #err { position: fixed; inset: 0; margin: 0; padding: 20px; color: #ff6b6b; font: 14px/1.5 monospace; background: #000; white-space: pre-wrap; }
 #boot { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); max-width: 90vw; text-align: center;
@@ -430,7 +445,15 @@ p, h1, h2, h3 { margin: 0; }
   </div>
   <div id="blackout"></div>
 </div>
-<div id="hud" hidden><span class="time">0.0</span><span class="scene"></span><div class="bar"><i></i></div><span>space pause · ←/→ 5 s · [ ] scene · L loop · R restart</span></div>
+<div id="hud" hidden role="toolbar" aria-label="Preview controls"><div class="tp">
+  <button type="button" data-do="restart" title="Play from the start (R)" aria-label="Play from the start"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3.6 8.6a4.6 4.6 0 1 0 1.4-3.9"/><path d="M4.6 1.9v3.2h3.2"/></svg></button>
+  <button type="button" data-do="prev" title="Previous scene ([)" aria-label="Previous scene"><svg viewBox="0 0 16 16" fill="currentColor"><rect x="3" y="3" width="2" height="10" rx="0.5"/><path d="M13 3v10L6 8z"/></svg></button>
+  <button type="button" data-do="back" title="Back 5 seconds (←)" aria-label="Back 5 seconds">−5s</button>
+  <button type="button" data-do="play" class="pp" title="Play or pause (space)" aria-label="Pause"><svg class="i-pause" viewBox="0 0 16 16" fill="currentColor"><rect x="4" y="3" width="3" height="10" rx="0.5"/><rect x="9" y="3" width="3" height="10" rx="0.5"/></svg><svg class="i-play" viewBox="0 0 16 16" fill="currentColor"><path d="M5 3v10l8.5-5z"/></svg></button>
+  <button type="button" data-do="fwd" title="Forward 5 seconds (→)" aria-label="Forward 5 seconds">+5s</button>
+  <button type="button" data-do="next" title="Next scene (])" aria-label="Next scene"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 3v10l7-5z"/><rect x="11" y="3" width="2" height="10" rx="0.5"/></svg></button>
+  <button type="button" data-do="loop" title="Loop this scene (L)" aria-label="Loop this scene" aria-pressed="false"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.8 7.2A4.4 4.4 0 0 1 10.6 4.3l1.6 1.4"/><path d="M12.4 2.6v3.2H9.2"/><path d="M13.2 8.8a4.4 4.4 0 0 1-7.8 2.9l-1.6-1.4"/><path d="M3.6 13.4v-3.2h3.2"/></svg></button>
+</div><span class="time">0.0</span><span class="scene"></span><div class="bar"><i></i></div><div class="tools"></div></div>
 <script src="../scripts/shape-detection.js"></script>
 <script src="../scripts/jh-shapes.js"></script>
 <script src="../scripts/jh-strokes.js"></script>
@@ -1502,16 +1525,37 @@ p, h1, h2, h3 { margin: 0; }
   const seekTo = s => { s = Math.max(0, Math.min(DURATION, s)); if (playing) base = performance.now() - s * 1000; else held = s; };
   const jump = sc => { if (!sc) return; if (loopSc) loopSc = sc; seekTo(sc.start); };
   const toggle = () => { if (playing) { held = now(); playing = false; } else { playing = true; seekTo(held >= DURATION ? 0 : held); } };
+  // One table behind the buttons and the keys: every key is a button too, named in its tooltip.
+  const DO = {
+    play: toggle,
+    back: () => seekTo(now() - 5), fwd: () => seekTo(now() + 5),
+    next: () => jump(SC[sceneAt(now()).i + 1]),
+    prev: () => { const t = now(), sc = sceneAt(t); jump(t - sc.start > 0.5 || !sc.i ? sc : SC[sc.i - 1]); },  // like a player: the start first, then the one before
+    loop: () => { loopSc = loopSc ? null : sceneAt(now()); },
+    restart: () => { playing = true; loopSc = null; seekTo(0); },
+  };
+  const KEYS = { ' ': 'play', ArrowRight: 'fwd', ArrowLeft: 'back', ']': 'next', '[': 'prev', l: 'loop', L: 'loop', r: 'restart', R: 'restart' };
   addEventListener('keydown', e => {
     if (e.target.closest && e.target.closest('input, textarea, select, [contenteditable]')) return;   // typing in the timeline
-    if (e.key === ' ') { e.preventDefault(); toggle(); }
-    else if (e.key === 'ArrowRight') seekTo(now() + 5);
-    else if (e.key === 'ArrowLeft') seekTo(now() - 5);
-    else if (e.key === ']') jump(SC[sceneAt(now()).i + 1]);
-    else if (e.key === '[') { const t = now(), sc = sceneAt(t); jump(t - sc.start > 0.5 || !sc.i ? sc : SC[sc.i - 1]); }  // like a player: the start first, then the one before
-    else if (e.key === 'l' || e.key === 'L') loopSc = loopSc ? null : sceneAt(now());
-    else if (e.key === 'r' || e.key === 'R') { playing = true; loopSc = null; seekTo(0); }
+    if (e.metaKey || e.ctrlKey || e.altKey || !KEYS[e.key]) return;
+    e.preventDefault(); DO[KEYS[e.key]]();                      // (and a focused button's own space or Enter never doubles it)
   });
+  const tp = hud.querySelector('.tp'), ppBtn = tp.querySelector('[data-do="play"]'), loopBtn = tp.querySelector('[data-do="loop"]');
+  // a mouse click leaves no focus behind (the keys stay the preview's); Tab and Enter keep it
+  tp.addEventListener('click', e => { const b = e.target.closest('button[data-do]'); if (!b) return; DO[b.dataset.do](); if (e.detail) b.blur(); });
+  // A tool (the timeline, the synth rack, export) puts its own button on the right of the HUD
+  // through REEL_LIVE.addTool; its key stays an accelerator. Ordered by `order`, low first.
+  const toolsEl = hud.querySelector('.tools');
+  function addTool({ id, label, key, title, order = 50, cls, onClick }) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.dataset.tool = id; b.dataset.order = order; if (cls) b.className = cls;
+    b.title = (title || label) + (key ? ` (${key})` : '');
+    const l = document.createElement('span'); l.textContent = label; b.appendChild(l);
+    if (key) { const k = document.createElement('kbd'); k.textContent = key; b.appendChild(k); }
+    b.addEventListener('click', e => { onClick(e); if (e.detail) b.blur(); });
+    toolsEl.insertBefore(b, [...toolsEl.children].find(c => +c.dataset.order > order) || null);
+    return b;
+  }
   let hashAt = -1, hashLoop = null, hashPlaying = null;
   // The preview's API, for the timeline (scripts/reel-timeline.js) and anything else that drives
   // it: read the script and where things are, move the playhead, and save a changed script,
@@ -1539,6 +1583,8 @@ p, h1, h2, h3 { margin: 0; }
     const cur = sceneAt(t), what = cur.query || cur.name || cur.caption || cur.line || '';
     sceneEl.textContent = `${cur.i + 1}/${SC.length} ${cur.type}${what ? ' · ' + what : ''}${loopSc ? ' · looping' : ''}`;
     sceneEl.classList.toggle('loop', !!loopSc);
+    if (ppBtn.classList.contains('paused') === playing) { ppBtn.classList.toggle('paused', !playing); ppBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play'); }
+    if ((loopBtn.getAttribute('aria-pressed') === 'true') !== !!loopSc) loopBtn.setAttribute('aria-pressed', String(!!loopSc));
     if (Math.abs(t - hashAt) >= 0.25 || loopSc !== hashLoop || playing !== hashPlaying) {   // a few times a second, never a history entry
       try { history.replaceState(null, '', `#t=${t.toFixed(2)}${loopSc ? '&loop=' + loopSc.i : ''}${playing ? '' : '&pause=1'}`); } catch (e) { /* a frame that refuses: no resume */ }
       hashAt = t; hashLoop = loopSc; hashPlaying = playing;
@@ -1553,6 +1599,7 @@ p, h1, h2, h3 { margin: 0; }
     scenes: SC, duration: DURATION,
     now, seek: seekTo, isPlaying: () => playing, setPlaying: p => { if (!!p !== playing) toggle(); },
     onFrame: fn => { frameFns.push(fn); },
+    addTool,
     reserveBottom: px => { reserved = Math.max(0, +px || 0); fit(); },
     reserveRight: px => { reservedR = Math.max(0, +px || 0); fit(); },
     async save(text) {
@@ -1594,6 +1641,8 @@ p, h1, h2, h3 { margin: 0; }
   // with the dev server, a save from any editor reloads the preview (a draft here is kept)
   if (DEV) new EventSource('/__reel/events?file=' + encodeURIComponent(SCRIPT_PATH)).addEventListener('change', () => { if (DRAFT == null) location.reload(); });
   const tl = document.createElement('script'); tl.src = '../scripts/reel-timeline.js'; tl.onerror = () => tl.remove(); document.head.appendChild(tl);
+  // how the script becomes a film: render it here (dev server), or ask Claude (the editor on claude.ai)
+  const ex = document.createElement('script'); ex.src = '../scripts/reel-export.js'; ex.onerror = () => ex.remove(); document.head.appendChild(ex);
   // the music: the score's synths under the preview, and the rack that plays them (M)
   ['reel-music.js', 'reel-synth.js', 'reel-rack.js'].reduce((p, f) => p.then(() => new Promise((ok, no) => {
     const el = document.createElement('script'); el.src = '../scripts/' + f; el.onload = ok; el.onerror = no; document.head.appendChild(el);

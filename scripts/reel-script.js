@@ -433,10 +433,10 @@
     if (!m) throw new Error(`line ${ln} is not a SCENE or ITEM line`);
     return `${m[1]}${m[2]} ${num(dur)}${m[3]}`;
   });
-  // a beat's time, on its @ line
+  // a time on its line: a beat's @ line, or the @ that leads a stat's or an award's words
   const setAt = (src, ln, at) => setLine(src, ln, s => {
-    const m = /^(\s*)@\s*[^\s[]+(.*)$/.exec(s);
-    if (!m) throw new Error(`line ${ln} is not an @ beat line`);
+    const m = /^(\s*)@\s*[^\s[]+(.*)$/.exec(s) || /^(\s*(?:stat|award)\s+)@[^\s[]+(.*)$/.exec(s);
+    if (!m) throw new Error(`line ${ln} has no @ time (a beat's @ line, or a stat or award that starts with one)`);
     return `${m[1]}@${num(at)}${m[2]}`;
   });
   // the words after a field's name (the name and its spacing stay)

@@ -98,6 +98,7 @@
 #reel-rack .rk-note { color: var(--ink-faint); font-size: 10px; margin-top: 6px; line-height: 1.45; }
 #hud .rk-chip { color: var(--ink-quiet); cursor: pointer; white-space: nowrap; }
 #hud .rk-chip.off { color: var(--gold); }
+#hud button.rk-chip[aria-pressed="true"] { color: var(--text-bright); border-color: rgba(var(--cyan-dim-rgb), 0.32); background: rgba(var(--cyan-dim-rgb), 0.08); }
 `;
   document.head.appendChild(css);
 
@@ -140,17 +141,24 @@
     chip(); if (!root.hidden) render();
   }
   // the HUD's chip: sound on, off, or waiting for a click
+  // Two buttons in the HUD's tools (REEL_LIVE.addTool): the sound, and the rack itself (M)
   const hud = document.getElementById('hud');
-  const chipEl = document.createElement('span'); chipEl.className = 'rk-chip';
-  chipEl.addEventListener('click', e => { e.stopPropagation(); if (!ctx || ctx.state !== 'running') { soundOn = true; ensureAudio(); } else setSound(!soundOn); });
-  if (hud) hud.insertBefore(chipEl, hud.querySelector('.bar'));
+  const soundClick = e => { e.stopPropagation(); if (!ctx || ctx.state !== 'running') { soundOn = true; ensureAudio(); } else setSound(!soundOn); };
+  let chipEl, rackBtn = null;
+  if (L.addTool) {
+    chipEl = L.addTool({ id: 'sound', label: '♪', order: 10, cls: 'rk-chip', title: 'the preview\'s sound, on or off', onClick: soundClick });
+    rackBtn = L.addTool({ id: 'synths', label: 'Synths', key: 'M', order: 30, title: 'the synth rack: the music\'s instruments and effects', onClick: () => open(root.hidden) });
+  } else {                                                              // an older rig: a chip before the bar
+    chipEl = document.createElement('span'); chipEl.className = 'rk-chip'; chipEl.appendChild(document.createElement('span'));
+    chipEl.addEventListener('click', soundClick);
+    if (hud) hud.insertBefore(chipEl, hud.querySelector('.bar'));
+  }
   function chip() {
     const live = ctx && ctx.state === 'running' && soundOn;
-    chipEl.textContent = !P ? '♪ no score' : live ? '♪ on' : soundOn ? '♪ click for sound' : '♪ off';
+    chipEl.firstChild.textContent = !P ? '♪ no score' : live ? '♪ sound on' : soundOn ? '♪ click for sound' : '♪ sound off';
     chipEl.classList.toggle('off', !live);
+    chipEl.setAttribute('aria-pressed', String(!!live));
   }
-  const hint = document.querySelector('#hud > span:last-child');
-  if (hint && !/M synths/.test(hint.textContent)) hint.textContent += ' · M synths';
 
   L.onFrame(t => {
     if (player && soundOn) player.tick(t, L.isPlaying());
@@ -525,6 +533,7 @@
   }
   function open(on) {
     root.hidden = !on; put(K_OPEN, on);
+    if (rackBtn) rackBtn.setAttribute('aria-pressed', String(!!on));
     if (on) { ensureAudio(); render(); }
     place(on);
   }

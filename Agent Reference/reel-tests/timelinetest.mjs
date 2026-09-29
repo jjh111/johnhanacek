@@ -12,6 +12,9 @@
 //      drag snaps the time to the grid, and Shift's grid is the 0.5 s beat
 //   5. with no dev server (ping answered 404) an edit is a draft: the file is untouched, the
 //      status offers Download and Discard, and Discard plays the file again
+// And every key is a button: the HUD's transport (play, next scene) and tools (Timeline, Synths,
+// Export, each naming its key), the panel's Undo, zoom and Export video. Zoomed in, a stat is a
+// moment of its own: dragged, it rewrites its @; clicked, it opens its line in the inspector.
 import { spawn } from 'node:child_process';
 import net from 'node:net';
 import fs from 'node:fs';
@@ -111,8 +114,23 @@ try {
   await page.keyboard.press('e');
   const n = await page.locator('#reel-tl .tl-sc').count();
   check(await page.locator('#reel-tl').isVisible() && n === 11, 'E opens the panel with 11 scene blocks', `visible ${await page.locator('#reel-tl').isVisible()}, ${n} blocks`);
-  const hint = await page.locator('#hud > span:last-child').textContent();
-  check(/· E timeline\b/.test(hint), 'the HUD hint names E', hint);
+  const tools = await page.locator('#hud .tools button').evaluateAll(bs => bs.map(b => `${b.dataset.tool}|${b.title}|${b.getAttribute('aria-pressed')}`));
+  check(tools.some(t => /^timeline\|.*\(E\)\|true$/.test(t)) && tools.some(t => /^synths\|.*\(M\)/.test(t)) && tools.some(t => /^export\|.*\(X\)/.test(t)),
+    'the HUD has buttons for the timeline (pressed while open), the synths and export, each naming its key', tools.join(' ; '));
+  // every key is a button too
+  await page.locator('#hud [data-do="play"]').click();
+  const played = await page.evaluate(() => REEL_LIVE.isPlaying());
+  await page.locator('#hud [data-do="play"]').click();
+  check(played && !(await page.evaluate(() => REEL_LIVE.isPlaying())), 'the HUD\'s play button plays, and pauses');
+  const tA = await page.evaluate(() => REEL_LIVE.now());
+  await page.locator('#hud [data-do="next"]').click();
+  const tB = await page.evaluate(() => REEL_LIVE.now()), nextStart = await page.evaluate(t => REEL_LIVE.scenes.find(x => x.start > t + 1e-6).start, tA);
+  check(Math.abs(tB - nextStart) < 0.01, 'the next-scene button jumps to the next scene', `${tA} → ${tB}, want ${nextStart}`);
+  await page.locator('#hud [data-tool="timeline"]').click();
+  const shut = !(await page.locator('#reel-tl').isVisible());
+  await page.locator('#hud [data-tool="timeline"]').click();
+  check(shut && await page.locator('#reel-tl').isVisible(), 'the HUD\'s Timeline button shuts the panel and opens it again');
+  await page.evaluate(() => REEL_LIVE.seek(7));
   await page.waitForTimeout(600);                  // fonts settle before the picture
   await page.screenshot({ path: path.join(SHOTS, 'timeline-panel.png') });
 
@@ -163,6 +181,34 @@ try {
   await page.waitForTimeout(400);
   const errText = await page.locator('#reel-tl .tl-status .tl-err').textContent();
   check(file() === before && /line \d+/.test(errText), 'a length that breaks the script is refused and shown, not saved', errText);
+
+  // 4b ── zoom, and a stat's @ is a moment like any other
+  await page.locator('#reel-tl [data-act="zoom-in"]').click();
+  const z1 = await page.evaluate(() => REEL_TIMELINE.zoomLevel);
+  check(z1 > 1.5 && await page.locator('#reel-tl .tl-lane').evaluate(e => e.clientWidth > e.parentElement.clientWidth * 1.5), 'the + button zooms in, and the lane scrolls', z1);
+  await page.evaluate(() => REEL_TIMELINE.zoom(10));
+  const stat = '#reel-tl .tl-bt.tl-f[title^="@1.15 "]';
+  check(await page.locator(stat).count() === 1, 'the answer\'s second stat is a moment of its own');
+  await page.locator(stat).scrollIntoViewIfNeeded();
+  s = await pxs();
+  await saving('stat', () => dragBy(stat, 0.35 * s, false));
+  const statLine = (/^\s*stat\s+@\S+ 3 products shipped$/m.exec(file()) || [''])[0];
+  check(/@1\.5 /.test(statLine), 'dragging it +0.35 s rewrote its @ on the 0.25 s grid (@1.5)', statLine);
+  check(await page.evaluate(() => REEL_TIMELINE.zoomLevel) > 9, 'the zoom survives the reload a save causes');
+  await saving('undo stat', () => page.locator('#reel-tl [data-act="undo"]').click());
+  check(/^\s*stat\s+@1\.15 3 products shipped$/m.test(file()), 'the Undo button takes it back');
+  await page.locator(stat).scrollIntoViewIfNeeded();
+  await page.locator(stat).click();
+  const lit = await page.evaluate(() => { const r = document.querySelector('#reel-tl .tl-insp-col .tl-hl'); const i = r && r.querySelector('input'); return i ? i.value : null; });
+  check(lit === '@1.15 3 products shipped', 'clicking a moment opens its scene in the inspector, its line lit', lit);
+  await page.locator('#reel-tl [data-act="fit"]').click();
+  check(await page.evaluate(() => REEL_TIMELINE.zoomLevel) === 1, 'Fit shows the whole reel again');
+  await page.locator('#reel-tl [data-act="export"]').click();
+  const ex = await page.evaluate(() => ({ open: !document.getElementById('reel-ex').hidden, go: document.querySelector('#reel-ex .ex-go').textContent, mode: REEL_EXPORT.mode }));
+  check(ex.open && ex.mode === 'dev' && /^Render/.test(ex.go), 'Export video opens the export panel, which renders here on the dev server', JSON.stringify(ex));
+  await page.keyboard.press('Escape');
+  check(await page.evaluate(() => document.getElementById('reel-ex').hidden), 'Esc shuts it');
+  await page.screenshot({ path: path.join(SHOTS, 'timeline-zoomed.png') });
 
   // 5 ── no dev server: the edit is a draft
   await page.route('**/__reel/ping', r => r.fulfill({ status: 404, body: 'no' }));

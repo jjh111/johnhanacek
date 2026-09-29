@@ -3,15 +3,22 @@
 // Static files with byte ranges (the rig's clips seek only through ranges), text no-store,
 // media re-asked by ETag (304), traversal refused, ping, saves that parse before they write (422 leaves the file alone,
 // 200 writes it and keeps a backup, other paths 400), and a change on disk reaching an
-// /__reel/events subscriber. Works on a temp copy of the script, removed in finally.
+// /__reel/events subscriber. Rendering for the editor's Export: the guards (JSON only, this
+// server's pages only, known formats, scripts only), one job at a time, the renderer's own
+// progress, and cancel (the render is started for real, then stopped). Works on a temp copy of
+// the script, removed in finally.
 import { spawn } from 'node:child_process';
 import http from 'node:http';
 import net from 'node:net';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const RS = createRequire(import.meta.url)(path.join(ROOT, 'scripts/reel-script.js'));
+const RS_TOTAL = src => { const sp = RS.spans(RS.parse(src).edit); return sp[sp.length - 1].end; };
+const VIDEO = path.join(ROOT, 'Assets', 'media-kit', 'video');
 const REL = 'Assets/zz-devserver-test.script.txt', TMP = path.join(ROOT, REL);
 const BACKUPS = path.join(ROOT, '.local', 'reel-backups');
 let fails = 0, passes = 0;
@@ -130,12 +137,47 @@ try {
   check(got && got.data && got.data.file === REL && got.ms < 2000, 'events: change within 2 s of a write on disk', JSON.stringify(got));
   r = await req(P, 'GET', '/__reel/events?file=scripts/x.js');
   check(r.status === 400, 'events for a disallowed path: 400', r.status);
+
+  // ── rendering: the editor's Export ──
+  const rpost = (p, obj, headers = { 'Content-Type': 'application/json' }) => req(port, 'POST', p, headers, JSON.stringify(obj)).then(x => ({ ...x, json: JSON.parse(x.body.toString() || '{}') }));
+  const status = async () => JSON.parse((await req(port, 'GET', '/__reel/render')).body.toString());
+  let st = await status();
+  check(st.job === null && st.formats.join() === 'wide,square,vertical', 'render: no job at first, and the formats it can make', JSON.stringify(st));
+  r = await rpost('/__reel/render', { file: REL, formats: ['wide'] }, { 'Content-Type': 'text/plain' });
+  check(r.status === 415, 'render: a text/plain body is refused (a page elsewhere cannot start one)', r.status);
+  r = await rpost('/__reel/render', { file: REL, formats: ['wide'] }, { 'Content-Type': 'application/json', Origin: 'http://elsewhere.example' });
+  check(r.status === 403, 'render: a foreign Origin is refused', r.status);
+  r = await rpost('/__reel/render', { file: REL, formats: ['cinema'] });
+  check(r.status === 400, 'render: an unknown format is refused', r.status);
+  r = await rpost('/__reel/render', { file: REL.replace('.script.txt', '.score.txt'), formats: ['wide'] });
+  check(r.status === 400, 'render: only a script renders', r.status);
+  r = await rpost('/__reel/render', { file: REL, formats: ['square', 'wide'], fps: 30 });
+  check(r.status === 202 && r.json.job.state === 'running' && r.json.job.items.map(i => i.format).join() === 'wide,square', 'render: a job starts, its films in order (wide, square)', `${r.status} ${JSON.stringify(r.json.job)}`);
+  const again = await rpost('/__reel/render', { file: REL, formats: ['wide'] });
+  check(again.status === 409, 'render: one job at a time', again.status);
+  let seen = null;
+  for (let k = 0; k < 150 && !seen; k++) {
+    await new Promise(res => setTimeout(res, 400));
+    st = await status();
+    const it = st.job.items[0];
+    if (it.frames) seen = it;
+    if (st.job.state !== 'running') break;
+  }
+  const frames30 = Math.round(RS_TOTAL(fs.readFileSync(TMP, "utf8")) * 30);
+  check(seen && seen.state === 'running' && seen.frames === frames30 && seen.frame >= 0 && seen.eta >= 0, 'render: its progress is the renderer\'s own (frame, frames, seconds left)', JSON.stringify(seen || st.job));
+  r = await rpost('/__reel/render/cancel', {});
+  check(r.status === 200 && r.json.job.state === 'cancelled', 'render: cancel stops the job', JSON.stringify(r.json.job && r.json.job.state));
+  await new Promise(res => setTimeout(res, 1000));
+  st = await status();
+  check(st.job.items.every(i => i.state === 'cancelled'), 'render: and every film in it', st.job.items.map(i => i.state).join());
 } catch (e) {
   fails++; console.log('FAIL', e.stack || e.message);
 } finally {
   if (child && child.exitCode == null) child.kill('SIGTERM');
   try { fs.unlinkSync(TMP); } catch { /* never made */ }
   backupsOf().forEach(n => fs.unlinkSync(path.join(BACKUPS, n)));
+  // a cancelled render leaves no film, but its chunks' folder may be left behind
+  if (fs.existsSync(VIDEO)) for (const n of fs.readdirSync(VIDEO)) if (/^\.?zz-devserver-test/.test(n)) fs.rmSync(path.join(VIDEO, n), { recursive: true, force: true });
 }
 console.log(`\n${passes} passed, ${fails} failed`);
 process.exit(fails ? 1 : 0);

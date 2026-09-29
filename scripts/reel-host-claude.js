@@ -11,14 +11,21 @@
 // either way; the first save is what asks. Each save also leaves a copy in this tab, so the
 // reload that follows a save plays it at once.
 //
+// Export (scripts/reel-export.js) asks for films here. Claude renders them: the page sends a
+// comment to Claude (the `comments` capability's sendToClaude, which a Claude session watching
+// this page receives), Claude renders the saved edit, uploads the films to the page's assets and
+// writes films/latest = { renderedAt, from, items: [{ format, url, mb, seconds, fps }] } in the
+// store, and films() reads it back.
+//
 // window.REEL_HOST is the contract the rig documents where it reads it (Assets/sizzle-reel-2.html):
-// { name, ready, load(path), save(path, text), discard(path), download(filename, text), media(path) }.
+// { name, ready, load(path), save(path, text), discard(path), download(filename, text), media(path) },
+// and for Export: films(), canAsk(), ask(text, element).
 (function () {
   'use strict';
   const within = (p, ms, dflt = null) => Promise.race([p, new Promise(r => setTimeout(() => r(dflt), ms))]);
   const cap = name => (window.claude && typeof window.claude.use === 'function'
     ? within(window.claude.use(name), 5000).catch(() => null) : Promise.resolve(null));
-  const dbP = cap('db'), permsP = cap('permissions');
+  const dbP = cap('db'), permsP = cap('permissions'), commentsP = cap('comments');
   const nameOf = path => path.replace(/^.*\//, '');
   const ref = async path => { const db = await dbP; return db ? db.doc('files/' + nameOf(path)) : null; };
   const COPY = 'reel-host-copy:';
@@ -81,6 +88,28 @@
       try { await dl.save({ filename, data: text }); return true; } catch (e) { return false; }
     },
     media: p => p.replace(/ /g, '_'),
+    // the films Claude rendered from this page's saves (films/latest), or null; asked on a click
+    // (Export's), so a viewer who has not yet allowed the store is asked then, never at load
+    async films() {
+      const db = await dbP;
+      if (!db) return null;
+      try { const s = await within(db.doc('films/latest').get(), 8000); return s && s.exists ? s.data() : null; } catch (e) { return null; }
+    },
+    // can a comment reach Claude from here? 'available' | 'writers_only' | 'no_session' | 'off'
+    async canAsk() {
+      const c = await commentsP;
+      if (!c) return 'off';
+      try { return await within(c.canSendToClaude(), 4000, 'off'); } catch (e) { return 'off'; }
+    },
+    // post `text` as a comment at `el` and send it to Claude: { ok, thread } or { ok: false, reason }
+    async ask(text, el) {
+      const c = await commentsP;
+      if (!c) return { ok: false, reason: 'off' };
+      try {
+        const r = await c.sendToClaude({ anchor: await c.anchorFor(el), text });
+        return { ok: true, thread: r && r.threadId };
+      } catch (e) { return { ok: false, reason: (e && e.code) || 'error', message: (e && e.message) || String(e) }; }
+    },
   };
 
   // A saved version that arrived after the reel had started: offer it rather than switch under you.
@@ -126,9 +155,9 @@
   const card = document.createElement('div');
   card.id = 'reel-hello'; card.setAttribute('role', 'dialog'); card.setAttribute('aria-label', 'How the editor works');
   card.innerHTML = `<h2>Sizzle reel editor</h2>
-<p>Click the reel, then <kbd>space</kbd> plays and pauses. <kbd>[</kbd> <kbd>]</kbd> jump a scene, <kbd>L</kbd> loops one.</p>
-<p><kbd>E</kbd> opens the timeline: drag a scene's edge or a beat, or click a scene to change its words. <kbd>M</kbd> opens the synth rack.</p>
-<p>Your changes save to this page. The first save asks you to let it store data. Ask Claude to bring your edits into the repo and render them.</p>
+<p>The buttons along the bottom play, jump a scene and loop one. Each names its key, and the keys work too (<kbd>space</kbd> plays).</p>
+<p><b>Timeline</b> <kbd>E</kbd>: every scene is a card. Drag its edge, its moments or its out; click it to change its words. <b>Synths</b> <kbd>M</kbd>: the music. <b>Export</b> <kbd>X</kbd>: the video.</p>
+<p>Your changes save to this page. The first save asks you to let it store data. Export asks Claude to render what you saved, and the films come back here.</p>
 <div class="row"><button type="button" data-go="e">Open the timeline</button><button type="button" data-go="m">Open the synths</button><button type="button" data-go="x">Got it</button></div>`;
   const close = () => { card.remove(); try { localStorage.setItem(K_SEEN, '1'); } catch (e) { /* no storage */ } };
   card.addEventListener('click', e => {

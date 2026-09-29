@@ -58,6 +58,14 @@ const sceneLn = i => marks.find(m => m.kind === 'scene' && m.obj === edit.scenes
   ok(e2.scenes[5].items[0].beats[1].at === 2.1, 'setAt: the MARA beat moves to @2.1');
 }
 {
+  // a stat's @ leads its words (the timeline drags it like a beat)
+  const st = fields.find(f => f.key === 'stat' && f.owner === answer && f.index === 1);
+  const out = RS.setAt(SRC, st.ln, 1.25);
+  ok(RS.parse(out).edit.scenes[2].stats[1].at === 1.25 && changedLines(SRC, out).length === 1, 'setAt: a stat\'s @ time moves, and only its line changes');
+  let refused = false; try { RS.setAt(SRC, sceneLn(2), 1); } catch (e) { refused = /no @ time/.test(e.message); }
+  ok(refused, 'setAt refuses a line with no @ time');
+}
+{
   const out = RS.setField(SRC, thesis.ln, 'Freehand   drawing ');
   const diff = changedLines(SRC, out);
   ok(RS.parse(out).edit.scenes[2].lines[0] === 'Freehand drawing' && diff.length === 1, 'setField: one line changes, spaces tidied');

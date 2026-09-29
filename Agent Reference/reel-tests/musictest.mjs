@@ -34,8 +34,9 @@ const diff = (a, b) => lines(a).map((l, i) => [i + 1, l, lines(b)[i]]).filter(([
 const edit = RS.parse(SCRIPT).edit;
 const scenes = RS.spans(edit).map((c, i) => ({ type: edit.scenes[i].type, start: c.start, end: c.end }));
 const P = RM.parse(SCORE), mom = RM.moments(edit, RS), A = RM.arrange(P.score, scenes, mom);
+const CUT = scenes[scenes.length - 1].end;                          // the cut's length, as the script says (60 s, then 63.5)
 ok(P.score.tempo === 120 && P.score.tracks.length >= 10 && A.sections.length === scenes.length, `the score parses: ${P.score.tracks.length} tracks, a section for each of the ${scenes.length} scenes`);
-ok(A.events.every(e => e.t >= 0 && e.t < 60 && e.dur > 0 && e.vel > 0), `${A.events.length} events, every one inside the 60 s cut`);
+ok(A.events.every(e => e.t >= 0 && e.t < CUT && e.dur > 0 && e.vel > 0), `${A.events.length} events, every one inside the ${CUT} s cut`);
 const band = A.events.filter(e => !P.score.tracks.find(t => t.name === e.track).on);
 ok(A.sections.every(s => band.filter(e => e.t >= s.start - 1e-9 && e.t < s.end - 1e-9).every(e => s.play.some(p => p.name === e.track))), 'each section plays only the tracks its play line names');
 // patterns start again at every cut: a section with the kick has a kick on its first frame
@@ -105,12 +106,12 @@ try {
   let most = 0; for (let i = 44; i + 1 < Math.min(w1.length, w2.length); i += 2) most = Math.max(most, Math.abs(w1.readInt16LE(i) - w2.readInt16LE(i)));
   ok(r.status === 0 && w1.length === w2.length && most <= 10, `two mixes of the same score agree to ${most} of 32768, under -70 dBFS (seeded noise, offline clock)`);
   const dur = (w1.length - 44) / (48000 * 4);
-  ok(Math.abs(dur - 60) < 0.01, `the mix is the cut's 60 s (${dur.toFixed(3)} s)`);
+  ok(Math.abs(dur - CUT) < 0.01, `the mix is the cut's ${CUT} s (${dur.toFixed(3)} s)`);
   const at = stats(wav);
   const loud = A.sections.map(s => ({ s, v: at(s.start + 0.1, Math.min(1.5, s.end - s.start - 0.2)) }));
   ok(loud.every(x => x.v.mean > -40), 'every section sounds: ' + loud.map(x => `${x.s.type} ${x.v.mean}`).join(', '));
   ok(loud.every(x => x.v.max < -0.5), `no section clips (loudest peak ${Math.max(...loud.map(x => x.v.max))} dBFS)`);
-  const tail = at(59.8, 0.2), res = loud.find(x => x.s.type === 'results').v.mean, art = loud.find(x => x.s.type === 'art').v.mean;
+  const tail = at(CUT - 0.2, 0.2), res = loud.find(x => x.s.type === 'results').v.mean, art = loud.find(x => x.s.type === 'art').v.mean;
   ok(tail.mean < res - 12, `the end fades out (last 0.2 s ${tail.mean} dB against the results' ${res})`);
   ok(res > art, `the results hit harder than the art (${res} against ${art} dB)`);
 
