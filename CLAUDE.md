@@ -294,6 +294,11 @@ which stamps every `?v=` cache-bust ref across root `*.html` **and** the `Portfo
   state dot as a badge, a one-glyph note for a loadable tier's cost (↓ / ⚡ / 37%), name in
   title + aria-label. Desktop at the default overlay width also collapses (its labels needed
   410px of 384 and were already ellipsizing). ⓘ is hidden on touch (hover-only tooltip)
+- **Early clicks are held, never sent to search.html** (v2.34): search-overlay.js is deferred, so on a slow
+  network a click on the magnifier or a `data-search-query` button used to follow the `href`. Each page's
+  `<head>` carries an inline capture-phase catcher that `preventDefault`s it, stores `__searchPending`
+  and sets `html[data-search-pending]` (the magnifier pulses); the overlay's init opens it. search.html
+  stays the no-JS fallback only
 - **Engine color coding**: WebGPU=blue, LMStudio=purple, Ollama=orange, Custom=green
 - AI toggle: users can disable LLM even when engine detected
 
@@ -452,7 +457,9 @@ Assets/
   search-chunks.json      — search index
   media-kit.json          — the media pack's copy (13 boards); media-kit.html only draws it
   favicon-jhsigfrmpaper.png
-  JHsig.svg               — signature used in nav + footer + hero (vector; white fill baked in)
+  JHsig.svg               — the signature's source file. It is SERVED as a data URI (v2.34): `SIG` in
+                            jh-shapes.js feeds the chrome, and the page heroes carry the same URI inline, so
+                            it paints with the markup. Changing the signature = regenerate that URI everywhere
   footer-JHsig.png        — superseded raster signature; still referenced by the frozen Archive/ snapshots, so it stays
   socialgraph-jhcom.webp  — OG image
   FISH_*.md               — fish system design/technical docs

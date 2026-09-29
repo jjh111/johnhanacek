@@ -14,11 +14,11 @@
   const SITE = {
     year: 2026,
     org: 'JHDesign LLC',
-    version: '2.33', // ← THE site version. Footer badge, ?v= cache-bust, and README all read this (run scripts/sync-version.mjs after bumping).
+    version: '2.34', // ← THE site version. Footer badge, ?v= cache-bust, and README all read this (run scripts/sync-version.mjs after bumping).
     versionNote: 'Made with Claude Code &amp; OpenCode',
     github: 'https://github.com/jjh111/johnhanacek',
     githubLabel: 'github.com/jjh111/johnhanacek',
-    sig: './Assets/JHsig.svg',
+    sig: (window.JHShapes && window.JHShapes.sig) || './Assets/JHsig.svg',   // inline data URI (jh-shapes.js)
     // Cookieless visit counts. Empty = off. Set to the GoatCounter site code
     // (the part before .goatcounter.com) and every page reports a pageview +
     // referrer with no cookie, no fingerprint, no consent banner needed. The

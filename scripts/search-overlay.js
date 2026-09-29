@@ -719,6 +719,14 @@
         try { if (!localStorage.getItem('jh-search-seen')) document.documentElement.dataset.searchHint = '1'; } catch {}
         setupNavTriggers();
         setupHeroSearch();
+        // A click that landed before this script did was held by the inline
+        // catcher in each page's <head>: honour it now instead of dropping it.
+        if (typeof window.__searchPending === 'string') {
+            const q = window.__searchPending;
+            delete window.__searchPending;
+            document.documentElement.removeAttribute('data-search-pending');
+            openSearch(q || undefined);
+        }
         checkUrlQuery();
         renderResidue();
         // Deliberately no engine detection here. It used to run on every page
