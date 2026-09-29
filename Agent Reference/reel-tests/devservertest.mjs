@@ -3,7 +3,8 @@
 // Static files with byte ranges (the rig's clips seek only through ranges), text no-store,
 // media re-asked by ETag (304), traversal refused, ping, saves that parse before they write (422 leaves the file alone,
 // 200 writes it and keeps a backup, other paths 400), and a change on disk reaching an
-// /__reel/events subscriber. Rendering for the editor's Export: the guards (JSON only, this
+// /__reel/events subscriber. The media picker's catalogue (/__reel/media) and thumbnails
+// (/__reel/thumb/<key>.webp). Rendering for the editor's Export: the guards (JSON only, this
 // server's pages only, known formats, scripts only), one job at a time, the renderer's own
 // progress, and cancel (the render is started for real, then stopped). Works on a temp copy of
 // the script, removed in finally.
@@ -137,6 +138,21 @@ try {
   check(got && got.data && got.data.file === REL && got.ms < 2000, 'events: change within 2 s of a write on disk', JSON.stringify(got));
   r = await req(P, 'GET', '/__reel/events?file=scripts/x.js');
   check(r.status === 400, 'events for a disallowed path: 400', r.status);
+
+  // ── the media library: the picker's catalogue and thumbnails ──
+  const lib = await req(port, 'GET', '/__reel/media'), libJ = JSON.parse(lib.body.toString());
+  const clips = (libJ.items || []).filter(i => i.kind === 'clip'), pics = (libJ.items || []).filter(i => i.kind === 'picture');
+  check(lib.status === 200 && clips.length >= 7 && pics.length >= 50 && libJ.items.every(i => /^\.\//.test(i.path) && i.thumb && i.key && i.w > 0),
+    `media: the catalogue lists every clip and picture (${clips.length} clips, ${pics.length} pictures), each with its size and a thumbnail`);
+  const mara = clips.find(i => i.path === './nanome-mara.mp4');
+  check(mara && Math.abs(mara.dur - 25.7) < 0.2 && mara.w === 1280, 'media: a clip carries its length and frame size', JSON.stringify(mara));
+  check(!libJ.items.some(i => /-poster\.webp$|favicon|\.svg$/i.test(i.path)) && !libJ.items.some(i => i.path === './jhana-1.jpg'),
+    'media: no posters, favicons or svgs, and a .jpg with a .webp twin is left out');
+  const th = await req(port, 'GET', mara ? mara.thumb : '/__reel/thumb/x.webp');
+  check(th.status === 200 && th.headers['content-type'] === 'image/webp' && th.body.slice(0, 4).toString() === 'RIFF' && th.body.slice(8, 12).toString() === 'WEBP',
+    `media: a thumbnail is a webp (${th.body.length} bytes)`, th.status);
+  const nothumb = await req(port, 'GET', '/__reel/thumb/no-such-file-12345678.webp');
+  check(nothumb.status === 404, 'media: an unknown thumbnail is a 404', nothumb.status);
 
   // ── rendering: the editor's Export ──
   const rpost = (p, obj, headers = { 'Content-Type': 'application/json' }) => req(port, 'POST', p, headers, JSON.stringify(obj)).then(x => ({ ...x, json: JSON.parse(x.body.toString() || '{}') }));

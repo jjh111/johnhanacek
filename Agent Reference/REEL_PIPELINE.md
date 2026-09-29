@@ -354,6 +354,31 @@ scenes; the timeline should zoom and its targets be bigger; how does the video g
   comment sent naming formats and version, the no-session fallback), scripttest (`setAt` on a
   stat).
 
+## The media picker (2026-09-29)
+
+John: "give me a better media picker for the img/video per slot (I don't memorize file names)".
+
+- **The library** is `scripts/reel-media.mjs`: every clip and every picture of 400 px and up in
+  the top of `Assets/` and in `grad/`, `blokdok/` and `posters/` (83 files, 39 MB). A `.jpg` or
+  `.png` with a `.webp` twin is left out; a clip's `<name>-poster.webp` is its thumbnail's source,
+  not a picture of its own. ffmpeg reads each file's size and length once (cached by bytes and
+  date) and makes a 320 px webp thumbnail (about 10 KB) in `.local/reel-media/thumbs/`.
+- **The picker** (`scripts/reel-picker.js`): a grid of thumbnails with name, size and a clip's
+  length; the slot's own file marked NOW, the reel's others IN THE REEL; search by name or
+  folder, folder chips, and "in the reel"; a clip plays muted while the pointer rests on it;
+  arrows move, Enter or a click picks, Esc shuts. The inspector's `img` and `video` lines are
+  chips (thumbnail, name, Change…) that open it, with the name still typeable under the chip.
+  A pick is one `setField`; a clip shorter than the slot's `from` also sets `from 0`, since an
+  in-point past the end shows nothing.
+- **Where the catalogue comes from:** the dev server (`GET /__reel/media`, thumbnails at
+  `/__reel/thumb/<key>.webp`, the key naming the file's version); the claude.ai build, which now
+  carries `reel-media.json`, `reel-thumbs/` and every file in the library, so a pick plays in the
+  preview at once (188 files, 40.8 MB); anywhere else, only what the script already uses.
+- **Tests:** devservertest (the catalogue, a clip's length, what is left out, a thumbnail's
+  bytes, a 404), timelinetest (the chip, 76 pictures with the slot's own marked, search and
+  Enter, a too-short clip's in-point reset, Undo), hosttest (the library travels with the page;
+  a pick saves to the store).
+
 ## Later
 
 Scene-specific cues (line staggers, the push); moving cut 1 onto the one player; a music track

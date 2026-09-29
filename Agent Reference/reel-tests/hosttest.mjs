@@ -196,6 +196,34 @@ try {
     ok(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.join(' | ') : ''));
   }
 
+  // ── the media picker on claude.ai: the library travels with the page ──
+  {
+    const { page, errs } = await fresh();
+    await page.goto(URL0 + '#t=13&pause=1'); await started(page);
+    await page.evaluate(() => localStorage.setItem('fake-standing', 'granted'));   // a save lands without asking
+    await page.reload(); await started(page);
+    await page.waitForFunction(() => window.REEL_TIMELINE && window.REEL_PICKER, null, { timeout: 20000 });
+    await page.keyboard.press('e');
+    await page.evaluate(() => REEL_TIMELINE.select(3, true));
+    await page.locator('#reel-tl .tl-mchip').first().click();
+    await page.waitForFunction(() => document.querySelectorAll('#reel-pk .pk-tile').length > 40, null, { timeout: 20000 }).catch(() => {});
+    const hp = await page.evaluate(async () => {
+      const im = document.querySelector('#reel-pk .pk-tile .pk-img'), u = im && /url\("?([^")]+)"?\)/.exec(im.style.backgroundImage);
+      return { n: document.querySelectorAll('#reel-pk .pk-tile').length, thumb: u ? (await fetch(u[1])).ok : false,
+        file: (await fetch(REEL_LIVE.mediaURL('./grad/img02.png'))).ok, clip: (await fetch(REEL_LIVE.mediaURL('./nanome-assisted-building.mp4'), { method: 'HEAD' })).ok,
+        hint: document.querySelector('#reel-pk .pk-foot').textContent };
+    });
+    ok(hp.n >= 50 && hp.thumb && !/Only the media/.test(hp.hint), `on claude.ai the picker offers the whole library it was built with (${hp.n} pictures), thumbnails and all`);
+    ok(hp.file && hp.clip, 'and every file it offers travels with the page, so a pick plays at once');
+    await page.locator('#reel-pk input[type=search]').fill('jhana-3');
+    const nav = page.waitForNavigation();
+    await page.locator('#reel-pk input[type=search]').press('Enter');
+    await nav; await started(page);
+    const kept = await store(page, 'sizzle-reel-2.script.txt');
+    ok(kept && /img\s+\.\/jhana-3\.webp/.test(kept.text), 'a pick saves to the page\'s store like any edit');
+    ok(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.join(' | ') : ''));
+  }
+
   // ── a viewer who says no: the save becomes a draft in the tab ──
   {
     const { page, errs } = await fresh();

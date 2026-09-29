@@ -15,6 +15,8 @@
 // And every key is a button: the HUD's transport (play, next scene) and tools (Timeline, Synths,
 // Export, each naming its key), the panel's Undo, zoom and Export video. Zoomed in, a stat is a
 // moment of its own: dragged, it rewrites its @; clicked, it opens its line in the inspector.
+// The media picker: an img line's chip opens it, a search and Enter put a picture in the slot,
+// a clip too short for the slot's in-point starts at 0, and Undo takes each back.
 import { spawn } from 'node:child_process';
 import net from 'node:net';
 import fs from 'node:fs';
@@ -209,6 +211,36 @@ try {
   await page.keyboard.press('Escape');
   check(await page.evaluate(() => document.getElementById('reel-ex').hidden), 'Esc shuts it');
   await page.screenshot({ path: path.join(SHOTS, 'timeline-zoomed.png') });
+
+  // 4c ── the media picker: a slot's picture or clip, chosen by looking at it
+  await page.evaluate(() => REEL_TIMELINE.select(3, true));        // the art scene: two pictures
+  await page.waitForFunction(() => { const t = document.querySelector('#reel-tl .tl-mchip .tl-mth'); return t && /url\(/.test(t.style.backgroundImage); }, null, { timeout: 15000 }).catch(() => {});
+  const chip = page.locator('#reel-tl .tl-mchip').first();
+  const c0 = await chip.evaluate(b => ({ name: b.querySelector('.tl-mnm').textContent, thumb: b.querySelector('.tl-mth').style.backgroundImage }));
+  check(c0.name === 'earthstar-painting.webp' && /url\(/.test(c0.thumb), 'an img line shows its picture and its name as a chip', JSON.stringify(c0));
+  await chip.click();
+  await page.waitForFunction(() => document.querySelectorAll('#reel-pk .pk-tile').length > 40, null, { timeout: 20000 }).catch(() => {});
+  const pk = await page.evaluate(() => ({ open: !document.getElementById('reel-pk').hidden, n: document.querySelectorAll('#reel-pk .pk-tile').length,
+    cur: (document.querySelector('#reel-pk .pk-cur') || { dataset: {} }).dataset.path, head: document.querySelector('#reel-pk h2').textContent }));
+  check(pk.open && pk.n >= 50 && pk.cur === './earthstar-painting.webp' && pk.head === 'Choose a picture', `the chip opens the picker: ${pk.n} pictures, the slot's own marked`, JSON.stringify(pk));
+  await page.screenshot({ path: path.join(SHOTS, 'media-picker.png') });
+  await page.locator('#reel-pk input[type=search]').fill('jhana-3');
+  const one = await page.locator('#reel-pk .pk-tile').count();
+  await saving('pick', () => page.locator('#reel-pk input[type=search]').press('Enter'));
+  const artImg = (/^\s*img\s+\.\/\S+$/m.exec(file()) || [''])[0];
+  check(one === 1 && /\.\/jhana-3\.webp$/.test(artImg), 'searching and pressing Enter puts that picture in the slot', `${one} tile(s); ${artImg.trim()}`);
+  await saving('undo pick', () => page.locator('#reel-tl [data-act="undo"]').click());
+  check(file().includes('img      ./earthstar-painting.webp'), 'and Undo takes it back');
+  await page.evaluate(() => REEL_TIMELINE.select(5, true));        // the results: its items' clips
+  await page.locator('#reel-tl .tl-mchip').first().click();          // nanome-hero, from 6.2
+  await page.waitForFunction(() => document.querySelectorAll('#reel-pk .pk-tile').length >= 5, null, { timeout: 20000 }).catch(() => {});
+  const nClips = await page.locator('#reel-pk .pk-tile').count(), nDur = await page.locator('#reel-pk .pk-tile .pk-dur').count();
+  check(nClips >= 7 && nDur === nClips && (await page.locator('#reel-pk h2').textContent()) === 'Choose a clip', `a video line's picker offers the clips, each with its length (${nClips})`);
+  await saving('pick clip', () => page.locator('#reel-pk .pk-tile[data-path="./BadVR-AROC-hud.mp4"]').click());
+  const swapped = /video\s+\.\/BadVR-AROC-hud\.mp4\n\s*from\s+(\S+)/.exec(file());
+  check(swapped && swapped[1] === '0', 'a clip shorter than the slot\'s in-point starts at 0 (from 6.2 → 0)', swapped && swapped[0]);
+  await saving('undo clip', () => page.locator('#reel-tl [data-act="undo"]').click());
+  check(/video\s+\.\/nanome-hero\.mp4\n\s*from\s+6\.2\b/.test(file()), 'Undo restores the clip and its in-point');
 
   // 5 ── no dev server: the edit is a draft
   await page.route('**/__reel/ping', r => r.fulfill({ status: 404, body: 'no' }));

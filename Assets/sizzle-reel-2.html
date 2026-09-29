@@ -1599,7 +1599,7 @@ p, h1, h2, h3 { margin: 0; }
     scenes: SC, duration: DURATION,
     now, seek: seekTo, isPlaying: () => playing, setPlaying: p => { if (!!p !== playing) toggle(); },
     onFrame: fn => { frameFns.push(fn); },
-    addTool,
+    addTool, mediaURL,
     reserveBottom: px => { reserved = Math.max(0, +px || 0); fit(); },
     reserveRight: px => { reservedR = Math.max(0, +px || 0); fit(); },
     async save(text) {
@@ -1643,6 +1643,8 @@ p, h1, h2, h3 { margin: 0; }
   const tl = document.createElement('script'); tl.src = '../scripts/reel-timeline.js'; tl.onerror = () => tl.remove(); document.head.appendChild(tl);
   // how the script becomes a film: render it here (dev server), or ask Claude (the editor on claude.ai)
   const ex = document.createElement('script'); ex.src = '../scripts/reel-export.js'; ex.onerror = () => ex.remove(); document.head.appendChild(ex);
+  // choosing a slot's picture or clip by looking at it (the inspector's img and video lines open it)
+  const pk = document.createElement('script'); pk.src = '../scripts/reel-picker.js'; pk.onerror = () => pk.remove(); document.head.appendChild(pk);
   // the music: the score's synths under the preview, and the rack that plays them (M)
   ['reel-music.js', 'reel-synth.js', 'reel-rack.js'].reduce((p, f) => p.then(() => new Promise((ok, no) => {
     const el = document.createElement('script'); el.src = '../scripts/' + f; el.onload = ok; el.onerror = no; document.head.appendChild(el);

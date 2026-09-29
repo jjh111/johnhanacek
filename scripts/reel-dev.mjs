@@ -23,6 +23,10 @@
 // after a save always reads the new version. Media is sent no-cache with an ETag, so the
 // browser keeps its clips and a reload re-asks for them, answered 304 at no cost.
 //
+// It knows the media, too: GET /__reel/media lists every picture and clip a script could name
+// (scripts/reel-media.mjs), for the editor's media picker, and GET /__reel/thumb/<key>.webp
+// answers each one's thumbnail, made on the first ask and kept in .local/reel-media/.
+//
 // It renders, too: the editor's Export (scripts/reel-export.js) asks POST /__reel/render for a
 // film of the script in any of its formats, and this server runs scripts/render-sizzle-reel.mjs
 // for each in turn. GET /__reel/render says how far it has got (frame, frames, seconds left) and,
@@ -38,6 +42,7 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import { scan as mediaScan, thumb as mediaThumb } from './reel-media.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -206,6 +211,24 @@ function events(req, res, q) {
   req.on('close', () => { clearInterval(beat); clearTimeout(timer); if (watcher) watcher.close(); });
 }
 
+// ── the media library: the picker's catalogue and thumbnails ───────────────
+// A scan stats every file (ffmpeg reads only new or changed ones); one every 5 s at most.
+let library = null, libraryAt = 0;
+const libraryNow = () => { if (!library || Date.now() - libraryAt > 5000) { library = mediaScan(ROOT); libraryAt = Date.now(); } return library; };
+function media(res) {
+  try { json(res, 200, { ok: true, items: libraryNow().map(it => ({ ...it, thumb: `/__reel/thumb/${it.key}.webp` })) }); }
+  catch (e) { log(`error listing media: ${e.message}`); json(res, 500, { ok: false, errors: [e.message] }); }
+}
+function mediaThumbReq(req, res, key) {
+  const it = (library || libraryNow()).find(i => i.key === key) || libraryNow().find(i => i.key === key);
+  if (!it) return send(res, 404, 'no such thumbnail');
+  const f = mediaThumb(it, ROOT);
+  if (!f) return send(res, 500, 'ffmpeg could not make that thumbnail');
+  const buf = fs.readFileSync(f);                                   // the key names this version of the file: keep it
+  res.writeHead(200, { 'Content-Type': 'image/webp', 'Cache-Control': 'max-age=31536000, immutable', 'Content-Length': buf.length });
+  res.end(req.method === 'HEAD' ? undefined : buf);
+}
+
 // ── rendering: the editor's Export ──────────────────────────────────────
 // A job renders one script in the formats asked for, one film after another, by running the
 // renderer as a person would; its progress is read off the renderer's own lines.
@@ -283,6 +306,9 @@ const server = http.createServer((req, res) => {
   if (u.pathname === '/__reel/ping') return json(res, 200, { ok: true, server: 'reel-dev' });
   if (u.pathname === '/__reel/save') return req.method === 'POST' ? save(req, res) : send(res, 405, 'POST only', undefined, { Allow: 'POST' });
   if (u.pathname === '/__reel/events') return events(req, res, u.searchParams);
+  if (u.pathname === '/__reel/media') return media(res);
+  const th = /^\/__reel\/thumb\/([\w.-]+)\.webp$/.exec(u.pathname);
+  if (th) return mediaThumbReq(req, res, th[1]);
   if (u.pathname === '/__reel/render') return req.method === 'POST' ? renderStart(req, res) : json(res, 200, { ok: true, job: jobView(), formats: FORMATS });
   if (u.pathname === '/__reel/render/cancel') return req.method === 'POST' ? renderCancel(req, res) : send(res, 405, 'POST only', undefined, { Allow: 'POST' });
   if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'GET or HEAD only', undefined, { Allow: 'GET, HEAD' });

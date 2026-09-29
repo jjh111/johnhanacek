@@ -15,6 +15,12 @@
 // Export: render the formats it names, upload each film (Artifact, asset: true) and write
 // films/latest = { renderedAt, from: <the version it names>, items: [{ format, url, mb, seconds, fps }] }.
 //
+// It also carries the media picker's library (scripts/reel-media.mjs): reel-media.json, a
+// thumbnail per file in reel-thumbs/, and every picture and clip the picker offers, so a pick
+// plays in the preview at once. That is most of its weight (about 40 MB), and why a first
+// publish of it sends many files: a publish takes at most 255 files and 64 MB, so if the library
+// grows past that, publish it in two calls to the same url.
+//
 // What changes on the way: ../scripts and ../styles become scripts/ and styles/ (a published
 // page cannot climb above itself); a media file with a space in its name is published with an
 // underscore (REEL_HOST.media maps the paths the script names); and the chrome's light theme is
@@ -23,6 +29,7 @@ import { readFileSync, writeFileSync, mkdirSync, copyFileSync, rmSync, existsSyn
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
+import { scan as mediaScan, thumb as mediaThumb } from './reel-media.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith(`--${k}=`)); return a ? a.slice(k.length + 3) : d; };
@@ -63,6 +70,17 @@ for (const p of media) {
   put(safe(p), from);
 }
 if (missing.length) console.warn('not found, left out: ' + missing.join(', '));
+
+// ── the media picker's library: its catalogue, a thumbnail each, and every file it offers, so
+// whatever John picks plays in this preview at once (scripts/reel-media.mjs, scripts/reel-picker.js)
+const library = mediaScan(ROOT).map(it => {
+  const t = mediaThumb(it, ROOT);
+  if (t) put(`reel-thumbs/${it.key}.webp`, t);
+  if (!files[safe(it.path)]) put(safe(it.path), join(ROOT, 'Assets', it.path.replace(/^\.\//, '')));
+  return { ...it, thumb: t ? `reel-thumbs/${it.key}.webp` : null };
+});
+writeFileSync(join(OUT, 'reel-media.json'), JSON.stringify({ items: library }) + '\n');
+files['reel-media.json'] = join(OUT, 'reel-media.json');
 
 // ── the page ────────────────────────────────────────────────────────────
 let page = rig

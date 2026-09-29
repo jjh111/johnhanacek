@@ -186,6 +186,12 @@
 #reel-tl input:focus { border-color: var(--gold); }
 #reel-tl input::placeholder { color: var(--ink-faint); }
 #reel-tl .tl-flag { color: var(--ink-quiet); }
+#reel-tl .tl-mbox { display: grid; gap: 4px; min-width: 0; }
+#reel-tl button.tl-mchip { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; align-items: center; gap: 10px; height: 50px; padding: 3px 10px 3px 3px; text-align: left; }
+#reel-tl .tl-mth { width: 72px; height: 42px; border-radius: 4px; background: #000 center / cover no-repeat; display: flex; align-items: center; justify-content: center; color: var(--ink-faint); }
+#reel-tl .tl-mnm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#reel-tl .tl-mgo { color: var(--gold); }
+#reel-tl .tl-mbox input { color: var(--ink-quiet); }
 `;
   document.head.appendChild(css);
 
@@ -560,8 +566,9 @@
   // one labelled input; Enter or leaving it saves a change, Esc puts it back
   function input(parent, label, value, act, opts = {}) {
     const id = 'reel-tl-in' + (uid++);
-    const lab = h('label', null, parent, label); lab.htmlFor = id;
+    if (!opts.bare) { const lab = h('label', null, parent, label); lab.htmlFor = id; }
     const inp = h('input', null, parent); inp.id = id;
+    if (opts.bare) inp.setAttribute('aria-label', label);
     if (opts.num) { inp.type = 'number'; inp.step = '0.05'; inp.min = '0'; } else inp.type = 'text';
     inp.value = value; inp.dataset.orig = value; inp.spellcheck = false;
     if (opts.placeholder != null) inp.placeholder = opts.placeholder;
@@ -581,6 +588,35 @@
     });
     inp.addEventListener('blur', go);
     return inp;
+  }
+  // An img or video line: a chip with the file's thumbnail and name opens the media picker
+  // (scripts/reel-picker.js); the name stays typeable under it.
+  function mediaRow(f, ln) {
+    const kind = f.key === 'img' ? 'picture' : 'clip', cur = wordsOf(ln, f.key);
+    const r = h('div', 'row', insp); h('label', null, r, f.key);
+    const box = h('div', 'mbox', r);
+    const chip = button(box, '', `choose ${kind === 'picture' ? 'a picture' : 'a clip'} for this moment by looking at it`, 'media', 'mchip');
+    chip.dataset.ln = ln;
+    const th = h('span', 'mth', chip); th.textContent = kind === 'clip' ? '▶' : '';
+    h('span', 'mnm', chip, cur.replace(/^\.\//, ''));
+    h('span', 'mgo', chip, 'Change…');
+    const P_ = window.REEL_PICKER;
+    if (P_) P_.thumbFor(cur, kind).then(u => { if (u) { th.style.backgroundImage = `url("${u}")`; th.textContent = ''; } }).catch(() => {});
+    chip.onclick = () => {
+      if (!window.REEL_PICKER) return say(['the media picker did not load (scripts/reel-picker.js)']);
+      window.REEL_PICKER.open({ kind, current: cur, onPick: it => pickMedia(f, ln, it) });
+    };
+    input(box, `${f.key} file`, cur, (src, v) => RS.setField(src, ln, v), { ln, key: f.key, bare: true });
+  }
+  // a new file for the slot; a clip's in-point past the new clip's end would show nothing, so it
+  // starts the new clip at 0
+  function pickMedia(f, ln, it) {
+    commit(src => {
+      let out = RS.setField(src, ln, it.path);
+      const fr = f.key === 'video' && it.dur ? P.fields.find(g => g.owner === f.owner && g.key === 'from') : null;
+      if (fr && f.owner.from >= it.dur - 0.5) out = RS.setField(out, fr.ln, '0');
+      return out;
+    });
   }
   function build(S) {
     insp.textContent = '';
@@ -608,6 +644,8 @@
         // shown in the cues row below
       } else if (f && f.kind === 'flag') {
         const r = h('div', 'row', insp); h('label', null, r, f.key); h('span', 'flag', r, 'on (a flag: delete the line to turn it off)');
+      } else if (f && (f.key === 'img' || f.key === 'video')) {
+        mediaRow(f, ln);
       } else if (f) {
         input(h('div', 'row', insp), f.key, wordsOf(ln, f.key), (src, v) => RS.setField(src, ln, v), { ln, key: f.key });
       }
