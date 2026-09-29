@@ -6,7 +6,7 @@
 // panel and the inspector land in the scratch folder named below (or $TIMELINE_SHOTS).
 //   1. E opens the panel with a block per scene
 //   2. dragging the answer scene's right edge +0.5 s with Shift saves "SCENE answer 5"; the
-//      reloaded reel runs 60.5 s
+//      reloaded reel runs 0.5 s longer than it did
 //   3. the inspector's first line input saves its words; Ctrl+Z twice gives the file back byte for byte
 //   4. dragging the MARA beat (@2.35 in the first ITEM) +0.5 s with Shift rewrites it as @3: a
 //      drag snaps the time to the grid, and Shift's grid is the 0.5 s beat
@@ -118,10 +118,11 @@ try {
 
   // 2 ── drag the answer scene's right edge +0.5 s with Shift
   let s = await pxs();
+  const dur0 = await page.evaluate(() => REEL_LIVE.duration);
   await saving('scene edge', () => dragBy('#reel-tl .tl-sc[data-scene="2"] .tl-grip', 0.5 * s, true));
   check(/^SCENE answer 5\s/m.test(file()), 'the edge drag saved "SCENE answer 5"', (/^SCENE answer.*$/m.exec(file()) || [])[0]);
   const dur = await page.evaluate(() => REEL_LIVE.duration);
-  check(dur === 60.5, 'the reloaded reel runs 60.5 s', dur);
+  check(Math.abs(dur - (dur0 + 0.5)) < 1e-9, `the reloaded reel runs 0.5 s longer (${dur0} → ${dur0 + 0.5} s)`, dur);
   check(await page.locator('#reel-tl').isVisible(), 'the panel is still open after the reload');
 
   // 3 ── the inspector: the first line of the answer scene

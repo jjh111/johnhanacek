@@ -76,7 +76,11 @@ const FAKE = () => {
 };
 const store = (page, f) => page.evaluate(k => localStorage.getItem('fake-db:files/' + k), f).then(v => v && JSON.parse(v));
 const SCRIPT = readFileSync(join(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8');
-const P0 = RS.parse(SCRIPT), ANSWER = P0.marks.find(m => m.kind === 'scene' && m.obj === P0.edit.scenes[2]).ln;   // the answer runs 4.5 s
+const P0 = RS.parse(SCRIPT), ANSWER = P0.marks.find(m => m.kind === 'scene' && m.obj === P0.edit.scenes[2]).ln;
+// the cut as the file has it, and with the answer set to 5 s (the edit every save below makes)
+const totalOf = src => RS.spans(RS.parse(src).edit).slice(-1)[0].end;
+const TOTAL0 = totalOf(SCRIPT), TOTAL1 = totalOf(RS.setDur(SCRIPT, ANSWER, 5));
+const near = (a, b) => Math.abs(a - b) < 1e-9;
 const answerTheFirstAsk = async (page, yes) => { await page.waitForFunction(() => window.__ask > 0, null, { timeout: 15000 }); await page.evaluate(y => window.__answer(y), yes); };
 const started = page => page.waitForFunction(() => window.REEL_LIVE && window.REEL_RACK && window.REEL_RACK.parsed && !document.getElementById('boot'), null, { timeout: 60000 });
 
@@ -108,7 +112,7 @@ try {
     const after = await page.evaluate(() => ({ hosted: REEL_LIVE.hosted, dur: REEL_LIVE.parsed.edit.scenes[2].dur, total: REEL_LIVE.duration, asked: window.__ask, at: +(new URLSearchParams(location.hash.slice(1)).get('t') || 0) }));
     const kept = await store(page, 'sizzle-reel-2.script.txt');
     ok(kept && kept.text === next, 'the first save asks, and after a yes the whole script lands in the store');
-    ok(after.hosted && after.dur === 5 && after.total === 60.5 && after.asked === 0, `the reload plays the saved version at once, asking nothing (answer ${after.dur} s, cut ${after.total} s)`);
+    ok(after.hosted && after.dur === 5 && near(after.total, TOTAL1) && after.asked === 0, `the reload plays the saved version at once, asking nothing (answer ${after.dur} s, cut ${after.total} s)`);
     ok(Math.abs(after.at - 21) < 0.6, `and comes back to where it was (${after.at} s)`);
 
     // a synth-rack change: reverb return 0.62 (this load has not been answered yet, so it asks)
@@ -129,7 +133,7 @@ try {
     await page.evaluate(() => { window.__reverting = REEL_LIVE.discardDraft(); });
     await answerTheFirstAsk(page, true);
     await nav2; await started(page);
-    ok(await page.evaluate(() => !REEL_LIVE.hosted && REEL_LIVE.duration === 60) && !(await store(page, 'sizzle-reel-2.script.txt')), 'Revert drops the saved script and plays the file');
+    ok(await page.evaluate(T => !REEL_LIVE.hosted && Math.abs(REEL_LIVE.duration - T) < 1e-9, TOTAL0) && !(await store(page, 'sizzle-reel-2.script.txt')), 'Revert drops the saved script and plays the file');
     ok(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.join(' | ') : ''));
   }
 
@@ -140,7 +144,7 @@ try {
     await page.evaluate(t => { localStorage.setItem('fake-standing', 'granted'); localStorage.setItem('fake-db:files/sizzle-reel-2.script.txt', JSON.stringify({ text: t })); }, RS.setDur(SCRIPT, ANSWER, 5));
     await page.reload(); await started(page);
     const r = await page.evaluate(() => ({ hosted: REEL_LIVE.hosted, total: REEL_LIVE.duration }));
-    ok(r.hosted && r.total === 60.5, `a new tab with a grant from before plays the saved version from the store (cut ${r.total} s)`);
+    ok(r.hosted && near(r.total, TOTAL1), `a new tab with a grant from before plays the saved version from the store (cut ${r.total} s)`);
 
     // a slow store: the reel starts on the file, then offers the saved version when it arrives
     await page.evaluate(() => localStorage.setItem('fake-slow', '4000'));
@@ -162,7 +166,7 @@ try {
     await answerTheFirstAsk(page, false);
     await nav; await started(page);
     const r = await page.evaluate(() => ({ draft: REEL_LIVE.draft, hosted: REEL_LIVE.hosted, total: REEL_LIVE.duration }));
-    ok(r.draft && !r.hosted && r.total === 60.5, `a no keeps the save as a draft in the tab (draft ${r.draft}, cut ${r.total} s)`);
+    ok(r.draft && !r.hosted && near(r.total, TOTAL1), `a no keeps the save as a draft in the tab (draft ${r.draft}, cut ${r.total} s)`);
     ok(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.join(' | ') : ''));
   }
 
@@ -177,7 +181,7 @@ try {
     const nav = p2.waitForNavigation();
     await p2.evaluate(t => REEL_LIVE.save(t), RS.setDur(SCRIPT, ANSWER, 5));
     await nav; await p2.waitForFunction(() => window.REEL_LIVE && !document.getElementById('boot'), null, { timeout: 60000 });
-    ok(await p2.evaluate(() => REEL_LIVE.draft && REEL_LIVE.duration === 60.5), 'and a save there becomes a draft in the tab');
+    ok(await p2.evaluate(T => REEL_LIVE.draft && Math.abs(REEL_LIVE.duration - T) < 1e-9, TOTAL1), 'and a save there becomes a draft in the tab');
   }
 } finally {
   await browser.close();

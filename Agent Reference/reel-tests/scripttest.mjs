@@ -23,7 +23,9 @@ const strip = l => l.replace(/\s*\[[^\]]*\]\s*$/, '');   // a line without its c
 const P = RS.parse(SRC);
 const { edit, marks, fields } = P;
 const total = e => RS.spans(e).slice(-1)[0].end;
-ok(edit.scenes.length === 11 && total(edit) === 60, `the real script parses: 11 scenes, ${total(edit)} s`);
+// the cut is as long as its scenes, on the 120 BPM grid (John sets the length in the editor: 60 s, then 63.5)
+const sum = edit.scenes.reduce((a, sc) => a + sc.dur, 0);
+ok(edit.scenes.length === 11 && Math.abs(total(edit) - sum) < 1e-9 && total(edit) % 0.5 === 0, `the real script parses: 11 scenes, ${total(edit)} s, whole beats at 120 BPM`);
 ok(same(RS.parse(RS.format(edit)).edit, edit), 'format then parse gives the same edit');
 ok(RS.retime(SRC) === SRC, 'retime leaves a fresh script unchanged');
 ok(marks.every(m => ['scene', 'item', 'beat'].includes(m.kind) && m.scene), 'every mark has a kind and its scene');
@@ -46,7 +48,7 @@ const sceneLn = i => marks.find(m => m.kind === 'scene' && m.obj === edit.scenes
 {
   const out = RS.setDur(SRC, sceneLn(2), 5);
   const e2 = RS.parse(out).edit;
-  ok(e2.scenes[2].dur === 5 && total(e2) === 60.5, 'setDur: the answer runs 5 s and the cut 60.5 s');
+  ok(e2.scenes[2].dur === 5 && Math.abs(total(e2) - (total(edit) + 5 - answer.dur)) < 1e-9, `setDur: the answer runs 5 s and the cut ${total(edit) + 5 - answer.dur} s`);
   const diff = changedLines(SRC, out);
   ok(diff.every(([, x, y]) => strip(x) === strip(y) || /^SCENE answer/.test(x)), `setDur changes the SCENE line and timecodes only (${diff.length} lines)`);
 }

@@ -15,10 +15,12 @@
 //    Set CUES_REF=<a folder of stills> to also compare against stills from an older rig.
 // 2. Each cue moves what it should. A copy of the script gains "cue out 1.5" on the answer,
 //    "cue typing 12" on the art and "cue in 0.6" on the logos. At a moment chosen for each,
-//    the cued still must differ from the default one (the answer already leaving at 9.2 s, the
-//    art's question half typed at 10.9 s, the logos panel not yet in at 38.9 s: by default it
-//    pops at about 38.6 s, the question's Enter plus 0.04). "Differ" means 2000 pixels or
-//    more, so the noise above cannot pass for a moved joint. The copy is deleted in finally.
+//    the cued still must differ from the default one (the answer already leaving 1.3 s before
+//    its end, the art's question half typed 0.4 s in, the logos panel not yet in 0.9 s in: by
+//    default it pops about 0.6 s in, the question's Enter plus 0.04). The moments are counted
+//    from the scenes, so they hold whatever lengths the script gives them. "Differ" means 2000
+//    pixels or more, so the noise above cannot pass for a moved joint. The copy is deleted in
+//    finally.
 //
 // Drives the renderer as a child process, one render at a time (the machine is shared).
 import { spawnSync } from 'node:child_process';
@@ -31,7 +33,8 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const ReelScript = createRequire(import.meta.url)(join(ROOT, 'scripts/reel-script.js'));
 const SCRATCH = process.env.CUES_SCRATCH || join(ROOT, '.local/reel-tests/cues');
 const LIST = '1.6,4.5,8.5,12,14.5,18.5,40,43,47,53.5,58.5';
-const MOMENTS = [['answer', 'out', 1.5, 9.2], ['art', 'typing', 12, 10.9], ['logos', 'in', 0.6, 38.9]];
+// [scene, cue, value, the moment to look at: seconds after the scene's start (+) or before its end (-)]
+const MOMENTS = [['answer', 'out', 1.5, -1.3], ['art', 'typing', 12, 0.4], ['logos', 'in', 0.6, 0.9]];
 const TEMP = 'Assets/zz-cues-test.script.txt';
 
 let fails = 0;
@@ -93,10 +96,13 @@ try {
   writeFileSync(join(ROOT, TEMP), src);
   const cued = ReelScript.parse(src).edit.scenes;
   MOMENTS.forEach(([type, name, value]) => ok(ReelScript.cue(cued.find(s => s.type === type), name) === value, `temp script: ${type} reads cue ${name} ${value}`));
-  const at = MOMENTS.map(m => m[3]).join(',');
+  const P = ReelScript.parse(plain), SP = ReelScript.spans(P.edit);
+  const when = ([type, , , off]) => { const sp = SP[P.edit.scenes.findIndex(x => x.type === type)]; return +(off < 0 ? sp.end + off : sp.start + off).toFixed(2); };
+  const at = MOMENTS.map(when).join(',');
   const a = render(join(SCRATCH, 'cued'), at, ['--script=' + TEMP]);
   const b = render(join(SCRATCH, 'dflt'), at);
-  MOMENTS.forEach(([type, name, value, t], i) => {
+  MOMENTS.forEach(([type, name, value], i) => {
+    const t = when(MOMENTS[i]);
     const d = a[i] && b[i] ? pixdiff(a[i], b[i]) : { n: 0 };
     ok(d.n >= 2000, `${type} at ${t} s differs with cue ${name} ${value}: ${d.n} pixels (${a[i]} vs ${b[i]})`);
   });
