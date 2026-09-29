@@ -277,7 +277,9 @@ which stamps every `?v=` cache-bust ref across root `*.html` **and** the `Portfo
   `search-tests/relaytest.mjs`).
   **No model writes a word**: their paragraph goes verbatim, generation is suppressed in brief
   mode, Enter only focuses Send. Two shells: the command bar (search-core loads inquiry-core
-  beside itself) and services.html `#book` (textarea, sessionStorage draft). GoatCounter gets
+  beside itself) and services.html `#book` (textarea, sessionStorage draft) — there the card is the form:
+  `alwaysCard` stands it at rest under the textarea (v2.35) and the words fill it in; Send waits for 20+
+  characters AND an email in every shell (the relay refuses shorter). GoatCounter gets
   count-only events. Thresholds in `T` were calibrated by `search-tests/inquirylab.mjs`; plan +
   build record: `Agent Reference/INQUIRY_COMPOSER_PLAN.md`. **Asked for by name** (v2.31): a
   leading command ("inquire", "send a message", "message john: …", "get in touch") always opens

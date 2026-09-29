@@ -24,9 +24,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@200;300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles/jh-chrome.css?v=2.34">
-    <link rel="stylesheet" href="./styles/shared.css?v=2.34">
-    <link rel="stylesheet" href="./scripts/search-overlay.css?v=2.34">
+    <link rel="stylesheet" href="./styles/jh-chrome.css?v=2.35">
+    <link rel="stylesheet" href="./styles/shared.css?v=2.35">
+    <link rel="stylesheet" href="./scripts/search-overlay.css?v=2.35">
 
     <link rel="alternate" type="application/json" href="./john-hanacek.json" title="Structured data">
     <script type="application/ld+json">
@@ -1060,34 +1060,35 @@
     })();
     </script>
 
-    <script src="./scripts/shared.js?v=2.34"></script>
-<script src="./scripts/search-overlay.js?v=2.34" defer></script>
-    <script src="./scripts/inquiry-core.js?v=2.34" defer></script>
+    <script src="./scripts/shared.js?v=2.35"></script>
+<script src="./scripts/search-overlay.js?v=2.35" defer></script>
+    <script src="./scripts/inquiry-core.js?v=2.35" defer></script>
     <script>
     // Shell B of the inquiry composer (plan: Agent Reference/INQUIRY_COMPOSER_PLAN.md).
-    // The textarea's words are parsed on-device into an editable brief; Send
-    // opens the visitor's mail app. The draft survives a reload in this tab.
+    // The card stands under the textarea from the start (alwaysCard) and the
+    // textarea's words fill it in, parsed on-device; Send goes through the
+    // relay (SITE.inquiryEndpoint). The draft survives a reload in this tab.
     document.addEventListener('DOMContentLoaded', function () {
         var ta = document.getElementById('inqText'), host = document.getElementById('inqCard');
         if (!ta || !host || !window.JHInquiry) return;
         var KEY = 'jh-inquiry-draft', timer = 0;
         var composer = JHInquiry.composer({
-            page: 'services.html', showWords: false, autoEmbed: true,
+            page: 'services.html', showWords: false, alwaysCard: true, autoEmbed: true,
             corpusUrl: 'Assets/search-chunks.json',
             onSent: function () { try { sessionStorage.removeItem(KEY); } catch (e) {} },
         });
         composer.attach(host);
         function sync() {
             var v = ta.value;
-            // The card waits for a few words; one word is not a brief yet.
-            composer.update((v.match(/\S+/g) || []).length >= 3 ? v : '');
+            // The card stands at rest (alwaysCard) and fills in as they type.
+            composer.update(v);
             try { if (v.trim()) sessionStorage.setItem(KEY, v); else sessionStorage.removeItem(KEY); } catch (e) {}
         }
         ta.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(sync, 250); });
         try { var d = sessionStorage.getItem(KEY); if (d) { ta.value = d; sync(); } } catch (e) {}
     });
     </script>
-    <script src="./scripts/jh-shapes.js?v=2.34"></script>
-    <script src="./scripts/jh-chrome.js?v=2.34" defer></script>
+    <script src="./scripts/jh-shapes.js?v=2.35"></script>
+    <script src="./scripts/jh-chrome.js?v=2.35" defer></script>
 </body>
 </html>

@@ -142,7 +142,8 @@ async function servicesShell(b, label) {
   page.on('pageerror', e => errs.push(String(e)));
   await page.goto(`${BASE}/services.html`, { waitUntil: 'networkidle' });
   await typeInto(page, '#inqText', COACHING);
-  await page.waitForSelector('#inqCard .inq-card', { timeout: 8000 }).catch(() => {});
+  // the card stands at rest (alwaysCard), so wait for the typed words to land in it
+  await page.waitForFunction(() => { const t = document.querySelector('#inqCard [data-inq-field="track"]'); return t && t.value !== 'unsure'; }, null, { timeout: 8000 }).catch(() => {});
   let v = await fieldVals(page, '#inqCard');
   check(`${label}: card under the textarea`, !!v);
   check(`${label}: grammar parse`, v && v.track === 'coaching' && v.org === 'Loop Health' && /founder/i.test(v.role) && v.timeline === 'next month', v && [v.track, v.org, v.role, v.timeline].join(' / '));
@@ -226,8 +227,20 @@ await servicesShell(browser, 'chromium');
   const errs = [];
   page.on('pageerror', e => errs.push(String(e)));
   await page.goto(`${BASE}/services.html`, { waitUntil: 'networkidle' });
+  // The card is the form: it stands at rest, before a word is typed, and Send
+  // waits for words as well as an email.
+  const rest = await page.evaluate(() => {
+    const s = document.querySelector('#inqCard [data-inq-act="send"]');
+    return { card: !!document.querySelector('#inqCard .inq-card'), email: !!document.querySelector('#inqCard [data-inq-field="email"]'), disabled: !!(s && s.disabled) };
+  });
+  check('relay: the card stands at rest under the textarea, Send disabled', rest.card && rest.email && rest.disabled, JSON.stringify(rest));
+  await page.fill('#inqCard [data-inq-field="email"]', 'early@example.com');
+  await page.dispatchEvent('#inqCard [data-inq-field="email"]', 'input');
+  check('relay: an email alone does not enable Send', await page.evaluate(() => document.querySelector('#inqCard [data-inq-act="send"]').disabled));
+  await page.fill('#inqCard [data-inq-field="email"]', '');
+  await page.dispatchEvent('#inqCard [data-inq-field="email"]', 'input');
   await typeInto(page, '#inqText', ROBOTICS);
-  await page.waitForSelector('#inqCard .inq-card', { timeout: 8000 });
+  await page.waitForFunction(() => { const t = document.querySelector('#inqCard [data-inq-field="track"]'); return t && t.value !== 'unsure'; }, null, { timeout: 8000 }).catch(() => {});
   const pre = await page.evaluate(() => {
     const em = document.querySelector('#inqCard [data-inq-field="email"]');
     const send = document.querySelector('#inqCard [data-inq-act="send"]');

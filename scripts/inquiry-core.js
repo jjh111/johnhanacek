@@ -577,6 +577,7 @@
             : '';
         let foot;
         const emailOk = EMAIL_OK.test(String(v.email || '').trim());
+        const textOk = String(v.text || '').replace(/\s+/g, ' ').trim().length >= 20;
         if (st.relay && st.ui === 'sending') {
             foot = '<div class="inq-receipt" role="status">Sending…</div>';
         } else if (st.relay && st.ui === 'sent') {
@@ -591,6 +592,8 @@
                 + ' Nothing opened? <button type="button" class="inq-link" data-inq-act="copy">Copy the message</button> and email it from anywhere.</div>';
         } else if (st.ui === 'copied') {
             foot = '<div class="inq-receipt" role="status">Copied. Paste it into an email to ' + TO + ' or a LinkedIn message.</div>';
+        } else if (!textOk) {
+            foot = '<div class="inq-note">Write a few sentences above. They fill in this card, and nothing leaves this page until you press Send.</div>';
         } else if (st.relay && !emailOk) {
             foot = '<div class="inq-note">Nothing leaves this page until you press Send.</div>';
         } else if (st.relay) {
@@ -599,7 +602,7 @@
             foot = '<div class="inq-note">Parsed on your device. Nothing leaves this page until you press Send.</div>';
         }
         const sendBtn = st.relay
-            ? '<button type="button" class="intent-cta" data-inq-act="send"' + (emailOk && st.ui !== 'sending' && st.ui !== 'sent' ? '' : ' disabled') + '>' + (st.ui === 'sent' ? 'Sent' : 'Send to John') + '</button>'
+            ? '<button type="button" class="intent-cta" data-inq-act="send"' + (emailOk && textOk && st.ui !== 'sending' && st.ui !== 'sent' ? '' : ' disabled') + '>' + (st.ui === 'sent' ? 'Sent' : 'Send to John') + '</button>'
             : '<a class="intent-cta" data-inq-act="send" href="mailto:' + TO + '">Send to John</a>';
         // A field no person sees or fills. Bots fill every field.
         const trap = st.relay ? '<div class="inq-hp" aria-hidden="true"><label>Leave this empty <input type="text" name="hp_field" data-inq-hp tabindex="-1" autocomplete="off"></label></div>' : '';
@@ -656,9 +659,12 @@
     // rebuilds its results on every full render, so the host can change;
     // attach() moves the card and its state to the new host. ──
     function composer(opts) {
-        opts = Object.assign({ page: '', showWords: true, autoEmbed: false, corpusUrl: null, resolveHref: null, onSent: null, endpoint: '' }, opts || {});
+        opts = Object.assign({ page: '', showWords: true, alwaysCard: false, autoEmbed: false, corpusUrl: null, resolveHref: null, onSent: null, endpoint: '' }, opts || {});
         const st = { text: '', brief: null, refined: null, ov: {}, open: new Set(), ui: 'draft', clipped: false, host: null, gen: 0, counted: false, timer: 0, relay: false, shownAt: 0, error: '', prompt: false };
 
+        // alwaysCard (services.html #book): the card is the form, so it stands
+        // at rest with an empty brief and fills in as the textarea is typed.
+        if (opts.alwaysCard) st.brief = parse('');
         function current() { return st.brief ? view(st.refined || st.brief, st.ov) : null; }
 
         function render() {
@@ -678,7 +684,7 @@
                 const n = host.querySelector('[data-inq-field="' + focusField + '"]');
                 if (n) { n.focus(); if (sel && n.setSelectionRange) try { n.setSelectionRange(sel[0], sel[1]); } catch (e) {} }
             }
-            if (!st.counted) { st.counted = true; count('inquiry-composed'); }
+            if (!st.counted && st.text.trim()) { st.counted = true; count('inquiry-composed'); }
         }
 
         function onInput(e) {
@@ -746,7 +752,7 @@
         function sendViaRelay(msg) {
             const v = current();
             const email = String(v.email || '').trim();
-            if (st.ui === 'sending' || !EMAIL_OK.test(email)) return;
+            if (st.ui === 'sending' || !EMAIL_OK.test(email) || String(v.text || '').trim().length < 20) return;
             const hp = st.host && st.host.querySelector('[data-inq-hp]');
             st.ui = 'sending'; st.error = '';
             render();
@@ -813,7 +819,7 @@
                 // "message john: we're building…" parses only what follows.
                 const body = stripCommand(text);
                 st.prompt = !body.trim() && COMMAND.test(text);
-                st.brief = body.trim() ? parse(body) : null;
+                st.brief = body.trim() ? parse(body) : (opts.alwaysCard ? parse('') : null);
                 st.refined = null;
                 st.ui = 'draft';
                 render();
@@ -849,7 +855,7 @@
             state() { return { text: st.text, brief: st.brief, refined: st.refined, view: current(), ui: st.ui }; },
             message() { const v = current(); return v ? compose(v, { page: opts.page }) : null; },
             _refine() {
-                if (!st.brief || !embedFn) return;
+                if (!st.brief || !embedFn || !st.text.trim()) return;
                 const gen = ++st.gen;
                 clearTimeout(st.timer);
                 st.timer = setTimeout(() => {
