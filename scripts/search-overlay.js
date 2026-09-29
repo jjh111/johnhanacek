@@ -489,7 +489,10 @@
         if (typeof initialQuery === 'string' && initialQuery.trim()) input.value = initialQuery;
         // Focus after transition — before the core exists, the focused input
         // IS the instant surface
-        requestAnimationFrame(() => { input.focus(); });
+        requestAnimationFrame(() => {
+            input.focus();
+            try { input.setSelectionRange(input.value.length, input.value.length); } catch {}
+        });
 
         // A failed load leaves the shell open and typeable — the visitor loses
         // the smarts, not the surface; the next open retries the fetch.
@@ -603,6 +606,18 @@
         // only ever caught the hero's hand-written nav, so once the hero scrolled away
         // the sticky nav fell through to search.html instead of opening the overlay.
         document.addEventListener('click', (e) => {
+            // Any element with data-search-query opens the bar holding that
+            // string, caret at the end, so the visitor keeps typing. Reusable
+            // on any page that loads this script: services.html's
+            // "Send a message" buttons carry data-search-query="Send Message: ",
+            // which the inquiry composer reads as its command and answers
+            // with the message prompt.
+            const seed = e.target.closest && e.target.closest('[data-search-query]');
+            if (seed && !e.defaultPrevented) {
+                e.preventDefault();
+                openSearch(seed.getAttribute('data-search-query'));
+                return;
+            }
             const link = e.target.closest && e.target.closest('a[data-search-trigger], a[href="search.html"], a[href="./search.html"]');
             if (!link) return;
             if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;

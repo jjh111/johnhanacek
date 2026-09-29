@@ -283,7 +283,7 @@ which stamps every `?v=` cache-bust ref across root `*.html` **and** the `Portfo
   leading command ("inquire", "send a message", "message john: …", "get in touch") always opens
   the card, stripped before parsing, and with nothing after it the card is a prompt to keep
   typing; every doorway intent card (services/contact/schedule/hire) carries **Write John a
-  message**, which puts `Message John: ` in the bar. Questions ABOUT John ("should i hire him…",
+  message**, which puts `Message John: ` in the bar. **Any page element** with `data-search-query="…"` opens the ⌘K bar holding that string, caret at the end (delegated in search-overlay.js, so it works on any page that loads the overlay); services.html's three **Send a message** buttons use `Send Message: `. Questions ABOUT John ("should i hire him…",
   "how do i contact him") never raise it. **Around a card** the postcard is re-queried from the
   brief's track + offer ("Around your message: what John offers"), not from the paragraph's
   words. `search-tests/servicetest.mjs` guards all of it on the real pipeline
