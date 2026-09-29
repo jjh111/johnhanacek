@@ -79,6 +79,13 @@
       return polygon(cx, cy, [[-h, -h], [h, -h], [h, h], [-h, h]], 7);
     },
 
+    // a w × h rectangle: the classifier still reads it as a square (coral), and the engine
+    // grows coral as wide as the box it was drawn in, so a wide low box is a bed of coral
+    rect: function (cx, cy, w, h) {
+      var a = w / 2, b = h / 2;
+      return polygon(cx, cy, [[-a, -b], [a, -b], [a, b], [-a, b]], 7);
+    },
+
     // the classifier's triangle sits slightly low — apex sharper than base
     triangle: function (cx, cy, s) {
       var h = s / 2;

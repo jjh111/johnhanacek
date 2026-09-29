@@ -22,7 +22,15 @@
  *   calmSchool: true       — the school stops reading large fish as predators (no
  *                            school flee, no scatter from them); for a host that
  *                            choreographs both, so they can share the water
- *   The sizzle reel (Assets/sizzle-reel-2.html) uses all three so its fish swim over
+ *   largeRightOfWay: true  — size decides who gives way. A bigger fish takes no push,
+ *                            steer or separation from a smaller one and holds its
+ *                            line; the smaller fish resolves the whole overlap. With
+ *                            calmSchool on, a medium fish is scared off by a large
+ *                            one: it darts away, mostly sideways, for under a second
+ *                            when it comes within both fishes' reach (bodyWidths plus
+ *                            25 px), or within 110 px more while the large fish swims
+ *                            at it, then rejoins its school
+ *   The sizzle reel (Assets/sizzle-reel-2.html) uses all four so its fish swim over
  *   and look at what is on screen.
  *
  * Usage — ambient single fish (404 page):
@@ -3057,16 +3065,22 @@
                     // ---- MEDIUM FISH: Scatter from large fish ----
                     // Two-zone: always flee when very close, facing check required at medium range
                     // canChangeState gate is bypassed in the close zone (emergency scatter)
-                    if (isMedium && f.state === 'idle' && !opts.calmSchool) {
+                    // With calmSchool and largeRightOfWay, a medium fish gives way instead: it darts off
+                    // when a large fish comes close, then rejoins after a much shorter flight. Its zones
+                    // grow with the two sizes (bodyWidth is about half a fish's drawn length), so it
+                    // leaves before it touches a big fish's nose or tail, not after.
+                    const giveWay = !!opts.calmSchool && !!opts.largeRightOfWay;
+                    if (isMedium && f.state === 'idle' && (!opts.calmSchool || giveWay)) {
                         let threat = null;
                         let threatDist = Infinity;
-                        const SCATTER_CLOSE = 90;   // Always scatter regardless of facing or cooldown
-                        const SCATTER_FAR  = 150;   // Only scatter if large fish is facing us (requires canChangeState)
 
                         fish.forEach(other => {
                             if (other.id === f.id) return;
                             const otherBw = other.bodyWidth || 20;
                             if (otherBw < MEDIUM_THRESHOLD) return;
+                            const reach = otherBw + (f.bodyWidth || 20);
+                            const SCATTER_CLOSE = giveWay ? reach + 25 : 90;    // Always scatter regardless of facing or cooldown
+                            const SCATTER_FAR  = giveWay ? reach + 110 : 150;   // Only scatter if large fish is facing us (requires canChangeState)
                             // Only skip retreating large fish (they are backing OFF — not a threat)
                             // Challenging large fish ARE a threat and should scatter medium fish
                             if (other.state === 'retreating') return;
@@ -3081,9 +3095,11 @@
                                 if (d < threatDist) { threat = other; threatDist = d; threat._close = true; }
                             } else if (canChangeState) {
                                 // Far zone: only scatter if not on cooldown AND large fish is facing us
+                                // (giving way: and coming at us; a large fish hovering in place is no threat)
                                 const angleToMe = Math.atan2(-dy, -dx);
                                 const facingDiff = Math.abs(angleDiff(angleToMe, other.heading || 0));
-                                if (facingDiff < Math.PI * 0.50 && d < threatDist) {
+                                const coming = !giveWay || Math.hypot(other.vx || 0, other.vy || 0) > 0.6;
+                                if (facingDiff < Math.PI * 0.50 && coming && d < threatDist) {
                                     threat = other; threatDist = d; threat._close = false;
                                 }
                             }
@@ -3092,11 +3108,12 @@
                         // Fire scatter if: close-zone threat (always) or far-zone threat (needs cooldown clear)
                         if (threat && (threat._close || canChangeState)) {
                             f.state = 'fleeing';
-                            f.stateChangeCooldown = 2000;
-                            f.fleeTimer = 1800 + nervousness * 1000; // 1.8-2.8s scatter
+                            f.stateChangeCooldown = giveWay ? 1200 : 2000;
+                            f.fleeTimer = giveWay ? 600 + nervousness * 500 : 1800 + nervousness * 1000; // give way 0.6-1.1s, scatter 1.8-2.8s
                             f.lastThreatId = threat.id; // Remember which predator we fled
                             // Scatter away from threat - direct escape
-                            const scatterAngle = Math.atan2(f.y - threat.y, f.x - threat.x);
+                            // (giving way: mostly sideways, along the band the school swims in)
+                            const scatterAngle = Math.atan2((f.y - threat.y) * (giveWay ? 0.35 : 1), f.x - threat.x);
                             f.targetHeading = scatterAngle;
                             // Fast blend instead of instant snap — prevents one-frame visual blink
                             // when noseOffset causes the drawn body to teleport on 180° flip
@@ -3104,7 +3121,7 @@
                             f.committedHeading = scatterAngle;
                             f.reversalPressure = 0;
                             // IMMEDIATE velocity kick — direction matches target, not current heading
-                            const kickSpeed = 3.2;
+                            const kickSpeed = giveWay ? 2.6 : 3.2;
                             f.vx = Math.cos(scatterAngle) * kickSpeed;
                             f.vy = Math.sin(scatterAngle) * kickSpeed;
                         }
@@ -3510,6 +3527,14 @@
                     else if (otherBw < MEDIUM_THRESHOLD) otherSize = 'medium';
                     else otherSize = 'large';
 
+                    // opts.largeRightOfWay: size decides who gives way. The bigger fish takes no
+                    // push, no steer and no separation from a smaller one; the smaller one yields
+                    // the whole overlap (below), so a school parts around a large fish instead of
+                    // shoving it off its line.
+                    const SIZE_RANK = { small: 0, medium: 1, large: 2 };
+                    if (opts.largeRightOfWay && SIZE_RANK[sizeCategory] > SIZE_RANK[otherSize]) return;
+                    const yielding = !!opts.largeRightOfWay && SIZE_RANK[sizeCategory] < SIZE_RANK[otherSize];
+
                     // ---- PHASE 2: Cross-size awareness multiplier ----
                     // Smaller fish detect predators from farther away
                     const awarenessMultiplier = getAwarenessMultiplier(sizeCategory, otherSize);
@@ -3563,11 +3588,13 @@
                                 // EMERGENCY: Severe overlap - strong steering + direct position push
                                 // SKIP position push when close to food
                                 inEmergencyCollision = true;
-                                const emergencyStrength = (bothMedium ? 0.10 : 0.08) * collisionReduction;
+                                const emergencyStrength = (yielding ? 0.14 : bothMedium ? 0.10 : 0.08) * collisionReduction;
                                 f.targetHeading += angleDiff(avoidAngle, f.heading) * emergencyStrength;
 
                                 // Emergency position nudge - SKIP when seeking food nearby
-                                const pushStrength = bothMedium
+                                // (a fish yielding to a bigger one resolves the whole overlap itself)
+                                const pushStrength = yielding ? Math.min(3.5, overlap * 0.3)
+                                    : bothMedium
                                     ? Math.min(3, overlap * 0.25)
                                     : Math.min(2, overlap * 0.15);
                                 f.x += (dx / d) * pushStrength;
@@ -3575,7 +3602,7 @@
                             } else {
                                 // BUFFER: Normal overlap - moderate steering
                                 // Large-vs-large: halve the steer to reduce oscillation during challenge/retreat
-                                const baseSteeer = bothMedium ? 0.035 : bothLarge ? 0.022 : 0.045;
+                                const baseSteeer = yielding ? 0.06 : bothMedium ? 0.035 : bothLarge ? 0.022 : 0.045;
                                 const steerStrength = baseSteeer * collisionReduction;
                                 const overlapFactor = Math.min(1.5, overlap / 15);
                                 f.targetHeading += angleDiff(avoidAngle, f.heading) * steerStrength * (1 + overlapFactor);

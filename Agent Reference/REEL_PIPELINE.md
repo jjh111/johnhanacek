@@ -257,6 +257,59 @@ so the editor is also published as a claude.ai artifact: the same rig, timeline 
 Limits: the hosted page carries only the pictures and clips the script names when it is built,
 so a new picture needs a rebuild and republish; it opens on the wide format.
 
+## What John saw in the editor (2026-09-29)
+
+John's first session in the hosted editor: some text sat too low (the title, scene 2, worst); was
+that the editor or the film ("I need WYSIWYG")? The smaller fish shoved the big fish around (they
+should be scared off by it). The coral could run wider along the bottom.
+
+- **The editor is the film.** Measured, not assumed: the hosted page, built fresh and wrapped the
+  way claude.ai wraps a page, paused at 13 moments in windows of 1280, 1600 and 2560 px, against
+  the renderer's own frames (`?render=1`, `REEL.frame(t)`): 714 text and panel boxes, the largest
+  difference 0.00 px. It was 1 px on the logo wall before `#stage` stated its own `font-size`
+  (16px, what the film inherits): claude.ai's frame sets `body { font: 14px ... }`, and a line box
+  sized by `line-height: normal` followed it. A hosted page must never inherit type from its host.
+  The fonts cannot differ by platform either: Raleway's hhea and typo metrics agree (940/-234,
+  USE_TYPO_METRICS set) and JetBrains Mono's three tables agree (1020/300).
+- **So "too low" was real, in the film too.** The title and end copy were centred on their box,
+  and an oval is not a box: the tagline's ends sat on the lower curve. `fitInOval(block, oval,
+  clear)` measures each line's width at its top and bottom edges against the ellipse and moves the
+  block to the nearest position where every line keeps `clear` (4% of the oval's width) inside.
+  Title and end, every format; the wide title oval is 400 px tall (was 380).
+- **The opening.** The engine lifts a new large fish into the upper half of the tank, which put
+  the loop's fish 115 px above the loop and over the caption. The rig now sets it where it was
+  drawn and holds it level until the caption is out.
+- **Coral beds.** The command scene's two coral strokes are wide low rectangles
+  (`JHStrokes.points.rect`); the engine grows a stalk per 20 px of width, up to 8, so each bed
+  runs along the floor.
+- **Right of way** (`largeRightOfWay`, a fish-engine host option, inert on every other page). A
+  bigger fish takes no push, steer or separation from a smaller one; the smaller one resolves the
+  whole overlap. With `calmSchool`, a medium fish is scared off instead of crowding in: it darts
+  away, mostly sideways, for under a second, once it is within both fishes' reach (their
+  bodyWidths plus 25 px; this big fish is 102), or 110 px further while the big fish swims at it.
+  A big fish hovering in place scares nobody.
+- **The big fish's parking, rebuilt around that.** The shoves had been hiding its fidgets: nothing
+  pushes it now, so it no longer drifts toward its next spot. It stays while it is 60-400 px out
+  on its side of the thing it looks at. A new look it already faces is judged by that band, not by
+  the exact spot (a 14 px correction used to cost a turn through a full circle). Parked, it slows
+  as it nears the band's top or inner edge; the slow swim, nose up, used to carry it 120 px up
+  over a long look. A look can name its side (`look(t0, t1, x, y, side)`): the command scene
+  says right, since the school is born on the left, and square and vertical used to swim the big
+  fish straight into it. The school's patrol keeps 320 px from the big fish.
+- **Measured, and now a suite:** `reel-tests/fishtest.mjs` simulates the cut at 60 Hz in the
+  renderer's page and reads the tank after every tick. On the 60 s cut, before this change, the
+  big fish was shoved 314 px and touched for 4.3 s in wide, 995 px and 14.8 s in square. Now it is
+  never shoved (no tick over 0.5 px) and smaller fish spend under 0.5 s within reach, in every
+  format; the suite holds that. U-turns: wide 6 to 4, vertical 7 to 2. Averaged over six seeds, a
+  school member is scared off 4 times a cut in vertical, 12 in wide and 15 in square (square is
+  cramped: 1080 px for the big fish, the school and the copy).
+- **His edits came home** (`ArtifactData` → `Assets/sizzle-reel-2.script.txt`, checked by both
+  checkers): the title runs 5 s with the tagline "Product Design Engineer | Artist", the answer's
+  support line is "Tools for new thought", the feature's clip beats moved to @0.25 and @4, the
+  logos run 5.5 s, and the end card reads "Science meets Craft". The cut is 63.5 s. Four suites had
+  pinned the 60 s cut's numbers; they now read them from the script (the cut's total, the answer's
+  length, cue moments counted from their scenes), so an edit in the editor cannot break them.
+
 ## Later
 
 Scene-specific cues (line staggers, the push); moving cut 1 onto the one player; a music track

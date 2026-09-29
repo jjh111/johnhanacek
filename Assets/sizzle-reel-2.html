@@ -57,8 +57,12 @@
 <style>
 :root { color-scheme: dark; }
 html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+/* font-size and line-height are stated, not inherited: a page that hosts the rig brings its own body
+   font (claude.ai's frame sets 14px), and every line box sized by line-height: normal would follow it,
+   so the editor drew the logo wall 1 px off the film. 16px is what the film inherits. */
 #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; transform-origin: 0 0;
-  background: var(--sea-deep); color: var(--text-primary); font-family: var(--font-mono); -webkit-font-smoothing: antialiased; }
+  background: var(--sea-deep); color: var(--text-primary); font-family: var(--font-mono); font-size: 16px; line-height: normal;
+  -webkit-font-smoothing: antialiased; }
 /* Raleway's default figures are old-style; every number in the reel stands on the baseline. An id
    selector, because each `font:` shorthand below resets font-variant-numeric to normal. */
 #stage, #stage * { font-variant-numeric: lining-nums; }
@@ -451,10 +455,10 @@ p, h1, h2, h3 { margin: 0; }
       tankY: 540, tankH: 540, colY: 457,           // copy columns centre here, clear of bar and tank
       spotY: 322, schoolY: 296,                    // tank px (stage 862 / 836); 296 is as deep as the engine lets a school waypoint go
       open: { cx: 924, cy: 895, guideTop: 792 },
-      oval: { cy: 380, w: 1200, h: 380 }, eoval: { cy: 430, w: 1160, h: 360 }, titleLook: 390, pillTop: 156,
+      oval: { cy: 380, w: 1200, h: 400 }, eoval: { cy: 430, w: 1160, h: 360 }, titleLook: 390, pillTop: 156,
       answer: { x: 96, look: 560 },
       art: { col: { x: 96, w: 900 }, port: { x: 1824 - 250, y: 457, r: 250 } },
-      command: { fish: [[470, 872], [595, 930], [720, 866], [845, 924]], coral: [[300, 1000, 92], [1730, 1006, 82]] },
+      command: { fish: [[470, 872], [595, 930], [720, 866], [845, 924]], coral: [[330, 1002, 300, 92], [1630, 1006, 280, 86]] },
       results: { rows: { x: 96, y: 204, w: 780 }, col: { x: 96, w: 780, cy: 457 }, win: { x: 924, y: 204, w: 900, h: 506 } },
       feature: { win: { x: 96, y: 204, w: 900, h: 506 }, col: { x: 1044, w: 780, cy: 457 } },
       panel: { x: 96, y: 204, w: 1728, h: 506 },
@@ -469,7 +473,7 @@ p, h1, h2, h3 { margin: 0; }
       oval: { cy: 400, w: 936, h: 460 }, eoval: { cy: 450, w: 936, h: 420 }, titleLook: 410, pillTop: 148,
       answer: { x: 72, look: 540 },
       art: { col: { x: 72, w: 470 }, port: { x: 1008 - 215, y: 487, r: 215 } },
-      command: { fish: [[210, 900], [330, 950], [450, 894], [570, 944]], coral: [[140, 1010, 80], [955, 1016, 72]] },
+      command: { fish: [[210, 900], [330, 950], [450, 894], [570, 944]], coral: [[200, 1010, 250, 80], [870, 1014, 230, 74]] },
       results: { rows: { x: 72, y: 184, w: 936 }, col: { x: 72, w: 450, cy: 487 }, win: { x: 558, y: 217, w: 450, h: 540 } },
       feature: { win: { x: 72, y: 217, w: 450, h: 540 }, col: { x: 558, w: 450, cy: 487 } },
       panel: { x: 72, y: 217, w: 936, h: 540 }, intent: { x: 72, y: 184, w: 936, h: 606 },
@@ -484,7 +488,7 @@ p, h1, h2, h3 { margin: 0; }
       oval: { cy: 740, w: 936, h: 520 }, eoval: { cy: 800, w: 936, h: 460 }, titleLook: 750, pillTop: 476,
       answer: { x: 72, look: 540 },
       art: { col: { x: 72, w: 936, cy: 1090 }, port: { x: 540, y: 526, r: 240 } },
-      command: { fish: [[210, 1700], [330, 1750], [450, 1694], [570, 1744]], coral: [[140, 1850, 84], [955, 1856, 76]] },
+      command: { fish: [[210, 1700], [330, 1750], [450, 1694], [570, 1744]], coral: [[200, 1850, 250, 84], [870, 1854, 230, 78]] },
       results: { rows: { x: 72, y: 270, w: 936 }, col: { x: 72, w: 936, cy: 530 }, win: { x: 72, y: 830, w: 936, h: 527 } },
       feature: { win: { x: 72, y: 270, w: 936, h: 527 }, col: { x: 72, w: 936, cy: 1100 } },
       panel: { x: 72, y: 495, w: 936, h: 660 }, intent: { x: 72, y: 405, w: 936, h: 840 },
@@ -702,14 +706,14 @@ p, h1, h2, h3 { margin: 0; }
   // it can) and tilts its nose up at it; the school sweeps along the other side.
   // Both go through the engine's opt-in host hooks: every turn is the engine's arc.
   const ATTN = [];
-  const look = (t0, t1, x, y) => ATTN.push({ t0, t1, x, y });
+  const look = (t0, t1, x, y, side) => ATTN.push({ t0, t1, x, y, want: side });   // side: 1 right of it, -1 left, else wherever the fish is
   let reelT = 0, BIG = null;                   // the reel's clock as the tank sees it; the opening's fish
   const SPOT_Y = F.spotY, SCHOOL_Y = F.schoolY;   // tank px: where the big fish stands and the school sweeps (FORMATS)
   const BIG_DX = 250, SCHOOL_DX = 210;         // how far to either side of the thing each one stands
   const attnAt = t => { let a = null; for (const x of ATTN) if (t >= x.t0 && t < x.t1 && (!a || x.t0 >= a.t0)) a = x; return a; };
   const sideOf = A => {                        // decided once, from where the big fish is when it notices
     if (A.side === undefined) {
-      A.side = BIG && BIG.x > A.x ? 1 : -1;
+      A.side = A.want || (BIG && BIG.x > A.x ? 1 : -1);
       if (A.x + A.side * BIG_DX < 140 || A.x + A.side * BIG_DX > W - 140) A.side = -A.side;
     }
     return A.side;
@@ -728,7 +732,15 @@ p, h1, h2, h3 { margin: 0; }
     if (!A) return null;
     const sx = Math.max(140, Math.min(W - 140, A.x + sideOf(A) * BIG_DX));
     const dx = sx - f.x, dy = SPOT_Y - f.y, d = Math.hypot(dx, dy);
-    if (d > (f.reelAtSpot ? 130 : 46)) {       // swim over, faster the further it has to go
+    // Beside the thing is a band, not a point. Parked, it stays while it is 60-400 px out on its
+    // side; arriving, it stops within 80 px of the spot if it already faces the thing. A few px
+    // of correction is never worth a turn through a full circle, and nothing shoves it now.
+    const out = (f.x - A.x) * sideOf(A);
+    const facing = Math.cos(Math.atan2((A.y - TANK_Y) - f.y, A.x - f.x) - f.heading) > 0;
+    if (f.reelLook !== A) { f.reelLook = A; if (facing) f.reelAtSpot = true; }   // a new look it already faces: the band decides
+    const there = f.reelAtSpot ? out > 60 && out < 400 && Math.abs(dy) < 120
+      : d <= 46 || (facing && Math.abs(dx) < 80 && Math.abs(dy) < 80);
+    if (!there) {                              // swim over, faster the further it has to go
       f.reelAtSpot = false;
       let speed = Math.min(2.4, 0.9 + d / 200);
       // Courtesy: the school is slower and always to its right. If it is still in the way,
@@ -743,17 +755,26 @@ p, h1, h2, h3 { margin: 0; }
       return { heading, speed };
     }
     f.reelAtSpot = true;                       // there: nose up at the thing, barely moving
-    return { heading: clampTilt(Math.atan2((A.y - TANK_Y) - f.y, A.x - f.x), 0.62, f.heading), speed: 0.12 };
+    // It hovers. Even this slow a swim, nose up, would carry it 100 px up and in over a long
+    // look, so it slows as it nears the top or the inner edge of its band (the tail beats on).
+    const hover = Math.max(0.15, Math.min(1, (f.y - (SPOT_Y - 70)) / 50, (out - 90) / 80));
+    return { heading: clampTilt(Math.atan2((A.y - TANK_Y) - f.y, A.x - f.x), 0.62, f.heading), speed: 0.12 * hover };
   }
   // The school's waypoint sweeps slowly left and right under the thing: a school parked on a
   // fixed point circles it (its turn rate is capped) and rides up behind the copy.
+  // It never sweeps into the big fish's water: the school gives way to it (largeRightOfWay), so
+  // a sweep that ran into it would only scatter the school again. The darts are for when the big
+  // fish comes to them.
+  const SCHOOL_GAP = 320;
   function schoolSpot(c) {
     const A = attnAt(reelT);
     if (!A) return null;
-    const x = Math.max(160, Math.min(W - 160, A.x - sideOf(A) * SCHOOL_DX + 170 * Math.sin(reelT * 0.55)));
+    const inW = x => Math.max(160, Math.min(W - 160, x));
+    let x = inW(A.x - sideOf(A) * SCHOOL_DX + 170 * Math.sin(reelT * 0.55));
+    if (BIG && Math.abs(x - BIG.x) < SCHOOL_GAP) x = inW(BIG.x + (x < BIG.x ? -SCHOOL_GAP : SCHOOL_GAP));
     return { x, y: SCHOOL_Y, pace: 1 + Math.min(1, Math.abs(x - c.x) / 500) };   // hurry when far
   }
-  const tank = FishCanvas(tankEl, { transparent: true, seedFish: false, seedJellyfish: false, steer: steerBig, schoolTarget: schoolSpot, calmSchool: true });
+  const tank = FishCanvas(tankEl, { transparent: true, seedFish: false, seedJellyfish: false, steer: steerBig, schoolTarget: schoolSpot, calmSchool: true, largeRightOfWay: true });
   const inTank = pts => pts.map(p => ({ x: p.x, y: p.y - TANK_Y }));   // stage → tank coordinates
   function spawnStroke(stagePts, kind, heading) {
     tank.processStroke(inTank(stagePts), [kind]);
@@ -783,6 +804,31 @@ p, h1, h2, h3 { margin: 0; }
     return { x, y, w: el.offsetWidth, h: el.offsetHeight };
   };
   const centreColumn = (col, cy = COL_Y) => LAYOUT.push(() => { col.style.top = (cy - col.offsetHeight / 2) + 'px'; });
+  // Text set inside an oval sits where the curve leaves it room. An ellipse narrows toward its
+  // top and bottom, so a wide line centred on the oval's box can run into its edge: the title's
+  // tagline did, its ends on the curve, and the whole name read as sitting too low. Each line
+  // (each child of the block) keeps at least `clear` px from the curve on both sides across its
+  // whole height. The block moves the least it must from the oval's centre; if no position gives
+  // every line that room, it takes the one that gives the most. It reads real widths, so new
+  // words fit the same way.
+  function fitInOval(block, o, clear = o.w * 0.04) {
+    const rx = o.w / 2, ry = o.h / 2, H0 = block.offsetHeight, top0 = o.cy - H0 / 2;
+    // (an <svg> child has no offset box, so every child is read from its client rect, in the
+    // block's own px whatever transform an ancestor carries)
+    const b = block.getBoundingClientRect(), k = b.height / H0 || 1;
+    const rows = [...block.children].map(e => { const r = e.getBoundingClientRect(); return { y: (r.top - b.top) / k, h: r.height / k, w: r.width / k }; });
+    const room = dy => Math.min(...rows.map(r => Math.min(...[r.y, r.y + r.h].map(y => {
+      const v = (top0 + dy + y - o.cy) / ry;
+      return (Math.abs(v) >= 1 ? -1e6 : rx * Math.sqrt(1 - v * v)) - r.w / 2;
+    }))));
+    let best = 0, most = room(0);
+    for (let s = 1; most < clear && s <= H0; s++) for (const dy of [-s, s]) {
+      const r = room(dy);
+      if (r >= clear) { most = r; best = dy; break; }
+      if (r > most) { most = r; best = dy; }
+    }
+    block.style.top = (top0 + best) + 'px';
+  }
   function mediaLayer(host, b, start, end) {
     const layer = document.createElement('div'); layer.className = 'layer';
     let m;
@@ -884,9 +930,16 @@ p, h1, h2, h3 { margin: 0; }
       const g1 = inner(el, '.g1'), g2 = inner(el, '.g2');
       const D0 = 0.2, D1 = 0.95, DONE = D0 + D1, OUT = sc.dur - ReelScript.cue(sc, 'out');   // cue out: when the guide leaves
       let born = null;
-      at(sc.start + DONE, () => { born = BIG = spawnStroke(pts, 'fish', Math.PI); });
-      // the new fish holds its heading until it has swum clear of the loop it was drawn as
-      TICKS.push(t => { if (born && t - sc.start < DONE + 0.45) { born.heading = born.targetHeading = born.cruiseAngle = Math.PI; born.vx = -0.3; born.vy = 0; } });
+      // The loop becomes the fish where it was drawn. (The engine lifts a new large fish into the
+      // upper half of the tank, its territory on the site; here that put it 115 px above the loop,
+      // swimming up through the caption.)
+      at(sc.start + DONE, () => {
+        born = BIG = spawnStroke(pts, 'fish', Math.PI);
+        if (born) { born.x = cx; born.y = cy - TANK_Y; }
+      });
+      // and it swims level, clear of the caption above it, until the caption has gone
+      const LEVEL = Math.max(DONE + 0.45, OUT + 0.35);
+      TICKS.push(t => { if (born && t - sc.start < LEVEL) { born.heading = born.targetHeading = born.cruiseAngle = Math.PI; born.vx = -0.3; born.vy = 0; } });
       return (lt) => {
         const k = seg(lt, D0, D1, E.inOutCubic);
         paths.forEach(p => { p.style.strokeDashoffset = fx(L * (1 - k)); });
@@ -906,7 +959,7 @@ p, h1, h2, h3 { margin: 0; }
       const tt = el.querySelector('.tt'), name = el.querySelector('.name'), sig = el.querySelector('.sig');
       const letters = [...name.querySelectorAll('.li')], tags = inner(el, '.tag > .lm'), dots = [...el.querySelectorAll('.tag .dot')];
       const write = sigWriter(sig);
-      LAYOUT.push(() => { tt.style.top = (F.oval.cy - tt.offsetHeight / 2 + 6) + 'px'; });
+      LAYOUT.push(() => fitInOval(tt, F.oval));
       const OUT = sc.dur - ReelScript.cue(sc, 'out');   // cue out: when the name leaves
       look(sc.start + 0.3, sc.end, CX, F.titleLook);
       return (lt) => {
@@ -1042,10 +1095,10 @@ p, h1, h2, h3 { margin: 0; }
       const G = JHStrokes.points;
       const icon = k => `<svg viewBox="0 0 24 24">${JHStrokes.marks[k === 'square' ? 'square' : 'loop']()}</svg>`;
       // where the command's strokes land: four medium loops left of the card, clear of the big fish
-      // (it watches the card from the right, coming from the art); two squares out in the corners
+      // (it watches the card from the right, coming from the art); two wide boxes along the floor
       const FISH = F.command.fish, CORAL = F.command.coral, PW = F.plan ? F.plan.w : 700;
       const strokes = FISH.map(([x, y]) => ({ pts: G.loop(x, y, 1.0), kind: 'fish' }))
-        .concat(CORAL.map(([x, y, s]) => ({ pts: G.square(x, y, s), kind: 'coral' })));
+        .concat(CORAL.map(([x, y, w, h]) => ({ pts: G.rect(x, y, w, h), kind: 'coral' })));   // wide low boxes: coral beds along the floor
       const rowOf = strokes.map(s => sc.plan.findIndex(p => (p.glyph === 'square') === (s.kind === 'coral')));
       const strip = '0123456789'.split('').map(d => `<i>${d}</i>`).join('');
       const el = segEl(sc, `
@@ -1067,7 +1120,7 @@ p, h1, h2, h3 { margin: 0; }
       const draw = strokes.map((s, i) => ({ a: TAP + 0.15 + i * 0.1, d: s.kind === 'fish' ? 0.2 : 0.24 }));
       const born = draw.map(dd => dd.a + dd.d);
       draw.forEach((dd, i) => at(sc.start + born[i], () => spawnStroke(strokes[i].pts, strokes[i].kind, strokes[i].kind === 'fish' ? Math.PI : null)));
-      look(sc.start + IN, sc.end, CX, COL_Y);
+      look(sc.start + IN, sc.end, CX, COL_Y, 1);   // from the right, whatever the frame: the school is born on the left
       const DONE = Math.max(...born), OUT = sc.dur - ReelScript.cue(sc, 'out');   // cue out
       return (lt) => {
         pop(plan, lt, IN, OUT, { from: 0.94, rise: 16 });
@@ -1218,7 +1271,7 @@ p, h1, h2, h3 { margin: 0; }
       TAPS.forEach(tp => at(sc.start + tp.t, () => tank.addFood(tp.x, tp.y - TANK_Y)));
       const taps = TAPS.map((tp, i) => ({ tp, c: el.querySelector('.c' + i), r: el.querySelector('.r' + i) }));
       LAYOUT.push(() => {
-        endc.style.top = (F.eoval.cy - endc.offsetHeight / 2 + 4) + 'px';
+        fitInOval(endc, F.eoval);
         pill.style.left = (CX - pill.offsetWidth / 2) + 'px'; pill.style.top = F.pillTop + 'px';
       });
       return (lt) => {
