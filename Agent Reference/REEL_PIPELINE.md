@@ -225,6 +225,15 @@ so the editor is also published as a claude.ai artifact: the same rig, timeline 
   version plays in place of the file; Revert (`discardDraft`) deletes it and plays the file.
   Contract (documented in the rig where it reads it): `{ name, ready, load(path), save(path,
   text), discard(path), download(filename, text), media(path) }`.
+- **Never wait on the viewer to start.** claude.ai asks the viewer before a page first uses its
+  store, and the call waits until they answer. Version 1 of the hosted editor read the store
+  before drawing, so it sat on a black screen behind that question (John saw exactly that). Now
+  `load()` reads the store only when `permissions.state('db')` (which never asks) is already
+  `granted`, gives up after 2.5 s either way (a later answer offers "Play it"), and the first
+  save is what asks. Each save also leaves a copy in the tab, so the reload after a save plays it
+  at once, whether or not the grant is remembered. A viewer's no turns saves into tab drafts. The
+  dev-server check no longer holds the start either: the reel plays, and only saving waits on it.
+  While it loads, a boot line names what it is waiting for, so a stall is never a black screen.
 - **`scripts/reel-host-claude.js`** is claude.ai's host: the page's `db` capability, one document
   per file at `files/<name>` = `{ text, file, savedAt }`; downloads through the viewer's save
   dialog; media paths with a space become underscores (a published path cannot hold one); a
@@ -238,10 +247,12 @@ so the editor is also published as a claude.ai artifact: the same rig, timeline 
   `files/sizzle-reel-2.score.txt`, write them over the repo's files, check them
   (`reel-script.js check`, `reel-music.js check`), commit, render.
 - **Test:** `reel-tests/hosttest.mjs` builds the page, serves it from a plain UTF-8 server with a
-  stand-in for claude.ai's capabilities and a light theme stamped on it, and checks the host is
-  found, the reel stays dark, a timeline save and a rack change land in the store and survive
-  the reload, Download goes through the save dialog, Revert plays the file, and that without the
-  capabilities the page still plays and keeps drafts.
+  stand-in for claude.ai's capabilities whose store calls wait on the viewer's answer, as
+  claude.ai's do, and a light theme stamped on the page. It checks the reel starts asking
+  nothing and stays dark, the first save asks and lands, the reload plays it at once, a rack
+  change does the same, Download goes through the save dialog, Revert plays the file, a grant
+  from before loads the saved version in a new tab, a slow store never holds the start, a no
+  keeps drafts, and without the capabilities the page still plays.
 
 Limits: the hosted page carries only the pictures and clips the script names when it is built,
 so a new picture needs a rebuild and republish; it opens on the wide format.

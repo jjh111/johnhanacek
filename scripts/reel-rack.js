@@ -104,8 +104,8 @@
   // ── the model ─────────────────────────────────────────────────────────
   let src = null, P = null, A = null, fileText = null, draft = false, err = '';
   // a page host that keeps saves when there is no dev server (the editor published on claude.ai)
-  let HOST = !L.dev && window.REEL_HOST ? window.REEL_HOST : null;
-  let hosted = false;                                                    // playing the host's saved version
+  const HOST = !L.dev && window.REEL_HOST ? window.REEL_HOST : null;
+  let hosted = false, hostRefused = false;                               // playing the host's saved version; the viewer said no
   let ctx = null, player = null;
   const undoS = get(K_UNDO, []), redoS = get(K_REDO, []);
   const root = document.createElement('div'); root.id = 'reel-rack'; root.hidden = true; document.body.appendChild(root);
@@ -178,10 +178,12 @@
         const j = r.json ? await r.json().catch(() => ({})) : {};
         if (!r.ok) status('not saved: ' + ((j.errors || []).join(' · ') || r.status), true);
         else { fileText = text; draft = false; try { sessionStorage.removeItem(DRAFT_KEY); } catch (e) { /* none */ } status(`saved ${NAME}`); }
-      } else if (HOST) {
+      } else if (HOST && await Promise.resolve(HOST.ready).catch(() => false) && !hostRefused) {
+        // the first save asks the viewer to let the page store data; a no keeps drafts in the tab
         const r = await Promise.resolve(HOST.save(FILE, text)).catch(e => ({ ok: false, errors: [e && e.message || String(e)] }));
-        if (!r || !r.ok) status('not saved: ' + ((r && r.errors) || []).join(' · '), true);
-        else { hosted = true; draft = false; try { sessionStorage.removeItem(DRAFT_KEY); } catch (e) { /* none */ } status(`saved on ${HOST.name}`); }
+        if (r && r.ok) { hosted = true; draft = false; try { sessionStorage.removeItem(DRAFT_KEY); } catch (e) { /* none */ } status(`saved on ${HOST.name}`); }
+        else if (r && r.fallback) { hostRefused = true; if (put(DRAFT_KEY, text)) { draft = true; status(`${HOST.name} is not storing data for this page, so this is a draft in this tab`); } }
+        else status('not saved: ' + ((r && r.errors) || []).join(' · '), true);
       } else if (put(DRAFT_KEY, text)) { draft = true; status('kept as a draft in this tab (run node scripts/reel-dev.mjs to save the file)'); }
       else status('not saved: this browser keeps no drafts here', true);
     } finally { saving = false; if (dirtyText != null) flush(); }
@@ -537,7 +539,6 @@
     let text = null;
     fileText = await fetch('./' + NAME, { cache: 'no-store' }).then(r => r.ok ? r.text() : null, () => null);
     try { const d = sessionStorage.getItem(DRAFT_KEY); if (d != null) { text = d; draft = true; } } catch (e) { /* no drafts */ }
-    if (HOST && HOST.ready && !(await Promise.resolve(HOST.ready).catch(() => false))) HOST = null;
     if (text == null && HOST) { const h = await Promise.resolve(HOST.load(FILE)).catch(() => null); if (h != null) { text = h; hosted = true; } }
     if (text == null) text = fileText;
     if (text != null) {

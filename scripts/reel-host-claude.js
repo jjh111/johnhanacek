@@ -5,16 +5,43 @@
 // repo with its ArtifactData tool. Downloads go through the viewer's save dialog (`downloads`).
 // A published file name cannot hold a space, so media paths trade spaces for underscores.
 //
+// claude.ai asks the viewer before a page first uses its store, and the call waits until they
+// answer. So nothing here asks while the page starts: load() only reads the store when the viewer
+// has already allowed it (permissions.state, which never asks), and gives up after a few seconds
+// either way; the first save is what asks. Each save also leaves a copy in this tab, so the
+// reload that follows a save plays it at once.
+//
 // window.REEL_HOST is the contract the rig documents where it reads it (Assets/sizzle-reel-2.html):
 // { name, ready, load(path), save(path, text), discard(path), download(filename, text), media(path) }.
 (function () {
   'use strict';
-  const WAIT = 5000;
-  const within = (p, ms) => Promise.race([p, new Promise(r => setTimeout(() => r(null), ms))]);
+  const within = (p, ms, dflt = null) => Promise.race([p, new Promise(r => setTimeout(() => r(dflt), ms))]);
   const cap = name => (window.claude && typeof window.claude.use === 'function'
-    ? within(window.claude.use(name), WAIT).catch(() => null) : Promise.resolve(null));
-  const dbP = cap('db');
-  const ref = async path => { const db = await dbP; return db ? db.doc('files/' + path.replace(/^.*\//, '')) : null; };
+    ? within(window.claude.use(name), 5000).catch(() => null) : Promise.resolve(null));
+  const dbP = cap('db'), permsP = cap('permissions');
+  const nameOf = path => path.replace(/^.*\//, '');
+  const ref = async path => { const db = await dbP; return db ? db.doc('files/' + nameOf(path)) : null; };
+  const COPY = 'reel-host-copy:';
+  const copy = {
+    get: path => { try { return sessionStorage.getItem(COPY + nameOf(path)); } catch (e) { return null; } },
+    set: (path, text) => { try { sessionStorage.setItem(COPY + nameOf(path), text); } catch (e) { /* no storage */ } },
+    drop: path => { try { sessionStorage.removeItem(COPY + nameOf(path)); } catch (e) { /* no storage */ } },
+  };
+  // has the viewer already allowed the store? (never asks)
+  async function allowed() {
+    const p = await permsP;
+    if (!p) return false;
+    try { return (await within(p.state('db'), 1500)) === 'granted'; } catch (e) { return false; }
+  }
+  async function loadNow(path) {
+    if (!(await allowed())) return null;
+    const r = await ref(path);
+    if (!r) return null;
+    const s = await r.get();
+    const v = s.exists ? s.data() : null;
+    return v && typeof v.text === 'string' ? v.text : null;
+  }
+  const refused = e => e && ['not_granted', 'capability_disabled', 'capability_removed', 'revoked'].includes(e.code);
   const why = e => e && e.code === 'invalid_argument' ? 'this view can play the reel but not change it'
     : e && e.code === 'quota_exceeded' ? "this page's store is full"
     : 'the save did not go through (' + (e && (e.code || e.message) || e) + ')';
@@ -22,25 +49,32 @@
   window.REEL_HOST = {
     name: 'claude.ai',
     ready: dbP.then(db => !!db),
-    async load(path) {
-      const r = await ref(path);
-      if (!r) return null;
-      try { const s = await r.get(); const v = s.exists ? s.data() : null; return v && typeof v.text === 'string' ? v.text : null; }
-      catch (e) { return null; }
+    // the saved version, or null: this tab's copy at once, else the store if the viewer has
+    // allowed it and it answers within 2.5 s (a later answer offers to reload into it)
+    load(path) {
+      const mine = copy.get(path);
+      if (mine != null) return Promise.resolve(mine);
+      return new Promise(resolve => {
+        let done = false;
+        loadNow(path).catch(() => null).then(text => {
+          if (!done) { done = true; resolve(text); } else if (text != null) offerLate();
+        });
+        setTimeout(() => { if (!done) { done = true; resolve(null); } }, 2500);
+      });
     },
     async save(path, text) {
       const r = await ref(path);
-      if (!r) return { ok: false, errors: ['this view cannot keep saves'] };
+      if (!r) return { ok: false, fallback: true, errors: ['this view cannot keep saves'] };
       for (let k = 0; k < 2; k++) {
-        try { await r.set({ text, file: path, savedAt: new Date().toISOString() }); return { ok: true }; }
+        try { await r.set({ text, file: path, savedAt: new Date().toISOString() }); copy.set(path, text); return { ok: true }; }
         catch (e) {
           if (k === 0 && e && e.code === 'unavailable') { await new Promise(res => setTimeout(res, 400 + Math.random() * 600)); continue; }
-          return { ok: false, errors: [why(e)] };
+          return { ok: false, fallback: refused(e), errors: [why(e)] };
         }
       }
       return { ok: false, errors: ['the save did not go through'] };
     },
-    async discard(path) { const r = await ref(path); if (r) await r.delete(); },
+    async discard(path) { copy.drop(path); const r = await ref(path); if (r) await r.delete(); },
     async download(filename, text) {
       const dl = await cap('downloads');
       if (!dl) return false;
@@ -48,6 +82,18 @@
     },
     media: p => p.replace(/ /g, '_'),
   };
+
+  // A saved version that arrived after the reel had started: offer it rather than switch under you.
+  function offerLate() {
+    if (document.getElementById('reel-late')) return;
+    const b = document.createElement('div');
+    b.id = 'reel-late'; b.setAttribute('role', 'status');
+    b.style.cssText = 'position:fixed;left:50%;top:calc(16px + env(safe-area-inset-top, 0px));transform:translateX(-50%);z-index:80;display:flex;gap:12px;align-items:center;'
+      + 'padding:10px 14px;border-radius:10px;background:rgba(var(--surface-rgb),0.97);border:1px solid rgba(var(--gold-rgb),0.55);font:500 13px/1.3 var(--font-mono);color:var(--text-primary)';
+    b.innerHTML = '<span>Your saved version is ready.</span><button type="button" style="font:inherit;color:var(--gold);background:none;border:1px solid rgba(var(--gold-rgb),0.55);border-radius:7px;padding:6px 10px;cursor:pointer">Play it</button>';
+    b.querySelector('button').onclick = () => location.reload();
+    document.body.appendChild(b);
+  }
 
   // Where the preview was: every save reloads the page, and a framed page can lose its #hash on
   // the way, so this tab keeps it too.
@@ -82,7 +128,7 @@
   card.innerHTML = `<h2>Sizzle reel editor</h2>
 <p>Click the reel, then <kbd>space</kbd> plays and pauses. <kbd>[</kbd> <kbd>]</kbd> jump a scene, <kbd>L</kbd> loops one.</p>
 <p><kbd>E</kbd> opens the timeline: drag a scene's edge or a beat, or click a scene to change its words. <kbd>M</kbd> opens the synth rack.</p>
-<p>Every change saves to this page. Ask Claude to bring your edits into the repo and render them.</p>
+<p>Your changes save to this page. The first save asks you to let it store data. Ask Claude to bring your edits into the repo and render them.</p>
 <div class="row"><button type="button" data-go="e">Open the timeline</button><button type="button" data-go="m">Open the synths</button><button type="button" data-go="x">Got it</button></div>`;
   const close = () => { card.remove(); try { localStorage.setItem(K_SEEN, '1'); } catch (e) { /* no storage */ } };
   card.addEventListener('click', e => {
