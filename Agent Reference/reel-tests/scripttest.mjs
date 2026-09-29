@@ -81,6 +81,41 @@ const sceneLn = i => marks.find(m => m.kind === 'scene' && m.obj === edit.scenes
   ok(RS.setCue(moved, sceneLn(2), 'out', null) === SRC, 'setCue with null removes it: back to the original, byte for byte');
 }
 
+// ── fish lines: directing the fish ──
+{
+  const res = sceneLn(5);
+  let out = RS.addLine(SRC, res, 'fish', '@0.5 big to 0.72 0.8');
+  out = RS.addLine(out, res, 'fish', '@3   school   idle circle');
+  out = RS.addLine(out, res, 'fish', '@4 feed 0.4 0.85');
+  out = RS.addLine(out, res, 'fish', '@5 all look off');
+  out = RS.addLine(out, res, 'fish', '@6 all dart');
+  const P2 = RS.parse(out), f2 = P2.edit.scenes[5].fish, fl = P2.fields.filter(f => f.key === 'fish');
+  ok(same(f2, [{ at: 0.5, who: 'big', verb: 'to', x: 0.72, y: 0.8 }, { at: 3, who: 'school', verb: 'idle', mode: 'circle' },
+    { at: 4, verb: 'feed', x: 0.4, y: 0.85 }, { at: 5, who: 'all', verb: 'look', look: 'off' }, { at: 6, who: 'all', verb: 'dart' }]),
+    'fish lines read into { at, who, verb, … }: a spot, an idle, food, a look, an action for all');
+  ok(lines(out).length === src.length + 5 && fl.every(f => f.owner === P2.edit.scenes[5]), 'addLine adds one line each, in the scene');
+  ok(lines(out)[fl[1].ln - 1] === '  fish     @3 school idle circle', 'addLine writes the field with its padding, spaces tidied');
+  ok(same(RS.parse(RS.format(P2.edit)).edit, P2.edit), 'format then parse keeps the fish lines');
+  const moved = RS.setAt(out, fl[0].ln, 1.25);
+  ok(RS.parse(moved).edit.scenes[5].fish[0].at === 1.25 && changedLines(out, moved).length === 1, 'setAt moves a fish line\'s @ time, and only its line changes');
+  ok(RS.removeLine(RS.removeLine(RS.removeLine(RS.removeLine(RS.removeLine(out, fl[4].ln), fl[3].ln), fl[2].ln), fl[1].ln), fl[0].ln) === SRC, 'removeLine takes them out again: back to the original, byte for byte');
+  ok(/fish big to 0\.72 0\.8/.test(RS.cueSheet(P2.edit)), 'the cue sheet lists the fish lines at their time');
+  ok(RS.writeFish(RS.readFish('@2 big pace 1.5')) === '@2 big pace 1.5', 'readFish and writeFish round-trip');
+  throws(() => RS.addLine(SRC, res, 'fish', '1.5 big to 0.5 0.5'), /an @ time, who/, 'a fish line needs its @ time');
+  throws(() => RS.addLine(SRC, res, 'fish', '@1 fish to 0.5 0.5'), /say big, school or all/, 'who is named');
+  throws(() => RS.addLine(SRC, res, 'fish', '@1 big swim'), /not something the fish do/, 'an unknown verb is named');
+  throws(() => RS.addLine(SRC, res, 'fish', '@1 big to 1.4 0.5'), /between 0 and 1/, 'a point is a fraction of the frame');
+  throws(() => RS.addLine(SRC, res, 'fish', '@1 school dart'), /only the big fish can dart/, 'the school does not dart');
+  throws(() => RS.addLine(SRC, res, 'fish', '@1 big scatter'), /only the school can scatter/, 'the big fish does not scatter');
+  throws(() => RS.addLine(SRC, res, 'fish', '@1 big feed 0.3 0.3'), /names no fish/, 'feed names no fish');
+  throws(() => RS.addLine(SRC, res, 'fish', '@1 big idle dance'), /hover, sweep, circle, wander/, 'the idles are named');
+  throws(() => RS.addLine(SRC, res, 'fish', '@1 big pace 9'), /between 0.3 and 3/, 'the pace is bounded');
+  throws(() => RS.addLine(SRC, res, 'fish', '@1 big look 0.5'), /auto .* or off/, 'look takes a point, auto or off');
+  throws(() => RS.removeLine(SRC, sceneLn(5)), /opens a part/, 'removeLine refuses a SCENE line');
+  const late = RS.parse(RS.addLine(SRC, res, 'fish', '@40 big turn'));
+  ok(late.warnings.some(w => /fish @40 is outside its scene/.test(w)), 'a fish line past its scene\'s end is a warning');
+}
+
 // ── cues: defaults are the rig's own timing ──
 const S = t => edit.scenes.find(s => s.type === t);
 ok(RS.cue(S('open'), 'out') === 0.45 && RS.cue(S('title'), 'out') === 0.65 && RS.cue(S('answer'), 'out') === 0.32, 'out defaults: open 0.45, title 0.65, answer 0.32');

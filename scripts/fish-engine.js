@@ -30,8 +30,11 @@
  *                            when it comes within both fishes' reach (bodyWidths plus
  *                            25 px), or within 110 px more while the large fish swims
  *                            at it, then rejoins its school
+ *   schoolPhase('scatter' | 'regroup') — the school's phases on cue (an API call, not
+ *                            an option): scatter bursts it apart now, regroup calls it
+ *                            together now
  *   The sizzle reel (Assets/sizzle-reel-2.html) uses all four so its fish swim over
- *   and look at what is on screen.
+ *   and look at what is on screen, and schoolPhase for its script's `fish` lines.
  *
  * Usage — ambient single fish (404 page):
  *   FishCanvas.ambient(canvasEl);
@@ -6966,6 +6969,18 @@
             },
             addFood(x, y) {
                 spawnClassified({ type: 'food', center: { x, y }, points: [] });
+            },
+            // The school's phases on cue, for a host that choreographs the school (the sizzle
+            // reel's `fish @t school scatter`): 'scatter' bursts it apart, each member on its own
+            // ray out of the centre for about a second, after which it regroups; 'regroup' calls
+            // it together now. It sets the same shared phase the school's own clock drives
+            // (drawFishEntities keeps it on the global object), so the clock carries on from there.
+            schoolPhase(name) {
+                const S = globalThis;
+                if (name === 'scatter') { S.schoolPhase = 'scatter'; S.schoolPhaseTimer = 1300; }
+                else if (name === 'regroup') { S.schoolPhase = 'regroup'; S.schoolPhaseTimer = 5000; }
+                startAnimation();
+                return S.schoolPhase;
             },
             setObstacles(list) {
                 for (let i = coral.length - 1; i >= 0; i--) {

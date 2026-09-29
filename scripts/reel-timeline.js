@@ -11,8 +11,9 @@
 //
 // Every scene is a card, and what belongs to a scene sits inside its card:
 //   items      a results scene's items, each work it shows in turn (only results scenes have them)
-//   moments    when something appears inside the scene: a picture, a clip, a quote, a stat, an
-//              award (the script's @ times). Drag one to retime it; click it to open it
+//   moments    when something happens inside the scene: a picture, a clip, a quote, a stat, an
+//              award, a fish line (the script's @ times; fish lines are gold triangles). Drag one
+//              to retime it; click it to open it
 //   out        the hatched end of each card: where the scene's content starts to leave (its
 //              `cue out`). Drag the hatch's edge
 // Every action is a button, and its key an accelerator (named in the button's tooltip):
@@ -68,6 +69,14 @@
       gist: file || said, label: file ? file.replace(/\.[a-z0-9]+$/i, '') : words(said, 4) });
   });
   P.fields.forEach(f => {
+    if (f.key === 'fish') {                           // a fish line: when the fish do something (scripts/reel-fish.js)
+      const S = sceneOf.get(f.owner), v = f.owner.fish[f.index];
+      if (!S) return;
+      const what = RS.writeFish(v).replace(/^@\S+\s+/, '');
+      MOMENTS.push({ ln: f.ln, own: S, S, at: v.at, len: S.end - S.start, kind: 'fish', field: true, fish: true,
+        gist: 'fish ' + what, label: what.replace(/\s+[\d.]+\s+[\d.]+$/, '') });
+      return;
+    }
     if (f.key !== 'stat' && f.key !== 'award') return;
     const S = sceneOf.get(f.owner), v = S && f.owner[f.jsonKey][f.index];
     if (!v || v.at == null) return;
@@ -142,6 +151,7 @@
 #reel-tl .tl-bt::before { content: ''; position: absolute; left: ${PIN / 2 - 5}px; top: 8px; width: 10px; height: 10px; transform: rotate(45deg); background: var(--cyan); }
 #reel-tl .tl-bt.tl-f::before { transform: none; border-radius: 50%; }
 #reel-tl .tl-bt.tl-quote::before { transform: none; border-radius: 2px; }
+#reel-tl .tl-bt.tl-fish::before { transform: none; width: 11px; clip-path: polygon(0 0, 100% 50%, 0 100%); background: var(--gold); }
 #reel-tl .tl-bt::after { content: ''; position: absolute; left: ${PIN / 2}px; top: -4px; height: 4px; width: 1px; background: rgba(var(--cyan-dim-rgb), 0.6); }
 #reel-tl .tl-bt:hover::before, #reel-tl .tl-bt.tl-on::before { background: var(--gold); }
 #reel-tl .tl-lb { position: absolute; left: ${PIN - 2}px; top: 7px; font-size: 10px; line-height: 12px; color: var(--ink-quiet); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
@@ -234,7 +244,7 @@
   [['time', Y.ruler + 7, 'click or drag the ruler to move the playhead'],
    ['scenes', Y.card + 12, 'each scene is a card: drag its right edge to change its length; click it to change its words'],
    ['items', Y.items + 2, 'a results scene shows several works, one after another: its items. Only results scenes have them', 'results only'],
-   ['moments', Y.m0 + 2, 'when something appears inside a scene: a picture, a clip, a quote, a stat, an award. Drag one to retime it; click it to open it'],
+   ['moments', Y.m0 + 2, 'when something happens inside a scene: a picture, a clip, a quote, a stat, an award, and the fish lines (gold triangles; the Fish panel, F, writes them). Drag one to retime it; click it to open it'],
    ['out', Y.body + Y.bodyH - 18, 'the hatched end of each card: where the scene\'s content starts to leave. Drag the handle at its foot']]
     .forEach(([t, y, tip, sub]) => { const g = h('div', 'gl', main, t); g.style.top = y + 'px'; g.title = tip; if (sub) h('small', null, g, sub); });
   const view = h('div', 'view', main);
@@ -264,7 +274,7 @@
     recs.push({ el, span: m => [m(I.start), m(I.end)] });
   });
   MOMENTS.forEach(M => {
-    const el = h('div', 'bt' + (M.field ? ' f' : M.kind === 'quote' ? ' quote' : ''), lane); M.el = el;
+    const el = h('div', 'bt' + (M.fish ? ' fish' : M.field ? ' f' : M.kind === 'quote' ? ' quote' : ''), lane); M.el = el;
     M.lb = h('span', 'lb', el, M.label);
     el.title = `@${M.at} · ${M.gist}\n${M.field ? M.kind : M.kind} ${fmt(M.own.start + M.at)} · drag to retime, click to open`;
     recs.push({ el, span: m => [m(M.own.start) + (M.drag != null ? M.drag : M.at)], moment: M });

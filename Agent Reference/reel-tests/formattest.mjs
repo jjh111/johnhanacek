@@ -19,7 +19,7 @@
 //    mid-slide under the zooming camera rasters one of two ways (3712 pixels, 51 dB); the rig
 //    before formats does it too, in 2 runs of 4, and each variant is byte-identical across rigs.
 // 4. The live preview takes ?format= too: in a 1440×900 window a square or vertical stage scales to
-//    fit with the HUD shown, E opens the timeline and the stage refits above it, and #t= resumes.
+//    fit above the HUD, E opens the timeline and the stage refits above it, and #t= resumes.
 // Writes only to .local/reel-tests/format/. One renderer at a time (the machine is shared).
 // --layout-only runs 1 and 2 alone (no renders), for the loop of laying a format out.
 import { chromium } from 'playwright-core';
@@ -186,10 +186,12 @@ try {
     page.on('pageerror', e => errors.push(e.message));
     await page.goto(`http://127.0.0.1:${srv.port}/Assets/sizzle-reel-2.html?format=${fmt}#t=24&pause=1`, { waitUntil: 'load', timeout: 120000 });
     await page.waitForFunction(() => window.REEL_LIVE && document.getElementById('reel-tl'), null, { timeout: 60000 });
-    const box = () => page.evaluate(() => { const b = document.getElementById('stage').getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height, hud: !document.getElementById('hud').hidden }; });
+    const box = () => page.evaluate(() => { const b = document.getElementById('stage').getBoundingClientRect(), hud = document.getElementById('hud');
+      return { x: b.left, y: b.top, w: b.width, h: b.height, hud: !hud.hidden, hudTop: hud.getBoundingClientRect().top }; });
     const a = await box();
-    ok(a.hud && Math.abs(a.w / a.h - w / h) < 0.01 && a.x >= -0.5 && a.y >= -0.5 && a.x + a.w <= 1440.5 && a.y + a.h <= 900.5 && (Math.abs(a.h - 900) < 1 || Math.abs(a.w - 1440) < 1),
-      `live ?format=${fmt}: the ${w}×${h} stage scales to fit a 1440×900 window, HUD shown`, `(stage ${Math.round(a.x)},${Math.round(a.y)} ${Math.round(a.w)}×${Math.round(a.h)})`);
+    // the HUD's strip is kept clear: the stage fits the window above it (the HUD never covers the tank)
+    ok(a.hud && Math.abs(a.w / a.h - w / h) < 0.01 && a.x >= -0.5 && a.y >= -0.5 && a.x + a.w <= 1440.5 && a.y + a.h <= a.hudTop + 0.5 && (Math.abs(a.h - a.hudTop) < 1 || Math.abs(a.w - 1440) < 1),
+      `live ?format=${fmt}: the ${w}×${h} stage scales to fit a 1440×900 window above the HUD`, `(stage ${Math.round(a.x)},${Math.round(a.y)} ${Math.round(a.w)}×${Math.round(a.h)}, HUD from ${Math.round(a.hudTop)})`);
     await page.keyboard.press('e');
     await page.waitForFunction(() => !document.getElementById('reel-tl').hidden, null, { timeout: 5000 }).catch(() => {});
     const b = await box();

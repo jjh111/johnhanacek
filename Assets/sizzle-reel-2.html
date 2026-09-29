@@ -72,12 +72,12 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 .sea { inset: -80px; pointer-events: none;
   background: radial-gradient(ellipse 70% 55% at 50% 0%, rgba(var(--cyan-dim-rgb), 0.10), transparent 70%),
               radial-gradient(ellipse 55% 45% at 100% 100%, rgba(var(--gold-rgb), 0.05), transparent 70%); }
-/* The tank: a fixed band along the bottom for the whole cut, its top edge dissolving into the sea.
-   The canvas itself runs from mid-frame down, but the mask keeps its upper part invisible: the
-   engine keeps fish ~100 px off every edge and looks 180 px ahead, so a canvas only as tall as the
-   visible band would be all edge, and fish looking up would be steered back down. */
-#tank { left: 0; top: 540px; width: 1920px; height: 540px; pointer-events: none;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 22%, #000 38%); mask-image: linear-gradient(to bottom, transparent 22%, #000 38%); }
+/* The tank: the water is the bottom of the frame for the whole cut. The canvas runs from mid-frame
+   down (the engine keeps fish ~100 px off every edge and looks 180 px ahead, so a canvas only as
+   tall as the band they swim in would be all edge). Nothing hides any of it: a fish is seen
+   wherever it swims. (Until 2026-09-29 a mask faded the canvas's top 38% out, and a fish rising
+   to look at something faded out with it.) */
+#tank { left: 0; top: 540px; width: 1920px; height: 540px; pointer-events: none; }
 .vignette { inset: 0; pointer-events: none; background: radial-gradient(ellipse 80% 85% at 50% 42%, transparent 58%, rgba(0, 0, 0, 0.45) 100%); }
 
 /* ── the glass: hero oval → command bar → hero oval ── */
@@ -777,10 +777,53 @@ p, h1, h2, h3 { margin: 0; }
     const e = Math.max(-m, Math.min(m, Math.atan2(sn, Math.abs(c))));
     return c >= 0 ? e : Math.PI - e;
   };
-  function steerBig(f) {
-    if (f !== BIG) return null;
-    const A = attnAt(reelT);
-    if (!A) return null;
+  // ── direction: the script's `fish` lines ──────────────────────────────
+  // A scene's fish lines take over from the choreography below for that scene only (ReelScript's
+  // FISH: `fish @1.5 big to 0.72 0.8`). `to`, `look`, `idle` and `pace` hold until the next line
+  // of their kind for that fish or the scene's end; dart, turn, scatter, regroup and feed happen
+  // once, as EVENTS (registered with the scenes' own, below). A scene without fish lines swims
+  // exactly as it always has. Points are fractions of the frame; a spot is kept in the water,
+  // clear of the tank's edges, where the engine would turn a fish back.
+  const WATER = { x0: 140, x1: W - 140, y0: TANK_Y + 120, y1: TANK_Y + TANK_H - 80 };   // stage px
+  const inWater = (x, y) => ({ x: Math.max(WATER.x0, Math.min(WATER.x1, x)), y: Math.max(WATER.y0, Math.min(WATER.y1, y)) });
+  const DIR = { big: [], school: [] }, LOOKS = [];   // { t0, t1, ch, v } in time order; the looks at a point
+  SC.forEach(sc => (sc.fish || []).map((c, k) => ({ c, k })).sort((a, b) => a.c.at - b.c.at || a.k - b.k).forEach(({ c }) => {
+    if (ReelScript.FISH[c.verb].once || c.at < 0 || c.at >= sc.dur) return;
+    let v = c.verb === 'to' ? inWater(c.x * W, c.y * H) : c.verb === 'idle' ? c.mode : c.verb === 'pace' ? c.pace : c.look;
+    if (c.verb === 'look' && !c.look) LOOKS.push(v = { x: c.x * W, y: c.y * H });   // its own object: it keeps its side (sideOf)
+    (c.who === 'all' ? ['big', 'school'] : [c.who]).forEach(w => DIR[w].push({ t0: sc.start + c.at, t1: sc.end, ch: c.verb, v }));
+  }));
+  // what a fish has been told at t; `since` is when the latest of it began
+  function dirAt(who, t) {
+    const d = { to: null, look: 'auto', idle: null, pace: 1, since: -1 };
+    for (const c of DIR[who]) if (t >= c.t0 && t < c.t1) { d[c.ch] = c.v; d.since = c.t0; }
+    return d;
+  }
+  const lookOf = D => D.look === 'auto' ? attnAt(reelT) : D.look === 'off' ? null : D.look;
+  // Swim over to a point: faster the further it has to go, big turns made nearly on the spot.
+  function swimTo(f, dx, dy, d, pace, sent) {
+    let speed = Math.min(2.4, 0.9 + d / 200);
+    // Courtesy: the school is slower and always to its right. If it is still in the way,
+    // drift behind it instead of cutting through (a large fish closing in reads as a
+    // predator, and the school would scatter). Sent somewhere by a fish line (`sent`), the
+    // school may be going the other way, and waiting behind it would wait for ever: it swims
+    // round underneath instead, where the school never goes (it keeps to the upper water).
+    let n = 0, cx = 0, cy = 0, under = null;
+    for (const m of tank.state.fish) if (m !== f && m.bodyWidth >= 35 && m.bodyWidth < 60) { cx += m.x; cy += m.y; n++; }
+    if (n) {
+      cx /= n; cy /= n;
+      if (Math.sign(cx - f.x) === Math.sign(dx) && Math.hypot(cx - f.x, cy - f.y) < 300) {
+        if (!sent) speed = 0.3;
+        else if (Math.abs(dx) > Math.abs(cx - f.x)) under = Math.min(TANK_H - 90, cy + 150);   // the school is between it and its spot
+      }
+    }
+    const heading = clampTilt(under != null ? Math.atan2(under - f.y, Math.sign(dx) * 180) : Math.atan2(dy, dx), 0.5);
+    // a big turn is made nearly on the spot, not at cruising speed (that reads as rearing up)
+    speed *= Math.max(0.22, Math.cos(Math.min(Math.PI, Math.abs(angDiff(heading, f.heading))) / 2));
+    return { heading, speed: speed * pace };
+  }
+  // The scene's own choreography: beside the thing, nose up at it.
+  function besideIt(f, A, pace) {
     const sx = Math.max(140, Math.min(W - 140, A.x + sideOf(A) * BIG_DX));
     const dx = sx - f.x, dy = SPOT_Y - f.y, d = Math.hypot(dx, dy);
     // Beside the thing is a band, not a point. Parked, it stays while it is 60-400 px out on its
@@ -791,39 +834,80 @@ p, h1, h2, h3 { margin: 0; }
     if (f.reelLook !== A) { f.reelLook = A; if (facing) f.reelAtSpot = true; }   // a new look it already faces: the band decides
     const there = f.reelAtSpot ? out > 60 && out < 400 && Math.abs(dy) < 120
       : d <= 46 || (facing && Math.abs(dx) < 80 && Math.abs(dy) < 80);
-    if (!there) {                              // swim over, faster the further it has to go
-      f.reelAtSpot = false;
-      let speed = Math.min(2.4, 0.9 + d / 200);
-      // Courtesy: the school is slower and always to its right. If it is still in the way,
-      // drift behind it instead of cutting through (a large fish closing in reads as a
-      // predator, and the school would scatter).
-      let n = 0, cx = 0, cy = 0;
-      for (const m of tank.state.fish) if (m !== f && m.bodyWidth >= 35 && m.bodyWidth < 60) { cx += m.x; cy += m.y; n++; }
-      if (n) { cx /= n; cy /= n; if (Math.sign(cx - f.x) === Math.sign(dx) && Math.hypot(cx - f.x, cy - f.y) < 300) speed = 0.3; }
-      const heading = clampTilt(Math.atan2(dy, dx), 0.5);
-      // a big turn is made nearly on the spot, not at cruising speed (that reads as rearing up)
-      speed *= Math.max(0.22, Math.cos(Math.min(Math.PI, Math.abs(angDiff(heading, f.heading))) / 2));
-      return { heading, speed };
-    }
+    if (!there) { f.reelAtSpot = false; return swimTo(f, dx, dy, d, pace); }   // swim over
     f.reelAtSpot = true;                       // there: nose up at the thing, barely moving
     // It hovers. Even this slow a swim, nose up, would carry it 100 px up and in over a long
     // look, so it slows as it nears the top or the inner edge of its band (the tail beats on).
     const hover = Math.max(0.15, Math.min(1, (f.y - (SPOT_Y - 70)) / 50, (out - 90) / 80));
     return { heading: clampTilt(Math.atan2((A.y - TANK_Y) - f.y, A.x - f.x), 0.62, f.heading), speed: 0.12 * hover };
   }
+  // A spot it was sent to (tank px), and what it does there. A sweep or a circle is moved in
+  // from the edges until all of it is in the water (a narrow frame has less room for it).
+  const inX = (x, r) => Math.max(WATER.x0 + r, Math.min(WATER.x1 - r, x));
+  const inY = (y, r) => Math.max(WATER.y0 - TANK_Y + r, Math.min(WATER.y1 - TANK_Y - r, y));
+  function onSpot(f, st, A, D) {
+    const mode = D.idle || 'hover';
+    const half = (WATER.x1 - WATER.x0) / 2 - 20, SW = Math.min(260, half), RX = Math.min(140, half);
+    if (mode === 'sweep') st = { x: inX(st.x, SW), y: st.y };
+    else if (mode === 'circle') st = { x: inX(st.x, RX), y: inY(st.y, 64) };
+    const dx = st.x - f.x, dy = st.y - f.y, d = Math.hypot(dx, dy);
+    if (mode === 'sweep') {                    // back and forth across the spot, up to 260 px each way
+      if (d > SW + 120) return swimTo(f, dx, dy, d, D.pace, true);
+      if (!f.reelSweep) f.reelSweep = Math.cos(f.heading) >= 0 ? 1 : -1;
+      if ((f.x - st.x) * f.reelSweep > SW - 20) f.reelSweep = -f.reelSweep;
+      const heading = clampTilt(Math.atan2(st.y - f.y, st.x + f.reelSweep * SW - f.x), 0.3);
+      return { heading, speed: 1.1 * D.pace * Math.max(0.22, Math.cos(Math.min(Math.PI, Math.abs(angDiff(heading, f.heading))) / 2)) };
+    }
+    if (mode === 'circle') {                   // round the spot: an ellipse up to 140 × 64 px, a lap in under 10 s,
+      if (d > RX + 180) return swimTo(f, dx, dy, d, D.pace, true);   // steering for a point ahead on it, the way it already swims
+      if (!f.reelSweep) f.reelSweep = (f.x - st.x) * Math.sin(f.heading) - (f.y - st.y) * Math.cos(f.heading) >= 0 ? 1 : -1;
+      const phi = Math.atan2((f.y - st.y) / 64, (f.x - st.x) / RX) + 0.6 * f.reelSweep;
+      return { heading: Math.atan2(st.y + 64 * Math.sin(phi) - f.y, st.x + RX * Math.cos(phi) - f.x), speed: 1.8 * D.pace };
+    }
+    // hover: there within 46 px, and it stays until it has crept 110 px off
+    if (f.reelHold ? d > 110 : d > 46) { f.reelHold = false; return swimTo(f, dx, dy, d, D.pace, true); }
+    f.reelHold = true;
+    const heading = A ? clampTilt(Math.atan2((A.y - TANK_Y) - f.y, A.x - f.x), 0.62, f.heading) : clampTilt(f.heading, 0.2, f.heading);
+    return { heading, speed: 0.12 };
+  }
+  function steerBig(f) {
+    if (f !== BIG) return null;
+    if (f.reelAct && reelT < f.reelAct.t1) return { heading: f.reelAct.h, speed: f.reelAct.speed };   // a dart or a turn, until done
+    const D = dirAt('big', reelT), A = lookOf(D);
+    if (D.idle === 'wander') return null;      // the engine's own
+    if (!D.to && (!D.idle || D.idle === 'hover')) {
+      if (A) return besideIt(f, A, D.pace);    // the scene's own choreography, or beside the point it was told to look at
+      if (!D.idle) return null;                // nothing to look at, nothing asked: the engine's own
+    }
+    if (f.reelSince !== D.since) { f.reelSince = D.since; f.reelHome = { x: f.x, y: f.y }; f.reelHold = f.reelSweep = 0; }
+    const st = D.to ? { x: D.to.x, y: D.to.y - TANK_Y }
+      : A ? { x: Math.max(140, Math.min(W - 140, A.x + sideOf(A) * BIG_DX)), y: SPOT_Y } : f.reelHome;
+    return onSpot(f, st, A, D);
+  }
   // The school's waypoint sweeps slowly left and right under the thing: a school parked on a
   // fixed point circles it (its turn rate is capped) and rides up behind the copy.
   // It never sweeps into the big fish's water: the school gives way to it (largeRightOfWay), so
   // a sweep that ran into it would only scatter the school again. The darts are for when the big
-  // fish comes to them.
+  // fish comes to them. A fish line can send it to a spot instead, or change what it does there
+  // (sweep, hover: a smaller, slower sweep, circle), or let it wander (the engine's own patrol).
   const SCHOOL_GAP = 320;
+  let schoolHome = null;
   function schoolSpot(c) {
-    const A = attnAt(reelT);
-    if (!A) return null;
+    const D = dirAt('school', reelT), A = lookOf(D), mode = D.idle || 'sweep';
+    if (mode === 'wander') return null;
     const inW = x => Math.max(160, Math.min(W - 160, x));
-    let x = inW(A.x - sideOf(A) * SCHOOL_DX + 170 * Math.sin(reelT * 0.55));
-    if (BIG && Math.abs(x - BIG.x) < SCHOOL_GAP) x = inW(BIG.x + (x < BIG.x ? -SCHOOL_GAP : SCHOOL_GAP));
-    return { x, y: SCHOOL_Y, pace: 1 + Math.min(1, Math.abs(x - c.x) / 500) };   // hurry when far
+    let st;
+    if (D.to) st = { x: D.to.x, y: D.to.y - TANK_Y };
+    else if (A) st = { x: A.x - sideOf(A) * SCHOOL_DX, y: SCHOOL_Y, auto: true };
+    else if (D.idle) { if (!schoolHome || schoolHome.since !== D.since) schoolHome = { since: D.since, x: c.x, y: c.y }; st = schoolHome; }
+    else return null;
+    let x = st.x, y = st.y;
+    if (mode === 'sweep') x += 170 * Math.sin(reelT * 0.55);
+    else if (mode === 'hover') x += 70 * Math.sin(reelT * 0.4);
+    else if (mode === 'circle') { x += 190 * Math.cos(reelT * 0.7); y += 50 * Math.sin(reelT * 0.7); }
+    x = inW(x);
+    if (st.auto && BIG && Math.abs(x - BIG.x) < SCHOOL_GAP) x = inW(BIG.x + (x < BIG.x ? -SCHOOL_GAP : SCHOOL_GAP));
+    return { x, y, pace: (1 + Math.min(1, Math.abs(x - c.x) / 500)) * D.pace };   // hurry when far
   }
   const tank = FishCanvas(tankEl, { transparent: true, seedFish: false, seedJellyfish: false, steer: steerBig, schoolTarget: schoolSpot, calmSchool: true, largeRightOfWay: true });
   const inTank = pts => pts.map(p => ({ x: p.x, y: p.y - TANK_Y }));   // stage → tank coordinates
@@ -838,6 +922,18 @@ p, h1, h2, h3 { margin: 0; }
   // ── registries the scenes fill ────────────────────────────────────────
   const MEDIA = [], EVENTS = [], LAYOUT = [], QUERIES = [];
   const at = (t, run) => EVENTS.push({ t, run });
+  // the fish lines that happen once, at their time
+  SC.forEach(sc => (sc.fish || []).forEach(c => {
+    if (!ReelScript.FISH[c.verb].once || c.at < 0 || c.at >= sc.dur) return;
+    const t = sc.start + c.at;
+    if (c.verb === 'feed') at(t, () => tank.addFood(c.x * W, c.y * H - TANK_Y));
+    else if (c.verb === 'scatter' || c.verb === 'regroup') at(t, () => tank.schoolPhase(c.verb));
+    else at(t, () => {                          // the big fish's: a dart straight ahead, or a turn round
+      const f = BIG; if (!f) return;
+      if (c.verb === 'dart') { f.reelAct = { t1: t + 0.55, h: f.heading, speed: 4.2 }; f.vx = Math.cos(f.heading) * 3; f.vy = Math.sin(f.heading) * 3; }
+      else f.reelAct = { t1: t + 1.2, h: f.heading + Math.PI, speed: 0.45 };
+    });
+  }));
   // Work on the tank that must happen after every engine tick, painted or not. Anything that
   // touches a fish lives here or in EVENTS, never in a scene's picture: a still, a part of the
   // cut or a parallel chunk paints only some frames, and must still grow the film's tank.
@@ -1475,7 +1571,7 @@ p, h1, h2, h3 { margin: 0; }
   function simulate(t) {                        // the tank's side: events, on every 60 Hz tick
     reelT = t;
     // a rewind regrows the tank from nothing; a hair's floating-point wobble is not a rewind
-    if (t < firedT - 1e-6) { tank.clearFish(); tank.state.coral.length = 0; firedT = -1; BIG = null; ATTN.forEach(a => { delete a.side; }); }
+    if (t < firedT - 1e-6) { tank.clearFish(); tank.state.coral.length = 0; firedT = -1; BIG = null; schoolHome = null; ATTN.concat(LOOKS).forEach(a => { delete a.side; }); }
     for (const ev of EVENTS) if (ev.t > firedT && ev.t <= t) ev.run();
     firedT = Math.max(firedT, t);              // never backwards, or an event could fire twice
   }
@@ -1507,7 +1603,7 @@ p, h1, h2, h3 { margin: 0; }
     MEDIA.forEach(m => m.el.pause());
     window.REEL = {
       duration: DURATION, ready, format: FORMAT, size: [W, H],
-      debug: { scenes: SC, tank, queries: QUERIES },
+      debug: { scenes: SC, tank, queries: QUERIES, tankY: TANK_Y, steer: steerBig, dirAt },
       async frame(t) {
         const want = Math.round(t * 60);
         while (ticks < want) { simulate((ticks + 1) / 60); tank.startAnimation(); CLOCK.tick(STEP); ticks++; for (const fn of TICKS) fn(ticks / 60); }
@@ -1533,9 +1629,19 @@ p, h1, h2, h3 { margin: 0; }
   const hud = document.getElementById('hud'), bar = hud.querySelector('.bar'), fill = bar.querySelector('i'), clock = hud.querySelector('.time');
   const sceneEl = hud.querySelector('.scene');
   hud.hidden = false;
-  let reserved = 0, reservedR = 0;                // px a tool keeps: at the bottom (the timeline), at the right (the synth rack)
-  const fit = () => { const w = Math.max(1, innerWidth - reservedR), h = Math.max(1, innerHeight - reserved), s = Math.min(w / W, h / H);
-    stage.style.transform = `translate(${fx((w - W * s) / 2)}px,${fx((h - H * s) / 2)}px) scale(${s.toFixed(5)})`; };
+  // px a tool keeps: at the bottom (the timeline), at the right (the synth rack), at the left (the fish panel).
+  // The same numbers ride on the root as --reel-bottom, --reel-right and --reel-left, for any
+  // tool that lays itself out around the others.
+  let reserved = 0, reservedR = 0, reservedL = 0;
+  const VIEW = { x: 0, y: 0, s: 1 };              // where the stage is drawn: client px of its corner, and its scale
+  // The HUD's strip is never over the picture: its gradient sat on the bottom of the tank (the
+  // coral, and the fish) whenever the window was wider than the frame.
+  const fit = () => { const bottom = Math.max(reserved, hud.hidden ? 0 : hud.offsetHeight);
+    const w = Math.max(1, innerWidth - reservedR - reservedL), h = Math.max(1, innerHeight - bottom), s = Math.min(w / W, h / H);
+    VIEW.x = reservedL + (w - W * s) / 2; VIEW.y = (h - H * s) / 2; VIEW.s = s;
+    stage.style.transform = `translate(${fx(VIEW.x)}px,${fx(VIEW.y)}px) scale(${s.toFixed(5)})`;
+    const rs = document.documentElement.style;
+    rs.setProperty('--reel-bottom', bottom + 'px'); rs.setProperty('--reel-right', reservedR + 'px'); rs.setProperty('--reel-left', reservedL + 'px'); };
   fit(); addEventListener('resize', fit);
   SC.forEach(sc => { const b = document.createElement('b'); b.style.left = (sc.start / DURATION * 100).toFixed(3) + '%'; bar.appendChild(b); });
   // `node scripts/reel-dev.mjs` answers /__reel/ping with its name; a plain static server does
@@ -1639,6 +1745,21 @@ p, h1, h2, h3 { margin: 0; }
     addTool, mediaURL,
     reserveBottom: px => { reserved = Math.max(0, +px || 0); fit(); },
     reserveRight: px => { reservedR = Math.max(0, +px || 0); fit(); },
+    reserveLeft: px => { reservedL = Math.max(0, +px || 0); fit(); },
+    // the stage on screen: its element, its frame (W × H stage px) and where it is drawn
+    // (client px = VIEW.x + stage px × VIEW.s)
+    stage, frame: [W, H], view: () => Object.assign({}, VIEW),
+    // the fish, for the Fish panel (scripts/reel-fish.js): the water a spot is kept in (stage px),
+    // where the fish are now (stage px), and what each has been told at t
+    fish: {
+      water: Object.assign({}, WATER),
+      now() {
+        const med = tank.state.fish.filter(f => f !== BIG && f.bodyWidth >= 35 && f.bodyWidth < 60);
+        const c = med.length ? { x: med.reduce((a, f) => a + f.x, 0) / med.length, y: med.reduce((a, f) => a + f.y, 0) / med.length + TANK_Y, n: med.length } : null;
+        return { big: BIG ? { x: BIG.x, y: BIG.y + TANK_Y, heading: BIG.heading } : null, school: c };
+      },
+      told: (who, t) => dirAt(who, t == null ? reelT : t),
+    },
     async save(text) {
       try { ReelScript.parse(text); } catch (e) { return { ok: false, errors: e.errors || [e.message] }; }
       if (DEV) {
@@ -1678,6 +1799,8 @@ p, h1, h2, h3 { margin: 0; }
   // with the dev server, a save from any editor reloads the preview (a draft here is kept)
   if (DEV) new EventSource('/__reel/events?file=' + encodeURIComponent(SCRIPT_PATH)).addEventListener('change', () => { if (DRAFT == null) location.reload(); });
   const tl = document.createElement('script'); tl.src = '../scripts/reel-timeline.js'; tl.onerror = () => tl.remove(); document.head.appendChild(tl);
+  // directing the fish: waypoints on the stage, and attention, idles and actions played at the playhead (F)
+  const fp = document.createElement('script'); fp.src = '../scripts/reel-fish.js'; fp.onerror = () => fp.remove(); document.head.appendChild(fp);
   // how the script becomes a film: render it here (dev server), or ask Claude (the editor on claude.ai)
   const ex = document.createElement('script'); ex.src = '../scripts/reel-export.js'; ex.onerror = () => ex.remove(); document.head.appendChild(ex);
   // choosing a slot's picture or clip by looking at it (the inspector's img and video lines open it)

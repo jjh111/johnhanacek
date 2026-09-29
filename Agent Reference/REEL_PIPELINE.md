@@ -411,6 +411,59 @@ HUD's tools ran off the window, and the inspector squeezed the cards to a strip.
   rack open: no button or bar overflows, and none leaves the window
   (`reel-tests/timelinetest.mjs` checks 820 and 390).
 
+## Directing the fish (2026-09-29)
+
+John: "we can remove the gradient that hard hides the fish, let them swim around and be viewed.
+bring in some mvp waypoints for the fish / settings timings and performative controls for
+attention, idles and actions."
+
+- **Nothing hides a fish.** The tank's mask faded the top 38% of its canvas out, and a fish that
+  rose to look at something faded with it. It is gone; the canvas and the fish's water are where
+  they were (the bottom of the frame), so every frame without fish lines is the frame it was.
+  The live preview also keeps the HUD's strip clear of the picture: its gradient sat on the
+  coral and the fish whenever the window was wider than the frame.
+- **Fish lines** in the script, one per direction, inside a scene:
+  `fish @<s> <who> <what>`. Who: `big` (the fish drawn in the opening), `school` (the four the
+  command scene makes) or `all`. What: `to x y` (swim to a point and stay there), `look x y |
+  auto | off`, `idle hover | sweep | circle | wander`, `pace 0.3-3`, and once, at their time,
+  `dart` and `turn` (the big fish), `scatter` and `regroup` (the school), `feed x y` (no who: the
+  food is for any fish). Points are fractions of the frame (0-1 across, 0-1 down), like `focus`,
+  so one line serves wide, square and vertical. `to`, `look`, `idle` and `pace` hold until the
+  next line of their kind for that fish, or the scene's end. `reel-script.js` reads them
+  (`readFish`/`writeFish`, every mistake a sentence: "only the big fish can dart; the school
+  scatters"), lists them on the cue sheet, and edits them like any line: `setAt` moves one's @,
+  `addLine` and `removeLine` put one in and take one out.
+- **The director** (the rig, beside the scenes' own attention). A scene without fish lines swims
+  exactly as before: the committed rig and this one put every fish in the same place, 0 px apart
+  at every quarter second of the cut. With lines, the big fish's `steer` hook goes to its spot
+  (kept in the water: 140 px off the sides, 120 below the tank's top, 80 above its floor) and
+  hovers there nose toward what it looks at, or sweeps across it (up to 260 px each way), circles
+  it (an ellipse up to 140 × 64 px, the way it already swims), or is let go to the engine's own
+  swimming (wander). Sent across the school's path it swims round underneath rather than waiting
+  behind it: the scenes' own courtesy (slow to a crawl) deadlocked against a school going the
+  other way. The school's `schoolTarget` sweeps, mills (hover), circles or wanders about its
+  spot; the engine still keeps it in the upper water. Dart (a burst straight ahead, 0.55 s),
+  turn (about-face in 1.2 s), scatter and regroup (the engine's own phases, now callable:
+  `tank.schoolPhase(name)`) and feed are EVENTS, so a render plays them to the frame.
+- **The Fish panel** (`scripts/reel-fish.js`, F, a fish in the HUD): choose the big fish, the
+  school or both, then press. Every control writes one line at the playhead into the scene under
+  it. Paused, a press saves at once; playing, presses gather into a take (a red strip counts
+  them) that pausing keeps in one save. Place / A point / Feed make the next click on the stage
+  the point. The panel says what the chosen fish is doing now and lights its current idle, look
+  and pace. While it is open the stage shows the water (dashed) and this scene's spots, look
+  points and food, numbered, with each fish's path between its spots; drag a mark to move it,
+  click it to jump to its moment. Its saves go on the timeline's undo stack. It sits beside the
+  preview in a window of 1100 px and up (the stage makes room, `REEL_LIVE.reserveLeft`), over it
+  in a narrower one. Keys while open: D T S G for the actions, 1-4 for the idles.
+- **The timeline** shows fish lines as gold triangles among a scene's moments: drag one to
+  retime it, click it for its line in the inspector.
+- **Tests:** scripttest (the grammar, round trips, every mistake), fishdirecttest (in render mode,
+  all three formats: the big fish reaches its spot, the school its side, scatter spreads it,
+  circle goes round, dart bursts, turn about-faces, wander hands back to the engine, food lands),
+  fishpaneltest (Dart writes its line and never a second, Place and a stage click, a mark
+  dragged, Undo, the school's scatter key, a two-line take kept on pause, delete, an 820 px
+  window), formattest (the stage fits above the HUD).
+
 ## Later
 
 Scene-specific cues (line staggers, the push); moving cut 1 onto the one player; a music track

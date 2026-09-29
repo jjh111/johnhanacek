@@ -50,6 +50,24 @@
     image: S('<rect x="2" y="3" width="12" height="10" rx="1.6"/><path d="M2.5 11.5l3.5-3.5 2.6 2.6 1.8-1.8 3.1 3.1"/><circle cx="10.5" cy="6.2" r="1.1"/>'),
     clip: S('<rect x="2" y="3.5" width="12" height="9" rx="1.6"/><path d="M6.8 6.2v3.6L10 8z" style="fill:currentColor;stroke:none"/>'),
     save: S('<path d="M3 2.5h8l2.5 2.5v8.5H3z"/><path d="M5.5 2.5v3.5h5v-3.5M5.5 13.5v-4h5v4"/>'),
+    // the fish panel's
+    fish: S('<path d="M1.8 8c2.3-3.3 6.6-4 9.4-1.6L14.2 4v8l-3-2.4C8.4 12 4.1 11.3 1.8 8z"/><circle cx="5.3" cy="7.3" r="0.9" style="fill:currentColor;stroke:none"/>'),
+    place: S('<circle cx="8" cy="8" r="4.2"/><circle cx="8" cy="8" r="1" style="fill:currentColor;stroke:none"/><path d="M8 1.2v2.6M8 12.2v2.6M1.2 8h2.6M12.2 8h2.6"/>'),
+    eye: S('<path d="M1.4 8s2.5-4.6 6.6-4.6 6.6 4.6 6.6 4.6-2.5 4.6-6.6 4.6S1.4 8 1.4 8z"/><circle cx="8" cy="8" r="2.1"/>'),
+    eyeOff: S('<path d="M1.4 8s2.5-4.6 6.6-4.6 6.6 4.6 6.6 4.6-2.5 4.6-6.6 4.6S1.4 8 1.4 8z"/><path d="M2.5 13.5l11-11"/>'),
+    auto: S('<path d="M1.4 8s2.5-4.6 6.6-4.6 6.6 4.6 6.6 4.6-2.5 4.6-6.6 4.6S1.4 8 1.4 8z"/><path d="M6 9.6l2-4.2 2 4.2M6.7 8.3h2.6"/>'),
+    hover: S('<path d="M2.5 11.5h11"/><path d="M4.5 8c1.6-2.2 4.4-2.6 6.2-1L12.8 5.4v5l-2.1-1.5c-1.8 1.5-4.6 1.1-6.2-.9z"/>'),
+    sweep: S('<path d="M1.8 8h12.4M4.3 5.5L1.8 8l2.5 2.5M11.7 5.5L14.2 8l-2.5 2.5"/>'),
+    circle: S('<ellipse cx="8" cy="8" rx="6" ry="3.6"/><path d="M11.4 3.3l2.3 1.4-1.2 2.3"/>'),
+    wander: S('<path d="M1.8 11c1.8-4 3.6-4 4.6-1.4s2.6 2.8 3.9-.6 2.6-4.4 3.9-3.3"/>'),
+    dart: S('<path d="M1.8 8h8.5M7.5 4.5L11 8l-3.5 3.5"/><path d="M13.7 3.5v9"/>'),
+    turn: S('<path d="M11.5 13.5V6.3a3.5 3.5 0 0 0-7 0v2.9"/><path d="M2.3 7.2l2.2 2.3 2.2-2.3"/>'),
+    scatter: S('<circle cx="8" cy="8" r="1.1" style="fill:currentColor;stroke:none"/><path d="M5.6 5.6L2.8 2.8M10.4 5.6l2.8-2.8M5.6 10.4l-2.8 2.8M10.4 10.4l2.8 2.8"/>'),
+    regroup: S('<circle cx="8" cy="8" r="1.1" style="fill:currentColor;stroke:none"/><path d="M2.6 2.6l2.8 2.8M13.4 2.6l-2.8 2.8M2.6 13.4l2.8-2.8M13.4 13.4l-2.8-2.8"/><path d="M5.4 3.6v1.8H3.6M10.6 3.6v1.8h1.8M5.4 12.4v-1.8H3.6M10.6 12.4v-1.8h1.8"/>'),
+    food: F('<circle cx="5" cy="5.5" r="1.5"/><circle cx="10.6" cy="6.8" r="1.5"/><circle cx="7" cy="11.2" r="1.5"/>'),
+    slow: S('<path d="M2 11.5c2.5-6 9.5-6 12 0"/><path d="M8 11.5L5.5 7.8"/>'),
+    fast: S('<path d="M2 11.5c2.5-6 9.5-6 12 0"/><path d="M8 11.5l2.8-3.6"/>'),
+    record: F('<circle cx="8" cy="8" r="4.6"/>'),
   };
   const icon = name => ICONS[name] || '';
 

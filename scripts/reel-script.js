@@ -22,6 +22,11 @@
 // arrives after the question's Enter, when the content leaves, how fast the question types);
 // a scene that writes none keeps the rig's own timing.
 //
+// Inside a scene, `fish @<seconds> <who> <what>` directs the fish (FISH below): the big fish
+// drawn in the opening, the school of four, or all of them. `fish @1.5 big to 0.72 0.8` sends
+// the big fish to 72% across and 80% down the frame, 1.5 s into the scene, and it stays there.
+// A scene that writes none keeps the rig's own choreography.
+//
 // Tools edit a script the way a person would, one line at a time: parse() says which line
 // holds what (`marks` for SCENE/ITEM/@ lines, `fields` for every other line), and setDur,
 // setAt, setField and setCue change that line and nothing else.
@@ -101,6 +106,8 @@
     pair:  { read: v => parts(v, 2, 2, '"name | role"'), write: a => a.join(' | ') },
     cta:   { read: v => { const p = parts(v, 2, 2, '"the lead | the gold part"'); return { lead: p[0], strong: p[1] }; },
              write: c => `${c.lead} | ${c.strong}` },
+    // one direction for the fish: its @ time, who, and what (FISH below)
+    fish:  { many: true, read: v => readFish(words(v)), write: v => writeFish(v) },
     // one named timing point: collected into an object, { out: 0.5 }, not a list
     cue:   { many: true, map: true,
              read: v => {
@@ -137,7 +144,7 @@
     end:     { fields: [['board', 'board', 'str'], ['line', 'line', 'str']], need: ['board', 'line'] },
   };
   const ITEM = { fields: HEAD, beats: ['beats', BEAT], need: ['eyebrow', 'headline', 'beats'] };
-  Object.values(SCENES).forEach(d => d.fields.push(['cue', 'cues', 'cue']));
+  Object.values(SCENES).forEach(d => d.fields.push(['cue', 'cues', 'cue'], ['fish', 'fish', 'fish']));
 
   // ── named timing points inside a scene ────────────────────────────────
   // A scene's choreography keeps its shape; a cue moves one of its joints. A scene that does
@@ -149,6 +156,74 @@
     in:     { about: 'seconds from the question\'s Enter to the answer starting to arrive', def: () => 0.04, asks: true },
     out:    { about: 'seconds before the scene ends that its content starts to leave', def: t => (OUT[t] != null ? OUT[t] : 0.32), skip: ['end'] },
   };
+  // ── directing the fish ────────────────────────────────────────────────
+  // `fish @1.5 big to 0.72 0.8`: 1.5 s into its scene, the big fish swims to a point and stays
+  // there. Who: `big` (the fish drawn in the opening), `school` (the four medium fish the
+  // command scene makes) or `all`. A position is a fraction of the frame, 0-1 across and 0-1
+  // down like `focus`, so one line serves every format; the rig keeps a fish inside the water.
+  // `to`, `look`, `idle` and `pace` hold until the next line of their kind for that fish, or
+  // the scene's end; the other verbs happen once, at their time. A scene with no fish lines
+  // keeps the rig's own choreography: the fish swim over to what the scene shows and look at it.
+  const WHO = ['big', 'school', 'all'];
+  const FISH = {
+    to:      { args: 'xy', about: 'swim to a point and stay there' },
+    look:    { args: 'look', about: 'look at a point, at what the scene shows (auto) or at nothing (off)' },
+    idle:    { args: 'mode', about: 'what it does while it is there: hover, sweep, circle or wander' },
+    pace:    { args: 'pace', about: 'how fast it swims: 1 is its own pace, 0.3 to 3' },
+    dart:    { once: true, only: 'big', about: 'a burst of speed, straight ahead' },
+    turn:    { once: true, only: 'big', about: 'turn round' },
+    scatter: { once: true, only: 'school', about: 'the school bursts apart, then comes back together' },
+    regroup: { once: true, only: 'school', about: 'the school comes back together now' },
+    feed:    { once: true, args: 'xy', nobody: true, about: 'drop food at a point, for any fish' },
+  };
+  const IDLES = {
+    hover:  'stays on its spot, nose toward what it looks at (the big fish\'s own)',
+    sweep:  'swims back and forth across its spot (the school\'s own)',
+    circle: 'swims round its spot',
+    wander: 'swims where it likes: the fish engine\'s own behaviour',
+  };
+  const frac = (v, what) => {
+    const n = number(v, what);
+    if (n < 0 || n > 1) throw new Error(`${what} should be between 0 and 1, a fraction of the frame (0.5 is the middle), not ${v}`);
+    return n;
+  };
+  const n3 = x => +(+x).toFixed(3);
+  function readFish(v) {
+    const m = /^@(\S+)\s+(.*)$/.exec(v);
+    if (!m) throw new Error('should read "@1.5 big to 0.72 0.8": an @ time, who (big, school or all), then what it does');
+    const at = number(m[1], 'its @ time'), w = m[2].split(/\s+/).filter(Boolean);
+    const who = WHO.includes(w[0]) ? w.shift() : null, verb = w.shift(), def = FISH[verb];
+    if (!def && !who && FISH[w[0]]) throw new Error(`"${verb}" is not one of the fish: say big, school or all`);
+    if (!def) throw new Error(`"${verb || ''}" is not something the fish do here; they ${Object.keys(FISH).join(', ')}`);
+    if (def.nobody && who) throw new Error(`${verb} names no fish: the food is for any fish ("@${at} ${verb} 0.4 0.85")`);
+    if (!def.nobody && !who) throw new Error(`say which fish: big, school or all ("@${at} big ${verb}…")`);
+    if (def.only && who !== 'all' && who !== def.only) throw new Error(`only the ${def.only === 'big' ? 'big fish' : 'school'} can ${verb}${def.only === 'big' ? '; the school scatters' : '; the big fish darts'}`);
+    const o = { at, verb };
+    if (who) o.who = who;
+    const xy = () => {
+      if (w.length !== 2) throw new Error(`${verb} takes a point: two fractions of the frame, across then down ("${verb} 0.72 0.8")`);
+      o.x = frac(w[0], 'across'); o.y = frac(w[1], 'down');
+    };
+    if (def.args === 'xy') xy();
+    else if (def.args === 'look') {
+      if (w.length === 1 && (w[0] === 'auto' || w[0] === 'off')) o.look = w[0];
+      else if (w.length === 2) xy();
+      else throw new Error('look takes a point ("look 0.5 0.4"), auto (what the scene shows) or off');
+    } else if (def.args === 'mode') {
+      if (w.length !== 1 || !IDLES[w[0]]) throw new Error(`idle takes one of ${Object.keys(IDLES).join(', ')}`);
+      o.mode = w[0];
+    } else if (def.args === 'pace') {
+      if (w.length !== 1) throw new Error('pace takes one number: 1 is its own pace');
+      o.pace = number(w[0], 'the pace');
+      if (o.pace < 0.3 || o.pace > 3) throw new Error('the pace should be between 0.3 and 3 (1 is its own pace)');
+    } else if (w.length) throw new Error(`${verb} takes nothing after it`);
+    return o;
+  }
+  function writeFish(o) {
+    const args = o.look ? [o.look] : o.mode ? [o.mode] : o.pace != null ? [n3(o.pace)] : o.x != null ? [n3(o.x), n3(o.y)] : [];
+    return [`@${n3(o.at)}`].concat(o.who ? [o.who] : [], [o.verb], args).join(' ');
+  }
+
   const asks = type => !!SCENES[type] && SCENES[type].fields.some(f => f[0] === 'query');
   const cueNames = type => Object.keys(CUES).filter(k => (!CUES[k].asks || asks(type)) && !(CUES[k].skip || []).includes(type));
   // a scene's cue: what it writes, or the default
@@ -285,6 +360,9 @@
       const def = SCENES[sc.type], ln = lnOf.get(sc), lists = [];
       need(sc, def.need, def, `${sc.type} scene`);
       if (sc.type === 'answer') (sc.stats || []).forEach(s => { if (s.at == null) fail(ln, 'every stat in an answer scene needs an @ time, as in "stat @1 14 years designing"'); });
+      (sc.fish || []).forEach((f, k) => {
+        if (f.at < 0 || f.at >= sc.dur) warnings.push(`line ${fields.find(x => x.owner === sc && x.key === 'fish' && x.index === k).ln}: fish @${f.at} is outside its scene, which runs 0 to ${sc.dur} s`);
+      });
       if (def.beats) lists.push({ owner: sc, key: def.beats[0], dur: sc.dur, label: 'scene', beatDef: { fields: def.beats[1] }, beatNeed: def.beatNeed });
       if (def.items && sc.items) {
         const run = sc.items.reduce((a, it) => a + it.dur, 0);
@@ -399,6 +477,7 @@
       const c = when[i], def = SCENES[sc.type], cs = [];
       (sc.stats || []).forEach(s => { if (s.at != null) cs.push([c.start + s.at, 1, `stat ${s.n} ${s.label}`]); });
       (sc.awards || []).forEach(a => cs.push([c.start + a.at, 1, `award ${a.yr} ${a.text}`]));
+      (sc.fish || []).forEach(f => cs.push([c.start + f.at, 1, 'fish ' + writeFish(f).replace(/^@\S+\s+/, '')]));
       if (def.beats) (sc[def.beats[0]] || []).forEach(b => cs.push([c.start + b.at, 1, `@${b.at}  ${gist(b)}`]));
       (sc.items || []).forEach((it, k) => {
         cs.push([c.items[k].start, 1, `ITEM ${it.dur} s  ${it.eyebrow || ''}`]);
@@ -433,10 +512,10 @@
     if (!m) throw new Error(`line ${ln} is not a SCENE or ITEM line`);
     return `${m[1]}${m[2]} ${num(dur)}${m[3]}`;
   });
-  // a time on its line: a beat's @ line, or the @ that leads a stat's or an award's words
+  // a time on its line: a beat's @ line, or the @ that leads a stat's, an award's or a fish line's words
   const setAt = (src, ln, at) => setLine(src, ln, s => {
-    const m = /^(\s*)@\s*[^\s[]+(.*)$/.exec(s) || /^(\s*(?:stat|award)\s+)@[^\s[]+(.*)$/.exec(s);
-    if (!m) throw new Error(`line ${ln} has no @ time (a beat's @ line, or a stat or award that starts with one)`);
+    const m = /^(\s*)@\s*[^\s[]+(.*)$/.exec(s) || /^(\s*(?:stat|award|fish)\s+)@[^\s[]+(.*)$/.exec(s);
+    if (!m) throw new Error(`line ${ln} has no @ time (a beat's @ line, or a stat, award or fish line that starts with one)`);
     return `${m[1]}@${num(at)}${m[2]}`;
   });
   // the words after a field's name (the name and its spacing stay)
@@ -447,25 +526,50 @@
     if (!v) throw new Error('a field needs some words');
     return m[1] + v;
   });
-  // a scene's cue: rewritten where it is, added after the scene's own lines, or (value null) removed
-  function setCue(src, sceneLn, name, value) {
+  // where a new line of a scene goes: after the scene's own lines, before its beats and items
+  function sceneSlot(src, sceneLn) {
     const { marks, fields } = parse(src);
     const scene = marks.find(m => m.ln === sceneLn && m.kind === 'scene');
     if (!scene) throw new Error(`line ${sceneLn} is not a SCENE line`);
-    if (!cueNames(scene.obj.type).includes(name)) throw new Error(`${a(scene.obj.type)} scene has no ${name} cue`);
     const own = fields.filter(f => f.owner === scene.obj);
+    const firstChild = Math.min(...marks.filter(m => m.scene === scene.obj && m.kind !== 'scene').map(m => m.ln), Infinity);
+    const before = own.filter(f => f.ln < firstChild).map(f => f.ln);
+    const lines = String(src).split('\n');
+    return { scene, own, lines, after: before.length ? Math.max(...before) : sceneLn,
+      indent: own.length ? /^\s*/.exec(lines[own[0].ln - 1])[0] : '  ' };
+  }
+  // a scene's cue: rewritten where it is, added after the scene's own lines, or (value null) removed
+  function setCue(src, sceneLn, name, value) {
+    const { scene, own, lines, after, indent } = sceneSlot(src, sceneLn);
+    if (!cueNames(scene.obj.type).includes(name)) throw new Error(`${a(scene.obj.type)} scene has no ${name} cue`);
     const there = own.find(f => f.key === 'cue' && f.index === name);
     if (there && value != null) return setField(src, there.ln, `${name} ${num(value)}`);
-    const lines = String(src).split('\n');
     if (there) lines.splice(there.ln - 1, 1);
-    else if (value != null) {
-      const firstChild = Math.min(...marks.filter(m => m.scene === scene.obj && m.kind !== 'scene').map(m => m.ln), Infinity);
-      const before = own.filter(f => f.ln < firstChild).map(f => f.ln);
-      const after = before.length ? Math.max(...before) : sceneLn;
-      const indent = own.length ? /^\s*/.exec(lines[own[0].ln - 1])[0] : '  ';
-      lines.splice(after, 0, `${indent}${'cue'.padEnd(9)}${name} ${num(value)}`);
-    } else return src;
+    else if (value != null) lines.splice(after, 0, `${indent}${'cue'.padEnd(9)}${name} ${num(value)}`);
+    else return src;
     return retime(lines.join('\n'));
+  }
+  // a new field line in a scene (a fish line, say), after the scene's own lines
+  function addLine(src, sceneLn, key, value) {
+    const { scene, lines, after, indent } = sceneSlot(src, sceneLn);
+    if (!SCENES[scene.obj.type].fields.some(f => f[0] === key)) throw new Error(`${a(scene.obj.type)} scene has no "${key}" lines`);
+    const v = String(value).replace(/\s+/g, ' ').trim();
+    if (!v) throw new Error('a field needs some words');
+    lines.splice(after, 0, `${indent}${key.padEnd(9)}${v}`);
+    const next = lines.join('\n');
+    parse(next);                                    // a line that does not read is refused, with parse's words
+    return retime(next);
+  }
+  // one field line out (never a SCENE, ITEM or @ line, which hold other lines)
+  function removeLine(src, ln) {
+    const { marks, fields } = parse(src);
+    if (marks.some(m => m.ln === ln)) throw new Error(`line ${ln} opens a part of the reel; change its length instead`);
+    if (!fields.some(f => f.ln === ln)) throw new Error(`line ${ln} is not a field line`);
+    const lines = String(src).split('\n');
+    lines.splice(ln - 1, 1);
+    const next = lines.join('\n');
+    parse(next);
+    return retime(next);
   }
 
   // ── the command line ──────────────────────────────────────────────────
@@ -499,5 +603,6 @@
     if (notes.length) console.log('\n' + notes.map(w => 'warning: ' + w).join('\n'));
   }
 
-  return { parse, format, retime, spans, queries, cueSheet, SCENES, CUES, cue, cueNames, setDur, setAt, setField, setCue, main };
+  return { parse, format, retime, spans, queries, cueSheet, SCENES, CUES, cue, cueNames, setDur, setAt, setField, setCue, addLine, removeLine,
+    FISH, IDLES, WHO, readFish, writeFish, main };
 });
