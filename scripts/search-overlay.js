@@ -47,7 +47,7 @@
                 <div class="so-command-frame">
                 <!-- Search first — the bar is the point -->
                 <div class="search-input-wrap">
-                    <input type="text" id="so-searchInput" placeholder="Search, ask, or command..." autocomplete="off" aria-label="Search, ask, or command">
+                    <textarea id="so-searchInput" rows="1" placeholder="Search, ask, or command..." autocomplete="off" spellcheck="false" aria-label="Search, ask, or command"></textarea>
                     <button id="so-clearBtn" class="clear-btn" aria-label="Clear search">&times;</button>
                 </div>
                 <!-- The tier strip: the intelligence ladder, one legible line -->

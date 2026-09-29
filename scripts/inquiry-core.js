@@ -592,7 +592,7 @@
         } else if (st.ui === 'copied') {
             foot = '<div class="inq-receipt" role="status">Copied. Paste it into an email to ' + TO + ' or a LinkedIn message.</div>';
         } else if (st.relay && !emailOk) {
-            foot = '<div class="inq-note">Add your email so John can reply. Nothing leaves this page until you press Send.</div>';
+            foot = '<div class="inq-note">Nothing leaves this page until you press Send.</div>';
         } else if (st.relay) {
             foot = '<div class="inq-note">Parsed on your device. Send delivers it straight to John’s inbox. Nothing leaves this page before that.</div>';
         } else {
@@ -604,7 +604,7 @@
         // A field no person sees or fills. Bots fill every field.
         const trap = st.relay ? '<div class="inq-hp" aria-hidden="true"><label>Leave this empty <input type="text" name="hp_field" data-inq-hp tabindex="-1" autocomplete="off"></label></div>' : '';
         return '<div class="inq-card" data-inq-card>'
-            + '<div class="inq-head"><span class="inq-title">Message to John</span><span class="cmdbar-group-label">the parse, before anything sends</span></div>'
+            + '<div class="inq-head"><span class="inq-title">Message to John</span></div>'
             + '<div class="inq-rows">' + rows + '</div>' + add + words
             + trap + '<div class="inq-actions">'
             + sendBtn

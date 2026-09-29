@@ -234,7 +234,7 @@ await servicesShell(browser, 'chromium');
     return { email: !!em, ph: em && em.placeholder, tag: send.tagName, disabled: send.disabled, note: (document.querySelector('#inqCard .inq-note') || {}).textContent || '' };
   });
   check('relay: email row shown and asked for', pre.email && pre.ph === 'so John can reply', JSON.stringify(pre));
-  check('relay: Send is a button, disabled without an email', pre.tag === 'BUTTON' && pre.disabled && /Add your email/.test(pre.note));
+  check('relay: Send is a button, disabled without an email', pre.tag === 'BUTTON' && pre.disabled && !/Add your email/.test(pre.note));
   await page.fill('#inqCard [data-inq-field="email"]', 'dana@example.com');
   await page.dispatchEvent('#inqCard [data-inq-field="email"]', 'input');
   check('relay: a valid email enables Send, caret stays in the field', await page.evaluate(() =>

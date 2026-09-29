@@ -3075,7 +3075,9 @@
         // ============================================
         // Search Wiring
         // ============================================
+        let fitInput = () => {};
         function doSearchOnly(rawQuery) {
+            fitInput();   // a programmatic value (a seeded button, a restore) never fires input
             const answerEl = el('aiAnswer');
             const sourcesSection = el('sourcesSection');
             const clearBtn = el('clearBtn');
@@ -3273,7 +3275,33 @@
                 });
             }
 
+            // The bar is a one-row <textarea> that grows with what is typed:
+            // a message is a paragraph, and an <input> showed only its last
+            // few words. Enter still commits (the keydown below eats it), so
+            // no newline is ever typed. Six rows, then it scrolls.
+            fitInput = function () {
+                if (searchInput.tagName !== 'TEXTAREA') return;
+                const cs = getComputedStyle(searchInput);
+                const line = parseFloat(cs.lineHeight) || 20;
+                const chrome = searchInput.offsetHeight - searchInput.clientHeight;   // borders
+                const pad = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+                const cap = line * 6 + pad + chrome;
+                searchInput.style.height = 'auto';
+                const want = searchInput.scrollHeight + chrome;
+                searchInput.style.height = Math.min(want, cap) + 'px';
+                searchInput.style.overflowY = want > cap + 1 ? 'auto' : 'hidden';
+                searchInput.classList.toggle('is-wrapped', searchInput.scrollHeight > line + pad + 2);
+            };
+            fitInput();
+            if (window.ResizeObserver) {
+                let lastW = 0;
+                new ResizeObserver(() => {
+                    if (searchInput.clientWidth !== lastW) { lastW = searchInput.clientWidth; fitInput(); }
+                }).observe(searchInput);
+            }
+
             searchInput.addEventListener('input', (e) => {
+                fitInput();
                 const val = e.target.value;
                 clearTimeout(searchDebounce); searchDebounce = setTimeout(() => doSearchOnly(val), 200);
                 clearTimeout(aiDebounce);
@@ -3290,6 +3318,13 @@
             // ladder rung stops theirs via stopImmediatePropagation.
             searchInput.addEventListener('keydown', (e) => {
                 if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                    // In a wrapped paragraph the arrows move the caret between
+                    // its lines; they reach the results only from the end of it
+                    // (or once a result already holds the cursor).
+                    if (cursorIdx < 0 && searchInput.classList.contains('is-wrapped')) {
+                        const atEnd = searchInput.selectionStart === searchInput.value.length;
+                        if (e.key === 'ArrowUp' || !atEnd) return;
+                    }
                     e.preventDefault();
                     moveCursor(e.key === 'ArrowDown' ? 1 : -1);
                     return;
