@@ -1593,6 +1593,13 @@ body.search-overlay-open .so-residue { display: none; }
    #nav, so a sibling selector tracks the nav's own .visible class with no
    scroll listener. Pages without #nav (playground) always show it. */
 #nav:not(.visible) ~ .so-residue { display: none; }
+/* The menu-state bar is 46px (jh-chrome.css #nav.nav-menu), not 40. */
+#nav.nav-menu ~ .so-residue { top: calc(46px + env(safe-area-inset-top)); }
+/* While the sentence shows it is part of the fixed header: --residue-h lets
+   a page's sticky bars (services.html's track tabs) and anchor offsets sit
+   below it instead of under it. 26px line + 1px border. */
+:root:has(#nav.visible ~ .so-residue) { --residue-h: 27px; }
+:root:has(body.search-overlay-open) { --residue-h: 0px; }
 .so-residue-open {
     all: unset;
     cursor: pointer;
