@@ -399,7 +399,8 @@ p, h1, h2, h3 { margin: 0; }
 #stage.vertical .endline { font-size: 34px; }
 
 /* live-mode controls (never in a render) */
-#hud { position: fixed; left: 0; right: 0; bottom: 0; padding: 10px 16px 12px; display: flex; gap: 14px; align-items: center;
+/* z 55: above the timeline (50), so the More menu opens over it; under the synth rack (60) and the dialogs */
+#hud { position: fixed; left: 0; right: 0; bottom: 0; z-index: 55; padding: 10px 16px 12px; display: flex; gap: 14px; align-items: center;
   font: 500 12px/1 var(--font-mono); letter-spacing: 0.08em; color: var(--ink-faint);
   background: linear-gradient(to top, rgba(0, 0, 0, 0.78), rgba(0, 0, 0, 0.35) 70%, transparent); transition: opacity 0.4s; }
 #hud[hidden] { display: none; }
@@ -417,6 +418,26 @@ p, h1, h2, h3 { margin: 0; }
 #hud .pp.paused .i-play { display: block; }
 #hud .tools { display: flex; gap: 6px; align-items: center; flex: none; }
 #hud .tools .go { border-color: rgba(var(--gold-rgb), 0.6); color: var(--gold); }
+/* The collapse rule (REEL_UI.fit): buttons never shrink; while the HUD overflows it takes these
+   steps in order, each on top of the last. Nothing is lost: labels live on in tooltips, and the
+   seek buttons move into the More menu. */
+#hud button, #hud .time { flex: none; }
+#hud .bar { flex: 1 1 auto; min-width: 72px; }
+#hud .more, #hud .menu[hidden] { display: none; }
+#hud.fit-kbd .tools kbd { display: none; }
+#hud.fit-tools .tools .rl { display: none; }
+#hud.fit-tools .tools button { padding: 0 8px; }
+#hud.fit-scene .scene { display: none; }
+#hud.fit-seek .tp [data-do="restart"], #hud.fit-seek .tp [data-do="back"], #hud.fit-seek .tp [data-do="fwd"] { display: none; }
+#hud.fit-seek .more { display: inline-flex; }
+#hud.fit-time .time { display: none; }
+#hud.fit-wrap { flex-wrap: wrap; row-gap: 8px; }
+#hud.fit-wrap .bar { order: -1; flex: 1 0 100%; }
+#hud .menu { position: absolute; left: 16px; bottom: calc(100% + 6px); display: grid; gap: 4px; padding: 6px; border-radius: 10px; min-width: 230px;
+  background: rgba(var(--surface-rgb), 0.97); border: 1px solid rgba(var(--cyan-dim-rgb), 0.4); box-shadow: 0 10px 30px var(--elevation); }
+#hud .menu button { justify-content: flex-start; width: 100%; gap: 10px; }
+#hud .menu button span:not(.n) { flex: 1; text-align: left; }
+#hud .menu .n { min-width: 3ch; color: var(--ink-quiet); }
 #hud kbd { font: 500 10px/1 var(--font-mono); color: var(--ink-faint); border: 1px solid rgba(var(--cyan-dim-rgb), 0.3); border-radius: 3px; padding: 2px 4px; }
 #hud button:hover kbd { color: inherit; }
 #hud .bar { flex: 1; height: 3px; background: rgba(var(--cyan-dim-rgb), 0.18); border-radius: 2px; cursor: pointer; position: relative; }
@@ -453,12 +474,19 @@ p, h1, h2, h3 { margin: 0; }
   <button type="button" data-do="fwd" title="Forward 5 seconds (→)" aria-label="Forward 5 seconds">+5s</button>
   <button type="button" data-do="next" title="Next scene (])" aria-label="Next scene"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 3v10l7-5z"/><rect x="11" y="3" width="2" height="10" rx="0.5"/></svg></button>
   <button type="button" data-do="loop" title="Loop this scene (L)" aria-label="Loop this scene" aria-pressed="false"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.8 7.2A4.4 4.4 0 0 1 10.6 4.3l1.6 1.4"/><path d="M12.4 2.6v3.2H9.2"/><path d="M13.2 8.8a4.4 4.4 0 0 1-7.8 2.9l-1.6-1.4"/><path d="M3.6 13.4v-3.2h3.2"/></svg></button>
-</div><span class="time">0.0</span><span class="scene"></span><div class="bar"><i></i></div><div class="tools"></div></div>
+  <button type="button" class="more" title="More: play from the start, back and forward 5 seconds" aria-label="More controls" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="3" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="13" cy="8" r="1.5"/></svg></button>
+</div><span class="time">0.0</span><span class="scene"></span><div class="bar"><i></i></div><div class="tools"></div>
+<div class="menu" role="menu" aria-label="More controls" hidden>
+  <button type="button" role="menuitem" data-do="restart"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3.6 8.6a4.6 4.6 0 1 0 1.4-3.9"/><path d="M4.6 1.9v3.2h3.2"/></svg><span>Play from the start</span><kbd>R</kbd></button>
+  <button type="button" role="menuitem" data-do="back"><span class="n">−5s</span><span>Back 5 seconds</span><kbd>←</kbd></button>
+  <button type="button" role="menuitem" data-do="fwd"><span class="n">+5s</span><span>Forward 5 seconds</span><kbd>→</kbd></button>
+</div></div>
 <script src="../scripts/shape-detection.js"></script>
 <script src="../scripts/jh-shapes.js"></script>
 <script src="../scripts/jh-strokes.js"></script>
 <script src="../scripts/fish-engine.js"></script>
 <script src="../scripts/reel-script.js"></script>
+<script src="../scripts/reel-ui.js"></script>
 <script>
 (async function () {
   'use strict';
@@ -1543,17 +1571,26 @@ p, h1, h2, h3 { margin: 0; }
   const tp = hud.querySelector('.tp'), ppBtn = tp.querySelector('[data-do="play"]'), loopBtn = tp.querySelector('[data-do="loop"]');
   // a mouse click leaves no focus behind (the keys stay the preview's); Tab and Enter keep it
   tp.addEventListener('click', e => { const b = e.target.closest('button[data-do]'); if (!b) return; DO[b.dataset.do](); if (e.detail) b.blur(); });
+  // More: the seek buttons the collapse rule took off the bar, in a menu above it
+  const moreBtn = tp.querySelector('.more'), menu = hud.querySelector('.menu');
+  const menuOpen = on => { menu.hidden = !on; moreBtn.setAttribute('aria-expanded', String(on)); if (on) menu.querySelector('button').focus(); };
+  moreBtn.addEventListener('click', e => { e.stopPropagation(); menuOpen(menu.hidden); });
+  menu.addEventListener('click', e => { const b = e.target.closest('button[data-do]'); if (!b) return; DO[b.dataset.do](); menuOpen(false); if (e.detail) moreBtn.blur(); });
+  menu.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); menuOpen(false); moreBtn.focus(); } });
+  addEventListener('pointerdown', e => { if (!menu.hidden && !menu.contains(e.target) && !moreBtn.contains(e.target)) menuOpen(false); });
+  // the collapse rule (scripts/reel-ui.js); a change of step can change the HUD's height, and
+  // the timeline sizes the preview from it
+  const refit = window.REEL_UI ? REEL_UI.fit(hud, ['fit-kbd', 'fit-tools', 'fit-scene', 'fit-seek', 'fit-time', 'fit-wrap'],
+    n => { if (n < 4) menuOpen(false); dispatchEvent(new Event('resize')); }) : () => {};
   // A tool (the timeline, the synth rack, export) puts its own button on the right of the HUD
   // through REEL_LIVE.addTool; its key stays an accelerator. Ordered by `order`, low first.
   const toolsEl = hud.querySelector('.tools');
-  function addTool({ id, label, key, title, order = 50, cls, onClick }) {
-    const b = document.createElement('button');
-    b.type = 'button'; b.dataset.tool = id; b.dataset.order = order; if (cls) b.className = cls;
-    b.title = (title || label) + (key ? ` (${key})` : '');
-    const l = document.createElement('span'); l.textContent = label; b.appendChild(l);
-    if (key) { const k = document.createElement('kbd'); k.textContent = key; b.appendChild(k); }
+  function addTool({ id, label, key, title, order = 50, cls, icon, onClick }) {
+    const b = window.REEL_UI ? REEL_UI.button({ icon, label, key, title, cls }) : Object.assign(document.createElement('button'), { type: 'button', textContent: label, title: title || label });
+    b.dataset.tool = id; b.dataset.order = order;
     b.addEventListener('click', e => { onClick(e); if (e.detail) b.blur(); });
     toolsEl.insertBefore(b, [...toolsEl.children].find(c => +c.dataset.order > order) || null);
+    refit();
     return b;
   }
   let hashAt = -1, hashLoop = null, hashPlaying = null;

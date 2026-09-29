@@ -379,6 +379,38 @@ John: "give me a better media picker for the img/video per slot (I don't memoriz
   Enter, a too-short clip's in-point reset, Undo), hosttest (the library travels with the page;
   a pick saves to the store).
 
+## Buttons that fold (2026-09-29)
+
+John: "button labels can be too large for the button size, have icons and collapse rule for
+responsive". At 820 px (a claude.ai side panel) "Export video" overflowed a 24 px button, the
+HUD's tools ran off the window, and the inspector squeezed the cards to a strip.
+
+- **One kit**, `scripts/reel-ui.js`, loaded before the rig's own script: 31 icons drawn on one 16 px grid in
+  `currentColor`, and `REEL_UI.button({ icon, label, key, title, cls })`, whose anatomy every bar
+  folds: an icon, a label (`.rl`) and a key hint (`kbd`). The label is also the accessible name,
+  and the tooltip keeps the name and the key when the label is folded away. `relabel` changes a
+  button's words in all three places at once (the sound chip).
+- **The collapse rule** is `REEL_UI.fit(bar, steps)`. Buttons never shrink (`flex: none`). While
+  anything overflows (the bar, or a button's own content), the bar takes the next class in
+  `steps`, each on top of the last, cheapest first. When it grows, it gives them back as far as
+  it fits. It is measured, not set by breakpoints: fonts differ, and tools add their buttons
+  after the bar is drawn. A ResizeObserver on the bar and on each of its children re-runs it, so
+  a label that changes or a tool that arrives refits it as surely as the window does.
+- **The HUD** folds in six steps: key hints, the tools' labels, the scene's name, the three seek
+  buttons (restart, −5 s, +5 s move into a More menu above the bar), the time, and last the scrub
+  bar takes a row of its own. **The timeline's status bar** folds in five: labels (Export video
+  keeps its label longest), the total, the save line, Export's label, the zoom readout and Fit.
+- **The panels** change shape by their own width. The timeline's inspector sits beside the cards
+  at 440 px, or 44% of a narrower panel; under 760 px the gutter's names go and the inspector
+  opens over the whole panel with its own close. The synth rack sits beside the preview in a
+  window of 1080 px and up; in a narrower one it lies over the preview, opaque, as wide as the
+  window allows, and stops at the HUD so the transport and tools stay in reach. Export and the
+  picker were already fluid dialogs; they gained icons, and the picker keeps two columns on a
+  phone.
+- **Measured** at 1440, 1024, 820, 600 and 390 px wide with the timeline, the inspector and the
+  rack open: no button or bar overflows, and none leaves the window
+  (`reel-tests/timelinetest.mjs` checks 820 and 390).
+
 ## Later
 
 Scene-specific cues (line staggers, the push); moving cut 1 onto the one player; a music track

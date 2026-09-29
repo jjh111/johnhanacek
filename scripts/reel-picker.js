@@ -62,7 +62,8 @@
   border-radius: 7px; padding: 0 11px; height: 32px; cursor: pointer; }
 #reel-pk button:hover, #reel-pk button:focus-visible { border-color: var(--gold); color: var(--gold); outline: none; }
 #reel-pk .pk-chip[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); background: rgba(var(--gold-rgb), 0.1); }
-#reel-pk .pk-grid { flex: 1; overflow-y: auto; padding: 14px 18px 18px; display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: 12px; align-content: start; }
+#reel-pk .pk-x { width: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+#reel-pk .pk-grid { flex: 1; overflow-y: auto; padding: 14px 18px 18px; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(176px, calc(50% - 6px)), 1fr)); gap: 12px; align-content: start; }
 #reel-pk .pk-tile { position: relative; display: flex; flex-direction: column; gap: 6px; height: auto; padding: 6px; border-radius: 10px; text-align: left; background: rgba(var(--cyan-dim-rgb), 0.05); }
 #reel-pk .pk-tile.pk-cur { border-color: var(--gold); background: rgba(var(--gold-rgb), 0.08); }
 #reel-pk .pk-img { position: relative; width: 100%; aspect-ratio: 16 / 10; border-radius: 6px; overflow: hidden; background: #000 center / cover no-repeat; }
@@ -75,6 +76,7 @@
 #reel-pk .pk-cur .pk-badge { color: var(--gold); border-color: var(--gold); }
 #reel-pk .pk-dur { position: absolute; right: 12px; top: 12px; padding: 3px 6px; border-radius: 4px; font-size: 10px; background: rgba(0, 0, 0, 0.72); color: var(--text-bright); }
 #reel-pk .pk-foot { padding: 10px 18px 14px; color: var(--ink-quiet); border-top: 1px solid rgba(var(--cyan-dim-rgb), 0.18); display: flex; gap: 12px; }
+#reel-pk .pk-foot > :first-child { flex: none; white-space: nowrap; }
 #reel-pk .pk-empty { grid-column: 1 / -1; color: var(--ink-quiet); padding: 30px 0; text-align: center; }
 `;
   document.head.appendChild(css);
@@ -88,7 +90,8 @@
   const head = el('div', 'head', panel);
   const h2 = el('h2', null, head); h2.id = 'reel-pk-h';
   const now = el('div', 'now', head);
-  const x = el('button', null, head, '×'); x.type = 'button'; x.title = 'close (Esc)'; x.setAttribute('aria-label', 'close'); x.onclick = () => shut();
+  const x = el('button', 'x', head); x.type = 'button'; x.title = 'close (Esc)'; x.setAttribute('aria-label', 'close'); x.onclick = () => shut();
+  if (window.REEL_UI) x.innerHTML = REEL_UI.icon('close'); else x.textContent = '×';
   const bar = el('div', 'bar', panel);
   const q = el('input', null, bar); q.type = 'search'; q.placeholder = 'search by name or folder'; q.setAttribute('aria-label', 'search the media');
   const chips = el('div', null, bar); chips.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px';

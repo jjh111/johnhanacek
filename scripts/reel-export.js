@@ -51,7 +51,7 @@
 #reel-ex button .ex-dim { color: var(--ink-faint); }
 #reel-ex button[aria-pressed="true"] .ex-dim { color: inherit; }
 #reel-ex .ex-go { border-color: rgba(var(--gold-rgb), 0.7); color: var(--gold); background: rgba(var(--gold-rgb), 0.08); height: 40px; padding: 0 16px; font-size: 13px; }
-#reel-ex .ex-x { height: 30px; padding: 0 10px; }
+#reel-ex .ex-x { height: 32px; width: 32px; padding: 0; justify-content: center; flex: none; }
 #reel-ex .ex-films { display: grid; gap: 8px; }
 #reel-ex .ex-film { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-items: center; padding: 10px 12px; border-radius: 9px; border: 1px solid rgba(var(--cyan-dim-rgb), 0.22); }
 #reel-ex .ex-film b { font-weight: 600; color: var(--text-bright); }
@@ -65,7 +65,12 @@
   document.head.appendChild(css);
 
   const el = (tag, cls, parent, text) => { const e = document.createElement(tag); if (cls) e.className = cls.split(' ').map(c => 'ex-' + c).join(' '); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; };
-  const btn = (parent, text, title, cls) => { const b = el('button', cls || null, parent, text); b.type = 'button'; if (title) b.title = title; return b; };
+  const btn = (parent, text, title, cls, icon) => { const b = el('button', cls || null, parent); b.type = 'button'; if (title) b.title = title; dress(b, text, icon); return b; };
+  // a button's icon (scripts/reel-ui.js) and words, set together
+  function dress(b, text, icon) {
+    if (icon && window.REEL_UI) { b.innerHTML = REEL_UI.icon(icon); if (text) { const l = el('span', null, b, text); l.className = 'rl'; } }
+    else b.textContent = text || '';
+  }
   const root = el('div', null, document.body); root.id = 'reel-ex'; root.hidden = true;
   const panel = el('div', 'panel', root);
   panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-modal', 'true'); panel.setAttribute('aria-labelledby', 'reel-ex-h'); panel.tabIndex = -1;
@@ -74,7 +79,7 @@
 
   const head = el('div', 'head', panel);
   const h2 = el('h2', null, head, 'Export video'); h2.id = 'reel-ex-h';
-  const x = btn(head, '×', 'close (Esc)', 'x'); x.setAttribute('aria-label', 'close'); x.onclick = () => open(false);
+  const x = btn(head, '', 'close (Esc)', 'x', 'close'); x.setAttribute('aria-label', 'close'); x.onclick = () => open(false);
   el('p', 'quiet', panel, 'A film is rendered from the saved script: this same page, played frame by frame, with the music mixed in. What the preview shows is what it films, to the pixel.');
 
   // what to make
@@ -102,8 +107,8 @@
   const lead = el('p', 'quiet', panel);
   const act = el('div', 'row', panel);
   const go = btn(act, '', null, 'go');
-  const stop = btn(act, 'Stop', 'stop the render'); stop.hidden = true;
-  const copy = btn(act, 'Copy the request', 'copy the words to send Claude'); copy.hidden = true;
+  const stop = btn(act, 'Stop', 'stop the render', null, 'stop'); stop.hidden = true;
+  const copy = btn(act, 'Copy the request', 'copy the words to send Claude', null, 'copy'); copy.hidden = true;
   const say = el('div', 'say', panel); say.hidden = true; say.setAttribute('role', 'status');
   const tell = (text, bad) => { say.hidden = !text; say.textContent = text || ''; say.classList.toggle('ex-bad', !!bad); };
 
@@ -113,8 +118,8 @@
   // the edit itself, to keep or to take elsewhere
   el('h3', null, panel, 'The edit');
   const more = el('div', 'row', panel);
-  const dScript = btn(more, 'Download the script', `save ${NAME}.script.txt: every word and time of the edit`);
-  const dScore = btn(more, 'Download the score', `save ${NAME}.score.txt: the music`);
+  const dScript = btn(more, 'Download the script', `save ${NAME}.script.txt: every word and time of the edit`, null, 'download');
+  const dScore = btn(more, 'Download the score', `save ${NAME}.score.txt: the music`, null, 'download');
   const cmd = el('p', 'faint', panel); cmd.style.marginTop = '10px';
   dScript.onclick = () => L.download(L.src);
   dScore.onclick = () => {
@@ -130,7 +135,7 @@
     const r = el('div', 'film', films);
     const t = el('div', null, r); el('b', null, t, label); if (detail) { t.appendChild(document.createTextNode('  ')); el('span', 'quiet', t, detail); }
     const l = el('div', 'row', r);
-    (links || []).forEach(([text, href, dl]) => { const a = el('a', 'btn', l, text); a.href = href; if (dl) a.download = dl; else { a.target = '_blank'; a.rel = 'noopener'; } });
+    (links || []).forEach(([text, href, dl]) => { const a = el('a', 'btn', l); dress(a, text, dl ? 'download' : 'film'); a.href = href; if (dl) a.download = dl; else { a.target = '_blank'; a.rel = 'noopener'; } });
     if (progress != null) { const bar = el('div', 'bar', r); const i = el('i', null, bar); i.style.width = Math.round(progress * 100) + '%'; }
     return r;
   }
@@ -157,7 +162,7 @@
       });
     }
     go.disabled = running || !chosen().length; stop.hidden = !running;
-    go.textContent = running ? 'Rendering…' : `Render ${chosen().length > 1 ? chosen().length + ' films' : 'the film'}`;
+    dress(go, running ? 'Rendering…' : `Render ${chosen().length > 1 ? chosen().length + ' films' : 'the film'}`, 'film');
   }
   async function devGo() {
     tell('');
@@ -191,7 +196,7 @@
     tell('');
     if (can == null) return;
     if (can !== 'available') { copyIt(); return; }
-    go.disabled = true; go.textContent = 'Sending…';
+    go.disabled = true; dress(go, 'Sending…', 'send');
     const r = await Promise.resolve(HOST.ask(request(), go)).catch(e => ({ ok: false, reason: 'error', message: e.message }));
     go.disabled = false; sync();
     if (r.ok) tell(`Sent to Claude. It renders your saved edit (${chosen().join(', ')}, ${pick.fps} fps) and puts the films in this panel; its reply shows in this page's comments. A film takes about ${pick.fps === 60 ? 10 : 5} minutes.`);
@@ -217,12 +222,12 @@
       lead.textContent = (can == null || can === 'available'
         ? 'Claude renders what is saved on this page and puts the films below.'
         : `${why[can] || why.off} Copy the request and send it to Claude in the chat where you opened this editor.`) + unsaved;
-      go.textContent = can == null ? 'Checking…' : can === 'available' ? `Ask Claude to render ${n > 1 ? n + ' films' : 'the film'}` : 'Copy the request';
+      dress(go, can == null ? 'Checking…' : can === 'available' ? `Ask Claude to render ${n > 1 ? n + ' films' : 'the film'}` : 'Copy the request', can === 'available' || can == null ? 'send' : 'copy');
       go.disabled = !n || can == null; copy.hidden = true;    // unavailable, the main button copies it
       go.onclick = hostGo;
     } else {
       lead.textContent = 'This preview has no renderer. On a computer with the repo, run the dev server (node scripts/reel-dev.mjs) and Export from there, or run the renderer yourself:';
-      go.textContent = 'Copy the command'; go.disabled = !n;
+      dress(go, 'Copy the command', 'copy'); go.disabled = !n;
       go.onclick = () => { const t = chosen().map(cmdFor).join('\n'); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => tell('Copied.'), () => tell(t)); };
       films.textContent = ''; el('p', 'faint', films, 'Films made on your computer land in Assets/media-kit/video/.');
     }
@@ -253,6 +258,6 @@
     if ((e.key === 'x' || e.key === 'X') && !e.metaKey && !e.ctrlKey && !e.altKey) { e.preventDefault(); open(); }
     else if (e.key === 'Escape' && !root.hidden) { e.preventDefault(); open(false); }
   });
-  if (L.addTool) tool = L.addTool({ id: 'export', label: 'Export', key: 'X', order: 40, cls: 'go', title: 'make the video from this edit', onClick: () => open() });
+  if (L.addTool) tool = L.addTool({ id: 'export', label: 'Export', key: 'X', order: 40, cls: 'go', icon: 'export', title: 'make the video from this edit', onClick: () => open() });
   window.REEL_EXPORT = { open: on => open(on === undefined ? true : on), get mode() { return MODE; }, get version() { return VERSION; } };
 })();

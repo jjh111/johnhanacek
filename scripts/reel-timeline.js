@@ -82,6 +82,7 @@
   const PANEL = 300;                       // the panel's height
   const Y = { ruler: 8, card: 40, cardH: 196, items: 90, m0: 124, m1: 154, body: 84, bodyH: 150, outRow: 194 };   // outRow: the out handles' band, to the card's foot
   const PIN = 24, GAP = 26, MAX_PXS = 360;  // a moment's hit box; the room it needs from the next; the deepest zoom (px a second)
+  const SLIM = 760, INSP = 440;            // a panel narrower than SLIM is slim; the inspector's width in a wide one
 
   // ── style: the site's tokens, never text dimmed with alpha ────────────
   const css = document.createElement('style');
@@ -92,7 +93,7 @@
 #reel-tl[hidden], #reel-tl [hidden] { display: none !important; }
 #reel-tl * { box-sizing: border-box; }
 #reel-tl .tl-main { position: absolute; left: 0; top: 0; bottom: 0; right: 0; }
-#reel-tl.tl-insp .tl-main { right: 440px; }
+#reel-tl.tl-insp .tl-main { right: var(--tl-iw, 440px); }
 #reel-tl .tl-gl { position: absolute; left: 16px; width: 80px; color: var(--ink-faint); font-size: 11px; text-transform: lowercase; letter-spacing: 0.08em; cursor: help; }
 #reel-tl .tl-gl small { display: block; margin-top: 4px; font-size: 10px; letter-spacing: 0.04em; }
 #reel-tl .tl-view { position: absolute; left: 100px; right: 20px; top: 0; bottom: 48px; overflow-x: auto; overflow-y: hidden;
@@ -152,7 +153,7 @@
 #reel-tl .tl-ro-out[hidden] { display: none; }
 #reel-tl .tl-status { position: absolute; left: 16px; right: 20px; bottom: 10px; height: 30px; display: flex; align-items: center; gap: 10px; white-space: nowrap;
   border-top: 1px solid rgba(var(--cyan-dim-rgb), 0.15); padding-top: 8px; }
-#reel-tl .tl-status .tl-where { color: var(--cyan); overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
+#reel-tl .tl-status .tl-where { color: var(--cyan); overflow: hidden; text-overflow: ellipsis; min-width: min(16ch, 40%); flex: 0 1 auto; }
 #reel-tl .tl-status .tl-err { color: var(--text-bright); border-left: 2px solid #ff8a7a; padding-left: 8px; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
 #reel-tl .tl-status .tl-err:empty { display: none; }
 #reel-tl .tl-status .tl-gap { flex: 1; }
@@ -160,15 +161,35 @@
 #reel-tl .tl-status .tl-note { color: var(--ink-faint); }
 #reel-tl .tl-status .tl-grp { display: flex; gap: 4px; align-items: center; margin: 0; padding: 0; border: 0; }
 #reel-tl .tl-status .tl-zr { min-width: 4ch; text-align: center; color: var(--ink-quiet); }
+/* The collapse rule (REEL_UI.fit): the bar's buttons never shrink; while it overflows it takes
+   these steps in order, each on top of the last. A label folds into its button's tooltip. */
+#reel-tl .tl-status > button, #reel-tl .tl-status .tl-grp, #reel-tl .tl-status .tl-note { flex: none; }
+#reel-tl .tl-status.fit-labels button:not(.tl-go) .rl { display: none; }
+#reel-tl .tl-status.fit-labels button:not(.tl-go):has(> .ri) { padding: 0; width: 28px; }
+#reel-tl .tl-status.fit-note .tl-note { display: none; }
+#reel-tl .tl-status.fit-where .tl-where { display: none; }
+#reel-tl .tl-status.fit-go .tl-go .rl { display: none; }
+#reel-tl .tl-status.fit-go .tl-go { padding: 0; width: 28px; }
+#reel-tl .tl-status.fit-zoom .tl-zr, #reel-tl .tl-status.fit-zoom [data-act="fit"] { display: none; }
 #reel-tl button { font: 500 11px/1 var(--font-mono); color: var(--text-bright); background: rgba(var(--cyan-dim-rgb), 0.1); border: 1px solid rgba(var(--cyan-dim-rgb), 0.4);
   border-radius: 5px; padding: 0 9px; height: 26px; min-width: 26px; cursor: pointer; }
 #reel-tl button:hover:not(:disabled), #reel-tl button:focus-visible { border-color: var(--gold); color: var(--gold); outline: none; }
 #reel-tl button:disabled { color: var(--ink-faint); cursor: default; opacity: 0.6; }
 #reel-tl button.tl-go { border-color: rgba(var(--gold-rgb), 0.65); color: var(--gold); }
-#reel-tl .tl-x { position: absolute; top: 8px; right: 20px; z-index: 7; }
-#reel-tl.tl-insp .tl-x { right: 460px; }
-#reel-tl .tl-insp-col { position: absolute; right: 0; top: 0; bottom: 0; width: 440px; overflow-y: auto; border-left: 1px solid rgba(var(--cyan-dim-rgb), 0.3);
+#reel-tl button:has(> .ri):not(:has(> .rl)) { padding: 0; width: 28px; flex: none; }   /* an icon alone: a square */
+#reel-tl .tl-x { position: absolute; top: 8px; right: 20px; z-index: 7;   /* opaque: it sits on the ruler's end */
+  background: linear-gradient(rgba(var(--cyan-dim-rgb), 0.1), rgba(var(--cyan-dim-rgb), 0.1)), rgb(var(--surface-rgb)); }
+#reel-tl.tl-insp .tl-x { right: calc(var(--tl-iw, 440px) + 20px); }
+#reel-tl .tl-insp-col { position: absolute; right: 0; top: 0; bottom: 0; width: var(--tl-iw, 440px); overflow-y: auto; border-left: 1px solid rgba(var(--cyan-dim-rgb), 0.3);
   padding: 12px 18px 16px; user-select: text; -webkit-user-select: text; }
+/* A narrow panel: under ${SLIM}px the gutter's names go (the cards, items and moments keep their
+   tooltips) and the inspector opens over the whole panel, a page of its own with its own close */
+#reel-tl.tl-slim .tl-gl { display: none; }
+#reel-tl.tl-slim .tl-view { left: 12px; right: 12px; }
+#reel-tl.tl-slim .tl-status { left: 12px; right: 12px; }
+#reel-tl.tl-slim .tl-x { right: 12px; }
+#reel-tl.tl-slim.tl-insp .tl-main { right: 0; }
+#reel-tl.tl-slim .tl-insp-col { z-index: 8; border-left: 0; background: rgba(var(--surface-rgb), 0.99); padding: 12px 14px 16px; }
 #reel-tl .tl-insp-col[hidden] { display: none; }
 #reel-tl .tl-ih { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
 #reel-tl .tl-ih h3 { margin: 0; font: 300 18px/1.2 var(--font-display); color: var(--gold); flex: 1; }
@@ -198,7 +219,14 @@
   // ── the DOM ───────────────────────────────────────────────────────────
   // every class wears tl-: the rig's own classes (.status, .row, .note…) are global and would reach in
   const h = (tag, cls, parent, text) => { const e = document.createElement(tag); if (cls) e.className = cls.split(' ').map(c => 'tl-' + c).join(' '); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; };
-  const button = (parent, text, title, act, cls) => { const b = h('button', cls || null, parent, text); b.type = 'button'; b.title = title; if (act) b.dataset.act = act; return b; };
+  // a button: an icon, and a label the collapse rule may fold away (the name stays in the tooltip)
+  const button = (parent, text, title, act, cls, icon) => {
+    let b;
+    if (icon && window.REEL_UI) { b = REEL_UI.button({ icon, label: text, title }); if (cls) b.className = cls.split(' ').map(c => 'tl-' + c).join(' '); parent.appendChild(b); }
+    else { b = h('button', cls || null, parent, text); b.type = 'button'; b.title = title; }
+    if (act) b.dataset.act = act;
+    return b;
+  };
   const root = h('div', null, document.body); root.id = 'reel-tl'; root.hidden = true;
   root.setAttribute('role', 'region'); root.setAttribute('aria-label', 'Reel timeline');
   const main = h('div', 'main', root);
@@ -243,7 +271,7 @@
   });
   const ph = h('div', 'ph', lane);
   const readout = h('div', 'ro-out', lane); readout.hidden = true;
-  const close = button(root, '×', 'close the timeline (E)', 'close', 'x'); close.setAttribute('aria-label', 'close the timeline');
+  const close = button(root, '', 'close the timeline (E)', 'close', 'x', 'close'); close.setAttribute('aria-label', 'close the timeline');
 
   const status = h('div', 'status', main);
   const where = h('span', 'where', status);
@@ -253,26 +281,30 @@
   const home = (busy) => L.dev ? `Saving to ${L.file}${busy ? '…' : ''}` : L.host ? `Saving to ${L.host}${busy ? '…' : ''}`
     : busy ? 'Keeping a draft in this tab…' : 'Draft in this tab: no dev server';
   if (!L.dev && (L.draft || L.hosted)) {
-    const dl = button(status, 'Download', 'save this version as ' + L.file.replace(/^.*\//, ''), 'download');
+    const dl = button(status, 'Download', 'save this version as ' + L.file.replace(/^.*\//, ''), 'download', null, 'download');
     dl.onclick = () => L.download(L.src);
-    const ds = button(status, L.hosted ? 'Revert' : 'Discard', L.hosted ? `drop the version saved on ${L.host} and play the file again` : 'drop the draft and play the file again', 'discard');
+    const ds = button(status, L.hosted ? 'Revert' : 'Discard', L.hosted ? `drop the version saved on ${L.host} and play the file again` : 'drop the draft and play the file again', 'discard', null, L.hosted ? 'revert' : 'discard');
     ds.onclick = () => { put(K_UNDO, []); put(K_REDO, []); L.discardDraft(); };
   }
   const edit = h('div', 'grp', status);
-  const bUndo = button(edit, 'Undo', 'undo the last change (⌘Z / Ctrl+Z)', 'undo');
-  const bRedo = button(edit, 'Redo', 'redo it (⇧⌘Z / Ctrl+Shift+Z)', 'redo');
+  const bUndo = button(edit, 'Undo', 'undo the last change (⌘Z / Ctrl+Z)', 'undo', null, 'undo');
+  const bRedo = button(edit, 'Redo', 'redo it (⇧⌘Z / Ctrl+Shift+Z)', 'redo', null, 'redo');
   const zoom = h('div', 'grp', status);
-  const bOut = button(zoom, '−', 'zoom out (-)', 'zoom-out'); bOut.setAttribute('aria-label', 'zoom out');
+  const bOut = button(zoom, '', 'zoom out (-)', 'zoom-out', null, 'zoomOut'); bOut.setAttribute('aria-label', 'zoom out');
   const zr = h('span', 'zr', zoom, 'fit');
-  const bIn = button(zoom, '+', 'zoom in (=), or Ctrl/⌘ + wheel, or pinch', 'zoom-in'); bIn.setAttribute('aria-label', 'zoom in');
-  const bFit = button(zoom, 'Fit', 'the whole reel in view (0)', 'fit');
+  const bIn = button(zoom, '', 'zoom in (=), or Ctrl/⌘ + wheel, or pinch', 'zoom-in', null, 'zoomIn'); bIn.setAttribute('aria-label', 'zoom in');
+  const bFit = button(zoom, 'Fit', 'the whole reel in view (0)', 'fit', null, 'fit');
   const warn = P.warnings.length;
   const note = h('span', 'note', status, `total ${fmt(DUR)}${warn ? ` · ${warn} warning${warn > 1 ? 's' : ''}` : ''}`);
   if (warn) note.title = P.warnings.join('\n');
-  const bEx = button(status, 'Export video', 'make the video from this edit (X)', 'export', 'go');
+  const bEx = button(status, 'Export video', 'make the video from this edit (X)', 'export', 'go', 'export');
   where.textContent = home(false);
   if (!L.dev && L.draft) where.textContent += ' (unsaved draft)';
   else if (L.hosted) where.textContent += ' (your saved version)';
+  where.title = where.textContent;
+  // the collapse rule (scripts/reel-ui.js): labels fold into tooltips, then the total goes, then
+  // the save line, then Export's label, then the zoom's readout and Fit
+  if (window.REEL_UI) REEL_UI.fit(status, ['fit-labels', 'fit-note', 'fit-where', 'fit-go', 'fit-zoom']);
   const say = errs => { errs = [].concat(errs || []).map(String).filter(Boolean); err.textContent = errs[0] || ''; err.title = errs.join('\n'); };
 
   const insp = h('div', 'insp-col', root); insp.hidden = true;
@@ -333,7 +365,8 @@
     const minor = step <= 0.5 ? step / 5 : step <= 2 ? step / 4 : step / 5;
     ruler.style.backgroundSize = `${(pxs * minor).toFixed(3)}px 5px`;
     const label = t => { const m = Math.floor(t / 60 + 1e-9), r = n3(t - m * 60); return `${m}:${r < 10 ? '0' : ''}${step < 1 ? r.toFixed(2).replace(/0$/, '') : Math.round(r)}`; };
-    for (let t = 0; t <= DUR + 1e-6 && x(t) < W - 30; t = n3(t + step)) { const e = h('span', 'tick', ruler, label(t)); e.style.left = x(t).toFixed(1) + 'px'; }
+    // the last label stops short of the close button, which sits on the ruler's end
+    for (let t = 0; t <= DUR + 1e-6 && x(t) < W - 48; t = n3(t + step)) { const e = h('span', 'tick', ruler, label(t)); e.style.left = x(t).toFixed(1) + 'px'; }
   }
   let curScene = -1, lastT = null, dragging = false;
   function frame(t) {
@@ -384,6 +417,12 @@
     const hud = document.getElementById('hud'), hh = hud && !hud.hidden ? hud.getBoundingClientRect().height : 0;
     root.style.bottom = Math.round(hh) + 'px';
     L.reserveBottom(hh + PANEL);
+    // the panel's own width decides its shape (the synth rack may take the right of the window):
+    // wide, the inspector sits beside the cards at INSP px; narrower, at 44% of the panel; slim,
+    // over all of it
+    const pw = root.clientWidth || innerWidth, slim = pw < SLIM;
+    root.classList.toggle('tl-slim', slim);
+    root.style.setProperty('--tl-iw', (slim ? pw : Math.min(INSP, Math.max(320, Math.round(pw * 0.44)))) + 'px');
   }
   let tool = null;
   function show(open) {
@@ -623,7 +662,7 @@
     const head = h('div', 'ih', insp);
     h('h3', null, head, `${S.i + 1} ${S.sc.type}`);
     h('span', 'note', head, `${fmt(S.start)} → ${fmt(S.end)}`);
-    const x_ = button(head, '×', 'close the inspector (Esc)'); x_.setAttribute('aria-label', 'close the inspector'); x_.onclick = unselect;
+    const x_ = button(head, '', 'close the inspector (Esc)', null, null, 'close'); x_.setAttribute('aria-label', 'close the inspector'); x_.onclick = unselect;
     const next = SCENES[S.i + 1] ? SCENES[S.i + 1].ln : lines.length + 1;
     const byLn = new Map();
     P.marks.forEach(m => { if (m.ln >= S.ln && m.ln < next) byLn.set(m.ln, { mark: m }); });
@@ -676,7 +715,7 @@
     else if (e.key === 'Escape' && selected >= 0) unselect();
   });
   // the HUD's button for the panel (older rigs: the key alone)
-  if (L.addTool) tool = L.addTool({ id: 'timeline', label: 'Timeline', key: 'E', order: 20,
+  if (L.addTool) tool = L.addTool({ id: 'timeline', label: 'Timeline', key: 'E', order: 20, icon: 'timeline',
     title: 'the timeline: drag the edit\'s times; click a scene to change its words', onClick: () => show(root.hidden) });
 
   // ── back to where the last reload left it ─────────────────────────────

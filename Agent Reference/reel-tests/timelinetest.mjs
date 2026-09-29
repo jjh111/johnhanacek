@@ -17,6 +17,9 @@
 // moment of its own: dragged, it rewrites its @; clicked, it opens its line in the inspector.
 // The media picker: an img line's chip opens it, a search and Enter put a picture in the slot,
 // a clip too short for the slot's in-point starts at 0, and Undo takes each back.
+//   6. narrow windows: at 820 and 390 px no button overflows or leaves the window; the bars
+//      fold, the seek buttons move into More, the inspector and the synth rack change shape;
+//      back at 1600 px every label returns
 import { spawn } from 'node:child_process';
 import net from 'node:net';
 import fs from 'node:fs';
@@ -262,6 +265,55 @@ try {
   await saving('discard', () => page.locator('#reel-tl .tl-status button[data-act="discard"]').click());
   const back = await page.evaluate(() => ({ draft: REEL_LIVE.draft, src: REEL_LIVE.src }));
   check(back.draft === false && back.src === disk, 'Discard plays the file\'s version again');
+
+  // 6 ── narrow windows: the collapse rule (scripts/reel-ui.js)
+  const narrow = () => page.evaluate(() => {
+    const vis = e => e && e.offsetParent !== null;
+    const bars = [document.getElementById('hud'), document.querySelector('#reel-tl .tl-status')];
+    const btns = [...document.querySelectorAll('#hud button, #reel-tl button')].filter(vis);
+    const col = document.querySelector('#reel-tl .tl-insp-col'), tl = document.getElementById('reel-tl');
+    return {
+      hudFit: +bars[0].dataset.fit, statusFit: +bars[1].dataset.fit,
+      overflow: [...bars, ...btns].filter(e => vis(e) && e.scrollWidth > e.clientWidth + 1).map(e => e.getAttribute('aria-label') || e.id || e.className),
+      outside: btns.filter(b => { const r = b.getBoundingClientRect(); return r.right > innerWidth + 0.5 || r.left < -0.5; }).map(b => b.getAttribute('aria-label')),
+      slim: tl.classList.contains('tl-slim'), panel: Math.round(tl.getBoundingClientRect().width),
+      insp: col && !col.hidden ? Math.round(col.getBoundingClientRect().width) : 0,
+    };
+  });
+  await page.evaluate(() => REEL_TIMELINE.select(5, true));
+  await page.setViewportSize({ width: 820, height: 640 });
+  await sleep(500);
+  let nw = await narrow();
+  check(!nw.overflow.length && !nw.outside.length, '820 px, inspector open: no button overflows its box or leaves the window', JSON.stringify(nw));
+  check(nw.hudFit >= 1 && nw.statusFit >= 1 && !nw.slim && nw.insp > 0 && nw.insp < nw.panel,
+    `820 px: the HUD and the status bar fold (steps ${nw.hudFit} and ${nw.statusFit}); the inspector sits beside the cards (${nw.insp} of ${nw.panel} px)`, JSON.stringify(nw));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await sleep(500);
+  nw = await narrow();
+  check(!nw.overflow.length && !nw.outside.length, '390 px: no button overflows its box or leaves the window', JSON.stringify(nw));
+  check(nw.slim && nw.insp === nw.panel, '390 px: the panel is slim and the inspector opens over all of it', JSON.stringify(nw));
+  const more = page.locator('#hud .more');
+  check(await more.isVisible() && !(await page.locator('#hud .tp [data-do="fwd"]').isVisible()), '390 px: the seek buttons fold into a More menu');
+  await more.click();
+  const items = await page.locator('#hud .menu [role="menuitem"]').count();
+  const m0 = await page.evaluate(() => REEL_LIVE.now());
+  await page.locator('#hud .menu [data-do="fwd"]').click();
+  const m1 = await page.evaluate(() => REEL_LIVE.now());
+  check(items === 3 && Math.abs(m1 - m0 - 5) < 0.3 && await page.locator('#hud .menu').isHidden(),
+    `More holds restart, back and forward; Forward moves 5 s and shuts the menu (${m0.toFixed(2)} → ${m1.toFixed(2)})`);
+  await more.click(); const menuOn = await page.locator('#hud .menu').isVisible();
+  await more.click(); const menuOff = await page.locator('#hud .menu').isHidden();
+  check(menuOn && menuOff, 'More opens its menu, and a second click on it shuts it', JSON.stringify({ menuOn, menuOff }));
+  await page.keyboard.press('m');
+  await sleep(500);
+  const rk = await page.evaluate(() => { const r = document.getElementById('reel-rack'), b = r.getBoundingClientRect(), h = document.getElementById('hud').getBoundingClientRect();
+    return { over: r.classList.contains('rk-over'), w: Math.round(b.width), foot: Math.round(b.bottom), hudTop: Math.round(h.top), vw: innerWidth }; });
+  check(rk.over && rk.w === rk.vw && Math.abs(rk.foot - rk.hudTop) <= 1, '390 px: the synth rack lies over the preview, the window\'s width, and stops at the HUD', JSON.stringify(rk));
+  await page.keyboard.press('m');
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await sleep(500);
+  nw = await narrow();
+  check(nw.hudFit === 0 && nw.statusFit === 0 && !nw.slim, 'back at 1600 px every label returns', JSON.stringify(nw));
 
   const own = errors.filter(e => !/Failed to load|NotSupportedError|no supported source/i.test(e));
   check(!own.length, 'no page errors', own.join(' | '));

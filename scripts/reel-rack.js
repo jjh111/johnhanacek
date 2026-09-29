@@ -32,6 +32,7 @@
   const get = (k, d, s = sessionStorage) => { try { const v = s.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };
   const put = (k, v, s = sessionStorage) => { try { s.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } };
   const W = 540;                                                         // the rack's width, px
+  const BESIDE = 1080;          // a window at least this wide keeps the preview beside the rack; a narrower one lays the rack over it
   const PALETTE = ['#b2e8fa', '#d4af37', '#b6ffba', '#ffb27d', '#b8a8f7', '#ff9b8a', '#7fd6c2', '#e8c3f0'];
 
   // the scenes as the score sees them
@@ -42,7 +43,7 @@
   // ── style ─────────────────────────────────────────────────────────────
   const css = document.createElement('style');
   css.textContent = `
-#reel-rack { position: fixed; top: 0; right: 0; bottom: 0; width: ${W}px; z-index: 60; box-sizing: border-box; overflow-y: auto; overflow-x: hidden;
+#reel-rack { position: fixed; top: 0; right: 0; bottom: 0; width: min(${W}px, 100vw); z-index: 60; box-sizing: border-box; overflow-y: auto; overflow-x: hidden;
   background: rgba(var(--surface-rgb), 0.97); border-left: 1px solid rgba(var(--cyan-dim-rgb), 0.3);
   font: 500 11px/1.3 var(--font-mono); color: var(--ink-quiet); user-select: none; -webkit-user-select: none; padding: 0 14px 40px; scrollbar-width: thin; }
 #reel-rack[hidden] { display: none; }
@@ -59,6 +60,9 @@
 #reel-rack button:hover { border-color: var(--cyan-dim); color: var(--cyan); }
 #reel-rack button.on { background: rgba(var(--gold-rgb), 0.14); border-color: var(--gold); color: var(--gold); }
 #reel-rack button.sm { padding: 3px 6px; min-width: 22px; }
+#reel-rack .rk-top button { height: 28px; padding: 0 9px; flex: none; }
+#reel-rack .rk-top button.sm { padding: 0; width: 28px; }
+#reel-rack.rk-over { background: rgb(var(--surface-rgb)); box-shadow: -12px 0 32px var(--elevation); }
 #reel-rack select { padding: 4px 6px; }
 #reel-rack input[type=text] { cursor: text; width: 100%; }
 #reel-rack .rk-grow { flex: 1; }
@@ -146,8 +150,8 @@
   const soundClick = e => { e.stopPropagation(); if (!ctx || ctx.state !== 'running') { soundOn = true; ensureAudio(); } else setSound(!soundOn); };
   let chipEl, rackBtn = null;
   if (L.addTool) {
-    chipEl = L.addTool({ id: 'sound', label: '♪', order: 10, cls: 'rk-chip', title: 'the preview\'s sound, on or off', onClick: soundClick });
-    rackBtn = L.addTool({ id: 'synths', label: 'Synths', key: 'M', order: 30, title: 'the synth rack: the music\'s instruments and effects', onClick: () => open(root.hidden) });
+    chipEl = L.addTool({ id: 'sound', label: 'sound', order: 10, cls: 'rk-chip', icon: 'sound', title: 'the preview\'s sound, on or off', onClick: soundClick });
+    rackBtn = L.addTool({ id: 'synths', label: 'Synths', key: 'M', order: 30, icon: 'synths', title: 'the synth rack: the music\'s instruments and effects', onClick: () => open(root.hidden) });
   } else {                                                              // an older rig: a chip before the bar
     chipEl = document.createElement('span'); chipEl.className = 'rk-chip'; chipEl.appendChild(document.createElement('span'));
     chipEl.addEventListener('click', soundClick);
@@ -155,7 +159,11 @@
   }
   function chip() {
     const live = ctx && ctx.state === 'running' && soundOn;
-    chipEl.firstChild.textContent = !P ? '♪ no score' : live ? '♪ sound on' : soundOn ? '♪ click for sound' : '♪ sound off';
+    const words = !P ? 'no score' : live ? 'sound on' : soundOn ? 'click for sound' : 'sound off';
+    if (window.REEL_UI && chipEl.tagName === 'BUTTON') {
+      REEL_UI.relabel(chipEl, words, 'the preview\'s sound: ' + words);
+      const svg = chipEl.querySelector('svg'); if (svg) svg.outerHTML = REEL_UI.icon(live ? 'sound' : 'mute');
+    } else chipEl.firstChild.textContent = '♪ ' + words;
     chipEl.classList.toggle('off', !live);
     chipEl.setAttribute('aria-pressed', String(!!live));
   }
@@ -279,6 +287,11 @@
 
   const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
   const btn = (text, title, fn, cls = '') => { const b = el('button', cls, text); b.title = title; b.addEventListener('click', e => { e.stopPropagation(); fn(e); }); return b; };
+  // a button with an icon (scripts/reel-ui.js); with no label its name is its tooltip
+  const ibtn = (icon, label, title, fn, cls = '') => {
+    if (!window.REEL_UI) return btn(label || title, title, fn, cls);
+    const b = REEL_UI.button({ icon, label, title, cls }); b.addEventListener('click', e => { e.stopPropagation(); fn(e); }); return b;
+  };
   const sel = (opts, value, fn, title) => { const s = el('select'); s.title = title || ''; opts.forEach(o => { const op = el('option'); op.value = o; op.textContent = o; if (o === value) op.selected = true; s.appendChild(op); }); s.addEventListener('change', () => fn(s.value)); s.addEventListener('keydown', e => e.stopPropagation()); return s; };
   const group = (label, ...kids) => { const g = el('div', 'rk-group'); g.appendChild(el('span', 'rk-gl', label)); kids.forEach(k => g.appendChild(k)); return g; };
   const lineSet = (kind, name, key, text, index) => { try { change(RM.setLine(src, kind, name, key, text, index)); } catch (e) { status((e.errors || [e.message]).join(' · '), true); } };
@@ -292,19 +305,19 @@
     r1.appendChild(el('h2', '', 'SYNTH RACK'));
     r1.appendChild(el('span', 'rk-grow'));
     const live = ctx && ctx.state === 'running' && soundOn;
-    r1.appendChild(btn(live ? '♪ sound on' : soundOn ? '♪ click to start' : '♪ sound off', 'turn the preview\'s sound on or off', () => setSound(!live), live ? 'on' : ''));
-    r1.appendChild(btn('↶', 'undo (Cmd/Ctrl+Z over the rack)', () => undo(true), 'sm'));
-    r1.appendChild(btn('↷', 'redo (Shift+Cmd/Ctrl+Z over the rack)', () => undo(false), 'sm'));
-    r1.appendChild(btn('×', 'close (M)', () => open(false), 'sm'));
+    r1.appendChild(ibtn(live ? 'sound' : 'mute', live ? 'sound on' : soundOn ? 'click to start' : 'sound off', 'turn the preview\'s sound on or off', () => setSound(!live), live ? 'on' : ''));
+    r1.appendChild(ibtn('undo', '', 'undo (Cmd/Ctrl+Z over the rack)', () => undo(true), 'sm'));
+    r1.appendChild(ibtn('redo', '', 'redo (Shift+Cmd/Ctrl+Z over the rack)', () => undo(false), 'sm'));
+    r1.appendChild(ibtn('close', '', 'close the synth rack (M)', () => open(false), 'sm'));
     top.appendChild(r1);
     if (P) top.appendChild(el('div', 'rk-sub', `${NAME} · ${P.score.tempo} BPM · ${P.score.key.name} · ${P.score.tracks.length} instruments · ${A.events.length} notes${draft ? ' · <span style="color:var(--gold)">draft</span>' : hosted ? ` · <span style="color:var(--gold)">your version on ${HOST.name}</span>` : ''}`));
     if (draft || hosted) {
       const r = el('div', 'rk-row'); r.style.marginTop = '6px';
-      r.appendChild(btn('download score', 'save this version as a file', () => {
+      r.appendChild(ibtn('download', 'download score', 'save this version as a file', () => {
         if (HOST && HOST.download) return HOST.download(NAME, src);
         const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([src], { type: 'text/plain' })); a.download = NAME; document.body.appendChild(a); a.click(); a.remove();
       }));
-      r.appendChild(btn(hosted ? 'revert to the file' : 'discard draft', 'back to the file', async () => {
+      r.appendChild(ibtn(hosted ? 'revert' : 'discard', hosted ? 'revert to the file' : 'discard draft', 'back to the file', async () => {
         try { sessionStorage.removeItem(DRAFT_KEY); } catch (e) { /* none */ }
         if (hosted && HOST) await Promise.resolve(HOST.discard(FILE)).catch(() => {});
         draft = false; hosted = false;
@@ -524,13 +537,23 @@
   }
 
   // ── open, shut, keys ──────────────────────────────────────────────────
+  // Beside: the preview, the HUD and the timeline make room on the right. Over (a window under
+  // BESIDE px): the rack lies over the preview, as wide as the window allows, and stops at the
+  // HUD, so the transport and the tools stay in reach.
+  let placing = false;
   function place(openNow) {
-    const px = openNow ? W : 0;
+    if (placing) return;                                                  // the resize below comes back here
+    placing = true;
+    const over = openNow && innerWidth < BESIDE, px = openNow && !over ? W : 0;
+    root.classList.toggle('rk-over', over);
     L.reserveRight(px);
     if (hud) hud.style.right = px + 'px';
     const tl = document.getElementById('reel-tl'); if (tl) tl.style.right = px + 'px';
+    root.style.bottom = over && hud && !hud.hidden ? Math.round(hud.getBoundingClientRect().height) + 'px' : '0';
     dispatchEvent(new Event('resize'));                                   // the timeline lays itself out again
+    placing = false;
   }
+  addEventListener('resize', () => { if (!root.hidden) place(true); });
   function open(on) {
     root.hidden = !on; put(K_OPEN, on);
     if (rackBtn) rackBtn.setAttribute('aria-pressed', String(!!on));
