@@ -213,6 +213,39 @@ rack edits values, not the score's structure beyond voices, play mode and steps 
 instrument or section is a few lines of text); the music has been checked by measurement
 (levels, spectrum, loudness), and taste is John's to tune in the rack.
 
+## The editor on claude.ai (2026-09-29)
+
+John asked to use the editor without running anything. The dev server needs a local checkout,
+so the editor is also published as a claude.ai artifact: the same rig, timeline and rack.
+
+- **One hook, three homes.** The rig, the timeline and the rack save through the dev server when
+  it answers `/__reel/ping` with `server: 'reel-dev'` (stricter than a 200, because a host may
+  answer any path with a page). Otherwise they save to `window.REEL_HOST` when a page defines one
+  and its `ready` resolves true. Otherwise they keep a draft in the tab. The host's saved
+  version plays in place of the file; Revert (`discardDraft`) deletes it and plays the file.
+  Contract (documented in the rig where it reads it): `{ name, ready, load(path), save(path,
+  text), discard(path), download(filename, text), media(path) }`.
+- **`scripts/reel-host-claude.js`** is claude.ai's host: the page's `db` capability, one document
+  per file at `files/<name>` = `{ text, file, savedAt }`; downloads through the viewer's save
+  dialog; media paths with a space become underscores (a published path cannot hold one); a
+  first-visit card names the keys; the reel's place is kept for the tab across the reload a
+  save causes.
+- **`scripts/build-reel-editor.mjs`** writes the page and its 27 files (16.8 MB; the clips
+  are the bulk) into `--out`, plus `files.json` for the Artifact tool's `files`. The page has
+  no document shell of its own and starts with its title. `../` paths become flat. The chrome's
+  light theme is switched off, so a light-theme viewer still gets the dark film.
+- **Bringing edits home:** `ArtifactData get` of `files/sizzle-reel-2.script.txt` and
+  `files/sizzle-reel-2.score.txt`, write them over the repo's files, check them
+  (`reel-script.js check`, `reel-music.js check`), commit, render.
+- **Test:** `reel-tests/hosttest.mjs` builds the page, serves it from a plain UTF-8 server with a
+  stand-in for claude.ai's capabilities and a light theme stamped on it, and checks the host is
+  found, the reel stays dark, a timeline save and a rack change land in the store and survive
+  the reload, Download goes through the save dialog, Revert plays the file, and that without the
+  capabilities the page still plays and keeps drafts.
+
+Limits: the hosted page carries only the pictures and clips the script names when it is built,
+so a new picture needs a rebuild and republish; it opens on the wide format.
+
 ## Later
 
 Scene-specific cues (line staggers, the push); moving cut 1 onto the one player; a music track

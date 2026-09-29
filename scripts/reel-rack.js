@@ -5,7 +5,8 @@
 // a person would, one line at a time (ReelMusic.setArg / setLine / toggleTrack), so a knob moves
 // one number on one line and the rest of the file stays as written. Every change is heard at
 // once; it is saved when you let go of the knob, through the dev server (node
-// scripts/reel-dev.mjs) or, without one, as a draft in this tab. The preview never reloads for
+// scripts/reel-dev.mjs), or with the page's host (window.REEL_HOST: the editor published on
+// claude.ai keeps saves with the page), or, without either, as a draft in this tab. The preview never reloads for
 // the music: the rack swaps the arrangement under the playhead.
 //
 //   M                open / shut (the preview shrinks to the left of it)
@@ -102,6 +103,9 @@
 
   // ── the model ─────────────────────────────────────────────────────────
   let src = null, P = null, A = null, fileText = null, draft = false, err = '';
+  // a page host that keeps saves when there is no dev server (the editor published on claude.ai)
+  let HOST = !L.dev && window.REEL_HOST ? window.REEL_HOST : null;
+  let hosted = false;                                                    // playing the host's saved version
   let ctx = null, player = null;
   const undoS = get(K_UNDO, []), redoS = get(K_REDO, []);
   const root = document.createElement('div'); root.id = 'reel-rack'; root.hidden = true; document.body.appendChild(root);
@@ -174,6 +178,10 @@
         const j = r.json ? await r.json().catch(() => ({})) : {};
         if (!r.ok) status('not saved: ' + ((j.errors || []).join(' · ') || r.status), true);
         else { fileText = text; draft = false; try { sessionStorage.removeItem(DRAFT_KEY); } catch (e) { /* none */ } status(`saved ${NAME}`); }
+      } else if (HOST) {
+        const r = await Promise.resolve(HOST.save(FILE, text)).catch(e => ({ ok: false, errors: [e && e.message || String(e)] }));
+        if (!r || !r.ok) status('not saved: ' + ((r && r.errors) || []).join(' · '), true);
+        else { hosted = true; draft = false; try { sessionStorage.removeItem(DRAFT_KEY); } catch (e) { /* none */ } status(`saved on ${HOST.name}`); }
       } else if (put(DRAFT_KEY, text)) { draft = true; status('kept as a draft in this tab (run node scripts/reel-dev.mjs to save the file)'); }
       else status('not saved: this browser keeps no drafts here', true);
     } finally { saving = false; if (dirtyText != null) flush(); }
@@ -279,11 +287,19 @@
     r1.appendChild(btn('↷', 'redo (Shift+Cmd/Ctrl+Z over the rack)', () => undo(false), 'sm'));
     r1.appendChild(btn('×', 'close (M)', () => open(false), 'sm'));
     top.appendChild(r1);
-    if (P) top.appendChild(el('div', 'rk-sub', `${NAME} · ${P.score.tempo} BPM · ${P.score.key.name} · ${P.score.tracks.length} instruments · ${A.events.length} notes${draft ? ' · <span style="color:var(--gold)">draft</span>' : ''}`));
-    if (draft) {
+    if (P) top.appendChild(el('div', 'rk-sub', `${NAME} · ${P.score.tempo} BPM · ${P.score.key.name} · ${P.score.tracks.length} instruments · ${A.events.length} notes${draft ? ' · <span style="color:var(--gold)">draft</span>' : hosted ? ` · <span style="color:var(--gold)">your version on ${HOST.name}</span>` : ''}`));
+    if (draft || hosted) {
       const r = el('div', 'rk-row'); r.style.marginTop = '6px';
-      r.appendChild(btn('download score', 'save the draft as a file', () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([src], { type: 'text/plain' })); a.download = NAME; document.body.appendChild(a); a.click(); a.remove(); }));
-      r.appendChild(btn('discard draft', 'back to the file', async () => { try { sessionStorage.removeItem(DRAFT_KEY); } catch (e) { /* none */ } draft = false; if (fileText != null) change(fileText, { save: false }); }));
+      r.appendChild(btn('download score', 'save this version as a file', () => {
+        if (HOST && HOST.download) return HOST.download(NAME, src);
+        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([src], { type: 'text/plain' })); a.download = NAME; document.body.appendChild(a); a.click(); a.remove();
+      }));
+      r.appendChild(btn(hosted ? 'revert to the file' : 'discard draft', 'back to the file', async () => {
+        try { sessionStorage.removeItem(DRAFT_KEY); } catch (e) { /* none */ }
+        if (hosted && HOST) await Promise.resolve(HOST.discard(FILE)).catch(() => {});
+        draft = false; hosted = false;
+        if (fileText != null) change(fileText, { save: false });
+      }));
       top.appendChild(r);
     }
     const st = el('div', 'rk-status' + (statusBad ? ' bad' : ''), ''); st.textContent = statusText; top.appendChild(st);
@@ -521,11 +537,14 @@
     let text = null;
     fileText = await fetch('./' + NAME, { cache: 'no-store' }).then(r => r.ok ? r.text() : null, () => null);
     try { const d = sessionStorage.getItem(DRAFT_KEY); if (d != null) { text = d; draft = true; } } catch (e) { /* no drafts */ }
+    if (HOST && HOST.ready && !(await Promise.resolve(HOST.ready).catch(() => false))) HOST = null;
+    if (text == null && HOST) { const h = await Promise.resolve(HOST.load(FILE)).catch(() => null); if (h != null) { text = h; hosted = true; } }
     if (text == null) text = fileText;
     if (text != null) {
       try { read(text); } catch (e) { err = `${NAME} has mistakes:\n` + (e.errors || [e.message]).join('\n'); P = null; }
     }
     if (draft) status('playing an unsaved draft of the score');
+    else if (hosted) status(`playing your version of the score saved on ${HOST.name}`);
     ensureAudio();                                   // made now; it starts at the first click or key
     chip();
     if (L.dev && fileText != null) {

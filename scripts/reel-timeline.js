@@ -3,8 +3,9 @@
 // The script (Assets/sizzle-reel-2.script.txt) stays the one source of truth. This panel only
 // reads it (REEL_LIVE.parsed) and changes it the way a person would, one line at a time, through
 // ReelScript's setDur / setAt / setField / setCue, then hands the new text to REEL_LIVE.save,
-// which writes the file through the dev server (node scripts/reel-dev.mjs) or keeps a draft in
-// this tab, and reloads the preview at the same moment. So the panel keeps no state of its own
+// which writes the file through the dev server (node scripts/reel-dev.mjs), or keeps it with the
+// page's host (the editor published on claude.ai), or keeps a draft in this tab, and reloads the
+// preview at the same moment. So the panel keeps no state of its own
 // beyond what must survive that reload: open or shut, the scene in the inspector, and the undo
 // and redo stacks (whole script texts, in sessionStorage).
 //
@@ -188,18 +189,23 @@
   const where = h('span', 'where', status);
   const err = h('span', 'err', status); err.setAttribute('role', 'status');
   h('span', 'gap', status);
-  if (!L.dev && L.draft) {
-    const dl = h('button', null, status, 'Download'); dl.type = 'button'; dl.dataset.act = 'download'; dl.title = 'save this draft as ' + L.file.replace(/^.*\//, '');
+  // where saves go: the file (dev server), the page's host (claude.ai), or a draft in this tab
+  const home = (busy) => L.dev ? `Saving to ${L.file}${busy ? '…' : ''}` : L.host ? `Saving to ${L.host}${busy ? '…' : ''}`
+    : busy ? 'Keeping a draft in this tab…' : 'Draft in this tab: no dev server';
+  if (!L.dev && (L.draft || L.hosted)) {
+    const dl = h('button', null, status, 'Download'); dl.type = 'button'; dl.dataset.act = 'download'; dl.title = 'save this version as ' + L.file.replace(/^.*\//, '');
     dl.onclick = () => L.download(L.src);
-    const ds = h('button', null, status, 'Discard'); ds.type = 'button'; ds.dataset.act = 'discard'; ds.title = 'drop the draft and play the file again';
+    const ds = h('button', null, status, L.hosted ? 'Revert' : 'Discard'); ds.type = 'button'; ds.dataset.act = 'discard';
+    ds.title = L.hosted ? `drop the version saved on ${L.host} and play the file again` : 'drop the draft and play the file again';
     ds.onclick = () => { put(K_UNDO, []); put(K_REDO, []); L.discardDraft(); };
   }
   h('span', 'note', status, 'drag an edge or a mark · click a scene · ⌘Z undo');
   const warn = P.warnings.length;
   const note = h('span', 'note', status, `total ${fmt(DUR)}${warn ? ` · ${warn} warning${warn > 1 ? 's' : ''}` : ''}`);
   if (warn) note.title = P.warnings.join('\n');
-  where.textContent = L.dev ? `Saving to ${L.file}` : 'Draft in this tab: no dev server';
+  where.textContent = home(false);
   if (!L.dev && L.draft) where.textContent += ' (unsaved draft)';
+  else if (L.hosted) where.textContent += ' (your saved version)';
   const say = errs => { errs = [].concat(errs || []).map(String).filter(Boolean); err.textContent = errs[0] || ''; err.title = errs.join('\n'); };
 
   const insp = h('div', 'insp-col', root); insp.hidden = true;
@@ -254,13 +260,13 @@
     if (busy) return false;
     const u0 = stack(K_UNDO), r0 = stack(K_REDO);
     try { RS.parse(next); } catch (e) { say(e.errors || [e.message]); layout(); return false; }   // never save a broken script
-    busy = true; say(''); where.textContent = L.dev ? `Saving to ${L.file}…` : 'Keeping a draft in this tab…';
+    busy = true; say(''); where.textContent = home(true);
     put(K_UNDO, undo.slice(-DEPTH)); put(K_REDO, redo.slice(-DEPTH));
     let res;
     try { res = await L.save(next); } catch (e) { res = { ok: false, errors: [e.message] }; }
     if (!res || !res.ok) {                         // nothing changed: put the stacks and the picture back
       put(K_UNDO, u0); put(K_REDO, r0); busy = false;
-      where.textContent = L.dev ? `Saving to ${L.file}` : 'Draft in this tab: no dev server';
+      where.textContent = home(false);
       say((res && res.errors) || ['the save failed']); layout();
       return false;
     }
