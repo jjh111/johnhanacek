@@ -593,7 +593,7 @@
         } else if (st.ui === 'copied') {
             foot = '<div class="inq-receipt" role="status">Copied. Paste it into an email to ' + TO + ' or a LinkedIn message.</div>';
         } else if (!textOk) {
-            foot = '<div class="inq-note">Write a few sentences above. They fill in this card, and nothing leaves this page until you press Send.</div>';
+            foot = '<div class="inq-note">Nothing leaves this page until you click Send.</div>';
         } else if (st.relay && !emailOk) {
             foot = '<div class="inq-note">Nothing leaves this page until you press Send.</div>';
         } else if (st.relay) {
