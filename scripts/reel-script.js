@@ -166,7 +166,7 @@
   // keeps the rig's own choreography: the fish swim over to what the scene shows and look at it.
   const WHO = ['big', 'school', 'all'];
   const FISH = {
-    to:      { args: 'xy', about: 'swim to a point and stay there' },
+    to:      { args: 'xy', auto: true, about: 'swim to a point and stay there (auto: back to the scene\'s own spot)' },
     look:    { args: 'look', about: 'look at a point, at what the scene shows (auto) or at nothing (off)' },
     idle:    { args: 'mode', about: 'what it does while it is there: hover, sweep, circle or wander' },
     pace:    { args: 'pace', about: 'how fast it swims: 1 is its own pace, 0.3 to 3' },
@@ -201,10 +201,11 @@
     const o = { at, verb };
     if (who) o.who = who;
     const xy = () => {
-      if (w.length !== 2) throw new Error(`${verb} takes a point: two fractions of the frame, across then down ("${verb} 0.72 0.8")`);
+      if (w.length !== 2) throw new Error(`${verb} takes a point: two fractions of the frame, across then down ("${verb} 0.72 0.8")${def.auto ? ', or auto' : ''}`);
       o.x = frac(w[0], 'across'); o.y = frac(w[1], 'down');
     };
-    if (def.args === 'xy') xy();
+    if (def.args === 'xy' && def.auto && w.length === 1 && w[0] === 'auto') o.auto = true;
+    else if (def.args === 'xy') xy();
     else if (def.args === 'look') {
       if (w.length === 1 && (w[0] === 'auto' || w[0] === 'off')) o.look = w[0];
       else if (w.length === 2) xy();
@@ -220,7 +221,7 @@
     return o;
   }
   function writeFish(o) {
-    const args = o.look ? [o.look] : o.mode ? [o.mode] : o.pace != null ? [n3(o.pace)] : o.x != null ? [n3(o.x), n3(o.y)] : [];
+    const args = o.look ? [o.look] : o.auto ? ['auto'] : o.mode ? [o.mode] : o.pace != null ? [n3(o.pace)] : o.x != null ? [n3(o.x), n3(o.y)] : [];
     return [`@${n3(o.at)}`].concat(o.who ? [o.who] : [], [o.verb], args).join(' ');
   }
 

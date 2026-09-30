@@ -11,11 +11,15 @@
 //
 // Every scene is a card, and what belongs to a scene sits inside its card:
 //   items      a results scene's items, each work it shows in turn (only results scenes have them)
-//   moments    when something happens inside the scene: a picture, a clip, a quote, a stat, an
-//              award, a fish line (the script's @ times; fish lines are gold triangles). Drag one
-//              to retime it; click it to open it
+//   moments    when something appears inside the scene: a picture, a clip, a quote, a stat, an
+//              award (the script's @ times). Drag one to retime it; click it to open it
 //   out        the hatched end of each card: where the scene's content starts to leave (its
 //              `cue out`). Drag the hatch's edge
+// Under the cards, a lane for each fish (the big fish, the school): what it does across the cut,
+// as spans that say what it looks at and how it idles (cyan: the scene's own choreography; gold:
+// a fish line decides; hatched: nothing to look at, so it swims freely), and a gold mark for
+// every fish line at its time. Drag a mark to retime its line; click it to edit the line in the
+// Fish panel (scripts/reel-fish.js); click a span to jump there with that fish chosen.
 // Every action is a button, and its key an accelerator (named in the button's tooltip):
 //   Timeline (E)          open / shut; the preview shrinks to fit above it (its button is in the HUD)
 //   Undo / Redo (⌘Z, ⇧⌘Z) each is a save, so each reloads
@@ -69,14 +73,6 @@
       gist: file || said, label: file ? file.replace(/\.[a-z0-9]+$/i, '') : words(said, 4) });
   });
   P.fields.forEach(f => {
-    if (f.key === 'fish') {                           // a fish line: when the fish do something (scripts/reel-fish.js)
-      const S = sceneOf.get(f.owner), v = f.owner.fish[f.index];
-      if (!S) return;
-      const what = RS.writeFish(v).replace(/^@\S+\s+/, '');
-      MOMENTS.push({ ln: f.ln, own: S, S, at: v.at, len: S.end - S.start, kind: 'fish', field: true, fish: true,
-        gist: 'fish ' + what, label: what.replace(/\s+[\d.]+\s+[\d.]+$/, '') });
-      return;
-    }
     if (f.key !== 'stat' && f.key !== 'award') return;
     const S = sceneOf.get(f.owner), v = S && f.owner[f.jsonKey][f.index];
     if (!v || v.at == null) return;
@@ -88,8 +84,10 @@
     .map(S => ({ S, out: RS.cue(S.sc, 'out'), set: !!(S.sc.cues && S.sc.cues.out != null) }));
 
   // ── geometry ──────────────────────────────────────────────────────────
-  const PANEL = 300;                       // the panel's height
-  const Y = { ruler: 8, card: 40, cardH: 196, items: 90, m0: 124, m1: 154, body: 84, bodyH: 150, outRow: 194 };   // outRow: the out handles' band, to the card's foot
+  const PANEL = 356;                       // the panel's height
+  // outRow: the out handles' band, to the card's foot; fish: the first fish lane, each laneH tall
+  const Y = { ruler: 8, card: 40, cardH: 196, items: 90, m0: 124, m1: 154, body: 84, bodyH: 150, outRow: 194, fish: 244, laneH: 24, laneGap: 4 };
+  const FISH_END = Y.fish + 2 * Y.laneH + Y.laneGap;
   const PIN = 24, GAP = 26, MAX_PXS = 360;  // a moment's hit box; the room it needs from the next; the deepest zoom (px a second)
   const SLIM = 760, INSP = 440;            // a panel narrower than SLIM is slim; the inspector's width in a wide one
 
@@ -151,12 +149,24 @@
 #reel-tl .tl-bt::before { content: ''; position: absolute; left: ${PIN / 2 - 5}px; top: 8px; width: 10px; height: 10px; transform: rotate(45deg); background: var(--cyan); }
 #reel-tl .tl-bt.tl-f::before { transform: none; border-radius: 50%; }
 #reel-tl .tl-bt.tl-quote::before { transform: none; border-radius: 2px; }
-#reel-tl .tl-bt.tl-fish::before { transform: none; width: 11px; clip-path: polygon(0 0, 100% 50%, 0 100%); background: var(--gold); }
+/* the fish lanes: spans of one state each, and a mark per fish line */
+#reel-tl .tl-fl { position: absolute; height: ${Y.laneH}px; border-radius: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: pointer;
+  padding: 0 6px; font: 500 10px/${Y.laneH - 2}px var(--font-mono); color: var(--ink-quiet); border: 1px solid transparent; }
+#reel-tl .tl-fl-auto { background: rgba(var(--cyan-dim-rgb), 0.11); border-color: rgba(var(--cyan-dim-rgb), 0.28); }
+#reel-tl .tl-fl-set { background: rgba(var(--gold-rgb), 0.12); border-color: rgba(var(--gold-rgb), 0.5); color: var(--text-bright); }
+#reel-tl .tl-fl-free { background: repeating-linear-gradient(135deg, rgba(var(--cyan-dim-rgb), 0.14) 0 2px, transparent 2px 6px); }
+#reel-tl .tl-fl-no { color: var(--ink-faint); border: 1px dashed rgba(var(--cyan-dim-rgb), 0.18); }
+#reel-tl .tl-fl:hover { border-color: var(--gold); }
+#reel-tl .tl-fm { position: absolute; width: 22px; height: 22px; margin-left: -11px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: rgb(var(--surface-rgb)); border: 1px solid var(--gold); color: var(--gold); cursor: ew-resize; z-index: 4; }
+#reel-tl .tl-fm .ri { width: 13px; height: 13px; }
+#reel-tl .tl-fm:hover, #reel-tl .tl-fm.tl-on { background: rgba(var(--gold-rgb), 0.25); }
+#reel-tl .tl-fm.tl-sel { background: var(--gold); color: rgb(var(--surface-rgb)); box-shadow: 0 0 0 3px rgba(var(--gold-rgb), 0.3); }
 #reel-tl .tl-bt::after { content: ''; position: absolute; left: ${PIN / 2}px; top: -4px; height: 4px; width: 1px; background: rgba(var(--cyan-dim-rgb), 0.6); }
 #reel-tl .tl-bt:hover::before, #reel-tl .tl-bt.tl-on::before { background: var(--gold); }
 #reel-tl .tl-lb { position: absolute; left: ${PIN - 2}px; top: 7px; font-size: 10px; line-height: 12px; color: var(--ink-quiet); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
 #reel-tl .tl-bt:hover .tl-lb, #reel-tl .tl-bt.tl-on .tl-lb { color: var(--gold); }
-#reel-tl .tl-ph { position: absolute; left: 0; top: ${Y.ruler}px; height: ${Y.card + Y.cardH - Y.ruler}px; width: 1px; background: var(--gold); pointer-events: none; will-change: transform; z-index: 5; }
+#reel-tl .tl-ph { position: absolute; left: 0; top: ${Y.ruler}px; height: ${FISH_END - Y.ruler}px; width: 1px; background: var(--gold); pointer-events: none; will-change: transform; z-index: 5; }
 #reel-tl .tl-ph::before { content: ''; position: absolute; left: -4px; top: 0; border: 4.5px solid transparent; border-top: 6px solid var(--gold); }
 #reel-tl .tl-ro-out { position: absolute; top: ${Y.card + 4}px; padding: 4px 7px; border: 1px solid rgba(var(--gold-rgb), 0.6); border-radius: 4px; background: rgba(var(--surface-rgb), 0.96);
   color: var(--text-bright); pointer-events: none; white-space: nowrap; z-index: 6; }
@@ -244,8 +254,10 @@
   [['time', Y.ruler + 7, 'click or drag the ruler to move the playhead'],
    ['scenes', Y.card + 12, 'each scene is a card: drag its right edge to change its length; click it to change its words'],
    ['items', Y.items + 2, 'a results scene shows several works, one after another: its items. Only results scenes have them', 'results only'],
-   ['moments', Y.m0 + 2, 'when something happens inside a scene: a picture, a clip, a quote, a stat, an award, and the fish lines (gold triangles; the Fish panel, F, writes them). Drag one to retime it; click it to open it'],
-   ['out', Y.body + Y.bodyH - 18, 'the hatched end of each card: where the scene\'s content starts to leave. Drag the handle at its foot']]
+   ['moments', Y.m0 + 2, 'when something appears inside a scene: a picture, a clip, a quote, a stat, an award. Drag one to retime it; click it to open it'],
+   ['out', Y.body + Y.bodyH - 18, 'the hatched end of each card: where the scene\'s content starts to leave. Drag the handle at its foot'],
+   ['big fish', Y.fish + 7, 'the big fish: what it looks at and does across the cut, and its fish lines (gold marks). Click a span to direct it from there'],
+   ['school', Y.fish + Y.laneH + Y.laneGap + 7, 'the school of four: what it swims under and does across the cut, and its fish lines (gold marks)']]
     .forEach(([t, y, tip, sub]) => { const g = h('div', 'gl', main, t); g.style.top = y + 'px'; g.title = tip; if (sub) h('small', null, g, sub); });
   const view = h('div', 'view', main);
   const lane = h('div', 'lane', view);
@@ -274,11 +286,63 @@
     recs.push({ el, span: m => [m(I.start), m(I.end)] });
   });
   MOMENTS.forEach(M => {
-    const el = h('div', 'bt' + (M.fish ? ' fish' : M.field ? ' f' : M.kind === 'quote' ? ' quote' : ''), lane); M.el = el;
+    const el = h('div', 'bt' + (M.field ? ' f' : M.kind === 'quote' ? ' quote' : ''), lane); M.el = el;
     M.lb = h('span', 'lb', el, M.label);
     el.title = `@${M.at} · ${M.gist}\n${M.field ? M.kind : M.kind} ${fmt(M.own.start + M.at)} · drag to retime, click to open`;
     recs.push({ el, span: m => [m(M.own.start) + (M.drag != null ? M.drag : M.at)], moment: M });
   });
+  // ── the fish lanes: what each fish does across the cut ────────────────
+  // The rig's own account of it (REEL_LIVE.fish.track): spans of one state each, labelled with
+  // what the fish looks at and how it idles, and a mark for every fish line at its time.
+  const FISH_WHO = [['big', Y.fish], ['school', Y.fish + Y.laneH + Y.laneGap]];
+  const FNAME = { big: 'the big fish', school: 'the school' };
+  const FISHL = P.fields.filter(f => f.key === 'fish' && sceneOf.get(f.owner)).map(f => ({ ln: f.ln, v: f.owner.fish[f.index], S: sceneOf.get(f.owner) }));
+  const inLane = (v, who) => v.verb === 'feed' || v.who === 'all' || v.who === who;   // food is for any fish
+  const FICON = v => v.verb === 'to' ? 'place' : v.verb === 'look' ? (v.look === 'off' ? 'eyeOff' : v.look === 'auto' ? 'auto' : 'eye')
+    : v.verb === 'idle' ? v.mode : v.verb === 'pace' ? (v.pace < 1 ? 'slow' : v.pace > 1 ? 'fast' : 'fish') : v.verb === 'feed' ? 'food' : v.verb;
+  // a span's words: short in the lane, whole in its tooltip
+  function spanWords(sp, who) {
+    if (sp.absent) return ['', `${FNAME[who]} is not in the tank yet`];
+    const pt = a => `(${a[0]}, ${a[1]})`;
+    const look = sp.look === 'auto' ? sp.what : sp.look === 'point' ? 'a point ' + pt(sp.at) : sp.look === 'off' ? 'nothing' : '';
+    const pace = sp.pace !== 1 ? ` · ${sp.pace}×` : '';
+    if (sp.idle === 'wander') return [`wanders${pace}`, `${FNAME[who]} wanders: the fish engine's own swimming${pace ? ', at ' + sp.pace + '× its pace' : ''}`];
+    // the reel's own choreography needs only its thing; a span a line decides says what it does too
+    const short = !sp.set ? look : look ? `${look} · ${sp.idle}${sp.to ? ' ◎' : ''}${pace}` : sp.to ? `◎ ${sp.idle}${pace}` : '';
+    const long = `${FNAME[who]} ${look ? `looks at ${look}${sp.look === 'auto' ? ' (what the scene shows)' : ''}` : 'has nothing to look at, so it swims freely'}, `
+      + `${sp.idle}s${sp.to ? ` at its spot ${pt(sp.to)}` : sp.look === 'auto' ? ' beside it' : ''}${pace ? ', at ' + sp.pace + '× its pace' : ''}`
+      + (sp.set ? '. A fish line decides this.' : '. The reel\'s own choreography.');
+    return [short, long];
+  }
+  const FISHM = [];                               // the marks: { el, F }; a line for all has one in each lane
+  FISH_WHO.forEach(([who, y]) => {
+    (L.fish && L.fish.track ? L.fish.track(who) : []).forEach(sp => {
+      const el = h('div', 'fl ' + (sp.absent ? 'fl-no' : sp.set ? 'fl-set' : sp.look === 'none' ? 'fl-free' : 'fl-auto'), lane);
+      const [short, long] = spanWords(sp, who);
+      el.textContent = short; el.style.top = y + 'px'; el.dataset.who = who;
+      el.title = `${fmt(sp.t0)} → ${fmt(sp.t1)} · ${long}\nclick to direct ${FNAME[who]} from here`;
+      recs.push({ el, span: m => [m(sp.t0), m(sp.t1)] });
+      el.addEventListener('pointerdown', e => {
+        if (e.button !== 0) return;
+        const t = Math.max(0, Math.min(DUR, (e.clientX - lane.getBoundingClientRect().left) / pxs));
+        drag(e, el, () => {}, moved => { if (moved) return; L.seek(t); if (window.REEL_FISH) window.REEL_FISH.show(who); });
+      });
+    });
+    const seen = new Map();                       // lines at the same moment stand side by side
+    FISHL.filter(F => inLane(F.v, who)).forEach(F => {
+      const k = (F.S.start + F.v.at).toFixed(3), n = seen.get(k) || 0; seen.set(k, n + 1);
+      const el = h('div', 'fm', lane); el.dataset.ln = F.ln; el.dataset.who = who;
+      el.innerHTML = window.REEL_UI ? REEL_UI.icon(FICON(F.v)) : '•';
+      el.style.top = (y + 1) + 'px'; el.style.marginLeft = (-11 + n * 16) + 'px';
+      el.title = `fish ${RS.writeFish(F.v)} (line ${F.ln}) · ${fmt(F.S.start + F.v.at)}\ndrag to retime it; click to edit it in the Fish panel`;
+      FISHM.push({ el, F });
+      recs.push({ el, span: m => [m(F.S.start) + (F.drag != null ? F.drag : F.v.at)] });
+    });
+  });
+  // the line the Fish panel has selected wears its colour here too
+  const litFish = ln => FISHM.forEach(M => M.el.classList.toggle('tl-sel', M.F.ln === ln));
+  addEventListener('reel-fish-select', e => litFish(e.detail && e.detail.ln));
+  if (window.REEL_FISH && window.REEL_FISH.selected) litFish(window.REEL_FISH.selected);   // the panel may have loaded first
   const ph = h('div', 'ph', lane);
   const readout = h('div', 'ro-out', lane); readout.hidden = true;
   const close = button(root, '', 'close the timeline (E)', 'close', 'x', 'close'); close.setAttribute('aria-label', 'close the timeline');
@@ -563,6 +627,24 @@
       const v = M.drag; M.drag = null;
       if (!moved) { L.seek(M.own.start + M.at); select(M.S.i, true); point(M.ln); layout(); }
       else if (v !== M.at) commit(src => RS.setAt(src, M.ln, v)); else layout();
+    });
+  }));
+  FISHM.forEach(M => M.el.addEventListener('pointerdown', e => {
+    if (e.button !== 0) return;
+    const F = M.F, hi = Math.max(0, n3(F.S.sc.dur - 0.05));
+    M.el.classList.add('tl-on');
+    drag(e, M.el, (dt, ev) => {
+      F.drag = Math.min(hi, Math.max(0, snap(F.v.at + dt, ev)));
+      layout(still);
+      show1(F.S.start + F.drag, `fish @${F.v.at} → @${F.drag}  (${fmt(F.S.start + F.drag)})`);
+    }, moved => {
+      M.el.classList.remove('tl-on');
+      const v = F.drag; F.drag = null;
+      if (!moved) {                               // a click: edit the line in the Fish panel
+        L.seek(F.S.start + F.v.at);
+        if (window.REEL_FISH) window.REEL_FISH.select(F.ln); else { select(F.S.i, true); point(F.ln); }
+        layout();
+      } else if (v !== F.v.at) commit(src => RS.setAt(src, F.ln, v)); else layout();
     });
   }));
   OUTS.forEach(O => O.el.addEventListener('pointerdown', e => {

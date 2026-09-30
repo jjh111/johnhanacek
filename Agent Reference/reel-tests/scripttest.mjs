@@ -8,7 +8,7 @@ import { dirname, resolve } from 'node:path';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const RS = createRequire(import.meta.url)(resolve(ROOT, 'scripts/reel-script.js'));
-const SRC = readFileSync(resolve(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8');
+const SRC0 = readFileSync(resolve(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8'), SRC = SRC0;
 
 let failed = 0;
 const ok = (cond, what) => { console.log(`${cond ? 'pass' : 'FAIL'}  ${what}`); if (!cond) failed++; };
@@ -82,7 +82,10 @@ const sceneLn = i => marks.find(m => m.kind === 'scene' && m.obj === edit.scenes
 }
 
 // ── fish lines: directing the fish ──
+// on the cut with its own fish lines taken out, so these counts are the suite's own
 {
+  const SRC = lines(SRC0).filter(l => !/^\s*fish\s/.test(l)).join('\n'), src = lines(SRC);
+  const PB = RS.parse(SRC), sceneLn = i => PB.marks.find(m => m.kind === 'scene' && m.obj === PB.edit.scenes[i]).ln;
   const res = sceneLn(5);
   let out = RS.addLine(SRC, res, 'fish', '@0.5 big to 0.72 0.8');
   out = RS.addLine(out, res, 'fish', '@3   school   idle circle');
@@ -101,6 +104,8 @@ const sceneLn = i => marks.find(m => m.kind === 'scene' && m.obj === edit.scenes
   ok(RS.removeLine(RS.removeLine(RS.removeLine(RS.removeLine(RS.removeLine(out, fl[4].ln), fl[3].ln), fl[2].ln), fl[1].ln), fl[0].ln) === SRC, 'removeLine takes them out again: back to the original, byte for byte');
   ok(/fish big to 0\.72 0\.8/.test(RS.cueSheet(P2.edit)), 'the cue sheet lists the fish lines at their time');
   ok(RS.writeFish(RS.readFish('@2 big pace 1.5')) === '@2 big pace 1.5', 'readFish and writeFish round-trip');
+  ok(same(RS.readFish('@4 big to auto'), { at: 4, who: 'big', verb: 'to', auto: true }) && RS.writeFish(RS.readFish('@4 big to auto')) === '@4 big to auto',
+    '"to auto" sends a fish back to the scene\'s own spot, and round-trips');
   throws(() => RS.addLine(SRC, res, 'fish', '1.5 big to 0.5 0.5'), /an @ time, who/, 'a fish line needs its @ time');
   throws(() => RS.addLine(SRC, res, 'fish', '@1 fish to 0.5 0.5'), /say big, school or all/, 'who is named');
   throws(() => RS.addLine(SRC, res, 'fish', '@1 big swim'), /not something the fish do/, 'an unknown verb is named');

@@ -757,7 +757,9 @@ p, h1, h2, h3 { margin: 0; }
   // it can) and tilts its nose up at it; the school sweeps along the other side.
   // Both go through the engine's opt-in host hooks: every turn is the engine's arc.
   const ATTN = [];
-  const look = (t0, t1, x, y, side) => ATTN.push({ t0, t1, x, y, want: side });   // side: 1 right of it, -1 left, else wherever the fish is
+  const BORN = { big: null, school: null };      // when each fish is drawn into the tank (the opening's loop; the command's first fish)
+  // side: 1 right of it, -1 left, else wherever the fish is; what: its name, for the editor's fish lanes
+  const look = (t0, t1, x, y, side, what) => ATTN.push({ t0, t1, x, y, want: side, what });
   let reelT = 0, BIG = null;                   // the reel's clock as the tank sees it; the opening's fish
   const SPOT_Y = F.spotY, SCHOOL_Y = F.schoolY;   // tank px: where the big fish stands and the school sweeps (FORMATS)
   const BIG_DX = 250, SCHOOL_DX = 210;         // how far to either side of the thing each one stands
@@ -789,7 +791,7 @@ p, h1, h2, h3 { margin: 0; }
   const DIR = { big: [], school: [] }, LOOKS = [];   // { t0, t1, ch, v } in time order; the looks at a point
   SC.forEach(sc => (sc.fish || []).map((c, k) => ({ c, k })).sort((a, b) => a.c.at - b.c.at || a.k - b.k).forEach(({ c }) => {
     if (ReelScript.FISH[c.verb].once || c.at < 0 || c.at >= sc.dur) return;
-    let v = c.verb === 'to' ? inWater(c.x * W, c.y * H) : c.verb === 'idle' ? c.mode : c.verb === 'pace' ? c.pace : c.look;
+    let v = c.verb === 'to' ? (c.auto ? null : inWater(c.x * W, c.y * H)) : c.verb === 'idle' ? c.mode : c.verb === 'pace' ? c.pace : c.look;   // `to auto`: back to the scene's own spot
     if (c.verb === 'look' && !c.look) LOOKS.push(v = { x: c.x * W, y: c.y * H });   // its own object: it keeps its side (sideOf)
     (c.who === 'all' ? ['big', 'school'] : [c.who]).forEach(w => DIR[w].push({ t0: sc.start + c.at, t1: sc.end, ch: c.verb, v }));
   }));
@@ -800,6 +802,37 @@ p, h1, h2, h3 { margin: 0; }
     return d;
   }
   const lookOf = D => D.look === 'auto' ? attnAt(reelT) : D.look === 'off' ? null : D.look;
+  // For the editor. What a fish looks at, at t: the scene's own focus (auto), a point it was
+  // told, or nothing (stage px).
+  function attentionAt(who, t) {
+    const D = dirAt(who, t), A = D.look === 'auto' ? attnAt(t) : D.look === 'off' ? null : D.look;
+    return A ? { x: A.x, y: A.y, what: A.what || 'a point', auto: D.look === 'auto' } : null;
+  }
+  // A fish's track across the whole cut: spans of one state each (what it looks at, where it was
+  // sent, its idle and pace), cut wherever any of them changes. The timeline draws it as the
+  // fish lanes. `set` marks a span a fish line decided, `absent` one before the fish is drawn.
+  function trackOf(who) {
+    const born = BORN[who] == null ? DURATION : BORN[who];
+    const cuts = new Set([0, born, DURATION]);
+    SC.forEach(s => { cuts.add(s.start); cuts.add(s.end); });
+    ATTN.forEach(a => { cuts.add(a.t0); cuts.add(a.t1); });
+    DIR[who].forEach(c => { cuts.add(c.t0); cuts.add(c.t1); });
+    const ts = [...cuts].filter(t => t >= 0 && t <= DURATION).sort((a, b) => a - b), out = [];
+    for (let i = 0; i + 1 < ts.length; i++) {
+      const t0 = ts[i], t1 = ts[i + 1];
+      if (t1 - t0 < 1e-6) continue;
+      const mid = (t0 + t1) / 2, D = dirAt(who, mid), A = attentionAt(who, mid);
+      const st = mid < born ? { absent: true } : {
+        look: D.look === 'off' ? 'off' : A ? (A.auto ? 'auto' : 'point') : 'none', what: A ? A.what : null,
+        at: A ? [+(A.x / W).toFixed(3), +(A.y / H).toFixed(3)] : null,
+        to: D.to ? [+(D.to.x / W).toFixed(3), +(D.to.y / H).toFixed(3)] : null,
+        idle: D.idle || (who === 'school' ? 'sweep' : 'hover'), pace: D.pace,
+        set: !!(D.to || D.idle || D.look !== 'auto' || D.pace !== 1) };
+      const last = out[out.length - 1], key = JSON.stringify(st);
+      if (last && last.key === key) last.t1 = t1; else out.push(Object.assign({ t0, t1, key }, st));
+    }
+    return out.map(({ key, ...o }) => o);
+  }
   // Swim over to a point: faster the further it has to go, big turns made nearly on the spot.
   function swimTo(f, dx, dy, d, pace, sent) {
     let speed = Math.min(2.4, 0.9 + d / 200);
@@ -1080,6 +1113,7 @@ p, h1, h2, h3 { margin: 0; }
       // The loop becomes the fish where it was drawn. (The engine lifts a new large fish into the
       // upper half of the tank, its territory on the site; here that put it 115 px above the loop,
       // swimming up through the caption.)
+      BORN.big = sc.start + DONE;
       at(sc.start + DONE, () => {
         born = BIG = spawnStroke(pts, 'fish', Math.PI);
         if (born) { born.x = cx; born.y = cy - TANK_Y; }
@@ -1108,7 +1142,7 @@ p, h1, h2, h3 { margin: 0; }
       const write = sigWriter(sig);
       LAYOUT.push(() => fitInOval(tt, F.oval));
       const OUT = sc.dur - ReelScript.cue(sc, 'out');   // cue out: when the name leaves
-      look(sc.start + 0.3, sc.end, CX, F.titleLook);
+      look(sc.start + 0.3, sc.end, CX, F.titleLook, undefined, 'the title');
       return (lt) => {
         write(lt, 0.2, 0.7);
         sig.style.opacity = (0.88 * (1 - seg(lt, OUT - 0.05, 0.2))).toFixed(3);
@@ -1128,7 +1162,7 @@ p, h1, h2, h3 { margin: 0; }
       const stats = [...el.querySelectorAll('.stat')].map((s, j) => statMotion(s, sc.stats[j].n));
       // cues in / out: the answer arrives after the question's Enter, leaves before the cut
       const IN = q.enter - sc.start + ReelScript.cue(sc, 'in'), OUT = sc.dur - ReelScript.cue(sc, 'out');
-      look(sc.start + IN, sc.end, F.answer.look, COL_Y);
+      look(sc.start + IN, sc.end, F.answer.look, COL_Y, undefined, 'the answer');
       return (lt) => {
         lines(ls, lt, IN, OUT, { stagger: 0.075, dur: 0.65 });
         lines(sup, lt, IN + 0.3, OUT, { dur: 0.6 });
@@ -1169,7 +1203,7 @@ p, h1, h2, h3 { margin: 0; }
       let THUMB = { x: 424, y: 196, w: 160, h: 90 };
       LAYOUT.push(() => { THUMB = box(thumbs[0]); });
       const ROW_IN = q.enter - t0 + ReelScript.cue(sc, 'in'), OUT = sc.end - ReelScript.cue(sc, 'out');   // cues in / out
-      look(t0 + ROW_IN, sc.end, WIN.x + WIN.w / 2, WIN.y + WIN.h / 2);   // head for where the work will open
+      look(t0 + ROW_IN, sc.end, WIN.x + WIN.w / 2, WIN.y + WIN.h / 2, undefined, 'the work');   // head for where the work will open
       return (lt, t) => {
         // the result list: the first thumbnail is the window itself, until it dives
         rows.forEach((r, i) => {
@@ -1216,7 +1250,7 @@ p, h1, h2, h3 { margin: 0; }
       const win = el.querySelector('.win'), media = win.querySelector('.media'), col = el.querySelector('.col');
       const caps = inner(win, '.c3'), badge = win.querySelector('.wbadge');
       const IN = q.enter + ReelScript.cue(sc, 'in'), OUT = sc.end - ReelScript.cue(sc, 'out');   // cues in / out
-      look(IN, sc.end, R.x + R.w / 2, R.y + R.h / 2);
+      look(IN, sc.end, R.x + R.w / 2, R.y + R.h / 2, undefined, 'the clip');
       const vis = sc.beats.filter(b => b.video || b.img);
       const layers = vis.map((b, j) => mediaLayer(media, b, j === 0 ? IN - 0.1 : sc.start + b.at, vis[j + 1] ? sc.start + vis[j + 1].at + 0.4 : sc.end + 0.2));
       const motion = columnMotion(col, sc, sc.start);
@@ -1267,7 +1301,8 @@ p, h1, h2, h3 { margin: 0; }
       const draw = strokes.map((s, i) => ({ a: TAP + 0.15 + i * 0.1, d: s.kind === 'fish' ? 0.2 : 0.24 }));
       const born = draw.map(dd => dd.a + dd.d);
       draw.forEach((dd, i) => at(sc.start + born[i], () => spawnStroke(strokes[i].pts, strokes[i].kind, strokes[i].kind === 'fish' ? Math.PI : null)));
-      look(sc.start + IN, sc.end, CX, COL_Y, 1);   // from the right, whatever the frame: the school is born on the left
+      BORN.school = sc.start + Math.min(...born.filter((b, i) => strokes[i].kind === 'fish'));
+      look(sc.start + IN, sc.end, CX, COL_Y, 1, 'the plan');   // from the right, whatever the frame: the school is born on the left
       const DONE = Math.max(...born), OUT = sc.dur - ReelScript.cue(sc, 'out');   // cue out
       return (lt) => {
         pop(plan, lt, IN, OUT, { from: 0.94, rise: 16 });
@@ -1311,7 +1346,7 @@ p, h1, h2, h3 { margin: 0; }
         ${pageBadge(sc, 'free')}${columnMarkup(it, AC.x, AC.w)}`);
       const port = el.querySelector('.port'), ring = el.querySelector('.ring circle'), col = el.querySelector('.col'), badge = el.querySelector('.wbadge');
       const IN = q.enter + ReelScript.cue(sc, 'in'), OUT = sc.end - ReelScript.cue(sc, 'out');   // cues in / out
-      look(IN, sc.end, C.x, C.y);
+      look(IN, sc.end, C.x, C.y, undefined, 'the picture');
       const layers = sc.beats.map((b, j) => mediaLayer(port, b, j === 0 ? IN : sc.start + b.at, sc.beats[j + 1] ? sc.start + sc.beats[j + 1].at + 0.4 : sc.end + 0.2));
       const motion = columnMotion(col, it, sc.start);
       const RL = 2 * Math.PI * (C.r + 12);
@@ -1341,7 +1376,7 @@ p, h1, h2, h3 { margin: 0; }
       const panel = el.querySelector('.panel'), eb = inner(el, '.lm.eyebrow');
       const heads = inner(el, '.lm.grp'), items = [...el.querySelectorAll('.wall li')];
       const IN = q.enter - sc.start + ReelScript.cue(sc, 'in'), OUT = sc.dur - ReelScript.cue(sc, 'out');   // cues in / out
-      look(sc.start + IN, sc.end, CX, COL_Y);
+      look(sc.start + IN, sc.end, CX, COL_Y, undefined, 'the logos');
       return (lt) => {
         pop(panel, lt, IN, OUT, { from: 0.96, rise: 18 });
         lines(eb, lt, IN + 0.15, OUT);
@@ -1361,7 +1396,7 @@ p, h1, h2, h3 { margin: 0; }
       const pg = el.querySelector('.status'), pgStrip = pg.querySelector('.ods');
       LAYOUT.push(() => blocks.forEach(({ b }) => { b.style.top = (COL_Y - b.offsetHeight / 2) + 'px'; }));
       const first = q.enter - sc.start + ReelScript.cue(sc, 'in'), OUT = sc.dur - ReelScript.cue(sc, 'out');   // cues in / out: the first voice, the last
-      look(sc.start + first, sc.end, CX, COL_Y);
+      look(sc.start + first, sc.end, CX, COL_Y, undefined, 'the quotes');
       return (lt) => {
         blocks.forEach((x, i) => {
           const qq = sc.quotes[i], next = sc.quotes[i + 1];
@@ -1391,7 +1426,7 @@ p, h1, h2, h3 { margin: 0; }
       const cols = [...el.querySelectorAll('.three > div')].map(c => ({ rule: c.querySelector('.trule'), ls: inner(c, '.lm') }));
       const cta = inner(el, '.lm.cta');
       const IN = q.enter - sc.start + ReelScript.cue(sc, 'in'), OUT = sc.dur - ReelScript.cue(sc, 'out');   // cues in / out
-      look(sc.start + IN, sc.end, CX, COL_Y);
+      look(sc.start + IN, sc.end, CX, COL_Y, undefined, 'the offer');
       return (lt) => {
         pop(card, lt, IN, OUT, { from: 0.95, rise: 18 });
         lines(eb, lt, IN + 0.15, OUT);
@@ -1413,7 +1448,7 @@ p, h1, h2, h3 { margin: 0; }
       const pill = el.querySelector('.pill'), icons = [...pill.querySelectorAll('.ic')], endc = el.querySelector('.endc');
       const sig = el.querySelector('.sig'), write = sigWriter(sig), url = el.querySelector('.url'), letters = [...url.querySelectorAll('.li')];
       const cta = inner(el, '.lm.endline');
-      look(sc.start + 0.4, sc.end, CX, F.eoval.cy);
+      look(sc.start + 0.4, sc.end, CX, F.eoval.cy, undefined, 'the end card');
       const TAPS = F.taps;
       TAPS.forEach(tp => at(sc.start + tp.t, () => tank.addFood(tp.x, tp.y - TANK_Y)));
       const taps = TAPS.map((tp, i) => ({ tp, c: el.querySelector('.c' + i), r: el.querySelector('.r' + i) }));
@@ -1759,6 +1794,8 @@ p, h1, h2, h3 { margin: 0; }
         return { big: BIG ? { x: BIG.x, y: BIG.y + TANK_Y, heading: BIG.heading } : null, school: c };
       },
       told: (who, t) => dirAt(who, t == null ? reelT : t),
+      attention: (who, t) => attentionAt(who, t == null ? reelT : t),
+      track: trackOf, born: Object.assign({}, BORN),
     },
     async save(text) {
       try { ReelScript.parse(text); } catch (e) { return { ok: false, errors: e.errors || [e.message] }; }

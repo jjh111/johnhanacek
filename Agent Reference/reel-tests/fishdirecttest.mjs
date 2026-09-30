@@ -28,8 +28,9 @@ const NAME = 'zz-fish-test.script.txt', TMP = resolve(ROOT, 'Assets', NAME);
 let fails = 0;
 const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); if (!c) fails++; };
 
-// the cut, with fish lines in its results scene
-let src = readFileSync(resolve(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8');
+// the cut, its own fish lines taken out (John's direction would steer these fish too), with
+// this suite's lines in its results scene
+let src = readFileSync(resolve(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8').split('\n').filter(l => !/^\s*fish\s/.test(l)).join('\n');
 const P0 = RS.parse(src);
 const resIdx = P0.edit.scenes.findIndex(s => s.type === 'results');
 const res = P0.marks.find(m => m.kind === 'scene' && m.obj === P0.edit.scenes[resIdx]);

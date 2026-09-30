@@ -464,6 +464,46 @@ attention, idles and actions."
   dragged, Undo, the school's scatter key, a two-line take kept on pause, delete, an 820 px
   window), formattest (the stage fits above the HUD).
 
+## The fish, coherent (2026-09-30)
+
+John, after trying it (and saving four fish lines in the hosted editor, now in the repo): the
+attention should show in the timeline; a press left the old button lit while its line appeared;
+surface the controls better and make them editable; one coherent way through the timeline, the
+behaviours and placing on the stage.
+
+- **Why the old button stayed lit:** a line written at the playhead was rounded to the nearest
+  0.05 s, so half the time it began just after the playhead, and the panel (rightly) showed the
+  state before it. Lines now land on the grid step at or before the playhead.
+- **The timeline's fish lanes.** Under the cards, a lane for the big fish and one for the school:
+  the rig's own account of each fish across the cut (`REEL_LIVE.fish.track(who)`), cut into spans
+  wherever what it does changes. A span says what the fish looks at (each scene's attention now
+  has a name: the title, the answer, the picture, the plan, the work, the clip, the logos, the
+  quotes, the offer, the end card) and, where a fish line decides, how it idles. Cyan is the
+  reel's own choreography, gold a fish line's, hatched nothing to look at (it swims freely), a
+  dashed outline before the fish is drawn. Every fish line is a gold mark in its fish's lane
+  (both lanes for `all` and for food), with the same icon as its button in the panel: drag it
+  to retime the line, click it to edit it in the panel. Click a span to jump there with that
+  fish chosen. Fish lines left the moments rows, which are the scene's content again.
+- **The panel has one shape.** At the top the fish (Big fish / School / Both). Under it the
+  **selected line's editor**: when, who, what it does (a menu: switching keeps what it can), its
+  point (typed, or Pick on the stage, or "Scene's" for `to auto`), idle, pace, Delete; each
+  change one save, and the line stays selected through the reload. Then **At the playhead**: a
+  sentence ("The big fish looks at the work and circles at its spot (0.4, 0.68)") and one row of
+  buttons per kind (Look at, Idle, Pace, Spot, Once) with what the fish does now lit; press
+  another to change it from the playhead on. Then **this scene's lines**, numbered in time
+  order: click one to select it.
+- **One selection, everywhere:** its row, its numbered mark on the stage (gold, filled) and its
+  mark in the fish lanes (gold, filled) light together, whichever of the three picked it
+  (`reel-fish-select` events; `REEL_FISH.select(ln)`). A new line comes back selected.
+- **Attention on the stage:** while the panel is open, a dotted line runs live from the chosen
+  fish to what it is looking at, labelled ("the big fish looks at the work"): cyan for the
+  scene's own, gold for a point a line gave it.
+- **`to auto`** sends a fish back to the scene's own spot, beside what it looks at: a way to
+  end a waypoint inside a scene.
+- **Tests:** fishpaneltest (24: the lit button follows a press between grid steps, Sweep
+  rewrites Circle at the same moment, the lanes' spans and marks, a lane mark selects its line,
+  the editor's point, verb and time, the take, Delete, 820 px), scripttest (`to auto`).
+
 ## Later
 
 Scene-specific cues (line staggers, the push); moving cut 1 onto the one player; a music track
