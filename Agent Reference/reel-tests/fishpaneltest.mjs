@@ -4,8 +4,9 @@
 // Works on a temp copy of the script with its fish lines taken out (Assets/zz-fishpanel-test.script.txt,
 // played through the rig's ?script=), removed in finally with the backups the dev server kept of it.
 //   1. F opens the panel beside the preview (the stage makes room), and its HUD button is pressed
-//   2. paused, Dart writes `fish @t big dart` into the scene under the playhead, one save; the
-//      preview comes back at the same moment with the new line selected; D again adds nothing
+//   2. paused, Dart writes `fish @t big dart` into the scene under the playhead, one save; it
+//      plays in place: the same moment, the same fish (the tank is not regrown), the new line
+//      selected; D again adds nothing
 //   3. the lit buttons follow a change: with the playhead between grid steps, Circle then Sweep
 //      leave one idle line (rewritten), and Sweep is the one lit
 //   4. Place, then a click on the stage, writes `big to x y` at the click's fraction of the frame;
@@ -18,7 +19,8 @@
 //   9. a take: playing, D then T at two moments; pausing keeps both lines in one save
 //  10. the editor's Delete takes a line out
 //  11. in an 820 px window the panel lies over the preview (no room taken) and nothing overflows
-//  12. no page errors
+//  12. no edit reloaded the page, and none regrew the tank (every save played in place)
+//  13. no page errors
 import { spawn } from 'node:child_process';
 import net from 'node:net';
 import fs from 'node:fs';
@@ -57,17 +59,29 @@ try {
   page.on('pageerror', e => errors.push(e.message));
   const ready = what => page.waitForFunction(() => window.REEL_LIVE && window.REEL_FISH && window.REEL_TIMELINE && !document.getElementById('boot'), null, { timeout: 60000 })
     .catch(e => { throw new Error(`${what}: the preview did not come back (${e.message})`); });
-  // one save: the page reloads; wait for the new one
+  // One save: it plays in place (the version counts up, and the mark set here survives: a reload
+  // would wipe it, and is counted), then wait until it is kept.
+  let reloads = 0;
   const saving = async (what, act) => {
-    await page.evaluate(() => { window.__stale = true; });
+    const v0 = await page.evaluate(() => { window.__mark = true; return REEL_LIVE.version; });
     await act();
-    await page.waitForFunction(() => !window.__stale, null, { timeout: 20000 }).catch(() => { throw new Error(`${what}: no reload`); });
+    const t0 = Date.now();
+    for (;;) {
+      const st = await page.evaluate(() => ({ mark: !!window.__mark, v: window.REEL_LIVE ? REEL_LIVE.version : -1 })).catch(() => ({ mark: false, v: -1 }));
+      if (!st.mark) { reloads++; console.log(`     (${what} reloaded the page)`); break; }
+      if (st.v > v0) break;
+      if (Date.now() - t0 > 20000) throw new Error(`${what}: the edit did not play`);
+      await page.waitForTimeout(50);
+    }
     await ready(what);
+    await page.evaluate(() => REEL_LIVE.settled());
     await page.waitForTimeout(150);
   };
   const lit = () => page.evaluate(() => [...document.querySelectorAll('#reel-fish .fp-on')].map(b => b.dataset.fish));
   await page.goto(`${base}/Assets/sizzle-reel-2.html?script=${NAME}#t=24&pause=1`);
   await ready('first load');
+  // every save's answer, to see that none regrew the tank
+  await page.evaluate(() => { const s = REEL_LIVE.save.bind(REEL_LIVE); window.__saves = []; REEL_LIVE.save = async t => { const r = await s(t); window.__saves.push(r); return r; }; });
 
   // 1. open
   await page.keyboard.press('f');
@@ -78,13 +92,16 @@ try {
 
   // 2. Dart, paused
   const scene = await page.evaluate(() => { const t = REEL_LIVE.now(), sc = REEL_LIVE.scenes.filter(s => t >= s.start - 1e-6).pop(); return { i: sc.i, start: sc.start, at: +(t - sc.start).toFixed(2), type: sc.type }; });
+  await page.evaluate(() => { window.__big = REEL_LIVE.debug.big(); window.__regrows = REEL_LIVE.debug.regrows; });
   await saving('dart', () => page.locator('#reel-fish [data-fish="dart"]').click());
   let fl = fishLines();
   check(fl.length === 1 && fl[0] === `@${scene.at} big dart`, `paused, Dart writes "@${scene.at} big dart" into the ${scene.type} scene`, JSON.stringify(fl));
   const back = await page.evaluate(() => ({ t: REEL_LIVE.now(), playing: REEL_LIVE.isPlaying(), open: REEL_FISH.isOpen, sel: REEL_FISH.selected,
     ed: !document.querySelector('#reel-fish .fp-edwrap').hidden }));
   check(Math.abs(back.t - 24) < 0.05 && !back.playing && back.open && back.sel === lnOf(fl[0]) && back.ed,
-    'the preview comes back at the same moment, paused, the panel open with the new line selected', JSON.stringify(back));
+    'it plays in place: the same moment, paused, the panel open with the new line selected', JSON.stringify(back));
+  const same = await page.evaluate(() => ({ big: !!window.__big && REEL_LIVE.debug.big() === window.__big, regrows: REEL_LIVE.debug.regrows - window.__regrows }));
+  check(same.big && same.regrows === 0, 'the same big fish swims on: the tank was not regrown for a fish line', JSON.stringify(same));
   await page.keyboard.press('d');                 // the same line again: nothing to save, and it says so
   await page.waitForTimeout(600);
   const said = await page.locator('#reel-fish .fp-say').textContent();
@@ -197,6 +214,9 @@ try {
   });
   check(nw.over && nw.right <= nw.vw && nw.left < 200 && !nw.overflow.length, 'in an 820 px window the panel lies over the preview, which keeps its room', JSON.stringify(nw));
 
+  const sv = await page.evaluate(() => window.__saves.map(r => ({ applied: !!r.applied, regrew: !!r.regrew, ok: r.ok })));
+  check(reloads === 0 && sv.length >= 10 && sv.every(r => r.applied && r.ok && !r.regrew),
+    `no edit reloaded the page or regrew the tank: ${sv.length} saves, each played in place and kept`, JSON.stringify({ reloads, sv }));
   const own = errors.filter(e => !/Failed to load|NotSupportedError|no supported source/i.test(e));
   check(!own.length, 'no page errors', own.join(' | '));
 } catch (e) {

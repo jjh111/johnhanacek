@@ -35,10 +35,15 @@
   const BESIDE = 1080;          // a window at least this wide keeps the preview beside the rack; a narrower one lays the rack over it
   const PALETTE = ['#b2e8fa', '#d4af37', '#b6ffba', '#ffb27d', '#b8a8f7', '#ff9b8a', '#7fd6c2', '#e8c3f0'];
 
-  // the scenes as the score sees them
-  const SP = RS.spans(L.parsed.edit);
-  const SCENES = SP.map((c, i) => ({ type: L.parsed.edit.scenes[i].type, start: c.start, end: c.end }));
-  const MOMENTS = RM.moments(L.parsed.edit, RS);
+  // the scenes as the score sees them (read again when the script changes: the arrangement
+  // follows the cut, below)
+  let SCENES, MOMENTS;
+  const timing = () => {
+    const SP = RS.spans(L.parsed.edit);
+    SCENES = SP.map((c, i) => ({ type: L.parsed.edit.scenes[i].type, start: c.start, end: c.end }));
+    MOMENTS = RM.moments(L.parsed.edit, RS);
+  };
+  timing();
 
   // ── style ─────────────────────────────────────────────────────────────
   const css = document.createElement('style');
@@ -589,6 +594,14 @@
       });
     }
     if (get(K_OPEN, false)) open(true);
+    // the script changed in place (a scene's length, a query's words): each section starts on its
+    // scene's new cut and the sound effects fall on the edit's new moments, heard at once
+    if (L.onChange) L.onChange(() => {
+      timing();
+      if (src == null) return;
+      try { read(src); } catch (e) { status((e.errors || [e.message]).join(' · '), true); return; }
+      if (!root.hidden) render();
+    });
     window.REEL_RACK = { open, get src() { return src; }, get parsed() { return P; }, get arrangement() { return A; }, get engine() { return player && player.E; }, get ctx() { return ctx; }, change, undo: () => undo(true), redo: () => undo(false), setSound };
   })();
 })();

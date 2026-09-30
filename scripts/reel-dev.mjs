@@ -4,11 +4,12 @@
 // The rig (Assets/sizzle-reel-2.html) asks GET /__reel/ping on load. When this server answers,
 // the timeline's edits save to the script file itself (POST /__reel/save), and the rig listens
 // on GET /__reel/events for any change to that file on disk, so a save from any text editor
-// reloads the preview at the same moment. Without it the rig still plays, and edits stay a draft.
+// plays in the preview at once, in place (its own saves it knows, and skips). Without it the rig
+// still plays, and edits stay a draft.
 //
 // The same goes for a script's score (Assets/<name>.score.txt, the music): the synth rack saves
 // it through /__reel/save, parsed by scripts/reel-music.js, and listens on /__reel/events so a
-// save from a text editor reaches the rack (which updates in place; the preview does not reload).
+// save from a text editor reaches the rack (which updates in place, as the preview does).
 //
 // A save is parsed with scripts/reel-script.js before a byte is written: a script with a mistake
 // answers 422 with the parser's "line N: …" rows and leaves the file alone. A good one first
@@ -19,8 +20,8 @@
 // It is also a plain static server for the repo, with two things `python3 -m http.server` lacks.
 // Byte ranges on every file: a media element only seeks a file it can range-request, and served
 // whole every seek snaps back to 0 (why both cuts once filmed each clip as its first frame).
-// And no stale copies: text (the script, the rig, the timeline) is sent no-store, so a reload
-// after a save always reads the new version. Media is sent no-cache with an ETag, so the
+// And no stale copies: text (the script, the rig, the timeline) is sent no-store, so a read
+// after a save always gets the new version. Media is sent no-cache with an ETag, so the
 // browser keeps its clips and a reload re-asks for them, answered 304 at no cost.
 //
 // It knows the media, too: GET /__reel/media lists every picture and clip a script could name
@@ -93,8 +94,8 @@ function serveStatic(req, res, pathname) {
   if (!st.isFile()) return send(res, 404, 'not found');
 
   const size = st.size, head = { 'Content-Type': typeOf(target), 'Cache-Control': 'no-store', 'Accept-Ranges': 'bytes' };
-  // Clips, pictures and fonts are kept by the browser and re-asked (no-cache + ETag): a save
-  // reloads the preview, and 16 MB of clips answered 304 cost nothing. Text stays no-store.
+  // Clips, pictures and fonts are kept by the browser and re-asked (no-cache + ETag): a reload
+  // by hand re-asks for 16 MB of clips, answered 304 at no cost. Text stays no-store.
   if (!FRESH.has(path.extname(target).slice(1).toLowerCase())) {
     const tag = `W/"${size.toString(16)}-${Math.round(st.mtimeMs).toString(16)}"`;
     Object.assign(head, { 'Cache-Control': 'no-cache', ETag: tag, 'Last-Modified': st.mtime.toUTCString() });

@@ -19,8 +19,11 @@
   const base = p => p.replace(/^\.\//, '');
   const clock = s => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
   // every path the script names in an img or video line: the reel's media, marked in the grid
+  // (read again when the script changes in place)
   const used = new Map();
-  L.parsed.fields.forEach(f => { if (f.key === 'img' || f.key === 'video') { const v = f.owner[f.jsonKey]; if (typeof v === 'string') used.set(v, f.key); } });
+  const readUsed = () => { used.clear(); L.parsed.fields.forEach(f => { if (f.key === 'img' || f.key === 'video') { const v = f.owner[f.jsonKey]; if (typeof v === 'string') used.set(v, f.key); } }); };
+  readUsed();
+  if (L.onChange) L.onChange(readUsed);
 
   // ── the catalogue ─────────────────────────────────────────────────────
   let cat = null;
@@ -156,7 +159,7 @@
       b.setAttribute('aria-pressed', String(folder === f));
       b.onclick = () => { folder = f; drawChips(c); draw(); };
     });
-    hint.textContent = c.full ? 'Pick one to put it in this slot; the preview reloads with it. A clip plays while you rest on it.'
+    hint.textContent = c.full ? 'Pick one to put it in this slot; the preview plays it at once. A clip plays while you rest on it.'
       : 'Only the media this reel already uses: run node scripts/reel-dev.mjs to choose from every file in Assets/.';
   }
   function pick(it) {

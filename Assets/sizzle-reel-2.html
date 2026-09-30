@@ -689,7 +689,7 @@ p, h1, h2, h3 { margin: 0; }
   boot('the script');
 
   // ── the edit ──────────────────────────────────────────────────────────
-  // read fresh every load: a reload after saving the script shows the save
+  // read fresh every load (and when the dev server says the file changed)
   const fresh = (url, as) => fetch(url, { cache: 'no-store' }).then(r => { if (!r.ok) throw new Error(url + ' ' + r.status); return r[as](); });
   const MK = await fresh('./media-kit.json', 'json');       // the boards (clients, offer) and the site's name
   // The script: ?script=name.script.txt plays another cut through this same player (a file next
@@ -711,16 +711,25 @@ p, h1, h2, h3 { margin: 0; }
   const HOST = !RENDER && window.REEL_HOST ? window.REEL_HOST : null;
   if (HOST && DRAFT == null) boot('your saved version on ' + HOST.name);
   const HOSTED = HOST && DRAFT == null ? await Promise.resolve(HOST.load(SCRIPT_PATH)).catch(() => null) : null;
+  let hosted = HOSTED != null;                 // playing (and saving to) the host's version
   boot('the script');
-  const SRC = DRAFT != null ? DRAFT : HOSTED != null ? HOSTED : await fresh('./' + SCRIPT, 'text');
+  // The script and the scenes it times. Live, an edit replaces them in place (REEL_LIVE.apply,
+  // below) and the film is built again inside the running page: it never reloads for an edit.
+  let SRC = DRAFT != null ? DRAFT : HOSTED != null ? HOSTED : await fresh('./' + SCRIPT, 'text');
   const mediaURL = p => (HOST && HOST.media ? HOST.media(p) : p);
   window.__reelHosted = HOSTED != null ? SCRIPT_PATH : null;   // lets the error screen go back to the file
-  const PARSED = ReelScript.parse(SRC);
-  const EDIT = PARSED.edit;
+  let PARSED = ReelScript.parse(SRC);
+  let EDIT = PARSED.edit;
   const boardNamed = name => { const b = MK.boards.find(x => x.name === name); if (!b) throw new Error('cut 2: no board named ' + name); return b; };
-  let acc = 0;
-  const SC = EDIT.scenes.map((s, i) => { const o = Object.assign({}, s, { i, start: acc, end: acc + s.dur }); acc += s.dur; return o; });
-  const DURATION = Math.round(acc * 1000) / 1000;
+  const SC = [];                               // every scene with its start and end (the same array for the whole visit)
+  let DURATION = 0;
+  function timeScenes() {
+    let acc = 0;
+    SC.length = 0;
+    EDIT.scenes.forEach((s, i) => { SC.push(Object.assign({}, s, { i, start: acc, end: acc + s.dur })); acc += s.dur; });
+    DURATION = Math.round(acc * 1000) / 1000;
+  }
+  timeScenes();
 
   boot('the signature');
   const SIG_D = await fetch('./JHsig.svg').then(r => r.text()).then(s => new DOMParser().parseFromString(s, 'image/svg+xml').querySelector('path').getAttribute('d'));
@@ -789,12 +798,15 @@ p, h1, h2, h3 { margin: 0; }
   const WATER = { x0: 140, x1: W - 140, y0: TANK_Y + 120, y1: TANK_Y + TANK_H - 80 };   // stage px
   const inWater = (x, y) => ({ x: Math.max(WATER.x0, Math.min(WATER.x1, x)), y: Math.max(WATER.y0, Math.min(WATER.y1, y)) });
   const DIR = { big: [], school: [] }, LOOKS = [];   // { t0, t1, ch, v } in time order; the looks at a point
-  SC.forEach(sc => (sc.fish || []).map((c, k) => ({ c, k })).sort((a, b) => a.c.at - b.c.at || a.k - b.k).forEach(({ c }) => {
-    if (ReelScript.FISH[c.verb].once || c.at < 0 || c.at >= sc.dur) return;
-    let v = c.verb === 'to' ? (c.auto ? null : inWater(c.x * W, c.y * H)) : c.verb === 'idle' ? c.mode : c.verb === 'pace' ? c.pace : c.look;   // `to auto`: back to the scene's own spot
-    if (c.verb === 'look' && !c.look) LOOKS.push(v = { x: c.x * W, y: c.y * H });   // its own object: it keeps its side (sideOf)
-    (c.who === 'all' ? ['big', 'school'] : [c.who]).forEach(w => DIR[w].push({ t0: sc.start + c.at, t1: sc.end, ch: c.verb, v }));
-  }));
+  function direct() {                          // (with the scenes: build(), below)
+    DIR.big.length = 0; DIR.school.length = 0; LOOKS.length = 0;
+    SC.forEach(sc => (sc.fish || []).map((c, k) => ({ c, k })).sort((a, b) => a.c.at - b.c.at || a.k - b.k).forEach(({ c }) => {
+      if (ReelScript.FISH[c.verb].once || c.at < 0 || c.at >= sc.dur) return;
+      let v = c.verb === 'to' ? (c.auto ? null : inWater(c.x * W, c.y * H)) : c.verb === 'idle' ? c.mode : c.verb === 'pace' ? c.pace : c.look;   // `to auto`: back to the scene's own spot
+      if (c.verb === 'look' && !c.look) LOOKS.push(v = { x: c.x * W, y: c.y * H });   // its own object: it keeps its side (sideOf)
+      (c.who === 'all' ? ['big', 'school'] : [c.who]).forEach(w => DIR[w].push({ t0: sc.start + c.at, t1: sc.end, ch: c.verb, v }));
+    }));
+  }
   // what a fish has been told at t; `since` is when the latest of it began
   function dirAt(who, t) {
     const d = { to: null, look: 'auto', idle: null, pace: 1, since: -1 };
@@ -905,7 +917,9 @@ p, h1, h2, h3 { margin: 0; }
   }
   function steerBig(f) {
     if (f !== BIG) return null;
-    if (f.reelAct && reelT < f.reelAct.t1) return { heading: f.reelAct.h, speed: f.reelAct.speed };   // a dart or a turn, until done
+    // a dart or a turn, until done (live, also on the wall clock: paused, the reel's clock stands
+    // still while the tank swims on, and a dart pressed then would never end)
+    if (f.reelAct && reelT < f.reelAct.t1 && (RENDER || !f.reelAct.wall || performance.now() < f.reelAct.wall)) return { heading: f.reelAct.h, speed: f.reelAct.speed };
     const D = dirAt('big', reelT), A = lookOf(D);
     if (D.idle === 'wander') return null;      // the engine's own
     if (!D.to && (!D.idle || D.idle === 'hover')) {
@@ -954,19 +968,26 @@ p, h1, h2, h3 { margin: 0; }
 
   // ── registries the scenes fill ────────────────────────────────────────
   const MEDIA = [], EVENTS = [], LAYOUT = [], QUERIES = [];
-  const at = (t, run) => EVENTS.push({ t, run });
+  // An event's id says what it does to the tank and where in the edit it sits (its scene and its
+  // time there, so moving another scene does not make it new). "spawn …" puts a fish or coral in
+  // the tank; an edit in place regrows the tank only when those differ (see apply, live mode).
+  const at = (t, run, id) => EVENTS.push({ t, run, id });
   // the fish lines that happen once, at their time
-  SC.forEach(sc => (sc.fish || []).forEach(c => {
-    if (!ReelScript.FISH[c.verb].once || c.at < 0 || c.at >= sc.dur) return;
-    const t = sc.start + c.at;
-    if (c.verb === 'feed') at(t, () => tank.addFood(c.x * W, c.y * H - TANK_Y));
-    else if (c.verb === 'scatter' || c.verb === 'regroup') at(t, () => tank.schoolPhase(c.verb));
-    else at(t, () => {                          // the big fish's: a dart straight ahead, or a turn round
-      const f = BIG; if (!f) return;
-      if (c.verb === 'dart') { f.reelAct = { t1: t + 0.55, h: f.heading, speed: 4.2 }; f.vx = Math.cos(f.heading) * 3; f.vy = Math.sin(f.heading) * 3; }
-      else f.reelAct = { t1: t + 1.2, h: f.heading + Math.PI, speed: 0.45 };
-    });
-  }));
+  function fishEvents() {                      // (with the scenes: build(), below)
+    SC.forEach(sc => (sc.fish || []).forEach(c => {
+      if (!ReelScript.FISH[c.verb].once || c.at < 0 || c.at >= sc.dur) return;
+      const t = sc.start + c.at, id = `fish ${sc.i} ${ReelScript.writeFish(c)}`;
+      if (c.verb === 'feed') at(t, () => tank.addFood(c.x * W, c.y * H - TANK_Y), id);
+      else if (c.verb === 'scatter' || c.verb === 'regroup') at(t, () => tank.schoolPhase(c.verb), id);
+      else at(t, () => {                        // the big fish's: a dart straight ahead, or a turn round
+        const f = BIG; if (!f) return;
+        const s = c.verb === 'dart' ? 0.55 : 1.2;
+        if (c.verb === 'dart') { f.reelAct = { t1: t + s, h: f.heading, speed: 4.2 }; f.vx = Math.cos(f.heading) * 3; f.vy = Math.sin(f.heading) * 3; }
+        else f.reelAct = { t1: t + s, h: f.heading + Math.PI, speed: 0.45 };
+        if (!RENDER) f.reelAct.wall = performance.now() + Math.max(0, t + s - reelT) * 1000;
+      }, id);
+    }));
+  }
   // Work on the tank that must happen after every engine tick, painted or not. Anything that
   // touches a fish lives here or in EVENTS, never in a scene's picture: a still, a part of the
   // cut or a parallel chunk paints only some frames, and must still grow the film's tank.
@@ -1009,25 +1030,43 @@ p, h1, h2, h3 { margin: 0; }
     }
     block.style.top = (top0 + best) + 'px';
   }
+  // Live, each clip is fetched once, as a blob (CLIPS), and the elements a build made wait in
+  // POOL, by file, while an edit builds the film again: the new build takes them back still
+  // loaded, so a clip or a picture never goes blank for an edit.
+  const CLIPS = new Map(), POOL = new Map(), LAYERS = [];   // file → blob url; file → elements; this build's { key, el }
+  const clipURL = src => {
+    if (!CLIPS.has(src)) CLIPS.set(src, fetch(src).then(r => r.ok ? r.blob() : Promise.reject(r.status)).then(bl => URL.createObjectURL(bl), () => src));
+    return CLIPS.get(src);
+  };
+  const pooled = key => { const a = POOL.get(key); return a && a.length ? a.shift() : null; };
   function mediaLayer(host, b, start, end) {
     const layer = document.createElement('div'); layer.className = 'layer';
     let m;
     if (b.video) {
-      m = document.createElement('video');
-      m.muted = true; m.playsInline = true; m.preload = 'auto';
-      m.setAttribute('muted', ''); m.setAttribute('playsinline', '');
-      // A clip only seeks if its server answers byte ranges. The renderer does; python's
-      // http.server does not, and a clip it serves plays from 0 whatever `from` says. So live,
-      // play it from a blob, which always seeks.
-      const src = mediaURL(b.video);
-      if (RENDER) m.src = src;
-      else fetch(src).then(r => r.ok ? r.blob() : Promise.reject(r.status)).then(bl => {
-        m.src = URL.createObjectURL(bl);
-        m.addEventListener('error', () => { if (m.src.startsWith('blob:')) m.src = src; }, { once: true });   // a page that refuses blob media plays the file
-      }, () => { m.src = src; });
+      const src = mediaURL(b.video), key = 'video ' + src;
+      m = RENDER ? null : pooled(key);
+      if (!m) {
+        m = document.createElement('video');
+        m.muted = true; m.playsInline = true; m.preload = 'auto';
+        m.setAttribute('muted', ''); m.setAttribute('playsinline', '');
+        // A clip only seeks if its server answers byte ranges. The renderer does; python's
+        // http.server does not, and a clip it serves plays from 0 whatever `from` says. So live,
+        // play it from a blob, which always seeks.
+        if (RENDER) m.src = src;
+        else clipURL(src).then(u => {
+          m.src = u;
+          if (u !== src) m.addEventListener('error', () => { if (m.src.startsWith('blob:')) m.src = src; }, { once: true });   // a page that refuses blob media plays the file
+        });
+      }
       m.loop = !!b.loop;                        // a clip shorter than its beat (the AROC HUD is 1.3 s) repeats
       MEDIA.push({ el: m, from: b.from || 0, start, end, loop: !!b.loop });
-    } else { m = new Image(); m.decoding = 'async'; m.alt = ''; m.src = mediaURL(b.img); }
+      if (!RENDER) LAYERS.push({ key, el: m });
+    } else {
+      const src = mediaURL(b.img), key = 'img ' + src;
+      m = RENDER ? null : pooled(key);
+      if (!m) { m = new Image(); m.decoding = 'async'; m.alt = ''; m.src = src; }
+      if (!RENDER) LAYERS.push({ key, el: m });
+    }
     const focus = b.focus || [0.5, 0.5];
     m.style.objectPosition = b.pan ? '0% 50%' : `${focus[0] * 100}% ${focus[1] * 100}%`;
     m.style.transformOrigin = `${focus[0] * 100}% ${focus[1] * 100}%`;
@@ -1109,18 +1148,17 @@ p, h1, h2, h3 { margin: 0; }
       paths.forEach(p => { p.style.strokeDasharray = `${L} ${L}`; });
       const g1 = inner(el, '.g1'), g2 = inner(el, '.g2');
       const D0 = 0.2, D1 = 0.95, DONE = D0 + D1, OUT = sc.dur - ReelScript.cue(sc, 'out');   // cue out: when the guide leaves
-      let born = null;
       // The loop becomes the fish where it was drawn. (The engine lifts a new large fish into the
       // upper half of the tank, its territory on the site; here that put it 115 px above the loop,
       // swimming up through the caption.)
       BORN.big = sc.start + DONE;
       at(sc.start + DONE, () => {
-        born = BIG = spawnStroke(pts, 'fish', Math.PI);
-        if (born) { born.x = cx; born.y = cy - TANK_Y; }
-      });
+        BIG = spawnStroke(pts, 'fish', Math.PI);
+        if (BIG) { BIG.x = cx; BIG.y = cy - TANK_Y; }
+      }, 'spawn big');
       // and it swims level, clear of the caption above it, until the caption has gone
       const LEVEL = Math.max(DONE + 0.45, OUT + 0.35);
-      TICKS.push(t => { if (born && t - sc.start < LEVEL) { born.heading = born.targetHeading = born.cruiseAngle = Math.PI; born.vx = -0.3; born.vy = 0; } });
+      TICKS.push(t => { const f = BIG; if (f && t - sc.start < LEVEL) { f.heading = f.targetHeading = f.cruiseAngle = Math.PI; f.vx = -0.3; f.vy = 0; } });
       return (lt) => {
         const k = seg(lt, D0, D1, E.inOutCubic);
         paths.forEach(p => { p.style.strokeDashoffset = fx(L * (1 - k)); });
@@ -1300,7 +1338,7 @@ p, h1, h2, h3 { margin: 0; }
       LAYOUT.push(() => { const b = box(go); GO.x = b.x + b.w / 2; GO.y = b.y + b.h / 2; });
       const draw = strokes.map((s, i) => ({ a: TAP + 0.15 + i * 0.1, d: s.kind === 'fish' ? 0.2 : 0.24 }));
       const born = draw.map(dd => dd.a + dd.d);
-      draw.forEach((dd, i) => at(sc.start + born[i], () => spawnStroke(strokes[i].pts, strokes[i].kind, strokes[i].kind === 'fish' ? Math.PI : null)));
+      draw.forEach((dd, i) => at(sc.start + born[i], () => spawnStroke(strokes[i].pts, strokes[i].kind, strokes[i].kind === 'fish' ? Math.PI : null), `spawn ${strokes[i].kind} ${i}`));
       BORN.school = sc.start + Math.min(...born.filter((b, i) => strokes[i].kind === 'fish'));
       look(sc.start + IN, sc.end, CX, COL_Y, 1, 'the plan');   // from the right, whatever the frame: the school is born on the left
       const DONE = Math.max(...born), OUT = sc.dur - ReelScript.cue(sc, 'out');   // cue out
@@ -1450,7 +1488,7 @@ p, h1, h2, h3 { margin: 0; }
       const cta = inner(el, '.lm.endline');
       look(sc.start + 0.4, sc.end, CX, F.eoval.cy, undefined, 'the end card');
       const TAPS = F.taps;
-      TAPS.forEach(tp => at(sc.start + tp.t, () => tank.addFood(tp.x, tp.y - TANK_Y)));
+      TAPS.forEach(tp => at(sc.start + tp.t, () => tank.addFood(tp.x, tp.y - TANK_Y), `food ${sc.i} ${tp.t}`));
       const taps = TAPS.map((tp, i) => ({ tp, c: el.querySelector('.c' + i), r: el.querySelector('.r' + i) }));
       LAYOUT.push(() => {
         fitInOval(endc, F.eoval);
@@ -1488,37 +1526,35 @@ p, h1, h2, h3 { margin: 0; }
   // Each question is typed over the last one's selection (select-all, then type), starting just
   // before its section's downbeat so its answer lands a few hundred ms after the cut.
   // (the key times are ReelScript.queries: the score plays its keys from the same list)
-  ReelScript.queries(EDIT).forEach(Q => {
-    const sc = SC[Q.scene];
-    const q = { sc, text: Q.text, times: Q.times, t0: Q.t0, typed: Q.typed, enter: Q.enter, clear: Q.clear, last: Q.last, tiers: sc.tiers || [] };
-    const g = document.createElement('div'); g.className = 'tg';
-    g.innerHTML = q.tiers.map(name => `<span class="tier ${TIERCLASS[name] || ''}"><i></i>${name}</span>`).join('');
-    tiersEl.appendChild(g);
-    q.tg = [...g.children]; q.g = g;
-    QUERIES.push(q);
-  });
+  function queries() {                         // (with the scenes: build(), below)
+    ReelScript.queries(EDIT).forEach(Q => {
+      const sc = SC[Q.scene];
+      const q = { sc, text: Q.text, times: Q.times, t0: Q.t0, typed: Q.typed, enter: Q.enter, clear: Q.clear, last: Q.last, tiers: sc.tiers || [] };
+      const g = document.createElement('div'); g.className = 'tg';
+      g.innerHTML = q.tiers.map(name => `<span class="tier ${TIERCLASS[name] || ''}"><i></i>${name}</span>`).join('');
+      tiersEl.appendChild(g);
+      q.tg = [...g.children]; q.g = g;
+      QUERIES.push(q);
+    });
+  }
   const queryOf = sc => QUERIES.find(q => q.sc === sc);
 
-  // ── build every scene, in edit order ──────────────────────────────────
-  for (const sc of SC) {
-    if (!BUILD[sc.type]) throw new Error('cut 2: unknown scene type ' + sc.type);
-    sc.update = BUILD[sc.type](sc, queryOf(sc));
-    sc.el = scenesEl.lastElementChild;
-  }
-  EVENTS.sort((a, b) => a.t - b.t);
-
   // ── the glass: hero oval → command bar → hero oval ────────────────────
-  const title = SC.find(s => s.type === 'title'), end = SC.find(s => s.type === 'end');
   const ellipse = o => ({ cx: CX, cy: o.cy, w: o.w, h: o.h, rx: o.w / 2, ry: o.h / 2 });
   const OVAL = ellipse(F.oval);
   const LENS = Object.assign({}, OVAL, { h: 2, ry: 1 });
   const BAR = { cx: CX, cy: F.barTop + 38, w: BAND, h: 76, rx: 38, ry: 38 };
   const EOVAL = ellipse(F.eoval);
-  const GK = [
-    { a: title.start, b: title.start + 0.55, from: LENS, to: OVAL, ease: E.outExpo },
-    { a: title.end - 0.5, b: title.end + 0.05, from: OVAL, to: BAR, ease: E.inOutExpo },
-    { a: end.start + 0.05, b: end.start + 0.75, from: BAR, to: EOVAL, ease: E.inOutExpo },
-  ];
+  let title, end, GK, OPEN;                    // (with the scenes: build(), below)
+  function glass() {
+    title = SC.find(s => s.type === 'title'); end = SC.find(s => s.type === 'end');
+    GK = [
+      { a: title.start, b: title.start + 0.55, from: LENS, to: OVAL, ease: E.outExpo },
+      { a: title.end - 0.5, b: title.end + 0.05, from: OVAL, to: BAR, ease: E.inOutExpo },
+      { a: end.start + 0.05, b: end.start + 0.75, from: BAR, to: EOVAL, ease: E.inOutExpo },
+    ];
+    OPEN = SC[0];
+  }
   function paintGlass(t) {
     let k0 = GK[0];
     for (const k of GK) if (t >= k.a) k0 = k;
@@ -1554,7 +1590,6 @@ p, h1, h2, h3 { margin: 0; }
   // The drawn fish's record, read live off the engine: freehand stroke in, structured data out.
   const chipEl = document.getElementById('chip'), chipB = chipEl.querySelector('b'), chipS = chipEl.querySelector('span');
   const leadEl = document.getElementById('chipLead'), leadLine = leadEl.querySelector('line'), leadDot = leadEl.querySelector('circle');
-  const OPEN = SC[0];
   function paintChip(t) {
     const v = BIG ? seg(t, OPEN.start + 1.25, 0.3, E.outCubic) * (1 - seg(t, title.end - 0.75, 0.3, E.inCubic)) : 0;
     chipEl.style.opacity = leadEl.style.opacity = v.toFixed(3);
@@ -1586,6 +1621,26 @@ p, h1, h2, h3 { margin: 0; }
     camera.style.transform = k >= 1 ? 'none' : `translate3d(${fx(CX - fxp * s)}px,${fx(H / 2 - fyp * s)}px,0) scale(${s.toFixed(4)})`;
   }
 
+  // ── the film: every scene built from the script, in edit order ────────
+  // Once as the page opens, and again, in place, for every edit (REEL_LIVE.apply, live mode):
+  // the registries start empty each time and are filled in the same order.
+  function build() {
+    ATTN.length = 0; BORN.big = BORN.school = null;
+    MEDIA.length = 0; EVENTS.length = 0; LAYOUT.length = 0; QUERIES.length = 0; TICKS.length = 0;
+    scenesEl.textContent = ''; tiersEl.textContent = '';
+    direct();
+    fishEvents();
+    queries();
+    for (const sc of SC) {
+      if (!BUILD[sc.type]) throw new Error('cut 2: unknown scene type ' + sc.type);
+      sc.update = BUILD[sc.type](sc, queryOf(sc));
+      sc.el = scenesEl.lastElementChild;
+    }
+    EVENTS.sort((a, b) => a.t - b.t);
+    glass();
+  }
+  build();
+
   // ── readiness ─────────────────────────────────────────────────────────
   const ready = (async () => {
     await document.fonts.ready;
@@ -1602,11 +1657,13 @@ p, h1, h2, h3 { margin: 0; }
   })();
 
   // ── one moment ────────────────────────────────────────────────────────
-  let firedT = -1;
+  let firedT = -1, regrows = 0;
+  // the tank from nothing: every event fires again as the clock passes it
+  function regrow() { regrows++; tank.clearFish(); tank.state.coral.length = 0; firedT = -1; BIG = null; schoolHome = null; ATTN.concat(LOOKS).forEach(a => { delete a.side; }); }
   function simulate(t) {                        // the tank's side: events, on every 60 Hz tick
     reelT = t;
     // a rewind regrows the tank from nothing; a hair's floating-point wobble is not a rewind
-    if (t < firedT - 1e-6) { tank.clearFish(); tank.state.coral.length = 0; firedT = -1; BIG = null; schoolHome = null; ATTN.concat(LOOKS).forEach(a => { delete a.side; }); }
+    if (t < firedT - 1e-6) regrow();
     for (const ev of EVENTS) if (ev.t > firedT && ev.t <= t) ev.run();
     firedT = Math.max(firedT, t);              // never backwards, or an event could fire twice
   }
@@ -1657,8 +1714,9 @@ p, h1, h2, h3 { margin: 0; }
 
   // ── live mode: the script's preview ───────────────────────────────────
   // The scrub bar carries a tick per scene; [ and ] jump a scene, L loops the one you are on.
-  // Where you are (and the loop) ride in the URL's #hash, so saving the script and reloading
-  // comes back to the same moment: edit, save, reload is the whole loop.
+  // An edit is played in place (apply, below): the playhead, the play state, the clips and the
+  // fish carry on. Where you are (and the loop) also ride in the URL's #hash, so a reload by
+  // hand comes back to the same moment.
   boot('fonts and pictures');
   try { await ready; } catch (e) { console.error(e); }
   const hud = document.getElementById('hud'), bar = hud.querySelector('.bar'), fill = bar.querySelector('i'), clock = hud.querySelector('.time');
@@ -1678,7 +1736,11 @@ p, h1, h2, h3 { margin: 0; }
     const rs = document.documentElement.style;
     rs.setProperty('--reel-bottom', bottom + 'px'); rs.setProperty('--reel-right', reservedR + 'px'); rs.setProperty('--reel-left', reservedL + 'px'); };
   fit(); addEventListener('resize', fit);
-  SC.forEach(sc => { const b = document.createElement('b'); b.style.left = (sc.start / DURATION * 100).toFixed(3) + '%'; bar.appendChild(b); });
+  const barTicks = () => {
+    bar.querySelectorAll('b').forEach(b => b.remove());
+    SC.forEach(sc => { const b = document.createElement('b'); b.style.left = (sc.start / DURATION * 100).toFixed(3) + '%'; bar.appendChild(b); });
+  };
+  barTicks();
   // `node scripts/reel-dev.mjs` answers /__reel/ping with its name; a plain static server does
   // not, and a host that answers every path with a page is not it either
   // Asked now, answered whenever: the reel starts playing without waiting for it (the clips load
@@ -1736,9 +1798,9 @@ p, h1, h2, h3 { margin: 0; }
   }
   let hashAt = -1, hashLoop = null, hashPlaying = null;
   // The preview's API, for the timeline (scripts/reel-timeline.js) and anything else that drives
-  // it: read the script and where things are, move the playhead, and save a changed script,
-  // through the dev server when it runs, else as this tab's draft. Either way the page reloads
-  // at the same moment.
+  // it: read the script and where things are, move the playhead, and save a changed script. An
+  // edit plays at once, in place (apply, below), and is kept in the background: through the dev
+  // server when it runs, else with the page's host, else as this tab's draft.
   const frameFns = [];
   if (bootEl) bootEl.remove();
   (function loop() {
@@ -1771,10 +1833,116 @@ p, h1, h2, h3 { margin: 0; }
     requestAnimationFrame(loop);
   })();
   const DEV = await devP;
+
+  // ── an edit, in place ─────────────────────────────────────────────────
+  // A changed script is parsed and the film built again inside the running page (its scenes,
+  // clips, events and the fish director's tables) in about the time of a frame, where a reload
+  // took everything with it: the clips fetched again, the fish regrown from nothing, every panel
+  // put back from storage. The playhead, the play state and the loop stay. The clips and pictures
+  // come back from POOL still loaded. The tank keeps swimming: it is regrown only when what it
+  // should hold by now has changed (a fish or the coral born on the other side of the playhead),
+  // and an event that is new and already due (food, a dart, a scatter written at the playhead)
+  // happens at once. The tools hear of it through onChange, just after.
+  let version = 0;
+  const changeFns = [];
+  const changed = detail => queueMicrotask(() => changeFns.forEach(fn => { try { fn(detail); } catch (e) { console.error(e); } }));
+  function applyText(text, from) {
+    let parsed;
+    try { parsed = ReelScript.parse(text); } catch (e) { return { ok: false, errors: e.errors || [e.message] }; }
+    if (text === SRC) return { ok: true, same: true };
+    const prev = SRC, due = () => EVENTS.filter(e => e.t <= firedT);
+    const had = due().map(e => e.id || ''), oldAttn = ATTN.slice(), lookSide = new Map(LOOKS.map(a => [a.x + ' ' + a.y, a.side]));
+    // what this build made waits for the next: its clips and pictures, by file
+    POOL.clear();
+    LAYERS.forEach(({ key, el }) => { if (el.tagName === 'VIDEO') el.pause(); if (!POOL.has(key)) POOL.set(key, []); POOL.get(key).push(el); });
+    LAYERS.length = 0;
+    SRC = text; PARSED = parsed; EDIT = parsed.edit;
+    timeScenes();
+    scenesEl.classList.add('measuring');
+    build();
+    LAYOUT.forEach(f => f());
+    scenesEl.classList.remove('measuring');
+    // what the new build did not take back is let go (its blob stays in CLIPS for another time)
+    POOL.forEach(list => list.forEach(el => { if (el.tagName === 'VIDEO') { el.removeAttribute('src'); el.load(); } }));
+    POOL.clear();
+    // each fish keeps the side it chose of a thing it was already looking at
+    oldAttn.forEach((o, i) => { const a = ATTN[i]; if (a && o.side !== undefined && o.what === a.what && o.x === a.x && o.y === a.y) a.side = o.side; });
+    LOOKS.forEach(a => { const s = lookSide.get(a.x + ' ' + a.y); if (s !== undefined) a.side = s; });
+    // the tank: regrown only if what it holds by now changed; else what is new and due happens now
+    const spawns = ids => ids.filter(id => id.startsWith('spawn ')).sort().join('|');
+    const now_ = due(), ids = now_.map(e => e.id || '');
+    const regrew = spawns(had) !== spawns(ids);
+    if (regrew) regrow();
+    else { const was = new Set(had); now_.forEach(e => { if (!was.has(e.id || '')) e.run(); }); }
+    if (loopSc) loopSc = SC[loopSc.i] || null;
+    if (now() > DURATION) seekTo(DURATION);
+    barTicks();
+    paint(Math.min(now(), DURATION));
+    const v = ++version;
+    // a picture new to the page is measured again once it has decoded
+    const fresh_ = [...scenesEl.querySelectorAll('img')].filter(i => !i.complete);
+    if (fresh_.length) Promise.all(fresh_.map(i => i.decode().catch(() => null))).then(() => {
+      if (v !== version) return;
+      scenesEl.classList.add('measuring'); LAYOUT.forEach(f => f()); scenesEl.classList.remove('measuring');
+    });
+    changed({ src: SRC, prev, parsed: PARSED, from, regrew, version: v });
+    return { ok: true, regrew };
+  }
+
+  // ── saving ────────────────────────────────────────────────────────────
+  // An edit is played first and kept after, one save at a time, the latest text last: through
+  // the dev server (the file), else the page's host (the editor on claude.ai keeps it in the
+  // page's store), else as a draft in this tab. A save that fails keeps the edit as a draft here
+  // and says why.
+  const MINE = [];                             // texts this page saved: the dev server's word that the file changed is then no news
+  let saving = false, queued = null;
+  const settledFns = [];                       // waiting for every save to be kept (settled())
+  const persist = text => new Promise(done => {
+    if (queued) queued.done.push(done); else queued = { done: [done] };
+    queued.text = text;
+    if (!saving) pump();
+  });
+  async function pump() {
+    saving = true;
+    while (queued) {
+      const { text, done } = queued; queued = null;
+      let r;
+      try { r = await keep(text); } catch (e) { r = { ok: false, errors: [e.message] }; }
+      done.forEach(f => f(r));
+    }
+    saving = false;
+    settledFns.splice(0).forEach(f => f());
+  }
+  function dropDraft() { try { sessionStorage.removeItem(DRAFT_KEY); } catch (e) { /* nothing to clear */ } DRAFT = null; window.__reelDraft = null; }
+  function draftOf(text, errors) {
+    try { sessionStorage.setItem(DRAFT_KEY, text); }
+    catch (e) { return { ok: false, via: null, errors: (errors || []).concat(['this browser keeps no drafts here (storage is blocked); run node scripts/reel-dev.mjs to save to the file']) }; }
+    DRAFT = text; window.__reelDraft = DRAFT_KEY;
+    return errors ? { ok: false, via: 'draft', errors: errors.concat(['kept as a draft in this tab']) } : { ok: true, via: 'draft' };
+  }
+  async function keep(text) {
+    if (DEV) {
+      MINE.push(text); if (MINE.length > 24) MINE.shift();
+      const r = await fetch('/__reel/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ file: SCRIPT_PATH, text }) }).catch(e => ({ ok: false, status: e.message }));
+      const j = r.json ? await r.json().catch(() => ({})) : {};
+      if (r.ok) { dropDraft(); return { ok: true, via: 'file' }; }
+      return draftOf(text, j.errors || ['the dev server did not save it (' + r.status + ')']);
+    }
+    if (HOST && await Promise.resolve(HOST.ready).catch(() => false)) {
+      const r = await Promise.resolve(HOST.save(SCRIPT_PATH, text)).catch(e => ({ ok: false, errors: [e && e.message || String(e)] }));
+      if (r && r.ok) { dropDraft(); hosted = true; window.__reelHosted = SCRIPT_PATH; return { ok: true, via: 'host' }; }
+      if (!r || !r.fallback) return draftOf(text, (r && r.errors) || [HOST.name + ' did not keep the save']);
+      // the viewer said no to storing data: keep a draft in this tab instead
+    }
+    return draftOf(text, null);
+  }
+
   window.REEL_LIVE = {
-    file: SCRIPT_PATH, src: SRC, parsed: PARSED, draft: DRAFT != null, dev: DEV,
-    host: !DEV && HOST ? HOST.name : null, hosted: HOSTED != null,
-    scenes: SC, duration: DURATION,
+    file: SCRIPT_PATH, dev: DEV, host: !DEV && HOST ? HOST.name : null,
+    // the script as it plays now (each edit replaces these)
+    get src() { return SRC; }, get parsed() { return PARSED; }, get duration() { return DURATION; },
+    get draft() { return DRAFT != null; }, get hosted() { return hosted; }, get version() { return version; },
+    scenes: SC,                                // the same array for the whole visit, its contents replaced by each edit
     now, seek: seekTo, isPlaying: () => playing, setPlaying: p => { if (!!p !== playing) toggle(); },
     onFrame: fn => { frameFns.push(fn); },
     addTool, mediaURL,
@@ -1795,36 +1963,38 @@ p, h1, h2, h3 { margin: 0; }
       },
       told: (who, t) => dirAt(who, t == null ? reelT : t),
       attention: (who, t) => attentionAt(who, t == null ? reelT : t),
-      track: trackOf, born: Object.assign({}, BORN),
+      track: trackOf, get born() { return Object.assign({}, BORN); },
     },
+    // An edit: played at once, in place, then kept (saving, above). Resolves when it is kept:
+    // { ok, via: 'file' | 'host' | 'draft', applied, regrew, errors }. A script with mistakes is
+    // neither played nor kept: { ok: false, errors } and no `applied`.
     async save(text) {
-      try { ReelScript.parse(text); } catch (e) { return { ok: false, errors: e.errors || [e.message] }; }
-      if (DEV) {
-        const r = await fetch('/__reel/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ file: SCRIPT_PATH, text }) }).catch(e => ({ ok: false, status: e.message }));
-        const j = r.json ? await r.json().catch(() => ({})) : {};
-        if (!r.ok) return { ok: false, errors: j.errors || ['the dev server did not save it (' + r.status + ')'] };
-        try { sessionStorage.removeItem(DRAFT_KEY); } catch (e) { /* nothing to clear */ }
-        location.reload();
-        return { ok: true, via: 'file' };
-      }
-      if (HOST && await Promise.resolve(HOST.ready).catch(() => false)) {
-        const r = await Promise.resolve(HOST.save(SCRIPT_PATH, text)).catch(e => ({ ok: false, errors: [e && e.message || String(e)] }));
-        if (r && r.ok) {
-          try { sessionStorage.removeItem(DRAFT_KEY); } catch (e) { /* nothing to clear */ }
-          location.reload();
-          return { ok: true, via: 'host' };
-        }
-        if (!r || !r.fallback) return { ok: false, errors: (r && r.errors) || [HOST.name + ' did not keep the save'] };
-        // the viewer said no to storing data: keep a draft in this tab instead
-      }
-      try { sessionStorage.setItem(DRAFT_KEY, text); } catch (e) { return { ok: false, errors: ['this browser keeps no drafts here (storage is blocked); run node scripts/reel-dev.mjs to save to the file'] }; }
-      location.reload();
-      return { ok: true, via: 'draft' };
+      const r = applyText(text, 'edit');
+      if (!r.ok) return r;
+      return Object.assign({ applied: true, regrew: !!r.regrew }, await persist(text));
     },
+    // Play a script in place without keeping it: it is kept already (the host's newer save, the
+    // file another editor saved). from 'host' marks the host's version as the one playing.
+    apply(text, from) {
+      const r = applyText(text, from || 'apply');
+      if (r.ok && from === 'host') { hosted = true; window.__reelHosted = SCRIPT_PATH; if (r.same) changed({ src: SRC, prev: SRC, parsed: PARSED, from, same: true, version }); }
+      return r;
+    },
+    // fn({ src, prev, parsed, from, regrew, version }) after every change of script, and when
+    // where it is kept changes (a draft discarded: `same`)
+    onChange: fn => { changeFns.push(fn); },
+    // resolves once every edit made so far is kept (Export waits for it: the renderer reads the file)
+    settled: () => saving || queued ? new Promise(r => settledFns.push(r)) : Promise.resolve(),
+    // for tests and the console: the tank, the big fish, and how often the tank was regrown
+    debug: { tank, big: () => BIG, get regrows() { return regrows; } },
     async discardDraft() {
-      try { sessionStorage.removeItem(DRAFT_KEY); } catch (e) { /* nothing to clear */ }
-      if (HOST && HOSTED != null) await Promise.resolve(HOST.discard(SCRIPT_PATH)).catch(() => {});   // back to the file
-      location.reload();
+      dropDraft();
+      if (HOST && hosted) { await Promise.resolve(HOST.discard(SCRIPT_PATH)).catch(() => {}); hosted = false; window.__reelHosted = null; }   // back to the file
+      const text = await fresh('./' + SCRIPT, 'text').catch(() => null);
+      if (text == null) { location.reload(); return; }
+      const r = applyText(text, 'file');
+      if (!r.ok) location.reload();
+      else if (r.same) changed({ src: SRC, prev: SRC, parsed: PARSED, from: 'file', same: true, version });
     },
     download(text) {
       if (HOST && HOST.download) return HOST.download(SCRIPT, text == null ? SRC : text);
@@ -1833,8 +2003,14 @@ p, h1, h2, h3 { margin: 0; }
       a.download = SCRIPT; document.body.appendChild(a); a.click(); a.remove();
     },
   };
-  // with the dev server, a save from any editor reloads the preview (a draft here is kept)
-  if (DEV) new EventSource('/__reel/events?file=' + encodeURIComponent(SCRIPT_PATH)).addEventListener('change', () => { if (DRAFT == null) location.reload(); });
+  // With the dev server, a save from another editor (another tab, the renderer's tools) plays here
+  // in place; this page's own saves come back as no news, and a draft here is kept.
+  if (DEV) new EventSource('/__reel/events?file=' + encodeURIComponent(SCRIPT_PATH)).addEventListener('change', async () => {
+    if (DRAFT != null) return;
+    const text = await fresh('./' + SCRIPT, 'text').catch(() => null);
+    if (text == null || text === SRC || MINE.includes(text)) return;
+    applyText(text, 'file');
+  });
   const tl = document.createElement('script'); tl.src = '../scripts/reel-timeline.js'; tl.onerror = () => tl.remove(); document.head.appendChild(tl);
   // directing the fish: waypoints on the stage, and attention, idles and actions played at the playhead (F)
   const fp = document.createElement('script'); fp.src = '../scripts/reel-fish.js'; fp.onerror = () => fp.remove(); document.head.appendChild(fp);

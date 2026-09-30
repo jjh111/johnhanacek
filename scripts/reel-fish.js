@@ -10,9 +10,9 @@
 //                     playhead, so it changes from there to the scene's end; pressing it again at
 //                     the same moment rewrites that line rather than adding a second. The once
 //                     buttons (dart, turn, scatter, regroup, feed) write a line each.
-//                     Paused, a press saves at once and the preview comes back at the same
-//                     moment. Playing, presses gather into a take (each at the moment it was
-//                     pressed, its button dashed) that pausing keeps in one save.
+//                     Paused, a press plays at once, in place: the fish carry on from where
+//                     they are (nothing reloads). Playing, presses gather into a take (each at
+//                     the moment it was pressed, its button dashed) that pausing keeps in one save.
 //   This scene's lines   every fish line of the scene under the playhead, numbered in time order.
 //                     Click one to open it: its time, who, what it does, and its point (typed, or
 //                     picked on the stage), each change one save; Delete takes it out.
@@ -28,7 +28,8 @@
   'use strict';
   const L = window.REEL_LIVE, RS = window.ReelScript, UI = window.REEL_UI;
   if (!L || !RS || !L.fish || !RS.writeFish || document.getElementById('reel-fish')) return;
-  const [W, H] = L.frame, P = L.parsed, SC = L.scenes;
+  const [W, H] = L.frame, SC = L.scenes;           // (the rig's own array: an edit replaces its contents)
+  let P = L.parsed;
   const get = (k, d) => { try { const v = sessionStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };
   const put = (k, v) => { try { sessionStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } };
   // the undo stacks are the timeline's (scripts/reel-timeline.js): whole script texts
@@ -41,9 +42,14 @@
   const fmt = s => { const m = Math.floor(s / 60 + 1e-9), r = s - m * 60; return `${m}:${r < 10 ? '0' : ''}${r.toFixed(1)}`; };
   const sceneAt = t => { let s = SC[0]; for (const x of SC) if (t >= x.start - 1e-6) s = x; return s; };
   // each scene's fish lines as written, numbered in time order: { ln, c, i (its scene), n }
-  const LINES = SC.map(() => []), BY_LN = new Map();
-  P.fields.forEach(f => { if (f.key === 'fish') LINES[P.edit.scenes.indexOf(f.owner)].push({ ln: f.ln, c: f.owner.fish[f.index] }); });
-  LINES.forEach((l, i) => { l.sort((a, b) => a.c.at - b.c.at || a.ln - b.ln); l.forEach((r, k) => { r.i = i; r.n = k + 1; BY_LN.set(r.ln, r); }); });
+  // (read again after every change of script)
+  let LINES, BY_LN;
+  function index() {
+    LINES = SC.map(() => []); BY_LN = new Map();
+    P.fields.forEach(f => { if (f.key === 'fish') LINES[P.edit.scenes.indexOf(f.owner)].push({ ln: f.ln, c: f.owner.fish[f.index] }); });
+    LINES.forEach((l, i) => { l.sort((a, b) => a.c.at - b.c.at || a.ln - b.ln); l.forEach((r, k) => { r.i = i; r.n = k + 1; BY_LN.set(r.ln, r); }); });
+  }
+  index();
   const WHO_NAME = { big: 'the big fish', school: 'the school', all: 'both' };
   const pt = (x, y) => `(${f2(x)}, ${f2(y)})`;
   // a line in words
@@ -383,18 +389,18 @@
   function remove(r) {
     try { save(RS.removeLine(L.src, r.ln), null); } catch (e) { say(e.errors || [e.message]); }
   }
-  let busy = false;
+  // A change plays at once, in place, and comes back through REEL_LIVE.onChange (below), which
+  // draws the lines again with `keepSel` (the line's words, in its scene) selected.
   async function save(next, keepSel) {
     if (next === L.src) { say(['already so: that line is in the script as it is']); return; }
-    if (busy) return;
-    busy = true; say('');
+    say('');
     const u0 = get(K_UNDO, []), r0 = get(K_REDO, []), s0 = get(K_SEL, null);
     put(K_UNDO, (Array.isArray(u0) ? u0 : []).concat([L.src]).slice(-DEPTH)); put(K_REDO, []);
     put(K_SEL, keepSel);
     let res;
     try { res = await L.save(next); } catch (e) { res = { ok: false, errors: [e.message] }; }
-    if (!res || !res.ok) { put(K_UNDO, u0); put(K_REDO, r0); put(K_SEL, s0); busy = false; say((res && res.errors) || ['the save failed']); drawScene(cur); }
-    // saved: the page reloads at the same moment, the line selected
+    if (!res || !res.applied) { put(K_UNDO, u0); put(K_REDO, r0); put(K_SEL, s0); say((res && res.errors) || ['the save failed']); drawScene(cur); return; }
+    if (!res.ok) say(res.errors || ['not saved']);   // played, but kept only as a draft here (it says why)
   }
   function drawTake() {
     takeEl.hidden = !take.length;
@@ -415,12 +421,15 @@
     if (r.i !== cur) cur = r.i;
     drawScene(r.i);
   }
-  // after a reload: the line saved last (by its words, in its scene)
+  // After a change of script (or a reload by hand): the line saved last, by its words in its
+  // scene; else the line that was selected, if it is still a fish line (the timeline retimed it).
   function restoreSel() {
-    const s = get(K_SEL, null);
-    if (!s || s.i == null || !LINES[s.i]) return;
-    const r = LINES[s.i].find(x => RS.writeFish(x.c) === s.text);
-    if (r) { sel = { ln: r.ln }; dispatchEvent(new CustomEvent('reel-fish-select', { detail: { ln: r.ln } })); }
+    const s = get(K_SEL, null), was = sel;
+    let r = s && s.i != null && LINES[s.i] ? LINES[s.i].find(x => RS.writeFish(x.c) === s.text) : null;
+    if (!r && was) r = BY_LN.get(was.ln) || null;
+    sel = r ? { ln: r.ln } : null;
+    if (r) put(K_SEL, { text: RS.writeFish(r.c), i: r.i });
+    if (r || was) dispatchEvent(new CustomEvent('reel-fish-select', { detail: { ln: r ? r.ln : null } }));
   }
 
   // ── this scene's lines, and the editor of the selected one ────────────
@@ -628,6 +637,14 @@
   setWho(who, true);
   restoreSel();
   if (get(K_OPEN, false)) open(true);
+  // a change of script (a press here, a drag in the timeline, an undo): the lines read again, the
+  // selection kept, the scene's list, its marks and the lit controls drawn again
+  if (L.onChange) L.onChange(() => {
+    P = L.parsed; index(); restoreSel();
+    if (root.hidden) return;
+    const t = L.now(), i = cur >= 0 && SC[cur] ? cur : sceneAt(t).i;
+    drawScene(i); drawNow(t); drawGaze(t);
+  });
   // for the timeline (its fish lanes), tests and the console
   window.REEL_FISH = {
     open: on => open(on === undefined ? true : on), get isOpen() { return !root.hidden; },

@@ -2,10 +2,12 @@
 // static server (no dev server, no byte ranges), with a stand-in for claude.ai's `db` and
 // `downloads` capabilities, and the viewer's light theme stamped on the page.
 //   node "Agent Reference/reel-tests/hosttest.mjs"      exits non-zero on any failure
-// Checks: the page starts without asking the viewer anything and stays dark; the first save asks,
-// lands in the store, and the reload plays it at once; a synth-rack change does the same; Revert
-// goes back to the file; a grant from before loads the saved version in a new tab; a slow store
-// never holds the start (the saved version is offered when it arrives); a viewer's no turns saves
+// Checks: the page starts without asking the viewer anything and stays dark; an edit plays at
+// once, in place (the page never reloads), and the first save asks and lands in the store; a
+// reload by hand plays it at once from this tab's copy; a synth-rack change lands too; Revert goes
+// back to the file, in place; a grant from before loads the saved version in a new tab; a slow
+// store never holds the start (the saved version is offered when it arrives, and plays in place);
+// a save in the store newer than this tab's copy is offered the same way; a viewer's no turns saves
 // into tab drafts; without the capabilities the page still plays and keeps drafts.
 // Builds into .local/reel-tests/host/editor and writes a screenshot there.
 import { chromium } from 'playwright-core';
@@ -88,6 +90,9 @@ const TOTAL0 = totalOf(SCRIPT), TOTAL1 = totalOf(RS.setDur(SCRIPT, ANSWER, 5));
 const near = (a, b) => Math.abs(a - b) < 1e-9;
 const answerTheFirstAsk = async (page, yes) => { await page.waitForFunction(() => window.__ask > 0, null, { timeout: 15000 }); await page.evaluate(y => window.__answer(y), yes); };
 const started = page => page.waitForFunction(() => window.REEL_LIVE && window.REEL_RACK && window.REEL_RACK.parsed && !document.getElementById('boot'), null, { timeout: 60000 });
+// a mark on the page that a reload would wipe: set it before an edit, and it is still there after
+const mark = page => page.evaluate(() => { window.__mark = true; });
+const marked = page => page.evaluate(() => !!window.__mark);
 
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || chromium.executablePath(), args: ['--autoplay-policy=no-user-gesture-required'] });
 const fresh = async () => { const ctx = await browser.newContext({ viewport: { width: 1600, height: 900 } }); await ctx.addInitScript(FAKE); const page = await ctx.newPage(); const errs = []; page.on('pageerror', e => errs.push(e.message)); return { ctx, page, errs }; };
@@ -107,17 +112,23 @@ try {
     await page.waitForTimeout(1500);
     await page.screenshot({ path: join(OUT, 'editor.png') });
 
-    // a timeline save: the answer runs 5 s; it waits on the viewer's yes, then lands
+    // a timeline save: the answer runs 5 s. It plays at once, in place; keeping it waits on the
+    // viewer's yes, then it lands
     const ln = await page.evaluate(() => REEL_LIVE.parsed.marks.find(m => m.kind === 'scene' && m.obj === REEL_LIVE.parsed.edit.scenes[2]).ln);
     const next = RS.setDur(SCRIPT, ln, 5);
-    const nav = page.waitForNavigation();
+    await mark(page);
     await page.evaluate(t => { window.__saving = REEL_LIVE.save(t); }, next);
+    const now = await page.evaluate(() => ({ dur: REEL_LIVE.parsed.edit.scenes[2].dur, total: REEL_LIVE.duration, t: REEL_LIVE.now() }));
+    ok(now.dur === 5 && near(now.total, TOTAL1) && Math.abs(now.t - 21) < 0.05, `the edit plays at once, in place, before the viewer has answered (answer ${now.dur} s, cut ${now.total} s, still at ${now.t.toFixed(2)} s)`);
     await answerTheFirstAsk(page, true);
-    await nav; await started(page);
-    const after = await page.evaluate(() => ({ hosted: REEL_LIVE.hosted, dur: REEL_LIVE.parsed.edit.scenes[2].dur, total: REEL_LIVE.duration, asked: window.__ask, at: +(new URLSearchParams(location.hash.slice(1)).get('t') || 0) }));
+    const res = await page.evaluate(() => window.__saving);
     const kept = await store(page, 'sizzle-reel-2.script.txt');
-    ok(kept && kept.text === next, 'the first save asks, and after a yes the whole script lands in the store');
-    ok(after.hosted && after.dur === 5 && near(after.total, TOTAL1) && after.asked === 0, `the reload plays the saved version at once, asking nothing (answer ${after.dur} s, cut ${after.total} s)`);
+    ok(res.ok && res.via === 'host' && kept && kept.text === next && await page.evaluate(() => REEL_LIVE.hosted), 'the first save asks, and after a yes the whole script lands in the store');
+    ok(await marked(page), 'no reload: the page that made the edit is the page that kept it');
+    // a reload by hand plays this tab's copy at once, asking nothing, where it was
+    await page.reload(); await started(page);
+    const after = await page.evaluate(() => ({ hosted: REEL_LIVE.hosted, dur: REEL_LIVE.parsed.edit.scenes[2].dur, total: REEL_LIVE.duration, asked: window.__ask, at: +(new URLSearchParams(location.hash.slice(1)).get('t') || 0) }));
+    ok(after.hosted && after.dur === 5 && near(after.total, TOTAL1) && after.asked === 0, `a reload by hand plays the saved version at once, asking nothing (answer ${after.dur} s, cut ${after.total} s)`);
     ok(Math.abs(after.at - 21) < 0.6, `and comes back to where it was (${after.at} s)`);
 
     // a synth-rack change: reverb return 0.62 (this load has not been answered yet, so it asks)
@@ -133,12 +144,13 @@ try {
     await page.evaluate(() => REEL_LIVE.download());
     ok((await page.evaluate(() => window.__saved.map(r => r.filename))).includes('sizzle-reel-2.script.txt'), 'Download offers the script through the save dialog');
 
-    // revert: back to the file
-    const nav2 = page.waitForNavigation();
+    // revert: back to the file, in place
+    await mark(page);
     await page.evaluate(() => { window.__reverting = REEL_LIVE.discardDraft(); });
     await answerTheFirstAsk(page, true);
-    await nav2; await started(page);
-    ok(await page.evaluate(T => !REEL_LIVE.hosted && Math.abs(REEL_LIVE.duration - T) < 1e-9, TOTAL0) && !(await store(page, 'sizzle-reel-2.script.txt')), 'Revert drops the saved script and plays the file');
+    await page.evaluate(() => window.__reverting);
+    ok(await page.evaluate(T => !REEL_LIVE.hosted && Math.abs(REEL_LIVE.duration - T) < 1e-9, TOTAL0) && !(await store(page, 'sizzle-reel-2.script.txt')) && await marked(page),
+      'Revert drops the saved script and plays the file, in place');
     ok(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.join(' | ') : ''));
   }
 
@@ -151,14 +163,33 @@ try {
     const r = await page.evaluate(() => ({ hosted: REEL_LIVE.hosted, total: REEL_LIVE.duration }));
     ok(r.hosted && near(r.total, TOTAL1), `a new tab with a grant from before plays the saved version from the store (cut ${r.total} s)`);
 
-    // a slow store: the reel starts on the file, then offers the saved version when it arrives
-    await page.evaluate(() => localStorage.setItem('fake-slow', '4000'));
+    // a slow store, and no copy of it in this tab: the reel starts on the file, then offers the
+    // saved version when it arrives; Play it plays it in place
+    await page.evaluate(() => { localStorage.setItem('fake-slow', '4000'); sessionStorage.removeItem('reel-host-copy:sizzle-reel-2.script.txt'); });
     const t0 = Date.now();
     await page.reload(); await started(page);
     const took = (Date.now() - t0) / 1000, first = await page.evaluate(() => REEL_LIVE.hosted);
-    await page.waitForSelector('#reel-late', { timeout: 10000 }).catch(() => null);
-    const late = await page.evaluate(() => !!document.getElementById('reel-late'));
-    ok(!first && took < 8 && late, `a slow store never holds the reel (started in ${took.toFixed(1)} s on the file), and the saved version is offered when it arrives`);
+    await page.waitForSelector('.reel-late', { timeout: 10000 }).catch(() => null);
+    const late = await page.evaluate(() => (document.querySelector('.reel-late') || {}).textContent || '');
+    ok(!first && took < 8 && /ready/.test(late), `a slow store never holds the reel (started in ${took.toFixed(1)} s on the file), and the saved version is offered when it arrives ("${late}")`);
+    await mark(page);
+    await page.locator('.reel-late button').first().click();
+    const took2 = await page.evaluate(() => ({ hosted: REEL_LIVE.hosted, total: REEL_LIVE.duration, gone: !document.querySelector('.reel-late') }));
+    ok(took2.hosted && near(took2.total, TOTAL1) && took2.gone && await marked(page), `Play it plays the saved version in place (cut ${took2.total} s)`);
+
+    // a save in the store newer than this tab's copy (another tab's, or Claude's): the copy plays
+    // at once, and the newer one is offered
+    const T2 = RS.setDur(SCRIPT, ANSWER, 6);
+    await page.evaluate(t => { localStorage.setItem('fake-slow', '0'); localStorage.setItem('fake-db:files/sizzle-reel-2.script.txt', JSON.stringify({ text: t, savedAt: new Date().toISOString() })); }, T2);
+    await page.reload(); await started(page);
+    const mine = await page.evaluate(() => REEL_LIVE.duration);
+    await page.waitForSelector('.reel-late', { timeout: 10000 }).catch(() => null);
+    const newer = await page.evaluate(() => (document.querySelector('.reel-late') || {}).textContent || '');
+    ok(near(mine, TOTAL1) && /newer save of the script/.test(newer), `this tab's copy plays at once (cut ${mine} s), and a newer save in the store is offered ("${newer}")`);
+    await mark(page);
+    await page.locator('.reel-late button').first().click();
+    const took3 = await page.evaluate(() => ({ total: REEL_LIVE.duration, dur: REEL_LIVE.parsed.edit.scenes[2].dur }));
+    ok(took3.dur === 6 && near(took3.total, totalOf(T2)) && await marked(page), `Play it plays the newer save in place (answer ${took3.dur} s)`);
     ok(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.join(' | ') : ''));
   }
 
@@ -216,11 +247,13 @@ try {
     ok(hp.n >= 50 && hp.thumb && !/Only the media/.test(hp.hint), `on claude.ai the picker offers the whole library it was built with (${hp.n} pictures), thumbnails and all`);
     ok(hp.file && hp.clip, 'and every file it offers travels with the page, so a pick plays at once');
     await page.locator('#reel-pk input[type=search]').fill('jhana-3');
-    const nav = page.waitForNavigation();
+    await mark(page);
+    const v0 = await page.evaluate(() => REEL_LIVE.version);
     await page.locator('#reel-pk input[type=search]').press('Enter');
-    await nav; await started(page);
+    await page.waitForFunction(v => REEL_LIVE.version > v, v0, { timeout: 10000 }).catch(() => {});
+    await page.evaluate(() => REEL_LIVE.settled());
     const kept = await store(page, 'sizzle-reel-2.script.txt');
-    ok(kept && /img\s+\.\/jhana-3\.webp/.test(kept.text), 'a pick saves to the page\'s store like any edit');
+    ok(kept && /img\s+\.\/jhana-3\.webp/.test(kept.text) && await marked(page), 'a pick plays in place and saves to the page\'s store like any edit');
     ok(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.join(' | ') : ''));
   }
 
@@ -228,12 +261,12 @@ try {
   {
     const { page, errs } = await fresh();
     await page.goto(URL0); await started(page);
-    const nav = page.waitForNavigation();
+    await mark(page);
     await page.evaluate(t => { window.__saving = REEL_LIVE.save(t); }, RS.setDur(SCRIPT, ANSWER, 5));
     await answerTheFirstAsk(page, false);
-    await nav; await started(page);
+    const res = await page.evaluate(() => window.__saving);
     const r = await page.evaluate(() => ({ draft: REEL_LIVE.draft, hosted: REEL_LIVE.hosted, total: REEL_LIVE.duration }));
-    ok(r.draft && !r.hosted && near(r.total, TOTAL1), `a no keeps the save as a draft in the tab (draft ${r.draft}, cut ${r.total} s)`);
+    ok(res.ok && res.via === 'draft' && r.draft && !r.hosted && near(r.total, TOTAL1) && await marked(page), `a no keeps the save as a draft in the tab, in place (draft ${r.draft}, cut ${r.total} s)`);
     ok(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.join(' | ') : ''));
   }
 
@@ -245,10 +278,9 @@ try {
     await p2.waitForFunction(() => window.REEL_LIVE && !document.getElementById('boot'), null, { timeout: 60000 });
     const b2 = await p2.evaluate(() => ({ host: REEL_LIVE.host, dev: REEL_LIVE.dev }));
     ok(b2.host === 'claude.ai' && !b2.dev && e2.length === 0, `without claude.ai's capabilities it still plays (${JSON.stringify(b2)}${e2.length ? ', ' + e2.join(' | ') : ''})`);
-    const nav = p2.waitForNavigation();
-    await p2.evaluate(t => REEL_LIVE.save(t), RS.setDur(SCRIPT, ANSWER, 5));
-    await nav; await p2.waitForFunction(() => window.REEL_LIVE && !document.getElementById('boot'), null, { timeout: 60000 });
-    ok(await p2.evaluate(T => REEL_LIVE.draft && Math.abs(REEL_LIVE.duration - T) < 1e-9, TOTAL1), 'and a save there becomes a draft in the tab');
+    await mark(p2);
+    const r2 = await p2.evaluate(t => REEL_LIVE.save(t), RS.setDur(SCRIPT, ANSWER, 5));
+    ok(r2.via === 'draft' && await p2.evaluate(T => REEL_LIVE.draft && Math.abs(REEL_LIVE.duration - T) < 1e-9, TOTAL1) && await marked(p2), 'and a save there becomes a draft in the tab, in place');
   }
 } finally {
   await browser.close();

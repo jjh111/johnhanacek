@@ -48,9 +48,15 @@ function psnr(a, b, n) {
 const leftovers = () => readdirSync(OUTDIR).filter(f => /-parts-|\.x264-2pass-/.test(f));
 
 try {
+  // the scenes' starts, from the script as it is now (the cut's timings change as it is edited)
+  const edit = R.parse(readFileSync(resolve(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8')).edit;
+  let t = 0; const starts = edit.scenes.map(s => { const x = t; t += s.dur; return +x.toFixed(3); });
+  const total = t;
+
   // ── 1. parallel equals serial ──────────────────────────────────────────
   const A = resolve(OUTDIR, 'jobs1.mp4'), B = resolve(OUTDIR, 'jobs3.mp4');
-  const range = ['--from=36', '--to=46', '--fps=30'];
+  const FROM = 36, TO = 46, range = [`--from=${FROM}`, `--to=${TO}`, '--fps=30'];
+  const inside = starts.filter(x => x > FROM + 1e-6 && x < TO - 1e-6);
   const r1 = render([...range, '--jobs=1', `--out=${A}`]);
   ok(r1.status === 0 && existsSync(A), '--jobs=1 renders', `${r1.secs.toFixed(1)} s wall`);
   const r3 = render([...range, '--jobs=3', `--out=${B}`]);
@@ -60,8 +66,13 @@ try {
     ok(fa === 300 && fb === 300, 'both have 300 frames', `${fa} / ${fb}`);
     ok(Math.abs(da - db) < 0.02 && Math.abs(da - 10) < 0.05, 'same duration', `${da} / ${db}`);
     ok(/3 jobs\s+frame 300\/300/.test(r3.out), 'one combined progress line reaches 300/300');
-    ok(/3 jobs, cut at 38\.00 s, 41\.50 s/.test(r3.out), 'the chunks start at the scene cuts inside the range', (r3.out.match(/\d jobs, cut at [^\n]*/) || [''])[0]);
-    for (const n of [0, 59, 60, 61, 120, 164, 165, 166, 299]) {
+    // the chunks start at scene cuts inside the range: as many as there are jobs after the first
+    const cutAt = ((/3 jobs, cut at ([^\n]*)/.exec(r3.out) || [])[1] || '').split(',').map(x => parseFloat(x)).filter(Number.isFinite);
+    ok(cutAt.length === Math.min(2, inside.length) && cutAt.every(c => inside.some(x => Math.abs(x - c) < 0.006)),
+      `the chunks start at the scene cuts inside the range (${inside.join(', ')} s)`, (r3.out.match(/\d jobs, cut at [^\n]*/) || [''])[0]);
+    // the frames either side of each cut, and a few between
+    const near_ = cutAt.flatMap(c => { const n = Math.round((c - FROM) * 30); return [n - 1, n, n + 1]; });
+    for (const n of [...new Set([0, 60, 120, ...near_, 299])].filter(n => n >= 0 && n < 300).sort((a, b) => a - b)) {
       const p = psnr(A, B, n);
       ok(p >= 45, `frame ${n} matches by PSNR`, `${p === Infinity ? 'identical' : p.toFixed(1) + ' dB'}`);
     }
@@ -70,9 +81,6 @@ try {
   ok(leftovers().length === 0, 'no part folders left after success', leftovers().join(' '));
 
   // ── 2. delivery ────────────────────────────────────────────────────────
-  const edit = R.parse(readFileSync(resolve(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8')).edit;
-  let t = 0; const starts = edit.scenes.map(s => { const x = t; t += s.dur; return +x.toFixed(3); });
-  const total = t;
   for (const cap of [null, 300000]) {
     const name = cap ? 'deliver-2pass' : 'deliver';
     const M = resolve(OUTDIR, `${name}.mp4`);
@@ -90,7 +98,7 @@ try {
     ok(/1920x1080/.test(ff(['-i', poster])), `${name}: poster is 1920×1080`);
     let c = null; try { c = JSON.parse(readFileSync(chap, 'utf8')); } catch (e) { ok(false, `${name}: chapters parse`, e.message); continue; }
     ok(c.chapters.length === 11 && c.chapters.length === edit.scenes.length, `${name}: 11 chapters`, `${c.chapters.length}`);
-    ok(JSON.stringify(c.chapters.map(x => x.t)) === JSON.stringify(starts) && starts.slice(0, 3).join() === '0,2.5,6', `${name}: chapter starts from the scene lengths`, c.chapters.map(x => x.t).join(' '));
+    ok(JSON.stringify(c.chapters.map(x => x.t)) === JSON.stringify(starts) && starts[0] === 0, `${name}: chapter starts from the scene lengths`, c.chapters.map(x => x.t).join(' '));
     ok(c.chapters.map(x => x.kind).join() === edit.scenes.map(s => s.type).join(), `${name}: chapter kinds are the scene kinds`);
     ok(c.chapters[0].what === 'draw a loop' && c.chapters[1].what === 'John Hanacek' && c.chapters[2].what === 'who is john?' && c.chapters.every(x => typeof x.what === 'string'), `${name}: chapter what = query || name || caption || line`);
     ok(Math.abs(c.duration - total) < 1e-6, `${name}: chapters duration is the edit's`, `${c.duration}`);

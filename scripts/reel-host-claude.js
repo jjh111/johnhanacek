@@ -8,8 +8,9 @@
 // claude.ai asks the viewer before a page first uses its store, and the call waits until they
 // answer. So nothing here asks while the page starts: load() only reads the store when the viewer
 // has already allowed it (permissions.state, which never asks), and gives up after a few seconds
-// either way; the first save is what asks. Each save also leaves a copy in this tab, so the
-// reload that follows a save plays it at once.
+// either way; the first save is what asks. Each save also leaves a copy in this tab (with its
+// time), so a reload plays it at once; the store is still read behind it, and a newer save there
+// (from another tab, or Claude's) is offered, and played in place when taken.
 //
 // Export (scripts/reel-export.js) asks for films here. Claude renders them: the page sends a
 // comment to Claude (the `comments` capability's sendToClaude, which a Claude session watching
@@ -29,9 +30,16 @@
   const nameOf = path => path.replace(/^.*\//, '');
   const ref = async path => { const db = await dbP; return db ? db.doc('files/' + nameOf(path)) : null; };
   const COPY = 'reel-host-copy:';
+  // this tab's copy of a save: { text, savedAt } (an older page kept the text alone: no time)
   const copy = {
-    get: path => { try { return sessionStorage.getItem(COPY + nameOf(path)); } catch (e) { return null; } },
-    set: (path, text) => { try { sessionStorage.setItem(COPY + nameOf(path), text); } catch (e) { /* no storage */ } },
+    get: path => {
+      let v = null;
+      try { v = sessionStorage.getItem(COPY + nameOf(path)); } catch (e) { return null; }
+      if (v == null) return null;
+      try { const o = JSON.parse(v); if (o && typeof o.text === 'string') return { text: o.text, savedAt: o.savedAt || '' }; } catch (e) { /* the text alone */ }
+      return { text: v, savedAt: '' };
+    },
+    set: (path, text, savedAt) => { try { sessionStorage.setItem(COPY + nameOf(path), JSON.stringify({ text, savedAt: savedAt || '' })); } catch (e) { /* no storage */ } },
     drop: path => { try { sessionStorage.removeItem(COPY + nameOf(path)); } catch (e) { /* no storage */ } },
   };
   // has the viewer already allowed the store? (never asks)
@@ -40,13 +48,14 @@
     if (!p) return false;
     try { return (await within(p.state('db'), 1500)) === 'granted'; } catch (e) { return false; }
   }
+  // the store's save: { text, savedAt }, or null
   async function loadNow(path) {
     if (!(await allowed())) return null;
     const r = await ref(path);
     if (!r) return null;
     const s = await r.get();
     const v = s.exists ? s.data() : null;
-    return v && typeof v.text === 'string' ? v.text : null;
+    return v && typeof v.text === 'string' ? { text: v.text, savedAt: v.savedAt || '' } : null;
   }
   const refused = e => e && ['not_granted', 'capability_disabled', 'capability_removed', 'revoked'].includes(e.code);
   const why = e => e && e.code === 'invalid_argument' ? 'this view can play the reel but not change it'
@@ -56,15 +65,19 @@
   window.REEL_HOST = {
     name: 'claude.ai',
     ready: dbP.then(db => !!db),
-    // the saved version, or null: this tab's copy at once, else the store if the viewer has
-    // allowed it and it answers within 2.5 s (a later answer offers to reload into it)
+    // The saved version, or null: this tab's copy at once, else the store if the viewer has
+    // allowed it and it answers within 2.5 s. The store is read either way: a later answer, or a
+    // save there newer than this tab's copy, is offered (offer, below).
     load(path) {
       const mine = copy.get(path);
-      if (mine != null) return Promise.resolve(mine);
+      if (mine) {
+        loadNow(path).catch(() => null).then(d => { if (d && d.text !== mine.text && d.savedAt > mine.savedAt) offer(path, d, true); });
+        return Promise.resolve(mine.text);
+      }
       return new Promise(resolve => {
         let done = false;
-        loadNow(path).catch(() => null).then(text => {
-          if (!done) { done = true; resolve(text); } else if (text != null) offerLate();
+        loadNow(path).catch(() => null).then(d => {
+          if (!done) { done = true; if (d) copy.set(path, d.text, d.savedAt); resolve(d ? d.text : null); } else if (d) offer(path, d, false);
         });
         setTimeout(() => { if (!done) { done = true; resolve(null); } }, 2500);
       });
@@ -73,7 +86,8 @@
       const r = await ref(path);
       if (!r) return { ok: false, fallback: true, errors: ['this view cannot keep saves'] };
       for (let k = 0; k < 2; k++) {
-        try { await r.set({ text, file: path, savedAt: new Date().toISOString() }); copy.set(path, text); return { ok: true }; }
+        const savedAt = new Date().toISOString();
+        try { await r.set({ text, file: path, savedAt }); copy.set(path, text, savedAt); return { ok: true }; }
         catch (e) {
           if (k === 0 && e && e.code === 'unavailable') { await new Promise(res => setTimeout(res, 400 + Math.random() * 600)); continue; }
           return { ok: false, fallback: refused(e), errors: [why(e)] };
@@ -112,20 +126,38 @@
     },
   };
 
-  // A saved version that arrived after the reel had started: offer it rather than switch under you.
-  function offerLate() {
-    if (document.getElementById('reel-late')) return;
+  // A save in the store the preview is not playing: one that answered after the reel had started,
+  // or one newer than this tab's copy (saved from another tab, or by Claude). It is offered rather
+  // than switched in under you; taken, it plays in place (the script through REEL_LIVE.apply, the
+  // score through the synth rack) and becomes this tab's copy.
+  function offer(path, d, newer) {
+    const id = 'reel-late-' + nameOf(path).replace(/[^\w-]/g, '_');
+    if (document.getElementById(id)) return;
+    const n = document.querySelectorAll('.reel-late').length;
     const b = document.createElement('div');
-    b.id = 'reel-late'; b.setAttribute('role', 'status');
-    b.style.cssText = 'position:fixed;left:50%;top:calc(16px + env(safe-area-inset-top, 0px));transform:translateX(-50%);z-index:80;display:flex;gap:12px;align-items:center;'
+    b.id = id; b.className = 'reel-late'; b.setAttribute('role', 'status');
+    b.style.cssText = `position:fixed;left:50%;top:calc(${16 + n * 56}px + env(safe-area-inset-top, 0px));transform:translateX(-50%);z-index:80;display:flex;gap:12px;align-items:center;`
       + 'padding:10px 14px;border-radius:10px;background:rgba(var(--surface-rgb),0.97);border:1px solid rgba(var(--gold-rgb),0.55);font:500 13px/1.3 var(--font-mono);color:var(--text-primary)';
-    b.innerHTML = '<span>Your saved version is ready.</span><button type="button" style="font:inherit;color:var(--gold);background:none;border:1px solid rgba(var(--gold-rgb),0.55);border-radius:7px;padding:6px 10px;cursor:pointer">Play it</button>';
-    b.querySelector('button').onclick = () => location.reload();
+    const when = d.savedAt ? new Date(d.savedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+    const what = /\.score\.txt$/.test(path) ? 'score' : 'script';
+    const btn = 'font:inherit;background:none;border:1px solid rgba(var(--gold-rgb),0.55);border-radius:7px;padding:6px 10px;cursor:pointer';
+    b.innerHTML = `<span></span><button type="button" style="${btn};color:var(--gold)">Play it</button>${newer ? `<button type="button" style="${btn};color:var(--text-primary)">Keep mine</button>` : ''}`;
+    b.querySelector('span').textContent = newer ? `A newer save of the ${what} is here${when ? ' (' + when + ')' : ''}.` : `Your saved version of the ${what} is ready.`;
+    const [play, keep] = b.querySelectorAll('button');
+    play.onclick = () => {
+      copy.set(path, d.text, d.savedAt);
+      const L = window.REEL_LIVE, R = window.REEL_RACK;
+      let r = null;
+      if (L && L.apply && L.file === path) r = L.apply(d.text, 'host');
+      else if (R && R.change && what === 'score') r = { ok: R.change(d.text, { save: false }) };
+      if (r && r.ok) b.remove(); else location.reload();
+    };
+    if (keep) keep.onclick = () => b.remove();
     document.body.appendChild(b);
   }
 
-  // Where the preview was: every save reloads the page, and a framed page can lose its #hash on
-  // the way, so this tab keeps it too.
+  // Where the preview was, for a reload by hand (or a republish): a framed page can lose its
+  // #hash on the way, so this tab keeps it too.
   try {
     const K = 'reel-editor-at';
     if (!location.hash) { const v = sessionStorage.getItem(K); if (v) history.replaceState(null, '', '#' + v); }

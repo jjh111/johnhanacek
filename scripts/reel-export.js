@@ -25,7 +25,7 @@
   const put = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* no storage */ } };
   // a short name for this version of the script, so a film can say which version it was made from
   const hash = t => { let x = 0x811c9dc5; for (let i = 0; i < t.length; i++) { x ^= t.charCodeAt(i); x = Math.imul(x, 0x01000193); } return (x >>> 0).toString(16).padStart(8, '0').slice(0, 6); };
-  const VERSION = hash(String(L.src));
+  const version = () => hash(String(L.src));   // (the script as it plays now: edits change it in place)
   const mmss = s => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
   const MODE = L.dev ? 'dev' : L.host ? 'host' : 'none';
 
@@ -166,6 +166,9 @@
   }
   async function devGo() {
     tell('');
+    // an edit plays at once and is kept a moment later: the renderer reads the file, so the last
+    // edit must have landed first
+    if (L.settled) await L.settled();
     const r = await fetch('/__reel/render', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ file: L.file, formats: chosen(), fps: pick.fps }) })
       .then(async x => ({ status: x.status, j: await x.json().catch(() => ({})) })).catch(e => ({ status: 0, j: { errors: [e.message] } }));
     if (r.status !== 202) return tell((r.j.errors || ['the dev server did not start the render']).join(' · '), true);
@@ -178,7 +181,7 @@
 
   // ── claude.ai: ask Claude ─────────────────────────────────────────────
   let can = null;                                         // not yet known: canAsk() is on its way
-  const request = () => `Render my reel from the editor: ${chosen().join(', ')} at ${pick.fps} fps, from my saved version (${VERSION}).`;
+  const request = () => `Render my reel from the editor: ${chosen().join(', ')} at ${pick.fps} fps, from my saved version (${version()}).`;
   const why = { writers_only: 'Only the page\'s editors can send Claude a request from here.', no_session: 'No Claude session is watching this page right now.',
     off: 'This view cannot send Claude a comment.' };
   async function drawHost() {
@@ -188,7 +191,7 @@
     wait.remove();
     if (!f || !Array.isArray(f.items) || !f.items.length) { el('p', 'faint', films, 'No films yet. They appear here once Claude has rendered them.'); return; }
     const when = f.renderedAt ? new Date(f.renderedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
-    el('p', 'faint', films, `Rendered ${when}${f.from ? f.from === VERSION ? ' from this version of the edit.' : ` from an earlier version (${f.from}); this one is ${VERSION}.` : '.'}`);
+    el('p', 'faint', films, `Rendered ${when}${f.from ? f.from === version() ? ' from this version of the edit.' : ` from an earlier version (${f.from}); this one is ${version()}.` : '.'}`);
     f.items.forEach(it => filmRow(it.format, [it.mb && `${it.mb} MB`, it.seconds && `${it.seconds} s`, it.fps && `${it.fps} fps`].filter(Boolean).join(' · '),
       [['Open', it.url], ['Download', it.url, `${NAME}${it.format === 'wide' ? '' : '-' + it.format}.mp4`]]));
   }
@@ -197,6 +200,7 @@
     if (can == null) return;
     if (can !== 'available') { copyIt(); return; }
     go.disabled = true; dress(go, 'Sending…', 'send');
+    if (L.settled) await L.settled();                     // Claude renders the saved edit: the last one must be kept first
     const r = await Promise.resolve(HOST.ask(request(), go)).catch(e => ({ ok: false, reason: 'error', message: e.message }));
     go.disabled = false; sync();
     if (r.ok) tell(`Sent to Claude. It renders your saved edit (${chosen().join(', ')}, ${pick.fps} fps) and puts the films in this panel; its reply shows in this page's comments. A film takes about ${pick.fps === 60 ? 10 : 5} minutes.`);
@@ -259,5 +263,5 @@
     else if (e.key === 'Escape' && !root.hidden) { e.preventDefault(); open(false); }
   });
   if (L.addTool) tool = L.addTool({ id: 'export', label: 'Export', key: 'X', order: 40, cls: 'go', icon: 'export', title: 'make the video from this edit', onClick: () => open() });
-  window.REEL_EXPORT = { open: on => open(on === undefined ? true : on), get mode() { return MODE; }, get version() { return VERSION; } };
+  window.REEL_EXPORT = { open: on => open(on === undefined ? true : on), get mode() { return MODE; }, get version() { return version(); } };
 })();

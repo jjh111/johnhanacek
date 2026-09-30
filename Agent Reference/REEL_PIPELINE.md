@@ -32,11 +32,14 @@ truth; everything else reads it, edits it one line at a time, or films it.
   pin lived in paint until 2026-09-27, so stills and parts showed a slightly different fish.)
 - **`window.REEL_LIVE`** (live mode only), for the timeline and anything else that drives
   the preview:
-  `{ file, src, parsed, draft, dev, scenes, duration, now(), seek(t), isPlaying(),
-  setPlaying(bool), onFrame(fn(t)), save(text) → Promise<{ok, via?: 'file'|'draft', errors?}>,
-  discardDraft(), download(text?) }`. `save` validates, then writes through the dev server
-  (`dev: true`) or keeps a sessionStorage draft for this tab; either way the page reloads at
-  the same moment. The rig loads `scripts/reel-timeline.js` after defining it.
+  `{ file, src, parsed, draft, hosted, dev, host, version, scenes, duration, now(), seek(t),
+  isPlaying(), setPlaying(bool), onFrame(fn(t)), save(text) → Promise<{ok, via: 'file'|'host'|'draft',
+  applied, regrew, errors?}>, apply(text, from?), onChange(fn), settled(), discardDraft(),
+  download(text?), debug }` (src, parsed, duration, draft, hosted and version are getters: an
+  edit replaces them; `scenes` is one array whose contents an edit replaces). `save` plays the
+  edit at once, in place (nothing reloads), then keeps it: through the dev server, else the
+  page's host, else a sessionStorage draft for this tab. Every change of script reaches the
+  tools through `onChange`. See "Edits in place" below. The rig loads the tools after defining it.
 - **The renderer** (`scripts/render-sizzle-reel.mjs`): `--cut=2`, `--script=Assets/x.script.txt`
   (any script through cut 2's player → `x.mp4`), `--scene=`, `--from/--to` (parts never
   overwrite the full cut), `--stills=`, `--fps`, `--crf`, `--seed`.
@@ -503,6 +506,57 @@ behaviours and placing on the stage.
 - **Tests:** fishpaneltest (24: the lit button follows a press between grid steps, Sweep
   rewrites Circle at the same moment, the lanes' spans and marks, a lane mark selects its line,
   the editor's point, verb and time, the take, Delete, 820 px), scripttest (`to auto`).
+
+## Edits in place (2026-09-30)
+
+John: "the entire artifact refreshes whenever I move anything". Every save ended in
+`location.reload()`, because the rig built the film once, as the page opened. On claude.ai that
+was the whole artifact starting again: the clips fetched again, the tank regrown from nothing
+(the fish being directed jumped back to where they were born), every panel put back from
+storage. Now nothing reloads for an edit.
+
+- **The film is a function.** `build()` fills every registry (MEDIA, EVENTS, LAYOUT, QUERIES,
+  TICKS, ATTN, BORN, the director's DIR and LOOKS) and the scene DOM from the script, in the
+  same order as before, so renders are unchanged: 15 frames per format, and the fish in them,
+  identical to the committed rig's to the byte (wide, square, vertical), and every suite green.
+- **`applyText(text)`**, live only: parse (a script with mistakes is refused, nothing changes),
+  then `timeScenes()`, `build()` and LAYOUT in one task, about 20-30 ms, no frame drawn in
+  between. The playhead, the play state and the loop stay. The frame it draws is the frame a
+  fresh load of the edited script draws at that moment, to the pixel (applytest).
+- **Clips and pictures are kept.** Live, a clip is fetched once, as a blob (`CLIPS`, by
+  file); the `<video>` and `<img>` elements a build made wait in `POOL` while the next build
+  takes them back, still loaded. What the new build does not take is let go.
+- **The tank keeps swimming.** Every event has an id: `spawn big`, `spawn fish 2`,
+  `food 10 2`, `fish 5 @2.5 big dart` (its scene and its time there, so moving another scene
+  does not make it new). An edit regrows the tank only when the spawns already due differ (a
+  fish or the coral born on the other side of the playhead); otherwise the fish carry on, and
+  an event that is new and already due runs at once (food written at the playhead drops;
+  a dart pressed while paused plays, and ends on the wall clock, since a paused reel's clock
+  stands still). Each fish keeps the side it chose of a thing it was already looking at.
+- **Saving is behind the picture.** `save` = apply, then keep: one save at a time, the latest
+  text last, each promise answered when its text (or a later one) is kept. A save that fails
+  keeps the edit as a draft in the tab and says why. `settled()` resolves when everything is
+  kept: Export waits on it, because the renderer reads the file and Claude renders the store.
+- **The tools follow.** `onChange` (a microtask after the rig has changed): the timeline
+  re-reads its model and draws its cards again (`populate()`), keeping the zoom, the scroll,
+  the inspector's scene, its scroll and the field you were typing in; the Fish panel re-reads
+  its lines and keeps the selected one (by its words, else by its line); the synth rack
+  re-arranges the score against the new cuts; Export and the picker read the script as it
+  plays. Undo and redo are saves, so they are instant too.
+- **Other editors.** With the dev server, a change on disk plays here in place; this page's
+  own saves come back as no news (`MINE`), and a draft here is kept. On claude.ai this tab's
+  copy of a save now carries its time, and the store is read behind it: a newer save there
+  (another tab's, or one Claude wrote) is offered ("A newer save of the script is here · Play
+  it · Keep mine"), and plays in place. The tab copy used to win outright, which is how an old
+  header came back into the store on 2026-09-30.
+- A reload by hand still comes back to the same moment (`#t=`), and the panels to where they
+  were (sessionStorage).
+- **Tests:** applytest (18: the same frame as a fresh load, twice; no piling up over ten
+  edits; the clips kept; the tank kept for a fish line, regrown when the school's birth moves
+  past the playhead; food at once; the clock, the loop, a shorter cut; a mistake refused;
+  another editor's save, and our own echo). timelinetest (55), fishpaneltest (26) and hosttest
+  now fail on any reload, or any regrowth for a fish line. rendertest reads its scene cuts from
+  the script (it had the cut's timings from before John's first edits written in).
 
 ## Later
 

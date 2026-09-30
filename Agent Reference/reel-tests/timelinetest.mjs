@@ -6,7 +6,9 @@
 // panel and the inspector land in the scratch folder named below (or $TIMELINE_SHOTS).
 //   1. E opens the panel with a block per scene
 //   2. dragging the answer scene's right edge +0.5 s with Shift saves "SCENE answer 5"; the
-//      reloaded reel runs 0.5 s longer than it did
+//      reel runs 0.5 s longer than it did, at once, in place
+//   0. no edit reloads the page: every one plays in place (a mark set on the page before each
+//      edit is still there after it), and each lands in the file before the next check
 //   3. the inspector's first line input saves its words; Ctrl+Z twice gives the file back byte for byte
 //   4. dragging the MARA beat (@2.35 in the first ITEM) +0.5 s with Shift rewrites it as @3: a
 //      drag snaps the time to the grid, and Shift's grid is the 0.5 s beat
@@ -80,8 +82,8 @@ try {
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
 
-  // Wait for the page (after any reload) to have the rig and the timeline up. Polls with evaluate,
-  // because a navigation mid-wait destroys the context a waitForFunction runs in.
+  // Wait for the page (after a load, or a reload) to have the rig and the timeline up. Polls with
+  // evaluate, because a navigation mid-wait destroys the context a waitForFunction runs in.
   const ready = async (label, ms = 30000) => {
     const t0 = Date.now();
     for (;;) {
@@ -91,11 +93,22 @@ try {
       await sleep(150);
     }
   };
-  // do something that saves, then wait for the reload it causes
+  // Do something that saves: it plays in place (the page's version counts up, and the mark set
+  // here survives: a reload would wipe it, and is counted), then wait until it is kept.
+  let reloads = 0;
   const saving = async (label, act) => {
-    await page.evaluate(() => { window.__tlStale = true; });
+    const v0 = await page.evaluate(() => { window.__tlMark = true; return REEL_LIVE.version; });
     await act();
+    const t0 = Date.now();
+    for (;;) {
+      const st = await page.evaluate(() => ({ mark: !!window.__tlMark, v: window.REEL_LIVE ? REEL_LIVE.version : -1 })).catch(() => ({ mark: false, v: -1 }));
+      if (!st.mark) { reloads++; console.log('     (' + label + ' reloaded the page)'); break; }
+      if (st.v > v0) break;
+      if (Date.now() - t0 > 30000) throw new Error('the edit did not play: ' + label);
+      await sleep(50);
+    }
     await ready(label);
+    await page.evaluate(() => REEL_LIVE.settled());
     await page.evaluate(() => REEL_LIVE.setPlaying(false));
   };
   const pxs = () => page.evaluate(() => document.querySelector('#reel-tl .tl-lane').clientWidth / REEL_LIVE.duration);
@@ -145,8 +158,8 @@ try {
   await saving('scene edge', () => dragBy('#reel-tl .tl-sc[data-scene="2"] .tl-grip', 0.5 * s, true));
   check(/^SCENE answer 5\s/m.test(file()), 'the edge drag saved "SCENE answer 5"', (/^SCENE answer.*$/m.exec(file()) || [])[0]);
   const dur = await page.evaluate(() => REEL_LIVE.duration);
-  check(Math.abs(dur - (dur0 + 0.5)) < 1e-9, `the reloaded reel runs 0.5 s longer (${dur0} → ${dur0 + 0.5} s)`, dur);
-  check(await page.locator('#reel-tl').isVisible(), 'the panel is still open after the reload');
+  check(Math.abs(dur - (dur0 + 0.5)) < 1e-9, `the reel runs 0.5 s longer, in place (${dur0} → ${dur0 + 0.5} s)`, dur);
+  check(await page.locator('#reel-tl').isVisible() && await page.locator('#reel-tl .tl-sc').count() === 11, 'the panel stays open, its cards drawn again');
 
   // 3 ── the inspector: the first line of the answer scene
   await page.locator('#reel-tl .tl-sc[data-scene="2"] b').click();
@@ -158,8 +171,11 @@ try {
   await saving('field', async () => { await first.fill('Freehand drawing'); await first.press('Enter'); });
   check(/^  line     Freehand drawing$/m.test(file()), 'Enter saved the words to that line of the file');
   const w = await page.evaluate(() => REEL_LIVE.parsed.edit.scenes[2].lines[0]);
-  check(w === 'Freehand drawing', 'the reloaded parse has the new words', w);
-  check(await page.locator('#reel-tl .tl-insp-col').isVisible(), 'the inspector comes back open after the reload');
+  check(w === 'Freehand drawing', 'the parse has the new words, at once', w);
+  check(await page.locator('#reel-tl .tl-insp-col').isVisible(), 'the inspector stays open');
+  const foc = await page.evaluate(() => { const a = document.activeElement; return a && a.dataset ? { key: a.dataset.key, v: a.value } : null; });
+  check(foc && foc.key === 'line' && foc.v === 'Freehand drawing', 'and the field you pressed Enter in keeps the focus, with its new words', JSON.stringify(foc));
+  await page.evaluate(() => document.activeElement && document.activeElement.blur());
   await saving('undo 1', () => page.keyboard.press('Control+z'));
   check(/^  line     Freehand expression$/m.test(file()) && /^SCENE answer 5\s/m.test(file()), 'Ctrl+Z undid the words');
   await saving('undo 2', () => page.keyboard.press('Control+z'));
@@ -199,7 +215,7 @@ try {
   await saving('stat', () => dragBy(stat, 0.35 * s, false));
   const statLine = (/^\s*stat\s+@\S+ 3 products shipped$/m.exec(file()) || [''])[0];
   check(/@1\.5 /.test(statLine), 'dragging it +0.35 s rewrote its @ on the 0.25 s grid (@1.5)', statLine);
-  check(await page.evaluate(() => REEL_TIMELINE.zoomLevel) > 9, 'the zoom survives the reload a save causes');
+  check(await page.evaluate(() => REEL_TIMELINE.zoomLevel) > 9, 'the zoom stays through a save');
   await saving('undo stat', () => page.locator('#reel-tl [data-act="undo"]').click());
   check(/^\s*stat\s+@1\.15 3 products shipped$/m.test(file()), 'the Undo button takes it back');
   await page.locator(stat).scrollIntoViewIfNeeded();
@@ -315,6 +331,7 @@ try {
   nw = await narrow();
   check(nw.hudFit === 0 && nw.statusFit === 0 && !nw.slim, 'back at 1600 px every label returns', JSON.stringify(nw));
 
+  check(reloads === 0, 'no edit reloaded the page: every one played in place', reloads + ' reloads');
   const own = errors.filter(e => !/Failed to load|NotSupportedError|no supported source/i.test(e));
   check(!own.length, 'no page errors', own.join(' | '));
 } catch (e) {

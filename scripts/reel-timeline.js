@@ -3,11 +3,13 @@
 // The script (Assets/sizzle-reel-2.script.txt) stays the one source of truth. This panel only
 // reads it (REEL_LIVE.parsed) and changes it the way a person would, one line at a time, through
 // ReelScript's setDur / setAt / setField / setCue, then hands the new text to REEL_LIVE.save,
-// which writes the file through the dev server (node scripts/reel-dev.mjs), or keeps it with the
-// page's host (the editor published on claude.ai), or keeps a draft in this tab, and reloads the
-// preview at the same moment. So the panel keeps no state of its own
-// beyond what must survive that reload: open or shut, the scene in the inspector, the zoom, and
-// the undo and redo stacks (whole script texts, in sessionStorage).
+// which plays it at once, in place (nothing reloads), and keeps it in the background: the file
+// through the dev server (node scripts/reel-dev.mjs), or the page's host (the editor published
+// on claude.ai), or a draft in this tab. Every change of script (this panel's, the Fish panel's,
+// an undo) comes back through REEL_LIVE.onChange, and the panel redraws its cards from the new
+// parse where they were: the zoom, the scroll, the scene in the inspector and the field you were
+// typing in stay. What it keeps in sessionStorage (open or shut, the inspector's scene, the zoom,
+// the undo and redo stacks: whole script texts) is for a reload by hand.
 //
 // Every scene is a card, and what belongs to a scene sits inside its card:
 //   items      a results scene's items, each work it shows in turn (only results scenes have them)
@@ -22,7 +24,7 @@
 // Fish panel (scripts/reel-fish.js); click a span to jump there with that fish chosen.
 // Every action is a button, and its key an accelerator (named in the button's tooltip):
 //   Timeline (E)          open / shut; the preview shrinks to fit above it (its button is in the HUD)
-//   Undo / Redo (⌘Z, ⇧⌘Z) each is a save, so each reloads
+//   Undo / Redo (⌘Z, ⇧⌘Z) each is a save, played at once like any edit
 //   − fit + (- 0 =)       zoom; also Ctrl/⌘ + wheel or a pinch. The wheel scrolls a zoomed timeline
 //   Export video (X)      how the script becomes a film (scripts/reel-export.js)
 //   drag a card's right edge    its length; everything after it ripples
@@ -40,48 +42,52 @@
   const L = window.REEL_LIVE, RS = window.ReelScript;
   if (!L || !RS || document.getElementById('reel-tl')) return;
 
-  // ── storage that survives the reload every save causes ────────────────
+  // ── storage for a reload by hand ──────────────────────────────────────
   const get = (k, d) => { try { const v = sessionStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };
   const put = (k, v) => { try { sessionStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } };
   const K_OPEN = 'reel-tl-open', K_SEL = 'reel-tl-sel:' + L.file, K_UNDO = 'reel-undo:' + L.file, K_REDO = 'reel-redo:' + L.file, K_VIEW = 'reel-tl-view:' + L.file;
   const DEPTH = 30;
 
-  // ── the model: where everything is, read from the parse ───────────────
-  const P = L.parsed, EDIT = P.edit, SP = RS.spans(EDIT), DUR = L.duration;
-  const lines = String(L.src).split('\n');
-  const markOf = new Map(P.marks.map(m => [m.obj, m]));
+  // ── the model: where everything is, read from the parse (again after every change) ──
   const fmt = s => { const m = Math.floor(s / 60 + 1e-9), r = s - m * 60; return `${m}:${r < 10 ? '0' : ''}${r.toFixed(1)}`; };
   const n3 = x => +(+x).toFixed(3);
-  const SCENES = EDIT.scenes.map((sc, i) => ({
-    sc, i, ln: markOf.get(sc).ln, start: SP[i].start, end: SP[i].end,
-    what: sc.query || sc.name || sc.caption || sc.line || '',
-  }));
-  const ITEMS = [], itemAt = new Map();
-  SCENES.forEach(S => (S.sc.items || []).forEach((it, k) => {
-    const r = { obj: it, S, k, ln: markOf.get(it).ln, start: SP[S.i].items[k].start, end: SP[S.i].items[k].end };
-    ITEMS.push(r); itemAt.set(it, r);
-  }));
-  const sceneOf = new Map(SCENES.map(S => [S.sc, S]));
   const words = (s, n) => String(s || '').replace(/<[^>]+>/g, '').split(/\s+/).filter(Boolean).slice(0, n).join(' ');
-  // Moments: every @ time. A beat has its own @ line; a stat or an award leads its words with one.
-  const MOMENTS = [];
-  P.marks.filter(m => m.kind === 'beat').forEach(m => {
-    const own = m.owner === m.scene ? sceneOf.get(m.scene) : itemAt.get(m.owner);
-    const b = m.obj, file = (b.video || b.img || '').replace(/^\.\//, '');
-    const said = b.caption || b.lead || (b.line || b.lines || b.quote || [])[0] || '';
-    MOMENTS.push({ ln: m.ln, own, S: own.S || own, at: b.at, len: own.end - own.start, kind: b.video ? 'clip' : b.img ? 'picture' : 'quote',
-      gist: file || said, label: file ? file.replace(/\.[a-z0-9]+$/i, '') : words(said, 4) });
-  });
-  P.fields.forEach(f => {
-    if (f.key !== 'stat' && f.key !== 'award') return;
-    const S = sceneOf.get(f.owner), v = S && f.owner[f.jsonKey][f.index];
-    if (!v || v.at == null) return;
-    const stat = f.key === 'stat';
-    MOMENTS.push({ ln: f.ln, own: S, S, at: v.at, len: S.end - S.start, kind: f.key, field: true,
-      gist: stat ? `stat ${v.n} ${v.label}` : `award ${v.yr} ${v.text}`, label: stat ? `${v.n} ${words(v.label, 2)}` : `${v.yr} ${words(v.text, 2)}` });
-  });
-  const OUTS = SCENES.filter(S => RS.cueNames(S.sc.type).includes('out'))
-    .map(S => ({ S, out: RS.cue(S.sc, 'out'), set: !!(S.sc.cues && S.sc.cues.out != null) }));
+  let P, EDIT, SP, DUR, lines, markOf, SCENES, ITEMS, itemAt, sceneOf, MOMENTS, OUTS;
+  function model() {
+    P = L.parsed; EDIT = P.edit; SP = RS.spans(EDIT); DUR = L.duration;
+    lines = String(L.src).split('\n');
+    markOf = new Map(P.marks.map(m => [m.obj, m]));
+    SCENES = EDIT.scenes.map((sc, i) => ({
+      sc, i, ln: markOf.get(sc).ln, start: SP[i].start, end: SP[i].end,
+      what: sc.query || sc.name || sc.caption || sc.line || '',
+    }));
+    ITEMS = []; itemAt = new Map();
+    SCENES.forEach(S => (S.sc.items || []).forEach((it, k) => {
+      const r = { obj: it, S, k, ln: markOf.get(it).ln, start: SP[S.i].items[k].start, end: SP[S.i].items[k].end };
+      ITEMS.push(r); itemAt.set(it, r);
+    }));
+    sceneOf = new Map(SCENES.map(S => [S.sc, S]));
+    // Moments: every @ time. A beat has its own @ line; a stat or an award leads its words with one.
+    MOMENTS = [];
+    P.marks.filter(m => m.kind === 'beat').forEach(m => {
+      const own = m.owner === m.scene ? sceneOf.get(m.scene) : itemAt.get(m.owner);
+      const b = m.obj, file = (b.video || b.img || '').replace(/^\.\//, '');
+      const said = b.caption || b.lead || (b.line || b.lines || b.quote || [])[0] || '';
+      MOMENTS.push({ ln: m.ln, own, S: own.S || own, at: b.at, len: own.end - own.start, kind: b.video ? 'clip' : b.img ? 'picture' : 'quote',
+        gist: file || said, label: file ? file.replace(/\.[a-z0-9]+$/i, '') : words(said, 4) });
+    });
+    P.fields.forEach(f => {
+      if (f.key !== 'stat' && f.key !== 'award') return;
+      const S = sceneOf.get(f.owner), v = S && f.owner[f.jsonKey][f.index];
+      if (!v || v.at == null) return;
+      const stat = f.key === 'stat';
+      MOMENTS.push({ ln: f.ln, own: S, S, at: v.at, len: S.end - S.start, kind: f.key, field: true,
+        gist: stat ? `stat ${v.n} ${v.label}` : `award ${v.yr} ${v.text}`, label: stat ? `${v.n} ${words(v.label, 2)}` : `${v.yr} ${words(v.text, 2)}` });
+    });
+    OUTS = SCENES.filter(S => RS.cueNames(S.sc.type).includes('out'))
+      .map(S => ({ S, out: RS.cue(S.sc, 'out'), set: !!(S.sc.cues && S.sc.cues.out != null) }));
+  }
+  model();
 
   // ── geometry ──────────────────────────────────────────────────────────
   const PANEL = 356;                       // the panel's height
@@ -262,41 +268,15 @@
   const view = h('div', 'view', main);
   const lane = h('div', 'lane', view);
   const ruler = h('div', 'ruler', lane); ruler.title = 'click or drag to move the playhead';
-  const recs = [];                                // every placed thing: { el, span(map) → [t0, t1?] }
-  SCENES.forEach(S => {
-    const el = h('div', 'blk sc', lane); el.dataset.scene = S.i;
-    S.nm = h('b', null, el, `${S.i + 1} ${S.sc.type}`); S.q = h('i', null, el, S.what || ' ');
-    el.title = `${S.i + 1} ${S.sc.type} · ${S.sc.dur} s · ${fmt(S.start)} → ${fmt(S.end)}${S.what ? '\n' + S.what : ''}\nclick to change its words`;
-    const g = h('div', 'grip', el); g.title = 'drag to change the scene\'s length';
-    S.el = el; S.grip = g;
-    recs.push({ el, span: m => [m(S.start), m(S.end)] });
-  });
-  OUTS.forEach(O => {
-    const z = h('div', 'otz' + (O.set ? '' : ' def'), lane); h('span', null, z, 'out'); O.zone = z;
-    const el = h('div', 'ot' + (O.set ? '' : ' def'), lane); O.el = el;
-    el.title = `${O.S.sc.type}: its content starts to leave ${O.out} s before the scene ends${O.set ? '' : ' (the default)'}. Drag to change`;
-    recs.push({ el: z, span: m => [m(O.S.end) - (O.drag != null ? O.drag : O.out), m(O.S.end)] });
-    recs.push({ el, span: m => [m(O.S.end) - (O.drag != null ? O.drag : O.out)] });
-  });
-  ITEMS.forEach(I => {
-    const el = h('div', 'blk it', lane, I.obj.eyebrow || (I.obj.headline || []).join(' ') || 'item');
-    el.title = `item ${I.k + 1} of the results · ${I.obj.dur} s · ${fmt(I.start)} → ${fmt(I.end)}\n${I.obj.eyebrow || ''}`;
-    const g = h('div', 'grip', el); g.title = 'drag to change the item\'s length';
-    I.el = el; I.grip = g;
-    recs.push({ el, span: m => [m(I.start), m(I.end)] });
-  });
-  MOMENTS.forEach(M => {
-    const el = h('div', 'bt' + (M.field ? ' f' : M.kind === 'quote' ? ' quote' : ''), lane); M.el = el;
-    M.lb = h('span', 'lb', el, M.label);
-    el.title = `@${M.at} · ${M.gist}\n${M.field ? M.kind : M.kind} ${fmt(M.own.start + M.at)} · drag to retime, click to open`;
-    recs.push({ el, span: m => [m(M.own.start) + (M.drag != null ? M.drag : M.at)], moment: M });
-  });
+  // The cards, items, moments, outs and fish lanes: drawn from the model, and drawn again (with
+  // their handlers) after every change of script. Each is placed by layout() through `recs`.
+  const content = h('div', 'content', lane);
+  let recs = [], FISHM = [];                      // every placed thing: { el, span(map) → [t0, t1?] }; the fish lines' marks
   // ── the fish lanes: what each fish does across the cut ────────────────
   // The rig's own account of it (REEL_LIVE.fish.track): spans of one state each, labelled with
   // what the fish looks at and how it idles, and a mark for every fish line at its time.
   const FISH_WHO = [['big', Y.fish], ['school', Y.fish + Y.laneH + Y.laneGap]];
   const FNAME = { big: 'the big fish', school: 'the school' };
-  const FISHL = P.fields.filter(f => f.key === 'fish' && sceneOf.get(f.owner)).map(f => ({ ln: f.ln, v: f.owner.fish[f.index], S: sceneOf.get(f.owner) }));
   const inLane = (v, who) => v.verb === 'feed' || v.who === 'all' || v.who === who;   // food is for any fish
   const FICON = v => v.verb === 'to' ? 'place' : v.verb === 'look' ? (v.look === 'off' ? 'eyeOff' : v.look === 'auto' ? 'auto' : 'eye')
     : v.verb === 'idle' ? v.mode : v.verb === 'pace' ? (v.pace < 1 ? 'slow' : v.pace > 1 ? 'fast' : 'fish') : v.verb === 'feed' ? 'food' : v.verb;
@@ -314,35 +294,148 @@
       + (sp.set ? '. A fish line decides this.' : '. The reel\'s own choreography.');
     return [short, long];
   }
-  const FISHM = [];                               // the marks: { el, F }; a line for all has one in each lane
-  FISH_WHO.forEach(([who, y]) => {
-    (L.fish && L.fish.track ? L.fish.track(who) : []).forEach(sp => {
-      const el = h('div', 'fl ' + (sp.absent ? 'fl-no' : sp.set ? 'fl-set' : sp.look === 'none' ? 'fl-free' : 'fl-auto'), lane);
-      const [short, long] = spanWords(sp, who);
-      el.textContent = short; el.style.top = y + 'px'; el.dataset.who = who;
-      el.title = `${fmt(sp.t0)} → ${fmt(sp.t1)} · ${long}\nclick to direct ${FNAME[who]} from here`;
-      recs.push({ el, span: m => [m(sp.t0), m(sp.t1)] });
-      el.addEventListener('pointerdown', e => {
-        if (e.button !== 0) return;
-        const t = Math.max(0, Math.min(DUR, (e.clientX - lane.getBoundingClientRect().left) / pxs));
-        drag(e, el, () => {}, moved => { if (moved) return; L.seek(t); if (window.REEL_FISH) window.REEL_FISH.show(who); });
-      });
-    });
-    const seen = new Map();                       // lines at the same moment stand side by side
-    FISHL.filter(F => inLane(F.v, who)).forEach(F => {
-      const k = (F.S.start + F.v.at).toFixed(3), n = seen.get(k) || 0; seen.set(k, n + 1);
-      const el = h('div', 'fm', lane); el.dataset.ln = F.ln; el.dataset.who = who;
-      el.innerHTML = window.REEL_UI ? REEL_UI.icon(FICON(F.v)) : '•';
-      el.style.top = (y + 1) + 'px'; el.style.marginLeft = (-11 + n * 16) + 'px';
-      el.title = `fish ${RS.writeFish(F.v)} (line ${F.ln}) · ${fmt(F.S.start + F.v.at)}\ndrag to retime it; click to edit it in the Fish panel`;
-      FISHM.push({ el, F });
-      recs.push({ el, span: m => [m(F.S.start) + (F.drag != null ? F.drag : F.v.at)] });
-    });
-  });
   // the line the Fish panel has selected wears its colour here too
   const litFish = ln => FISHM.forEach(M => M.el.classList.toggle('tl-sel', M.F.ln === ln));
   addEventListener('reel-fish-select', e => litFish(e.detail && e.detail.ln));
-  if (window.REEL_FISH && window.REEL_FISH.selected) litFish(window.REEL_FISH.selected);   // the panel may have loaded first
+  function populate() {
+    content.textContent = ''; recs = []; FISHM = [];
+    SCENES.forEach(S => {
+      const el = h('div', 'blk sc', content); el.dataset.scene = S.i;
+      S.nm = h('b', null, el, `${S.i + 1} ${S.sc.type}`); S.q = h('i', null, el, S.what || ' ');
+      el.title = `${S.i + 1} ${S.sc.type} · ${S.sc.dur} s · ${fmt(S.start)} → ${fmt(S.end)}${S.what ? '\n' + S.what : ''}\nclick to change its words`;
+      const g = h('div', 'grip', el); g.title = 'drag to change the scene\'s length';
+      S.el = el; S.grip = g;
+      recs.push({ el, span: m => [m(S.start), m(S.end)] });
+      // a results scene cannot be shorter than its items (the list needs a moment first)
+      const floor = (S.sc.items || []).reduce((a, it) => a + it.dur, 0);
+      g.addEventListener('pointerdown', e => {
+        let d = S.sc.dur;
+        g.classList.add('tl-on');
+        drag(e, g, (dt, ev) => {
+          d = Math.max(floor ? n3(floor + snapOf(ev)) : snapOf(ev), snap(S.sc.dur + dt, ev));
+          layout(ripple(S.end, d - S.sc.dur));
+          show1(S.start + d, `${S.sc.type} ${S.sc.dur} → ${d} s · total ${fmt(DUR + d - S.sc.dur)}`);
+        }, moved => {
+          g.classList.remove('tl-on');
+          if (moved && d !== S.sc.dur) commit(src => RS.setDur(src, S.ln, d)); else layout();
+        });
+      });
+      el.addEventListener('pointerdown', e => {
+        if (e.button !== 0) return;
+        drag(e, el, () => {}, moved => { if (!moved) select(S.i); });
+      });
+    });
+    OUTS.forEach(O => {
+      const z = h('div', 'otz' + (O.set ? '' : ' def'), content); h('span', null, z, 'out'); O.zone = z;
+      const el = h('div', 'ot' + (O.set ? '' : ' def'), content); O.el = el;
+      el.title = `${O.S.sc.type}: its content starts to leave ${O.out} s before the scene ends${O.set ? '' : ' (the default)'}. Drag to change`;
+      recs.push({ el: z, span: m => [m(O.S.end) - (O.drag != null ? O.drag : O.out), m(O.S.end)] });
+      recs.push({ el, span: m => [m(O.S.end) - (O.drag != null ? O.drag : O.out)] });
+      el.addEventListener('pointerdown', e => {
+        const len = O.S.sc.dur;
+        el.classList.add('tl-on');
+        drag(e, el, (dt, ev) => {
+          O.drag = Math.min(len, Math.max(0, snap(O.out - dt, ev)));   // right is later, so a smaller out
+          layout(still);
+          show1(O.S.end - O.drag, `out ${O.out} → ${O.drag} s before the end`);
+        }, moved => {
+          el.classList.remove('tl-on');
+          const v = O.drag; O.drag = null;
+          if (!moved) { L.seek(O.S.end - O.out); select(O.S.i, true); point('cue:out'); layout(); }
+          else if (v !== O.out) commit(src => RS.setCue(src, O.S.ln, 'out', v)); else layout();
+        });
+      });
+    });
+    ITEMS.forEach(I => {
+      const el = h('div', 'blk it', content, I.obj.eyebrow || (I.obj.headline || []).join(' ') || 'item');
+      el.title = `item ${I.k + 1} of the results · ${I.obj.dur} s · ${fmt(I.start)} → ${fmt(I.end)}\n${I.obj.eyebrow || ''}`;
+      const g = h('div', 'grip', el); g.title = 'drag to change the item\'s length';
+      I.el = el; I.grip = g;
+      recs.push({ el, span: m => [m(I.start), m(I.end)] });
+      g.addEventListener('pointerdown', e => {
+        let d = I.obj.dur;
+        g.classList.add('tl-on');
+        drag(e, g, (dt, ev) => {
+          d = Math.max(snapOf(ev), snap(I.obj.dur + dt, ev));
+          layout(ripple(I.end, d - I.obj.dur));
+          show1(I.start + d, `item ${I.obj.dur} → ${d} s · scene ${n3(I.S.sc.dur + d - I.obj.dur)} s · total ${fmt(DUR + d - I.obj.dur)}`);
+        }, moved => {
+          g.classList.remove('tl-on');
+          if (moved && d !== I.obj.dur) commit(itemDur(I, d)); else layout();
+        });
+      });
+      el.addEventListener('pointerdown', e => {
+        if (e.button !== 0) return;
+        drag(e, el, () => {}, moved => { if (!moved) { select(I.S.i, true); L.seek(I.start); point(I.ln); } });
+      });
+    });
+    MOMENTS.forEach(M => {
+      const el = h('div', 'bt' + (M.field ? ' f' : M.kind === 'quote' ? ' quote' : ''), content); M.el = el;
+      M.lb = h('span', 'lb', el, M.label);
+      el.title = `@${M.at} · ${M.gist}\n${M.field ? M.kind : M.kind} ${fmt(M.own.start + M.at)} · drag to retime, click to open`;
+      recs.push({ el, span: m => [m(M.own.start) + (M.drag != null ? M.drag : M.at)], moment: M });
+      el.addEventListener('pointerdown', e => {
+        const hi = Math.max(0, n3(M.len - 0.05));
+        el.classList.add('tl-on');
+        drag(e, el, (dt, ev) => {
+          M.drag = Math.min(hi, Math.max(0, snap(M.at + dt, ev)));
+          layout(still);
+          show1(M.own.start + M.drag, `@${M.at} → @${M.drag}  (${fmt(M.own.start + M.drag)})`);
+        }, moved => {
+          el.classList.remove('tl-on');
+          const v = M.drag; M.drag = null;
+          if (!moved) { L.seek(M.own.start + M.at); select(M.S.i, true); point(M.ln); layout(); }
+          else if (v !== M.at) commit(src => RS.setAt(src, M.ln, v)); else layout();
+        });
+      });
+    });
+    const FISHL = P.fields.filter(f => f.key === 'fish' && sceneOf.get(f.owner)).map(f => ({ ln: f.ln, v: f.owner.fish[f.index], S: sceneOf.get(f.owner) }));
+    FISH_WHO.forEach(([who, y]) => {
+      (L.fish && L.fish.track ? L.fish.track(who) : []).forEach(sp => {
+        const el = h('div', 'fl ' + (sp.absent ? 'fl-no' : sp.set ? 'fl-set' : sp.look === 'none' ? 'fl-free' : 'fl-auto'), content);
+        const [short, long] = spanWords(sp, who);
+        el.textContent = short; el.style.top = y + 'px'; el.dataset.who = who;
+        el.title = `${fmt(sp.t0)} → ${fmt(sp.t1)} · ${long}\nclick to direct ${FNAME[who]} from here`;
+        recs.push({ el, span: m => [m(sp.t0), m(sp.t1)] });
+        el.addEventListener('pointerdown', e => {
+          if (e.button !== 0) return;
+          const t = Math.max(0, Math.min(DUR, (e.clientX - lane.getBoundingClientRect().left) / pxs));
+          drag(e, el, () => {}, moved => { if (moved) return; L.seek(t); if (window.REEL_FISH) window.REEL_FISH.show(who); });
+        });
+      });
+      const seen = new Map();                     // lines at the same moment stand side by side
+      FISHL.filter(F => inLane(F.v, who)).forEach(F => {
+        const k = (F.S.start + F.v.at).toFixed(3), n = seen.get(k) || 0; seen.set(k, n + 1);
+        const el = h('div', 'fm', content); el.dataset.ln = F.ln; el.dataset.who = who;
+        el.innerHTML = window.REEL_UI ? REEL_UI.icon(FICON(F.v)) : '•';
+        el.style.top = (y + 1) + 'px'; el.style.marginLeft = (-11 + n * 16) + 'px';
+        el.title = `fish ${RS.writeFish(F.v)} (line ${F.ln}) · ${fmt(F.S.start + F.v.at)}\ndrag to retime it; click to edit it in the Fish panel`;
+        const M = { el, F };
+        FISHM.push(M);
+        recs.push({ el, span: m => [m(F.S.start) + (F.drag != null ? F.drag : F.v.at)] });
+        el.addEventListener('pointerdown', e => {
+          if (e.button !== 0) return;
+          const hi = Math.max(0, n3(F.S.sc.dur - 0.05));
+          el.classList.add('tl-on');
+          drag(e, el, (dt, ev) => {
+            F.drag = Math.min(hi, Math.max(0, snap(F.v.at + dt, ev)));
+            layout(still);
+            show1(F.S.start + F.drag, `fish @${F.v.at} → @${F.drag}  (${fmt(F.S.start + F.drag)})`);
+          }, moved => {
+            el.classList.remove('tl-on');
+            const v = F.drag; F.drag = null;
+            if (!moved) {                           // a click: edit the line in the Fish panel
+              L.seek(F.S.start + F.v.at);
+              if (window.REEL_FISH) window.REEL_FISH.select(F.ln); else { select(F.S.i, true); point(F.ln); }
+              layout();
+            } else if (v !== F.v.at) commit(src => RS.setAt(src, F.ln, v)); else layout();
+          });
+        });
+      });
+    });
+    if (window.REEL_FISH && window.REEL_FISH.selected) litFish(window.REEL_FISH.selected);   // the panel may have loaded first
+  }
+  populate();
   const ph = h('div', 'ph', lane);
   const readout = h('div', 'ro-out', lane); readout.hidden = true;
   const close = button(root, '', 'close the timeline (E)', 'close', 'x', 'close'); close.setAttribute('aria-label', 'close the timeline');
@@ -354,11 +447,19 @@
   // where saves go: the file (dev server), the page's host (claude.ai), or a draft in this tab
   const home = (busy) => L.dev ? `Saving to ${L.file}${busy ? '…' : ''}` : L.host ? `Saving to ${L.host}${busy ? '…' : ''}`
     : busy ? 'Keeping a draft in this tab…' : 'Draft in this tab: no dev server';
-  if (!L.dev && (L.draft || L.hosted)) {
-    const dl = button(status, 'Download', 'save this version as ' + L.file.replace(/^.*\//, ''), 'download', null, 'download');
-    dl.onclick = () => L.download(L.src);
-    const ds = button(status, L.hosted ? 'Revert' : 'Discard', L.hosted ? `drop the version saved on ${L.host} and play the file again` : 'drop the draft and play the file again', 'discard', null, L.hosted ? 'revert' : 'discard');
-    ds.onclick = () => { put(K_UNDO, []); put(K_REDO, []); L.discardDraft(); };
+  // a version kept here or with the host (not the file) can be downloaded, or dropped for the file
+  const dl = button(status, 'Download', 'save this version as ' + L.file.replace(/^.*\//, ''), 'download', null, 'download');
+  dl.onclick = () => L.download(L.src);
+  // (Discard for a draft in this tab; Revert for the version saved with the host)
+  const ds = button(status, 'Discard', 'drop the draft and play the file again', 'discard', null, 'discard');
+  ds.onclick = () => { put(K_UNDO, []); put(K_REDO, []); L.discardDraft(); };
+  function dress(rev) {
+    if (ds.dataset.mode === (rev ? 'revert' : 'discard')) return;
+    ds.dataset.mode = rev ? 'revert' : 'discard';
+    const label = rev ? 'Revert' : 'Discard', title = rev ? `drop the version saved on ${L.host} and play the file again` : 'drop the draft and play the file again';
+    if (!window.REEL_UI) { ds.textContent = label; ds.title = title; return; }
+    REEL_UI.relabel(ds, label, title);
+    const svg = ds.querySelector('svg'); if (svg) svg.outerHTML = REEL_UI.icon(rev ? 'revert' : 'discard');
   }
   const edit = h('div', 'grp', status);
   const bUndo = button(edit, 'Undo', 'undo the last change (⌘Z / Ctrl+Z)', 'undo', null, 'undo');
@@ -368,14 +469,19 @@
   const zr = h('span', 'zr', zoom, 'fit');
   const bIn = button(zoom, '', 'zoom in (=), or Ctrl/⌘ + wheel, or pinch', 'zoom-in', null, 'zoomIn'); bIn.setAttribute('aria-label', 'zoom in');
   const bFit = button(zoom, 'Fit', 'the whole reel in view (0)', 'fit', null, 'fit');
-  const warn = P.warnings.length;
-  const note = h('span', 'note', status, `total ${fmt(DUR)}${warn ? ` · ${warn} warning${warn > 1 ? 's' : ''}` : ''}`);
-  if (warn) note.title = P.warnings.join('\n');
+  const note = h('span', 'note', status);
   const bEx = button(status, 'Export video', 'make the video from this edit (X)', 'export', 'go', 'export');
-  where.textContent = home(false);
-  if (!L.dev && L.draft) where.textContent += ' (unsaved draft)';
-  else if (L.hosted) where.textContent += ' (your saved version)';
-  where.title = where.textContent;
+  // the bar's words: where saves go (and whether one is on its way), the total and the warnings
+  function refreshStatus(busy) {
+    const kept = !L.dev && (L.draft || L.hosted);
+    dl.hidden = ds.hidden = !kept; dress(L.hosted);
+    where.textContent = home(busy) + (busy ? '' : !L.dev && L.draft ? ' (unsaved draft)' : L.hosted ? ' (your saved version)' : '');
+    where.title = where.textContent;
+    const warn = P.warnings.length;
+    note.textContent = `total ${fmt(DUR)}${warn ? ` · ${warn} warning${warn > 1 ? 's' : ''}` : ''}`;
+    note.title = warn ? P.warnings.join('\n') : '';
+  }
+  refreshStatus(false);
   // the collapse rule (scripts/reel-ui.js): labels fold into tooltips, then the total goes, then
   // the save line, then Export's label, then the zoom's readout and Fit
   if (window.REEL_UI) REEL_UI.fit(status, ['fit-labels', 'fit-note', 'fit-where', 'fit-go', 'fit-zoom']);
@@ -511,24 +617,29 @@
   addEventListener('resize', () => { if (!root.hidden) { fitStage(); layout(); } });
 
   // ── saving: every change is one new script text ───────────────────────
-  let busy = false;
+  // REEL_LIVE.save plays it at once (the panel redraws through onChange, below) and keeps it in
+  // the background; the bar says "Saving…" until it is kept. Edits never wait for a save.
+  let pending = 0;
   const stack = k => { const s = get(k, []); return Array.isArray(s) ? s : []; };
-  const stacks = () => { bUndo.disabled = !stack(K_UNDO).length || busy; bRedo.disabled = !stack(K_REDO).length || busy; };
+  const stacks = () => { bUndo.disabled = !stack(K_UNDO).length; bRedo.disabled = !stack(K_REDO).length; };
   async function save(next, undo, redo) {
-    if (busy) return false;
     const u0 = stack(K_UNDO), r0 = stack(K_REDO);
     try { RS.parse(next); } catch (e) { say(e.errors || [e.message]); layout(); return false; }   // never save a broken script
-    busy = true; say(''); where.textContent = home(true); stacks();
+    say('');
     put(K_UNDO, undo.slice(-DEPTH)); put(K_REDO, redo.slice(-DEPTH));
+    pending++; refreshStatus(true); stacks();
     let res;
     try { res = await L.save(next); } catch (e) { res = { ok: false, errors: [e.message] }; }
-    if (!res || !res.ok) {                         // nothing changed: put the stacks and the picture back
-      put(K_UNDO, u0); put(K_REDO, r0); busy = false;
-      where.textContent = home(false); stacks();
+    pending--;
+    if (!res || !res.applied) {                    // nothing changed: the stacks and the picture as they were
+      put(K_UNDO, u0); put(K_REDO, r0);
+      refreshStatus(pending > 0); stacks();
       say((res && res.errors) || ['the save failed']); layout();
       return false;
     }
-    return true;                                   // the page reloads
+    refreshStatus(pending > 0); stacks();
+    if (!res.ok) say(res.errors || ['not saved']);   // played, but kept only as a draft here (it says why)
+    return true;
   }
   // change the script with one helper call (or a chain of them); a helper that throws is shown
   function commit(change) {
@@ -577,90 +688,6 @@
   const ripple = (edge, d) => { const m = t => (t >= edge - 1e-6 ? t + d : t); m.drag = true; return m; };
   const still = t => t; still.drag = true;
 
-  SCENES.forEach(S => {
-    // a results scene cannot be shorter than its items (the list needs a moment first)
-    const floor = (S.sc.items || []).reduce((a, it) => a + it.dur, 0);
-    S.grip.addEventListener('pointerdown', e => {
-      let d = S.sc.dur;
-      S.grip.classList.add('tl-on');
-      drag(e, S.grip, (dt, ev) => {
-        d = Math.max(floor ? n3(floor + snapOf(ev)) : snapOf(ev), snap(S.sc.dur + dt, ev));
-        layout(ripple(S.end, d - S.sc.dur));
-        show1(S.start + d, `${S.sc.type} ${S.sc.dur} → ${d} s · total ${fmt(DUR + d - S.sc.dur)}`);
-      }, moved => {
-        S.grip.classList.remove('tl-on');
-        if (moved && d !== S.sc.dur) commit(src => RS.setDur(src, S.ln, d)); else layout();
-      });
-    });
-    S.el.addEventListener('pointerdown', e => {
-      if (e.button !== 0) return;
-      drag(e, S.el, () => {}, moved => { if (!moved) select(S.i); });
-    });
-  });
-  ITEMS.forEach(I => {
-    I.grip.addEventListener('pointerdown', e => {
-      let d = I.obj.dur;
-      I.grip.classList.add('tl-on');
-      drag(e, I.grip, (dt, ev) => {
-        d = Math.max(snapOf(ev), snap(I.obj.dur + dt, ev));
-        layout(ripple(I.end, d - I.obj.dur));
-        show1(I.start + d, `item ${I.obj.dur} → ${d} s · scene ${n3(I.S.sc.dur + d - I.obj.dur)} s · total ${fmt(DUR + d - I.obj.dur)}`);
-      }, moved => {
-        I.grip.classList.remove('tl-on');
-        if (moved && d !== I.obj.dur) commit(itemDur(I, d)); else layout();
-      });
-    });
-    I.el.addEventListener('pointerdown', e => {
-      if (e.button !== 0) return;
-      drag(e, I.el, () => {}, moved => { if (!moved) { select(I.S.i, true); L.seek(I.start); point(I.ln); } });
-    });
-  });
-  MOMENTS.forEach(M => M.el.addEventListener('pointerdown', e => {
-    const hi = Math.max(0, n3(M.len - 0.05));
-    M.el.classList.add('tl-on');
-    drag(e, M.el, (dt, ev) => {
-      M.drag = Math.min(hi, Math.max(0, snap(M.at + dt, ev)));
-      layout(still);
-      show1(M.own.start + M.drag, `@${M.at} → @${M.drag}  (${fmt(M.own.start + M.drag)})`);
-    }, moved => {
-      M.el.classList.remove('tl-on');
-      const v = M.drag; M.drag = null;
-      if (!moved) { L.seek(M.own.start + M.at); select(M.S.i, true); point(M.ln); layout(); }
-      else if (v !== M.at) commit(src => RS.setAt(src, M.ln, v)); else layout();
-    });
-  }));
-  FISHM.forEach(M => M.el.addEventListener('pointerdown', e => {
-    if (e.button !== 0) return;
-    const F = M.F, hi = Math.max(0, n3(F.S.sc.dur - 0.05));
-    M.el.classList.add('tl-on');
-    drag(e, M.el, (dt, ev) => {
-      F.drag = Math.min(hi, Math.max(0, snap(F.v.at + dt, ev)));
-      layout(still);
-      show1(F.S.start + F.drag, `fish @${F.v.at} → @${F.drag}  (${fmt(F.S.start + F.drag)})`);
-    }, moved => {
-      M.el.classList.remove('tl-on');
-      const v = F.drag; F.drag = null;
-      if (!moved) {                               // a click: edit the line in the Fish panel
-        L.seek(F.S.start + F.v.at);
-        if (window.REEL_FISH) window.REEL_FISH.select(F.ln); else { select(F.S.i, true); point(F.ln); }
-        layout();
-      } else if (v !== F.v.at) commit(src => RS.setAt(src, F.ln, v)); else layout();
-    });
-  }));
-  OUTS.forEach(O => O.el.addEventListener('pointerdown', e => {
-    const len = O.S.sc.dur;
-    O.el.classList.add('tl-on');
-    drag(e, O.el, (dt, ev) => {
-      O.drag = Math.min(len, Math.max(0, snap(O.out - dt, ev)));   // right is later, so a smaller out
-      layout(still);
-      show1(O.S.end - O.drag, `out ${O.out} → ${O.drag} s before the end`);
-    }, moved => {
-      O.el.classList.remove('tl-on');
-      const v = O.drag; O.drag = null;
-      if (!moved) { L.seek(O.S.end - O.out); select(O.S.i, true); point('cue:out'); layout(); }
-      else if (v !== O.out) commit(src => RS.setCue(src, O.S.ln, 'out', v)); else layout();
-    });
-  }));
   ruler.addEventListener('pointerdown', e => {
     const seek = ev => L.seek((ev.clientX - lane.getBoundingClientRect().left) / pxs);
     seek(e);
@@ -706,11 +733,13 @@
     if (opts.ln) inp.dataset.ln = opts.ln;
     if (opts.key) inp.dataset.key = opts.key;
     const go = () => {
-      if (inp.value === inp.dataset.orig || busy) return;
+      if (inp.value === inp.dataset.orig) return;
       const v = inp.value.trim();
       if (opts.num && v !== '' && !Number.isFinite(Number(v))) { say([`"${v}" is not a number`]); inp.value = inp.dataset.orig; return; }
       commit(src => act(src, v));
-      if (!busy) inp.value = inp.dataset.orig;        // refused: the input shows the script again
+      // taken, the inspector is drawn again from the new script (this input with it); refused, it
+      // shows the script as it was
+      inp.value = inp.dataset.orig;
     };
     inp.addEventListener('keydown', e => {
       if (e.key === 'Enter') { e.preventDefault(); go(); }
@@ -810,7 +839,37 @@
   if (L.addTool) tool = L.addTool({ id: 'timeline', label: 'Timeline', key: 'E', order: 20, icon: 'timeline',
     title: 'the timeline: drag the edit\'s times; click a scene to change its words', onClick: () => show(root.hidden) });
 
-  // ── back to where the last reload left it ─────────────────────────────
+  // ── a change of script: the cards drawn again, where they were ────────
+  // (an edit here or in the Fish panel, an undo, the file saved by another editor, a draft let
+  // go). The zoom and the scroll stay; the inspector keeps its scene, its scroll and the field
+  // you were typing in.
+  function inspState() {
+    const a = document.activeElement, own = a && a.tagName === 'INPUT' && insp.contains(a);
+    let caret = null;
+    try { if (own && a.selectionStart != null) caret = [a.selectionStart, a.selectionEnd]; } catch (e) { /* a number input has none */ }
+    return { top: insp.scrollTop, ln: own ? a.dataset.ln : null, key: own ? a.dataset.key : null, caret };
+  }
+  function restoreInsp(s) {
+    insp.scrollTop = s.top;
+    if (s.ln == null && s.key == null) return;
+    const q = (s.ln != null ? `[data-ln="${s.ln}"]` : '') + (s.key != null ? `[data-key="${CSS.escape(s.key)}"]` : '');
+    const inp = insp.querySelector('input' + q);
+    if (!inp) return;
+    inp.focus({ preventScroll: true });
+    try { if (s.caret) inp.setSelectionRange(Math.min(s.caret[0], inp.value.length), Math.min(s.caret[1], inp.value.length)); } catch (e) { /* a number input has none */ }
+  }
+  if (L.onChange) L.onChange(() => {
+    const st = selected >= 0 ? inspState() : null;
+    model(); populate(); refreshStatus(pending > 0); stacks();
+    curScene = -1;
+    if (selected >= 0) {
+      if (SCENES[selected]) { SCENES[selected].el.classList.add('tl-sel'); build(SCENES[selected]); restoreInsp(st); }
+      else unselect();
+    }
+    if (!root.hidden) layout();
+  });
+
+  // ── back to where a reload by hand left it ────────────────────────────
   if (get(K_OPEN, false)) show(true);
   const sel = get(K_SEL, -1);
   if (!root.hidden && SCENES[sel]) select(sel, true);
