@@ -849,9 +849,14 @@ body > footer { pointer-events: none; }
     letter-spacing: 0.05em;
 }
 .footer-signature {
-    margin: 0.1rem 0 0.3rem;
+    margin: 0.1rem 0 0.45rem;
+    line-height: 1; /* v2.37: the signature owns its line box — at height 2em the
+                       inline img bled out of the inherited line box and its
+                       descender loop landed on the version line below */
 }
 .footer-signature img {
+    display: block;
+    margin: 0 auto;
     height: 2em;
     opacity: 0.7;
     filter: drop-shadow(0 1px 6px rgba(0, 0, 0, 0.7));
@@ -860,12 +865,16 @@ body > footer { pointer-events: none; }
     font-size: var(--text-xs);
     color: var(--muted);
     margin-bottom: 0;
-    opacity: 0.8;
+    white-space: normal; /* v2.37: the oval's nowrap clipped "JHDesign LLC" at
+                            300px — the copyright wraps instead of truncating */
+    /* v2.37: the 0.8 alpha wash came off — --muted is already the designed dim
+       tier, and alpha stacked on it fails AA on the glass oval in both themes
+       (same doctrine as the --ink-quiet/--ink-faint tiers). */
 }
 .footer-github {
     font-size: var(--text-xs);
-    margin: 0.15rem 0 0;
-    opacity: 0.7;
+    margin: 0.35rem 0 0;
+    /* v2.37: opacity wash dropped; the link keeps --cyan */
 }
 /* Reset global p max-width inside footer oval */
 .footer-oval p {
@@ -886,13 +895,25 @@ body > footer .version {
     font-family: var(--font-mono);
     font-size: var(--text-3xs);
     font-weight: 500;
-    color: var(--muted);
-    opacity: 0.5;
-    margin-top: 0.25rem;
+    color: var(--ink-faint); /* v2.37: --muted at opacity 0.5 ran roughly 2:1 on
+                                the oval in both themes — the exact failure the
+                                ink tiers exist to prevent. --ink-faint keeps
+                                the quiet look and clears 4.5:1 everywhere. */
+    margin-top: 0.35rem;
     letter-spacing: 0.05em;
     text-align: center;
-    line-height: 1.6;
+    line-height: 1.7;
     white-space: normal; /* allow <br> to work */
+}
+
+/* v2.37: vertical rhythm — the credits and privacy lines sat as a compressed
+   wall under the GitHub link; the pair gets its own gaps. */
+body > footer .version-note {
+    margin-top: 0.55rem;
+}
+
+body > footer .footer-privacy {
+    margin-top: 0.2rem;
 }
 
 /* ===========================================
@@ -1050,7 +1071,7 @@ body > footer .version {
     .footer-oval {
         min-width: 0;
         width: min(80vw, 300px);
-        padding: 1rem 1.5rem 0.9rem;
+        padding: 1.1rem 1.5rem 1.15rem;
     }
 }
 
