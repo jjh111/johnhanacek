@@ -19,6 +19,11 @@
 // moment of its own: dragged, it rewrites its @; clicked, it opens its line in the inspector.
 // The media picker: an img line's chip opens it, a search and Enter put a picture in the slot,
 // a clip too short for the slot's in-point starts at 0, and Undo takes each back.
+//   1b. the tracks are named by icons in a narrow column (each with its name in the tooltip), the
+//      works of the results scene by their eyebrows' first words, and the panel is no taller than
+//      it needs; playing, zoomed in, a scroll of yours is not pulled back to the playhead;
+//      scrubbing the ruler while it plays holds the reel still under the pointer, and it plays
+//      on from where you let go
 //   6. narrow windows: at 820 and 390 px no button overflows or leaves the window; the bars
 //      fold, the seek buttons move into More, the inspector and the synth rack change shape;
 //      back at 1600 px every label returns
@@ -148,6 +153,41 @@ try {
   const shut = !(await page.locator('#reel-tl').isVisible());
   await page.locator('#hud [data-tool="timeline"]').click();
   check(shut && await page.locator('#reel-tl').isVisible(), 'the HUD\'s Timeline button shuts the panel and opens it again');
+  // 1b ── icons for the tracks, the works, the panel's height, and a scroll of yours
+  const gut = await page.evaluate(() => ({ icons: [...document.querySelectorAll('#reel-tl .tl-gi')].map(g => g.dataset.track + ':' + (g.querySelector('svg') ? 1 : 0) + ':' + g.title.split(':')[0]),
+    w: document.querySelector('#reel-tl .tl-gut').getBoundingClientRect().width, cardLeft: document.querySelector('#reel-tl .tl-sc').getBoundingClientRect().left,
+    works: [...document.querySelectorAll('#reel-tl .tl-it')].map(e => e.textContent), h: document.getElementById('reel-tl').getBoundingClientRect().height }));
+  check(gut.icons.length === 7 && gut.icons.every(x => /:1:/.test(x)) && gut.w <= 40 && gut.cardLeft - gut.w < 4,
+    `the tracks are icons in a ${Math.round(gut.w)} px column, the cards starting right after it (${gut.icons.map(x => x.split(':')[2]).join(', ')})`, JSON.stringify(gut));
+  check(gut.works.join(',') === 'Nanome,BadVR,OpenProse', `the results' works are named by their eyebrows (${gut.works.join(', ')})`, JSON.stringify(gut.works));
+  check(gut.h <= 260, `the panel is ${Math.round(gut.h)} px tall (no taller than it needs)`, gut.h);
+  await page.evaluate(() => { REEL_TIMELINE.zoom(5); REEL_LIVE.seek(30); REEL_LIVE.setPlaying(true); });
+  await sleep(300);
+  const vb = await page.locator('#reel-tl .tl-view').boundingBox();
+  await page.mouse.move(vb.x + vb.width / 2, vb.y + 60);
+  const trace = [];
+  for (let k = 0; k < 12; k++) { await page.mouse.wheel(0, 150); await sleep(40); trace.push(await page.evaluate(() => Math.round(document.querySelector('#reel-tl .tl-view').scrollLeft))); }
+  await sleep(400);
+  const kept = await page.evaluate(() => Math.round(document.querySelector('#reel-tl .tl-view').scrollLeft));
+  await page.evaluate(() => { REEL_LIVE.setPlaying(false); REEL_TIMELINE.zoom(1); });
+  check(trace.every((v, i) => !i || v >= trace[i - 1]) && kept >= trace[trace.length - 1] - 1, `playing, zoomed in, a scroll of yours stays where you put it (${trace[0]} → ${kept} px)`, trace.join(' '));
+  {
+    await page.evaluate(() => { REEL_LIVE.seek(20); REEL_LIVE.setPlaying(true); });
+    await sleep(200);
+    const rb = await page.locator('#reel-tl .tl-ruler').boundingBox(), D = await page.evaluate(() => REEL_LIVE.duration);
+    const xAt = t => rb.x + t / D * rb.width;
+    await page.mouse.move(xAt(24), rb.y + 8); await page.mouse.down();
+    const held = [];
+    for (let k = 0; k < 24; k++) { await page.mouse.move(xAt(24 + 6 * Math.sin(k / 4)), rb.y + 8); await sleep(16); held.push(await page.evaluate(() => [REEL_LIVE.isPlaying(), +REEL_LIVE.now().toFixed(2)])); }
+    await sleep(250);
+    const still = await page.evaluate(() => REEL_LIVE.now());
+    await page.mouse.up();
+    await sleep(400);
+    const on = await page.evaluate(() => [REEL_LIVE.isPlaying(), REEL_LIVE.now()]);
+    await page.evaluate(() => REEL_LIVE.setPlaying(false));
+    check(held.every(h => !h[0]) && Math.abs(still - held[held.length - 1][1]) < 0.01 && on[0] && on[1] > still + 0.2,
+      `scrubbing the ruler while it plays holds the reel still under the pointer (${held.length} steps), and it plays on from where you let go (${still.toFixed(2)} → ${on[1].toFixed(2)} s)`, JSON.stringify({ held, still, on }));
+  }
   await page.evaluate(() => REEL_LIVE.seek(7));
   await page.waitForTimeout(600);                  // fonts settle before the picture
   await page.screenshot({ path: path.join(SHOTS, 'timeline-panel.png') });

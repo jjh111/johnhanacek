@@ -122,7 +122,8 @@ const sceneLn = i => marks.find(m => m.kind === 'scene' && m.obj === edit.scenes
 }
 
 // ── cues: defaults are the rig's own timing ──
-const S = t => edit.scenes.find(s => s.type === t);
+// (asked of each scene without the cues the script gives it: John sets some, open and title's out)
+const S = t => Object.assign({}, edit.scenes.find(s => s.type === t), { cues: {} });
 ok(RS.cue(S('open'), 'out') === 0.45 && RS.cue(S('title'), 'out') === 0.65 && RS.cue(S('answer'), 'out') === 0.32, 'out defaults: open 0.45, title 0.65, answer 0.32');
 ok(RS.cue(S('results'), 'out') === 0.34 && RS.cue(S('quotes'), 'out') === 0.34 && RS.cue(S('offer'), 'out') === 0.34, 'out defaults: results, quotes, offer 0.34');
 ok(RS.cue(S('answer'), 'in') === 0.04 && RS.cue(S('answer'), 'typing') === 40, 'in 0.04 and typing 40 by default');

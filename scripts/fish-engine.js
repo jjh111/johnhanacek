@@ -33,8 +33,10 @@
  *   schoolPhase('scatter' | 'regroup') — the school's phases on cue (an API call, not
  *                            an option): scatter bursts it apart now, regroup calls it
  *                            together now
+ *   remove(fishOrCoral)    — takes one out, as the tank's own caps do (an API call)
  *   The sizzle reel (Assets/sizzle-reel-2.html) uses all four so its fish swim over
- *   and look at what is on screen, and schoolPhase for its script's `fish` lines.
+ *   and look at what is on screen, schoolPhase for its script's `fish` lines, and
+ *   remove when its live preview is scrubbed back past a fish's birth.
  *
  * Usage — ambient single fish (404 page):
  *   FishCanvas.ambient(canvasEl);
@@ -6969,6 +6971,16 @@
             },
             addFood(x, y) {
                 spawnClassified({ type: 'food', center: { x, y }, points: [] });
+            },
+            // Take one fish or one piece of coral out of the tank, the way the tank's own caps do
+            // (whoever was chasing or rivalling it lets go). For a host whose clock steps back
+            // past the moment it was drawn in (the sizzle reel's live preview, scrubbed).
+            remove(entity) {
+                let i = fish.indexOf(entity);
+                if (i >= 0) { fish.splice(i, 1); cleanupFishRefs(entity.id); markNavDirty(); startAnimation(); return true; }
+                i = coral.indexOf(entity);
+                if (i >= 0) { coral.splice(i, 1); markNavDirty(); startAnimation(); return true; }
+                return false;
             },
             // The school's phases on cue, for a host that choreographs the school (the sizzle
             // reel's `fish @t school scatter`): 'scatter' bursts it apart, each member on its own

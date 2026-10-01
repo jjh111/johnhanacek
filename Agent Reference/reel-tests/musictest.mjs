@@ -175,6 +175,31 @@ try {
   for (let i = 0; i < 3; i++) await page.evaluate(() => REEL_RACK.undo());
   t = await waitFile(x => x === SCORE);
   ok(t === SCORE, 'three undos: the file is the score we started from, byte for byte');
+  // Seeking every frame while it plays (a scrub, from any tool): the sound starts again once and
+  // waits, silent, for the scrub to end. It used to start again at every step, and the pop on a
+  // beat nearby played over and over.
+  const scrub = await page.evaluate(async () => {
+    const E = REEL_RACK.engine, L = REEL_LIVE, beat = REEL_RACK.arrangement.events.find(e => e.track === 'pop' && e.t > 5);
+    if (!beat) return null;
+    let pops = 0, gens = 0;
+    const play = E.play, ng = E.newGeneration;
+    E.play = (ev, ...a) => { if (ev.track === 'pop') pops++; return play(ev, ...a); };
+    E.newGeneration = () => { gens++; return ng(); };
+    const frame = () => new Promise(r => requestAnimationFrame(r));
+    L.seek(beat.t - 1.5); L.setPlaying(true);
+    for (let k = 0; k < 20; k++) await frame();
+    const g0 = gens, p0 = pops;
+    for (let k = 0; k < 90; k++) { L.seek(beat.t - 0.6 + 1.2 * (0.5 - 0.5 * Math.cos(k / 6))); await frame(); }
+    const during = { gens: gens - g0, pops: pops - p0 };
+    L.seek(beat.t - 0.6);                        // let go before the beat: it plays on through it
+    for (let k = 0; k < 70; k++) await frame();
+    const after = { pops: pops - p0 - during.pops, t: L.now() };
+    L.setPlaying(false); await frame();
+    E.play = play; E.newGeneration = ng;
+    return { beat: beat.t, during, after };
+  });
+  ok(scrub && scrub.during.gens <= 2 && scrub.during.pops <= 1, `seeking every frame while it plays (90 steps): the sound starts again once and waits (${scrub && scrub.during.gens} restarts, ${scrub && scrub.during.pops} pops; it was a restart a step)`);
+  ok(scrub && scrub.after.pops === 1 && scrub.after.t > scrub.beat, `let go before a beat (${scrub && scrub.beat} s), it plays on through it, and its pop sounds once (${scrub && scrub.after.pops})`);
   ok(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.join(' | ') : ''));
 } finally {
   if (browser) await browser.close();

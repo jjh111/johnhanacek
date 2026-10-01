@@ -604,6 +604,11 @@
     if (notes.length) console.log('\n' + notes.map(w => 'warning: ' + w).join('\n'));
   }
 
+  // A field's value in the script's own words, from what the parser read (a field's `kind`, as
+  // parse() reports it): the words setField takes. For an editor that changes one part of a field
+  // (a stat's label, a row's title) and writes the whole field back.
+  const writeValue = (kind, v) => { const K = KINDS[kind]; if (!K) throw new Error('no field kind ' + kind); return K.write(v); };
+
   return { parse, format, retime, spans, queries, cueSheet, SCENES, CUES, cue, cueNames, setDur, setAt, setField, setCue, addLine, removeLine,
-    FISH, IDLES, WHO, readFish, writeFish, main };
+    FISH, IDLES, WHO, readFish, writeFish, writeValue, main };
 });

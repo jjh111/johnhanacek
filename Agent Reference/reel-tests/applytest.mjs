@@ -11,8 +11,12 @@
 //      and the clips of an edit that leaves them alone are the same elements, still loaded
 //   3. an edit is quick: it takes a small fraction of a second, where a reload took the whole page
 //   4. the tank: a fish line keeps it swimming (the same big fish); an edit that moves the school's
-//      birth past the playhead regrows it (the school is gone); food written at the playhead drops
-//      at once
+//      birth past the playhead takes the school out and leaves the big fish swimming; food written
+//      at the playhead drops at once
+//   4b. scrubbing: back and forth after the school's birth, the same fish swim on (nothing taken
+//      out or put back, nothing regrown); back past its birth the school is taken out, forward
+//      again it is drawn in; scrubbing over the end card's taps drops no food, playing through
+//      them does
 //   5. the clock: playing stays playing and keeps its time; a loop stays on its scene; a cut shorter
 //      than the playhead brings the playhead to its end
 //   6. a script with a mistake is refused and nothing changes
@@ -92,7 +96,7 @@ try {
   const T1 = +at(S1, 'answer', 2.2).toFixed(2);
   const { ctx: cA, page: pA } = await open(A, `t=${T1}&pause=1`);
   const t0 = await pA.evaluate(async s => { const t = performance.now(); const r = REEL_LIVE.apply(s); await new Promise(res => setTimeout(res, 0)); return { r, ms: performance.now() - t }; }, S1);
-  check(t0.r.ok && !t0.r.regrew, 'a text and a timing edit apply in place', JSON.stringify(t0.r));
+  check(t0.r.ok && !t0.r.restocked, 'a text and a timing edit apply in place', JSON.stringify(t0.r));
   const imgA = await still(pA);
   fs.writeFileSync(path.join(ROOT, 'Assets', B), S1);
   const { ctx: cB, page: pB } = await open(B, `t=${T1}&pause=1`);
@@ -153,7 +157,7 @@ try {
     const r = REEL_LIVE.apply(ReelScript.addLine(s, ln, 'fish', '@0.5 big idle circle'));
     return { r, same: REEL_LIVE.debug.big() === big && !!big, regrows: REEL_LIVE.debug.regrows - g };
   }, [ORIG, res4]);
-  check(fishEdit.r.ok && !fishEdit.r.regrew && fishEdit.same && fishEdit.regrows === 0, 'a fish line keeps the tank swimming: the same big fish, no regrowth', JSON.stringify(fishEdit));
+  check(fishEdit.r.ok && !fishEdit.r.restocked && fishEdit.same && fishEdit.regrows === 0, 'a fish line keeps the tank swimming: the same big fish, nothing taken out or put in', JSON.stringify(fishEdit));
   const food = await pA.evaluate(([s, ln, t]) => {
     const n0 = REEL_LIVE.debug.tank.state.food.length, sc = REEL_LIVE.scenes.find(x => x.type === 'results');
     const r = REEL_LIVE.apply(ReelScript.addLine(REEL_LIVE.src, ln, 'fish', `@${(Math.floor((t - sc.start) / 0.05) * 0.05).toFixed(2)} feed 0.5 0.8`));
@@ -161,20 +165,51 @@ try {
   }, [ORIG, res4, T4]);
   check(food.r.ok && food.n1 === food.n0 + 1, `food written at the playhead drops at once (${food.n0} → ${food.n1} pieces)`, JSON.stringify(food));
   // the school is born in the command scene; half a second after its first fish, lengthen the
-  // scene before it: the birth moves past the playhead, and the tank is regrown without the school
+  // scene before it: the birth moves past the playhead, and the school is taken out (only it)
   const cmd = spans(ORIG)[P0.edit.scenes.findIndex(s => s.type === 'command')];
   const born = await pA.evaluate(() => REEL_LIVE.fish.born.school);
   await pA.evaluate(t => REEL_LIVE.seek(t), born + 0.5);
   await sleep(300);
-  const regrow = await pA.evaluate(s => {
-    const before = REEL_LIVE.fish.now().school;
+  const restock = await pA.evaluate(s => {
+    const before = REEL_LIVE.fish.now().school, big = REEL_LIVE.debug.big(), g = REEL_LIVE.debug.regrows;
     const r = REEL_LIVE.apply(s);
-    return { r, before: before && before.n, born: REEL_LIVE.fish.born.school, now: REEL_LIVE.now() };
+    window.__big4 = big;
+    return { r, before: before && before.n, born: REEL_LIVE.fish.born.school, now: REEL_LIVE.now(), regrows: REEL_LIVE.debug.regrows - g };
   }, RS.setDur(ORIG, sceneLn('art'), P0.edit.scenes.find(s => s.type === 'art').dur + 2));
   await sleep(300);
-  const after4 = await pA.evaluate(() => ({ school: REEL_LIVE.fish.now().school, big: !!REEL_LIVE.debug.big() }));
-  check(regrow.r.ok && regrow.r.regrew && regrow.before >= 1 && !after4.school && after4.big && regrow.born > regrow.now,
-    `an edit that moves the school's birth past the playhead regrows the tank: the school is gone, the big fish is back (born at ${regrow.born.toFixed(2)} s, the playhead ${regrow.now.toFixed(2)} s)`, JSON.stringify({ regrow, after4, cmd }));
+  const after4 = await pA.evaluate(() => ({ school: REEL_LIVE.fish.now().school, big: !!window.__big4 && REEL_LIVE.debug.big() === window.__big4, n: REEL_LIVE.debug.tank.state.fish.length }));
+  check(restock.r.ok && restock.r.restocked && restock.before >= 1 && !after4.school && after4.big && after4.n === 1 && restock.regrows === 0 && restock.born > restock.now,
+    `an edit that moves the school's birth past the playhead takes the school out; the big fish swims on (born at ${restock.born.toFixed(2)} s, the playhead ${restock.now.toFixed(2)} s)`, JSON.stringify({ restock, after4, cmd }));
+
+  // ── 4b. scrubbing ─────────────────────────────────────────────────────
+  await pA.evaluate(s => REEL_LIVE.apply(s), ORIG);
+  await pA.evaluate(() => { REEL_LIVE.setPlaying(false); REEL_LIVE.seek(30); });
+  await sleep(300);
+  const scrub = await pA.evaluate(async () => {
+    const L = REEL_LIVE, tank = L.debug.tank, ids = () => tank.state.fish.map(f => f.id).join(','), g = L.debug.regrows, frame = () => new Promise(r => requestAnimationFrame(r));
+    // food dropped, counted as it drops (a pellet from earlier may still be in the water)
+    let dropped = 0; const add = tank.addFood; tank.addFood = (...a) => { dropped++; return add.apply(tank, a); };
+    const a = ids(), food0 = dropped;
+    for (let k = 0; k < 30; k++) { L.seek(24 + 12 * Math.abs(Math.sin(k * 1.7))); await frame(); }
+    const b = ids(), food1 = dropped;
+    const born = L.fish.born.school, big = L.debug.big();
+    L.seek(born - 0.5); await frame(); await frame();
+    const back = { n: tank.state.fish.length, big: L.debug.big() === big, school: !!L.fish.now().school };
+    L.seek(born + 0.5); await frame(); await frame();
+    const fwd = { n: tank.state.fish.length, big: L.debug.big() === big, school: L.fish.now().school && L.fish.now().school.n };
+    const end = L.scenes[L.scenes.length - 1];
+    const d0 = dropped;
+    L.seek(end.start + 1.5); await frame(); L.seek(end.start + 3); await frame(); await frame();
+    const scrubbedFood = dropped - d0;
+    L.seek(end.start + 1.5); await frame(); L.setPlaying(true);
+    await new Promise(r => setTimeout(r, 1300)); L.setPlaying(false);
+    tank.addFood = add;
+    return { same: a === b, a, food: [food0, food1], back, fwd, scrubbedFood, playedFood: dropped - d0 - scrubbedFood, regrows: L.debug.regrows - g };
+  });
+  check(scrub.same && scrub.regrows === 0 && scrub.food[1] === scrub.food[0], `scrubbing back and forth (30 jumps) after the school's birth: the same fish swim on, nothing regrown, no food dropped (${scrub.a})`, JSON.stringify(scrub));
+  check(!scrub.back.school && scrub.back.big && scrub.back.n === 1 && scrub.fwd.school === 4 && scrub.fwd.big && scrub.fwd.n === 5,
+    'back past the school\'s birth it is taken out, forward again it is drawn in; the big fish is the same fish throughout', JSON.stringify({ back: scrub.back, fwd: scrub.fwd }));
+  check(scrub.scrubbedFood === 0 && scrub.playedFood >= 1, `scrubbing over the end card's taps drops no food; playing through them does (${scrub.scrubbedFood} → ${scrub.playedFood})`, JSON.stringify(scrub));
 
   // ── 5. the clock ──────────────────────────────────────────────────────
   await pA.evaluate(s => REEL_LIVE.apply(s), ORIG);

@@ -33,8 +33,8 @@ truth; everything else reads it, edits it one line at a time, or films it.
 - **`window.REEL_LIVE`** (live mode only), for the timeline and anything else that drives
   the preview:
   `{ file, src, parsed, draft, hosted, dev, host, version, scenes, duration, now(), seek(t),
-  isPlaying(), setPlaying(bool), onFrame(fn(t)), save(text) → Promise<{ok, via: 'file'|'host'|'draft',
-  applied, regrew, errors?}>, apply(text, from?), onChange(fn), settled(), discardDraft(),
+  isPlaying(), setPlaying(bool), onFrame(fn(t, wallMs)), save(text) → Promise<{ok, via: 'file'|'host'|'draft',
+  applied, restocked, errors?}>, apply(text, from?), onChange(fn), settled(), discardDraft(),
   download(text?), debug }` (src, parsed, duration, draft, hosted and version are getters: an
   edit replaces them; `scenes` is one array whose contents an edit replaces). `save` plays the
   edit at once, in place (nothing reloads), then keeps it: through the dev server, else the
@@ -557,6 +557,86 @@ storage. Now nothing reloads for an edit.
   another editor's save, and our own echo). timelinetest (55), fishpaneltest (26) and hosttest
   now fail on any reload, or any regrowth for a fish line. rendertest reads its scene cuts from
   the script (it had the cut's timings from before John's first edits written in).
+
+## Scrubbing, the timeline, and words on the stage (2026-10-01)
+
+John: "when scrolling around on the timeline the pop effect is playing over and over. do a final
+UI alignment pass ... apply icons for the tracks (reword items results, what does this actually
+mean? ...) ... is it possible to get direct manipulation of the text in situ".
+
+- **No more pop.** Live, every step back in time regrew the tank from nothing: each fish jumped
+  to where it was born, the coral dropped in again, and every food event before the playhead fired
+  again, ripple and all. A scrub is a stream of steps back, so it popped over and over. Now a spawn
+  remembers what it put in the tank (`ev.made`), and `rewind(t)` takes out only what was born
+  after t, through the engine's new `remove(fishOrCoral)`. Every fish already there swims on from
+  where it is. A momentary event (food, a dart, a scatter, a regroup) happens only when the clock
+  plays through it (`simulate(t, played)`: the reel is playing, nobody seeked since the last
+  frame, and that frame was earlier and less than 0.5 s back), so a seek or a scrub drops nothing. A spawn happens however the clock
+  got there, so the tank always holds what it should. A render never steps back and keeps the
+  regrow; its frames and the fish in them are the committed rig's, to the byte, in all three
+  formats.
+- **The sound did it too.** The live player started the music again at every jump, so a scrub
+  while it played was a restart a frame: the pads clicked, and the score's `pop` (a sound effect
+  on every beat) went off over and over near a beat (18 pops and 64 restarts in one short scrub,
+  measured). Now the player compares how far the reel moved with how far the wall clock did, by
+  the frame's own clock (`onFrame` hands each tool the `performance.now()` its playhead was read
+  at). One jump (a click, a key, the loop) starts the sound again at once; a second within 0.2 s
+  is a scrub, and the sound waits, silent, until the reel has played on smoothly for 0.2 s. A
+  drift between the audio's clock and the reel's is closed by moving what comes next, never by
+  starting over. The ruler holds the reel still while you scrub it, like a video player, and it
+  plays on from where you let go. And a seek someone makes (not the loop, not play) marks its
+  frame as not played through, so nothing momentary in a short jump happens either.
+- An edit restocks the same way: a spawn still due keeps what it made; one whose birth moved
+  past the playhead is taken out; one that moved before it is put in. `save` and `apply` report
+  `restocked` (it was `regrew`). `REEL_LIVE.debug.regrows` counts regrows, for the tests: live,
+  it stays 0.
+- **The view stays where you put it.** Playing and zoomed in, the timeline scrolled back to the
+  playhead every frame, under your hand. The panel's own scrolls go through `scrollTo`, so a
+  scroll it did not make is yours, and the view stays there until the playhead jumps, play starts
+  again, or the playhead comes back into view.
+- **Tracks are icons.** Each track is named by an icon in a 34 px column (time, scenes, works,
+  moments, out, the big fish, the school), its name in the tooltip, and the lanes start right
+  after it. Lanes and gaps share one scale, one rule parts the cards from the fish lanes, and no
+  padding is doubled: the panel is 248 px tall. The close button sits in the status bar after
+  Export; ⌘Z works with the panel shut.
+- **"Items" are works.** "items (results only)" meant the ITEM lines of the results scene ("what
+  has he shipped?"): the works it shows one after another. The lane is called works now, each
+  named by the first part of its eyebrow (Nanome, BadVR, OpenProse), and the inspector says
+  "work 2: BadVR". The inspector also lists the scene's fish lines; a click selects one in the
+  Fish panel.
+- **Words change where they stand** (`scripts/reel-text.js`). Paused, a line on the stage that
+  came from the script shows a dashed gold outline under the pointer, framed to its words.
+  Double-click it and type: Enter keeps it, and so does clicking away; Esc puts it back. One line
+  of the script changes, through `setField`, and plays at once, in place. A part is written back
+  in the script's own words (`ReelScript.writeValue(kind, value)`): a stat's label beside its
+  number, a cite's role beside the name, an award beside the others. A double-click while it
+  plays pauses it first. A hint names the keys the first few times. Its saves go on the
+  timeline's undo stack, so ⌘Z takes a word back like any other edit. What the script does not
+  hold (the media kit's logos and the offer's heading, the rig's own Plan, Receipt and ✓) is
+  edited where it was before.
+  - The rig tags, live only, every element it draws from a script line: `data-ln` (the line) and
+    `data-part` (`all`, `label`, `yr`, `text`, `what`, `title`, `micro`, `part:N`, `k`,
+    `line:N`, `pair`, `cta`, `letters`). A render carries no tags. The bar's question is tagged
+    per frame, and is not repainted while it is being edited.
+  - `window.REEL_TEXT = { editing, lines(), edit(ln, part), commit(), cancel() }`.
+- **Tests:** applytest (21: scrubbing back and forth keeps the same fish, regrows nothing and
+  drops no food; back past the school's birth takes it out, forward draws it in; playing through
+  the end card's taps drops food), texttest (20, new: tags live and none in a render, the outline,
+  a whole line and each kind of part, the bar's question, Esc, a refused `|`, ⌘Z byte for byte),
+  timelinetest (60: the icon column, the works' names, the panel's height, a scroll that stays
+  while playing, a ruler scrub that holds the reel and plays on), musictest (seeking every frame
+  while it plays: 2 restarts and no pop, where it was a restart a step; let go before a beat, its
+  pop sounds once).
+
+- **Open: a fish in the big fish's way (from John's edits of 2026-10-01).** His waypoint
+  `fish @0 big to 0.16 0.75` as the results open sends the big fish left through the school.
+  A medium fish gives way down and to the left, into the floor's edge zone; the edge steering
+  turns it back up, and it crawls in front of the big fish at about 1 px a tick (25.5 to 27.2 s
+  in wide). fishtest counts 1.75 s within reach in wide and 0.5 s in square, against its 0.5 s
+  limit; with the script as it was before these edits (the waypoint at 0.62) there is none. Keeping the give-way flight out of the edge
+  zones was tried and made it worse (5 s over seven encounters: the tank is chaotic, so one
+  change moves every later meeting), so it was not kept. Either the waypoint moves, or the
+  give-way is tuned with the whole cut watched.
 
 ## Later
 

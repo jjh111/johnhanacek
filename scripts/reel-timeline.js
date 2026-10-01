@@ -12,7 +12,8 @@
 // the undo and redo stacks: whole script texts) is for a reload by hand.
 //
 // Every scene is a card, and what belongs to a scene sits inside its card:
-//   items      a results scene's items, each work it shows in turn (only results scenes have them)
+//   works      the works a results scene shows, one after another (its ITEMs in the script: Nanome,
+//              the AROC HUD, OpenProse); only results scenes have them
 //   moments    when something appears inside the scene: a picture, a clip, a quote, a stat, an
 //              award (the script's @ times). Drag one to retime it; click it to open it
 //   out        the hatched end of each card: where the scene's content starts to leave (its
@@ -28,8 +29,8 @@
 //   − fit + (- 0 =)       zoom; also Ctrl/⌘ + wheel or a pinch. The wheel scrolls a zoomed timeline
 //   Export video (X)      how the script becomes a film (scripts/reel-export.js)
 //   drag a card's right edge    its length; everything after it ripples
-//   drag an item's right edge   its length, and its results scene grows with it, so the items
-//                               before it stay put (items are hung from the scene's end)
+//   drag a work's right edge    how long it shows, and its results scene grows with it, so the
+//                               works before it stay put (they hang from the scene's end)
 //   snap             0.25 s;  Shift: 0.5 s (a beat at 120 BPM);  Alt/Option: 0.05 s
 //   click a card     seek to it and open the inspector: every line of the scene as an input
 //
@@ -90,71 +91,81 @@
   model();
 
   // ── geometry ──────────────────────────────────────────────────────────
-  const PANEL = 356;                       // the panel's height
-  // outRow: the out handles' band, to the card's foot; fish: the first fish lane, each laneH tall
-  const Y = { ruler: 8, card: 40, cardH: 196, items: 90, m0: 124, m1: 154, body: 84, bodyH: 150, outRow: 194, fish: 244, laneH: 24, laneGap: 4 };
+  // One rhythm, top to bottom: the ruler, the scene cards (a head of words, then the works, two
+  // rows of moments and the out handles in the card's body), a hairline, the two fish lanes. A
+  // narrow column of icons on the left names each track; the status bar runs under all of it.
+  const GUT = 34, STATUS = 38;             // the icon column's width; the status bar's height
+  // card: its top; head: its words; works: the works row; m0/m1: the moments' rows; body: under
+  // the head's rule, where the out hatch runs; outRow: the out handles' band, to the card's foot
+  const Y = { ruler: 0, rulerH: 22, card: 26, cardH: 118, head: 33, works: 60, m0: 82, m1: 102, outRow: 124, fish: 150, laneH: 20, laneGap: 4 };
+  Y.body = Y.card + Y.head; Y.bodyH = Y.card + Y.cardH - Y.body; Y.sep = Y.card + Y.cardH + 3;
   const FISH_END = Y.fish + 2 * Y.laneH + Y.laneGap;
-  const PIN = 24, GAP = 26, MAX_PXS = 360;  // a moment's hit box; the room it needs from the next; the deepest zoom (px a second)
-  const SLIM = 760, INSP = 440;            // a panel narrower than SLIM is slim; the inspector's width in a wide one
+  const PANEL = FISH_END + 16 + STATUS;    // the panel's height (the view keeps 10 px under the lanes for its scrollbar)
+  const PIN = 22, GAP = 24, MAX_PXS = 360;  // a moment's hit box; the room it needs from the next; the deepest zoom (px a second)
+  const SLIM = 760, INSP = 420;            // a panel narrower than SLIM is slim; the inspector's width in a wide one
 
   // ── style: the site's tokens, never text dimmed with alpha ────────────
   const css = document.createElement('style');
   css.textContent = `
 #reel-tl { position: fixed; left: 0; right: 0; height: ${PANEL}px; z-index: 50; box-sizing: border-box;
-  background: rgba(var(--surface-rgb), 0.95); border-top: 1px solid rgba(var(--cyan-dim-rgb), 0.3);
+  background: rgba(var(--surface-rgb), 0.96); border-top: 1px solid rgba(var(--cyan-dim-rgb), 0.3);
   font: 500 11px/1 var(--font-mono); color: var(--ink-quiet); letter-spacing: 0.02em; user-select: none; -webkit-user-select: none; }
 #reel-tl[hidden], #reel-tl [hidden] { display: none !important; }
 #reel-tl * { box-sizing: border-box; }
 #reel-tl .tl-main { position: absolute; left: 0; top: 0; bottom: 0; right: 0; }
-#reel-tl.tl-insp .tl-main { right: var(--tl-iw, 440px); }
-#reel-tl .tl-gl { position: absolute; left: 16px; width: 80px; color: var(--ink-faint); font-size: 11px; text-transform: lowercase; letter-spacing: 0.08em; cursor: help; }
-#reel-tl .tl-gl small { display: block; margin-top: 4px; font-size: 10px; letter-spacing: 0.04em; }
-#reel-tl .tl-view { position: absolute; left: 100px; right: 20px; top: 0; bottom: 48px; overflow-x: auto; overflow-y: hidden;
+#reel-tl.tl-insp .tl-main { right: var(--tl-iw, ${INSP}px); }
+/* the tracks' icons: one per row band, the name in the tooltip */
+#reel-tl .tl-gut { position: absolute; left: 0; top: 0; width: ${GUT}px; bottom: ${STATUS}px; border-right: 1px solid rgba(var(--cyan-dim-rgb), 0.15); }
+#reel-tl .tl-gi { position: absolute; left: 0; width: ${GUT}px; display: flex; align-items: center; justify-content: center; color: var(--ink-faint); cursor: help; }
+#reel-tl .tl-gi .ri { width: 14px; height: 14px; }
+#reel-tl .tl-gi:hover { color: var(--cyan); }
+#reel-tl .tl-view { position: absolute; left: ${GUT}px; right: 0; top: 0; bottom: ${STATUS}px; overflow-x: auto; overflow-y: hidden;
   scrollbar-width: thin; scrollbar-color: rgba(var(--cyan-dim-rgb), 0.45) transparent; }
 #reel-tl .tl-view::-webkit-scrollbar { height: 8px; }
 #reel-tl .tl-view::-webkit-scrollbar-thumb { background: rgba(var(--cyan-dim-rgb), 0.45); border-radius: 4px; }
 #reel-tl .tl-lane { position: relative; height: 100%; min-width: 100%; }
-#reel-tl .tl-ruler { position: absolute; left: 0; right: 0; top: ${Y.ruler}px; height: 24px; cursor: col-resize;
+#reel-tl .tl-ruler { position: absolute; left: 0; right: 0; top: ${Y.ruler}px; height: ${Y.rulerH}px; cursor: col-resize;
   border-bottom: 1px solid rgba(var(--cyan-dim-rgb), 0.3);
   background-image: linear-gradient(to right, rgba(var(--cyan-dim-rgb), 0.35) 1px, transparent 1px);
-  background-repeat: repeat-x; background-position: 0 100%; background-size: 10px 5px; }
-#reel-tl .tl-tick { position: absolute; bottom: 0; height: 12px; border-left: 1px solid rgba(var(--cyan-dim-rgb), 0.6); padding: 0 0 0 4px; color: var(--ink-faint); pointer-events: none; font-size: 10px; line-height: 10px; }
-#reel-tl .tl-blk { position: absolute; border: 1px solid rgba(var(--cyan-dim-rgb), 0.35); background: rgba(var(--cyan-dim-rgb), 0.06); border-radius: 6px;
+  background-repeat: repeat-x; background-position: 0 100%; background-size: 10px 4px; }
+#reel-tl .tl-tick { position: absolute; bottom: 0; height: 11px; border-left: 1px solid rgba(var(--cyan-dim-rgb), 0.6); padding: 0 0 0 4px; color: var(--ink-faint); pointer-events: none; font-size: 10px; line-height: 10px; }
+/* a hairline between the cards and the fish lanes */
+#reel-tl .tl-sep { position: absolute; left: 0; right: 0; top: ${Y.sep}px; border-top: 1px solid rgba(var(--cyan-dim-rgb), 0.15); pointer-events: none; }
+#reel-tl .tl-blk { position: absolute; border: 1px solid rgba(var(--cyan-dim-rgb), 0.35); background: rgba(var(--cyan-dim-rgb), 0.06); border-radius: 5px;
   overflow: hidden; white-space: nowrap; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
 #reel-tl .tl-blk:hover { background: rgba(var(--cyan-dim-rgb), 0.11); }
-#reel-tl .tl-sc { top: ${Y.card}px; height: ${Y.cardH}px; padding: 9px 10px 0; }
+#reel-tl .tl-sc { top: ${Y.card}px; height: ${Y.cardH}px; padding: 5px 8px 0; }
 #reel-tl .tl-sc b, #reel-tl .tl-sc i { will-change: transform; }
-#reel-tl .tl-sc b { display: block; font: 300 15px/1.1 var(--font-display); color: var(--text-bright); overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.01em; }
-#reel-tl .tl-sc i { display: block; font-style: normal; color: var(--ink-faint); margin-top: 6px; overflow: hidden; text-overflow: ellipsis; }
-#reel-tl .tl-sc::after { content: ''; position: absolute; left: 0; right: 0; top: ${Y.body - Y.card - 4}px; border-top: 1px dashed rgba(var(--cyan-dim-rgb), 0.2); pointer-events: none; }
+#reel-tl .tl-sc b { display: block; font: 400 13px/1.15 var(--font-display); color: var(--text-bright); overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.01em; }
+#reel-tl .tl-sc i { display: block; font-style: normal; font-size: 10px; line-height: 12px; color: var(--ink-faint); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; }
+#reel-tl .tl-sc::after { content: ''; position: absolute; left: 0; right: 0; top: ${Y.head - 1}px; border-top: 1px dashed rgba(var(--cyan-dim-rgb), 0.2); pointer-events: none; }
 #reel-tl .tl-sc.tl-cur { border-bottom: 2px solid var(--gold); }
 #reel-tl .tl-sc.tl-sel { border-color: var(--gold); background: rgba(var(--gold-rgb), 0.07); }
 #reel-tl .tl-sc.tl-sel b { color: var(--gold); }
-#reel-tl .tl-it { top: ${Y.items}px; height: 26px; padding: 7px 8px 0; color: var(--ink-quiet); text-overflow: ellipsis; z-index: 2; background: rgba(var(--cyan-dim-rgb), 0.12); }
-#reel-tl .tl-grip { position: absolute; right: -1px; top: 0; bottom: 0; width: 14px; cursor: ew-resize; z-index: 1; }
+#reel-tl .tl-it { top: ${Y.works}px; height: 20px; padding: 0 16px 0 6px; line-height: 18px; font-size: 10px; color: var(--ink-quiet); text-overflow: ellipsis; z-index: 2; background: rgba(var(--cyan-dim-rgb), 0.12); }
+#reel-tl .tl-grip { position: absolute; right: -1px; top: 0; bottom: 0; width: 12px; cursor: ew-resize; z-index: 1; }
 #reel-tl .tl-sc .tl-grip { bottom: ${Y.card + Y.cardH - Y.outRow}px; }   /* above the out row, so the two never overlap */
-#reel-tl .tl-grip::after { content: ''; position: absolute; right: 4px; top: 22%; bottom: 22%; width: 3px; border-radius: 2px; background: rgba(var(--cyan-dim-rgb), 0.35); transition: background 0.15s; }
+#reel-tl .tl-grip::after { content: ''; position: absolute; right: 3px; top: 22%; bottom: 22%; width: 3px; border-radius: 2px; background: rgba(var(--cyan-dim-rgb), 0.35); transition: background 0.15s; }
 #reel-tl .tl-blk:hover .tl-grip::after { background: rgba(var(--cyan-dim-rgb), 0.7); }
 #reel-tl .tl-grip:hover::after, #reel-tl .tl-grip.tl-on::after { background: var(--gold); }
 /* the out hatch: part of its card, from the cue to the card's end */
-#reel-tl .tl-otz { position: absolute; top: ${Y.body}px; height: ${Y.bodyH}px; pointer-events: none; z-index: 1; border-radius: 0 0 5px 0; overflow: hidden;
+#reel-tl .tl-otz { position: absolute; top: ${Y.body}px; height: ${Y.bodyH}px; pointer-events: none; z-index: 1; border-radius: 0 0 4px 0; overflow: hidden;
   border-left: 1px solid rgba(var(--cyan-dim-rgb), 0.7);
   background: repeating-linear-gradient(135deg, rgba(var(--cyan-dim-rgb), 0.22) 0 2px, transparent 2px 7px); }
 #reel-tl .tl-otz.tl-def { background: repeating-linear-gradient(135deg, rgba(var(--cyan-dim-rgb), 0.12) 0 2px, transparent 2px 7px); border-left-style: dashed; }
-#reel-tl .tl-otz span { position: absolute; left: 5px; bottom: 6px; color: var(--ink-quiet); font-size: 10px; }
-#reel-tl .tl-ot { position: absolute; top: ${Y.outRow}px; height: ${Y.body + Y.bodyH - Y.outRow}px; width: 18px; margin-left: -9px; cursor: ew-resize; z-index: 3; }
-#reel-tl .tl-ot::before { content: ''; position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: var(--cyan); opacity: 0.8; }
-#reel-tl .tl-ot.tl-def::before { background: var(--ink-faint); }
-#reel-tl .tl-ot::after { content: ''; position: absolute; left: 4px; bottom: 9px; width: 10px; height: 18px; border-radius: 3px;
+#reel-tl .tl-ot { position: absolute; top: ${Y.outRow}px; height: ${Y.card + Y.cardH - Y.outRow}px; width: 16px; margin-left: -8px; cursor: ew-resize; z-index: 3; }
+#reel-tl .tl-ot::after { content: ''; position: absolute; left: 3px; bottom: 3px; width: 10px; height: 14px; border-radius: 3px;
   border: 1px solid var(--cyan); background: rgba(var(--surface-rgb), 0.95); }
 #reel-tl .tl-ot.tl-def::after { border-color: var(--ink-faint); }
-#reel-tl .tl-ot:hover::before, #reel-tl .tl-ot.tl-on::before { background: var(--gold); opacity: 1; }
-#reel-tl .tl-ot:hover::after, #reel-tl .tl-ot.tl-on::after { border-color: var(--gold); }
+#reel-tl .tl-ot:hover::after, #reel-tl .tl-ot.tl-on::after { border-color: var(--gold); background: rgba(var(--gold-rgb), 0.25); }
 /* a moment: a ${PIN}px target, its mark, and its name when there is room */
-#reel-tl .tl-bt { position: absolute; width: ${PIN}px; height: 26px; margin-left: -${PIN / 2}px; cursor: ew-resize; z-index: 4; }
-#reel-tl .tl-bt::before { content: ''; position: absolute; left: ${PIN / 2 - 5}px; top: 8px; width: 10px; height: 10px; transform: rotate(45deg); background: var(--cyan); }
+#reel-tl .tl-bt { position: absolute; width: ${PIN}px; height: 20px; margin-left: -${PIN / 2}px; cursor: ew-resize; z-index: 4; }
+#reel-tl .tl-bt::before { content: ''; position: absolute; left: ${PIN / 2 - 5}px; top: 5px; width: 10px; height: 10px; transform: rotate(45deg); background: var(--cyan); }
 #reel-tl .tl-bt.tl-f::before { transform: none; border-radius: 50%; }
 #reel-tl .tl-bt.tl-quote::before { transform: none; border-radius: 2px; }
+#reel-tl .tl-bt:hover::before, #reel-tl .tl-bt.tl-on::before { background: var(--gold); }
+#reel-tl .tl-lb { position: absolute; left: ${PIN - 4}px; top: 4px; font-size: 10px; line-height: 12px; color: var(--ink-quiet); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+#reel-tl .tl-bt:hover .tl-lb, #reel-tl .tl-bt.tl-on .tl-lb { color: var(--gold); }
 /* the fish lanes: spans of one state each, and a mark per fish line */
 #reel-tl .tl-fl { position: absolute; height: ${Y.laneH}px; border-radius: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: pointer;
   padding: 0 6px; font: 500 10px/${Y.laneH - 2}px var(--font-mono); color: var(--ink-quiet); border: 1px solid transparent; }
@@ -163,22 +174,19 @@
 #reel-tl .tl-fl-free { background: repeating-linear-gradient(135deg, rgba(var(--cyan-dim-rgb), 0.14) 0 2px, transparent 2px 6px); }
 #reel-tl .tl-fl-no { color: var(--ink-faint); border: 1px dashed rgba(var(--cyan-dim-rgb), 0.18); }
 #reel-tl .tl-fl:hover { border-color: var(--gold); }
-#reel-tl .tl-fm { position: absolute; width: 22px; height: 22px; margin-left: -11px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+#reel-tl .tl-fm { position: absolute; width: ${Y.laneH}px; height: ${Y.laneH}px; margin-left: -${Y.laneH / 2}px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
   background: rgb(var(--surface-rgb)); border: 1px solid var(--gold); color: var(--gold); cursor: ew-resize; z-index: 4; }
-#reel-tl .tl-fm .ri { width: 13px; height: 13px; }
+#reel-tl .tl-fm .ri { width: 12px; height: 12px; }
 #reel-tl .tl-fm:hover, #reel-tl .tl-fm.tl-on { background: rgba(var(--gold-rgb), 0.25); }
 #reel-tl .tl-fm.tl-sel { background: var(--gold); color: rgb(var(--surface-rgb)); box-shadow: 0 0 0 3px rgba(var(--gold-rgb), 0.3); }
-#reel-tl .tl-bt::after { content: ''; position: absolute; left: ${PIN / 2}px; top: -4px; height: 4px; width: 1px; background: rgba(var(--cyan-dim-rgb), 0.6); }
-#reel-tl .tl-bt:hover::before, #reel-tl .tl-bt.tl-on::before { background: var(--gold); }
-#reel-tl .tl-lb { position: absolute; left: ${PIN - 2}px; top: 7px; font-size: 10px; line-height: 12px; color: var(--ink-quiet); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
-#reel-tl .tl-bt:hover .tl-lb, #reel-tl .tl-bt.tl-on .tl-lb { color: var(--gold); }
 #reel-tl .tl-ph { position: absolute; left: 0; top: ${Y.ruler}px; height: ${FISH_END - Y.ruler}px; width: 1px; background: var(--gold); pointer-events: none; will-change: transform; z-index: 5; }
 #reel-tl .tl-ph::before { content: ''; position: absolute; left: -4px; top: 0; border: 4.5px solid transparent; border-top: 6px solid var(--gold); }
 #reel-tl .tl-ro-out { position: absolute; top: ${Y.card + 4}px; padding: 4px 7px; border: 1px solid rgba(var(--gold-rgb), 0.6); border-radius: 4px; background: rgba(var(--surface-rgb), 0.96);
   color: var(--text-bright); pointer-events: none; white-space: nowrap; z-index: 6; }
 #reel-tl .tl-ro-out[hidden] { display: none; }
-#reel-tl .tl-status { position: absolute; left: 16px; right: 20px; bottom: 10px; height: 30px; display: flex; align-items: center; gap: 10px; white-space: nowrap;
-  border-top: 1px solid rgba(var(--cyan-dim-rgb), 0.15); padding-top: 8px; }
+/* the status bar: one row under everything, its own rule above it */
+#reel-tl .tl-status { position: absolute; left: 0; right: 0; bottom: 0; height: ${STATUS}px; padding: 0 8px 0 12px; display: flex; align-items: center; gap: 8px; white-space: nowrap;
+  border-top: 1px solid rgba(var(--cyan-dim-rgb), 0.18); }
 #reel-tl .tl-status .tl-where { color: var(--cyan); overflow: hidden; text-overflow: ellipsis; min-width: min(16ch, 40%); flex: 0 1 auto; }
 #reel-tl .tl-status .tl-err { color: var(--text-bright); border-left: 2px solid #ff8a7a; padding-left: 8px; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
 #reel-tl .tl-status .tl-err:empty { display: none; }
@@ -203,39 +211,34 @@
 #reel-tl button:disabled { color: var(--ink-faint); cursor: default; opacity: 0.6; }
 #reel-tl button.tl-go { border-color: rgba(var(--gold-rgb), 0.65); color: var(--gold); }
 #reel-tl button:has(> .ri):not(:has(> .rl)) { padding: 0; width: 28px; flex: none; }   /* an icon alone: a square */
-#reel-tl .tl-x { position: absolute; top: 8px; right: 20px; z-index: 7;   /* opaque: it sits on the ruler's end */
-  background: linear-gradient(rgba(var(--cyan-dim-rgb), 0.1), rgba(var(--cyan-dim-rgb), 0.1)), rgb(var(--surface-rgb)); }
-#reel-tl.tl-insp .tl-x { right: calc(var(--tl-iw, 440px) + 20px); }
-#reel-tl .tl-insp-col { position: absolute; right: 0; top: 0; bottom: 0; width: var(--tl-iw, 440px); overflow-y: auto; border-left: 1px solid rgba(var(--cyan-dim-rgb), 0.3);
-  padding: 12px 18px 16px; user-select: text; -webkit-user-select: text; }
-/* A narrow panel: under ${SLIM}px the gutter's names go (the cards, items and moments keep their
-   tooltips) and the inspector opens over the whole panel, a page of its own with its own close */
-#reel-tl.tl-slim .tl-gl { display: none; }
-#reel-tl.tl-slim .tl-view { left: 12px; right: 12px; }
-#reel-tl.tl-slim .tl-status { left: 12px; right: 12px; }
-#reel-tl.tl-slim .tl-x { right: 12px; }
+#reel-tl .tl-insp-col { position: absolute; right: 0; top: 0; bottom: 0; width: var(--tl-iw, ${INSP}px); overflow-y: auto; border-left: 1px solid rgba(var(--cyan-dim-rgb), 0.3);
+  padding: 8px 12px 12px; user-select: text; -webkit-user-select: text; scrollbar-width: thin; }
+/* A narrow panel: under ${SLIM}px the inspector opens over the whole panel, a page of its own
+   with its own close */
 #reel-tl.tl-slim.tl-insp .tl-main { right: 0; }
-#reel-tl.tl-slim .tl-insp-col { z-index: 8; border-left: 0; background: rgba(var(--surface-rgb), 0.99); padding: 12px 14px 16px; }
+#reel-tl.tl-slim .tl-insp-col { z-index: 8; border-left: 0; background: rgba(var(--surface-rgb), 0.99); }
 #reel-tl .tl-insp-col[hidden] { display: none; }
-#reel-tl .tl-ih { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
-#reel-tl .tl-ih h3 { margin: 0; font: 300 18px/1.2 var(--font-display); color: var(--gold); flex: 1; }
-#reel-tl .tl-insp-col .tl-grp { margin: 12px 0 4px; padding-top: 8px; border-top: 1px solid rgba(var(--cyan-dim-rgb), 0.2); color: var(--cyan); display: flex; align-items: center; gap: 8px; }
-#reel-tl .tl-row { display: grid; grid-template-columns: 64px 1fr; align-items: center; gap: 8px; margin: 3px 0; border-radius: 4px; transition: background 0.6s; }
-#reel-tl .tl-row.tl-cues { grid-template-columns: 64px repeat(3, 1fr); }
+#reel-tl .tl-ih { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+#reel-tl .tl-ih h3 { margin: 0; font: 400 15px/1.2 var(--font-display); color: var(--gold); flex: 1; }
+#reel-tl .tl-insp-col .tl-grp { margin: 8px 0 2px; padding-top: 6px; border-top: 1px solid rgba(var(--cyan-dim-rgb), 0.2); color: var(--cyan); display: flex; align-items: center; gap: 8px; }
+#reel-tl .tl-row { display: grid; grid-template-columns: 56px 1fr; align-items: center; gap: 8px; margin: 2px 0; border-radius: 4px; transition: background 0.6s; }
+#reel-tl .tl-row.tl-cues { grid-template-columns: 56px repeat(3, 1fr); }
 #reel-tl .tl-hl, #reel-tl .tl-insp-col .tl-grp.tl-hl { background: rgba(var(--gold-rgb), 0.16); transition: none; }
 #reel-tl .tl-row label, #reel-tl .tl-insp-col .tl-grp label, #reel-tl .tl-cue label { color: var(--ink-faint); }
 #reel-tl .tl-cue { display: flex; align-items: center; gap: 5px; }
 #reel-tl .tl-cue input { width: 100%; min-width: 0; }
 #reel-tl input { font: 500 11px/1.3 var(--font-mono); color: var(--text-bright); background: rgba(var(--cyan-dim-rgb), 0.06); border: 1px solid rgba(var(--cyan-dim-rgb), 0.25);
-  border-radius: 4px; padding: 4px 6px; width: 100%; outline: none; }
+  border-radius: 4px; padding: 3px 6px; width: 100%; outline: none; }
 #reel-tl input[type=number] { width: 72px; }
 #reel-tl .tl-cue input[type=number] { width: 100%; }
 #reel-tl input:focus { border-color: var(--gold); }
 #reel-tl input::placeholder { color: var(--ink-faint); }
 #reel-tl .tl-flag { color: var(--ink-quiet); }
+#reel-tl button.tl-fline { justify-content: flex-start; width: 100%; color: var(--text-bright); border-color: rgba(var(--gold-rgb), 0.45); overflow: hidden; }
+#reel-tl button.tl-fline .rl { overflow: hidden; text-overflow: ellipsis; }
 #reel-tl .tl-mbox { display: grid; gap: 4px; min-width: 0; }
-#reel-tl button.tl-mchip { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; align-items: center; gap: 10px; height: 50px; padding: 3px 10px 3px 3px; text-align: left; }
-#reel-tl .tl-mth { width: 72px; height: 42px; border-radius: 4px; background: #000 center / cover no-repeat; display: flex; align-items: center; justify-content: center; color: var(--ink-faint); }
+#reel-tl button.tl-mchip { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; align-items: center; gap: 10px; height: 44px; padding: 3px 10px 3px 3px; text-align: left; }
+#reel-tl .tl-mth { width: 64px; height: 36px; border-radius: 4px; background: #000 center / cover no-repeat; display: flex; align-items: center; justify-content: center; color: var(--ink-faint); }
 #reel-tl .tl-mnm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #reel-tl .tl-mgo { color: var(--gold); }
 #reel-tl .tl-mbox input { color: var(--ink-quiet); }
@@ -256,18 +259,25 @@
   const root = h('div', null, document.body); root.id = 'reel-tl'; root.hidden = true;
   root.setAttribute('role', 'region'); root.setAttribute('aria-label', 'Reel timeline');
   const main = h('div', 'main', root);
-  // the gutter says what each band of the cards holds
-  [['time', Y.ruler + 7, 'click or drag the ruler to move the playhead'],
-   ['scenes', Y.card + 12, 'each scene is a card: drag its right edge to change its length; click it to change its words'],
-   ['items', Y.items + 2, 'a results scene shows several works, one after another: its items. Only results scenes have them', 'results only'],
-   ['moments', Y.m0 + 2, 'when something appears inside a scene: a picture, a clip, a quote, a stat, an award. Drag one to retime it; click it to open it'],
-   ['out', Y.body + Y.bodyH - 18, 'the hatched end of each card: where the scene\'s content starts to leave. Drag the handle at its foot'],
-   ['big fish', Y.fish + 7, 'the big fish: what it looks at and does across the cut, and its fish lines (gold marks). Click a span to direct it from there'],
-   ['school', Y.fish + Y.laneH + Y.laneGap + 7, 'the school of four: what it swims under and does across the cut, and its fish lines (gold marks)']]
-    .forEach(([t, y, tip, sub]) => { const g = h('div', 'gl', main, t); g.style.top = y + 'px'; g.title = tip; if (sub) h('small', null, g, sub); });
+  // the tracks' icons, each on its own band of the lane (its name and what it does in the tooltip)
+  const gut = h('div', 'gut', main);
+  [['clock', Y.ruler, Y.rulerH, 'time: click or drag the ruler to move the playhead'],
+   ['scenes', Y.card, Y.head, 'scenes: each scene is a card. Drag its right edge to change its length; click it to see its lines'],
+   ['works', Y.works, 20, 'works: the results scene ("what has he shipped?") shows several works, one after another (Nanome, the AROC HUD, OpenProse…). Each block is one work: drag its right edge to change how long it shows, click it to see its lines'],
+   ['moment', Y.m0, Y.outRow - Y.m0, 'moments: when something appears inside a scene: a picture, a clip, a quote, a stat, an award. Drag one to retime it; click it to see its line'],
+   ['out', Y.outRow, Y.card + Y.cardH - Y.outRow, 'out: the hatched end of each card, where the scene\'s content starts to leave. Drag the handle at its foot'],
+   ['fish', Y.fish, Y.laneH, 'the big fish: what it looks at and does across the cut, and its fish lines (gold marks). Click a span to direct it from there'],
+   ['school', Y.fish + Y.laneH + Y.laneGap, Y.laneH, 'the school of four: what it swims under and does across the cut, and its fish lines (gold marks)']]
+    .forEach(([icon, top, height, tip]) => {
+      const g = h('div', 'gi', gut); g.style.top = top + 'px'; g.style.height = height + 'px';
+      g.title = tip; g.setAttribute('aria-label', tip.replace(/:.*$/, ''));
+      g.innerHTML = window.REEL_UI ? REEL_UI.icon(icon) : '';
+      g.dataset.track = icon;
+    });
   const view = h('div', 'view', main);
   const lane = h('div', 'lane', view);
   const ruler = h('div', 'ruler', lane); ruler.title = 'click or drag to move the playhead';
+  h('div', 'sep', lane);
   // The cards, items, moments, outs and fish lanes: drawn from the model, and drawn again (with
   // their handlers) after every change of script. Each is placed by layout() through `recs`.
   const content = h('div', 'content', lane);
@@ -326,7 +336,7 @@
       });
     });
     OUTS.forEach(O => {
-      const z = h('div', 'otz' + (O.set ? '' : ' def'), content); h('span', null, z, 'out'); O.zone = z;
+      const z = h('div', 'otz' + (O.set ? '' : ' def'), content); O.zone = z;
       const el = h('div', 'ot' + (O.set ? '' : ' def'), content); O.el = el;
       el.title = `${O.S.sc.type}: its content starts to leave ${O.out} s before the scene ends${O.set ? '' : ' (the default)'}. Drag to change`;
       recs.push({ el: z, span: m => [m(O.S.end) - (O.drag != null ? O.drag : O.out), m(O.S.end)] });
@@ -347,9 +357,10 @@
       });
     });
     ITEMS.forEach(I => {
-      const el = h('div', 'blk it', content, I.obj.eyebrow || (I.obj.headline || []).join(' ') || 'item');
-      el.title = `item ${I.k + 1} of the results · ${I.obj.dur} s · ${fmt(I.start)} → ${fmt(I.end)}\n${I.obj.eyebrow || ''}`;
-      const g = h('div', 'grip', el); g.title = 'drag to change the item\'s length';
+      // named by its eyebrow's first words (Nanome, BadVR, OpenProse)
+      const el = h('div', 'blk it', content, (I.obj.eyebrow || '').split(' · ')[0] || (I.obj.headline || []).join(' ') || 'work ' + (I.k + 1));
+      el.title = `work ${I.k + 1} of the results · ${I.obj.dur} s · ${fmt(I.start)} → ${fmt(I.end)}\n${I.obj.eyebrow || ''}\nclick to see its lines; drag its right edge to change how long it shows`;
+      const g = h('div', 'grip', el); g.title = 'drag to change how long this work shows';
       I.el = el; I.grip = g;
       recs.push({ el, span: m => [m(I.start), m(I.end)] });
       g.addEventListener('pointerdown', e => {
@@ -358,7 +369,7 @@
         drag(e, g, (dt, ev) => {
           d = Math.max(snapOf(ev), snap(I.obj.dur + dt, ev));
           layout(ripple(I.end, d - I.obj.dur));
-          show1(I.start + d, `item ${I.obj.dur} → ${d} s · scene ${n3(I.S.sc.dur + d - I.obj.dur)} s · total ${fmt(DUR + d - I.obj.dur)}`);
+          show1(I.start + d, `work ${I.obj.dur} → ${d} s · scene ${n3(I.S.sc.dur + d - I.obj.dur)} s · total ${fmt(DUR + d - I.obj.dur)}`);
         }, moved => {
           g.classList.remove('tl-on');
           if (moved && d !== I.obj.dur) commit(itemDur(I, d)); else layout();
@@ -408,7 +419,7 @@
         const k = (F.S.start + F.v.at).toFixed(3), n = seen.get(k) || 0; seen.set(k, n + 1);
         const el = h('div', 'fm', content); el.dataset.ln = F.ln; el.dataset.who = who;
         el.innerHTML = window.REEL_UI ? REEL_UI.icon(FICON(F.v)) : '•';
-        el.style.top = (y + 1) + 'px'; el.style.marginLeft = (-11 + n * 16) + 'px';
+        el.style.top = y + 'px'; el.style.marginLeft = (-Y.laneH / 2 + n * 16) + 'px';
         el.title = `fish ${RS.writeFish(F.v)} (line ${F.ln}) · ${fmt(F.S.start + F.v.at)}\ndrag to retime it; click to edit it in the Fish panel`;
         const M = { el, F };
         FISHM.push(M);
@@ -438,7 +449,6 @@
   populate();
   const ph = h('div', 'ph', lane);
   const readout = h('div', 'ro-out', lane); readout.hidden = true;
-  const close = button(root, '', 'close the timeline (E)', 'close', 'x', 'close'); close.setAttribute('aria-label', 'close the timeline');
 
   const status = h('div', 'status', main);
   const where = h('span', 'where', status);
@@ -471,6 +481,7 @@
   const bFit = button(zoom, 'Fit', 'the whole reel in view (0)', 'fit', null, 'fit');
   const note = h('span', 'note', status);
   const bEx = button(status, 'Export video', 'make the video from this edit (X)', 'export', 'go', 'export');
+  const close = button(status, '', 'close the timeline (E)', 'close', 'x', 'close'); close.setAttribute('aria-label', 'close the timeline');
   // the bar's words: where saves go (and whether one is on its way), the total and the warnings
   function refreshStatus(busy) {
     const kept = !L.dev && (L.draft || L.hosted);
@@ -507,7 +518,7 @@
       if (b != null) r.el.style.width = Math.max(4, x(b) - x(a) - 2).toFixed(1) + 'px';   // a 2 px gutter between blocks
     });
     placeMoments(map);
-    if (!map.drag) { ticks(); if (t0 != null) view.scrollLeft = t0 * pxs; }
+    if (!map.drag) { ticks(); if (t0 != null) scrollTo(t0 * pxs); }
     stick();
     zr.textContent = Z < 1.05 ? 'fit' : (Z < 10 ? Z.toFixed(1) : Math.round(Z)) + '×';
     bOut.disabled = bFit.disabled = Z < 1.05; bIn.disabled = Z >= zMax() - 0.01;
@@ -549,18 +560,23 @@
     for (let t = 0; t <= DUR + 1e-6 && x(t) < W - 48; t = n3(t + step)) { const e = h('span', 'tick', ruler, label(t)); e.style.left = x(t).toFixed(1) + 'px'; }
   }
   let curScene = -1, lastT = null, dragging = false;
+  // The view follows the playhead while it plays (zoomed in), and after a jump. A scroll of yours
+  // wins: the view stays where you put it until the playhead jumps, play starts again, or the
+  // playhead comes back into view (it used to pull the view back under you, frame after frame).
+  // The panel's own scrolls go through scrollTo, so a scroll it did not make is yours.
+  let follow = true, placed = null, wasPlaying = false;
+  function scrollTo(left) { left = Math.max(0, left); placed = left; view.scrollLeft = left; placed = view.scrollLeft; }
   function frame(t) {
     if (root.hidden) return;
     const tt = Math.max(0, Math.min(DUR, t));
     ph.style.transform = `translateX(${x(tt).toFixed(1)}px)`;
     let c = 0; SCENES.forEach(S => { if (t >= S.start - 1e-6) c = S.i; });
     if (c !== curScene) { if (SCENES[curScene]) SCENES[curScene].el.classList.remove('tl-cur'); SCENES[c].el.classList.add('tl-cur'); curScene = c; }
-    // zoomed in, the view follows the playhead while it plays, and after a jump
     const jumped = lastT != null && Math.abs(tt - lastT) > 0.3; lastT = tt;
-    if (Z > 1.05 && !dragging && ((L.isPlaying && L.isPlaying()) || jumped)) {
-      const p = x(tt) - view.scrollLeft;
-      if (p < 0 || p > VW - 24) view.scrollLeft = Math.max(0, x(tt) - VW * 0.15);
-    }
+    const playing = !!(L.isPlaying && L.isPlaying()), p = x(tt) - view.scrollLeft, inView = p >= 0 && p <= VW - 24;
+    if (jumped || inView || (playing && !wasPlaying)) follow = true;
+    wasPlaying = playing;
+    if (Z > 1.05 && !dragging && follow && (playing || jumped) && !inView) scrollTo(x(tt) - VW * 0.15);
   }
   L.onFrame(frame);
 
@@ -574,7 +590,7 @@
     if (at == null) { const p = x(Math.max(0, Math.min(DUR, L.now()))) - view.scrollLeft; at = p >= 0 && p <= VW ? p : VW / 2; }
     const t = (view.scrollLeft + at) / pxs;
     Z = z; VW = 0; layout();                          // VW 0: no left-edge anchoring, the anchor below decides
-    view.scrollLeft = Math.max(0, t * pxs - at);
+    scrollTo(t * pxs - at);
     stick(); keepView();
   }
   bIn.onclick = () => zoomTo(Z * 1.6);
@@ -583,13 +599,16 @@
   view.addEventListener('wheel', e => {
     const k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? VW : 1;
     if (e.ctrlKey || e.metaKey) { e.preventDefault(); zoomTo(Z * Math.exp(-e.deltaY * k * 0.0025), e.clientX - view.getBoundingClientRect().left); }
-    else if (Z > 1.05 && Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.preventDefault(); view.scrollLeft += e.deltaY * k; }
+    else if (Z > 1.05 && Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.preventDefault(); follow = false; view.scrollLeft += e.deltaY * k; }
   }, { passive: false });
   let g0 = null;                                        // Safari's pinch
   view.addEventListener('gesturestart', e => { e.preventDefault(); g0 = Z; });
   view.addEventListener('gesturechange', e => { e.preventDefault(); if (g0 != null) zoomTo(g0 * e.scale, e.clientX - view.getBoundingClientRect().left); });
   view.addEventListener('gestureend', e => { e.preventDefault(); g0 = null; });
-  let scrollT; view.addEventListener('scroll', () => { stick(); clearTimeout(scrollT); scrollT = setTimeout(keepView, 200); });
+  let scrollT; view.addEventListener('scroll', () => {
+    if (placed == null || Math.abs(view.scrollLeft - placed) > 2) follow = false;   // not where the panel put it: yours
+    stick(); clearTimeout(scrollT); scrollT = setTimeout(keepView, 200);
+  });
 
   // the preview shrinks to fit above the panel (the rig keeps the bottom of the window for it)
   // and takes the whole window back when the panel shuts
@@ -610,7 +629,7 @@
     if (tool) tool.setAttribute('aria-pressed', String(!!open));
     if (open) {
       fitStage(); VW = 0; layout();
-      const v = get(K_VIEW, null); if (v && v.left != null) view.scrollLeft = v.left * pxs;
+      const v = get(K_VIEW, null); if (v && v.left != null) scrollTo(v.left * pxs);
     } else L.reserveBottom(0);
   }
   close.onclick = () => show(false);
@@ -688,10 +707,14 @@
   const ripple = (edge, d) => { const m = t => (t >= edge - 1e-6 ? t + d : t); m.drag = true; return m; };
   const still = t => t; still.drag = true;
 
+  // Scrubbing holds the reel still under the pointer, like a video player, and it plays on from
+  // where you let go. (Scrubbed while it played, the music started again at every step.)
   ruler.addEventListener('pointerdown', e => {
     const seek = ev => L.seek((ev.clientX - lane.getBoundingClientRect().left) / pxs);
+    const was = L.isPlaying();
+    if (was) L.setPlaying(false);
     seek(e);
-    drag(e, ruler, (dt, ev) => seek(ev), () => {});
+    drag(e, ruler, (dt, ev) => seek(ev), () => { if (was && L.now() < L.duration - 0.05) L.setPlaying(true); });
     // a still press is a seek too, and drag() only calls move once the pointer travels
   });
 
@@ -768,6 +791,14 @@
     };
     input(box, `${f.key} file`, cur, (src, v) => RS.setField(src, ln, v), { ln, key: f.key, bare: true });
   }
+  // A fish line: edited in the Fish panel, where its time, who, what it does and its point each
+  // have a control (and its point a mark on the stage).
+  function fishRow(f, ln) {
+    const r = h('div', 'row', insp); h('label', null, r, 'fish');
+    const b = button(r, RS.writeFish(f.owner.fish[f.index]), 'edit this fish line in the Fish panel (F)', null, 'fline', 'fish');
+    b.dataset.ln = ln;
+    b.onclick = () => { if (window.REEL_FISH) window.REEL_FISH.select(ln); else say(['the Fish panel did not load (scripts/reel-fish.js)']); };
+  }
   // a new file for the slot; a clip's in-point past the new clip's end would show nothing, so it
   // starts the new clip at 0
   function pickMedia(f, ln, it) {
@@ -794,11 +825,11 @@
         input(h('div', 'row', insp), 'length', String(S.sc.dur), (src, v) => RS.setDur(src, ln, Number(v)), { num: true, ln, key: 'SCENE' });
       } else if (m && m.kind === 'item') {
         const I = itemAt.get(m.obj), g = h('div', 'grp', insp);
-        h('span', null, g, `ITEM ${I.k + 1}`);
+        h('span', null, g, `work ${I.k + 1}: ${(m.obj.eyebrow || '').split(' · ')[0]}`);
         input(g, 'length', String(m.obj.dur), (src, v) => itemDur(I, Number(v))(src), { num: true, ln, key: 'ITEM' });
       } else if (m && m.kind === 'beat') {
         const g = h('div', 'grp', insp);
-        h('span', null, g, m.owner === m.scene ? 'moment' : 'moment in the item');
+        h('span', null, g, m.owner === m.scene ? 'moment' : 'moment in the work');
         input(g, '@', String(m.obj.at), (src, v) => RS.setAt(src, ln, Number(v)), { num: true, ln, key: '@' });
       } else if (f && f.kind === 'cue') {
         // shown in the cues row below
@@ -806,6 +837,8 @@
         const r = h('div', 'row', insp); h('label', null, r, f.key); h('span', 'flag', r, 'on (a flag: delete the line to turn it off)');
       } else if (f && (f.key === 'img' || f.key === 'video')) {
         mediaRow(f, ln);
+      } else if (f && f.key === 'fish') {
+        fishRow(f, ln);
       } else if (f) {
         input(h('div', 'row', insp), f.key, wordsOf(ln, f.key), (src, v) => RS.setField(src, ln, v), { ln, key: f.key });
       }
@@ -828,7 +861,9 @@
     if (e.target.closest && e.target.closest('input, textarea, select, [contenteditable]')) return;
     const plain = !e.metaKey && !e.ctrlKey && !e.altKey;
     if ((e.key === 'e' || e.key === 'E') && plain) { e.preventDefault(); show(root.hidden); }
-    else if ((e.key === 'z' || e.key === 'Z') && (e.metaKey || e.ctrlKey) && !root.hidden) { e.preventDefault(); undo(!e.shiftKey); }
+    // Undo and redo answer with the panel shut too: the Fish panel and the words on the stage
+    // keep their edits on the same stacks (the synth rack keeps its own, while the pointer is on it)
+    else if ((e.key === 'z' || e.key === 'Z') && (e.metaKey || e.ctrlKey)) { e.preventDefault(); undo(!e.shiftKey); }
     else if (root.hidden) return;
     else if ((e.key === '=' || e.key === '+') && plain) { e.preventDefault(); zoomTo(Z * 1.6); }
     else if (e.key === '-' && plain) { e.preventDefault(); zoomTo(Z / 1.6); }

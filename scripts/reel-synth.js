@@ -261,26 +261,54 @@
   }
 
   // ── live: the preview's player ────────────────────────────────────────
-  // tick(t, playing) every frame: schedules what falls in the next 0.3 s of reel time, and
-  // restarts (silence, then schedule from t) when the preview seeks, loops or pauses.
+  // tick(t, playing, wallMs) every frame: schedules what falls in the next 0.3 s of reel time.
+  // Each tick also compares how far the reel moved with how far the wall clock did (the preview
+  // plays by performance.now; wallMs is when its frame read t, so a slow frame is no jump):
+  //   the same     playing on. Should the audio's clock have drifted from the reel's (two clocks,
+  //                two crystals), what comes next is scheduled against the reel again: nothing
+  //                starts over, nothing plays twice
+  //   not the same a jump (a click, a key, the loop): the sound starts again from there at once,
+  //                unless it started again a moment ago. Then it is a scrub, and the sound waits,
+  //                silent, until the reel has played on smoothly for SETTLE. (It used to start
+  //                again at every step of a scrub: the pads clicked, and a beat's pop nearby
+  //                played over and over.)
+  // A pause silences it; play starts it from the playhead.
   function Player(ctx, parsed, A) {
     const E = create(ctx, parsed.score, { meters: true, live: true });
-    const P = { E, A, running: false, offset: 0, horizon: 0, idx: 0 };
-    const AHEAD = 0.3, LAT = 0.06;
+    const P = { E, A, running: false, offset: 0, horizon: 0, idx: 0, starts: 0 };
+    // JUMP: how far the reel may stray from the wall clock in a frame and still be playing. With
+    // the frame's own time (wallMs) the two agree to the microsecond, so a hair is a jump;
+    // without it, the tick reads the clock later in the frame, after a frame's work
+    const AHEAD = 0.3, LAT = 0.06, SETTLE = 0.2, DRIFT = 0.09;
     const at = t => t + P.offset;
+    const wall = () => performance.now() / 1000;
+    let lastT = null, lastW = 0, lastStart = -1, quietUntil = 0;
     function first(t) { let lo = 0, hi = P.A.events.length; while (lo < hi) { const m = (lo + hi) >> 1; if (P.A.events[m].t < t) lo = m + 1; else hi = m; } return lo; }
-    function start(t) {
+    function start(t, w) {
       E.newGeneration();
       P.offset = ctx.currentTime + LAT - t;
       E.automate(P.A, t, at);
       // notes already sounding at t (a pad mid-bar) come in now, for what is left of them
       for (const ev of P.A.events) if (ev.t < t && ev.t + ev.dur > t + 0.1 && ev.dur >= 0.3 && !ev.rise) E.play(ev, at(t), t - ev.t);
       P.horizon = t; P.idx = first(t); P.running = true;
+      lastStart = w; P.starts++;
     }
     P.stop = () => { if (P.running) { E.newGeneration(); P.running = false; E.master.gain.cancelScheduledValues(0); } };
-    P.tick = (t, playing) => {
-      if (!playing || ctx.state !== 'running') { P.stop(); return; }
-      if (!P.running || Math.abs((ctx.currentTime + LAT - P.offset) - t) > 0.09) start(t);
+    P.tick = (t, playing, wallMs) => {
+      const w = wallMs != null ? wallMs / 1000 : wall(), JUMP = wallMs != null ? 0.008 : 0.05;
+      const jumped = lastT != null && Math.abs((t - lastT) - (w - lastW)) > JUMP;
+      lastT = t; lastW = w;
+      if (!playing || ctx.state !== 'running') { P.stop(); quietUntil = 0; return; }
+      if (jumped && (P.running || w < quietUntil)) {
+        if (w < quietUntil || w - lastStart < SETTLE) { P.stop(); quietUntil = w + SETTLE; return; }   // a scrub: wait
+        start(t, w);
+      } else if (!P.running) {
+        if (w < quietUntil) return;
+        start(t, w);
+      } else {
+        const drift = (ctx.currentTime + LAT - P.offset) - t;
+        if (Math.abs(drift) > DRIFT) P.offset += drift;                // the clocks agree again
+      }
       const until = t + AHEAD, ev = P.A.events;
       while (P.idx < ev.length && ev[P.idx].t < until) { const e = ev[P.idx++]; if (e.t >= P.horizon - 1e-9) E.play(e, Math.max(ctx.currentTime, at(e.t))); }
       P.horizon = until;

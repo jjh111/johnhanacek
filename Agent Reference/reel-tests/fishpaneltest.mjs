@@ -19,7 +19,7 @@
 //   9. a take: playing, D then T at two moments; pausing keeps both lines in one save
 //  10. the editor's Delete takes a line out
 //  11. in an 820 px window the panel lies over the preview (no room taken) and nothing overflows
-//  12. no edit reloaded the page, and none regrew the tank (every save played in place)
+//  12. no edit reloaded the page, and none took a fish out or put one back (every save played in place)
 //  13. no page errors
 import { spawn } from 'node:child_process';
 import net from 'node:net';
@@ -80,7 +80,7 @@ try {
   const lit = () => page.evaluate(() => [...document.querySelectorAll('#reel-fish .fp-on')].map(b => b.dataset.fish));
   await page.goto(`${base}/Assets/sizzle-reel-2.html?script=${NAME}#t=24&pause=1`);
   await ready('first load');
-  // every save's answer, to see that none regrew the tank
+  // every save's answer, to see that none restocked the tank
   await page.evaluate(() => { const s = REEL_LIVE.save.bind(REEL_LIVE); window.__saves = []; REEL_LIVE.save = async t => { const r = await s(t); window.__saves.push(r); return r; }; });
 
   // 1. open
@@ -214,8 +214,8 @@ try {
   });
   check(nw.over && nw.right <= nw.vw && nw.left < 200 && !nw.overflow.length, 'in an 820 px window the panel lies over the preview, which keeps its room', JSON.stringify(nw));
 
-  const sv = await page.evaluate(() => window.__saves.map(r => ({ applied: !!r.applied, regrew: !!r.regrew, ok: r.ok })));
-  check(reloads === 0 && sv.length >= 10 && sv.every(r => r.applied && r.ok && !r.regrew),
+  const sv = await page.evaluate(() => window.__saves.map(r => ({ applied: !!r.applied, restocked: !!r.restocked, ok: r.ok })));
+  check(reloads === 0 && sv.length >= 10 && sv.every(r => r.applied && r.ok && !r.restocked),
     `no edit reloaded the page or regrew the tank: ${sv.length} saves, each played in place and kept`, JSON.stringify({ reloads, sv }));
   const own = errors.filter(e => !/Failed to load|NotSupportedError|no supported source/i.test(e));
   check(!own.length, 'no page errors', own.join(' | '));

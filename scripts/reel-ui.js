@@ -68,6 +68,14 @@
     slow: S('<path d="M2 11.5c2.5-6 9.5-6 12 0"/><path d="M8 11.5L5.5 7.8"/>'),
     fast: S('<path d="M2 11.5c2.5-6 9.5-6 12 0"/><path d="M8 11.5l2.8-3.6"/>'),
     record: F('<circle cx="8" cy="8" r="4.6"/>'),
+    // the timeline's tracks
+    clock: S('<circle cx="8" cy="8" r="6"/><path d="M8 4.8V8l2.3 1.5"/>'),
+    scenes: S('<rect x="1.5" y="4" width="4" height="8" rx="0.8"/><rect x="6" y="4" width="4" height="8" rx="0.8"/><rect x="10.5" y="4" width="4" height="8" rx="0.8"/>'),
+    works: S('<rect x="2" y="5.5" width="9" height="8" rx="1.2"/><path d="M4.6 3.2h8.2c.4 0 .7.3.7.7v7.6"/>'),
+    moment: S('<path d="M8 1.8l3 3-3 3-3-3z" style="fill:currentColor;stroke:none"/><path d="M8 8.6v4.9M5 13.5h6"/>'),
+    out: S('<path d="M8.5 2.8H3v10.4h5.5"/><path d="M6.5 8h7.5M11.3 5.3L14 8l-2.7 2.7"/>'),
+    school: S('<path d="M1.6 5.2c1.1-1.4 3-1.6 4.3-.6l1.4-1v3.2l-1.4-1c-1.3 1-3.2.8-4.3-.6z"/><path d="M8.4 5.2c1.1-1.4 3-1.6 4.3-.6l1.4-1v3.2l-1.4-1c-1.3 1-3.2.8-4.3-.6z"/><path d="M4.8 11.4c1.1-1.4 3-1.6 4.3-.6l1.4-1V13l-1.4-1c-1.3 1-3.2.8-4.3-.6z"/>'),
+    text: S('<path d="M3 3.5h10M8 3.5V13M6 13h4"/>'),
   };
   const icon = name => ICONS[name] || '';
 

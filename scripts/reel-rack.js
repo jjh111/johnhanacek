@@ -173,8 +173,8 @@
     chipEl.setAttribute('aria-pressed', String(!!live));
   }
 
-  L.onFrame(t => {
-    if (player && soundOn) player.tick(t, L.isPlaying());
+  L.onFrame((t, wall) => {
+    if (player && soundOn) player.tick(t, L.isPlaying(), wall);
     if (!root.hidden) frame(t);
   });
 

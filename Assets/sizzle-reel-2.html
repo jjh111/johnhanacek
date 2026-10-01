@@ -611,7 +611,7 @@ p, h1, h2, h3 { margin: 0; }
   // ── kinetic type ──────────────────────────────────────────────────────
   // A designed line is `<span class="lm"><span class="li">…</span></span>`: the outer clips, the
   // inner slides. Breaks are authored in the edit, never left to the wrapper.
-  const maskLine = (html, cls = '') => `<span class="lm ${cls}"><span class="li">${html}</span></span>`;
+  const maskLine = (html, cls = '', tag = '') => `<span class="lm ${cls}"${tag}><span class="li">${html}</span></span>`;
   const maskLetters = text => [...text].map(ch => ch === ' ' ? ' ' : `<span class="li">${ch}</span>`).join('');
   const inner = (root, sel) => [...root.querySelectorAll(sel)].map(n => n.querySelector(':scope > .li') || n);
   // Hidden is set explicitly and shown is left to inherit ('' rather than 'visible'), so a parent
@@ -721,6 +721,16 @@ p, h1, h2, h3 { margin: 0; }
   let PARSED = ReelScript.parse(SRC);
   let EDIT = PARSED.edit;
   const boardNamed = name => { const b = MK.boards.find(x => x.name === name); if (!b) throw new Error('cut 2: no board named ' + name); return b; };
+  // Live, every line on screen the script wrote says which script line it came from and which
+  // part of that line it shows (` data-ln="52" data-part="label"`), so the text on the stage can
+  // be changed where it stands (scripts/reel-text.js). A render tags nothing: its markup is the
+  // markup it always was. owner: the scene (as parsed: EDIT.scenes[sc.i]), an item, or a beat.
+  const tagOf = (owner, key, index, part) => {
+    if (RENDER || !owner) return '';
+    const f = PARSED.fields.find(x => x.owner === owner && x.key === key && (index == null || x.index === index));
+    return f ? ` data-ln="${f.ln}" data-part="${part || 'all'}"` : '';
+  };
+  const ownerOf = sc => EDIT.scenes[sc.i];
   const SC = [];                               // every scene with its start and end (the same array for the whole visit)
   let DURATION = 0;
   function timeScenes() {
@@ -970,7 +980,8 @@ p, h1, h2, h3 { margin: 0; }
   const MEDIA = [], EVENTS = [], LAYOUT = [], QUERIES = [];
   // An event's id says what it does to the tank and where in the edit it sits (its scene and its
   // time there, so moving another scene does not make it new). "spawn …" puts a fish or coral in
-  // the tank; an edit in place regrows the tank only when those differ (see apply, live mode).
+  // the tank: live, it remembers what it made, so a rewind or an edit can take out just that
+  // (see fire and rewind, below, and apply).
   const at = (t, run, id) => EVENTS.push({ t, run, id });
   // the fish lines that happen once, at their time
   function fishEvents() {                      // (with the scenes: build(), below)
@@ -1087,18 +1098,19 @@ p, h1, h2, h3 { margin: 0; }
   // whose beats swap in place (lines, a lead + counters, or a quote) and/or an awards ledger.
   const hasCopy = b => b.line || b.lead || b.quote;
   function beatMarkup(b, quiet) {
-    if (b.quote) return `<div class="bt"><div class="ql">${b.quote.map(l => maskLine(l, 'qt3')).join('')}</div>${maskLine(`<strong>${b.cite[0]}</strong><span>${DOT}${b.cite[1]}</span>`, 'cite')}</div>`;
-    const ls = b.line || [b.lead];
-    return `<div class="bt"><div class="ll">${ls.map(l => maskLine(l, quiet ? 'ln cap' : 'ln')).join('')}</div>${b.stats ? `<div class="stats">${b.stats.map(s => `<div class="stat"><span class="num"></span>${maskLine(s.label, 'lab')}</div>`).join('')}</div>` : ''}</div>`;
+    if (b.quote) return `<div class="bt"><div class="ql">${b.quote.map((l, i) => maskLine(l, 'qt3', tagOf(b, 'quote', i))).join('')}</div>${maskLine(`<strong>${b.cite[0]}</strong><span>${DOT}${b.cite[1]}</span>`, 'cite', tagOf(b, 'cite', null, 'pair'))}</div>`;
+    const ls = b.line || [b.lead], tl = i => (b.line ? tagOf(b, 'line', i) : tagOf(b, 'lead'));
+    return `<div class="bt"><div class="ll">${ls.map((l, i) => maskLine(l, quiet ? 'ln cap' : 'ln', tl(i))).join('')}</div>${b.stats ? `<div class="stats">${b.stats.map((s, j) => `<div class="stat"><span class="num"></span>${maskLine(s.label, 'lab', tagOf(b, 'stat', j, 'label'))}</div>`).join('')}</div>` : ''}</div>`;
   }
-  function columnMarkup(it, x, width) {
+  // owner: whose eyebrow, headline and awards these are (an item, or the scene as parsed)
+  function columnMarkup(it, x, width, owner = it) {
     const beats = (it.beats || []).filter(hasCopy);
     return `<div class="col" style="left:${x}px;width:${width}px">
-      ${maskLine(it.eyebrow, 'eyebrow')}
-      <div class="hls">${it.headline.map(l => maskLine(l, 'hl')).join('')}</div>
+      ${maskLine(it.eyebrow, 'eyebrow', tagOf(owner, 'eyebrow'))}
+      <div class="hls">${it.headline.map((l, i) => maskLine(l, 'hl', tagOf(owner, 'headline', i))).join('')}</div>
       <div class="rule"></div>
       ${beats.length ? `<div class="slot">${beats.map(b => beatMarkup(b, it.quiet)).join('')}</div>` : ''}
-      ${it.awards ? `<div class="ledger">${it.awards.map(a => `<div class="lrow"><i class="lrule"></i>${maskLine(a.yr, 'inl yr')}${maskLine(a.text, 'inl aw')}</div>`).join('')}</div>` : ''}
+      ${it.awards ? `<div class="ledger">${it.awards.map((a, i) => `<div class="lrow"><i class="lrule"></i>${maskLine(a.yr, 'inl yr', tagOf(owner, 'award', i, 'yr'))}${maskLine(a.text, 'inl aw', tagOf(owner, 'award', i, 'text'))}</div>`).join('')}</div>` : ''}
     </div>`;
   }
   // animate that column: tin = first arrival, tout = everything leaves; base = where beat `at`s count from
@@ -1142,7 +1154,7 @@ p, h1, h2, h3 { margin: 0; }
       const pts = JHStrokes.points.loop(cx, cy, S), d = smooth(pts);
       const el = segEl(sc, `
         ${inkSvg(`<g class="glow"><path d="${d}"/><circle class="nib" r="10"/></g><path class="main" d="${d}"/><circle class="nib" r="5.5"/>`)}
-        <p class="guide" style="top:${F.open.guideTop}px">${maskLine(sc.caption, 'g1')}${maskLine(sc.reveal, 'g2')}</p>`);
+        <p class="guide" style="top:${F.open.guideTop}px">${maskLine(sc.caption, 'g1', tagOf(ownerOf(sc), 'caption'))}${maskLine(sc.reveal, 'g2', tagOf(ownerOf(sc), 'reveal'))}</p>`);
       const paths = [...el.querySelectorAll('.ink path')], nibs = [...el.querySelectorAll('.nib')];
       const main = el.querySelector('.main'), glow = el.querySelector('.glow'), L = main.getTotalLength();
       paths.forEach(p => { p.style.strokeDasharray = `${L} ${L}`; });
@@ -1173,8 +1185,8 @@ p, h1, h2, h3 { margin: 0; }
     },
 
     title(sc) {
-      const tag = sc.tagline.map((g, i) => (i ? '<span class="dot">·</span>' : '') + maskLine(g, 'inl')).join('');
-      const el = segEl(sc, `<div class="tt">${sigMarkup()}<div class="lm name">${maskLetters(sc.name)}</div><div class="tag">${tag}</div></div>`);
+      const tag = sc.tagline.map((g, i) => (i ? '<span class="dot">·</span>' : '') + maskLine(g, 'inl', tagOf(ownerOf(sc), 'tagline', null, 'part:' + i))).join('');
+      const el = segEl(sc, `<div class="tt">${sigMarkup()}<div class="lm name"${tagOf(ownerOf(sc), 'name', null, 'letters')}>${maskLetters(sc.name)}</div><div class="tag">${tag}</div></div>`);
       const tt = el.querySelector('.tt'), name = el.querySelector('.name'), sig = el.querySelector('.sig');
       const letters = [...name.querySelectorAll('.li')], tags = inner(el, '.tag > .lm'), dots = [...el.querySelectorAll('.tag .dot')];
       const write = sigWriter(sig);
@@ -1192,9 +1204,10 @@ p, h1, h2, h3 { margin: 0; }
     },
 
     answer(sc, q) {
-      const el = segEl(sc, `<div class="ansc" style="left:${F.answer.x}px${FORMAT === 'wide' ? '' : ';width:' + BAND + 'px'}"><div class="ansb">${sc.lines.map((l, i) => maskLine(l, 'ans' + (i === 0 ? ' gold' : ''))).join('')}</div>
-        ${sc.support ? `<div class="supw">${maskLine(sc.support, 'sup')}</div>` : ''}
-        <div class="stats astats">${sc.stats.map(s => `<div class="stat"><span class="num"></span>${maskLine(s.label, 'lab')}</div>`).join('')}</div></div>`);
+      const own = ownerOf(sc);
+      const el = segEl(sc, `<div class="ansc" style="left:${F.answer.x}px${FORMAT === 'wide' ? '' : ';width:' + BAND + 'px'}"><div class="ansb">${sc.lines.map((l, i) => maskLine(l, 'ans' + (i === 0 ? ' gold' : ''), tagOf(own, 'line', i))).join('')}</div>
+        ${sc.support ? `<div class="supw">${maskLine(sc.support, 'sup', tagOf(own, 'support'))}</div>` : ''}
+        <div class="stats astats">${sc.stats.map((s, j) => `<div class="stat"><span class="num"></span>${maskLine(s.label, 'lab', tagOf(own, 'stat', j, 'label'))}</div>`).join('')}</div></div>`);
       centreColumn(el.querySelector('.ansc'));
       const ls = inner(el, '.ansb > .lm'), sup = inner(el, '.lm.sup');
       const stats = [...el.querySelectorAll('.stat')].map((s, j) => statMotion(s, sc.stats[j].n));
@@ -1213,7 +1226,7 @@ p, h1, h2, h3 { margin: 0; }
       const WIN = F.results.win, RC = F.results.col;
       const rowsHtml = sc.rows.map((r, i) => `<div class="row">
           <div class="thumb${r.thumb || i === 0 ? '' : ' tile'}">${i === 0 ? '' : r.thumb ? `<img src="${mediaURL(r.thumb)}" alt="">` : glyphSvg(r.shape)}</div>
-          <div class="meta">${maskLine(`${glyphSvg(r.shape)}${r.page} ↗`, 'badge')}${maskLine(r.title, 'rtitle')}${maskLine(r.micro, 'micro')}</div></div>`).join('');
+          <div class="meta">${maskLine(`${glyphSvg(r.shape)}${r.page} ↗`, 'badge')}${maskLine(r.title, 'rtitle', tagOf(ownerOf(sc), 'row', i, 'title'))}${maskLine(r.micro, 'micro', tagOf(ownerOf(sc), 'row', i, 'micro'))}</div></div>`).join('');
       // one window; each result is a pane that pushes in from the right through it
       const panes = items.map(it => `<div class="pane"><div class="media"></div><div class="shade"></div>${pageBadge(it)}</div>`).join('');
       const pager = `<b><span class="od"><span class="ods">${items.map((_, i) => `<i>${i + 1}</i>`).join('')}</span></span></b> / ${items.length}  ·  ${q.text}`;
@@ -1284,7 +1297,7 @@ p, h1, h2, h3 { margin: 0; }
     feature(sc, q) {
       const R = F.feature.win, FC = F.feature.col;
       const el = segEl(sc, `<div class="win" style="left:${R.x}px;top:${R.y}px;width:${R.w}px;height:${R.h}px"><div class="media"></div>
-          <div class="cap3"><div class="slot">${sc.beats.map(b => maskLine(b.caption, 'c3')).join('')}</div></div>${pageBadge(sc)}</div>${columnMarkup(sc, FC.x, FC.w)}`);
+          <div class="cap3"><div class="slot">${sc.beats.map(b => maskLine(b.caption, 'c3', tagOf(b, 'caption'))).join('')}</div></div>${pageBadge(sc)}</div>${columnMarkup(sc, FC.x, FC.w, ownerOf(sc))}`);
       const win = el.querySelector('.win'), media = win.querySelector('.media'), col = el.querySelector('.col');
       const caps = inner(win, '.c3'), badge = win.querySelector('.wbadge');
       const IN = q.enter + ReelScript.cue(sc, 'in'), OUT = sc.end - ReelScript.cue(sc, 'out');   // cues in / out
@@ -1323,7 +1336,7 @@ p, h1, h2, h3 { margin: 0; }
       const el = segEl(sc, `
         <div class="plan" style="left:${CX - PW / 2}px${F.plan ? ';width:' + PW + 'px' : ''}">
           <div class="ptop"><span class="pts">${maskLine('Plan', 'p1')}${maskLine('Receipt', 'p2')}</span><span class="lang">scene language</span></div>
-          ${sc.plan.map(p => `<div class="prow">${icon(p.glyph)}<span class="cnt">${maskLine(`<b>${p.n}</b> ×`, 'pl')}${maskLine(`<b><span class="od"><span class="ods">${strip}</span></span></b>/${p.n}`, 'rc')}</span>${maskLine(p.what, 'what')}${maskLine('✓', 'ck')}</div>`).join('')}
+          ${sc.plan.map(p => `<div class="prow">${icon(p.glyph)}<span class="cnt">${maskLine(`<b>${p.n}</b> ×`, 'pl')}${maskLine(`<b><span class="od"><span class="ods">${strip}</span></span></b>/${p.n}`, 'rc')}</span>${maskLine(p.what, 'what', tagOf(ownerOf(sc), 'plan', sc.plan.indexOf(p), 'what'))}${maskLine('✓', 'ck')}</div>`).join('')}
           <div class="pact">${maskLine('<span class="go">Make it</span><span class="no">cancel</span>', 'pa')}${maskLine(`<span class="ok">✓</span> built · ${sc.receipt}`, 'pb')}</div></div>
         ${inkSvg(`${strokes.map(s => `<path d="${s.kind === 'fish' ? smooth(s.pts) : closedPath(s.pts)}"/>`).join('')}
           <circle class="ripple" r="10"/><circle class="nib cur" r="9"/>`)}`);
@@ -1381,7 +1394,7 @@ p, h1, h2, h3 { margin: 0; }
       const it = Object.assign({ quiet: true }, sc);
       const el = segEl(sc, `<div class="port" style="left:${C.x}px;top:${C.y}px;width:0;height:0"></div>
         <svg class="ring" style="left:${C.x - C.r - 16}px;top:${C.y - C.r - 16}px;width:${(C.r + 16) * 2}px;height:${(C.r + 16) * 2}px" viewBox="0 0 ${(C.r + 16) * 2} ${(C.r + 16) * 2}"><circle cx="${C.r + 16}" cy="${C.r + 16}" r="${C.r + 12}"/></svg>
-        ${pageBadge(sc, 'free')}${columnMarkup(it, AC.x, AC.w)}`);
+        ${pageBadge(sc, 'free')}${columnMarkup(it, AC.x, AC.w, ownerOf(sc))}`);
       const port = el.querySelector('.port'), ring = el.querySelector('.ring circle'), col = el.querySelector('.col'), badge = el.querySelector('.wbadge');
       const IN = q.enter + ReelScript.cue(sc, 'in'), OUT = sc.end - ReelScript.cue(sc, 'out');   // cues in / out
       look(IN, sc.end, C.x, C.y, undefined, 'the picture');
@@ -1427,8 +1440,8 @@ p, h1, h2, h3 { margin: 0; }
       const n = sc.quotes.length;
       const pager = `<b><span class="od"><span class="ods">${sc.quotes.map((_, i) => `<i>${i + 1}</i>`).join('')}</span></span></b> / ${n}  ·  ${q.text}`;
       const el = segEl(sc, sc.quotes.map(qq => `<div class="qb" style="left:${F.quotes.x}px;top:0;width:${F.quotes.w}px">
-          <div>${qq.lines.map(l => maskLine(l, 'qt2' + (qq.lines.length < 3 ? ' big' : ''))).join('')}</div>
-          <div class="rule"></div>${maskLine(`<strong>${qq.cite[0]}</strong><span>${DOT}${qq.cite[1]}</span>`, 'cite')}</div>`).join('')
+          <div>${qq.lines.map((l, i) => maskLine(l, 'qt2' + (qq.lines.length < 3 ? ' big' : ''), tagOf(qq, 'line', i))).join('')}</div>
+          <div class="rule"></div>${maskLine(`<strong>${qq.cite[0]}</strong><span>${DOT}${qq.cite[1]}</span>`, 'cite', tagOf(qq, 'cite', null, 'pair'))}</div>`).join('')
         + `<div class="status" style="left:auto;right:${F.M}px;top:${F.tiersTop}px">${pager}</div>`);
       const blocks = [...el.querySelectorAll('.qb')].map(b => ({ b, ls: inner(b, '.qt2'), rule: b.querySelector('.rule'), cs: inner(b, '.cite') }));
       const pg = el.querySelector('.status'), pgStrip = pg.querySelector('.ods');
@@ -1458,8 +1471,8 @@ p, h1, h2, h3 { margin: 0; }
       const el = segEl(sc, `<div class="intent" style="left:${P.x}px;top:${P.y}px;width:${P.w}px;height:${P.h}px">
           ${maskLine('Work with John', 'eyebrow')}
           <div>${h.map(l => maskLine(l, 'oh')).join('')}</div>
-          <div class="three">${three.map(x => `<div><i class="trule"></i>${maskLine(x.k, 'k')}<div>${x.lines.map(l => maskLine(l, 'v')).join('')}</div></div>`).join('')}</div>
-          ${maskLine(`${(sc.cta || bd.cta).lead.trim()} <strong>${(sc.cta || bd.cta).strong}</strong>`, 'cta')}</div>`);
+          <div class="three">${three.map((x, i) => `<div><i class="trule"></i>${maskLine(x.k, 'k', sc.three ? tagOf(ownerOf(sc), 'three', i, 'k') : '')}<div>${x.lines.map((l, j) => maskLine(l, 'v', sc.three ? tagOf(ownerOf(sc), 'three', i, 'line:' + j) : '')).join('')}</div></div>`).join('')}</div>
+          ${maskLine(`${(sc.cta || bd.cta).lead.trim()} <strong>${(sc.cta || bd.cta).strong}</strong>`, 'cta', sc.cta ? tagOf(ownerOf(sc), 'cta', null, 'cta') : '')}</div>`);
       const card = el.querySelector('.intent'), eb = inner(el, '.lm.eyebrow'), hs = inner(el, '.oh');
       const cols = [...el.querySelectorAll('.three > div')].map(c => ({ rule: c.querySelector('.trule'), ls: inner(c, '.lm') }));
       const cta = inner(el, '.lm.cta');
@@ -1481,7 +1494,7 @@ p, h1, h2, h3 { margin: 0; }
       const bd = boardNamed(sc.board);
       const el = segEl(sc, `
         <nav class="pill" aria-hidden="true">${['search', 'triangle', 'roundedSquare', 'circle', 'diamond', 'star', 'hexagon'].map(k => `<span class="ic">${glyphSvg(k)}</span>`).join('')}</nav>
-        <div class="endc">${sigMarkup()}<div class="lm url">${maskLetters(MK.meta.site)}</div>${maskLine(sc.line, 'endline')}</div>
+        <div class="endc">${sigMarkup()}<div class="lm url">${maskLetters(MK.meta.site)}</div>${maskLine(sc.line, 'endline', tagOf(ownerOf(sc), 'line'))}</div>
         ${inkSvg('<circle class="ripple r0" r="10"/><circle class="ripple r1" r="10"/><circle class="nib c0" r="9"/><circle class="nib c1" r="9"/>')}`);
       const pill = el.querySelector('.pill'), icons = [...pill.querySelectorAll('.ic')], endc = el.querySelector('.endc');
       const sig = el.querySelector('.sig'), write = sigWriter(sig), url = el.querySelector('.url'), letters = [...url.querySelectorAll('.li')];
@@ -1530,6 +1543,7 @@ p, h1, h2, h3 { margin: 0; }
     ReelScript.queries(EDIT).forEach(Q => {
       const sc = SC[Q.scene];
       const q = { sc, text: Q.text, times: Q.times, t0: Q.t0, typed: Q.typed, enter: Q.enter, clear: Q.clear, last: Q.last, tiers: sc.tiers || [] };
+      if (!RENDER) q.tag = tagOf(ownerOf(sc), 'query');   // live: the bar says which line it is typing (see paintBar)
       const g = document.createElement('div'); g.className = 'tg';
       g.innerHTML = q.tiers.map(name => `<span class="tier ${TIERCLASS[name] || ''}"><i></i>${name}</span>`).join('');
       tiersEl.appendChild(g);
@@ -1574,6 +1588,13 @@ p, h1, h2, h3 { margin: 0; }
       text = q.text.slice(0, n);
       sel = t >= q.clear;
       typing = t < q.typed + 0.2;
+    }
+    // (live, the line being typed is tagged like any text on the stage, and a bar being typed
+    // into by hand is left alone: scripts/reel-text.js)
+    if (!RENDER) {
+      const ln = q && q.tag ? /data-ln="(\d+)"/.exec(q.tag)[1] : '';
+      if (qtEl.dataset.ln !== ln) { if (ln) { qtEl.dataset.ln = ln; qtEl.dataset.part = 'all'; } else { delete qtEl.dataset.ln; delete qtEl.dataset.part; } }
+      if (qtEl.isContentEditable) return;
     }
     qtEl.textContent = text;
     qtEl.classList.toggle('sel', sel);
@@ -1658,13 +1679,36 @@ p, h1, h2, h3 { margin: 0; }
 
   // ── one moment ────────────────────────────────────────────────────────
   let firedT = -1, regrows = 0;
-  // the tank from nothing: every event fires again as the clock passes it
+  // the tank from nothing: every event fires again as the clock passes it (a render's rewind)
   function regrow() { regrows++; tank.clearFish(); tank.state.coral.length = 0; firedT = -1; BIG = null; schoolHome = null; ATTN.concat(LOOKS).forEach(a => { delete a.side; }); }
-  function simulate(t) {                        // the tank's side: events, on every 60 Hz tick
+  // Live, the preview is scrubbed and edited, and the tank must follow without starting over
+  // (it used to regrow from nothing at every step back: each fish jumped to where it was born,
+  // the coral dropped in again, the food rippled again, over and over). So a spawn remembers
+  // what it put in the tank (`made`), and a rewind takes out only what was born after the new
+  // moment: every fish already there swims on from where it is.
+  const isSpawn = ev => /^spawn /.test(ev.id || '');
+  function fire(ev) {
+    if (RENDER || !isSpawn(ev)) { ev.run(); return; }
+    const before = new Set(tank.state.fish.concat(tank.state.coral));
+    ev.run();
+    ev.made = tank.state.fish.concat(tank.state.coral).filter(x => !before.has(x));
+  }
+  function unmake(ev) {
+    (ev.made || []).forEach(x => { tank.remove(x); if (x === BIG) BIG = null; });
+    ev.made = null;
+  }
+  function rewind(t) {
+    for (const ev of EVENTS) if (ev.t > t + 1e-9 && ev.t <= firedT && ev.made) unmake(ev);
+    firedT = t;
+  }
+  // `played` (live): the clock got to t by playing, not by a seek or a scrub. A momentary event
+  // (food dropped, a dart, a scatter) happens only when it is played through; a spawn happens
+  // however the clock got there, so the tank holds what it should at every moment.
+  function simulate(t, played) {                // the tank's side: events, on every 60 Hz tick
     reelT = t;
-    // a rewind regrows the tank from nothing; a hair's floating-point wobble is not a rewind
-    if (t < firedT - 1e-6) regrow();
-    for (const ev of EVENTS) if (ev.t > firedT && ev.t <= t) ev.run();
+    // a hair's floating-point wobble is not a rewind
+    if (t < firedT - 1e-6) { if (RENDER) regrow(); else rewind(t); }
+    for (const ev of EVENTS) if (ev.t > firedT && ev.t <= t && (RENDER || played || isSpawn(ev))) fire(ev);
     firedT = Math.max(firedT, t);              // never backwards, or an event could fire twice
   }
   function paint(t) {                           // the picture's side: a pure function of t
@@ -1753,9 +1797,12 @@ p, h1, h2, h3 { margin: 0; }
   const T0 = parseFloat(HASH.get('t') || Q.get('t')) || 0;
   let playing = !HASH.has('pause'), base = performance.now() - T0 * 1000, held = T0;   // paused stays paused across a save
   const now = () => playing ? (performance.now() - base) / 1000 : held;
-  const seekTo = s => { s = Math.max(0, Math.min(DURATION, s)); if (playing) base = performance.now() - s * 1000; else held = s; };
+  // A seek someone made (a click, a key, a tool) is a jump: the frame after it was not played
+  // through, so nothing momentary in between happens. The reel's own moves (the loop, play) are not.
+  let userSeek = false;
+  const seekTo = (s, own) => { s = Math.max(0, Math.min(DURATION, s)); if (playing) base = performance.now() - s * 1000; else held = s; if (!own) userSeek = true; };
   const jump = sc => { if (!sc) return; if (loopSc) loopSc = sc; seekTo(sc.start); };
-  const toggle = () => { if (playing) { held = now(); playing = false; } else { playing = true; seekTo(held >= DURATION ? 0 : held); } };
+  const toggle = () => { if (playing) { held = now(); playing = false; } else { playing = true; seekTo(held >= DURATION ? 0 : held, true); } };
   // One table behind the buttons and the keys: every key is a button too, named in its tooltip.
   const DO = {
     play: toggle,
@@ -1803,11 +1850,14 @@ p, h1, h2, h3 { margin: 0; }
   // server when it runs, else with the page's host, else as this tab's draft.
   const frameFns = [];
   if (bootEl) bootEl.remove();
+  let lastT = null;                              // the last frame's time: did the clock play to this one?
   (function loop() {
+    const wall = performance.now();             // when this frame read its playhead (the sound keeps time by it)
     let t = now();
-    if (loopSc && playing && (t >= loopSc.end || t < loopSc.start - 0.05)) { seekTo(loopSc.start); t = loopSc.start; }
+    if (loopSc && playing && (t >= loopSc.end || t < loopSc.start - 0.05)) { seekTo(loopSc.start, true); t = loopSc.start; }
     if (t >= DURATION) { t = DURATION; if (playing) { held = t; playing = false; } }
-    simulate(t);
+    simulate(t, playing && !userSeek && lastT != null && t >= lastT && t - lastT < 0.5);
+    userSeek = false; lastT = t;
     tank.startAnimation();
     for (const fn of TICKS) fn(t);
     paint(t);
@@ -1829,7 +1879,7 @@ p, h1, h2, h3 { margin: 0; }
       try { history.replaceState(null, '', `#t=${t.toFixed(2)}${loopSc ? '&loop=' + loopSc.i : ''}${playing ? '' : '&pause=1'}`); } catch (e) { /* a frame that refuses: no resume */ }
       hashAt = t; hashLoop = loopSc; hashPlaying = playing;
     }
-    for (const fn of frameFns) fn(t);
+    for (const fn of frameFns) fn(t, wall);
     requestAnimationFrame(loop);
   })();
   const DEV = await devP;
@@ -1839,10 +1889,10 @@ p, h1, h2, h3 { margin: 0; }
   // clips, events and the fish director's tables) in about the time of a frame, where a reload
   // took everything with it: the clips fetched again, the fish regrown from nothing, every panel
   // put back from storage. The playhead, the play state and the loop stay. The clips and pictures
-  // come back from POOL still loaded. The tank keeps swimming: it is regrown only when what it
-  // should hold by now has changed (a fish or the coral born on the other side of the playhead),
-  // and an event that is new and already due (food, a dart, a scatter written at the playhead)
-  // happens at once. The tools hear of it through onChange, just after.
+  // come back from POOL still loaded. The tank keeps swimming: only a fish or the coral whose
+  // birth moved to the other side of the playhead is taken out or put in, and an event that is
+  // new and already due (food, a dart, a scatter written at the playhead) happens at once. The
+  // tools hear of it through onChange, just after.
   let version = 0;
   const changeFns = [];
   const changed = detail => queueMicrotask(() => changeFns.forEach(fn => { try { fn(detail); } catch (e) { console.error(e); } }));
@@ -1851,7 +1901,7 @@ p, h1, h2, h3 { margin: 0; }
     try { parsed = ReelScript.parse(text); } catch (e) { return { ok: false, errors: e.errors || [e.message] }; }
     if (text === SRC) return { ok: true, same: true };
     const prev = SRC, due = () => EVENTS.filter(e => e.t <= firedT);
-    const had = due().map(e => e.id || ''), oldAttn = ATTN.slice(), lookSide = new Map(LOOKS.map(a => [a.x + ' ' + a.y, a.side]));
+    const had = due(), oldAttn = ATTN.slice(), lookSide = new Map(LOOKS.map(a => [a.x + ' ' + a.y, a.side]));
     // what this build made waits for the next: its clips and pictures, by file
     POOL.clear();
     LAYERS.forEach(({ key, el }) => { if (el.tagName === 'VIDEO') el.pause(); if (!POOL.has(key)) POOL.set(key, []); POOL.get(key).push(el); });
@@ -1868,14 +1918,20 @@ p, h1, h2, h3 { margin: 0; }
     // each fish keeps the side it chose of a thing it was already looking at
     oldAttn.forEach((o, i) => { const a = ATTN[i]; if (a && o.side !== undefined && o.what === a.what && o.x === a.x && o.y === a.y) a.side = o.side; });
     LOOKS.forEach(a => { const s = lookSide.get(a.x + ' ' + a.y); if (s !== undefined) a.side = s; });
-    // the tank: regrown only if what it holds by now changed; else what is new and due happens now
-    const spawns = ids => ids.filter(id => id.startsWith('spawn ')).sort().join('|');
-    const now_ = due(), ids = now_.map(e => e.id || '');
-    const regrew = spawns(had) !== spawns(ids);
-    if (regrew) regrow();
-    else { const was = new Set(had); now_.forEach(e => { if (!was.has(e.id || '')) e.run(); }); }
+    // The tank swims on. What it holds is restocked by spawn: a fish or the coral whose birth
+    // moved past the playhead is taken out, one that moved before it is put in; every event
+    // still due keeps what it made; one new and already due (food written at the playhead)
+    // happens now.
+    const was = new Map(had.map(e => [e.id || '', e])), now_ = due(), ids = new Set(now_.map(e => e.id || ''));
+    let restocked = false;
+    had.forEach(e => { if (!ids.has(e.id || '') && e.made && e.made.length) { unmake(e); restocked = true; } });
+    now_.forEach(e => {
+      const o = was.get(e.id || '');
+      if (o) { e.made = o.made; return; }
+      fire(e); if (isSpawn(e)) restocked = true;
+    });
     if (loopSc) loopSc = SC[loopSc.i] || null;
-    if (now() > DURATION) seekTo(DURATION);
+    if (now() > DURATION) seekTo(DURATION, true);
     barTicks();
     paint(Math.min(now(), DURATION));
     const v = ++version;
@@ -1885,8 +1941,8 @@ p, h1, h2, h3 { margin: 0; }
       if (v !== version) return;
       scenesEl.classList.add('measuring'); LAYOUT.forEach(f => f()); scenesEl.classList.remove('measuring');
     });
-    changed({ src: SRC, prev, parsed: PARSED, from, regrew, version: v });
-    return { ok: true, regrew };
+    changed({ src: SRC, prev, parsed: PARSED, from, restocked, version: v });
+    return { ok: true, restocked };
   }
 
   // ── saving ────────────────────────────────────────────────────────────
@@ -1943,7 +1999,7 @@ p, h1, h2, h3 { margin: 0; }
     get src() { return SRC; }, get parsed() { return PARSED; }, get duration() { return DURATION; },
     get draft() { return DRAFT != null; }, get hosted() { return hosted; }, get version() { return version; },
     scenes: SC,                                // the same array for the whole visit, its contents replaced by each edit
-    now, seek: seekTo, isPlaying: () => playing, setPlaying: p => { if (!!p !== playing) toggle(); },
+    now, seek: s => seekTo(s), isPlaying: () => playing, setPlaying: p => { if (!!p !== playing) toggle(); },
     onFrame: fn => { frameFns.push(fn); },
     addTool, mediaURL,
     reserveBottom: px => { reserved = Math.max(0, +px || 0); fit(); },
@@ -1966,12 +2022,12 @@ p, h1, h2, h3 { margin: 0; }
       track: trackOf, get born() { return Object.assign({}, BORN); },
     },
     // An edit: played at once, in place, then kept (saving, above). Resolves when it is kept:
-    // { ok, via: 'file' | 'host' | 'draft', applied, regrew, errors }. A script with mistakes is
+    // { ok, via: 'file' | 'host' | 'draft', applied, restocked, errors }. A script with mistakes is
     // neither played nor kept: { ok: false, errors } and no `applied`.
     async save(text) {
       const r = applyText(text, 'edit');
       if (!r.ok) return r;
-      return Object.assign({ applied: true, regrew: !!r.regrew }, await persist(text));
+      return Object.assign({ applied: true, restocked: !!r.restocked }, await persist(text));
     },
     // Play a script in place without keeping it: it is kept already (the host's newer save, the
     // file another editor saved). from 'host' marks the host's version as the one playing.
@@ -1980,12 +2036,13 @@ p, h1, h2, h3 { margin: 0; }
       if (r.ok && from === 'host') { hosted = true; window.__reelHosted = SCRIPT_PATH; if (r.same) changed({ src: SRC, prev: SRC, parsed: PARSED, from, same: true, version }); }
       return r;
     },
-    // fn({ src, prev, parsed, from, regrew, version }) after every change of script, and when
+    // fn({ src, prev, parsed, from, restocked, version }) after every change of script, and when
     // where it is kept changes (a draft discarded: `same`)
     onChange: fn => { changeFns.push(fn); },
     // resolves once every edit made so far is kept (Export waits for it: the renderer reads the file)
     settled: () => saving || queued ? new Promise(r => settledFns.push(r)) : Promise.resolve(),
-    // for tests and the console: the tank, the big fish, and how often the tank was regrown
+    // for tests and the console: the tank, the big fish, and how often the tank was regrown from
+    // nothing (live, never: a rewind or an edit takes out only what it must)
     debug: { tank, big: () => BIG, get regrows() { return regrows; } },
     async discardDraft() {
       dropDraft();
@@ -2014,6 +2071,8 @@ p, h1, h2, h3 { margin: 0; }
   const tl = document.createElement('script'); tl.src = '../scripts/reel-timeline.js'; tl.onerror = () => tl.remove(); document.head.appendChild(tl);
   // directing the fish: waypoints on the stage, and attention, idles and actions played at the playhead (F)
   const fp = document.createElement('script'); fp.src = '../scripts/reel-fish.js'; fp.onerror = () => fp.remove(); document.head.appendChild(fp);
+  // the words on the stage, changed where they stand: double-click a line (scripts/reel-text.js)
+  const tx = document.createElement('script'); tx.src = '../scripts/reel-text.js'; tx.onerror = () => tx.remove(); document.head.appendChild(tx);
   // how the script becomes a film: render it here (dev server), or ask Claude (the editor on claude.ai)
   const ex = document.createElement('script'); ex.src = '../scripts/reel-export.js'; ex.onerror = () => ex.remove(); document.head.appendChild(ex);
   // choosing a slot's picture or clip by looking at it (the inspector's img and video lines open it)
