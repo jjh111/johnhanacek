@@ -1,5 +1,6 @@
 // The sizzle reel's music: reads a score (Assets/<name>.score.txt), checks it, and arranges it
-// against the reel's script into a list of timed notes. Pure: no audio, no DOM. The synths that
+// against the reel's script, as one piece on one clock, into timed notes and each instrument's
+// level across the cut (see arrange). Pure: no audio, no DOM. The synths that
 // play the list are scripts/reel-synth.js; the rack that edits the score is scripts/reel-rack.js.
 //
 //   node scripts/reel-music.js check [score] [script]   the arrangement, section by section
@@ -21,7 +22,7 @@
   // ── the vocabulary ────────────────────────────────────────────────────
   const WAVES = { sine: 'sine', triangle: 'triangle', square: 'square', saw: 'sawtooth', sawtooth: 'sawtooth', noise: 'noise' };
   const FILTERS = ['lowpass', 'highpass', 'bandpass', 'notch', 'lowshelf', 'highshelf', 'peaking', 'allpass'];
-  const DRUMS = ['kick', 'snare', 'clap', 'hat', 'openhat', 'shaker', 'tick', 'boom'];
+  const DRUMS = ['kick', 'snare', 'clap', 'hat', 'openhat', 'shaker', 'tick', 'boom', 'crash'];
   const MOMENTS = ['key', 'space', 'enter', 'clear', 'cut', 'item', 'beat'];
   const PLAYS = { chord: ['oct'], root: ['oct'], arp: ['oct', 'dir'], notes: [], hit: ['oct'], rise: ['beats'], chime: ['oct'], note: ['name'] };
   const DIRS = ['up', 'down', 'updown'];
@@ -31,7 +32,7 @@
     SYNTH: Object.assign({ voice: [['wave', 'n', 'n'], true], filter: [['filter', 'n', 'n']], env: [['n', 'n', 'n', 'n']],
       lfo: [['lfo', 'n', 'n']], play: [['play']], steps: [['steps']], notes: [['notes']], len: [['n']] }, MIX),
     DRUM: Object.assign({ kind: [['drum']], tune: [['n']], decay: [['n']], tone: [['n']], steps: [['steps']] }, MIX),
-    SECTION: { play: [['tracks']], chords: [['chords']], sweep: [['n', 'n']] },
+    SECTION: { play: [['tracks']], chords: [['chords']], sweep: [['n', 'n']], into: [['into']], start: [['start']] },
   };
   // the effects, each field's default and what it means (the rack's knobs read these too)
   const FX = {
@@ -46,7 +47,10 @@
   const SYNTH_DEF = { filter: null, env: { attack: 0.01, decay: 0.2, sustain: 0.7, release: 0.3 }, lfo: null, len: 1 };
   const DRUM_DEF = { kick: { tune: 52, decay: 0.32, tone: 0 }, snare: { tune: 190, decay: 0.16, tone: 1800 }, clap: { tune: 0, decay: 0.18, tone: 1300 },
     hat: { tune: 0, decay: 0.045, tone: 8200 }, openhat: { tune: 0, decay: 0.3, tone: 7600 }, shaker: { tune: 0, decay: 0.05, tone: 6200 },
-    tick: { tune: 2600, decay: 0.025, tone: 0 }, boom: { tune: 42, decay: 1.4, tone: 600 } };
+    tick: { tune: 2600, decay: 0.025, tone: 0 }, boom: { tune: 42, decay: 1.4, tone: 600 }, crash: { tune: 0, decay: 1.6, tone: 6500 } };
+  // how the music arrives at a section (its `into`), and each kind's length in beats by default
+  const INTO = { fade: 2, swell: 4, build: 4, drop: 1, cut: 0 };
+  const STARTS = ['auto', 'bar', 'cut'];
   const STEP_VEL = { X: 1, x: 0.78, o: 0.45 };
 
   // ── notes and chords ──────────────────────────────────────────────────
@@ -109,7 +113,7 @@
             obj = score.fx[name];
           } else if (head === 'SECTION') {
             if (score.sections.some(s => s.ref === name)) { err(ln, `SECTION ${name} is already given`); return; }
-            obj = { ref: name, ln, play: [], chords: null, sweep: null };
+            obj = { ref: name, ln, play: [], chords: null, sweep: null, into: null, start: null };
             score.sections.push(obj);
           } else {
             if (!/^[a-z][\w-]*$/i.test(name)) { err(ln, `a track name is one word: "${name}"`); return; }
@@ -160,9 +164,14 @@
   const NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
   const noteName = pc => NAMES[pc];
 
+  // a chord, or a chord held for several bars: Am:2
   function readChords(words, ln, err) {
     const out = [];
-    for (const w of words) { const c = chord(w); if (!c) err(ln, `"${w}" is not a chord this score knows (as in Am, F, C7, Fmaj7, Am9, Dsus4)`); else out.push(c); }
+    for (const w of words) {
+      const m = /^(.+?)(?::(\d+))?$/.exec(w), c = m && chord(m[1]);
+      if (!c) err(ln, `"${w}" is not a chord this score knows (as in Am, F, C7, Fmaj7, Am9, Dsus4; Am:2 holds it two bars)`);
+      else { if (m[2] != null) c.bars = Math.max(1, +m[2]); out.push(c); }
+    }
     if (!words.length) err(ln, 'CHORDS wants at least one chord');
     return out;
   }
@@ -203,6 +212,16 @@
       return;
     }
     if (kinds[0] === 'chords') { o.chords = readChords(args, ln, err); return; }
+    if (kinds[0] === 'into') {
+      const kind = args[0], n = args[1] != null ? num(args[1]) : INTO[kind];
+      if (!INTO.hasOwnProperty(kind) || args.length > 2) { err(ln, `into wants how the music arrives (${Object.keys(INTO).join(', ')}) and, if you like, its beats`); return; }
+      if (n == null || n < 0 || n > 16) { err(ln, 'into: its beats are a number, 0-16'); return; }
+      o.into = { kind, beats: n, set: true }; return;
+    }
+    if (kinds[0] === 'start') {
+      if (args.length !== 1 || !STARTS.includes(args[0])) { err(ln, `start wants ${STARTS.join(', ')}: on the bar line nearest the cut when within a beat (auto), on the nearest bar line, or on the cut`); return; }
+      o.start = args[0]; return;
+    }
     if (kinds[0] === 'play') {
       const mode = args[0], want = PLAYS[mode];
       if (!want) { err(ln, `play wants one of ${Object.keys(PLAYS).join(', ')}`); return; }
@@ -264,83 +283,189 @@
   }
 
   // ── arranging ─────────────────────────────────────────────────────────
-  // The score against the reel: `scenes` [{ type, start, end }], `moments` from moments().
-  // Returns { events, sections, sweeps, duration }. An event is a note or a hit:
-  //   { t, dur, track, vel, midi? (synths), detune? (cents), rise? }
-  // Patterns start at each section's cut; chords change every bar from the cut.
+  // The score against the reel, as one piece of music across the whole cut. `scenes`
+  // [{ type, start, end }], `mom` from moments(). Until 2026-10-01 every section started its
+  // patterns, its melody and its chords again on its picture cut and switched its instruments on
+  // and off there, so the music came in blocks. Now:
+  //   one clock    bars (four beats) and steps (sixteen a bar) count from the reel's 0, and a
+  //                steps pattern runs on that clock, so the groove never starts again;
+  //   a section    starts on the bar line nearest its cut when that is within a beat of it, else
+  //                on the cut itself (`start bar` or `start cut` decides for one). Its chords
+  //                change there and on every bar line after (a first piece shorter than half a
+  //                bar joins the next bar; Am:2 holds two), and its melody (`notes`) starts there;
+  //   a seam       each instrument's level moves the way the later section's `into` says: fade
+  //                (a crossfade across the seam), swell (in over the beats before it), build (a
+  //                fill on the snare and a rise into it, a crash on it), drop (the drums and the
+  //                bass fall silent for the beats before it) or cut. A note rings on past its
+  //                section while its level fades;
+  //   a hit        (a drum with no steps, a synth that plays hit or rise) lands on the picture
+  //                cut, or, after a build or a drop, on the arrival, with the crash.
+  // Returns { events, sections, sweeps, levels, transitions, harmony, duration, beat, step, bar }.
+  // An event is { t, dur, track, vel, midi?, detune?, rise?, bypass? } (bypass: a transition's
+  // own note, played past its track's level). levels[track] = [{ t, v }], the level of each
+  // instrument that plays patterns, chords or a melody, linear between points (two points at one
+  // time: a step); a hit, a rise and a sound effect carry their level in their vel.
   const hash01 = i => { let h = Math.imul(i ^ 0x9e3779b9, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
+  const mod = (k, n) => ((k % n) + n) % n;
   function arrange(score, scenes, mom) {
-    const beat = 60 / score.tempo, step = beat / 4, bar = beat * 4;
+    const beat = 60 / score.tempo, step = beat / 4, bar = beat * 4, E = 1e-9;
     const duration = scenes.length ? scenes[scenes.length - 1].end : 0;
-    const events = [], sections = [], sweeps = [];
+    const events = [], sweeps = [], levels = {}, transitions = [], fills = [];
     const byName = n => score.tracks.find(t => t.name === n);
+    const S = [];
     for (const s of score.sections) {
-      let i = /^\d+$/.test(s.ref) ? +s.ref - 1 : scenes.findIndex(x => x.type === s.ref);
+      const i = /^\d+$/.test(s.ref) ? +s.ref - 1 : scenes.findIndex(x => x.type === s.ref);
       if (!/^\d+$/.test(s.ref) && scenes.filter(x => x.type === s.ref).length > 1) throw withErrors([`line ${s.ln}: there are ${scenes.filter(x => x.type === s.ref).length} ${s.ref} scenes; name this one by its number`]);
       const sc = scenes[i];
       if (!sc) throw withErrors([`line ${s.ln}: the script has no ${/^\d+$/.test(s.ref) ? 'scene ' + s.ref : s.ref + ' scene'}`]);
-      sections.push({ ref: s.ref, ln: s.ln, scene: i, type: sc.type, start: sc.start, end: sc.end, chords: s.chords || score.chords, play: s.play, sweep: s.sweep });
+      S.push({ ref: s.ref, ln: s.ln, scene: i, type: sc.type, cut: sc.start, cutEnd: sc.end, chords: s.chords || score.chords, play: s.play, sweep: s.sweep,
+        into: s.into || { kind: 'fade', beats: INTO.fade, set: false }, startMode: s.start || 'auto' });
     }
-    sections.sort((a, b) => a.start - b.start);
-    const chordAt = t => {
-      const s = sections.find(x => t >= x.start - 1e-9 && t < x.end - 1e-9) || sections[sections.length - 1];
-      if (!s) return score.chords[0];
-      return s.chords[Math.floor((t - s.start) / bar + 1e-9) % s.chords.length];
-    };
-    for (const s of sections) {
-      const len = s.end - s.start, chords = s.chords;
-      const chordIn = t => chords[Math.floor((t - s.start) / bar + 1e-9) % chords.length];
-      if (s.sweep) sweeps.push({ t0: s.start, t1: s.end, from: s.sweep[0], to: s.sweep[1] });
-      for (const p of s.play) {
-        const tr = byName(p.name), lvl = p.level, push = e => events.push(Object.assign({ track: tr.name }, e));
-        const stepsDo = fn => {
-          if (!tr.steps) return;
-          for (let k = 0; s.start + k * step < s.end - 1e-9; k++) {
-            const c = tr.steps[k % tr.steps.length];
-            if (c === '.') continue;
-            fn(s.start + k * step, STEP_VEL[c] * lvl, k);
-          }
-        };
-        const noteLen = t => Math.max(step * 0.5, Math.min((tr.len || 1) * step, s.end - t));
+    S.sort((a, b) => a.cut - b.cut);
+
+    // where each section's music starts, and so where it ends (where the next one starts)
+    let prev = -Infinity;
+    for (const s of S) {
+      const near = Math.ceil(s.cut / bar - 0.5 - E) * bar;              // the nearest bar line (a tie: the earlier)
+      let start = s.startMode === 'cut' ? s.cut : s.startMode === 'bar' || Math.abs(near - s.cut) <= beat + E ? near : s.cut;
+      start = Math.max(0, start);
+      if (start <= prev + E) start = Math.max(s.cut, prev + step);      // shorter than the snap: its cut
+      s.start = start; prev = start;
+    }
+    S.forEach((s, i) => { s.end = i + 1 < S.length ? S[i + 1].start : Math.max(s.start, duration); });
+
+    // the harmony: each section's chords from its start, then on every bar line
+    for (const s of S) {
+      const seq = []; s.chords.forEach(c => { for (let k = 0; k < (c.bars || 1); k++) seq.push(c); });
+      const at = [s.start];
+      let b = Math.floor(s.start / bar + E) * bar + bar;
+      if (b - s.start < bar / 2 - E) b += bar;                          // a short first piece joins the next bar
+      for (; b < s.end - E; b += bar) at.push(b);
+      s.harmony = at.map((t, k) => ({ t, end: k + 1 < at.length ? at[k + 1] : s.end, chord: seq[k % seq.length] }));
+    }
+    const harmony = S.flatMap(s => s.harmony);
+    const chordAt = t => { let h = harmony[0]; for (const x of harmony) if (t >= x.t - E) h = x; return h ? h.chord : score.chords[0]; };
+
+    // the seams: how the music arrives at each section, and what a build, a swell and a drop play
+    const fillTr = score.tracks.find(t => t.type === 'drum' && !t.on && ['snare', 'clap'].includes(t.kind));
+    const riseTr = score.tracks.find(t => t.type === 'synth' && !t.on && t.play && t.play.mode === 'rise');
+    const crashTr = score.tracks.find(t => t.type === 'drum' && !t.on && t.kind === 'crash');
+    for (let i = 1; i < S.length; i++) {
+      const s = S[i], T = s.into, B = s.start, n = Math.min(T.beats * beat, B - S[i - 1].start);
+      const win = T.kind === 'fade' ? [B - n / 2, Math.min(s.end, B + n / 2)] : T.kind === 'cut' ? [B, B] : [B - n, B];
+      transitions.push({ t: B, cut: s.cut, kind: T.kind, beats: T.beats, set: T.set, ref: s.ref, from: S[i - 1].ref, ln: s.ln, t0: win[0], t1: win[1] });
+      if (T.kind === 'build' && n > 0) {
+        if (fillTr) {
+          // eighths, then sixteenths, louder all the way in
+          const m = Math.round(n / step);
+          for (let k = 0; k < m; k++) if (k >= m / 2 || k % 2 === 0) events.push({ track: fillTr.name, t: B - n + k * step, dur: fillTr.decay, vel: 0.35 + 0.65 * k / Math.max(1, m - 1), bypass: true });
+          fills.push({ track: fillTr.name, t0: B - n, t1: B });
+        }
+        if (riseTr) events.push({ track: riseTr.name, t: B - n, dur: n, vel: 0.9, rise: true, bypass: true });
+        if (crashTr) events.push({ track: crashTr.name, t: B, dur: crashTr.decay, vel: 1, bypass: true });
+      } else if (T.kind === 'swell' && n > 0) {
+        if (riseTr) events.push({ track: riseTr.name, t: B - n, dur: n, vel: 0.45, rise: true, bypass: true });
+      } else if (T.kind === 'drop' && crashTr) events.push({ track: crashTr.name, t: B, dur: crashTr.decay, vel: 0.8, bypass: true });
+    }
+    const inFill = (name, t) => fills.some(f => f.track === name && t >= f.t0 - E && t < f.t1 - E);
+
+    // the instruments that flow (patterns, chords, melodies): a level that moves, and notes over
+    // every stretch where it is above nothing
+    const flows = t => !t.on && (t.type === 'drum' ? !!t.steps : !!t.play && !['hit', 'rise'].includes(t.play.mode));
+    const dropsOut = t => t.type === 'drum' || (t.play && t.play.mode === 'root');
+    const levelIn = (s, name) => { const p = s && s.play.find(x => x.name === name); return p ? p.level : 0; };
+    for (const tr of score.tracks.filter(flows)) {
+      const L = S.map(s => levelIn(s, tr.name));
+      if (!L.some(v => v > 0)) continue;
+      const pts = [{ t: 0, v: 0 }];
+      const put = (t, v) => { pts.push({ t: Math.max(t, pts[pts.length - 1].t), v }); };
+      S.forEach((s, i) => {
+        const B = s.start, a = i ? L[i - 1] : 0, z = L[i], T = s.into, n = Math.min(T.beats * beat, i ? B - S[i - 1].start : 0);
+        const dropping = T.kind === 'drop' && dropsOut(tr) && a > 0 && n > 0;
+        if (a === z && !dropping) return;
+        if (!i) { put(B, 0); put(B, z); return; }                       // the first section starts as it is
+        if (T.kind === 'fade' && n > 0) { put(B - n / 2, a); put(Math.min(s.end, B + n / 2), z); }
+        else if (T.kind === 'swell' && n > 0) { put(B - n, a); put(B, z); }
+        else if (dropping) { put(B - n, a); put(B - n, 0); put(B, 0); put(B, z); }
+        else { put(B, a); put(B, z); }
+      });
+      put(Math.max(duration, pts[pts.length - 1].t), pts[pts.length - 1].v);
+      levels[tr.name] = pts;
+
+      // the notes, section by section, each over its own stretch and the fades on either side
+      // of it (a melody comes in on its section's start)
+      S.forEach((s, i) => {
+        if (!(L[i] > 0)) return;
+        const melody = tr.type === 'synth' && tr.play.mode === 'notes';
+        let w0 = s.start, w1 = s.end;
+        if (i > 0 && !(L[i - 1] > 0) && !melody) {
+          const n = Math.min(s.into.beats * beat, s.start - S[i - 1].start);
+          if (s.into.kind === 'fade') w0 = s.start - n / 2; else if (s.into.kind === 'swell') w0 = s.start - n;
+        }
+        const nx = S[i + 1];
+        if (nx && !(L[i + 1] > 0)) {
+          const n = Math.min(nx.into.beats * beat, nx.start - s.start);
+          if (nx.into.kind === 'fade') w1 = Math.min(nx.end, nx.start + n / 2);
+          else if (nx.into.kind === 'drop' && dropsOut(tr)) w1 = Math.max(s.start, nx.start - n);
+        }
+        const push = e => events.push(Object.assign({ track: tr.name }, e));
+        const k0 = Math.ceil(w0 / step - E), k1 = Math.ceil(w1 / step - E);
+        const noteLen = t => Math.max(step * 0.5, Math.min((tr.len || 1) * step, w1 - t));
         if (tr.type === 'drum') {
-          if (tr.steps) stepsDo((t, vel) => push({ t, dur: tr.decay, vel }));
-          else push({ t: s.start, dur: tr.decay, vel: lvl });          // a drum with no steps lands on the cut
-          continue;
+          for (let k = k0; k < k1; k++) {
+            const c = tr.steps[mod(k, tr.steps.length)], t = k * step;
+            if (c !== '.' && !inFill(tr.name, t)) push({ t, dur: tr.decay, vel: STEP_VEL[c] });
+          }
+          return;
         }
         const m = tr.play;
         if (m.mode === 'chord') {
-          // held for the bar; a chord that stays for the next bar is held on, not struck again
-          for (let b = 0; s.start + b * bar < s.end - 1e-9;) {
-            const t = s.start + b * bar, c = chordIn(t);
-            let n = 1; while (s.start + (b + n) * bar < s.end - 1e-9 && chordIn(s.start + (b + n) * bar) === c) n++;
-            const dur = Math.min(n * bar, s.end - t);
-            voicing(c, m.oct).forEach(midi => push({ t, dur, vel: lvl, midi }));
-            b += n;
+          // held to the next change of chord; a chord that stays is held on, not struck again
+          const segs = harmony.filter(h => h.end > w0 + E && h.t < w1 - E).map(h => ({ t: Math.max(h.t, w0), end: Math.min(h.end, w1), chord: h.chord }));
+          for (let j = 0; j < segs.length;) {
+            let e = j; while (e + 1 < segs.length && segs[e + 1].chord.name === segs[j].chord.name) e++;
+            voicing(segs[j].chord, m.oct).forEach(midi => push({ t: segs[j].t, dur: segs[e].end - segs[j].t, vel: 1, midi }));
+            j = e + 1;
           }
-        } else if (m.mode === 'root') {
-          stepsDo((t, vel) => push({ t, dur: noteLen(t), vel, midi: voicing(chordIn(t), m.oct)[0] }));
-        } else if (m.mode === 'arp') {
-          let n = 0;
-          stepsDo((t, vel) => {
-            const v = voicing(chordIn(t), m.oct), run = v.concat(v.map(x => x + 12));
-            const seq = m.dir === 'up' ? run : m.dir === 'down' ? run.slice().reverse() : run.concat(run.slice(1, -1).reverse());
-            push({ t, dur: noteLen(t), vel, midi: seq[n++ % seq.length] });
-          });
+        } else if (m.mode === 'root' || m.mode === 'arp') {
+          const n = tr.steps.length, per = [...tr.steps].filter(c => c !== '.').length;
+          for (let k = k0; k < k1; k++) {
+            const c = tr.steps[mod(k, n)];
+            if (c === '.') continue;
+            const t = k * step, v = voicing(chordAt(t + E), m.oct);
+            if (m.mode === 'root') { push({ t, dur: noteLen(t), vel: STEP_VEL[c], midi: v[0] }); continue; }
+            // the arp's place in its run counts every note it has played since the reel's 0
+            const played = Math.floor(k / n) * per + [...tr.steps.slice(0, mod(k, n))].filter(x => x !== '.').length;
+            const run = v.concat(v.map(x => x + 12)), seq = m.dir === 'up' ? run : m.dir === 'down' ? run.slice().reverse() : run.concat(run.slice(1, -1).reverse());
+            push({ t, dur: noteLen(t), vel: STEP_VEL[c], midi: seq[mod(played, seq.length)] });
+          }
         } else if (m.mode === 'notes') {
-          for (let k = 0; s.start + k * step < s.end - 1e-9; k++) {
+          for (let k = 0; s.start + k * step < w1 - E; k++) {
             const w = tr.notes[k % tr.notes.length];
             if (w === '.') continue;
             const t = s.start + k * step;
-            push({ t, dur: noteLen(t), vel: lvl, midi: noteMidi(w) });
+            push({ t, dur: noteLen(t), vel: 1, midi: noteMidi(w) });
           }
-        } else if (m.mode === 'hit') {
-          voicing(chordIn(s.start), m.oct).forEach(midi => push({ t: s.start, dur: Math.min(bar, len), vel: lvl, midi }));
-        } else if (m.mode === 'rise') {
-          const t0 = Math.max(s.start, s.end - m.beats * beat);
-          push({ t: t0, dur: s.end - t0, vel: lvl, rise: true });
+        }
+      });
+    }
+
+    // the hits: a drum with no steps, a synth that plays hit or rise, at the level its section gives it
+    S.forEach((s, i) => {
+      for (const p of s.play) {
+        const tr = byName(p.name);
+        if (flows(tr)) continue;
+        const th = i > 0 && ['build', 'drop'].includes(s.into.kind) ? s.start : s.cut;
+        if (tr.type === 'drum') events.push({ track: tr.name, t: th, dur: tr.decay, vel: p.level });
+        else if (tr.play.mode === 'hit') voicing(chordAt(th + E), tr.play.oct).forEach(midi => events.push({ track: tr.name, t: th, dur: Math.max(step, Math.min(bar, s.end - th)), vel: p.level, midi }));
+        else if (tr.play.mode === 'rise') {
+          const t0 = Math.max(s.start, s.end - tr.play.beats * beat);
+          if (s.end > t0) events.push({ track: tr.name, t: t0, dur: s.end - t0, vel: p.level, rise: true });
         }
       }
-    }
+    });
+    for (const s of S) if (s.sweep) sweeps.push({ t0: s.start, t1: s.end, from: s.sweep[0], to: s.sweep[1] });
+
     // the sound effects: every moment of their kind
     for (const tr of score.tracks.filter(t => t.on)) {
       mom.filter(m => m.kind === tr.on).forEach((m, k) => {
@@ -348,11 +473,13 @@
         if (tr.type === 'drum') { events.push({ track: tr.name, t: m.t, dur: tr.decay, vel: 0.8 + 0.2 * vary, detune: (vary - 0.5) * 120 }); return; }
         const p = tr.play;
         if (p.mode === 'note') events.push({ track: tr.name, t: m.t, dur: tr.env.attack + tr.env.decay, vel: 1, midi: p.midi });
-        else voicing(chordAt(m.t), p.oct).forEach((midi, j) => events.push({ track: tr.name, t: m.t + (p.mode === 'chime' ? j * 0.045 : 0), dur: tr.env.attack + tr.env.decay, vel: p.mode === 'chime' ? 1 - j * 0.12 : 1, midi }));
+        else voicing(chordAt(m.t + E), p.oct).forEach((midi, j) => events.push({ track: tr.name, t: m.t + (p.mode === 'chime' ? j * 0.045 : 0), dur: tr.env.attack + tr.env.decay, vel: p.mode === 'chime' ? 1 - j * 0.12 : 1, midi }));
       });
     }
     events.sort((a, b) => a.t - b.t || (a.track < b.track ? -1 : 1));
-    return { events, sections, sweeps, duration, beat, step, bar };
+    const sections = S.map(s => ({ ref: s.ref, ln: s.ln, scene: s.scene, type: s.type, cut: s.cut, cutEnd: s.cutEnd, start: s.start, end: s.end,
+      chords: s.chords, play: s.play, sweep: s.sweep, into: s.into, startMode: s.startMode, harmony: s.harmony }));
+    return { events, sections, sweeps, levels, transitions, harmony, duration, beat, step, bar };
   }
   const withErrors = errs => { const e = new Error(errs.join('\n')); e.errors = errs; return e; };
 
@@ -418,9 +545,12 @@
   const tc = s => { const m = Math.floor(s / 60 + 1e-9), r = s - m * 60; return `${m}:${r < 10 ? '0' : ''}${r.toFixed(1)}`; };
   function sheet(score, A) {
     const out = [`${score.tempo} BPM · ${score.key.name} · ${score.tracks.length} tracks · ${A.events.length} notes and hits`];
+    const names = s => s.harmony.map(h => h.chord.name).filter((n, i, a) => !i || n !== a[i - 1]).join(' ');
     for (const s of A.sections) {
       const n = A.events.filter(e => e.t >= s.start - 1e-9 && e.t < s.end - 1e-9 && !score.tracks.find(t => t.name === e.track).on).length;
-      out.push(`${tc(s.start)}  ${s.type.toUpperCase().padEnd(8)} ${(s.end - s.start).toFixed(1).padStart(4)} s  ${s.chords.map(c => c.name).join(' ').padEnd(12)} ${s.play.map(p => p.level === 1 ? p.name : `${p.name}:${p.level}`).join(' ')}${s.sweep ? `  (sweep ${s.sweep[0]}→${s.sweep[1]} Hz)` : ''}  · ${n}`);
+      const seam = A.sections[0] === s ? '' : `${s.into.kind}${s.into.kind === 'cut' ? '' : ' ' + s.into.beats}`;
+      const off = Math.abs(s.start - s.cut) > 1e-9 ? `  (the cut ${tc(s.cut)}: the music ${s.start < s.cut ? 'leads' : 'follows'} it by ${Math.abs(s.start - s.cut).toFixed(1)} s, on the bar)` : '';
+      out.push(`${tc(s.start)}  ${s.type.toUpperCase().padEnd(8)} ${(s.end - s.start).toFixed(1).padStart(4)} s  ${seam.padEnd(9)} ${names(s).padEnd(12)} ${s.play.map(p => p.level === 1 ? p.name : `${p.name}:${p.level}`).join(' ')}${s.sweep ? `  (sweep ${s.sweep[0]}→${s.sweep[1]} Hz)` : ''}  · ${n}${off}`);
     }
     const fx = score.tracks.filter(t => t.on);
     if (fx.length) out.push('sound effects: ' + fx.map(t => `${t.name} on ${t.on} ×${A.events.filter(e => e.track === t.name && (t.type === 'drum' || !A.events.some(o => o !== e && o.track === t.name && Math.abs(o.t - e.t) < 0.2 && o.t < e.t))).length}`).join(' · '));

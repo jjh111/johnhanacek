@@ -8,7 +8,8 @@
 // (a kick is a sine falling in pitch, a hat is high-passed noise). Nothing is sampled, and the
 // noise is seeded, so an offline render is the same render every time.
 //
-//   voices → track (level · mute) → pan ─→ music bus → sweep filter ─┐
+//   voices → arrangement level → track (level · mute) → pan ─→ music bus → sweep filter ─┐
+//   (a transition's own notes, a fill: straight to the track)
 //                                        ├→ reverb send               ├→ drive → tape (wow, flutter,
 //                                        └→ delay send                │   age) → comp → master → out
 //   sound effects ─────────────────────────→ sfx bus ────────────────┘   hiss ──┘
@@ -99,10 +100,10 @@
       for (const t of E.score.tracks) {
         let T = E.tracks[t.name];
         if (!T) {
-          T = E.tracks[t.name] = { chan: G(), pan: ctx.createStereoPanner(), sendR: G(0), sendD: G(0), lfo: null, lfoG: null, meter: null, gen: null };
-          T.chan.connect(T.pan); T.pan.connect(t.on ? sfx : music); T.pan.connect(T.sendR); T.pan.connect(T.sendD); T.sendR.connect(revIn); T.sendD.connect(dlyIn);
+          T = E.tracks[t.name] = { chan: G(), arr: G(), pan: ctx.createStereoPanner(), sendR: G(0), sendD: G(0), lfo: null, lfoG: null, meter: null, gen: null, genX: null };
+          T.arr.connect(T.chan); T.chan.connect(T.pan); T.pan.connect(t.on ? sfx : music); T.pan.connect(T.sendR); T.pan.connect(T.sendD); T.sendR.connect(revIn); T.sendD.connect(dlyIn);
           if (opts.meters) { T.meter = ctx.createAnalyser(); T.meter.fftSize = 512; T.pan.connect(T.meter); }
-          T.gen = G(); T.gen.connect(T.chan);
+          T.gen = G(); T.gen.connect(T.arr); T.genX = G(); T.genX.connect(T.chan);
         }
         T.def = t;
         const audible = !E.mutes.has(t.name) && (!E.solos.size || E.solos.has(t.name));
@@ -123,9 +124,12 @@
     // pause can silence everything that is scheduled without touching the tracks
     E.newGeneration = () => {
       for (const T of Object.values(E.tracks)) {
-        const old = T.gen;
-        if (old) { const n = ctx.currentTime; old.gain.cancelScheduledValues(n); old.gain.setValueAtTime(old.gain.value, n); old.gain.linearRampToValueAtTime(0, n + 0.04); setTimeout(() => { try { old.disconnect(); } catch (e) { /* gone */ } }, 200); }
-        T.gen = G(); T.gen.connect(T.chan);
+        for (const old of [T.gen, T.genX]) {
+          if (!old) continue;
+          const n = ctx.currentTime; old.gain.cancelScheduledValues(n); old.gain.setValueAtTime(old.gain.value, n); old.gain.linearRampToValueAtTime(0, n + 0.04);
+          setTimeout(() => { try { old.disconnect(); } catch (e) { /* gone */ } }, 200);
+        }
+        T.gen = G(); T.gen.connect(T.arr); T.genX = G(); T.genX.connect(T.chan);
       }
     };
 
@@ -148,19 +152,45 @@
         f.exponentialRampToValueAtTime(s.to, at(s.t1) - 0.001);
         f.setValueAtTime(sweepOpen, at(s.t1));
       }
+      // each flowing instrument's level across the cut (A.levels: points, linear between, two at
+      // one time a step): its crossfades, swells, builds and drops. The rest stay at 1.
+      for (const [name, T] of Object.entries(E.tracks)) {
+        const g = T.arr.gain, pts = A.levels && A.levels[name];
+        g.cancelScheduledValues(0);
+        if (!pts || !pts.length) { g.setValueAtTime(1, n); continue; }
+        g.setValueAtTime(levelAt(pts, from), n);
+        for (let i = 0; i < pts.length; i++) {
+          const p = pts[i];
+          if (p.t <= from) continue;
+          const q = pts[i - 1];
+          if (q && Math.abs(q.t - p.t) < 1e-9) g.setValueAtTime(p.v, at(p.t));
+          else g.linearRampToValueAtTime(p.v, at(p.t));
+        }
+      }
+    };
+    // an instrument's level at reel time t, from its points
+    const levelAt = (pts, t) => {
+      let v = pts[0].v;
+      for (let i = 1; i < pts.length; i++) {
+        const a = pts[i - 1], b = pts[i];
+        if (t < a.t) break;
+        if (t <= b.t) return b.t - a.t < 1e-9 ? b.v : a.v + (b.v - a.v) * (t - a.t) / (b.t - a.t);
+        v = b.v;
+      }
+      return v;
     };
 
     // one event at ctx time `when` (`cut`: seconds of it already past, for a note resumed mid-way)
     E.play = function (ev, when, cut = 0) {
       const T = E.tracks[ev.track];
       if (!T || !T.gen) return;
-      const t = T.def;
-      if (t.type === 'drum') return drum(t, ev, when, T.gen);
-      if (ev.rise) return rise(t, ev, when, T);
-      return note(t, ev, when, cut, T);
+      const t = T.def, dest = ev.bypass ? T.genX : T.gen;
+      if (t.type === 'drum') return drum(t, ev, when, dest);
+      if (ev.rise) return rise(t, ev, when, dest);
+      return note(t, ev, when, cut, T, dest);
     };
 
-    function note(t, ev, when, cut, T) {
+    function note(t, ev, when, cut, T, dest) {
       const env = t.env, dur = Math.max(0.01, ev.dur - cut), rel = env.release;
       const vg = G(0), peak = ev.vel;
       // the envelope, truncated where the note lets go
@@ -178,7 +208,7 @@
       let head = vg;
       let filt = null;
       if (t.filter) { filt = ctx.createBiquadFilter(); filt.type = t.filter.type; filt.frequency.value = t.filter.freq; filt.Q.value = t.filter.q; filt.connect(vg); head = filt; }
-      vg.connect(T.gen);
+      vg.connect(dest);
       const oscs = [], srcs = [];
       for (const v of t.voices) {
         const lg = G(v.level); lg.connect(head);
@@ -197,7 +227,7 @@
       }
     }
 
-    function rise(t, ev, when, T) {
+    function rise(t, ev, when, dest) {
       const vg = G(0.0001), dur = ev.dur, end = when + dur;
       vg.gain.setValueAtTime(0.0001, when);
       vg.gain.exponentialRampToValueAtTime(ev.vel, end - 0.02);
@@ -208,7 +238,7 @@
         f.frequency.setValueAtTime(t.filter.freq * 0.06, when); f.frequency.exponentialRampToValueAtTime(t.filter.freq, end);
         f.connect(vg); head = f;
       }
-      vg.connect(T.gen);
+      vg.connect(dest);
       for (const v of t.voices) {
         const lg = G(v.level); lg.connect(head);
         let src;
@@ -242,6 +272,7 @@
       else if (k === 'hat' || k === 'openhat') noise('highpass', t.tone, 0.7, v * 0.7, 0.001, D);
       else if (k === 'shaker') noise('bandpass', t.tone, 1.5, v * 0.6, 0.012, D);
       else if (k === 'tick') { noise('highpass', t.tune, 0.9, v * 0.6, 0.001, D); tone('sine', t.tune, t.tune * 0.97, D, v * 0.2, 0.001, D); }
+      else if (k === 'crash') { noise('highpass', t.tone, 0.6, v * 0.55, 0.002, D); noise('bandpass', t.tone * 1.45, 2.2, v * 0.3, 0.004, D * 0.6, 1); noise('highpass', 2400, 0.7, v * 0.4, 0.001, 0.05, 2); }
     }
 
     // a note now, for the rack's audition button

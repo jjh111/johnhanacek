@@ -684,6 +684,68 @@ small matrix scaled to the rack's width, with nothing lined up against the scene
   file, a mark's seek, shut and open and shut across a reload, a 640 px window). timelinetest's
   panel-height check allows the music's one row.
 
+## The music as one piece (2026-10-01)
+
+John: "the music is currently chunked into the sections in a hard way, but it should flow
+between and bridge, redo the music itself focusing on coherence of the whole video, and the
+interface should support that". The arranger started every section's patterns, melody and
+chord list again on its picture cut. Cuts land on beats (the script's 0.5 s grid), not on
+bars, so the groove jumped at each one; notes were cut off at a section's end; instruments
+switched on and off at the cut; each section's chords ignored the last section's.
+
+- **One clock.** Bars (2 s) and steps (0.125 s) count from the reel's 0, and a steps pattern
+  runs on it: every kick in the cut sits on a step its pattern plays (musictest), across every
+  seam. An arp's place in its run counts every note since 0, so its line carries on too.
+- **Where a section's music starts.** On the bar line nearest its cut when that is a beat away
+  or less, else on the cut itself (`start bar` or `start cut` decides for one): title 2 s (its
+  cut 2.5), answer 8 (7.5), results 22 (21.5), feature 34 (34.5), logos 40 (39.5); command,
+  quotes and end on their cuts (17, 45, 59, a bar's half from either bar line). It ends where
+  the next starts. Its chords change on its start and then on every bar line (a first piece
+  shorter than half a bar joins the next bar; `F:2` holds two); its melody starts on its start.
+- **The seams.** A section's `into` says how the music arrives there: `fade [beats]` (2: a
+  crossfade centred on the seam), `swell` (4: in over the beats before it, on a soft rise),
+  `build` (4: a fill on the snare, eighths then sixteenths, louder all the way, standing in for
+  the snare's own pattern, a rise, then a crash and the section's hits on the arrival), `drop`
+  (1: the drums and the bass silent for the beats before it, then a crash) and `cut`. Each
+  instrument that flows (patterns, chords, melodies) has a level across the cut,
+  `A.levels[track] = [{ t, v }]` (linear between points; two at one time a step), made from its
+  sections' levels and the seams; its notes run on into a fade, so a leaving instrument rings
+  out instead of stopping. A hit (a drum with no steps, a synth that plays hit or rise) lands on
+  the picture cut, or after a build or a drop on the arrival. `A.transitions` lists the seams
+  (their kind, beats, window); `A.harmony` the chords with their times.
+- **The synth** routes each note through its track's arrangement gain (`gen → arr → chan`),
+  automated from `A.levels` by `E.automate` (live and offline alike); a seam's own notes
+  (`bypass`) go straight to the channel (`genX`), so a fill sounds even where the snare's level
+  is nothing. A `crash` drum joins the kinds.
+- **The score, written again** (`Assets/sizzle-reel-2.score.txt`): A minor, the loop Am F C G
+  shared out across the sections so each starts where the last left off (open Am; title F C G;
+  answer Am F; art C G; command F:2 G:2 to the chorus; results Am F C G with the hook; feature
+  C G Am; logos F G:2; quotes Am F:2 C E:2, leaning on the dominant; offer Am F G; end Am9). A
+  4-bar hook on the lead in both choruses; a bell plays its first bar as a call over the open,
+  the breakdown and the end, where it resolves on A. Filters open across the intro (400 →
+  1800 → 12000 Hz), lift through the command, hold the breakdown at 2400 Hz and close over the
+  end. Seams: a swell into the title, a drop into the answer (the groove lands on a downbeat
+  with a crash), fades through the verses (a longer one, 4 beats, into the breakdown), builds
+  into the results and the offer, a drop into the end. Measured offline: peak -3.4 dBFS, -15.9
+  LUFS; the only steps over 7 dB are the arrivals (the title's boom, the crashes at 8, 22 and
+  54 s, the drop at 59 s); every other seam moves a few dB.
+- **The timeline shows it.** The music's head blocks sit where each section's music plays, a
+  dashed line where its picture cuts when the two differ; its chords sit on their bars over a
+  faint bar grid; a chip on every seam names how the music crosses it (gold when the score sets
+  it) and a click writes the next way in (fade, swell, build, drop, cut) as the section's
+  `into`; the seam's stretch glows across the lanes. Each flowing instrument's lane carries a
+  ribbon of its level across the cut, the ramps of its fades and builds plain to see; the cells
+  are outlined where an instrument plays (a hit's cell filled as strong as its level); a
+  build's fill, rise and crash are gold marks on their lanes. `check` prints each section's
+  seam and how far its music leads or follows its cut.
+- **Tests:** musictest (the groove's continuity, the starts, chords on the bars and held
+  ones, a build's fill, rise, crash and boom, the fill standing in for the snare, a drop, a
+  fade's levels, the lead ringing on past the chorus, into and start refused when wrong, and
+  the mix: every section sounds, nothing clips, the results louder than the art);
+  musiclanestest (31: the heads where the music plays, chords, cut lines, a chip per seam and
+  a click that writes the next way in and undoes, the ribbons and their ramps, the builds'
+  marks).
+
 ## Later
 
 Scene-specific cues (line staggers, the push); moving cut 1 onto the one player; stems out of

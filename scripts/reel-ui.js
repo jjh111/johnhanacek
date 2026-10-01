@@ -79,6 +79,12 @@
     music: S('<path d="M6 12.2V3.4l7-1.4v8.6"/><circle cx="4.4" cy="12.2" r="1.7" style="fill:currentColor;stroke:none"/><circle cx="11.4" cy="10.6" r="1.7" style="fill:currentColor;stroke:none"/>'),
     chevDown: S('<path d="M4 6l4 4 4-4"/>'),
     chevRight: S('<path d="M6 4l4 4-4 4"/>'),
+    // how the music crosses a seam (the timeline's chips): fade, swell, build, drop, cut
+    xfade: S('<path d="M2 4.5l12 7M2 11.5l12-7"/>'),
+    swell: S('<path d="M2 12.5h12V3.5z" style="fill:currentColor;stroke:none;opacity:0.85"/>'),
+    build: S('<path d="M2 12.5L11 4.5"/><path d="M7.4 4.2H11.4v4"/><path d="M13.8 2.4v11.2" stroke-width="1.2"/>'),
+    drop: S('<path d="M2 5h6.5"/><path d="M8.5 5v6.5"/><path d="M6 9l2.5 2.5L11 9"/><path d="M13.8 2.4v11.2" stroke-width="1.2"/>'),
+    seamCut: S('<path d="M8 2v12" stroke-width="2"/>'),
   };
   const icon = name => ICONS[name] || '';
 

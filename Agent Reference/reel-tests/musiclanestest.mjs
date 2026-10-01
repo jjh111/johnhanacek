@@ -4,7 +4,10 @@
 //   node "Agent Reference/reel-tests/musiclanestest.mjs"
 // Works on temp copies (Assets/zz-mlane-test.script.txt and .score.txt, played through ?script=),
 // removed in finally with the dev server's backups of them.
-//   1. under the fish lanes: a head per section, each over its scene's card (to 2 px)
+//   1. under the fish lanes: a head per section where its music plays (to 2 px), its chords on
+//      the bars, a dashed line where the picture cuts when the music arrives on a bar beside it,
+//      a chip on every seam (how the music crosses it), and, open, a ribbon of each flowing
+//      instrument's level and the builds' own notes (a fill, a rise, a crash) on their lanes
 //   2. open: a lane per instrument with a cell per section, lit where the score plays it, and a lane
 //      per sound effect with a tick per moment; M and S beside every lane
 //   3. one Undo for both files: a scene's edge dragged, then a cell clicked; Ctrl+Z takes back the
@@ -18,6 +21,8 @@
 //      shut after a reload by hand, and opens again
 //   8. a short window: the panel stops where the preview would get too small, its lanes scroll up
 //      and down under a ruler that stays, and the M and S column moves with them
+//  1b. a click on a seam's chip writes the next way in (fade → swell) to the score, and Undo
+//      takes it back
 //   9. no edit reloads the page; no page errors
 import { spawn } from 'node:child_process';
 import net from 'node:net';
@@ -67,17 +72,31 @@ try {
   await page.evaluate(() => REEL_TIMELINE.music.open(true));
   await sleep(300);
 
-  // 1 ── under the fish lanes, a head per section over its scene's card
+  // 1 ── under the fish lanes: the sections where their music plays, chords, cuts, seams, ribbons
   const geo = await page.evaluate(() => {
-    const r = e => e.getBoundingClientRect();
+    const r = e => e.getBoundingClientRect(), lane = document.querySelector('#reel-tl .tl-lane'), x0 = r(lane).left, pxs = lane.clientWidth / REEL_LIVE.duration;
+    const A = REEL_RACK.arrangement;
     const fish = [...document.querySelectorAll('#reel-tl .tl-fl')].reduce((b, e) => Math.max(b, r(e).bottom), 0);
-    const heads = [...document.querySelectorAll('#reel-tl .tl-mh[data-ref]')].map(e => ({ ref: e.dataset.ref, l: r(e).left, rt: r(e).right, top: r(e).top }));
-    const cards = [...document.querySelectorAll('#reel-tl .tl-sc')].map(e => ({ l: r(e).left, rt: r(e).right }));
-    return { fish, heads, cards };
+    const heads = [...document.querySelectorAll('#reel-tl .tl-mh[data-ref]')].map(e => ({ ref: e.dataset.ref, l: r(e).left - x0, rt: r(e).right - x0, top: r(e).top }));
+    const want = A.sections.map(sc => ({ l: sc.start * pxs, rt: sc.end * pxs }));
+    const runs = A.sections.reduce((n, sc) => n + sc.harmony.filter((h, i, all) => !i || h.chord.name !== all[i - 1].chord.name).length, 0);
+    return { fish, heads, want, chords: document.querySelectorAll('#reel-tl .tl-mch').length, runs,
+      cuts: document.querySelectorAll('#reel-tl .tl-mcut').length, offCut: A.sections.filter(sc => Math.abs(sc.start - sc.cut) > 1e-6).length,
+      seams: [...document.querySelectorAll('#reel-tl button.tl-mseam')].map(b => b.dataset.ref + ':' + b.dataset.kind).join(' '),
+      wantSeams: A.transitions.map(t => t.ref + ':' + t.kind).join(' '),
+      ribbons: [...document.querySelectorAll('#reel-tl svg.tl-mrib')].map(s => s.dataset.track).sort().join(), levels: Object.keys(A.levels).sort().join(),
+      ramp: (() => { const p = document.querySelector('#reel-tl svg.tl-mrib[data-track="hat"] path'); return p ? p.getAttribute('d').split('L').length : 0; })(),
+      own: { snare: document.querySelectorAll('#reel-tl .tl-mtk.tl-x[data-track="snare"]').length, riser: document.querySelectorAll('#reel-tl .tl-mtk.tl-x[data-track="riser"]').length, crash: document.querySelectorAll('#reel-tl .tl-mtk.tl-x[data-track="crash"]').length } };
   });
-  const aligned = geo.heads.every((hd, i) => geo.cards[i] && Math.abs(hd.l - geo.cards[i].l) <= 2 && Math.abs(hd.rt - geo.cards[i].rt) <= 2);
+  const aligned = geo.heads.every((hd, i) => geo.want[i] && Math.abs(hd.l - geo.want[i].l) <= 2 && Math.abs(hd.rt - geo.want[i].rt) <= 4);
   check(geo.heads.length === 11 && geo.heads.every(hd => hd.top > geo.fish) && aligned,
-    `under the fish lanes, a head per section (${geo.heads.length}), each over its scene's card to 2 px`, JSON.stringify(geo).slice(0, 400));
+    `under the fish lanes, a head per section (${geo.heads.length}), each where its music plays to 2 px (on the bar near its cut)`, JSON.stringify({ heads: geo.heads.slice(0, 3), want: geo.want.slice(0, 3) }));
+  check(geo.chords === geo.runs && geo.runs > 20 && geo.cuts === geo.offCut && geo.cuts >= 4,
+    `the chords on the bars (${geo.chords}), and a dashed line where the picture cuts for each of the ${geo.cuts} sections whose music arrives on a bar beside it`, JSON.stringify(geo).slice(0, 300));
+  check(geo.seams === geo.wantSeams && geo.seams.split(' ').length === 10, `a chip on every seam, naming how the music crosses it (${geo.seams})`, geo.seams + ' / ' + geo.wantSeams);
+  check(geo.ribbons === geo.levels && geo.ribbons.split(',').length >= 8 && geo.ramp >= 6,
+    `a ribbon of the level of each of the ${geo.ribbons.split(',').length} instruments that flow (the hat's: ${geo.ramp} points, its fades ramps)`, JSON.stringify({ ribbons: geo.ribbons, levels: geo.levels, ramp: geo.ramp }));
+  check(geo.own.snare >= 2 && geo.own.riser >= 2 && geo.own.crash >= 3, `the seams' own notes on their lanes, in gold: a fill on the snare, a rise, a crash (${JSON.stringify(geo.own)})`);
 
   // 2 ── a lane per instrument and per sound effect, with M and S
   const lanes = await page.evaluate(() => {
@@ -96,6 +115,18 @@ try {
     `open: ${lanes.band} instruments × ${lanes.sections} sections, ${lanes.lit} cells lit (the score plays ${lanes.plays}), M and S on all ${lanes.rows} lanes`, JSON.stringify(lanes));
   check(lanes.fx === 5 && lanes.keyTicks === lanes.bursts && lanes.bursts === lanes.enters && lanes.keys > 100 && lanes.enterTicks === lanes.enters,
     `the sound effects' lanes: a span of keys for each question typed (${lanes.bursts}, ${lanes.keys} letters), a tick per Enter (${lanes.enterTicks})`, JSON.stringify(lanes));
+
+  // 1b ── a seam's chip: the next way in, written to the score, and back with Undo
+  {
+    const m00 = score();
+    // the ways in go round: fade, swell, build, drop, cut
+    await page.locator('#reel-tl button.tl-mseam[data-ref="art"]').click();
+    const swelled = await until(() => /SECTION art\n(?:.*\n)*?  into +swell$/m.test(score()));
+    const kind = await page.waitForFunction(() => { const b = document.querySelector('#reel-tl button.tl-mseam[data-ref="art"]'); return b && b.dataset.kind === 'swell' && b; }, null, { timeout: 5000 }).then(() => 'swell', () => 'unchanged');
+    check(swelled && kind === 'swell', `a click on the art's chip (a fade) makes it the next way in, a swell: "into swell" in the score, the chip redrawn (${kind})`);
+    await page.keyboard.press('Control+z');
+    check(await until(() => score() === m00), 'Ctrl+Z takes the seam back: the score as it was');
+  }
 
   // 3 ── one Undo for both files
   const s0 = script(), m0 = score();

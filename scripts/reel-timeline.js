@@ -24,13 +24,16 @@
 // every fish line at its time. Drag a mark to retime its line; click it to edit the line in the
 // Fish panel (scripts/reel-fish.js); click a span to jump there with that fish chosen.
 // Under the fish lanes, the music: the score next to the script, which the synth rack keeps
-// (scripts/reel-rack.js, REEL_RACK), on the same clock. A head names each section's chords;
-// open (the chevron in the icon column), a lane per instrument has a cell per section, lit where
-// it plays and as strong as its level, then a lane per sound effect has a tick at every moment it
-// sounds. Click a cell to play the instrument there or stop it; drag a lit cell up or down for
-// its level (Alt-click: half or full); Shift-click opens the instrument in the synth rack. M and
-// S beside each lane mute and solo it while you listen (not saved). Undo takes back the last
-// edit, the script's or the score's (REEL_LIVE.journal).
+// (scripts/reel-rack.js, REEL_RACK), on the same clock, as one piece. A head shows each section
+// where its music plays (on the bar near its cut; a dashed line where the picture cuts), its
+// chords on the bars, and a chip on every seam saying how the music crosses it (click: the next
+// way in: fade, swell, build, drop, cut). Open (the chevron in the icon column), a lane per
+// instrument carries a ribbon of its level across the cut, its fades and builds as ramps, and a
+// cell per section, outlined where it plays; then a lane per sound effect has a tick at every
+// moment it sounds. Click a cell to play the instrument there or stop it; drag a lit cell up or
+// down for its level (Alt-click: half or full); Shift-click opens the instrument in the synth
+// rack. M and S beside each lane mute and solo it while you listen (not saved). Undo takes back
+// the last edit, the script's or the score's (REEL_LIVE.journal).
 // Every action is a button, and its key an accelerator (named in the button's tooltip):
 //   Timeline (E)          open / shut; the preview shrinks to fit above it (its button is in the HUD)
 //   Undo / Redo (⌘Z, ⇧⌘Z) each is a save, played at once like any edit
@@ -221,6 +224,26 @@
 #reel-tl .tl-mtk { position: absolute; min-width: 3px; height: ${MUS.lane - 5}px; border-radius: 1px; background: var(--c); cursor: pointer; }
 #reel-tl .tl-mtk.tl-mute { opacity: 0.3; }
 #reel-tl .tl-mtk:hover { background: var(--gold); }
+/* the music as one piece: the bars under it, the chords on them, where the picture cuts, a chip on
+   every seam (how the music crosses it), the seam's stretch, each instrument's level as a ribbon */
+#reel-tl .tl-mbars { position: absolute; left: 0; top: ${Y.mus}px; pointer-events: none;
+  background-image: linear-gradient(to right, rgba(var(--cyan-dim-rgb), 0.12) 1px, transparent 1px); background-repeat: repeat-x; background-position: 0 0; }
+#reel-tl .tl-mch { position: absolute; top: ${Y.mus + 1}px; height: ${MUS.head - 2}px; padding: 0 6px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; pointer-events: none; z-index: 1;
+  font: 500 10px/${MUS.head - 2}px var(--font-mono); color: var(--ink-quiet); border-left: 1px solid rgba(var(--cyan-dim-rgb), 0.25); }
+#reel-tl .tl-mch.tl-first { border-left: 0; padding-left: 12px; }   /* clear of the seam's chip (the generic icon-button rule is out-ranked above: 18 px, not 28) */
+#reel-tl .tl-mcut { position: absolute; top: ${Y.mus - 4}px; height: ${MUS.head + 8}px; width: 7px; margin-left: -3px; z-index: 3; cursor: help; }
+#reel-tl .tl-mcut::before { content: ''; position: absolute; left: 3px; top: 0; bottom: 0; border-left: 1px dashed var(--ink-quiet); }
+#reel-tl .tl-lane .tl-mcontent button.tl-mseam { position: absolute; top: ${Y.mus + 1}px; width: 18px; height: 18px; min-width: 0; margin-left: -9px; padding: 0; border-radius: 50%; z-index: 4;
+  display: flex; align-items: center; justify-content: center; background: rgb(var(--surface-rgb)); border: 1px solid rgba(var(--gold-rgb), 0.75); color: var(--gold); }
+#reel-tl .tl-lane .tl-mcontent button.tl-mseam.tl-def { border-color: rgba(var(--cyan-dim-rgb), 0.55); color: var(--ink-quiet); }
+#reel-tl .tl-lane .tl-mcontent button.tl-mseam .ri { width: 11px; height: 11px; }
+#reel-tl .tl-mwin { position: absolute; top: ${Y.musLanes - 2}px; pointer-events: none; border-radius: 3px;
+  background: linear-gradient(to right, transparent, rgba(var(--gold-rgb), 0.12), transparent); }
+#reel-tl .tl-mwin.swell, #reel-tl .tl-mwin.build, #reel-tl .tl-mwin.drop { background: linear-gradient(to right, transparent, rgba(var(--gold-rgb), 0.16)); }
+#reel-tl svg.tl-mrib { position: absolute; left: 0; overflow: visible; pointer-events: none; }
+#reel-tl svg.tl-mrib path { fill: var(--c); fill-opacity: 0.28; stroke: var(--c); stroke-width: 1; stroke-opacity: 0.9; stroke-linejoin: round; }
+#reel-tl svg.tl-mrib.tl-mute path { fill-opacity: 0.07; stroke-opacity: 0.3; }
+#reel-tl .tl-mtk.tl-x { background: var(--gold); }
 #reel-tl .tl-mms { position: absolute; left: 0; width: ${GUT}px; height: ${MUS.lane}px; display: flex; gap: 2px; padding: 1px 2px 1px 5px; }
 #reel-tl .tl-mms::before { content: ''; position: absolute; left: 1px; top: 2px; bottom: 3px; width: 2px; border-radius: 1px; background: var(--c); }
 #reel-tl .tl-mms button { flex: 1; height: ${MUS.lane - 3}px; min-width: 0; padding: 0; border-radius: 3px; font: 600 9px/1 var(--font-mono);
@@ -566,6 +589,7 @@
       if (b != null) r.el.style.width = Math.max(4, x(b) - x(a) - 2).toFixed(1) + 'px';   // a 2 px gutter between blocks
     };
     recs.forEach(place); mrecs.forEach(place);
+    if (!map.drag) drawRibbons();
     placeMoments(map);
     if (!map.drag) { ticks(); if (t0 != null) scrollTo(t0 * pxs); }
     stick();
@@ -800,28 +824,47 @@
   // ── the music: the score's arrangement on the same clock ──────────────
   // What the synth rack holds (REEL_RACK: the score's parse, its arrangement against the cut, the
   // mix) drawn under the fish lanes, and drawn again whenever the rack says it changed (a
-  // reel-score event): the score, the cut (each section starts on its scene's cut), the mix.
-  let musOpen = get(K_MUS, true), MB = [], MX = [], MHEADS = [], MLB = [], musSig = null, curSec = -1;
+  // reel-score event): the score, the cut, the mix. The music is one piece (ReelMusic.arrange):
+  // its sections sit where their music plays (on the bar line nearest the cut, a dashed line
+  // where the picture cuts when the two differ), its chords on the bars, a chip on every seam
+  // saying how the music crosses it (click: the next way), and, open, every instrument's level
+  // as a ribbon across the cut, its crossfades and builds as ramps.
+  let musOpen = get(K_MUS, true), MB = [], MX = [], MHEADS = [], MLB = [], RIBS = [], musSig = null, curSec = -1, BAR = 2, bars = null;
   const lanes = new Map();                           // a track's name → its M and S, and what dims when it is silent
   const RK = () => window.REEL_RACK;
   const musEnd = () => !musOpen || !(MB.length + MX.length) ? Y.mus + MUS.head
     : Y.musLanes + MB.length * MUS.lane + (MX.length ? MUS.sep + MX.length * MUS.lane : 0);
   const laneTop = (k, fx) => Y.musLanes + (fx ? MB.length * MUS.lane + MUS.sep : 0) + k * MUS.lane;
   const rgba = (hex, a) => { const n = parseInt(String(hex).slice(1), 16); return `rgba(${n >> 16 & 255}, ${n >> 8 & 255}, ${n & 255}, ${a})`; };
-  const lvA = lv => (0.14 + 0.26 * Math.min(1, lv)).toFixed(3);   // a lit cell's strength: its level
+  const lvA = lv => (0.14 + 0.26 * Math.min(1, lv)).toFixed(3);   // a lit hit cell's strength: its level
   const ON = { key: 'every letter typed', space: 'every space typed', clear: 'each question cleared', enter: 'each Enter', beat: 'every @ moment', cut: 'every cut', item: 'each work' };
+  // the ways the music crosses a seam, in the order a click on its chip goes through them
+  const SEAMS = ['fade', 'swell', 'build', 'drop', 'cut'];
+  const SEAM_ICON = { fade: 'xfade', swell: 'swell', build: 'build', drop: 'drop', cut: 'seamCut' };
+  const seamWords = tr => {
+    const n = tr.beats, b = `${n} beat${n === 1 ? '' : 's'}`;
+    return { fade: `a crossfade across the seam (${b}): what leaves fades out as what arrives fades in`,
+      swell: `a swell: what arrives comes in over the ${b} before it, on a soft rise`,
+      build: `a build: a fill on the snare and a rise over the ${b} before it, then a crash and its hits on the arrival`,
+      drop: `a drop: the drums and the bass fall silent for the ${b} before it, then a crash on the arrival`,
+      cut: 'a cut: everything changes on it' }[tr.kind];
+  };
+  // runs of a track's sounds closer than 0.13 s, as one mark (a question's typing; a fill's sixteenths)
+  const runsOf = ts => { const out = []; ts.forEach(t => { const r = out[out.length - 1]; if (r && t - r.t1 < 0.13) { r.t1 = t; r.n++; } else out.push({ t0: t, t1: t, n: 1 }); }); return out; };
   function musicSig() {
     const R = RK(), Pm = R && R.parsed, A = R && R.arrangement;
     if (!Pm || !A) return JSON.stringify([musOpen, R ? R.error || 'none' : 'wait']);
-    const fx = new Set(Pm.score.tracks.filter(t => t.on).map(t => t.name));
+    const marks = A.events.filter(e => { const t = Pm.score.tracks.find(x => x.name === e.track); return t && (t.on || e.bypass || !(A.levels && A.levels[e.track])); });
     return JSON.stringify([musOpen, Pm.score.tracks.map(t => t.name + ':' + (t.on || '')),
-      A.sections.map(sc => [sc.ref, sc.start, sc.end, sc.play.map(p => p.name + ':' + p.level).join(' '), (sc.chords || []).map(c => c.name).join(' ')]),
-      A.events.filter(e => fx.has(e.track)).map(e => e.track + e.t.toFixed(3)).join(' ')]);
+      A.sections.map(sc => [sc.ref, sc.cut, sc.start, sc.end, sc.play.map(p => p.name + ':' + p.level).join(' '), sc.harmony.map(x => x.chord.name + '@' + x.t).join(' ')]),
+      (A.transitions || []).map(tr => [tr.ref, tr.kind, tr.beats, tr.set, tr.t0, tr.t1]), A.levels || {},
+      marks.map(e => e.track + e.t.toFixed(3) + (e.rise ? 'r' + e.dur.toFixed(2) : '')).join(' ')]);
   }
   function populateMusic() {
     const R = RK(), Pm = R && R.parsed, A = R && R.arrangement;
-    mcontent.textContent = ''; mgut.textContent = ''; mrecs = []; MHEADS = []; MLB = []; lanes.clear(); curSec = -1;
+    mcontent.textContent = ''; mgut.textContent = ''; mrecs = []; MHEADS = []; MLB = []; RIBS = []; lanes.clear(); curSec = -1;
     h('div', 'msep', mcontent);
+    bars = h('div', 'mbars', mcontent);                // the bars, faintly, under the whole music (sized in layout)
     const tog = h('button', 'mtog', mgut); tog.type = 'button'; tog.style.top = Y.mus + 'px';
     tog.innerHTML = window.REEL_UI ? REEL_UI.icon(musOpen ? 'chevDown' : 'chevRight') + REEL_UI.icon('music') : (musOpen ? '▾♪' : '▸♪');
     tog.title = musOpen ? 'the music: shut it to its sections' : 'the music: open it to every instrument and sound effect';
@@ -834,22 +877,56 @@
       return;
     }
     const tracks = Pm.score.tracks;
-    MB = tracks.filter(t => !t.on); MX = tracks.filter(t => t.on);
-    // the head: a block per section, its chords and how many instruments play in it
+    MB = tracks.filter(t => !t.on); MX = tracks.filter(t => t.on); BAR = A.bar || 2;
+    const flowing = name => !!(A.levels && A.levels[name]);
+    // the head: a block per section where its music plays, its chords on the bars
     A.sections.forEach(sc => {
-      const chords = (sc.chords || []).map(c => c.name).join(' ');
-      const el = h('div', 'mh', mcontent, chords || '·'); el.dataset.ref = sc.ref;
-      h('span', 'mn', el, '♪' + sc.play.length);
-      el.title = `${sc.type} · ${fmt(sc.start)} → ${fmt(sc.end)} · ${chords}\n${sc.play.length} playing: ${sc.play.map(p => p.name + (p.level !== 1 ? ' ' + p.level : '')).join(', ') || 'nothing'}\nclick to play from here`;
+      const el = h('div', 'mh', mcontent); el.dataset.ref = sc.ref;
+      const chords = sc.harmony.map(x => x.chord.name).filter((n, i, all) => !i || n !== all[i - 1]).join(' ');
+      const off = Math.abs(sc.start - sc.cut) > 1e-6;
+      el.title = `${sc.type} · its music ${fmt(sc.start)} → ${fmt(sc.end)}${off ? `, on the bar ${(Math.abs(sc.start - sc.cut)).toFixed(1)} s ${sc.start < sc.cut ? 'before' : 'after'} the picture cuts (${fmt(sc.cut)})` : ''} · ${chords}`
+        + `\n${sc.play.length} playing: ${sc.play.map(p => p.name + (p.level !== 1 ? ' ' + p.level : '')).join(', ') || 'nothing'}\nclick to play from here`;
       mrecs.push({ el, span: m => [m(sc.start), m(sc.end)] });
       MHEADS.push({ el, sc });
       el.addEventListener('pointerdown', e => { if (e.button !== 0) return; drag(e, el, () => {}, moved => { if (!moved) L.seek(sc.start); }); });
+      // its chords, each over the bars it holds
+      const runs = [];
+      sc.harmony.forEach(x => { const r = runs[runs.length - 1]; if (r && r.name === x.chord.name) r.end = x.end; else runs.push({ name: x.chord.name, t: x.t, end: x.end }); });
+      runs.forEach((x, i) => { const c = h('div', 'mch' + (i ? '' : ' first'), mcontent, x.name); mrecs.push({ el: c, span: m => [m(x.t), m(x.end)] }); });
+      if (off) {
+        const k = h('div', 'mcut', mcontent);
+        k.title = `the picture cuts to ${sc.type} here (${fmt(sc.cut)}); its music arrives on the bar ${sc.start < sc.cut ? 'just before' : 'just after'} it (${fmt(sc.start)}). "start cut" in its SECTION puts the music on the cut`;
+        mrecs.push({ el: k, span: m => [m(sc.cut)] });
+      }
+    });
+    // the seams: how the music crosses each one (click for the next way), and, open, its stretch
+    (A.transitions || []).forEach(tr => {
+      const b = h('button', 'mseam' + (tr.set ? '' : ' def'), mcontent); b.type = 'button'; b.dataset.ref = tr.ref; b.dataset.kind = tr.kind;
+      b.innerHTML = window.REEL_UI ? REEL_UI.icon(SEAM_ICON[tr.kind]) : tr.kind[0];
+      const nx = SEAMS[(SEAMS.indexOf(tr.kind) + 1) % SEAMS.length];
+      b.title = `into ${tr.ref}: ${seamWords(tr)}${tr.set ? '' : ' (the default)'}\nclick for a ${nx} instead`;
+      b.setAttribute('aria-label', `how the music arrives at ${tr.ref}: ${tr.kind}`);
+      mrecs.push({ el: b, span: m => [m(tr.t)] });
+      b.addEventListener('pointerdown', e => e.stopPropagation());
+      b.addEventListener('click', e => { e.stopPropagation(); scoreEdit(src => window.ReelMusic.setLine(src, 'SECTION', tr.ref, 'into', nx)); });
+      if (musOpen && tr.t1 > tr.t0 && (MB.length + MX.length)) {
+        const w = h('div', 'mwin ' + tr.kind, mcontent);
+        w.style.height = (musEnd() - Y.musLanes + 2) + 'px';
+        mrecs.push({ el: w, span: m => [m(tr.t0), m(tr.t1)] });
+      }
     });
     if (!musOpen) return;
     MB.forEach((t, k) => {
-      const top = laneTop(k, false), c = R.colour(t.name);
-      mixRow(t, top, c);
-      A.sections.forEach(sc => cell(t, sc, top, c));
+      const top = laneTop(k, false), c = R.colour(t.name), ln = mixRow(t, top, c);
+      if (flowing(t.name)) ribbon(t.name, A.levels[t.name], top, c, ln);   // its level across the cut
+      A.sections.forEach(sc => cell(t, sc, top, c, !flowing(t.name)));
+      // what it plays outside its level: a hit, a rise, a seam's own notes (a fill, a crash)
+      const own = A.events.filter(e => e.track === t.name && (e.bypass || !flowing(t.name)));
+      own.filter(e => e.rise).forEach(e => mark(t, top, c, ln, e.t, e.t + e.dur, e.bypass, `${t.name} rises ${fmt(e.t)} → ${fmt(e.t + e.dur)}${e.bypass ? ', into a seam' : ''}`));
+      runsOf(own.filter(e => !e.rise).map(e => e.t)).forEach(r => {
+        const x_ = own.find(e => Math.abs(e.t - r.t0) < 1e-9);
+        mark(t, top, c, ln, r.t0, r.t1 > r.t0 ? r.t1 : null, x_ && x_.bypass, `${t.name}${r.n > 1 ? ` ×${r.n}, ${fmt(r.t0)} → ${fmt(r.t1)}` : ' at ' + fmt(r.t0)}${x_ && x_.bypass ? ': the seam\'s own' : ''}`);
+      });
     });
     MX.forEach((t, k) => {
       const top = laneTop(k, true), c = R.colour(t.name), ln = mixRow(t, top, c);
@@ -882,14 +959,44 @@
     const ln = { m, so, els: [] }; lanes.set(t.name, ln);
     return ln;
   }
-  // an instrument in a section: lit where it plays, as strong as its level
-  function cell(t, sc, top, c) {
+  // an instrument's level across the cut: an area under its line, drawn again on every zoom
+  function ribbon(name, pts, top, c, ln) {
+    const NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg'), path = document.createElementNS(NS, 'path');
+    svg.setAttribute('class', 'tl-mrib'); svg.setAttribute('aria-hidden', 'true'); svg.dataset.track = name;
+    svg.style.top = top + 'px'; svg.style.height = MUS.lane + 'px'; svg.style.setProperty('--c', c);
+    svg.appendChild(path); mcontent.appendChild(svg);
+    RIBS.push({ svg, path, pts }); ln.els.push(svg);
+  }
+  function drawRibbons() {
+    const H = MUS.lane - 3, base = MUS.lane - 1, y = v => (base - Math.min(1.25, v) / 1.25 * H).toFixed(1);
+    RIBS.forEach(r => {
+      r.svg.setAttribute('width', W); r.svg.style.width = W + 'px';
+      let d = `M0 ${base}`;
+      r.pts.forEach(p => { d += ` L${x(p.t).toFixed(1)} ${y(p.v)}`; });
+      r.path.setAttribute('d', d + ` L${x(r.pts[r.pts.length - 1].t).toFixed(1)} ${base} Z`);
+    });
+    if (bars) {
+      bars.style.width = W + 'px'; bars.style.height = (musEnd() - Y.mus) + 'px';
+      bars.style.backgroundSize = `${(BAR * pxs).toFixed(3)}px 100%`;
+    }
+  }
+  // a hit, a rise, or a seam's own notes, on its instrument's lane
+  function mark(t, top, c, ln, t0, t1, own, words) {
+    const tk = h('div', 'mtk' + (own ? ' x' : ''), mcontent); tk.style.top = (top + 2) + 'px'; tk.style.setProperty('--c', c);
+    tk.dataset.track = t.name; tk.dataset.t = +t0.toFixed(3); if (own) tk.dataset.own = '1';
+    tk.title = words + '\nclick to play from just before it';
+    mrecs.push({ el: tk, span: m => t1 != null ? [m(t0), m(t1)] : [m(t0)] }); ln.els.push(tk);
+    tk.addEventListener('pointerdown', e => { if (e.button !== 0) return; drag(e, tk, () => {}, moved => { if (!moved) L.seek(Math.max(0, t0 - 0.4)); }); });
+  }
+  // an instrument in a section: outlined where it plays (its level is the ribbon behind it; a hit
+  // that has no ribbon is filled as strong as its level)
+  function cell(t, sc, top, c, hit) {
     const p = sc.play.find(x => x.name === t.name), el = h('div', 'mc' + (p ? ' on' : ''), mcontent);
     const label = lv => t.name + (lv !== 1 ? ' ' + lv : '');
     el.textContent = p ? label(p.level) : t.name; el.dataset.track = t.name; el.dataset.ref = sc.ref;
     el.style.top = (top + 1) + 'px'; el.style.setProperty('--c', c);
-    if (p) el.style.background = rgba(c, lvA(p.level));
-    el.title = p ? `${t.name} plays in ${sc.type}${p.level !== 1 ? ' at ' + p.level : ''}\nclick: stop it here · drag up or down: its level · Alt-click: half or full · Shift-click: open it in the synth rack`
+    if (p && hit) el.style.background = rgba(c, lvA(p.level));
+    el.title = p ? `${t.name} plays in ${sc.type}${p.level !== 1 ? ' at ' + p.level : ''}${hit ? '' : ' (its level is the ribbon behind: it fades across the seams)'}\nclick: stop it here · drag up or down: its level · Alt-click: half or full · Shift-click: open it in the synth rack`
       : `${t.name} is silent in ${sc.type}\nclick: play it here · Shift-click: open it in the synth rack`;
     mrecs.push({ el, span: m => [m(sc.start), m(sc.end)] }); lanes.get(t.name).els.push(el);
     el.addEventListener('pointerdown', e => {
@@ -903,7 +1010,7 @@
         if (!moved && Math.abs(dy) < 4) return;
         moved = true; el.classList.add('tl-lv');
         lv = Math.max(0.05, Math.min(1.5, Math.round((p.level + dy / 100) * 20) / 20));
-        el.textContent = label(lv); el.style.background = rgba(c, lvA(lv));
+        el.textContent = label(lv); if (hit) el.style.background = rgba(c, lvA(lv));
         readout.style.top = Math.max(0, top - 24) + 'px';           // over the lane being set
         show1(sc.start, `${t.name} in ${sc.type}: level ${p.level} → ${lv}`);
       };

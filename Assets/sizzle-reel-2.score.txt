@@ -4,23 +4,38 @@
 # its name. Every sound is made here, by synths and drum voices built from numbers, on
 # the script's own 120 BPM grid. There are no samples.
 #
+# ONE PIECE The music is one piece across the whole cut, on one clock: bars (four beats,
+#           2 s) and steps (sixteen a bar) count from the reel's first frame, and a steps
+#           pattern runs on that clock, so the groove never starts again at a cut. Each
+#           SECTION starts on the bar line nearest its scene's cut when that is within a
+#           beat of it, else on the cut itself, and the seam between two sections is
+#           crossed the way the later one's "into" says. A note rings on past its section.
+#
+#   Am F C G  the arc: a call on a bell over Am (the open), a swell into the title, the
+#             groove arriving on a downbeat (the answer), a lift (the command), a build into
+#             the chorus and its hook on the lead (the results), a second verse (the feature,
+#             the logos), a breakdown that leans on E (the quotes), a build into the last
+#             chorus (the offer), and a drop into the end, where the bell's call resolves on A.
+#
 # SYNTH     A voice-built instrument (the patch vocabulary of like-every-cloud's
 #           SynthVoice): "voice <wave> <cents> <level>" per oscillator (sine, triangle,
 #           square, saw, noise; 1200 cents is an octave), then "filter <type> <Hz> <Q>",
 #           "env <attack> <decay> <sustain> <release>" (seconds, sustain 0-1) and
 #           "lfo <gain|filter|pitch> <Hz> <depth>". "play" says what it plays:
-#             chord <octave>        the section's chord, held for the bar
+#             chord <octave>        the chord, held until it changes
 #             root <octave>         the chord's root on the steps
 #             arp <octave> <up|down|updown>   the chord's notes in turn on the steps
-#             notes                 the "notes" line, one per step (. rests)
-#             hit <octave>          the chord once, on the section's downbeat
-#             rise <beats>          a sweep up into the next section
+#             notes                 the "notes" line, one per step (. rests), from the
+#                                   section's start: a melody starts with its section
+#             hit <octave>          the chord once, on the section's cut
+#             rise <beats>          a sweep up into the end of the section
 #             chime <octave>        the chord rolled upwards (a sound effect)
 #             note <name>           one note (a sound effect)
-# DRUM      A drum voice: "kind" kick, snare, clap, hat, openhat, shaker, tick or boom;
-#           "tune" (Hz), "decay" (s), "tone" (Hz).
+# DRUM      A drum voice: "kind" kick, snare, clap, hat, openhat, shaker, tick, boom or
+#           crash; "tune" (Hz), "decay" (s), "tone" (Hz). A drum with no steps is a hit: it
+#           lands on its section's cut (after a build or a drop, on the arrival).
 # STEPS     Sixteen to a bar, a sixteenth is 0.125 s: X loud, x, o soft, . rest. A pattern
-#           loops, and starts again at every cut, so each section's downbeat is its cut.
+#           loops on the reel's own bars.
 # MIX       "level" 0-1, "pan" -1 left to 1 right, "send <reverb> <delay>" 0-1 each.
 # SFX       Sound effects the edit plays itself: "on key|space|enter|clear|cut|item|beat"
 #           plays a SYNTH or DRUM voice at every such moment of the reel (each key of a
@@ -28,14 +43,25 @@
 # FX        reverb (size s, decay, tone Hz, return), delay (time in beats, feedback, tone
 #           Hz, return), tape (wow, flutter, age Hz, hiss), drive (amount), comp (threshold
 #           dB, ratio, attack, release), master (level, fade in s, fade out s).
-# SECTION   One per scene of the script, by its kind or its number: "play" the tracks it
-#           plays (name:0.5 plays one at half level), "chords" one a bar from the cut
-#           (else the CHORDS line), "sweep <from Hz> <to Hz>" filters the music across it.
+# SECTION   One per scene of the script, by its kind or its number:
+#             play      the tracks it plays (name:0.5 plays one at half level); a level is
+#                       where the instrument settles in this section
+#             chords    from the section's start, one a bar (Am:2 holds two); else CHORDS
+#             into      how the music arrives here from the section before:
+#                         fade [beats]   a crossfade across the seam (2 beats)
+#                         swell [beats]  in over the beats before it (4)
+#                         build [beats]  a fill on the snare and a rise into it, a crash and
+#                                        its hits on it (4)
+#                         drop [beats]   the drums and the bass go silent for the beats
+#                                        before it, then a crash (1)
+#                         cut            everything changes on it
+#             start     auto (the default), bar (the nearest bar line) or cut (the cut)
+#             sweep     <from Hz> <to Hz> filters the music across it
 #
-# PLAY      node scripts/reel-dev.mjs, open the page it prints, press M: the synth rack.
-#           Every knob, step and cell there edits a line of this file. Saving this file
-#           from any editor updates the rack without a reload.
-# CHECK     node scripts/reel-music.js check      the arrangement: sections, notes, mistakes
+# PLAY      node scripts/reel-dev.mjs, open the page it prints, press E (the timeline: the
+#           music under the scenes) or M (the synth rack). Every knob, step and cell there
+#           edits a line of this file. Saving this file from any editor plays it at once.
+# CHECK     node scripts/reel-music.js check      the arrangement: sections, seams, notes
 # FILM      node scripts/render-sizzle-reel.mjs --cut=2 renders it into the MP4.
 
 TEMPO  120
@@ -95,11 +121,23 @@ SYNTH lead
   env      0.03 0.25 0.6 0.35
   lfo      pitch 5.5 14
   play     notes
-  notes    E5 . . . C5 . D5 . E5 . . . G5 . . . | A5 . . . G5 . E5 . D5 . . . C5 . D5 .
+  notes    E5 . . . . . D5 . C5 . . . . . A4 . | C5 . . . . . A4 . C5 . . . F5 . E5 . | E5 . . . . . D5 . E5 . . . G5 . . . | D5 . . . . . B4 . D5 . . . . . . .
   len      3
   level    0.2
   pan      -0.1
   send     0.35 0.3
+
+SYNTH bell
+  voice    sine 0 0.5
+  voice    sine 2400 0.12
+  voice    triangle 1200 0.1
+  env      0.004 0.6 0 1.1
+  play     notes
+  notes    E6 . . . . . D6 . C6 . . . . . A5 . | . . . . . . . . . . . . . . . . | . . . . . . . . . . . . . . . . | . . . . . . . . . . . . . . . .
+  len      4
+  level    0.16
+  pan      0.15
+  send     0.6 0.45
 
 SYNTH riser
   voice    noise 0 0.7
@@ -139,6 +177,14 @@ DRUM hat
   steps    ..x...x...x...xo
   level    0.36
   pan      0.2
+
+DRUM crash
+  kind     crash
+  tone     6500
+  decay    1.6
+  level    0.26
+  pan      0.1
+  send     0.4 0
 
 DRUM shaker
   kind     shaker
@@ -221,50 +267,63 @@ FX master
   level    1
   fade     0 1.8
 
-# ── the arrangement: one section per scene ───────────────────────────────
+# ── the arrangement: one section per scene, one piece across them ────
 
 SECTION open
-  play     glass pad:0.6 riser
+  play     pad:0.7 bell glass:0.4
   chords   Am
-  sweep    500 2600
+  sweep    400 1800
 
 SECTION title
-  play     boom pad glass:0.6 arp:0.5
-  chords   Am F
+  play     boom pad:0.85 glass:0.7 arp:0.45
+  chords   F C G
+  into     swell
+  sweep    1800 12000
 
 SECTION answer
-  play     kick hat bass pad arp
-  chords   Am F C
+  play     kick hat:0.8 bass pad arp
+  chords   Am F
+  into     drop
 
 SECTION art
   play     pad glass bass:0.7 hat:0.6
-  chords   F C G
+  chords   C G
+  into     fade
 
 SECTION command
-  play     kick hat bass arp pad riser
-  chords   Am G
-  sweep    700 6000
+  play     kick hat bass arp pad snare:0.5
+  chords   F:2 G:2
+  into     fade
+  sweep    900 8000
 
 SECTION results
-  play     boom kick snare hat shaker bass arp pad
+  play     boom kick snare hat shaker bass arp pad lead
+  chords   Am F C G
+  into     build
 
 SECTION feature
-  play     kick snare hat bass pad lead arp:0.6
-  chords   F G Am
+  play     kick snare hat bass pad arp:0.6 glass:0.5
+  chords   C G Am
+  into     fade
 
 SECTION logos
-  play     pad bass:0.6 hat glass kick
-  chords   C G
-  sweep    900 2200
+  play     kick hat bass pad glass:0.7
+  chords   F G:2
+  into     fade
 
 SECTION quotes
-  play     pad glass kick:0.5 hat:0.5 bass:0.6
-  chords   F C Am G F
+  play     pad bell glass:0.6 bass:0.5 kick:0.4
+  chords   Am F:2 C E:2
+  into     fade 4
+  sweep    2400 2400
 
 SECTION offer
-  play     boom kick snare hat shaker bass arp lead pad
-  chords   Am F C
+  play     boom kick snare hat shaker bass arp pad lead
+  chords   Am F G
+  into     build
 
 SECTION end
-  play     boom pad glass
+  play     boom pad bell glass:0.5
   chords   Am9
+  into     drop
+  sweep    12000 1400
