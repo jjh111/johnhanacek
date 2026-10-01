@@ -400,6 +400,7 @@
     let res;
     try { res = await L.save(next); } catch (e) { res = { ok: false, errors: [e.message] }; }
     if (!res || !res.applied) { put(K_UNDO, u0); put(K_REDO, r0); put(K_SEL, s0); say((res && res.errors) || ['the save failed']); drawScene(cur); return; }
+    if (L.journal) L.journal.note('script');          // one history with the score's edits (the timeline's Undo)
     if (!res.ok) say(res.errors || ['not saved']);   // played, but kept only as a draft here (it says why)
   }
   function drawTake() {

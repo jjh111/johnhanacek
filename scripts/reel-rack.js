@@ -20,6 +20,12 @@
 // Meters are dim and move only while the rack is open (moving bright pixels on a dark field
 // read as flicker on mini-LED screens; like-every-cloud's Sound Lab learned that).
 //
+// The timeline (scripts/reel-timeline.js) draws the same score under its scenes. The rack tells it
+// of every change of the score, the mix and the sound (a `reel-score` event on window), and lends
+// it mute, solo, mix, focus, colour, canUndo/canRedo through window.REEL_RACK. Its edits, and the
+// timeline's edits of the score, are noted in the one history (REEL_LIVE.journal), so the
+// timeline's Undo takes back a score edit too.
+//
 // A classic script the rig injects in live mode, after reel-music.js and reel-synth.js.
 (function () {
   'use strict';
@@ -127,7 +133,11 @@
     const a = RM.arrange(p.score, SCENES, MOMENTS);
     src = text; P = p; A = a; err = '';
     if (player) player.set(P, A);
+    tell('score');
   }
+  // the timeline draws the score under the scenes (scripts/reel-timeline.js): it hears of every
+  // change of the score, the mix (mute, solo) and the sound on this event
+  const tell = why => dispatchEvent(new CustomEvent('reel-score', { detail: { why } }));
 
   // ── sound ─────────────────────────────────────────────────────────────
   let soundOn = get(K_SOUND, true, localStorage);
@@ -148,6 +158,31 @@
     ensureAudio();
     if (ctx) { if (on) ctx.resume().catch(() => {}); else { player.stop(); ctx.suspend().catch(() => {}); } }
     chip(); if (!root.hidden) render();
+    tell('sound');
+  }
+  // Mute and solo, for listening: heard at once, never saved. on: true, false, or (left out) the
+  // other way round. The rack's modules and the timeline's lanes show it.
+  function mute(name, on) {
+    ensureAudio(); if (!player) return;
+    player.E.setMute(name, on == null ? !player.E.mutes.has(name) : !!on);
+    if (!root.hidden) render(); tell('mix');
+  }
+  function solo(name, on) {
+    ensureAudio(); if (!player) return;
+    player.E.setSolo(name, on == null ? !player.E.solos.has(name) : !!on);
+    if (!root.hidden) render(); tell('mix');
+  }
+  const mixOf = name => {
+    const E = player && player.E, m = !!(E && E.mutes.has(name)), so = !!(E && E.solos.has(name));
+    return { muted: m, soloed: so, silent: m || !!(E && E.solos.size && !so) };
+  };
+  // open the rack at one instrument's module (the timeline's Shift-click on a lane)
+  function focus(name) {
+    open(true);
+    const m = [...root.querySelectorAll('.rk-mod')].find(x => { const b = x.querySelector('.rk-head b'); return b && b.textContent === name; });
+    if (!m) return;
+    m.scrollIntoView({ block: 'center' });
+    m.animate([{ boxShadow: '0 0 0 3px rgba(212,175,55,0.6)' }, { boxShadow: '0 0 0 0 rgba(212,175,55,0)' }], { duration: 900 });
   }
   // the HUD's chip: sound on, off, or waiting for a click
   // Two buttons in the HUD's tools (REEL_LIVE.addTool): the sound, and the rack itself (M)
@@ -184,9 +219,9 @@
   function change(text, { save = true, record = true, rerender = true } = {}) {
     const before = src;
     try { read(text); } catch (e) { status((e.errors || [e.message]).join(' · '), true); return false; }
-    if (record && before !== text) { undoS.push(before); if (undoS.length > 40) undoS.shift(); redoS.length = 0; put(K_UNDO, undoS); put(K_REDO, redoS); }
+    if (record && before !== text) { undoS.push(before); if (undoS.length > 40) undoS.shift(); redoS.length = 0; put(K_UNDO, undoS); put(K_REDO, redoS); if (L.journal) L.journal.note('score'); }
     if (save) queueSave();
-    if (rerender) render();
+    if (rerender && !root.hidden) render();          // shut, it draws itself when it opens
     return true;
   }
   function queueSave() { dirtyText = src; clearTimeout(saveTimer); saveTimer = setTimeout(flush, 350); status('…'); }
@@ -212,11 +247,13 @@
   }
   function undo(back) {
     const from = back ? undoS : redoS, to = back ? redoS : undoS;
-    if (!from.length) return;
+    if (!from.length) return false;
     to.push(src);
     const text = from.pop();
     put(K_UNDO, undoS); put(K_REDO, redoS);
+    if (L.journal) L.journal.step('score', back);
     change(text, { record: false });
+    return true;
   }
   let statusText = '', statusBad = false;
   function status(t, bad) { statusText = t; statusBad = !!bad; const el = root.querySelector('.rk-status'); if (el) { el.textContent = t; el.classList.toggle('bad', !!bad); } }
@@ -286,7 +323,7 @@
   let dragBase = null;
   const gestureStart = () => { dragBase = src; };
   function undoFix() {
-    if (dragBase != null && dragBase !== src) { undoS.push(dragBase); if (undoS.length > 40) undoS.shift(); redoS.length = 0; put(K_UNDO, undoS); put(K_REDO, redoS); }
+    if (dragBase != null && dragBase !== src) { undoS.push(dragBase); if (undoS.length > 40) undoS.shift(); redoS.length = 0; put(K_UNDO, undoS); put(K_REDO, redoS); if (L.journal) L.journal.note('score'); }
     dragBase = null;
   }
 
@@ -400,8 +437,8 @@
     h.appendChild(el('span', 'rk-grow'));
     const mt = el('div', 'rk-meter', '<i></i>'); meters.push([t.name, mt.firstChild]); h.appendChild(mt);
     h.appendChild(btn('▶', 'hear it now', () => { ensureAudio(); if (E) E.audition(t.name, A); }, 'sm'));
-    h.appendChild(btn('M', 'mute (not saved)', () => { ensureAudio(); if (player) { player.E.setMute(t.name, !player.E.mutes.has(t.name)); render(); } }, 'sm' + (E && E.mutes.has(t.name) ? ' on' : '')));
-    h.appendChild(btn('S', 'solo (not saved)', () => { ensureAudio(); if (player) { player.E.setSolo(t.name, !player.E.solos.has(t.name)); render(); } }, 'sm' + (E && E.solos.has(t.name) ? ' on' : '')));
+    h.appendChild(btn('M', 'mute (not saved)', () => mute(t.name), 'sm' + (E && E.mutes.has(t.name) ? ' on' : '')));
+    h.appendChild(btn('S', 'solo (not saved)', () => solo(t.name), 'sm' + (E && E.solos.has(t.name) ? ' on' : '')));
     m.appendChild(h);
 
     const K = (label, spec, value, key, arg, index) => argKnob(label, spec, value, [kind, t.name, key, arg, index]);
@@ -602,6 +639,12 @@
       try { read(src); } catch (e) { status((e.errors || [e.message]).join(' · '), true); return; }
       if (!root.hidden) render();
     });
-    window.REEL_RACK = { open, get src() { return src; }, get parsed() { return P; }, get arrangement() { return A; }, get engine() { return player && player.E; }, get ctx() { return ctx; }, change, undo: () => undo(true), redo: () => undo(false), setSound };
+    window.REEL_RACK = { open, get src() { return src; }, get parsed() { return P; }, get arrangement() { return A; }, get engine() { return player && player.E; }, get ctx() { return ctx; }, change, undo: () => undo(true), redo: () => undo(false), setSound,
+      // for the timeline's music lanes (scripts/reel-timeline.js)
+      mute, solo, mix: mixOf, focus, get name() { return NAME; }, get error() { return err; },
+      get canUndo() { return undoS.length > 0; }, get canRedo() { return redoS.length > 0; },
+      get sounding() { return !!(ctx && ctx.state === 'running' && soundOn); },
+      colour: name => { const i = P ? P.score.tracks.findIndex(t => t.name === name) : -1; return PALETTE[(i < 0 ? 0 : i) % PALETTE.length]; } };
+    tell('ready');
   })();
 })();

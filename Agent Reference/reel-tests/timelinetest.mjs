@@ -160,7 +160,8 @@ try {
   check(gut.icons.length === 7 && gut.icons.every(x => /:1:/.test(x)) && gut.w <= 40 && gut.cardLeft - gut.w < 4,
     `the tracks are icons in a ${Math.round(gut.w)} px column, the cards starting right after it (${gut.icons.map(x => x.split(':')[2]).join(', ')})`, JSON.stringify(gut));
   check(gut.works.join(',') === 'Nanome,BadVR,OpenProse', `the results' works are named by their eyebrows (${gut.works.join(', ')})`, JSON.stringify(gut.works));
-  check(gut.h <= 260, `the panel is ${Math.round(gut.h)} px tall (no taller than it needs)`, gut.h);
+  // (this temp script has no score beside it: the music is one row, saying so)
+  check(gut.h <= 280, `the panel is ${Math.round(gut.h)} px tall (no taller than it needs, the music one row)`, gut.h);
   await page.evaluate(() => { REEL_TIMELINE.zoom(5); REEL_LIVE.seek(30); REEL_LIVE.setPlaying(true); });
   await sleep(300);
   const vb = await page.locator('#reel-tl .tl-view').boundingBox();

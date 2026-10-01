@@ -33,7 +33,7 @@ truth; everything else reads it, edits it one line at a time, or films it.
 - **`window.REEL_LIVE`** (live mode only), for the timeline and anything else that drives
   the preview:
   `{ file, src, parsed, draft, hosted, dev, host, version, scenes, duration, now(), seek(t),
-  isPlaying(), setPlaying(bool), onFrame(fn(t, wallMs)), save(text) → Promise<{ok, via: 'file'|'host'|'draft',
+  isPlaying(), setPlaying(bool), onFrame(fn(t, wallMs)), journal, save(text) → Promise<{ok, via: 'file'|'host'|'draft',
   applied, restocked, errors?}>, apply(text, from?), onChange(fn), settled(), discardDraft(),
   download(text?), debug }` (src, parsed, duration, draft, hosted and version are getters: an
   edit replaces them; `scenes` is one array whose contents an edit replaces). `save` plays the
@@ -638,8 +638,49 @@ mean? ...) ... is it possible to get direct manipulation of the text in situ".
   change moves every later meeting), so it was not kept. Either the waypoint moves, or the
   give-way is tuned with the whole cut watched.
 
+## The music under the timeline (2026-10-01)
+
+John: "the music timeline needs to be brought into the context of the other timeline, right
+underneath (collapsable, with proper controls)". The arrangement lived only in the synth rack, a
+small matrix scaled to the rack's width, with nothing lined up against the scenes.
+
+- **Under the fish lanes, on the same clock.** A head row: a block per section, over its scene's
+  card to the pixel, naming its chords and how many instruments play (♪8); the section the
+  playhead is in is lit. Open (the chevron and note in the icon column), a lane per instrument:
+  a cell per section, lit in the instrument's colour (the rack's palette) where the score plays
+  it, as strong as its level, its name and level written in it; a silent cell is a dashed outline
+  with the name, to click. Then a lane per sound effect, a mark at each moment it sounds:
+  sounds closer than 0.12 s are one mark, so a question's letters make one span and a chime's
+  notes one tick. Shut, the music is its head row alone (the panel 236 px shorter).
+- **Controls.** Click a cell: the instrument plays there or stops (`ReelMusic.toggleTrack`, one
+  `play` line). Drag a lit cell up or down: its level, live in the cell, written on release
+  (`setTrackLevel`, 0.05 steps); Alt-click: half or full. Shift-click: the synth rack opens at that
+  instrument's module (`REEL_RACK.focus`). M and S beside each lane, in the icon column with the
+  instrument's colour: mute and solo in the engine for listening, never saved; a silent lane dims
+  (`REEL_RACK.mute`, `solo`, `mix`). A click on a sound effect's mark plays from just before it.
+- **One Undo.** The score's edits go through the rack (`REEL_RACK.change`), which plays them,
+  keeps them (the file, the host, a draft) and keeps their undo texts, as before. What is new is
+  one history over both files: `REEL_LIVE.journal` (`note(kind)` a new edit, `step(kind, back)` an
+  undo or redo of one, `peek(back)` the kind the next would touch, `drop(kind)` an edit that did
+  not happen), in sessionStorage. The timeline, the Fish panel and the words on the stage note
+  `script`; the rack notes `score`. The timeline's Undo, Redo and ⌘Z ask the journal and undo
+  the right file: drag a scene's edge, click a cell, and ⌘Z takes back the cell, then the edge.
+- **The rack tells.** It fires `reel-score` on window after every change of its score (an edit, an
+  undo, the cut, the file or the host), of the mix and of the sound, and once when it is ready.
+  The timeline draws the music again on the next frame, only when what it shows changed (else it
+  only relights M, S and the dimmed lanes). A shut rack no longer redraws itself for each change.
+- **A short window.** The panel is as tall as what it shows (510 px open at 1600×1000). Past what
+  the window can spare (the preview keeps 200 px), it stops, and its lanes scroll up and down
+  under a ruler that stays; the M and S column moves with them. The wheel then scrolls up and
+  down; Shift + wheel, across.
+- **Tests:** musiclanestest (25, new: the heads over the cards, the lanes and their lit cells,
+  a span of keys per question and a tick per Enter, the one Undo across both files and Redo, a
+  click, an Alt-click and a drag written to the score file, M and S in the engine and never the
+  file, a mark's seek, shut and open and shut across a reload, a 640 px window). timelinetest's
+  panel-height check allows the music's one row.
+
 ## Later
 
-Scene-specific cues (line staggers, the push); moving cut 1 onto the one player; a music track
-in the timeline (sections under the scenes); stems out of the renderer; per-format cues, should
-a narrow frame ever need its own timing.
+Scene-specific cues (line staggers, the push); moving cut 1 onto the one player; stems out of
+the renderer; per-format cues, should a narrow frame ever need its own timing; the score's
+patterns and knobs from the timeline (today they are the rack's).

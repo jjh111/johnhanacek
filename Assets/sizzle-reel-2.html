@@ -2044,6 +2044,26 @@ p, h1, h2, h3 { margin: 0; }
     // for tests and the console: the tank, the big fish, and how often the tank was regrown from
     // nothing (live, never: a rewind or an edit takes out only what it must)
     debug: { tank, big: () => BIG, get regrows() { return regrows; } },
+    // One history for every edit, whichever file it changed, so the timeline's Undo (and ⌘Z) takes
+    // back the last one, a line of the script or a line of the score. A tool notes each new edit
+    // of its own (note), and steps an edit of its kind back or forward when it undoes or redoes
+    // one (step); peek names the kind the next undo (back) or redo would touch. The texts
+    // themselves stay in each file's own stacks.
+    journal: (() => {
+      const K = 'reel-journal:' + SCRIPT_PATH;
+      const read = () => { try { const j = JSON.parse(sessionStorage.getItem(K)); if (j && Array.isArray(j.u) && Array.isArray(j.r)) return j; } catch (e) { /* none */ } return { u: [], r: [] }; };
+      const write = j => { try { sessionStorage.setItem(K, JSON.stringify({ u: j.u.slice(-80), r: j.r.slice(-80) })); } catch (e) { /* none */ } };
+      return {
+        note(kind) { const j = read(); j.u.push(kind); j.r = []; write(j); },
+        drop(kind) { const j = read(), i = j.u.lastIndexOf(kind); if (i >= 0) { j.u.splice(i, 1); write(j); } },   // a noted edit that did not happen
+        peek(back) { const s = read()[back ? 'u' : 'r']; return s.length ? s[s.length - 1] : null; },
+        step(kind, back) {
+          const j = read(), from = back ? j.u : j.r, i = from.lastIndexOf(kind);
+          if (i < 0) return;
+          from.splice(i, 1); (back ? j.r : j.u).push(kind); write(j);
+        },
+      };
+    })(),
     async discardDraft() {
       dropDraft();
       if (HOST && hosted) { await Promise.resolve(HOST.discard(SCRIPT_PATH)).catch(() => {}); hosted = false; window.__reelHosted = null; }   // back to the file

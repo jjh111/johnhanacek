@@ -199,6 +199,7 @@
     let res;
     try { res = await L.save(next); } catch (err) { res = { ok: false, errors: [err.message] }; }
     if (!res || !res.applied) { put(K_UNDO, u); restore(e); flash(((res && res.errors) || ['not changed'])[0], true); return; }
+    if (L.journal) L.journal.note('script');          // one history with the score's edits (the timeline's Undo)
     if (!res.ok) flash((res.errors || ['kept as a draft in this tab'])[0], true);
   }
   function flash(text, bad) {

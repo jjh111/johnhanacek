@@ -23,6 +23,14 @@
 // a fish line decides; hatched: nothing to look at, so it swims freely), and a gold mark for
 // every fish line at its time. Drag a mark to retime its line; click it to edit the line in the
 // Fish panel (scripts/reel-fish.js); click a span to jump there with that fish chosen.
+// Under the fish lanes, the music: the score next to the script, which the synth rack keeps
+// (scripts/reel-rack.js, REEL_RACK), on the same clock. A head names each section's chords;
+// open (the chevron in the icon column), a lane per instrument has a cell per section, lit where
+// it plays and as strong as its level, then a lane per sound effect has a tick at every moment it
+// sounds. Click a cell to play the instrument there or stop it; drag a lit cell up or down for
+// its level (Alt-click: half or full); Shift-click opens the instrument in the synth rack. M and
+// S beside each lane mute and solo it while you listen (not saved). Undo takes back the last
+// edit, the script's or the score's (REEL_LIVE.journal).
 // Every action is a button, and its key an accelerator (named in the button's tooltip):
 //   Timeline (E)          open / shut; the preview shrinks to fit above it (its button is in the HUD)
 //   Undo / Redo (⌘Z, ⇧⌘Z) each is a save, played at once like any edit
@@ -46,7 +54,7 @@
   // ── storage for a reload by hand ──────────────────────────────────────
   const get = (k, d) => { try { const v = sessionStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };
   const put = (k, v) => { try { sessionStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } };
-  const K_OPEN = 'reel-tl-open', K_SEL = 'reel-tl-sel:' + L.file, K_UNDO = 'reel-undo:' + L.file, K_REDO = 'reel-redo:' + L.file, K_VIEW = 'reel-tl-view:' + L.file;
+  const K_OPEN = 'reel-tl-open', K_SEL = 'reel-tl-sel:' + L.file, K_UNDO = 'reel-undo:' + L.file, K_REDO = 'reel-redo:' + L.file, K_VIEW = 'reel-tl-view:' + L.file, K_MUS = 'reel-tl-music';
   const DEPTH = 30;
 
   // ── the model: where everything is, read from the parse (again after every change) ──
@@ -100,14 +108,18 @@
   const Y = { ruler: 0, rulerH: 22, card: 26, cardH: 118, head: 33, works: 60, m0: 82, m1: 102, outRow: 124, fish: 150, laneH: 20, laneGap: 4 };
   Y.body = Y.card + Y.head; Y.bodyH = Y.card + Y.cardH - Y.body; Y.sep = Y.card + Y.cardH + 3;
   const FISH_END = Y.fish + 2 * Y.laneH + Y.laneGap;
-  const PANEL = FISH_END + 16 + STATUS;    // the panel's height (the view keeps 10 px under the lanes for its scrollbar)
+  // the music, under the fish: a hairline, a head of sections, then (open) a lane per instrument,
+  // a gap, and a lane per sound effect. The panel is as tall as what it shows (panelH, below).
+  const MUS = { gap: 10, head: 20, lane: 14, sep: 8 };
+  Y.mus = FISH_END + MUS.gap; Y.musLanes = Y.mus + MUS.head + 4;
+  const BOTTOM = 12;                       // under the last lane: room for the view's scrollbar
   const PIN = 22, GAP = 24, MAX_PXS = 360;  // a moment's hit box; the room it needs from the next; the deepest zoom (px a second)
   const SLIM = 760, INSP = 420;            // a panel narrower than SLIM is slim; the inspector's width in a wide one
 
   // ── style: the site's tokens, never text dimmed with alpha ────────────
   const css = document.createElement('style');
   css.textContent = `
-#reel-tl { position: fixed; left: 0; right: 0; height: ${PANEL}px; z-index: 50; box-sizing: border-box;
+#reel-tl { position: fixed; left: 0; right: 0; height: 248px; z-index: 50; box-sizing: border-box;
   background: rgba(var(--surface-rgb), 0.96); border-top: 1px solid rgba(var(--cyan-dim-rgb), 0.3);
   font: 500 11px/1 var(--font-mono); color: var(--ink-quiet); letter-spacing: 0.02em; user-select: none; -webkit-user-select: none; }
 #reel-tl[hidden], #reel-tl [hidden] { display: none !important; }
@@ -115,15 +127,20 @@
 #reel-tl .tl-main { position: absolute; left: 0; top: 0; bottom: 0; right: 0; }
 #reel-tl.tl-insp .tl-main { right: var(--tl-iw, ${INSP}px); }
 /* the tracks' icons: one per row band, the name in the tooltip */
-#reel-tl .tl-gut { position: absolute; left: 0; top: 0; width: ${GUT}px; bottom: ${STATUS}px; border-right: 1px solid rgba(var(--cyan-dim-rgb), 0.15); }
+#reel-tl .tl-gut { position: absolute; left: 0; top: 0; width: ${GUT}px; bottom: ${STATUS}px; border-right: 1px solid rgba(var(--cyan-dim-rgb), 0.15); overflow: hidden; }
+#reel-tl .tl-gin { position: absolute; left: 0; top: 0; width: ${GUT}px; height: 100%; will-change: transform; }
+#reel-tl .tl-gi.tl-fix { z-index: 2; background: rgb(var(--surface-rgb)); }
 #reel-tl .tl-gi { position: absolute; left: 0; width: ${GUT}px; display: flex; align-items: center; justify-content: center; color: var(--ink-faint); cursor: help; }
 #reel-tl .tl-gi .ri { width: 14px; height: 14px; }
 #reel-tl .tl-gi:hover { color: var(--cyan); }
-#reel-tl .tl-view { position: absolute; left: ${GUT}px; right: 0; top: 0; bottom: ${STATUS}px; overflow-x: auto; overflow-y: hidden;
+#reel-tl .tl-view { position: absolute; left: ${GUT}px; right: 0; top: 0; bottom: ${STATUS}px; overflow-x: auto; overflow-y: hidden; overscroll-behavior: contain;
   scrollbar-width: thin; scrollbar-color: rgba(var(--cyan-dim-rgb), 0.45) transparent; }
 #reel-tl .tl-view::-webkit-scrollbar { height: 8px; }
 #reel-tl .tl-view::-webkit-scrollbar-thumb { background: rgba(var(--cyan-dim-rgb), 0.45); border-radius: 4px; }
 #reel-tl .tl-lane { position: relative; height: 100%; min-width: 100%; }
+/* too tall for the window: the lanes scroll up and down under a ruler that stays (Shift + wheel: across) */
+#reel-tl.tl-vs .tl-view { overflow-y: auto; }
+#reel-tl.tl-vs .tl-ruler { background-color: rgb(var(--surface-rgb)); z-index: 7; }
 #reel-tl .tl-ruler { position: absolute; left: 0; right: 0; top: ${Y.ruler}px; height: ${Y.rulerH}px; cursor: col-resize;
   border-bottom: 1px solid rgba(var(--cyan-dim-rgb), 0.3);
   background-image: linear-gradient(to right, rgba(var(--cyan-dim-rgb), 0.35) 1px, transparent 1px);
@@ -184,6 +201,33 @@
 #reel-tl .tl-ro-out { position: absolute; top: ${Y.card + 4}px; padding: 4px 7px; border: 1px solid rgba(var(--gold-rgb), 0.6); border-radius: 4px; background: rgba(var(--surface-rgb), 0.96);
   color: var(--text-bright); pointer-events: none; white-space: nowrap; z-index: 6; }
 #reel-tl .tl-ro-out[hidden] { display: none; }
+/* the music: a head of sections, a lane per instrument, a lane per sound effect */
+#reel-tl .tl-msep { position: absolute; left: 0; right: 0; top: ${Y.mus - MUS.gap / 2}px; border-top: 1px solid rgba(var(--cyan-dim-rgb), 0.15); pointer-events: none; }
+#reel-tl .tl-mh { position: absolute; top: ${Y.mus}px; height: ${MUS.head}px; padding: 0 6px; border-radius: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: pointer;
+  font: 500 10px/${MUS.head - 2}px var(--font-mono); color: var(--ink-quiet); background: rgba(var(--cyan-dim-rgb), 0.06); border: 1px solid rgba(var(--cyan-dim-rgb), 0.22); }
+#reel-tl .tl-mh:hover { border-color: var(--gold); }
+#reel-tl .tl-mh.tl-cur { border-color: rgba(var(--gold-rgb), 0.75); color: var(--text-bright); }
+#reel-tl .tl-mh .tl-mn { color: var(--ink-faint); margin-left: 7px; }
+#reel-tl .tl-mh.tl-none { cursor: default; color: var(--ink-faint); }
+#reel-tl .tl-mc { position: absolute; height: ${MUS.lane - 3}px; padding: 0 5px; border-radius: 3px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: pointer;
+  font: 500 9.5px/${MUS.lane - 5}px var(--font-mono); color: var(--ink-faint); border: 1px dashed rgba(var(--cyan-dim-rgb), 0.18); }
+#reel-tl .tl-mc:hover { border-color: var(--gold); color: var(--text-bright); }
+#reel-tl .tl-mc.tl-on { border: 1px solid var(--c); color: var(--text-bright); }
+#reel-tl .tl-mc.tl-on.tl-mute { border-style: dashed; color: var(--ink-faint); }
+#reel-tl .tl-mc.tl-lv { cursor: ns-resize; border-color: var(--gold); }
+#reel-tl .tl-mlb { position: absolute; height: ${MUS.lane - 3}px; padding: 0 5px; border-radius: 3px; white-space: nowrap; z-index: 2; cursor: help;
+  font: 500 9.5px/${MUS.lane - 5}px var(--font-mono); color: var(--text-bright); background: rgba(var(--surface-rgb), 0.92); border: 1px solid var(--c); }
+#reel-tl .tl-mlb.tl-mute { color: var(--ink-faint); border-style: dashed; }
+#reel-tl .tl-mtk { position: absolute; min-width: 3px; height: ${MUS.lane - 5}px; border-radius: 1px; background: var(--c); cursor: pointer; }
+#reel-tl .tl-mtk.tl-mute { opacity: 0.3; }
+#reel-tl .tl-mtk:hover { background: var(--gold); }
+#reel-tl .tl-mms { position: absolute; left: 0; width: ${GUT}px; height: ${MUS.lane}px; display: flex; gap: 2px; padding: 1px 2px 1px 5px; }
+#reel-tl .tl-mms::before { content: ''; position: absolute; left: 1px; top: 2px; bottom: 3px; width: 2px; border-radius: 1px; background: var(--c); }
+#reel-tl .tl-mms button { flex: 1; height: ${MUS.lane - 3}px; min-width: 0; padding: 0; border-radius: 3px; font: 600 9px/1 var(--font-mono);
+  background: transparent; color: var(--ink-faint); border: 1px solid rgba(var(--cyan-dim-rgb), 0.3); }
+#reel-tl .tl-mms button.tl-on { background: var(--gold); border-color: var(--gold); color: rgb(var(--surface-rgb)); }
+#reel-tl button.tl-mtog { position: absolute; left: 3px; width: ${GUT - 6}px; height: ${MUS.head}px; min-width: 0; padding: 0; display: flex; align-items: center; justify-content: center; gap: 0; }
+#reel-tl button.tl-mtog .ri { width: 12px; height: 12px; }
 /* the status bar: one row under everything, its own rule above it */
 #reel-tl .tl-status { position: absolute; left: 0; right: 0; bottom: 0; height: ${STATUS}px; padding: 0 8px 0 12px; display: flex; align-items: center; gap: 8px; white-space: nowrap;
   border-top: 1px solid rgba(var(--cyan-dim-rgb), 0.18); }
@@ -260,7 +304,7 @@
   root.setAttribute('role', 'region'); root.setAttribute('aria-label', 'Reel timeline');
   const main = h('div', 'main', root);
   // the tracks' icons, each on its own band of the lane (its name and what it does in the tooltip)
-  const gut = h('div', 'gut', main);
+  const gut = h('div', 'gut', main), gin = h('div', 'gin', gut);
   [['clock', Y.ruler, Y.rulerH, 'time: click or drag the ruler to move the playhead'],
    ['scenes', Y.card, Y.head, 'scenes: each scene is a card. Drag its right edge to change its length; click it to see its lines'],
    ['works', Y.works, 20, 'works: the results scene ("what has he shipped?") shows several works, one after another (Nanome, the AROC HUD, OpenProse…). Each block is one work: drag its right edge to change how long it shows, click it to see its lines'],
@@ -269,7 +313,7 @@
    ['fish', Y.fish, Y.laneH, 'the big fish: what it looks at and does across the cut, and its fish lines (gold marks). Click a span to direct it from there'],
    ['school', Y.fish + Y.laneH + Y.laneGap, Y.laneH, 'the school of four: what it swims under and does across the cut, and its fish lines (gold marks)']]
     .forEach(([icon, top, height, tip]) => {
-      const g = h('div', 'gi', gut); g.style.top = top + 'px'; g.style.height = height + 'px';
+      const g = h('div', icon === 'clock' ? 'gi fix' : 'gi', icon === 'clock' ? gut : gin); g.style.top = top + 'px'; g.style.height = height + 'px';
       g.title = tip; g.setAttribute('aria-label', tip.replace(/:.*$/, ''));
       g.innerHTML = window.REEL_UI ? REEL_UI.icon(icon) : '';
       g.dataset.track = icon;
@@ -282,6 +326,9 @@
   // their handlers) after every change of script. Each is placed by layout() through `recs`.
   const content = h('div', 'content', lane);
   let recs = [], FISHM = [];                      // every placed thing: { el, span(map) → [t0, t1?] }; the fish lines' marks
+  // the music's own (drawn again when the score changes, not the script): see "the music", below
+  const mcontent = h('div', 'mcontent', lane), mgut = h('div', 'mgut', gin);
+  let mrecs = [];
   // ── the fish lanes: what each fish does across the cut ────────────────
   // The rig's own account of it (REEL_LIVE.fish.track): spans of one state each, labelled with
   // what the fish looks at and how it idles, and a mark for every fish line at its time.
@@ -511,12 +558,14 @@
     const t0 = VW > 1 ? view.scrollLeft / pxs : null;   // the time at the view's left edge stays put
     VW = view.clientWidth || 1; Z = Math.min(Z, zMax());
     W = Math.max(VW, Math.round(VW * Z)); pxs = W / DUR;
-    lane.style.width = W + 'px';
-    recs.forEach(r => {
+    lane.style.width = W + 'px'; lane.style.height = (musEnd() + BOTTOM) + 'px';
+    ph.style.height = (musEnd() - Y.ruler) + 'px';
+    const place = r => {
       const [a, b] = r.span(map);
       r.el.style.left = x(a).toFixed(1) + 'px';
       if (b != null) r.el.style.width = Math.max(4, x(b) - x(a) - 2).toFixed(1) + 'px';   // a 2 px gutter between blocks
-    });
+    };
+    recs.forEach(place); mrecs.forEach(place);
     placeMoments(map);
     if (!map.drag) { ticks(); if (t0 != null) scrollTo(t0 * pxs); }
     stick();
@@ -543,6 +592,7 @@
   // a card scrolled half out of view keeps its name in view
   function stick() {
     const L0 = view.scrollLeft;
+    MLB.forEach(lb => { lb.style.left = (L0 + 4) + 'px'; });
     SCENES.forEach(S => {
       const a = parseFloat(S.el.style.left) || 0, w = parseFloat(S.el.style.width) || 0;
       const d = Math.max(0, Math.min(L0 - a, w - 120));
@@ -572,6 +622,8 @@
     ph.style.transform = `translateX(${x(tt).toFixed(1)}px)`;
     let c = 0; SCENES.forEach(S => { if (t >= S.start - 1e-6) c = S.i; });
     if (c !== curScene) { if (SCENES[curScene]) SCENES[curScene].el.classList.remove('tl-cur'); SCENES[c].el.classList.add('tl-cur'); curScene = c; }
+    let ms = -1; for (let i = 0; i < MHEADS.length; i++) if (t >= MHEADS[i].sc.start - 1e-6) ms = i;
+    if (ms !== curSec) { if (MHEADS[curSec]) MHEADS[curSec].el.classList.remove('tl-cur'); if (MHEADS[ms]) MHEADS[ms].el.classList.add('tl-cur'); curSec = ms; }
     const jumped = lastT != null && Math.abs(tt - lastT) > 0.3; lastT = tt;
     const playing = !!(L.isPlaying && L.isPlaying()), p = x(tt) - view.scrollLeft, inView = p >= 0 && p <= VW - 24;
     if (jumped || inView || (playing && !wasPlaying)) follow = true;
@@ -599,6 +651,7 @@
   view.addEventListener('wheel', e => {
     const k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? VW : 1;
     if (e.ctrlKey || e.metaKey) { e.preventDefault(); zoomTo(Z * Math.exp(-e.deltaY * k * 0.0025), e.clientX - view.getBoundingClientRect().left); }
+    else if (root.classList.contains('tl-vs') && Math.abs(e.deltaY) > Math.abs(e.deltaX)) return;   // up and down (Shift + wheel: across)
     else if (Z > 1.05 && Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.preventDefault(); follow = false; view.scrollLeft += e.deltaY * k; }
   }, { passive: false });
   let g0 = null;                                        // Safari's pinch
@@ -607,15 +660,28 @@
   view.addEventListener('gestureend', e => { e.preventDefault(); g0 = null; });
   let scrollT; view.addEventListener('scroll', () => {
     if (placed == null || Math.abs(view.scrollLeft - placed) > 2) follow = false;   // not where the panel put it: yours
-    stick(); clearTimeout(scrollT); scrollT = setTimeout(keepView, 200);
+    stick(); stickY(); clearTimeout(scrollT); scrollT = setTimeout(keepView, 200);
   });
+  // a panel too tall for the window scrolls up and down: the ruler stays on top, and the icon
+  // column moves with the lanes it names
+  function stickY() {
+    const y = view.scrollTop;
+    gin.style.transform = y ? `translateY(${-y}px)` : '';
+    ruler.style.transform = y ? `translateY(${y}px)` : '';
+  }
 
   // the preview shrinks to fit above the panel (the rig keeps the bottom of the window for it)
   // and takes the whole window back when the panel shuts
   function fitStage() {
     const hud = document.getElementById('hud'), hh = hud && !hud.hidden ? hud.getBoundingClientRect().height : 0;
     root.style.bottom = Math.round(hh) + 'px';
-    L.reserveBottom(hh + PANEL);
+    // as tall as what it shows; past what the window can spare (the preview keeps 200 px), the
+    // lanes scroll up and down under the ruler
+    const want = musEnd() + BOTTOM + STATUS, room = Math.max(240, Math.round(innerHeight - hh - 200)), pH = Math.min(want, room);
+    root.style.height = pH + 'px';
+    root.classList.toggle('tl-vs', want > room);
+    if (want <= room && view.scrollTop) { view.scrollTop = 0; stickY(); }
+    L.reserveBottom(hh + pH);
     // the panel's own width decides its shape (the synth rack may take the right of the window):
     // wide, the inspector sits beside the cards at INSP px; narrower, at 44% of the panel; slim,
     // over all of it
@@ -640,7 +706,10 @@
   // the background; the bar says "Saving…" until it is kept. Edits never wait for a save.
   let pending = 0;
   const stack = k => { const s = get(k, []); return Array.isArray(s) ? s : []; };
-  const stacks = () => { bUndo.disabled = !stack(K_UNDO).length; bRedo.disabled = !stack(K_REDO).length; };
+  const stacks = () => {
+    const R = window.REEL_RACK;                    // the score's edits are on the one Undo too
+    bUndo.disabled = !stack(K_UNDO).length && !(R && R.canUndo); bRedo.disabled = !stack(K_REDO).length && !(R && R.canRedo);
+  };
   async function save(next, undo, redo) {
     const u0 = stack(K_UNDO), r0 = stack(K_REDO);
     try { RS.parse(next); } catch (e) { say(e.errors || [e.message]); layout(); return false; }   // never save a broken script
@@ -665,16 +734,26 @@
     let next;
     try { next = change(L.src); } catch (e) { say(e.errors || [e.message]); layout(); return; }
     if (next === L.src) { layout(); return; }
-    save(next, stack(K_UNDO).concat([L.src]), []);
+    if (L.journal) L.journal.note('script');       // in the one history now, so a score edit just after comes after it
+    save(next, stack(K_UNDO).concat([L.src]), []).then(ok => { if (!ok && L.journal) L.journal.drop('script'); });
   }
   function undo(back) {
     const from = stack(back ? K_UNDO : K_REDO), to = stack(back ? K_REDO : K_UNDO);
     if (!from.length) { say(back ? ['nothing to undo'] : ['nothing to redo']); return; }
     const prev = from.pop(); to.push(L.src);
+    if (L.journal) L.journal.step('script', back);
     back ? save(prev, from, to) : save(prev, to, from);
   }
-  bUndo.onclick = () => undo(true);
-  bRedo.onclick = () => undo(false);
+  // One Undo for every edit: the last one, the script's or the score's (REEL_LIVE.journal says
+  // which; the synth rack keeps the score's texts and undoes its own)
+  function undoAny(back) {
+    const J = L.journal, R = window.REEL_RACK, kind = J ? J.peek(back) : null;
+    if (kind === 'score' && R && (back ? R.canUndo : R.canRedo)) { say(''); back ? R.undo() : R.redo(); return; }
+    if (kind === 'score' && J) J.step('score', back);   // the rack no longer holds it: let it go
+    undo(back);
+  }
+  bUndo.onclick = () => undoAny(true);
+  bRedo.onclick = () => undoAny(false);
   stacks();
   bEx.onclick = () => { if (window.REEL_EXPORT) window.REEL_EXPORT.open(); else say(['export did not load (scripts/reel-export.js)']); };
   // an item's length: its results scene grows by the same amount, so the items before it (hung
@@ -717,6 +796,161 @@
     drag(e, ruler, (dt, ev) => seek(ev), () => { if (was && L.now() < L.duration - 0.05) L.setPlaying(true); });
     // a still press is a seek too, and drag() only calls move once the pointer travels
   });
+
+  // ── the music: the score's arrangement on the same clock ──────────────
+  // What the synth rack holds (REEL_RACK: the score's parse, its arrangement against the cut, the
+  // mix) drawn under the fish lanes, and drawn again whenever the rack says it changed (a
+  // reel-score event): the score, the cut (each section starts on its scene's cut), the mix.
+  let musOpen = get(K_MUS, true), MB = [], MX = [], MHEADS = [], MLB = [], musSig = null, curSec = -1;
+  const lanes = new Map();                           // a track's name → its M and S, and what dims when it is silent
+  const RK = () => window.REEL_RACK;
+  const musEnd = () => !musOpen || !(MB.length + MX.length) ? Y.mus + MUS.head
+    : Y.musLanes + MB.length * MUS.lane + (MX.length ? MUS.sep + MX.length * MUS.lane : 0);
+  const laneTop = (k, fx) => Y.musLanes + (fx ? MB.length * MUS.lane + MUS.sep : 0) + k * MUS.lane;
+  const rgba = (hex, a) => { const n = parseInt(String(hex).slice(1), 16); return `rgba(${n >> 16 & 255}, ${n >> 8 & 255}, ${n & 255}, ${a})`; };
+  const lvA = lv => (0.14 + 0.26 * Math.min(1, lv)).toFixed(3);   // a lit cell's strength: its level
+  const ON = { key: 'every letter typed', space: 'every space typed', clear: 'each question cleared', enter: 'each Enter', beat: 'every @ moment', cut: 'every cut', item: 'each work' };
+  function musicSig() {
+    const R = RK(), Pm = R && R.parsed, A = R && R.arrangement;
+    if (!Pm || !A) return JSON.stringify([musOpen, R ? R.error || 'none' : 'wait']);
+    const fx = new Set(Pm.score.tracks.filter(t => t.on).map(t => t.name));
+    return JSON.stringify([musOpen, Pm.score.tracks.map(t => t.name + ':' + (t.on || '')),
+      A.sections.map(sc => [sc.ref, sc.start, sc.end, sc.play.map(p => p.name + ':' + p.level).join(' '), (sc.chords || []).map(c => c.name).join(' ')]),
+      A.events.filter(e => fx.has(e.track)).map(e => e.track + e.t.toFixed(3)).join(' ')]);
+  }
+  function populateMusic() {
+    const R = RK(), Pm = R && R.parsed, A = R && R.arrangement;
+    mcontent.textContent = ''; mgut.textContent = ''; mrecs = []; MHEADS = []; MLB = []; lanes.clear(); curSec = -1;
+    h('div', 'msep', mcontent);
+    const tog = h('button', 'mtog', mgut); tog.type = 'button'; tog.style.top = Y.mus + 'px';
+    tog.innerHTML = window.REEL_UI ? REEL_UI.icon(musOpen ? 'chevDown' : 'chevRight') + REEL_UI.icon('music') : (musOpen ? '▾♪' : '▸♪');
+    tog.title = musOpen ? 'the music: shut it to its sections' : 'the music: open it to every instrument and sound effect';
+    tog.setAttribute('aria-expanded', String(musOpen)); tog.setAttribute('aria-label', 'the music\'s lanes');
+    tog.onclick = () => setMusic(!musOpen);
+    if (!Pm || !A) {
+      MB = []; MX = [];
+      const el = h('div', 'mh none', mcontent, !R ? 'the music is loading…' : R.error ? R.error.split('\n')[0] : `no ${R.name} next to this script: the reel is silent`);
+      mrecs.push({ el, span: () => [0, DUR] });
+      return;
+    }
+    const tracks = Pm.score.tracks;
+    MB = tracks.filter(t => !t.on); MX = tracks.filter(t => t.on);
+    // the head: a block per section, its chords and how many instruments play in it
+    A.sections.forEach(sc => {
+      const chords = (sc.chords || []).map(c => c.name).join(' ');
+      const el = h('div', 'mh', mcontent, chords || '·'); el.dataset.ref = sc.ref;
+      h('span', 'mn', el, '♪' + sc.play.length);
+      el.title = `${sc.type} · ${fmt(sc.start)} → ${fmt(sc.end)} · ${chords}\n${sc.play.length} playing: ${sc.play.map(p => p.name + (p.level !== 1 ? ' ' + p.level : '')).join(', ') || 'nothing'}\nclick to play from here`;
+      mrecs.push({ el, span: m => [m(sc.start), m(sc.end)] });
+      MHEADS.push({ el, sc });
+      el.addEventListener('pointerdown', e => { if (e.button !== 0) return; drag(e, el, () => {}, moved => { if (!moved) L.seek(sc.start); }); });
+    });
+    if (!musOpen) return;
+    MB.forEach((t, k) => {
+      const top = laneTop(k, false), c = R.colour(t.name);
+      mixRow(t, top, c);
+      A.sections.forEach(sc => cell(t, sc, top, c));
+    });
+    MX.forEach((t, k) => {
+      const top = laneTop(k, true), c = R.colour(t.name), ln = mixRow(t, top, c);
+      // A mark a moment: sounds closer than 0.12 s are one (a chime's notes; the letters of one
+      // question, typed 25 ms apart, make one span)
+      const ts = A.events.filter(e => e.track === t.name).map(e => e.t).sort((a, b) => a - b), runs = [];
+      ts.forEach(t0 => { const r = runs[runs.length - 1]; if (r && t0 - r.t1 < 0.12) { r.t1 = t0; r.n++; } else runs.push({ t0, t1: t0, n: 1 }); });
+      runs.forEach(r => {
+        const tk = h('div', 'mtk', mcontent); tk.style.top = (top + 2) + 'px'; tk.style.setProperty('--c', c); tk.dataset.track = t.name; tk.dataset.t = +r.t0.toFixed(3);
+        tk.title = `${t.name} ${r.t1 - r.t0 > 0.12 ? `×${r.n}, ${fmt(r.t0)} → ${fmt(r.t1)}` : 'at ' + fmt(r.t0)}: it sounds on ${ON[t.on] || t.on}\nclick to play from just before it`;
+        mrecs.push({ el: tk, span: m => r.t1 - r.t0 > 0.12 ? [m(r.t0), m(r.t1)] : [m(r.t0)] }); ln.els.push(tk);
+        tk.addEventListener('pointerdown', e => { if (e.button !== 0) return; drag(e, tk, () => {}, moved => { if (!moved) L.seek(Math.max(0, r.t0 - 0.4)); }); });
+      });
+      // its name stays at the left of the view (what sets it off, in its tooltip)
+      const lb = h('div', 'mlb', mcontent, t.name); lb.style.top = (top + 1) + 'px'; lb.style.setProperty('--c', c); lb.dataset.track = t.name;
+      lb.title = `${t.name}: a sound effect on ${ON[t.on] || t.on} (${ts.length} in the cut). It follows the edit: move a question or a moment and it moves too`;
+      MLB.push(lb); ln.els.push(lb);
+    });
+    applyMix();
+  }
+  // a lane's M and S, in the icon column, with the instrument's colour beside them
+  function mixRow(t, top, c) {
+    const row = h('div', 'mms', mgut); row.style.top = top + 'px'; row.style.setProperty('--c', c); row.dataset.track = t.name;
+    const m = h('button', null, row, 'M'), so = h('button', null, row, 'S');
+    m.type = so.type = 'button';
+    m.title = `${t.name}: mute it while you listen (not saved)`; so.title = `${t.name}: solo it while you listen (not saved)`;
+    m.setAttribute('aria-label', 'mute ' + t.name); so.setAttribute('aria-label', 'solo ' + t.name);
+    m.onclick = () => { const R = RK(); if (R && R.mute) R.mute(t.name); };
+    so.onclick = () => { const R = RK(); if (R && R.solo) R.solo(t.name); };
+    const ln = { m, so, els: [] }; lanes.set(t.name, ln);
+    return ln;
+  }
+  // an instrument in a section: lit where it plays, as strong as its level
+  function cell(t, sc, top, c) {
+    const p = sc.play.find(x => x.name === t.name), el = h('div', 'mc' + (p ? ' on' : ''), mcontent);
+    const label = lv => t.name + (lv !== 1 ? ' ' + lv : '');
+    el.textContent = p ? label(p.level) : t.name; el.dataset.track = t.name; el.dataset.ref = sc.ref;
+    el.style.top = (top + 1) + 'px'; el.style.setProperty('--c', c);
+    if (p) el.style.background = rgba(c, lvA(p.level));
+    el.title = p ? `${t.name} plays in ${sc.type}${p.level !== 1 ? ' at ' + p.level : ''}\nclick: stop it here · drag up or down: its level · Alt-click: half or full · Shift-click: open it in the synth rack`
+      : `${t.name} is silent in ${sc.type}\nclick: play it here · Shift-click: open it in the synth rack`;
+    mrecs.push({ el, span: m => [m(sc.start), m(sc.end)] }); lanes.get(t.name).els.push(el);
+    el.addEventListener('pointerdown', e => {
+      if (e.button !== 0) return;
+      e.preventDefault(); e.stopPropagation();
+      try { el.setPointerCapture(e.pointerId); } catch (x_) { /* synthetic pointer */ }
+      const y0 = e.clientY; let moved = false, lv = p ? p.level : 1;
+      const mv = ev => {
+        if (!p) return;
+        const dy = y0 - ev.clientY;
+        if (!moved && Math.abs(dy) < 4) return;
+        moved = true; el.classList.add('tl-lv');
+        lv = Math.max(0.05, Math.min(1.5, Math.round((p.level + dy / 100) * 20) / 20));
+        el.textContent = label(lv); el.style.background = rgba(c, lvA(lv));
+        readout.style.top = Math.max(0, top - 24) + 'px';           // over the lane being set
+        show1(sc.start, `${t.name} in ${sc.type}: level ${p.level} → ${lv}`);
+      };
+      const up = ev => {
+        el.removeEventListener('pointermove', mv); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
+        el.classList.remove('tl-lv'); readout.hidden = true; readout.style.top = '';
+        if (ev.type === 'pointercancel') { redrawMusic(true); return; }
+        if (ev.shiftKey) { const R = RK(); if (R && R.focus) R.focus(t.name); return; }
+        if (moved) { if (lv !== p.level) scoreEdit(src => window.ReelMusic.setTrackLevel(src, sc.ref, t.name, lv)); return; }
+        if (p && ev.altKey) scoreEdit(src => window.ReelMusic.setTrackLevel(src, sc.ref, t.name, p.level === 1 ? 0.5 : 1));
+        else scoreEdit(src => window.ReelMusic.toggleTrack(src, sc.ref, t.name));
+      };
+      el.addEventListener('pointermove', mv); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+    });
+  }
+  // mute and solo, as the rack's engine holds them: the buttons lit, a silent track's lane dim
+  function applyMix() {
+    const R = RK(); if (!R || !R.mix) return;
+    lanes.forEach((ln, name) => {
+      const m = R.mix(name);
+      ln.m.classList.toggle('tl-on', m.muted); ln.so.classList.toggle('tl-on', m.soloed);
+      ln.m.setAttribute('aria-pressed', String(m.muted)); ln.so.setAttribute('aria-pressed', String(m.soloed));
+      ln.els.forEach(el => el.classList.toggle('tl-mute', m.silent));
+    });
+  }
+  // A change of the score goes through the rack, which plays it at once, keeps it (the file, the
+  // page's host, or a draft) and notes it in the one history; it comes back here as reel-score.
+  function scoreEdit(fn) {
+    const R = RK();
+    if (!R || !window.ReelMusic || R.src == null) { say(['there is no score to change (the synth rack has none)']); return; }
+    let next;
+    try { next = fn(R.src); } catch (e) { say(e.errors || [e.message]); redrawMusic(true); return; }
+    if (next === R.src) return;
+    say('');
+    if (!R.change(next)) { say(['the score refused that change']); redrawMusic(true); }
+  }
+  function redrawMusic(force) {
+    const sig = musicSig();
+    if (force || sig !== musSig) {
+      musSig = sig; populateMusic();
+      if (!root.hidden) { fitStage(); layout(); }
+    } else applyMix();
+    stacks();
+  }
+  function setMusic(on) { musOpen = !!on; put(K_MUS, musOpen); redrawMusic(true); }
+  let musRaf = 0;
+  addEventListener('reel-score', () => { if (!musRaf) musRaf = requestAnimationFrame(() => { musRaf = 0; redrawMusic(false); }); });
 
   // ── the inspector: the scene's lines, in the order they are written ──
   let selected = -1;
@@ -863,7 +1097,7 @@
     if ((e.key === 'e' || e.key === 'E') && plain) { e.preventDefault(); show(root.hidden); }
     // Undo and redo answer with the panel shut too: the Fish panel and the words on the stage
     // keep their edits on the same stacks (the synth rack keeps its own, while the pointer is on it)
-    else if ((e.key === 'z' || e.key === 'Z') && (e.metaKey || e.ctrlKey)) { e.preventDefault(); undo(!e.shiftKey); }
+    else if ((e.key === 'z' || e.key === 'Z') && (e.metaKey || e.ctrlKey)) { e.preventDefault(); undoAny(!e.shiftKey); }
     else if (root.hidden) return;
     else if ((e.key === '=' || e.key === '+') && plain) { e.preventDefault(); zoomTo(Z * 1.6); }
     else if (e.key === '-' && plain) { e.preventDefault(); zoomTo(Z / 1.6); }
@@ -905,8 +1139,10 @@
   });
 
   // ── back to where a reload by hand left it ────────────────────────────
+  musSig = musicSig(); populateMusic();
   if (get(K_OPEN, false)) show(true);
   const sel = get(K_SEL, -1);
   if (!root.hidden && SCENES[sel]) select(sel, true);
-  window.REEL_TIMELINE = { show, select, undo: () => undo(true), redo: () => undo(false), zoom: z => zoomTo(z), get zoomLevel() { return Z; } };   // for tests and the console
+  window.REEL_TIMELINE = { show, select, undo: () => undoAny(true), redo: () => undoAny(false), zoom: z => zoomTo(z), get zoomLevel() { return Z; },   // for tests and the console
+    music: { open: setMusic, get opened() { return musOpen; } } };
 })();

@@ -76,6 +76,9 @@
     out: S('<path d="M8.5 2.8H3v10.4h5.5"/><path d="M6.5 8h7.5M11.3 5.3L14 8l-2.7 2.7"/>'),
     school: S('<path d="M1.6 5.2c1.1-1.4 3-1.6 4.3-.6l1.4-1v3.2l-1.4-1c-1.3 1-3.2.8-4.3-.6z"/><path d="M8.4 5.2c1.1-1.4 3-1.6 4.3-.6l1.4-1v3.2l-1.4-1c-1.3 1-3.2.8-4.3-.6z"/><path d="M4.8 11.4c1.1-1.4 3-1.6 4.3-.6l1.4-1V13l-1.4-1c-1.3 1-3.2.8-4.3-.6z"/>'),
     text: S('<path d="M3 3.5h10M8 3.5V13M6 13h4"/>'),
+    music: S('<path d="M6 12.2V3.4l7-1.4v8.6"/><circle cx="4.4" cy="12.2" r="1.7" style="fill:currentColor;stroke:none"/><circle cx="11.4" cy="10.6" r="1.7" style="fill:currentColor;stroke:none"/>'),
+    chevDown: S('<path d="M4 6l4 4 4-4"/>'),
+    chevRight: S('<path d="M6 4l4 4-4 4"/>'),
   };
   const icon = name => ICONS[name] || '';
 
