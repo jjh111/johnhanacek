@@ -637,6 +637,11 @@ mean? ...) ... is it possible to get direct manipulation of the text in situ".
   zones was tried and made it worse (5 s over seven encounters: the tank is chaotic, so one
   change moves every later meeting), so it was not kept. Either the waypoint moves, or the
   give-way is tuned with the whole cut watched.
+- formattest's wide reference stills (local, `.local/reel-tests/format/wide-ref/`) were filmed
+  again for John's edits of 2026-10-01, from the rig before this round. Recording them in a
+  fresh worktree showed a first-run effect: that run's stills differed from every later run's at
+  36.5, 43, 49 and 53.5 s, the old rig's and the new rig's alike, to the pixel. So the references
+  are a later run's, and the old ones are kept beside them (`wide-ref-0930`).
 
 ## The music under the timeline (2026-10-01)
 
