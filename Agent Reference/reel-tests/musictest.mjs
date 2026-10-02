@@ -35,74 +35,82 @@ const edit = RS.parse(SCRIPT).edit;
 const scenes = RS.spans(edit).map((c, i) => ({ type: edit.scenes[i].type, start: c.start, end: c.end }));
 const P = RM.parse(SCORE), mom = RM.moments(edit, RS), A = RM.arrange(P.score, scenes, mom);
 const CUT = scenes[scenes.length - 1].end;                          // the cut's length, as the script says (60 s, then 63.5)
-ok(P.score.tempo === 120 && P.score.tracks.length === 10 && A.sections.length === scenes.length, `the score parses: ${P.score.tracks.length} tracks, a section for each of the ${scenes.length} scenes`);
+const STEP = 0.125, SPB = 16;
+const partOf = name => P.score.parts.find(p => p.tracks.includes(name));
+ok(P.score.tempo === 120 && P.score.beatsPerBar === 4 && P.score.parts.map(p => p.name).join() === 'drums,bass,chords,arp,lead,fx',
+  `the score parses: ${P.score.beatsPerBar}/4 at ${P.score.tempo}, six parts (${P.score.parts.map(p => p.name).join(', ')}), ${P.score.clips.length} clips`);
 ok(A.events.every(e => e.t >= 0 && e.t < CUT && e.dur > 0 && e.vel > 0), `${A.events.length} events, every one inside the ${CUT} s cut`);
 const band = A.events.filter(e => !P.score.tracks.find(t => t.name === e.track).on);
-// the music is one piece (2026-10-01): one clock, sections on the bars near their cuts, seams
-const levelAt = (pts, t) => { let v = pts[0].v; for (let i = 1; i < pts.length; i++) { const a = pts[i - 1], b = pts[i]; if (t < a.t) break; if (t <= b.t) return b.t - a.t < 1e-9 ? b.v : a.v + (b.v - a.v) * (t - a.t) / (b.t - a.t); v = b.v; } return v; };
-const secAt = t => { let s = A.sections[0]; for (const x of A.sections) if (t >= x.start - 1e-9) s = x; return s; };
-const strays = band.filter(e => {
-  if (e.bypass) return !A.transitions.some(tr => ['build', 'swell', 'drop'].includes(tr.kind) && e.t >= tr.t0 - 1e-9 && e.t <= tr.t + 1e-9);
-  if (A.levels[e.track]) return !(Math.max(levelAt(A.levels[e.track], e.t), levelAt(A.levels[e.track], e.t + 0.05)) > 0);
-  return !A.sections.some(s => s.play.some(p => p.name === e.track) && (e.t >= s.cut - 1e-9 || e.t >= s.start - 1e-9) && e.t < s.end + 1e-9);
-});
-ok(!strays.length, `every note of the band sounds where it belongs: an instrument that flows only where its level is above nothing (its fades included), a hit on a section that plays it, a seam's own notes at a build, a swell or a drop${strays.length ? ' (' + strays.slice(0, 3).map(e => e.track + '@' + e.t).join(' ') + ')' : ''}`);
-const STEP = 0.125, kickSteps = P.score.tracks.find(t => t.name === 'kick').steps;
-const kicks = band.filter(e => e.track === 'kick');
-ok(kicks.length > 50 && kicks.every(e => Math.abs(e.t / STEP - Math.round(e.t / STEP)) < 1e-6 && kickSteps[Math.round(e.t / STEP) % kickSteps.length] !== '.'),
-  `the groove never starts again: all ${kicks.length} kicks sit on the reel's own sixteenths, on a step their pattern plays, across every seam`);
-ok(band.every(e => Math.abs(e.t / STEP - Math.round(e.t / STEP)) < 1e-6), 'every note of the band sits on the reel\'s sixteenth grid (0.125 s from 0)');
-const at = type => A.sections.find(s => s.type === type);
-ok(at('title').start === 2 && at('answer').start === 8 && at('results').start === 22 && at('command').start === 17 && at('quotes').start === 45 && at('end').start === 59,
-  'a section starts on the bar nearest its cut when that is a beat away or less (title 2, answer 8, results 22), else on its cut (command 17, quotes 45, end 59)');
+// every note of a part sits inside one of the part's clips, on the music's own sixteenths
+const strays = band.filter(e => { const p = partOf(e.track); return !p || !A.clips.some(c => c.part === p.name && e.t >= c.t0 - 1e-9 && e.t < c.t1 - 1e-9); });
+ok(!strays.length, `every note of every part sits inside one of its clips${strays.length ? ' (' + strays.slice(0, 3).map(e => e.track + '@' + e.t).join(' ') + ')' : ''}`);
+ok(band.every(e => Math.abs(e.t / STEP - Math.round(e.t / STEP)) < 1e-6), 'every note sits on the music\'s sixteenths (0.125 s from 0)');
+ok(A.clips.length === P.score.clips.length && A.clips.every(c => Math.abs(c.t0 - c.from * STEP) < 1e-9 && Math.abs(c.t1 - c.to * STEP) < 1e-9),
+  `the ${A.clips.length} clips sit on their bars (bar 1 at 0 s, a bar 2 s)`);
+// the chords go round from bar 1, one a bar, and a stretch of bars may have its own
+const loop = P.score.chords.map(c => c.name);
+ok(A.harmony.length === A.bars && A.harmony.every((h, b) => h.chord.name === (b >= 29 ? 'Am' : loop[b % loop.length])),
+  `the chords go round from bar 1 (${loop.join(' ')}), a bar each, and bars 30-32 hold Am (${A.bars} bars)`);
+{
+  const kickSteps = P.score.parts.find(p => p.name === 'drums').pads.find(d => d.name === 'beat').voices.find(v => v.track === 'kick').steps;
+  const beat = A.clips.find(c => c.part === 'drums' && c.pad === 'beat' && c.from === 11 * SPB);
+  const kicks = band.filter(e => e.track === 'kick' && e.t >= beat.t0 - 1e-9 && e.t < beat.t1 - 1e-9);
+  ok(kicks.length === 6 * 4 && kicks.every(e => kickSteps[Math.round(e.t / STEP) % 16] !== '.'), `a clip plays its pad on the bars: the results' beat (bars 12-17) kicks on all ${kicks.length} beats its pad marks`);
+  const fill = band.filter(e => e.track === 'clap' && e.t >= 20 - 1e-9 && e.t < 22);
+  ok(fill.length === 12 && fill.every((e, i) => !i || e.vel >= fill[i - 1].vel) && fill[0].vel < fill[11].vel, `a fill in bar 11: ${fill.length} claps, louder all the way in`);
+  const crash = band.filter(e => e.track === 'crash' && e.t >= 22 - 1e-9 && e.t < 24);
+  ok(crash.length === 1 && Math.abs(crash[0].t - 22) < 1e-9, 'a "once" pad plays once from its clip\'s start (the crash on bar 12, at 22 s)');
+  const rise = band.filter(e => e.track === 'riser');
+  ok(rise.length === 2 && rise.every(e => e.rise && Math.abs(e.dur - 2) < 1e-9) && Math.abs(rise[0].t - 20) < 1e-9, 'a riser rises across its clip (bars 11 and 27, 2 s each)');
+  const lead = P.score.parts.find(p => p.name === 'lead').pads.find(d => d.name === 'hook').voices[0].notes, n0 = band.find(e => e.track === 'lead' && Math.abs(e.t - 22) < 1e-9);
+  ok(n0 && n0.midi === RM.noteMidi(lead[(22 / STEP) % lead.length]), `a pad goes round on the bars, so the tune keeps time with the chords: at 22 s the lead plays ${lead[(22 / STEP) % lead.length]}`);
+  const tune = band.filter(e => e.track === 'lead' && e.t >= 22 - 1e-9 && e.t < 24 - 1e-9).map(e => +(e.dur / STEP).toFixed(3)).join();
+  ok(tune === '4,2,2,4,4', `a note lasts until the next one, len steps at most (the bar from 22 s: ${tune} steps)`);
+  const held = band.filter(e => e.track === 'chords' && e.midi === RM.noteMidi('A3') && e.t <= 58 + 1e-9 && e.t + e.dur >= 63.5 - 1e-9);
+  ok(held.length === 1, 'a chord that carries on is held, not struck again (Am from bar 30 to the end, one note a voice)');
+  const lv = A.levels.lead;
+  ok(RM.levelAt(lv, 45) === 0 && Math.abs(RM.levelAt(lv, 46) - 0.35) < 1e-9 && Math.abs(RM.levelAt(lv, 47) - 0.7) < 1e-9 && RM.levelAt(lv, 54.01) === 1,
+    'a clip\'s level and fades are its sounds\' level: the lead fades in over 4 beats to 0.7 at the quotes, then plays full at the offer');
+  ok(RM.levelAt(A.levels.kick, 25) === 1 && RM.levelAt(A.levels.clap, 25) === 1 && RM.levelAt(A.levels.kick, 47) === 0, 'a part\'s clips set the level of each of its sounds (the drums\' kick and clap together)');
+  ok(P.score.parts.find(p => p.name === 'drums').tracks.join() === 'kick,clap,hat' && P.score.tracks.filter(t => t.on).length === 4, 'the drums are a kick, a clap and a hat; four sound effects');
+}
 // the keys the score plays are the keys the rig types (both read ReelScript.queries)
 const keys = A.events.filter(e => e.track === 'keys').map(e => e.t);
 const typed = RS.queries(edit).flatMap(q => q.times.filter((_, i) => q.text[i] !== ' '));
 ok(keys.length === typed.length && keys.every((t, i) => Math.abs(t - typed[i]) < 1e-9), `the keys track clicks on all ${typed.length} typed letters, at the rig's times`);
-// ReelScript.queries is the rig's old formula, moved: same numbers
 {
+  // ReelScript.queries is the rig's old formula, moved: same numbers
   const hash01 = i => { let h = Math.imul(i ^ 0x9e3779b9, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
   let acc = 0; const SC = edit.scenes.map((s, i) => { const o = Object.assign({}, s, { i, start: acc, end: acc + s.dur }); acc += s.dur; return o; });
   const QS = SC.filter(s => s.query), old = QS.map((sc, k) => { const t0 = sc.start + (k === 0 ? 0.1 : -0.08); const times = []; let tt = t0; const CPS = RS.cue(sc, 'typing'); for (let i = 0; i < sc.query.length; i++) { tt += (1 / CPS) * (0.6 + 0.8 * hash01(i + 31 * sc.i)); times.push(tt); } return { times, enter: tt + 0.06 }; });
   const now = RS.queries(edit);
   ok(now.length === old.length && now.every((q, k) => q.enter === old[k].enter && q.times.every((t, i) => t === old[k].times[i])), 'ReelScript.queries gives the rig\'s typing times to the bit');
 }
-// everything goes round on the reel's own clock (2026-10-02): the chords, the steps, the tune
-const round = P.score.chords.map(c => c.name), chordOn = t => round[Math.floor(t / 2 + 1e-9) % round.length];
-ok(A.sections.filter(s => !s.own).every(s => s.harmony.every(h => h.chord.name === chordOn(h.t + 1e-6))),
-  `the chords go round on the reel's own bars, one a bar, across every cut (${round.join(' ')}): no section starts them again`);
-ok(at('results').harmony.map(h => h.chord.name + '@' + h.t).join() === 'Am@22,F@24,C@26,G@28,Am@30,F@32', 'the results, from 22 s: Am F C G Am F, the loop where it stands');
-ok(at('quotes').harmony.map(h => h.chord.name + '@' + h.t).join() === 'G@45,Am@46,F@48,C@50,G@52', 'a section starting mid-bar takes the bar\'s chord (the quotes: G at 45, then Am at 46)');
-ok(at('end').own && at('end').harmony.every(h => h.chord.name === 'Am') && at('end').harmony[0].t === 59, 'a section with its own chords plays them from its start (the end holds Am from 59 s)');
 {
-  // a part that plays on across a seam is one part: the chords held over the art's seam at 17 s
-  const held = band.filter(e => e.track === 'chords' && e.t <= 16 + 1e-9 && e.t + e.dur >= 18 - 1e-9);
-  ok(held.length === 3 && !band.some(e => e.track === 'chords' && Math.abs(e.t - 17) < 1e-9), 'the chords hold over a seam inside a bar (F from 16 to 18 s, across the cut at 17): never struck again');
-  // the tune goes round from 0 with the chords: the results' first note is the loop's fourth bar's
-  const lead = P.score.tracks.find(t => t.name === 'lead'), n0 = band.find(e => e.track === 'lead' && Math.abs(e.t - 22) < 1e-9);
-  ok(n0 && n0.midi === RM.noteMidi(lead.notes[(22 / STEP) % lead.notes.length]), `the tune goes round from the reel's 0: at 22 s it plays ${lead.notes[(22 / STEP) % lead.notes.length]}, its fourth bar's first note`);
-  const tune = band.filter(e => e.track === 'lead' && e.t >= 22 - 1e-9 && e.t < 24 - 1e-9).map(e => +(e.dur / STEP).toFixed(3)).join();
-  ok(tune === '4,2,2,4,4', `a note lasts until the next one, len steps at most (the bar from 22 s: ${tune} steps)`);
-}
-{
-  const B = 22, fill = band.filter(e => e.bypass && e.track === 'clap' && e.t >= B - 2 - 1e-9 && e.t < B);
-  const eighths = fill.filter(e => e.t < B - 1), sixteenths = fill.filter(e => e.t >= B - 1);
-  ok(eighths.length === 4 && sixteenths.length === 8 && fill.every((e, i) => !i || e.vel > fill[i - 1].vel),
-    `a build into the results: a fill on the clap of ${eighths.length} eighths then ${sixteenths.length} sixteenths, louder all the way`);
-  ok(!band.some(e => !e.bypass && e.track === 'clap' && e.t >= B - 2 - 1e-9 && e.t < B), 'the fill stands in for the clap\'s own pattern there');
-  const D = 59, dropped = band.filter(e => ['kick', 'hat', 'clap', 'bass'].includes(e.track) && !e.bypass && e.t >= D - 0.5 - 1e-9 && e.t < D);
-  ok(!dropped.length && levelAt(A.levels.kick, D - 0.25) === 0 && levelAt(A.levels.chords, D - 0.25) > 0, 'a drop into the end: no drum and no bass in the beat before it (the chords hold)');
-  const hat = A.levels.hat, F = 12;
-  ok(Math.abs(levelAt(hat, F - 0.5) - 1) < 1e-9 && Math.abs(levelAt(hat, F) - 0.85) < 1e-9 && Math.abs(levelAt(hat, F + 0.5) - 0.7) < 1e-9,
-    'a fade into the art: the hat moves from 1 to 0.7 across the seam, a beat either side of it');
-  const lead = band.filter(e => e.track === 'lead' && e.t >= 34 - 1e-9 && e.t < 34.5);
-  ok(lead.length > 0 && levelAt(A.levels.lead, 34.25) > 0 && levelAt(A.levels.lead, 34.25) < 1, 'the lead rings on past the chorus while it fades (its notes after 34 s, its level going down)');
-  ok(P.score.tracks.filter(t => !t.on).map(t => t.name).join() === 'kick,clap,hat,bass,chords,lead' && P.score.tracks.filter(t => t.on).length === 4,
-    'six parts (kick, clap, hat, bass, chords, lead) and four sound effects');
+  // a pad heard on its own: one turn of it, from 0, over the chords where the playhead is
+  const pv = RM.padPreview(P.score, A, 'drums', 'beat', 22.3);
+  ok(pv.length === 4 + 2 + 4 && pv.every(e => e.t >= 0 && e.t < 2), `padPreview: one turn of the drums' beat (${pv.length} hits in a bar, from 0)`);
 }
 
-// ── one line at a time ───────────────────────────────────────────────────
+// ── positions on the bars, and one line at a time ───────────────────────
 {
+  const round = ['5', '5-8', '4.4-6', '9.3', '11', '23.3-27', '28-30.1', '2-4.3', '5.2.3', '5.2.3-5.3', '1-32'];
+  ok(round.every(r => { const g = RM.readRange(r, SPB); return g && RM.rangeText(g.from, g.to, SPB) === r; }), `bars read and write back as written (${round.join(', ')})`);
+  const g = RM.readRange('4.4-6', SPB);
+  ok(g.from === 60 && g.to === 96, '"4.4-6" is from bar 4\'s last beat (7.5 s) to the end of bar 6 (12 s)');
+  const ln = P.score.clips.find(c => c.part === 'lead' && c.from === 16).ln;
+  const moved = RM.setClip(SCORE, ln, { to: 6 * SPB });
+  ok(diff(SCORE, moved).length === 1 && /^CLIP lead +2-6 +hook +0\.5$/.test(lines(moved)[ln - 1]), `setClip: one line, the lead's title clip to bar 6 ("${lines(moved)[ln - 1]}")`);
+  const faded = RM.setClip(SCORE, ln, { fadeIn: 2, level: 0.75 });
+  ok(/^CLIP lead +2-4 +hook +0\.75  in 2$/.test(lines(faded)[ln - 1]), `setClip: a level and a fade ("${lines(faded)[ln - 1]}")`);
+  const added = RM.addClip(SCORE, { part: 'drums', from: 23 * SPB, to: 26 * SPB, pad: 'half' });
+  const al = lines(added), at = al.indexOf('CLIP drums   24-26     half'), before = al[at - 1], after = al[at + 1];
+  ok(at > 0 && /^CLIP drums +21-23\.2 /.test(before) && /^CLIP drums +27 /.test(after) && al.length === lines(SCORE).length + 1, `addClip: a new line among its part's clips, in the order they play (after "${before.trim()}")`);
+  const removed = RM.removeClip(added, at + 1);
+  ok(removed === SCORE, 'removeClip: the line goes, the rest as it was');
+  const pad = RM.setPad(SCORE, 'drums', 'beat', 'kick', 'X.......X.......');
+  const pd = diff(SCORE, pad);
+  ok(pd.length === 1 && /^ {2}pad {6}beat {5}kick X\.{7}X\.{7} {2}clap \.{4}x\.{7}x\.{3} {2}hat \.\.x\.\.\.x\.\.\.x\.\.\.x\.$/.test(pd[0][2]), `setPad: one sound's steps in one pad, the line as it was otherwise ("${pd.length && pd[0][2].trim()}")`);
   const out = RM.setArg(SCORE, 'FX', 'reverb', 'return', 0, 0.65);
   const d = diff(SCORE, out);
   ok(d.length === 1 && /^ {2}return {3}0\.65$/.test(d[0][2]) && RM.parse(out).score.fx.reverb.return === 0.65, 'setArg: one number on one line (FX reverb return 0.65)');
@@ -110,21 +118,19 @@ ok(at('end').own && at('end').harmony.every(h => h.chord.name === 'Am') && at('e
   ok(diff(SCORE, v).length === 1 && RM.parse(v).score.tracks.find(t => t.name === 'chords').voices[1].cents === 12, 'setArg: the second voice of the chords, by index');
   const add = RM.setArg(SCORE, 'DRUM', 'kick', 'send', 0, 0.2);
   ok(lines(add).length === lines(SCORE).length + 1 && RM.parse(add).score.tracks.find(t => t.name === 'kick').send[0] === 0.2, 'setArg on a missing line adds it to its block, from the defaults');
-  const off = RM.toggleTrack(SCORE, 'art', 'hat');
-  const on = RM.toggleTrack(off, 'art', 'hat');
-  ok(!RM.parse(off).score.sections.find(s => s.ref === 'art').play.some(p => p.name === 'hat') && on === SCORE.replace('hat:0.7 bass:0.7 chords\n', 'bass:0.7 chords hat\n'), 'toggleTrack: off, then on again at full level, at the end of the line');
-  const st = RM.setLine(SCORE, 'DRUM', 'kick', 'steps', 'X.x.X.x.X.x.X.x.');
-  ok(diff(SCORE, st).length === 1 && RM.parse(st).score.tracks.find(t => t.name === 'kick').steps === 'X.x.X.x.X.x.X.x.', 'setLine: a new steps line in place');
   ok(RM.setLine(RM.setLine(SCORE, 'SYNTH', 'chords', 'lfo', null), 'SYNTH', 'chords', 'lfo', 'filter 0.18 380') !== SCORE && RM.parse(RM.setLine(SCORE, 'SYNTH', 'chords', 'lfo', null)).score.tracks.find(t => t.name === 'chords').lfo === null, 'setLine null removes a line (the chords\' lfo)');
 }
 throws(() => RM.parse(SCORE.replace('voice    saw -9 0.45', 'voice    sawz -9 0.45')), /line \d+: a voice's wave is/, 'a bad wave is named by line');
-throws(() => RM.parse(SCORE.replace('play     chords:0.8', 'play     chords:0.8 tuba')), /no track called that/, 'a section playing a track that is not there');
-throws(() => RM.parse(SCORE.replace('into     swell', 'into     wobble')), /into wants how the music arrives/, 'into wants a way the music arrives');
-throws(() => RM.parse(SCORE.replace('into     swell', 'into     swell 40')), /its beats are a number, 0-16/, 'into: its beats in range');
-throws(() => RM.parse(SCORE.replace('into     swell', 'into     swell\n  start    later')), /start wants auto, bar, cut/, 'start wants auto, bar or cut');
-throws(() => RM.parse(SCORE.replace('steps    X...x...X...x...', 'steps    X...y...X...x...')), /steps are X, x, o and \./, 'steps with a stray letter');
+throws(() => RM.parse(SCORE.replace('CLIP drums   5-6       groove', 'CLIP drums   5-7       groove')), /starts before the one on line \d+ ends/, 'two clips of one part may not overlap');
+throws(() => RM.parse(SCORE.replace('CLIP drums   5-6       groove', 'CLIP drums   5-6       tango')), /the drums part has no pad "tango"/, 'a clip names one of its part\'s pads');
+throws(() => RM.parse(SCORE.replace('CLIP drums   5-6       groove', 'CLIP drums   0-6       groove')), /is not a stretch of bars/, 'bars count from 1');
+throws(() => RM.parse(SCORE.replace('CLIP fx      11        rise', 'CLIP fx      11        rise  in 9')), /fades .* are longer than the clip/, 'a clip\'s fades fit inside it');
+throws(() => RM.parse(SCORE.replace('  pad      pulse    x...x...x...x...', '  pad      pulse    kick x...x...x...x...')), /kick plays in the drums part already/, 'a sound belongs to one part');
+throws(() => RM.parse(SCORE + '\nSECTION open\n  play     chords\n'), /SECTION is gone .* CLIP lines/, 'an old SECTION line says what took its place');
+throws(() => RM.parse(SCORE.replace('  decay    0.32\n  level    0.55', '  decay    0.32\n  steps    X...x...X...x...\n  level    0.55')), /no longer carries its steps/, 'steps on a sound say where they live now');
+throws(() => RM.parse(SCORE.replace('TIME   4/4', 'TIME   9/8')), /TIME wants beats a bar over 4/, 'TIME wants n/4');
+throws(() => RM.parse(SCORE.replace('steps    x.x.x.x.x.x.x.x.', '').replace('  pad      eighths  x.x.x.x.x.x.x.x.', '  pad      eighths  x.x.y.x.x.x.x.x.')), /plays steps: X loud, x, o soft/, 'steps with a stray letter');
 throws(() => RM.setArg(SCORE, 'SYNTH', 'chords', 'env', 0, 'soon'), /not a number/, 'setArg refuses a change that breaks the score');
-throws(() => RM.arrange(RM.parse(SCORE.replace('SECTION end', 'SECTION 12')).score, scenes, mom), /the script has no scene 12/, 'a section for a scene the script does not have');
 
 // ── the rig, the dev server, the rack, the renderer ─────────────────────
 const freePort = () => new Promise(r => { const s = net.createServer().listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => r(p)); }); });
@@ -154,7 +160,7 @@ try {
   const dur = (w1.length - 44) / (48000 * 4);
   ok(Math.abs(dur - CUT) < 0.01, `the mix is the cut's ${CUT} s (${dur.toFixed(3)} s)`);
   const at = stats(wav);
-  const loud = A.sections.map(s => ({ s, v: at(s.start + 0.1, Math.min(1.5, s.end - s.start - 0.2)) }));
+  const loud = scenes.map(s => ({ s, v: at(s.start + 0.1, Math.min(1.5, s.end - s.start - 0.2)) }));   // a stretch a scene
   ok(loud.every(x => x.v.mean > -40), 'every section sounds: ' + loud.map(x => `${x.s.type} ${x.v.mean}`).join(', '));
   ok(loud.every(x => x.v.max < -0.5), `no section clips (loudest peak ${Math.max(...loud.map(x => x.v.max))} dBFS)`);
   const tail = at(CUT - 0.2, 0.2), res = loud.find(x => x.s.type === 'results').v.mean, art = loud.find(x => x.s.type === 'art').v.mean;
@@ -175,7 +181,7 @@ try {
   dev = spawn(process.execPath, [join(ROOT, 'scripts/reel-dev.mjs'), `--port=${port}`], { stdio: ['ignore', 'pipe', 'inherit'] });
   await new Promise((res, rej) => { const t = setTimeout(() => rej(new Error('dev server did not start')), 8000); dev.stdout.on('data', d => { if (/reel-dev: http/.test(String(d))) { clearTimeout(t); res(); } }); });
   const post = body => fetch(`http://127.0.0.1:${port}/__reel/save`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(async x => ({ status: x.status, j: await x.json() }));
-  let s = await post({ file: T_SCORE, text: SCORE.replace('steps    X...x...X...x...', 'steps    X...y') });
+  let s = await post({ file: T_SCORE, text: SCORE.replace('CLIP drums   5-6       groove', 'CLIP drums   5-6       tango') });
   ok(s.status === 422 && /line \d+/.test((s.j.errors || [])[0]) && readFileSync(join(ROOT, T_SCORE), 'utf8') === SCORE, 'a score with a mistake: 422 with its line, the file untouched');
   s = await post({ file: T_SCORE, text: SCORE.replace('return   0.5', 'return   0.55') });
   ok(s.status === 200 && readFileSync(join(ROOT, T_SCORE), 'utf8').includes('return   0.55'), 'a good score: 200, written');
@@ -206,18 +212,28 @@ try {
   ok(t && d1.length === 1 && /^ {2}return {3}0\.\d+$/.test(d1[0][2]) && +d1[0][2].split(/\s+/)[2] > 0.5, `dragging the reverb's return knob up changes that one line of the score (${d1.map(x => x[2].trim()).join()})`);
   const heard = await page.evaluate(() => REEL_RACK.parsed.score.fx.reverb.return);
   ok(t && heard === +d1[0][2].split(/\s+/)[2], 'the engine plays the value the file now holds');
-  // the kick's first step: X → o
-  const step = page.locator('#reel-rack .rk-mod', { hasText: 'kick' }).locator('.rk-step').first();
+  // a pad's step: the drums' beat, its kick's first step, X → o
+  await page.locator('#reel-rack .rk-prow[data-part="drums"] .rk-tile', { hasText: 'beat' }).first().click();
+  const step = page.locator('#reel-rack .rk-paded .rk-pvoice', { hasText: 'kick' }).locator('.rk-step').first();
   await step.scrollIntoViewIfNeeded(); await step.click();
-  t = await waitFile(x => x.includes('steps    o...x...X...x...'));
-  ok(!!t, 'clicking a step cycles it in the file (X → o)');
-  // the arrangement: the art stops playing the hat
-  const cell = page.locator('#reel-rack .rk-arr .rk-lane', { hasText: 'hat' }).locator('.rk-cell').nth(3);
-  await cell.scrollIntoViewIfNeeded(); await cell.click();
-  t = await waitFile(x => /SECTION art\n {2}play {5}bass:0\.7 chords\n/.test(x));
-  if (!t) console.log('   art is now: ' + (/SECTION art\n(.*)\n/.exec(readFileSync(join(ROOT, T_SCORE), 'utf8')) || [])[1]);
-  ok(!!t, 'clicking a lit cell of the arrangement takes the track out of that section');
-  // undo, three times: back to the score we started from
+  t = await waitFile(x => /^ {2}pad {6}beat {5}kick o\.\.\.x\.\.\.X\.\.\.x\.\.\. {2}clap /m.test(x));
+  ok(!!t, 'clicking a pad\'s step cycles it in the file (the beat\'s first kick, X → o), its other sounds as they were');
+  // a tune: the lead's hook, its first note
+  await page.locator('#reel-rack .rk-prow[data-part="lead"] .rk-tile', { hasText: 'hook' }).first().click();
+  const tuneIn = page.locator('#reel-rack .rk-paded .rk-pvoice', { hasText: 'lead' }).locator('input');
+  await tuneIn.scrollIntoViewIfNeeded();
+  const tv = await tuneIn.inputValue();
+  await tuneIn.fill(tv.replace(/^C5/, 'D5')); await tuneIn.press('Enter');
+  t = await waitFile(x => /^ {2}pad {6}hook {5}D5 \. \. \. C5 \. D5/m.test(x));
+  ok(!!t, 'typing a tune writes the pad\'s line (the hook starts on D5 now), its bars kept');
+  // ▶ on a tile: the pad heard on its own, past the clips' levels
+  const preview = await page.evaluate(async () => {
+    const E = REEL_RACK.engine; let n = 0, bypass = 0;
+    const play = E.play; E.play = (ev, ...a) => { n++; if (ev.bypass) bypass++; return play(ev, ...a); };
+    document.querySelector('#reel-rack .rk-prow[data-part="bass"] .rk-tile:nth-child(2) button').click();
+    await new Promise(r => setTimeout(r, 60)); E.play = play; return { n, bypass };
+  });
+  ok(preview.n >= 4 && preview.bypass === preview.n, `▶ on a pad plays one turn of it on its own, past the clips' levels (${preview.n} notes)`);
   for (let i = 0; i < 3; i++) await page.evaluate(() => REEL_RACK.undo());
   t = await waitFile(x => x === SCORE);
   ok(t === SCORE, 'three undos: the file is the score we started from, byte for byte');

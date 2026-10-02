@@ -803,6 +803,62 @@ show sound effect cues too. all synth."
   with its words, a tick per key, an Enter each, a select-all per clear, a dot per pop, the
   cues' M for every sound effect, a question's and a pop's seek).
 
+## The music on its own bars: parts, pads and clips (2026-10-02)
+
+John: "I still can't move the edges of the audio elements or adjust them. think ableton mixed
+with easy pad. consistent musical setup, standard; aware of the other sizes but its own clear
+time signature timeline." The music was one SECTION per scene: nothing to drag, and its
+stretches were the picture's. (His tab had also kept playing the older score, and his 12 saves
+on claude.ai went onto it: arp and kick added to the art, a riser into the offer, a longer bass
+decay, more reverb on the arp. They are in the new arrangement.)
+
+- **The format, as a music program has it.** Sounds (SYNTH, DRUM: unchanged but for steps and
+  notes, which moved to pads). Parts: `PART drums` with its pads, `pad beat kick X...x...X...x...
+  clap ....x.......x...  hat ..x...x...x...x.` (sixteen steps a bar per sound), a tune for a
+  sound that plays notes (`pad hook C5 . . . | …`), nothing for a riser (`pad rise riser`: a
+  sweep across its clip); `len` caps a note, `once` plays from its clip's start (the crash).
+  Clips: `CLIP <part> <bars> <pad> [level] [in <beats>] [out <beats>]`, bars as positions
+  (`5`, `5-8`, `4.4-6`, `9.3`, `5.2.3`; each end at its own precision, both included). `TIME
+  4/4`, and `CHORDS 30-32 Am` for bars with chords of their own. A part's clips may not overlap;
+  a sound belongs to one part; an old SECTION, `into`, `sweep`, or steps on a sound fail by line
+  and say what took their place.
+- **A clip is a window onto its pad.** Pads go round on the bars from the reel's 0 (a `once` pad
+  from its clip's start), so a clip moved or stretched plays what the music plays there, in time
+  with the chords and the other parts. A part's clips are its sounds' level (`A.levels`: a step
+  or a fade at each end, the level between). A note lasts until its pad's next, `len` at most,
+  never past its clip; a chord's notes carried on (the same chord, or a common tone) are held.
+- **The arrangement** (`node scripts/reel-music.js check` draws it on the bars): six parts,
+  drums (beat, groove, half, hats, fill), bass (eighths, pulse, long), chords (hold, stabs), arp
+  (updown, run), lead (hook, high), fx (rise, crash). The groove lands at the answer with a crash;
+  the art has the arp and the kick (John's); fills and risers into both choruses, crashes on
+  them; the quotes are the chords, the hook at 0.7 and a long bass; the end holds Am. Measured
+  offline: peak -3.8 dBFS, -16.2 LUFS.
+- **The timeline's music** has its own ruler of bars and beats (`4/4 · 120` at its left), the
+  chords on the bars, and a gold marker and dashed line at each scene's cut. A lane per part, its
+  clips drawn with what they play (`REEL_UI.rollPaths` with rows: the drums as a drum grid, kick at
+  the foot). Drag a clip to move it, its edges to start and end it, its top corners to fade it,
+  up or down for its level; the grid is the finest of a sixteenth, a beat and a bar still 12 px
+  wide (Shift the bar, Alt free), and a scene's cut pulls an edge within 8 px. Double-click a lane
+  for a new clip (the part's chosen pad, up to four bars, to the next clip); click a clip for its
+  inspector (bars typed, pad tiles with ▶, a level slider, fades, Play from here, Duplicate,
+  Delete; ⌫ and ⌘D); click a lane's name for its pads. Selecting on press but opening the
+  inspector only on a click keeps a dragged clip under the pointer (opening it re-lays the panel
+  out). A clip past the reel's end is drawn to the view's end. Each change is one line
+  (`setClip`, `addClip` in play order among its part's lines, `removeClip`) on the one Undo.
+- **The rack** lost its arrangement matrix to the timeline and gained the pads: a row a part,
+  a tile a pad (its picture, ▶ to hear one turn of it on its own through `ReelSynth.preview`,
+  past the clips' levels), the chosen pad's step grid per sound or its tune (`setPad`, one line).
+  A part and its sounds share a colour in both panels. A saved score that no longer parses (one
+  in the old format, in a tab or on claude.ai) gives way to the file, with a note; the save is
+  left alone.
+- **Tests:** musictest (the format, the window semantics, a fill, a once pad, a riser, the tune
+  in time, note lengths, held chords, levels from clips, padPreview, positions read and written
+  back, the line editors, eleven refusals, the mix, the rack's pad step, tune and ▶);
+  musiclanestest (42: the ruler, chords and cut markers, every clip to 2 px and every note drawn,
+  the drum rows, an edge each way, a move, a fade, a level, the cut's pull, a double-click's clip
+  in play order, its pad and level from the inspector, ⌘D refused and done, ⌫, a part's chosen
+  pad, one Undo across both files, M/S per part, the cues, shut and open, a short window).
+
 ## Later
 
 Scene-specific cues (line staggers, the push); moving cut 1 onto the one player; stems out of

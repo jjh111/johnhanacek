@@ -1,65 +1,52 @@
 # SIZZLE REEL · CUT 2 · THE MUSIC
 #
 # The music for Assets/sizzle-reel-2.script.txt (a script's music is the .score.txt with its
-# name). All synth: every sound is made here from numbers, on the script's 120 BPM grid.
+# name). All synth: every sound is made here from numbers. No samples.
 #
-#   kick clap hat   the beat
-#   bass            the chord's root, on the eighths
-#   chords          the chord, held for its bar
-#   lead            the tune: four bars, once round the chords
-#   keys enter select pop   the sound effects: the edit plays these itself
+# It is set up the way a music program is, on its own bars (4/4 at 120 BPM: a bar is 2 s, and
+# bar 1 starts on the reel's first frame):
+#   SOUNDS  SYNTH and DRUM blocks: how each sound is made
+#   PARTS   PART blocks: drums, bass, chords, arp, lead, fx, and each one's pads, the patterns
+#           it can play (a bar of steps for one or more of its sounds, or a tune)
+#   CLIPS   CLIP lines: a part plays one of its pads over a stretch of bars. The timeline (E)
+#           shows them on the bars under the scenes: drag one, its edges or its fades
 #
-# ONE LOOP  Everything goes round on the reel's own bars (a bar is four beats, 2 s), from its
-#           first frame to its last: the chords (CHORDS, one a bar), the steps and the tune. A
-#           cut never starts anything again. A SECTION (one per scene) only says which parts
-#           play there, how loud, and how the music crosses into it.
+# CHORDS   F C G Am goes round from bar 1, one a bar (Am:2 holds two); "CHORDS 30-32 Am" gives
+#          those bars their own
+# SYNTH    voice <wave> <cents> <level> (sine, triangle, square, saw, noise; 1200 cents is an
+#          octave), filter <type> <Hz> <Q>, env <attack> <decay> <sustain> <release>, lfo
+#          <gain|filter|pitch> <Hz> <depth>; play chord|root|arp <octave> (on a pad's steps),
+#          notes (a pad's tune), rise (a sweep up across its clip); len: a note's most steps
+# DRUM     kind kick|snare|clap|hat|openhat|shaker|tick|boom|crash, tune (Hz), decay (s), tone (Hz)
+# mix      level 0-1, pan -1 to 1, send <reverb> <delay>
+# pad      <name> [<sound>] <steps or tune> [<sound> <steps>]... [len <steps>] [once]
+#          steps: sixteen a bar, X loud, x, o soft, . rest. A pad goes round on the bars; a
+#          "once" pad plays once from its clip's start
+# CLIP     <part> <bars> <pad> [<level>] [in <beats>] [out <beats>]
+#          bars: 5 (bar 5), 5-8 (bars 5 to 8), 4.4-6 (bar 4 beat 4 to the end of bar 6)
+# on       a sound effect plays at every moment of its kind: key, space, enter, clear (the
+#          select-all before the next question), cut, item, beat (an @)
 #
-# SYNTH     voice <wave> <cents> <level>   one line per oscillator: sine, triangle, square,
-#                                          saw or noise; 1200 cents is an octave up
-#           filter <type> <Hz> <Q>  env <attack> <decay> <sustain> <release>  (seconds)
-#           lfo <gain|filter|pitch> <Hz> <depth>
-#           play chord <octave>     the chord, held for its bar
-#                root <octave>      the chord's root, on the steps
-#                notes              the notes line, one a step (. rests), going round from 0;
-#                                   a note lasts until the next one, len steps at most
-#                arp, hit, rise, chime, note: see scripts/reel-music.js
-# DRUM      kind kick|snare|clap|hat|openhat|shaker|tick|boom|crash, tune (Hz), decay (s),
-#           tone (Hz)
-# steps     sixteen to a bar: X loud, x, o soft, . rest
-# level     0-1;  pan  -1 left to 1 right;  send <reverb> <delay>  0-1 each
-# on        a sound effect plays at every moment of its kind: key (each letter typed), space,
-#           enter, clear (the select-all before the next question), cut, item, beat (an @)
-# SECTION   play     the parts it plays; bass:0.6 plays the bass at 0.6 of its level
-#           into     how the music arrives here: fade (a crossfade, the default), swell, build
-#                    (a fill on the clap into it), drop (the drums and bass rest for a beat
-#                    before it) or cut; a number after it is its length in beats
-#           chords   its own chords instead of the loop's (the end holds Am)
-#           sweep    <from Hz> <to Hz>  a filter over the music across it
-#           start    auto (on the bar line nearest the cut when that is a beat away or less),
-#                    bar or cut
-#
-# PLAY      node scripts/reel-dev.mjs, then E (the timeline: every part's notes under the scenes)
-#           or M (the synth rack). Every control edits a line of this file.
-# CHECK     node scripts/reel-music.js check
+# CHECK    node scripts/reel-music.js check      the arrangement as a chart on the bars
 
 TEMPO  120
+TIME   4/4
 KEY    A minor
 CHORDS F C G Am
+CHORDS 30-32 Am
 
-# ── the parts ─────────────────────────────────────────────────────────────
+# ── the sounds ────────────────────────────────────────────────────────────
 
 DRUM kick
   kind     kick
   tune     52
   decay    0.32
-  steps    X...x...X...x...
   level    0.55
 
 DRUM clap
   kind     clap
   tone     1300
   decay    0.18
-  steps    ....x.......x...
   level    0.6
   send     0.3 0.05
 
@@ -67,7 +54,6 @@ DRUM hat
   kind     hat
   tone     8200
   decay    0.045
-  steps    ..x...x...x...x.
   level    0.32
   pan      0.2
 
@@ -75,9 +61,8 @@ SYNTH bass
   voice    saw 0 0.6
   voice    sine -1200 0.5
   filter   lowpass 480 4
-  env      0.004 0.18 0.55 0.08
+  env      0.004 0.58 0.55 0.08
   play     root 2
-  steps    x.x.x.x.x.x.x.x.
   len      2
   level    0.3
 
@@ -89,8 +74,20 @@ SYNTH chords
   env      0.5 0.6 0.75 1.2
   lfo      filter 0.18 380
   play     chord 3
+  len      16
   level    0.1
   send     0.55 0.12
+
+SYNTH arp
+  voice    square 0 0.35
+  voice    triangle 1200 0.3
+  filter   lowpass 2600 3
+  env      0.002 0.16 0 0.12
+  play     arp 4 updown
+  len      1
+  level    0.22
+  pan      0.25
+  send     0.51 0.4
 
 SYNTH lead
   voice    triangle 0 0.55
@@ -99,13 +96,59 @@ SYNTH lead
   env      0.02 0.25 0.6 0.35
   lfo      pitch 5.5 12
   play     notes
-  notes    C5 . . . C5 . D5 . A4 . . . . . . . | E5 . . . E5 . G5 . E5 . . . D5 . C5 . | D5 . . . D5 . C5 . B4 . . . . . . . | E5 . . . E5 . D5 . C5 . . . A4 . . .
   len      4
   level    0.2
   pan      -0.1
   send     0.35 0.3
 
-# ── the sound effects ─────────────────────────────────────────────────────
+SYNTH riser
+  voice    noise 0 0.7
+  voice    saw 0 0.15
+  filter   bandpass 5200 2
+  env      0.05 0 1 0.08
+  play     rise
+  level    0.2
+  send     0.4 0
+
+DRUM crash
+  kind     crash
+  tone     6500
+  decay    1.6
+  level    0.26
+  pan      0.1
+  send     0.4 0
+
+# ── the parts and their pads ──────────────────────────────────────────────
+
+PART drums
+  pad      beat     kick X...x...X...x...  clap ....x.......x...  hat ..x...x...x...x.
+  pad      groove   kick X...x...X...x...  hat ..x...x...x...x.
+  pad      half     kick X.......X.......  clap ........x.......  hat ..x...x...x...x.
+  pad      hats     hat ..x...x...x...x.
+  pad      fill     kick X...X...X...X...  clap o.o.x.x.xxxxXXXX
+
+PART bass
+  pad      eighths  x.x.x.x.x.x.x.x.
+  pad      pulse    x...x...x...x...
+  pad      long     X...............  len 16
+
+PART chords
+  pad      hold     X...............
+  pad      stabs    x...x...x...x...  len 2
+
+PART arp
+  pad      updown   x.xx.x.xx.xx.x.x
+  pad      run      xxxxxxxxxxxxxxxx
+
+PART lead
+  pad      hook     C5 . . . C5 . D5 . A4 . . . . . . . | E5 . . . E5 . G5 . E5 . . . D5 . C5 . | D5 . . . D5 . C5 . B4 . . . . . . . | E5 . . . E5 . D5 . C5 . . . A4 . . .
+  pad      high     C6 . . . C6 . D6 . A5 . . . . . . . | E6 . . . E6 . G6 . E6 . . . D6 . C6 . | D6 . . . D6 . C6 . B5 . . . . . . . | E6 . . . E6 . D6 . C6 . . . A5 . . .
+
+PART fx
+  pad      rise     riser
+  pad      crash    crash X  once
+
+# ── the sound effects: the edit plays these itself ───────────────────────
 
 DRUM keys
   kind     tick
@@ -171,46 +214,38 @@ FX master
   level    1
   fade     0 1.8
 
-# ── the arrangement: one section per scene ───────────────────────────────
+# ── the arrangement: a clip a line, on the bars ──────────────────────────
 
-SECTION open
-  play     chords:0.8
-  sweep    500 9000
+CLIP drums   5-6       groove
+CLIP drums   7-9.2     groove     0.8
+CLIP drums   9.3-10    beat
+CLIP drums   11        fill
+CLIP drums   12-17     beat
+CLIP drums   18-20     groove
+CLIP drums   21-23.2   beat
+CLIP drums   27        fill
+CLIP drums   28-30.1   beat
 
-SECTION title
-  play     chords lead:0.5 bass:0.5
-  into     swell
+CLIP bass    2-4.3     eighths    0.5  in 4
+CLIP bass    5-6       eighths
+CLIP bass    7-9.2     eighths    0.7
+CLIP bass    9.3-23.2  eighths
+CLIP bass    23.3-27   long       0.5
+CLIP bass    28-30.1   eighths
 
-SECTION answer
-  play     kick hat bass chords
-  into     drop
+CLIP chords  1-32      hold       in 4  out 4
 
-SECTION art
-  play     hat:0.7 bass:0.7 chords
+CLIP arp     7-11      updown     0.7
+CLIP arp     18-23.2   updown     0.6
+CLIP arp     28-30.1   updown     0.5
 
-SECTION command
-  play     kick clap:0.7 hat bass chords
+CLIP lead    2-4       hook       0.5
+CLIP lead    12-17     hook       out 2
+CLIP lead    23.3-27   hook       0.7  in 4
+CLIP lead    28-30.2   hook
 
-SECTION results
-  play     kick clap hat bass chords lead
-  into     build
-
-SECTION feature
-  play     kick hat bass chords
-
-SECTION logos
-  play     kick clap hat bass chords
-
-SECTION quotes
-  play     chords lead:0.7 bass:0.5
-  into     fade 4
-
-SECTION offer
-  play     kick clap hat bass chords lead
-  into     build
-
-SECTION end
-  play     chords
-  chords   Am
-  into     drop
-  sweep    9000 900
+CLIP fx      5         crash      0.7
+CLIP fx      11        rise
+CLIP fx      12        crash
+CLIP fx      27        rise
+CLIP fx      28        crash

@@ -8,8 +8,8 @@
 // (a kick is a sine falling in pitch, a hat is high-passed noise). Nothing is sampled, and the
 // noise is seeded, so an offline render is the same render every time.
 //
-//   voices → arrangement level → track (level · mute) → pan ─→ music bus → sweep filter ─┐
-//   (a transition's own notes, a fill: straight to the track)
+//   voices → the clips' level → track (level · mute) → pan ─→ music bus → sweep filter ──┐
+//   (an audition, a pad heard on its own: straight to the track)
 //                                        ├→ reverb send               ├→ drive → tape (wow, flutter,
 //                                        └→ delay send                │   age) → comp → master → out
 //   sound effects ─────────────────────────→ sfx bus ────────────────┘   hiss ──┘
@@ -144,16 +144,16 @@
       if (fout > 0) { const s = Math.max(from, D - fout); m.setValueAtTime(fadeAt(s), at(s)); m.linearRampToValueAtTime(0, at(D)); }
       const f = sweep.frequency;
       f.cancelScheduledValues(0);
-      const now = A.sweeps.find(s => from >= s.t0 && from < s.t1);
+      const sweeps = A.sweeps || [], now = sweeps.find(s => from >= s.t0 && from < s.t1);
       f.setValueAtTime(now ? now.from * Math.pow(now.to / now.from, (from - now.t0) / (now.t1 - now.t0)) : sweepOpen, n);
-      for (const s of A.sweeps) {
+      for (const s of sweeps) {
         if (s.t1 <= from) continue;
         if (s.t0 > from) f.setValueAtTime(s.from, at(s.t0));
         f.exponentialRampToValueAtTime(s.to, at(s.t1) - 0.001);
         f.setValueAtTime(sweepOpen, at(s.t1));
       }
-      // each flowing instrument's level across the cut (A.levels: points, linear between, two at
-      // one time a step): its crossfades, swells, builds and drops. The rest stay at 1.
+      // each part's sounds' level across the cut (A.levels: points, linear between, two at one
+      // time a step), from its clips: their levels and fades. The rest (sound effects) stay at 1.
       for (const [name, T] of Object.entries(E.tracks)) {
         const g = T.arr.gain, pts = A.levels && A.levels[name];
         g.cancelScheduledValues(0);
@@ -275,16 +275,26 @@
       else if (k === 'crash') { noise('highpass', t.tone, 0.6, v * 0.55, 0.002, D); noise('bandpass', t.tone * 1.45, 2.2, v * 0.3, 0.004, D * 0.6, 1); noise('highpass', 2400, 0.7, v * 0.4, 0.001, 0.05, 2); }
     }
 
-    // a note now, for the rack's audition button
+    // a note now, for the rack's audition button (past the clips' levels: the bypass)
     E.audition = function (name, A) {
       const t = E.score.tracks.find(x => x.name === name); if (!t) return;
       const when = ctx.currentTime + 0.02;
-      if (t.type === 'drum') return E.play({ track: name, t: 0, dur: t.decay, vel: 0.9 }, when);
-      if (t.play.mode === 'rise') return E.play({ track: name, t: 0, dur: 1.5, vel: 0.8, rise: true }, when);
-      const c = (A && A.sections[0] && A.sections[0].chords[0]) || E.score.chords[0];
+      if (t.type === 'drum') return E.play({ track: name, t: 0, dur: t.decay, vel: 0.9, bypass: true }, when);
+      if (t.play.mode === 'rise') return E.play({ track: name, t: 0, dur: 1.5, vel: 0.8, rise: true, bypass: true }, when);
+      const c = (A && A.harmony && A.harmony[0] && A.harmony[0].chord) || E.score.chords[0];
       const oct = t.play.oct != null ? t.play.oct : 4;
-      const midis = t.play.mode === 'note' ? [t.play.midi] : t.play.mode === 'notes' ? [RM().noteMidi(t.notes.find(n => n !== '.'))] : ['chord', 'hit', 'chime'].includes(t.play.mode) ? RM().voicing(c, oct) : [RM().voicing(c, oct)[0]];
-      midis.forEach((midi, j) => E.play({ track: name, t: 0, dur: t.play.mode === 'chord' ? 1.2 : Math.max(0.2, t.env.attack + t.env.decay), vel: 0.9, midi }, when + (t.play.mode === 'chime' ? j * 0.045 : 0)));
+      // a sound that plays a tune: its first note, in the first pad that gives it one
+      const tune = (E.score.parts || []).flatMap(p => p.pads).flatMap(p => p.voices).find(v => v.track === name && v.notes);
+      const first = tune ? RM().noteMidi(tune.notes.find(n => n !== '.')) : 72;
+      const midis = t.play.mode === 'note' ? [t.play.midi] : t.play.mode === 'notes' ? [first] : ['chord', 'chime'].includes(t.play.mode) ? RM().voicing(c, oct) : [RM().voicing(c, oct)[0]];
+      midis.forEach((midi, j) => E.play({ track: name, t: 0, dur: t.play.mode === 'chord' ? 1.2 : Math.max(0.2, t.env.attack + t.env.decay), vel: 0.9, midi, bypass: true }, when + (t.play.mode === 'chime' ? j * 0.045 : 0)));
+    };
+    // a pad on its own, now (ReelMusic.padPreview's events, from 0), past the clips' levels;
+    // a second preview stops the first
+    E.preview = function (evs) {
+      E.newGeneration();
+      const when = ctx.currentTime + 0.04;
+      evs.forEach(ev => E.play(Object.assign({}, ev, { bypass: true }), when + ev.t));
     };
 
     E.apply(score);

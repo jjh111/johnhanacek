@@ -114,12 +114,12 @@
   const Y = { ruler: 0, rulerH: 22, card: 26, cardH: 118, head: 33, works: 60, m0: 82, m1: 102, outRow: 124, fish: 150, laneH: 20, laneGap: 4 };
   Y.body = Y.card + Y.head; Y.bodyH = Y.card + Y.cardH - Y.body; Y.sep = Y.card + Y.cardH + 3;
   const FISH_END = Y.fish + 2 * Y.laneH + Y.laneGap;
-  // the music, under the fish: a hairline, a head of sections, then (open) a lane per part, each as
-  // tall as what it plays needs (a drum's ticks, a tune's range), a gap, and the sound effects'
-  // cues. The panel is as tall as what it shows (panelH, below).
-  const MUS = { gap: 10, head: 20, sep: 8 };
-  const LANE = { drum: 14, pitch: [18, 30], cues: 28 };
-  Y.mus = FISH_END + MUS.gap; Y.musLanes = Y.mus + MUS.head + 4;
+  // the music, under the fish: a hairline, its own ruler of bars, its chords, then (open) a lane
+  // per part (a clip's pad name in a head of LANE.head px, what it plays under it), a gap, and the
+  // sound effects' cues. The panel is as tall as what it shows (panelH, below).
+  const MUS = { gap: 10, ruler: 18, chords: 14, sep: 8 };
+  const LANE = { head: 10, cues: 28 };
+  Y.mus = FISH_END + MUS.gap; Y.musChords = Y.mus + MUS.ruler; Y.musLanes = Y.musChords + MUS.chords + 4;
   const BOTTOM = 12;                       // under the last lane: room for the view's scrollbar
   const PIN = 22, GAP = 24, MAX_PXS = 360;  // a moment's hit box; the room it needs from the next; the deepest zoom (px a second)
   const SLIM = 760, INSP = 420;            // a panel narrower than SLIM is slim; the inspector's width in a wide one
@@ -209,67 +209,88 @@
 #reel-tl .tl-ro-out { position: absolute; top: ${Y.card + 4}px; padding: 4px 7px; border: 1px solid rgba(var(--gold-rgb), 0.6); border-radius: 4px; background: rgba(var(--surface-rgb), 0.96);
   color: var(--text-bright); pointer-events: none; white-space: nowrap; z-index: 6; }
 #reel-tl .tl-ro-out[hidden] { display: none; }
-/* the music: a head of sections, a lane per part (what it plays, note for note), the cues */
+/* the music: its own ruler of bars, its chords, the scenes' cuts, a lane per part with its clips,
+   the cues */
 #reel-tl .tl-msep { position: absolute; left: 0; right: 0; top: ${Y.mus - MUS.gap / 2}px; border-top: 1px solid rgba(var(--cyan-dim-rgb), 0.15); pointer-events: none; }
-#reel-tl .tl-mh { position: absolute; top: ${Y.mus}px; height: ${MUS.head}px; padding: 0 6px; border-radius: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: pointer;
-  font: 500 10px/${MUS.head - 2}px var(--font-mono); color: var(--ink-quiet); background: rgba(var(--cyan-dim-rgb), 0.06); border: 1px solid rgba(var(--cyan-dim-rgb), 0.22); }
-#reel-tl .tl-mh:hover { border-color: var(--gold); }
-#reel-tl .tl-mh.tl-cur { border-color: rgba(var(--gold-rgb), 0.75); color: var(--text-bright); }
-#reel-tl .tl-mh.tl-none { cursor: default; color: var(--ink-faint); }
-/* a part in a section: a stretch to click, its notes showing through; hovered, its level on the right when not 1 */
-#reel-tl .tl-mc { position: absolute; padding: 0 5px; border-radius: 3px; overflow: hidden; white-space: nowrap; cursor: pointer; text-align: right; z-index: 1;
-  font: 500 9px/1 var(--font-mono); color: transparent; border: 1px dashed transparent; }
-#reel-tl .tl-mc:hover { border-color: rgba(var(--gold-rgb), 0.8); color: var(--text-bright); text-shadow: 0 0 3px rgb(var(--surface-rgb)), 0 0 3px rgb(var(--surface-rgb)); }
-#reel-tl .tl-mc.tl-on:hover { border-style: solid; }
-#reel-tl .tl-mc.tl-lv { cursor: ns-resize; border: 1px solid var(--gold); color: var(--gold); }
-/* a lane's name, kept at the left of the view */
-#reel-tl .tl-mlb { position: absolute; height: 13px; padding: 0 4px; border-radius: 3px; white-space: nowrap; z-index: 3; cursor: help;
-  font: 500 9px/11px var(--font-mono); color: var(--text-bright); background: rgba(var(--surface-rgb), 0.88); border: 1px solid var(--c); }
-#reel-tl .tl-mlb.tl-mute { color: var(--ink-faint); border-style: dashed; }
-/* the notes: the level behind, faint; the notes in four strengths; a seam's own in gold */
-#reel-tl svg.tl-mroll { position: absolute; left: 0; overflow: visible; pointer-events: none; }
-#reel-tl svg.tl-mroll .tl-lva { fill: var(--c); fill-opacity: 0.09; stroke: none; }
+#reel-tl .tl-mruler { position: absolute; left: 0; right: 0; top: ${Y.mus}px; height: ${MUS.ruler}px; cursor: col-resize;
+  background: rgba(var(--cyan-dim-rgb), 0.05); border-bottom: 1px solid rgba(var(--cyan-dim-rgb), 0.3); }
+#reel-tl .tl-mbar { position: absolute; top: ${Y.mus}px; height: ${MUS.ruler}px; padding-left: 3px; border-left: 1px solid rgba(var(--cyan-dim-rgb), 0.6);
+  font: 600 9.5px/${MUS.ruler}px var(--font-mono); color: var(--ink-quiet); pointer-events: none; }
+#reel-tl .tl-msig { position: absolute; height: ${MUS.ruler - 4}px; padding: 0 5px; border-radius: 3px; z-index: 4; pointer-events: none;
+  font: 600 9px/${MUS.ruler - 6}px var(--font-mono); color: var(--gold); background: rgba(var(--surface-rgb), 0.94); border: 1px solid rgba(var(--gold-rgb), 0.6); }
+#reel-tl .tl-mch { position: absolute; top: ${Y.musChords}px; height: ${MUS.chords}px; padding: 0 5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; pointer-events: none;
+  font: 500 9.5px/${MUS.chords}px var(--font-mono); color: var(--ink-quiet); border-left: 1px solid rgba(var(--cyan-dim-rgb), 0.25); }
+#reel-tl .tl-mcutl { position: absolute; top: ${Y.mus}px; width: 0; border-left: 1px dashed rgba(var(--gold-rgb), 0.45); pointer-events: none; z-index: 2; }
+#reel-tl .tl-mcutl span { position: absolute; left: -6px; top: 0; width: 12px; height: 9px; pointer-events: auto; cursor: help; }
+#reel-tl .tl-mcutl span::before { content: ''; position: absolute; left: 1px; top: 0; border: 5px solid transparent; border-top: 6px solid var(--gold); }
+#reel-tl .tl-mbars { position: absolute; left: 0; top: ${Y.mus}px; pointer-events: none; background-repeat: repeat-x; background-position: 0 0;
+  background-image: linear-gradient(to right, rgba(var(--cyan-dim-rgb), 0.2) 1px, transparent 1px); }
+#reel-tl .tl-mbars.tl-beats { background-image: linear-gradient(to right, rgba(var(--cyan-dim-rgb), 0.2) 1px, transparent 1px), linear-gradient(to right, rgba(var(--cyan-dim-rgb), 0.07) 1px, transparent 1px); }
+#reel-tl .tl-mnone { position: absolute; top: ${Y.mus}px; height: ${MUS.ruler}px; padding: 0 6px; font: 500 10px/${MUS.ruler}px var(--font-mono); color: var(--ink-faint); }
+/* a part's lane and its clips: a head with the pad's name, what it plays under it; edges, fades */
+#reel-tl .tl-mlane { position: absolute; left: 0; right: 0; border-bottom: 1px solid rgba(var(--cyan-dim-rgb), 0.08); }
+#reel-tl .tl-mk { position: absolute; border: 1px solid; border-radius: 4px; cursor: grab; z-index: 1; box-sizing: border-box; }
+#reel-tl .tl-mk:hover { box-shadow: 0 0 0 1px rgba(var(--gold-rgb), 0.55); }
+#reel-tl .tl-mk.tl-sel { border-color: var(--gold) !important; box-shadow: 0 0 0 1px var(--gold); z-index: 2; }
+#reel-tl .tl-mk.tl-mute { opacity: 0.4; }
+#reel-tl .tl-mkn { display: block; height: ${LANE.head}px; padding: 0 5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; pointer-events: none;
+  font: 600 8.5px/${LANE.head}px var(--font-mono); color: var(--text-bright); }
+#reel-tl .tl-mke { position: absolute; top: 0; bottom: 0; width: 7px; cursor: ew-resize; z-index: 2; border-radius: 3px; }
+#reel-tl .tl-mke.tl-l { left: -3px; }
+#reel-tl .tl-mke.tl-r { right: -3px; }
+#reel-tl .tl-mke:hover { background: rgba(var(--gold-rgb), 0.5); }
+#reel-tl .tl-mkf { position: absolute; top: -3px; width: 8px; height: 8px; border-radius: 2px; background: var(--c); border: 1px solid rgb(var(--surface-rgb)); cursor: ew-resize; z-index: 3; opacity: 0; }
+#reel-tl .tl-mk:hover .tl-mkf, #reel-tl .tl-mk.tl-sel .tl-mkf { opacity: 1; }
+#reel-tl .tl-mkf:hover { background: var(--gold); }
+/* the notes, over the clips: four strengths; a fade's corner shaded under its line */
+#reel-tl svg.tl-mroll { position: absolute; left: 0; overflow: visible; pointer-events: none; z-index: 3; }
 #reel-tl svg.tl-mroll .tl-n { fill: var(--c); stroke: none; }
 #reel-tl svg.tl-mroll .tl-n1 { fill-opacity: 0.3; }
 #reel-tl svg.tl-mroll .tl-n2 { fill-opacity: 0.55; }
 #reel-tl svg.tl-mroll .tl-n3 { fill-opacity: 0.8; }
-#reel-tl svg.tl-mroll .tl-own { fill: var(--gold); }
+#reel-tl svg.tl-mroll .tl-fsh { fill: rgb(var(--surface-rgb)); fill-opacity: 0.55; stroke: none; }
+#reel-tl svg.tl-mroll .tl-fln { fill: none; stroke: var(--c); stroke-width: 1.2; }
 #reel-tl svg.tl-mroll.tl-mute { opacity: 0.3; }
+/* a lane's name, kept at the left of the view: a part's opens its pads */
+#reel-tl .tl-mlb { position: absolute; height: ${LANE.head + 2}px; padding: 0 5px; border-radius: 3px; white-space: nowrap; z-index: 4; cursor: help;
+  font: 600 9px/${LANE.head}px var(--font-mono); color: var(--text-bright); background: rgba(var(--surface-rgb), 0.92); border: 1px solid var(--c); }
+#reel-tl button.tl-mlb { height: ${LANE.head + 2}px; min-width: 0; padding: 0 5px; cursor: pointer; font: 600 9px/${LANE.head}px var(--font-mono);
+  color: var(--text-bright); background: rgba(var(--surface-rgb), 0.92); border: 1px solid var(--c); border-radius: 3px; }
+#reel-tl button.tl-mlb:hover { border-color: var(--gold); color: var(--gold); }
+#reel-tl .tl-mlb.tl-mute { color: var(--ink-faint); border-style: dashed; }
 /* the cues: a tick a key, the Enter, the question while it stands on the bar, the select-all
    that clears it; a dot for each pop */
 #reel-tl .tl-mq { position: absolute; height: 13px; padding: 0 4px 0 9px; border-radius: 3px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: pointer;
   font: 500 9.5px/11px var(--font-mono); color: var(--ink-quiet); background: rgba(var(--cyan-dim-rgb), 0.07); border: 1px solid rgba(var(--cyan-dim-rgb), 0.25); }
 #reel-tl .tl-mq:hover { border-color: var(--gold); color: var(--text-bright); }
 #reel-tl .tl-mkt { position: absolute; width: 1px; height: 11px; background: var(--c); pointer-events: none; }
-#reel-tl .tl-mke, #reel-tl .tl-mks { position: absolute; width: 13px; height: 13px; margin-left: -6.5px; color: var(--c); z-index: 2; pointer-events: none; display: flex;
+#reel-tl .tl-mke2, #reel-tl .tl-mks { position: absolute; width: 13px; height: 13px; margin-left: -6.5px; color: var(--c); z-index: 2; pointer-events: none; display: flex;
   background: rgb(var(--surface-rgb)); border-radius: 3px; }
-#reel-tl .tl-mke .ri, #reel-tl .tl-mks .ri { width: 13px; height: 13px; }
+#reel-tl .tl-mke2 .ri, #reel-tl .tl-mks .ri { width: 13px; height: 13px; }
 #reel-tl .tl-mpd { position: absolute; width: 9px; height: 9px; margin-left: -4.5px; border-radius: 50%; background: var(--c); cursor: pointer; z-index: 2; }
 #reel-tl .tl-mpd:hover { background: var(--gold); }
-#reel-tl .tl-mq.tl-mute, #reel-tl .tl-mkt.tl-mute, #reel-tl .tl-mke.tl-mute, #reel-tl .tl-mks.tl-mute, #reel-tl .tl-mpd.tl-mute { opacity: 0.3; }
-/* the music as one piece: the bars under it, the chords on them, where the picture cuts, a chip on
-   every seam (how the music crosses it), the seam's stretch */
-#reel-tl .tl-mbars { position: absolute; left: 0; top: ${Y.mus}px; pointer-events: none;
-  background-image: linear-gradient(to right, rgba(var(--cyan-dim-rgb), 0.12) 1px, transparent 1px); background-repeat: repeat-x; background-position: 0 0; }
-#reel-tl .tl-mch { position: absolute; top: ${Y.mus + 1}px; height: ${MUS.head - 2}px; padding: 0 6px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; pointer-events: none; z-index: 1;
-  font: 500 10px/${MUS.head - 2}px var(--font-mono); color: var(--ink-quiet); border-left: 1px solid rgba(var(--cyan-dim-rgb), 0.25); }
-#reel-tl .tl-mch.tl-first { border-left: 0; padding-left: 12px; }   /* clear of the seam's chip (the generic icon-button rule is out-ranked above: 18 px, not 28) */
-#reel-tl .tl-mcut { position: absolute; top: ${Y.mus - 4}px; height: ${MUS.head + 8}px; width: 7px; margin-left: -3px; z-index: 3; cursor: help; }
-#reel-tl .tl-mcut::before { content: ''; position: absolute; left: 3px; top: 0; bottom: 0; border-left: 1px dashed var(--ink-quiet); }
-#reel-tl .tl-lane .tl-mcontent button.tl-mseam { position: absolute; top: ${Y.mus + 1}px; width: 18px; height: 18px; min-width: 0; margin-left: -9px; padding: 0; border-radius: 50%; z-index: 4;
-  display: flex; align-items: center; justify-content: center; background: rgb(var(--surface-rgb)); border: 1px solid rgba(var(--gold-rgb), 0.75); color: var(--gold); }
-#reel-tl .tl-lane .tl-mcontent button.tl-mseam.tl-def { border-color: rgba(var(--cyan-dim-rgb), 0.55); color: var(--ink-quiet); }
-#reel-tl .tl-lane .tl-mcontent button.tl-mseam .ri { width: 11px; height: 11px; }
-#reel-tl .tl-mwin { position: absolute; top: ${Y.musLanes - 2}px; pointer-events: none; border-radius: 3px;
-  background: linear-gradient(to right, transparent, rgba(var(--gold-rgb), 0.1), transparent); }
-#reel-tl .tl-mwin.swell, #reel-tl .tl-mwin.build, #reel-tl .tl-mwin.drop { background: linear-gradient(to right, transparent, rgba(var(--gold-rgb), 0.13)); }
+#reel-tl .tl-mq.tl-mute, #reel-tl .tl-mkt.tl-mute, #reel-tl .tl-mke2.tl-mute, #reel-tl .tl-mks.tl-mute, #reel-tl .tl-mpd.tl-mute { opacity: 0.3; }
 #reel-tl .tl-mms { position: absolute; left: 0; width: ${GUT}px; display: flex; align-items: center; gap: 2px; padding: 0 2px 0 5px; }
 #reel-tl .tl-mms::before { content: ''; position: absolute; left: 1px; top: 2px; bottom: 2px; width: 2px; border-radius: 1px; background: var(--c); }
 #reel-tl .tl-mms button { flex: 1; height: 12px; min-width: 0; padding: 0; border-radius: 3px; font: 600 9px/1 var(--font-mono);
   background: transparent; color: var(--ink-faint); border: 1px solid rgba(var(--cyan-dim-rgb), 0.3); }
 #reel-tl .tl-mms button.tl-on { background: var(--gold); border-color: var(--gold); color: rgb(var(--surface-rgb)); }
-#reel-tl button.tl-mtog { position: absolute; left: 3px; width: ${GUT - 6}px; height: ${MUS.head}px; min-width: 0; padding: 0; display: flex; align-items: center; justify-content: center; gap: 0; }
+#reel-tl button.tl-mtog { position: absolute; left: 3px; width: ${GUT - 6}px; height: ${MUS.ruler}px; min-width: 0; padding: 0; display: flex; align-items: center; justify-content: center; gap: 0; }
 #reel-tl button.tl-mtog .ri { width: 12px; height: 12px; }
+/* the inspector's music pages: a clip (its bars, its pad, level, fades), a part's pads */
+#reel-tl .tl-pads { display: grid; grid-template-columns: repeat(auto-fill, minmax(94px, 1fr)); gap: 6px; margin: 4px 0 10px; }
+#reel-tl .tl-pad { position: relative; height: 54px; padding: 6px 7px; border-radius: 7px; cursor: pointer; color: var(--c); display: flex; flex-direction: column; justify-content: space-between;
+  background: rgba(var(--cyan-dim-rgb), 0.06); border: 1px solid rgba(var(--cyan-dim-rgb), 0.3); }
+#reel-tl .tl-pad b { font: 600 10.5px/1 var(--font-mono); color: var(--text-bright); }
+#reel-tl .tl-pad:hover, #reel-tl .tl-pad:focus-visible { border-color: var(--gold); outline: none; }
+#reel-tl .tl-pad.tl-on { border-color: var(--gold); background: rgba(var(--gold-rgb), 0.1); box-shadow: inset 0 0 0 1px var(--gold); }
+#reel-tl .tl-pad button.tl-pplay { position: absolute; right: 4px; top: 4px; width: 22px; height: 22px; min-width: 0; padding: 0; }
+#reel-tl .tl-pad button.tl-pplay .ri { width: 11px; height: 11px; }
+#reel-tl .tl-mlv { display: flex; gap: 8px; align-items: center; }
+#reel-tl .tl-mlv input[type=range] { flex: 1; min-width: 0; padding: 0; border: 0; background: none; accent-color: var(--gold); }
+#reel-tl .tl-mlv .tl-cue { flex: none; width: 74px; }
+#reel-tl .tl-macts { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 6px; }
+#reel-tl .tl-mhint { color: var(--ink-faint); font-size: 10px; line-height: 1.5; margin: 8px 0 4px; user-select: none; }
 /* the status bar: one row under everything, its own rule above it */
 #reel-tl .tl-status { position: absolute; left: 0; right: 0; bottom: 0; height: ${STATUS}px; padding: 0 8px 0 12px; display: flex; align-items: center; gap: 8px; white-space: nowrap;
   border-top: 1px solid rgba(var(--cyan-dim-rgb), 0.18); }
@@ -636,6 +657,12 @@
   function stick() {
     const L0 = view.scrollLeft;
     MLB.forEach(lb => { lb.style.left = (L0 + 4) + 'px'; });
+    CLIPS.forEach(k => {
+      const a = parseFloat(k.el.style.left) || 0, w = parseFloat(k.el.style.width) || 0, room = L0 + (k.tagW || 0) + 8;
+      const d = Math.max(0, Math.min(room - a, w - 60));
+      const tr = d > 0 ? `translateX(${d.toFixed(0)}px)` : '';
+      if (k.nm.style.transform !== tr) k.nm.style.transform = tr;
+    });
     SCENES.forEach(S => {
       const a = parseFloat(S.el.style.left) || 0, w = parseFloat(S.el.style.width) || 0;
       const d = Math.max(0, Math.min(L0 - a, w - 120));
@@ -665,8 +692,6 @@
     ph.style.transform = `translateX(${x(tt).toFixed(1)}px)`;
     let c = 0; SCENES.forEach(S => { if (t >= S.start - 1e-6) c = S.i; });
     if (c !== curScene) { if (SCENES[curScene]) SCENES[curScene].el.classList.remove('tl-cur'); SCENES[c].el.classList.add('tl-cur'); curScene = c; }
-    let ms = -1; for (let i = 0; i < MHEADS.length; i++) if (t >= MHEADS[i].sc.start - 1e-6) ms = i;
-    if (ms !== curSec) { if (MHEADS[curSec]) MHEADS[curSec].el.classList.remove('tl-cur'); if (MHEADS[ms]) MHEADS[ms].el.classList.add('tl-cur'); curSec = ms; }
     const jumped = lastT != null && Math.abs(tt - lastT) > 0.3; lastT = tt;
     const playing = !!(L.isPlaying && L.isPlaying()), p = x(tt) - view.scrollLeft, inView = p >= 0 && p <= VW - 24;
     if (jumped || inView || (playing && !wasPlaying)) follow = true;
@@ -840,151 +865,143 @@
     // a still press is a seek too, and drag() only calls move once the pointer travels
   });
 
-  // ── the music: the score's arrangement on the same clock ──────────────
-  // What the synth rack holds (REEL_RACK: the score's parse, its arrangement against the cut, the
-  // mix) drawn under the fish lanes, and drawn again whenever the rack says it changed (a
-  // reel-score event): the score, the cut, the mix. The music is one piece (ReelMusic.arrange): a
-  // head shows each section where its music plays (on the bar line nearest the cut, a dashed line
-  // where the picture cuts when the two differ), the chords on the bars, and a chip on every seam
-  // saying how the music crosses it (click: the next way). Open, each part has a lane that shows
-  // what it plays, note for note (until 2026-10-02 a lane was a row of blocks that only said a
-  // part was playing): a drum's hits as ticks, taller when louder; a pitched part's notes at their
-  // pitches, as long as they sound, fainter where its level is lower; and behind them, faintly,
-  // its level across the cut, so where it plays and how it fades in and out is the lane's shape.
-  // Under the parts, one lane of cues for the sound effects the edit plays itself: each question
-  // the command bar types (a tick a key, its Enter, the question while it stands on the bar, the
-  // select-all that clears it) and a dot for each pop on an @ moment.
-  let musOpen = get(K_MUS, true), MB = [], MX = [], MHEADS = [], MLB = [], ROLLS = [], musSig = null, curSec = -1, BAR = 2, bars = null, musH = 0;
+  // ── the music: the score's clips on the music's own bars ─────────────
+  // What the synth rack holds (REEL_RACK: the score's parse, its arrangement, the mix), drawn
+  // under the fish lanes and drawn again whenever the rack says it changed (a reel-score event).
+  // The music keeps its own time, as a music program does: a ruler of bars and beats (its time
+  // signature and tempo at its left), the chords on the bars, and the scenes' cuts as notches and
+  // faint lines, so the picture is always in view and a clip's edge is drawn to a cut when it comes
+  // near one. Under it, a lane per part (drums, bass, chords, arp, lead, fx: its name, M and S),
+  // and on it the part's clips, each showing what it plays (a drum grid, notes at their pitches,
+  // a riser's wedge) under the name of its pad:
+  //   drag a clip           move it (on the grid: a bar zoomed out, a beat in, a sixteenth closer;
+  //                         Shift: the bar; Alt: free of the grid and the cuts)
+  //   drag its edges        where it starts and ends
+  //   drag its top corners  its fade in and out (in beats)
+  //   drag it up or down    its level (start with an upward or downward pull)
+  //   double-click a lane   a new clip there, of the pad last chosen for the part
+  //   click a clip          the inspector: its bars, its pad (a pad each, to hear and to choose),
+  //                         its level and fades, Play from here, Duplicate, Delete (⌫ and ⌘D too)
+  //   click a lane's name   its pads: hear one, choose the one a new clip gets
+  // Each change is one line of the score (ReelMusic.setClip, addClip, removeClip) through the rack
+  // (REEL_RACK.change), which plays it at once and keeps it; Undo takes it back.
+  let musOpen = get(K_MUS, true), PARTS = [], MX = [], MLB = [], ROLLS = [], CLIPS = [], BARN = [], CUTL = [], musSig = null, musH = 0, bars = null;
+  let selClip = null, inspMode = null;               // the selected clip's line; what the inspector shows
+  const chosen = {};                                 // a part's pad for the next new clip
   const lanes = new Map();                           // a lane's name → its M and S, and what dims when it is silent
-  const RK = () => window.REEL_RACK;
-  const musEnd = () => musOpen && musH ? musH : Y.mus + MUS.head;
+  const RK = () => window.REEL_RACK, RMu = () => window.ReelMusic;
+  const AR = () => { const R = RK(); return R && R.arrangement; };
+  let musEmpty = true;                               // no score yet (or none beside this script): one row says so
+  const musEnd = () => musEmpty ? Y.mus + MUS.ruler : musOpen && musH ? musH : Y.musLanes - 4;
   const rgba = (hex, a) => { const n = parseInt(String(hex).slice(1), 16); return `rgba(${n >> 16 & 255}, ${n >> 8 & 255}, ${n & 255}, ${a})`; };
-  const lvA = lv => (0.14 + 0.26 * Math.min(1, lv)).toFixed(3);   // a lit hit cell's strength: its level
   const ON = { key: 'every letter typed', space: 'every space typed', clear: 'the select-all that clears each question', enter: 'each Enter', beat: 'every @ moment', cut: 'every cut', item: 'each work' };
-  // the ways the music crosses a seam, in the order a click on its chip goes through them
-  const SEAMS = ['fade', 'swell', 'build', 'drop', 'cut'];
-  const SEAM_ICON = { fade: 'xfade', swell: 'swell', build: 'build', drop: 'drop', cut: 'seamCut' };
-  const seamWords = tr => {
-    const n = tr.beats, b = `${n} beat${n === 1 ? '' : 's'}`;
-    return { fade: `a crossfade across the seam (${b}): what leaves fades out as what arrives fades in`,
-      swell: `a swell: what arrives comes in over the ${b} before it`,
-      build: `a build: a fill on the clap over the ${b} before it, louder all the way in`,
-      drop: `a drop: the drums and the bass rest for the ${b} before it`,
-      cut: 'a cut: everything changes on it' }[tr.kind];
-  };
-  // A lane is as tall as what it plays needs: a drum's hits little, a tune its range of pitches.
-  const NOTE = n => ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'][((n % 12) + 12) % 12] + (Math.floor(n / 12) - 1);
-  function laneShape(evs) {
+  const bt = (s, A) => RMu().rangeText(s.from, s.to, A.spb);           // a clip's bars, as the score writes them
+  const clipName = c => c.pad + (Math.abs(c.level - 1) > 1e-9 ? ' · ' + c.level : '');
+  // a part's lane: a row a sound for a part of several (the drums: kick at the foot, as a drum grid
+  // has it), a piano roll as tall as its range for one that plays pitches, a strip for one drum
+  function shapeOf(p, A) {
+    const n = p.tracks.length, head = LANE.head;
+    if (n > 1) return { h: head + n * 8 + 3, rows: Object.fromEntries(p.tracks.map((t, i) => [t, n - 1 - i])), nRows: n };
     let lo = Infinity, hi = -Infinity;
-    evs.forEach(e => { if (e.midi != null) { lo = Math.min(lo, e.midi); hi = Math.max(hi, e.midi); } });
-    if (lo === Infinity) return { h: LANE.drum, pitched: false };
-    return { h: Math.max(LANE.pitch[0], Math.min(LANE.pitch[1], 6 + (hi - lo + 1) * 2)), pitched: true, lo, hi };
-  }
-  // what a part plays, in words (its name's tooltip)
-  function plays(t, shape) {
-    const range = shape.pitched ? `, ${shape.lo === shape.hi ? NOTE(shape.lo) : NOTE(shape.lo) + ' to ' + NOTE(shape.hi)}` : '';
-    if (t.type === 'drum') return t.steps ? `${t.name}: a ${t.kind} on the steps ${t.steps}, round every bar (a taller tick, a louder hit)` : `${t.name}: a ${t.kind}, once on each section's cut`;
-    const m = t.play.mode, bars = +(((t.notes || []).length) / 16).toFixed(2);
-    return `${t.name}: ` + ({ chord: 'the chord, held for its bar', root: `the chord's root on the steps ${t.steps}`, arp: `the chord's notes in turn (${t.play.dir}) on the steps ${t.steps}`,
-      notes: `the tune, ${bars} bar${bars === 1 ? '' : 's'} round with the chords`, hit: 'the chord once, on each section\'s cut', rise: 'a sweep up into a seam' }[m] || m) + range;
+    A.events.forEach(e => { if (e.track === p.tracks[0] && e.midi != null) { lo = Math.min(lo, e.midi); hi = Math.max(hi, e.midi); } });
+    if (lo === Infinity) return { h: head + 14 };
+    return { h: head + Math.max(14, Math.min(22, 6 + (hi - lo + 1) * 1.2)) + 3, lo, hi };
   }
   // a cheap fingerprint of every note, so a knob that changes no note redraws nothing
   function noteHash(A, Pm) {
     const idx = new Map(Pm.score.tracks.map((t, i) => [t.name, i + 1]));
     let x = 2166136261;
     const mix = n => { x = Math.imul(x ^ (n | 0), 16777619); };
-    for (const e of A.events) { mix(idx.get(e.track) || 0); mix(Math.round(e.t * 1000)); mix(Math.round(e.dur * 1000)); mix(e.midi || 0); mix(Math.round(e.vel * 1000)); mix(e.bypass ? 1 : e.rise ? 2 : 0); }
+    for (const e of A.events) { mix(idx.get(e.track) || 0); mix(Math.round(e.t * 1000)); mix(Math.round(e.dur * 1000)); mix(e.midi || 0); mix(Math.round(e.vel * 1000)); mix(e.rise ? 2 : 0); }
     return x >>> 0;
   }
   function musicSig() {
     const R = RK(), Pm = R && R.parsed, A = R && R.arrangement;
     if (!Pm || !A) return JSON.stringify([musOpen, R ? R.error || 'none' : 'wait']);
-    return JSON.stringify([musOpen, Pm.score.tracks.map(t => [t.name, t.on || '', t.type === 'drum' ? t.kind + (t.steps || '') : t.play && t.play.mode + (t.steps || '') + (t.notes || []).length]),
-      A.sections.map(sc => [sc.ref, sc.type, sc.cut, sc.start, sc.end, sc.play.map(p => p.name + ':' + p.level).join(' ')]),
-      (A.harmony || []).map(x => x.chord.name + '@' + x.t).join(' '), (A.transitions || []).map(tr => [tr.ref, tr.kind, tr.beats, tr.set, tr.t0, tr.t1]),
-      A.levels || {}, noteHash(A, Pm), RS.queries(EDIT).map(q => q.text), MOMENTS.map(M => M.label)]);
+    return JSON.stringify([musOpen, Pm.score.tempo, Pm.score.beatsPerBar, Pm.score.tracks.map(t => [t.name, t.on || '']),
+      Pm.score.parts.map(p => [p.name, p.tracks, p.pads.map(d => d.name + ':' + d.voices.map(v => v.track + (v.steps || v.text || '')).join(','))]),
+      A.clips.map(c => [c.ln, c.part, c.from, c.to, c.pad, c.level, c.fadeIn, c.fadeOut]), A.harmony.map(x => x.chord.name).join(' '),
+      noteHash(A, Pm), RS.queries(EDIT).map(q => q.text), MOMENTS.map(M => M.label), SCENES.map(S => S.start)]);
   }
   function populateMusic() {
     const R = RK(), Pm = R && R.parsed, A = R && R.arrangement;
-    mcontent.textContent = ''; mgut.textContent = ''; mrecs = []; MHEADS = []; MLB = []; ROLLS = []; lanes.clear(); curSec = -1; musH = 0;
+    mcontent.textContent = ''; mgut.textContent = ''; mrecs = []; MLB = []; ROLLS = []; CLIPS = []; BARN = []; CUTL = []; lanes.clear(); musH = 0;
     h('div', 'msep', mcontent);
-    bars = h('div', 'mbars', mcontent);                // the bars, faintly, under the whole music (sized in layout)
+    bars = h('div', 'mbars', mcontent);                // the bars and beats, faintly, under the whole music (sized in layout)
     const tog = h('button', 'mtog', mgut); tog.type = 'button'; tog.style.top = Y.mus + 'px';
     tog.innerHTML = window.REEL_UI ? REEL_UI.icon(musOpen ? 'chevDown' : 'chevRight') + REEL_UI.icon('music') : (musOpen ? '▾♪' : '▸♪');
-    tog.title = musOpen ? 'the music: shut it to its sections' : 'the music: open it to every part, note for note, and the sound effects\' cues';
+    tog.title = musOpen ? 'the music: shut it to its bars and chords' : 'the music: open its parts and their clips';
     tog.setAttribute('aria-expanded', String(musOpen)); tog.setAttribute('aria-label', 'the music\'s lanes');
     tog.onclick = () => setMusic(!musOpen);
-    if (!Pm || !A) {
-      MB = []; MX = [];
-      const el = h('div', 'mh none', mcontent, !R ? 'the music is loading…' : R.error ? R.error.split('\n')[0] : `no ${R.name} next to this script: the reel is silent`);
+    musEmpty = !Pm || !A;
+    if (musEmpty) {
+      PARTS = []; MX = [];
+      const el = h('div', 'mnone', mcontent, !R ? 'the music is loading…' : R.error ? R.error.split('\n')[0] : `no ${R.name} next to this script: the reel is silent`);
       mrecs.push({ el, span: () => [0, DUR] });
       return;
     }
-    const tracks = Pm.score.tracks;
-    MB = tracks.filter(t => !t.on); MX = tracks.filter(t => t.on); BAR = A.bar || 2;
-    // the head: a block per section where its music plays
-    A.sections.forEach(sc => {
-      const el = h('div', 'mh', mcontent); el.dataset.ref = sc.ref;
-      const chords = sc.harmony.map(x => x.chord.name).filter((n, i, all) => !i || n !== all[i - 1]).join(' ');
-      const off = Math.abs(sc.start - sc.cut) > 1e-6;
-      el.title = `${sc.type} · its music ${fmt(sc.start)} → ${fmt(sc.end)}${off ? `, on the bar ${(Math.abs(sc.start - sc.cut)).toFixed(1)} s ${sc.start < sc.cut ? 'before' : 'after'} the picture cuts (${fmt(sc.cut)})` : ''} · ${chords}${sc.own ? ' (its own chords)' : ''}`
-        + `\n${sc.play.length} playing: ${sc.play.map(p => p.name + (p.level !== 1 ? ' ' + p.level : '')).join(', ') || 'nothing'}\nclick to play from here`;
-      mrecs.push({ el, span: m => [m(sc.start), m(sc.end)] });
-      MHEADS.push({ el, sc });
-      el.addEventListener('pointerdown', e => { if (e.button !== 0) return; drag(e, el, () => {}, moved => { if (!moved) L.seek(sc.start); }); });
-      if (off) {
-        const k = h('div', 'mcut', mcontent);
-        k.title = `the picture cuts to ${sc.type} here (${fmt(sc.cut)}); its music arrives on the bar ${sc.start < sc.cut ? 'just before' : 'just after'} it (${fmt(sc.start)}). "start cut" in its SECTION puts the music on the cut`;
-        mrecs.push({ el: k, span: m => [m(sc.cut)] });
-      }
+    PARTS = Pm.score.parts; MX = Pm.score.tracks.filter(t => t.on);
+    // the ruler: a number a bar (layout thins them), its time signature, scrubbed like the clock's
+    const mr = h('div', 'mruler', mcontent);
+    mr.title = `the music's bars: ${Pm.score.beatsPerBar}/4 at ${Pm.score.tempo} BPM, a bar ${A.bar.toFixed(2).replace(/\.?0+$/, '')} s. Click or drag to move the playhead`;
+    mr.addEventListener('pointerdown', e => {
+      if (e.button !== 0) return;
+      const seek = ev => L.seek((ev.clientX - lane.getBoundingClientRect().left) / pxs), was = L.isPlaying();
+      if (was) L.setPlaying(false);
+      seek(e);
+      drag(e, mr, (dt, ev) => seek(ev), () => { if (was && L.now() < L.duration - 0.05) L.setPlaying(true); });
     });
-    // the chords on the bars, across the sections: a chord held over a seam is one
-    const runs = [], starts = A.sections.map(sc => sc.start);
-    (A.harmony || []).forEach(x => { const r = runs[runs.length - 1]; if (r && r.name === x.chord.name && Math.abs(r.end - x.t) < 1e-6) r.end = x.end; else runs.push({ name: x.chord.name, t: x.t, end: x.end }); });
-    runs.forEach(x => {
-      const c = h('div', 'mch' + (starts.some(s => Math.abs(s - x.t) < 1e-6) ? ' first' : ''), mcontent, x.name);
-      mrecs.push({ el: c, span: m => [m(x.t), m(x.end)] });
+    for (let b = 1; b <= A.bars; b++) { const n = h('span', 'mbar', mcontent, String(b)); mrecs.push({ el: n, span: m => [m((b - 1) * A.bar)] }); BARN.push(n); }
+    const sig = h('div', 'msig', mcontent, `${Pm.score.beatsPerBar}/4 · ${Pm.score.tempo}`); sig.title = mr.title; sig.style.top = (Y.mus + 2) + 'px'; MLB.push(sig);
+    // the chords: a run of bars each
+    const runs = [];
+    A.harmony.forEach(x => { const r = runs[runs.length - 1]; if (r && r.name === x.chord.name) r.end = x.end; else runs.push({ name: x.chord.name, t: x.t, end: x.end, bar: x.bar }); });
+    runs.forEach(x => { const c = h('div', 'mch', mcontent, x.name); c.title = `${x.name} from bar ${x.bar}`; mrecs.push({ el: c, span: m => [m(x.t), m(x.end)] }); });
+    // the scenes' cuts: a notch on the ruler, a faint line down the music, the scene's number
+    SCENES.forEach(S => {
+      if (!S.i) return;
+      const k = h('div', 'mcutl', mcontent); k.dataset.scene = S.i;
+      const pos = RMu().posText(Math.round(S.start / A.step), A.spb);
+      h('span', null, k).title = `the cut to scene ${S.i + 1}, ${S.sc.type}, at ${fmt(S.start)}: bar ${pos.includes('.') ? pos.replace('.', ' beat ').replace(/\.(\d)$/, ', sixteenth $1') : pos}. A clip's edge is drawn to it when it comes near`;
+      mrecs.push({ el: k, span: m => [m(S.start)] }); CUTL.push(k);
     });
-    // the seams: how the music crosses each one (click for the next way)
-    (A.transitions || []).forEach(tr => {
-      const b = h('button', 'mseam' + (tr.set ? '' : ' def'), mcontent); b.type = 'button'; b.dataset.ref = tr.ref; b.dataset.kind = tr.kind;
-      b.innerHTML = window.REEL_UI ? REEL_UI.icon(SEAM_ICON[tr.kind]) : tr.kind[0];
-      const nx = SEAMS[(SEAMS.indexOf(tr.kind) + 1) % SEAMS.length];
-      b.title = `into ${tr.ref}: ${seamWords(tr)}${tr.set ? '' : ' (the default)'}\nclick for a ${nx} instead`;
-      b.setAttribute('aria-label', `how the music arrives at ${tr.ref}: ${tr.kind}`);
-      mrecs.push({ el: b, span: m => [m(tr.t)] });
-      b.addEventListener('pointerdown', e => e.stopPropagation());
-      b.addEventListener('click', e => { e.stopPropagation(); scoreEdit(src => window.ReelMusic.setLine(src, 'SECTION', tr.ref, 'into', nx)); });
-    });
-    if (!musOpen) return;
-    // a lane per part, note for note
-    let top = Y.musLanes;
-    MB.forEach(t => {
-      const evs = A.events.filter(e => e.track === t.name), shape = laneShape(evs), c = R.colour(t.name), lv = A.levels && A.levels[t.name];
-      const ln = mixRow([t.name], top, shape.h, c, t.name);
-      roll(t.name, evs, shape, top, c, ln, lv);
-      A.sections.forEach(sc => cell(t, sc, top, shape.h, c, !lv));
-      tag(t.name, plays(t, shape) + '\nclick a stretch of it to play it there or stop it · Shift-click: the synth rack', top, shape.h, c, ln);
-      top += shape.h;
-    });
-    if (MX.length) { top += MUS.sep; cueLane(top, A, R); top += LANE.cues; }
-    musH = top;
-    // each seam's stretch, down through the lanes
-    (A.transitions || []).forEach(tr => {
-      if (!(tr.t1 > tr.t0) || !(MB.length + MX.length)) return;
-      const w = h('div', 'mwin ' + tr.kind, mcontent);
-      w.style.height = (musH - Y.musLanes + 2) + 'px';
-      mrecs.push({ el: w, span: m => [m(tr.t0), m(tr.t1)] });
-    });
+    if (musOpen) {
+      let top = Y.musLanes;
+      PARTS.forEach((p, i) => {
+        const shape = shapeOf(p, A), c = R.colour(p.name), ln = mixRow(p.tracks, top, shape.h, c, p.name);
+        const bg = h('div', 'mlane', mcontent); bg.style.top = top + 'px'; bg.style.height = shape.h + 'px'; bg.dataset.part = p.name;
+        bg.title = `${p.name}: double-click to add a clip of ${chosenPad(p, A)} here`;
+        bg.addEventListener('pointerdown', e => { if (e.button === 0 && inspMode === 'clip') closeInsp(); });
+        bg.addEventListener('dblclick', e => addAt(p, (e.clientX - lane.getBoundingClientRect().left) / pxs, e));
+        roll(p, shape, top, c, ln, A);
+        A.clips.filter(cl => cl.part === p.name).forEach(cl => clipEl(cl, p, top, shape, c, ln, A));
+        tag(p.name, `${p.name}: ${p.tracks.join(', ')} · pads ${p.pads.map(d => d.name).join(', ')}\nclick: its pads, to hear and choose · double-click its lane: a new clip`, top, shape.h, c, ln, () => openPart(p.name));
+        const lb = MLB[MLB.length - 1];
+        CLIPS.filter(k => k.part === p.name).forEach(k => { Object.defineProperty(k, 'tagW', { get: () => lb.offsetWidth, configurable: true }); });
+        top += shape.h + (i < PARTS.length - 1 ? 1 : 0);
+      });
+      if (MX.length) { top += MUS.sep; cueLane(top, A, R); top += LANE.cues; }
+      musH = top;
+    }
+    CUTL.forEach(k => { k.style.height = (musEnd() - Y.mus) + 'px'; });
     applyMix();
+    if (inspMode === 'clip') { const cl = A.clips.find(c => c.ln === selClip); if (cl) buildClip(cl); else closeInsp(); }
+    else if (inspMode === 'part') { if (PARTS.some(p => p.name === insp.dataset.part)) buildPart(insp.dataset.part); else closeInsp(); }
+    markSel();
   }
-  // a lane's M and S, in the icon column, with its colour beside them: one part's, or (the cues)
-  // every sound effect's at once
+  // the pad a new clip of the part gets: the one last chosen, else its last clip's, else its first
+  function chosenPad(p, A) {
+    if (chosen[p.name] && p.pads.some(d => d.name === chosen[p.name])) return chosen[p.name];
+    const last = A.clips.filter(c => c.part === p.name).pop();
+    return last ? last.pad : p.pads[0] ? p.pads[0].name : '';
+  }
+  // a lane's M and S, in the icon column, with its colour beside them: a part's sounds, or (the
+  // cues) every sound effect's, at once
   function mixRow(names, top, H, c, key) {
     const row = h('div', 'mms', mgut); row.style.top = top + 'px'; row.style.height = H + 'px'; row.style.setProperty('--c', c); row.dataset.track = key;
     const m = h('button', null, row, 'M'), so = h('button', null, row, 'S');
     m.type = so.type = 'button';
-    const who = names.length > 1 ? 'the sound effects' : names[0];
+    const who = key === '*cues' ? 'the sound effects' : key;
     m.title = `${who}: mute while you listen (not saved)`; so.title = `${who}: solo while you listen (not saved)`;
     m.setAttribute('aria-label', 'mute ' + who); so.setAttribute('aria-label', 'solo ' + who);
     const all = (R, k) => names.every(n => R.mix(n)[k]);
@@ -993,46 +1010,263 @@
     const ln = { names, m, so, els: [] }; lanes.set(key, ln);
     return ln;
   }
-  // a lane's name, kept at the left of the view (what it plays, in its tooltip)
-  function tag(name, tip, top, H, c, ln) {
-    const lb = h('div', 'mlb', mcontent, name); lb.style.top = (top + Math.max(1, Math.round((Math.min(H, 16) - 13) / 2))) + 'px';
+  // a lane's name, kept at the left of the view (a click: its pads)
+  function tag(name, tip, top, H, c, ln, onClick) {
+    const lb = h(onClick ? 'button' : 'div', 'mlb', mcontent, name); lb.style.top = (top + 1) + 'px';
+    if (onClick) { lb.type = 'button'; lb.onclick = e => { e.stopPropagation(); onClick(); }; lb.addEventListener('pointerdown', e => e.stopPropagation()); }
     lb.style.setProperty('--c', c); lb.dataset.track = name; lb.title = tip;
     MLB.push(lb); ln.els.push(lb);
   }
-  // A part's notes: one SVG the width of the lane, its paths made again on every zoom: the level
-  // behind (a faint area), the notes in four strengths (velocity × level where each
-  // starts), and in gold what a seam plays itself (a fill)
-  function roll(name, evs, shape, top, c, ln, levels) {
+  // A part's notes, every clip's, in one SVG the width of the lane, made again on every zoom: under
+  // each clip's name, in rows for a part of several sounds, fainter where the level is lower; and
+  // each clip's fades, the faded corner shaded under a line.
+  function roll(p, shape, top, c, ln, A) {
     const NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg');
-    svg.setAttribute('class', 'tl-mroll'); svg.setAttribute('aria-hidden', 'true'); svg.dataset.track = name;
+    svg.setAttribute('class', 'tl-mroll'); svg.setAttribute('aria-hidden', 'true'); svg.dataset.track = p.name;
     svg.style.top = top + 'px'; svg.style.height = shape.h + 'px'; svg.style.setProperty('--c', c);
-    const path = cls => { const p = document.createElementNS(NS, 'path'); p.setAttribute('class', cls); svg.appendChild(p); return p; };
-    const r = { svg, evs, shape, levels, area: levels ? path('tl-lva') : null,
-      notes: [1, 2, 3, 4].map(k => path('tl-n tl-n' + k)), own: path('tl-n tl-own') };
+    const path = cls => { const q = document.createElementNS(NS, 'path'); q.setAttribute('class', cls); svg.appendChild(q); return q; };
+    const r = { svg, p, shape, evs: A.events.filter(e => p.tracks.includes(e.track)), levels: A.levels[p.tracks[0]] || null,
+      clips: A.clips.filter(cl => cl.part === p.name), shade: path('tl-fsh'), notes: [1, 2, 3, 4].map(k => path('tl-n tl-n' + k)), fade: path('tl-fln') };
     mcontent.appendChild(svg); ROLLS.push(r); ln.els.push(svg);
   }
   const levelAt = (pts, t) => window.ReelMusic.levelAt(pts, t);
   const f1 = n => n.toFixed(1);
   function drawRoll(r) {
-    const H = r.shape.h;
+    const H = r.shape.h, y0 = LANE.head + 1, A = AR();
     r.svg.setAttribute('width', W); r.svg.setAttribute('height', H); r.svg.style.width = W + 'px';
-    if (r.levels) {
-      const y = v => f1(H - 1 - Math.min(1.25, v) / 1.25 * (H - 3));
-      let line = '';
-      r.levels.forEach((p, i) => { line += `${i ? 'L' : 'M'}${f1(x(p.t))} ${y(p.v)}`; });
-      const last = r.levels[r.levels.length - 1];
-      r.area.setAttribute('d', `M0 ${H}` + line.replace(/^M/, 'L') + `L${f1(x(last.t))} ${H}Z`);
-    }
-    const P = REEL_UI.rollPaths(r.evs, { H, px: x, pxs, lo: r.shape.lo, hi: r.shape.hi, level: r.levels ? t => levelAt(r.levels, t) : null });
-    r.notes.forEach((path, k) => path.setAttribute('d', P.d[k]));
-    r.own.setAttribute('d', P.own);
+    const P = REEL_UI.rollPaths(r.evs, { H: H - 1, y0, px: x, pxs, lo: r.shape.lo, hi: r.shape.hi, rows: r.shape.rows, nRows: r.shape.nRows,
+      level: r.levels ? t => levelAt(r.levels, t) : null });
+    r.notes.forEach((q, k) => q.setAttribute('d', P.d[k]));
+    let sh = '', ln = '';
+    if (A) r.clips.forEach(cl => {
+      const a = x(cl.t0), b = x(cl.t1) - 2, fi = cl.fadeIn * A.beat * pxs, fo = cl.fadeOut * A.beat * pxs, top = y0 - 1, bot = H - 2;
+      if (fi > 0) { sh += `M${f1(a)} ${top}H${f1(a + fi)}L${f1(a)} ${bot}Z`; ln += `M${f1(a)} ${bot}L${f1(a + fi)} ${top}`; }
+      if (fo > 0) { sh += `M${f1(b)} ${top}H${f1(b - fo)}L${f1(b)} ${bot}Z`; ln += `M${f1(b - fo)} ${top}L${f1(b)} ${bot}`; }
+    });
+    r.shade.setAttribute('d', sh); r.fade.setAttribute('d', ln);
   }
   function drawMusic() {
+    const A = AR();
     ROLLS.forEach(drawRoll);
-    if (bars) {
+    if (bars && A) {
+      const barPx = A.bar * pxs, beatPx = A.beat * pxs;
       bars.style.width = W + 'px'; bars.style.height = (musEnd() - Y.mus) + 'px';
-      bars.style.backgroundSize = `${(BAR * pxs).toFixed(3)}px 100%`;
+      bars.style.backgroundSize = `${barPx.toFixed(3)}px 100%, ${beatPx.toFixed(3)}px 100%`;
+      bars.classList.toggle('tl-beats', beatPx >= 9);
+      // a number a bar, or every 2nd, 4th, 8th where they would crowd
+      const every = [1, 2, 4, 8, 16].find(k => k * barPx >= 22) || 16;
+      BARN.forEach((n, i) => { n.hidden = i % every !== 0; });
     }
+    // the fade handles sit where each fade ends
+    if (A) CLIPS.forEach(k => { k.fI.style.left = (k.cl.fadeIn * A.beat * pxs - 4) + 'px'; k.fO.style.right = (k.cl.fadeOut * A.beat * pxs - 4) + 'px'; });
+  }
+  // ── a clip ─────────────────────────────────────────────────────────────
+  function clipEl(cl, p, top, shape, c, ln, A) {
+    const el = h('div', 'mk', mcontent); el.dataset.part = p.name; el.dataset.ln = cl.ln;
+    el.style.top = top + 'px'; el.style.height = (shape.h - 1) + 'px'; el.style.setProperty('--c', c);
+    el.style.background = `linear-gradient(to bottom, ${rgba(c, 0.36)} 0 ${LANE.head}px, ${rgba(c, 0.09)} ${LANE.head}px)`;
+    el.style.borderColor = rgba(c, 0.8);
+    const nm = h('span', 'mkn', el, clipName(cl));
+    const eL = h('i', 'mke l', el), eR = h('i', 'mke r', el), fI = h('i', 'mkf i', el), fO = h('i', 'mkf o', el);
+    eL.title = 'drag: where it starts'; eR.title = 'drag: where it ends'; fI.title = 'drag: its fade in'; fO.title = 'drag: its fade out';
+    el.title = `${p.name} plays ${cl.pad}, bars ${bt(cl, A)} (${fmt(cl.t0)} → ${fmt(cl.t1)})${cl.level !== 1 ? ', at ' + cl.level : ''}${cl.fadeIn ? ', in ' + cl.fadeIn + ' beats' : ''}${cl.fadeOut ? ', out ' + cl.fadeOut + ' beats' : ''}`
+      + '\ndrag: move · its edges: start and end · its top corners: fades · up or down: level · click: the inspector';
+    mrecs.push({ el, span: m => [m(cl.t0), m(Math.min(cl.t1, DUR))] });  // past the reel's end, drawn to the end of the view
+    CLIPS.push({ el, cl, fI, fO, nm, part: p.name }); ln.els.push(el);
+    el.addEventListener('pointerdown', e => clipDown(e, cl, el, p, top));
+    el.addEventListener('dblclick', e => e.stopPropagation());
+  }
+  function markSel() { CLIPS.forEach(k => k.el.classList.toggle('tl-sel', k.cl.ln === selClip)); }
+  // the grid a drag snaps to: the finest of a sixteenth, a beat and a bar still 12 px wide (Shift:
+  // the bar; Alt: a sixteenth, and no pull from the cuts); a scene's cut pulls within 8 px
+  function gridUnit(ev, A) {
+    if (ev.altKey) return 1;
+    if (ev.shiftKey) return A.spb;
+    return [1, 4, A.spb].find(u => u * A.step * pxs >= 12) || A.spb;
+  }
+  function snapStep(s, unit, ev, A) {
+    let q = Math.round(s / unit) * unit;
+    if (!ev.altKey) SCENES.forEach(S => {
+      const c = Math.round(S.start / A.step);
+      if (Math.abs(c - s) * A.step * pxs <= 8 && Math.abs(c - s) < Math.abs(q - s)) q = c;
+    });
+    return q;
+  }
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  function clipDown(e, cl, el, p, top) {
+    if (e.button !== 0) return;
+    e.preventDefault(); e.stopPropagation();
+    const A = AR(); if (!A) return;
+    selClip = cl.ln; markSel();
+    if (inspMode === 'clip' && insp.dataset.ln !== String(cl.ln)) buildClip(cl);   // already open: it follows the selection
+    const cls = e.target.classList, len = cl.to - cl.from, end = A.bars * A.spb;
+    const zone = cls.contains('tl-mke') ? (cls.contains('tl-l') ? 'from' : 'to') : cls.contains('tl-mkf') ? (cls.contains('tl-i') ? 'in' : 'out') : null;
+    const others = A.clips.filter(o => o.part === cl.part && o.ln !== cl.ln);
+    const lo = Math.max(0, ...others.filter(o => o.to <= cl.from).map(o => o.to)), hi = Math.min(end, ...others.filter(o => o.from >= cl.to).map(o => o.from));
+    const x0 = e.clientX, y0 = e.clientY;
+    let mode = zone, nf = cl.from, nt = cl.to, lv = cl.level, fi = cl.fadeIn, fo = cl.fadeOut, moved = false;
+    try { el.setPointerCapture(e.pointerId); } catch (x_) { /* synthetic pointer */ }
+    readout.style.top = Math.max(0, top - 26) + 'px';
+    const mv = ev => {
+      const dx = ev.clientX - x0, dy = y0 - ev.clientY;
+      if (!mode) { if (Math.abs(dx) < 4 && Math.abs(dy) < 4) return; mode = Math.abs(dy) > Math.abs(dx) ? 'level' : 'move'; }
+      moved = true; dragging = true;
+      const unit = gridUnit(ev, A), d = dx / pxs / A.step, minLen = ev.altKey ? 1 : 4;
+      if (mode === 'move') { nf = clamp(snapStep(cl.from + d, unit, ev, A), lo, hi - len); nt = nf + len; }
+      else if (mode === 'from') nf = clamp(snapStep(cl.from + d, unit, ev, A), lo, cl.to - minLen);
+      else if (mode === 'to') nt = clamp(snapStep(cl.to + d, unit, ev, A), cl.from + minLen, hi);
+      else if (mode === 'in') fi = clamp(Math.round((cl.fadeIn + d / 4) * (ev.altKey ? 4 : 1)) / (ev.altKey ? 4 : 1), 0, len / 4 - fo);
+      else if (mode === 'out') fo = clamp(Math.round((cl.fadeOut - d / 4) * (ev.altKey ? 4 : 1)) / (ev.altKey ? 4 : 1), 0, len / 4 - fi);
+      else lv = clamp(Math.round((cl.level + dy / 100) * 20) / 20, 0.05, 1.5);
+      el.style.left = x(nf * A.step).toFixed(1) + 'px'; el.style.width = Math.max(4, x(nt * A.step) - x(nf * A.step) - 2).toFixed(1) + 'px';
+      el.querySelector('.tl-mkn').textContent = clipName({ pad: cl.pad, level: lv });
+      const k = CLIPS.find(c => c.el === el);
+      if (k) { k.fI.style.left = (fi * A.beat * pxs - 4) + 'px'; k.fO.style.right = (fo * A.beat * pxs - 4) + 'px'; }
+      const what = mode === 'level' ? `level ${cl.level} → ${lv}` : mode === 'in' ? `fade in ${cl.fadeIn} → ${fi} beats` : mode === 'out' ? `fade out ${cl.fadeOut} → ${fo} beats`
+        : `bars ${bt(cl, A)} → ${RMu().rangeText(nf, nt, A.spb)}`;
+      show1(nf * A.step, `${p.name} ${cl.pad}: ${what}`);
+    };
+    const up = ev => {
+      el.removeEventListener('pointermove', mv); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
+      dragging = false; readout.hidden = true; readout.style.top = '';
+      if (ev.type === 'pointercancel') { redrawMusic(true); return; }
+      if (!moved) { selectClip(cl.ln); return; }       // a click: the inspector
+      const ch = {};
+      if (nf !== cl.from) ch.from = nf; if (nt !== cl.to) ch.to = nt; if (lv !== cl.level) ch.level = lv;
+      if (fi !== cl.fadeIn) ch.fadeIn = fi; if (fo !== cl.fadeOut) ch.fadeOut = fo;
+      if (Object.keys(ch).length) scoreEdit(src => RMu().setClip(src, cl.ln, ch)); else redrawMusic(true);
+    };
+    el.addEventListener('pointermove', mv); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+  }
+  // a new clip where a lane is double-clicked: from the bar (Alt: the beat) under the pointer, up
+  // to four bars, as far as the next clip lets it
+  function addAt(p, t, ev) {
+    const A = AR(); if (!A || !p.pads.length) return;
+    const unit = ev && ev.altKey ? 4 : A.spb, from = Math.floor(t / A.step / unit) * unit;
+    const mine = A.clips.filter(c => c.part === p.name);
+    if (mine.some(c => from >= c.from && from < c.to)) return;
+    const to = Math.min(from + 4 * A.spb, A.bars * A.spb, ...mine.filter(c => c.from > from).map(c => c.from));
+    if (to <= from) return;
+    const pad = chosenPad(p, A);
+    scoreEdit(src => RMu().addClip(src, { part: p.name, from, to, pad }), next => {
+      const c = RMu().parse(next).score.clips.find(x_ => x_.part === p.name && x_.from === from);
+      if (c) { selClip = c.ln; if (inspMode === 'clip') insp.dataset.ln = ''; }
+    });
+  }
+  function removeSel() {
+    const A = AR(), cl = A && A.clips.find(c => c.ln === selClip);
+    if (!cl) return;
+    closeInsp();
+    scoreEdit(src => RMu().removeClip(src, cl.ln));
+  }
+  // a copy right after it, as long as there is room before the next clip
+  function duplicateSel() {
+    const A = AR(), cl = A && A.clips.find(c => c.ln === selClip);
+    if (!cl) return;
+    const len = cl.to - cl.from, next = Math.min(A.bars * A.spb, ...A.clips.filter(c => c.part === cl.part && c.from >= cl.to).map(c => c.from));
+    const to = Math.min(cl.to + len, next);
+    if (to - cl.to < 4) { say([`no room after this ${cl.part} clip: the next one starts at bar ${RMu().posText(next, A.spb)}`]); return; }
+    scoreEdit(src => RMu().addClip(src, { part: cl.part, from: cl.to, to, pad: cl.pad, level: cl.level }), next => {
+      const c = RMu().parse(next).score.clips.find(x_ => x_.part === cl.part && x_.from === cl.to);
+      if (c) selClip = c.ln;
+    });
+  }
+  // ── the inspector's music pages: a clip, a part's pads ────────────────
+  function openInsp(mode) {
+    if (selected >= 0) { SCENES[selected].el.classList.remove('tl-sel'); selected = -1; put(K_SEL, -1); }
+    inspMode = mode; insp.hidden = false; root.classList.add('tl-insp'); layout();
+  }
+  function closeInsp() {
+    selClip = null; inspMode = null; markSel();
+    if (selected < 0) { insp.hidden = true; root.classList.remove('tl-insp'); layout(); }
+  }
+  function selectClip(ln) {
+    const A = AR(), cl = A && A.clips.find(c => c.ln === ln); if (!cl) return;
+    selClip = ln; markSel();
+    if (inspMode !== 'clip' || insp.dataset.ln !== String(ln)) { openInsp('clip'); buildClip(cl); }
+  }
+  function openPart(name) { selClip = null; markSel(); openInsp('part'); buildPart(name); }
+  function inspHead(title, note) {
+    insp.textContent = '';
+    const head = h('div', 'ih', insp);
+    h('h3', null, head, title);
+    if (note) h('span', 'note', head, note);
+    const x_ = button(head, '', 'close the inspector (Esc)', null, null, 'close'); x_.setAttribute('aria-label', 'close the inspector'); x_.onclick = closeInsp;
+  }
+  // the pads of a part as tiles: each its name and a picture of what it plays; a click chooses it,
+  // its ▶ plays it on its own (one turn, over the chords where the playhead is)
+  function padTiles(parent, pname, current, pick) {
+    const R = RK(), Pm = R && R.parsed, A = AR(), p = Pm && Pm.score.parts.find(x_ => x_.name === pname);
+    if (!p) return;
+    const grid = h('div', 'pads', parent), c = R.colour(pname), shape = shapeOf(p, A);
+    p.pads.forEach(d => {
+      const tile = h('div', 'pad' + (d.name === current ? ' on' : ''), grid); tile.style.setProperty('--c', c); tile.dataset.pad = d.name;
+      tile.setAttribute('role', 'button'); tile.tabIndex = 0;
+      tile.title = `${d.name}: ${d.voices.map(v => `${v.track} ${v.text || 'rises across its clip'}`).join(' · ')}${d.once ? ' (once, from its clip\'s start)' : ''}`;
+      h('b', null, tile, d.name);
+      const evs = RMu().padPreview(Pm.score, A, pname, d.name, L.now()), dur = Math.max(A.bar, ...evs.map(e => e.t + 0.05));
+      const P_ = REEL_UI.rollPaths(evs, { H: 20, px: t => 2 + t / dur * 70, pxs: 70 / dur, lo: shape.lo, hi: shape.hi, rows: shape.rows, nRows: shape.nRows });
+      const sv = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); sv.setAttribute('width', 74); sv.setAttribute('height', 20); sv.setAttribute('aria-hidden', 'true');
+      sv.innerHTML = P_.d.map((q, k) => q ? `<path d="${q}" fill="currentColor" fill-opacity="${[0.4, 0.6, 0.8, 1][k]}"/>` : '').join('');
+      tile.appendChild(sv);
+      const play = button(tile, '', `hear ${d.name} on its own`, null, 'pplay', 'play');
+      play.onclick = e => { e.stopPropagation(); const E = R.engine; if (E && E.preview) E.preview(RMu().padPreview(Pm.score, AR(), pname, d.name, L.now())); else say(['click once for sound, then ▶']); };
+      tile.onclick = () => pick(d.name);
+      tile.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); pick(d.name); } };
+    });
+  }
+  function buildClip(cl) {
+    const A = AR(), p = PARTS.find(x_ => x_.name === cl.part);
+    insp.dataset.ln = cl.ln; delete insp.dataset.part;
+    inspHead(`${cl.part} · ${cl.pad}`, `bars ${bt(cl, A)} · ${fmt(cl.t0)} → ${fmt(cl.t1)}`);
+    // where it plays: its first and last bar, as the score writes them (5, 5.3, 5.3.2)
+    const r = h('div', 'row cues', insp); h('label', null, r, 'bars');
+    const fromIn = numBox(r, 'from', RMu().posText(cl.from, A.spb), v => { const g = RMu().readRange(v, A.spb); if (!g) throw new Error(`"${v}" is not a bar, as in 5 or 5.3`); return { from: g.from }; });
+    const toIn = numBox(r, 'to', RMu().rangeText(cl.from, cl.to, A.spb).split('-').pop(), v => { const g = RMu().readRange(v, A.spb); if (!g) throw new Error(`"${v}" is not a bar, as in 8 or 8.2`); return { to: g.to }; });
+    fromIn.title = 'the bar it starts on (5, or bar 5 beat 3: 5.3)'; toIn.title = 'the last bar it plays (8, or to bar 8 beat 2: 8.2)';
+    const g = h('div', 'grp', insp); h('span', null, g, 'pad');
+    padTiles(insp, cl.part, cl.pad, name => { chosen[cl.part] = name; if (name !== cl.pad) scoreEdit(src => RMu().setClip(src, cl.ln, { pad: name })); });
+    const lv = h('div', 'row', insp); h('label', null, lv, 'level');
+    const box = h('div', 'mlv', lv);
+    const sl = h('input', null, box); sl.type = 'range'; sl.min = '0'; sl.max = '1.5'; sl.step = '0.05'; sl.value = String(cl.level); sl.setAttribute('aria-label', 'level');
+    const lvIn = numBox(box, 'level', String(cl.level), v => { const n = Number(v); if (!(n >= 0 && n <= 1.5)) throw new Error('a level is 0 to 1.5'); return { level: n }; });
+    sl.oninput = () => { lvIn.value = sl.value; };
+    sl.onchange = () => { const n = Number(sl.value); if (n !== cl.level) scoreEdit(src => RMu().setClip(src, cl.ln, { level: n })); };
+    const fr = h('div', 'row cues', insp); h('label', null, fr, 'fades');
+    numBox(fr, 'in', String(cl.fadeIn), v => { const n = Number(v); if (!(n >= 0)) throw new Error('a fade is 0 or more beats'); return { fadeIn: n }; }).title = 'fade in, in beats';
+    numBox(fr, 'out', String(cl.fadeOut), v => { const n = Number(v); if (!(n >= 0)) throw new Error('a fade is 0 or more beats'); return { fadeOut: n }; }).title = 'fade out, in beats';
+    const acts = h('div', 'macts', insp);
+    button(acts, 'Play from here', 'play the reel from this clip\'s start', null, null, 'play').onclick = () => { L.seek(cl.t0); L.setPlaying(true); };
+    button(acts, 'Duplicate', 'a copy right after it (⌘D)', null, null, 'copy').onclick = duplicateSel;
+    button(acts, 'Delete', 'take it out (⌫)', null, null, 'discard').onclick = removeSel;
+    h('p', 'mhint', insp, `Drag the clip to move it, its edges to start and end it, its top corners to fade it, up or down for its level. ${p ? 'Its pads are the ' + p.name + ' part\'s.' : ''}`);
+    // an input that writes one change to the clip: Enter or leaving it
+    function numBox(parent, label, value, read) {
+      const c = h('div', 'cue', parent), lab = h('label', null, c, label), inp = h('input', null, c);
+      inp.type = 'text'; inp.value = value; inp.dataset.orig = value; inp.spellcheck = false; inp.dataset.key = 'clip:' + label;
+      lab.htmlFor = inp.id = 'reel-tl-in' + (uid++);
+      const go = () => {
+        if (inp.value.trim() === inp.dataset.orig) return;
+        let ch;
+        try { ch = read(inp.value.trim()); } catch (er) { say([er.message]); inp.value = inp.dataset.orig; return; }
+        scoreEdit(src => RMu().setClip(src, cl.ln, ch));
+        inp.value = inp.dataset.orig;
+      };
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); go(); } else if (e.key === 'Escape') { inp.value = inp.dataset.orig; inp.blur(); } e.stopPropagation(); });
+      inp.addEventListener('blur', go);
+      return inp;
+    }
+  }
+  function buildPart(name) {
+    const R = RK(), A = AR(), p = PARTS.find(x_ => x_.name === name); if (!p) return;
+    insp.dataset.part = name; delete insp.dataset.ln;
+    const n = A.clips.filter(c => c.part === name).length;
+    inspHead(name, `${p.tracks.join(', ')} · ${n} clip${n === 1 ? '' : 's'}`);
+    const g = h('div', 'grp', insp); h('span', null, g, 'pads');
+    padTiles(insp, name, chosenPad(p, A), pad => { chosen[name] = pad; buildPart(name); redrawMusic(true); });
+    h('p', 'mhint', insp, `▶ plays a pad on its own. The one lit is what a new clip gets: double-click the ${name} lane where it should start. Its sounds are in the synth rack.`);
+    const acts = h('div', 'macts', insp);
+    button(acts, 'Open in the synth rack', `the ${name} part's sounds and pads, with their knobs and steps (M)`, null, null, 'synths').onclick = () => { if (R && R.focus) R.focus(name); };
   }
   // The cues: what sets each sound effect off, read from the edit itself. Its top row is the command
   // bar: a tick for each key a question types, its Enter, the question while it stands on the bar,
@@ -1055,7 +1289,7 @@
         const tr = q.text[i] === ' ' ? spaceT : keyT; if (!tr) return;
         const k = h('div', 'mkt', mcontent); k.style.top = (top + 3) + 'px'; k.style.setProperty('--c', col(tr)); put1(k, tk);
       });
-      if (entT) { const k = h('div', 'mke', mcontent); k.innerHTML = window.REEL_UI ? REEL_UI.icon('enter') : '⏎'; k.style.top = (top + 2) + 'px'; k.style.setProperty('--c', col(entT)); put1(k, q.enter); }
+      if (entT) { const k = h('div', 'mke2', mcontent); k.innerHTML = window.REEL_UI ? REEL_UI.icon('enter') : '⏎'; k.style.top = (top + 2) + 'px'; k.style.setProperty('--c', col(entT)); put1(k, q.enter); }
       if (clrT && isFinite(q.clear)) { const k = h('div', 'mks', mcontent); k.innerHTML = window.REEL_UI ? REEL_UI.icon('select') : '[]'; k.style.top = (top + 2) + 'px'; k.style.setProperty('--c', col(clrT)); put1(k, q.clear); }
     });
     // what an @ moment, a cut or a work is, for a dot's tooltip
@@ -1076,46 +1310,6 @@
       });
     });
   }
-  // A part in a section: a stretch of its lane you can click (its notes show through). Lit, it
-  // plays there: click stops it, a drag up or down sets its level (shown on the right when it is
-  // not 1), Alt-click halves it or gives it back; dark, a click plays it there. Shift-click opens
-  // the part in the synth rack. A hit that has no level of its own is filled as strong as its level.
-  function cell(t, sc, top, H, c, hit) {
-    const p = sc.play.find(x => x.name === t.name), el = h('div', 'mc' + (p ? ' on' : ''), mcontent);
-    const label = lv => lv !== 1 ? String(lv) : '';
-    el.textContent = p ? label(p.level) : ''; el.dataset.track = t.name; el.dataset.ref = sc.ref;
-    el.style.top = top + 'px'; el.style.height = H + 'px'; el.style.lineHeight = (H - 2) + 'px'; el.style.setProperty('--c', c);
-    if (p && hit) el.style.background = rgba(c, lvA(p.level));
-    el.title = p ? `${t.name} plays in ${sc.type}${p.level !== 1 ? ' at ' + p.level + ' of its level' : ''}\nclick: stop it here · drag up or down: its level · Alt-click: half or full · Shift-click: open it in the synth rack`
-      : `${t.name} is silent in ${sc.type}\nclick: play it here · Shift-click: open it in the synth rack`;
-    mrecs.push({ el, span: m => [m(sc.start), m(sc.end)] }); lanes.get(t.name).els.push(el);
-    el.addEventListener('pointerdown', e => {
-      if (e.button !== 0) return;
-      e.preventDefault(); e.stopPropagation();
-      try { el.setPointerCapture(e.pointerId); } catch (x_) { /* synthetic pointer */ }
-      const y0 = e.clientY; let moved = false, lv = p ? p.level : 1;
-      const mv = ev => {
-        if (!p) return;
-        const dy = y0 - ev.clientY;
-        if (!moved && Math.abs(dy) < 4) return;
-        moved = true; el.classList.add('tl-lv');
-        lv = Math.max(0.05, Math.min(1.5, Math.round((p.level + dy / 100) * 20) / 20));
-        el.textContent = String(lv); if (hit) el.style.background = rgba(c, lvA(lv));
-        readout.style.top = Math.max(0, top - 24) + 'px';           // over the lane being set
-        show1(sc.start, `${t.name} in ${sc.type}: level ${p.level} → ${lv}`);
-      };
-      const up = ev => {
-        el.removeEventListener('pointermove', mv); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
-        el.classList.remove('tl-lv'); readout.hidden = true; readout.style.top = '';
-        if (ev.type === 'pointercancel') { redrawMusic(true); return; }
-        if (ev.shiftKey) { const R = RK(); if (R && R.focus) R.focus(t.name); return; }
-        if (moved) { if (lv !== p.level) scoreEdit(src => window.ReelMusic.setTrackLevel(src, sc.ref, t.name, lv)); else el.textContent = label(lv); return; }
-        if (p && ev.altKey) scoreEdit(src => window.ReelMusic.setTrackLevel(src, sc.ref, t.name, p.level === 1 ? 0.5 : 1));
-        else scoreEdit(src => window.ReelMusic.toggleTrack(src, sc.ref, t.name));
-      };
-      el.addEventListener('pointermove', mv); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
-    });
-  }
   // mute and solo, as the rack's engine holds them: the buttons lit, a silent lane dim
   function applyMix() {
     const R = RK(); if (!R || !R.mix) return;
@@ -1128,13 +1322,15 @@
   }
   // A change of the score goes through the rack, which plays it at once, keeps it (the file, the
   // page's host, or a draft) and notes it in the one history; it comes back here as reel-score.
-  function scoreEdit(fn) {
+  // `after(text)` runs once it is taken (a new clip's line chosen as the selection).
+  function scoreEdit(fn, after) {
     const R = RK();
     if (!R || !window.ReelMusic || R.src == null) { say(['there is no score to change (the synth rack has none)']); return; }
     let next;
     try { next = fn(R.src); } catch (e) { say(e.errors || [e.message]); redrawMusic(true); return; }
     if (next === R.src) return;
     say('');
+    if (after) after(next);
     if (!R.change(next)) { say(['the score refused that change']); redrawMusic(true); }
   }
   function redrawMusic(force) {
@@ -1145,7 +1341,7 @@
     } else applyMix();
     stacks();
   }
-  function setMusic(on) { musOpen = !!on; put(K_MUS, musOpen); redrawMusic(true); }
+  function setMusic(on) { musOpen = !!on; put(K_MUS, musOpen); if (!musOpen && inspMode === 'clip') closeInsp(); redrawMusic(true); }
   let musRaf = 0;
   addEventListener('reel-score', () => { if (!musRaf) musRaf = requestAnimationFrame(() => { musRaf = 0; redrawMusic(false); }); });
 
@@ -1154,6 +1350,7 @@
   function select(i, keep) {
     const S = SCENES[i]; if (!S) return;
     if (!keep) L.seek(S.start);
+    selClip = null; inspMode = 'scene'; markSel(); delete insp.dataset.ln; delete insp.dataset.part;
     if (selected >= 0) SCENES[selected].el.classList.remove('tl-sel');
     selected = i; S.el.classList.add('tl-sel'); put(K_SEL, i);
     build(S);
@@ -1162,7 +1359,7 @@
   }
   function unselect() {
     if (selected >= 0) SCENES[selected].el.classList.remove('tl-sel');
-    selected = -1; put(K_SEL, -1);
+    selected = -1; put(K_SEL, -1); if (inspMode === 'scene') inspMode = null;
     insp.hidden = true; root.classList.remove('tl-insp'); layout();
   }
   // bring one line of the inspector into view and light it for a moment (a line number, or 'cue:out')
@@ -1300,6 +1497,10 @@
     else if (e.key === '-' && plain) { e.preventDefault(); zoomTo(Z / 1.6); }
     else if (e.key === '0' && plain) { e.preventDefault(); zoomTo(1); }
     else if (e.key === 'Escape' && selected >= 0) unselect();
+    else if (e.key === 'Escape' && (inspMode || selClip != null)) closeInsp();
+    // a selected clip: ⌫ takes it out, ⌘D copies it after itself
+    else if ((e.key === 'Delete' || e.key === 'Backspace') && selClip != null && !e.metaKey && !e.ctrlKey) { e.preventDefault(); removeSel(); }
+    else if ((e.key === 'd' || e.key === 'D') && (e.metaKey || e.ctrlKey) && selClip != null) { e.preventDefault(); duplicateSel(); }
   });
   // the HUD's button for the panel (older rigs: the key alone)
   if (L.addTool) tool = L.addTool({ id: 'timeline', label: 'Timeline', key: 'E', order: 20, icon: 'timeline',
@@ -1341,5 +1542,5 @@
   const sel = get(K_SEL, -1);
   if (!root.hidden && SCENES[sel]) select(sel, true);
   window.REEL_TIMELINE = { show, select, undo: () => undoAny(true), redo: () => undoAny(false), zoom: z => zoomTo(z), get zoomLevel() { return Z; },   // for tests and the console
-    music: { open: setMusic, get opened() { return musOpen; } } };
+    music: { open: setMusic, get opened() { return musOpen; }, select: selectClip, part: openPart, get selected() { return selClip; } } };
 })();

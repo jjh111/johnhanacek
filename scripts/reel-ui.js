@@ -5,7 +5,7 @@
 //   REEL_UI.button(opts)          <button> with an icon, a label and a key: the anatomy every bar
 //                                 collapses (see below). opts: { icon, label, key, title, cls, onClick }
 //   REEL_UI.fit(bar, steps, done) the collapse rule
-//   REEL_UI.rollPaths(evs, o)     a part's notes as SVG paths (the timeline's lanes, the rack's arrangement)
+//   REEL_UI.rollPaths(evs, o)     a part's notes as SVG paths (the timeline's clips, the pads)
 //
 // The collapse rule. A bar is laid out at full size; while anything in it overflows (the bar, or
 // a button's own label), it takes the next class in `steps`, each on top of the last, cheapest
@@ -144,28 +144,33 @@ button > .rl { white-space: nowrap; }
 button:has(> .ri) { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
 `;
   (document.head || document.documentElement).appendChild(css);
-  // A part's notes as SVG path data, drawn the same way in the timeline's lanes and the synth
-  // rack's arrangement: a hit is a tick, taller when louder; a note sits at its pitch, as long as it
-  // sounds; a sweep up is a wedge. In four strengths (k 0-3: velocity × level where each starts),
-  // and apart, what a seam plays itself (a fill: `own`).
-  //   evs   the part's events (ReelMusic.arrange)
-  //   o     { H: height, px: t → x, pxs: px a second, level: t → 0..1 (optional), lo, hi: its
-  //           pitches (optional: read from evs) }
+  // A part's notes as SVG path data, drawn the same way in the timeline's clips, the synth rack's
+  // pads and the pad tiles: a hit is a tick, taller when louder; a note sits at its pitch, as long
+  // as it sounds; a sweep up is a wedge. A part of several sounds (the drums: kick, clap, hat) draws
+  // each sound in a row of its own, as a drum grid does. In four strengths (k 0-3: velocity ×
+  // level where each starts), and apart, what is drawn in gold (`own`: a note marked `bypass`).
+  //   evs   the events (ReelMusic.arrange or padPreview)
+  //   o     { H: height, y0: the top of the drawing (under a clip's name), px: t → x, pxs: px a
+  //           second, level: t → 0..1 (optional), lo, hi: the pitches (optional: read from evs),
+  //           rows: { sound: row } with nRows (optional; row 0 the top) }
   function rollPaths(evs, o) {
-    const H = o.H, f = n => n.toFixed(1), d = ['', '', '', ''], own = [];
+    const H = o.H, y0 = o.y0 || 0, f = n => n.toFixed(1), d = ['', '', '', ''], own = [];
     let lo = o.lo, hi = o.hi;
     if (lo == null) { lo = Infinity; hi = -Infinity; evs.forEach(e => { if (e.midi != null) { lo = Math.min(lo, e.midi); hi = Math.max(hi, e.midi); } }); }
-    const pitched = lo !== Infinity, span = pitched ? Math.max(1, hi - lo) : 1;
-    const nh = pitched ? Math.max(1.5, Math.min(4, (H - 4) / (span + 1))) : 0, tw = Math.max(1.2, Math.min(3, o.pxs * 0.05));
+    const rows = o.rows && o.nRows > 1 ? o.rows : null, rh = rows ? (H - 1 - y0) / o.nRows : 0;
+    const pitched = !rows && lo !== Infinity, span = pitched ? Math.max(1, hi - lo) : 1;
+    const nh = pitched ? Math.max(1.5, Math.min(4, (H - 2 - y0) / (span + 1))) : 0, tw = Math.max(1.2, Math.min(3, o.pxs * 0.05));
     for (const e of evs) {
       const x0 = o.px(e.t);
+      // the band it draws in: its row, or the whole height under y0
+      const top = rows ? y0 + (rows[e.track] || 0) * rh : y0, bot = rows ? top + rh : H - 1, bh = bot - top;
       let p;
-      if (e.rise) p = `M${f(x0)} ${H - 1}L${f(o.px(e.t + e.dur))} 2V${H - 1}Z`;
+      if (e.rise) p = `M${f(x0)} ${f(bot)}L${f(o.px(e.t + e.dur))} ${f(top + 1)}V${f(bot)}Z`;
       else if (!pitched || e.midi == null) {
-        const hh = Math.max(2, (H - 3) * (0.35 + 0.65 * Math.min(1, e.vel)));
-        p = `M${f(x0)} ${f(H - 1)}h${f(tw)}v${f(-hh)}h${f(-tw)}Z`;
+        const hh = Math.max(2, (bh - 1) * (0.4 + 0.6 * Math.min(1, e.vel)));
+        p = `M${f(x0)} ${f(bot)}h${f(tw)}v${f(-hh)}h${f(-tw)}Z`;
       } else {
-        const y = hi === lo ? (H - nh) / 2 : 2 + (hi - e.midi) / span * (H - 4 - nh), w = e.dur * o.pxs;
+        const y = hi === lo ? top + (bh - nh) / 2 : top + 1 + (hi - e.midi) / span * (bh - 2 - nh), w = e.dur * o.pxs;
         const len = Math.max(1.2, w > 3 ? w - 1 : w);                                   // a hair between repeated notes
         p = `M${f(x0)} ${f(y)}h${f(len)}v${f(nh)}h${f(-len)}Z`;
       }

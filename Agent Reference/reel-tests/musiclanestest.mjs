@@ -1,31 +1,29 @@
-// The music under the timeline (scripts/reel-timeline.js, drawing the synth rack's score:
-// scripts/reel-rack.js), end to end: a real dev server, the rig in Chromium, real clicks, drags and
-// keys, and the files on disk as the judge.
+// The music under the timeline (scripts/reel-timeline.js, drawing and editing the synth rack's
+// score: scripts/reel-rack.js), end to end: a real dev server, the rig in Chromium, real clicks,
+// drags and keys, and the files on disk as the judge.
 //   node "Agent Reference/reel-tests/musiclanestest.mjs"
 // Works on temp copies (Assets/zz-mlane-test.script.txt and .score.txt, played through ?script=),
 // removed in finally with the dev server's backups of them.
-//   1. under the fish lanes: a head per section where its music plays (to 2 px), the chords on the
-//      bars (a chord held over a seam is one), a dashed line where the picture cuts when the music
-//      arrives on a bar beside it, a chip on every seam (how the music crosses it), and, open, a
-//      lane per part that draws what it plays, note for note: a tick per hit, a note per note at
-//      its pitch (the lead's pitches as many heights as it has notes), the build's fill in gold
-//   2. open: a stretch per part per section, lit where the score plays it, and one lane of cues:
-//      a box per question the bar types, a tick per key, an Enter per question, a select-all per
-//      clear, a dot per pop; M and S beside every lane (the cues' for every sound effect at once)
-//   3. one Undo for both files: a scene's edge dragged, then a stretch clicked; Ctrl+Z takes back
-//      the stretch (the score as it was), Ctrl+Z again the edge (the script as it was);
-//      Ctrl+Shift+Z gives the edge back, and Ctrl+Z takes it again
-//   4. a click on a silent stretch plays the part there (one line of the score), a click again
-//      stops it; Alt-click halves a level and gives it back; a drag up raises a level
-//   5. M mutes (the engine's, never the file's) and dims its lane; S solos and dims the others;
-//      the cues' M mutes every sound effect
-//   6. a cue: a click on a question plays from just before its typing, on a pop from just before it
-//   7. the chevron shuts the music to its head and the panel loses the lanes' height; shut stays
-//      shut after a reload by hand, and opens again
+//   1. the music's own time: a ruler of bars (as many as the reel has), its time signature, the
+//      chords on the bars, a marker for every scene's cut; a lane per part, each clip on its bars
+//      to 2 px, every note of a part drawn once in its clips, the drums in rows (kick at the foot)
+//   2. a clip's right edge dragged two bars on (one line: "CLIP lead 2-6 hook 0.5"), its left edge a
+//      bar back, a clip moved a bar, a fade dragged in, a level dragged up: each one line of the
+//      score; an edge drawn to a scene's cut when it comes near one (the lead's title clip ends
+//      on the answer's cut, bar 4 beat 3)
+//   3. double-click an empty stretch: a new clip of the part's pad, up to the next clip; ⌘D a copy
+//      after it; ⌫ takes it out; the pad tiles in the clip's inspector switch its pad
+//   4. a lane's name opens its pads: the one chosen is what a new clip gets
+//   5. one Undo for both files: a scene's edge dragged, then a clip; Ctrl+Z takes back the clip,
+//      Ctrl+Z again the edge; Ctrl+Shift+Z gives the edge back, and Ctrl+Z takes it again
+//   6. M mutes a part (all its sounds, the engine's, never the file's) and dims its lane; S solos;
+//      the cues: a box per question with its words, a tick per key, an Enter each, a select-all
+//      per clear, a dot per pop; their M mutes every sound effect; a click on a question or a pop
+//      plays from just before it
+//   7. the chevron shuts the music to its ruler and chords; shut stays shut after a reload by
+//      hand, and opens again
 //   8. a short window: the panel stops where the preview would get too small, its lanes scroll up
 //      and down under a ruler that stays, and the M and S column moves with them
-//  1b. a click on a seam's chip writes the next way in (fade → swell) to the score, and Undo
-//      takes it back
 //   9. no edit reloads the page; no page errors
 import { spawn } from 'node:child_process';
 import net from 'node:net';
@@ -42,7 +40,7 @@ const ORIG_SCORE = fs.readFileSync(path.join(ROOT, 'Assets/sizzle-reel-2.score.t
 let fails = 0, passes = 0;
 const check = (ok, what, extra = '') => { if (ok) passes++; else fails++; console.log(`${ok ? 'ok  ' : 'FAIL'} ${what}${ok || !extra ? '' : '  (' + extra + ')'}`); };
 const script = () => fs.readFileSync(SCRIPT, 'utf8'), score = () => fs.readFileSync(SCORE, 'utf8');
-const playLine = (text, ref) => ((new RegExp(`^SECTION ${ref}\\n(?:.*\\n)*?  play +(.*)$`, 'm')).exec(text) || [])[1] || '';
+const clipLines = (text, part) => text.split('\n').filter(l => l.startsWith('CLIP ' + part + ' ')).map(l => l.replace(/\s+/g, ' ').trim());
 const freePort = () => new Promise(r => { const s = net.createServer().listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => r(p)); }); });
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 // wait until fn(file) holds (saves are debounced and written by the dev server)
@@ -67,80 +65,144 @@ try {
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   const ready = () => page.waitForFunction(() => window.REEL_LIVE && window.REEL_TIMELINE && window.REEL_RACK && window.REEL_RACK.parsed
-    && document.querySelector('#reel-tl .tl-mh[data-ref]') && !document.getElementById('boot'), null, { timeout: 60000 });
+    && document.querySelector('#reel-tl .tl-mbar') && !document.getElementById('boot'), null, { timeout: 60000 });
   await page.goto(`${base}/Assets/sizzle-reel-2.html?script=${NAME}#t=27&pause=1`);
   await ready();
   await page.evaluate(() => { window.__mark = true; sessionStorage.removeItem('reel-tl-music'); });
   if (await page.evaluate(() => document.getElementById('reel-tl').hidden)) await page.keyboard.press('e');
   await page.evaluate(() => REEL_TIMELINE.music.open(true));
   await sleep(300);
+  // a clip's box, found by its part and where it starts (in steps)
+  const clipBox = (part, from) => page.evaluate(([p, f]) => {
+    const A = REEL_RACK.arrangement, c = A.clips.find(x => x.part === p && x.from === f);
+    const el = c && document.querySelector(`#reel-tl .tl-mk[data-ln="${c.ln}"]`);
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { x: r.x, y: r.y, w: r.width, h: r.height, ln: c.ln };
+  }, [part, from]);
+  const pxs = await page.evaluate(() => document.querySelector('#reel-tl .tl-lane').clientWidth / REEL_LIVE.duration);
+  const BAR = 2 * pxs, BEAT = BAR / 4;
+  // a drag in small steps, as a hand does
+  const dragBy = async (x, y, dx, dy, opt = {}) => {
+    await page.mouse.move(x, y);
+    const mod = opt.shift ? 'Shift' : opt.alt ? 'Alt' : null;
+    if (mod) await page.keyboard.down(mod);
+    await page.mouse.down();
+    for (let k = 1; k <= 10; k++) await page.mouse.move(x + dx * k / 10, y + dy * k / 10);
+    await page.mouse.up();
+    if (mod) await page.keyboard.up(mod);
+  };
 
-  // 1 ── under the fish lanes: the sections where their music plays, chords, cuts, seams, the notes
+  // 1 ── the music's own time, and the clips on it
   const geo = await page.evaluate(() => {
     const r = e => e.getBoundingClientRect(), lane = document.querySelector('#reel-tl .tl-lane'), x0 = r(lane).left, pxs = lane.clientWidth / REEL_LIVE.duration;
     const A = REEL_RACK.arrangement, P = REEL_RACK.parsed;
     const fish = [...document.querySelectorAll('#reel-tl .tl-fl')].reduce((b, e) => Math.max(b, r(e).bottom), 0);
-    const heads = [...document.querySelectorAll('#reel-tl .tl-mh[data-ref]')].map(e => ({ ref: e.dataset.ref, l: r(e).left - x0, rt: r(e).right - x0, top: r(e).top }));
-    const want = A.sections.map(sc => ({ l: sc.start * pxs, rt: sc.end * pxs }));
-    const runs = A.harmony.filter((h, i, all) => !i || h.chord.name !== all[i - 1].chord.name || Math.abs(h.t - all[i - 1].end) > 1e-6).length;
-    // the notes each part's lane draws: one closed shape per event (M … Z), at the heights of its pitches
-    const shapes = (track, sel) => { const svg = document.querySelector(`#reel-tl svg.tl-mroll[data-track="${track}"]`); if (!svg) return []; return [...svg.querySelectorAll(sel)].flatMap(p => (p.getAttribute('d') || '').match(/M[^M]*/g) || []); };
-    const band = P.score.tracks.filter(t => !t.on).map(t => t.name);
-    const drawn = Object.fromEntries(band.map(n => [n, shapes(n, 'path.tl-n:not(.tl-own)').length + shapes(n, 'path.tl-own').length]));
-    const evs = Object.fromEntries(band.map(n => [n, A.events.filter(e => e.track === n).length]));
-    const leadYs = new Set(shapes('lead', 'path.tl-n').map(d => d.split(/[ h]/)[1])), leadPitches = new Set(A.events.filter(e => e.track === 'lead').map(e => e.midi));
-    return { fish, heads, want, chords: document.querySelectorAll('#reel-tl .tl-mch').length, runs,
-      cuts: document.querySelectorAll('#reel-tl .tl-mcut').length, offCut: A.sections.filter(sc => Math.abs(sc.start - sc.cut) > 1e-6).length,
-      seams: [...document.querySelectorAll('#reel-tl button.tl-mseam')].map(b => b.dataset.ref + ':' + b.dataset.kind).join(' '),
-      wantSeams: A.transitions.map(t => t.ref + ':' + t.kind).join(' '),
-      rolls: [...document.querySelectorAll('#reel-tl svg.tl-mroll')].map(s => s.dataset.track).join(), band: band.join(), drawn, evs,
-      levels: [...document.querySelectorAll('#reel-tl svg.tl-mroll path.tl-lva')].length, flows: Object.keys(A.levels).length,
-      leadYs: leadYs.size, leadPitches: leadPitches.size,
-      fill: shapes('clap', 'path.tl-own').length, fillEvs: A.events.filter(e => e.track === 'clap' && e.bypass).length,
-      kickTall: (() => { const hs = shapes('kick', 'path.tl-n').map(d => +(/v(-?[\d.]+)/.exec(d) || [0, 0])[1]); return [Math.min(...hs), Math.max(...hs)]; })() };
+    const barEls = [...document.querySelectorAll('#reel-tl .tl-mbar')];
+    const clips = A.clips.map(c => { const el = document.querySelector(`#reel-tl .tl-mk[data-ln="${c.ln}"]`); return el ? { l: r(el).left - x0, rt: r(el).right - x0, want: c.t0 * pxs, wantR: Math.min(c.t1, REEL_LIVE.duration) * pxs, part: c.part } : null; });
+    const shapes = part => { const svg = document.querySelector(`#reel-tl svg.tl-mroll[data-track="${part}"]`); return svg ? [...svg.querySelectorAll('path.tl-n')].flatMap(p => (p.getAttribute('d') || '').match(/M[^M]*/g) || []) : []; };
+    const drawn = Object.fromEntries(P.score.parts.map(p => [p.name, shapes(p.name).length]));
+    const evs = Object.fromEntries(P.score.parts.map(p => [p.name, A.events.filter(e => p.tracks.includes(e.track)).length]));
+    // the drums' rows: the kick's ticks sit lowest, the hat's highest
+    const svg = document.querySelector('#reel-tl svg.tl-mroll[data-track="drums"]');
+    const ys = { kick: [], hat: [] };
+    if (svg) {
+      const beat = A.clips.find(c => c.part === 'drums' && c.pad === 'beat' && c.from === 176);
+      const kick = A.events.filter(e => e.track === 'kick' && e.t >= beat.t0 && e.t < beat.t1).map(e => e.t * pxs);
+      const hat = A.events.filter(e => e.track === 'hat' && e.t >= beat.t0 && e.t < beat.t1).map(e => e.t * pxs);
+      shapes('drums').forEach(d => { const m = /^M([\d.]+) ([\d.]+)/.exec(d); if (!m) return; const xx = +m[1], yy = +m[2]; if (kick.some(k => Math.abs(k - xx) < 0.2)) ys.kick.push(yy); else if (hat.some(k => Math.abs(k - xx) < 0.2)) ys.hat.push(yy); });
+    }
+    return { fish, bars: barEls.length, wantBars: A.bars, sig: (document.querySelector('#reel-tl .tl-msig') || {}).textContent,
+      chords: document.querySelectorAll('#reel-tl .tl-mch').length, runs: A.harmony.filter((h, i, all) => !i || h.chord.name !== all[i - 1].chord.name).length,
+      cuts: document.querySelectorAll('#reel-tl .tl-mcutl').length, scenes: REEL_LIVE.parsed.edit.scenes.length,
+      rulerTop: r(document.querySelector('#reel-tl .tl-mruler')).top,
+      lanes: [...document.querySelectorAll('#reel-tl .tl-mlane')].map(e => e.dataset.part).join(), parts: P.score.parts.map(p => p.name).join(),
+      clips, drawn, evs, kickY: Math.min(...ys.kick), hatY: Math.max(...ys.hat), nk: ys.kick.length, nh: ys.hat.length };
   });
-  const aligned = geo.heads.every((hd, i) => geo.want[i] && Math.abs(hd.l - geo.want[i].l) <= 2 && Math.abs(hd.rt - geo.want[i].rt) <= 4);
-  check(geo.heads.length === 11 && geo.heads.every(hd => hd.top > geo.fish) && aligned,
-    `under the fish lanes, a head per section (${geo.heads.length}), each where its music plays to 2 px (on the bar near its cut)`, JSON.stringify({ heads: geo.heads.slice(0, 3), want: geo.want.slice(0, 3) }));
-  check(geo.chords === geo.runs && geo.runs > 20 && geo.cuts === geo.offCut && geo.cuts >= 4,
-    `the chords on the bars (${geo.chords}, a chord held over a seam is one), and a dashed line where the picture cuts for each of the ${geo.cuts} sections whose music arrives on a bar beside it`, JSON.stringify(geo).slice(0, 300));
-  check(geo.seams === geo.wantSeams && geo.seams.split(' ').length === 10, `a chip on every seam, naming how the music crosses it (${geo.seams})`, geo.seams + ' / ' + geo.wantSeams);
-  check(geo.rolls === geo.band && Object.keys(geo.evs).every(n => geo.drawn[n] === geo.evs[n] && geo.evs[n] > 0) && geo.levels === geo.flows,
-    `a lane per part draws what it plays, note for note: ${Object.entries(geo.drawn).map(([n, k]) => `${n} ${k}`).join(', ')} (every event, one shape each), its level behind`, JSON.stringify({ drawn: geo.drawn, evs: geo.evs, levels: geo.levels, flows: geo.flows }));
-  check(geo.leadYs === geo.leadPitches && geo.leadPitches >= 5, `the lead's notes sit at their pitches: ${geo.leadYs} heights for its ${geo.leadPitches} pitches`);
-  check(geo.fill === geo.fillEvs && geo.fill >= 12 && geo.kickTall[1] > geo.kickTall[0] + 1, `the builds' fills in gold on the clap's lane (${geo.fill}), and a louder kick a taller tick (an accent ${Math.abs(geo.kickTall[0]).toFixed(1)} px, a hit ${Math.abs(geo.kickTall[1]).toFixed(1)} px)`);
+  check(geo.bars === geo.wantBars && geo.sig === '4/4 · 120' && geo.rulerTop > geo.fish && geo.chords === geo.runs && geo.cuts === geo.scenes - 1,
+    `the music's own time under the fish: ${geo.bars} bars on its ruler, "${geo.sig}", the chords on the bars (${geo.chords}), a marker at each of the ${geo.cuts} cuts`, JSON.stringify(geo).slice(0, 300));
+  const placed = geo.clips.every(c => c && Math.abs(c.l - c.want) <= 2 && Math.abs(c.rt - (c.wantR - 2)) <= 2);
+  check(geo.lanes === geo.parts && placed, `a lane per part (${geo.lanes}), and each of the ${geo.clips.length} clips on its bars to 2 px`, JSON.stringify(geo.clips.filter(c => !c || Math.abs(c.l - c.want) > 2).slice(0, 3)));
+  check(Object.keys(geo.evs).every(n => geo.drawn[n] === geo.evs[n] && geo.evs[n] > 0), `every note of every part drawn once in its clips (${Object.entries(geo.drawn).map(([n, k]) => `${n} ${k}`).join(', ')})`, JSON.stringify({ drawn: geo.drawn, evs: geo.evs }));
+  check(geo.nk > 10 && geo.nh > 10 && geo.kickY > geo.hatY, `the drums in rows, as a drum grid: the kick's ticks at the foot, the hat's at the top (${geo.nk} kicks, ${geo.nh} hats)`);
 
-  // 2 ── a stretch per part per section, the cues, M and S
-  const lanes = await page.evaluate(() => {
-    const P = REEL_RACK.parsed, A = REEL_RACK.arrangement, band = P.score.tracks.filter(t => !t.on), fx = P.score.tracks.filter(t => t.on);
-    const plays = A.sections.reduce((n, s) => n + s.play.length, 0), Q = ReelScript.queries(REEL_LIVE.parsed.edit);
-    const n = sel => document.querySelectorAll('#reel-tl ' + sel).length;
-    return { band: band.length, fx: fx.length, plays, sections: A.sections.length, questions: Q.length, clears: Q.filter(q => isFinite(q.clear)).length,
-      keys: A.events.filter(e => e.track === 'keys').length, pops: A.events.filter(e => e.track === 'pop').length,
-      cells: n('.tl-mc'), lit: n('.tl-mc.tl-on'), rows: [...document.querySelectorAll('#reel-tl .tl-mms')].filter(r => r.querySelectorAll('button').length === 2).length,
-      boxes: n('.tl-mq'), ticks: n('.tl-mkt'), enters: n('.tl-mke'), selects: n('.tl-mks'), dots: n('.tl-mpd'),
-      texts: [...document.querySelectorAll('#reel-tl .tl-mq')].map(e => e.textContent).join('|') === Q.map(q => q.text).join('|') };
-  });
-  check(lanes.cells === lanes.band * lanes.sections && lanes.lit === lanes.plays && lanes.rows === lanes.band + 1,
-    `open: ${lanes.band} parts × ${lanes.sections} sections, ${lanes.lit} stretches lit (the score plays ${lanes.plays}), M and S on all ${lanes.rows} lanes (one for the cues)`, JSON.stringify(lanes));
-  check(lanes.fx === 4 && lanes.boxes === lanes.questions && lanes.texts && lanes.ticks === lanes.keys && lanes.keys > 100 && lanes.enters === lanes.questions && lanes.selects === lanes.clears && lanes.dots === lanes.pops && lanes.pops > 4,
-    `the cues: each of the ${lanes.questions} questions on the bar with its words, a tick per key (${lanes.ticks}), an Enter each, a select-all per clear (${lanes.selects}), a dot per pop (${lanes.dots})`, JSON.stringify(lanes));
+  // 2 ── edges, a move, a fade, a level: each one line of the score
+  const s00 = score();
+  let b = await clipBox('lead', 16);                          // the title's lead: bars 2-4
+  await dragBy(b.x + b.w - 2, b.y + b.h / 2, 2 * BAR, 0);
+  check(await until(() => clipLines(score(), 'lead')[0] === 'CLIP lead 2-6 hook 0.5'), `its right edge two bars on: "${clipLines(score(), 'lead')[0]}"`);
+  b = await clipBox('lead', 16);
+  await dragBy(b.x + 2, b.y + b.h / 2, -BAR, 0);
+  check(await until(() => clipLines(score(), 'lead')[0] === 'CLIP lead 1-6 hook 0.5'), `its left edge a bar back: "${clipLines(score(), 'lead')[0]}"`);
+  b = await clipBox('fx', 64);                                // the crash on bar 5
+  await dragBy(b.x + b.w / 2, b.y + b.h / 2, BAR, 0);
+  check(await until(() => clipLines(score(), 'fx')[0] === 'CLIP fx 6 crash 0.7'), `a clip moved a bar on: "${clipLines(score(), 'fx')[0]}"`);
+  b = await clipBox('arp', 96);                               // the art's arp: bars 7-11
+  await page.mouse.move(b.x + b.w / 2, b.y + b.h / 2);       // its fade handles show on hover
+  await dragBy(b.x + 4, b.y - 1, 2 * BEAT, 0);
+  check(await until(() => clipLines(score(), 'arp')[0] === 'CLIP arp 7-11 updown 0.7 in 2'), `its fade in dragged two beats: "${clipLines(score(), 'arp')[0]}"`);
+  b = await clipBox('bass', 64);                              // the answer's bass: bars 5-6
+  await dragBy(b.x + b.w / 2, b.y + b.h - 4, 0, -20);
+  check(await until(() => clipLines(score(), 'bass')[1] === 'CLIP bass 5-6 eighths 1.2'), `dragged up 20 px, its level: "${clipLines(score(), 'bass')[1]}"`);
+  // an edge comes near a scene's cut and is drawn to it: on the bar grid (Shift), the title's lead
+  // ends on the answer's cut (7.5 s), not on the bar line half a second on
+  b = await clipBox('lead', 0);
+  const cutX = await page.evaluate(() => { const r = document.querySelector('#reel-tl .tl-lane').getBoundingClientRect(); return r.left + 7.55 * (r.width / REEL_LIVE.duration); });
+  await dragBy(b.x + b.w - 2, b.y + b.h / 2, cutX - (b.x + b.w + 1), 0, { shift: true });
+  check(await until(() => clipLines(score(), 'lead')[0] === 'CLIP lead 1-4.3 hook 0.5'), `an edge near a cut is drawn to it, off the bar grid: "${clipLines(score(), 'lead')[0]}" (the answer cuts at 7.5 s, the end of bar 4's beat 3)`);
+  const editsN = 6;
+  for (let i = 0; i < editsN; i++) { await page.keyboard.press('Control+z'); await sleep(120); }
+  check(await until(() => score() === s00), `${editsN} undos: the score as it was, byte for byte`);
 
-  // 1b ── a seam's chip: the next way in, written to the score, and back with Undo
-  {
-    const m00 = score();
-    // the ways in go round: fade, swell, build, drop, cut
-    await page.locator('#reel-tl button.tl-mseam[data-ref="art"]').click();
-    const swelled = await until(() => /SECTION art\n(?:.*\n)*?  into +swell$/m.test(score()));
-    const kind = await page.waitForFunction(() => { const b = document.querySelector('#reel-tl button.tl-mseam[data-ref="art"]'); return b && b.dataset.kind === 'swell' && b; }, null, { timeout: 5000 }).then(() => 'swell', () => 'unchanged');
-    check(swelled && kind === 'swell', `a click on the art's chip (a fade) makes it the next way in, a swell: "into swell" in the score, the chip redrawn (${kind})`);
-    await page.keyboard.press('Control+z');
-    check(await until(() => score() === m00), 'Ctrl+Z takes the seam back: the score as it was');
-  }
+  // 3 ── a new clip, a copy, its pad, gone
+  const s0 = score();
+  const lane = await page.evaluate(() => { const e = document.querySelector('#reel-tl .tl-mlane[data-part="drums"]').getBoundingClientRect(); return { y: e.y + e.height / 2 }; });
+  const xAt = t => page.evaluate(t => { const r = document.querySelector('#reel-tl .tl-lane').getBoundingClientRect(); return r.left + t * (r.width / REEL_LIVE.duration); }, t);
+  await page.mouse.dblclick(await xAt(46.7), lane.y);         // bar 24, in the quotes, where the drums rest
+  check(await until(() => clipLines(score(), 'drums').includes('CLIP drums 24-26 beat')), `double-click an empty stretch: a new clip of the drums' last pad, to the next clip ("CLIP drums 24-26 beat")`);
+  const order = clipLines(score(), 'drums').map(l => l.split(' ')[2]).join(' ');
+  check(order === '5-6 7-9.2 9.3-10 11 12-17 18-20 21-23.2 24-26 27 28-30.1', `written among the drums' clips in the order they play (${order})`);
+  const sel = await page.evaluate(() => { const A = REEL_RACK.arrangement, c = A.clips.find(x => x.part === 'drums' && x.from === 368); return c && REEL_TIMELINE.music.selected === c.ln; });
+  check(sel, 'and it is the one selected');
+  b = await clipBox('drums', 368);
+  await page.mouse.click(b.x + b.w / 2, b.y + b.h / 2);       // a click: the inspector
+  await page.waitForSelector('#reel-tl .tl-insp-col:not([hidden]) .tl-pad[data-pad="half"]');
+  await page.locator('#reel-tl .tl-insp-col .tl-pad[data-pad="half"]').click();
+  check(await until(() => clipLines(score(), 'drums').includes('CLIP drums 24-26 half')), 'a pad tile in its inspector switches its pad ("half")');
+  await page.locator('#reel-tl .tl-insp-col input[aria-label="level"]').evaluate(e => { e.value = '0.6'; e.dispatchEvent(new Event('change')); });
+  check(await until(() => clipLines(score(), 'drums').includes('CLIP drums 24-26 half 0.6')), 'its level slider writes its level ("0.6")');
+  const before = score();
+  await page.keyboard.press('Control+d');
+  await sleep(500);
+  const said = await page.evaluate(() => document.querySelector('#reel-tl .tl-err').textContent);
+  check(score() === before && /no room/.test(said), `no room for a copy before the fill on bar 27: ⌘D says so ("${said}") and writes nothing`);
+  await page.keyboard.press('Delete');
+  check(await until(() => !clipLines(score(), 'drums').some(l => l.includes(' 24-26 '))), '⌫ takes the selected clip out');
+  b = await clipBox('fx', 432);                               // the crash on bar 28: room after it
+  await page.mouse.click(b.x + b.w / 2, b.y + b.h / 2);
+  await page.keyboard.press('Control+d');
+  check(await until(() => clipLines(score(), 'fx').includes('CLIP fx 29 crash')), `⌘D: a copy right after it ("CLIP fx 29 crash")`);
+  await page.keyboard.press('Delete');
+  check(await until(() => !clipLines(score(), 'fx').includes('CLIP fx 29 crash')), 'and ⌫ the copy');
+  for (let i = 0; i < 6; i++) { await page.keyboard.press('Control+z'); await sleep(120); }
+  check(await until(() => score() === s0), 'six undos: the score as it was');
+  await page.keyboard.press('Escape');
 
-  // 3 ── one Undo for both files
-  const s0 = script(), m0 = score();
-  const pxs = await page.evaluate(() => document.querySelector('#reel-tl .tl-lane').clientWidth / REEL_LIVE.duration);
+  // 4 ── a lane's name: its pads, and the one a new clip gets
+  await page.locator('#reel-tl button.tl-mlb[data-track="bass"]').click();
+  await page.waitForSelector('#reel-tl .tl-insp-col:not([hidden]) .tl-pad[data-pad="pulse"]');
+  const tiles = await page.evaluate(() => [...document.querySelectorAll('#reel-tl .tl-insp-col .tl-pad')].map(e => e.dataset.pad + (e.querySelector(':scope > svg path') ? '+' : '')).join(' '));
+  check(tiles === 'eighths+ pulse+ long+', `the bass's name opens its pads, each drawn (${tiles})`);
+  await page.locator('#reel-tl .tl-insp-col .tl-pad[data-pad="pulse"]').click();
+  const bl = await page.evaluate(() => { const e = document.querySelector('#reel-tl .tl-mlane[data-part="bass"]').getBoundingClientRect(); return e.y + e.height / 2; });
+  await page.mouse.dblclick(await xAt(1.2), bl);              // bar 1, before the bass starts
+  check(await until(() => clipLines(score(), 'bass')[0] === 'CLIP bass 1 pulse'), `the pad chosen is what a new clip gets ("${clipLines(score(), 'bass')[0]}")`);
+  await page.keyboard.press('Control+z');
+  check(await until(() => score() === s0), 'Ctrl+Z: the score as it was');
+  await page.keyboard.press('Escape');
+
+  // 5 ── one Undo for both files
+  const sA = script(), mA = score();
   const g = await page.locator('#reel-tl .tl-sc[data-scene="2"] .tl-grip').boundingBox();
   await page.mouse.move(g.x + g.width / 2, g.y + g.height / 2);
   await page.keyboard.down('Shift'); await page.mouse.down();
@@ -148,112 +210,82 @@ try {
   await page.mouse.up(); await page.keyboard.up('Shift');
   const s1ok = await until(() => /^SCENE answer 5\s/m.test(script()));
   const s1 = script();
-  await page.locator('#reel-tl .tl-mc[data-track="lead"][data-ref="answer"]').click();
-  const m1ok = await until(() => / lead$/.test(playLine(score(), 'answer')));
-  const m1 = score();
-  check(s1ok && m1ok, `a scene's edge dragged (the script: "SCENE answer 5"), then a silent cell clicked (the score's answer plays "${playLine(m1, 'answer')}")`);
+  b = await clipBox('lead', 176);                             // the results' lead: bars 12-17
+  await dragBy(b.x + b.w - 2, b.y + b.h / 2, -BAR, 0);
+  const m1ok = await until(() => clipLines(score(), 'lead')[1] === 'CLIP lead 12-16 hook out 2');
+  check(s1ok && m1ok, `a scene's edge dragged (the script: "SCENE answer 5"), then a clip's ("${clipLines(score(), 'lead')[1]}")`);
   await page.keyboard.press('Control+z');
-  const u1 = await until(() => score() === m0);
-  check(u1 && script() === s1, 'Ctrl+Z takes back the cell: the score as it was, byte for byte, the script still edited');
+  check(await until(() => score() === mA) && script() === s1, 'Ctrl+Z takes back the clip: the score as it was, byte for byte, the script still edited');
   await page.keyboard.press('Control+z');
-  const u2 = await until(() => script() === s0);
-  check(u2 && score() === m0, 'Ctrl+Z again takes back the edge: the script as it was, byte for byte');
+  check(await until(() => script() === sA) && score() === mA, 'Ctrl+Z again takes back the edge: the script as it was, byte for byte');
   await page.keyboard.press('Control+Shift+z');
-  const r1 = await until(() => script() === s1);
-  check(r1 && score() === m0, 'Ctrl+Shift+Z gives the edge back');
+  check(await until(() => script() === s1) && score() === mA, 'Ctrl+Shift+Z gives the edge back');
   await page.keyboard.press('Control+z');
-  check(await until(() => script() === s0) && score() === m0, 'and Ctrl+Z takes it again: both files as they were');
+  check(await until(() => script() === sA) && score() === mA, 'and Ctrl+Z takes it again: both files as they were');
 
-  // 4 ── a click, an Alt-click, a drag
-  const cellSel = (t, ref) => `#reel-tl .tl-mc[data-track="${t}"][data-ref="${ref}"]`;
-  await page.locator(cellSel('lead', 'answer')).click();
-  const on = await until(() => / lead$/.test(playLine(score(), 'answer')));
-  const lit = await page.evaluate(s => document.querySelector(s).classList.contains('tl-on'), cellSel('lead', 'answer'));
-  check(on && lit, `a click on a silent cell plays it there: answer plays "${playLine(score(), 'answer')}", and the cell is lit`);
-  await page.locator(cellSel('lead', 'answer')).click();
-  check(await until(() => score() === m0), 'a click again stops it: the score as it was');
-  await page.locator(cellSel('chords', 'answer')).click({ modifiers: ['Alt'] });
-  const half = await until(() => /\bchords:0\.5\b/.test(playLine(score(), 'answer')));
-  check(half, `Alt-click halves its level: "${playLine(score(), 'answer')}"`);
-  await page.locator(cellSel('chords', 'answer')).click({ modifiers: ['Alt'] });
-  check(await until(() => score() === m0), 'Alt-click again: full, the score as it was');
-  const b = await page.locator(cellSel('bass', 'art')).boundingBox();
-  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down();
-  for (let k = 1; k <= 6; k++) await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2 - 5 * k);
-  await page.mouse.up();
-  const raised = await until(() => /\bbass(?!:)\b/.test(playLine(score(), 'art')));
-  check(raised, `dragging a lit stretch up 30 px raises its level from 0.7 to full: art plays "${playLine(score(), 'art')}"`);
-  await page.keyboard.press('Control+z');
-  check(await until(() => score() === m0), 'Ctrl+Z puts the level back');
-
-  // 5 ── mute and solo: the engine's, never the file's
+  // 6 ── mute and solo, the cues
   const mix = () => page.evaluate(() => {
-    const E = REEL_RACK.engine, dim = t => [...document.querySelectorAll(`#reel-tl .tl-mc[data-track="${t}"]`)].every(e => e.classList.contains('tl-mute'));
-    return { mutes: [...E.mutes], solos: [...E.solos], padDim: dim('chords'), kickDim: dim('kick'), bassDim: dim('bass'),
-      rollDim: document.querySelector('#reel-tl svg.tl-mroll[data-track="chords"]').classList.contains('tl-mute'),
-      mOn: document.querySelector('#reel-tl .tl-mms[data-track="chords"] button').classList.contains('tl-on') };
+    const E = REEL_RACK.engine, dim = p => [...document.querySelectorAll(`#reel-tl .tl-mk[data-part="${p}"]`)].every(e => e.classList.contains('tl-mute'));
+    return { mutes: [...E.mutes].sort().join(), solos: [...E.solos].sort().join(), drumsDim: dim('drums'), bassDim: dim('bass'), leadDim: dim('lead'),
+      mOn: document.querySelector('#reel-tl .tl-mms[data-track="drums"] button').classList.contains('tl-on') };
   });
-  await page.locator('#reel-tl .tl-mms[data-track="chords"] button').first().click();
+  await page.locator('#reel-tl .tl-mms[data-track="drums"] button').first().click();
   await sleep(150);
   let mx = await mix();
-  check(mx.mutes.join() === 'chords' && mx.padDim && mx.rollDim && !mx.kickDim && mx.mOn && score() === m0, 'M mutes the chords in the engine, lights M and dims its lane and its notes; the score is untouched', JSON.stringify(mx));
-  await page.locator('#reel-tl .tl-mms[data-track="chords"] button').first().click();
-  await page.locator('#reel-tl .tl-mms[data-track="kick"] button').nth(1).click();
+  check(mx.mutes === 'clap,hat,kick' && mx.drumsDim && !mx.bassDim && mx.mOn && score() === mA, 'M mutes the drums (kick, clap and hat) in the engine, lights M and dims their clips; the score is untouched', JSON.stringify(mx));
+  await page.locator('#reel-tl .tl-mms[data-track="drums"] button').first().click();
+  await page.locator('#reel-tl .tl-mms[data-track="lead"] button').nth(1).click();
   await sleep(150);
   mx = await mix();
-  check(!mx.mutes.length && mx.solos.join() === 'kick' && !mx.kickDim && mx.bassDim && mx.padDim, 'M again unmutes; S solos kick and dims every other lane', JSON.stringify(mx));
-  await page.locator('#reel-tl .tl-mms[data-track="kick"] button').nth(1).click();
-  await sleep(150);
-  mx = await mix();
-  check(!mx.solos.length && !mx.bassDim, 'S again: every lane back', JSON.stringify(mx));
-
-  // the cues' M: every sound effect at once
+  check(!mx.mutes && mx.solos === 'lead' && !mx.leadDim && mx.bassDim && mx.drumsDim, 'M again unmutes; S solos the lead and dims every other part', JSON.stringify(mx));
+  await page.locator('#reel-tl .tl-mms[data-track="lead"] button').nth(1).click();
+  const cues = await page.evaluate(() => {
+    const A = REEL_RACK.arrangement, Q = ReelScript.queries(REEL_LIVE.parsed.edit), n = sel => document.querySelectorAll('#reel-tl ' + sel).length;
+    return { questions: Q.length, clears: Q.filter(q => isFinite(q.clear)).length, keys: A.events.filter(e => e.track === 'keys').length, pops: A.events.filter(e => e.track === 'pop').length,
+      boxes: n('.tl-mq'), ticks: n('.tl-mkt'), enters: n('.tl-mke2'), selects: n('.tl-mks'), dots: n('.tl-mpd'),
+      texts: [...document.querySelectorAll('#reel-tl .tl-mq')].map(e => e.textContent).join('|') === Q.map(q => q.text).join('|') };
+  });
+  check(cues.boxes === cues.questions && cues.texts && cues.ticks === cues.keys && cues.keys > 100 && cues.enters === cues.questions && cues.selects === cues.clears && cues.dots === cues.pops && cues.pops > 4,
+    `the cues: each of the ${cues.questions} questions with its words, a tick per key (${cues.ticks}), an Enter each, a select-all per clear (${cues.selects}), a dot per pop (${cues.dots})`, JSON.stringify(cues));
   await page.locator('#reel-tl .tl-mms[data-track="*cues"] button').first().click();
   await sleep(150);
-  const fxm = await page.evaluate(() => ({ mutes: [...REEL_RACK.engine.mutes].sort().join(), fx: REEL_RACK.parsed.score.tracks.filter(t => t.on).map(t => t.name).sort().join(),
-    dim: [...document.querySelectorAll('#reel-tl .tl-mq')].every(e => e.classList.contains('tl-mute')) }));
+  const fxm = await page.evaluate(() => ({ mutes: [...REEL_RACK.engine.mutes].sort().join(), fx: REEL_RACK.parsed.score.tracks.filter(t => t.on).map(t => t.name).sort().join() }));
   await page.locator('#reel-tl .tl-mms[data-track="*cues"] button').first().click();
   await sleep(150);
-  const fxu = await page.evaluate(() => REEL_RACK.engine.mutes.size);
-  check(fxm.mutes === fxm.fx && fxm.dim && fxu === 0 && score() === m0, `the cues' M mutes every sound effect (${fxm.mutes}) and dims the cues; again, and they sound`, JSON.stringify(fxm));
-
-  // 6 ── a cue: a question, a pop
+  check(fxm.mutes === fxm.fx && await page.evaluate(() => REEL_RACK.engine.mutes.size) === 0, `the cues' M mutes every sound effect (${fxm.mutes}); again, and they sound`);
   const q2 = page.locator('#reel-tl .tl-mq').nth(1), qt = +(await q2.getAttribute('data-t'));
-  await q2.click();
-  await sleep(150);
+  await q2.click(); await sleep(150);
   let now = await page.evaluate(() => REEL_LIVE.now());
   check(Math.abs(now - (qt - 0.3)) < 0.05, `a click on the second question plays from just before its typing (${qt} s → ${now.toFixed(2)} s)`);
   const pd = page.locator('#reel-tl .tl-mpd').nth(1), pt = +(await pd.getAttribute('data-t'));
-  await pd.click();
-  await sleep(150);
+  await pd.click(); await sleep(150);
   now = await page.evaluate(() => REEL_LIVE.now());
   check(Math.abs(now - (pt - 0.4)) < 0.05, `a click on the second pop (${pt} s) plays from just before it (${now.toFixed(2)} s)`);
 
   // 7 ── shut, a reload, open
   const hOpen = await page.evaluate(() => document.getElementById('reel-tl').getBoundingClientRect().height);
-  const rowsH = await page.evaluate(() => [...document.querySelectorAll('#reel-tl .tl-mms')].reduce((n, r) => n + r.getBoundingClientRect().height, 0));
+  const lanesH = await page.evaluate(() => { const t = document.querySelector('#reel-tl .tl-mlane').getBoundingClientRect().top, q = [...document.querySelectorAll('#reel-tl .tl-mms')].pop().getBoundingClientRect().bottom; return q - t + 4; });
   await page.locator('#reel-tl button.tl-mtog').click();
   await sleep(200);
-  const shut = await page.evaluate(() => ({ h: document.getElementById('reel-tl').getBoundingClientRect().height, cells: document.querySelectorAll('#reel-tl .tl-mc').length,
-    heads: document.querySelectorAll('#reel-tl .tl-mh[data-ref]').length, exp: document.querySelector('#reel-tl button.tl-mtog').getAttribute('aria-expanded') }));
-  const lanesH = rowsH + 8 + 4;
-  check(shut.cells === 0 && shut.heads === 11 && shut.exp === 'false' && Math.abs(hOpen - shut.h - lanesH) <= 2,
-    `the chevron shuts the music to its head: ${Math.round(hOpen)} → ${Math.round(shut.h)} px, the lanes' height`, JSON.stringify(shut));
+  const shut = await page.evaluate(() => ({ h: document.getElementById('reel-tl').getBoundingClientRect().height, clips: document.querySelectorAll('#reel-tl .tl-mk').length,
+    bars: document.querySelectorAll('#reel-tl .tl-mbar').length, exp: document.querySelector('#reel-tl button.tl-mtog').getAttribute('aria-expanded') }));
+  check(shut.clips === 0 && shut.bars === geo.bars && shut.exp === 'false' && Math.abs(hOpen - shut.h - lanesH) <= 3,
+    `the chevron shuts the music to its ruler and chords: ${Math.round(hOpen)} → ${Math.round(shut.h)} px, the lanes' height`, JSON.stringify({ shut, lanesH }));
   await page.reload();
   await ready();
-  const after = await page.evaluate(() => ({ opened: REEL_TIMELINE.music.opened, cells: document.querySelectorAll('#reel-tl .tl-mc').length }));
-  check(!after.opened && after.cells === 0, 'shut stays shut after a reload by hand');
+  const after = await page.evaluate(() => ({ opened: REEL_TIMELINE.music.opened, clips: document.querySelectorAll('#reel-tl .tl-mk').length }));
+  check(!after.opened && after.clips === 0, 'shut stays shut after a reload by hand');
   await page.evaluate(() => { window.__mark = true; });
   if (await page.evaluate(() => document.getElementById('reel-tl').hidden)) await page.keyboard.press('e');
   await page.locator('#reel-tl button.tl-mtog').click();
   await sleep(200);
-  check(await page.evaluate(() => document.querySelectorAll('#reel-tl .tl-mc').length) === lanes.cells, 'and the chevron opens it again');
+  check(await page.evaluate(() => document.querySelectorAll('#reel-tl .tl-mk').length) === geo.clips.length, 'and the chevron opens it again');
 
   // 8 ── a short window: the lanes scroll under a ruler that stays
   await page.setViewportSize({ width: 1440, height: 640 });
   await sleep(400);
   const tall = await page.evaluate(async () => {
-    const tl = document.getElementById('reel-tl'), view = tl.querySelector('.tl-view'), hud = document.getElementById('hud');
+    const tl = document.getElementById('reel-tl'), view = tl.querySelector('.tl-view');
     const st = document.getElementById('stage').getBoundingClientRect();
     const out = { vs: tl.classList.contains('tl-vs'), h: tl.getBoundingClientRect().height, stageH: st.height, sh: view.scrollHeight, ch: view.clientHeight };
     view.scrollTop = view.scrollHeight;
@@ -263,11 +295,11 @@ try {
     out.rulerTop = r(tl.querySelector('.tl-ruler')).top - r(view).top;
     const lb = tl.querySelector('.tl-mlb[data-track="cues"]'), row = tl.querySelector('.tl-mms[data-track="*cues"]');
     out.rowVsLane = Math.round(r(row).top - r(lb).top);
-    out.popInView = r(lb).bottom <= r(view).bottom + 1 && r(lb).top >= r(view).top;
+    out.inView = r(lb).bottom <= r(view).bottom + 1 && r(lb).top >= r(view).top;
     return out;
   });
   check(tall.vs && tall.sh > tall.ch && tall.stageH >= 150, `a 640 px window: the panel stops at ${Math.round(tall.h)} px (the preview keeps ${Math.round(tall.stageH)} px) and its lanes scroll`, JSON.stringify(tall));
-  check(tall.scrolled > 0 && Math.abs(tall.rulerTop) <= 1 && tall.popInView && Math.abs(tall.rowVsLane) <= 2,
+  check(tall.scrolled > 0 && Math.abs(tall.rulerTop) <= 1 && tall.inView && Math.abs(tall.rowVsLane) <= 2,
     'scrolled to the last lane: the ruler stays on top, and the last lane\'s M and S sit beside it', JSON.stringify(tall));
   await page.setViewportSize({ width: 1600, height: 1000 });
 

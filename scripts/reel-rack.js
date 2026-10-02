@@ -10,11 +10,13 @@
 // the music: the rack swaps the arrangement under the playhead.
 //
 //   M                open / shut (the preview shrinks to the left of it)
+//   pads             each part's pads (the patterns its clips can play) as tiles: click one to
+//                    edit it below, ▶ to hear it on its own
+//   step             click: . → x → X (accent) → o (soft) → .  (a tune is typed: E5 . C5 …)
 //   knob             drag up/down (Shift: fine), wheel, double-click to type a value
-//   step             click: . → x → X (accent) → o (soft) → .
-//   arrangement cell click: the section plays the track, or stops; Alt-click: half level
-//   ▶                audition the instrument now;  M / S  mute / solo (not saved: listening aids)
+//   ▶                audition a sound now;  M / S  mute / solo (not saved: listening aids)
 //   ↶ ↷              undo / redo (Cmd/Ctrl+Z over the rack)
+// The arrangement, the clips on the bars, is the timeline's (E).
 //
 // Sound needs a click or a key first (the browser's rule); the ♪ chip in the HUD says so.
 // Meters are dim and move only while the rack is open (moving bright pixels on a dark field
@@ -77,17 +79,20 @@
 #reel-rack select { padding: 4px 6px; }
 #reel-rack input[type=text] { cursor: text; width: 100%; }
 #reel-rack .rk-grow { flex: 1; }
-/* arrangement */
-#reel-rack .rk-arr { position: relative; }
-#reel-rack .rk-arr .rk-lane { display: flex; align-items: center; height: 17px; }
-#reel-rack .rk-arr .rk-name { width: 58px; flex: none; color: var(--ink-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
-#reel-rack .rk-arr .rk-cells { position: relative; flex: 1; height: 15px; }
-#reel-rack .rk-arr .rk-cell { position: absolute; top: 0; bottom: 0; border-radius: 2px; border: 1px dashed transparent; cursor: pointer; z-index: 1; }
-#reel-rack .rk-arr .rk-cell:hover { border-color: var(--gold); }
-#reel-rack .rk-arr .rk-cell.on:hover { border-style: solid; }
-#reel-rack .rk-arr svg.rk-roll { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; }
-#reel-rack .rk-arr .rk-sec { position: absolute; top: 0; font-size: 9px; color: var(--ink-faint); white-space: nowrap; overflow: hidden; padding-left: 2px; }
-#reel-rack .rk-arr .rk-ph { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--gold); pointer-events: none; }
+/* pads: a row a part, a tile a pad; the chosen pad's steps under them */
+#reel-rack .rk-prow { display: flex; align-items: flex-start; gap: 8px; margin: 0 0 6px; }
+#reel-rack .rk-prow .rk-pname { width: 52px; flex: none; padding-top: 6px; font: 600 10px/1.2 var(--font-mono); letter-spacing: 0.06em; }
+#reel-rack .rk-tiles { display: flex; flex-wrap: wrap; gap: 5px; flex: 1; }
+#reel-rack .rk-tile { position: relative; width: 84px; height: 44px; padding: 5px 6px; border-radius: 7px; cursor: pointer; box-sizing: border-box;
+  display: flex; flex-direction: column; justify-content: space-between; background: rgba(var(--cyan-dim-rgb), 0.06); border: 1px solid rgba(var(--cyan-dim-rgb), 0.28); }
+#reel-rack .rk-tile b { font: 600 10px/1 var(--font-mono); color: var(--text-bright); }
+#reel-rack .rk-tile:hover { border-color: var(--gold); }
+#reel-rack .rk-tile.on { border-color: var(--gold); background: rgba(var(--gold-rgb), 0.1); box-shadow: inset 0 0 0 1px var(--gold); }
+#reel-rack .rk-tile button.sm { position: absolute; right: 3px; top: 3px; padding: 0; width: 20px; height: 20px; min-width: 0; }
+#reel-rack .rk-paded { border: 1px solid rgba(var(--cyan-dim-rgb), 0.2); border-radius: 9px; padding: 8px 10px; margin: 4px 0 8px 60px; }
+#reel-rack .rk-pvoice { display: grid; grid-template-columns: 48px 1fr; align-items: center; gap: 6px; margin: 3px 0; }
+#reel-rack .rk-pvoice > span { color: var(--ink-faint); font-size: 10px; overflow: hidden; text-overflow: ellipsis; }
+#reel-rack .rk-pvoice .rk-steps { margin-top: 0; }
 /* modules */
 #reel-rack .rk-mod { border: 1px solid rgba(var(--cyan-dim-rgb), 0.18); border-top: 2px solid var(--acc); border-radius: 9px; padding: 9px 10px 8px; margin: 0 0 10px; background: rgba(var(--cyan-dim-rgb), 0.03); }
 #reel-rack .rk-mod.muted { opacity: 0.55; }
@@ -180,8 +185,11 @@
   };
   // open the rack at one instrument's module (the timeline's Shift-click on a lane)
   function focus(name) {
+    const part = P && P.score.parts.find(p => p.name === name);
+    if (part && part.pads.length && !(selPad && selPad.part === name)) selPad = { part: name, pad: part.pads[0].name };
     open(true);
-    const m = [...root.querySelectorAll('.rk-mod')].find(x => { const b = x.querySelector('.rk-head b'); return b && b.textContent === name; });
+    const m = part ? root.querySelector(`.rk-prow[data-part="${CSS.escape(name)}"]`)
+      : [...root.querySelectorAll('.rk-mod')].find(x => { const b = x.querySelector('.rk-head b'); return b && b.textContent === name; });
     if (!m) return;
     m.scrollIntoView({ block: 'center' });
     m.animate([{ boxShadow: '0 0 0 3px rgba(212,175,55,0.6)' }, { boxShadow: '0 0 0 0 rgba(212,175,55,0)' }], { duration: 900 });
@@ -329,6 +337,15 @@
     dragBase = null;
   }
 
+  // a part's colour (the timeline's lanes and clips, the pads' rows); a sound wears its part's; a
+  // sound effect its own
+  function colourOf(name) {
+    if (!P) return PALETTE[0];
+    const parts = P.score.parts, pi = parts.findIndex(p => p.name === name || p.tracks.includes(name));
+    if (pi >= 0) return PALETTE[pi % PALETTE.length];
+    const fx = P.score.tracks.filter(t => !parts.some(p => p.tracks.includes(t.name))), i = fx.findIndex(t => t.name === name);
+    return PALETTE[(parts.length + Math.max(0, i)) % PALETTE.length];
+  }
   const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
   const btn = (text, title, fn, cls = '') => { const b = el('button', cls, text); b.title = title; b.addEventListener('click', e => { e.stopPropagation(); fn(e); }); return b; };
   // a button with an icon (scripts/reel-ui.js); with no label its name is its tooltip
@@ -341,7 +358,7 @@
   const lineSet = (kind, name, key, text, index) => { try { change(RM.setLine(src, kind, name, key, text, index)); } catch (e) { status((e.errors || [e.message]).join(' · '), true); } };
 
   // ── drawing ───────────────────────────────────────────────────────────
-  let meters = [], stepEls = {}, phEl = null, arrW = 0;
+  let meters = [], stepEls = {}, selPad = null;
   function renderTop() {
     const top = root.querySelector('.rk-top'); if (!top) return;
     top.innerHTML = '';
@@ -383,41 +400,30 @@
       return;
     }
     const tracks = P.score.tracks, colour = {};
-    tracks.forEach((t, i) => { colour[t.name] = PALETTE[i % PALETTE.length]; });
+    tracks.forEach(t => { colour[t.name] = colourOf(t.name); });
 
-    // the arrangement: sections across, instruments down
-    root.appendChild(el('h3', '', 'arrangement · click a stretch to play or stop'));
-    const arr = el('div', 'rk-arr');
-    const D = A.duration || 1, band = tracks.filter(t => !t.on);
-    const head = el('div', 'rk-lane'); head.appendChild(el('span', 'rk-name', ''));
-    const hc = el('div', 'rk-cells'); head.appendChild(hc);
-    A.sections.forEach(s => { const sEl = el('span', 'rk-sec', s.type); sEl.style.left = (s.start / D * 100) + '%'; sEl.style.width = ((s.end - s.start) / D * 100) + '%'; sEl.title = `${s.type} · ${s.harmony.map(x => x.chord.name).filter((n, i, a) => !i || n !== a[i - 1]).join(' ')}`; hc.appendChild(sEl); });
-    arr.appendChild(head);
-    const rolls = [];
-    for (const t of band) {
-      const lane = el('div', 'rk-lane'); const nm = el('span', 'rk-name', t.name); nm.style.color = colour[t.name]; lane.appendChild(nm);
-      const cells = el('div', 'rk-cells');
-      // what it plays, note for note, as the timeline draws it (drawn below, once the lane has its width)
-      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('class', 'rk-roll'); svg.style.color = colour[t.name];
-      cells.appendChild(svg); rolls.push({ svg, evs: A.events.filter(e => e.track === t.name), levels: A.levels && A.levels[t.name] });
-      for (const s of A.sections) {
-        const p = s.play.find(x => x.name === t.name);
-        const c = el('div', 'rk-cell' + (p ? ' on' : ''));
-        c.style.left = `calc(${s.start / D * 100}% + 1px)`; c.style.width = `calc(${(s.end - s.start) / D * 100}% - 2px)`;
-        if (p) { c.style.background = colour[t.name] + '12'; c.style.borderColor = colour[t.name] + '55'; c.style.borderStyle = 'solid'; }
-        c.title = `${s.type}: ${p ? `plays ${t.name}${p.level !== 1 ? ' at ' + p.level : ''} (click to stop, Alt-click for half/full level)` : `click to play ${t.name} here`}`;
-        c.addEventListener('click', e => {
-          try {
-            if (p && e.altKey) change(RM.setTrackLevel(src, s.ref, t.name, p.level === 1 ? 0.5 : 1));
-            else change(RM.toggleTrack(src, s.ref, t.name));
-          } catch (x) { status((x.errors || [x.message]).join(' · '), true); }
-        });
-        cells.appendChild(c);
-      }
-      lane.appendChild(cells); arr.appendChild(lane);
+    // the pads: a row a part, a tile a pad (what it plays, drawn); the chosen one's steps under them
+    root.appendChild(el('h3', '', 'pads · what each part can play'));
+    for (const part of P.score.parts) {
+      const row = el('div', 'rk-prow'); row.dataset.part = part.name;
+      const nm = el('span', 'rk-pname', part.name); nm.style.color = colourOf(part.name); row.appendChild(nm);
+      const tiles = el('div', 'rk-tiles');
+      part.pads.forEach(d => {
+        const tile = el('div', 'rk-tile' + (selPad && selPad.part === part.name && selPad.pad === d.name ? ' on' : ''));
+        tile.style.color = colourOf(part.name);
+        tile.title = `${d.name}: ${d.voices.map(v => `${v.track} ${v.text || 'rises across its clip'}`).join(' · ')}${d.once ? ' (once, from its clip\'s start)' : ''}\nclick: edit it below · ▶ hear it`;
+        tile.appendChild(el('b', '', d.name));
+        tile.appendChild(padPicture(part, d));
+        tile.appendChild(btn('▶', `hear ${d.name} on its own`, () => { ensureAudio(); if (player) player.E.preview(RM.padPreview(P.score, A, part.name, d.name, L.now())); }, 'sm'));
+        tile.addEventListener('click', () => { selPad = selPad && selPad.part === part.name && selPad.pad === d.name ? null : { part: part.name, pad: d.name }; render(); });
+        tiles.appendChild(tile);
+      });
+      row.appendChild(tiles);
+      root.appendChild(row);
+      const d = selPad && selPad.part === part.name && part.pads.find(x => x.name === selPad.pad);
+      if (d) root.appendChild(padEditor(part, d));
     }
-    phEl = el('div', 'rk-ph'); arr.appendChild(phEl);
-    root.appendChild(arr);
+    if (!P.score.parts.length) root.appendChild(el('p', 'rk-note', 'No PART lines yet: a part\'s pads are what its clips play.'));
 
     // the instruments
     root.appendChild(el('h3', '', 'instruments'));
@@ -427,13 +433,52 @@
     root.appendChild(fxModules());
     root.appendChild(el('p', 'rk-note', `Every control edits one line of ${NAME}; the file is the music. Mute and solo are for listening and are not saved.`));
     root.scrollTop = scroll;
-    arrW = arr.querySelector('.rk-cells').getBoundingClientRect().width;
-    if (window.REEL_UI && REEL_UI.rollPaths && arrW > 0) rolls.forEach(r => {
-      const H = 15, OP = [0.3, 0.55, 0.8, 1];
-      const P = REEL_UI.rollPaths(r.evs, { H, px: t => t / D * arrW, pxs: arrW / D, level: r.levels ? t => RM.levelAt(r.levels, t) : null });
-      r.svg.setAttribute('width', arrW); r.svg.setAttribute('height', H);
-      r.svg.innerHTML = P.d.map((d, k) => d ? `<path d="${d}" fill="currentColor" fill-opacity="${OP[k]}"/>` : '').join('') + (P.own ? `<path d="${P.own}" fill="var(--gold)"/>` : '');
+  }
+  // a pad's picture: one turn of it, as the timeline draws a clip
+  function padPicture(part, d) {
+    const NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('width', 72); svg.setAttribute('height', 18); svg.setAttribute('aria-hidden', 'true');
+    if (!window.REEL_UI || !REEL_UI.rollPaths) return svg;
+    const evs = RM.padPreview(P.score, A, part.name, d.name, L.now()), dur = Math.max(A.bar, ...evs.map(e => e.t + 0.05)), n = part.tracks.length;
+    const rows = n > 1 ? Object.fromEntries(part.tracks.map((t, i) => [t, n - 1 - i])) : null;
+    const pp = REEL_UI.rollPaths(evs, { H: 18, px: t => 1 + t / dur * 70, pxs: 70 / dur, rows, nRows: n });
+    svg.innerHTML = pp.d.map((q, k) => q ? `<path d="${q}" fill="currentColor" fill-opacity="${[0.4, 0.6, 0.8, 1][k]}"/>` : '').join('');
+    return svg;
+  }
+  // the chosen pad: a row of sixteen steps a sound (click: . → x → X → o → .), or its tune typed
+  function padEditor(part, d) {
+    const box = el('div', 'rk-paded'), acc = colourOf(part.name);
+    box.style.setProperty('--acc', acc);
+    d.voices.forEach(v => {
+      const r = el('div', 'rk-pvoice'); r.appendChild(el('span', '', v.track));
+      if (v.rise) { r.appendChild(el('span', '', 'rises across its clip')); box.appendChild(r); return; }
+      if (v.notes) {
+        const inp = el('input'); inp.type = 'text'; inp.value = v.text;
+        inp.title = 'one note a step (E5, C#4), . to rest, | between bars; Enter to set';
+        inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') inp.blur(); });
+        inp.addEventListener('change', () => padSet(part.name, d.name, v.track, inp.value.trim()));
+        r.appendChild(inp); box.appendChild(r); return;
+      }
+      const g = el('div', 'rk-steps'), cells = [], s16 = v.steps.length >= 16 ? v.steps.slice(0, 16) : v.steps.padEnd(16, '.');
+      [...s16].forEach((c, i) => {
+        const st = el('div', 'rk-step');
+        if (c !== '.') { st.style.background = acc; st.style.opacity = c === 'X' ? 1 : c === 'x' ? 0.72 : 0.38; }
+        st.title = `${v.track}, step ${i + 1}: ${c === 'X' ? 'accent' : c === 'x' ? 'hit' : c === 'o' ? 'soft' : 'rest'} (click to change)`;
+        st.addEventListener('click', () => {
+          const arr2 = [...s16]; arr2[i] = { '.': 'x', x: 'X', X: 'o', o: '.' }[c];
+          padSet(part.name, d.name, v.track, arr2.join('') + (v.steps.length > 16 ? v.steps.slice(16) : ''));
+        });
+        g.appendChild(st); cells.push(st);
+      });
+      stepEls[`${part.name}/${d.name}/${v.track}`] = cells;
+      r.appendChild(g); box.appendChild(r);
     });
+    const note = el('p', 'rk-note', `${d.name}${d.once ? ' plays once, from its clip\'s start' : ' goes round on the bars'}${d.len != null ? `; a note lasts ${d.len} steps at most` : ''}. The timeline (E) places it: click a ${part.name} clip and choose ${d.name}.`);
+    box.appendChild(note);
+    return box;
+  }
+  function padSet(part, pad, track, pattern) {
+    try { change(RM.setPad(src, part, pad, track, pattern)); } catch (e) { status((e.errors || [e.message]).join(' · '), true); }
   }
 
   function module(t, acc) {
@@ -468,29 +513,17 @@
       });
       // what it plays
       const pl = el('div', 'rk-line'); pl.appendChild(el('label', '', 'play'));
-      const DEF = { chord: 'chord 3', root: 'root 2', arp: 'arp 4 up', notes: 'notes', hit: 'hit 3', rise: 'rise 4', chime: 'chime 5', note: 'note E6' };
+      // what it plays (its pads must suit it: steps for chord, root and arp, a tune for notes)
+      const DEF = t.on ? { chime: 'chime 5', note: 'note E6' } : { chord: 'chord 3', root: 'root 2', arp: 'arp 4 up', notes: 'notes', rise: 'rise' };
       pl.appendChild(sel(Object.keys(DEF), t.play.mode, mode => {
-        let text = RM.setLine(src, kind, t.name, 'play', DEF[mode]);
-        try {
-          if ((mode === 'root' || mode === 'arp') && !t.steps) text = RM.setLine(text, kind, t.name, 'steps', 'x.x.x.x.x.x.x.x.');
-          if (mode === 'notes' && !t.notes) text = RM.setLine(text, kind, t.name, 'notes', 'A4 . . . C5 . . . E5 . . . D5 . . .');
-          change(text);
-        } catch (e) { status((e.errors || [e.message]).join(' · '), true); }
+        try { change(RM.setLine(src, kind, t.name, 'play', DEF[mode])); } catch (e) { status((e.errors || [e.message]).join(' · '), true); }
       }, 'what it plays'));
       if (t.play.oct != null) pl.appendChild(K('octave', SPEC.oct, t.play.oct, 'play', 1));
       if (t.play.dir) pl.appendChild(sel(['up', 'down', 'updown'], t.play.dir, d => { try { change(RM.setArg(src, kind, t.name, 'play', 2, d)); } catch (e) { status(e.message, true); } }, 'direction'));
-      if (t.play.beats != null) pl.appendChild(K('beats', SPEC.beats, t.play.beats, 'play', 1));
       if (t.play.mode === 'note') { const inp = el('input'); inp.type = 'text'; inp.value = t.play.name; inp.style.width = '60px'; inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') inp.blur(); }); inp.addEventListener('change', () => { try { change(RM.setArg(src, kind, t.name, 'play', 1, inp.value.trim())); } catch (e) { status((e.errors || [e.message]).join(' · '), true); } }); pl.appendChild(inp); }
-      if (['root', 'arp', 'notes'].includes(t.play.mode)) pl.appendChild(K('length', SPEC.len, t.len, 'len', 0));
+      if (['root', 'arp', 'notes', 'chord'].includes(t.play.mode)) pl.appendChild(K('length', SPEC.len, t.len, 'len', 0));
       if (t.on) pl.appendChild(onSel(t, kind));
       m.appendChild(pl);
-      if (t.play.mode === 'notes') {
-        const inp = el('input'); inp.type = 'text'; inp.value = (P.fields.find(f => f.block.name === t.name && f.key === 'notes') || { args: t.notes }).args.join(' ');
-        inp.title = 'one note a step (E5, C#4), . to rest, | between bars; Enter to set';
-        inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') inp.blur(); });
-        inp.addEventListener('change', () => lineSet(kind, t.name, 'notes', inp.value.trim()));
-        const r = el('div', 'rk-line'); r.appendChild(el('label', '', 'notes')); r.appendChild(inp); m.appendChild(r);
-      }
       // filter, envelope, lfo, mix
       const ks = el('div', 'rk-knobs');
       const fsel = sel(['off'].concat(RM.FILTERS), t.filter ? t.filter.type : 'off', v => lineSet(kind, t.name, 'filter', v === 'off' ? null : `${v} ${t.filter ? t.filter.freq : 2000} ${t.filter ? t.filter.q : 1}`), 'filter');
@@ -508,24 +541,6 @@
       ks.appendChild(mix(t, K));
       m.appendChild(ks);
     }
-    // the steps
-    if (t.steps && (t.type === 'drum' || ['root', 'arp'].includes(t.play.mode))) {
-      const g = el('div', 'rk-steps'); const cells = [];
-      const s16 = t.steps.length >= 16 ? t.steps.slice(0, 16) : t.steps.padEnd(16, '.');
-      [...s16].forEach((c, i) => {
-        const st = el('div', 'rk-step');
-        if (c !== '.') { st.style.background = acc; st.style.opacity = c === 'X' ? 1 : c === 'x' ? 0.72 : 0.38; }
-        st.title = `step ${i + 1}: ${c === 'X' ? 'accent' : c === 'x' ? 'hit' : c === 'o' ? 'soft' : 'rest'} (click to change)`;
-        st.addEventListener('click', () => {
-          const next = { '.': 'x', x: 'X', X: 'o', o: '.' }[c];
-          const arr2 = [...s16]; arr2[i] = next;
-          lineSet(kind, t.name, 'steps', arr2.join('') + (t.steps.length > 16 ? t.steps.slice(16) : ''));
-        });
-        g.appendChild(st); cells.push(st);
-      });
-      stepEls[t.name] = cells;
-      m.appendChild(g);
-    } else if (t.type === 'drum' && !t.on) m.appendChild(el('div', 'rk-note', 'no steps: plays once on each section\'s cut'));
     return m;
   }
   function onSel(t, kind) { return sel(RM.MOMENTS, t.on, v => { try { change(RM.setArg(src, kind, t.name, 'on', 0, v)); } catch (e) { status(e.message, true); } }, 'plays at every moment of this kind'); }
@@ -570,13 +585,8 @@
   let lastMeter = 0;
   function frame(t) {
     if (!P || !A) return;
-    if (phEl && arrW) phEl.style.left = `calc(58px + ${(Math.min(1, t / (A.duration || 1)) * arrW).toFixed(1)}px)`;
-    const sec = A.sections.find(s => t >= s.start && t < s.end);
-    for (const [name, cells] of Object.entries(stepEls)) {
-      const on = sec && sec.play.some(p => p.name === name) && L.isPlaying();
-      const k = on ? Math.floor(t / A.step + 1e-6) % 16 : -1;          // the steps go round on the reel's own clock
-      cells.forEach((c, i) => c.classList.toggle('now', i === k));
-    }
+    const k = L.isPlaying() ? Math.floor(t / A.step + 1e-6) % 16 : -1;   // the steps go round on the reel's own clock
+    for (const cells of Object.values(stepEls)) cells.forEach((c, i) => c.classList.toggle('now', i === k));
     const now = performance.now();
     if (!player || now - lastMeter < 50) return;                        // meters at 20 fps, dim
     lastMeter = now;
@@ -627,10 +637,17 @@
     try { const d = sessionStorage.getItem(DRAFT_KEY); if (d != null) { text = d; draft = true; } } catch (e) { /* no drafts */ }
     if (text == null && HOST) { const h = await Promise.resolve(HOST.load(FILE)).catch(() => null); if (h != null) { text = h; hosted = true; } }
     if (text == null) text = fileText;
+    let older = false;
     if (text != null) {
-      try { read(text); } catch (e) { err = `${NAME} has mistakes:\n` + (e.errors || [e.message]).join('\n'); P = null; }
+      try { read(text); } catch (e) {
+        // a saved draft or version that no longer reads (one written before the music had parts and
+        // clips, 2026-10-02): the file plays, and the save stays where it was
+        if ((draft || hosted) && fileText != null && text !== fileText) { try { read(fileText); older = true; draft = false; hosted = false; } catch (e2) { /* both fail: say the first */ } }
+        if (!older) { err = `${NAME} has mistakes:\n` + (e.errors || [e.message]).join('\n'); P = null; }
+      }
     }
-    if (draft) status('playing an unsaved draft of the score');
+    if (older) status('your saved score was written for the older music, so the file plays (parts, pads and clips); your save is untouched');
+    else if (draft) status('playing an unsaved draft of the score');
     else if (hosted) status(`playing your version of the score saved on ${HOST.name}`);
     ensureAudio();                                   // made now; it starts at the first click or key
     chip();
@@ -656,7 +673,7 @@
       mute, solo, mix: mixOf, focus, get name() { return NAME; }, get error() { return err; },
       get canUndo() { return undoS.length > 0; }, get canRedo() { return redoS.length > 0; },
       get sounding() { return !!(ctx && ctx.state === 'running' && soundOn); },
-      colour: name => { const i = P ? P.score.tracks.findIndex(t => t.name === name) : -1; return PALETTE[(i < 0 ? 0 : i) % PALETTE.length]; } };
+      colour: name => colourOf(name) };
     tell('ready');
   })();
 })();
