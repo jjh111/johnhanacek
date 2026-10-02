@@ -348,14 +348,25 @@ scenes; the timeline should zoom and its targets be bigger; how does the video g
   render" posts a comment and sends it to Claude (`comments.sendToClaude`, from the click). The
   artifact wakes the Claude session watching it. The request names the formats, the frame rate and
   the saved version (a six-character hash of the script). Claude renders it, uploads each film
-  (Artifact, `asset: true`) and writes `films/latest`, and the panel lists those films with Open
+  (Artifact, `asset: true`) and writes `films/latest`, and the panel lists those films with Play
   and Download. When no Claude session can receive the comment, the button copies the request
   and the panel says why. Anywhere else, it gives the renderer's command.
+- **Downloads inside claude.ai (2026-10-02).** The page runs in a sandboxed frame, where a link
+  neither opens a tab (`target=_blank`) nor downloads (`download`): the films were first listed
+  as Open and Download links, and John's click on Download "didn't give me anything". So a film
+  plays in the panel (Play opens a `<video controls>` under its row; Close takes it away) and its
+  Download fetches the film from the page (`/_blob/<id>`, same origin) and hands the Blob to the
+  `downloads` capability (`REEL_HOST.saveFilm`), whose dialog asks the viewer first. Every
+  download in the editor (the film, the script from the timeline or Export, the score from the
+  rack or Export) now says what came of it where its button is: saved, the dialog answered no, a
+  dialog already open, or a view that cannot save files (`REEL_HOST.said(result, what)`). On the
+  dev server the films stay links, and a browser download says nothing back.
 - **Tests:** timelinetest (37: the HUD's buttons, zoom, a stat dragged and undone by the Undo
   button, a moment's click, Export), devservertest (42: the render guards, one job at a time,
-  progress, cancel; the render is started for real, then stopped), hosttest (the films listed, one
-  comment sent naming formats and version, the no-session fallback), scripttest (`setAt` on a
-  stat).
+  progress, cancel; the render is started for real, then stopped), hosttest (the films listed with
+  Play and Download and no links, the player fetching the film, the film handed to the save dialog
+  as a Blob, a no said; one comment sent naming formats and version, the no-session fallback),
+  scripttest (`setAt` on a stat).
 
 ## The media picker (2026-09-29)
 
@@ -968,6 +979,14 @@ a shotlist that can be re-organized."
   shot's arrive, Duplicate, Delete, an 820 px window, no reload), fishdirecttest (a scene's lines let
   go at the cut, a carried wander holds into the next), fishpaneltest (the gold's handle at a cut
   carries, Carry on toggles), and the DOM check above.
+- **The suites and John's order.** The same evening John used the shot list: the command scene
+  before the answer, the art after the feature. The suites had found scenes by their place in the
+  cut (`scenes[2]` was the answer), so they now work on a copy of his script with the scenes put
+  back in the order they were written for (`reel-tests/inorder.mjs`, `ReelScript.moveScene`): what
+  he changes inside a scene still reaches them, where he puts it does not. Order is tested on its
+  own terms (ordertest), and samefilmtest compares the film he saved, in his order. hosttest,
+  which plays the built editor with his script as it is, finds the answer and the pictured scene
+  by type.
 
 ## Later
 

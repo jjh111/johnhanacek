@@ -18,11 +18,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
+import { inOrder } from './inorder.mjs';   // the scenes in the order the suite was written for
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const NAME = 'zz-text-test.script.txt', TMP = path.join(ROOT, 'Assets', NAME);
 const BACKUPS = path.join(ROOT, '.local', 'reel-backups');
-const ORIG = fs.readFileSync(path.join(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8');
+const ORIG = inOrder(fs.readFileSync(path.join(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8'));
 let fails = 0, passes = 0;
 const check = (ok, what, extra = '') => { if (ok) passes++; else fails++; console.log(`${ok ? 'ok  ' : 'FAIL'} ${what}${ok || !extra ? '' : '  (' + extra + ')'}`); };
 const file = () => fs.readFileSync(TMP, 'utf8');

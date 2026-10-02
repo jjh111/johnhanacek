@@ -31,17 +31,18 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
+import { inOrder } from './inorder.mjs';   // the scenes in the order the suite was written for
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 // where the answer scene cuts in, as John has timed it, and the lead's end written on it
 const RQ = (await import('node:module')).createRequire(import.meta.url);
 const RS_ = RQ(path.join(ROOT, 'scripts/reel-script.js')), RM_ = RQ(path.join(ROOT, 'scripts/reel-music.js'));
-const SCRIPT_ = RS_.parse(fs.readFileSync(path.join(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8')).edit;
+const SCRIPT_ = RS_.parse(inOrder(fs.readFileSync(path.join(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8'))).edit;
 const CUT = RS_.spans(SCRIPT_)[SCRIPT_.scenes.findIndex(x => x.type === 'answer')].start;
 const LEAD_CUT = `CLIP lead ${RM_.rangeText(0, Math.round(CUT / 0.125), 16)} hook 0.5`;
 const NAME = 'zz-mlane-test.script.txt', SCRIPT = path.join(ROOT, 'Assets', NAME), SCORE = SCRIPT.replace(/\.script\.txt$/, '.score.txt');
 const BACKUPS = path.join(ROOT, '.local', 'reel-backups');
-const ORIG = fs.readFileSync(path.join(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8');
+const ORIG = inOrder(fs.readFileSync(path.join(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8'));
 const ORIG_SCORE = fs.readFileSync(path.join(ROOT, 'Assets/sizzle-reel-2.score.txt'), 'utf8');
 let fails = 0, passes = 0;
 const check = (ok, what, extra = '') => { if (ok) passes++; else fails++; console.log(`${ok ? 'ok  ' : 'FAIL'} ${what}${ok || !extra ? '' : '  (' + extra + ')'}`); };

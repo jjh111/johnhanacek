@@ -5,10 +5,11 @@ import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { inOrder } from './inorder.mjs';   // the scenes in the order the suite was written for
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const RS = createRequire(import.meta.url)(resolve(ROOT, 'scripts/reel-script.js'));
-const SRC0 = readFileSync(resolve(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8'), SRC = SRC0;
+const SRC0 = inOrder(readFileSync(resolve(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8')), SRC = SRC0;
 
 let failed = 0;
 const ok = (cond, what) => { console.log(`${cond ? 'pass' : 'FAIL'}  ${what}`); if (!cond) failed++; };

@@ -75,7 +75,7 @@ const FAKE = () => {
     sendToClaude: async ({ text }) => { if (canSend !== 'available') throw { code: 'claude_unavailable', message: 'no' }; window.__sent.push(text); return { threadId: 't1', commentId: 'c1' }; } };
   window.claude = { use: async name => name === 'db' ? { doc }
     : name === 'permissions' ? { state: async n => n === 'db' ? consent : 'unavailable', request: async () => ({ db: consent }) }
-    : name === 'downloads' ? { save: async r => { window.__saved.push(r); return { status: 'saved' }; } }
+    : name === 'downloads' ? { save: async r => { if (localStorage.getItem('fake-decline')) throw { code: 'declined', message: 'the viewer said no' }; window.__saved.push(r); return { status: 'saved' }; } }
     : name === 'comments' ? comments : null };
   // an init script can run before <html> exists: stamp the theme as soon as it does
   const light = () => document.documentElement && document.documentElement.setAttribute('data-theme', 'light');
@@ -83,7 +83,9 @@ const FAKE = () => {
 };
 const store = (page, f) => page.evaluate(k => localStorage.getItem('fake-db:files/' + k), f).then(v => v && JSON.parse(v));
 const SCRIPT = readFileSync(join(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8');
-const P0 = RS.parse(SCRIPT), ANSWER = P0.marks.find(m => m.kind === 'scene' && m.obj === P0.edit.scenes[2]).ln;
+// the scenes the tests touch, found by what they are (the shot list puts them in any order)
+const P0 = RS.parse(SCRIPT), AI = P0.edit.scenes.findIndex(s => s.type === 'answer'), ANSWER = P0.marks.find(m => m.kind === 'scene' && m.obj === P0.edit.scenes[AI]).ln;
+const PICTURED = P0.edit.scenes.findIndex(s => (s.beats || []).some(b => b.img));
 // the cut as the file has it, and with the answer set to 5 s (the edit every save below makes)
 const totalOf = src => RS.spans(RS.parse(src).edit).slice(-1)[0].end;
 const TOTAL0 = totalOf(SCRIPT), TOTAL1 = totalOf(RS.setDur(SCRIPT, ANSWER, 5));
@@ -114,11 +116,11 @@ try {
 
     // a timeline save: the answer runs 5 s. It plays at once, in place; keeping it waits on the
     // viewer's yes, then it lands
-    const ln = await page.evaluate(() => REEL_LIVE.parsed.marks.find(m => m.kind === 'scene' && m.obj === REEL_LIVE.parsed.edit.scenes[2]).ln);
+    const ln = await page.evaluate(i => REEL_LIVE.parsed.marks.find(m => m.kind === 'scene' && m.obj === REEL_LIVE.parsed.edit.scenes[i]).ln, AI);
     const next = RS.setDur(SCRIPT, ln, 5);
     await mark(page);
     await page.evaluate(t => { window.__saving = REEL_LIVE.save(t); }, next);
-    const now = await page.evaluate(() => ({ dur: REEL_LIVE.parsed.edit.scenes[2].dur, total: REEL_LIVE.duration, t: REEL_LIVE.now() }));
+    const now = await page.evaluate(i => ({ dur: REEL_LIVE.parsed.edit.scenes[i].dur, total: REEL_LIVE.duration, t: REEL_LIVE.now() }), AI);
     ok(now.dur === 5 && near(now.total, TOTAL1) && Math.abs(now.t - 21) < 0.05, `the edit plays at once, in place, before the viewer has answered (answer ${now.dur} s, cut ${now.total} s, still at ${now.t.toFixed(2)} s)`);
     await answerTheFirstAsk(page, true);
     const res = await page.evaluate(() => window.__saving);
@@ -127,7 +129,7 @@ try {
     ok(await marked(page), 'no reload: the page that made the edit is the page that kept it');
     // a reload by hand plays this tab's copy at once, asking nothing, where it was
     await page.reload(); await started(page);
-    const after = await page.evaluate(() => ({ hosted: REEL_LIVE.hosted, dur: REEL_LIVE.parsed.edit.scenes[2].dur, total: REEL_LIVE.duration, asked: window.__ask, at: +(new URLSearchParams(location.hash.slice(1)).get('t') || 0) }));
+    const after = await page.evaluate(i => ({ hosted: REEL_LIVE.hosted, dur: REEL_LIVE.parsed.edit.scenes[i].dur, total: REEL_LIVE.duration, asked: window.__ask, at: +(new URLSearchParams(location.hash.slice(1)).get('t') || 0) }), AI);
     ok(after.hosted && after.dur === 5 && near(after.total, TOTAL1) && after.asked === 0, `a reload by hand plays the saved version at once, asking nothing (answer ${after.dur} s, cut ${after.total} s)`);
     ok(Math.abs(after.at - 21) < 0.6, `and comes back to where it was (${after.at} s)`);
 
@@ -140,9 +142,19 @@ try {
     await page.reload(); await started(page);
     ok(await page.evaluate(() => REEL_RACK.parsed.score.fx.reverb.return) === 0.62, 'and the reload plays it');
 
-    // download goes through the viewer's save dialog
+    // download goes through the viewer's save dialog, and the button that asked says what came of it
     await page.evaluate(() => REEL_LIVE.download());
     ok((await page.evaluate(() => window.__saved.map(r => r.filename))).includes('sizzle-reel-2.script.txt'), 'Download offers the script through the save dialog');
+    await page.evaluate(() => REEL_TIMELINE.show(true));
+    await page.locator('#reel-tl .tl-status button[data-act="download"]').click();
+    await page.waitForFunction(() => /saved/.test(document.querySelector('#reel-tl .tl-err').textContent), null, { timeout: 8000 }).catch(() => {});
+    ok(await page.evaluate(() => { const e = document.querySelector('#reel-tl .tl-err'); return /The script saved/.test(e.textContent) && e.classList.contains('tl-ok'); }),
+      "the timeline's Download says the script was saved");
+    await page.evaluate(() => localStorage.setItem('fake-decline', '1'));
+    await page.locator('#reel-tl .tl-status button[data-act="download"]').click();
+    await page.waitForFunction(() => /Not saved/.test(document.querySelector('#reel-tl .tl-err').textContent), null, { timeout: 8000 }).catch(() => {});
+    ok(/answered no/.test(await page.evaluate(() => document.querySelector('#reel-tl .tl-err').textContent)), 'and says so when the save dialog is answered no');
+    await page.evaluate(() => { localStorage.removeItem('fake-decline'); REEL_TIMELINE.show(false); });
 
     // revert: back to the file, in place
     await mark(page);
@@ -188,7 +200,7 @@ try {
     ok(near(mine, TOTAL1) && /newer save of the script/.test(newer), `this tab's copy plays at once (cut ${mine} s), and a newer save in the store is offered ("${newer}")`);
     await mark(page);
     await page.locator('.reel-late button').first().click();
-    const took3 = await page.evaluate(() => ({ total: REEL_LIVE.duration, dur: REEL_LIVE.parsed.edit.scenes[2].dur }));
+    const took3 = await page.evaluate(i => ({ total: REEL_LIVE.duration, dur: REEL_LIVE.parsed.edit.scenes[i].dur }), AI);
     ok(took3.dur === 6 && near(took3.total, totalOf(T2)) && await marked(page), `Play it plays the newer save in place (answer ${took3.dur} s)`);
     ok(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.join(' | ') : ''));
   }
@@ -200,15 +212,38 @@ try {
     await page.evaluate(() => {
       localStorage.setItem('fake-standing', 'granted');
       localStorage.setItem('fake-db:films/latest', JSON.stringify({ renderedAt: '2026-09-29T21:00:00Z', from: 'abc123',
-        items: [{ format: 'wide', url: 'films/sizzle-reel-2.mp4', mb: 12.5, seconds: 63.5, fps: 60 }] }));
+        items: [{ format: 'wide', url: 'BadVR-AROC-hud.mp4', mb: 12.5, seconds: 63.5, fps: 60 }] }));
     });
     await page.reload(); await started(page);
     await page.locator('#hud [data-tool="export"]').click();
     await page.waitForFunction(() => document.querySelectorAll('#reel-ex .ex-film').length > 0 && /^Ask/.test(document.querySelector('#reel-ex .ex-go').textContent), null, { timeout: 10000 }).catch(() => {});
     const ex = await page.evaluate(() => ({ mode: REEL_EXPORT.mode, films: [...document.querySelectorAll('#reel-ex .ex-film')].map(f => f.textContent.replace(/\s+/g, ' ')),
-      links: [...document.querySelectorAll('#reel-ex .ex-film a')].map(a => a.getAttribute('href')), go: document.querySelector('#reel-ex .ex-go').textContent }));
-    ok(ex.mode === 'host' && ex.films.length === 1 && /wide/.test(ex.films[0]) && /12\.5 MB/.test(ex.films[0]) && ex.links.includes('films/sizzle-reel-2.mp4'),
-      `Export lists the films Claude made, each to open and download (${ex.films.join(' | ')})`);
+      links: [...document.querySelectorAll('#reel-ex .ex-film a')].length, buttons: [...document.querySelectorAll('#reel-ex .ex-film button')].map(b => b.dataset.film), go: document.querySelector('#reel-ex .ex-go').textContent }));
+    ok(ex.mode === 'host' && ex.films.length === 1 && /wide/.test(ex.films[0]) && /12\.5 MB/.test(ex.films[0]) && !ex.links && ex.buttons.join() === 'play,download',
+      `Export lists the films Claude made, each to play and download, with no links (a link inside claude.ai neither opens nor downloads) (${ex.films.join(' | ')})`);
+    // Play: the film here, in the panel. (This Chromium has no H.264 decoder, so what is checked is
+    // that a player with controls opens and fetches the film; decoding it is any real browser's job.)
+    const fetched = page.waitForResponse(r => /BadVR-AROC-hud\.mp4$/.test(r.url()) && r.request().resourceType() === 'media', { timeout: 8000 }).then(r => r.status()).catch(() => null);
+    await page.locator('#reel-ex .ex-film [data-film="play"]').click();
+    const v = await page.evaluate(() => { const v = document.querySelector('#reel-ex .ex-film video'); return v && { src: v.getAttribute('src'), controls: v.controls, button: document.querySelector('#reel-ex .ex-film [data-film="play"]').textContent }; });
+    const status = await fetched;
+    ok(v && v.src === 'BadVR-AROC-hud.mp4' && v.controls && /Close/.test(v.button) && (status === 200 || status === 206),
+      `Play opens a player in the panel that fetches the film (${JSON.stringify(v)}, ${status})`);
+    await page.locator('#reel-ex .ex-film [data-film="play"]').click();
+    ok(await page.evaluate(() => !document.querySelector('#reel-ex .ex-film video') && /Play/.test(document.querySelector('#reel-ex .ex-film [data-film="play"]').textContent)),
+      'and Close takes it away again');
+    // Download: the file itself, through the save dialog, and the panel says so
+    await page.evaluate(() => { window.__saved.length = 0; });
+    await page.locator('#reel-ex .ex-film [data-film="download"]').click();
+    await page.waitForFunction(() => window.__saved.length > 0 && /saved/.test(document.querySelector('#reel-ex .ex-say').textContent), null, { timeout: 8000 }).catch(() => {});
+    const dl = await page.evaluate(() => { const r = window.__saved[0]; return r && { filename: r.filename, blob: r.data instanceof Blob, size: r.data && r.data.size, say: document.querySelector('#reel-ex .ex-say').textContent }; });
+    ok(dl && dl.filename === 'sizzle-reel-2.mp4' && dl.blob && dl.size === 80194 && /The film saved/.test(dl.say),
+      `Download hands the film itself to the save dialog, as a file (${JSON.stringify(dl)})`);
+    await page.evaluate(() => localStorage.setItem('fake-decline', '1'));
+    await page.locator('#reel-ex .ex-film [data-film="download"]').click();
+    await page.waitForFunction(() => /Not saved/.test(document.querySelector('#reel-ex .ex-say').textContent), null, { timeout: 8000 }).catch(() => {});
+    ok(/answered no/.test(await page.evaluate(() => document.querySelector('#reel-ex .ex-say').textContent)), 'a save the viewer says no to is said so, not silent');
+    await page.evaluate(() => localStorage.removeItem('fake-decline'));
     ok(/^Ask Claude to render the film$/.test(ex.go), `and offers to ask Claude for more (${ex.go})`);
     await page.locator('#reel-ex .ex-go').click();
     await page.waitForFunction(() => window.__sent.length > 0, null, { timeout: 5000 }).catch(() => {});
@@ -235,7 +270,7 @@ try {
     await page.reload(); await started(page);
     await page.waitForFunction(() => window.REEL_TIMELINE && window.REEL_PICKER, null, { timeout: 20000 });
     await page.keyboard.press('e');
-    await page.evaluate(() => REEL_TIMELINE.select(3, true));
+    await page.evaluate(i => REEL_TIMELINE.select(i, true), PICTURED);
     await page.locator('#reel-tl .tl-mchip').first().click();
     await page.waitForFunction(() => document.querySelectorAll('#reel-pk .pk-tile').length > 40, null, { timeout: 20000 }).catch(() => {});
     const hp = await page.evaluate(async () => {

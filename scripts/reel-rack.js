@@ -374,8 +374,9 @@
     if (P) top.appendChild(el('div', 'rk-sub', `${NAME} · ${P.score.tempo} BPM · ${P.score.key.name} · ${P.score.tracks.length} instruments · ${A.events.length} notes${draft ? ' · <span style="color:var(--gold)">draft</span>' : hosted ? ` · <span style="color:var(--gold)">your version on ${HOST.name}</span>` : ''}`));
     if (draft || hosted) {
       const r = el('div', 'rk-row'); r.style.marginTop = '6px';
-      r.appendChild(ibtn('download', 'download score', 'save this version as a file', () => {
-        if (HOST && HOST.download) return HOST.download(NAME, src);
+      r.appendChild(ibtn('download', 'download score', 'save this version as a file', async () => {
+        // on claude.ai the save dialog asks first, and what came of it is said under the rack's title
+        if (HOST && HOST.download) { const s = HOST.said ? HOST.said(await HOST.download(NAME, src), 'The score') : null; if (s) status(s.text, s.bad); return; }
         const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([src], { type: 'text/plain' })); a.download = NAME; document.body.appendChild(a); a.click(); a.remove();
       }));
       r.appendChild(ibtn(hosted ? 'revert' : 'discard', hosted ? 'revert to the file' : 'discard draft', 'back to the file', async () => {

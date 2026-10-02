@@ -32,12 +32,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
+import { inOrder } from './inorder.mjs';   // the scenes in the order the suite was written for
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const NAME = 'zz-fishpanel-test.script.txt', TMP = path.join(ROOT, 'Assets', NAME);
 const BACKUPS = path.join(ROOT, '.local', 'reel-backups');
 // the cut without its fish lines, so the counts below are this suite's own
-const ORIG = fs.readFileSync(path.join(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8').split('\n').filter(l => !/^\s*fish\s/.test(l)).join('\n');
+const ORIG = inOrder(fs.readFileSync(path.join(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8')).split('\n').filter(l => !/^\s*fish\s/.test(l)).join('\n');
 let fails = 0, passes = 0;
 const check = (ok, what, extra = '') => { if (ok) passes++; else fails++; console.log(`${ok ? 'ok  ' : 'FAIL'} ${what}${ok || !extra ? '' : '  (' + extra + ')'}`); };
 const fishLines = () => fs.readFileSync(TMP, 'utf8').split('\n').map(l => l.trim()).filter(l => /^fish\s/.test(l)).map(l => l.replace(/^fish\s+/, ''));

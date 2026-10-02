@@ -14,13 +14,14 @@ import { resolve, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import net from 'node:net';
+import { inOrder } from './inorder.mjs';   // the scenes in the order the suite was written for
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const req = createRequire(import.meta.url);
 const RM = req(join(ROOT, 'scripts/reel-music.js')), RS = req(join(ROOT, 'scripts/reel-script.js'));
 const OUT = join(ROOT, '.local/reel-tests/music');
 mkdirSync(OUT, { recursive: true });
-const SCRIPT = readFileSync(join(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8');
+const SCRIPT = inOrder(readFileSync(join(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8'));
 const SCORE = readFileSync(join(ROOT, 'Assets/sizzle-reel-2.score.txt'), 'utf8');
 const T_SCRIPT = 'Assets/zz-music-test.script.txt', T_SCORE = 'Assets/zz-music-test.score.txt';
 

@@ -19,8 +19,9 @@
 //    its end, the art's question half typed 0.4 s in, the logos panel not yet in 0.9 s in: by
 //    default it pops about 0.6 s in, the question's Enter plus 0.04). The moments are counted
 //    from the scenes, so they hold whatever lengths the script gives them. "Differ" means 2000
-//    pixels or more, so the noise above cannot pass for a moved joint. The copy is deleted in
-//    finally.
+//    pixels or more, so the noise above cannot pass for a moved joint. Both sides render from
+//    copies (the script with no cues written is a copy too, in the same scene order: see
+//    inorder.mjs), deleted in finally.
 //
 // Drives the renderer as a child process, one render at a time (the machine is shared).
 import { spawnSync } from 'node:child_process';
@@ -28,6 +29,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync, rmSync, mkdirSync
 import { resolve, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
+import { inOrder } from './inorder.mjs';   // the scenes in the order the suite was written for
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const ReelScript = createRequire(import.meta.url)(join(ROOT, 'scripts/reel-script.js'));
@@ -35,7 +37,7 @@ const SCRATCH = process.env.CUES_SCRATCH || join(ROOT, '.local/reel-tests/cues')
 const LIST = '1.6,4.5,8.5,12,14.5,18.5,40,43,47,53.5,58.5';
 // [scene, cue, value, the moment to look at: seconds after the scene's start (+) or before its end (-)]
 const MOMENTS = [['answer', 'out', 1.5, -1.3], ['art', 'typing', 12, 0.4], ['logos', 'in', 0.6, 0.9]];
-const TEMP = 'Assets/zz-cues-test.script.txt';
+const TEMP = 'Assets/zz-cues-test.script.txt', PLAIN = 'Assets/zz-cues-plain.script.txt';   // the cued copy; the plain one, in the same order
 
 let fails = 0;
 const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); if (!c) fails++; };
@@ -66,7 +68,7 @@ function pixdiff(a, b) {
 
 try {
   // ── 1. defaults are the rig's own timing ──────────────────────────
-  const plain = readFileSync(join(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8');
+  const plain = inOrder(readFileSync(join(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8'));
   let spelled = plain;
   for (const m of ReelScript.parse(plain).marks.filter(k => k.kind === 'scene'))
     for (const name of ReelScript.cueNames(m.obj.type)) {
@@ -74,9 +76,10 @@ try {
       spelled = ReelScript.setCue(spelled, at.ln, name, ReelScript.cue(m.obj, name));
     }
   writeFileSync(join(ROOT, TEMP), spelled);
+  writeFileSync(join(ROOT, PLAIN), plain);
   const written = ReelScript.parse(spelled).edit.scenes.reduce((n, s) => n + Object.keys(s.cues || {}).length, 0);
   ok(written >= 25, `temp script: every cue of every scene written at its default (${written} cues)`);
-  const base = render(join(SCRATCH, 'plain'), LIST);
+  const base = render(join(SCRATCH, 'plain'), LIST, ['--script=' + PLAIN]);
   const full = render(join(SCRATCH, 'spelled'), LIST, ['--script=' + TEMP]);
   ok(base.length === 11 && full.length === 11, `both still lists rendered (${base.length}, ${full.length})`);
   const compare = (f, g, what) => {
@@ -88,7 +91,7 @@ try {
   if (process.env.CUES_REF) pngs(process.env.CUES_REF).forEach((f, i) => base[i] && compare(f, base[i], 'against CUES_REF'));
 
   // ── 2. each cue moves its joint ───────────────────────────────────
-  let src = readFileSync(join(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8');
+  let src = inOrder(readFileSync(join(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8'));
   for (const [type, name, value] of MOMENTS) {
     const m = ReelScript.parse(src).marks.find(k => k.kind === 'scene' && k.obj.type === type);
     src = ReelScript.setCue(src, m.ln, name, value);
@@ -100,7 +103,7 @@ try {
   const when = ([type, , , off]) => { const sp = SP[P.edit.scenes.findIndex(x => x.type === type)]; return +(off < 0 ? sp.end + off : sp.start + off).toFixed(2); };
   const at = MOMENTS.map(when).join(',');
   const a = render(join(SCRATCH, 'cued'), at, ['--script=' + TEMP]);
-  const b = render(join(SCRATCH, 'dflt'), at);
+  const b = render(join(SCRATCH, 'dflt'), at, ['--script=' + PLAIN]);
   MOMENTS.forEach(([type, name, value], i) => {
     const t = when(MOMENTS[i]);
     const d = a[i] && b[i] ? pixdiff(a[i], b[i]) : { n: 0 };
@@ -110,6 +113,7 @@ try {
   ok(false, e.message);
 } finally {
   rmSync(join(ROOT, TEMP), { force: true });
+  rmSync(join(ROOT, PLAIN), { force: true });
 }
 console.log(fails ? `\n${fails} failed` : '\nall passed');
 process.exit(fails ? 1 : 0);

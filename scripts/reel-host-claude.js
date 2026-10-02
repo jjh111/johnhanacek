@@ -19,8 +19,11 @@
 // store, and films() reads it back.
 //
 // window.REEL_HOST is the contract the rig documents where it reads it (Assets/sizzle-reel-2.html):
-// { name, ready, load(path), save(path, text), discard(path), download(filename, text), media(path) },
-// and for Export: films(), canAsk(), ask(text, element).
+// { name, ready, load(path), save(path, text), discard(path), download(filename, data), media(path) },
+// and for Export: films(), saveFilm(filename, url), canAsk(), ask(text, element). A download is
+// { ok: true } or { ok: false, code, message }: the viewer is asked first and may say no, and a
+// page inside claude.ai cannot save a file any other way (a link's `download` does nothing there),
+// so every download button says what came of it (said(result, what) has the words).
 (function () {
   'use strict';
   const within = (p, ms, dflt = null) => Promise.race([p, new Promise(r => setTimeout(() => r(dflt), ms))]);
@@ -58,6 +61,16 @@
     return v && typeof v.text === 'string' ? { text: v.text, savedAt: v.savedAt || '' } : null;
   }
   const refused = e => e && ['not_granted', 'capability_disabled', 'capability_removed', 'revoked'].includes(e.code);
+  // a download's outcomes, said (see said() below)
+  const SAYS = {
+    declined: 'Not saved: the save dialog was answered no.',
+    rate_limited: 'A save dialog is already open: answer it first.',
+    too_large: 'The file is too large to save on this device.',
+    rejected_extension: 'This view does not allow saving that kind of file.',
+    extension_not_enabled: 'This view does not allow saving that kind of file.',
+    fetch: 'The film could not be fetched from this page',
+  };
+  const GONE = ['unavailable', 'not_granted', 'capability_disabled', 'capability_removed'];
   const why = e => e && e.code === 'invalid_argument' ? 'this view can play the reel but not change it'
     : e && e.code === 'quota_exceeded' ? "this page's store is full"
     : 'the save did not go through (' + (e && (e.code || e.message) || e) + ')';
@@ -96,10 +109,31 @@
       return { ok: false, errors: ['the save did not go through'] };
     },
     async discard(path) { copy.drop(path); const r = await ref(path); if (r) await r.delete(); },
-    async download(filename, text) {
+    async download(filename, data) {
       const dl = await cap('downloads');
-      if (!dl) return false;
-      try { await dl.save({ filename, data: text }); return true; } catch (e) { return false; }
+      if (!dl) return { ok: false, code: 'unavailable' };
+      try { await dl.save({ filename, data }); return { ok: true }; }
+      catch (e) { return { ok: false, code: (e && e.code) || 'unavailable', message: (e && e.message) || String(e) }; }
+    },
+    // a film Claude uploaded to this page (its url is the page's own /_blob/…): fetched whole, then
+    // offered the same way (a Blob goes to the save dialog as it is)
+    async saveFilm(filename, url) {
+      let blob;
+      try {
+        const r = await fetch(url);
+        if (!r.ok) return { ok: false, code: 'fetch', message: 'the page answered ' + r.status };
+        blob = await r.blob();
+      } catch (e) { return { ok: false, code: 'fetch', message: (e && e.message) || String(e) }; }
+      return this.download(filename, blob);
+    },
+    // what a download came to, in words for the panel whose button it was: { text, bad }, or null
+    // for a browser's own download (a dev page), which says nothing back
+    said(r, what) {
+      if (!r || r.ok === undefined) return null;
+      if (r.ok) return { text: `${what} saved.`, bad: false };
+      const text = SAYS[r.code] || (GONE.includes(r.code) ? 'This view cannot save files: open the editor itself on claude.ai and try again.'
+        : `The save did not go through (${r.code || 'unknown'}).`);
+      return { text: r.code === 'fetch' ? `${text}${r.message ? ` (${r.message})` : ''}.` : text, bad: r.code !== 'declined' };
     },
     media: p => p.replace(/ /g, '_'),
     // the films Claude rendered from this page's saves (films/latest), or null; asked on a click

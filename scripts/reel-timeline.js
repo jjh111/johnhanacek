@@ -306,6 +306,7 @@
 #reel-tl .tl-status .tl-where { color: var(--cyan); overflow: hidden; text-overflow: ellipsis; min-width: min(16ch, 40%); flex: 0 1 auto; }
 #reel-tl .tl-status .tl-err { color: var(--text-bright); border-left: 2px solid #ff8a7a; padding-left: 8px; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
 #reel-tl .tl-status .tl-err:empty { display: none; }
+#reel-tl .tl-status .tl-err.tl-ok { border-left-color: var(--gold); }
 #reel-tl .tl-status .tl-gap { flex: 1; }
 #reel-tl .tl-status .tl-err:not(:empty) ~ .tl-gap { display: none; }
 #reel-tl .tl-status .tl-note { color: var(--ink-faint); }
@@ -632,7 +633,8 @@
     : busy ? 'Keeping a draft in this tab…' : 'Draft in this tab: no dev server';
   // a version kept here or with the host (not the file) can be downloaded, or dropped for the file
   const dl = button(status, 'Download', 'save this version as ' + L.file.replace(/^.*\//, ''), 'download', null, 'download');
-  dl.onclick = () => L.download(L.src);
+  // on claude.ai the save dialog asks first: what came of it is said here (a browser download says nothing)
+  dl.onclick = async () => { const s = window.REEL_HOST && REEL_HOST.said ? REEL_HOST.said(await L.download(L.src), 'The script') : null; if (s) passing(s.text, s.bad); };
   // (Discard for a draft in this tab; Revert for the version saved with the host)
   const ds = button(status, 'Discard', 'drop the draft and play the file again', 'discard', null, 'discard');
   ds.onclick = () => { put(K_UNDO, []); put(K_REDO, []); L.discardDraft(); };
@@ -669,7 +671,13 @@
   // the collapse rule (scripts/reel-ui.js): labels fold into tooltips, then the total goes, then
   // the save line, then Export's label, then the zoom's readout and Fit
   if (window.REEL_UI) REEL_UI.fit(status, ['fit-labels', 'fit-note', 'fit-where', 'fit-go', 'fit-zoom']);
-  const say = errs => { errs = [].concat(errs || []).map(String).filter(Boolean); err.textContent = errs[0] || ''; err.title = errs.join('\n'); };
+  const say = errs => { errs = [].concat(errs || []).map(String).filter(Boolean); err.classList.remove('tl-ok'); err.textContent = errs[0] || ''; err.title = errs.join('\n'); };
+  // a passing word in the same place (a download kept), gone after a few seconds
+  let passT = 0;
+  function passing(text, bad) {
+    clearTimeout(passT); say(text); err.classList.toggle('tl-ok', !bad);
+    if (!bad) passT = setTimeout(() => { if (err.textContent === text) say(''); }, 4000);
+  }
 
   const insp = h('div', 'insp-col', root); insp.hidden = true;
   insp.setAttribute('aria-label', 'Scene inspector');

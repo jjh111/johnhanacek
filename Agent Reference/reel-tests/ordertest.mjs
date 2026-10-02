@@ -17,13 +17,14 @@ import { createRequire } from 'node:module';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { serveVerified } from '../../scripts/serve-verified.mjs';
+import { inOrder } from './inorder.mjs';   // the scenes in the order the suite was written for
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const RS = createRequire(import.meta.url)(resolve(ROOT, 'scripts/reel-script.js'));
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith(`--${k}=`)); return a ? a.slice(k.length + 3) : d; };
 const FORMATS = arg('format', 'wide').split(',');
 const NAME = 'zz-order-test.script.txt', TMP = resolve(ROOT, 'Assets', NAME);
-const SRC = readFileSync(resolve(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8');
+const SRC = inOrder(readFileSync(resolve(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8'));
 let fails = 0;
 const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); if (!c) fails++; };
 

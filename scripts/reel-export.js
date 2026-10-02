@@ -55,6 +55,7 @@
 #reel-ex .ex-films { display: grid; gap: 8px; }
 #reel-ex .ex-film { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-items: center; padding: 10px 12px; border-radius: 9px; border: 1px solid rgba(var(--cyan-dim-rgb), 0.22); }
 #reel-ex .ex-film b { font-weight: 600; color: var(--text-bright); }
+#reel-ex .ex-video { grid-column: 1 / -1; width: 100%; max-height: 50vh; border-radius: 8px; background: #000; }
 #reel-ex .ex-bar { grid-column: 1 / -1; height: 4px; border-radius: 2px; background: rgba(var(--cyan-dim-rgb), 0.16); overflow: hidden; }
 #reel-ex .ex-bar i { display: block; height: 100%; width: 0; background: var(--gold); transition: width 0.4s; }
 #reel-ex code { font: 500 12px/1.5 var(--font-mono); color: var(--text-bright); background: rgba(var(--cyan-dim-rgb), 0.08); border-radius: 5px; padding: 2px 6px; word-break: break-all; }
@@ -121,12 +122,18 @@
   const dScript = btn(more, 'Download the script', `save ${NAME}.script.txt: every word and time of the edit`, null, 'download');
   const dScore = btn(more, 'Download the score', `save ${NAME}.score.txt: the music`, null, 'download');
   const cmd = el('p', 'faint', panel); cmd.style.marginTop = '10px';
-  dScript.onclick = () => L.download(L.src);
-  dScore.onclick = () => {
+  // what a download came to, said under the action (the hosted editor asks the viewer first, and
+  // saves nothing any other way; a dev page saves through the browser and says nothing back)
+  function saved(r, what) {
+    const s = HOST && HOST.said ? HOST.said(r, what) : null;
+    if (s) tell(s.text, s.bad);
+  }
+  dScript.onclick = async () => saved(await L.download(L.src), 'The script');
+  dScore.onclick = async () => {
     const t = window.REEL_RACK && window.REEL_RACK.src;
     if (t == null) return tell('There is no score loaded to download.', true);
     const f = SCORE.replace(/^.*\//, '');
-    if (HOST && HOST.download) return HOST.download(f, t);
+    if (HOST && HOST.download) return saved(await HOST.download(f, t), 'The score');
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([t], { type: 'text/plain' })); a.download = f; document.body.appendChild(a); a.click(); a.remove();
   };
   const cmdFor = f => `node scripts/render-sizzle-reel.mjs --script=${L.file}${f === 'wide' ? '' : ' --format=' + f}${pick.fps === 30 ? ' --fps=30' : ''}`;
@@ -137,6 +144,28 @@
     const l = el('div', 'row', r);
     (links || []).forEach(([text, href, dl]) => { const a = el('a', 'btn', l); dress(a, text, dl ? 'download' : 'film'); a.href = href; if (dl) a.download = dl; else { a.target = '_blank'; a.rel = 'noopener'; } });
     if (progress != null) { const bar = el('div', 'bar', r); const i = el('i', null, bar); i.style.width = Math.round(progress * 100) + '%'; }
+    return r;
+  }
+  // A film in the hosted editor: inside claude.ai a link can neither open a tab nor download, so
+  // Play plays it here, in the panel, and Download hands it to the viewer's save dialog.
+  function hostFilmRow(it, name) {
+    const r = filmRow(it.format, [it.mb && `${it.mb} MB`, it.seconds && `${it.seconds} s`, it.fps && `${it.fps} fps`].filter(Boolean).join(' · '), []);
+    const l = r.querySelector('.ex-row');
+    const play = btn(l, 'Play', 'play the film here', null, 'play'); play.dataset.film = 'play';
+    const down = btn(l, 'Download', `save ${name}: the save dialog asks you first`, null, 'download'); down.dataset.film = 'download';
+    let v = null;
+    play.onclick = () => {
+      if (v) { v.pause(); v.remove(); v = null; dress(play, 'Play', 'play'); return; }
+      v = document.createElement('video'); v.className = 'ex-video'; v.controls = true; v.playsInline = true; v.preload = 'metadata'; v.src = it.url;
+      r.appendChild(v); v.play().catch(() => {});
+      dress(play, 'Close', 'close');
+    };
+    down.onclick = async () => {
+      if (!HOST.saveFilm) return tell('This editor cannot save the film: open it again after it is updated.', true);
+      down.disabled = true; tell(`Getting the film${it.mb ? ` (${it.mb} MB)` : ''}… then the save dialog asks.`);
+      saved(await HOST.saveFilm(name, it.url), 'The film');
+      down.disabled = false;
+    };
     return r;
   }
 
@@ -192,8 +221,7 @@
     if (!f || !Array.isArray(f.items) || !f.items.length) { el('p', 'faint', films, 'No films yet. They appear here once Claude has rendered them.'); return; }
     const when = f.renderedAt ? new Date(f.renderedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
     el('p', 'faint', films, `Rendered ${when}${f.from ? f.from === version() ? ' from this version of the edit.' : ` from an earlier version (${f.from}); this one is ${version()}.` : '.'}`);
-    f.items.forEach(it => filmRow(it.format, [it.mb && `${it.mb} MB`, it.seconds && `${it.seconds} s`, it.fps && `${it.fps} fps`].filter(Boolean).join(' · '),
-      [['Open', it.url], ['Download', it.url, `${NAME}${it.format === 'wide' ? '' : '-' + it.format}.mp4`]]));
+    f.items.forEach(it => hostFilmRow(it, `${NAME}${it.format === 'wide' ? '' : '-' + it.format}${it.fps && it.fps !== 60 ? '-' + it.fps + 'fps' : ''}.mp4`));
   }
   async function hostGo() {
     tell('');

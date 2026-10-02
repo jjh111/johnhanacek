@@ -33,12 +33,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
+import { inOrder } from './inorder.mjs';   // the scenes in the order the suite was written for
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const NAME = 'zz-timeline-test.script.txt', TMP = path.join(ROOT, 'Assets', NAME);
 const BACKUPS = path.join(ROOT, '.local', 'reel-backups'), CACHE = path.join(ROOT, '.local', 'sizzle-cache');
 const SHOTS = process.env.TIMELINE_SHOTS || path.join(ROOT, '.local', 'reel-tests', 'timeline');
-const ORIG = fs.readFileSync(path.join(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8');
+const ORIG = inOrder(fs.readFileSync(path.join(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8'));
 // the answer scene's first line as John has it now (he rewrites the copy in the hosted editor)
 const LINE0 = /^SCENE answer[^\n]*\n(?:(?!SCENE)[^\n]*\n)*?\s*line\s+(.+?)\s*$/m.exec(ORIG)[1];
 const reLine = t => new RegExp('^  line     ' + t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'm');
