@@ -302,6 +302,8 @@ body.no-descs .card .desc, body.no-descs #focus .fdesc { display: none; }
   <div class="tb-group visible" id="live-group">
     <label for="live-max" style="color: var(--ink3); font-size: 11px;">live</label>
     <select id="live-max" style="font: inherit; font-size: 11px; color: var(--ink2); background: var(--paper); border: 1px solid var(--rule); border-radius: 5px; padding: 2px 6px;">
+      <option value="1">1</option>
+      <option value="2">2</option>
       <option value="4">4</option>
       <option value="6">6</option>
       <option value="8" selected>8</option>
@@ -383,8 +385,11 @@ body.no-descs .card .desc, body.no-descs #focus .fdesc { display: none; }
     if (q.has('items')) c.items = q.get('items').split(',').map(function (s) { return s.trim(); });
     if (q.has('budget')) c.budget = Math.max(1, parseInt(q.get('budget'), 10) || c.budget);
     // Phones: fewer live iframes per embed unless the host asked explicitly —
-    // several panels × 8 subframes is real memory and battery on mobile.
-    else if (EMBEDDED && window.matchMedia && matchMedia('(pointer: coarse)').matches) c.budget = Math.min(c.budget, 4);
+    // several panels × 8 subframes is real memory and battery on mobile. Two,
+    // not four: on iOS every same-origin subpage shares the host's process,
+    // and four WebGL / 100%-CPU previews inside one panel were enough to get
+    // the openprose case study killed a few seconds after the panel woke.
+    else if (EMBEDDED && window.matchMedia && matchMedia('(pointer: coarse)').matches) c.budget = Math.min(c.budget, 2);
     if (q.has('cols')) c.cols = q.get('cols');
     if (q.has('sort')) c.sort = q.get('sort'); // 'date' | 'sequence'
     // Starting view for canvas mode, per embed: ?zoom=0.65 boots zoomed out
@@ -643,6 +648,12 @@ body.no-descs .card .desc, body.no-descs #focus .fdesc { display: none; }
     cells.filter(function (c) { return c.near && !c.live; })
          .sort(function (a, b) { return cellDist(a) - cellDist(b); })
          .forEach(function (c) { wakeCell(c); });
+    // A cell in view but over the live budget says so, instead of promising
+    // a load that is not coming.
+    cells.forEach(function (c) {
+      var ph = c.well.querySelector('.ph');
+      if (ph) ph.textContent = (c.near && !c.live) ? 'paused to save memory — open to view' : 'loading nearby…';
+    });
     if (typeof navDraw === 'function') navDraw();
   }
 
