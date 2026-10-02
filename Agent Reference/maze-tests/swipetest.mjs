@@ -84,7 +84,7 @@ for (const { file, target } of PAGES) {
     await pg.evaluate(() => { document.getElementById('heroCanvas').style.touchAction = 'none'; });
     const cdp = await ctx.newCDPSession(pg);
 
-    const Y0 = 690, Y1 = 470;   // above the guide card's CTA (y≈722–760 at 390×844)
+    const Y0 = 600, Y1 = 380;   // between the oval and the guide card (which takes touch itself, y≈620+ at 390×844)
     const x = await clearColumn(pg, Y0, Y1);
     check(x != null, `found a clear canvas column (x=${x})`);
     if (x == null) { await ctx.close(); continue; }
@@ -125,9 +125,9 @@ for (const { file, target } of PAGES) {
     await sleep(150);
     await touchStroke(cdp, line({ x: x + 30, y: Y0 }, { x: x + 30, y: Y1 }));
     await sleep(300);
-    const hit = await pg.evaluate(([x, y]) => { const e = document.elementFromPoint(x, y); return e ? (e.id || e.className || e.tagName) : null; }, [x, 640]);
+    const hit = await pg.evaluate(([x, y]) => { const e = document.elementFromPoint(x, y); return e ? (e.id || e.className || e.tagName) : null; }, [x, 500]);
     check(!(await offerState(pg)).hidden, `side-by-side pair offers again (under the finger: ${hit}; ${JSON.stringify(await pg.evaluate(() => window.JHSwipeOffer.offers[0].stats))})`);
-    await touchStroke(cdp, [{ x: x + 20, y: 600 }, { x: x + 21, y: 601 }, { x: x + 21, y: 602 }], { dur: 40 });
+    await touchStroke(cdp, [{ x: x + 20, y: 500 }, { x: x + 21, y: 501 }, { x: x + 21, y: 502 }], { dur: 40 });
     await sleep(200);
     check((await offerState(pg)).hidden, 'a new stroke (a tap) dismisses the offer');
     await sleep(1300);
@@ -147,11 +147,29 @@ for (const { file, target } of PAGES) {
     };
     await none('top-down corridor', [[line({ x, y: Y1 }, { x, y: Y0 })], [line({ x: x + 40, y: Y1 }, { x: x + 40, y: Y0 })]]);
     await none('box from 4 strokes', [
-        [line({ x, y: 560 }, { x: x + 80, y: 560 })], [line({ x: x + 80, y: 560 }, { x: x + 80, y: 680 })],
-        [line({ x: x + 80, y: 680 }, { x, y: 680 })], [line({ x, y: 680 }, { x, y: 560 })]]);
-    await none('upward line, then a loop', [[line({ x, y: Y0 }, { x, y: Y1 })], [loop(x + 30, 640, 40)]]);
+        [line({ x, y: 400 }, { x: x + 80, y: 400 })], [line({ x: x + 80, y: 400 }, { x: x + 80, y: 520 })],
+        [line({ x: x + 80, y: 520 }, { x, y: 520 })], [line({ x, y: 520 }, { x, y: 400 })]]);
+    await none('upward line, then a loop', [[line({ x, y: Y0 }, { x, y: Y1 })], [loop(x + 30, 480, 40)]]);
     await none('two upward lines 2 s apart', [[line({ x, y: Y0 }, { x, y: Y1 }), { gap: 2000 }], [line({ x: x + 30, y: Y0 }, { x: x + 30, y: Y1 })]]);
     await none('upward line, then a short parallel tick', [[line({ x, y: Y0 }, { x, y: Y1 })], [line({ x: x + 30, y: Y0 }, { x: x + 30, y: Y0 - 60 })]]);
+
+    // 5. the guide card is its own way down: no CTA, and a swipe ON it scrolls
+    // On a fresh load: the strokes above have walked the guide to its end.
+    await pg.reload({ waitUntil: 'domcontentloaded' });
+    await pg.waitForFunction(() => window.JHSwipeOffer && window.JHSwipeOffer.offers.length === 1, null, { timeout: 15000 });
+    await pg.evaluate(() => { document.getElementById('heroCanvas').style.touchAction = 'none'; });
+    await sleep(1500);
+    const card = await pg.evaluate(() => {
+        const g = document.querySelector('.canvas-guide');
+        const r = g.getBoundingClientRect();
+        return { cta: !!g.querySelector('.guide-cta'), pe: getComputedStyle(g).pointerEvents + (g.classList.contains('hidden') ? ' (hidden)' : ''), x: r.left + r.width / 2, y: r.top + r.height / 2, h: r.height };
+    });
+    check(!card.cta, 'the guide card carries no "tap or swipe" button');
+    check(card.pe === 'auto', `the guide card takes touch (pointer-events: ${card.pe})`);
+    await touchStroke(cdp, line({ x: card.x, y: card.y + card.h / 3 }, { x: card.x, y: card.y - 160 }), { dur: 180 });
+    await sleep(900);
+    const y = await pg.evaluate(() => scrollY);
+    check(y > 60, `a swipe on the guide card scrolls the page (scrollY ${Math.round(y)})`);
 
     const st = await pg.evaluate(() => window.JHSwipeOffer.offers[0].stats);
     console.log(`  · ${st.strokes} strokes seen, ${st.offers} offers, ${st.taken} taken`);

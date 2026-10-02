@@ -24,8 +24,15 @@ const SWEEP = () => {
     const c = P(getComputedStyle(document.body).backgroundColor); return c && c.a > 0.5 ? c : { r: 255, g: 255, b: 255, a: 1 }; };
   const out = [];
   document.querySelectorAll('body *').forEach(el => {
-    if (el.children.length && ![...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return;
-    const t = el.textContent.trim(); if (!t || t.length < 2) return;
+    // pretext-wrapped prose (scripts/pretext-wrap.js): the retained source is
+    // transparent ON PURPOSE (screen readers, Reader, find-in-page), and the
+    // visible lines are runs whose text is painted by ::before from data-text.
+    // Skip the first, measure the second, or the gate is blind to the very
+    // words a visitor reads.
+    if (el.closest('.pretext-source')) return;
+    const painted = el.dataset && el.dataset.text;
+    if (!painted && el.children.length && ![...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return;
+    const t = (painted || el.textContent).trim(); if (!t || t.length < 2) return;
     const cs = getComputedStyle(el);
     if (cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) < 0.15) return;
     const r = el.getBoundingClientRect(); if (!r.width || !r.height) return;

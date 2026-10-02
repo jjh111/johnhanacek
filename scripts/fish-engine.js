@@ -6738,9 +6738,10 @@
         // page scroll halfway down its first side. A scroll-vs-draw
         // arbitration was tried here (2026-09-01) and reverted the same day:
         // it broke vertical-leaning strokes, and the pages already carry the
-        // designed escape — the "view content" pill and the guide's
-        // tap-or-swipe CTA. Every touchstart is cancelled; the page scrolls
-        // from the chrome, the ovals, and the content panels above the water.
+        // designed escapes — the "view content" pill, the guide card (a swipe
+        // ON it scrolls the page), and the swipe offer (scripts/swipe-offer.js).
+        // Every touchstart is cancelled; the page scrolls from the chrome, the
+        // ovals, the guide card, and the content panels above the water.
         function startDraw(e) {
             e.preventDefault();
             isDrawing = true;

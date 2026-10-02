@@ -446,6 +446,12 @@ scripts/pretext-wrap.js   — flows running prose around obstacles on BOTH sides
                             (`<main itemscope Article>` > `<article itemprop=articleBody>`) so a
                             reader takes the whole case study, not the densest section.
                             Demo/test: Assets/DemosPlayground/pretext-wrap-test.html
+                            index.html's About card is the first-impression use: both
+                            paragraphs around the portrait's ellipse at every width (the
+                            photo floats on phones too; `shape-outside` is the no-JS
+                            curve), rebuilt when the type scale changes the font. Guard:
+                            `maze-tests/aboutwraptest.mjs`. contrasttest measures the
+                            painted `data-text` runs and skips `.pretext-source`.
 scripts/pretext/          — vendored copy of the pretext text-measurement + line-breaking engine
                             (see VENDORED.md). Also usable measurement-only: prepare() + layout()
                             answer "how many lines at width W" arithmetically with no DOM read,
