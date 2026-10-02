@@ -746,6 +746,63 @@ switched on and off at the cut; each section's chords ignored the last section's
   a click that writes the next way in and undoes, the ribbons and their ramps, the builds'
   marks).
 
+## The music, simple, and what it plays (2026-10-02)
+
+John: "the score itself is too convoluted, the blocks show only that it's happening not what's in
+it. simplify the whole music itself and show it better in ui. there's some simple elements, and
+show sound effect cues too. all synth."
+
+- **Six parts and four sound effects, all synth.** kick, clap and hat (the beat), bass (the
+  chord's root on the eighths), chords (the chord, held for its bar) and lead (the tune: four
+  bars, once round the chords); keys, select, enter and pop, which the edit plays itself. Gone:
+  boom, crash, riser, arp, glass, bell, shaker, and the space key (a space types silently, so a
+  question reads as words). The score's header explains the format in one screen.
+- **One loop, going round.** `CHORDS F C G Am`, one a bar, goes round on the reel's own bars
+  from its first frame (until now each section started its own chord list again on its start);
+  the tune (`notes`) loops from 0 with them, so the two always agree, as the steps already did.
+  A section says only which parts play, how loud, and how the music arrives (`into`); one that
+  names its own `chords` plays them from its start (the end holds Am). F C G Am, not Am F C G,
+  so that both choruses arrive on Am (the results at 22 s and the offer at 54: the loop's fourth
+  bar) with the tune's head, E E D C A.
+- **A part plays wherever its level is above nothing, as one part.** The arranger makes each
+  part's notes over the stretches where its level is above nothing (its fades included), no
+  longer section by section: a chord held over a seam inside a bar is held, never struck again
+  (F over the art/command seam at 17 s), and a tune is never restarted. In `notes` a note lasts
+  until the next one, `len` steps at most (the bar from 22 s: 4, 2, 2, 4, 4 steps).
+- **The arrangement.** The open: the chords alone, filtered open (500 → 9000 Hz). The title: the
+  chords, the tune at half, the bass at half, swelling in. The answer: the groove lands (kick,
+  hat, bass, chords) after a beat's drop. The art: hat and bass at 0.7, the chords. The command:
+  the kick back, the clap at 0.7. The results: everything and the tune, after a build (a fill on
+  the clap). The feature: no clap, no tune. The logos: the clap back. The quotes: the chords, the
+  tune at 0.7, the bass at half, fading in over 4 beats. The offer: everything, after a build.
+  The end: the chords hold Am after a drop, closing (9000 → 900 Hz). Measured offline: peak
+  -4.0 dBFS, -16.8 LUFS integrated; every section within half a dB of the old mix but the end
+  (-22.6 dB mean: a held chord, closing).
+- **The timeline draws what each part plays.** Each part's lane is as tall as its notes need (a
+  drum 14 px, a pitched part 18-30 px by its range) and draws every event: a hit is a tick,
+  taller when louder; a note sits at its pitch, as long as it sounds; fainter where its level is
+  lower (four strengths: velocity × the level where it starts); a build's fill in gold; behind,
+  faintly, its level across the cut, so where it plays and how it fades is the lane's shape. One
+  SVG per lane, its paths made again on every zoom (`REEL_UI.rollPaths`; the synth rack's
+  arrangement draws with it too). The blocks are now stretches to click (outlined on hover, the
+  level written on hover when it is not 1); a lane's name stays at the left of the view, what it
+  plays in its tooltip. The head's chords run across seams (a chord held over one is one label).
+  Open, the panel is 440 px at 1600×1000 (it was 510).
+- **The cues.** One lane for the sound effects, read from the edit: a box for each question
+  while it stands on the bar, with its words; a tick for each key typed before it; an Enter;
+  the select-all that clears it; and a dot for each pop on an @ moment (its tooltip names the
+  picture, clip or quote that comes on). A click on a question plays from just before its
+  typing, on a dot from just before the pop. The lane's M and S mute or solo every sound effect.
+- **Also:** the rack's step lights follow the reel's own clock (they counted from each section's
+  start); `ReelMusic.levelAt` is shared by the timeline and the rack.
+- **Tests:** musictest (the loop across every cut, a section starting mid-bar on the bar's
+  chord, the end's own Am, a chord held over a seam, the tune going round from 0 and its note
+  lengths, the clap's fill, the drop, the fades, six parts and four effects, the mix);
+  musiclanestest (34: every event drawn once on its lane, the lead at as many heights as it
+  has pitches, the fills in gold, a louder kick a taller tick, the stretches, a box per question
+  with its words, a tick per key, an Enter each, a select-all per clear, a dot per pop, the
+  cues' M for every sound effect, a question's and a pop's seek).
+
 ## Later
 
 Scene-specific cues (line staggers, the push); moving cut 1 onto the one player; stems out of

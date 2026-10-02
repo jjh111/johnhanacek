@@ -287,17 +287,22 @@
   // [{ type, start, end }], `mom` from moments(). Until 2026-10-01 every section started its
   // patterns, its melody and its chords again on its picture cut and switched its instruments on
   // and off there, so the music came in blocks. Now:
-  //   one clock    bars (four beats) and steps (sixteen a bar) count from the reel's 0, and a
-  //                steps pattern runs on that clock, so the groove never starts again;
-  //   a section    starts on the bar line nearest its cut when that is within a beat of it, else
-  //                on the cut itself (`start bar` or `start cut` decides for one). Its chords
-  //                change there and on every bar line after (a first piece shorter than half a
-  //                bar joins the next bar; Am:2 holds two), and its melody (`notes`) starts there;
-  //   a seam       each instrument's level moves the way the later section's `into` says: fade
-  //                (a crossfade across the seam), swell (in over the beats before it), build (a
-  //                fill on the snare and a rise into it, a crash on it), drop (the drums and the
-  //                bass fall silent for the beats before it) or cut. A note rings on past its
-  //                section while its level fades;
+  //   one clock    bars (four beats) and steps (sixteen a bar) count from the reel's 0, and
+  //                everything goes round on that clock: the steps, the tune (a `notes` line
+  //                loops from the reel's first frame) and the chords (CHORDS, one a bar; Am:2
+  //                holds two), so no cut starts anything again (until 2026-10-02 each section
+  //                started its own chords and its tune again at its start);
+  //   a section    says which parts play and how loud, from the bar line nearest its cut when
+  //                that is within a beat of it, else from the cut itself (`start bar` or `start
+  //                cut` decides for one). A section that names its own chords plays them from
+  //                its start, changing on the bar lines (the end holds Am);
+  //   a part       plays wherever its level is above nothing, as one part: a pad that plays on
+  //                across a seam holds its chord, never struck again;
+  //   a seam       each part's level moves the way the later section's `into` says: fade (a
+  //                crossfade across the seam), swell (in over the beats before it), build (a
+  //                fill on the snare or clap and a rise into it, a crash on it), drop (the drums
+  //                and the bass fall silent for the beats before it) or cut. A note rings on past
+  //                its section while its level fades;
   //   a hit        (a drum with no steps, a synth that plays hit or rise) lands on the picture
   //                cut, or, after a build or a drop, on the arrival, with the crash.
   // Returns { events, sections, sweeps, levels, transitions, harmony, duration, beat, step, bar }.
@@ -318,7 +323,7 @@
       if (!/^\d+$/.test(s.ref) && scenes.filter(x => x.type === s.ref).length > 1) throw withErrors([`line ${s.ln}: there are ${scenes.filter(x => x.type === s.ref).length} ${s.ref} scenes; name this one by its number`]);
       const sc = scenes[i];
       if (!sc) throw withErrors([`line ${s.ln}: the script has no ${/^\d+$/.test(s.ref) ? 'scene ' + s.ref : s.ref + ' scene'}`]);
-      S.push({ ref: s.ref, ln: s.ln, scene: i, type: sc.type, cut: sc.start, cutEnd: sc.end, chords: s.chords || score.chords, play: s.play, sweep: s.sweep,
+      S.push({ ref: s.ref, ln: s.ln, scene: i, type: sc.type, cut: sc.start, cutEnd: sc.end, chords: s.chords || score.chords, own: !!s.chords, play: s.play, sweep: s.sweep,
         into: s.into || { kind: 'fade', beats: INTO.fade, set: false }, startMode: s.start || 'auto' });
     }
     S.sort((a, b) => a.cut - b.cut);
@@ -334,10 +339,21 @@
     }
     S.forEach((s, i) => { s.end = i + 1 < S.length ? S[i + 1].start : Math.max(s.start, duration); });
 
-    // the harmony: each section's chords from its start, then on every bar line
+    // the harmony: the score's chords go round on the reel's own bars, one a bar, from its first
+    // frame to its last; a section that names its own plays them from its start, then on every
+    // bar line
+    const bars = list => { const seq = []; list.forEach(c => { for (let k = 0; k < (c.bars || 1); k++) seq.push(c); }); return seq; };
+    const round = bars(score.chords);
     for (const s of S) {
-      const seq = []; s.chords.forEach(c => { for (let k = 0; k < (c.bars || 1); k++) seq.push(c); });
-      const at = [s.start];
+      s.harmony = [];
+      if (!s.own) {
+        for (let b = Math.floor(s.start / bar + E); b * bar < s.end - E; b++) {
+          const t0 = Math.max(s.start, b * bar), t1 = Math.min(s.end, (b + 1) * bar);
+          if (t1 - t0 > E) s.harmony.push({ t: t0, end: t1, chord: round[mod(b, round.length)] });
+        }
+        continue;
+      }
+      const seq = bars(s.chords), at = [s.start];
       let b = Math.floor(s.start / bar + E) * bar + bar;
       if (b - s.start < bar / 2 - E) b += bar;                          // a short first piece joins the next bar
       for (; b < s.end - E; b += bar) at.push(b);
@@ -374,6 +390,17 @@
     const flows = t => !t.on && (t.type === 'drum' ? !!t.steps : !!t.play && !['hit', 'rise'].includes(t.play.mode));
     const dropsOut = t => t.type === 'drum' || (t.play && t.play.mode === 'root');
     const levelIn = (s, name) => { const p = s && s.play.find(x => x.name === name); return p ? p.level : 0; };
+    // the stretches where a level is above nothing, [from, to], its ramps in and out included
+    const sounding = pts => {
+      const out = [];
+      for (let i = 0; i + 1 < pts.length; i++) {
+        const a = pts[i], b = pts[i + 1];
+        if (b.t - a.t <= E || !(a.v > 0 || b.v > 0)) continue;
+        const r = out[out.length - 1];
+        if (r && a.t <= r[1] + E) r[1] = b.t; else out.push([a.t, b.t]);
+      }
+      return out;
+    };
     for (const tr of score.tracks.filter(flows)) {
       const L = S.map(s => levelIn(s, tr.name));
       if (!L.some(v => v > 0)) continue;
@@ -392,22 +419,9 @@
       put(Math.max(duration, pts[pts.length - 1].t), pts[pts.length - 1].v);
       levels[tr.name] = pts;
 
-      // the notes, section by section, each over its own stretch and the fades on either side
-      // of it (a melody comes in on its section's start)
-      S.forEach((s, i) => {
-        if (!(L[i] > 0)) return;
-        const melody = tr.type === 'synth' && tr.play.mode === 'notes';
-        let w0 = s.start, w1 = s.end;
-        if (i > 0 && !(L[i - 1] > 0) && !melody) {
-          const n = Math.min(s.into.beats * beat, s.start - S[i - 1].start);
-          if (s.into.kind === 'fade') w0 = s.start - n / 2; else if (s.into.kind === 'swell') w0 = s.start - n;
-        }
-        const nx = S[i + 1];
-        if (nx && !(L[i + 1] > 0)) {
-          const n = Math.min(nx.into.beats * beat, nx.start - s.start);
-          if (nx.into.kind === 'fade') w1 = Math.min(nx.end, nx.start + n / 2);
-          else if (nx.into.kind === 'drop' && dropsOut(tr)) w1 = Math.max(s.start, nx.start - n);
-        }
+      // the notes: on the reel's own clock, over every stretch where its level is above nothing
+      // (its fades included), so a part that plays on across a seam is one part
+      for (const [w0, w1] of sounding(pts)) {
         const push = e => events.push(Object.assign({ track: tr.name }, e));
         const k0 = Math.ceil(w0 / step - E), k1 = Math.ceil(w1 / step - E);
         const noteLen = t => Math.max(step * 0.5, Math.min((tr.len || 1) * step, w1 - t));
@@ -416,7 +430,7 @@
             const c = tr.steps[mod(k, tr.steps.length)], t = k * step;
             if (c !== '.' && !inFill(tr.name, t)) push({ t, dur: tr.decay, vel: STEP_VEL[c] });
           }
-          return;
+          continue;
         }
         const m = tr.play;
         if (m.mode === 'chord') {
@@ -440,14 +454,18 @@
             push({ t, dur: noteLen(t), vel: STEP_VEL[c], midi: seq[mod(played, seq.length)] });
           }
         } else if (m.mode === 'notes') {
-          for (let k = 0; s.start + k * step < w1 - E; k++) {
-            const w = tr.notes[k % tr.notes.length];
+          // the tune goes round from the reel's 0, with the chords; a note lasts until the next
+          // one, `len` steps at most
+          const n = tr.notes.length;
+          for (let k = k0; k < k1; k++) {
+            const w = tr.notes[mod(k, n)];
             if (w === '.') continue;
-            const t = s.start + k * step;
-            push({ t, dur: noteLen(t), vel: 1, midi: noteMidi(w) });
+            let gap = 1; while (gap < n && tr.notes[mod(k + gap, n)] === '.') gap++;
+            const t = k * step;
+            push({ t, dur: Math.max(step * 0.5, Math.min(Math.min(tr.len || 1, gap) * step, w1 - t)), vel: 1, midi: noteMidi(w) });
           }
         }
-      });
+      }
     }
 
     // the hits: a drum with no steps, a synth that plays hit or rise, at the level its section gives it
@@ -478,10 +496,22 @@
     }
     events.sort((a, b) => a.t - b.t || (a.track < b.track ? -1 : 1));
     const sections = S.map(s => ({ ref: s.ref, ln: s.ln, scene: s.scene, type: s.type, cut: s.cut, cutEnd: s.cutEnd, start: s.start, end: s.end,
-      chords: s.chords, play: s.play, sweep: s.sweep, into: s.into, startMode: s.startMode, harmony: s.harmony }));
+      chords: s.chords, own: s.own, play: s.play, sweep: s.sweep, into: s.into, startMode: s.startMode, harmony: s.harmony }));
     return { events, sections, sweeps, levels, transitions, harmony, duration, beat, step, bar };
   }
   const withErrors = errs => { const e = new Error(errs.join('\n')); e.errors = errs; return e; };
+  // an instrument's level at reel time t, from its points in arrange's `levels` (linear between
+  // them; two at one time, a step), as the synth automates it
+  function levelAt(pts, t) {
+    let v = pts[0].v;
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1], b = pts[i];
+      if (t < a.t) break;
+      if (t <= b.t) return b.t - a.t < 1e-9 ? b.v : a.v + (b.v - a.v) * (t - a.t) / (b.t - a.t);
+      v = b.v;
+    }
+    return v;
+  }
 
   // ── writing: one line at a time ───────────────────────────────────────
   // The rack edits the file through these, so a knob moves one number on one line and the rest
@@ -581,6 +611,6 @@
     if (P.warnings.concat(silent).length) console.log('\n' + P.warnings.concat(silent).map(w => 'warning: ' + w).join('\n'));
   }
 
-  return { parse, arrange, moments, sheet, setLine, setArg, toggleTrack, setTrackLevel, block, chord, noteMidi, hz, voicing,
+  return { parse, arrange, moments, sheet, setLine, setArg, toggleTrack, setTrackLevel, block, chord, noteMidi, hz, voicing, levelAt,
     FX, DRUMS, DRUM_DEF, WAVES, FILTERS, MOMENTS, PLAYS, STEP_VEL, fieldLine, fmtNum, main };
 });

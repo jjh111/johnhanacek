@@ -79,11 +79,13 @@
 #reel-rack .rk-grow { flex: 1; }
 /* arrangement */
 #reel-rack .rk-arr { position: relative; }
-#reel-rack .rk-arr .rk-lane { display: flex; align-items: center; height: 15px; }
+#reel-rack .rk-arr .rk-lane { display: flex; align-items: center; height: 17px; }
 #reel-rack .rk-arr .rk-name { width: 58px; flex: none; color: var(--ink-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
-#reel-rack .rk-arr .rk-cells { position: relative; flex: 1; height: 13px; }
-#reel-rack .rk-arr .rk-cell { position: absolute; top: 1px; bottom: 1px; border-radius: 2px; border: 1px solid rgba(var(--cyan-dim-rgb), 0.12); cursor: pointer; }
-#reel-rack .rk-arr .rk-cell:hover { border-color: var(--cyan-dim); }
+#reel-rack .rk-arr .rk-cells { position: relative; flex: 1; height: 15px; }
+#reel-rack .rk-arr .rk-cell { position: absolute; top: 0; bottom: 0; border-radius: 2px; border: 1px dashed transparent; cursor: pointer; z-index: 1; }
+#reel-rack .rk-arr .rk-cell:hover { border-color: var(--gold); }
+#reel-rack .rk-arr .rk-cell.on:hover { border-style: solid; }
+#reel-rack .rk-arr svg.rk-roll { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; }
 #reel-rack .rk-arr .rk-sec { position: absolute; top: 0; font-size: 9px; color: var(--ink-faint); white-space: nowrap; overflow: hidden; padding-left: 2px; }
 #reel-rack .rk-arr .rk-ph { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--gold); pointer-events: none; }
 /* modules */
@@ -384,21 +386,25 @@
     tracks.forEach((t, i) => { colour[t.name] = PALETTE[i % PALETTE.length]; });
 
     // the arrangement: sections across, instruments down
-    root.appendChild(el('h3', '', 'arrangement · click a cell'));
+    root.appendChild(el('h3', '', 'arrangement · click a stretch to play or stop'));
     const arr = el('div', 'rk-arr');
     const D = A.duration || 1, band = tracks.filter(t => !t.on);
     const head = el('div', 'rk-lane'); head.appendChild(el('span', 'rk-name', ''));
     const hc = el('div', 'rk-cells'); head.appendChild(hc);
-    A.sections.forEach(s => { const sEl = el('span', 'rk-sec', s.type); sEl.style.left = (s.start / D * 100) + '%'; sEl.style.width = ((s.end - s.start) / D * 100) + '%'; sEl.title = `${s.type} · ${s.chords.map(c => c.name).join(' ')}`; hc.appendChild(sEl); });
+    A.sections.forEach(s => { const sEl = el('span', 'rk-sec', s.type); sEl.style.left = (s.start / D * 100) + '%'; sEl.style.width = ((s.end - s.start) / D * 100) + '%'; sEl.title = `${s.type} · ${s.harmony.map(x => x.chord.name).filter((n, i, a) => !i || n !== a[i - 1]).join(' ')}`; hc.appendChild(sEl); });
     arr.appendChild(head);
+    const rolls = [];
     for (const t of band) {
       const lane = el('div', 'rk-lane'); const nm = el('span', 'rk-name', t.name); nm.style.color = colour[t.name]; lane.appendChild(nm);
       const cells = el('div', 'rk-cells');
+      // what it plays, note for note, as the timeline draws it (drawn below, once the lane has its width)
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('class', 'rk-roll'); svg.style.color = colour[t.name];
+      cells.appendChild(svg); rolls.push({ svg, evs: A.events.filter(e => e.track === t.name), levels: A.levels && A.levels[t.name] });
       for (const s of A.sections) {
         const p = s.play.find(x => x.name === t.name);
-        const c = el('div', 'rk-cell');
+        const c = el('div', 'rk-cell' + (p ? ' on' : ''));
         c.style.left = `calc(${s.start / D * 100}% + 1px)`; c.style.width = `calc(${(s.end - s.start) / D * 100}% - 2px)`;
-        if (p) { c.style.background = colour[t.name]; c.style.opacity = (0.25 + 0.6 * Math.min(1, p.level)).toFixed(2); }
+        if (p) { c.style.background = colour[t.name] + '12'; c.style.borderColor = colour[t.name] + '55'; c.style.borderStyle = 'solid'; }
         c.title = `${s.type}: ${p ? `plays ${t.name}${p.level !== 1 ? ' at ' + p.level : ''} (click to stop, Alt-click for half/full level)` : `click to play ${t.name} here`}`;
         c.addEventListener('click', e => {
           try {
@@ -422,6 +428,12 @@
     root.appendChild(el('p', 'rk-note', `Every control edits one line of ${NAME}; the file is the music. Mute and solo are for listening and are not saved.`));
     root.scrollTop = scroll;
     arrW = arr.querySelector('.rk-cells').getBoundingClientRect().width;
+    if (window.REEL_UI && REEL_UI.rollPaths && arrW > 0) rolls.forEach(r => {
+      const H = 15, OP = [0.3, 0.55, 0.8, 1];
+      const P = REEL_UI.rollPaths(r.evs, { H, px: t => t / D * arrW, pxs: arrW / D, level: r.levels ? t => RM.levelAt(r.levels, t) : null });
+      r.svg.setAttribute('width', arrW); r.svg.setAttribute('height', H);
+      r.svg.innerHTML = P.d.map((d, k) => d ? `<path d="${d}" fill="currentColor" fill-opacity="${OP[k]}"/>` : '').join('') + (P.own ? `<path d="${P.own}" fill="var(--gold)"/>` : '');
+    });
   }
 
   function module(t, acc) {
@@ -562,7 +574,7 @@
     const sec = A.sections.find(s => t >= s.start && t < s.end);
     for (const [name, cells] of Object.entries(stepEls)) {
       const on = sec && sec.play.some(p => p.name === name) && L.isPlaying();
-      const k = on ? Math.floor((t - sec.start) / A.step) % 16 : -1;
+      const k = on ? Math.floor(t / A.step + 1e-6) % 16 : -1;          // the steps go round on the reel's own clock
       cells.forEach((c, i) => c.classList.toggle('now', i === k));
     }
     const now = performance.now();

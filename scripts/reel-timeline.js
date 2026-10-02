@@ -25,15 +25,18 @@
 // Fish panel (scripts/reel-fish.js); click a span to jump there with that fish chosen.
 // Under the fish lanes, the music: the score next to the script, which the synth rack keeps
 // (scripts/reel-rack.js, REEL_RACK), on the same clock, as one piece. A head shows each section
-// where its music plays (on the bar near its cut; a dashed line where the picture cuts), its
+// where its music plays (on the bar near its cut; a dashed line where the picture cuts), the
 // chords on the bars, and a chip on every seam saying how the music crosses it (click: the next
-// way in: fade, swell, build, drop, cut). Open (the chevron in the icon column), a lane per
-// instrument carries a ribbon of its level across the cut, its fades and builds as ramps, and a
-// cell per section, outlined where it plays; then a lane per sound effect has a tick at every
-// moment it sounds. Click a cell to play the instrument there or stop it; drag a lit cell up or
-// down for its level (Alt-click: half or full); Shift-click opens the instrument in the synth
-// rack. M and S beside each lane mute and solo it while you listen (not saved). Undo takes back
-// the last edit, the script's or the score's (REEL_LIVE.journal).
+// way in: fade, swell, build, drop, cut). Open (the chevron in the icon column), every part has a
+// lane that shows what it plays, note for note: a drum's hits as ticks (taller, louder), a pitched
+// part's notes at their pitches, fainter where its level is lower, its level behind them as a
+// faint shape (its fades as ramps); then one lane of cues for the sound effects the edit plays
+// itself: a tick a key of each question the command bar types, its Enter, the question while it
+// stands on the bar, the select-all that clears it, and a dot for each pop on an @ moment. Click
+// a stretch of a lane to play the part there or stop it; drag a lit one up or down for its level
+// (Alt-click: half or full); Shift-click opens the part in the synth rack. M and S beside each
+// lane mute and solo it while you listen (not saved; the cues' mute every sound effect). Undo
+// takes back the last edit, the script's or the score's (REEL_LIVE.journal).
 // Every action is a button, and its key an accelerator (named in the button's tooltip):
 //   Timeline (E)          open / shut; the preview shrinks to fit above it (its button is in the HUD)
 //   Undo / Redo (⌘Z, ⇧⌘Z) each is a save, played at once like any edit
@@ -111,9 +114,11 @@
   const Y = { ruler: 0, rulerH: 22, card: 26, cardH: 118, head: 33, works: 60, m0: 82, m1: 102, outRow: 124, fish: 150, laneH: 20, laneGap: 4 };
   Y.body = Y.card + Y.head; Y.bodyH = Y.card + Y.cardH - Y.body; Y.sep = Y.card + Y.cardH + 3;
   const FISH_END = Y.fish + 2 * Y.laneH + Y.laneGap;
-  // the music, under the fish: a hairline, a head of sections, then (open) a lane per instrument,
-  // a gap, and a lane per sound effect. The panel is as tall as what it shows (panelH, below).
-  const MUS = { gap: 10, head: 20, lane: 14, sep: 8 };
+  // the music, under the fish: a hairline, a head of sections, then (open) a lane per part, each as
+  // tall as what it plays needs (a drum's ticks, a tune's range), a gap, and the sound effects'
+  // cues. The panel is as tall as what it shows (panelH, below).
+  const MUS = { gap: 10, head: 20, sep: 8 };
+  const LANE = { drum: 14, pitch: [18, 30], cues: 28 };
   Y.mus = FISH_END + MUS.gap; Y.musLanes = Y.mus + MUS.head + 4;
   const BOTTOM = 12;                       // under the last lane: room for the view's scrollbar
   const PIN = 22, GAP = 24, MAX_PXS = 360;  // a moment's hit box; the room it needs from the next; the deepest zoom (px a second)
@@ -204,28 +209,46 @@
 #reel-tl .tl-ro-out { position: absolute; top: ${Y.card + 4}px; padding: 4px 7px; border: 1px solid rgba(var(--gold-rgb), 0.6); border-radius: 4px; background: rgba(var(--surface-rgb), 0.96);
   color: var(--text-bright); pointer-events: none; white-space: nowrap; z-index: 6; }
 #reel-tl .tl-ro-out[hidden] { display: none; }
-/* the music: a head of sections, a lane per instrument, a lane per sound effect */
+/* the music: a head of sections, a lane per part (what it plays, note for note), the cues */
 #reel-tl .tl-msep { position: absolute; left: 0; right: 0; top: ${Y.mus - MUS.gap / 2}px; border-top: 1px solid rgba(var(--cyan-dim-rgb), 0.15); pointer-events: none; }
 #reel-tl .tl-mh { position: absolute; top: ${Y.mus}px; height: ${MUS.head}px; padding: 0 6px; border-radius: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: pointer;
   font: 500 10px/${MUS.head - 2}px var(--font-mono); color: var(--ink-quiet); background: rgba(var(--cyan-dim-rgb), 0.06); border: 1px solid rgba(var(--cyan-dim-rgb), 0.22); }
 #reel-tl .tl-mh:hover { border-color: var(--gold); }
 #reel-tl .tl-mh.tl-cur { border-color: rgba(var(--gold-rgb), 0.75); color: var(--text-bright); }
-#reel-tl .tl-mh .tl-mn { color: var(--ink-faint); margin-left: 7px; }
 #reel-tl .tl-mh.tl-none { cursor: default; color: var(--ink-faint); }
-#reel-tl .tl-mc { position: absolute; height: ${MUS.lane - 3}px; padding: 0 5px; border-radius: 3px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: pointer;
-  font: 500 9.5px/${MUS.lane - 5}px var(--font-mono); color: var(--ink-faint); border: 1px dashed rgba(var(--cyan-dim-rgb), 0.18); }
-#reel-tl .tl-mc:hover { border-color: var(--gold); color: var(--text-bright); }
-#reel-tl .tl-mc.tl-on { border: 1px solid var(--c); color: var(--text-bright); }
-#reel-tl .tl-mc.tl-on.tl-mute { border-style: dashed; color: var(--ink-faint); }
-#reel-tl .tl-mc.tl-lv { cursor: ns-resize; border-color: var(--gold); }
-#reel-tl .tl-mlb { position: absolute; height: ${MUS.lane - 3}px; padding: 0 5px; border-radius: 3px; white-space: nowrap; z-index: 2; cursor: help;
-  font: 500 9.5px/${MUS.lane - 5}px var(--font-mono); color: var(--text-bright); background: rgba(var(--surface-rgb), 0.92); border: 1px solid var(--c); }
+/* a part in a section: a stretch to click, its notes showing through; hovered, its level on the right when not 1 */
+#reel-tl .tl-mc { position: absolute; padding: 0 5px; border-radius: 3px; overflow: hidden; white-space: nowrap; cursor: pointer; text-align: right; z-index: 1;
+  font: 500 9px/1 var(--font-mono); color: transparent; border: 1px dashed transparent; }
+#reel-tl .tl-mc:hover { border-color: rgba(var(--gold-rgb), 0.8); color: var(--text-bright); text-shadow: 0 0 3px rgb(var(--surface-rgb)), 0 0 3px rgb(var(--surface-rgb)); }
+#reel-tl .tl-mc.tl-on:hover { border-style: solid; }
+#reel-tl .tl-mc.tl-lv { cursor: ns-resize; border: 1px solid var(--gold); color: var(--gold); }
+/* a lane's name, kept at the left of the view */
+#reel-tl .tl-mlb { position: absolute; height: 13px; padding: 0 4px; border-radius: 3px; white-space: nowrap; z-index: 3; cursor: help;
+  font: 500 9px/11px var(--font-mono); color: var(--text-bright); background: rgba(var(--surface-rgb), 0.88); border: 1px solid var(--c); }
 #reel-tl .tl-mlb.tl-mute { color: var(--ink-faint); border-style: dashed; }
-#reel-tl .tl-mtk { position: absolute; min-width: 3px; height: ${MUS.lane - 5}px; border-radius: 1px; background: var(--c); cursor: pointer; }
-#reel-tl .tl-mtk.tl-mute { opacity: 0.3; }
-#reel-tl .tl-mtk:hover { background: var(--gold); }
+/* the notes: the level behind, faint; the notes in four strengths; a seam's own in gold */
+#reel-tl svg.tl-mroll { position: absolute; left: 0; overflow: visible; pointer-events: none; }
+#reel-tl svg.tl-mroll .tl-lva { fill: var(--c); fill-opacity: 0.09; stroke: none; }
+#reel-tl svg.tl-mroll .tl-n { fill: var(--c); stroke: none; }
+#reel-tl svg.tl-mroll .tl-n1 { fill-opacity: 0.3; }
+#reel-tl svg.tl-mroll .tl-n2 { fill-opacity: 0.55; }
+#reel-tl svg.tl-mroll .tl-n3 { fill-opacity: 0.8; }
+#reel-tl svg.tl-mroll .tl-own { fill: var(--gold); }
+#reel-tl svg.tl-mroll.tl-mute { opacity: 0.3; }
+/* the cues: a tick a key, the Enter, the question while it stands on the bar, the select-all
+   that clears it; a dot for each pop */
+#reel-tl .tl-mq { position: absolute; height: 13px; padding: 0 4px 0 9px; border-radius: 3px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: pointer;
+  font: 500 9.5px/11px var(--font-mono); color: var(--ink-quiet); background: rgba(var(--cyan-dim-rgb), 0.07); border: 1px solid rgba(var(--cyan-dim-rgb), 0.25); }
+#reel-tl .tl-mq:hover { border-color: var(--gold); color: var(--text-bright); }
+#reel-tl .tl-mkt { position: absolute; width: 1px; height: 11px; background: var(--c); pointer-events: none; }
+#reel-tl .tl-mke, #reel-tl .tl-mks { position: absolute; width: 13px; height: 13px; margin-left: -6.5px; color: var(--c); z-index: 2; pointer-events: none; display: flex;
+  background: rgb(var(--surface-rgb)); border-radius: 3px; }
+#reel-tl .tl-mke .ri, #reel-tl .tl-mks .ri { width: 13px; height: 13px; }
+#reel-tl .tl-mpd { position: absolute; width: 9px; height: 9px; margin-left: -4.5px; border-radius: 50%; background: var(--c); cursor: pointer; z-index: 2; }
+#reel-tl .tl-mpd:hover { background: var(--gold); }
+#reel-tl .tl-mq.tl-mute, #reel-tl .tl-mkt.tl-mute, #reel-tl .tl-mke.tl-mute, #reel-tl .tl-mks.tl-mute, #reel-tl .tl-mpd.tl-mute { opacity: 0.3; }
 /* the music as one piece: the bars under it, the chords on them, where the picture cuts, a chip on
-   every seam (how the music crosses it), the seam's stretch, each instrument's level as a ribbon */
+   every seam (how the music crosses it), the seam's stretch */
 #reel-tl .tl-mbars { position: absolute; left: 0; top: ${Y.mus}px; pointer-events: none;
   background-image: linear-gradient(to right, rgba(var(--cyan-dim-rgb), 0.12) 1px, transparent 1px); background-repeat: repeat-x; background-position: 0 0; }
 #reel-tl .tl-mch { position: absolute; top: ${Y.mus + 1}px; height: ${MUS.head - 2}px; padding: 0 6px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; pointer-events: none; z-index: 1;
@@ -238,15 +261,11 @@
 #reel-tl .tl-lane .tl-mcontent button.tl-mseam.tl-def { border-color: rgba(var(--cyan-dim-rgb), 0.55); color: var(--ink-quiet); }
 #reel-tl .tl-lane .tl-mcontent button.tl-mseam .ri { width: 11px; height: 11px; }
 #reel-tl .tl-mwin { position: absolute; top: ${Y.musLanes - 2}px; pointer-events: none; border-radius: 3px;
-  background: linear-gradient(to right, transparent, rgba(var(--gold-rgb), 0.12), transparent); }
-#reel-tl .tl-mwin.swell, #reel-tl .tl-mwin.build, #reel-tl .tl-mwin.drop { background: linear-gradient(to right, transparent, rgba(var(--gold-rgb), 0.16)); }
-#reel-tl svg.tl-mrib { position: absolute; left: 0; overflow: visible; pointer-events: none; }
-#reel-tl svg.tl-mrib path { fill: var(--c); fill-opacity: 0.28; stroke: var(--c); stroke-width: 1; stroke-opacity: 0.9; stroke-linejoin: round; }
-#reel-tl svg.tl-mrib.tl-mute path { fill-opacity: 0.07; stroke-opacity: 0.3; }
-#reel-tl .tl-mtk.tl-x { background: var(--gold); }
-#reel-tl .tl-mms { position: absolute; left: 0; width: ${GUT}px; height: ${MUS.lane}px; display: flex; gap: 2px; padding: 1px 2px 1px 5px; }
-#reel-tl .tl-mms::before { content: ''; position: absolute; left: 1px; top: 2px; bottom: 3px; width: 2px; border-radius: 1px; background: var(--c); }
-#reel-tl .tl-mms button { flex: 1; height: ${MUS.lane - 3}px; min-width: 0; padding: 0; border-radius: 3px; font: 600 9px/1 var(--font-mono);
+  background: linear-gradient(to right, transparent, rgba(var(--gold-rgb), 0.1), transparent); }
+#reel-tl .tl-mwin.swell, #reel-tl .tl-mwin.build, #reel-tl .tl-mwin.drop { background: linear-gradient(to right, transparent, rgba(var(--gold-rgb), 0.13)); }
+#reel-tl .tl-mms { position: absolute; left: 0; width: ${GUT}px; display: flex; align-items: center; gap: 2px; padding: 0 2px 0 5px; }
+#reel-tl .tl-mms::before { content: ''; position: absolute; left: 1px; top: 2px; bottom: 2px; width: 2px; border-radius: 1px; background: var(--c); }
+#reel-tl .tl-mms button { flex: 1; height: 12px; min-width: 0; padding: 0; border-radius: 3px; font: 600 9px/1 var(--font-mono);
   background: transparent; color: var(--ink-faint); border: 1px solid rgba(var(--cyan-dim-rgb), 0.3); }
 #reel-tl .tl-mms button.tl-on { background: var(--gold); border-color: var(--gold); color: rgb(var(--surface-rgb)); }
 #reel-tl button.tl-mtog { position: absolute; left: 3px; width: ${GUT - 6}px; height: ${MUS.head}px; min-width: 0; padding: 0; display: flex; align-items: center; justify-content: center; gap: 0; }
@@ -589,7 +608,7 @@
       if (b != null) r.el.style.width = Math.max(4, x(b) - x(a) - 2).toFixed(1) + 'px';   // a 2 px gutter between blocks
     };
     recs.forEach(place); mrecs.forEach(place);
-    if (!map.drag) drawRibbons();
+    if (!map.drag) drawMusic();
     placeMoments(map);
     if (!map.drag) { ticks(); if (t0 != null) scrollTo(t0 * pxs); }
     stick();
@@ -824,50 +843,75 @@
   // ── the music: the score's arrangement on the same clock ──────────────
   // What the synth rack holds (REEL_RACK: the score's parse, its arrangement against the cut, the
   // mix) drawn under the fish lanes, and drawn again whenever the rack says it changed (a
-  // reel-score event): the score, the cut, the mix. The music is one piece (ReelMusic.arrange):
-  // its sections sit where their music plays (on the bar line nearest the cut, a dashed line
-  // where the picture cuts when the two differ), its chords on the bars, a chip on every seam
-  // saying how the music crosses it (click: the next way), and, open, every instrument's level
-  // as a ribbon across the cut, its crossfades and builds as ramps.
-  let musOpen = get(K_MUS, true), MB = [], MX = [], MHEADS = [], MLB = [], RIBS = [], musSig = null, curSec = -1, BAR = 2, bars = null;
-  const lanes = new Map();                           // a track's name → its M and S, and what dims when it is silent
+  // reel-score event): the score, the cut, the mix. The music is one piece (ReelMusic.arrange): a
+  // head shows each section where its music plays (on the bar line nearest the cut, a dashed line
+  // where the picture cuts when the two differ), the chords on the bars, and a chip on every seam
+  // saying how the music crosses it (click: the next way). Open, each part has a lane that shows
+  // what it plays, note for note (until 2026-10-02 a lane was a row of blocks that only said a
+  // part was playing): a drum's hits as ticks, taller when louder; a pitched part's notes at their
+  // pitches, as long as they sound, fainter where its level is lower; and behind them, faintly,
+  // its level across the cut, so where it plays and how it fades in and out is the lane's shape.
+  // Under the parts, one lane of cues for the sound effects the edit plays itself: each question
+  // the command bar types (a tick a key, its Enter, the question while it stands on the bar, the
+  // select-all that clears it) and a dot for each pop on an @ moment.
+  let musOpen = get(K_MUS, true), MB = [], MX = [], MHEADS = [], MLB = [], ROLLS = [], musSig = null, curSec = -1, BAR = 2, bars = null, musH = 0;
+  const lanes = new Map();                           // a lane's name → its M and S, and what dims when it is silent
   const RK = () => window.REEL_RACK;
-  const musEnd = () => !musOpen || !(MB.length + MX.length) ? Y.mus + MUS.head
-    : Y.musLanes + MB.length * MUS.lane + (MX.length ? MUS.sep + MX.length * MUS.lane : 0);
-  const laneTop = (k, fx) => Y.musLanes + (fx ? MB.length * MUS.lane + MUS.sep : 0) + k * MUS.lane;
+  const musEnd = () => musOpen && musH ? musH : Y.mus + MUS.head;
   const rgba = (hex, a) => { const n = parseInt(String(hex).slice(1), 16); return `rgba(${n >> 16 & 255}, ${n >> 8 & 255}, ${n & 255}, ${a})`; };
   const lvA = lv => (0.14 + 0.26 * Math.min(1, lv)).toFixed(3);   // a lit hit cell's strength: its level
-  const ON = { key: 'every letter typed', space: 'every space typed', clear: 'each question cleared', enter: 'each Enter', beat: 'every @ moment', cut: 'every cut', item: 'each work' };
+  const ON = { key: 'every letter typed', space: 'every space typed', clear: 'the select-all that clears each question', enter: 'each Enter', beat: 'every @ moment', cut: 'every cut', item: 'each work' };
   // the ways the music crosses a seam, in the order a click on its chip goes through them
   const SEAMS = ['fade', 'swell', 'build', 'drop', 'cut'];
   const SEAM_ICON = { fade: 'xfade', swell: 'swell', build: 'build', drop: 'drop', cut: 'seamCut' };
   const seamWords = tr => {
     const n = tr.beats, b = `${n} beat${n === 1 ? '' : 's'}`;
     return { fade: `a crossfade across the seam (${b}): what leaves fades out as what arrives fades in`,
-      swell: `a swell: what arrives comes in over the ${b} before it, on a soft rise`,
-      build: `a build: a fill on the snare and a rise over the ${b} before it, then a crash and its hits on the arrival`,
-      drop: `a drop: the drums and the bass fall silent for the ${b} before it, then a crash on the arrival`,
+      swell: `a swell: what arrives comes in over the ${b} before it`,
+      build: `a build: a fill on the clap over the ${b} before it, louder all the way in`,
+      drop: `a drop: the drums and the bass rest for the ${b} before it`,
       cut: 'a cut: everything changes on it' }[tr.kind];
   };
-  // runs of a track's sounds closer than 0.13 s, as one mark (a question's typing; a fill's sixteenths)
-  const runsOf = ts => { const out = []; ts.forEach(t => { const r = out[out.length - 1]; if (r && t - r.t1 < 0.13) { r.t1 = t; r.n++; } else out.push({ t0: t, t1: t, n: 1 }); }); return out; };
+  // A lane is as tall as what it plays needs: a drum's hits little, a tune its range of pitches.
+  const NOTE = n => ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'][((n % 12) + 12) % 12] + (Math.floor(n / 12) - 1);
+  function laneShape(evs) {
+    let lo = Infinity, hi = -Infinity;
+    evs.forEach(e => { if (e.midi != null) { lo = Math.min(lo, e.midi); hi = Math.max(hi, e.midi); } });
+    if (lo === Infinity) return { h: LANE.drum, pitched: false };
+    return { h: Math.max(LANE.pitch[0], Math.min(LANE.pitch[1], 6 + (hi - lo + 1) * 2)), pitched: true, lo, hi };
+  }
+  // what a part plays, in words (its name's tooltip)
+  function plays(t, shape) {
+    const range = shape.pitched ? `, ${shape.lo === shape.hi ? NOTE(shape.lo) : NOTE(shape.lo) + ' to ' + NOTE(shape.hi)}` : '';
+    if (t.type === 'drum') return t.steps ? `${t.name}: a ${t.kind} on the steps ${t.steps}, round every bar (a taller tick, a louder hit)` : `${t.name}: a ${t.kind}, once on each section's cut`;
+    const m = t.play.mode, bars = +(((t.notes || []).length) / 16).toFixed(2);
+    return `${t.name}: ` + ({ chord: 'the chord, held for its bar', root: `the chord's root on the steps ${t.steps}`, arp: `the chord's notes in turn (${t.play.dir}) on the steps ${t.steps}`,
+      notes: `the tune, ${bars} bar${bars === 1 ? '' : 's'} round with the chords`, hit: 'the chord once, on each section\'s cut', rise: 'a sweep up into a seam' }[m] || m) + range;
+  }
+  // a cheap fingerprint of every note, so a knob that changes no note redraws nothing
+  function noteHash(A, Pm) {
+    const idx = new Map(Pm.score.tracks.map((t, i) => [t.name, i + 1]));
+    let x = 2166136261;
+    const mix = n => { x = Math.imul(x ^ (n | 0), 16777619); };
+    for (const e of A.events) { mix(idx.get(e.track) || 0); mix(Math.round(e.t * 1000)); mix(Math.round(e.dur * 1000)); mix(e.midi || 0); mix(Math.round(e.vel * 1000)); mix(e.bypass ? 1 : e.rise ? 2 : 0); }
+    return x >>> 0;
+  }
   function musicSig() {
     const R = RK(), Pm = R && R.parsed, A = R && R.arrangement;
     if (!Pm || !A) return JSON.stringify([musOpen, R ? R.error || 'none' : 'wait']);
-    const marks = A.events.filter(e => { const t = Pm.score.tracks.find(x => x.name === e.track); return t && (t.on || e.bypass || !(A.levels && A.levels[e.track])); });
-    return JSON.stringify([musOpen, Pm.score.tracks.map(t => t.name + ':' + (t.on || '')),
-      A.sections.map(sc => [sc.ref, sc.cut, sc.start, sc.end, sc.play.map(p => p.name + ':' + p.level).join(' '), sc.harmony.map(x => x.chord.name + '@' + x.t).join(' ')]),
-      (A.transitions || []).map(tr => [tr.ref, tr.kind, tr.beats, tr.set, tr.t0, tr.t1]), A.levels || {},
-      marks.map(e => e.track + e.t.toFixed(3) + (e.rise ? 'r' + e.dur.toFixed(2) : '')).join(' ')]);
+    return JSON.stringify([musOpen, Pm.score.tracks.map(t => [t.name, t.on || '', t.type === 'drum' ? t.kind + (t.steps || '') : t.play && t.play.mode + (t.steps || '') + (t.notes || []).length]),
+      A.sections.map(sc => [sc.ref, sc.type, sc.cut, sc.start, sc.end, sc.play.map(p => p.name + ':' + p.level).join(' ')]),
+      (A.harmony || []).map(x => x.chord.name + '@' + x.t).join(' '), (A.transitions || []).map(tr => [tr.ref, tr.kind, tr.beats, tr.set, tr.t0, tr.t1]),
+      A.levels || {}, noteHash(A, Pm), RS.queries(EDIT).map(q => q.text), MOMENTS.map(M => M.label)]);
   }
   function populateMusic() {
     const R = RK(), Pm = R && R.parsed, A = R && R.arrangement;
-    mcontent.textContent = ''; mgut.textContent = ''; mrecs = []; MHEADS = []; MLB = []; RIBS = []; lanes.clear(); curSec = -1;
+    mcontent.textContent = ''; mgut.textContent = ''; mrecs = []; MHEADS = []; MLB = []; ROLLS = []; lanes.clear(); curSec = -1; musH = 0;
     h('div', 'msep', mcontent);
     bars = h('div', 'mbars', mcontent);                // the bars, faintly, under the whole music (sized in layout)
     const tog = h('button', 'mtog', mgut); tog.type = 'button'; tog.style.top = Y.mus + 'px';
     tog.innerHTML = window.REEL_UI ? REEL_UI.icon(musOpen ? 'chevDown' : 'chevRight') + REEL_UI.icon('music') : (musOpen ? '▾♪' : '▸♪');
-    tog.title = musOpen ? 'the music: shut it to its sections' : 'the music: open it to every instrument and sound effect';
+    tog.title = musOpen ? 'the music: shut it to its sections' : 'the music: open it to every part, note for note, and the sound effects\' cues';
     tog.setAttribute('aria-expanded', String(musOpen)); tog.setAttribute('aria-label', 'the music\'s lanes');
     tog.onclick = () => setMusic(!musOpen);
     if (!Pm || !A) {
@@ -878,28 +922,30 @@
     }
     const tracks = Pm.score.tracks;
     MB = tracks.filter(t => !t.on); MX = tracks.filter(t => t.on); BAR = A.bar || 2;
-    const flowing = name => !!(A.levels && A.levels[name]);
-    // the head: a block per section where its music plays, its chords on the bars
+    // the head: a block per section where its music plays
     A.sections.forEach(sc => {
       const el = h('div', 'mh', mcontent); el.dataset.ref = sc.ref;
       const chords = sc.harmony.map(x => x.chord.name).filter((n, i, all) => !i || n !== all[i - 1]).join(' ');
       const off = Math.abs(sc.start - sc.cut) > 1e-6;
-      el.title = `${sc.type} · its music ${fmt(sc.start)} → ${fmt(sc.end)}${off ? `, on the bar ${(Math.abs(sc.start - sc.cut)).toFixed(1)} s ${sc.start < sc.cut ? 'before' : 'after'} the picture cuts (${fmt(sc.cut)})` : ''} · ${chords}`
+      el.title = `${sc.type} · its music ${fmt(sc.start)} → ${fmt(sc.end)}${off ? `, on the bar ${(Math.abs(sc.start - sc.cut)).toFixed(1)} s ${sc.start < sc.cut ? 'before' : 'after'} the picture cuts (${fmt(sc.cut)})` : ''} · ${chords}${sc.own ? ' (its own chords)' : ''}`
         + `\n${sc.play.length} playing: ${sc.play.map(p => p.name + (p.level !== 1 ? ' ' + p.level : '')).join(', ') || 'nothing'}\nclick to play from here`;
       mrecs.push({ el, span: m => [m(sc.start), m(sc.end)] });
       MHEADS.push({ el, sc });
       el.addEventListener('pointerdown', e => { if (e.button !== 0) return; drag(e, el, () => {}, moved => { if (!moved) L.seek(sc.start); }); });
-      // its chords, each over the bars it holds
-      const runs = [];
-      sc.harmony.forEach(x => { const r = runs[runs.length - 1]; if (r && r.name === x.chord.name) r.end = x.end; else runs.push({ name: x.chord.name, t: x.t, end: x.end }); });
-      runs.forEach((x, i) => { const c = h('div', 'mch' + (i ? '' : ' first'), mcontent, x.name); mrecs.push({ el: c, span: m => [m(x.t), m(x.end)] }); });
       if (off) {
         const k = h('div', 'mcut', mcontent);
         k.title = `the picture cuts to ${sc.type} here (${fmt(sc.cut)}); its music arrives on the bar ${sc.start < sc.cut ? 'just before' : 'just after'} it (${fmt(sc.start)}). "start cut" in its SECTION puts the music on the cut`;
         mrecs.push({ el: k, span: m => [m(sc.cut)] });
       }
     });
-    // the seams: how the music crosses each one (click for the next way), and, open, its stretch
+    // the chords on the bars, across the sections: a chord held over a seam is one
+    const runs = [], starts = A.sections.map(sc => sc.start);
+    (A.harmony || []).forEach(x => { const r = runs[runs.length - 1]; if (r && r.name === x.chord.name && Math.abs(r.end - x.t) < 1e-6) r.end = x.end; else runs.push({ name: x.chord.name, t: x.t, end: x.end }); });
+    runs.forEach(x => {
+      const c = h('div', 'mch' + (starts.some(s => Math.abs(s - x.t) < 1e-6) ? ' first' : ''), mcontent, x.name);
+      mrecs.push({ el: c, span: m => [m(x.t), m(x.end)] });
+    });
+    // the seams: how the music crosses each one (click for the next way)
     (A.transitions || []).forEach(tr => {
       const b = h('button', 'mseam' + (tr.set ? '' : ' def'), mcontent); b.type = 'button'; b.dataset.ref = tr.ref; b.dataset.kind = tr.kind;
       b.innerHTML = window.REEL_UI ? REEL_UI.icon(SEAM_ICON[tr.kind]) : tr.kind[0];
@@ -909,94 +955,138 @@
       mrecs.push({ el: b, span: m => [m(tr.t)] });
       b.addEventListener('pointerdown', e => e.stopPropagation());
       b.addEventListener('click', e => { e.stopPropagation(); scoreEdit(src => window.ReelMusic.setLine(src, 'SECTION', tr.ref, 'into', nx)); });
-      if (musOpen && tr.t1 > tr.t0 && (MB.length + MX.length)) {
-        const w = h('div', 'mwin ' + tr.kind, mcontent);
-        w.style.height = (musEnd() - Y.musLanes + 2) + 'px';
-        mrecs.push({ el: w, span: m => [m(tr.t0), m(tr.t1)] });
-      }
     });
     if (!musOpen) return;
-    MB.forEach((t, k) => {
-      const top = laneTop(k, false), c = R.colour(t.name), ln = mixRow(t, top, c);
-      if (flowing(t.name)) ribbon(t.name, A.levels[t.name], top, c, ln);   // its level across the cut
-      A.sections.forEach(sc => cell(t, sc, top, c, !flowing(t.name)));
-      // what it plays outside its level: a hit, a rise, a seam's own notes (a fill, a crash)
-      const own = A.events.filter(e => e.track === t.name && (e.bypass || !flowing(t.name)));
-      own.filter(e => e.rise).forEach(e => mark(t, top, c, ln, e.t, e.t + e.dur, e.bypass, `${t.name} rises ${fmt(e.t)} → ${fmt(e.t + e.dur)}${e.bypass ? ', into a seam' : ''}`));
-      runsOf(own.filter(e => !e.rise).map(e => e.t)).forEach(r => {
-        const x_ = own.find(e => Math.abs(e.t - r.t0) < 1e-9);
-        mark(t, top, c, ln, r.t0, r.t1 > r.t0 ? r.t1 : null, x_ && x_.bypass, `${t.name}${r.n > 1 ? ` ×${r.n}, ${fmt(r.t0)} → ${fmt(r.t1)}` : ' at ' + fmt(r.t0)}${x_ && x_.bypass ? ': the seam\'s own' : ''}`);
-      });
+    // a lane per part, note for note
+    let top = Y.musLanes;
+    MB.forEach(t => {
+      const evs = A.events.filter(e => e.track === t.name), shape = laneShape(evs), c = R.colour(t.name), lv = A.levels && A.levels[t.name];
+      const ln = mixRow([t.name], top, shape.h, c, t.name);
+      roll(t.name, evs, shape, top, c, ln, lv);
+      A.sections.forEach(sc => cell(t, sc, top, shape.h, c, !lv));
+      tag(t.name, plays(t, shape) + '\nclick a stretch of it to play it there or stop it · Shift-click: the synth rack', top, shape.h, c, ln);
+      top += shape.h;
     });
-    MX.forEach((t, k) => {
-      const top = laneTop(k, true), c = R.colour(t.name), ln = mixRow(t, top, c);
-      // A mark a moment: sounds closer than 0.12 s are one (a chime's notes; the letters of one
-      // question, typed 25 ms apart, make one span)
-      const ts = A.events.filter(e => e.track === t.name).map(e => e.t).sort((a, b) => a - b), runs = [];
-      ts.forEach(t0 => { const r = runs[runs.length - 1]; if (r && t0 - r.t1 < 0.12) { r.t1 = t0; r.n++; } else runs.push({ t0, t1: t0, n: 1 }); });
-      runs.forEach(r => {
-        const tk = h('div', 'mtk', mcontent); tk.style.top = (top + 2) + 'px'; tk.style.setProperty('--c', c); tk.dataset.track = t.name; tk.dataset.t = +r.t0.toFixed(3);
-        tk.title = `${t.name} ${r.t1 - r.t0 > 0.12 ? `×${r.n}, ${fmt(r.t0)} → ${fmt(r.t1)}` : 'at ' + fmt(r.t0)}: it sounds on ${ON[t.on] || t.on}\nclick to play from just before it`;
-        mrecs.push({ el: tk, span: m => r.t1 - r.t0 > 0.12 ? [m(r.t0), m(r.t1)] : [m(r.t0)] }); ln.els.push(tk);
-        tk.addEventListener('pointerdown', e => { if (e.button !== 0) return; drag(e, tk, () => {}, moved => { if (!moved) L.seek(Math.max(0, r.t0 - 0.4)); }); });
-      });
-      // its name stays at the left of the view (what sets it off, in its tooltip)
-      const lb = h('div', 'mlb', mcontent, t.name); lb.style.top = (top + 1) + 'px'; lb.style.setProperty('--c', c); lb.dataset.track = t.name;
-      lb.title = `${t.name}: a sound effect on ${ON[t.on] || t.on} (${ts.length} in the cut). It follows the edit: move a question or a moment and it moves too`;
-      MLB.push(lb); ln.els.push(lb);
+    if (MX.length) { top += MUS.sep; cueLane(top, A, R); top += LANE.cues; }
+    musH = top;
+    // each seam's stretch, down through the lanes
+    (A.transitions || []).forEach(tr => {
+      if (!(tr.t1 > tr.t0) || !(MB.length + MX.length)) return;
+      const w = h('div', 'mwin ' + tr.kind, mcontent);
+      w.style.height = (musH - Y.musLanes + 2) + 'px';
+      mrecs.push({ el: w, span: m => [m(tr.t0), m(tr.t1)] });
     });
     applyMix();
   }
-  // a lane's M and S, in the icon column, with the instrument's colour beside them
-  function mixRow(t, top, c) {
-    const row = h('div', 'mms', mgut); row.style.top = top + 'px'; row.style.setProperty('--c', c); row.dataset.track = t.name;
+  // a lane's M and S, in the icon column, with its colour beside them: one part's, or (the cues)
+  // every sound effect's at once
+  function mixRow(names, top, H, c, key) {
+    const row = h('div', 'mms', mgut); row.style.top = top + 'px'; row.style.height = H + 'px'; row.style.setProperty('--c', c); row.dataset.track = key;
     const m = h('button', null, row, 'M'), so = h('button', null, row, 'S');
     m.type = so.type = 'button';
-    m.title = `${t.name}: mute it while you listen (not saved)`; so.title = `${t.name}: solo it while you listen (not saved)`;
-    m.setAttribute('aria-label', 'mute ' + t.name); so.setAttribute('aria-label', 'solo ' + t.name);
-    m.onclick = () => { const R = RK(); if (R && R.mute) R.mute(t.name); };
-    so.onclick = () => { const R = RK(); if (R && R.solo) R.solo(t.name); };
-    const ln = { m, so, els: [] }; lanes.set(t.name, ln);
+    const who = names.length > 1 ? 'the sound effects' : names[0];
+    m.title = `${who}: mute while you listen (not saved)`; so.title = `${who}: solo while you listen (not saved)`;
+    m.setAttribute('aria-label', 'mute ' + who); so.setAttribute('aria-label', 'solo ' + who);
+    const all = (R, k) => names.every(n => R.mix(n)[k]);
+    m.onclick = () => { const R = RK(); if (!R || !R.mute) return; const on = !all(R, 'muted'); names.forEach(n => R.mute(n, on)); };
+    so.onclick = () => { const R = RK(); if (!R || !R.solo) return; const on = !all(R, 'soloed'); names.forEach(n => R.solo(n, on)); };
+    const ln = { names, m, so, els: [] }; lanes.set(key, ln);
     return ln;
   }
-  // an instrument's level across the cut: an area under its line, drawn again on every zoom
-  function ribbon(name, pts, top, c, ln) {
-    const NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg'), path = document.createElementNS(NS, 'path');
-    svg.setAttribute('class', 'tl-mrib'); svg.setAttribute('aria-hidden', 'true'); svg.dataset.track = name;
-    svg.style.top = top + 'px'; svg.style.height = MUS.lane + 'px'; svg.style.setProperty('--c', c);
-    svg.appendChild(path); mcontent.appendChild(svg);
-    RIBS.push({ svg, path, pts }); ln.els.push(svg);
+  // a lane's name, kept at the left of the view (what it plays, in its tooltip)
+  function tag(name, tip, top, H, c, ln) {
+    const lb = h('div', 'mlb', mcontent, name); lb.style.top = (top + Math.max(1, Math.round((Math.min(H, 16) - 13) / 2))) + 'px';
+    lb.style.setProperty('--c', c); lb.dataset.track = name; lb.title = tip;
+    MLB.push(lb); ln.els.push(lb);
   }
-  function drawRibbons() {
-    const H = MUS.lane - 3, base = MUS.lane - 1, y = v => (base - Math.min(1.25, v) / 1.25 * H).toFixed(1);
-    RIBS.forEach(r => {
-      r.svg.setAttribute('width', W); r.svg.style.width = W + 'px';
-      let d = `M0 ${base}`;
-      r.pts.forEach(p => { d += ` L${x(p.t).toFixed(1)} ${y(p.v)}`; });
-      r.path.setAttribute('d', d + ` L${x(r.pts[r.pts.length - 1].t).toFixed(1)} ${base} Z`);
-    });
+  // A part's notes: one SVG the width of the lane, its paths made again on every zoom: the level
+  // behind (a faint area), the notes in four strengths (velocity × level where each
+  // starts), and in gold what a seam plays itself (a fill)
+  function roll(name, evs, shape, top, c, ln, levels) {
+    const NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('class', 'tl-mroll'); svg.setAttribute('aria-hidden', 'true'); svg.dataset.track = name;
+    svg.style.top = top + 'px'; svg.style.height = shape.h + 'px'; svg.style.setProperty('--c', c);
+    const path = cls => { const p = document.createElementNS(NS, 'path'); p.setAttribute('class', cls); svg.appendChild(p); return p; };
+    const r = { svg, evs, shape, levels, area: levels ? path('tl-lva') : null,
+      notes: [1, 2, 3, 4].map(k => path('tl-n tl-n' + k)), own: path('tl-n tl-own') };
+    mcontent.appendChild(svg); ROLLS.push(r); ln.els.push(svg);
+  }
+  const levelAt = (pts, t) => window.ReelMusic.levelAt(pts, t);
+  const f1 = n => n.toFixed(1);
+  function drawRoll(r) {
+    const H = r.shape.h;
+    r.svg.setAttribute('width', W); r.svg.setAttribute('height', H); r.svg.style.width = W + 'px';
+    if (r.levels) {
+      const y = v => f1(H - 1 - Math.min(1.25, v) / 1.25 * (H - 3));
+      let line = '';
+      r.levels.forEach((p, i) => { line += `${i ? 'L' : 'M'}${f1(x(p.t))} ${y(p.v)}`; });
+      const last = r.levels[r.levels.length - 1];
+      r.area.setAttribute('d', `M0 ${H}` + line.replace(/^M/, 'L') + `L${f1(x(last.t))} ${H}Z`);
+    }
+    const P = REEL_UI.rollPaths(r.evs, { H, px: x, pxs, lo: r.shape.lo, hi: r.shape.hi, level: r.levels ? t => levelAt(r.levels, t) : null });
+    r.notes.forEach((path, k) => path.setAttribute('d', P.d[k]));
+    r.own.setAttribute('d', P.own);
+  }
+  function drawMusic() {
+    ROLLS.forEach(drawRoll);
     if (bars) {
       bars.style.width = W + 'px'; bars.style.height = (musEnd() - Y.mus) + 'px';
       bars.style.backgroundSize = `${(BAR * pxs).toFixed(3)}px 100%`;
     }
   }
-  // a hit, a rise, or a seam's own notes, on its instrument's lane
-  function mark(t, top, c, ln, t0, t1, own, words) {
-    const tk = h('div', 'mtk' + (own ? ' x' : ''), mcontent); tk.style.top = (top + 2) + 'px'; tk.style.setProperty('--c', c);
-    tk.dataset.track = t.name; tk.dataset.t = +t0.toFixed(3); if (own) tk.dataset.own = '1';
-    tk.title = words + '\nclick to play from just before it';
-    mrecs.push({ el: tk, span: m => t1 != null ? [m(t0), m(t1)] : [m(t0)] }); ln.els.push(tk);
-    tk.addEventListener('pointerdown', e => { if (e.button !== 0) return; drag(e, tk, () => {}, moved => { if (!moved) L.seek(Math.max(0, t0 - 0.4)); }); });
+  // The cues: what sets each sound effect off, read from the edit itself. Its top row is the command
+  // bar: a tick for each key a question types, its Enter, the question while it stands on the bar,
+  // and the select-all that clears it; its bottom row a dot for each pop on an @ moment (and any
+  // sound on a cut or a work).
+  function cueLane(top, A, R) {
+    const of = kind => MX.find(t => t.on === kind), col = t => R.colour(t.name);
+    const c0 = col(MX[0]), ln = mixRow(MX.map(t => t.name), top, LANE.cues, c0, '*cues');
+    tag('cues', `the sound effects, cued by the edit: ${MX.map(t => `${t.name} on ${ON[t.on] || t.on}`).join('; ')}. Move a question or a moment and its sounds move with it`, top, LANE.cues, c0, ln);
+    const seekOn = (el, t) => el.addEventListener('pointerdown', e => { if (e.button !== 0) return; drag(e, el, () => {}, moved => { if (!moved) L.seek(Math.max(0, t)); }); });
+    const put1 = (el, t) => { mrecs.push({ el, span: m => [m(t)] }); ln.els.push(el); };
+    const keyT = of('key'), spaceT = of('space'), entT = of('enter'), clrT = of('clear');
+    if (keyT || spaceT || entT || clrT) RS.queries(EDIT).forEach(q => {
+      const end = isFinite(q.clear) ? q.clear : SCENES[q.scene].end;
+      const box = h('div', 'mq', mcontent, q.text); box.style.top = (top + 2) + 'px'; box.dataset.t = +q.t0.toFixed(3);
+      box.title = `"${q.text}": typed ${fmt(q.times[0])} → ${fmt(q.typed)}${keyT ? ` (${keyT.name}: a tick a key)` : ''}, Enter at ${fmt(q.enter)}${entT ? ` (${entT.name})` : ''}, then on the bar until ${isFinite(q.clear) ? `${fmt(q.clear)}, when a select-all clears it${clrT ? ` (${clrT.name})` : ''}` : 'its scene ends'}\nclick to play from just before it`;
+      mrecs.push({ el: box, span: m => [m(q.enter), m(end)] }); ln.els.push(box);
+      seekOn(box, q.t0 - 0.3);
+      q.times.forEach((tk, i) => {
+        const tr = q.text[i] === ' ' ? spaceT : keyT; if (!tr) return;
+        const k = h('div', 'mkt', mcontent); k.style.top = (top + 3) + 'px'; k.style.setProperty('--c', col(tr)); put1(k, tk);
+      });
+      if (entT) { const k = h('div', 'mke', mcontent); k.innerHTML = window.REEL_UI ? REEL_UI.icon('enter') : '⏎'; k.style.top = (top + 2) + 'px'; k.style.setProperty('--c', col(entT)); put1(k, q.enter); }
+      if (clrT && isFinite(q.clear)) { const k = h('div', 'mks', mcontent); k.innerHTML = window.REEL_UI ? REEL_UI.icon('select') : '[]'; k.style.top = (top + 2) + 'px'; k.style.setProperty('--c', col(clrT)); put1(k, q.clear); }
+    });
+    // what an @ moment, a cut or a work is, for a dot's tooltip
+    const what = (t, on) => {
+      if (on === 'beat') { const M = MOMENTS.find(m => Math.abs(m.own.start + m.at - t) < 1e-3); return M ? `the ${M.kind} ${M.label ? '"' + M.label + '"' : ''} comes on in ${M.S.sc.type}` : 'an @ moment'; }
+      if (on === 'cut') { const S = SCENES.find(s => Math.abs(s.start - t) < 1e-3); return S ? `the cut to ${S.sc.type}` : 'a cut'; }
+      if (on === 'item') { const I = ITEMS.find(r => Math.abs(r.start - t) < 1e-3); return I ? `the work ${I.obj.eyebrow || I.obj.title || ''} comes on` : 'a work comes on'; }
+      return ON[on] || on;
+    };
+    MX.filter(t => ['beat', 'cut', 'item'].includes(t.on)).forEach(t => {
+      let last = -1;
+      A.events.filter(e => e.track === t.name).forEach(e => {
+        if (e.t - last < 0.12) return;                                               // a chime's notes are one sound
+        last = e.t;
+        const d = h('div', 'mpd', mcontent); d.style.top = (top + 17) + 'px'; d.style.setProperty('--c', col(t)); d.dataset.track = t.name; d.dataset.t = +e.t.toFixed(3);
+        d.title = `${t.name} at ${fmt(e.t)}: ${what(e.t, t.on)}\nclick to play from just before it`;
+        put1(d, e.t); seekOn(d, e.t - 0.4);
+      });
+    });
   }
-  // an instrument in a section: outlined where it plays (its level is the ribbon behind it; a hit
-  // that has no ribbon is filled as strong as its level)
-  function cell(t, sc, top, c, hit) {
+  // A part in a section: a stretch of its lane you can click (its notes show through). Lit, it
+  // plays there: click stops it, a drag up or down sets its level (shown on the right when it is
+  // not 1), Alt-click halves it or gives it back; dark, a click plays it there. Shift-click opens
+  // the part in the synth rack. A hit that has no level of its own is filled as strong as its level.
+  function cell(t, sc, top, H, c, hit) {
     const p = sc.play.find(x => x.name === t.name), el = h('div', 'mc' + (p ? ' on' : ''), mcontent);
-    const label = lv => t.name + (lv !== 1 ? ' ' + lv : '');
-    el.textContent = p ? label(p.level) : t.name; el.dataset.track = t.name; el.dataset.ref = sc.ref;
-    el.style.top = (top + 1) + 'px'; el.style.setProperty('--c', c);
+    const label = lv => lv !== 1 ? String(lv) : '';
+    el.textContent = p ? label(p.level) : ''; el.dataset.track = t.name; el.dataset.ref = sc.ref;
+    el.style.top = top + 'px'; el.style.height = H + 'px'; el.style.lineHeight = (H - 2) + 'px'; el.style.setProperty('--c', c);
     if (p && hit) el.style.background = rgba(c, lvA(p.level));
-    el.title = p ? `${t.name} plays in ${sc.type}${p.level !== 1 ? ' at ' + p.level : ''}${hit ? '' : ' (its level is the ribbon behind: it fades across the seams)'}\nclick: stop it here · drag up or down: its level · Alt-click: half or full · Shift-click: open it in the synth rack`
+    el.title = p ? `${t.name} plays in ${sc.type}${p.level !== 1 ? ' at ' + p.level + ' of its level' : ''}\nclick: stop it here · drag up or down: its level · Alt-click: half or full · Shift-click: open it in the synth rack`
       : `${t.name} is silent in ${sc.type}\nclick: play it here · Shift-click: open it in the synth rack`;
     mrecs.push({ el, span: m => [m(sc.start), m(sc.end)] }); lanes.get(t.name).els.push(el);
     el.addEventListener('pointerdown', e => {
@@ -1010,7 +1100,7 @@
         if (!moved && Math.abs(dy) < 4) return;
         moved = true; el.classList.add('tl-lv');
         lv = Math.max(0.05, Math.min(1.5, Math.round((p.level + dy / 100) * 20) / 20));
-        el.textContent = label(lv); if (hit) el.style.background = rgba(c, lvA(lv));
+        el.textContent = String(lv); if (hit) el.style.background = rgba(c, lvA(lv));
         readout.style.top = Math.max(0, top - 24) + 'px';           // over the lane being set
         show1(sc.start, `${t.name} in ${sc.type}: level ${p.level} → ${lv}`);
       };
@@ -1019,21 +1109,21 @@
         el.classList.remove('tl-lv'); readout.hidden = true; readout.style.top = '';
         if (ev.type === 'pointercancel') { redrawMusic(true); return; }
         if (ev.shiftKey) { const R = RK(); if (R && R.focus) R.focus(t.name); return; }
-        if (moved) { if (lv !== p.level) scoreEdit(src => window.ReelMusic.setTrackLevel(src, sc.ref, t.name, lv)); return; }
+        if (moved) { if (lv !== p.level) scoreEdit(src => window.ReelMusic.setTrackLevel(src, sc.ref, t.name, lv)); else el.textContent = label(lv); return; }
         if (p && ev.altKey) scoreEdit(src => window.ReelMusic.setTrackLevel(src, sc.ref, t.name, p.level === 1 ? 0.5 : 1));
         else scoreEdit(src => window.ReelMusic.toggleTrack(src, sc.ref, t.name));
       };
       el.addEventListener('pointermove', mv); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
     });
   }
-  // mute and solo, as the rack's engine holds them: the buttons lit, a silent track's lane dim
+  // mute and solo, as the rack's engine holds them: the buttons lit, a silent lane dim
   function applyMix() {
     const R = RK(); if (!R || !R.mix) return;
-    lanes.forEach((ln, name) => {
-      const m = R.mix(name);
-      ln.m.classList.toggle('tl-on', m.muted); ln.so.classList.toggle('tl-on', m.soloed);
-      ln.m.setAttribute('aria-pressed', String(m.muted)); ln.so.setAttribute('aria-pressed', String(m.soloed));
-      ln.els.forEach(el => el.classList.toggle('tl-mute', m.silent));
+    lanes.forEach(ln => {
+      const ms = ln.names.map(n => R.mix(n)), muted = ms.every(m => m.muted), soloed = ms.every(m => m.soloed), silent = ms.every(m => m.silent);
+      ln.m.classList.toggle('tl-on', muted); ln.so.classList.toggle('tl-on', soloed);
+      ln.m.setAttribute('aria-pressed', String(muted)); ln.so.setAttribute('aria-pressed', String(soloed));
+      ln.els.forEach(el => el.classList.toggle('tl-mute', silent));
     });
   }
   // A change of the score goes through the rack, which plays it at once, keeps it (the file, the

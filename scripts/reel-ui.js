@@ -5,6 +5,7 @@
 //   REEL_UI.button(opts)          <button> with an icon, a label and a key: the anatomy every bar
 //                                 collapses (see below). opts: { icon, label, key, title, cls, onClick }
 //   REEL_UI.fit(bar, steps, done) the collapse rule
+//   REEL_UI.rollPaths(evs, o)     a part's notes as SVG paths (the timeline's lanes, the rack's arrangement)
 //
 // The collapse rule. A bar is laid out at full size; while anything in it overflows (the bar, or
 // a button's own label), it takes the next class in `steps`, each on top of the last, cheapest
@@ -85,6 +86,10 @@
     build: S('<path d="M2 12.5L11 4.5"/><path d="M7.4 4.2H11.4v4"/><path d="M13.8 2.4v11.2" stroke-width="1.2"/>'),
     drop: S('<path d="M2 5h6.5"/><path d="M8.5 5v6.5"/><path d="M6 9l2.5 2.5L11 9"/><path d="M13.8 2.4v11.2" stroke-width="1.2"/>'),
     seamCut: S('<path d="M8 2v12" stroke-width="2"/>'),
+    // the sound effects' cues: a question typed, its Enter, the select-all that clears it
+    keys: S('<rect x="1.8" y="4.2" width="12.4" height="7.6" rx="1.4"/><path d="M4.4 6.8h.01M7 6.8h.01M9.6 6.8h.01M12 6.8h.01M5.4 9.4h5.2"/>'),
+    enter: S('<path d="M12.8 3.6v4.2a1.6 1.6 0 0 1-1.6 1.6H3.6"/><path d="M6 6.8L3.4 9.4 6 12"/>'),
+    select: S('<path d="M5 3H3.2v10H5M11 3h1.8v10H11"/><path d="M5.6 8h4.8" stroke-width="2.4" style="opacity:0.55"/>'),
   };
   const icon = name => ICONS[name] || '';
 
@@ -139,5 +144,37 @@ button > .rl { white-space: nowrap; }
 button:has(> .ri) { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
 `;
   (document.head || document.documentElement).appendChild(css);
-  window.REEL_UI = { icon, button, relabel, fit, ICONS };
+  // A part's notes as SVG path data, drawn the same way in the timeline's lanes and the synth
+  // rack's arrangement: a hit is a tick, taller when louder; a note sits at its pitch, as long as it
+  // sounds; a sweep up is a wedge. In four strengths (k 0-3: velocity × level where each starts),
+  // and apart, what a seam plays itself (a fill: `own`).
+  //   evs   the part's events (ReelMusic.arrange)
+  //   o     { H: height, px: t → x, pxs: px a second, level: t → 0..1 (optional), lo, hi: its
+  //           pitches (optional: read from evs) }
+  function rollPaths(evs, o) {
+    const H = o.H, f = n => n.toFixed(1), d = ['', '', '', ''], own = [];
+    let lo = o.lo, hi = o.hi;
+    if (lo == null) { lo = Infinity; hi = -Infinity; evs.forEach(e => { if (e.midi != null) { lo = Math.min(lo, e.midi); hi = Math.max(hi, e.midi); } }); }
+    const pitched = lo !== Infinity, span = pitched ? Math.max(1, hi - lo) : 1;
+    const nh = pitched ? Math.max(1.5, Math.min(4, (H - 4) / (span + 1))) : 0, tw = Math.max(1.2, Math.min(3, o.pxs * 0.05));
+    for (const e of evs) {
+      const x0 = o.px(e.t);
+      let p;
+      if (e.rise) p = `M${f(x0)} ${H - 1}L${f(o.px(e.t + e.dur))} 2V${H - 1}Z`;
+      else if (!pitched || e.midi == null) {
+        const hh = Math.max(2, (H - 3) * (0.35 + 0.65 * Math.min(1, e.vel)));
+        p = `M${f(x0)} ${f(H - 1)}h${f(tw)}v${f(-hh)}h${f(-tw)}Z`;
+      } else {
+        const y = hi === lo ? (H - nh) / 2 : 2 + (hi - e.midi) / span * (H - 4 - nh), w = e.dur * o.pxs;
+        const len = Math.max(1.2, w > 3 ? w - 1 : w);                                   // a hair between repeated notes
+        p = `M${f(x0)} ${f(y)}h${f(len)}v${f(nh)}h${f(-len)}Z`;
+      }
+      if (e.bypass) { own.push(p); continue; }
+      const lv = o.level ? Math.min(1, o.level(e.t + 1e-6)) : 1, s = (pitched ? Math.min(1, e.vel) : 1) * lv;
+      d[Math.max(0, Math.min(3, Math.ceil(s * 4) - 1))] += p;
+    }
+    return { d, own: own.join(''), pitched, lo, hi };
+  }
+
+  window.REEL_UI = { icon, button, relabel, fit, rollPaths, ICONS };
 })();

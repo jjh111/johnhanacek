@@ -35,7 +35,7 @@ const edit = RS.parse(SCRIPT).edit;
 const scenes = RS.spans(edit).map((c, i) => ({ type: edit.scenes[i].type, start: c.start, end: c.end }));
 const P = RM.parse(SCORE), mom = RM.moments(edit, RS), A = RM.arrange(P.score, scenes, mom);
 const CUT = scenes[scenes.length - 1].end;                          // the cut's length, as the script says (60 s, then 63.5)
-ok(P.score.tempo === 120 && P.score.tracks.length >= 10 && A.sections.length === scenes.length, `the score parses: ${P.score.tracks.length} tracks, a section for each of the ${scenes.length} scenes`);
+ok(P.score.tempo === 120 && P.score.tracks.length === 10 && A.sections.length === scenes.length, `the score parses: ${P.score.tracks.length} tracks, a section for each of the ${scenes.length} scenes`);
 ok(A.events.every(e => e.t >= 0 && e.t < CUT && e.dur > 0 && e.vel > 0), `${A.events.length} events, every one inside the ${CUT} s cut`);
 const band = A.events.filter(e => !P.score.tracks.find(t => t.name === e.track).on);
 // the music is one piece (2026-10-01): one clock, sections on the bars near their cuts, seams
@@ -67,25 +67,38 @@ ok(keys.length === typed.length && keys.every((t, i) => Math.abs(t - typed[i]) <
   const now = RS.queries(edit);
   ok(now.length === old.length && now.every((q, k) => q.enter === old[k].enter && q.times.every((t, i) => t === old[k].times[i])), 'ReelScript.queries gives the rig\'s typing times to the bit');
 }
-ok(at('results').harmony.map(h => h.chord.name + '@' + h.t).join() === 'Am@22,F@24,C@26,G@28,Am@30,F@32', 'chords change on the section\'s start and then on every bar (the results: Am F C G Am F from 22 s)');
-ok(at('quotes').harmony.map(h => h.chord.name + '@' + h.t).join() === 'Am@45,F@46,F@48,C@50,E@52', 'a chord written F:2 holds two bars; a half bar from a cut on the beat is its own (the quotes: Am at 45, F 46-50, C, E)');
+// everything goes round on the reel's own clock (2026-10-02): the chords, the steps, the tune
+const round = P.score.chords.map(c => c.name), chordOn = t => round[Math.floor(t / 2 + 1e-9) % round.length];
+ok(A.sections.filter(s => !s.own).every(s => s.harmony.every(h => h.chord.name === chordOn(h.t + 1e-6))),
+  `the chords go round on the reel's own bars, one a bar, across every cut (${round.join(' ')}): no section starts them again`);
+ok(at('results').harmony.map(h => h.chord.name + '@' + h.t).join() === 'Am@22,F@24,C@26,G@28,Am@30,F@32', 'the results, from 22 s: Am F C G Am F, the loop where it stands');
+ok(at('quotes').harmony.map(h => h.chord.name + '@' + h.t).join() === 'G@45,Am@46,F@48,C@50,G@52', 'a section starting mid-bar takes the bar\'s chord (the quotes: G at 45, then Am at 46)');
+ok(at('end').own && at('end').harmony.every(h => h.chord.name === 'Am') && at('end').harmony[0].t === 59, 'a section with its own chords plays them from its start (the end holds Am from 59 s)');
 {
-  const B = 22, fill = band.filter(e => e.bypass && e.track === 'snare' && e.t >= B - 2 - 1e-9 && e.t < B);
-  const rise = band.find(e => e.bypass && e.rise && Math.abs(e.t - (B - 2)) < 1e-9), crash = band.find(e => e.track === 'crash' && Math.abs(e.t - B) < 1e-9);
+  // a part that plays on across a seam is one part: the chords held over the art's seam at 17 s
+  const held = band.filter(e => e.track === 'chords' && e.t <= 16 + 1e-9 && e.t + e.dur >= 18 - 1e-9);
+  ok(held.length === 3 && !band.some(e => e.track === 'chords' && Math.abs(e.t - 17) < 1e-9), 'the chords hold over a seam inside a bar (F from 16 to 18 s, across the cut at 17): never struck again');
+  // the tune goes round from 0 with the chords: the results' first note is the loop's fourth bar's
+  const lead = P.score.tracks.find(t => t.name === 'lead'), n0 = band.find(e => e.track === 'lead' && Math.abs(e.t - 22) < 1e-9);
+  ok(n0 && n0.midi === RM.noteMidi(lead.notes[(22 / STEP) % lead.notes.length]), `the tune goes round from the reel's 0: at 22 s it plays ${lead.notes[(22 / STEP) % lead.notes.length]}, its fourth bar's first note`);
+  const tune = band.filter(e => e.track === 'lead' && e.t >= 22 - 1e-9 && e.t < 24 - 1e-9).map(e => +(e.dur / STEP).toFixed(3)).join();
+  ok(tune === '4,2,2,4,4', `a note lasts until the next one, len steps at most (the bar from 22 s: ${tune} steps)`);
+}
+{
+  const B = 22, fill = band.filter(e => e.bypass && e.track === 'clap' && e.t >= B - 2 - 1e-9 && e.t < B);
   const eighths = fill.filter(e => e.t < B - 1), sixteenths = fill.filter(e => e.t >= B - 1);
-  ok(eighths.length === 4 && sixteenths.length === 8 && rise && rise.dur === 2 && crash && fill.every((e, i) => !i || e.vel > fill[i - 1].vel),
-    `a build into the results: a fill of ${eighths.length} eighths then ${sixteenths.length} sixteenths, louder all the way, a rise over the bar before it, a crash on it`);
-  ok(!band.some(e => !e.bypass && e.track === 'snare' && e.t >= B - 2 - 1e-9 && e.t < B), 'the fill stands in for the snare\'s own pattern there');
-  const boom = band.find(e => e.track === 'boom' && Math.abs(e.t - B) < 1e-9);
-  ok(!!boom && !band.some(e => e.track === 'boom' && Math.abs(e.t - 21.5) < 1e-9), 'after a build the boom lands with the crash, on the arrival (22 s), not on the picture cut (21.5 s)');
-  const D = 59, dropped = band.filter(e => ['kick', 'hat', 'snare', 'shaker', 'bass'].includes(e.track) && !e.bypass && e.t >= D - 0.5 - 1e-9 && e.t < D);
-  ok(!dropped.length && levelAt(A.levels.kick, D - 0.25) === 0 && levelAt(A.levels.pad, D - 0.25) > 0 && band.some(e => e.track === 'crash' && Math.abs(e.t - D) < 1e-9),
-    'a drop into the end: no drum and no bass in the beat before it (the pad holds), then a crash');
+  ok(eighths.length === 4 && sixteenths.length === 8 && fill.every((e, i) => !i || e.vel > fill[i - 1].vel),
+    `a build into the results: a fill on the clap of ${eighths.length} eighths then ${sixteenths.length} sixteenths, louder all the way`);
+  ok(!band.some(e => !e.bypass && e.track === 'clap' && e.t >= B - 2 - 1e-9 && e.t < B), 'the fill stands in for the clap\'s own pattern there');
+  const D = 59, dropped = band.filter(e => ['kick', 'hat', 'clap', 'bass'].includes(e.track) && !e.bypass && e.t >= D - 0.5 - 1e-9 && e.t < D);
+  ok(!dropped.length && levelAt(A.levels.kick, D - 0.25) === 0 && levelAt(A.levels.chords, D - 0.25) > 0, 'a drop into the end: no drum and no bass in the beat before it (the chords hold)');
   const hat = A.levels.hat, F = 12;
-  ok(Math.abs(levelAt(hat, F - 0.5) - 0.8) < 1e-9 && Math.abs(levelAt(hat, F) - 0.7) < 1e-9 && Math.abs(levelAt(hat, F + 0.5) - 0.6) < 1e-9,
-    'a fade into the art: the hat moves from 0.8 to 0.6 across the seam, a beat either side of it');
+  ok(Math.abs(levelAt(hat, F - 0.5) - 1) < 1e-9 && Math.abs(levelAt(hat, F) - 0.85) < 1e-9 && Math.abs(levelAt(hat, F + 0.5) - 0.7) < 1e-9,
+    'a fade into the art: the hat moves from 1 to 0.7 across the seam, a beat either side of it');
   const lead = band.filter(e => e.track === 'lead' && e.t >= 34 - 1e-9 && e.t < 34.5);
   ok(lead.length > 0 && levelAt(A.levels.lead, 34.25) > 0 && levelAt(A.levels.lead, 34.25) < 1, 'the lead rings on past the chorus while it fades (its notes after 34 s, its level going down)');
+  ok(P.score.tracks.filter(t => !t.on).map(t => t.name).join() === 'kick,clap,hat,bass,chords,lead' && P.score.tracks.filter(t => t.on).length === 4,
+    'six parts (kick, clap, hat, bass, chords, lead) and four sound effects');
 }
 
 // ── one line at a time ───────────────────────────────────────────────────
@@ -93,24 +106,24 @@ ok(at('quotes').harmony.map(h => h.chord.name + '@' + h.t).join() === 'Am@45,F@4
   const out = RM.setArg(SCORE, 'FX', 'reverb', 'return', 0, 0.65);
   const d = diff(SCORE, out);
   ok(d.length === 1 && /^ {2}return {3}0\.65$/.test(d[0][2]) && RM.parse(out).score.fx.reverb.return === 0.65, 'setArg: one number on one line (FX reverb return 0.65)');
-  const v = RM.setArg(SCORE, 'SYNTH', 'pad', 'voice', 1, 12, 1);
-  ok(diff(SCORE, v).length === 1 && RM.parse(v).score.tracks.find(t => t.name === 'pad').voices[1].cents === 12, 'setArg: the second voice of the pad, by index');
+  const v = RM.setArg(SCORE, 'SYNTH', 'chords', 'voice', 1, 12, 1);
+  ok(diff(SCORE, v).length === 1 && RM.parse(v).score.tracks.find(t => t.name === 'chords').voices[1].cents === 12, 'setArg: the second voice of the chords, by index');
   const add = RM.setArg(SCORE, 'DRUM', 'kick', 'send', 0, 0.2);
   ok(lines(add).length === lines(SCORE).length + 1 && RM.parse(add).score.tracks.find(t => t.name === 'kick').send[0] === 0.2, 'setArg on a missing line adds it to its block, from the defaults');
   const off = RM.toggleTrack(SCORE, 'art', 'hat');
   const on = RM.toggleTrack(off, 'art', 'hat');
-  ok(!RM.parse(off).score.sections.find(s => s.ref === 'art').play.some(p => p.name === 'hat') && on === SCORE.replace('pad glass bass:0.7 hat:0.6', 'pad glass bass:0.7 hat'), 'toggleTrack: off, then on again at full level');
+  ok(!RM.parse(off).score.sections.find(s => s.ref === 'art').play.some(p => p.name === 'hat') && on === SCORE.replace('hat:0.7 bass:0.7 chords\n', 'bass:0.7 chords hat\n'), 'toggleTrack: off, then on again at full level, at the end of the line');
   const st = RM.setLine(SCORE, 'DRUM', 'kick', 'steps', 'X.x.X.x.X.x.X.x.');
   ok(diff(SCORE, st).length === 1 && RM.parse(st).score.tracks.find(t => t.name === 'kick').steps === 'X.x.X.x.X.x.X.x.', 'setLine: a new steps line in place');
-  ok(RM.setLine(RM.setLine(SCORE, 'SYNTH', 'pad', 'lfo', null), 'SYNTH', 'pad', 'lfo', 'filter 0.18 380') !== SCORE && RM.parse(RM.setLine(SCORE, 'SYNTH', 'pad', 'lfo', null)).score.tracks.find(t => t.name === 'pad').lfo === null, 'setLine null removes a line (the pad\'s lfo)');
+  ok(RM.setLine(RM.setLine(SCORE, 'SYNTH', 'chords', 'lfo', null), 'SYNTH', 'chords', 'lfo', 'filter 0.18 380') !== SCORE && RM.parse(RM.setLine(SCORE, 'SYNTH', 'chords', 'lfo', null)).score.tracks.find(t => t.name === 'chords').lfo === null, 'setLine null removes a line (the chords\' lfo)');
 }
 throws(() => RM.parse(SCORE.replace('voice    saw -9 0.45', 'voice    sawz -9 0.45')), /line \d+: a voice's wave is/, 'a bad wave is named by line');
-throws(() => RM.parse(SCORE.replace('play     pad:0.7 bell glass:0.4', 'play     pad:0.7 bell glass:0.4 tuba')), /no track called that/, 'a section playing a track that is not there');
+throws(() => RM.parse(SCORE.replace('play     chords:0.8', 'play     chords:0.8 tuba')), /no track called that/, 'a section playing a track that is not there');
 throws(() => RM.parse(SCORE.replace('into     swell', 'into     wobble')), /into wants how the music arrives/, 'into wants a way the music arrives');
 throws(() => RM.parse(SCORE.replace('into     swell', 'into     swell 40')), /its beats are a number, 0-16/, 'into: its beats in range');
 throws(() => RM.parse(SCORE.replace('into     swell', 'into     swell\n  start    later')), /start wants auto, bar, cut/, 'start wants auto, bar or cut');
 throws(() => RM.parse(SCORE.replace('steps    X...x...X...x...', 'steps    X...y...X...x...')), /steps are X, x, o and \./, 'steps with a stray letter');
-throws(() => RM.setArg(SCORE, 'SYNTH', 'pad', 'env', 0, 'soon'), /not a number/, 'setArg refuses a change that breaks the score');
+throws(() => RM.setArg(SCORE, 'SYNTH', 'chords', 'env', 0, 'soon'), /not a number/, 'setArg refuses a change that breaks the score');
 throws(() => RM.arrange(RM.parse(SCORE.replace('SECTION end', 'SECTION 12')).score, scenes, mom), /the script has no scene 12/, 'a section for a scene the script does not have');
 
 // ── the rig, the dev server, the rack, the renderer ─────────────────────
@@ -201,7 +214,7 @@ try {
   // the arrangement: the art stops playing the hat
   const cell = page.locator('#reel-rack .rk-arr .rk-lane', { hasText: 'hat' }).locator('.rk-cell').nth(3);
   await cell.scrollIntoViewIfNeeded(); await cell.click();
-  t = await waitFile(x => /SECTION art\n {2}play {5}pad glass bass:0\.7\n/.test(x));
+  t = await waitFile(x => /SECTION art\n {2}play {5}bass:0\.7 chords\n/.test(x));
   if (!t) console.log('   art is now: ' + (/SECTION art\n(.*)\n/.exec(readFileSync(join(ROOT, T_SCORE), 'utf8')) || [])[1]);
   ok(!!t, 'clicking a lit cell of the arrangement takes the track out of that section');
   // undo, three times: back to the score we started from
