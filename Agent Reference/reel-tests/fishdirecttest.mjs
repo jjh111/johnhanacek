@@ -10,8 +10,9 @@
 //   5. `feed 0.5 0.8`: food lands at its time
 //   6. `big dart`: the big fish bursts forward; `big turn`: it turns round
 //   7. `all look off` + `big idle wander`: the engine has the big fish again (no host steer)
-//   7b. those lines hold across the cut into the feature scene (still the engine's), until the
-//      feature's `big auto` gives the big fish back to the reel's own choreography
+//   7b. a line stops at its scene's end (the school's spot is let go at the cut); the wander,
+//      which carries (`carry`), holds on into the feature scene, until the feature's `big auto`
+//      gives the big fish back to the reel's own choreography
 //   8. without fish lines the same page swims as before (the director is transparent): checked
 //      by fishtest.mjs and, against the committed rig, by hand (0 px over the whole cut)
 //   9. no page errors
@@ -37,7 +38,7 @@ const P0 = RS.parse(src);
 const resIdx = P0.edit.scenes.findIndex(s => s.type === 'results');
 const res = P0.marks.find(m => m.kind === 'scene' && m.obj === P0.edit.scenes[resIdx]);
 const LINES = ['@0.5 big to 0.8 0.85', '@0.5 school to 0.2 0.78', '@4 school scatter', '@5 big idle circle',
-  '@9.5 big dart', '@10.5 big turn', '@12 all look off', '@12 big idle wander', '@12.5 feed 0.5 0.8'];
+  '@9.5 big dart', '@10.5 big turn', '@12 all look off', '@12 big idle wander carry', '@12.5 feed 0.5 0.8'];
 for (const l of LINES.slice().reverse()) src = RS.addLine(src, res.ln, 'fish', l);
 { const Q = RS.parse(src), f = Q.edit.scenes.findIndex(s => s.type === 'feature');
   src = RS.addLine(src, Q.marks.find(m => m.kind === 'scene' && m.obj === Q.edit.scenes[f]).ln, 'fish', '@2 big auto'); }
@@ -119,10 +120,13 @@ async function run(format) {
   const w1 = await walk(T(12.4));
   const steer = await page.evaluate(() => { const f = window.REEL.debug.tank.state.fish.reduce((a, f) => (!a || f.bodyWidth > a.bodyWidth ? f : a), null); return window.REEL.debug.steer(f); });
   ok(steer === null, `${format}: "all look off", "big idle wander": the engine has the big fish again (steer ${JSON.stringify(steer)})`);
-  // 7b. across the cut: still the engine's in the feature scene, until its `big auto`
+  // 7b. at the cut: the scene's own lines let go, the carried wander holds, until `big auto`
   const steerAt = async t => { await walk(t); return page.evaluate(() => { const f = window.REEL.debug.tank.state.fish.reduce((a, f) => (!a || f.bodyWidth > a.bodyWidth ? f : a), null); return window.REEL.debug.steer(f); }); };
+  const told = await page.evaluate(t => ({ school: window.REEL.debug.dirAt('school', t), big: window.REEL.debug.dirAt('big', t) }), +(F0 + 1).toFixed(4));
+  ok(told.school.to === null && told.school.look === 'auto' && told.big.look === 'auto' && told.big.idle === 'wander',
+    `${format}: at the cut a scene's lines let go (the school's spot, the look off) and the carried wander holds (${JSON.stringify({ school: told.school.to, look: told.big.look, idle: told.big.idle })})`);
   const across = await steerAt(+(F0 + 1.5).toFixed(4));
-  ok(across === null, `${format}: the results scene's lines hold across the cut: 1.5 s into the feature, the engine still has the big fish (steer ${JSON.stringify(across)})`);
+  ok(across === null, `${format}: carried, the wander holds across the cut: 1.5 s into the feature, the engine still has the big fish (steer ${JSON.stringify(across)})`);
   const back = await steerAt(+(F0 + 2.6).toFixed(4));
   ok(back && Number.isFinite(back.heading), `${format}: "big auto" in the feature gives it back to the reel's own: steered again 0.6 s later`);
   ok(errors.length === 0, `${format}: no page errors${errors.length ? ': ' + errors.slice(0, 2).join(' | ') : ''}`);

@@ -862,6 +862,9 @@ decay, more reverb on the arp. They are in the new arrangement.)
 
 ## Fish lines that outlast their scene (2026-10-02)
 
+(Later the same day the default went back: a line belongs to its scene, and `carry` runs it on
+past the cut. See "Transitions, interchangeable scenes and the shot list" below.)
+
 John: "it's now tricky to set up the fish behaviors when they are locked to the section i have to
 keep re-creating them." He had: the big fish sent to the lower left in the command scene, then
 the same spot written again at the top of results, because each scene's end let it go.
@@ -904,6 +907,67 @@ the same spot written again at the top of results, because each scene's end let 
   feature's `big auto` steers it again), fishpaneltest (the sweep still lit and listed in the
   next scene, the timeline's end handle writes `big auto`, Stop here writes `idle auto`, a mark
   dragged back across a cut lands in the scene before).
+
+## Transitions, interchangeable scenes and the shot list (2026-10-02)
+
+John: "I also need some controls for the ease in aspects like out, the transitions take a long
+time give me some flexibility. i realized that the fish cues anchored to the sections would make
+them more modular, but overall i think we need to make these sections interchangeable and present
+a shotlist that can be re-organized."
+
+- **Transitions as cues.** Beside `in` (seconds from the question's Enter to the arrival), `out`
+  (seconds before the cut that the content starts to leave) and `typing`, a scene now takes
+  `arrive` (how long its arrival takes, against the rig's own 0.6 s), `leave` (how long its
+  leaving takes, against 0.3 s) and `ease` (`own`, `expo`, `cubic`, `sine`, `back`, `linear`: `own`
+  keeps each motion's own curve; the others put every arrival on the family's out-curve and every
+  leaving on its in-curve). `arrive 0.3` brings everything in twice as fast: each motion's
+  duration, each stagger in a cascade, each step after the Enter, the window's dive, the panes'
+  pushes and the crossfades between pictures. A `cue` line above the first SCENE sets a cue for
+  every scene (`setReelCue`); a scene's own wins (`cue(sc, name, edit)`). The end card has no
+  `out` or `leave`: it stays to its cut.
+- **One motion per scene in the rig.** `motionOf(sc)` reads the three cues into `{ a(x), l(x),
+  ei(e), eo(e), eio(e) }`; `MO` is the motion of the scene being painted, and `lines`, `pop`,
+  `fade`, `drawRule`, the stats and the columns read it; every builder scales its own steps with
+  its scene's. With no cues, `a` and `l` multiply by 1 and every curve is the call's own, so no
+  number changes: every element's inline style, class and SVG attribute, and every fish's place,
+  at 63 moments of the cut (cuts, middles, transitions), is what the committed rig drew, in wide,
+  square and vertical. (The renderer's stills differ by a pixel or two in places between two runs of
+  the same rig, at the caret and in video frames, and a glyph's glow can rasterise a hair apart
+  across rigs with identical DOM, which is why the check reads the DOM and not the pixels.)
+- **Interchangeable scenes.** What tied the scenes to their order was the glass: the hero oval at
+  the title, the bar after it, the end card's oval at the end, the fish's chip and the opening's
+  camera, all found by type and assumed first and last. Now each scene wears one thing (the
+  opening nothing, the title the oval, the end card its oval, every scene that asks the bar), and
+  `glass()` builds the morphs from the scenes as they stand: an oval collapses into the bar in its
+  own scene's last half second, an oval opens out of the bar (or out of a line) at its scene's
+  start, the bar grows out of a line after an opening, a scene that wears nothing shrinks the glass
+  away. The bar's and the glass's fades are lists of keyed fades; the chip shows from the first
+  opening until the bar or the end card; the camera closes in at each opening. A question left
+  behind by a scene that wears no bar does not come back with the bar. In the cut's own order these
+  are the three morphs it always had, to the frame. `moveScene`, `duplicateScene` and `removeScene`
+  move whole blocks (a scene's lines, beats, cues and fish lines, and any notes right above it).
+- **Fish lines belong to their scene again.** A holding line stops at its scene's end (`by: 'cut'`)
+  unless it ends in `carry` (`by: 'reel'` or `'line'`), so a scene keeps its own fish wherever it
+  is put. The two `big auto` lines John's script got for the morning's rule are gone; the film is
+  the same either way. In the Fish panel a line's editor has **Carry on**; in the timeline the gold's
+  end at a cut is a handle: on past the cut carries the lines that stopped there to a `<who> auto`
+  where it lands, back writes the auto. "Reel's own" moved to the A key (0 is the timeline's fit).
+- **The shot list** (`scripts/reel-shots.js`, S, a HUD button): a row per shot with its first
+  picture (the picker's thumbnails) or its words, what it says, its length and its transitions as
+  chips (gold its own, cyan every shot's, plain the rig's), the one under the playhead marked. Click
+  a row to go there and open it: its length; a little table of when it arrives (after the Enter)
+  and how long that takes, when it leaves (before the cut) and how long that takes; its curve; its
+  typing; Play here, Earlier, Later, Duplicate, Delete. Drag a row to move the shot (a gold line
+  shows where it lands; Alt+↑/↓ on a row too). "Every shot" sets the reel-wide cues. One save each,
+  on the timeline's Undo. It shares the preview's left side with the Fish panel. The music stays on
+  its bars: moving shots does not move the score.
+- **Tests:** scripttest (the cues, every scene's, the scene moves, carry), ordertest (new: the cut
+  played in five other orders, each scene wearing its own in its middle with no page error, and
+  arrive, ease and leave measured on the answer's first line), shotstest (new: open and the shared
+  side, rows, a click, a drag and its Undo, Alt+↓ and Later, a shot's arrive, ease and length, every
+  shot's arrive, Duplicate, Delete, an 820 px window, no reload), fishdirecttest (a scene's lines let
+  go at the cut, a carried wander holds into the next), fishpaneltest (the gold's handle at a cut
+  carries, Carry on toggles), and the DOM check above.
 
 ## Later
 

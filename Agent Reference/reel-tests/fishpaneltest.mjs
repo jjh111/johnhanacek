@@ -18,10 +18,11 @@
 //   8. School + the S key writes `school scatter`; Dart is off for the school alone
 //   9. a take: playing, D then T at two moments; pausing keeps both lines in one save
 //  10. the editor's Delete takes a line out
-//  10b. a line holds across the cuts: in the next scene its button is still lit and the panel
-//      lists it as still holding from earlier; the timeline's gold runs to the reel's end, and
-//      dragging that end back writes `big auto` where it lands; Stop here ends the selected line
-//      at the playhead (`idle auto`); a mark dragged across a cut moves its line into that scene
+//  10b. a scene keeps its own fish: in the next scene the sweep is not lit; the timeline's gold
+//      stops at the cut, and dragging its end on past the cut carries the lines that stopped there
+//      (`carry`) to a `big auto` where it lands, after which the sweep is lit there and listed as
+//      still holding; Stop here ends the selected line at the playhead (`idle auto`); Carry on
+//      pressed again keeps it in its scene; a mark dragged across a cut moves its line there
 //  11. in an 820 px window the panel lies over the preview (no room taken) and nothing overflows
 //  12. no edit reloaded the page, and none took a fish out or put one back (every save played in place)
 //  13. no page errors
@@ -208,42 +209,54 @@ try {
   await saving('delete', () => page.locator('#reel-fish [data-ed="delete"]').click());
   check(fishLines().length === n0 - 1 && !fishLines().includes(gone), 'the editor\'s Delete takes the line out', JSON.stringify(fishLines()));
 
-  // 10b. holding across the cuts
+  // 10b. a scene keeps its own fish; a line that carries runs on past the cut
   const SCN = await page.evaluate(() => REEL_LIVE.scenes.map(s => ({ i: s.i, type: s.type, start: s.start, end: s.end })));
   const feat = SCN.find(s => s.type === 'feature'), resS = SCN.find(s => s.type === 'results');
   const kindOf = text => { let k = null; for (const l of fs.readFileSync(TMP, 'utf8').split('\n')) { const m = /^\s*SCENE\s+(\w+)/.exec(l); if (m) k = m[1]; if (l.trim().replace(/^fish\s+/, '') === text) return k; } return null; };
-  const sweepLn = lnOf('@1.35 big idle sweep');
+  const carriedNow = () => page.evaluate(() => [...document.querySelectorAll('#reel-fish .fp-line.fp-carried')].map(r => +r.dataset.ln));
   await page.evaluate(t => REEL_LIVE.seek(t), feat.start + 1.1);
   await page.waitForTimeout(400);
-  const carriedRows = await page.evaluate(() => [...document.querySelectorAll('#reel-fish .fp-line.fp-carried')].map(r => +r.dataset.ln));
-  const litF = await lit();
-  check(carriedRows.includes(sweepLn) && litF.includes('sweep'), 'a line holds across the cut: in the feature scene the results scene\'s sweep is still lit, listed as still holding from earlier', JSON.stringify({ carriedRows, litF }));
-  // the timeline: the gold runs to the reel's end, and its end drags back
+  const scoped = { carried: await carriedNow(), lit: await lit() };
+  check(!scoped.carried.includes(lnOf('@1.35 big idle sweep')) && !scoped.lit.includes('sweep'), 'a scene keeps its own fish: in the feature, the results scene\'s sweep is not lit or carried', JSON.stringify(scoped));
+  // the timeline: the gold stops at the cut, and its end there carries it on when dragged past
   await page.keyboard.press('e');
   await page.waitForTimeout(400);
-  const fe = page.locator('#reel-tl .tl-fe[data-who="big"]');
-  check(await fe.count() === 1, 'the big fish\'s lane: what the lines decide runs to the reel\'s end, and that end is a handle');
   const pxs = await page.evaluate(() => document.querySelector('#reel-tl .tl-lane').getBoundingClientRect().width / REEL_LIVE.duration);
-  const dur = await page.evaluate(() => REEL_LIVE.duration);
+  const cutX = await page.evaluate(t => { const r = document.querySelector('#reel-tl .tl-lane').getBoundingClientRect(); return r.left + t * r.width / REEL_LIVE.duration; }, resS.end);
+  const handles = await page.$$eval('#reel-tl .tl-fe[data-who="big"][data-end="cut"]', els => els.map(e => { const b = e.getBoundingClientRect(); return b.x + b.width; }));
+  const hi = handles.findIndex(x => Math.abs(x - cutX) < 4);
+  check(hi >= 0, `the big fish's lane: the gold stops at the results scene's cut, and its end there is a handle (${handles.length} at cuts)`);
   const dragX = async (loc, dt, what) => {
     const b = await loc.boundingBox(), x0 = b.x + b.width / 2, y0 = b.y + b.height / 2;
     await saving(what, async () => { await page.mouse.move(x0, y0); await page.mouse.down(); for (let k = 1; k <= 10; k++) await page.mouse.move(x0 + dt * pxs * k / 10, y0); await page.mouse.up(); });
   };
-  await dragX(fe, feat.start + 1 - dur, 'end handle');
-  check(fishLines().includes('@1 big auto') && kindOf('@1 big auto') === 'feature', 'dragging the end back writes "@1 big auto" where it lands, in the feature scene', JSON.stringify(fishLines()));
+  await dragX(page.locator('#reel-tl .tl-fe[data-who="big"][data-end="cut"]').nth(Math.max(0, hi)), (feat.start + 1) - resS.end, 'carry handle');
+  let fl2 = fishLines();
+  check(fl2.includes('@1.35 big idle sweep carry') && fl2.includes('@1 big auto') && kindOf('@1 big auto') === 'feature',
+    'dragged on past the cut: the lines that stopped there carry ("@1.35 big idle sweep carry"), to "@1 big auto" in the feature', JSON.stringify(fl2));
+  await page.evaluate(t => REEL_LIVE.seek(t), feat.start + 0.5);
+  await page.waitForTimeout(400);
+  const on = { carried: await carriedNow(), lit: await lit() };
+  check(on.carried.includes(lnOf('@1.35 big idle sweep carry')) && on.lit.includes('sweep'), 'carried, the sweep is lit in the feature and listed as still holding from earlier', JSON.stringify(on));
   await page.evaluate(t => REEL_LIVE.seek(t), feat.start + 1.5);
   await page.waitForTimeout(400);
-  check((await lit()).includes('reel') && !(await lit()).includes('sweep'), 'after it the big fish is the reel\'s own again: Reel\'s own lit, the sweep not', JSON.stringify(await lit()));
+  check((await lit()).includes('reel') && !(await lit()).includes('sweep'), 'after the auto the big fish is the reel\'s own again: Reel\'s own lit, the sweep not', JSON.stringify(await lit()));
   // Stop here, in the line's own scene
   await page.evaluate(t => REEL_LIVE.seek(t), resS.start + 6.02);
   await page.waitForTimeout(300);
-  await page.evaluate(ln => REEL_FISH.select(ln), sweepLn);
+  await page.evaluate(ln => REEL_FISH.select(ln), lnOf('@1.35 big idle sweep carry'));
   await page.waitForTimeout(300);
   const holdsTxt = await page.evaluate(() => { const e = document.querySelector('#reel-fish [data-ed="till"]'); return e && e.textContent; });
   const stopOn = await page.evaluate(() => { const b = document.querySelector('#reel-fish [data-ed="stop"]'); return !!b && !b.disabled; });
-  check(/to \d:\d/.test(holdsTxt || '') && stopOn, `the line's editor says how long it holds ("${holdsTxt}") and offers Stop here past its start`);
+  const carryOn = await page.evaluate(() => { const b = document.querySelector('#reel-fish [data-ed="carry"]'); return b && b.getAttribute('aria-pressed'); });
+  check(/to \d:\d/.test(holdsTxt || '') && stopOn && carryOn === 'true', `the line's editor says how long it holds ("${holdsTxt}"), its Carry on is pressed, and Stop here is offered past its start`);
   await saving('stop here', () => page.locator('#reel-fish [data-ed="stop"]').click());
   check(fishLines().includes('@6 big idle auto') && kindOf('@6 big idle auto') === 'results', 'Stop here ends it at the playhead: "@6 big idle auto" in the results scene', JSON.stringify(fishLines()));
+  // Carry on, pressed again, keeps it in its scene
+  await page.evaluate(ln => REEL_FISH.select(ln), lnOf('@1.35 big idle sweep carry'));
+  await page.waitForTimeout(300);
+  await saving('carry off', () => page.locator('#reel-fish [data-ed="carry"]').click());
+  check(fishLines().includes('@1.35 big idle sweep') && !fishLines().includes('@1.35 big idle sweep carry'), 'Carry on pressed again: the line stays in its scene ("@1.35 big idle sweep")', JSON.stringify(fishLines()));
   // a mark dragged across a cut moves its line into that scene
   const mk = page.locator(`#reel-tl .tl-fm[data-ln="${lnOf('@1 big auto')}"][data-who="big"]`);
   await dragX(mk, (resS.start + 12) - (feat.start + 1), 'mark across');

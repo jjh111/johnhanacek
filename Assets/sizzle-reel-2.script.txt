@@ -13,10 +13,17 @@
 # PICTURES  In a beat, "video" or "img" names the file and "from" is the second of the
 #           clip it starts at. "loop" repeats a short clip. "zoom" runs from one scale
 #           to another, "focus" is the point it zooms on (0-1 across, 0-1 down).
-# CUES      Inside a scene, "cue out 0.5" starts its content leaving 0.5 s before the
-#           scene ends, "cue in 0.2" brings the answer 0.2 s after the question's Enter,
-#           "cue typing 30" types the question at 30 characters a second. A scene
-#           without cues keeps its own timing.
+# CUES      A scene's transitions. "cue in 0.2" brings the answer 0.2 s after the
+#           question's Enter and "cue arrive 0.3" has it all arrive in 0.3 s (the rig's
+#           own is 0.6); "cue out 0.5" starts its content leaving 0.5 s before the scene
+#           ends and "cue leave 0.15" has it gone in 0.15 s (own 0.3); "cue ease cubic"
+#           is the curve it moves on (own, expo, cubic, sine, back, linear); "cue typing
+#           30" types the question at 30 characters a second. A cue line above the first
+#           SCENE sets it for every scene; a scene's own still wins. No cues: the rig's
+#           own timing.
+# SHOTS     The scenes go in any order: each takes its lines, beats, cues and fish lines
+#           with it. S in the preview opens the shot list: drag a shot to move it, set its
+#           transitions, copy it or take it out. The music stays on its bars.
 # CHECK     node scripts/reel-script.js check   the cue sheet, the total, any mistakes
 #           node scripts/reel-script.js fmt     refresh the [bracketed] timecodes
 # PREVIEW   node scripts/reel-dev.mjs and open the page it prints. E opens the timeline:
@@ -31,8 +38,9 @@
 #           (the drawn fish), school or all. "to" a point (0-1 across, 0-1 down) where it
 #           stays, or auto (the scene's own spot); "look" at a point, auto (what the scene
 #           shows) or off; "idle" hover, sweep, circle, wander or auto; "pace" 0.3 to 3.
-#           Each holds across the cuts until a later line of its kind for that fish, and
-#           "big auto" gives all of it back to the reel's own choreography. Once, at their
+#           Each holds until a later line of its kind for that fish, and no further than
+#           its scene's end, so a scene keeps its own fish; end one with "carry" to run on
+#           past the cut. "big auto" gives all of it back to the reel's own. Once, at their
 #           time: dart and turn (the big fish), scatter and regroup (the school), "feed 0.4
 #           0.85" (food). F in the preview opens the Fish panel; the timeline's fish lanes
 #           show what each fish looks at and does across the cut.
@@ -104,7 +112,6 @@ SCENE results 13                                    [0:19.75 → 0:32.75]
   fish     @4.75 big pace 0.6
   fish     @5.6 big idle sweep
   fish     @1 feed 0.18 0.7
-  fish     @0 big auto
   ITEM 4.5                                          [0:21.75 → 0:26.25]
     page     nanome2
     shape    roundedSquare
@@ -161,7 +168,6 @@ SCENE feature 5                                     [0:32.75 → 0:37.75]
   award    @0.9 2020 Microsoft Reactor Hackathon winner
   award    @1.25 2021 NIST CHARIoT Challenge, Phase 2 winner
   award    @1.5 2022 AsMA R&D Innovation Award
-  fish     @0 big auto
   @0.25                                             [0:33.0]
     video    ./Avatarmedic-Holotriageclip-1.mp4
     from     29.6
@@ -175,6 +181,8 @@ SCENE logos 5.5                                     [0:37.75 → 0:43.25]
   query    who has he worked with?
   tiers    BM25 | MiniLM
   board    clients
+  fish     @1.85 big idle sweep
+  fish     @4 big idle auto
 
 SCENE quotes 9                                      [0:43.25 → 0:52.25]
   query    what do people say?

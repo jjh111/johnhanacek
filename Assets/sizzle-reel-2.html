@@ -589,8 +589,28 @@ p, h1, h2, h3 { margin: 0; }
     inExpo: x => x <= 0 ? 0 : Math.pow(2, 10 * x - 10),
     inOutExpo: x => x <= 0 ? 0 : x >= 1 ? 1 : x < 0.5 ? Math.pow(2, 20 * x - 10) / 2 : (2 - Math.pow(2, -20 * x + 10)) / 2,
     outBack: x => { const c1 = 1.5, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); },
+    inBack: x => { const c1 = 1.5, c3 = c1 + 1; return c3 * x * x * x - c1 * x * x; },
+    inOutBack: x => { const c2 = 1.5 * 1.525; return x < 0.5 ? (Math.pow(2 * x, 2) * ((c2 + 1) * 2 * x - c2)) / 2 : (Math.pow(2 * x - 2, 2) * ((c2 + 1) * (x * 2 - 2) + c2) + 2) / 2; },
+    outSine: x => Math.sin((x * Math.PI) / 2),
+    inSine: x => 1 - Math.cos((x * Math.PI) / 2),
     inOutSine: x => -(Math.cos(Math.PI * x) - 1) / 2,
   };
+  // A scene's transitions (ReelScript's arrive, leave and ease cues): every step, motion and
+  // stagger of its arrival scales with `a`, of its leaving with `l`, and an ease other than `own`
+  // puts every arrival on its out-curve and every leaving on its in-curve. MO is the motion of
+  // the scene being painted, which the type helpers below read; the default changes no number.
+  const FAMILY = {
+    expo:   { i: E.outExpo, o: E.inExpo, io: E.inOutExpo },
+    cubic:  { i: E.outCubic, o: E.inCubic, io: E.inOutCubic },
+    sine:   { i: E.outSine, o: E.inSine, io: E.inOutSine },
+    back:   { i: E.outBack, o: E.inBack, io: E.inOutBack },
+    linear: { i: E.lin, o: E.lin, io: E.lin },
+  };
+  const motion = (fi, fo, fam) => ({ fi, fo, fam: fam || null,
+    a: x => x * fi, l: x => x * fo,
+    ei: e => (fam ? fam.i : e), eo: e => (fam ? fam.o : e), eio: e => (fam ? fam.io : e) });
+  const OWN = motion(1, 1, null);
+  let MO = OWN;
   const seg = (t, a, d, ease = E.lin) => ease(clamp01((t - a) / d));
   const fx = n => n.toFixed(2);
   function seedRandom(seed) {
@@ -618,10 +638,11 @@ p, h1, h2, h3 { margin: 0; }
   // that hides takes every line inside it along.
   function lines(spans, t, tin, tout, o) {
     o = o || {};
-    const st = o.stagger != null ? o.stagger : 0.07, d = o.dur || 0.6, dO = o.durOut || 0.3, sto = o.staggerOut != null ? o.staggerOut : 0.035;
+    const M = MO, st = M.a(o.stagger != null ? o.stagger : 0.07), d = M.a(o.dur || 0.6), dO = M.l(o.durOut || 0.3), sto = M.l(o.staggerOut != null ? o.staggerOut : 0.035);
+    const ei = M.ei(E.outExpo), eo = M.eo(E.inExpo);
     for (let i = 0; i < spans.length; i++) {
-      const a = seg(t, tin + i * st, d, E.outExpo);
-      const b = tout == null ? 0 : seg(t, tout + i * sto, dO, E.inExpo);
+      const a = seg(t, tin + i * st, d, ei);
+      const b = tout == null ? 0 : seg(t, tout + i * sto, dO, eo);
       const s = spans[i].style;
       s.transform = `translate3d(0,${fx((1 - a) * 108 - b * 108)}%,0)`;
       s.visibility = a <= 0 || b >= 1 ? 'hidden' : '';
@@ -630,20 +651,20 @@ p, h1, h2, h3 { margin: 0; }
   // chips and cards: a small overshoot on the way in, a quick dip on the way out
   function pop(el, t, tin, tout, o) {
     o = o || {};
-    const from = o.from != null ? o.from : 0.86, d = o.dur || 0.45;
-    const a = seg(t, tin, d), b = tout == null ? 0 : seg(t, tout, o.durOut || 0.25, E.inCubic);
-    const sc = from + (1 - from) * E.outBack(a) - b * 0.05;
-    el.style.opacity = (E.outCubic(a) * (1 - b)).toFixed(3);
-    el.style.transform = `translate3d(0,${fx((1 - E.outExpo(a)) * (o.rise != null ? o.rise : 14) - b * 10)}px,0) scale(${sc.toFixed(4)})`;
+    const M = MO, from = o.from != null ? o.from : 0.86, d = M.a(o.dur || 0.45);
+    const a = seg(t, tin, d), b = tout == null ? 0 : seg(t, tout, M.l(o.durOut || 0.25), M.eo(E.inCubic));
+    const sc = from + (1 - from) * M.ei(E.outBack)(a) - b * 0.05;
+    el.style.opacity = (M.ei(E.outCubic)(a) * (1 - b)).toFixed(3);
+    el.style.transform = `translate3d(0,${fx((1 - M.ei(E.outExpo)(a)) * (o.rise != null ? o.rise : 14) - b * 10)}px,0) scale(${sc.toFixed(4)})`;
     el.style.visibility = a <= 0 || b >= 1 ? 'hidden' : '';
     return a * (1 - b);
   }
   function fade(el, t, tin, d, tout, dO) {
-    const v = seg(t, tin, d, E.outCubic) * (tout == null ? 1 : 1 - seg(t, tout, dO || 0.25, E.inCubic));
+    const M = MO, v = seg(t, tin, M.a(d), M.ei(E.outCubic)) * (tout == null ? 1 : 1 - seg(t, tout, M.l(dO || 0.25), M.eo(E.inCubic)));
     el.style.opacity = v.toFixed(3);
     return v;
   }
-  const drawRule = (el, t, tin, tout, d = 0.5) => { el.style.transform = `scaleX(${(seg(t, tin, d, E.outExpo) * (1 - seg(t, tout, 0.25, E.inExpo))).toFixed(3)})`; };
+  const drawRule = (el, t, tin, tout, d = 0.5) => { el.style.transform = `scaleX(${(seg(t, tin, MO.a(d), MO.ei(E.outExpo)) * (1 - seg(t, tout, MO.l(0.25), MO.eo(E.inExpo)))).toFixed(3)})`; };
   // a number rolls up to itself: each digit a strip that runs past ten before it lands. Each
   // digit's window is as wide as the digit it lands on (measured once the fonts are in), so a
   // landed "14" is set like type, not like a row of equal slots.
@@ -666,9 +687,10 @@ p, h1, h2, h3 { margin: 0; }
   function statMotion(node, n) {
     const num = node.querySelector('.num'), roll = odometer(num, n), lab = node.querySelector('.lab > .li');
     return (t, tin, tout) => {
-      roll(seg(t, tin + 0.05, 1.1));
-      num.style.opacity = (seg(t, tin, 0.25) * (tout == null ? 1 : 1 - seg(t, tout, 0.2))).toFixed(3);
-      lines([lab], t, tin + 0.12, tout);
+      const M = MO;
+      roll(seg(t, tin + M.a(0.05), M.a(1.1)));
+      num.style.opacity = (seg(t, tin, M.a(0.25)) * (tout == null ? 1 : 1 - seg(t, tout, M.l(0.2)))).toFixed(3);
+      lines([lab], t, tin + M.a(0.12), tout);
     };
   }
   const rectAt = (A, B, k) => ({ x: lerp(A.x, B.x, k), y: lerp(A.y, B.y, k), w: lerp(A.w, B.w, k), h: lerp(A.h, B.h, k) });
@@ -720,6 +742,10 @@ p, h1, h2, h3 { margin: 0; }
   window.__reelHosted = HOSTED != null ? SCRIPT_PATH : null;   // lets the error screen go back to the file
   let PARSED = ReelScript.parse(SRC);
   let EDIT = PARSED.edit;
+  // a scene's cue: its own, else the one the script sets for every scene, else the rig's own
+  const cue = (sc, name) => ReelScript.cue(sc, name, EDIT);
+  // its transitions: arrive and leave against the rig's own 0.6 and 0.3 s, and its curve
+  const motionOf = sc => motion(cue(sc, 'arrive') / 0.6, ReelScript.cueNames(sc.type).includes('leave') ? cue(sc, 'leave') / 0.3 : 1, FAMILY[cue(sc, 'ease')]);
   const boardNamed = name => { const b = MK.boards.find(x => x.name === name); if (!b) throw new Error('cut 2: no board named ' + name); return b; };
   // Live, every line on screen the script wrote says which script line it came from and which
   // part of that line it shows (` data-ln="52" data-part="label"`), so the text on the stage can
@@ -757,9 +783,10 @@ p, h1, h2, h3 { margin: 0; }
     pens.forEach((p, i) => { p.style.strokeDasharray = `${lens[i]} ${lens[i]}`; });
     // a pen that hasn't started stays out of the mask: a zero-length dash with round caps still
     // paints a dot, which would show as specks of ink before the signature is written
-    return (t, t0, dur) => { const run = dur - LIFT * (pens.length - 1); let at = t0;
+    // (a pen lift shrinks only when a fast arrival leaves the writing too little time for it)
+    return (t, t0, dur) => { const lift = LIFT * (pens.length - 1) < dur * 0.6 ? LIFT : dur * 0.6 / Math.max(1, pens.length - 1), run = dur - lift * (pens.length - 1); let at = t0;
       pens.forEach((p, i) => { const d = run * lens[i] / total, k = seg(t, at, d, E.inOutSine);
-        p.style.strokeDashoffset = fx(lens[i] * (1 - k)); p.style.visibility = k > 0 ? '' : 'hidden'; at += d + LIFT; }); };
+        p.style.strokeDashoffset = fx(lens[i] * (1 - k)); p.style.visibility = k > 0 ? '' : 'hidden'; at += d + lift; }); };
   }
   const glyphSvg = key => JHShapes.svg[key];
   const DOT = FORMAT === 'wide' ? ' · ' : '&nbsp;· ';   // a cite that wraps breaks after its dot
@@ -1130,21 +1157,22 @@ p, h1, h2, h3 { margin: 0; }
     }));
     const rows = [...colEl.querySelectorAll('.lrow')].map((r, i) => ({ a: it.awards[i], rule: r.querySelector('.lrule'), ls: inner(r, '.lm') }));
     return (t, tin, tout) => {
+      const M = MO;
       lines(eb, t, tin, tout, { dur: 0.55 });
-      lines(heads, t, tin + 0.06, tout, { stagger: 0.07 });
-      drawRule(rule, t, tin + 0.3, tout);
+      lines(heads, t, tin + M.a(0.06), tout, { stagger: 0.07 });
+      drawRule(rule, t, tin + M.a(0.3), tout);
       bts.forEach((x, i) => {
         const next = bts[i + 1];
-        const bin = i === 0 ? tin + 0.36 : base + x.b.at + 0.12;
-        const bout = next ? base + next.b.at - 0.3 : tout;   // gone before the next beat rises into the same slot
+        const bin = i === 0 ? tin + M.a(0.36) : base + x.b.at + M.a(0.12);
+        const bout = next ? base + next.b.at - M.l(0.3) : tout;   // gone before the next beat rises into the same slot
         lines(x.lines, t, bin, bout, { stagger: 0.06 });
-        lines(x.cite, t, bin + 0.28, bout);
-        x.stats.forEach((s, j) => s(t, bin + 0.14 + j * 0.12, bout));
+        lines(x.cite, t, bin + M.a(0.28), bout);
+        x.stats.forEach((s, j) => s(t, bin + M.a(0.14) + M.a(j * 0.12), bout));
       });
       rows.forEach(x => {
         const tin2 = base + x.a.at;
         drawRule(x.rule, t, tin2, tout, 0.55);
-        lines(x.ls, t, tin2 + 0.05, tout, { stagger: 0.06 });
+        lines(x.ls, t, tin2 + M.a(0.05), tout, { stagger: 0.06 });
       });
     };
   }
@@ -1162,7 +1190,7 @@ p, h1, h2, h3 { margin: 0; }
       const main = el.querySelector('.main'), glow = el.querySelector('.glow'), L = main.getTotalLength();
       paths.forEach(p => { p.style.strokeDasharray = `${L} ${L}`; });
       const g1 = inner(el, '.g1'), g2 = inner(el, '.g2');
-      const D0 = 0.2, D1 = 0.95, DONE = D0 + D1, OUT = sc.dur - ReelScript.cue(sc, 'out');   // cue out: when the guide leaves
+      const M = sc.motion, D0 = 0.2, D1 = 0.95, DONE = D0 + D1, OUT = sc.dur - cue(sc, 'out');   // cue out: when the guide leaves
       // The loop becomes the fish where it was drawn. (The engine lifts a new large fish into the
       // upper half of the tank, its territory on the site; here that put it 115 px above the loop,
       // swimming up through the caption.)
@@ -1182,8 +1210,8 @@ p, h1, h2, h3 { margin: 0; }
         const flare = Math.sin(Math.PI * seg(lt, DONE - 0.08, 0.4)), gone = seg(lt, DONE + 0.05, 0.4, E.inOutSine);
         main.style.opacity = (1 - gone).toFixed(3);
         glow.style.opacity = ((0.7 + 0.6 * flare) * (1 - gone)).toFixed(3);
-        lines(g1, lt, 0.22, OUT, { dur: 0.5 });
-        lines(g2, lt, DONE + 0.06, OUT, { dur: 0.45 });
+        lines(g1, lt, M.a(0.22), OUT, { dur: 0.5 });
+        lines(g2, lt, DONE + M.a(0.06), OUT, { dur: 0.45 });
       };
     },
 
@@ -1194,15 +1222,15 @@ p, h1, h2, h3 { margin: 0; }
       const letters = [...name.querySelectorAll('.li')], tags = inner(el, '.tag > .lm'), dots = [...el.querySelectorAll('.tag .dot')];
       const write = sigWriter(sig);
       LAYOUT.push(() => fitInOval(tt, F.oval));
-      const OUT = sc.dur - ReelScript.cue(sc, 'out');   // cue out: when the name leaves
-      look(sc.start + 0.3, sc.end, CX, F.titleLook, undefined, 'the title');
+      const M = sc.motion, OUT = sc.dur - cue(sc, 'out');   // cue out: when the name leaves
+      look(sc.start + M.a(0.3), sc.end, CX, F.titleLook, undefined, 'the title');
       return (lt) => {
-        write(lt, 0.2, 0.7);
-        sig.style.opacity = (0.88 * (1 - seg(lt, OUT - 0.05, 0.2))).toFixed(3);
-        lines(letters, lt, 0.35, OUT, { stagger: 0.022, dur: 0.6, staggerOut: 0.008, durOut: 0.26 });
-        name.style.letterSpacing = (0.12 + 0.1 * (1 - seg(lt, 0.35, 0.9, E.outExpo))).toFixed(4) + 'em';
-        lines(tags, lt, 0.8, OUT + 0.02, { stagger: 0.07, dur: 0.5 });
-        dots.forEach(d => fade(d, lt, 0.9, 0.3, OUT, 0.15));
+        write(lt, M.a(0.2), M.a(0.7));
+        sig.style.opacity = (0.88 * (1 - seg(lt, OUT - M.l(0.05), M.l(0.2), M.eo(E.lin)))).toFixed(3);
+        lines(letters, lt, M.a(0.35), OUT, { stagger: 0.022, dur: 0.6, staggerOut: 0.008, durOut: 0.26 });
+        name.style.letterSpacing = (0.12 + 0.1 * (1 - seg(lt, M.a(0.35), M.a(0.9), M.ei(E.outExpo)))).toFixed(4) + 'em';
+        lines(tags, lt, M.a(0.8), OUT + M.l(0.02), { stagger: 0.07, dur: 0.5 });
+        dots.forEach(d => fade(d, lt, M.a(0.9), 0.3, OUT, 0.15));
       };
     },
 
@@ -1215,12 +1243,12 @@ p, h1, h2, h3 { margin: 0; }
       const ls = inner(el, '.ansb > .lm'), sup = inner(el, '.lm.sup');
       const stats = [...el.querySelectorAll('.stat')].map((s, j) => statMotion(s, sc.stats[j].n));
       // cues in / out: the answer arrives after the question's Enter, leaves before the cut
-      const IN = q.enter - sc.start + ReelScript.cue(sc, 'in'), OUT = sc.dur - ReelScript.cue(sc, 'out');
+      const M = sc.motion, IN = q.enter - sc.start + cue(sc, 'in'), OUT = sc.dur - cue(sc, 'out');
       look(sc.start + IN, sc.end, F.answer.look, COL_Y, undefined, 'the answer');
       return (lt) => {
         lines(ls, lt, IN, OUT, { stagger: 0.075, dur: 0.65 });
-        lines(sup, lt, IN + 0.3, OUT, { dur: 0.6 });
-        stats.forEach((s, j) => s(lt, sc.stats[j].at, OUT + j * 0.03));
+        lines(sup, lt, IN + M.a(0.3), OUT, { dur: 0.6 });
+        stats.forEach((s, j) => s(lt, sc.stats[j].at, OUT + M.l(j * 0.03)));
       };
     },
 
@@ -1246,54 +1274,54 @@ p, h1, h2, h3 { margin: 0; }
       const t0 = sc.start, starts = [], ends = [];
       let cur = t0 + LIST;
       items.forEach(it => { starts.push(cur); cur += it.dur; ends.push(cur); });
-      const PUSH = 0.6;                               // a push is centred on the cut: half before, half after
+      const M = sc.motion, PUSH = M.a(0.6);           // a push is centred on the cut: half before, half after
       const layers = items.map((it, i) => it.beats.filter(b => b.video || b.img).map((b, j, arr) => {
         const bs = (i === 0 && j === 0) ? t0 + 0.3 : starts[i] + b.at - (j === 0 ? PUSH : 0);
-        const be = arr[j + 1] ? starts[i] + arr[j + 1].at + 0.4 : ends[i] + PUSH;
+        const be = arr[j + 1] ? starts[i] + arr[j + 1].at + Math.max(0.4, M.a(0.35) + 0.05) : ends[i] + PUSH;
         return { b, j, L: mediaLayer(paneEls[i].querySelector('.media'), b, bs, be) };
       }));
       const motions = cols.map((c, i) => columnMotion(c, items[i], starts[i]));
       cols.forEach(c => centreColumn(c, RC.cy));
       let THUMB = { x: 424, y: 196, w: 160, h: 90 };
       LAYOUT.push(() => { THUMB = box(thumbs[0]); });
-      const ROW_IN = q.enter - t0 + ReelScript.cue(sc, 'in'), OUT = sc.end - ReelScript.cue(sc, 'out');   // cues in / out
+      const ROW_IN = q.enter - t0 + cue(sc, 'in'), OUT = sc.end - cue(sc, 'out');   // cues in / out
       look(t0 + ROW_IN, sc.end, WIN.x + WIN.w / 2, WIN.y + WIN.h / 2, undefined, 'the work');   // head for where the work will open
       return (lt, t) => {
         // the result list: the first thumbnail is the window itself, until it dives
         rows.forEach((r, i) => {
-          const tin = ROW_IN + i * 0.06, tout = LIST - 0.1 + i * 0.03;
+          const tin = ROW_IN + M.a(i * 0.06), tout = LIST - M.l(0.1) + M.l(i * 0.03);
           if (i > 0) pop(thumbs[i], lt, tin, tout, { from: 0.9, rise: 18 }); else thumbs[0].style.opacity = 0;
-          lines(metaLines[i], lt, tin + 0.04, tout, { stagger: 0.04, dur: 0.5, durOut: 0.22, staggerOut: 0.02 });
+          lines(metaLines[i], lt, tin + M.a(0.04), tout, { stagger: 0.04, dur: 0.5, durOut: 0.22, staggerOut: 0.02 });
         });
         // the window: pops in as row 1's thumbnail, dives out of it to full size, then holds
-        const kd = seg(t, starts[0] - 0.1, 0.62, E.inOutExpo);
+        const kd = seg(t, starts[0] - M.a(0.1), M.a(0.62), M.eio(E.inOutExpo));
         place(win, rectAt(THUMB, WIN, kd));
         win.style.borderRadius = fx(lerp(9, 16, kd)) + 'px';
-        if (t < starts[0] - 0.1) pop(win, lt, ROW_IN, null, { from: 0.9, rise: 18 });
+        if (t < starts[0] - M.a(0.1)) pop(win, lt, ROW_IN, null, { from: 0.9, rise: 18 });
         else {
-          const b = seg(t, OUT, 0.3, E.inCubic);
+          const b = seg(t, OUT, M.l(0.3), M.eo(E.inCubic));
           win.style.visibility = b >= 1 ? 'hidden' : '';
           win.style.opacity = (1 - b).toFixed(3);
           win.style.transform = `scale(${(1 - 0.05 * b).toFixed(4)})`;
         }
         // panes: the next result covers the last, which slips a third of the way left and darkens
         paneEls.forEach((p, i) => {
-          const kin = i === 0 ? 1 : seg(t, starts[i] - PUSH / 2, PUSH, E.inOutExpo);
-          const kout = i < items.length - 1 ? seg(t, starts[i + 1] - PUSH / 2, PUSH, E.inOutExpo) : 0;
+          const kin = i === 0 ? 1 : seg(t, starts[i] - PUSH / 2, PUSH, M.eio(E.inOutExpo));
+          const kout = i < items.length - 1 ? seg(t, starts[i + 1] - PUSH / 2, PUSH, M.eio(E.inOutExpo)) : 0;
           const vis = kin > 0 && kout < 1;
           p.style.visibility = vis ? '' : 'hidden';
           if (!vis) return;
           p.style.transform = `translate3d(${fx((1 - kin) * 100 - kout * 32)}%,0,0)`;
           shades[i].style.opacity = (kout * 0.75).toFixed(3);
-          layers[i].forEach(({ b, j, L }) => L.update(t, j === 0 ? 1 : seg(t, starts[i] + b.at, 0.35, E.outCubic)));
-          pop(badges[i], t, i === 0 ? starts[0] + 0.5 : starts[i] + 0.25, null, { from: 0.8, rise: 0 });
+          layers[i].forEach(({ b, j, L }) => L.update(t, j === 0 ? 1 : seg(t, starts[i] + b.at, M.a(0.35), M.ei(E.outCubic))));
+          pop(badges[i], t, i === 0 ? starts[0] + M.a(0.5) : starts[i] + M.a(0.25), null, { from: 0.8, rise: 0 });
         });
         // columns: out just before the push, in just after it
-        cols.forEach((c, i) => motions[i](t, i === 0 ? starts[0] + 0.3 : starts[i] + 0.3, i < items.length - 1 ? ends[i] - 0.32 : OUT));
+        cols.forEach((c, i) => motions[i](t, i === 0 ? starts[0] + M.a(0.3) : starts[i] + M.a(0.3), i < items.length - 1 ? ends[i] - M.l(0.32) : OUT));
         // the pager rolls to the next result number on every push
-        let n = 0; for (let i = 1; i < items.length; i++) n += seg(t, starts[i] - 0.1, 0.45, E.outExpo);
+        let n = 0; for (let i = 1; i < items.length; i++) n += seg(t, starts[i] - M.a(0.1), M.a(0.45), M.ei(E.outExpo));
         pgStrip.style.transform = `translate3d(0,${fx(-n)}em,0)`;
-        pg.style.opacity = (seg(t, starts[0] + 0.3, 0.25) * (1 - seg(t, OUT, 0.2))).toFixed(3);
+        pg.style.opacity = (seg(t, starts[0] + M.a(0.3), M.a(0.25)) * (1 - seg(t, OUT, M.l(0.2)))).toFixed(3);
       };
     },
 
@@ -1303,26 +1331,26 @@ p, h1, h2, h3 { margin: 0; }
           <div class="cap3"><div class="slot">${sc.beats.map(b => maskLine(b.caption, 'c3', tagOf(b, 'caption'))).join('')}</div></div>${pageBadge(sc)}</div>${columnMarkup(sc, FC.x, FC.w, ownerOf(sc))}`);
       const win = el.querySelector('.win'), media = win.querySelector('.media'), col = el.querySelector('.col');
       const caps = inner(win, '.c3'), badge = win.querySelector('.wbadge');
-      const IN = q.enter + ReelScript.cue(sc, 'in'), OUT = sc.end - ReelScript.cue(sc, 'out');   // cues in / out
+      const M = sc.motion, IN = q.enter + cue(sc, 'in'), OUT = sc.end - cue(sc, 'out');   // cues in / out
       look(IN, sc.end, R.x + R.w / 2, R.y + R.h / 2, undefined, 'the clip');
       const vis = sc.beats.filter(b => b.video || b.img);
-      const layers = vis.map((b, j) => mediaLayer(media, b, j === 0 ? IN - 0.1 : sc.start + b.at, vis[j + 1] ? sc.start + vis[j + 1].at + 0.4 : sc.end + 0.2));
+      const layers = vis.map((b, j) => mediaLayer(media, b, j === 0 ? IN - 0.1 : sc.start + b.at, vis[j + 1] ? sc.start + vis[j + 1].at + Math.max(0.4, M.a(0.35) + 0.05) : sc.end + 0.2));
       const motion = columnMotion(col, sc, sc.start);
       centreColumn(col, FC.cy);
       return (lt, t) => {
         // the window wipes open left to right while its picture settles from a push-in, and
         // wipes on through to the right on the way out
-        const a = seg(t, IN, 0.7, E.outExpo), b = seg(t, OUT, 0.32, E.inExpo);
+        const a = seg(t, IN, M.a(0.7), M.ei(E.outExpo)), b = seg(t, OUT, M.l(0.32), M.eo(E.inExpo));
         win.style.clipPath = `inset(0 ${fx((1 - a) * 100)}% 0 ${fx(b * 100)}% round 16px)`;
         win.style.visibility = a <= 0 || b >= 1 ? 'hidden' : '';
         media.style.transform = `scale(${(1.14 - 0.14 * a).toFixed(4)})`;
-        layers.forEach((L, j) => L.update(t, j === 0 ? 1 : seg(t, sc.start + vis[j].at, 0.35, E.outCubic)));
+        layers.forEach((L, j) => L.update(t, j === 0 ? 1 : seg(t, sc.start + vis[j].at, M.a(0.35), M.ei(E.outCubic))));
         caps.forEach((c, i) => {
           const nb = sc.beats[i + 1];
-          lines([c], t, i === 0 ? IN + 0.45 : sc.start + sc.beats[i].at + 0.15, nb ? sc.start + nb.at - 0.25 : OUT - 0.05);
+          lines([c], t, i === 0 ? IN + M.a(0.45) : sc.start + sc.beats[i].at + M.a(0.15), nb ? sc.start + nb.at - M.l(0.25) : OUT - M.l(0.05));
         });
-        pop(badge, t, IN + 0.4, OUT - 0.05, { from: 0.8, rise: 0 });
-        motion(t, IN + 0.1, OUT);
+        pop(badge, t, IN + M.a(0.4), OUT - M.l(0.05), { from: 0.8, rise: 0 });
+        motion(t, IN + M.a(0.1), OUT);
       };
     },
 
@@ -1349,7 +1377,7 @@ p, h1, h2, h3 { margin: 0; }
       const paths = [...el.querySelectorAll('.ink path')], lens = paths.map(p => p.getTotalLength());
       paths.forEach((p, i) => { p.style.strokeDasharray = `${lens[i]} ${lens[i]}`; });
       const cur = el.querySelector('.cur'), ripple = el.querySelector('.ripple');
-      const IN = q.enter - sc.start + ReelScript.cue(sc, 'in'), TAP = IN + 0.75, GO = { x: 0, y: 0 };   // cue in: the plan card
+      const M = sc.motion, IN = q.enter - sc.start + cue(sc, 'in'), TAP = IN + M.a(0.75), GO = { x: 0, y: 0 };   // cue in: the plan card
       LAYOUT.push(() => { plan.style.top = (COL_Y - plan.offsetHeight / 2) + 'px'; });
       LAYOUT.push(() => { const b = box(go); GO.x = b.x + b.w / 2; GO.y = b.y + b.h / 2; });
       const draw = strokes.map((s, i) => ({ a: TAP + 0.15 + i * 0.1, d: s.kind === 'fish' ? 0.2 : 0.24 }));
@@ -1357,23 +1385,23 @@ p, h1, h2, h3 { margin: 0; }
       draw.forEach((dd, i) => at(sc.start + born[i], () => spawnStroke(strokes[i].pts, strokes[i].kind, strokes[i].kind === 'fish' ? Math.PI : null), `spawn ${strokes[i].kind} ${i}`));
       BORN.school = sc.start + Math.min(...born.filter((b, i) => strokes[i].kind === 'fish'));
       look(sc.start + IN, sc.end, CX, COL_Y, 1, 'the plan');   // from the right, whatever the frame: the school is born on the left
-      const DONE = Math.max(...born), OUT = sc.dur - ReelScript.cue(sc, 'out');   // cue out
+      const DONE = Math.max(...born), OUT = sc.dur - cue(sc, 'out');   // cue out
       return (lt) => {
         pop(plan, lt, IN, OUT, { from: 0.94, rise: 16 });
         // Plan → Receipt: the header, each count and the action row all turn over on the tap
-        lines([p1], lt, IN + 0.08, TAP + 0.05, { durOut: 0.22 });
+        lines([p1], lt, IN + M.a(0.08), TAP + 0.05, { durOut: 0.22 });
         lines([p2], lt, TAP + 0.16, OUT);
         prows.forEach((x, i) => {
-          fade(x.icon, lt, IN + 0.12 + i * 0.07, 0.3, OUT, 0.2);
-          lines(x.pl, lt, IN + 0.14 + i * 0.07, TAP + 0.05 + i * 0.04, { durOut: 0.2 });
-          lines(x.what, lt, IN + 0.18 + i * 0.07, OUT);
+          fade(x.icon, lt, IN + M.a(0.12) + M.a(i * 0.07), 0.3, OUT, 0.2);
+          lines(x.pl, lt, IN + M.a(0.14) + M.a(i * 0.07), TAP + 0.05 + i * 0.04, { durOut: 0.2 });
+          lines(x.what, lt, IN + M.a(0.18) + M.a(i * 0.07), OUT);
           lines(x.rc, lt, TAP + 0.14 + i * 0.05, OUT);
           // the count rolls as each of this row's strokes becomes a living thing in the tank
           let c = 0; born.forEach((b, s) => { if (rowOf[s] === i) c += E.outExpo(seg(lt, b, 0.3)); });
           x.ods.style.transform = `translate3d(0,${fx(-c)}em,0)`;
           lines(x.ck, lt, Math.max(...born.filter((b, s) => rowOf[s] === i)) + 0.2, OUT, { dur: 0.45 });
         });
-        lines([pa], lt, IN + 0.3, TAP + 0.1, { durOut: 0.2 });
+        lines([pa], lt, IN + M.a(0.3), TAP + 0.1, { durOut: 0.2 });
         lines([pb], lt, DONE + 0.25, OUT);
         // the cursor comes in from below right, taps Make it, and goes
         const m = seg(lt, TAP - 0.4, 0.38, E.outExpo);
@@ -1399,24 +1427,24 @@ p, h1, h2, h3 { margin: 0; }
         <svg class="ring" style="left:${C.x - C.r - 16}px;top:${C.y - C.r - 16}px;width:${(C.r + 16) * 2}px;height:${(C.r + 16) * 2}px" viewBox="0 0 ${(C.r + 16) * 2} ${(C.r + 16) * 2}"><circle cx="${C.r + 16}" cy="${C.r + 16}" r="${C.r + 12}"/></svg>
         ${pageBadge(sc, 'free')}${columnMarkup(it, AC.x, AC.w, ownerOf(sc))}`);
       const port = el.querySelector('.port'), ring = el.querySelector('.ring circle'), col = el.querySelector('.col'), badge = el.querySelector('.wbadge');
-      const IN = q.enter + ReelScript.cue(sc, 'in'), OUT = sc.end - ReelScript.cue(sc, 'out');   // cues in / out
+      const M = sc.motion, IN = q.enter + cue(sc, 'in'), OUT = sc.end - cue(sc, 'out');   // cues in / out
       look(IN, sc.end, C.x, C.y, undefined, 'the picture');
-      const layers = sc.beats.map((b, j) => mediaLayer(port, b, j === 0 ? IN : sc.start + b.at, sc.beats[j + 1] ? sc.start + sc.beats[j + 1].at + 0.4 : sc.end + 0.2));
+      const layers = sc.beats.map((b, j) => mediaLayer(port, b, j === 0 ? IN : sc.start + b.at, sc.beats[j + 1] ? sc.start + sc.beats[j + 1].at + Math.max(0.4, M.a(0.35) + 0.05) : sc.end + 0.2));
       const motion = columnMotion(col, it, sc.start);
       const RL = 2 * Math.PI * (C.r + 12);
       ring.style.strokeDasharray = `${RL} ${RL}`;
       centreColumn(col, AC.cy);
       LAYOUT.push(() => { badge.style.left = (C.x - badge.offsetWidth / 2) + 'px'; badge.style.top = (C.y + C.r - badge.offsetHeight / 2) + 'px'; });
       return (lt, t) => {
-        const a = seg(t, IN, 0.6, E.outExpo), b = seg(t, OUT, 0.3, E.inExpo);
+        const a = seg(t, IN, M.a(0.6), M.ei(E.outExpo)), b = seg(t, OUT, M.l(0.3), M.eo(E.inExpo));
         const d = 2 * C.r * a * (1 - b * 0.15);
         place(port, { x: C.x - d / 2, y: C.y - d / 2, w: d, h: d });
         port.style.opacity = (1 - b).toFixed(3);
-        ring.style.strokeDashoffset = fx(RL * (1 - seg(t, IN + 0.15, 0.7, E.inOutCubic)));
+        ring.style.strokeDashoffset = fx(RL * (1 - seg(t, IN + M.a(0.15), M.a(0.7), M.eio(E.inOutCubic))));
         ring.style.opacity = (1 - b).toFixed(3);
-        layers.forEach((L, j) => L.update(t, j === 0 ? 1 : seg(t, sc.start + sc.beats[j].at, 0.35, E.outCubic)));
-        pop(badge, t, IN + 0.45, OUT, { from: 0.8, rise: 0 });
-        motion(t, IN + 0.1, OUT);
+        layers.forEach((L, j) => L.update(t, j === 0 ? 1 : seg(t, sc.start + sc.beats[j].at, M.a(0.35), M.ei(E.outCubic))));
+        pop(badge, t, IN + M.a(0.45), OUT, { from: 0.8, rise: 0 });
+        motion(t, IN + M.a(0.1), OUT);
       };
     },
 
@@ -1429,13 +1457,13 @@ p, h1, h2, h3 { margin: 0; }
       </div></div>`);
       const panel = el.querySelector('.panel'), eb = inner(el, '.lm.eyebrow');
       const heads = inner(el, '.lm.grp'), items = [...el.querySelectorAll('.wall li')];
-      const IN = q.enter - sc.start + ReelScript.cue(sc, 'in'), OUT = sc.dur - ReelScript.cue(sc, 'out');   // cues in / out
+      const M = sc.motion, IN = q.enter - sc.start + cue(sc, 'in'), OUT = sc.dur - cue(sc, 'out');   // cues in / out
       look(sc.start + IN, sc.end, CX, COL_Y, undefined, 'the logos');
       return (lt) => {
         pop(panel, lt, IN, OUT, { from: 0.96, rise: 18 });
-        lines(eb, lt, IN + 0.15, OUT);
-        heads.forEach((h, i) => lines([h], lt, IN + 0.25 + i * 0.3, OUT));
-        items.forEach((li, i) => pop(li, lt, IN + 0.3 + i * 0.055 + (i > 2 ? 0.12 : 0), OUT + i * 0.012, { from: 0.8, rise: 20 }));
+        lines(eb, lt, IN + M.a(0.15), OUT);
+        heads.forEach((h, i) => lines([h], lt, IN + M.a(0.25) + M.a(i * 0.3), OUT));
+        items.forEach((li, i) => pop(li, lt, IN + M.a(0.3) + M.a(i * 0.055) + M.a(i > 2 ? 0.12 : 0), OUT + M.l(i * 0.012), { from: 0.8, rise: 20 }));
       };
     },
 
@@ -1449,20 +1477,20 @@ p, h1, h2, h3 { margin: 0; }
       const blocks = [...el.querySelectorAll('.qb')].map(b => ({ b, ls: inner(b, '.qt2'), rule: b.querySelector('.rule'), cs: inner(b, '.cite') }));
       const pg = el.querySelector('.status'), pgStrip = pg.querySelector('.ods');
       LAYOUT.push(() => blocks.forEach(({ b }) => { b.style.top = (COL_Y - b.offsetHeight / 2) + 'px'; }));
-      const first = q.enter - sc.start + ReelScript.cue(sc, 'in'), OUT = sc.dur - ReelScript.cue(sc, 'out');   // cues in / out: the first voice, the last
+      const M = sc.motion, first = q.enter - sc.start + cue(sc, 'in'), OUT = sc.dur - cue(sc, 'out');   // cues in / out: the first voice, the last
       look(sc.start + first, sc.end, CX, COL_Y, undefined, 'the quotes');
       return (lt) => {
         blocks.forEach((x, i) => {
           const qq = sc.quotes[i], next = sc.quotes[i + 1];
-          const tin = i === 0 ? first : qq.at + 0.1, tout = next ? next.at - 0.3 : OUT;
+          const tin = i === 0 ? first : qq.at + M.a(0.1), tout = next ? next.at - M.l(0.3) : OUT;
           lines(x.ls, lt, tin, tout, { stagger: 0.07, dur: 0.65 });
-          x.rule.style.transform = `scaleX(${(seg(lt, tin + 0.3, 0.5, E.outExpo) * (1 - seg(lt, tout, 0.25, E.inExpo))).toFixed(3)})`;
-          lines(x.cs, lt, tin + 0.36, tout);
+          x.rule.style.transform = `scaleX(${(seg(lt, tin + M.a(0.3), M.a(0.5), M.ei(E.outExpo)) * (1 - seg(lt, tout, M.l(0.25), M.eo(E.inExpo)))).toFixed(3)})`;
+          lines(x.cs, lt, tin + M.a(0.36), tout);
         });
         // the pager rolls to the next voice as each one lands
-        let k = 0; for (let i = 1; i < n; i++) k += seg(lt, sc.quotes[i].at, 0.45, E.outExpo);
+        let k = 0; for (let i = 1; i < n; i++) k += seg(lt, sc.quotes[i].at, M.a(0.45), M.ei(E.outExpo));
         pgStrip.style.transform = `translate3d(0,${fx(-k)}em,0)`;
-        pg.style.opacity = (seg(lt, first + 0.3, 0.25) * (1 - seg(lt, OUT, 0.2))).toFixed(3);
+        pg.style.opacity = (seg(lt, first + M.a(0.3), M.a(0.25)) * (1 - seg(lt, OUT, M.l(0.2)))).toFixed(3);
       };
     },
 
@@ -1479,17 +1507,17 @@ p, h1, h2, h3 { margin: 0; }
       const card = el.querySelector('.intent'), eb = inner(el, '.lm.eyebrow'), hs = inner(el, '.oh');
       const cols = [...el.querySelectorAll('.three > div')].map(c => ({ rule: c.querySelector('.trule'), ls: inner(c, '.lm') }));
       const cta = inner(el, '.lm.cta');
-      const IN = q.enter - sc.start + ReelScript.cue(sc, 'in'), OUT = sc.dur - ReelScript.cue(sc, 'out');   // cues in / out
+      const M = sc.motion, IN = q.enter - sc.start + cue(sc, 'in'), OUT = sc.dur - cue(sc, 'out');   // cues in / out
       look(sc.start + IN, sc.end, CX, COL_Y, undefined, 'the offer');
       return (lt) => {
         pop(card, lt, IN, OUT, { from: 0.95, rise: 18 });
-        lines(eb, lt, IN + 0.15, OUT);
-        lines(hs, lt, IN + 0.22, OUT, { stagger: 0.08, dur: 0.65 });
+        lines(eb, lt, IN + M.a(0.15), OUT);
+        lines(hs, lt, IN + M.a(0.22), OUT, { stagger: 0.08, dur: 0.65 });
         cols.forEach((c, i) => {
-          drawRule(c.rule, lt, IN + 0.62 + i * 0.1, OUT, 0.55);
-          lines(c.ls, lt, IN + 0.68 + i * 0.1, OUT, { stagger: 0.05 });
+          drawRule(c.rule, lt, IN + M.a(0.62) + M.a(i * 0.1), OUT, 0.55);
+          lines(c.ls, lt, IN + M.a(0.68) + M.a(i * 0.1), OUT, { stagger: 0.05 });
         });
-        lines(cta, lt, IN + 1.2, OUT);
+        lines(cta, lt, IN + M.a(1.2), OUT);
       };
     },
 
@@ -1502,7 +1530,8 @@ p, h1, h2, h3 { margin: 0; }
       const pill = el.querySelector('.pill'), icons = [...pill.querySelectorAll('.ic')], endc = el.querySelector('.endc');
       const sig = el.querySelector('.sig'), write = sigWriter(sig), url = el.querySelector('.url'), letters = [...url.querySelectorAll('.li')];
       const cta = inner(el, '.lm.endline');
-      look(sc.start + 0.4, sc.end, CX, F.eoval.cy, undefined, 'the end card');
+      const M = sc.motion;
+      look(sc.start + M.a(0.4), sc.end, CX, F.eoval.cy, undefined, 'the end card');
       const TAPS = F.taps;
       TAPS.forEach(tp => at(sc.start + tp.t, () => tank.addFood(tp.x, tp.y - TANK_Y), `food ${sc.i} ${tp.t}`));
       const taps = TAPS.map((tp, i) => ({ tp, c: el.querySelector('.c' + i), r: el.querySelector('.r' + i) }));
@@ -1511,13 +1540,13 @@ p, h1, h2, h3 { margin: 0; }
         pill.style.left = (CX - pill.offsetWidth / 2) + 'px'; pill.style.top = F.pillTop + 'px';
       });
       return (lt) => {
-        pop(pill, lt, 0.75, null, { from: 0.9, rise: 10 });
-        icons.forEach((ic, i) => pop(ic, lt, 0.85 + i * 0.045, null, { from: 0.6, rise: 0 }));
-        write(lt, 0.7, 0.75);
+        pop(pill, lt, M.a(0.75), null, { from: 0.9, rise: 10 });
+        icons.forEach((ic, i) => pop(ic, lt, M.a(0.85) + M.a(i * 0.045), null, { from: 0.6, rise: 0 }));
+        write(lt, M.a(0.7), M.a(0.75));
         sig.style.opacity = 0.88;
-        lines(letters, lt, 0.95, null, { stagger: 0.02, dur: 0.6 });
-        url.style.letterSpacing = (0.06 + 0.1 * (1 - seg(lt, 0.95, 0.9, E.outExpo))).toFixed(4) + 'em';
-        lines(cta, lt, 1.45, null);
+        lines(letters, lt, M.a(0.95), null, { stagger: 0.02, dur: 0.6 });
+        url.style.letterSpacing = (0.06 + 0.1 * (1 - seg(lt, M.a(0.95), M.a(0.9), M.ei(E.outExpo)))).toFixed(4) + 'em';
+        lines(cta, lt, M.a(1.45), null);
         taps.forEach(({ tp, c, r }) => {
           const m = seg(lt, tp.t - 0.35, 0.3, E.outExpo);
           c.setAttribute('cx', fx(lerp(tp.x + 120, tp.x, m))); c.setAttribute('cy', fx(lerp(tp.y - 90, tp.y, m)));
@@ -1556,35 +1585,81 @@ p, h1, h2, h3 { margin: 0; }
   }
   const queryOf = sc => QUERIES.find(q => q.sc === sc);
 
-  // ── the glass: hero oval → command bar → hero oval ────────────────────
+  // ── the glass: what each scene wears, and the morphs between ──────────
+  // Each scene wears one thing: the opening nothing, the title the hero oval, the end card its
+  // oval, every scene that asks a question the command bar. Where two scenes in a row wear
+  // different things the glass morphs from one to the other: an oval collapses into the bar in
+  // the last half second of its own scene (so the bar is up when the next question types), an
+  // oval opens out of the bar (or out of a line, from nothing) at its scene's start, the bar grows
+  // out of a line after the opening, and a scene that wears nothing shrinks it away. So the scenes
+  // play in any order, and in the cut's own (open, title, …, end) these are the three morphs it
+  // always had, to the frame. A morph runs at its scene's arrive or leave and on its curve.
   const ellipse = o => ({ cx: CX, cy: o.cy, w: o.w, h: o.h, rx: o.w / 2, ry: o.h / 2 });
   const OVAL = ellipse(F.oval);
   const LENS = Object.assign({}, OVAL, { h: 2, ry: 1 });
   const BAR = { cx: CX, cy: F.barTop + 38, w: BAND, h: 76, rx: 38, ry: 38 };
   const EOVAL = ellipse(F.eoval);
-  let title, end, GK, OPEN;                    // (with the scenes: build(), below)
+  const WEARS = { open: 'none', title: 'oval', end: 'eoval' };
+  const wears = sc => WEARS[sc.type] || 'bar';
+  const SHAPE = { none: LENS, oval: OVAL, eoval: EOVAL, bar: BAR };
+  // GK: the morphs, in time order; GO and BV: the glass's and the bar's fades ({ a, d, to });
+  // CHIP: when the drawn fish's record shows; OPENS: the openings' starts (the camera's)
+  let GK, GO, BV, CHIP, OPENS;                 // (with the scenes: build(), below)
   function glass() {
-    title = SC.find(s => s.type === 'title'); end = SC.find(s => s.type === 'end');
-    GK = [
-      { a: title.start, b: title.start + 0.55, from: LENS, to: OVAL, ease: E.outExpo },
-      { a: title.end - 0.5, b: title.end + 0.05, from: OVAL, to: BAR, ease: E.inOutExpo },
-      { a: end.start + 0.05, b: end.start + 0.75, from: BAR, to: EOVAL, ease: E.inOutExpo },
-    ];
-    OPEN = SC[0];
+    GK = []; GO = []; BV = []; CHIP = null; OPENS = [];
+    let was = 'none';
+    SC.forEach((sc, i) => {
+      const now = wears(sc), M = sc.motion, P = SC[i - 1];
+      if (sc.type === 'open') OPENS.push(sc.start);
+      if (now !== was) {
+        const oval = w => w === 'oval' || w === 'eoval';
+        if (now === 'bar' && oval(was) && P.type !== 'end') {          // the oval collapses into the bar, in its own scene's last half second
+          GK.push({ a: P.end - P.motion.l(0.5), b: P.end + 0.05, from: SHAPE[was], to: BAR, ease: P.motion.eio(E.inOutExpo) });
+          BV.push({ a: P.end - P.motion.l(0.1), d: P.motion.l(0.2), to: 1 });
+        } else if (oval(now) && was === 'none') {                      // an oval opens out of a line
+          GK.push({ a: sc.start, b: sc.start + M.a(0.55), from: LENS, to: SHAPE[now], ease: M.ei(E.outExpo) });
+        } else if (oval(now)) {                                        // out of the bar, or the other oval
+          GK.push({ a: sc.start + M.a(0.05), b: sc.start + M.a(0.75), from: SHAPE[was], to: SHAPE[now], ease: M.eio(E.inOutExpo) });
+        } else if (now === 'bar') {                                    // the bar grows out of a line, or out of an end card that cut
+          GK.push({ a: sc.start, b: sc.start + M.a(0.55), from: SHAPE[was], to: BAR, ease: M.eio(E.inOutExpo) });
+          BV.push({ a: sc.start + M.a(0.1), d: M.a(0.2), to: 1 });
+        } else {                                                       // nothing: it shrinks away
+          GK.push({ a: sc.start, b: sc.start + M.a(0.3), from: SHAPE[was], to: LENS, ease: M.eo(E.inCubic) });
+        }
+        if (was === 'bar') BV.push({ a: sc.start - M.a(0.05), d: M.a(0.12), to: 0 });
+        if (was === 'none') GO.push({ a: sc.start, d: M.a(0.2), to: 1 });
+        if (now === 'none') GO.push({ a: sc.start, d: M.a(0.3), to: 0 });
+      }
+      was = now;
+    });
+    GK.sort((x, y) => x.a - y.a); BV.sort((x, y) => x.a - y.a);
+    // the drawn fish's record: from the first opening, until the bar or the end card takes over
+    const o = SC.find(s => s.type === 'open');
+    if (o) { const next = SC.find(s => s.start > o.start && wears(s) !== 'none' && wears(s) !== 'oval'); CHIP = { a: o.start + 1.25, z: (next ? next.start : DURATION) - 0.75 }; }
+  }
+  // a fade's value at t: each one goes from where the last left off (0 before the first)
+  function faded(list, t) {
+    let v = 0;
+    for (const f of list) { if (t < f.a) break; v = lerp(v, f.to, seg(t, f.a, f.d)); }
+    return v;
   }
   function paintGlass(t) {
     let k0 = GK[0];
+    if (!k0) { glassEl.style.opacity = 0; return; }
     for (const k of GK) if (t >= k.a) k0 = k;
     const k = k0.ease(clamp01((t - k0.a) / (k0.b - k0.a)));
     const r = {}; for (const f of ['cx', 'cy', 'w', 'h', 'rx', 'ry']) r[f] = lerp(k0.from[f], k0.to[f], k);
     glassEl.style.left = fx(r.cx - r.w / 2) + 'px'; glassEl.style.top = fx(r.cy - r.h / 2) + 'px';
     glassEl.style.width = fx(r.w) + 'px'; glassEl.style.height = fx(r.h) + 'px';
     glassEl.style.borderRadius = `${fx(r.rx)}px / ${fx(r.ry)}px`;
-    glassEl.style.opacity = seg(t, title.start, 0.2).toFixed(3);
+    glassEl.style.opacity = faded(GO, t).toFixed(3);
   }
   function paintBar(t) {
-    barEl.style.opacity = tiersEl.style.opacity = (seg(t, title.end - 0.1, 0.2) * (1 - seg(t, end.start - 0.05, 0.12))).toFixed(3);
+    barEl.style.opacity = tiersEl.style.opacity = faded(BV, t).toFixed(3);
     let q = null; for (const x of QUERIES) if (t >= x.t0) q = x;
+    // a question left behind by a scene that wears no bar does not come back with the bar
+    if (q && SC.some(S => wears(S) !== 'bar' && S.start >= q.sc.end - 1e-6 && S.start <= t - 0.2
+      && SC.some(B => wears(B) === 'bar' && B.start >= S.end - 1e-6))) q = null;
     let text = '', sel = false, typing = false;
     if (q) {
       let n = 0; while (n < q.times.length && q.times[n] <= t) n++;
@@ -1608,14 +1683,17 @@ p, h1, h2, h3 { margin: 0; }
     QUERIES.forEach(x => {
       const on = x === q;
       x.g.style.display = on ? 'flex' : 'none';
-      if (on) x.tg.forEach((b, i) => pop(b, t, x.enter + 0.04 + i * 0.07, x.last ? null : x.clear, { from: 0.7, rise: 0, dur: 0.35, durOut: 0.15 }));
+      if (!on) return;
+      MO = x.sc.motion;                         // the tiers come and go at their scene's pace
+      x.tg.forEach((b, i) => pop(b, t, x.enter + MO.a(0.04) + MO.a(i * 0.07), x.last ? null : x.clear, { from: 0.7, rise: 0, dur: 0.35, durOut: 0.15 }));
+      MO = OWN;
     });
   }
   // The drawn fish's record, read live off the engine: freehand stroke in, structured data out.
   const chipEl = document.getElementById('chip'), chipB = chipEl.querySelector('b'), chipS = chipEl.querySelector('span');
   const leadEl = document.getElementById('chipLead'), leadLine = leadEl.querySelector('line'), leadDot = leadEl.querySelector('circle');
   function paintChip(t) {
-    const v = BIG ? seg(t, OPEN.start + 1.25, 0.3, E.outCubic) * (1 - seg(t, title.end - 0.75, 0.3, E.inCubic)) : 0;
+    const v = BIG && CHIP ? seg(t, CHIP.a, 0.3, E.outCubic) * (1 - seg(t, CHIP.z, 0.3, E.inCubic)) : 0;
     chipEl.style.opacity = leadEl.style.opacity = v.toFixed(3);
     if (v <= 0) return;
     const x = BIG.x, y = BIG.y + TANK_Y, bw = Math.round(BIG.bodyWidth || 0);
@@ -1638,8 +1716,9 @@ p, h1, h2, h3 { margin: 0; }
     chipS.textContent = `heading ${String(deg).padStart(3, ' ')}° · ${String(pxs).padStart(3, ' ')} px/s`;
   }
   const CAM = { s: 1, x: 0 };                  // the camera's scale and x shift, for the chip
-  function paintCamera(t) {
-    const k = seg(t, 1.2, 1.1, E.inOutExpo);
+  function paintCamera(t) {                     // in close on the drawn loop, then out: at each opening
+    let o = null; for (const a of OPENS) if (t >= a) o = a;
+    const k = o == null ? 1 : seg(t, o + 1.2, 1.1, E.inOutExpo);
     const s = lerp(2.1, 1, k), fxp = lerp(F.open.cx, CX, k), fyp = lerp(F.open.cy, H / 2, k);
     CAM.s = s; CAM.x = k >= 1 ? 0 : CX - fxp * s;
     camera.style.transform = k >= 1 ? 'none' : `translate3d(${fx(CX - fxp * s)}px,${fx(H / 2 - fyp * s)}px,0) scale(${s.toFixed(4)})`;
@@ -1652,6 +1731,7 @@ p, h1, h2, h3 { margin: 0; }
     ATTN.length = 0; BORN.big = BORN.school = null;
     MEDIA.length = 0; EVENTS.length = 0; LAYOUT.length = 0; QUERIES.length = 0; TICKS.length = 0;
     scenesEl.textContent = ''; tiersEl.textContent = '';
+    SC.forEach(sc => { sc.motion = motionOf(sc); });
     direct();
     fishEvents();
     queries();
@@ -1719,8 +1799,9 @@ p, h1, h2, h3 { margin: 0; }
     for (const sc of SC) {
       const on = t >= sc.start - 0.02 && t <= sc.end + 0.02;
       sc.el.classList.toggle('on', on);
-      if (on) sc.update(t - sc.start, t);
+      if (on) { MO = sc.motion; sc.update(t - sc.start, t); }
     }
+    MO = OWN;
     blackout.style.opacity = (1 - seg(t, 0, 0.35, E.inOutSine)).toFixed(3);
   }
   function seekVideo(v, time) {
@@ -2094,6 +2175,8 @@ p, h1, h2, h3 { margin: 0; }
   const tl = document.createElement('script'); tl.src = '../scripts/reel-timeline.js'; tl.onerror = () => tl.remove(); document.head.appendChild(tl);
   // directing the fish: waypoints on the stage, and attention, idles and actions played at the playhead (F)
   const fp = document.createElement('script'); fp.src = '../scripts/reel-fish.js'; fp.onerror = () => fp.remove(); document.head.appendChild(fp);
+  // the shot list: the scenes in order, to move about, time and give their transitions (S)
+  const sh = document.createElement('script'); sh.src = '../scripts/reel-shots.js'; sh.onerror = () => sh.remove(); document.head.appendChild(sh);
   // the words on the stage, changed where they stand: double-click a line (scripts/reel-text.js)
   const tx = document.createElement('script'); tx.src = '../scripts/reel-text.js'; tx.onerror = () => tx.remove(); document.head.appendChild(tx);
   // how the script becomes a film: render it here (dev server), or ask Claude (the editor on claude.ai)

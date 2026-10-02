@@ -21,12 +21,13 @@
 // Under the cards, a lane for each fish (the big fish, the school): what it does across the cut,
 // as spans that say what it looks at and how it idles (cyan: the scene's own choreography; gold:
 // a fish line decides; hatched: nothing to look at, so it swims freely), and a gold mark for
-// every fish line at its time. A line holds across the cuts until another of its kind changes it
-// (ReelScript.fishHolds), so the gold runs on past the cards' edges. Drag a mark to move its line
-// anywhere in the cut (across a cut, it moves into that scene); where the gold runs to the reel's
-// end, drag its end back to where the fish is the reel's own again (a `<who> auto` line). Click a
-// mark to edit its line in the Fish panel (scripts/reel-fish.js); click a span to jump there with
-// that fish chosen.
+// every fish line at its time. A line holds until another of its kind changes it, and no further
+// than its scene's cut unless it carries (ReelScript.fishHolds). Drag a mark to move its line
+// anywhere in the cut (across a cut, it moves into that scene). Where the gold stops at a cut or at
+// the reel's end, its end is a handle: drag it back and the fish is the reel's own from there (a
+// `<who> auto` line); drag it on past the cut and the lines that stopped there carry on, to an auto
+// where it lands. Click a mark to edit its line in the Fish panel (scripts/reel-fish.js); click a
+// span to jump there with that fish chosen.
 // Under the fish lanes, the music: the score next to the script, which the synth rack keeps
 // (scripts/reel-rack.js, REEL_RACK), on the same clock, as one piece. A head shows each section
 // where its music plays (on the bar near its cut; a dashed line where the picture cuts), the
@@ -105,7 +106,7 @@
         gist: stat ? `stat ${v.n} ${v.label}` : `award ${v.yr} ${v.text}`, label: stat ? `${v.n} ${words(v.label, 2)}` : `${v.yr} ${words(v.text, 2)}` });
     });
     OUTS = SCENES.filter(S => RS.cueNames(S.sc.type).includes('out'))
-      .map(S => ({ S, out: RS.cue(S.sc, 'out'), set: !!(S.sc.cues && S.sc.cues.out != null) }));
+      .map(S => ({ S, out: RS.cue(S.sc, 'out', EDIT), set: !!(S.sc.cues && S.sc.cues.out != null) }));
   }
   model();
 
@@ -536,33 +537,47 @@
           drag(e, el, () => {}, moved => { if (moved) return; L.seek(t); if (window.REEL_FISH) window.REEL_FISH.show(who); });
         });
       });
-      // A fish line holds until another changes it, so what a line decides can run to the reel's
-      // end. Its end is a handle: drag it back to where the fish should be the reel's own again
-      // (a `<who> auto` line there).
-      const last = track[track.length - 1];
-      if (last && last.set && last.t1 >= DUR - 1e-3) {
-        let from = last.t0;
-        for (let k = track.length - 1; k >= 0 && track[k].set; k--) from = track[k].t0;
-        const el = h('div', 'fe', content); el.dataset.who = who; el.style.top = y + 'px';
-        el.title = `what the fish lines decide holds to the end of the reel\ndrag back to where ${FNAME[who]} goes back to the reel's own (a "${who} auto" line)`;
+      // What fish lines decide (the gold) stops at its scene's cut, unless a line carries on past
+      // it, or at a later line, or at the reel's end. Where it stops at a cut or at the reel's end
+      // its end is a handle, like a clip's: drag it back and a `<who> auto` line is written where
+      // it lands; drag it on past the cut and the lines that stopped there carry on (`carry`), to
+      // a `<who> auto` where it lands. (Stopped by a line, the line's mark is there to drag.)
+      const runs = [];
+      track.forEach((sp, k) => { if (!sp.set) return; const r = runs[runs.length - 1]; if (r && r.k === k - 1) { r.t1 = sp.t1; r.k = k; } else runs.push({ t0: sp.t0, t1: sp.t1, k }); });
+      runs.forEach(run => {
+        const atEnd = run.t1 >= DUR - 1e-3;
+        const cutLines = [...HELD.entries()].filter(([, hs]) => hs.some(x => x.who === who && x.by === 'cut' && Math.abs(x.t1 - run.t1) < 1e-6)).map(([ln, hs]) => ({ ln, c: hs[0].c }));
+        if (!atEnd && !cutLines.length) return;
+        const el = h('div', 'fe', content); el.dataset.who = who; el.style.top = y + 'px'; el.dataset.end = atEnd ? 'reel' : 'cut';
+        el.title = atEnd ? `what the fish lines decide holds to the end of the reel\ndrag back to where ${FNAME[who]} goes back to the reel's own (a "${who} auto" line)`
+          : `what the fish lines decide stops at this cut\ndrag on past it to carry it into the next scene (to a "${who} auto" where you let go), or back to stop it sooner`;
         const E = { el, T: null };
-        recs.push({ el, span: m => [E.T != null ? E.T : m(DUR)] });
+        recs.push({ el, span: m => [E.T != null ? E.T : m(run.t1)] });
         el.addEventListener('pointerdown', e => {
           if (e.button !== 0) return;
           el.classList.add('tl-on');
           drag(e, el, (dt, ev) => {
-            const S = sceneAtT(Math.max(from + 0.05, DUR + dt));
-            const at = Math.min(n3(S.sc.dur - 0.05), Math.max(0, snap(Math.max(from + 0.05, DUR + dt) - S.start, ev)));
-            E.T = S.start + at; E.to = { S, at };
+            const T0 = Math.max(run.t0 + 0.05, Math.min(DUR, run.t1 + dt)), S = sceneAtT(Math.min(T0, DUR - 0.05));
+            const at = Math.min(n3(S.sc.dur - 0.05), Math.max(0, snap(T0 - S.start, ev)));
+            E.T = T0 >= DUR - 0.05 ? DUR : S.start + at; E.to = { S, at, end: T0 >= DUR - 0.05 };
             layout(still);
-            show1(E.T, `${FNAME[who]}: the reel's own from ${S.sc.type} @${at}  (${fmt(E.T)})`);
+            show1(E.T, E.T > run.t1 + 0.05 ? `${FNAME[who]}: carried on ${E.to.end ? 'to the end of the reel' : `to ${S.sc.type} @${at}`}  (${fmt(E.T)})`
+              : `${FNAME[who]}: the reel's own from ${S.sc.type} @${at}  (${fmt(E.T)})`);
           }, moved => {
             el.classList.remove('tl-on');
-            const to = E.to; E.T = E.to = null;
-            if (moved && to && to.S.start + to.at < DUR - 0.05) commit(src => RS.addLine(src, to.S.ln, 'fish', `@${to.at} ${who} auto`)); else layout();
+            const to = E.to, T = E.T; E.T = E.to = null;
+            if (!moved || !to || Math.abs(T - run.t1) < 0.05) { layout(); return; }
+            commit(src => {
+              let out = src;
+              // on past the cut: the lines that stopped there carry on (their line count stays,
+              // so the scene's line numbers hold for the auto after them)
+              if (T > run.t1) cutLines.forEach(({ ln, c }) => { out = RS.setField(out, ln, RS.writeFish(Object.assign({}, c, { carry: true }))); });
+              if (!to.end) { const Q = RS.parse(out); out = RS.addLine(out, Q.marks.find(m => m.kind === 'scene' && m.obj === Q.edit.scenes[to.S.i]).ln, 'fish', `@${to.at} ${who} auto`); }
+              return out;
+            });
           });
         });
-      }
+      });
       const seen = new Map();                     // lines at the same moment stand side by side
       FISHL.filter(F => inLane(F.v, who)).forEach(F => {
         const k = (F.S.start + F.v.at).toFixed(3), n = seen.get(k) || 0; seen.set(k, n + 1);
@@ -571,7 +586,7 @@
         el.style.top = y + 'px'; el.style.marginLeft = (-Y.laneH / 2 + n * 16) + 'px';
         const holds = (HELD.get(F.ln) || []).filter(x => x.who === who);
         el.title = `fish ${RS.writeFish(F.v)} (line ${F.ln}) · ${fmt(F.S.start + F.v.at)}`
-          + (holds.length ? ` · holds to ${holds[0].end ? fmt(holds[0].t1) : 'the end'}` : '')
+          + (holds.length ? ` · holds to ${holds[0].by === 'reel' ? 'the end' : fmt(holds[0].t1)}${holds[0].by === 'cut' ? ' (its scene\'s end)' : ''}` : '')
           + '\ndrag to move it (across a cut, into that scene); click to edit it in the Fish panel';
         const M = { el, F };
         FISHM.push(M);
@@ -1525,8 +1540,17 @@
       const r = h('div', 'row cues', insp); h('span', null, r, '');
       names.forEach(n => {
         const c = h('div', 'cue', r), set = S.sc.cues && S.sc.cues[n] != null;
+        const dflt = RS.cue({ type: S.sc.type, cues: {} }, n, EDIT);   // every scene's, else the rig's own
+        if (RS.CUES[n].words) {                    // a word, not a number: the ease's curves
+          const lab = h('label', null, c, n), sel = h('select', null, c); sel.id = 'reel-tl-in' + (uid++); lab.htmlFor = sel.id; sel.dataset.key = 'cue:' + n;
+          [''].concat(RS.CUES[n].words).forEach(w => { const o = h('option', null, sel, w || `(${dflt})`); o.value = w; if ((set ? S.sc.cues[n] : '') === w) o.selected = true; });
+          sel.title = RS.CUES[n].about + ' (the first: the default)';
+          sel.addEventListener('change', () => commit(src => RS.setCue(src, S.ln, n, sel.value || null)));
+          sel.addEventListener('keydown', e => e.stopPropagation());
+          return;
+        }
         const inp = input(c, n, set ? String(S.sc.cues[n]) : '', (src, v) => RS.setCue(src, S.ln, n, v === '' ? null : Number(v)),
-          { num: true, placeholder: String(RS.CUES[n].def(S.sc.type)), key: 'cue:' + n });
+          { num: true, placeholder: String(dflt), key: 'cue:' + n });
         inp.title = RS.CUES[n].about + ' (empty: the default)';
       });
     }

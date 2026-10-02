@@ -4,12 +4,13 @@
 // The script's `fish` lines direct the fish (FISH in scripts/reel-script.js, played by the rig's
 // director): `fish @1.5 big to 0.72 0.8` sends the big fish to a spot, `look`, `idle` and `pace`
 // say what it does there, and dart, turn, scatter, regroup and feed happen once. A line is
-// written in the scene where it starts, and it holds from there, across the cuts, until another
-// line of its kind changes it (ReelScript.fishHolds): set a fish up once, not scene by scene.
+// written in the scene where it starts and holds from there until another line of its kind
+// changes it, and no further than its scene's end, so a scene keeps its own fish wherever it is
+// put; a line that carries (`carry`) runs on past the cut (ReelScript.fishHolds).
 // The panel has two halves, for one fish chosen at the top (the big fish, the school, or both):
 //   At the playhead   one row per kind of thing (look, idle, pace, spot), its button lit for what
 //                     the fish does at the playhead now. Pressing another writes a line at the
-//                     playhead, so it changes from there on, until a later line changes it again;
+//                     playhead, so it changes from there to the scene's end (or a later line);
 //                     Reel's own gives every kind back to the reel's choreography. Pressing one
 //                     again at the same moment rewrites that line rather than adding a second.
 //                     The once buttons (dart, turn, scatter, regroup, feed) write a line each.
@@ -19,8 +20,8 @@
 //   Lines             the lines still holding from earlier scenes, then every fish line of the
 //                     scene under the playhead, numbered in time order, each with where it stops.
 //                     Click one to open it: its time, who, what it does, its point (typed, or
-//                     picked on the stage) and how long it holds (Stop here ends it at the
-//                     playhead), each change one save; Delete takes it out.
+//                     picked on the stage) and how long it holds (Carry on past the cut, or Stop
+//                     here at the playhead), each change one save; Delete takes it out.
 // One line is selected at a time, and it is the same line everywhere: its row here, its numbered
 // mark on the stage (drag a mark to move its point, click it to select), and its gold mark in the
 // timeline's fish lanes (click a mark there to select it here). While the panel is open the stage
@@ -28,7 +29,7 @@
 // to what it is looking at. Saves go on the timeline's undo stack, so its Undo (and ⌘Z) takes a
 // fish line back like any other edit.
 // Keys while it is open: D dart, T turn, S scatter, G regroup, 1-4 hover, sweep, circle, wander,
-// 0 the reel's own; Esc drops a pick. F opens and shuts it. A classic script the rig injects in
+// A the reel's own (auto); Esc drops a pick. F opens and shuts it. A classic script the rig injects in
 // live mode only.
 (function () {
   'use strict';
@@ -61,10 +62,11 @@
   // a line from an earlier scene that still holds in scene i, and all of those
   const holdsInto = (r, i) => r.i < i && r.holds.some(h => h.t1 > SC[i].start + 1e-6);
   const carried = i => [].concat(...LINES.slice(0, i)).filter(r => holdsInto(r, i));
-  // where a line stops holding: a time, or the end (an `all` line's two fish may stop apart)
+  // where a line stops holding: a time (its scene's end, or a later line), or the reel's end (an
+  // `all` line's two fish may stop apart)
   function till(r, long) {
     if (!r.holds.length) return '';
-    const one = h => (h.end ? fmt(h.t1) : long ? 'the end of the reel' : 'end');
+    const one = h => (h.by === 'reel' ? (long ? 'the end of the reel' : 'end') : fmt(h.t1) + (long && h.by === 'cut' ? ', its scene\'s end' : ''));
     const a = r.holds.map(one);
     if (a.length === 2 && a[0] !== a[1]) return long ? `the big fish to ${a[0]}, the school to ${a[1]}` : `${a[0]} big · ${a[1]} school`;
     return a[0];
@@ -210,7 +212,7 @@
   // At the playhead: each control, its row, its icon and words, its key, the line it writes (the
   // words after the @ time) and which fish it is for. A control with no `body` picks a point.
   const hNow = el('h3', null, body, 'At the playhead');
-  hNow.title = 'A lit button is what the fish does at the playhead. Press another to change it from here on: it holds across the cuts until a later line changes it. Playing, presses gather into a take that pausing keeps.';
+  hNow.title = 'A lit button is what the fish does at the playhead. Press another to change it from here to the scene\'s end (a line\'s Carry runs it on past the cut). Playing, presses gather into a take that pausing keeps.';
   const nowEl = el('p', 'now', body);
   const ctl = el('div', 'ctl', body);
   const rowOf = label => { el('span', null, ctl, label); return el('div', 'row', ctl); };
@@ -235,14 +237,14 @@
   control(rSpot, 'to', 'place', 'Place', 'the next click on the stage is where it swims to, and stays', null, null);
   control(rSpot, 'toauto', 'auto', 'Scene\'s', 'the scene\'s own spot, beside what it looks at', null, w => `${w} to auto`);
   const rAll = rowOf('All');
-  control(rAll, 'reel', 'auto', 'Reel\'s own', `from here on, ${RS.FISH.auto.about.replace(/^back/, 'all of it back')} (0)`, null, w => `${w} auto`);
+  control(rAll, 'reel', 'auto', 'Reel\'s own', `from here on, ${RS.FISH.auto.about.replace(/^back/, 'all of it back')} (A)`, null, w => `${w} auto`);
   const rAct = rowOf('Once');
   control(rAct, 'dart', 'dart', 'Dart', RS.FISH.dart.about + ', the big fish (D)', null, w => `${w} dart`, 'big');
   control(rAct, 'turn', 'turn', 'Turn', RS.FISH.turn.about + ', the big fish (T)', null, w => `${w} turn`, 'big');
   control(rAct, 'scatter', 'scatter', 'Scatter', RS.FISH.scatter.about + ' (S)', null, w => `${w} scatter`, 'school');
   control(rAct, 'regroup', 'regroup', 'Regroup', RS.FISH.regroup.about + ' (G)', null, w => `${w} regroup`, 'school');
   control(rAct, 'feed', 'food', 'Feed', 'the next click on the stage drops food there, for any fish', null, null);
-  el('p', 'tip', body, 'Lit: what it does now. A press holds from here on, across the cuts, until another changes it.');
+  el('p', 'tip', body, 'Lit: what it does now. A press holds from here to the scene\'s end; open its line and Carry it to run on past the cut.');
   const takeEl = el('div', 'take', body); takeEl.hidden = true;
   takeEl.insertAdjacentHTML('beforeend', UI ? UI.icon('record') : '');
   const takeTxt = el('span', null, takeEl);
@@ -604,8 +606,11 @@
       el('span', null, box, 'Holds');
       const hr = el('div', 'row', box);
       const tl = el('span', 'till', hr, `to ${till(r, true)}`); tl.dataset.ed = 'till';
-      const end = r.holds.find(h => h.end);
-      if (end) { const g = btn(hr, 'fwd', '', 'move the playhead to where it stops'); g.dataset.ed = 'go-end'; g.style.width = '26px'; g.style.padding = '0'; g.style.justifyContent = 'center'; g.onclick = () => L.seek(end.t1 + 1e-3); }
+      const cy = btn(hr, 'fwd', 'Carry on', 'run on past its scene\'s cut, until a later line of its kind (carry)'); cy.dataset.ed = 'carry';
+      cy.setAttribute('aria-pressed', String(!!c.carry));
+      cy.onclick = () => edit(r, o => Object.assign(o, { carry: o.carry ? undefined : true }));
+      const end = r.holds.find(h => h.by !== 'reel');
+      if (end) { const g = btn(hr, 'play', '', 'move the playhead to where it stops'); g.dataset.ed = 'go-end'; g.style.width = '26px'; g.style.padding = '0'; g.style.justifyContent = 'center'; g.onclick = () => L.seek(end.t1 - 0.05); }
       stopBtn = btn(hr, 'stop', 'Stop here', `end it at the playhead: a "${c.who} ${RS.RESET[c.verb]}" line there gives it back to the reel`);
       stopBtn.dataset.ed = 'stop'; stopR = r;
       stopBtn.onclick = () => write(`${c.who} ${RS.RESET[c.verb]}`, null);
@@ -675,6 +680,7 @@
   let tool = null;
   function open(on) {
     if (on === undefined) on = root.hidden;
+    if (on && window.REEL_SHOTS && window.REEL_SHOTS.isOpen) window.REEL_SHOTS.open(false);   // they share the left side
     root.hidden = !on; marks.hidden = !on; put(K_OPEN, !!on);
     if (tool) tool.setAttribute('aria-pressed', String(!!on));
     if (!on) endPick();
@@ -683,7 +689,7 @@
   }
   xBtn.onclick = () => open(false);
   addEventListener('resize', () => { if (!root.hidden) placePanel(); });
-  const KEYS = { d: 'dart', t: 'turn', s: 'scatter', g: 'regroup', 1: 'hover', 2: 'sweep', 3: 'circle', 4: 'wander', 0: 'reel' };
+  const KEYS = { d: 'dart', t: 'turn', s: 'scatter', g: 'regroup', 1: 'hover', 2: 'sweep', 3: 'circle', 4: 'wander', a: 'reel' };
   addEventListener('keydown', e => {
     if (e.target.closest && e.target.closest('input, textarea, select, [contenteditable]')) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
