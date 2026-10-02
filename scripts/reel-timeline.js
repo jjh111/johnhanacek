@@ -21,8 +21,12 @@
 // Under the cards, a lane for each fish (the big fish, the school): what it does across the cut,
 // as spans that say what it looks at and how it idles (cyan: the scene's own choreography; gold:
 // a fish line decides; hatched: nothing to look at, so it swims freely), and a gold mark for
-// every fish line at its time. Drag a mark to retime its line; click it to edit the line in the
-// Fish panel (scripts/reel-fish.js); click a span to jump there with that fish chosen.
+// every fish line at its time. A line holds across the cuts until another of its kind changes it
+// (ReelScript.fishHolds), so the gold runs on past the cards' edges. Drag a mark to move its line
+// anywhere in the cut (across a cut, it moves into that scene); where the gold runs to the reel's
+// end, drag its end back to where the fish is the reel's own again (a `<who> auto` line). Click a
+// mark to edit its line in the Fish panel (scripts/reel-fish.js); click a span to jump there with
+// that fish chosen.
 // Under the fish lanes, the music: the score next to the script, which the synth rack keeps
 // (scripts/reel-rack.js, REEL_RACK), on the same clock, as one piece. A head shows each section
 // where its music plays (on the bar near its cut; a dashed line where the picture cuts), the
@@ -66,6 +70,7 @@
   // ── the model: where everything is, read from the parse (again after every change) ──
   const fmt = s => { const m = Math.floor(s / 60 + 1e-9), r = s - m * 60; return `${m}:${r < 10 ? '0' : ''}${r.toFixed(1)}`; };
   const n3 = x => +(+x).toFixed(3);
+  const sceneAtT = T => SCENES.find(S => T >= S.start - 1e-9 && T < S.end - 1e-9) || SCENES[SCENES.length - 1];   // the scene playing at T
   const words = (s, n) => String(s || '').replace(/<[^>]+>/g, '').split(/\s+/).filter(Boolean).slice(0, n).join(' ');
   let P, EDIT, SP, DUR, lines, markOf, SCENES, ITEMS, itemAt, sceneOf, MOMENTS, OUTS;
   function model() {
@@ -202,6 +207,9 @@
 #reel-tl .tl-fm { position: absolute; width: ${Y.laneH}px; height: ${Y.laneH}px; margin-left: -${Y.laneH / 2}px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
   background: rgb(var(--surface-rgb)); border: 1px solid var(--gold); color: var(--gold); cursor: ew-resize; z-index: 4; }
 #reel-tl .tl-fm .ri { width: 12px; height: 12px; }
+#reel-tl .tl-fe { position: absolute; width: 10px; height: ${Y.laneH}px; margin-left: -10px; border-radius: 0 4px 4px 0; cursor: ew-resize; z-index: 4;
+  border: 1px solid var(--gold); border-left: 0; background: repeating-linear-gradient(90deg, rgba(var(--gold-rgb), 0.55) 0 1px, transparent 1px 3px); }
+#reel-tl .tl-fe:hover, #reel-tl .tl-fe.tl-on { background: rgba(var(--gold-rgb), 0.45); }
 #reel-tl .tl-fm:hover, #reel-tl .tl-fm.tl-on { background: rgba(var(--gold-rgb), 0.25); }
 #reel-tl .tl-fm.tl-sel { background: var(--gold); color: rgb(var(--surface-rgb)); box-shadow: 0 0 0 3px rgba(var(--gold-rgb), 0.3); }
 #reel-tl .tl-ph { position: absolute; left: 0; top: ${Y.ruler}px; height: ${FISH_END - Y.ruler}px; width: 1px; background: var(--gold); pointer-events: none; will-change: transform; z-index: 5; }
@@ -511,8 +519,12 @@
       });
     });
     const FISHL = P.fields.filter(f => f.key === 'fish' && sceneOf.get(f.owner)).map(f => ({ ln: f.ln, v: f.owner.fish[f.index], S: sceneOf.get(f.owner) }));
+    // how long each line holds (ReelScript.fishHolds), by its line
+    const HELD = new Map();
+    RS.fishHolds(EDIT).forEach(x => { const f = P.fields.find(g => g.key === 'fish' && g.owner === EDIT.scenes[x.i] && g.index === x.k); if (f) HELD.set(f.ln, (HELD.get(f.ln) || []).concat(x)); });
     FISH_WHO.forEach(([who, y]) => {
-      (L.fish && L.fish.track ? L.fish.track(who) : []).forEach(sp => {
+      const track = L.fish && L.fish.track ? L.fish.track(who) : [];
+      track.forEach(sp => {
         const el = h('div', 'fl ' + (sp.absent ? 'fl-no' : sp.set ? 'fl-set' : sp.look === 'none' ? 'fl-free' : 'fl-auto'), content);
         const [short, long] = spanWords(sp, who);
         el.textContent = short; el.style.top = y + 'px'; el.dataset.who = who;
@@ -524,32 +536,68 @@
           drag(e, el, () => {}, moved => { if (moved) return; L.seek(t); if (window.REEL_FISH) window.REEL_FISH.show(who); });
         });
       });
+      // A fish line holds until another changes it, so what a line decides can run to the reel's
+      // end. Its end is a handle: drag it back to where the fish should be the reel's own again
+      // (a `<who> auto` line there).
+      const last = track[track.length - 1];
+      if (last && last.set && last.t1 >= DUR - 1e-3) {
+        let from = last.t0;
+        for (let k = track.length - 1; k >= 0 && track[k].set; k--) from = track[k].t0;
+        const el = h('div', 'fe', content); el.dataset.who = who; el.style.top = y + 'px';
+        el.title = `what the fish lines decide holds to the end of the reel\ndrag back to where ${FNAME[who]} goes back to the reel's own (a "${who} auto" line)`;
+        const E = { el, T: null };
+        recs.push({ el, span: m => [E.T != null ? E.T : m(DUR)] });
+        el.addEventListener('pointerdown', e => {
+          if (e.button !== 0) return;
+          el.classList.add('tl-on');
+          drag(e, el, (dt, ev) => {
+            const S = sceneAtT(Math.max(from + 0.05, DUR + dt));
+            const at = Math.min(n3(S.sc.dur - 0.05), Math.max(0, snap(Math.max(from + 0.05, DUR + dt) - S.start, ev)));
+            E.T = S.start + at; E.to = { S, at };
+            layout(still);
+            show1(E.T, `${FNAME[who]}: the reel's own from ${S.sc.type} @${at}  (${fmt(E.T)})`);
+          }, moved => {
+            el.classList.remove('tl-on');
+            const to = E.to; E.T = E.to = null;
+            if (moved && to && to.S.start + to.at < DUR - 0.05) commit(src => RS.addLine(src, to.S.ln, 'fish', `@${to.at} ${who} auto`)); else layout();
+          });
+        });
+      }
       const seen = new Map();                     // lines at the same moment stand side by side
       FISHL.filter(F => inLane(F.v, who)).forEach(F => {
         const k = (F.S.start + F.v.at).toFixed(3), n = seen.get(k) || 0; seen.set(k, n + 1);
         const el = h('div', 'fm', content); el.dataset.ln = F.ln; el.dataset.who = who;
         el.innerHTML = window.REEL_UI ? REEL_UI.icon(FICON(F.v)) : '•';
         el.style.top = y + 'px'; el.style.marginLeft = (-Y.laneH / 2 + n * 16) + 'px';
-        el.title = `fish ${RS.writeFish(F.v)} (line ${F.ln}) · ${fmt(F.S.start + F.v.at)}\ndrag to retime it; click to edit it in the Fish panel`;
+        const holds = (HELD.get(F.ln) || []).filter(x => x.who === who);
+        el.title = `fish ${RS.writeFish(F.v)} (line ${F.ln}) · ${fmt(F.S.start + F.v.at)}`
+          + (holds.length ? ` · holds to ${holds[0].end ? fmt(holds[0].t1) : 'the end'}` : '')
+          + '\ndrag to move it (across a cut, into that scene); click to edit it in the Fish panel';
         const M = { el, F };
         FISHM.push(M);
-        recs.push({ el, span: m => [m(F.S.start) + (F.drag != null ? F.drag : F.v.at)] });
+        recs.push({ el, span: m => [F.dragT != null ? F.dragT : m(F.S.start) + F.v.at] });
         el.addEventListener('pointerdown', e => {
           if (e.button !== 0) return;
-          const hi = Math.max(0, n3(F.S.sc.dur - 0.05));
+          const t0 = F.S.start + F.v.at;
           el.classList.add('tl-on');
-          drag(e, el, (dt, ev) => {
-            F.drag = Math.min(hi, Math.max(0, snap(F.v.at + dt, ev)));
+          drag(e, el, (dt, ev) => {                 // a line moves anywhere in the cut: it holds from where it lands
+            const T = Math.max(0, Math.min(DUR - 0.05, t0 + dt)), S = sceneAtT(T);
+            const at = Math.min(n3(S.sc.dur - 0.05), Math.max(0, snap(T - S.start, ev)));
+            F.dragT = S.start + at; F.dragTo = { S, at };
             layout(still);
-            show1(F.S.start + F.drag, `fish @${F.v.at} → @${F.drag}  (${fmt(F.S.start + F.drag)})`);
+            show1(F.dragT, `fish @${F.v.at} → ${S === F.S ? '' : S.sc.type + ' '}@${at}  (${fmt(F.dragT)})`);
           }, moved => {
             el.classList.remove('tl-on');
-            const v = F.drag; F.drag = null;
+            const to = F.dragTo; F.dragT = F.dragTo = null;
             if (!moved) {                           // a click: edit the line in the Fish panel
               L.seek(F.S.start + F.v.at);
               if (window.REEL_FISH) window.REEL_FISH.select(F.ln); else { select(F.S.i, true); point(F.ln); }
               layout();
-            } else if (v !== F.v.at) commit(src => RS.setAt(src, F.ln, v)); else layout();
+            } else if (to && (to.S !== F.S || to.at !== F.v.at)) {
+              // the Fish panel finds the line again by its words in its new scene, if it had it selected
+              if (window.REEL_FISH && window.REEL_FISH.selected === F.ln) put('reel-fish-sel:' + L.file, { text: RS.writeFish(Object.assign({}, F.v, { at: to.at })), i: to.S.i });
+              commit(src => RS.moveFish(src, F.ln, to.S.i, to.at));
+            } else layout();
           });
         });
       });

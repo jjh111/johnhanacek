@@ -33,6 +33,12 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+// where the answer scene cuts in, as John has timed it, and the lead's end written on it
+const RQ = (await import('node:module')).createRequire(import.meta.url);
+const RS_ = RQ(path.join(ROOT, 'scripts/reel-script.js')), RM_ = RQ(path.join(ROOT, 'scripts/reel-music.js'));
+const SCRIPT_ = RS_.parse(fs.readFileSync(path.join(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8')).edit;
+const CUT = RS_.spans(SCRIPT_)[SCRIPT_.scenes.findIndex(x => x.type === 'answer')].start;
+const LEAD_CUT = `CLIP lead ${RM_.rangeText(0, Math.round(CUT / 0.125), 16)} hook 0.5`;
 const NAME = 'zz-mlane-test.script.txt', SCRIPT = path.join(ROOT, 'Assets', NAME), SCORE = SCRIPT.replace(/\.script\.txt$/, '.score.txt');
 const BACKUPS = path.join(ROOT, '.local', 'reel-backups');
 const ORIG = fs.readFileSync(path.join(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8');
@@ -145,11 +151,11 @@ try {
   await dragBy(b.x + b.w / 2, b.y + b.h - 4, 0, -20);
   check(await until(() => clipLines(score(), 'bass')[1] === 'CLIP bass 5-6 eighths 1.2'), `dragged up 20 px, its level: "${clipLines(score(), 'bass')[1]}"`);
   // an edge comes near a scene's cut and is drawn to it: on the bar grid (Shift), the title's lead
-  // ends on the answer's cut (7.5 s), not on the bar line half a second on
+  // ends on the answer's cut (5.75 s since John's 3.25 s title), not on the bar line near it
   b = await clipBox('lead', 0);
-  const cutX = await page.evaluate(() => { const r = document.querySelector('#reel-tl .tl-lane').getBoundingClientRect(); return r.left + 7.55 * (r.width / REEL_LIVE.duration); });
+  const cutX = await page.evaluate(t => { const r = document.querySelector('#reel-tl .tl-lane').getBoundingClientRect(); return r.left + t * (r.width / REEL_LIVE.duration); }, CUT + 0.05);
   await dragBy(b.x + b.w - 2, b.y + b.h / 2, cutX - (b.x + b.w + 1), 0, { shift: true });
-  check(await until(() => clipLines(score(), 'lead')[0] === 'CLIP lead 1-4.3 hook 0.5'), `an edge near a cut is drawn to it, off the bar grid: "${clipLines(score(), 'lead')[0]}" (the answer cuts at 7.5 s, the end of bar 4's beat 3)`);
+  check(await until(() => clipLines(score(), 'lead')[0] === LEAD_CUT), `an edge near a cut is drawn to it, off the bar grid: "${clipLines(score(), 'lead')[0]}" (the answer cuts at ${CUT} s: "${LEAD_CUT}")`);
   const editsN = 6;
   for (let i = 0; i < editsN; i++) { await page.keyboard.press('Control+z'); await sleep(120); }
   check(await until(() => score() === s00), `${editsN} undos: the score as it was, byte for byte`);

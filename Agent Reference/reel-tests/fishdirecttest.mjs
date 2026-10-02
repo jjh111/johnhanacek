@@ -10,6 +10,8 @@
 //   5. `feed 0.5 0.8`: food lands at its time
 //   6. `big dart`: the big fish bursts forward; `big turn`: it turns round
 //   7. `all look off` + `big idle wander`: the engine has the big fish again (no host steer)
+//   7b. those lines hold across the cut into the feature scene (still the engine's), until the
+//      feature's `big auto` gives the big fish back to the reel's own choreography
 //   8. without fish lines the same page swims as before (the director is transparent): checked
 //      by fishtest.mjs and, against the committed rig, by hand (0 px over the whole cut)
 //   9. no page errors
@@ -37,7 +39,10 @@ const res = P0.marks.find(m => m.kind === 'scene' && m.obj === P0.edit.scenes[re
 const LINES = ['@0.5 big to 0.8 0.85', '@0.5 school to 0.2 0.78', '@4 school scatter', '@5 big idle circle',
   '@9.5 big dart', '@10.5 big turn', '@12 all look off', '@12 big idle wander', '@12.5 feed 0.5 0.8'];
 for (const l of LINES.slice().reverse()) src = RS.addLine(src, res.ln, 'fish', l);
+{ const Q = RS.parse(src), f = Q.edit.scenes.findIndex(s => s.type === 'feature');
+  src = RS.addLine(src, Q.marks.find(m => m.kind === 'scene' && m.obj === Q.edit.scenes[f]).ln, 'fish', '@2 big auto'); }
 const R0 = RS.spans(RS.parse(src).edit)[resIdx].start;
+const F0 = RS.spans(RS.parse(src).edit)[RS.parse(src).edit.scenes.findIndex(s => s.type === 'feature')].start;
 const T = s => +(R0 + s).toFixed(4);          // a time in the results scene, in reel seconds
 
 const srv = await serveVerified(ROOT);
@@ -86,8 +91,11 @@ async function run(format) {
   const pre = s35;
   const post = await walk(T(4.1));
   ok(post.phase === 'scatter', `${format}: "school scatter": the school's phase turns to scatter (${pre.phase} → ${post.phase})`);
-  const later = await walk(T(4.9));
-  ok(later.school.spread > pre.school.spread * 1.3, `${format}: the school spreads out (${pre.school.spread.toFixed(0)} → ${later.school.spread.toFixed(0)} px from its centre)`);
+  // its widest in the second after (one instant depends on how spread it already was: John's
+  // 3.25 s title has the school start the scatter at 183 px, and peak a beat later)
+  let widest = 0;
+  for (const s_ of [4.3, 4.5, 4.7, 4.9, 5.1, 5.3]) widest = Math.max(widest, (await walk(T(s_))).school.spread);
+  ok(widest > pre.school.spread * 1.3, `${format}: the school spreads out (${pre.school.spread.toFixed(0)} → ${widest.toFixed(0)} px from its centre at its widest)`);
   // 4. circle: the big fish's bearing from its spot turns through most of a circle
   // (a circle is moved in from the edges until all of it is in the water: in a 1080 px frame its
   // centre is at most 280 px from a side, the water's 140 and the ellipse's 140)
@@ -111,6 +119,12 @@ async function run(format) {
   const w1 = await walk(T(12.4));
   const steer = await page.evaluate(() => { const f = window.REEL.debug.tank.state.fish.reduce((a, f) => (!a || f.bodyWidth > a.bodyWidth ? f : a), null); return window.REEL.debug.steer(f); });
   ok(steer === null, `${format}: "all look off", "big idle wander": the engine has the big fish again (steer ${JSON.stringify(steer)})`);
+  // 7b. across the cut: still the engine's in the feature scene, until its `big auto`
+  const steerAt = async t => { await walk(t); return page.evaluate(() => { const f = window.REEL.debug.tank.state.fish.reduce((a, f) => (!a || f.bodyWidth > a.bodyWidth ? f : a), null); return window.REEL.debug.steer(f); }); };
+  const across = await steerAt(+(F0 + 1.5).toFixed(4));
+  ok(across === null, `${format}: the results scene's lines hold across the cut: 1.5 s into the feature, the engine still has the big fish (steer ${JSON.stringify(across)})`);
+  const back = await steerAt(+(F0 + 2.6).toFixed(4));
+  ok(back && Number.isFinite(back.heading), `${format}: "big auto" in the feature gives it back to the reel's own: steered again 0.6 s later`);
   ok(errors.length === 0, `${format}: no page errors${errors.length ? ': ' + errors.slice(0, 2).join(' | ') : ''}`);
   await ctx.close();
 }

@@ -34,7 +34,7 @@ const diff = (a, b) => lines(a).map((l, i) => [i + 1, l, lines(b)[i]]).filter(([
 const edit = RS.parse(SCRIPT).edit;
 const scenes = RS.spans(edit).map((c, i) => ({ type: edit.scenes[i].type, start: c.start, end: c.end }));
 const P = RM.parse(SCORE), mom = RM.moments(edit, RS), A = RM.arrange(P.score, scenes, mom);
-const CUT = scenes[scenes.length - 1].end;                          // the cut's length, as the script says (60 s, then 63.5)
+const CUT = scenes[scenes.length - 1].end;                          // the cut's length, as the script says (60 s, then 63.5, then 61.75)
 const STEP = 0.125, SPB = 16;
 const partOf = name => P.score.parts.find(p => p.tracks.includes(name));
 ok(P.score.tempo === 120 && P.score.beatsPerBar === 4 && P.score.parts.map(p => p.name).join() === 'drums,bass,chords,arp,lead,fx',
@@ -66,7 +66,7 @@ ok(A.harmony.length === A.bars && A.harmony.every((h, b) => h.chord.name === (b 
   ok(n0 && n0.midi === RM.noteMidi(lead[(22 / STEP) % lead.length]), `a pad goes round on the bars, so the tune keeps time with the chords: at 22 s the lead plays ${lead[(22 / STEP) % lead.length]}`);
   const tune = band.filter(e => e.track === 'lead' && e.t >= 22 - 1e-9 && e.t < 24 - 1e-9).map(e => +(e.dur / STEP).toFixed(3)).join();
   ok(tune === '4,2,2,4,4', `a note lasts until the next one, len steps at most (the bar from 22 s: ${tune} steps)`);
-  const held = band.filter(e => e.track === 'chords' && e.midi === RM.noteMidi('A3') && e.t <= 58 + 1e-9 && e.t + e.dur >= 63.5 - 1e-9);
+  const held = band.filter(e => e.track === 'chords' && e.midi === RM.noteMidi('A3') && e.t <= 58 + 1e-9 && e.t + e.dur >= Math.min(64, CUT) - 1e-9);
   ok(held.length === 1, 'a chord that carries on is held, not struck again (Am from bar 30 to the end, one note a voice)');
   const lv = A.levels.lead;
   ok(RM.levelAt(lv, 45) === 0 && Math.abs(RM.levelAt(lv, 46) - 0.35) < 1e-9 && Math.abs(RM.levelAt(lv, 47) - 0.7) < 1e-9 && RM.levelAt(lv, 54.01) === 1,

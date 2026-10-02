@@ -432,7 +432,8 @@ attention, idles and actions."
   `dart` and `turn` (the big fish), `scatter` and `regroup` (the school), `feed x y` (no who: the
   food is for any fish). Points are fractions of the frame (0-1 across, 0-1 down), like `focus`,
   so one line serves wide, square and vertical. `to`, `look`, `idle` and `pace` hold until the
-  next line of their kind for that fish, or the scene's end. `reel-script.js` reads them
+  next line of their kind for that fish, or the scene's end (until 2026-10-02: now across the
+  cuts, see "Fish lines that outlast their scene"). `reel-script.js` reads them
   (`readFish`/`writeFish`, every mistake a sentence: "only the big fish can dart; the school
   scatters"), lists them on the cue sheet, and edits them like any line: `setAt` moves one's @,
   `addLine` and `removeLine` put one in and take one out.
@@ -858,6 +859,51 @@ decay, more reverb on the arp. They are in the new arrangement.)
   the drum rows, an edge each way, a move, a fade, a level, the cut's pull, a double-click's clip
   in play order, its pad and level from the inspector, ⌘D refused and done, ⌫, a part's chosen
   pad, one Undo across both files, M/S per part, the cues, shut and open, a short window).
+
+## Fish lines that outlast their scene (2026-10-02)
+
+John: "it's now tricky to set up the fish behaviors when they are locked to the section i have to
+keep re-creating them." He had: the big fish sent to the lower left in the command scene, then
+the same spot written again at the top of results, because each scene's end let it go.
+
+- **A line holds until it is changed.** `to`, `look`, `idle` and `pace` hold from their time,
+  across the cuts, until the next line of their kind for that fish (anywhere later in the cut) or
+  its `auto`. A line is still written in the scene where it starts, and its @ still counts from
+  that scene, so it moves with the scene when an edit ripples. Where no line holds, the fish keep
+  the reel's own choreography, as before (0 px).
+- **The ways back:** `to auto` and `look auto` (as before), `idle auto` (new: its own idle) and
+  `pace 1`, one per kind (`ReelScript.RESET`), and `<who> auto` (new), which gives all four back
+  at once. At one moment an `auto` comes before the other lines, so "auto, then circle" circles
+  whichever is written first.
+- **One account of it:** `ReelScript.fishHolds(edit)` gives every holding line, for each fish it
+  directs (an `all` line once per fish, ending apart if a later line names one of them), its
+  start, its end and the line that ends it. The rig's director plays it (`direct()` is now its
+  spans), the Fish panel and the timeline draw it, and the cue sheet prints where each line stops
+  (`fish big idle circle  → 0:25.35`, `→ the end`).
+- **The Fish panel** lists the lines still holding from earlier scenes above the scene's own
+  (`↳`, with their scene), each with where it stops; their spots show on the stage too, so a spot
+  set in the command scene is dragged from the results scene without writing it again. Selecting
+  one keeps the playhead where it is. A line's editor says how long it holds and has **Stop here**
+  (its kind's way back, written at the playhead) and a jump to where it stops. A selected line
+  stays selected across a cut while it still holds. At the playhead, **Reel's own** (key 0) writes
+  `<who> auto`. The panel's words say a press holds "from here on, across the cuts".
+- **The timeline:** the gold of a fish line runs on past the cards' edges until it is changed. A
+  mark drags anywhere in the cut: across a cut its line moves into that scene (`moveFish`: out of
+  one scene, into the other at the @ it lands on, snapped on the scene's own grid). Where the gold
+  runs to the reel's end, its end is a handle: drag it back and a `<who> auto` line is written
+  where it lands.
+- **John's script plays as it did.** His lines (command: the spot at 0.21 0.71 and a circle;
+  results: food, a slower pace and a sweep) used to stop at those scenes' ends, so a `big auto`
+  went at the top of results and of feature, where the old rule let go. The committed rig playing
+  his saved script and this one playing it with the two lines put every fish in the same place at
+  every quarter second of the cut. Delete the one in results and the command scene's circle
+  carries on into it.
+- **Tests:** scripttest (holds across cuts, the `all` line's two ends, an `auto` first at one
+  moment, the cue sheet's ends, `moveFish` across a cut, the ways back), fishdirecttest (in
+  render mode: the results scene's wander still has the big fish 1.5 s into the feature, and the
+  feature's `big auto` steers it again), fishpaneltest (the sweep still lit and listed in the
+  next scene, the timeline's end handle writes `big auto`, Stop here writes `idle auto`, a mark
+  dragged back across a cut lands in the scene before).
 
 ## Later
 

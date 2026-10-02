@@ -39,6 +39,9 @@ const NAME = 'zz-timeline-test.script.txt', TMP = path.join(ROOT, 'Assets', NAME
 const BACKUPS = path.join(ROOT, '.local', 'reel-backups'), CACHE = path.join(ROOT, '.local', 'sizzle-cache');
 const SHOTS = process.env.TIMELINE_SHOTS || path.join(ROOT, '.local', 'reel-tests', 'timeline');
 const ORIG = fs.readFileSync(path.join(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8');
+// the answer scene's first line as John has it now (he rewrites the copy in the hosted editor)
+const LINE0 = /^SCENE answer[^\n]*\n(?:(?!SCENE)[^\n]*\n)*?\s*line\s+(.+?)\s*$/m.exec(ORIG)[1];
+const reLine = t => new RegExp('^  line     ' + t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'm');
 let fails = 0, passes = 0;
 const check = (ok, what, extra = '') => { if (ok) passes++; else fails++; console.log(`${ok ? 'ok  ' : 'FAIL'} ${what}${ok || !extra ? '' : '  (' + extra + ')'}`); };
 const file = () => fs.readFileSync(TMP, 'utf8');
@@ -205,7 +208,7 @@ try {
   // 3 ── the inspector: the first line of the answer scene
   await page.locator('#reel-tl .tl-sc[data-scene="2"] b').click();
   const first = page.locator('#reel-tl .tl-insp-col input[data-key="line"]').first();
-  check(await first.inputValue() === 'Freehand expression', 'the inspector shows the answer scene\'s first line', await first.inputValue());
+  check(await first.inputValue() === LINE0, `the inspector shows the answer scene's first line ("${LINE0}")`, await first.inputValue());
   const nIn = await page.locator('#reel-tl .tl-insp-col input').count();
   check(nIn >= 10, 'the inspector has an input per line (and the cues)', nIn);
   await page.screenshot({ path: path.join(SHOTS, 'timeline-inspector.png') });
@@ -218,7 +221,7 @@ try {
   check(foc && foc.key === 'line' && foc.v === 'Freehand drawing', 'and the field you pressed Enter in keeps the focus, with its new words', JSON.stringify(foc));
   await page.evaluate(() => document.activeElement && document.activeElement.blur());
   await saving('undo 1', () => page.keyboard.press('Control+z'));
-  check(/^  line     Freehand expression$/m.test(file()) && /^SCENE answer 5\s/m.test(file()), 'Ctrl+Z undid the words');
+  check(reLine(LINE0).test(file()) && /^SCENE answer 5\s/m.test(file()), 'Ctrl+Z undid the words');
   await saving('undo 2', () => page.keyboard.press('Control+z'));
   check(file() === ORIG, 'Ctrl+Z twice gives the file back byte for byte');
   await saving('redo', () => page.keyboard.press('Control+Shift+z'));

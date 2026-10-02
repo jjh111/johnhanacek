@@ -799,23 +799,26 @@ p, h1, h2, h3 { margin: 0; }
     return c >= 0 ? e : Math.PI - e;
   };
   // ── direction: the script's `fish` lines ──────────────────────────────
-  // A scene's fish lines take over from the choreography below for that scene only (ReelScript's
-  // FISH: `fish @1.5 big to 0.72 0.8`). `to`, `look`, `idle` and `pace` hold until the next line
-  // of their kind for that fish or the scene's end; dart, turn, scatter, regroup and feed happen
-  // once, as EVENTS (registered with the scenes' own, below). A scene without fish lines swims
-  // exactly as it always has. Points are fractions of the frame; a spot is kept in the water,
-  // clear of the tank's edges, where the engine would turn a fish back.
+  // A fish line takes over from the choreography below from its time on (ReelScript's FISH:
+  // `fish @1.5 big to 0.72 0.8`). `to`, `look`, `idle` and `pace` hold until the next line of
+  // their kind for that fish, or its `auto`, across the cuts (ReelScript.fishHolds); dart, turn,
+  // scatter, regroup and feed happen once, as EVENTS (registered with the scenes' own, below).
+  // Where no line holds, the fish swim exactly as they always have. Points are fractions of the
+  // frame; a spot is kept in the water, clear of the tank's edges, where the engine would turn a
+  // fish back.
   const WATER = { x0: 140, x1: W - 140, y0: TANK_Y + 120, y1: TANK_Y + TANK_H - 80 };   // stage px
   const inWater = (x, y) => ({ x: Math.max(WATER.x0, Math.min(WATER.x1, x)), y: Math.max(WATER.y0, Math.min(WATER.y1, y)) });
   const DIR = { big: [], school: [] }, LOOKS = [];   // { t0, t1, ch, v } in time order; the looks at a point
   function direct() {                          // (with the scenes: build(), below)
     DIR.big.length = 0; DIR.school.length = 0; LOOKS.length = 0;
-    SC.forEach(sc => (sc.fish || []).map((c, k) => ({ c, k })).sort((a, b) => a.c.at - b.c.at || a.k - b.k).forEach(({ c }) => {
-      if (ReelScript.FISH[c.verb].once || c.at < 0 || c.at >= sc.dur) return;
-      let v = c.verb === 'to' ? (c.auto ? null : inWater(c.x * W, c.y * H)) : c.verb === 'idle' ? c.mode : c.verb === 'pace' ? c.pace : c.look;   // `to auto`: back to the scene's own spot
-      if (c.verb === 'look' && !c.look) LOOKS.push(v = { x: c.x * W, y: c.y * H });   // its own object: it keeps its side (sideOf)
-      (c.who === 'all' ? ['big', 'school'] : [c.who]).forEach(w => DIR[w].push({ t0: sc.start + c.at, t1: sc.end, ch: c.verb, v }));
-    }));
+    const pts = new Map();                     // a look at a point is one object, for both fish: it keeps its side (sideOf)
+    ReelScript.fishHolds(EDIT).forEach(h => {
+      const c = h.c;
+      let v = c.verb === 'to' ? (c.auto ? null : inWater(c.x * W, c.y * H))   // `to auto`: back to the scene's own spot
+        : c.verb === 'idle' ? (c.mode === 'auto' ? null : c.mode) : c.verb === 'pace' ? c.pace : c.look;
+      if (c.verb === 'look' && !c.look) { if (!pts.has(c)) LOOKS.push(pts.set(c, { x: c.x * W, y: c.y * H }).get(c)); v = pts.get(c); }
+      DIR[h.who].push({ t0: h.t0, t1: Math.min(h.t1, DURATION), ch: c.verb, v });
+    });
   }
   // what a fish has been told at t; `since` is when the latest of it began
   function dirAt(who, t) {

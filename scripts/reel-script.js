@@ -24,8 +24,9 @@
 //
 // Inside a scene, `fish @<seconds> <who> <what>` directs the fish (FISH below): the big fish
 // drawn in the opening, the school of four, or all of them. `fish @1.5 big to 0.72 0.8` sends
-// the big fish to 72% across and 80% down the frame, 1.5 s into the scene, and it stays there.
-// A scene that writes none keeps the rig's own choreography.
+// the big fish to 72% across and 80% down the frame, 1.5 s into the scene, and it stays there,
+// across the cuts, until a later line sends it somewhere else (or `big auto` gives it back to the
+// reel). Where nothing has been said, the fish keep the rig's own choreography.
 //
 // Tools edit a script the way a person would, one line at a time: parse() says which line
 // holds what (`marks` for SCENE/ITEM/@ lines, `fields` for every other line), and setDur,
@@ -161,15 +162,18 @@
   // there. Who: `big` (the fish drawn in the opening), `school` (the four medium fish the
   // command scene makes) or `all`. A position is a fraction of the frame, 0-1 across and 0-1
   // down like `focus`, so one line serves every format; the rig keeps a fish inside the water.
-  // `to`, `look`, `idle` and `pace` hold until the next line of their kind for that fish, or
-  // the scene's end; the other verbs happen once, at their time. A scene with no fish lines
-  // keeps the rig's own choreography: the fish swim over to what the scene shows and look at it.
+  // `to`, `look`, `idle` and `pace` hold until the next line of their kind for that fish, or its
+  // `auto`, wherever that is in the cut: a line outlasts its scene (fishHolds, below). Each has a
+  // way back to the reel's own (`to auto`, `look auto`, `idle auto`, `pace 1`), and `auto` gives
+  // all four back at once. The other verbs happen once, at their time. Where no line holds, the
+  // fish keep the rig's own choreography: they swim over to what the scene shows and look at it.
   const WHO = ['big', 'school', 'all'];
   const FISH = {
     to:      { args: 'xy', auto: true, about: 'swim to a point and stay there (auto: back to the scene\'s own spot)' },
     look:    { args: 'look', about: 'look at a point, at what the scene shows (auto) or at nothing (off)' },
-    idle:    { args: 'mode', about: 'what it does while it is there: hover, sweep, circle or wander' },
+    idle:    { args: 'mode', about: 'what it does while it is there: hover, sweep, circle or wander (auto: its own)' },
     pace:    { args: 'pace', about: 'how fast it swims: 1 is its own pace, 0.3 to 3' },
+    auto:    { about: 'back to the reel\'s own choreography: the scene\'s spot, what it shows, its own idle and pace' },
     dart:    { once: true, only: 'big', about: 'a burst of speed, straight ahead' },
     turn:    { once: true, only: 'big', about: 'turn round' },
     scatter: { once: true, only: 'school', about: 'the school bursts apart, then comes back together' },
@@ -211,7 +215,7 @@
       else if (w.length === 2) xy();
       else throw new Error('look takes a point ("look 0.5 0.4"), auto (what the scene shows) or off');
     } else if (def.args === 'mode') {
-      if (w.length !== 1 || !IDLES[w[0]]) throw new Error(`idle takes one of ${Object.keys(IDLES).join(', ')}`);
+      if (w.length !== 1 || !(IDLES[w[0]] || w[0] === 'auto')) throw new Error(`idle takes one of ${Object.keys(IDLES).join(', ')}, or auto (its own)`);
       o.mode = w[0];
     } else if (def.args === 'pace') {
       if (w.length !== 1) throw new Error('pace takes one number: 1 is its own pace');
@@ -223,6 +227,34 @@
   function writeFish(o) {
     const args = o.look ? [o.look] : o.auto ? ['auto'] : o.mode ? [o.mode] : o.pace != null ? [n3(o.pace)] : o.x != null ? [n3(o.x), n3(o.y)] : [];
     return [`@${n3(o.at)}`].concat(o.who ? [o.who] : [], [o.verb], args).join(' ');
+  }
+  // The line that gives one kind of direction back to the reel: what ends a hold of it.
+  const RESET = { to: 'to auto', look: 'look auto', idle: 'idle auto', pace: 'pace 1' };
+  // How long each fish line holds. `to`, `look`, `idle` and `pace` hold from their time until
+  // the next line of their kind for that fish, or its `auto`, wherever that is in the cut: so a
+  // fish keeps what it was told across the cuts until it is told otherwise. One entry for each
+  // line and fish it directs (an `all` line is one for each): { i: its scene, k: its index in
+  // the scene's fish, c: the line, who: 'big' | 'school', t0, t1 (reel seconds: the reel's end
+  // when nothing ends it), end: { i, k } of the line that ends it, or null }, in time order.
+  // Lines at one moment: an `auto` first, then the lines as written ("auto, then circle"
+  // circles). A line past its scene's end does nothing (the checker says so).
+  function fishHolds(edit) {
+    const when = spans(edit), total = when.length ? when[when.length - 1].end : 0, all = [];
+    edit.scenes.forEach((sc, i) => (sc.fish || []).forEach((c, k) => {
+      if (!FISH[c.verb] || FISH[c.verb].once || c.at < 0 || c.at >= sc.dur) return;
+      all.push({ i, k, c, t0: when[i].start + c.at });
+    }));
+    all.sort((a, b) => a.t0 - b.t0 || (b.c.verb === 'auto') - (a.c.verb === 'auto') || a.i - b.i || a.k - b.k);
+    const out = [];
+    ['big', 'school'].forEach(who => {
+      const mine = all.filter(x => x.c.who === who || x.c.who === 'all');
+      mine.forEach((x, n) => {
+        if (x.c.verb === 'auto') return;
+        const y = mine.slice(n + 1).find(z => z.c.verb === x.c.verb || z.c.verb === 'auto');
+        out.push({ i: x.i, k: x.k, c: x.c, who, t0: x.t0, t1: y ? y.t0 : total, end: y ? { i: y.i, k: y.k } : null });
+      });
+    });
+    return out.sort((a, b) => a.t0 - b.t0 || a.i - b.i || a.k - b.k || (a.who === 'big' ? -1 : 1));
   }
 
   const asks = type => !!SCENES[type] && SCENES[type].fields.some(f => f[0] === 'query');
@@ -468,7 +500,7 @@
 
   // ── the cue sheet: everything that happens, in the order it happens ───
   function cueSheet(edit) {
-    const when = spans(edit), out = [];
+    const when = spans(edit), out = [], held = fishHolds(edit);
     const clip = p => p.replace(/^\.\//, '');
     const gist = b => [
       b.video ? `video ${clip(b.video)}${b.from != null ? ' from ' + b.from : ''}${b.loop ? ' (loop)' : ''}` : b.img ? `img ${clip(b.img)}` : '',
@@ -478,7 +510,13 @@
       const c = when[i], def = SCENES[sc.type], cs = [];
       (sc.stats || []).forEach(s => { if (s.at != null) cs.push([c.start + s.at, 1, `stat ${s.n} ${s.label}`]); });
       (sc.awards || []).forEach(a => cs.push([c.start + a.at, 1, `award ${a.yr} ${a.text}`]));
-      (sc.fish || []).forEach(f => cs.push([c.start + f.at, 1, 'fish ' + writeFish(f).replace(/^@\S+\s+/, '')]));
+      (sc.fish || []).forEach((f, k) => {
+        // a line that holds says until when: the reel's end, or where a later line changes it
+        const ends = held.filter(h => h.i === i && h.k === k), till = h => (h.end ? tc(h.t1) : 'the end');
+        const until = !ends.length ? '' : ends.length === 1 || till(ends[0]) === till(ends[1]) ? `  → ${till(ends[0])}`
+          : '  → ' + ends.map(h => `${till(h)} (${h.who})`).join(', ');
+        cs.push([c.start + f.at, 1, 'fish ' + writeFish(f).replace(/^@\S+\s+/, '') + until]);
+      });
       if (def.beats) (sc[def.beats[0]] || []).forEach(b => cs.push([c.start + b.at, 1, `@${b.at}  ${gist(b)}`]));
       (sc.items || []).forEach((it, k) => {
         cs.push([c.items[k].start, 1, `ITEM ${it.dur} s  ${it.eyebrow || ''}`]);
@@ -573,6 +611,18 @@
     return retime(next);
   }
 
+  // A fish line taken to another scene (its mark dragged across a cut): out of its own scene and
+  // into scene i, `at` seconds in. In its own scene it is only retimed.
+  function moveFish(src, ln, i, at) {
+    const P = parse(src), f = P.fields.find(x => x.ln === ln && x.key === 'fish'), sc = P.edit.scenes[i];
+    if (!f) throw new Error(`line ${ln} is not a fish line`);
+    if (!sc) throw new Error(`there is no scene ${i + 1}`);
+    if (f.owner === sc) return setAt(src, ln, n3(at));
+    const c = Object.assign({}, f.owner.fish[f.index], { at: n3(at) });
+    const out = removeLine(src, ln), Q = parse(out);
+    return addLine(out, Q.marks.find(m => m.kind === 'scene' && m.obj === Q.edit.scenes[i]).ln, 'fish', writeFish(c));
+  }
+
   // ── the command line ──────────────────────────────────────────────────
   function main(argv) {
     const fs = require('fs'), path = require('path');
@@ -610,5 +660,5 @@
   const writeValue = (kind, v) => { const K = KINDS[kind]; if (!K) throw new Error('no field kind ' + kind); return K.write(v); };
 
   return { parse, format, retime, spans, queries, cueSheet, SCENES, CUES, cue, cueNames, setDur, setAt, setField, setCue, addLine, removeLine,
-    FISH, IDLES, WHO, readFish, writeFish, writeValue, main };
+    FISH, IDLES, WHO, RESET, readFish, writeFish, fishHolds, moveFish, writeValue, main };
 });

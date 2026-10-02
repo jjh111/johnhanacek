@@ -23,9 +23,9 @@ const strip = l => l.replace(/\s*\[[^\]]*\]\s*$/, '');   // a line without its c
 const P = RS.parse(SRC);
 const { edit, marks, fields } = P;
 const total = e => RS.spans(e).slice(-1)[0].end;
-// the cut is as long as its scenes, on the 120 BPM grid (John sets the length in the editor: 60 s, then 63.5)
+// the cut is as long as its scenes (John sets the lengths in the editor: 60 s, then 63.5, then 61.75)
 const sum = edit.scenes.reduce((a, sc) => a + sc.dur, 0);
-ok(edit.scenes.length === 11 && Math.abs(total(edit) - sum) < 1e-9 && total(edit) % 0.5 === 0, `the real script parses: 11 scenes, ${total(edit)} s, whole beats at 120 BPM`);
+ok(edit.scenes.length === 11 && Math.abs(total(edit) - sum) < 1e-9, `the real script parses: 11 scenes, ${total(edit)} s`);
 ok(same(RS.parse(RS.format(edit)).edit, edit), 'format then parse gives the same edit');
 ok(RS.retime(SRC) === SRC, 'retime leaves a fresh script unchanged');
 ok(marks.every(m => ['scene', 'item', 'beat'].includes(m.kind) && m.scene), 'every mark has a kind and its scene');
@@ -41,7 +41,7 @@ const bad = fields.filter(f => {
 });
 ok(fields.length > 100 && bad.length === 0, `${fields.length} field lines, each pointing at its own value${bad.length ? ' (bad: ' + bad.map(f => f.ln).join(',') + ')' : ''}`);
 const answer = edit.scenes[2], thesis = fields.find(f => f.owner === answer && f.key === 'line' && f.index === 0);
-ok(thesis && src[thesis.ln - 1].includes('Freehand expression'), 'the answer\'s first line is found by owner, key and index');
+ok(thesis && answer.lines[0] && src[thesis.ln - 1].includes(answer.lines[0]), 'the answer\'s first line is found by owner, key and index');
 
 // ── changing a script one line at a time ──
 const sceneLn = i => marks.find(m => m.kind === 'scene' && m.obj === edit.scenes[i]).ln;
@@ -119,6 +119,43 @@ const sceneLn = i => marks.find(m => m.kind === 'scene' && m.obj === edit.scenes
   throws(() => RS.removeLine(SRC, sceneLn(5)), /opens a part/, 'removeLine refuses a SCENE line');
   const late = RS.parse(RS.addLine(SRC, res, 'fish', '@40 big turn'));
   ok(late.warnings.some(w => /fish @40 is outside its scene/.test(w)), 'a fish line past its scene\'s end is a warning');
+
+  // A line holds across the cuts until the next line of its kind for that fish, or its `auto`.
+  // (scenes: 4 command, 5 results, 6 feature, 7 logos)
+  const lnIn = (src, i) => { const Q = RS.parse(src); return Q.marks.find(m => m.kind === 'scene' && m.obj === Q.edit.scenes[i]).ln; };
+  let h = RS.addLine(SRC, lnIn(SRC, 4), 'fish', '@1 big idle circle');
+  h = RS.addLine(h, lnIn(h, 4), 'fish', '@2 all to 0.3 0.8');
+  h = RS.addLine(h, lnIn(h, 6), 'fish', '@1 big idle sweep');
+  h = RS.addLine(h, lnIn(h, 7), 'fish', '@0.5 school auto');
+  const PH = RS.parse(h), SPH = RS.spans(PH.edit), END = SPH[SPH.length - 1].end, HS = RS.fishHolds(PH.edit);
+  const held = (verb, who, i) => HS.find(x => x.c.verb === verb && x.who === who && (i == null || x.i === i));
+  const near = (a, b) => Math.abs(a - b) < 1e-9;
+  const circle = held('idle', 'big', 4), sweep = held('idle', 'big', 6), toBig = held('to', 'big'), toSchool = held('to', 'school');
+  ok(circle && near(circle.t0, SPH[4].start + 1) && near(circle.t1, SPH[6].start + 1) && circle.end && circle.end.i === 6,
+    `a line holds past its scene's end: the command's circle holds through results, to the feature's sweep (${circle && circle.t0} → ${circle && circle.t1})`);
+  ok(sweep && near(sweep.t1, END) && sweep.end === null, 'with nothing after it, a line holds to the reel\'s end');
+  ok(toBig && toSchool && near(toBig.t1, END) && near(toSchool.t1, SPH[7].start + 0.5) && toSchool.end.i === 7,
+    'an "all" line holds for each fish apart: the school\'s auto ends only the school\'s spot');
+  ok(HS.length === 4 && !HS.some(x => x.c.verb === 'auto'), 'one hold per line and fish (the "all" line twice); an auto holds nothing itself');
+  const sheet = RS.cueSheet(PH.edit);
+  ok(/fish big idle circle {2}→ \d:\d/.test(sheet) && /fish big idle sweep {2}→ the end/.test(sheet)
+    && /fish all to 0\.3 0\.8 {2}→ the end \(big\), \d:[\d.]+ \(school\)/.test(sheet), 'the cue sheet says where each line stops holding');
+  // at one moment, an auto comes first: "auto, then sweep" sweeps, whatever order they are written in
+  const PA = RS.parse(RS.addLine(h, lnIn(h, 6), 'fish', '@1 big auto')), HA = RS.fishHolds(PA.edit);
+  ok(near(HA.find(x => x.c.verb === 'idle' && x.i === 6).t1, END) && near(HA.find(x => x.c.verb === 'to' && x.who === 'big').t1, SPH[6].start + 1),
+    'an auto and a line at one moment: the auto first, so the sweep holds and the spot ends there');
+  // moving a line across a cut: out of its scene, into the other
+  const cl = PH.fields.find(f => f.key === 'fish' && f.owner === PH.edit.scenes[4] && f.owner.fish[f.index].verb === 'idle').ln;
+  const mv = RS.moveFish(h, cl, 5, 2), PM = RS.parse(mv);
+  ok(lines(mv).length === lines(h).length && PM.edit.scenes[4].fish.length === 1 && PM.edit.scenes[5].fish.some(c => c.verb === 'idle' && c.at === 2 && c.mode === 'circle'),
+    'moveFish takes a line across a cut: out of the command scene, into results at @2');
+  ok(RS.moveFish(h, cl, 4, 3) === RS.setAt(h, cl, 3), 'moveFish in its own scene is a retime');
+  // the ways back
+  ok(RS.writeFish(RS.readFish('@1 big auto')) === '@1 big auto' && RS.writeFish(RS.readFish('@1 school idle auto')) === '@1 school idle auto',
+    '"big auto" and "idle auto" read and round-trip');
+  throws(() => RS.readFish('@1 big auto now'), /auto takes nothing after it/, 'auto takes nothing after it');
+  throws(() => RS.readFish('@1 auto'), /say which fish/, 'auto names its fish');
+  ok(RS.RESET.to === 'to auto' && RS.RESET.look === 'look auto' && RS.RESET.idle === 'idle auto' && RS.RESET.pace === 'pace 1', 'each kind has its way back (RESET)');
 }
 
 // ── cues: defaults are the rig's own timing ──
