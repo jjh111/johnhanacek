@@ -1927,7 +1927,7 @@ code, kbd, samp, pre {
         max-width: min(96vw, 480px);  /* never wider than screen */
         width: fit-content;           /* let name drive the width, keeps oval aspect ratio */
         padding: 0.9rem 3rem 0.7rem;
-        top: 4rem;
+        top: 4rem;   /* touch: overridden below, where the pill is taller */
     }
     .hero h1 {
         font-size: clamp(1.8rem, 8vw, 2.8rem);  /* larger so name fills oval width */
@@ -2109,3 +2109,55 @@ code, kbd, samp, pre {
 /* (The canvases theme themselves now — fish engine, blueprint, cosmos all
    follow jh-theme-change — so canvas-anchored chrome like .canvas-guide
    simply follows the page tokens.) */
+
+/* Swipe offer (scripts/swipe-offer.js): two quick upward strokes on a drawing
+   canvas read as an attempt to scroll, and this pill appears under the finger.
+   Fixed, because both #heroCanvas are fixed; the script places it in client px. */
+.swipe-offer {
+    position: fixed;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    width: max-content;      /* fixed + near an edge would otherwise squeeze it */
+    white-space: nowrap;
+    min-height: 44px;
+    padding: 0.55rem 1rem;
+    transform: translateX(-50%);
+    background: rgba(var(--surface-rgb), 0.92);
+    border: 1px solid rgba(var(--gold-rgb), 0.55);
+    border-radius: 999px;
+    color: var(--gold);
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.25s;
+    -webkit-tap-highlight-color: transparent;
+}
+.swipe-offer[hidden] { display: none; }
+.swipe-offer.shown { opacity: 1; }
+.swipe-offer:hover,
+.swipe-offer:focus-visible { border-color: var(--gold); }
+.swipe-offer svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    animation: bounce-gentle 3s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+    .swipe-offer { transition: none; }
+    .swipe-offer svg { animation: none; }
+}
+
+/* Hero oval on touch: clear the labelled pill. Since v2.18 the touch pill wears
+   its labels in 44px targets, so it ends at 1.5rem + 44px + 0.4rem of padding +
+   2px of border (~76px) and the oval's 4–4.5rem top ran 12px under it on every
+   hero page. Same 0.5rem gap as desktop. Last in the file so it beats both the
+   base rule and the ≤768px one. */
+@media (hover: none) and (pointer: coarse) {
+    .hero-oval { top: calc(2.4rem + 46px); }
+}

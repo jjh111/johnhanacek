@@ -96,10 +96,12 @@
           // Version sits on its own line directly above the copyright; the
           // made-with note moves to the end so it does not split the pair.
           '<p class="version">Portfolio v' + SITE.version + '</p>' +
-          '<p class="footer-copyright">© ' + SITE.year + ' John Hanacek · ' + SITE.org + '</p>' +
+          // Lines are spans so a narrow oval breaks them where they read, not
+          // where they run out of room (jh-chrome.css, ≤768px): no dangling "·".
+          '<p class="footer-copyright"><span class="footer-line">© ' + SITE.year + ' John Hanacek</span><span class="footer-sep"> · </span><span class="footer-line">' + SITE.org + '</span></p>' +
           '<p class="footer-github"><a href="' + SITE.github + '" target="_blank" rel="noopener">' + SITE.githubLabel + '</a></p>' +
           '<p class="version version-note">' + SITE.versionNote + '</p>' +
-          (SITE.goatcounter ? '<p class="version version-note footer-privacy">Visits are <a href="https://www.goatcounter.com" target="_blank" rel="noopener" title="GoatCounter — no cookies, nothing about you is stored">counted</a> without cookies</p>' : '') +
+          (SITE.goatcounter ? '<p class="version version-note footer-privacy"><span class="footer-line">Visits are <a href="https://www.goatcounter.com" target="_blank" rel="noopener" title="GoatCounter — no cookies, nothing about you is stored">counted</a></span> <span class="footer-line">without cookies</span></p>' : '') +
         '</div>';
     }
   }

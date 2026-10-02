@@ -369,7 +369,7 @@
         <nav class="shape-nav" aria-label="Page navigation" data-jh-hero-nav="search,home,design,art" data-current="design"></nav>
         <script src="./scripts/jh-shapes.js?v=2.37"></script>
 
-        <canvas id="heroCanvas"></canvas>
+        <canvas id="heroCanvas" data-swipe-offer="#intro"></canvas>
         <canvas id="fishCanvas" aria-hidden="true"></canvas>
         <div class="hero-hint hidden">
             <span class="hint-icon">✎</span>
@@ -1024,6 +1024,7 @@
          after deferred scripts — order preserved, parser never blocks. -->
     <script src="./scripts/shape-detection.js?v=2.37" defer></script>
     <script src="./scripts/fish-engine.js?v=2.37" defer></script>
+    <script src="./scripts/swipe-offer.js?v=2.37" defer></script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         const canvas = document.getElementById('heroCanvas');
@@ -2465,6 +2466,10 @@
         canvas.addEventListener('touchmove', draw, { passive: false });
         canvas.addEventListener('touchend', endDraw);
         canvas.addEventListener('touchcancel', endDraw);
+        // The blueprint owns every finger, by the same ruling as the engine's tank
+        // (fish-engine.js sets this on index). preventDefault in startDraw alone
+        // only holds while the browser delivers touchstart as cancelable.
+        canvas.style.touchAction = 'none';
 
 
         function clearCanvas() {

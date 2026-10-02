@@ -879,10 +879,10 @@ body > footer { pointer-events: none; }
     max-width: 100%;
     white-space: nowrap;
 }
-.footer-oval p.footer-copyright {
-    white-space: normal; /* v2.37: beats the nowrap above (higher specificity) —
-                            at the mobile oval width "JHDesign LLC" clipped; the
-                            copyright wraps to a second line instead */
+/* v2.37: at the mobile oval width the copyright clipped "JHDesign LLC", and
+   letting it wrap left a dangling "·". The component marks its lines as spans
+   (.footer-line) instead; the ≤768px block below stacks them and drops the
+   separator, so every line breaks where it reads. Desktop stays one line. */
 body > footer a {
     color: var(--cyan);
     text-decoration: underline;
@@ -1074,6 +1074,17 @@ body > footer .footer-privacy {
         min-width: 0;
         width: min(80vw, 300px);
         padding: 1.1rem 1.5rem 1.15rem;
+    }
+    .footer-oval .footer-line { display: block; }
+    .footer-oval .footer-sep { display: none; }
+}
+/* Below 360 the 80vw oval left the GitHub line (~252px) wider than its own
+   content box: the oval takes 90vw and gives back side padding instead. */
+@media (max-width: 360px) {
+    .footer-oval {
+        width: 90vw;
+        padding-left: 1rem;
+        padding-right: 1rem;
     }
 }
 

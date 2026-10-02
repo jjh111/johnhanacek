@@ -811,6 +811,50 @@ is that mechanism applied everywhere:
   is to make that possible by putting every fact in data first; v4 decides whether the
   pages still need to exist.
 
+### v4 — the single-page platform (STASHED 2026-10-02, John: "let's stash this for now")
+
+John's framing: one page, always one background, a "morphic data display" you nav
+around like a high↔low-level wiki; searches and pasted paragraphs call up displays of
+content. The two fish canvases merge; art.html's cosmic header becomes a subset item.
+His motive: a sitemap is more surface to maintain than a platform that calls things up.
+
+**Already half-built:** the postcard's LOD ladder (mention → one-liner → tldr →
+dossier) is the high↔low zoom; `fish-engine.js` already runs both tanks (they differ
+by `renderStyle`, `floorAffinity`, and design's stroke routing), so the merge is
+scenes of one engine — aquarium, blueprint, cosmos — with the background showing
+*where you are* in the idea space. On one page, "verbs stay per-page" stops binding.
+
+**Costs, as discussed:** (1) crawlers/agents that don't run JS → the compiler must
+emit a static twin per node, so surface becomes *generated*, not gone; (2) the
+30-second recruiter needs who/what-shipped on the first screen; (3) the touch doctrine
+(tanks own every touch) collides with an always-on background under reading content;
+(4) long reads — case studies, onagents, writing — stay documents the platform opens;
+(5) phone battery with up to three scene renderers; (6) back button, per-display URLs,
+GoatCounter virtual pageviews, focus management, and the 56 test files pinned to
+today's pages; (7) one shell bug breaks the whole site.
+
+**Recommended sequence when un-stashed:** v3 record + compiler first (it is v4's
+foundation either way) → index.html becomes the platform with generated pages live
+behind it → retire hand-made pages one at a time (About, Services, Design, Art), each
+old URL becoming a generated twin → documents stay documents. Two open questions:
+on a phone, is the background scenery while a display is open, or still drawable?
+Does the first screen lead with the tank (demo) or with a featured display (proof)?
+
+**BUILT 2026-10-02 (local, uncommitted) as `scripts/swipe-offer.js` — see CLAUDE.md and `maze-tests/swipelab.mjs`; it diverges from the description below by reading UPWARD strokes only, using along-axis overlap (same-spot swipes count), and a 1.2 s window.** Port candidate — the swipe offer (MetaMedium, `../MetaMedium/index.html`
+`swipeRead` / `updateOffer`, ~line 3249).** Two roughly parallel lines drawn one
+right after the other read as a swipe, and the canvas offers a "scroll on" button
+right under the last touch point. This mitigates the tank's touch containment from
+the UX side without re-adding scroll arbitration, which the touch doctrine forbids. The gate is
+relational, like design.html's erase: the two most recent marks (consecutive uids),
+both `line`, `adjacent`, within ~20° of parallel (`SWIPE_TURN` 0.35 rad), the shorter
+at least 60% of the longer (`SWIPE_PEER`), and side by side rather than end to end.
+That last check rejects two box sides, a dash after a dash, and letters. Taking
+the offer consumes it for that pair only; draw the pair again and it re-offers. No
+time window exists: "quickly" is approximated by "the last two strokes". It is
+useful now, before v4, on index.html and design.html, as an extra escape next to the
+"view content" oval. In this repo's engine it would hook into `classifyStroke` results,
+not MetaMedium's relationship detector, so it is a port, not a copy.
+
 ## Sequencing & the running ratchet (superseded 2026-09-09 by "Priority order" above — kept for the record)
 
 v2.1 → v2.2 → v2.3 → v2.4 → v2.5 → v3.0. Data first (John's call: philosophy into the

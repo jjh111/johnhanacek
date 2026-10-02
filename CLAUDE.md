@@ -157,6 +157,7 @@ which stamps every `?v=` cache-bust ref across root `*.html` **and** the `Portfo
 - Touch and mouse support for drawing entities
 - See `Assets/FISH_SYSTEM_TECHNICAL.md` for full technical reference
 - Debug mode: "Logic view" checkbox in the hero controls (wired to `heroFish.setDebug`)
+- **Swipe offer** (`scripts/swipe-offer.js`, both tanks via `data-swipe-offer="#target"` on `#heroCanvas`): the tanks own every touch by ruling, so two quick, roughly parallel UPWARD strokes (what a thumb does trying to scroll) offer a "scroll down" pill under the last touch point. Touch only, listens passively, changes no stroke routing; the strokes still do what lines do. Ported from MetaMedium's `swipeRead`. Thresholds are budgeted by `maze-tests/swipelab.mjs`, wiring by `swipetest.mjs`
 - **Shared engine (v1.8):** the whole system lives in `scripts/fish-engine.js` — `FishCanvas(canvasEl, opts)` (full minigame, used by index.html; page hooks: `onDrawingChange`, `onStroke`) and `FishCanvas.ambient(canvasEl)` (single cursor-following fish, used by 404.html). `fish-demo/` still runs its own `fish.js` — that file is a compiled esbuild bundle whose source (`fish-src.js`) lives only on John's machine (gitignored); rebase it onto the engine locally when convenient
 
 **Fish Minigame Architecture:**
