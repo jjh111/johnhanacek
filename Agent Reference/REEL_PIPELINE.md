@@ -1023,6 +1023,25 @@ put the art's arp and kick under the answer.
   score has its fixture), and musictest checks the real score reads and plays inside the real
   cut, in John's order, and that a clip on sixteenths writes to the same columns.
 
+## The film again, and a walkthrough of the editor (2026-10-03)
+
+John: "render the new film and also make a new walkthrough of our UI system (go through each
+feature/control set, keep the whole thing at a minute)".
+
+- **The film** was rendered from the saved edit (`e382f3`, the store's script and score equal to
+  the repo's): wide, 60 fps, `--jobs=3 --deliver`, 14.5 min here. The web copy (13.8 MB) went to
+  the editor's assets and `films/latest`, where Export plays and downloads it.
+- **`scripts/record-walkthrough.mjs`** records the walkthrough: the hosted build, served with the
+  stand-in for claude.ai's capabilities that hosttest uses, driven through ten control sets in
+  60 s. Three things it had to learn: a button a panel has scrolled out of view still has a box,
+  and a click there lands on whatever is behind it (the Fish panel's Place, under the timeline's
+  music ruler, which moves the playhead), so every click scrolls its target into view and
+  checks `elementFromPoint` first; typed words must only follow a double-click that really
+  started editing, or they arrive as the editor's keys (F, R, Space…); ffmpeg here has no
+  `drawtext`, so captions are drawn by the browser into images laid into a band above the page.
+  The page draws about 25 frames a second with the timeline open (13 with the preview filling
+  the window) and the screencast keeps about 15 of them; no Chromium flag tried did better.
+
 ## Later
 
 Scene-specific cues (line staggers, the push); moving cut 1 onto the one player; stems out of

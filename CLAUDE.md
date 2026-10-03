@@ -425,6 +425,10 @@ scripts/build-reel-editor.mjs — packs the live rig (preview, timeline, rack, e
                             to Claude: render the formats it names from the saved edit, upload each film to the
                             artifact (Artifact, asset: true) and write films/latest = { renderedAt, from, items }.
                             Test: reel-tests/hosttest.mjs
+scripts/record-walkthrough.mjs — a one-minute captioned walkthrough of the hosted editor, every control set, with its
+                            sound: the build served with a stand-in claude.ai host, the browser's screencast held to
+                            30 fps, captions drawn in a band above the page; `--dry` checks every step (a click that
+                            would miss its target stops the take) → .local/walk/reel-editor-walkthrough.mp4
 scripts/playground-items.js — manifest for playground.html (31 items). `featured: true` leads
                             the default sequence sort (stable partition; `date` and `?items=` exempt). `nested: true` marks a
                             page that embeds the canvas itself (recursion guard); `weight: 'heavy'`
