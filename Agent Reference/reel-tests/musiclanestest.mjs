@@ -43,7 +43,9 @@ const LEAD_CUT = `CLIP lead ${RM_.rangeText(0, Math.round(CUT / 0.125), 16)} hoo
 const NAME = 'zz-mlane-test.script.txt', SCRIPT = path.join(ROOT, 'Assets', NAME), SCORE = SCRIPT.replace(/\.script\.txt$/, '.score.txt');
 const BACKUPS = path.join(ROOT, '.local', 'reel-backups');
 const ORIG = inOrder(fs.readFileSync(path.join(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8'));
-const ORIG_SCORE = fs.readFileSync(path.join(ROOT, 'Assets/sizzle-reel-2.score.txt'), 'utf8');
+// the arrangement as it was when the suite was written (the lead's title clip 2-4, the crash on
+// bar 5, the answer's bass 5-6…): John re-arranging the real score changes nothing here
+const ORIG_SCORE = fs.readFileSync(path.join(ROOT, 'Agent Reference/reel-tests/fixtures/sizzle-reel-2.score.txt'), 'utf8');
 let fails = 0, passes = 0;
 const check = (ok, what, extra = '') => { if (ok) passes++; else fails++; console.log(`${ok ? 'ok  ' : 'FAIL'} ${what}${ok || !extra ? '' : '  (' + extra + ')'}`); };
 const script = () => fs.readFileSync(SCRIPT, 'utf8'), score = () => fs.readFileSync(SCORE, 'utf8');

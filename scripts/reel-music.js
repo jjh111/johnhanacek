@@ -601,14 +601,15 @@
     return D.map(v => typeof v === 'number' ? fmtNum(v) : String(v));
   }
   // a CLIP line, written the one way: the part, the stretch, the pad, then what is not the default
+  // (the stretch's column fits two sixteenths, "14.4.3-17.2.2": a clip on a cut between beats)
   const pad_ = (s, w) => s + ' '.repeat(Math.max(1, w - s.length));
   function clipLine(c, spb) {
-    let s = 'CLIP ' + pad_(c.part, 8) + pad_(rangeText(c.from, c.to, spb), 10) + c.pad;
+    let s = 'CLIP ' + pad_(c.part, 8) + pad_(rangeText(c.from, c.to, spb), 15) + c.pad;
     const tail = [];
     if (Math.abs(c.level - 1) > 1e-9) tail.push(fmtNum(c.level));
     if (c.fadeIn > 0) tail.push('in ' + fmtNum(c.fadeIn));
     if (c.fadeOut > 0) tail.push('out ' + fmtNum(c.fadeOut));
-    return tail.length ? pad_(s, 34) + tail.join('  ') : s;
+    return tail.length ? pad_(s, 38) + tail.join('  ') : s;
   }
   const clipOn = (P, ln) => { const c = P.score.clips.find(x => x.ln === ln); if (!c) throw withErrors([`there is no CLIP on line ${ln}`]); return c; };
   // change a clip: any of { from, to, pad, level, fadeIn, fadeOut } (from/to in steps)
@@ -722,5 +723,5 @@
   }
 
   return { parse, arrange, moments, sheet, setLine, setArg, setClip, addClip, removeClip, setPad, padPreview, block, chord, noteMidi, hz, voicing, levelAt,
-    readRange, rangeText, posText, FX, DRUMS, DRUM_DEF, WAVES, FILTERS, MOMENTS, PLAYS, STEP_VEL, fieldLine, fmtNum, main };
+    readRange, rangeText, posText, clipLine, FX, DRUMS, DRUM_DEF, WAVES, FILTERS, MOMENTS, PLAYS, STEP_VEL, fieldLine, fmtNum, main };
 });

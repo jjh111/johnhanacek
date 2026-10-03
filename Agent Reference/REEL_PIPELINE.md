@@ -988,6 +988,41 @@ a shotlist that can be re-organized."
   which plays the built editor with his script as it is, finds the answer and the pictured scene
   by type.
 
+## The music meets the cuts (2026-10-03)
+
+John reordered the shots (the command before the answer, the art after the feature) and asked to
+"move the music to meet the cuts". The clips had been written on whole bars for the 63.5 s cut,
+when the art cut on bar 7, the command on 9.3, the quotes on 23.3 and the offer on bar 28; his
+shorter title (5 s to 3.25 s) had put every later cut 1.75 s ahead of its music, and the reorder
+put the art's arp and kick under the answer.
+
+- **Each scene keeps its music, on its own cut.** Every clip now starts and ends on a scene's
+  cut, wherever it falls between beats (the cuts sit on eighths: the command at 5.75 s is
+  `3.4.3`, a clip ending on it ends `3.4.2`). A pad still goes round on the bars, so a clip that
+  opens between beats plays what the music plays there, in time; only the window moves. The art
+  keeps John's arp and kick (groove 0.8, arp 0.7, bass 0.7) wherever the art is.
+- **What leads into a cut ends on it.** A riser and a `roll` fill the bar before the cut into the
+  results and into the offer; a crash lands on the cut (0.7 on the first scene after the title,
+  the command now). The old `fill` went round on the bars, so on a cut between beats its build
+  peaked on the bar line before the cut; `roll` is its claps alone, `once`, so it plays from its
+  clip's start and ends on any cut (its kick would have fallen between the beats; the bar before
+  a drop goes without it).
+- **The end ends.** The chords' clip ran to bar 32 (64 s), past the 61.75 s film, so its fade
+  out was never heard; it now ends on the reel's last frame, fading over its last bar.
+- **Measured, not guessed.** The offline mix is as loud as before (peak -3.8 dBFS, -16.1 LUFS);
+  around each cut, in sixteenths, it now changes on the cut: the command's crash and drums lift
+  it 2-6 dB, the crash at the results and the offer lands on the roll's peak (up to 3 dB more),
+  the quotes' breakdown and the end card drop it 5 dB, and the last frame is silent (-74 dB,
+  where the old ending was cut off at -53); the old mix changed on none of them. In the timeline
+  every clip's edge is within 0.1 px of a cut marker, except a roll's and a riser's starts, a bar
+  before theirs.
+- **Writing it down.** A clip line's stretch column is 15 wide (`CLIP drums   14.4.3-17.2.2  groove`)
+  so clips on cuts line up like clips on bars; `RM.clipLine` is exported.
+- **Tests.** musictest and musiclanestest play `reel-tests/fixtures/sizzle-reel-2.score.txt`,
+  the arrangement on whole bars they were written against (the scripts have `inorder.mjs`; the
+  score has its fixture), and musictest checks the real score reads and plays inside the real
+  cut, in John's order, and that a clip on sixteenths writes to the same columns.
+
 ## Later
 
 Scene-specific cues (line staggers, the push); moving cut 1 onto the one player; stems out of

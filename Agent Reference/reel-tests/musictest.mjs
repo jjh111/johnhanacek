@@ -6,7 +6,10 @@
 //   node "Agent Reference/reel-tests/musictest.mjs"      exits non-zero on any failure
 //
 // Works on temp copies (Assets/zz-music-test.script.txt and .score.txt), removed in finally.
-// Renders land in .local/reel-tests/music/.
+// Renders land in .local/reel-tests/music/. The score it plays is fixtures/sizzle-reel-2.score.txt,
+// the arrangement as it was when the suite was written (the clips on whole bars: the results' beat
+// from bar 12, a fill in bar 11, the lead's title clip 2-4), so John re-arranging the real one
+// changes nothing here; the real one is checked to read and play inside his cut.
 import { chromium } from 'playwright-core';
 import { spawn, spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync, rmSync, mkdirSync } from 'node:fs';
@@ -22,7 +25,7 @@ const RM = req(join(ROOT, 'scripts/reel-music.js')), RS = req(join(ROOT, 'script
 const OUT = join(ROOT, '.local/reel-tests/music');
 mkdirSync(OUT, { recursive: true });
 const SCRIPT = inOrder(readFileSync(join(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8'));
-const SCORE = readFileSync(join(ROOT, 'Assets/sizzle-reel-2.score.txt'), 'utf8');
+const SCORE = readFileSync(join(ROOT, 'Agent Reference/reel-tests/fixtures/sizzle-reel-2.score.txt'), 'utf8');
 const T_SCRIPT = 'Assets/zz-music-test.script.txt', T_SCORE = 'Assets/zz-music-test.score.txt';
 
 let fails = 0;
@@ -75,6 +78,15 @@ ok(A.harmony.length === A.bars && A.harmony.every((h, b) => h.chord.name === (b 
   ok(RM.levelAt(A.levels.kick, 25) === 1 && RM.levelAt(A.levels.clap, 25) === 1 && RM.levelAt(A.levels.kick, 47) === 0, 'a part\'s clips set the level of each of its sounds (the drums\' kick and clap together)');
   ok(P.score.parts.find(p => p.name === 'drums').tracks.join() === 'kick,clap,hat' && P.score.tracks.filter(t => t.on).length === 4, 'the drums are a kick, a clap and a hat; four sound effects');
 }
+// the score John has: it reads, and plays inside his cut, in his order
+{
+  const e = RS.parse(readFileSync(join(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8')).edit;
+  const sc = RS.spans(e).map((c, i) => ({ type: e.scenes[i].type, start: c.start, end: c.end }));
+  const RP = RM.parse(readFileSync(join(ROOT, 'Assets/sizzle-reel-2.score.txt'), 'utf8')), RA = RM.arrange(RP.score, sc, RM.moments(e, RS));
+  const end = sc[sc.length - 1].end;
+  ok(RA.events.length > 0 && RA.events.every(x => x.t >= 0 && x.t < end && x.dur > 0) && RA.clips.every(c => c.t0 < end),
+    `the real score (Assets/sizzle-reel-2.score.txt) reads and plays inside the real cut: ${RP.score.clips.length} clips, ${RA.events.length} events in ${end} s`);
+}
 // the keys the score plays are the keys the rig types (both read ReelScript.queries)
 const keys = A.events.filter(e => e.track === 'keys').map(e => e.t);
 const typed = RS.queries(edit).flatMap(q => q.times.filter((_, i) => q.text[i] !== ' '));
@@ -99,13 +111,18 @@ ok(keys.length === typed.length && keys.every((t, i) => Math.abs(t - typed[i]) <
   ok(round.every(r => { const g = RM.readRange(r, SPB); return g && RM.rangeText(g.from, g.to, SPB) === r; }), `bars read and write back as written (${round.join(', ')})`);
   const g = RM.readRange('4.4-6', SPB);
   ok(g.from === 60 && g.to === 96, '"4.4-6" is from bar 4\'s last beat (7.5 s) to the end of bar 6 (12 s)');
+  // a clip on cuts between beats (5.75 s to 10.25 s) is written to the same columns as one on bars
+  const cl = c => RM.clipLine(Object.assign({ level: 1, fadeIn: 0, fadeOut: 0 }, c), SPB);
+  const a1 = cl({ part: 'drums', from: 46, to: 82, pad: 'beat' }), a2 = cl({ part: 'drums', from: 64, to: 96, pad: 'groove', level: 0.8 }), a3 = cl({ part: 'bass', from: 20, to: 46, pad: 'eighths', level: 0.5, fadeIn: 4 });
+  ok(a1 === 'CLIP drums   3.4.3-6.1.2    beat' && a2.indexOf('groove') === a1.indexOf('beat') && a3 === 'CLIP bass    2.2-3.4.2      eighths   0.5  in 4',
+    `a clip on sixteenths writes to the columns of one on bars ("${a1}", "${a3}")`);
   const ln = P.score.clips.find(c => c.part === 'lead' && c.from === 16).ln;
   const moved = RM.setClip(SCORE, ln, { to: 6 * SPB });
   ok(diff(SCORE, moved).length === 1 && /^CLIP lead +2-6 +hook +0\.5$/.test(lines(moved)[ln - 1]), `setClip: one line, the lead's title clip to bar 6 ("${lines(moved)[ln - 1]}")`);
   const faded = RM.setClip(SCORE, ln, { fadeIn: 2, level: 0.75 });
   ok(/^CLIP lead +2-4 +hook +0\.75  in 2$/.test(lines(faded)[ln - 1]), `setClip: a level and a fade ("${lines(faded)[ln - 1]}")`);
   const added = RM.addClip(SCORE, { part: 'drums', from: 23 * SPB, to: 26 * SPB, pad: 'half' });
-  const al = lines(added), at = al.indexOf('CLIP drums   24-26     half'), before = al[at - 1], after = al[at + 1];
+  const al = lines(added), at = al.findIndex(l => /^CLIP drums +24-26 +half$/.test(l)), before = al[at - 1], after = al[at + 1];
   ok(at > 0 && /^CLIP drums +21-23\.2 /.test(before) && /^CLIP drums +27 /.test(after) && al.length === lines(SCORE).length + 1, `addClip: a new line among its part's clips, in the order they play (after "${before.trim()}")`);
   const removed = RM.removeClip(added, at + 1);
   ok(removed === SCORE, 'removeClip: the line goes, the rest as it was');
