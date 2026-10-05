@@ -101,7 +101,7 @@
           '<p class="footer-copyright"><span class="footer-line">© ' + SITE.year + ' John Hanacek</span><span class="footer-sep"> · </span><span class="footer-line">' + SITE.org + '</span></p>' +
           '<p class="footer-github"><a href="' + SITE.github + '" target="_blank" rel="noopener">' + SITE.githubLabel + '</a></p>' +
           '<p class="version version-note">' + SITE.versionNote + '</p>' +
-          (SITE.goatcounter ? '<p class="version version-note footer-privacy"><span class="footer-line">Visits are <a href="https://www.goatcounter.com" target="_blank" rel="noopener" title="GoatCounter — no cookies, nothing about you is stored">counted</a></span> <span class="footer-line">without cookies</span></p>' : '') +
+          (SITE.goatcounter ? '<p class="version version-note footer-privacy"><span class="footer-line">Visits <a href="https://www.goatcounter.com" target="_blank" rel="noopener" title="GoatCounter — no cookies, nothing about you is stored">counted</a></span> <span class="footer-line">without cookies</span></p>' : '') +
         '</div>';
     }
   }
