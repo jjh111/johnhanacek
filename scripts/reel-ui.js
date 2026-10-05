@@ -5,7 +5,8 @@
 //   REEL_UI.button(opts)          <button> with an icon, a label and a key: the anatomy every bar
 //                                 collapses (see below). opts: { icon, label, key, title, cls, onClick }
 //   REEL_UI.fit(bar, steps, done) the collapse rule
-//   REEL_UI.rollPaths(evs, o)     a part's notes as SVG paths (the timeline's clips, the pads)
+//   REEL_UI.rollPaths(evs, o)     a part's notes as SVG paths (the timeline's clips, the pads), and
+//                                 a sung take's bends as one line (`bends`)
 //
 // The collapse rule. A bar is laid out at full size; while anything in it overflows (the bar, or
 // a button's own label), it takes the next class in `steps`, each on top of the last, cheapest
@@ -155,6 +156,7 @@ button:has(> .ri) { display: inline-flex; align-items: center; justify-content: 
   //           rows: { sound: row } with nRows (optional; row 0 the top) }
   function rollPaths(evs, o) {
     const H = o.H, y0 = o.y0 || 0, f = n => n.toFixed(1), d = ['', '', '', ''], own = [];
+    let bends = '';
     let lo = o.lo, hi = o.hi;
     if (lo == null) { lo = Infinity; hi = -Infinity; evs.forEach(e => { if (e.midi != null) { lo = Math.min(lo, e.midi); hi = Math.max(hi, e.midi); } }); }
     const rows = o.rows && o.nRows > 1 ? o.rows : null, rh = rows ? (H - 1 - y0) / o.nRows : 0;
@@ -177,8 +179,14 @@ button:has(> .ri) { display: inline-flex; align-items: center; justify-content: 
       if (e.bypass) { own.push(p); continue; }
       const lv = o.level ? Math.min(1, o.level(e.t + 1e-6)) : 1, s = (pitched ? Math.min(1, e.vel) : 1) * lv;
       d[Math.max(0, Math.min(3, Math.ceil(s * 4) - 1))] += p;
+      // a sung note's bend (cents, BEND_RATE points a second), where the note is wide enough to show it
+      if (pitched && e.bend && e.midi != null && e.dur * o.pxs >= 8) {
+        const yc = (hi === lo ? top + (bh - nh) / 2 : top + 1 + (hi - e.midi) / span * (bh - 2 - nh)) + nh / 2, per = hi === lo ? nh : (bh - 2 - nh) / span;
+        const R = (window.ReelMusic && window.ReelMusic.BEND_RATE) || 32;
+        for (let i = 0; i < e.bend.length && i / R <= e.dur + 1e-6; i++) bends += (i ? 'L' : 'M') + f(o.px(e.t + i / R)) + ' ' + f(yc - e.bend[i] / 100 * per);
+      }
     }
-    return { d, own: own.join(''), pitched, lo, hi };
+    return { d, own: own.join(''), pitched, lo, hi, bends };
   }
 
   window.REEL_UI = { icon, button, relabel, fit, rollPaths, ICONS };

@@ -15,6 +15,11 @@
 //   clips    CLIP lines: a part plays one of its pads over a stretch of bars, at a level, fading in
 //            or out; the arrangement is its clips, on the music's own bars, whatever the picture
 //            does (the timeline shows the scenes' cuts against them, and snaps to them)
+//   takes    TAKE blocks: a melody someone sang, read from a recording by scripts/reel-sing.py (since
+//            2026-10-05): a line a note, each with what was sung and how its pitch moved, and the
+//            mapping onto the score as lines of its own (octave, shift, straighten, nuance, feel).
+//            A pad plays one ("pad john take john"); a SYNTH sings it in the voice's own colour
+//            with "voice harmonics" and the voice's measured `harmonics`
 //
 // In a page: a classic script defining window.ReelMusic. In Node: require('./reel-music.js').
 (function (root, factory) {
@@ -27,7 +32,8 @@
   'use strict';
 
   // ── the vocabulary ────────────────────────────────────────────────────
-  const WAVES = { sine: 'sine', triangle: 'triangle', square: 'square', saw: 'sawtooth', sawtooth: 'sawtooth', noise: 'noise' };
+  // harmonics: the sound's own `harmonics` line as one wave (a sung voice's colour, measured)
+  const WAVES = { sine: 'sine', triangle: 'triangle', square: 'square', saw: 'sawtooth', sawtooth: 'sawtooth', noise: 'noise', harmonics: 'harmonics' };
   const FILTERS = ['lowpass', 'highpass', 'bandpass', 'notch', 'lowshelf', 'highshelf', 'peaking', 'allpass'];
   const DRUMS = ['kick', 'snare', 'clap', 'hat', 'openhat', 'shaker', 'tick', 'boom', 'crash'];
   const MOMENTS = ['key', 'space', 'enter', 'clear', 'cut', 'item', 'beat'];
@@ -38,11 +44,18 @@
   // one row per field a block may carry: [name, argument kinds, can repeat]. A number is 'n'.
   const MIX = { level: [['n']], pan: [['n']], send: [['n', 'n']], on: [['moment']] };
   const BLOCKS = {
-    SYNTH: Object.assign({ voice: [['wave', 'n', 'n'], true], filter: [['filter', 'n', 'n']], env: [['n', 'n', 'n', 'n']],
+    SYNTH: Object.assign({ voice: [['wave', 'n', 'n'], true], harmonics: [['dbs']], filter: [['filter', 'n', 'n']], env: [['n', 'n', 'n', 'n']],
       lfo: [['lfo', 'n', 'n']], play: [['play']], len: [['n']] }, MIX),
     DRUM: Object.assign({ kind: [['drum']], tune: [['n']], decay: [['n']], tone: [['n']] }, MIX),
     PART: { pad: [['pad'], true] },
+    TAKE: { octave: [['n']], shift: [['n']], straighten: [['n']], nuance: [['n']], feel: [['n']], drift: [['ns']], n: [['tnote'], true] },
   };
+  // a take's mapping: [lowest, highest, whole numbers only, default]
+  const TAKE_MAP = { octave: [-3, 3, true, 0], shift: [-64, 64, true, 0], straighten: [0, 100, false, 0], nuance: [0, 200, false, 100], feel: [0, 100, false, 0] };
+  // a sung note's pitch as it moved: BEND_RATE points a second, each held to BEND_MAX cents from
+  // the note's centre (further is the glide to the next note, or a crack); the first and last
+  // BEND_EDGE points keep their scoop and fall when the take is straightened
+  const BEND_RATE = 32, BEND_MAX = 200, BEND_EDGE = 3, TONE_MAX = 6;
   // the effects, each field's default and what it means (the rack's knobs read these too)
   const FX = {
     reverb: { size: [2.8, 0.2, 8, 's'], decay: [3, 0.5, 8, ''], tone: [5200, 400, 16000, 'Hz'], return: [0.5, 0, 1.5, ''] },
@@ -133,7 +146,7 @@
   // excluded; fades in beats). A mistake throws one Error whose `.errors` lists "line N: …" rows.
   function parse(src) {
     const errors = [], warnings = [], blocks = [], fields = [], rawClips = [], rawRanges = [];
-    const score = { tempo: 120, beatsPerBar: 4, key: { root: 9, mode: 'minor', name: 'A minor' }, chords: [], chordRanges: [], tracks: [], fx: {}, parts: [], clips: [] };
+    const score = { tempo: 120, beatsPerBar: 4, key: { root: 9, mode: 'minor', name: 'A minor' }, chords: [], chordRanges: [], tracks: [], fx: {}, parts: [], clips: [], takes: [] };
     for (const [k, d] of Object.entries(FX)) { score.fx[k] = {}; for (const [f, v] of Object.entries(d)) score.fx[k][f] = Array.isArray(v[0]) ? v[0].slice() : v[0]; }
     const lines = src.split('\n');
     let cur = null;
@@ -166,11 +179,17 @@
         }
         if (head === 'CLIP') { rawClips.push({ ln, args: rest }); return; }
         if (GONE[head]) { err(ln, GONE[head]); return; }
-        if (head === 'SYNTH' || head === 'DRUM' || head === 'FX' || head === 'PART') {
+        if (head === 'SYNTH' || head === 'DRUM' || head === 'FX' || head === 'PART' || head === 'TAKE') {
           const name = rest[0];
-          if (!name || rest.length > 1) { err(ln, `${head} wants one name, as in "${head} ${head === 'FX' ? 'reverb' : head === 'PART' ? 'drums' : 'bass'}"`); return; }
+          if (!name || rest.length > 1) { err(ln, `${head} wants one name, as in "${head} ${head === 'FX' ? 'reverb' : head === 'PART' ? 'drums' : head === 'TAKE' ? 'john' : 'bass'}"`); return; }
           let obj;
-          if (head === 'FX') {
+          if (head === 'TAKE') {
+            if (!/^[a-z][\w-]*$/i.test(name)) { err(ln, `a take's name is one word: "${name}"`); return; }
+            if (score.takes.some(t => t.name === name)) { err(ln, `TAKE ${name} is already given`); return; }
+            obj = { name, ln, notes: [], raw: [], drift: [] };
+            for (const [k, d] of Object.entries(TAKE_MAP)) obj[k] = d[3];
+            score.takes.push(obj);
+          } else if (head === 'FX') {
             if (!FX[name]) { err(ln, `there is no "${name}" effect (there are ${Object.keys(FX).join(', ')})`); return; }
             if (blocks.some(b => b.kind === 'FX' && b.name === name)) { err(ln, `FX ${name} is already given`); return; }
             obj = score.fx[name];
@@ -191,11 +210,11 @@
           blocks.push(cur);
           return;
         }
-        err(ln, `"${head}" is not a line this score knows (TEMPO, TIME, KEY, CHORDS, SYNTH, DRUM, FX, PART, CLIP)`);
+        err(ln, `"${head}" is not a line this score knows (TEMPO, TIME, KEY, CHORDS, SYNTH, DRUM, FX, PART, CLIP, TAKE)`);
         return;
       }
       // an indented line: a field of the block above
-      if (!cur) { err(ln, 'an indented line belongs under a SYNTH, DRUM, FX or PART line'); return; }
+      if (!cur) { err(ln, 'an indented line belongs under a SYNTH, DRUM, FX, PART or TAKE line'); return; }
       cur.end = ln;
       const index = cur.counts[head] = (cur.counts[head] == null ? 0 : cur.counts[head] + 1);
       fields.push({ ln, block: cur, key: head, index, args: rest });
@@ -208,6 +227,7 @@
       const at = `line ${t.ln}`;
       if (t.type === 'synth') {
         if (!t.voices.length) errors.push(`${at}: SYNTH ${t.name} has no voice line`);
+        if (t.voices.some(v => v.wave === 'harmonics') && !t.harmonics) errors.push(`${at}: SYNTH ${t.name} has a harmonics voice but no harmonics line (its levels, as in "harmonics 0 -2 -10 -14")`);
         if (!t.play) errors.push(`${at}: SYNTH ${t.name} has no play line`);
         if (t.on && t.play && !['chime', 'note'].includes(t.play.mode)) errors.push(`${at}: a sound effect (${t.name}, on ${t.on}) plays chime or note`);
         if (!t.on && t.play && ['chime', 'note'].includes(t.play.mode)) errors.push(`${at}: ${t.name} plays ${t.play.mode}, which is for a sound effect: give it an "on" line`);
@@ -215,6 +235,13 @@
         if (!t.kind) errors.push(`${at}: DRUM ${t.name} has no kind line`);
         else for (const k of ['tune', 'decay', 'tone']) if (t[k] == null) t[k] = DRUM_DEF[t.kind][k];
       }
+    }
+    // the takes' notes, now the bars are known
+    for (const tk of score.takes) {
+      for (const r of tk.raw) { const n = readTakeNote(r, spb, err); if (n) tk.notes.push(n); }
+      delete tk.raw;
+      tk.notes.sort((a, b) => a.step - b.step || a.ln - b.ln);
+      if (!tk.notes.length) warnings.push(`TAKE ${tk.name} (line ${tk.ln}) has no notes`);
     }
     // the pads, now every sound is known
     const owner = {};
@@ -267,6 +294,34 @@
     return out;
   }
 
+  // a sung pitch: a note and cents from it, as in F#2-14 or C3+31 (midi, a fraction)
+  function sungMidi(s) {
+    const m = /^([A-G][#b]?-?\d)([+-]\d+(?:\.\d+)?)?$/.exec(s || ''), b = m && noteMidi(m[1]);
+    return b == null ? null : b + (m[2] ? +m[2] / 100 : 0);
+  }
+  const sungText = x => { const n = Math.round(x), c = Math.round((x - n) * 100); return NAMES[mod(n, 12)] + (Math.floor(n / 12) - 1) + (c ? (c > 0 ? '+' : '') + c : ''); };
+  // "n <bar.beat.sixteenth> <note> <sixteenths> [<level> [<tone> [<sung> [<early ms>]]]] [| <cents>…]":
+  // a take's note, where it plays and for how long; what was sung there and how early (-) or late
+  // it came; after the bar, how its pitch moved as sung, cents from its own centre BEND_RATE times
+  // a second. Everything after its length may be left out (a note typed by hand plays straight).
+  function readTakeNote(r, spb, err) {
+    const bar = r.args.indexOf('|'), head = bar < 0 ? r.args : r.args.slice(0, bar), curve = bar < 0 ? [] : r.args.slice(bar + 1);
+    const [at, note, len, vel, tone, sung, early] = head;
+    const p = readPos(at || '', spb), midi = noteMidi(note || ''), n = num(len);
+    if (!p || midi == null || n == null) { err(r.ln, `n wants where the note starts (bar.beat.sixteenth), the note and its length in sixteenths, as in "n 5.1.3 E3 4"${p ? midi == null ? ` ("${note || ''}" is not a note)` : '' : ` ("${at || ''}" is not a place on the bars)`}`); return null; }
+    if (n < 1 || n > 256 || n !== Math.round(n)) { err(r.ln, 'a note\'s length is whole sixteenths, 1-256'); return null; }
+    if (head.length > 7) { err(r.ln, 'after its length, a note takes its level, its tone, what was sung and how early, then | and how it moved'); return null; }
+    const o = { ln: r.ln, index: r.index, step: p.start, len: n, midi, name: note, vel: 0.8, tone: 0, sung: midi, early: 0, curve: [] };
+    if (vel != null) { const v = num(vel); if (v == null || v < 0 || v > 1.5) { err(r.ln, `a note's level is 0-1.5 ("${vel}")`); return null; } o.vel = v; }
+    if (tone != null) { const v = num(tone); if (v == null || Math.abs(v) > 24) { err(r.ln, `a note's tone is dB brighter (+) or darker (-) than the voice, -24 to 24 ("${tone}")`); return null; } o.tone = v; }
+    if (sung != null) { const v = sungMidi(sung); if (v == null) { err(r.ln, `what was sung is a note and cents, as in F#2-14 ("${sung}")`); return null; } o.sung = v; }
+    if (early != null) { const v = num(early); if (v == null || Math.abs(v) > 2000) { err(r.ln, `how early or late it came is ms, -2000 to 2000 ("${early}")`); return null; } o.early = v; }
+    const cs = curve.map(num);
+    if (cs.some(c => c == null || Math.abs(c) > 4800)) { err(r.ln, 'after |, how the pitch moved: whole cents, one a point'); return null; }
+    o.curve = cs;
+    return o;
+  }
+
   function readField(b, key, args, index, ln, err) {
     if (b.kind === 'FX') {
       const d = FX[b.name][key];
@@ -284,6 +339,27 @@
     if (kinds[0] === 'pad') {
       if (!args.length) { err(ln, 'pad wants a name and what it plays, as in "pad beat kick X...x...X...x..."'); return; }
       o.raw.push({ ln, index, args });
+      return;
+    }
+    if (kinds[0] === 'tnote') { o.raw.push({ ln, index, args }); return; }
+    if (kinds[0] === 'ns') {
+      // a take's drift: how far the singer's key had wandered, cents a bar from bar 1 (+ sharp), as
+      // read; nothing plays it, the editor draws it
+      const ns = args.map(num);
+      if (ns.some(n => n == null || Math.abs(n) > 1200)) { err(ln, `${key} wants cents, one a bar, as in "${key} -12 +4 +30"`); return; }
+      o[key] = ns;
+      return;
+    }
+    if (kinds[0] === 'dbs') {
+      const ns = args.map(num);
+      if (!ns.length || ns.length > 64 || ns.some(n => n == null || n < -120 || n > 24)) { err(ln, 'harmonics wants each harmonic\'s level in dB against the first, the first included, as in "harmonics 0 -2 -10 -14" (up to 64, -120 to 24)'); return; }
+      o.harmonics = ns;
+      return;
+    }
+    if (b.kind === 'TAKE') {
+      const d = TAKE_MAP[key], n = args.length === 1 ? num(args[0]) : null;
+      if (n == null || n < d[0] || n > d[1] || (d[2] && n !== Math.round(n))) { err(ln, `${key} wants ${d[2] ? 'a whole number' : 'a number'} from ${d[0]} to ${d[1]}`); return; }
+      o[key] = n;
       return;
     }
     if (kinds[0] === 'play') {
@@ -354,6 +430,12 @@
       if (mode === 'rise') {
         if (vc.tokens.length) { err(r.ln, `${vc.track} rises across its clip: its pad wants no pattern`); return null; }
         vc.rise = true;
+      } else if (vc.tokens[0] === 'take') {
+        // a take: what someone sang (a TAKE block), sung by a sound that plays notes
+        const tk = score.takes.find(x => x.name === vc.tokens[1]);
+        if (mode !== 'notes') { err(r.ln, `${vc.track} plays ${mode || 'nothing'}: a take is sung by a sound that plays notes ("play notes")`); return null; }
+        if (vc.tokens.length !== 2 || !tk) { err(r.ln, `take wants the name of a TAKE (${score.takes.map(x => x.name).join(', ') || 'none yet'}), as in "pad sung take john"`); return null; }
+        vc.take = tk.name;
       } else if (mode === 'notes') {
         const toks = vc.tokens.filter(w => w !== '|'), bad = toks.filter(w => w !== '.' && noteMidi(w) == null);
         if (bad.length || !toks.length) { err(r.ln, `${vc.track} plays a tune: note names like E5 or C#4, . to rest${bad.length ? ` ("${bad[0]}" is not one)` : ''}`); return null; }
@@ -432,8 +514,10 @@
   // a step. A note lasts until the pad's next one, `len` steps at most (the pad's, else the
   // sound's), and never past its clip; a chord's notes that carry on into the next chord, or the
   // next bar of the same one, are held, not struck again.
+  // A take's notes play where they were sung, on the reel's own bars (a clip is a window onto it).
   // Returns { events, clips, levels, harmony, parts, duration, beat, step, bar, spb, bars, sweeps }.
-  // An event is { t, dur, track, vel, midi?, detune?, rise? }; a clip { …the score's, t0, t1 }.
+  // An event is { t, dur, track, vel, midi?, detune?, rise? }, and a take's note adds { tone, bend,
+  // take, nln } (bend: cents, BEND_RATE a second from t; nln: its n line); a clip { …the score's, t0, t1 }.
   const hash01 = i => { let h = Math.imul(i ^ 0x9e3779b9, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
   const mod = (k, n) => ((k % n) + n) % n;
   function arrange(score, scenes, mom) {
@@ -473,7 +557,7 @@
       // the notes, clip by clip
       for (const c of cs) {
         const pad = part.pads.find(p => p.name === c.pad);
-        for (const v of pad.voices) padNotes(byName(v.track), v, pad, c.t0, Math.min(c.t1, duration), { step, spb, chordAt, anchor: pad.once ? c.t0 : 0, push: e => events.push(e) });
+        for (const v of pad.voices) padNotes(byName(v.track), v, pad, c.t0, Math.min(c.t1, duration), { step, spb, chordAt, anchor: pad.once ? c.t0 : 0, takes: score.takes, push: e => events.push(e) });
       }
     }
     // a chord that carries on is held: the same note, ending where the next begins, is one note
@@ -506,6 +590,20 @@
     const { step, chordAt, push } = o, E = 1e-9;
     if (!t || t1 <= t0 + E) return;
     if (v.rise) { push({ track: t.name, t: t0, dur: t1 - t0, vel: 0.9, rise: true }); return; }
+    if (v.take) {
+      // a take: each note at its own place (moved by `shift` sixteenths, and `feel` of how early or
+      // late it was sung), up its `octave`s, with its level, its tone and how its pitch moved
+      const tk = (o.takes || []).find(x => x.name === v.take);
+      if (!tk) return;
+      for (const n of tk.notes) {
+        const g = (n.step + tk.shift) * step;                           // its place on the grid decides its clip
+        if (g < t0 - E || g >= t1 - E) continue;
+        const tt = Math.max(0, g + tk.feel / 100 * n.early / 1000);
+        push({ track: t.name, t: tt, dur: Math.max(step * 0.5, Math.min(n.len * step, t1 - g)), vel: n.vel, midi: n.midi + 12 * tk.octave,
+          tone: Math.max(-TONE_MAX, Math.min(TONE_MAX, n.tone)), bend: bendOf(n, tk), take: tk.name, nln: n.ln });
+      }
+      return;
+    }
     const pat = v.steps || v.notes, n = pat.length, rest = '.';
     const len = pad.len != null ? pad.len : t.type === 'synth' ? (t.len || 1) : 1;
     const a = Math.round(o.anchor / step);
@@ -536,19 +634,51 @@
       }
     }
   }
+  // How a take's note moves as it plays: its curve as sung, each point held to ±BEND_MAX, less
+  // `straighten` % of its slow wander (a five-point average, about 0.15 s) in the note's body, the
+  // first and last BEND_EDGE points easing out of it so the scoop in and the fall off stay; the
+  // vibrato, quicker than the average, stays too. Then times `nuance` %. Null for a straight note.
+  function bendOf(n, tk) {
+    const L = n.curve.length, k = tk.nuance / 100, s = tk.straighten / 100;
+    if (!L || k === 0) return null;
+    const c = n.curve.map(x => Math.max(-BEND_MAX, Math.min(BEND_MAX, x)));
+    return c.map((x, i) => {
+      let a = 0, m = 0;
+      for (let j = Math.max(0, i - 2); j <= Math.min(L - 1, i + 2); j++) { a += c[j]; m++; }
+      const w = Math.max(0, Math.min(1, i / BEND_EDGE, (L - 1 - i) / BEND_EDGE));
+      return Math.round(k * (x - s * w * a / m));
+    });
+  }
+  // what a take is, in numbers: its notes' span, what was sung against what plays, how far the
+  // notes were moved to the key (sung → written, in cents) and how far from the sixteenth they came
+  // the singer's drift at a step of the take (cents, + sharp), from its drift line (a value a bar)
+  const driftAt = (tk, k, spb) => tk.drift.length ? tk.drift[Math.max(0, Math.min(tk.drift.length - 1, Math.floor(k / spb)))] : 0;
+  function takeSummary(tk, step, spb = 16) {
+    const ns = tk.notes;
+    if (!ns.length) return null;
+    // moved: how far each note's centre went to its note, the drift taken out first
+    const moved = ns.map(n => (n.midi - n.sung) * 100 + driftAt(tk, n.step, spb)), abs = moved.map(Math.abs).sort((a, b) => a - b), early = ns.map(n => Math.abs(n.early)).sort((a, b) => a - b);
+    const med = a => a.length ? a[Math.floor(a.length / 2)] : 0, lo = Math.min(...ns.map(n => n.midi)), hi = Math.max(...ns.map(n => n.midi));
+    const slo = Math.min(...ns.map(n => n.sung)), shi = Math.max(...ns.map(n => n.sung));
+    return { notes: ns.length, t0: (ns[0].step + tk.shift) * step, t1: (ns[ns.length - 1].step + ns[ns.length - 1].len + tk.shift) * step,
+      sung: [sungText(slo), sungText(shi)], written: [NAMES[mod(lo, 12)] + (Math.floor(lo / 12) - 1), NAMES[mod(hi, 12)] + (Math.floor(hi / 12) - 1)],
+      plays: [NAMES[mod(lo + 12 * tk.octave, 12)] + (Math.floor((lo + 12 * tk.octave) / 12) - 1), NAMES[mod(hi + 12 * tk.octave, 12)] + (Math.floor((hi + 12 * tk.octave) / 12) - 1)],
+      movedMedian: med(abs), movedSemis: abs.filter(x => x > 100).length, movedHalf: abs.filter(x => x > 50).length, earlyMedian: med(early), bent: ns.filter(n => n.curve.length).length,
+      drift: tk.drift.length ? [Math.min(...tk.drift), Math.max(...tk.drift)] : null };
+  }
   // A pad on its own, for hearing it (the rack's and the timeline's pads): its notes over one turn
   // (a bar, or as long as its longest pattern), from the bar the reel is in. Returns events from 0.
   function padPreview(score, A, partName, padName, at = 0) {
     const part = score.parts.find(p => p.name === partName), pad = part && part.pads.find(p => p.name === padName);
     if (!pad) return [];
     const step = A ? A.step : 15 / score.tempo, spb = score.beatsPerBar * 4, bar = step * spb;
-    const steps = Math.max(spb, ...pad.voices.map(v => (v.steps || v.notes || []).length));
+    const steps = Math.max(spb, ...pad.voices.map(v => v.take ? spb * 2 : (v.steps || v.notes || []).length));      // a take: two bars of it
     const b0 = Math.floor(at / bar + 1e-9) * bar, t1 = b0 + steps * step;
     const harmony = A && A.harmony && A.harmony.length ? A.harmony : null;
     const chordAt = t => harmony ? harmony[Math.max(0, Math.min(harmony.length - 1, Math.floor(t / bar + 1e-9)))].chord : score.chords[0];
     const out = [];
-    for (const v of pad.voices) padNotes(score.tracks.find(t => t.name === v.track), v, pad, b0, t1, { step, spb, chordAt, anchor: b0, push: e => out.push(e) });
-    return out.map(e => Object.assign(e, { t: e.t - b0 })).sort((a, b) => a.t - b.t);
+    for (const v of pad.voices) padNotes(score.tracks.find(t => t.name === v.track), v, pad, b0, t1, { step, spb, chordAt, anchor: b0, takes: score.takes, push: e => out.push(e) });
+    return out.map(e => Object.assign(e, { t: Math.max(0, e.t - b0) })).sort((a, b) => a.t - b.t);
   }
 
   // an instrument's level at reel time t, from its points in arrange's `levels` (linear between
@@ -598,6 +728,7 @@
   function defaultArgs(b, key) {
     if (b.kind === 'FX') { const d = FX[b.name][key]; return (Array.isArray(d[0]) ? d[0] : [d[0]]).map(fmtNum); }
     const o = b.obj;
+    if (b.kind === 'TAKE' && TAKE_MAP[key]) return [fmtNum(TAKE_MAP[key][3])];
     const D = { level: [0.5], pan: [0], send: [0, 0], len: [1], tune: [o.tune], decay: [o.decay], tone: [o.tone],
       filter: ['lowpass', 2000, 1], env: [o.env ? o.env.attack : 0.01, o.env ? o.env.decay : 0.2, o.env ? o.env.sustain : 0.7, o.env ? o.env.release : 0.3],
       lfo: ['filter', 0.5, 0] }[key];
@@ -667,6 +798,25 @@
     if (p.once) words.push('once');
     return setLine(src, 'PART', part, 'pad', pad_(padName, 9) + words.join('  '), p.index);
   }
+  // a take's note, moved: { midi } (another note), { step } or { len }; the n line keeps its columns,
+  // what was sung and how it moved
+  function setTakeNote(src, take, ln, change) {
+    const P = parse(src), tk = P.score.takes.find(x => x.name === take), n = tk && tk.notes.find(x => x.ln === ln);
+    if (!n) throw withErrors([`TAKE ${take} has no note on line ${ln}`]);
+    const lines = src.split('\n'), m = /^(\s*n\s+)(\S+)(\s+)(\S+)(\s+)(\S+)(.*)$/.exec(lines[ln - 1]);
+    if (!m) throw withErrors([`line ${ln} is not a note`]);
+    const spb = P.score.beatsPerBar * 4;
+    let at = m[2], note = m[4], len = m[6];
+    if (change.step != null) { const k = Math.max(0, Math.round(change.step)), bar = Math.floor(k / spb) + 1, r = k - (bar - 1) * spb; at = `${bar}.${Math.floor(r / 4) + 1}.${r % 4 + 1}`; }
+    if (change.midi != null) { const k = Math.round(change.midi); note = NAMES[mod(k, 12)] + (Math.floor(k / 12) - 1); }
+    if (change.len != null) len = String(Math.max(1, Math.round(change.len)));
+    // the place keeps its column; the note and its length (right-aligned) keep theirs together
+    const w1 = m[2].length + m[3].length, w2 = m[4].length + m[5].length + m[6].length;
+    lines[ln - 1] = m[1] + at + ' '.repeat(Math.max(1, w1 - at.length)) + note + ' '.repeat(Math.max(1, w2 - note.length - len.length)) + len + m[7];
+    const out = lines.join('\n');
+    parse(out);
+    return out;
+  }
   const block = (kind, name) => ({ kind, name });
 
   // ── the check ─────────────────────────────────────────────────────────
@@ -697,6 +847,14 @@
       const cs = A.clips.filter(c => c.part === p.name).sort((a, b) => a.from - b.from);
       out.push(`${p.name.padEnd(8)} pads ${p.pads.map(d => d.name).join(' ')}  ·  ` + (cs.length ? cs.map(c => `${rangeText(c.from, c.to, spb)} ${c.pad}${c.level !== 1 ? ' ' + c.level : ''}${c.fadeIn ? ' in ' + c.fadeIn : ''}${c.fadeOut ? ' out ' + c.fadeOut : ''}`).join(' · ') : 'no clips'));
     }
+    for (const tk of score.takes) {
+      const S = takeSummary(tk, A.step, A.spb), sing = score.parts.flatMap(p => p.pads.filter(d => d.voices.some(v => v.take === tk.name)).map(d => `${p.name} ${d.name}`));
+      if (!S) { out.push(`take ${tk.name}: no notes`); continue; }
+      out.push(`take ${tk.name}: ${S.notes} notes, ${tc(S.t0)}-${tc(S.t1)}${sing.length ? ', sung by ' + sing.join(', ') : ', no pad sings it'} · sung ${S.sung[0]}-${S.sung[1]}, written ${S.written[0]}-${S.written[1]}, plays ${S.plays[0]}-${S.plays[1]}`
+        + (S.drift ? ` · the key drifted ${S.drift[0] > 0 ? '+' : ''}${S.drift[0]} to ${S.drift[1] > 0 ? '+' : ''}${S.drift[1]} cents` : '')
+        + ` · tuned to ${score.key.name}: a note moved ${Math.round(S.movedMedian)} cents (the median), ${S.movedHalf} more than 50, ${S.movedSemis} more than a semitone · came ${Math.round(S.earlyMedian)} ms off the sixteenth`
+        + ` · octave ${tk.octave > 0 ? '+' : ''}${tk.octave}${tk.shift ? ' · shift ' + tk.shift : ''} · straighten ${tk.straighten} · nuance ${tk.nuance} · feel ${tk.feel}`);
+    }
     const fx = score.tracks.filter(t => t.on);
     if (fx.length) out.push('sound effects: ' + fx.map(t => `${t.name} on ${t.on} ×${A.events.filter(e => e.track === t.name && (t.type === 'drum' || !A.events.some(o => o !== e && o.track === t.name && Math.abs(o.t - e.t) < 0.2 && o.t < e.t))).length}`).join(' · '));
     return out.join('\n');
@@ -726,6 +884,6 @@
     if (P.warnings.concat(silent).length) console.log('\n' + P.warnings.concat(silent).map(w => 'warning: ' + w).join('\n'));
   }
 
-  return { parse, arrange, moments, sheet, setLine, setArg, setClip, addClip, removeClip, setPad, padPreview, block, chord, noteMidi, hz, voicing, levelAt,
-    readRange, rangeText, posText, clipLine, FX, DRUMS, DRUM_DEF, WAVES, FILTERS, MOMENTS, PLAYS, STEP_VEL, fieldLine, fmtNum, main };
+  return { parse, arrange, moments, sheet, setLine, setArg, setClip, addClip, removeClip, setPad, setTakeNote, padPreview, bendOf, takeSummary, block, chord, noteMidi, hz, voicing, levelAt,
+    readRange, rangeText, posText, clipLine, sungMidi, sungText, driftAt, FX, DRUMS, DRUM_DEF, WAVES, FILTERS, MOMENTS, PLAYS, STEP_VEL, TAKE_MAP, BEND_RATE, BEND_MAX, TONE_MAX, NAMES, fieldLine, fmtNum, main };
 });

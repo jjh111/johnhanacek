@@ -28,13 +28,14 @@
  *                            calmSchool on, a medium fish is scared off by a large
  *                            one: it darts away, mostly sideways, for under a second
  *                            when it comes within both fishes' reach (bodyWidths plus
- *                            25 px), or within 110 px more while the large fish swims
+ *                            45 px), or within 110 px more while the large fish swims
  *                            at it, then rejoins its school
  *   surface(f)             → y | null — the top of the water for fish f (tank px; f is
  *                            null for the school's waypoint). Its edge avoidance, and
  *                            the school's waypoint and slots, turn back from there the
- *                            way they do from the canvas top. Unset, or 0, it is the
- *                            canvas top
+ *                            way they do from the canvas top, and it seeks no food
+ *                            above it (food sinking into its water is food again).
+ *                            Unset, or 0, it is the canvas top
  *   schoolPhase('scatter' | 'regroup') — the school's phases on cue (an API call, not
  *                            an option): scatter bursts it apart now, regroup calls it
  *                            together now
@@ -2017,9 +2018,14 @@
                 // the unreachable nearest only as a fallback (it can still lure
                 // the fish once a wall opens).
                 let reachFood = null, reachDist = Infinity, reachMouthDist = Infinity;
+                // a host's water top for this fish (opts.surface): food above it is out of its water
+                // until it sinks in (the reel's school, kept under its copy, swam up under a pellet
+                // the big fish had come down to eat, 2026-10-05)
+                const waterTop = opts.surface ? (+opts.surface(f) || 0) : 0;
                 food.forEach(fd => {
                     if (fd.inBubble) return;
                     if (f.ignoredFood && f.ignoredFood[fd.id] > now) return; // gave up on it (walled off)
+                    if (waterTop && fd.y < waterTop) return;
                     // Detection uses body center — fish notices food when their body is near it
                     const cd = Math.sqrt((centerX - fd.x) ** 2 + (centerY - fd.y) ** 2);
                     // Eat check uses mouth — but much more generous range
@@ -3083,7 +3089,8 @@
                     // grow with the two sizes (bodyWidth is about half a fish's drawn length), so it
                     // leaves before it touches a big fish's nose or tail, not after.
                     const giveWay = !!opts.calmSchool && !!opts.largeRightOfWay;
-                    if (isMedium && f.state === 'idle' && (!opts.calmSchool || giveWay)) {
+                    // (giving way, a medium fish going for food gives way too: size decides, whatever it is doing)
+                    if (isMedium && (f.state === 'idle' || (giveWay && f.state === 'seeking')) && (!opts.calmSchool || giveWay)) {
                         let threat = null;
                         let threatDist = Infinity;
 
@@ -3092,7 +3099,7 @@
                             const otherBw = other.bodyWidth || 20;
                             if (otherBw < MEDIUM_THRESHOLD) return;
                             const reach = otherBw + (f.bodyWidth || 20);
-                            const SCATTER_CLOSE = giveWay ? reach + 25 : 90;    // Always scatter regardless of facing or cooldown
+                            const SCATTER_CLOSE = giveWay ? reach + 45 : 90;    // Always scatter regardless of facing or cooldown (giving way: a berth of 45 px, so it is gone before it is within reach; 25 left it inside for a few frames)
                             const SCATTER_FAR  = giveWay ? reach + 110 : 150;   // Only scatter if large fish is facing us (requires canChangeState)
                             // Only skip retreating large fish (they are backing OFF — not a threat)
                             // Challenging large fish ARE a threat and should scatter medium fish
@@ -3125,8 +3132,14 @@
                             f.fleeTimer = giveWay ? 600 + nervousness * 500 : 1800 + nervousness * 1000; // give way 0.6-1.1s, scatter 1.8-2.8s
                             f.lastThreatId = threat.id; // Remember which predator we fled
                             // Scatter away from threat - direct escape
-                            // (giving way: mostly sideways, along the band the school swims in)
-                            const scatterAngle = Math.atan2((f.y - threat.y) * (giveWay ? 0.35 : 1), f.x - threat.x);
+                            // (giving way: mostly sideways, along the band the school swims in, and never up
+                            // through a host's water top within 140 px: a fish right over the big one
+                            // fled straight up through it, into the copy above, 2026-10-05)
+                            let fdy = (f.y - threat.y) * (giveWay ? 0.35 : 1), fdx = f.x - threat.x;
+                            let level = false;
+                            if (giveWay && fdy < 0 && opts.surface) { const wt = +opts.surface(f) || 0; if (wt && f.y - wt < 140) { fdy = 0; level = true; } }
+                            if (Math.abs(fdx) < 1 && fdy === 0) fdx = Math.cos(f.heading) >= 0 ? 1 : -1;
+                            const scatterAngle = Math.atan2(fdy, fdx);
                             f.targetHeading = scatterAngle;
                             // Fast blend instead of instant snap — prevents one-frame visual blink
                             // when noseOffset causes the drawn body to teleport on 180° flip
@@ -3134,7 +3147,7 @@
                             f.committedHeading = scatterAngle;
                             f.reversalPressure = 0;
                             // IMMEDIATE velocity kick — direction matches target, not current heading
-                            const kickSpeed = giveWay ? 2.6 : 3.2;
+                            const kickSpeed = giveWay ? (level ? 3.4 : 2.6) : 3.2;   // a level flight goes faster: it gains no distance by rising
                             f.vx = Math.cos(scatterAngle) * kickSpeed;
                             f.vy = Math.sin(scatterAngle) * kickSpeed;
                         }

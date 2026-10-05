@@ -13,6 +13,11 @@
 //   pads             each part's pads (the patterns its clips can play) as tiles: click one to
 //                    edit it below, ▶ to hear it on its own
 //   step             click: . → x → X (accent) → o (soft) → .  (a tune is typed: E5 . C5 …)
+//   take             a pad that sings a TAKE (a melody sung over the cut) opens its view: what was
+//                    sung, the notes it became and how they play, four bars at a time; its mapping
+//                    as knobs (octave, shift, straighten, nuance, feel); click a note for what became
+//                    of it, ▲ ▼ or the arrow keys move it a semitone
+//   harmonics        a voice made of harmonics (the singer's, measured) shows them as bars: drag one
 //   knob             drag up/down (Shift: fine), wheel, double-click to type a value
 //   ▶                audition a sound now;  M / S  mute / solo (not saved: listening aids)
 //   ↶ ↷              undo / redo (Cmd/Ctrl+Z over the rack)
@@ -118,6 +123,30 @@
 #reel-rack .rk-line > label { color: var(--ink-faint); }
 #reel-rack svg.rk-shape { background: rgba(var(--cyan-dim-rgb), 0.05); border-radius: 4px; }
 #reel-rack .rk-note { color: var(--ink-faint); font-size: 10px; margin-top: 6px; line-height: 1.45; }
+/* a sung take: the mapping's knobs, the view (what was sung, the notes, how they play), the whole take */
+#reel-rack .rk-take { border: 1px solid rgba(var(--cyan-dim-rgb), 0.22); border-top: 2px solid var(--acc); border-radius: 9px; padding: 8px 10px 10px; margin: 4px 0 10px; background: rgba(var(--cyan-dim-rgb), 0.03); }
+#reel-rack .rk-take .rk-thead { display: flex; align-items: center; gap: 6px; }
+#reel-rack .rk-take .rk-knob { width: 58px; }
+#reel-rack .rk-take .rk-thead b { font: 500 12px/1 var(--font-mono); color: var(--acc); letter-spacing: 0.1em; text-transform: uppercase; }
+#reel-rack .rk-take canvas { display: block; width: 100%; border-radius: 6px; }
+#reel-rack .rk-take canvas.rk-tcv { height: 176px; margin-top: 8px; cursor: pointer; background: rgba(var(--cyan-dim-rgb), 0.03); }
+#reel-rack .rk-take canvas.rk-tcv:focus-visible { outline: 1px solid var(--gold); }
+#reel-rack .rk-take canvas.rk-tov { height: 30px; margin-top: 4px; cursor: pointer; }
+#reel-rack .rk-take .rk-tnav { margin-top: 6px; gap: 6px; }
+#reel-rack .rk-take .rk-tnav span { color: var(--ink-quiet); }
+#reel-rack .rk-take .rk-tkey { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px; color: var(--ink-faint); font-size: 10px; }
+#reel-rack .rk-take .rk-tkey i { display: inline-block; width: 14px; height: 0; vertical-align: middle; margin-right: 4px; border-top: 1.5px solid; }
+#reel-rack .rk-take .rk-tkey i.sung { border-color: rgba(178, 232, 250, 0.6); }
+#reel-rack .rk-take .rk-tkey i.note { height: 7px; border: none; background: var(--acc); opacity: 0.7; border-radius: 1px; }
+#reel-rack .rk-take .rk-tkey i.play { border-color: var(--gold); }
+#reel-rack .rk-take .rk-tkey i.drift { border-color: rgba(var(--gold-rgb), 0.55); border-top-style: dashed; }
+#reel-rack .rk-take .rk-tsel { display: flex; align-items: flex-start; gap: 6px; margin-top: 8px; min-height: 30px; color: var(--ink-quiet); line-height: 1.45; }
+#reel-rack .rk-take .rk-tsel > span { flex: 1; }
+#reel-rack .rk-take .rk-tsel b { color: var(--text-bright); font-weight: 600; }
+#reel-rack .rk-take .rk-tsum { color: var(--ink-quiet); font-size: 10.5px; line-height: 1.55; margin: 8px 0 0; }
+#reel-rack .rk-harm svg text { font: 500 8px var(--font-mono); fill: var(--ink-faint); text-anchor: middle; }
+#reel-rack .rk-harm svg { cursor: ns-resize; touch-action: none; }
+#reel-rack .rk-harm .rk-hnote { color: var(--ink-faint); font-size: 10px; }
 #hud .rk-chip { color: var(--ink-quiet); cursor: pointer; white-space: nowrap; }
 #hud .rk-chip.off { color: var(--gold); }
 #hud button.rk-chip[aria-pressed="true"] { color: var(--text-bright); border-color: rgba(var(--cyan-dim-rgb), 0.32); background: rgba(var(--cyan-dim-rgb), 0.08); }
@@ -393,6 +422,7 @@
   function render() {
     const scroll = root.scrollTop;
     root.innerHTML = '';
+    takeView = null;
     root.appendChild(el('div', 'rk-top'));
     renderTop();
     meters = []; stepEls = {};
@@ -422,7 +452,8 @@
       row.appendChild(tiles);
       root.appendChild(row);
       const d = selPad && selPad.part === part.name && part.pads.find(x => x.name === selPad.pad);
-      if (d) root.appendChild(padEditor(part, d));
+      const sung = d && d.voices.find(v => v.take);
+      if (d) root.appendChild(sung ? takeEditor(part, d, sung) : padEditor(part, d));
     }
     if (!P.score.parts.length) root.appendChild(el('p', 'rk-note', 'No PART lines yet: a part\'s pads are what its clips play.'));
 
@@ -478,6 +509,251 @@
     box.appendChild(note);
     return box;
   }
+  // ── a sung take: the mapping, made visible ─────────────────────────────
+  // Four of the reel's bars at a time: what was sung (the faint line: the pitch as it moved, when
+  // it came, in the singer's own key, drift and all, up the take's octaves so it lies over what
+  // plays), the notes it became (boxes on the sixteenths, in the score's key) and how each plays
+  // (the gold line: its bend, after straighten and nuance). Under it the whole take: its notes, the
+  // drift of the key a bar (dashed) and the bars shown. The window follows the playhead while it
+  // plays. The mapping's lines are knobs; a note clicked says what became of it; ▲ ▼ (or the arrow
+  // keys, over the view) move it to the next note of the key (Shift: a semitone), and ◀ ▶ step from
+  // note to note.
+  const TSPEC = { octave: [-3, 3, 1, 'oct'], shift: [-16, 16, 1, '16th'], straighten: [0, 100, 1, '%'], nuance: [0, 200, 1, '%'], feel: [0, 100, 1, '%'] };
+  const TIP = {
+    octave: 'moves every note by octaves',
+    shift: 'moves the whole take earlier (-) or later (+), in sixteenths',
+    straighten: 'takes out that share of the slow wander inside each note; the scoop in, the fall off and the vibrato stay',
+    nuance: 'plays that share of how each note\'s pitch moved as it was sung (0: every note straight)',
+    feel: 'plays that share of how early or late each note came (0: every note on its sixteenth)' };
+  const TBARS = 4, TGUT = 26;                                            // bars shown; the note names' gutter
+  const tstate = {};                                                     // per take: { bar0, sel }, kept across redraws
+  let takeView = null;
+  const sgn = n => (n > 0 ? '+' : '') + n;
+  const tcode = s => { const m = Math.floor(s / 60 + 1e-9), r = s - m * 60; return `${m}:${r < 10 ? '0' : ''}${r.toFixed(1)}`; };
+  const noteName = m => RM.NAMES[((Math.round(m) % 12) + 12) % 12] + (Math.floor(Math.round(m) / 12) - 1);
+  function takeEditor(part, d, v) {
+    const tk = P.score.takes.find(x => x.name === v.take), acc = colourOf(part.name);
+    const box = el('div', 'rk-take'); box.style.setProperty('--acc', acc);
+    if (!tk) { box.appendChild(el('p', 'rk-note', `There is no TAKE ${v.take}.`)); return box; }
+    const S = RM.takeSummary(tk, A.step, A.spb), R = RM.BEND_RATE, singer = v.track;
+    const st = tstate[tk.name] = tstate[tk.name] || { bar0: Math.max(0, Math.floor(L.now() / A.bar)), sel: null };
+    const evs = A.events.filter(e => e.take === tk.name).sort((a, b) => a.t - b.t);
+    const played = tk.notes.map(n => n.midi + 12 * tk.octave);
+    const lo = Math.min(...played, 60) - 2, hi = Math.max(...played, 60) + 2;
+    const lastBar = Math.max(0, A.bars - TBARS);
+    st.bar0 = Math.max(0, Math.min(lastBar, st.bar0));
+    const inKey = m => { const k = P.score.key, iv = k.mode === 'minor' ? [0, 2, 3, 5, 7, 8, 10] : [0, 2, 4, 5, 7, 9, 11]; return iv.includes(((m - k.root) % 12 + 12) % 12); };
+
+    // head: the take's name, what sings it, hear four bars of it
+    const head = el('div', 'rk-thead');
+    head.appendChild(el('b', '', 'take ' + tk.name));
+    head.appendChild(el('span', 'rk-kind', `sung by ${singer} · ${S ? S.notes + ' notes' : 'no notes'}`));
+    head.appendChild(el('span', 'rk-grow'));
+    head.appendChild(btn('▶ 4 bars', 'hear the four bars shown, on their own', () => {
+      ensureAudio(); if (!player) return;
+      const t0 = st.bar0 * A.bar, t1 = t0 + TBARS * A.bar;
+      player.E.preview(evs.filter(e => e.t >= t0 && e.t < t1).map(e => Object.assign({}, e, { t: e.t - t0 })));
+    }, 'sm'));
+    box.appendChild(head);
+    // the mapping: a knob a line of the TAKE
+    const knobs = Object.keys(TSPEC).map(key => { const k = argKnob(key, TSPEC[key], tk[key], ['TAKE', tk.name, key, 0]); k.title = `${key}: ${TIP[key]}. Drag, wheel, or double-click to type`; return k; });
+    const ks = el('div', 'rk-knobs'); ks.appendChild(group('mapping', ...knobs)); box.appendChild(ks);
+
+    // the view, its legend, the whole take under it
+    const cv = el('canvas', 'rk-tcv'); cv.tabIndex = 0;
+    cv.setAttribute('aria-label', `take ${tk.name}: what was sung, the notes it became and how they play; click a note, arrow keys to move it`);
+    const ov = el('canvas', 'rk-tov'); ov.setAttribute('aria-label', 'the whole take: click to show those bars');
+    box.appendChild(cv);
+    const legend = el('div', 'rk-tkey', '<span><i class="sung"></i>what was sung</span><span><i class="note"></i>the notes it became</span><span><i class="play"></i>how they play</span><span><i class="drift"></i>the key\'s drift (below)</span>');
+    box.appendChild(legend);
+    box.appendChild(ov);
+    const nav = el('div', 'rk-row rk-tnav');
+    const where = el('span', 'rk-grow');
+    nav.appendChild(btn('‹', 'the four bars before', () => { st.bar0 = Math.max(0, st.bar0 - TBARS); draw(); }, 'sm'));
+    nav.appendChild(btn('›', 'the four bars after', () => { st.bar0 = Math.min(lastBar, st.bar0 + TBARS); draw(); }, 'sm'));
+    nav.appendChild(where);
+    box.appendChild(nav);
+    // the chosen note: what became of it
+    const selRow = el('div', 'rk-tsel'), selText = el('span');
+    selRow.appendChild(selText);
+    const up = btn('▲', `up to the next note of ${P.score.key.name} (Shift: a semitone), its n line`, e => move(1, e.shiftKey), 'sm');
+    const dn = btn('▼', `down to the next note of ${P.score.key.name} (Shift: a semitone), its n line`, e => move(-1, e.shiftKey), 'sm');
+    const hear = btn('▶', 'hear this note', () => { const e = evs.find(x => x.nln === st.sel); ensureAudio(); if (e && player) player.E.preview([Object.assign({}, e, { t: 0 })]); }, 'sm');
+    [hear, up, dn].forEach(b => selRow.appendChild(b));
+    box.appendChild(selRow);
+    // the mapping in words
+    const d0 = S && S.drift;
+    box.appendChild(el('p', 'rk-tsum', !S ? 'This take has no notes.' : [
+      `${S.notes} notes, sung from ${tcode(S.t0)} to ${tcode(S.t1)}, ${S.sung[0]} to ${S.sung[1]}.`,
+      d0 ? `The key drifted ${sgn(d0[0])} to ${sgn(d0[1])} cents as it went (the dashed line), and that is taken out first.` : '',
+      `Each note then goes to the nearest note of ${P.score.key.name}: the median note moved ${Math.round(S.movedMedian)} cents, and ${S.movedHalf} moved more than 50.`,
+      `Each starts on its sixteenth: they came ${Math.round(S.earlyMedian)} ms off it (the median)${tk.feel ? `, and feel plays ${tk.feel}% of that back` : ''}.`,
+      `Octave ${sgn(tk.octave)} plays it from ${S.plays[0]} to ${S.plays[1]}${tk.shift ? `, ${Math.abs(tk.shift)} sixteenths ${tk.shift > 0 ? 'later' : 'earlier'}` : ''}.`,
+      `Straighten ${tk.straighten}% and nuance ${tk.nuance}% shape how each note moves.`,
+      `It sings in the voice's own colour: the harmonics of ${singer}, under instruments.`].filter(Boolean).join(' ')));
+
+    // to the next note of the key (chromatic: a semitone)
+    function move(by, chromatic) {
+      const n = tk.notes.find(x => x.ln === st.sel);
+      if (!n) { status('click a note first'); return; }
+      let m = n.midi + by;
+      if (!chromatic) while (!inKey(m)) m += by;
+      st.refocus = document.activeElement === cv;                       // the rack draws again: the keys stay with the view
+      try { change(RM.setTakeNote(src, tk.name, n.ln, { midi: m })); } catch (e) { status((e.errors || [e.message]).join(' · '), true); }
+    }
+    // the window's time and pitch, as drawn
+    const geo = () => {
+      const w = cv.clientWidth || 480, h = cv.clientHeight || 176, top = 14, rh = (h - top - 3) / (hi - lo + 1);
+      const t0 = st.bar0 * A.bar, t1 = t0 + TBARS * A.bar;
+      return { w, h, top, rh, t0, t1, X: t => TGUT + (t - t0) / (t1 - t0) * (w - TGUT - 2), T: x => t0 + (x - TGUT) / (w - TGUT - 2) * (t1 - t0), Y: m => top + (hi - m) * rh };
+    };
+    function draw() {
+      const dpr = window.devicePixelRatio || 1, G = geo(), { w, h, top, rh, t0, t1, X, Y } = G;
+      if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+      const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+      g.font = '500 8.5px "JetBrains Mono", monospace'; g.textBaseline = 'middle';
+      // rows: the key's notes lighter; each C, and the lowest and highest, named
+      for (let m = lo; m <= hi; m++) {
+        g.fillStyle = inKey(m) ? 'rgba(77,201,246,0.07)' : 'rgba(0,0,0,0.16)';
+        g.fillRect(TGUT, Y(m), w - TGUT, rh - 0.6);
+        // each C named, and the top and bottom rows where no C is near them
+        const named = m % 12 === 0 || ((m === lo + 1 || m === hi - 1) && [-2, -1, 1, 2].every(k => (m + k) % 12 !== 0));
+        if (named) { g.fillStyle = 'rgba(149,174,187,0.9)'; g.fillText(noteName(m), 2, Y(m) + rh / 2); }
+      }
+      // bars and beats, each bar's chord over it
+      for (let b = st.bar0; b <= st.bar0 + TBARS; b++) {
+        for (let k = 0; k < (b < st.bar0 + TBARS ? A.spb / 4 : 1); k++) {
+          const x = X(b * A.bar + k * A.beat);
+          g.fillStyle = k ? 'rgba(77,201,246,0.12)' : 'rgba(77,201,246,0.4)'; g.fillRect(Math.round(x), top - (k ? 0 : 3), 1, h - top + (k ? 0 : 3));
+        }
+        const hm = A.harmony[b];
+        if (hm && b < st.bar0 + TBARS) { g.fillStyle = 'rgba(149,174,187,0.95)'; g.fillText(`${b + 1} ${hm.chord.name}`, X(b * A.bar) + 4, 6); }
+      }
+      g.save(); g.beginPath(); g.rect(TGUT, 0, w - TGUT, h); g.clip();
+      // what was sung: each note's pitch as it moved, in the singer's key, from when it came
+      g.strokeStyle = 'rgba(178,232,250,0.5)'; g.lineWidth = 1.2; g.lineJoin = 'round';
+      for (const n of tk.notes) {
+        const ts = (n.step + tk.shift) * A.step + n.early / 1000, c = n.curve.length ? n.curve : [0, 0], dur = n.curve.length ? (c.length - 1) / R : n.len * A.step;
+        if (ts > t1 || ts + dur < t0) continue;
+        g.beginPath();
+        c.forEach((x, i) => { const px = X(ts + (n.curve.length ? i / R : i * dur)), py = Y(n.sung + 12 * tk.octave + x / 100) + rh / 2; i ? g.lineTo(px, py) : g.moveTo(px, py); });
+        g.stroke();
+      }
+      // the notes it became, and how each plays
+      for (const e of evs) {
+        if (e.t > t1 || e.t + e.dur < t0) continue;
+        const x0 = X(e.t), x1 = X(e.t + e.dur), y = Y(e.midi);
+        g.globalAlpha = 0.3 + 0.5 * Math.min(1, e.vel); g.fillStyle = acc; g.fillRect(x0, y + 1, Math.max(2, x1 - x0 - 1), rh - 2); g.globalAlpha = 1;
+        if (e.nln === st.sel) { g.strokeStyle = '#eaf5fa'; g.lineWidth = 1.5; g.strokeRect(x0 - 1, y, Math.max(3, x1 - x0 + 1), rh); }
+        if (e.bend) {
+          g.strokeStyle = '#d4af37'; g.lineWidth = 1.4; g.beginPath();
+          let first = true;
+          for (let i = 0; i < e.bend.length && i / R <= e.dur + 1e-6; i++) { const px = X(e.t + i / R), py = y + rh / 2 - e.bend[i] / 100 * rh; if (first) { g.moveTo(px, py); first = false; } else g.lineTo(px, py); }
+          g.stroke();
+        }
+      }
+      g.restore();
+      // the playhead
+      const ph = L.now();
+      if (ph >= t0 && ph <= t1) { g.fillStyle = '#d4af37'; g.fillRect(Math.round(X(ph)), 0, 1.5, h); }
+      st.drawnAt = ph;
+      where.textContent = `bars ${st.bar0 + 1} to ${Math.min(A.bars, st.bar0 + TBARS)} of ${A.bars}`;
+      drawOv(); info();
+    }
+    // the whole take: its notes at their pitches, the key's drift a bar, the window
+    function drawOv() {
+      const dpr = window.devicePixelRatio || 1, w = ov.clientWidth || 480, h = ov.clientHeight || 30, D = A.duration;
+      if (ov.width !== Math.round(w * dpr) || ov.height !== Math.round(h * dpr)) { ov.width = Math.round(w * dpr); ov.height = Math.round(h * dpr); }
+      const g = ov.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+      const X = t => t / D * w;
+      g.fillStyle = 'rgba(77,201,246,0.05)'; g.fillRect(0, 0, w, h);
+      g.fillStyle = acc; g.globalAlpha = 0.75;
+      for (const e of evs) g.fillRect(X(e.t), 2 + (hi - e.midi) / (hi - lo) * (h - 6), Math.max(1, X(e.t + e.dur) - X(e.t) - 0.5), 2);
+      g.globalAlpha = 1;
+      if (tk.drift.length) {
+        g.strokeStyle = 'rgba(212,175,55,0.6)'; g.setLineDash([3, 2]); g.lineWidth = 1; g.beginPath();
+        tk.drift.forEach((c, b) => { const x = X((b + 0.5) * A.bar), y = h / 2 - Math.max(-150, Math.min(150, c)) / 150 * (h / 2 - 2); b ? g.lineTo(x, y) : g.moveTo(x, y); });
+        g.stroke(); g.setLineDash([]);
+        g.fillStyle = 'rgba(212,175,55,0.25)'; g.fillRect(0, h / 2, w, 0.6);
+      }
+      g.strokeStyle = '#eaf5fa'; g.lineWidth = 1; g.strokeRect(X(st.bar0 * A.bar) + 0.5, 0.5, X(TBARS * A.bar) - 1, h - 1);
+      const ph = L.now(); g.fillStyle = '#d4af37'; g.fillRect(X(ph), 0, 1, h);
+    }
+    // what became of the chosen note
+    function info() {
+      const n = tk.notes.find(x => x.ln === st.sel), e = n && evs.find(x => x.nln === n.ln);
+      [up, dn, hear].forEach(b => { b.disabled = !n; });
+      if (!n) { selText.textContent = 'Click a note to see what became of it.'; return; }
+      const drift = RM.driftAt(tk, n.step, A.spb), moved = Math.round((n.midi - n.sung) * 100 + drift);
+      const raw = n.curve.length ? Math.max(...n.curve.map(Math.abs)) : 0, plays = e && e.bend ? Math.max(...e.bend.map(Math.abs)) : 0;
+      selText.innerHTML = `<b>${RM.posText(n.step + tk.shift, A.spb)}</b> plays <b>${noteName(n.midi + 12 * tk.octave)}</b>. Sung ${RM.sungText(n.sung)}`
+        + (drift ? `, the key ${Math.abs(drift)} cents ${drift > 0 ? 'sharp' : 'flat'} there` : '')
+        + `: moved ${sgn(moved)} cents to ${noteName(n.midi)}${tk.octave ? `, then ${Math.abs(tk.octave)} octave${Math.abs(tk.octave) > 1 ? 's' : ''} ${tk.octave > 0 ? 'up' : 'down'}` : ''}.`
+        + ` Came ${Math.abs(n.early)} ms ${n.early < 0 ? 'early' : 'late'}${tk.feel && n.early ? ` (${Math.round(Math.abs(n.early) * tk.feel / 100)} ms of it plays)` : ''}.`
+        + ` Level ${n.vel}, tone ${sgn(n.tone)} dB. Its pitch moved ±${raw} cents as sung${e ? `; it plays ±${plays}` : ''}.`;
+    }
+    // a click: the note under it (or the nearest within 6 px); the arrow keys move and step
+    cv.addEventListener('pointerdown', ev => {
+      const r = cv.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top, G = geo();
+      let best = null, bd = 7;
+      for (const e of evs) {
+        const x0 = G.X(e.t), x1 = G.X(e.t + e.dur), y0 = G.Y(e.midi), dx = x < x0 ? x0 - x : x > x1 ? x - x1 : 0, dy = y < y0 ? y0 - y : y > y0 + G.rh ? y - y0 - G.rh : 0, dd = Math.hypot(dx, dy);
+        if (dd < bd) { bd = dd; best = e; }
+      }
+      st.sel = best ? best.nln : null; cv.focus(); draw();
+    });
+    cv.addEventListener('keydown', ev => {
+      if (ev.key === 'ArrowUp' || ev.key === 'ArrowDown') { ev.preventDefault(); ev.stopPropagation(); move(ev.key === 'ArrowUp' ? 1 : -1, ev.shiftKey); return; }
+      if (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight') {
+        ev.preventDefault(); ev.stopPropagation();
+        const i = evs.findIndex(e => e.nln === st.sel), j = i < 0 ? (ev.key === 'ArrowRight' ? 0 : evs.length - 1) : Math.max(0, Math.min(evs.length - 1, i + (ev.key === 'ArrowRight' ? 1 : -1)));
+        const e = evs[j]; if (!e) return;
+        st.sel = e.nln;
+        if (e.t < st.bar0 * A.bar || e.t >= (st.bar0 + TBARS) * A.bar) st.bar0 = Math.max(0, Math.min(lastBar, Math.floor(e.t / A.bar)));
+        draw();
+      }
+    });
+    ov.addEventListener('pointerdown', ev => { const r = ov.getBoundingClientRect(); st.bar0 = Math.max(0, Math.min(lastBar, Math.floor((ev.clientX - r.left) / r.width * A.duration / A.bar) - 1)); draw(); });
+    takeView = { draw, st, follow: t => { if (t < st.bar0 * A.bar || t >= (st.bar0 + TBARS) * A.bar) { st.bar0 = Math.max(0, Math.min(lastBar, Math.floor(t / A.bar))); return true; } return false; } };
+    if (st.refocus) { st.refocus = false; cv.focus({ preventScroll: true }); requestAnimationFrame(() => { if (cv.isConnected) cv.focus({ preventScroll: true }); }); }
+    requestAnimationFrame(() => { if (takeView && takeView.draw === draw) draw(); });
+    return box;
+  }
+  // a sound's harmonics, as bars: each harmonic's level in dB against the first (0 at the top, -60
+  // at the foot). Drag one up or down: heard at once, saved when you let go. The first is the
+  // measure of the rest, so it stays at 0.
+  function harmonicsRow(t, kind) {
+    const wrap = el('div', 'rk-line rk-harm'); wrap.appendChild(el('label', '', 'harmonics'));
+    const NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg'), n = t.harmonics.length, BW = 14, H = 46, FLOOR = -60;
+    svg.setAttribute('width', n * BW + 2); svg.setAttribute('height', H + 11); svg.setAttribute('class', 'rk-shape');
+    svg.setAttribute('aria-label', `${t.name}'s harmonics, dB against the first: ${t.harmonics.join(' ')}`);
+    const yOf = db => 2 + Math.min(1, Math.max(0, db / FLOOR)) * (H - 4);
+    let hs = t.harmonics.slice();
+    const draw = () => {
+      svg.innerHTML = hs.map((db, k) => `<rect x="${1 + k * BW + 1.5}" y="${yOf(db).toFixed(1)}" width="${BW - 3}" height="${Math.max(1, H - yOf(db)).toFixed(1)}" rx="1.5" fill="var(--acc)" fill-opacity="${k ? 0.72 : 1}"><title>harmonic ${k + 1}: ${db} dB</title></rect>`
+        + `<text x="${(1 + k * BW + BW / 2).toFixed(1)}" y="${H + 9}">${k + 1}</text>`).join('');
+    };
+    draw();
+    svg.addEventListener('pointerdown', e => {
+      if (e.button !== 0) return;
+      const r = svg.getBoundingClientRect(), k = Math.floor((e.clientX - r.left - 1) / BW);
+      if (k < 1 || k >= n) return;
+      e.preventDefault(); svg.setPointerCapture(e.pointerId); gestureStart();
+      const set = ev => {
+        const db = Math.round(Math.max(FLOOR, Math.min(0, (ev.clientY - r.top - 2) / (H - 4) * FLOOR)));
+        if (db === hs[k]) return;
+        hs[k] = db; draw();
+        try { change(RM.setArg(src, kind, t.name, 'harmonics', k, db), { save: false, record: false, rerender: false }); } catch (er) { status((er.errors || [er.message]).join(' · '), true); }
+      };
+      set(e);
+      const mv = ev => set(ev);
+      const upf = () => { svg.removeEventListener('pointermove', mv); svg.removeEventListener('pointerup', upf); svg.removeEventListener('pointercancel', upf); undoFix(); queueSave(); render(); };
+      svg.addEventListener('pointermove', mv); svg.addEventListener('pointerup', upf); svg.addEventListener('pointercancel', upf);
+    });
+    wrap.appendChild(svg);
+    wrap.appendChild(el('span', 'rk-hnote', 'each harmonic against the first, in dB: drag a bar'));
+    return wrap;
+  }
   function padSet(part, pad, track, pattern) {
     try { change(RM.setPad(src, part, pad, track, pattern)); } catch (e) { status((e.errors || [e.message]).join(' · '), true); }
   }
@@ -504,14 +780,15 @@
       // voices: wave, pitch, level; add and remove
       t.voices.forEach((v, i) => {
         const row = el('div', 'rk-voice');
-        row.appendChild(sel(['sine', 'triangle', 'square', 'saw', 'noise'], v.wave === 'sawtooth' ? 'saw' : v.wave, w => { try { change(RM.setArg(src, kind, t.name, 'voice', 0, w, i)); } catch (e) { status(e.message, true); } }, 'wave'));
+        row.appendChild(sel(['sine', 'triangle', 'square', 'saw', 'noise'].concat(t.harmonics ? ['harmonics'] : []), v.wave === 'sawtooth' ? 'saw' : v.wave, w => { try { change(RM.setArg(src, kind, t.name, 'voice', 0, w, i)); } catch (e) { status((e.errors || [e.message]).join(' · '), true); } }, 'wave'));
         row.appendChild(K('pitch', SPEC.cents, v.cents, 'voice', 1, i));
         row.appendChild(K('level', SPEC.vlevel, v.level, 'voice', 2, i));
-        row.appendChild(shape(v.wave));
+        row.appendChild(shape(v.wave, t));
         if (t.voices.length > 1) row.appendChild(btn('−', 'remove this voice', () => lineSet(kind, t.name, 'voice', null, i), 'sm'));
         if (i === t.voices.length - 1) row.appendChild(btn('+ voice', 'add a voice', () => lineSet(kind, t.name, 'voice', 'sine 1200 0.2', t.voices.length), 'sm'));
         m.appendChild(row);
       });
+      if (t.harmonics) m.appendChild(harmonicsRow(t, kind));
       // what it plays
       const pl = el('div', 'rk-line'); pl.appendChild(el('label', '', 'play'));
       // what it plays (its pads must suit it: steps for chord, root and arp, a tune for notes)
@@ -522,7 +799,10 @@
       if (t.play.oct != null) pl.appendChild(K('octave', SPEC.oct, t.play.oct, 'play', 1));
       if (t.play.dir) pl.appendChild(sel(['up', 'down', 'updown'], t.play.dir, d => { try { change(RM.setArg(src, kind, t.name, 'play', 2, d)); } catch (e) { status(e.message, true); } }, 'direction'));
       if (t.play.mode === 'note') { const inp = el('input'); inp.type = 'text'; inp.value = t.play.name; inp.style.width = '60px'; inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') inp.blur(); }); inp.addEventListener('change', () => { try { change(RM.setArg(src, kind, t.name, 'play', 1, inp.value.trim())); } catch (e) { status((e.errors || [e.message]).join(' · '), true); } }); pl.appendChild(inp); }
-      if (['root', 'arp', 'notes', 'chord'].includes(t.play.mode)) pl.appendChild(K('length', SPEC.len, t.len, 'len', 0));
+      // a sound that sings a take plays each note as long as it was sung: no length of its own
+      const takes = P.score.parts.flatMap(p => p.pads).flatMap(p => p.voices).filter(v => v.track === t.name && v.take).map(v => v.take);
+      if (takes.length) pl.appendChild(el('span', 'rk-kind', 'sings take ' + [...new Set(takes)].join(', ')));
+      else if (['root', 'arp', 'notes', 'chord'].includes(t.play.mode)) pl.appendChild(K('length', SPEC.len, t.len, 'len', 0));
       if (t.on) pl.appendChild(onSel(t, kind));
       m.appendChild(pl);
       // filter, envelope, lfo, mix
@@ -547,11 +827,16 @@
   function onSel(t, kind) { return sel(RM.MOMENTS, t.on, v => { try { change(RM.setArg(src, kind, t.name, 'on', 0, v)); } catch (e) { status(e.message, true); } }, 'plays at every moment of this kind'); }
   function mix(t, K) { return group('mix', K('level', SPEC.level, t.level, 'level', 0), K('pan', SPEC.pan, t.pan, 'pan', 0), K('reverb', SPEC.send, t.send[0], 'send', 0), K('delay', SPEC.send, t.send[1], 'send', 1)); }
   // little pictures of a wave and an envelope, redrawn only when the rack is drawn
-  function shape(w) {
+  function shape(w, t) {
     const n = 40, pts = [];
+    // a harmonics wave: its harmonics summed (sine phase), scaled to its peak
+    const amps = w === 'harmonics' && t && t.harmonics ? t.harmonics.map(db => Math.pow(10, db / 20)) : null;
+    const hw = x => amps.reduce((a, v, k) => a + v * Math.sin((k + 1) * x * 4 * Math.PI), 0);
+    let peak = 1;
+    if (amps) { peak = 1e-6; for (let i = 0; i <= 200; i++) peak = Math.max(peak, Math.abs(hw(i / 200))); }
     for (let i = 0; i <= n; i++) {
       const x = i / n, p = x * 2 % 1;
-      const y = w === 'sine' ? Math.sin(x * 4 * Math.PI) : w === 'triangle' ? 1 - 4 * Math.abs(p - 0.5) : w === 'square' ? (p < 0.5 ? 1 : -1) : w === 'sawtooth' ? 2 * p - 1 : Math.sin(i * 12.9898) * 43758.5453 % 1;
+      const y = amps ? hw(x) / peak : w === 'sine' ? Math.sin(x * 4 * Math.PI) : w === 'triangle' ? 1 - 4 * Math.abs(p - 0.5) : w === 'square' ? (p < 0.5 ? 1 : -1) : w === 'sawtooth' ? 2 * p - 1 : Math.sin(i * 12.9898) * 43758.5453 % 1;
       pts.push(`${(2 + x * 44).toFixed(1)},${(11 - y * 8).toFixed(1)}`);
     }
     return el('span', '', `<svg class="rk-shape" width="48" height="22"><polyline points="${pts.join(' ')}" fill="none" stroke="var(--acc)" stroke-width="1.2"/></svg>`).firstChild;
@@ -584,10 +869,17 @@
   // ── every frame, while open: the playhead, the steps, the meters ──────
   const buf = new Float32Array(512);
   let lastMeter = 0;
+  let lastTake = 0;
   function frame(t) {
     if (!P || !A) return;
     const k = L.isPlaying() ? Math.floor(t / A.step + 1e-6) % 16 : -1;   // the steps go round on the reel's own clock
     for (const cells of Object.values(stepEls)) cells.forEach((c, i) => c.classList.toggle('now', i === k));
+    // a take's view: its playhead, at 30 fps; playing, the four bars follow it
+    if (takeView && (Math.abs(t - takeView.st.drawnAt) > 1e-3) && performance.now() - lastTake > 33) {
+      lastTake = performance.now();
+      if (L.isPlaying()) takeView.follow(t);
+      takeView.draw();
+    }
     const now = performance.now();
     if (!player || now - lastMeter < 50) return;                        // meters at 20 fps, dim
     lastMeter = now;

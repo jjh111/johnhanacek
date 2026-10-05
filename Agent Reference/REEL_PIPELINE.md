@@ -1157,6 +1157,112 @@ at another polish pass."
   server with no byte ranges and the start there runs 5-8 s against its 8 s limit; Chrome on
   claude.ai plays the blobs and never makes those requests.
 
+## A melody sung over the cut, and bigger frames (2026-10-05)
+
+John sang a melody over the film and sent the recording: "fold into the work gracefully, I sang
+a melody for this, can we try to map / normalize it as best we can, keep my nuance of voice
+within harmonics, then update the UI to reflect what the mappings are. Make the content frames
+around 20 percent larger too. For badvr content just zoom out a bit to show the labels."
+
+- **`scripts/reel-sing.py`** reads a recording into the score as a `TAKE` (librosa and ffmpeg;
+  `python3 scripts/reel-sing.py <recording> --apply`). The recording is analysed and never kept:
+  only what was read from it goes into the score (the raw audio is John's and stays out of this
+  public repo). What it does, in order:
+  - *pitch*: pYIN every 10 ms. Notes are runs that snap to one note of the score's `KEY` (100 ms
+    of a new note before it changes); glide fragments under 110 ms join their neighbour.
+  - *syllables*: a new syllable on the same note is a new note, where the level dips 7 dB and
+    comes back or an onset rises 4 dB. Until this round a later step merged same-pitch neighbours
+    back, and "da, da, da" on F2 played as one held note; the rendered voice showed it.
+  - *when*: the reel's 0 inside the recording, from the eighths' phase most onsets fall on and the
+    bar whose chords the sung notes sit on most (3.03 s in; 53% of onsets within 40 ms of an eighth
+    against 32% by chance, and the chord fit peaks at 2.9-3.3 s). No film sound reached the mic
+    (cross-correlation against the film's own soundtrack found nothing), so the music is the only
+    clock. Onsets go to the sixteenth.
+  - *key*: a singer's key drifts (here -64 to +78 cents a bar). The drift is tracked note by note
+    (Viterbi over offsets, a cost per change, cheaper after a breath), so the intervals inside a
+    phrase stay as sung; each note's centre then goes to the nearest note of A minor (a chord tone
+    of its bar, or the note before, wins a near tie). In key within 50 cents: 66% as sung, 84%
+    with the drift out. The drift is written into the take (`drift`, cents a bar) for the editor.
+  - *octaves*: the low notes (E2, F2) are real: their fundamental and third harmonic are present
+    and nothing sits an octave below, so the leaps stay as sung.
+  - *nuance*: each note keeps how its pitch moved, cents from its own centre 32 times a second,
+    measured on the drift-corrected pitch near its written note (a glide into it from far away no
+    longer pulls its centre off).
+  - *level and colour*: each note's loudness (0.3-1) and tone (its harmonics 2-8 against the
+    voice's, ±6 dB); and the voice's harmonics, H1-H16 in dB from the fundamental, the median of
+    its steady notes: 0 -2 -10 -14 -25 -33 -39 … (warm, a strong second).
+- **The score.** `TAKE john` holds 140 `n` lines (`n 5.2.3 F2 4 0.39 +0 F2-24 +20 | 104 -5 …`:
+  where, the note, sixteenths, level, tone, what was sung, how early or late in ms, then the
+  bend) and its mapping, each a line: `octave +1` (D3-G4, a tenor over the bass, under the
+  lead's register), `shift` (sixteenths), `straighten 60` (that share of the slow wander inside a
+  note goes, a five-point average, the first and last three points easing out of it so the scoop
+  and the fall stay), `nuance 100` (that share of the movement plays; each point held to ±200
+  cents, beyond which it is the glide into the next note), `feel 20` (that share of how early or
+  late each note came). `SYNTH voice` sings it: `voice harmonics 0 0.8` plays the sound's
+  `harmonics` line as one PeriodicWave, each note's tone tilting the harmonics above the first;
+  `env 0.045 0.45 0.35 0.12` speaks like the sung syllables (peak at 50 ms, about 4 dB down by
+  half a 0.5 s note, 11 dB by its end, as measured). `PART voice` with `pad john take john`, and
+  `CLIP voice 1-31.4.2 john in 1 out 4`: a window onto the take, which plays where it was sung.
+  At level 0.32 it sits 1.4 dB over the band A-weighted, the melody without burying it.
+- **The synth.** A take's note carries its bend; the oscillator's detune follows it (linear
+  between points, from `cut` when a note is resumed mid-way), live and offline. Waves are kept
+  per sound and whole dB of tone.
+- **The editor.** The rack's voice pad opens the take view: four bars at a time (the reel's, with
+  their chords), what was sung (the faint line, as sung, drift and all), the notes it became (boxes
+  on the sixteenths) and how they play (the gold line), the whole take under it with the key's
+  drift dashed, the window following the playhead. The mapping's five lines are knobs. A note
+  clicked says what became of it ("5.3.3 plays F3. Sung F2-29, the key 10 cents flat there: moved
+  +19 cents to F2, then 1 octave up. Came 10 ms late …"); ▲ ▼ and the arrow keys move it to the
+  next note of the key (Shift: a semitone), one `n` line. The summary says it in words. The voice
+  sound shows its harmonics as bars to drag (H1 is the measure of the rest and stays at 0), its
+  wave drawn from them. The timeline's voice lane is taller and draws each note's bend in gold.
+- **The frames, 20% larger** (wide): windows 1080×608 (were 900×506), from 204 to 812 where the
+  band ended at 710 over empty water; the art's port r 300 (250), the answer's portrait 404×606
+  (336×504), the logos and offer cards 608 tall. The copy beside a window is 600 wide (780): a
+  line John wrote on one line wraps there, balanced, its mask sliding the block as one (the wide
+  frame never wrapped before), and a label (an eyebrow) takes a smaller size once until it fits
+  (`fitLabel`), snapped so its line box is whole pixels: a 20.2 px line moved every line under it
+  by a fraction, and Chrome rastered "XR + AI" one of two ways from render to render (0.57 px, a
+  render in three). Copy beside a window centres on 432 (the rest on 457) and never starts above
+  the frames' top (`colTop` 204: the OpenProse column, with its quote, is 542 tall and had reached
+  the tier marks). Square keeps its layout (its copy columns are as narrow as its headlines allow)
+  and vertical's windows already span its width.
+- **The fish under the bigger frames.** Under a frame that reaches 812 the tank has 100 px less
+  water, and the fish learned to keep under it where it is. Each framed scene names its frame's
+  x-range (`FRAMES` in the rig: the results' and feature's windows, the art's port, the logos' and
+  offer's cards; not the answer's portrait, on the far side of the copy the fish look at). Under
+  one, the school's water starts at 824 (`surfaceFramed`, 12 px under the foot; 710 elsewhere, as
+  before) and the big fish keeps its centre under 862 (`bigTop`: its back and fin under the foot),
+  heading down the way it faces when over it; beside one, they swim as before (a ceiling over the
+  whole tank had sent the big fish down and round for 2.5 s in the art scene, 500 px clear of the
+  port). The water comes down over the second before a framed scene (`frameDepth`, a smoothstep;
+  the big fish's ceiling from then too): a top that dropped onto the school at the cut turned its
+  fish back each its own way round, one the long way through a loop to the tank's floor, and a
+  fish line in the scene's first second found the school in pieces. A big turn under a frame goes
+  round by the belly, not nose up through the top (it had reared into the logos card), and swims
+  round, a small loop down: turned on the spot, nose down, its tail stood up into the logos card at
+  39 s. A fish line's food lands no higher than 818 (`feedTop`), so no fish feeds inside the copy:
+  the results' `feed 0.18 0.7` had the big fish's fin in the wrapped Nanome lines. The engine
+  learned three things, all behind the reel's own options (`surface`, `calmSchool` with
+  `largeRightOfWay`), so index, design and 404 swim as before: a fish seeks no food above its
+  water's top (the school had waited under a pellet the big fish came down to eat); a medium fish
+  gives way with a berth of 45 px (25), going for food or not; and one near its water's top flees
+  level, faster (3.4 px a tick), not up through it (fish right over the big one had fled through
+  the offer card's link line). Measured in wide on the cut's own seed, each fish as points along
+  its body: the big fish over copy 0 s and over a frame 0 s; the school over copy 0 s and over a
+  frame 0.75 s, three grazes of a few px at a frame's foot (2.75 s before); fishtest's contact 0.20 s
+  (0.27 before), square 0.23 s; the big fish over a frame 0 s on seeds 1-4 too. fishdirecttest's
+  `big to` lands 87 px off at 3.4 s (its limit 90; 80 before) and `school to` 562 px across (536
+  before). One thing tried and dropped: letting a fish line's move keep its pace until 180 px out
+  landed `big to` at 62 px, but John's own `big to` and `idle circle` in the command scene then
+  ran the big fish after a fish it had scared (0.8 s within reach on every seed; 0.2 s without).
+- **BadVR**: the hand-tracked picture at zoom 1 to 1.06, so its labels read (APP, application, VX);
+  the block close-up beat is gone. John's lines are as he wrote them (the feed point included).
+- Suites: `reel-tests/taketest.mjs` (the take read and mapped, the synth offline, the take view,
+  the harmonics bars, undo, the timeline's lane); formattest's wide references recorded again
+  (the old ones in `wide-ref-1005b`), and its live check reads the stage and the timeline in one
+  frame after the rack is up (the score is longer now, and the rack can land between two reads).
+
 ## Later
 
 Scene-specific cues (line staggers, the push); moving cut 1 onto the one player; stems out of

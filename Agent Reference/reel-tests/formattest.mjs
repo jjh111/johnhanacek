@@ -199,8 +199,14 @@ try {
       `live ?format=${fmt}: the ${w}×${h} stage scales to fit a 1440×900 window above the HUD`, `(stage ${Math.round(a.x)},${Math.round(a.y)} ${Math.round(a.w)}×${Math.round(a.h)}, HUD from ${Math.round(a.hudTop)})`);
     await page.keyboard.press('e');
     await page.waitForFunction(() => !document.getElementById('reel-tl').hidden, null, { timeout: 5000 }).catch(() => {});
-    const b = await box();
-    const tl = await page.evaluate(() => { const r = document.getElementById('reel-tl').getBoundingClientRect(); return { top: r.top, hidden: document.getElementById('reel-tl').hidden, blocks: document.querySelectorAll('#reel-tl .tl-scene, #reel-tl [class*=scene]').length }; });
+    // the music lanes join the panel when the synth rack has read the score (a moment later, and
+    // longer for a longer score: John's sung take, 2026-10-05), and the stage refits again then;
+    // so wait for the rack, and read the stage and the panel in the same frame
+    await page.waitForFunction(() => window.REEL_RACK, null, { timeout: 15000 }).catch(() => {});
+    await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+    const [b, tl] = await page.evaluate(() => { const s = document.getElementById('stage').getBoundingClientRect(), hud = document.getElementById('hud'), r = document.getElementById('reel-tl').getBoundingClientRect();
+      return [{ x: s.left, y: s.top, w: s.width, h: s.height, hud: !hud.hidden, hudTop: hud.getBoundingClientRect().top },
+        { top: r.top, hidden: document.getElementById('reel-tl').hidden, blocks: document.querySelectorAll('#reel-tl .tl-scene, #reel-tl [class*=scene]').length }]; });
     ok(!tl.hidden && b.y + b.h <= tl.top + 0.5 && Math.abs(b.w / b.h - w / h) < 0.01 && b.h < a.h,
       `live ?format=${fmt}: E opens the timeline and the stage refits above it`, `(stage bottom ${Math.round(b.y + b.h)}, panel top ${Math.round(tl.top)})`);
     await page.screenshot({ path: join(OUT, `live-${fmt}-timeline.png`) });

@@ -308,6 +308,9 @@ p, h1, h2, h3 { margin: 0; }
 #stage.narrow .eyebrow { font-size: 24px; letter-spacing: 0.18em; }
 #stage.narrow .lm.eyebrow, #stage.narrow .lm.ln, #stage.narrow .lm.cite, #stage.narrow .lm.sup, #stage.narrow .lm.qt2, #stage.narrow .lm.qt3,
 #stage.narrow .lm.c3, #stage.narrow .lm.aw, #stage.narrow .lm.v, #stage.narrow .lm.endline, #stage.narrow .lm.lab, #stage.narrow .lm.oh { white-space: normal; }
+/* wide: a column beside a 1080 px window is 600 px (2026-10-05), and a line of copy that John wrote
+   on one line wraps in it, balanced, its mask sliding the block as one (labels shrink instead) */
+#stage:not(.narrow) .col .lm.ln, #stage:not(.narrow) .col .lm.qt3, #stage:not(.narrow) .col .lm.aw { white-space: normal; text-wrap: balance; }
 #stage.narrow .lm.qt2, #stage.narrow .lm.oh, #stage.narrow .lm.endline, #stage.narrow .lm.cite { text-wrap: balance; }
 #stage.narrow .ln.cap { font-size: 30px; }
 #stage.narrow .cite { font-size: 28px; line-height: 1.4; }
@@ -504,17 +507,29 @@ p, h1, h2, h3 { margin: 0; }
   const FORMATS = {
     wide: {
       W: 1920, H: 1080, M: 96, barTop: 56, tiersTop: 146,
+      // The windows run from 204 to 812: 1080×608 since 2026-10-05 (John: "make the content frames
+      // around 20 percent larger"; they were 900×506, to 710, with empty water under them), the copy
+      // beside them 600 wide. Copy beside a window centres on 432 (the rest on 457), so a column
+      // that wraps (the Nanome one: 476 px, 194-670, its eyebrow 19 px under the tier marks) keeps
+      // clear of the big fish feeding under it (a fish line's food lands no higher than feedTop)
       tankY: 540, tankH: 540, colY: 457,           // copy columns centre here, clear of bar and tank
       spotY: 322, schoolY: 296,                    // tank px (stage 862 / 836); 296 is as deep as the engine lets a school waypoint go
-      surface: 170,                                // tank px (stage 710, the window grid's foot): the school's water starts under the copy
+      // Under a frame that reaches the band's foot (812: a window, the art's port, the logos' and
+      // offer's cards; FRAMES in the rig), the school's water starts under it and the big fish keeps
+      // its back under it; everywhere else the school's water starts at 710, the copy band's foot,
+      // as before the frames grew, and the big fish has the whole tank
+      bigTop: 862,                                 // stage px: the big fish's centre keeps under this under a frame (its back and fin under the frame's foot)
+      surface: 170, surfaceFramed: 284,            // tank px (stage 710; 824, 12 px under the frames' foot): the school's water starts under the copy
+      colTop: 204,                                 // stage px: no column of copy starts above the frames' top
+      feedTop: 818,                                // stage px: the highest a fish line's food lands (just above the school's water under a frame)
       open: { cx: 924, cy: 895, guideTop: 792 },
       oval: { cy: 380, w: 1200, h: 400 }, eoval: { cy: 430, w: 1160, h: 360 }, titleLook: 390, pillTop: 156,
-      answer: { x: 96, look: 560, portrait: { x: 1824 - 336, y: 205, w: 336, h: 504 } },   // the window grid's height, 2:3
-      art: { col: { x: 96, w: 900 }, port: { x: 1824 - 250, y: 457, r: 250 } },
+      answer: { x: 96, look: 560, portrait: { x: 1824 - 404, y: 205, w: 404, h: 606 } },   // the window grid's height, 2:3
+      art: { col: { x: 96, w: 900 }, port: { x: 1824 - 300, y: 508, r: 300 } },
       command: { fish: [[470, 872], [595, 930], [720, 866], [845, 924]], coral: [[330, 1002, 300, 92], [1630, 1006, 280, 86]] },
-      results: { rows: { x: 96, y: 204, w: 780 }, col: { x: 96, w: 780, cy: 457 }, win: { x: 924, y: 204, w: 900, h: 506 } },
-      feature: { win: { x: 96, y: 204, w: 900, h: 506 }, col: { x: 1044, w: 780, cy: 457 } },
-      panel: { x: 96, y: 204, w: 1728, h: 506 },
+      results: { rows: { x: 96, y: 204, w: 780 }, col: { x: 96, w: 600, cy: 432 }, win: { x: 744, y: 204, w: 1080, h: 608 } },
+      feature: { win: { x: 96, y: 204, w: 1080, h: 608 }, col: { x: 1224, w: 600, cy: 432 } },
+      panel: { x: 96, y: 204, w: 1728, h: 608 },
       quotes: { x: 160, w: 1600 },
       taps: [{ t: 2.0, x: 760, y: 900 }, { t: 2.45, x: 1170, y: 890 }],
     },
@@ -817,6 +832,39 @@ p, h1, h2, h3 { margin: 0; }
   const look = (t0, t1, x, y, side, what) => ATTN.push({ t0, t1, x, y, want: side, what });
   let reelT = 0, BIG = null;                   // the reel's clock as the tank sees it; the opening's fish
   const SPOT_Y = F.spotY, SCHOOL_Y = F.schoolY;   // tank px: where the big fish stands and the school sweeps (FORMATS)
+  // The highest the big fish's centre goes under a frame (tank px), where a format says (wide: the
+  // windows reach 812 since 2026-10-05, and a big fish nosing up at them from its old spot went in
+  // under their foot for 22.75 s of the cut). Above it, it heads down at once, unless a fish line
+  // sent it there.
+  const BIG_TOP = F.bigTop != null ? F.bigTop - TANK_Y : null;
+  // The frames a scene shows down to the content band's foot, where the fish swim (stage px, their
+  // x-range): a window, the art's port, the logos' and the offer's cards. Under one, the big fish
+  // keeps its back under the frame's foot (bigTop) and the school's water starts under it
+  // (surfaceFramed); beside one, they swim as they always have (a ceiling over the whole tank sent
+  // the big fish down and round for 2.5 s in the art scene, 500 px clear of the port). Not the
+  // answer's portrait: it is on the far side of the copy the fish look at.
+  const FRAMES = {
+    results: () => F.results.win, feature: () => F.feature.win,
+    art: () => ({ x: F.art.port.x - F.art.port.r, w: 2 * F.art.port.r }),
+    logos: () => F.panel, offer: () => F.intent || F.panel,
+  };
+  const frameOf = sc => sc && FRAMES[sc.type] ? FRAMES[sc.type]() : null;
+  const sceneIx = t => { let i = -1; for (let k = 0; k < SC.length; k++) if (t >= SC[k].start - 1e-6) i = k; return i; };
+  const within = (r, x, m) => !!r && (x == null || (x > r.x - m && x < r.x + r.w + m));   // under it: within m px of its sides (x null: anywhere)
+  // How far the school's water top has come down under a frame at x, at t: 1 in the frame's scene,
+  // and over the FRAME_LEAD before it, rising from 0 (smoothstep). The school sinks while the scene
+  // before leaves; a top that dropped onto it at the cut turned its fish back, each its own way
+  // round, and a fish line in the scene's first second found the school in pieces.
+  const FRAME_LEAD = 1;
+  function frameDepth(x, t, m) {
+    const i = sceneIx(t), nx = SC[i + 1];
+    let k = within(frameOf(SC[i]), x, m) ? 1 : 0;
+    if (k < 1 && nx && nx.start - t < FRAME_LEAD && within(frameOf(nx), x, m)) { const u = 1 - (nx.start - t) / FRAME_LEAD; k = Math.max(k, u * u * (3 - 2 * u)); }
+    return k;
+  }
+  // the big fish keeps under a frame's foot from FRAME_LEAD before its scene too (its nose, and room
+  // to dive: within its length and 40 px of the frame's sides)
+  const bigUnder = f => BIG_TOP != null && frameDepth(f.x, reelT, (f.bodyWidth || 100) + 40) > 0;
   const BIG_DX = 250, SCHOOL_DX = 210;         // how far to either side of the thing each one stands
   const attnAt = t => { let a = null; for (const x of ATTN) if (t >= x.t0 && t < x.t1 && (!a || x.t0 >= a.t0)) a = x; return a; };
   const sideOf = A => {                        // decided once, from where the big fish is when it notices
@@ -932,7 +980,7 @@ p, h1, h2, h3 { margin: 0; }
     f.reelAtSpot = true;                       // there: nose up at the thing, barely moving
     // It hovers. Even this slow a swim, nose up, would carry it 100 px up and in over a long
     // look, so it slows as it nears the top or the inner edge of its band (the tail beats on).
-    const hover = Math.max(0.15, Math.min(1, (f.y - (SPOT_Y - 70)) / 50, (out - 90) / 80));
+    const hover = Math.max(0.15, Math.min(1, (f.y - Math.max(SPOT_Y - 70, bigUnder(f) ? BIG_TOP : -1e9)) / 50, (out - 90) / 80));
     return { heading: clampTilt(Math.atan2((A.y - TANK_Y) - f.y, A.x - f.x), 0.62, f.heading), speed: 0.12 * hover };
   }
   // A spot it was sent to (tank px), and what it does there. A sweep or a circle is moved in
@@ -965,6 +1013,20 @@ p, h1, h2, h3 { margin: 0; }
     return { heading, speed: 0.12 };
   }
   function steerBig(f) {
+    const s = steerBig_(f);
+    if (!s || f.reelAct || dirAt('big', reelT).to || !bigUnder(f)) return s;
+    // over its ceiling: down under it, the way it faces (not the way it is turning to: that turned
+    // it round, nose up, into the logos card at 38.6 s)
+    const out = f.y < BIG_TOP ? { heading: clampTilt(Math.atan2(BIG_TOP + 30 - f.y, (Math.cos(f.heading) >= 0 ? 1 : -1) * 90), 0.6), speed: Math.max(s.speed, 0.6) } : s;
+    // a big turn goes round by the belly, not the nose: the shortest way round from nose up to nose
+    // up passes straight up, and the fish would rear into the frame over it. And it swims round, a
+    // small loop down: turned on the spot, nose down, its tail stood up into the frame (the logos'
+    // card at 39 s)
+    const d = angDiff(out.heading, f.heading), up = angDiff(-Math.PI / 2, f.heading);
+    if (Math.abs(d) > 1.5 && Math.sign(up) === Math.sign(d) && Math.abs(up) < Math.abs(d)) return { heading: f.heading - Math.sign(d) * 0.9, speed: Math.max(out.speed, 1) };
+    return out;
+  }
+  function steerBig_(f) {
     if (f !== BIG) return null;
     // a dart or a turn, until done (live, also on the wall clock: paused, the reel's clock stands
     // still while the tank swims on, and a dart pressed then would never end)
@@ -1011,9 +1073,14 @@ p, h1, h2, h3 { margin: 0; }
   // fish line sends somewhere ("school to x y"). Until 2026-10-05 the tank's top was the
   // school's top too: the canvas starts at mid-frame, and the school swam up into the answer's
   // figures, the awards and the quotes' names, 16.75 s of the cut in wide.
+  // Under a frame (FRAMES) it starts under the frame instead (F.surfaceFramed), coming down over
+  // the second before the frame's scene (frameDepth): for a fish under it, and for the school's
+  // waypoint (f null) wherever the frame is.
   function surfaceOf(f) {
     if (f && f === BIG) return 0;
-    return dirAt('school', reelT).to ? 0 : F.surface;
+    if (dirAt('school', reelT).to) return 0;
+    if (F.surfaceFramed == null) return F.surface;
+    return F.surface + (F.surfaceFramed - F.surface) * frameDepth(f ? f.x : null, reelT, f ? (f.bodyWidth || 40) + 20 : 0);
   }
   const tank = FishCanvas(tankEl, { transparent: true, seedFish: false, seedJellyfish: false, steer: steerBig, schoolTarget: schoolSpot, calmSchool: true, largeRightOfWay: true, surface: surfaceOf });
   const inTank = pts => pts.map(p => ({ x: p.x, y: p.y - TANK_Y }));   // stage → tank coordinates
@@ -1037,7 +1104,9 @@ p, h1, h2, h3 { margin: 0; }
     SC.forEach(sc => (sc.fish || []).forEach(c => {
       if (!ReelScript.FISH[c.verb].once || c.at < 0 || c.at >= sc.dur) return;
       const t = sc.start + c.at, id = `fish ${sc.i} ${ReelScript.writeFish(c)}`;
-      if (c.verb === 'feed') at(t, () => tank.addFood(c.x * W, c.y * H - TANK_Y), id);
+      // food a line drops lands in the water under the copy band (F.feedTop), so no fish eats inside
+      // the copy (the results' food at 0.7 had the big fish's fin in the wrapped Nanome lines)
+      if (c.verb === 'feed') at(t, () => tank.addFood(c.x * W, Math.max(c.y * H, F.feedTop || 0) - TANK_Y), id);
       else if (c.verb === 'scatter' || c.verb === 'regroup') at(t, () => tank.schoolPhase(c.verb), id);
       else at(t, () => {                        // the big fish's: a dart straight ahead, or a turn round
         const f = BIG; if (!f) return;
@@ -1064,7 +1133,9 @@ p, h1, h2, h3 { margin: 0; }
     while (n && n !== camera) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; }
     return { x, y, w: el.offsetWidth, h: el.offsetHeight };
   };
-  const centreColumn = (col, cy = COL_Y) => LAYOUT.push(() => { col.style.top = (cy - col.offsetHeight / 2) + 'px'; });
+  // a column centres on cy, its top no higher than the frames' top (F.colTop: a tall column grows
+  // down from there, clear of the tier marks over it)
+  const centreColumn = (col, cy = COL_Y) => LAYOUT.push(() => { col.style.top = Math.max(F.colTop || -1e9, cy - col.offsetHeight / 2) + 'px'; });
   // Text set inside an oval sits where the curve leaves it room. An ellipse narrows toward its
   // top and bottom, so a wide line centred on the oval's box can run into its edge: the title's
   // tagline did, its ends on the curve, and the whole name read as sitting too low. Each line
@@ -1169,8 +1240,22 @@ p, h1, h2, h3 { margin: 0; }
     </div>`;
   }
   // animate that column: tin = first arrival, tout = everything leaves; base = where beat `at`s count from
+  // A label too wide for its column (an eyebrow: "Nanome · Lead XR product designer · 2022–24" in
+  // the 600 px column beside a 1080 px window) takes a smaller size, once, until it fits on its
+  // one line; measured, so any label John writes fits. (Copy lines wrap instead: .col .lm.ln.)
+  function fitLabel(lm, maxW) {
+    lm.style.fontSize = '';
+    const li = lm.querySelector(':scope > .li') || lm, w = li.offsetWidth;
+    if (!w || w <= maxW) return;
+    // the size its line fits at, then down to the size whose line box is a whole number of px: a
+    // fractional line moved every line under it by a fraction, and Chrome rasters such a line one
+    // of two ways from run to run (0.57 px apart, a render in three)
+    const cs = getComputedStyle(lm), fs = parseFloat(cs.fontSize), lh = parseFloat(cs.lineHeight) / fs || 1.2;
+    lm.style.fontSize = (Math.floor(fs * maxW / w * 0.99 * lh) / lh).toFixed(4) + 'px';
+  }
   function columnMotion(colEl, it, base) {
     const eb = inner(colEl, '.lm.eyebrow');
+    LAYOUT.push(() => colEl.querySelectorAll('.lm.eyebrow').forEach(lm => fitLabel(lm, colEl.clientWidth)));
     const heads = inner(colEl, '.hls > .lm');
     const rule = colEl.querySelector('.rule');
     const beats = (it.beats || []).filter(hasCopy);

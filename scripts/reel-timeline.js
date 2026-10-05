@@ -259,6 +259,7 @@
 #reel-tl svg.tl-mroll .tl-n3 { fill-opacity: 0.8; }
 #reel-tl svg.tl-mroll .tl-fsh { fill: rgb(var(--surface-rgb)); fill-opacity: 0.55; stroke: none; }
 #reel-tl svg.tl-mroll .tl-fln { fill: none; stroke: var(--c); stroke-width: 1.2; }
+#reel-tl svg.tl-mroll .tl-nb { fill: none; stroke: var(--gold); stroke-width: 1; stroke-linejoin: round; stroke-opacity: 0.9; }
 #reel-tl svg.tl-mroll.tl-mute { opacity: 0.3; }
 /* a lane's name, kept at the left of the view: a part's opens its pads */
 #reel-tl .tl-mlb { position: absolute; height: ${LANE.head + 2}px; padding: 0 5px; border-radius: 3px; white-space: nowrap; z-index: 4; cursor: help;
@@ -973,9 +974,11 @@
   function shapeOf(p, A) {
     const n = p.tracks.length, head = LANE.head;
     if (n > 1) return { h: head + n * 8 + 3, rows: Object.fromEntries(p.tracks.map((t, i) => [t, n - 1 - i])), nRows: n };
-    let lo = Infinity, hi = -Infinity;
-    A.events.forEach(e => { if (e.track === p.tracks[0] && e.midi != null) { lo = Math.min(lo, e.midi); hi = Math.max(hi, e.midi); } });
+    let lo = Infinity, hi = -Infinity, sung = false;
+    A.events.forEach(e => { if (e.track === p.tracks[0] && e.midi != null) { lo = Math.min(lo, e.midi); hi = Math.max(hi, e.midi); if (e.take) sung = true; } });
     if (lo === Infinity) return { h: head + 14 };
+    // a sung take: taller, two pixels a semitone, so how each note bends can be seen
+    if (sung) return { h: head + Math.max(22, Math.min(40, 4 + (hi - lo + 1) * 2)) + 3, lo, hi };
     return { h: head + Math.max(14, Math.min(22, 6 + (hi - lo + 1) * 1.2)) + 3, lo, hi };
   }
   // a cheap fingerprint of every note, so a knob that changes no note redraws nothing
@@ -983,7 +986,10 @@
     const idx = new Map(Pm.score.tracks.map((t, i) => [t.name, i + 1]));
     let x = 2166136261;
     const mix = n => { x = Math.imul(x ^ (n | 0), 16777619); };
-    for (const e of A.events) { mix(idx.get(e.track) || 0); mix(Math.round(e.t * 1000)); mix(Math.round(e.dur * 1000)); mix(e.midi || 0); mix(Math.round(e.vel * 1000)); mix(e.rise ? 2 : 0); }
+    for (const e of A.events) {
+      mix(idx.get(e.track) || 0); mix(Math.round(e.t * 1000)); mix(Math.round(e.dur * 1000)); mix(e.midi || 0); mix(Math.round(e.vel * 1000)); mix(e.rise ? 2 : 0);
+      if (e.bend) for (const c of e.bend) mix(c);                       // a sung note's bend: nuance and straighten move it
+    }
     return x >>> 0;
   }
   function musicSig() {
@@ -1097,7 +1103,7 @@
     svg.style.top = top + 'px'; svg.style.height = shape.h + 'px'; svg.style.setProperty('--c', c);
     const path = cls => { const q = document.createElementNS(NS, 'path'); q.setAttribute('class', cls); svg.appendChild(q); return q; };
     const r = { svg, p, shape, evs: A.events.filter(e => p.tracks.includes(e.track)), levels: A.levels[p.tracks[0]] || null,
-      clips: A.clips.filter(cl => cl.part === p.name), shade: path('tl-fsh'), notes: [1, 2, 3, 4].map(k => path('tl-n tl-n' + k)), fade: path('tl-fln') };
+      clips: A.clips.filter(cl => cl.part === p.name), shade: path('tl-fsh'), notes: [1, 2, 3, 4].map(k => path('tl-n tl-n' + k)), bends: path('tl-nb'), fade: path('tl-fln') };
     mcontent.appendChild(svg); ROLLS.push(r); ln.els.push(svg);
   }
   const levelAt = (pts, t) => window.ReelMusic.levelAt(pts, t);
@@ -1108,6 +1114,7 @@
     const P = REEL_UI.rollPaths(r.evs, { H: H - 1, y0, px: x, pxs, lo: r.shape.lo, hi: r.shape.hi, rows: r.shape.rows, nRows: r.shape.nRows,
       level: r.levels ? t => levelAt(r.levels, t) : null });
     r.notes.forEach((q, k) => q.setAttribute('d', P.d[k]));
+    r.bends.setAttribute('d', P.bends || '');
     let sh = '', ln = '';
     if (A) r.clips.forEach(cl => {
       const a = x(cl.t0), b = x(cl.t1) - 2, fi = cl.fadeIn * A.beat * pxs, fo = cl.fadeOut * A.beat * pxs, top = y0 - 1, bot = H - 2;

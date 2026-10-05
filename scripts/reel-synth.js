@@ -6,7 +6,10 @@
 // The voices are like-every-cloud's SynthVoice patch vocabulary as data: osc/noise voices →
 // optional filter → ADSR envelope, one LFO (gain, filter or pitch). Drums are small equations
 // (a kick is a sine falling in pitch, a hat is high-passed noise). Nothing is sampled, and the
-// noise is seeded, so an offline render is the same render every time.
+// noise is seeded, so an offline render is the same render every time. A sung take (2026-10-05)
+// plays through a `harmonics` voice, the singer's measured harmonic levels as one PeriodicWave
+// (each note's tone tilting the harmonics above the first), and its pitch moves as it was sung:
+// each note's bend, automated on the oscillator's detune.
 //
 //   voices → the clips' level → track (level · mute) → pan ─→ music bus → sweep filter ──┐
 //   (an audition, a pad heard on its own: straight to the track)
@@ -180,6 +183,31 @@
       return v;
     };
 
+    // a sound's harmonics as one wave: amplitudes from its `harmonics` line (dB against the first),
+    // every harmonic above the first moved by `tone` dB (a sung note's brighter or darker colour);
+    // one wave per sound and whole dB of tone, kept
+    const waves = new Map();
+    function waveFor(t, tone) {
+      const k = Math.max(-RM().TONE_MAX, Math.min(RM().TONE_MAX, Math.round(tone || 0))), key = t.name + '|' + t.harmonics.join(',') + '|' + k;
+      let w = waves.get(key);
+      if (!w) {
+        if (waves.size > 256) waves.clear();                          // a long drag of the harmonics: keep a few
+        const n = t.harmonics.length + 1, re = new Float32Array(n), im = new Float32Array(n);
+        t.harmonics.forEach((db, i) => { im[i + 1] = Math.pow(10, (db + (i ? k : 0)) / 20); });
+        w = ctx.createPeriodicWave(re, im);
+        waves.set(key, w);
+      }
+      return w;
+    }
+    // a sung note's pitch as it moved: its bend (cents, BEND_RATE points a second from its start)
+    // on a detune, from `cut` seconds in, held at its last point after
+    function bendOn(p, base, b, when, cut) {
+      const R = RM().BEND_RATE, x = cut * R, j = Math.floor(x), last = b.length - 1;
+      const at = i => b[Math.max(0, Math.min(last, i))];
+      p.setValueAtTime(base + (j >= last ? at(last) : at(j) + (at(j + 1) - at(j)) * (x - j)), when);
+      for (let i = j + 1; i <= last; i++) p.linearRampToValueAtTime(base + b[i], when + i / R - cut);
+    }
+
     // one event at ctx time `when` (`cut`: seconds of it already past, for a note resumed mid-way)
     E.play = function (ev, when, cut = 0) {
       const T = E.tracks[ev.track];
@@ -214,7 +242,14 @@
         const lg = G(v.level); lg.connect(head);
         let src;
         if (v.wave === 'noise') { src = ctx.createBufferSource(); src.buffer = noiseBuffer(ctx); src.loop = true; src.connect(lg); src.start(when, (ev.t * 7.31) % 1.9); }
-        else { src = ctx.createOscillator(); src.type = v.wave; src.frequency.value = RM().hz(ev.midi); src.detune.value = v.cents + (ev.detune || 0); src.connect(lg); src.start(when); oscs.push(src); }
+        else {
+          src = ctx.createOscillator();
+          if (v.wave === 'harmonics') { if (t.harmonics) src.setPeriodicWave(waveFor(t, ev.tone)); } else src.type = v.wave;
+          src.frequency.value = RM().hz(ev.midi);
+          const base = v.cents + (ev.detune || 0);
+          if (ev.bend && ev.bend.length) bendOn(src.detune, base, ev.bend, when, cut); else src.detune.value = base;
+          src.connect(lg); src.start(when); oscs.push(src);
+        }
         src.stop(stop); srcs.push(src);
       }
       if (t.lfo && T.lfoG) {
@@ -243,7 +278,7 @@
         const lg = G(v.level); lg.connect(head);
         let src;
         if (v.wave === 'noise') { src = ctx.createBufferSource(); src.buffer = noiseBuffer(ctx); src.loop = true; src.start(when, 0.3); }
-        else { src = ctx.createOscillator(); src.type = v.wave; src.detune.value = v.cents; src.frequency.setValueAtTime(80, when); src.frequency.exponentialRampToValueAtTime(640, end); src.start(when); }
+        else { src = ctx.createOscillator(); if (v.wave === 'harmonics') { if (t.harmonics) src.setPeriodicWave(waveFor(t, 0)); } else src.type = v.wave; src.detune.value = v.cents; src.frequency.setValueAtTime(80, when); src.frequency.exponentialRampToValueAtTime(640, end); src.start(when); }
         src.connect(lg); src.stop(end + 0.1);
       }
     }
@@ -283,9 +318,10 @@
       if (t.play.mode === 'rise') return E.play({ track: name, t: 0, dur: 1.5, vel: 0.8, rise: true, bypass: true }, when);
       const c = (A && A.harmony && A.harmony[0] && A.harmony[0].chord) || E.score.chords[0];
       const oct = t.play.oct != null ? t.play.oct : 4;
-      // a sound that plays a tune: its first note, in the first pad that gives it one
-      const tune = (E.score.parts || []).flatMap(p => p.pads).flatMap(p => p.voices).find(v => v.track === name && v.notes);
-      const first = tune ? RM().noteMidi(tune.notes.find(n => n !== '.')) : 72;
+      // a sound that plays a tune: its first note, in the first pad that gives it one (a take's, up its octaves)
+      const vs = (E.score.parts || []).flatMap(p => p.pads).flatMap(p => p.voices), tune = vs.find(v => v.track === name && v.notes);
+      const sung = vs.find(v => v.track === name && v.take), tk = sung && (E.score.takes || []).find(x => x.name === sung.take);
+      const first = tk && tk.notes.length ? tk.notes[0].midi + 12 * tk.octave : tune ? RM().noteMidi(tune.notes.find(n => n !== '.')) : 72;
       const midis = t.play.mode === 'note' ? [t.play.midi] : t.play.mode === 'notes' ? [first] : ['chord', 'chime'].includes(t.play.mode) ? RM().voicing(c, oct) : [RM().voicing(c, oct)[0]];
       midis.forEach((midi, j) => E.play({ track: name, t: 0, dur: t.play.mode === 'chord' ? 1.2 : Math.max(0.2, t.env.attack + t.env.decay), vel: 0.9, midi, bypass: true }, when + (t.play.mode === 'chime' ? j * 0.045 : 0)));
     };
