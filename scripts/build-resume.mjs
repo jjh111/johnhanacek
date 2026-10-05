@@ -156,8 +156,8 @@ const thesisText = (e, fmt) => {
   const t = e.thesis || {}, s2 = secondOf(e), parts = [];
   const head = t.title ? `Thesis: ${fmt(`“${t.title}”`, t.url)}${t.subtitle ? `: ${fmt.esc(t.subtitle)}` : ''}` : 'Thesis:';
   parts.push(t.title ? head + (t.note ? `. ${fmt.esc(t.note)}` : '.') : `${head} ${fmt.esc(t.note || '')}`);
-  if (t.supervisor) parts.push(`Under the supervision of ${fmt(t.supervisor.name, t.supervisor.url)}.`);
-  if (s2) parts.push(`Second thesis: ${s2.url ? fmt(`“${s2.title}”`, s2.url) : fmt.esc(s2.title)}.`);
+  if (t.supervisor) parts.push(`Supervisor: ${fmt(t.supervisor.name, t.supervisor.url)}.`);
+  if (s2) parts.push(`Thesis 2: ${s2.url ? fmt(`“${s2.title}”`, s2.url) : fmt.esc(s2.title)}.`);
   return parts.join(' ').replace(/\.\./g, '.').replace(/\?\./g, '?');
 };
 const plain = Object.assign((txt) => esc(txt), { esc });

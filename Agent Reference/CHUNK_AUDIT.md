@@ -722,7 +722,6 @@ Source: John, in session (Agent Reference/ART_PHOTO_INTAKE_PLAN.md). Each claim 
 - 31 — "including camping in the Sierra Nevada mountains" (John: "I also go camping in the Sierra Nevada Mountains"); about.html Off the clock carries the same sentence.
 - 49 — url `services.html#fit` → `services.html#book`: the "Is this a fit?" section was removed (John, 2026-10-05, "not adding anything we haven't already said"); a hiring-availability answer lands on Get in touch. Text unchanged.
 
-
 ## §J Resume compile — 2026-09-16
 
 Chunks 4, 21, 23, 26, 27, 50 are COMPILED from `Assets/resume.json` by `scripts/build-resume.mjs --apply` (source: the 2026-09-09 interview; evidence links live in the JSON). Edit the JSON, not the chunk text. Rebuild vectors after each compile (`node scripts/build-chunk-vectors.mjs`).
