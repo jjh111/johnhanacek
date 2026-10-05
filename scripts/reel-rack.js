@@ -140,6 +140,7 @@
 #reel-rack .rk-take .rk-tkey i.note { height: 7px; border: none; background: var(--acc); opacity: 0.7; border-radius: 1px; }
 #reel-rack .rk-take .rk-tkey i.play { border-color: var(--gold); }
 #reel-rack .rk-take .rk-tkey i.drift { border-color: rgba(var(--gold-rgb), 0.55); border-top-style: dashed; }
+#reel-rack .rk-take .rk-tkey i.out { border-color: rgba(178, 232, 250, 0.4); border-top-style: dotted; }
 #reel-rack .rk-take .rk-tsel { display: flex; align-items: flex-start; gap: 6px; margin-top: 8px; min-height: 30px; color: var(--ink-quiet); line-height: 1.45; }
 #reel-rack .rk-take .rk-tsel > span { flex: 1; }
 #reel-rack .rk-take .rk-tsel b { color: var(--text-bright); font-weight: 600; }
@@ -538,7 +539,8 @@
     const S = RM.takeSummary(tk, A.step, A.spb), R = RM.BEND_RATE, singer = v.track;
     const st = tstate[tk.name] = tstate[tk.name] || { bar0: Math.max(0, Math.floor(L.now() / A.bar)), sel: null };
     const evs = A.events.filter(e => e.take === tk.name).sort((a, b) => a.t - b.t);
-    const played = tk.notes.map(n => n.midi + 12 * tk.octave);
+    // the rows: every note it plays or could (a left-out one put back), and every pitch that was sung
+    const played = tk.notes.flatMap(n => n.heard ? [n.midi, Math.round(n.sung)] : [n.midi]).map(m => m + 12 * tk.octave);
     const lo = Math.min(...played, 60) - 2, hi = Math.max(...played, 60) + 2;
     const lastBar = Math.max(0, A.bars - TBARS);
     st.bar0 = Math.max(0, Math.min(lastBar, st.bar0));
@@ -547,7 +549,7 @@
     // head: the take's name, what sings it, hear four bars of it
     const head = el('div', 'rk-thead');
     head.appendChild(el('b', '', 'take ' + tk.name));
-    head.appendChild(el('span', 'rk-kind', `sung by ${singer} · ${S ? S.notes + ' notes' : 'no notes'}`));
+    head.appendChild(el('span', 'rk-kind', `sung by ${singer} · ${S ? `${S.notes} notes, from ${S.sungNotes} sung` : 'no notes'}`));
     head.appendChild(el('span', 'rk-grow'));
     head.appendChild(btn('▶ 4 bars', 'hear the four bars shown, on their own', () => {
       ensureAudio(); if (!player) return;
@@ -561,10 +563,10 @@
 
     // the view, its legend, the whole take under it
     const cv = el('canvas', 'rk-tcv'); cv.tabIndex = 0;
-    cv.setAttribute('aria-label', `take ${tk.name}: what was sung, the notes it became and how they play; click a note, arrow keys to move it`);
+    cv.setAttribute('aria-label', `take ${tk.name}: what was sung, the melody made from it and how it plays; click a note, arrow keys to move it`);
     const ov = el('canvas', 'rk-tov'); ov.setAttribute('aria-label', 'the whole take: click to show those bars');
     box.appendChild(cv);
-    const legend = el('div', 'rk-tkey', '<span><i class="sung"></i>what was sung</span><span><i class="note"></i>the notes it became</span><span><i class="play"></i>how they play</span><span><i class="drift"></i>the key\'s drift (below)</span>');
+    const legend = el('div', 'rk-tkey', '<span><i class="sung"></i>what was sung</span><span><i class="note"></i>the melody made from it</span><span><i class="play"></i>how it plays</span><span><i class="out"></i>sung, left out</span><span><i class="drift"></i>the key\'s drift (below)</span>');
     box.appendChild(legend);
     box.appendChild(ov);
     const nav = el('div', 'rk-row rk-tnav');
@@ -579,17 +581,25 @@
     const up = btn('▲', `up to the next note of ${P.score.key.name} (Shift: a semitone), its n line`, e => move(1, e.shiftKey), 'sm');
     const dn = btn('▼', `down to the next note of ${P.score.key.name} (Shift: a semitone), its n line`, e => move(-1, e.shiftKey), 'sm');
     const hear = btn('▶', 'hear this note', () => { const e = evs.find(x => x.nln === st.sel); ensureAudio(); if (e && player) player.E.preview([Object.assign({}, e, { t: 0 })]); }, 'sm');
-    [hear, up, dn].forEach(b => selRow.appendChild(b));
+    // leave the chosen note out of the melody (what was sung stays), or put a left-out one back
+    const outB = btn('Leave out', 'leave this note out of the melody (what was sung stays drawn), or put a left-out note back', () => {
+      const n = tk.notes.find(x => x.ln === st.sel);
+      if (!n) { status('click a note first'); return; }
+      st.refocus = document.activeElement === cv;
+      try { change(RM.setTakeNote(src, tk.name, n.ln, { out: !n.out })); } catch (e) { status((e.errors || [e.message]).join(' · '), true); }
+    }, 'sm');
+    [hear, up, dn, outB].forEach(b => selRow.appendChild(b));
     box.appendChild(selRow);
     // the mapping in words
     const d0 = S && S.drift;
     box.appendChild(el('p', 'rk-tsum', !S ? 'This take has no notes.' : [
-      `${S.notes} notes, sung from ${tcode(S.t0)} to ${tcode(S.t1)}, ${S.sung[0]} to ${S.sung[1]}.`,
-      d0 ? `The key drifted ${sgn(d0[0])} to ${sgn(d0[1])} cents as it went (the dashed line), and that is taken out first.` : '',
-      `Each note then goes to the nearest note of ${P.score.key.name}: the median note moved ${Math.round(S.movedMedian)} cents, and ${S.movedHalf} moved more than 50.`,
-      `Each starts on its sixteenth: they came ${Math.round(S.earlyMedian)} ms off it (the median)${tk.feel ? `, and feel plays ${tk.feel}% of that back` : ''}.`,
+      `${S.notes} notes play (${tcode(S.t0)} to ${tcode(S.t1)}), made from the ${S.sungNotes} sung, ${S.sung[0]} to ${S.sung[1]}.`,
+      `${S.kept} of them are sung notes, each set on its sixteenth and on a note of ${P.score.key.name}: ${S.retimed} moved more than 40 ms, ${S.movedSemis} to another note than the one sung.`
+        + (S.added ? ` ${S.added} were added where the melody wanted a note that was not sung.` : '')
+        + (S.left ? ` ${S.left} sung notes are left out (dotted): click one to put it back.` : ''),
+      `The faint line is what was sung, where it was sung.` + (d0 ? ` The key drifted ${sgn(d0[0])} to ${sgn(d0[1])} cents as it went (the dashed line below), and that is taken out first.` : ''),
       `Octave ${sgn(tk.octave)} plays it from ${S.plays[0]} to ${S.plays[1]}${tk.shift ? `, ${Math.abs(tk.shift)} sixteenths ${tk.shift > 0 ? 'later' : 'earlier'}` : ''}.`,
-      `Straighten ${tk.straighten}% and nuance ${tk.nuance}% shape how each note moves.`,
+      `Straighten ${tk.straighten}% takes the slow wander out of each note, and nuance ${tk.nuance}% keeps that share of how the voice moved (the scoop in, the fall off)${tk.feel ? `; feel ${tk.feel}% plays back how early or late each came` : ''}.`,
       `It sings in the voice's own colour: the harmonics of ${singer}, under instruments.`].filter(Boolean).join(' ')));
 
     // to the next note of the key (chromatic: a semitone)
@@ -631,14 +641,18 @@
       }
       g.save(); g.beginPath(); g.rect(TGUT, 0, w - TGUT, h); g.clip();
       // what was sung: each note's pitch as it moved, in the singer's key, from when it came
-      g.strokeStyle = 'rgba(178,232,250,0.5)'; g.lineWidth = 1.2; g.lineJoin = 'round';
+      g.lineWidth = 1.2; g.lineJoin = 'round';
       for (const n of tk.notes) {
+        if (!n.heard) continue;                                          // added: nothing was sung there
         const ts = (n.step + tk.shift) * A.step + n.early / 1000, c = n.curve.length ? n.curve : [0, 0], dur = n.curve.length ? (c.length - 1) / R : n.len * A.step;
         if (ts > t1 || ts + dur < t0) continue;
+        g.strokeStyle = n.ln === st.sel ? '#eaf5fa' : n.out ? 'rgba(178,232,250,0.32)' : 'rgba(178,232,250,0.5)';
+        g.setLineDash(n.out ? [2, 2] : []);
         g.beginPath();
         c.forEach((x, i) => { const px = X(ts + (n.curve.length ? i / R : i * dur)), py = Y(n.sung + 12 * tk.octave + x / 100) + rh / 2; i ? g.lineTo(px, py) : g.moveTo(px, py); });
         g.stroke();
       }
+      g.setLineDash([]);
       // the notes it became, and how each plays
       for (const e of evs) {
         if (e.t > t1 || e.t + e.dur < t0) continue;
@@ -657,6 +671,7 @@
       const ph = L.now();
       if (ph >= t0 && ph <= t1) { g.fillStyle = '#d4af37'; g.fillRect(Math.round(X(ph)), 0, 1.5, h); }
       st.drawnAt = ph;
+      Object.assign(cv.dataset, { lo, hi, bar0: st.bar0, gut: TGUT, top });   // the rows and bars as drawn (for a test's click)
       where.textContent = `bars ${st.bar0 + 1} to ${Math.min(A.bars, st.bar0 + TBARS)} of ${A.bars}`;
       drawOv(); info();
     }
@@ -682,15 +697,26 @@
     // what became of the chosen note
     function info() {
       const n = tk.notes.find(x => x.ln === st.sel), e = n && evs.find(x => x.nln === n.ln);
-      [up, dn, hear].forEach(b => { b.disabled = !n; });
-      if (!n) { selText.textContent = 'Click a note to see what became of it.'; return; }
-      const drift = RM.driftAt(tk, n.step, A.spb), moved = Math.round((n.midi - n.sung) * 100 + drift);
-      const raw = n.curve.length ? Math.max(...n.curve.map(Math.abs)) : 0, plays = e && e.bend ? Math.max(...e.bend.map(Math.abs)) : 0;
-      selText.innerHTML = `<b>${RM.posText(n.step + tk.shift, A.spb)}</b> plays <b>${noteName(n.midi + 12 * tk.octave)}</b>. Sung ${RM.sungText(n.sung)}`
-        + (drift ? `, the key ${Math.abs(drift)} cents ${drift > 0 ? 'sharp' : 'flat'} there` : '')
-        + `: moved ${sgn(moved)} cents to ${noteName(n.midi)}${tk.octave ? `, then ${Math.abs(tk.octave)} octave${Math.abs(tk.octave) > 1 ? 's' : ''} ${tk.octave > 0 ? 'up' : 'down'}` : ''}.`
-        + ` Came ${Math.abs(n.early)} ms ${n.early < 0 ? 'early' : 'late'}${tk.feel && n.early ? ` (${Math.round(Math.abs(n.early) * tk.feel / 100)} ms of it plays)` : ''}.`
-        + ` Level ${n.vel}, tone ${sgn(n.tone)} dB. Its pitch moved ±${raw} cents as sung${e ? `; it plays ±${plays}` : ''}.`;
+      [up, dn, hear].forEach(b => { b.disabled = !n || n.out; });
+      outB.disabled = !n; outB.textContent = n && n.out ? 'Put back' : 'Leave out';
+      if (!n) { selText.textContent = 'Click a note to see where it came from.'; return; }
+      const oct = tk.octave ? `, then ${Math.abs(tk.octave)} octave${Math.abs(tk.octave) > 1 ? 's' : ''} ${tk.octave > 0 ? 'up' : 'down'}` : '';
+      const drift = RM.driftAt(tk, n.step, A.spb), moved = Math.round((n.midi - n.sung) * 100 + drift), where = RM.posText(n.step + tk.shift, A.spb);
+      const sungAt = RM.posText(Math.max(0, Math.round(n.step + tk.shift + n.early / 1000 / A.step)), A.spb);
+      if (n.out) {
+        selText.innerHTML = `<b>Left out.</b> Sung ${RM.sungText(n.sung)} at ${sungAt}${drift ? ` (the key ${Math.abs(drift)} cents ${drift > 0 ? 'sharp' : 'flat'} there)` : ''}, level ${n.vel}. Put back, it plays <b>${noteName(n.midi + 12 * tk.octave)}</b> at ${where}.`;
+        return;
+      }
+      if (!n.heard) {
+        selText.innerHTML = `<b>${where}</b> plays <b>${noteName(n.midi + 12 * tk.octave)}</b>. Added: nothing was sung here; the melody wanted a note${n.curve.length ? ', and it moves the way one sung elsewhere did' : ''}. Level ${n.vel}.`;
+        return;
+      }
+      const ms = Math.round(n.early), raw = n.curve.length ? Math.max(...n.curve.map(Math.abs)) : 0, plays = e && e.bend ? Math.max(...e.bend.map(Math.abs)) : 0;
+      selText.innerHTML = `<b>${where}</b> plays <b>${noteName(n.midi + 12 * tk.octave)}</b>. Sung ${RM.sungText(n.sung)}`
+        + (Math.abs(ms) > 40 ? ` at ${sungAt}, ${Math.abs(ms)} ms ${ms > 0 ? 'later' : 'earlier'}: moved onto the beat` : `, ${Math.abs(ms)} ms ${ms > 0 ? 'late' : 'early'}${tk.feel && ms ? ` (${Math.round(Math.abs(ms) * tk.feel / 100)} ms of it plays)` : ''}`)
+        + (drift ? `; the key ${Math.abs(drift)} cents ${drift > 0 ? 'sharp' : 'flat'} there` : '')
+        + (Math.abs(moved) > 100 ? `. Set to ${noteName(n.midi)}, ${Math.abs(Math.round(moved / 100))} semitone${Math.abs(Math.round(moved / 100)) > 1 ? 's' : ''} ${moved > 0 ? 'above' : 'below'} what was sung${oct}.` : `. Tuned ${sgn(moved)} cents to ${noteName(n.midi)}${oct}.`)
+        + ` Level ${n.vel}, tone ${sgn(n.tone)} dB. Its pitch moved ±${raw} cents as sung; it plays ±${plays}.`;
     }
     // a click: the note under it (or the nearest within 6 px); the arrow keys move and step
     cv.addEventListener('pointerdown', ev => {
@@ -700,7 +726,17 @@
         const x0 = G.X(e.t), x1 = G.X(e.t + e.dur), y0 = G.Y(e.midi), dx = x < x0 ? x0 - x : x > x1 ? x - x1 : 0, dy = y < y0 ? y0 - y : y > y0 + G.rh ? y - y0 - G.rh : 0, dd = Math.hypot(dx, dy);
         if (dd < bd) { bd = dd; best = e; }
       }
-      st.sel = best ? best.nln : null; cv.focus(); draw();
+      if (!best) {
+        // no note box near: a left-out note's line of what was sung, within 7 px
+        let bo = null, bod = 7;
+        for (const n of tk.notes) {
+          if (!n.out || !n.heard) continue;
+          const ts = (n.step + tk.shift) * A.step + n.early / 1000, c = n.curve.length ? n.curve : [0, 0], dur = n.curve.length ? (c.length - 1) / R : n.len * A.step;
+          c.forEach((v, i) => { const px = G.X(ts + (n.curve.length ? i / R : i * dur)), py = G.Y(n.sung + 12 * tk.octave + v / 100) + G.rh / 2, dd = Math.hypot(px - x, py - y); if (dd < bod) { bod = dd; bo = n; } });
+        }
+        st.sel = bo ? bo.ln : null; cv.focus(); draw(); return;
+      }
+      st.sel = best.nln; cv.focus(); draw();
     });
     cv.addEventListener('keydown', ev => {
       if (ev.key === 'ArrowUp' || ev.key === 'ArrowDown') { ev.preventDefault(); ev.stopPropagation(); move(ev.key === 'ArrowUp' ? 1 : -1, ev.shiftKey); return; }

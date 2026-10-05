@@ -33,7 +33,10 @@ What it reads, and how it is mapped onto the score's own grid, key and chords:
             its steady notes: the `harmonics` line of the sound that sings the take.
 
 Prints the TAKE block and the harmonics line; --apply writes both into the score (replacing a
-TAKE of the same name, and the harmonics line of the SYNTH that plays it).
+TAKE of the same name, and the harmonics line of the SYNTH that plays it). What it writes is
+the take as sung, each note on its sixteenth and in its key. A melody composed from it is an
+edit of those n lines (`out` leaves a sung note out; a note with no sung pitch was added; the
+rack's take view edits both), so --apply over a composed take replaces the composition too.
 """
 import json, os, re, subprocess, sys, tempfile, warnings
 import numpy as np

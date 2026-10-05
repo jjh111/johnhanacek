@@ -53,8 +53,8 @@ ok(A.clips.length === P.score.clips.length && A.clips.every(c => Math.abs(c.t0 -
   `the ${A.clips.length} clips sit on their bars (bar 1 at 0 s, a bar 2 s)`);
 // the chords go round from bar 1, one a bar, and a stretch of bars may have its own
 const loop = P.score.chords.map(c => c.name);
-ok(A.harmony.length === A.bars && A.harmony.every((h, b) => h.chord.name === (b >= 29 ? 'Am' : loop[b % loop.length])),
-  `the chords go round from bar 1 (${loop.join(' ')}), a bar each, and bars 30-32 hold Am (${A.bars} bars)`);
+ok(A.harmony.length === A.bars && A.harmony.every((h, b) => h.chord.name === (b >= 29 && b < 32 ? 'Am' : loop[b % loop.length])),
+  `the chords go round from bar 1 (${loop.join(' ')}), a bar each, bars 30-32 hold Am, and after them it goes round again (${A.bars} bars)`);
 {
   const kickSteps = P.score.parts.find(p => p.name === 'drums').pads.find(d => d.name === 'beat').voices.find(v => v.track === 'kick').steps;
   const beat = A.clips.find(c => c.part === 'drums' && c.pad === 'beat' && c.from === 11 * SPB);

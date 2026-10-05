@@ -24,13 +24,14 @@ const strip = l => l.replace(/\s*\[[^\]]*\]\s*$/, '');   // a line without its c
 const P = RS.parse(SRC);
 const { edit, marks, fields } = P;
 const total = e => RS.spans(e).slice(-1)[0].end;
-// the cut is as long as its scenes (John sets the lengths in the editor: 60 s, then 63.5, then 61.75)
+// the cut is as long as its scenes (John sets the lengths in the editor: 60 s, then 63.5, then 61.75;
+// 67.75 with the design services' offer)
 const sum = edit.scenes.reduce((a, sc) => a + sc.dur, 0);
-ok(edit.scenes.length === 11 && Math.abs(total(edit) - sum) < 1e-9, `the real script parses: 11 scenes, ${total(edit)} s`);
+ok(edit.scenes.length === 12 && Math.abs(total(edit) - sum) < 1e-9, `the real script parses: 12 scenes, ${total(edit)} s`);
 ok(same(RS.parse(RS.format(edit)).edit, edit), 'format then parse gives the same edit');
 ok(RS.retime(SRC) === SRC, 'retime leaves a fresh script unchanged');
 ok(marks.every(m => ['scene', 'item', 'beat'].includes(m.kind) && m.scene), 'every mark has a kind and its scene');
-ok(marks.filter(m => m.kind === 'scene').length === 11 && marks.filter(m => m.kind === 'item').length === 3, 'marks: 11 scenes, 3 items');
+ok(marks.filter(m => m.kind === 'scene').length === 12 && marks.filter(m => m.kind === 'item').length === 3, 'marks: 12 scenes, 3 items');
 // every field line says where its value lives, and the value there is that line's words
 const src = lines(SRC);
 const bad = fields.filter(f => {
@@ -200,20 +201,20 @@ ok(RS.cue(S('answer'), 'arrive') === 0.6 && RS.cue(S('answer'), 'leave') === 0.3
 {
   const ks = src => RS.parse(src).edit.scenes.map(x => x.type).join(' ');
   const m1 = RS.moveScene(SRC, 2, 7);
-  ok(ks(m1) === 'open title art command results feature logos answer quotes offer end', 'moveScene puts a scene somewhere else: the answer after the logos');
+  ok(ks(m1) === 'open title art command results feature logos answer quotes offer offer end', 'moveScene puts a scene somewhere else: the answer after the logos');
   ok(RS.moveScene(m1, 7, 2) === SRC, 'and back again: the original, byte for byte');
   const P1 = RS.parse(m1), a1 = P1.edit.scenes[7];
   ok(same(a1, edit.scenes[2]), 'the scene goes with all its lines: words, stats, cues and fish');
   ok(Math.abs(RS.spans(P1.edit).slice(-1)[0].end - total(edit)) < 1e-9 && /SCENE answer 4\.5\s+\[0:3\d/.test(m1), 'the cut is as long as before, and the timecodes are refreshed');
   const d1 = RS.duplicateScene(SRC, 3), Pd = RS.parse(d1);
-  ok(Pd.edit.scenes.length === 12 && Pd.edit.scenes[3].type === 'art' && Pd.edit.scenes[4].type === 'art' && same(Pd.edit.scenes[3], Pd.edit.scenes[4]), 'duplicateScene puts a copy right after it');
+  ok(Pd.edit.scenes.length === 13 && Pd.edit.scenes[3].type === 'art' && Pd.edit.scenes[4].type === 'art' && same(Pd.edit.scenes[3], Pd.edit.scenes[4]), 'duplicateScene puts a copy right after it');
   const r1 = RS.removeScene(SRC, 7), Pr = RS.parse(r1);
-  ok(Pr.edit.scenes.length === 10 && !Pr.edit.scenes.some(x => x.type === 'logos'), 'removeScene takes one out');
+  ok(Pr.edit.scenes.length === 11 && !Pr.edit.scenes.some(x => x.type === 'logos'), 'removeScene takes one out');
   throws(() => RS.removeScene('SCENE end 2\n  board offer\n  line x', 0), /at least one scene/, 'the last scene is not taken out');
-  throws(() => RS.moveScene(SRC, 0, 11), /no scene 12/, 'a scene that is not there is named');
+  throws(() => RS.moveScene(SRC, 0, 12), /no scene 13/, 'a scene that is not there is named');
   const noted = SRC.replace(/\nSCENE art /, '\n# the art, as a note\nSCENE art ');
-  const mn = RS.moveScene(noted, 3, 9);
-  ok(/# the art, as a note\nSCENE art /.test(mn) && ks(mn).endsWith('offer art end'), 'a note written right above a scene goes with it');
+  const mn = RS.moveScene(noted, 3, 10);
+  ok(/# the art, as a note\nSCENE art /.test(mn) && ks(mn).endsWith('offer offer art end'), 'a note written right above a scene goes with it');
 }
 
 // ── mistakes are named, by line ──

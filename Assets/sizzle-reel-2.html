@@ -344,6 +344,8 @@ p, h1, h2, h3 { margin: 0; }
 #stage.narrow .three { grid-template-columns: 1fr; gap: 18px; margin: 28px 0 26px; }
 #stage.narrow .three > div { display: grid; grid-template-columns: 150px 1fr; column-gap: 24px; align-items: baseline; padding-top: 16px; }
 #stage.narrow .three .v { font-size: 28px; line-height: 1.35; }
+#stage.narrow .intent .lm.cta { white-space: normal; text-wrap: balance; }   /* a link wider than the card breaks after its arrow */
+#stage.narrow .intent > * { flex-shrink: 0; }   /* a masked line never squeezes (it clipped instead): the card measures its copy (offer, LAYOUT) */
 #stage.narrow #chip { font-size: 16px; padding: 8px 11px 9px; gap: 4px; }
 #stage.narrow .lrow .lm.yr { flex: none; }
 #stage.narrow .lm.ln { text-wrap: pretty; }
@@ -1655,16 +1657,30 @@ p, h1, h2, h3 { margin: 0; }
     },
 
     offer(sc, q) {
-      const bd = boardNamed(sc.board);
-      const h = bd.h2.split('<br>');
+      const bd = boardNamed(sc.board), own = ownerOf(sc);
+      // its own eyebrow and headline where it gives them (the design services' answer), else the
+      // reel's eyebrow and its board's headline
+      const h = sc.headline || bd.h2.split('<br>');
       const three = sc.three || bd.three.map(x => ({ k: x.k, lines: [x.span] }));
       const P = F.intent || F.panel;
       const el = segEl(sc, `<div class="intent" style="left:${P.x}px;top:${P.y}px;width:${P.w}px;height:${P.h}px">
-          ${maskLine('Work with John', 'eyebrow')}
-          <div>${h.map(l => maskLine(l, 'oh')).join('')}</div>
-          <div class="three">${three.map((x, i) => `<div><i class="trule"></i>${maskLine(x.k, 'k', sc.three ? tagOf(ownerOf(sc), 'three', i, 'k') : '')}<div>${x.lines.map((l, j) => maskLine(l, 'v', sc.three ? tagOf(ownerOf(sc), 'three', i, 'line:' + j) : '')).join('')}</div></div>`).join('')}</div>
-          ${maskLine(`${(sc.cta || bd.cta).lead.trim()} <strong>${(sc.cta || bd.cta).strong}</strong>`, 'cta', sc.cta ? tagOf(ownerOf(sc), 'cta', null, 'cta') : '')}</div>`);
+          ${maskLine(sc.eyebrow || 'Work with John', 'eyebrow', sc.eyebrow ? tagOf(own, 'eyebrow') : '')}
+          <div>${h.map((l, i) => maskLine(l, 'oh', sc.headline ? tagOf(own, 'headline', i) : '')).join('')}</div>
+          <div class="three">${three.map((x, i) => `<div><i class="trule"></i>${maskLine(x.k, 'k', sc.three ? tagOf(own, 'three', i, 'k') : '')}<div>${x.lines.map((l, j) => maskLine(l, 'v', sc.three ? tagOf(own, 'three', i, 'line:' + j) : '')).join('')}</div></div>`).join('')}</div>
+          ${maskLine(`${(sc.cta || bd.cta).lead.trim()} <strong>${(sc.cta || bd.cta).strong}</strong>`, 'cta', sc.cta ? tagOf(own, 'cta', null, 'cta') : '')}</div>`);
       const card = el.querySelector('.intent'), eb = inner(el, '.lm.eyebrow'), hs = inner(el, '.oh');
+      // A narrow frame stacks the three as rows, each key beside its lines: the keys' column grows
+      // past its 150 px (180 in vertical) only for a key that needs it ("AI · XR · robotics" ran
+      // past it; a "Coach" keeps the stylesheet's), and a card whose copy runs taller than it takes
+      // a smaller headline, two px at a time, so any copy fits
+      if (FORMAT !== 'wide') LAYOUT.push(() => {
+        const kw = Math.max(0, ...[...card.querySelectorAll('.three .lm.k')].map(k => (k.querySelector(':scope > .li') || k).offsetWidth));
+        const col = Math.ceil(kw) + 6;
+        if (col > (FORMAT === 'vertical' ? 180 : 150)) card.querySelectorAll('.three > div').forEach(d => { d.style.gridTemplateColumns = `${col}px 1fr`; });
+        const ohs = [...card.querySelectorAll('.lm.oh')];
+        let fs = ohs.length ? parseFloat(getComputedStyle(ohs[0]).fontSize) : 0;
+        while (fs > 40 && card.scrollHeight > card.clientHeight + 1) { fs -= 2; ohs.forEach(o => { o.style.fontSize = fs + 'px'; }); }
+      });
       const cols = [...el.querySelectorAll('.three > div')].map(c => ({ rule: c.querySelector('.trule'), ls: inner(c, '.lm') }));
       const cta = inner(el, '.lm.cta');
       const M = sc.motion, IN = q.enter - sc.start + cue(sc, 'in'), OUT = sc.dur - cue(sc, 'out');   // cues in / out

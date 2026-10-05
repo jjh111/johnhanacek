@@ -300,18 +300,21 @@
     return b == null ? null : b + (m[2] ? +m[2] / 100 : 0);
   }
   const sungText = x => { const n = Math.round(x), c = Math.round((x - n) * 100); return NAMES[mod(n, 12)] + (Math.floor(n / 12) - 1) + (c ? (c > 0 ? '+' : '') + c : ''); };
-  // "n <bar.beat.sixteenth> <note> <sixteenths> [<level> [<tone> [<sung> [<early ms>]]]] [| <cents>…]":
+  // "n <bar.beat.sixteenth> <note> <sixteenths> [<level> [<tone> [<sung> [<early ms>]]]] [out] [| <cents>…]":
   // a take's note, where it plays and for how long; what was sung there and how early (-) or late
   // it came; after the bar, how its pitch moved as sung, cents from its own centre BEND_RATE times
   // a second. Everything after its length may be left out (a note typed by hand plays straight).
+  // `out`: a sung note the melody leaves out, kept for what was sung (it does not play). A note
+  // with no sung pitch was never sung: one added where the composition wanted it.
   function readTakeNote(r, spb, err) {
-    const bar = r.args.indexOf('|'), head = bar < 0 ? r.args : r.args.slice(0, bar), curve = bar < 0 ? [] : r.args.slice(bar + 1);
+    const bar = r.args.indexOf('|'), head0 = bar < 0 ? r.args : r.args.slice(0, bar), curve = bar < 0 ? [] : r.args.slice(bar + 1);
+    const oi = head0.indexOf('out'), head = oi < 0 ? head0 : head0.filter((w, i) => i !== oi);
     const [at, note, len, vel, tone, sung, early] = head;
     const p = readPos(at || '', spb), midi = noteMidi(note || ''), n = num(len);
     if (!p || midi == null || n == null) { err(r.ln, `n wants where the note starts (bar.beat.sixteenth), the note and its length in sixteenths, as in "n 5.1.3 E3 4"${p ? midi == null ? ` ("${note || ''}" is not a note)` : '' : ` ("${at || ''}" is not a place on the bars)`}`); return null; }
     if (n < 1 || n > 256 || n !== Math.round(n)) { err(r.ln, 'a note\'s length is whole sixteenths, 1-256'); return null; }
     if (head.length > 7) { err(r.ln, 'after its length, a note takes its level, its tone, what was sung and how early, then | and how it moved'); return null; }
-    const o = { ln: r.ln, index: r.index, step: p.start, len: n, midi, name: note, vel: 0.8, tone: 0, sung: midi, early: 0, curve: [] };
+    const o = { ln: r.ln, index: r.index, step: p.start, len: n, midi, name: note, vel: 0.8, tone: 0, sung: midi, early: 0, curve: [], out: oi >= 0, heard: sung != null };
     if (vel != null) { const v = num(vel); if (v == null || v < 0 || v > 1.5) { err(r.ln, `a note's level is 0-1.5 ("${vel}")`); return null; } o.vel = v; }
     if (tone != null) { const v = num(tone); if (v == null || Math.abs(v) > 24) { err(r.ln, `a note's tone is dB brighter (+) or darker (-) than the voice, -24 to 24 ("${tone}")`); return null; } o.tone = v; }
     if (sung != null) { const v = sungMidi(sung); if (v == null) { err(r.ln, `what was sung is a note and cents, as in F#2-14 ("${sung}")`); return null; } o.sung = v; }
@@ -596,6 +599,7 @@
       const tk = (o.takes || []).find(x => x.name === v.take);
       if (!tk) return;
       for (const n of tk.notes) {
+        if (n.out) continue;                                             // left out: only what was sung
         const g = (n.step + tk.shift) * step;                           // its place on the grid decides its clip
         if (g < t0 - E || g >= t1 - E) continue;
         const tt = Math.max(0, g + tk.feel / 100 * n.early / 1000);
@@ -654,13 +658,19 @@
   // the singer's drift at a step of the take (cents, + sharp), from its drift line (a value a bar)
   const driftAt = (tk, k, spb) => tk.drift.length ? tk.drift[Math.max(0, Math.min(tk.drift.length - 1, Math.floor(k / spb)))] : 0;
   function takeSummary(tk, step, spb = 16) {
-    const ns = tk.notes;
+    const all = tk.notes, ns = all.filter(n => !n.out), heard = all.filter(n => n.heard);
     if (!ns.length) return null;
+    // what the melody made of what was sung: the notes that play, those left out, those added
+    // (never sung), and how far the ones it kept were moved in time (ms) and in pitch (to another
+    // note than the one sung: more than a semitone, the drift out)
+    const kept = ns.filter(n => n.heard), retimed = kept.filter(n => Math.abs(n.early) > 40).length;
     // moved: how far each note's centre went to its note, the drift taken out first
-    const moved = ns.map(n => (n.midi - n.sung) * 100 + driftAt(tk, n.step, spb)), abs = moved.map(Math.abs).sort((a, b) => a - b), early = ns.map(n => Math.abs(n.early)).sort((a, b) => a - b);
+    const moved = kept.map(n => (n.midi - n.sung) * 100 + driftAt(tk, n.step, spb)), abs = moved.map(Math.abs).sort((a, b) => a - b), early = kept.map(n => Math.abs(n.early)).sort((a, b) => a - b);
     const med = a => a.length ? a[Math.floor(a.length / 2)] : 0, lo = Math.min(...ns.map(n => n.midi)), hi = Math.max(...ns.map(n => n.midi));
-    const slo = Math.min(...ns.map(n => n.sung)), shi = Math.max(...ns.map(n => n.sung));
-    return { notes: ns.length, t0: (ns[0].step + tk.shift) * step, t1: (ns[ns.length - 1].step + ns[ns.length - 1].len + tk.shift) * step,
+    const sn = heard.length ? heard : ns, slo = Math.min(...sn.map(n => n.sung)), shi = Math.max(...sn.map(n => n.sung));
+    const last = ns.reduce((a, n) => n.step + n.len > a.step + a.len ? n : a, ns[0]);
+    return { notes: ns.length, sungNotes: heard.length, left: all.length - ns.length, added: ns.length - kept.length, kept: kept.length, retimed,
+      t0: (Math.min(...ns.map(n => n.step)) + tk.shift) * step, t1: (last.step + last.len + tk.shift) * step,
       sung: [sungText(slo), sungText(shi)], written: [NAMES[mod(lo, 12)] + (Math.floor(lo / 12) - 1), NAMES[mod(hi, 12)] + (Math.floor(hi / 12) - 1)],
       plays: [NAMES[mod(lo + 12 * tk.octave, 12)] + (Math.floor((lo + 12 * tk.octave) / 12) - 1), NAMES[mod(hi + 12 * tk.octave, 12)] + (Math.floor((hi + 12 * tk.octave) / 12) - 1)],
       movedMedian: med(abs), movedSemis: abs.filter(x => x > 100).length, movedHalf: abs.filter(x => x > 50).length, earlyMedian: med(early), bent: ns.filter(n => n.curve.length).length,
@@ -798,21 +808,36 @@
     if (p.once) words.push('once');
     return setLine(src, 'PART', part, 'pad', pad_(padName, 9) + words.join('  '), p.index);
   }
-  // a take's note, moved: { midi } (another note), { step } or { len }; the n line keeps its columns,
-  // what was sung and how it moved
+  // a take's note, changed: { midi } (another note), { step }, { len }, or { out } (true: left out of
+  // the melody, kept for what was sung; false: put back). The n line keeps its columns, what was sung
+  // and how it moved; moved in time, its early changes by as much, so what was sung stays where it was
   function setTakeNote(src, take, ln, change) {
     const P = parse(src), tk = P.score.takes.find(x => x.name === take), n = tk && tk.notes.find(x => x.ln === ln);
     if (!n) throw withErrors([`TAKE ${take} has no note on line ${ln}`]);
     const lines = src.split('\n'), m = /^(\s*n\s+)(\S+)(\s+)(\S+)(\s+)(\S+)(.*)$/.exec(lines[ln - 1]);
     if (!m) throw withErrors([`line ${ln} is not a note`]);
-    const spb = P.score.beatsPerBar * 4;
-    let at = m[2], note = m[4], len = m[6];
-    if (change.step != null) { const k = Math.max(0, Math.round(change.step)), bar = Math.floor(k / spb) + 1, r = k - (bar - 1) * spb; at = `${bar}.${Math.floor(r / 4) + 1}.${r % 4 + 1}`; }
+    const spb = P.score.beatsPerBar * 4, ms = 60000 / P.score.tempo / 4;   // a sixteenth, in ms
+    let at = m[2], note = m[4], len = m[6], rest = m[7];
+    // the columns after its length: its head (level, tone, sung, early, out) and the curve after |
+    const cut = rest.indexOf('|'), head = cut < 0 ? rest : rest.slice(0, cut), tail = cut < 0 ? '' : rest.slice(cut).trim();
+    const words = head.trim() ? head.trim().split(/\s+/) : [], plain = words.filter(w => w !== 'out');   // level, tone, sung, early
+    let left = words.includes('out');
+    if (change.step != null) {
+      const k = Math.max(0, Math.round(change.step)), bar = Math.floor(k / spb) + 1, r = k - (bar - 1) * spb;
+      at = `${bar}.${Math.floor(r / 4) + 1}.${r % 4 + 1}`;
+      if (n.heard && plain.length >= 4) { const e = Math.round(n.early - (k - n.step) * ms); plain[3] = (e >= 0 ? '+' : '') + e; }
+    }
     if (change.midi != null) { const k = Math.round(change.midi); note = NAMES[mod(k, 12)] + (Math.floor(k / 12) - 1); }
     if (change.len != null) len = String(Math.max(1, Math.round(change.len)));
+    if (change.out != null) left = !!change.out;
+    if (change.step != null || change.out != null) {
+      // the head written again in the take's own columns
+      const [v, t, sg, e] = plain;
+      rest = (v != null ? '  ' + v : '') + (t != null ? '  ' + t : '') + (sg != null ? '  ' + sg.padEnd(7) : '') + (e != null ? ' ' + e.padStart(4) : '') + (left ? ' out' : '') + (tail ? ' ' + tail : '');
+    }
     // the place keeps its column; the note and its length (right-aligned) keep theirs together
     const w1 = m[2].length + m[3].length, w2 = m[4].length + m[5].length + m[6].length;
-    lines[ln - 1] = m[1] + at + ' '.repeat(Math.max(1, w1 - at.length)) + note + ' '.repeat(Math.max(1, w2 - note.length - len.length)) + len + m[7];
+    lines[ln - 1] = m[1] + at + ' '.repeat(Math.max(1, w1 - at.length)) + note + ' '.repeat(Math.max(1, w2 - note.length - len.length)) + len + rest;
     const out = lines.join('\n');
     parse(out);
     return out;
@@ -850,9 +875,10 @@
     for (const tk of score.takes) {
       const S = takeSummary(tk, A.step, A.spb), sing = score.parts.flatMap(p => p.pads.filter(d => d.voices.some(v => v.take === tk.name)).map(d => `${p.name} ${d.name}`));
       if (!S) { out.push(`take ${tk.name}: no notes`); continue; }
-      out.push(`take ${tk.name}: ${S.notes} notes, ${tc(S.t0)}-${tc(S.t1)}${sing.length ? ', sung by ' + sing.join(', ') : ', no pad sings it'} · sung ${S.sung[0]}-${S.sung[1]}, written ${S.written[0]}-${S.written[1]}, plays ${S.plays[0]}-${S.plays[1]}`
-        + (S.drift ? ` · the key drifted ${S.drift[0] > 0 ? '+' : ''}${S.drift[0]} to ${S.drift[1] > 0 ? '+' : ''}${S.drift[1]} cents` : '')
-        + ` · tuned to ${score.key.name}: a note moved ${Math.round(S.movedMedian)} cents (the median), ${S.movedHalf} more than 50, ${S.movedSemis} more than a semitone · came ${Math.round(S.earlyMedian)} ms off the sixteenth`
+      out.push(`take ${tk.name}: ${S.notes} notes play, ${tc(S.t0)}-${tc(S.t1)}${sing.length ? ', sung by ' + sing.join(', ') : ', no pad sings it'}`
+        + ` · from ${S.sungNotes} sung: ${S.kept} kept, ${S.added} added, ${S.left} left out; ${S.retimed} moved in time, ${S.movedSemis} to another note`
+        + ` · sung ${S.sung[0]}-${S.sung[1]}` + (S.drift ? ` (the key drifted ${S.drift[0] > 0 ? '+' : ''}${S.drift[0]} to ${S.drift[1] > 0 ? '+' : ''}${S.drift[1]} cents)` : '')
+        + `, written ${S.written[0]}-${S.written[1]}, plays ${S.plays[0]}-${S.plays[1]} · in ${score.key.name}, a kept note ${Math.round(S.movedMedian)} cents from its sung centre (the median)`
         + ` · octave ${tk.octave > 0 ? '+' : ''}${tk.octave}${tk.shift ? ' · shift ' + tk.shift : ''} · straighten ${tk.straighten} · nuance ${tk.nuance} · feel ${tk.feel}`);
     }
     const fx = score.tracks.filter(t => t.on);

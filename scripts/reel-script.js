@@ -153,7 +153,8 @@
                need: ['query', 'eyebrow', 'headline', 'beats'], beatNeed: ['media'] },   // a caption holds until the next one
     logos:   { fields: ASK.concat([['board', 'board', 'str']]), need: ['query', 'board'] },
     quotes:  { fields: ASK, beats: ['quotes', VOICE], need: ['query', 'quotes'], beatNeed: ['lines', 'cite'] },
-    offer:   { fields: ASK.concat([['board', 'board', 'str'], ['three', 'three', 'three'], ['cta', 'cta', 'cta']]), need: ['query', 'board'] },
+    // an offer's eyebrow and headline are its board's unless it gives its own (the design services' answer)
+    offer:   { fields: ASK.concat([['board', 'board', 'str'], ['eyebrow', 'eyebrow', 'str'], ['headline', 'headline', 'lines'], ['three', 'three', 'three'], ['cta', 'cta', 'cta']]), need: ['query', 'board'] },
     end:     { fields: [['board', 'board', 'str'], ['line', 'line', 'str']], need: ['board', 'line'] },
   };
   const ITEM = { fields: HEAD, beats: ['beats', BEAT], need: ['eyebrow', 'headline', 'beats'] };

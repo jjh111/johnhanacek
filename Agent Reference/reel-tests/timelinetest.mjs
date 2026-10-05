@@ -140,7 +140,7 @@ try {
   // 1 ── E opens the panel
   await page.keyboard.press('e');
   const n = await page.locator('#reel-tl .tl-sc').count();
-  check(await page.locator('#reel-tl').isVisible() && n === 11, 'E opens the panel with 11 scene blocks', `visible ${await page.locator('#reel-tl').isVisible()}, ${n} blocks`);
+  check(await page.locator('#reel-tl').isVisible() && n === 12, 'E opens the panel with 12 scene blocks', `visible ${await page.locator('#reel-tl').isVisible()}, ${n} blocks`);
   const tools = await page.locator('#hud .tools button').evaluateAll(bs => bs.map(b => `${b.dataset.tool}|${b.title}|${b.getAttribute('aria-pressed')}`));
   check(tools.some(t => /^timeline\|.*\(E\)\|true$/.test(t)) && tools.some(t => /^synths\|.*\(M\)/.test(t)) && tools.some(t => /^export\|.*\(X\)/.test(t)),
     'the HUD has buttons for the timeline (pressed while open), the synths and export, each naming its key', tools.join(' ; '));
@@ -204,7 +204,7 @@ try {
   check(/^SCENE answer 5\s/m.test(file()), 'the edge drag saved "SCENE answer 5"', (/^SCENE answer.*$/m.exec(file()) || [])[0]);
   const dur = await page.evaluate(() => REEL_LIVE.duration);
   check(Math.abs(dur - (dur0 + 0.5)) < 1e-9, `the reel runs 0.5 s longer, in place (${dur0} → ${dur0 + 0.5} s)`, dur);
-  check(await page.locator('#reel-tl').isVisible() && await page.locator('#reel-tl .tl-sc').count() === 11, 'the panel stays open, its cards drawn again');
+  check(await page.locator('#reel-tl').isVisible() && await page.locator('#reel-tl .tl-sc').count() === 12, 'the panel stays open, its cards drawn again');
 
   // 3 ── the inspector: the first line of the answer scene
   await page.locator('#reel-tl .tl-sc[data-scene="2"] b').click();

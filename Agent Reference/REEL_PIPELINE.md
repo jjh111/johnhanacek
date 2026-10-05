@@ -1280,6 +1280,83 @@ around 20 percent larger too. For badvr content just zoom out a bit to show the 
   (the old ones in `wide-ref-1005b`), and its live check reads the stage and the timeline in one
   frame after the rack is up (the score is longer now, and the rack can land between two reads).
 
+## The design services, and a melody composed from the take (2026-10-05)
+
+John, on the film with the sung take: "We just need to add an end about the design services
+after coaching. And then the music is not quite there, I didn't sing perfectly so this version is
+a bit overly literal, I wanted to use it as reference for a composition you parse into place -
+collab where I sang the idea you get it musically locked in and clean up stray first few notes,
+fix alignments, etc"
+
+- **The design services' scene.** After the coaching offer, a second `offer` scene (6 s, three
+  whole bars, so the end card stays on its downbeat) asks "can he design our product?" and answers
+  from `services.html`: "Founding design & product", "From workshop to shipped product. / We
+  build real things, and you keep them.", three cards (Workshops, Product, AI · XR · robotics) and
+  "Building something? → johnhanacek.com/services". The cut is 67.75 s: the offer 52.25-57.25,
+  the design services 57.25-63.25, the end card 63.25-67.75. An `offer` may now give its own
+  `eyebrow` and `headline` lines (`reel-script.js`); without them it wears the reel's eyebrow and
+  its board's headline, as before, so the coaching offer is drawn as it was. It is a framed scene
+  for the fish (`FRAMES`' `offer` entry covers both). In square and vertical the cards are
+  measured: the key column grows past its 150 px (180 in vertical) for a key that needs it ("AI ·
+  XR · robotics" had clipped there), the headline steps down 2 px at a time (not under 40) until
+  the card fits, and the CTA wraps, balanced. Masked lines no longer shrink in the card's column:
+  squeezed, their own mask had hidden the eyebrow's and the CTA's overflow. None of it moves the
+  coaching offer: played on the script before this scene, the rig draws every element and every
+  fish as the commit before it did, at 63 moments in all three formats (samefilmtest, from a
+  worktree holding the new rig and the old script), and the coaching card's boxes measure the same
+  to the hundredth of a pixel.
+- **The music around it.** The end card's bars moved three bars later: the chords, bass and voice
+  clips run to 34.4.2, the groove to 32.3.2, and the ending's held Am is `CHORDS 33-35 Am`.
+- **The composition.** What was sung is now the reference, and the take's `n` lines are a melody
+  made from it, in four-bar phrases over F C G Am: bars 1-3, the warm-up, left out; a pickup on the
+  offbeats of bar 4 and that pulse to bar 7 (sung bunched in bar 7, now even); the tune from bar 8;
+  its phrase coming round in 21-24 and climbing in 25-28; the phrase again under the design question
+  (29-32, nothing sung there: each note added, moving the way its twin in 21-24 was sung); the
+  closing turn landing on A in bar 33, and the pulse once more in 34. It was written as a grid of
+  eighths, then matched to the sung notes by an order-keeping alignment (an edit distance's: a pair
+  within 0.45 s and 4 semitones, the drift out, costs its distance in sixteenths plus 1.5 a semitone;
+  a composed note may stay unmatched, added, and a sung note unmatched is left out). A matched note
+  keeps what was sung for it: its sung pitch, its tone, its bend, and `early`, how much later (+)
+  than where it now plays it was sung, so the faint sung line in the editor stays where it was sung.
+  Levels follow the sung ones, evened (0.6 plus 0.35 of the sung level's place in 0.3-1), the
+  pulse at most 0.72 and the climb at least 0.85. 126 notes play: 105 sung (49 moved more than 40
+  ms, 15 to another note than the one sung) and 21 added; 35 sung notes are left out (the warm-up,
+  breaths, repeats held into one note, the last notes past the end). One added note, the pulse's
+  last at 34.4.3, started on the reel's last frame and could never play: taken out.
+- **The mapping**: `straighten 100`, `nuance 20`, `feel 0`. Every note on its sixteenth, the slow
+  wander gone, and a fifth of the voice's movement kept, so each note is in tune with a scoop of at
+  most 40 cents at its edges (at nuance 35 the edges bent 70 cents and read as out of tune). Heard
+  back: the voice rendered alone through the renderer (`--audio-only`, every other part at level 0)
+  and read with pYIN, each note sits a median 0 cents from its written pitch, 90% within 30, the
+  worst 45; every onset on its sixteenth (one constant 75 ms of analysis lag, 8 ms of spread).
+- **The format.** `out` on an `n` line: a sung note the melody leaves out, kept for what was sung
+  (it does not play, `padNotes` skips it). A note with nothing after its tone has no sung pitch:
+  added (`heard: false`). `takeSummary` counts what plays, what was kept, added and left out, and
+  how many moved; the cue sheet's take line says it ("126 notes play … from 140 sung: 105 kept, 21
+  added, 35 left out; 49 moved in time, 15 to another note"). `setTakeNote` takes `{ out }` (its
+  one line, the columns rewritten, out and back byte for byte for every note) and, moving a note
+  in time, changes its `early` by as much, so what was sung stays where it was.
+- **The editor.** The take view's header reads "126 notes, from 140 sung"; its legend names what
+  was sung, the melody made from it, how it plays, a sung note left out (dotted) and the key's
+  drift. Its rows reach every sung pitch, not only the notes that play. A note clicked says where
+  it came from: a sung one where it was sung and how far it moved ("5.3.3 plays F3. Sung F2-29, 10
+  ms late; the key 10 cents flat there. Tuned +19 cents to F2, then 1 octave up"; one moved more
+  than 40 ms says it was moved onto the beat, one set to another note by how many semitones); an
+  added one that nothing was sung there; a left-out one, picked by its dotted line, what it would
+  play put back. **Leave out** and **Put back** write its line; ▲ ▼ still move a note. The summary
+  says the same in words, the key and the sixteenths included. The canvas carries the rows and
+  bars it drew (`data-lo`, `data-hi`, `data-bar0`, `data-gut`, `data-top`), so a test clicks a
+  note where it is drawn.
+- `scripts/reel-sing.py` writes a take as sung; over a composed take, `--apply` replaces the
+  composition too (its header says so).
+- Suites: `reel-tests/taketest.mjs` checks the composed take (what plays and what does not, every
+  note out and back byte for byte, a move keeping where it was sung, an added note staying added,
+  bends twice as deep at twice the score's nuance, Leave out and Put back in the view, a left-out
+  and an added note clicked, six undos to the byte). `inorder.mjs` names `offer` twice, so a suite's
+  copy of the cut keeps the design services before the end card (a second scene of a kind used to
+  land after the ones named, here after the end card); scripttest counts 12 scenes, and musictest's
+  fixture holds Am over bars 30-32 only, the loop going round again after them.
+
 ## Later
 
 Scene-specific cues (line staggers, the push); moving cut 1 onto the one player; stems out of

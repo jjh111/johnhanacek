@@ -1,13 +1,18 @@
-// John's sung take (2026-10-05): a melody he sang over the cut, read from a recording by
-// scripts/reel-sing.py into the score as a TAKE, and sung by a sound made of his voice's own
-// harmonics. This suite checks
-//   1. the reading and the mapping (scripts/reel-music.js): the take's notes, its mapping lines
-//      (octave, shift, straighten, nuance, feel), each note's bend, the one-line edits, the errors
+// John's sung take (2026-10-05): a melody sung over the cut, read from a recording by
+// scripts/reel-sing.py into the score as a TAKE, then composed from it (the n lines are the
+// melody; each keeps what was sung for it; `out` lines are sung notes it leaves out, and notes
+// with nothing sung were added), and sung by a sound made of the voice's own harmonics.
+// This suite checks
+//   1. the reading and the mapping (scripts/reel-music.js): the take's notes, what plays and what
+//      is left out, its mapping lines (octave, shift, straighten, nuance, feel), each note's bend,
+//      the one-line edits (a note moved keeps where it was sung; out and back is byte for byte),
+//      the errors
 //   2. the synth (scripts/reel-synth.js), offline: the harmonics wave and the bends are heard
 //   3. the editor, through the dev server: the rack's take view (its knobs write their lines, a
 //      note clicked says what became of it, the arrow keys move it to the next note of the key,
-//      Shift a semitone), the voice's
-//      harmonics bars, one undo a change, and the timeline's voice lane drawing the bends
+//      Shift a semitone, Leave out and Put back write its one line; a left-out note's sung line
+//      and an added note say what they are), the voice's harmonics bars, one undo a change, and
+//      the timeline's voice lane drawing the bends
 //   node "Agent Reference/reel-tests/taketest.mjs"      exits non-zero on any failure
 // Works on temp copies (Assets/zz-take-test.script.txt and .score.txt), removed in finally.
 import { chromium } from 'playwright-core';
@@ -43,20 +48,27 @@ ok(voice && voice.voices.some(v => v.wave === 'harmonics') && voice.harmonics &&
   `the voice is a harmonics sound, its 16 harmonics measured from the take (${voice && voice.harmonics && voice.harmonics.slice(0, 5).join(' ')} …)`);
 ok(P.score.parts.some(p => p.pads.some(d => d.voices.some(v => v.track === 'voice' && v.take === 'john'))), 'a pad sings it ("pad john take john")');
 const A = RM.arrange(P.score, scenes, mom), sung = A.events.filter(e => e.take === 'john');
+const S = RM.takeSummary(tk, A.step, A.spb), outs = tk.notes.filter(n => n.out), added = tk.notes.filter(n => !n.out && !n.heard);
+ok(S && outs.length > 0 && added.length > 0 && S.notes + S.left === tk.notes.length && S.kept + S.added === S.notes && S.sungNotes === tk.notes.filter(n => n.heard).length,
+  `a melody composed from what was sung: ${S && S.notes} notes play (${S && S.kept} sung, ${S && S.added} added), ${S && S.left} sung notes left out`);
+ok(added.every(n => n.early === 0 && n.sung === n.midi) && tk.notes.filter(n => n.heard).every(n => n.ln && Number.isFinite(n.sung)),
+  'an added note has nothing sung for it; every other keeps what was sung');
 const clip = A.clips.find(c => c.part === 'voice');
-const inClip = tk.notes.filter(n => (n.step + tk.shift) * A.step >= clip.t0 - 1e-9 && (n.step + tk.shift) * A.step < Math.min(clip.t1, CUT) - 1e-9);
-ok(sung.length === inClip.length && sung.every(e => e.dur > 0 && e.t >= 0 && e.t < CUT), `every note of the take inside its clip plays (${sung.length} of ${tk.notes.length}; the rest were sung past the cut's end)`);
+const inClip = tk.notes.filter(n => !n.out && (n.step + tk.shift) * A.step >= clip.t0 - 1e-9 && (n.step + tk.shift) * A.step < Math.min(clip.t1, CUT) - 1e-9);
+ok(sung.length === inClip.length && sung.length === S.notes && sung.every(e => e.dur > 0 && e.t >= 0 && e.t + e.dur <= CUT + 1e-9),
+  `every note of the melody plays, inside its clip and the cut (${sung.length} of ${tk.notes.length} lines)`);
 const byLn = new Map(tk.notes.map(n => [n.ln, n]));
+ok(sung.every(e => !byLn.get(e.nln).out), `no left-out note plays (${outs.length} of them)`);
 ok(sung.every(e => { const n = byLn.get(e.nln); return n && e.midi === n.midi + 12 * tk.octave && Math.abs(e.t - Math.max(0, (n.step + tk.shift) * A.step + tk.feel / 100 * n.early / 1000)) < 1e-9; }),
   `each plays its written note an octave up, on its sixteenth plus ${tk.feel}% of how early or late it was sung`);
 ok(sung.filter(e => e.bend).every(e => e.bend.every(c => Math.abs(c) <= RM.BEND_MAX * tk.nuance / 100 + 1)) && sung.some(e => e.bend),
   `its notes bend as sung, each point held to ±${RM.BEND_MAX} cents (the glides beyond belong to the next note)`);
 const remap = change => { const p = RM.parse(SCORE); Object.assign(p.score.takes[0], change); return RM.arrange(p.score, scenes, mom).events.filter(e => e.take === 'john'); };
 {
-  const n0 = remap({ nuance: 0 }), n2 = remap({ nuance: 200 }), n1 = sung;
+  const n0 = remap({ nuance: 0 }), n2 = remap({ nuance: 2 * tk.nuance }), n1 = sung;
   ok(n0.every(e => !e.bend), 'nuance 0: every note plays straight');
   const pairs = n1.filter(e => e.bend).map(e => [e, n2.find(x => x.nln === e.nln)]);
-  ok(pairs.length && pairs.every(([a, b]) => b && b.bend && b.bend.every((c, i) => Math.abs(c - 2 * a.bend[i]) <= 1)), 'nuance 200: every bend twice as deep');
+  ok(pairs.length && pairs.every(([a, b]) => b && b.bend && b.bend.every((c, i) => Math.abs(c - 2 * a.bend[i]) <= 1)), `nuance ${2 * tk.nuance}: every bend twice as deep as at the score's ${tk.nuance}`);
   const s0 = remap({ straighten: 0 }), s9 = remap({ straighten: 100 });
   const long = s0.filter(e => e.bend && e.bend.length > 12);
   const edgesKept = long.every(e => { const o = s9.find(x => x.nln === e.nln); return o.bend[0] === e.bend[0] && o.bend[o.bend.length - 1] === e.bend[e.bend.length - 1]; });
@@ -70,10 +82,26 @@ const remap = change => { const p = RM.parse(SCORE); Object.assign(p.score.takes
   // one-line edits: a mapping line, and a note moved a semitone with its columns kept
   const t1 = RM.setArg(SCORE, 'TAKE', 'john', 'nuance', 0, 40), d1 = diff(SCORE, t1);
   ok(d1.length === 1 && /^ {2}nuance +40$/.test(d1[0][2]) && RM.parse(t1).score.takes[0].nuance === 40, `a mapping knob writes its one line (${d1.map(x => x[2].trim()).join()})`);
-  const n = tk.notes[5], t2 = RM.setTakeNote(SCORE, 'john', n.ln, { midi: n.midi + 1 }), d2 = diff(SCORE, t2);
+  const n = tk.notes.find(x => x.heard && !x.out && x.curve.length > 4 && x.early), t2 = RM.setTakeNote(SCORE, 'john', n.ln, { midi: n.midi + 1 }), d2 = diff(SCORE, t2);
   const after = RM.parse(t2).score.takes[0].notes.find(x => x.ln === n.ln);
   ok(d2.length === 1 && after.midi === n.midi + 1 && d2[0][1].length === d2[0][2].length && d2[0][1].split('|')[1] === d2[0][2].split('|')[1],
     `a note a semitone up rewrites its n line, same columns, its sung pitch and bend untouched (${d2[0][1].trim().slice(0, 22)} → ${d2[0][2].trim().slice(0, 22)})`);
+  // moved two sixteenths later: what was sung stays where it was (its early takes the move)
+  const ms = 60000 / P.score.tempo / 4, t3 = RM.setTakeNote(SCORE, 'john', n.ln, { step: n.step + 2 }), m3 = RM.parse(t3).score.takes[0].notes.find(x => x.ln === n.ln);
+  ok(diff(SCORE, t3).length === 1 && m3.step === n.step + 2 && Math.abs((m3.step * ms + m3.early) - (n.step * ms + n.early)) <= 1 && m3.curve.join() === n.curve.join() && m3.sung === n.sung,
+    `a note moved keeps where it was sung: its early ${n.early} → ${m3.early} ms, its sung pitch and bend as they were`);
+  const a = added[0], t4 = RM.setTakeNote(SCORE, 'john', a.ln, { step: a.step + 1 }), m4 = RM.parse(t4).score.takes[0].notes.find(x => x.ln === a.ln);
+  ok(diff(SCORE, t4).length === 1 && m4.step === a.step + 1 && !m4.heard && m4.early === 0, 'an added note moved stays added: nothing sung is made up for it');
+  // left out and put back: its one line, byte for byte; a left-out note does not play, put back it does
+  const t5 = RM.setTakeNote(SCORE, 'john', n.ln, { out: true }), d5 = diff(SCORE, t5), P5 = RM.parse(t5), m5 = P5.score.takes[0].notes.find(x => x.ln === n.ln);
+  const plays5 = RM.arrange(P5.score, scenes, mom).events.some(e => e.nln === n.ln);
+  ok(d5.length === 1 && m5.out && / out \| /.test(d5[0][2]) && !plays5 && sung.some(e => e.nln === n.ln) && RM.setTakeNote(t5, 'john', n.ln, { out: false }) === SCORE,
+    `Leave out writes "out" on its one line and it stops playing; Put back is the line it was (${d5.length && d5[0][2].trim().slice(0, 48)}…)`);
+  const rt = tk.notes.filter(x => RM.setTakeNote(RM.setTakeNote(SCORE, 'john', x.ln, { out: !x.out }), 'john', x.ln, { out: x.out }) !== SCORE);
+  ok(rt.length === 0, `every note, left out and put back (or back and out), is its line again, byte for byte${rt.length ? ': not lines ' + rt.map(x => x.ln).join(' ') : ''}`);
+  const o = outs.find(x => x.heard && x.step * A.step > 7 && x.step * A.step < 60), t6 = RM.setTakeNote(SCORE, 'john', o.ln, { out: false }), P6 = RM.parse(t6);
+  ok(diff(SCORE, t6).length === 1 && !P6.score.takes[0].notes.find(x => x.ln === o.ln).out && RM.arrange(P6.score, scenes, mom).events.some(e => e.nln === o.ln) && RM.setTakeNote(t6, 'john', o.ln, { out: true }) === SCORE,
+    `a left-out note put back plays (line ${o.ln}), and out again is the line it was`);
   throws(() => RM.parse(SCORE.replace(/^ {2}n (\S+) +\S+/m, '  n $1 X9')), /line \d+: n wants .*"X9" is not a note/, 'a note that is not one says so by line');
   throws(() => RM.parse(SCORE.replace('take john', 'take nobody')), /line \d+: take wants the name of a TAKE \(john\)/, 'a pad that sings a take not there says so');
   throws(() => RM.parse(SCORE.replace(/^ {2}harmonics .*\n/m, '')), /has a harmonics voice but no harmonics line/, 'a harmonics voice with no harmonics says so');
@@ -135,7 +163,8 @@ try {
     return { knobs: [...t.querySelectorAll('.rk-knob .l')].map(l => l.textContent), sum: t.querySelector('.rk-tsum').textContent, drawn: t.querySelector('canvas.rk-tcv').width > 0 };
   });
   ok(view.knobs.join() === 'octave,shift,straighten,nuance,feel' && view.drawn, `the voice's pad opens the take view: the sung line, the notes and how they play, drawn; the mapping as knobs (${view.knobs.join(', ')})`);
-  ok(/notes, sung from/.test(view.sum) && /drifted/.test(view.sum) && /A minor/.test(view.sum), 'it says, in words, what became of the take (the drift, the key, the sixteenths, the octave)');
+  ok(/\d+ notes play .*made from the \d+ sung/.test(view.sum) && /left out \(dotted\)/.test(view.sum) && /added/.test(view.sum) && /drifted/.test(view.sum) && /A minor/.test(view.sum) && /sixteenth/.test(view.sum),
+    'it says, in words, what the melody made of the take (kept, added, left out; the drift, the key, the sixteenths, the octave)');
   const waitFile = async fn => { for (let i = 0; i < 50; i++) { const t = readFileSync(join(ROOT, T_SCORE), 'utf8'); if (fn(t)) return t; await new Promise(r => setTimeout(r, 100)); } return null; };
   // the nuance knob, typed
   const nk = page.locator('#reel-rack .rk-take .rk-knob', { hasText: 'nuance' });
@@ -146,16 +175,26 @@ try {
   const heard = await page.evaluate(() => REEL_RACK.parsed.score.takes[0].nuance);
   ok(heard === 40, 'and the engine plays it at once');
   // a note: clicked, then a semitone up with the arrow key
-  const pick = await page.evaluate(() => {
-    const A = REEL_RACK.arrangement, e = A.events.find(x => x.take && x.t >= 9.2 && x.t < 9.6);
-    const cv = document.querySelector('#reel-rack .rk-take canvas.rk-tcv'), r = cv.getBoundingClientRect();
-    const all = A.events.filter(x => x.take).map(x => x.midi), lo = Math.min(...all, 60) - 2, hi = Math.max(...all, 60) + 2;
-    const t0 = 4 * A.bar, t1 = t0 + 4 * A.bar, rh = (r.height - 14 - 3) / (hi - lo + 1);
-    return { x: r.left + 26 + (e.t + e.dur / 2 - t0) / (t1 - t0) * (r.width - 28), y: r.top + 14 + (hi - e.midi) * rh + rh / 2, nln: e.nln };
-  });
+  // where a note (or, for a left-out one, its sung line) is drawn: the view's rows and bars as drawn
+  const pointOf = sel => page.evaluate(sel => {
+    const A = REEL_RACK.arrangement, tk = REEL_RACK.parsed.score.takes[0], cv = document.querySelector('#reel-rack .rk-take canvas.rk-tcv'), r = cv.getBoundingClientRect(), d = cv.dataset;
+    const lo = +d.lo, hi = +d.hi, t0 = +d.bar0 * A.bar, t1 = t0 + 4 * A.bar, rh = (r.height - +d.top - 3) / (hi - lo + 1);
+    const X = t => r.left + +d.gut + (t - t0) / (t1 - t0) * (r.width - +d.gut - 2), Y = m => r.top + +d.top + (hi - m) * rh + rh / 2;
+    if (sel.out) {
+      const n = tk.notes.find(n => n.out && n.heard && n.curve.length > 4 && n.step * A.step + n.early / 1000 >= t0 && n.step * A.step + n.early / 1000 < t1 - 0.3);
+      if (!n) return null;
+      const i = Math.floor(n.curve.length / 2);
+      return { x: X(n.step * A.step + n.early / 1000 + i / 32), y: Y(n.sung + 12 * tk.octave + n.curve[i] / 100), nln: n.ln };
+    }
+    const e = sel.added ? A.events.find(x => x.take && x.t >= t0 && x.t < t1 && !tk.notes.find(n => n.ln === x.nln).heard) : A.events.find(x => x.take && x.t >= sel.t && x.t < sel.t + 0.4);
+    return e ? { x: X(e.t + e.dur / 2), y: Y(e.midi), nln: e.nln } : null;
+  }, sel);
+  const selText = () => page.locator('#reel-rack .rk-tsel span').first().textContent();
+  const outBtn = () => page.locator('#reel-rack .rk-tsel button').last();
+  const pick = await pointOf({ t: 9.2 });
   await page.mouse.click(pick.x, pick.y);
-  const info = await page.locator('#reel-rack .rk-tsel span').first().textContent();
-  ok(/plays [A-G]#?\d\. Sung [A-G]#?\d/.test(info) && /moved [+-]\d+ cents/.test(info), `a note clicked says what became of it ("${info.slice(0, 70)}…")`);
+  const info = await selText();
+  ok(/plays [A-G]#?\d\. Sung [A-G]#?\d/.test(info) && /(Tuned [+-]\d+ cents to|Set to) [A-G]#?\d/.test(info), `a note clicked says what became of it ("${info.slice(0, 70)}…")`);
   // ↑: the next note of the key (A minor: F to G), its one n line; Shift+↓: a semitone (G to F#)
   const before = t, midiOf = (x, ln) => RM.parse(x).score.takes[0].notes.find(n => n.ln === ln).midi, m0 = midiOf(before, pick.nln);
   const inKey = m => [0, 2, 3, 5, 7, 8, 10].includes(((m - 9) % 12 + 12) % 12);
@@ -170,6 +209,29 @@ try {
   d = t ? diff(before1, t) : [];
   ok(t && d.length === 1 && midiOf(t, pick.nln) === want - 1, `Shift+↓ moves it a semitone, the view keeping the keys after it drew again (${want} → ${t && midiOf(t, pick.nln)})`);
   t = t || before1;
+  // Leave out: its one line says out, and it stops playing; Put back: the line it was
+  const before3 = t;
+  ok((await outBtn().textContent()) === 'Leave out', 'a note that plays offers Leave out');
+  await outBtn().click();
+  t = await waitFile(x => x !== before3);
+  d = t ? diff(before3, t) : [];
+  const gone = await page.evaluate(ln => !REEL_RACK.arrangement.events.some(e => e.nln === ln), pick.nln);
+  ok(t && d.length === 1 && d[0][0] === pick.nln && / out( \||$)/.test(d[0][2]) && gone && (await outBtn().textContent()) === 'Put back' && /^Left out\./.test(await selText()),
+    'Leave out writes "out" on its one line; the note stops playing and says it is left out');
+  const before4 = t;
+  await outBtn().click();
+  t = await waitFile(x => x !== before4);
+  const back = await page.evaluate(ln => REEL_RACK.arrangement.events.some(e => e.nln === ln), pick.nln);
+  ok(t === before3 && back, 'Put back: the line it was, byte for byte, and it plays again');
+  t = t || before4;
+  // a left-out note, clicked on its sung line (dotted); an added note, which nothing was sung for
+  const op = await pointOf({ out: true });
+  if (op) await page.mouse.click(op.x, op.y);
+  ok(op && /^Left out\. Sung [A-G]#?\d/.test(await selText()) && (await outBtn().textContent()) === 'Put back', `a left-out note is picked by the line of what was sung (line ${op && op.nln}): "${(await selText()).slice(0, 48)}…"`);
+  for (let i = 0; i < 6; i++) await page.locator('#reel-rack .rk-take .rk-tnav button').nth(1).click();
+  const ap = await pointOf({ added: true });
+  if (ap) await page.mouse.click(ap.x, ap.y);
+  ok(ap && /Added: nothing was sung here/.test(await selText()) && (await outBtn().textContent()) === 'Leave out', `an added note says so (bars 29-32, line ${ap && ap.nln})`);
   // the voice's harmonics: drag the third bar to the top
   const harm = page.locator('#reel-rack .rk-mod .rk-harm svg').first();
   await harm.scrollIntoViewIfNeeded();
@@ -180,9 +242,9 @@ try {
   t = await waitFile(x => x !== before2);
   const h3 = t && RM.parse(t).score.tracks.find(x => x.name === 'voice').harmonics[2], h3was = voice.harmonics[2];
   ok(t && diff(before2, t).length === 1 && h3 > h3was, `dragging the third harmonic's bar up writes the harmonics line (${h3was} → ${h3} dB)`);
-  for (let i = 0; i < 4; i++) await page.evaluate(() => REEL_RACK.undo());
+  for (let i = 0; i < 6; i++) await page.evaluate(() => REEL_RACK.undo());
   t = await waitFile(x => x === SCORE);
-  ok(t === SCORE, 'four undos: the score is as it was, byte for byte');
+  ok(t === SCORE, 'six undos: the score is as it was, byte for byte');
   // the timeline: the voice lane, its notes and their bends
   await page.keyboard.press('Escape');
   await page.evaluate(() => { const r = document.getElementById('reel-rack'); if (r && !r.hidden) REEL_RACK.open(false); });

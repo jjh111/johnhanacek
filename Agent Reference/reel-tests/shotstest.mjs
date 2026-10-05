@@ -94,7 +94,7 @@ try {
 
   // 2. the rows
   let R = await rows();
-  check(R.map(r => r.kind).join(' ') === kinds().join(' ') && R.length === 11, `a row per shot, in the script's order (${R.map(r => r.kind).join(' ')})`);
+  check(R.map(r => r.kind).join(' ') === kinds().join(' ') && R.length === 12, `a row per shot, in the script's order (${R.map(r => r.kind).join(' ')})`);
   check(R.findIndex(r => r.now) === 2, 'the shot under the playhead (the answer, at 7 s) is marked', JSON.stringify(R.map(r => r.now)));
 
   // 3. a click goes there and opens it
@@ -118,7 +118,7 @@ try {
   });
   const moved = kinds();
   const after = await page.evaluate(() => ({ dur: REEL_LIVE.duration, sel: REEL_SHOTS.selected, order: REEL_SHOTS.rows() }));
-  check(moved.join(' ') === 'open title art command results feature answer logos quotes offer end', `dragged past the feature, the answer moves in the file (${moved.join(' ')})`);
+  check(moved.join(' ') === 'open title art command results feature answer logos quotes offer offer end', `dragged past the feature, the answer moves in the file (${moved.join(' ')})`);
   check(Math.abs(after.dur - dur0) < 1e-9 && after.sel === 6 && after.order.join(' ') === moved.join(' '), 'one save, played in place: the cut as long as before, the list in the new order, the moved shot open', JSON.stringify(after));
   await saving('undo', () => page.keyboard.press('Control+z'));
   check(file() === before, 'the timeline\'s Undo (⌘Z) puts it back, byte for byte');
@@ -164,9 +164,9 @@ try {
 
   // 9. duplicate and delete
   await saving('duplicate', () => page.locator(`${ed} [data-act="duplicate"]`).click());
-  check(kinds().length === 12 && kinds()[3] === 'answer', 'Duplicate puts a copy of the answer right after it', kinds().join(' '));
+  check(kinds().length === 13 && kinds()[3] === 'answer', 'Duplicate puts a copy of the answer right after it', kinds().join(' '));
   await saving('delete', () => page.locator('#reel-shots .sh-ed [data-act="delete"]').click());
-  check(kinds().length === 11, 'Delete takes the shot out again', kinds().join(' '));
+  check(kinds().length === 12, 'Delete takes the shot out again', kinds().join(' '));
 
   // 10. narrow
   await page.setViewportSize({ width: 820, height: 640 });

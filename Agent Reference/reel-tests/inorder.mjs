@@ -1,5 +1,6 @@
 // The suites were written for the cut's scenes in one order, the one below (the cut as of
-// 2026-10-02). The shot list lets John put them in any order, and the saved script is his, so a
+// 2026-10-02, and since 2026-10-05 a second offer, the design services', after the first). A
+// kind named twice takes the next scene of that kind, if there is one. The shot list lets John put them in any order, and the saved script is his, so a
 // suite puts a copy of it back in this order before it starts (ReelScript.moveScene: the same
 // scenes, each with all its lines). What he changes inside a scene still reaches the suites; where
 // he puts it does not. A scene of a kind not named here, or a second of a kind, is left after the
@@ -9,7 +10,7 @@
 import { createRequire } from 'node:module';
 
 const RS = createRequire(import.meta.url)('../../scripts/reel-script.js');
-export const ORDER = ['open', 'title', 'answer', 'art', 'command', 'results', 'feature', 'logos', 'quotes', 'offer', 'end'];
+export const ORDER = ['open', 'title', 'answer', 'art', 'command', 'results', 'feature', 'logos', 'quotes', 'offer', 'offer', 'end'];
 
 export function inOrder(src) {
   let k = 0;

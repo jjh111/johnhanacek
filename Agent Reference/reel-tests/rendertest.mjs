@@ -99,7 +99,7 @@ try {
     ok(head.length === 3 && head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff, `${name}: poster is a JPEG`, `${existsSync(poster) ? statSync(poster).size + ' bytes' : 'missing'}`);
     ok(/1920x1080/.test(ff(['-i', poster])), `${name}: poster is 1920×1080`);
     let c = null; try { c = JSON.parse(readFileSync(chap, 'utf8')); } catch (e) { ok(false, `${name}: chapters parse`, e.message); continue; }
-    ok(c.chapters.length === 11 && c.chapters.length === edit.scenes.length, `${name}: 11 chapters`, `${c.chapters.length}`);
+    ok(c.chapters.length === 12 && c.chapters.length === edit.scenes.length, `${name}: 12 chapters`, `${c.chapters.length}`);
     ok(JSON.stringify(c.chapters.map(x => x.t)) === JSON.stringify(starts) && starts[0] === 0, `${name}: chapter starts from the scene lengths`, c.chapters.map(x => x.t).join(' '));
     ok(c.chapters.map(x => x.kind).join() === edit.scenes.map(s => s.type).join(), `${name}: chapter kinds are the scene kinds`);
     // each chapter says what its own scene says, in whatever order the scenes are
