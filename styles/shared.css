@@ -1098,6 +1098,71 @@ section > .content-card:only-of-type {
     }
 }
 
+/* A captioned photo the card's prose wraps around (about.html). It floats to
+   one side with its rounded box as the wrap shape, and stacks centred on
+   phones. A card holding one becomes a flow root so the float never spills
+   past its border. .photo-pair is two photos side by side, no wrap; it sits
+   in the column a .photo-wrap leaves, so a short text has no hole beside it. */
+.content-card:has(.photo-wrap) { display: flow-root; }
+.photo-wrap {
+    float: right;
+    width: min(240px, 40%);
+    margin: 0.3rem 0 var(--space-sm) var(--space-lg);
+    shape-outside: inset(0 round 10px);
+    shape-margin: 0.5rem;
+}
+.photo-wrap.left { float: left; margin: 0.3rem var(--space-lg) var(--space-sm) 0; }
+.photo-wrap.small { width: min(170px, 34%); }
+.photo-wrap img, .photo-pair img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 10px;
+    border: 1px solid rgba(var(--cyan-dim-rgb), 0.25);
+}
+.photo-wrap figcaption, .photo-pair figcaption {
+    margin-top: 0.4rem;
+    font-family: var(--font-mono);
+    font-size: var(--text-3xs);
+    line-height: 1.45;
+    color: var(--ink-quiet);
+}
+.photo-pair {
+    /* no clear: beside a .photo-wrap it fills the column the float leaves */
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+    margin: var(--space-md) 0 0;
+}
+.photo-pair figure { margin: 0; }
+.photo-pair { align-items: start; }
+.photo-pair.square img { aspect-ratio: 1; object-fit: cover; }
+/* art.html: the works themselves, larger, title in the caption */
+.photo-pair.works { gap: var(--space-lg); }
+.photo-pair.works figcaption { font-size: var(--text-2xs); }
+.art-still { display: block; width: 100%; height: auto; margin-top: var(--space-md); border-radius: 8px; }
+/* A self-hosted art video: nothing loads until play (preload="none"); the
+   poster is the only byte at page load. Has sound, so never autoplay. */
+.art-video {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    margin-top: var(--space-md);
+    border-radius: 8px;
+    background: #000;
+}
+@media (max-width: 480px) { .photo-pair { grid-template-columns: 1fr; } }
+@media (max-width: 640px) {
+    /* .small keeps floating: at a third of the card the prose still wraps it */
+    .photo-wrap:not(.small), .photo-wrap.left:not(.small) {
+        float: none;
+        width: auto;
+        max-width: 300px;
+        margin: 0 auto var(--space-md);
+    }
+}
+
 /* Endorsement card */
 .content-card.endorsement {
     font-size: var(--text-base);

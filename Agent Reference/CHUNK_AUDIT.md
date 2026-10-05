@@ -714,3 +714,14 @@ John's ruling: terse prose, fewer words, no em dashes, no negation-constructivis
 ## §J Resume compile — 2026-09-16
 
 Chunks 4, 21, 23, 26, 27, 50 are COMPILED from `Assets/resume.json` by `scripts/build-resume.mjs --apply` (source: the 2026-09-09 interview; evidence links live in the JSON). Edit the JSON, not the chunk text. Rebuild vectors after each compile (`node scripts/build-chunk-vectors.mjs`).
+
+## §K Art + photo intake — 2026-10-05
+
+Source: John, in session (Agent Reference/ART_PHOTO_INTAKE_PLAN.md). Each claim is his.
+- 12 — "Godish" → "God-ish", John's spelling; "Leap Motion interactive lightning strike" is his description. The art.html card now plays the self-hosted encode (Assets/art/god-ish.mp4) where the YouTube embed was.
+- 15 — new facts, each placed on art.html:
+  - photographs *Containing Multitudes* and *Aligned Sight* (#photography);
+  - digital illustrations *Galaxy Cat* (2018) and *The Last Frontier* (2016) (#about);
+  - *Blink If You Can Hear Me* (2015): actor, selected for the DC Shorts Film Festival (#photography, IMDb tt6064026);
+  - *Mirrored Lotus* (2019) (#4dart).
+- 31 — "including camping in the Sierra Nevada mountains" (John: "I also go camping in the Sierra Nevada Mountains"); about.html Off the clock carries the same sentence.

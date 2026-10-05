@@ -465,6 +465,15 @@ CNAME                     — www.johnhanacek.com (GitHub Pages)
 Assets/
   search-chunks.json      — search index
   media-kit.json          — the media pack's copy (13 boards); media-kit.html only draws it
+  gallery.json            — THE registry of John's art + photos (v2.42): per piece title, year, caption,
+                            alt, the committed web encode, the gitignored MASTER path (local only), placements
+                            and use. Change a caption here first. The reel/video agent reads it too. Plan:
+                            Agent Reference/ART_PHOTO_INTAKE_PLAN.md (3D facade + splat are phases 2–3)
+  photos/, art/           — web encodes only (WebP; mp4 1280w CRF 27 with sound, `-poster.webp`); masters
+                            beside them are listed in .gitignore. Placed with `.photo-wrap` (captioned float
+                            the prose wraps; `.small` keeps floating on phones), `.photo-pair` (two-up,
+                            `.square` crops, `.works` larger captions) and `.art-video` (`preload="none"`,
+                            never autoplay) in shared.css
   favicon-jhsigfrmpaper.png
   JHsig.svg               — the signature's source file. It is SERVED as a data URI (v2.34): `SIG` in
                             jh-shapes.js feeds the chrome, and the page heroes carry the same URI inline, so
