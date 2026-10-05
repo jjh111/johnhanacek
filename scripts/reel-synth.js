@@ -55,7 +55,7 @@
   const sweepOpen = 20000;
 
   // ── the engine ────────────────────────────────────────────────────────
-  // create(ctx, score, { meters }) builds the whole graph once; notes are made per event.
+  // create(ctx, score, { meters, live }) builds the whole graph once; notes are made per event.
   function create(ctx, score, opts = {}) {
     const out = opts.destination || ctx.destination;
     const E = { ctx, score, tracks: {}, mutes: new Set(), solos: new Set() };
@@ -76,7 +76,17 @@
     const flut = ctx.createOscillator(); flut.frequency.value = 7.3; const flutG = G(0); flut.connect(flutG); flutG.connect(tape.delayTime); flut.start();
     const hiss = ctx.createBufferSource(); hiss.buffer = noiseBuffer(ctx); hiss.loop = true;
     const hissHp = ctx.createBiquadFilter(); hissHp.type = 'highpass'; hissHp.frequency.value = 2500;
-    const hissG = G(0); hiss.connect(hissHp); hissHp.connect(hissG); hissG.connect(comp); hiss.start();
+    const hissG = G(0); hiss.connect(hissHp); hissHp.connect(hissG); hiss.start();
+    // the hiss runs with the tape: offline, under the whole film; live, only while the reel plays
+    // (E.tape, the player's), so the editor is silent between takes. It had hissed on its own at
+    // -50 dBFS (94% of it above 2.5 kHz) from the first play on, paused or not.
+    const hissGate = opts.live ? G(0) : null;
+    if (hissGate) { hissG.connect(hissGate); hissGate.connect(comp); } else hissG.connect(comp);
+    E.tape = on => {
+      if (!hissGate) return;
+      const g = hissGate.gain, n = ctx.currentTime;
+      g.cancelScheduledValues(n); g.setValueAtTime(g.value, n); g.linearRampToValueAtTime(on ? 1 : 0, n + 0.05);
+    };
     // returns
     const revIn = G(), rev = ctx.createConvolver(), revRet = G();
     revIn.connect(rev); rev.connect(revRet); revRet.connect(pre);
@@ -365,12 +375,13 @@
       E.newGeneration();
       P.offset = ctx.currentTime + LAT - t;
       E.automate(P.A, t, at);
+      E.tape(true);
       // notes already sounding at t (a pad mid-bar) come in now, for what is left of them
       for (const ev of P.A.events) if (ev.t < t && ev.t + ev.dur > t + 0.1 && ev.dur >= 0.3 && !ev.rise) E.play(ev, at(t), t - ev.t);
       P.horizon = t; P.idx = first(t); P.running = true;
       lastStart = w; P.starts++;
     }
-    P.stop = () => { if (P.running) { E.newGeneration(); P.running = false; E.master.gain.cancelScheduledValues(0); } };
+    P.stop = () => { if (P.running) { E.newGeneration(); E.tape(false); P.running = false; E.master.gain.cancelScheduledValues(0); } };
     P.tick = (t, playing, wallMs) => {
       const w = wallMs != null ? wallMs / 1000 : wall(), JUMP = wallMs != null ? 0.008 : 0.05;
       const jumped = lastT != null && Math.abs((t - lastT) - (w - lastW)) > JUMP;

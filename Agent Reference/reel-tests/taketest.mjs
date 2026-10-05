@@ -42,7 +42,7 @@ const scenes = RS.spans(edit).map((c, i) => ({ type: edit.scenes[i].type, start:
 const mom = RM.moments(edit, RS), CUT = scenes[scenes.length - 1].end;
 const P = RM.parse(SCORE), tk = P.score.takes.find(t => t.name === 'john');
 const voice = P.score.tracks.find(t => t.name === 'voice');
-ok(tk && tk.notes.length >= 100 && tk.octave === 1 && tk.drift.length >= 30,
+ok(tk && tk.notes.length >= 100 && tk.octave === 2 && tk.drift.length >= 30,
   `the score holds John's take: ${tk && tk.notes.length} notes, octave ${tk && tk.octave}, the key's drift a bar (${tk && tk.drift.length} bars)`);
 ok(voice && voice.voices.some(v => v.wave === 'harmonics') && voice.harmonics && voice.harmonics.length === 16 && voice.harmonics[0] === 0,
   `the voice is a harmonics sound, its 16 harmonics measured from the take (${voice && voice.harmonics && voice.harmonics.slice(0, 5).join(' ')} …)`);
@@ -60,16 +60,20 @@ ok(sung.length === inClip.length && sung.length === S.notes && sung.every(e => e
 const byLn = new Map(tk.notes.map(n => [n.ln, n]));
 ok(sung.every(e => !byLn.get(e.nln).out), `no left-out note plays (${outs.length} of them)`);
 ok(sung.every(e => { const n = byLn.get(e.nln); return n && e.midi === n.midi + 12 * tk.octave && Math.abs(e.t - Math.max(0, (n.step + tk.shift) * A.step + tk.feel / 100 * n.early / 1000)) < 1e-9; }),
-  `each plays its written note an octave up, on its sixteenth plus ${tk.feel}% of how early or late it was sung`);
-ok(sung.filter(e => e.bend).every(e => e.bend.every(c => Math.abs(c) <= RM.BEND_MAX * tk.nuance / 100 + 1)) && sung.some(e => e.bend),
-  `its notes bend as sung, each point held to ±${RM.BEND_MAX} cents (the glides beyond belong to the next note)`);
+  `each plays its written note ${tk.octave} octave${tk.octave === 1 ? '' : 's'} up, on its sixteenth plus ${tk.feel}% of how early or late it was sung`);
+ok(sung.every(e => { const n = byLn.get(e.nln); return e.vel === n.vel && e.tone === Math.max(-RM.TONE_MAX, Math.min(RM.TONE_MAX, n.tone)); }),
+  `each plays at its own level and tone, as written (${[...new Set(sung.map(e => e.vel))].join(', ')}; ${[...new Set(sung.map(e => e.tone))].join(', ')} dB)`);
 const remap = change => { const p = RM.parse(SCORE); Object.assign(p.score.takes[0], change); return RM.arrange(p.score, scenes, mom).events.filter(e => e.take === 'john'); };
 {
-  const n0 = remap({ nuance: 0 }), n2 = remap({ nuance: 2 * tk.nuance }), n1 = sung;
-  ok(n0.every(e => !e.bend), 'nuance 0: every note plays straight');
+  // the bends are the mapping's: at the score's nuance (${tk.nuance}) and at others, set here
+  const b100 = remap({ nuance: 100 });
+  ok(b100.filter(e => e.bend).every(e => e.bend.every(c => Math.abs(c) <= RM.BEND_MAX + 1)) && b100.some(e => e.bend),
+    `at nuance 100 its notes bend as sung, each point held to ±${RM.BEND_MAX} cents (the glides beyond belong to the next note)`);
+  const n0 = remap({ nuance: 0 }), n2 = b100, n1 = remap({ nuance: 50 });
+  ok(n0.every(e => !e.bend), `nuance 0: every note plays straight${tk.nuance === 0 ? ' (the score\'s own: the melody plays clean)' : ''}`);
   const pairs = n1.filter(e => e.bend).map(e => [e, n2.find(x => x.nln === e.nln)]);
-  ok(pairs.length && pairs.every(([a, b]) => b && b.bend && b.bend.every((c, i) => Math.abs(c - 2 * a.bend[i]) <= 1)), `nuance ${2 * tk.nuance}: every bend twice as deep as at the score's ${tk.nuance}`);
-  const s0 = remap({ straighten: 0 }), s9 = remap({ straighten: 100 });
+  ok(pairs.length && pairs.every(([a, b]) => b && b.bend && b.bend.every((c, i) => Math.abs(c - 2 * a.bend[i]) <= 1)), 'nuance 100: every bend twice as deep as at 50');
+  const s0 = remap({ straighten: 0, nuance: 100 }), s9 = remap({ straighten: 100, nuance: 100 });
   const long = s0.filter(e => e.bend && e.bend.length > 12);
   const edgesKept = long.every(e => { const o = s9.find(x => x.nln === e.nln); return o.bend[0] === e.bend[0] && o.bend[o.bend.length - 1] === e.bend[e.bend.length - 1]; });
   const bodyMoved = long.some(e => { const o = s9.find(x => x.nln === e.nln); return o.bend.some((c, i) => c !== e.bend[i]); });
@@ -105,7 +109,7 @@ const remap = change => { const p = RM.parse(SCORE); Object.assign(p.score.takes
   throws(() => RM.parse(SCORE.replace(/^ {2}n (\S+) +\S+/m, '  n $1 X9')), /line \d+: n wants .*"X9" is not a note/, 'a note that is not one says so by line');
   throws(() => RM.parse(SCORE.replace('take john', 'take nobody')), /line \d+: take wants the name of a TAKE \(john\)/, 'a pad that sings a take not there says so');
   throws(() => RM.parse(SCORE.replace(/^ {2}harmonics .*\n/m, '')), /has a harmonics voice but no harmonics line/, 'a harmonics voice with no harmonics says so');
-  throws(() => RM.parse(SCORE.replace(/^ {2}octave +\+?1$/m, '  octave     9')), /line \d+: octave wants a whole number from -3 to 3/, 'an octave out of range says so');
+  throws(() => RM.parse(SCORE.replace(/^ {2}octave +[+-]?\d+$/m, '  octave     9')), /line \d+: octave wants a whole number from -3 to 3/, 'an octave out of range says so');
 }
 
 // ── 2. the synth, offline ────────────────────────────────────────────────
@@ -121,24 +125,25 @@ try {
     await page.addScriptTag({ path: join(ROOT, 'scripts/reel-synth.js') });
     const r = await page.evaluate(async ({ SCORE, scenes, mom }) => {
       const RM = window.ReelMusic, RSy = window.ReelSynth;
-      // the voice alone, 8 to 12 s, as it is, as a sine (harmonics 0), and straight (nuance 0)
+      // the voice alone, 8 to 12 s, as it is, as a sine (harmonics 0), bent (nuance 100) and straight (nuance 0)
       const run = async edit => {
         const P = RM.parse(edit(SCORE));
         P.score.tracks.forEach(t => { if (t.name !== 'voice') t.level = 0; });
         const buf = await RSy.renderOffline(P, RM.arrange(P.score, scenes, mom), { from: 8, to: 12, sampleRate: 24000 });
         return Array.from(buf.getChannelData(0));
       };
-      const base = await run(s => s), sine = await run(s => s.replace(/^ {2}harmonics .*$/m, '  harmonics 0')), straight = await run(s => s.replace(/^ {2}nuance +\d+$/m, '  nuance     0'));
+      const base = await run(s => s), sine = await run(s => s.replace(/^ {2}harmonics .*$/m, '  harmonics 0'));
+      const bent = await run(s => s.replace(/^ {2}nuance +\d+$/m, '  nuance     100')), straight = await run(s => s.replace(/^ {2}nuance +\d+$/m, '  nuance     0'));
       const rms = a => Math.sqrt(a.reduce((x, v) => x + v * v, 0) / a.length), peak = a => a.reduce((x, v) => Math.max(x, Math.abs(v)), 0);
       const dif = (a, b) => rms(a.map((v, i) => v - b[i]));
       // brightness: how much of it changes from one sample to the next (a sine's is least)
       const bright = a => rms(a.slice(1).map((v, i) => v - a[i])) / Math.max(1e-9, rms(a));
-      return { peak: peak(base), rms: rms(base), sineDiff: dif(base, sine), straightDiff: dif(base, straight), bright: bright(base), sineBright: bright(sine) };
+      return { peak: peak(base), rms: rms(base), sineDiff: dif(base, sine), straightDiff: dif(bent, straight), bright: bright(base), sineBright: bright(sine) };
     }, { SCORE, scenes, mom });
     const db = x => (20 * Math.log10(x || 1e-9)).toFixed(1);
     ok(r.peak > 0.02 && r.peak < 0.99, `the voice sings, alone, 8-12 s: peak ${db(r.peak)} dBFS, rms ${db(r.rms)} dBFS`);
     ok(r.sineDiff > r.rms * 0.3 && r.bright > r.sineBright * 1.2, `its harmonics are heard: brighter than a sine of the same notes (${r.bright.toFixed(3)} against ${r.sineBright.toFixed(3)})`);
-    ok(r.straightDiff > r.rms * 0.1, `its bends are heard: nuance 0 plays it differently (${db(r.straightDiff)} dBFS of difference)`);
+    ok(r.straightDiff > r.rms * 0.1, `its bends are heard: nuance 100 plays it differently from 0 (${db(r.straightDiff)} dBFS of difference)`);
     ok(errs.length === 0, 'no page errors offline' + (errs.length ? ': ' + errs.join(' | ') : ''));
     await page.close();
   }
@@ -245,13 +250,23 @@ try {
   for (let i = 0; i < 6; i++) await page.evaluate(() => REEL_RACK.undo());
   t = await waitFile(x => x === SCORE);
   ok(t === SCORE, 'six undos: the score is as it was, byte for byte');
-  // the timeline: the voice lane, its notes and their bends
+  // the timeline: the voice lane, its notes and, where the mapping bends them, their bends
   await page.keyboard.press('Escape');
   await page.evaluate(() => { const r = document.getElementById('reel-rack'); if (r && !r.hidden) REEL_RACK.open(false); });
   await page.keyboard.press('e');
+  const laneOf = () => page.evaluate(() => { const s = document.querySelector('#reel-tl svg.tl-mroll[data-track="voice"]'); return s ? { notes: [...s.querySelectorAll('.tl-n')].map(p => (p.getAttribute('d') || '').length).reduce((a, b) => a + b, 0), bends: ((s.querySelector('.tl-nb') || { getAttribute: () => '' }).getAttribute('d') || '').length, h: s.getBoundingClientRect().height } : null; });
+  await page.waitForFunction(() => { const s = document.querySelector('#reel-tl svg.tl-mroll[data-track="voice"] .tl-n'); return s && (s.getAttribute('d') || '').length > 20; }, null, { timeout: 10000 }).catch(() => {});
+  const lane = await laneOf(), bentAt = tk.nuance > 0;
+  ok(lane && lane.notes > 100 && (bentAt ? lane.bends > 20 : lane.bends === 0) && lane.h >= 30,
+    `the timeline's voice lane draws the notes${bentAt ? ' and, over them, how each bends' : ', straight at nuance 0 (no bend drawn)'} (lane ${lane && Math.round(lane.h)} px tall)`);
+  const before5 = t;
+  await page.evaluate(() => REEL_RACK.change(ReelMusic.setArg(REEL_RACK.src, 'TAKE', 'john', 'nuance', 0, 40)));
   await page.waitForFunction(() => { const s = document.querySelector('#reel-tl svg.tl-mroll[data-track="voice"] .tl-nb'); return s && (s.getAttribute('d') || '').length > 20; }, null, { timeout: 10000 }).catch(() => {});
-  const lane = await page.evaluate(() => { const s = document.querySelector('#reel-tl svg.tl-mroll[data-track="voice"]'); return s ? { notes: [...s.querySelectorAll('.tl-n')].map(p => (p.getAttribute('d') || '').length).reduce((a, b) => a + b, 0), bends: (s.querySelector('.tl-nb').getAttribute('d') || '').length, h: s.getBoundingClientRect().height } : null; });
-  ok(lane && lane.notes > 100 && lane.bends > 20 && lane.h >= 30, `the timeline's voice lane draws the notes and, over them, how each bends (lane ${lane && Math.round(lane.h)} px tall)`);
+  const lane40 = await laneOf();
+  ok(lane40 && lane40.bends > 20, `at nuance 40 the lane draws how each note bends, over it (${lane40 && lane40.bends} of path)`);
+  await page.evaluate(() => REEL_RACK.undo());
+  t = await waitFile(x => x === before5);
+  ok(t === SCORE, 'and one undo: the score as it was');
   ok(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.join(' | ') : ''));
 } finally {
   if (browser) await browser.close();

@@ -599,7 +599,8 @@
         + (S.left ? ` ${S.left} sung notes are left out (dotted): click one to put it back.` : ''),
       `The faint line is what was sung, where it was sung.` + (d0 ? ` The key drifted ${sgn(d0[0])} to ${sgn(d0[1])} cents as it went (the dashed line below), and that is taken out first.` : ''),
       `Octave ${sgn(tk.octave)} plays it from ${S.plays[0]} to ${S.plays[1]}${tk.shift ? `, ${Math.abs(tk.shift)} sixteenths ${tk.shift > 0 ? 'later' : 'earlier'}` : ''}.`,
-      `Straighten ${tk.straighten}% takes the slow wander out of each note, and nuance ${tk.nuance}% keeps that share of how the voice moved (the scoop in, the fall off)${tk.feel ? `; feel ${tk.feel}% plays back how early or late each came` : ''}.`,
+      (tk.nuance ? `Straighten ${tk.straighten}% takes the slow wander out of each note, and nuance ${tk.nuance}% keeps that share of how the voice moved (the scoop in, the fall off)`
+        : `Nuance 0%: every note plays straight, on its pitch (turn it up for the scoop in and the fall off as sung)`) + (tk.feel ? `; feel ${tk.feel}% plays back how early or late each came` : '') + '.',
       `It sings in the voice's own colour: the harmonics of ${singer}, under instruments.`].filter(Boolean).join(' ')));
 
     // to the next note of the key (chromatic: a semitone)

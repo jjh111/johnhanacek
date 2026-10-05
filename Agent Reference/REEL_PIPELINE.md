@@ -1357,6 +1357,47 @@ fix alignments, etc"
   land after the ones named, here after the end card); scripttest counts 12 scenes, and musictest's
   fixture holds Am over bars 30-32 only, the loop going round again after them.
 
+## The voice standardized, and the editor's hiss (2026-10-05)
+
+John, on the composed take: "ok the voice row needs some standardization, normalize the score,
+fill in gaps, hit the cleanest notes above get into a crisp song. there is also a pronounced
+'hiss' on the laptop while the editor is on, idk if that can be minimized (it's not present in
+the outputs so it's ok)"
+
+- **The melody, standardized.** Written again as a grid of eighths and matched to what was sung
+  the same way (an order-keeping alignment; every heard line of the take, kept or left out, is a
+  reference), by these rules:
+  - *no gaps*: the voice sings from bar 1, where it had come in at bar 4: the warm-up's A, C and
+    D (bars 1-3, left out before) become the intro's pulse, then the pulse as sung. Inside a
+    phrase no rest is longer than an eighth (one breath, before bar 9): a rest became the note
+    before it, held, the way the phrases were sung, and a long empty beat a note of the chord.
+  - *clean notes*: beats 1 and 3 are chord tones. A note sung off one moved to the clean note,
+    usually the one above (G over F to A, B over C to C, D over Am to E, the climb's F over C to
+    G); passing notes stay between those beats (C between D and B, B between A and C).
+  - *the phrasing kept*: phrases start on the and-of-1, as sung; the tune's rises to C, the
+    bounce, the fall to A; the climb's high F and its drop an octave; the closing turn.
+  - *normalized*: every note at level 0.8 and tone 0 dB (they had run from 0.6 to 0.95 and ±6 dB).
+  - *crisp*: `nuance 0` (every note straight on its pitch; the knob brings the scoops back) and
+    `octave +2`: the voice plays E4-G5, above the chord pad (C3-E4), where it had sat inside it
+    at E3-G4. For the higher register the voice's filter opens to 4200 Hz (3200) and its attack
+    is 0.02 s (0.045).
+  - *balanced*: rendered alone (every other sound at level 0, through the master chain), the
+    voice measured -17.6 LUFS against the band's -17.0 at level 0.32; at 0.4 it sits about 1.3 dB
+    over the band, as the take did. The voice's clip fades in over bar 1 (`in 4`), with the chords.
+  143 notes play: 105 matched to sung notes (a median 50 ms from where each was sung), 38 added
+  (the intro, the gaps, the theme's return), and 35 sung notes stay out. The take view says
+  "Nuance 0%: every note plays straight" where it had said what the nuance keeps.
+- **The hiss.** The master chain has a tape hiss (`FX tape hiss 0.04`: high-passed noise into the
+  compressor). Under the music it is masked; live, the master gain stayed open after the first
+  play, and the paused editor hissed on its own: -49.7 dBFS rms, 94% of it above 2.5 kHz,
+  measured off the master meter. The live player now opens the hiss only while the reel plays
+  (`E.tape`, a 50 ms ramp each way, from `start` and `stop`): paused, the output falls to -139
+  dBFS once the reverb dies away. Offline, the hiss is wired as before, so a film is unchanged by
+  it, and so are the rack's previews, now silent between notes.
+- Suites: taketest sets the nuances it checks (100, 50, 0) rather than reading the score's own
+  (0 now), checks each note plays at its own level and tone, octave +2, and the timeline's voice
+  lane straight at nuance 0 and bent at 40 (one undo back).
+
 ## Later
 
 Scene-specific cues (line staggers, the push); moving cut 1 onto the one player; stems out of
