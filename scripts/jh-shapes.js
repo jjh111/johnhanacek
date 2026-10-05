@@ -53,7 +53,9 @@
     { key: 'about', href: 'about.html', cls: 'shape-link secondary', aria: 'About',
       svg: SVG.diamond, label: '<span class="shape-label">ABOUT</span>', hero: false },
     { key: 'services', href: 'services.html', cls: 'shape-link secondary', aria: 'Services',
-      svg: SVG.star, label: '<span class="shape-label">SERVICES</span>', hero: false },
+      // Folded into the menu-state strip it reads SERV: the tail is a span the
+      // nav-menu CSS hides, so the full word stays one string everywhere else.
+      svg: SVG.star, label: '<span class="shape-label">SERV<span class="shape-label-tail">ICES</span></span>', hero: false },
     { key: 'play', href: 'playground.html', cls: 'shape-link secondary', aria: 'Playground',
       svg: SVG.hexagon, label: '<span class="shape-label">PLAY</span>', hero: false }
   ];
