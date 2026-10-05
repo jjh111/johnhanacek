@@ -1905,14 +1905,23 @@ code, kbd, samp, pre {
 
     .hero-oval {
         min-width: 0;
-        /* Wider than the screen on purpose. Capped at 96vw, the tagline's ends
-           sat 2–3px from the curve at 320–390px and read as clipped; the oval
-           now takes the padding its ellipse needs and lets its own far edges
-           run off the sides (.hero clips them, so no page scroll). */
         max-width: min(124vw, 520px);
         width: fit-content;           /* let name drive the width, keeps oval aspect ratio */
         padding: 0.9rem 3.6rem 0.7rem;
         top: 4rem;   /* touch: overridden below, where the pill is taller */
+    }
+    /* index.html's oval (the one with the tagline) fits the screen, 6px in
+       from each edge (v2.40; it used to run off both sides at up to 124vw).
+       Its width is FIXED to the screen, not fit-content, and the room the
+       43-character tagline needs comes from height instead: taller padding
+       widens the chord at its row. Measured 320–768: every text corner sits
+       inside the curve (worst 0.91 of the radius, the tagline's ends) at the
+       same type sizes as before. design/art keep their compact fit-content
+       ovals, which already fit. */
+    .hero-oval:has(.tagline):not(.hero-oval--collapsed) {
+        width: min(calc(100vw - 12px), 500px);
+        max-width: none;
+        padding: 1.4rem 0.5rem 1.2rem;
     }
     .hero h1 {
         font-size: clamp(1.8rem, 8vw, 2.8rem);  /* larger so name fills oval width */
@@ -1925,7 +1934,7 @@ code, kbd, samp, pre {
        22px off the left edge of the screen). Below the width where the token
        fits, the viewport sets the size instead, exactly as the h1's clamp
        already does. 2.6vw is 34em of this string inside 92vw of screen. */
-    .hero .tagline { font-size: min(var(--text-3xs), 2.6vw); }
+    .hero .tagline { font-size: min(var(--text-3xs), 2.55vw); }
     .hero .byline { font-size: var(--text-3xs); }
     .hero-sig-inline { height: 2.8rem; }
     .hero-hint { bottom: 8rem; }
