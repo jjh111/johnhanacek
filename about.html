@@ -24,9 +24,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@200;300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles/jh-chrome.css?v=2.43">
-    <link rel="stylesheet" href="./styles/shared.css?v=2.43">
-    <link rel="stylesheet" href="./scripts/search-overlay.css?v=2.43">
+    <link rel="stylesheet" href="./styles/jh-chrome.css?v=2.44">
+    <link rel="stylesheet" href="./styles/shared.css?v=2.44">
+    <link rel="stylesheet" href="./scripts/search-overlay.css?v=2.44">
 
     <link rel="alternate" type="application/json" href="./john-hanacek.json" title="Structured data">
     <script type="application/ld+json">
@@ -74,8 +74,9 @@
             align-items: stretch;
             gap: var(--space-lg);
         }
-        main .card-grid.is-packed.is-single { display: block; }
-        main .card-grid.is-packed.is-single > .content-card { margin: 0 0 var(--space-lg); }
+        /* Bio: the oval portrait leads on the LEFT; the Reactor photo floats right */
+        #bio .about-portrait { float: left; margin: 0 var(--space-xl) var(--space-md) 0; shape-outside: ellipse(50% 50%); }
+        @media (max-width: 640px) { #bio .about-portrait { float: none; margin: 0 auto var(--space-lg); } }
         main .pack-col {
             flex: 1 1 0;
             min-width: 0;
@@ -128,7 +129,7 @@
                 </figure>
                 <p><strong>Product Designer & Design Engineer</strong> building AI-native products and spatial computing interfaces.</p>
                 <p>I design and code <strong>agentic systems</strong>, interactive experiences, and AI-augmented tools. Whatever the problem calls for: context engineering, agent orchestration, data architecture, web, mobile, XR, robotics, poetry and art.</p>
-                <figure class="photo-wrap left">
+                <figure class="photo-wrap" data-fit="next">
                     <img src="./Assets/photos/hololens-headshot.webp" width="1200" height="1200"
                          alt="John Hanacek wearing a HoloLens 2 headset and a black flight suit with mission patches"
                          loading="lazy">
@@ -141,7 +142,7 @@
                  step with them: it is the one place the site says these things. -->
             <div class="content-card off-clock" id="off-the-clock">
                 <h4>Off the clock</h4>
-                <figure class="photo-wrap small">
+                <figure class="photo-wrap small" data-fit=".photo-pair">
                     <img src="./Assets/photos/power-of-ma-shakti.webp" width="1048" height="1600"
                          alt="Night beach under a bright moon: a figure stands with many arms fanned out like a deity, a long shadow spreading across the sand"
                          loading="lazy">
@@ -497,22 +498,21 @@
         <jh-footer></jh-footer>
     </footer>
 
-    <script src="./scripts/shared.js?v=2.43"></script>
-<script src="./scripts/search-overlay.js?v=2.43" defer></script>
-<script src="./scripts/jh-shapes.js?v=2.43"></script>
-    <script src="./scripts/jh-chrome.js?v=2.43" defer></script>
+    <script src="./scripts/shared.js?v=2.44"></script>
+<script src="./scripts/search-overlay.js?v=2.44" defer></script>
+<script src="./scripts/jh-shapes.js?v=2.44"></script>
+    <script src="./scripts/jh-chrome.js?v=2.44" defer></script>
     <script>
     /* Pack each About card group into balanced columns (see the <style> in
-       <head>). For 3 then 2 columns it measures every card in place at that
+       <head>). For 3 and 2 columns it measures every card in place at that
        column width, deals the cards into the columns that come out most even,
-       and takes the most columns whose spread (tallest minus shortest column)
-       is at most 18% of the tallest; the cards of each column share that
-       remainder. Otherwise the group runs as one column. Re-runs on resize and
-       once the fonts land. */
+       and keeps whichever count ends more evenly (3 when they are within 5%).
+       The cards of the shorter columns share the remainder. Re-runs on resize
+       and once the fonts land. */
     (function () {
         var GROUPS = [].slice.call(document.querySelectorAll('main .card-grid'));
         if (!GROUPS.length) return;
-        var MIN_COL = 300, MAX_HOLE = 0.18, MQ = window.matchMedia('(min-width: 1025px)');
+        var MIN_COL = 280, PREFER = 0.05, MQ = window.matchMedia('(min-width: 1025px)');
         GROUPS.forEach(function (g) { g._cards = [].slice.call(g.children).filter(function (n) { return n.classList.contains('content-card'); }); });
 
         function unpack(g) {
@@ -559,14 +559,18 @@
             if (!MQ.matches || g._cards.length < 2) return;
             var gap = parseFloat(getComputedStyle(g).columnGap) || parseFloat(getComputedStyle(g).gap) || 24;
             var W = g.clientWidth, chosen = null;
+            // Desktop never runs a group as one column (John, 2026-10-05:
+            // "inconsistent"). Of 3 and 2 columns, take the more even; within
+            // PREFER of each other, the one with more columns.
             for (var c = Math.min(3, g._cards.length); c >= 2; c--) {
-                var colW = (W - gap * (c - 1)) / c;
-                if (colW < MIN_COL) continue;
+                if ((W - gap * (c - 1)) / c < MIN_COL) continue;
                 var r = split(heightsAt(g, c, gap), c, gap);
-                if (r && r.spread / r.max <= MAX_HOLE) { chosen = r; break; }
+                if (!r) continue;
+                r.ratio = r.spread / r.max;
+                if (!chosen || r.ratio < chosen.ratio - PREFER) chosen = r;
             }
+            if (!chosen) return;
             g.classList.add('is-packed');
-            if (!chosen) { g.classList.add('is-single'); return; }
             chosen.cols.forEach(function (col) {
                 var div = document.createElement('div'); div.className = 'pack-col';
                 col.forEach(function (idx) { div.appendChild(g._cards[idx]); });
@@ -576,6 +580,45 @@
         function all() { GROUPS.forEach(pack); }
         var t = 0;
         window.addEventListener('resize', function () { clearTimeout(t); t = setTimeout(all, 150); });
+        all();
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(all);
+    })();
+    </script>
+    <script>
+    /* At the widest layout (1200px and up) a photo marked data-fit grows until
+       its bottom meets the bottom of what it sits beside: the HoloLens photo
+       the "Since 2012" paragraph after it ("next"), Containing Multitudes the
+       caption row of the pair beside it (a selector inside the same card).
+       Width and height are tied (the picture keeps its shape) and the text
+       rewraps as the float widens, so it settles in a few passes. Narrower
+       screens keep the CSS sizes. */
+    (function () {
+        var FIGS = [].slice.call(document.querySelectorAll('main figure[data-fit]'));
+        if (!FIGS.length) return;
+        var MQ = window.matchMedia('(min-width: 1200px)');
+        function target(f) {
+            var k = f.getAttribute('data-fit');
+            return k === 'next' ? f.nextElementSibling : f.parentElement.querySelector(k);
+        }
+        function fit(f) {
+            f.style.width = '';
+            var img = f.querySelector('img'), t = target(f);
+            if (!MQ.matches || !img || !t || !img.naturalWidth) return;
+            var aspect = img.naturalWidth / img.naturalHeight;
+            var maxW = f.parentElement.clientWidth * 0.45;
+            for (var pass = 0; pass < 6; pass++) {
+                var cap = f.querySelector('figcaption');
+                var capH = cap ? cap.getBoundingClientRect().height + parseFloat(getComputedStyle(cap).marginTop) : 0;
+                var want = t.getBoundingClientRect().bottom - img.getBoundingClientRect().top - capH;
+                var w = Math.max(120, Math.min(maxW, want * aspect));
+                if (Math.abs(w - f.getBoundingClientRect().width) < 1) break;
+                f.style.width = w + 'px';
+            }
+        }
+        function all() { FIGS.forEach(fit); }
+        FIGS.forEach(function (f) { var img = f.querySelector('img'); if (img) { img.loading = 'eager'; if (!img.complete) img.addEventListener('load', function () { fit(f); }); } });
+        var t = 0;
+        window.addEventListener('resize', function () { clearTimeout(t); t = setTimeout(all, 160); });
         all();
         if (document.fonts && document.fonts.ready) document.fonts.ready.then(all);
     })();
