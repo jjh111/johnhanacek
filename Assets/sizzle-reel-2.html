@@ -652,7 +652,10 @@ p, h1, h2, h3 { margin: 0; }
   const maskLetters = text => [...text].map(ch => ch === ' ' ? ' ' : `<span class="li">${ch}</span>`).join('');
   const inner = (root, sel) => [...root.querySelectorAll(sel)].map(n => n.querySelector(':scope > .li') || n);
   // Hidden is set explicitly and shown is left to inherit ('' rather than 'visible'), so a parent
-  // that hides takes every line inside it along.
+  // that hides takes every line inside it along. A line slides 108% of its own height in whole
+  // pixels: Chrome rasters a moving line at the fraction of a pixel it stood at when it rastered it,
+  // and a slide in fractions left "XR + AI" (y 349.84) drawn one of two ways from render to render
+  // (2253 px). Whole steps keep every moment of the slide at the line's own fraction.
   function lines(spans, t, tin, tout, o) {
     o = o || {};
     const M = MO, st = M.a(o.stagger != null ? o.stagger : 0.07), d = M.a(o.dur || 0.6), dO = M.l(o.durOut || 0.3), sto = M.l(o.staggerOut != null ? o.staggerOut : 0.035);
@@ -661,7 +664,7 @@ p, h1, h2, h3 { margin: 0; }
       const a = seg(t, tin + i * st, d, ei);
       const b = tout == null ? 0 : seg(t, tout + i * sto, dO, eo);
       const s = spans[i].style;
-      s.transform = `translate3d(0,${fx((1 - a) * 108 - b * 108)}%,0)`;
+      s.transform = `translate3d(0,${Math.round(((1 - a) * 1.08 - b * 1.08) * (spans[i].offsetHeight || 0)) || 0}px,0)`;
       s.visibility = a <= 0 || b >= 1 ? 'hidden' : '';
     }
   }
@@ -1317,7 +1320,7 @@ p, h1, h2, h3 { margin: 0; }
       const paths = [...el.querySelectorAll('.ink path')], nibs = [...el.querySelectorAll('.nib')];
       const main = el.querySelector('.main'), glow = el.querySelector('.glow'), L = main.getTotalLength();
       paths.forEach(p => { p.style.strokeDasharray = `${L} ${L}`; });
-      const g1 = inner(el, '.g1'), g2 = inner(el, '.g2');
+      const g1 = inner(el, '.g1'), g2 = inner(el, '.g2'), guide = el.querySelector('.guide');
       const M = sc.motion, D0 = 0.2, D1 = 0.95, DONE = D0 + D1, OUT = sc.dur - cue(sc, 'out');   // cue out: when the guide leaves
       // The loop becomes the fish where it was drawn. (The engine lifts a new large fish into the
       // upper half of the tank, its territory on the site; here that put it 115 px above the loop,
@@ -1338,6 +1341,11 @@ p, h1, h2, h3 { margin: 0; }
         const flare = Math.sin(Math.PI * seg(lt, DONE - 0.08, 0.4)), gone = seg(lt, DONE + 0.05, 0.4, E.inOutSine);
         main.style.opacity = (1 - gone).toFixed(3);
         glow.style.opacity = ((0.7 + 0.6 * flare) * (1 - gone)).toFixed(3);
+        // The camera is in close on the loop (paintCamera), zoomed about it, not about the stage's
+        // middle: the caption, centred on the stage, rode 76 px right of the screen's middle and into
+        // a narrow frame's margin. It keeps to the middle of the screen instead, the whole way out.
+        const kc = camK(lt);
+        guide.style.transform = kc >= 1 ? '' : `translate3d(${fx(lerp(cx, CX, kc) - CX)}px,0,0)`;
         lines(g1, lt, M.a(0.22), OUT, { dur: 0.5 });
         lines(g2, lt, DONE + M.a(0.06), OUT, { dur: 0.45 });
       };
@@ -1868,9 +1876,10 @@ p, h1, h2, h3 { margin: 0; }
     chipS.textContent = `heading ${String(deg).padStart(3, ' ')}° · ${String(pxs).padStart(3, ' ')} px/s`;
   }
   const CAM = { s: 1, x: 0 };                  // the camera's scale and x shift, for the chip
+  const camK = lt => seg(lt, 1.2, 1.1, E.inOutExpo);   // how far out it has come, lt into an opening (0 in close, 1 out)
   function paintCamera(t) {                     // in close on the drawn loop, then out: at each opening
     let o = null; for (const a of OPENS) if (t >= a) o = a;
-    const k = o == null ? 1 : seg(t, o + 1.2, 1.1, E.inOutExpo);
+    const k = o == null ? 1 : camK(t - o);
     const s = lerp(2.1, 1, k), fxp = lerp(F.open.cx, CX, k), fyp = lerp(F.open.cy, H / 2, k);
     CAM.s = s; CAM.x = k >= 1 ? 0 : CX - fxp * s;
     camera.style.transform = k >= 1 ? 'none' : `translate3d(${fx(CX - fxp * s)}px,${fx(H / 2 - fyp * s)}px,0) scale(${s.toFixed(4)})`;

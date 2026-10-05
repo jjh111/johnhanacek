@@ -1223,7 +1223,17 @@ around 20 percent larger too. For badvr content just zoom out a bit to show the 
   frame never wrapped before), and a label (an eyebrow) takes a smaller size once until it fits
   (`fitLabel`), snapped so its line box is whole pixels: a 20.2 px line moved every line under it
   by a fraction, and Chrome rastered "XR + AI" one of two ways from render to render (0.57 px, a
-  render in three). Copy beside a window centres on 432 (the rest on 457) and never starts above
+  render in three). That was half of it: a line slid in percent of its own height stood at a
+  different fraction of a pixel at each moment of the slide, and Chrome keeps a moving line's
+  raster from whichever moment it made it, so "XR + AI" (at y 349.84) still came out one of two
+  ways after a run of earlier stills (2253 px, formattest's second run against its first). Lines
+  now slide in whole pixels (`lines()`: 108% of the line's height, rounded), and the moment renders
+  the same after any history: alone, after 17.2 s, after the suite's run of stills, one hash. The
+  same change let formattest see the opening's caption at 1.5 s (before, its last fraction of a
+  percent of slide counted as motion): centred on the stage while the camera zooms about the drawn
+  loop, it rode 76 px right of the screen's middle, 7-14 px into square's and vertical's right
+  margin. It now keeps to the middle of the screen the whole way out (`camK`, the camera's own
+  curve, shared with `paintCamera`). Copy beside a window centres on 432 (the rest on 457) and never starts above
   the frames' top (`colTop` 204: the OpenProse column, with its quote, is 542 tall and had reached
   the tier marks). Square keeps its layout (its copy columns are as narrow as its headlines allow)
   and vertical's windows already span its width.

@@ -111,7 +111,9 @@ try {
         for (let x = 0.25; x < t; x += 0.25) await window.REEL.frame(+x.toFixed(4));
         await window.REEL.frame(t);
         const li = sc.el.querySelector('.ansb .li');
-        return parseFloat(/translate3d\(0px, ([-\d.]+)%/.exec(li.style.transform)[1]);
+        // how far down its clip the line is, in % of its height (the rig slides it in whole px)
+        const m = /translate3d\(0px, ([-\d.]+)(%|px)/.exec(li.style.transform);
+        return m[2] === '%' ? parseFloat(m[1]) : parseFloat(m[1]) / li.offsetHeight * 100;
       }, when);
       await ctx.close();
       return { y, errors };
