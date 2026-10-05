@@ -105,15 +105,15 @@ Media, web and product design under DBAs before the LLC.
 
 ## Education
 
-### MA, Communication, Culture & Technology
+### MA, Communication, Culture & Technology (CCT)
 **Georgetown University** · Washington, DC · 2014–2016
 
-Thesis: [“As We May Sketch”](https://jhanacek.net/art-math-math-art-toward-a-boundless-grounded-infinity-13): AI-interpreted drawing interface, a riff on Bush's 'As We May Think'. Supporting papers: 'Art Math, Math Art', the precursor to MetaMedium. Second thesis: Political and social implications of technology standardization. "Most Meta", voted by peers (2016).
+Thesis: [“As We May Sketch”](https://jhanacek.net/art-math-math-art-toward-a-boundless-grounded-infinity-13). AI-interpreted drawing interface, a riff on Bush's 'As We May Think'. Under the supervision of [Prof. Martin Irvine](https://irvine.georgetown.domains). Second thesis: [“Capitalism, The Internet & Network Power”](https://johnhanacek.substack.com/p/computer-capitalism-cybernetic-feudalism). "Most Meta", voted by peers (2016).
 
 ### BA, Political Science / International Relations; minor in Neuroscience
 **UC San Diego** · La Jolla, CA · 2008–2012
 
-Thesis: Remotely piloted aircraft and just war theory, closing on ground robotics deployment.
+Thesis: [“Remote Controlled Warfare”](https://johnhanacek.substack.com/p/remote-controlled-warfare): Can modern war be just? Remotely piloted aircraft and just war theory, closing on ground robotics deployment.
 
 ---
 

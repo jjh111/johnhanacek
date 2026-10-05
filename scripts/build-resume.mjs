@@ -148,6 +148,20 @@ function checkProse() {
 }
 
 // ---------------------------------------------------------------- HTML
+// Education's thesis line, one shape for every renderer (2026-10-05): a
+// title (+ subtitle), the note, the supervisor, and a second thesis that is
+// a string or {title, url}. fmt decides how a linked title is written.
+const secondOf = e => !e.secondThesis ? null : (typeof e.secondThesis === 'string' ? { title: e.secondThesis } : e.secondThesis);
+const thesisText = (e, fmt) => {
+  const t = e.thesis || {}, s2 = secondOf(e), parts = [];
+  const head = t.title ? `Thesis: ${fmt(`“${t.title}”`, t.url)}${t.subtitle ? `: ${fmt.esc(t.subtitle)}` : ''}` : 'Thesis:';
+  parts.push(t.title ? head + (t.note ? `. ${fmt.esc(t.note)}` : '.') : `${head} ${fmt.esc(t.note || '')}`);
+  if (t.supervisor) parts.push(`Under the supervision of ${fmt(t.supervisor.name, t.supervisor.url)}.`);
+  if (s2) parts.push(`Second thesis: ${s2.url ? fmt(`“${s2.title}”`, s2.url) : fmt.esc(s2.title)}.`);
+  return parts.join(' ').replace(/\.\./g, '.').replace(/\?\./g, '?');
+};
+const plain = Object.assign((txt) => esc(txt), { esc });
+
 function html(mode, withPhone) {
   const one = mode !== 'long';
   const ats = mode === 'ats';
@@ -177,7 +191,7 @@ function html(mode, withPhone) {
     <section class="role">
       <div class="role-head"><h3>${esc(e.degree)}<span class="org"> · ${esc(e.school)}</span>${ats ? `<span class="dates"> · ${e.start}–${e.end}</span>` : ''}</h3>${ats ? '' : `<span class="dates">${e.start}–${e.end}</span>`}</div>
       ${one ? (e.thesis?.title ? `<p class="note">Thesis: “${esc(e.thesis.title)}”${e.honors ? ` · ${esc(e.honors[0])}` : ''}</p>` : '') :
-        `<p class="note">${e.thesis?.title ? `Thesis: “${esc(e.thesis.title)}”. ` : 'Thesis: '}${esc(e.thesis?.note || '')}${e.secondThesis ? ` Second thesis: ${esc(e.secondThesis)}.` : ''}${e.honors ? ` ${esc(e.honors.join('; '))}.` : ''}</p>`}
+        `<p class="note">${thesisText(e, plain)}${e.honors ? ` ${esc(e.honors.join('; '))}.` : ''}</p>`}
     </section>`).join('');
   const projects = R.projects.map(p => `<li><strong>${esc(p.name)}</strong>${p.period ? ` (${esc(p.period)})` : ''}: ${esc(p.summary)}</li>`).join('');
   const art = ats ? '' : `<div class="tank" aria-hidden="true"><canvas id="tank"></canvas></div>`;
@@ -273,7 +287,8 @@ function markdown() {
   L.push('---', '', '## Education', '');
   for (const e of R.education) {
     L.push(`### ${e.degree}`, `**${e.school}** · ${e.location} · ${e.start}–${e.end}`, '');
-    if (e.thesis) L.push(`${e.thesis.title ? `Thesis: [“${e.thesis.title}”](${e.thesis.url || ''}): ` : 'Thesis: '}${e.thesis.note}${e.secondThesis ? ` Second thesis: ${e.secondThesis}.` : ''}${e.honors ? ` ${e.honors.join('; ')}.` : ''}`, '');
+    const md = Object.assign((txt, url) => url ? `[${txt}](${url})` : txt, { esc: x => x });
+    if (e.thesis) L.push(`${thesisText(e, md)}${e.honors ? ` ${e.honors.join('; ')}.` : ''}`, '');
   }
   L.push('---', '', '## Skills', '', `**Domains:** ${R.skills.domains.join(' · ')}`, '', `**Technologies:** ${R.skills.technologies.join(' · ')}`, '', `**Practice:** ${R.skills.practice.join(' · ')}`, '');
   for (const [k, tools, practice] of skillLines) L.push(`**${k}:** ${tools.join(', ')}${practice ? `. ${practice}` : ''}`, '');
@@ -401,8 +416,8 @@ function aboutBlocks() {
                 <div class="content-card">
                     <h4>${esc(e.school)}</h4>
                     <p class="muted">${esc(e.location)} · ${e.start}–${e.end}</p>
-                    <p><strong>${esc(e.degree.split(',')[0])}</strong>${esc(e.degree.slice(e.degree.indexOf(',')))}</p>
-                    <p>${e.thesis?.title ? `Thesis: ${e.thesis.url ? `<a href="${e.thesis.url}" target="_blank" rel="noopener">“${esc(e.thesis.title)}”</a>` : `“${esc(e.thesis.title)}”`}: ${esc(e.thesis.note)}` : `Thesis: ${esc(e.thesis?.note || '')}`}${e.secondThesis ? ` Second thesis: ${esc(e.secondThesis)}.` : ''}</p>
+                    <p><strong>${esc(e.degree.split(',')[0])}, ${e.programUrl ? link(e.degree.slice(e.degree.indexOf(',') + 1).trim(), e.programUrl) : esc(e.degree.slice(e.degree.indexOf(',') + 1).trim())}</strong></p>
+                    <p>${thesisText(e, Object.assign((txt, url) => url ? link(txt, url) : esc(txt), { esc }))}</p>
                     ${e.honors ? `<p class="muted">${esc(e.honors.join(' · '))}</p>` : ''}
                 </div>`).join('') + `\n            </div>\n            `;
   const awards = `\n            <div class="timeline">` + R.awards.map(a => item(a.year, esc(a.title), link(a.org, a.url), null).replace('</h4>\n', `</h4>\n`).replace(/(<\/p>)(\s*<\/div>)/, `$1${a.for ? `<p class="muted">${esc(a.for)}</p>` : ''}$2`)).join('') + `\n            </div>\n            `;

@@ -710,11 +710,6 @@ John's ruling: terse prose, fewer words, no em dashes, no negation-constructivis
 - design.html — dash ×8: four maze guide rows, the done-note, the AsMA award line, both thesis lines
 - art.html — dash ×5: the Writing & Worldbuilding intro, "A Desirable Future in 100 Words", the Earth Star alt text and figcaption, the Granite Omnistump caption
 - Integrator follow-ups (2026-09-16): 17 tldr keeps the coaching outcome (chief-of-staff agent or the skills to build software); 36 names LFM2.5-350M (Qwen was replaced 2026-09-01) and says local models are detected on request, never probed on load.
-
-## §J Resume compile — 2026-09-16
-
-Chunks 4, 21, 23, 26, 27, 50 are COMPILED from `Assets/resume.json` by `scripts/build-resume.mjs --apply` (source: the 2026-09-09 interview; evidence links live in the JSON). Edit the JSON, not the chunk text. Rebuild vectors after each compile (`node scripts/build-chunk-vectors.mjs`).
-
 ## §K Art + photo intake — 2026-10-05
 
 Source: John, in session (Agent Reference/ART_PHOTO_INTAKE_PLAN.md). Each claim is his.
@@ -726,3 +721,8 @@ Source: John, in session (Agent Reference/ART_PHOTO_INTAKE_PLAN.md). Each claim 
   - *Mirrored Lotus* (2019) (#4dart).
 - 31 — "including camping in the Sierra Nevada mountains" (John: "I also go camping in the Sierra Nevada Mountains"); about.html Off the clock carries the same sentence.
 - 49 — url `services.html#fit` → `services.html#book`: the "Is this a fit?" section was removed (John, 2026-10-05, "not adding anything we haven't already said"); a hiring-availability answer lands on Get in touch. Text unchanged.
+
+
+## §J Resume compile — 2026-09-16
+
+Chunks 4, 21, 23, 26, 27, 50 are COMPILED from `Assets/resume.json` by `scripts/build-resume.mjs --apply` (source: the 2026-09-09 interview; evidence links live in the JSON). Edit the JSON, not the chunk text. Rebuild vectors after each compile (`node scripts/build-chunk-vectors.mjs`).
