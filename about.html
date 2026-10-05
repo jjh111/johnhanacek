@@ -24,9 +24,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@200;300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles/jh-chrome.css?v=2.42">
-    <link rel="stylesheet" href="./styles/shared.css?v=2.42">
-    <link rel="stylesheet" href="./scripts/search-overlay.css?v=2.42">
+    <link rel="stylesheet" href="./styles/jh-chrome.css?v=2.43">
+    <link rel="stylesheet" href="./styles/shared.css?v=2.43">
+    <link rel="stylesheet" href="./scripts/search-overlay.css?v=2.43">
 
     <link rel="alternate" type="application/json" href="./john-hanacek.json" title="Structured data">
     <script type="application/ld+json">
@@ -53,6 +53,40 @@
     }
     </script>
     <script>/* Search early-click catcher: search-overlay.js is deferred, so on a slow network a click on the magnifier (or a data-search-query button) used to follow the href to search.html. Hold it; the overlay opens the moment it inits (it reads __searchPending). */document.addEventListener('click',function(e){if(window.__searchOverlayInit||e.defaultPrevented||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey||e.button!==0)return;var t=e.target;if(t&&t.nodeType!==1)t=t.parentNode;if(!t||!t.closest)return;var a=t.closest('[data-search-query],a[data-search-trigger],a.search-icon,a[href="search.html"],a[href="./search.html"]');if(!a)return;if(a.tagName==='A'&&!a.hasAttribute('data-search-query')&&!a.hasAttribute('data-search-trigger')&&!a.querySelector('svg line'))return;e.preventDefault();window.__searchPending=a.getAttribute('data-search-query')||'';document.documentElement.setAttribute('data-search-pending','1');},true);</script>
+    <style>
+        /* About's card groups are packed by measurement (2026-10-05); the
+           script at the end of <body> does it. A grid row stretched every card
+           to its tallest neighbour, and an odd count stranded the last card
+           alone in a half-empty row (Research's "Spatial Design" sat in a row
+           of its own). Below 1025px (the tablet band, where two columns were
+           ~300px wide) every group is one sequential column, as on phones;
+           that is also the layout with JS off. The markup inside the
+           resume:* markers is compiled by scripts/build-resume.mjs, so the
+           packing is runtime only and never touches the source. */
+        @media (max-width: 1024px) {
+            main .card-grid.cols-2, main .card-grid.cols-3,
+            main .widescreen-split { display: block; }
+            main .card-grid > .content-card,
+            main .widescreen-split > .content-card { margin: 0 0 var(--space-lg); }
+        }
+        main .card-grid.is-packed {
+            display: flex;
+            align-items: stretch;
+            gap: var(--space-lg);
+        }
+        main .card-grid.is-packed.is-single { display: block; }
+        main .card-grid.is-packed.is-single > .content-card { margin: 0 0 var(--space-lg); }
+        main .pack-col {
+            flex: 1 1 0;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-lg);
+        }
+        /* the shorter column's cards share the remainder evenly, so the
+           columns end on one line and no single card carries a hole */
+        main .pack-col > .content-card { margin: 0; flex: 1 0 auto; }
+    </style>
 </head>
 <body>
     <div id="cursorSpotlight"></div>
@@ -463,9 +497,88 @@
         <jh-footer></jh-footer>
     </footer>
 
-    <script src="./scripts/shared.js?v=2.42"></script>
-<script src="./scripts/search-overlay.js?v=2.42" defer></script>
-<script src="./scripts/jh-shapes.js?v=2.42"></script>
-    <script src="./scripts/jh-chrome.js?v=2.42" defer></script>
+    <script src="./scripts/shared.js?v=2.43"></script>
+<script src="./scripts/search-overlay.js?v=2.43" defer></script>
+<script src="./scripts/jh-shapes.js?v=2.43"></script>
+    <script src="./scripts/jh-chrome.js?v=2.43" defer></script>
+    <script>
+    /* Pack each About card group into balanced columns (see the <style> in
+       <head>). For 3 then 2 columns it measures every card in place at that
+       column width, deals the cards into the columns that come out most even,
+       and takes the most columns whose spread (tallest minus shortest column)
+       is at most 18% of the tallest; the cards of each column share that
+       remainder. Otherwise the group runs as one column. Re-runs on resize and
+       once the fonts land. */
+    (function () {
+        var GROUPS = [].slice.call(document.querySelectorAll('main .card-grid'));
+        if (!GROUPS.length) return;
+        var MIN_COL = 300, MAX_HOLE = 0.18, MQ = window.matchMedia('(min-width: 1025px)');
+        GROUPS.forEach(function (g) { g._cards = [].slice.call(g.children).filter(function (n) { return n.classList.contains('content-card'); }); });
+
+        function unpack(g) {
+            g._cards.forEach(function (c) { g.appendChild(c); });
+            [].slice.call(g.querySelectorAll(':scope > .pack-col')).forEach(function (col) { col.remove(); });
+            g.classList.remove('is-packed', 'is-single');
+        }
+        // measured IN PLACE (the cards' styles depend on where they sit): the
+        // group becomes a c-column grid, top-aligned, for one synchronous read
+        function heightsAt(g, c, gap) {
+            g.style.cssText = 'display:grid;grid-template-columns:repeat(' + c + ',minmax(0,1fr));align-items:start;gap:' + gap + 'px';
+            var hs = g._cards.map(function (k) { return k.getBoundingClientRect().height; });
+            g.style.cssText = '';
+            return hs;
+        }
+        // best assignment of the cards to c columns: every way to deal n cards
+        // into c columns is tried (n is under ten: at most 3^9 = 19,683), each
+        // column keeps the cards' original order, and the winner has the
+        // smallest spread between its tallest and shortest column. A lone card
+        // beside a stack is allowed only when it is about as tall as the stack,
+        // which the spread already demands, so no orphan sits in a hole.
+        function split(hs, c, gap) {
+            var n = hs.length, best = null, a = new Array(n).fill(0);
+            for (var code = 0, total = Math.pow(c, n); code < total; code++) {
+                var x = code;
+                for (var i = 0; i < n; i++) { a[i] = x % c; x = Math.floor(x / c); }
+                if (a[0] !== 0) continue;                  // column order is free: fix the first card left
+                var h = new Array(c).fill(0), k = new Array(c).fill(0);
+                for (i = 0; i < n; i++) { h[a[i]] += hs[i]; k[a[i]]++; }
+                if (k.indexOf(0) !== -1) continue;
+                for (var j = 0; j < c; j++) h[j] += gap * (k[j] - 1);
+                var max = Math.max.apply(null, h), spread = max - Math.min.apply(null, h);
+                if (!best || spread < best.spread - 0.5 || (Math.abs(spread - best.spread) <= 0.5 && max < best.max)) {
+                    var cols = []; for (j = 0; j < c; j++) cols.push([]);
+                    for (i = 0; i < n; i++) cols[a[i]].push(i);
+                    cols.sort(function (p, q) { return p[0] - q[0]; });
+                    best = { cols: cols, max: max, spread: spread };
+                }
+            }
+            return best;
+        }
+        function pack(g) {
+            unpack(g);
+            if (!MQ.matches || g._cards.length < 2) return;
+            var gap = parseFloat(getComputedStyle(g).columnGap) || parseFloat(getComputedStyle(g).gap) || 24;
+            var W = g.clientWidth, chosen = null;
+            for (var c = Math.min(3, g._cards.length); c >= 2; c--) {
+                var colW = (W - gap * (c - 1)) / c;
+                if (colW < MIN_COL) continue;
+                var r = split(heightsAt(g, c, gap), c, gap);
+                if (r && r.spread / r.max <= MAX_HOLE) { chosen = r; break; }
+            }
+            g.classList.add('is-packed');
+            if (!chosen) { g.classList.add('is-single'); return; }
+            chosen.cols.forEach(function (col) {
+                var div = document.createElement('div'); div.className = 'pack-col';
+                col.forEach(function (idx) { div.appendChild(g._cards[idx]); });
+                g.appendChild(div);
+            });
+        }
+        function all() { GROUPS.forEach(pack); }
+        var t = 0;
+        window.addEventListener('resize', function () { clearTimeout(t); t = setTimeout(all, 150); });
+        all();
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(all);
+    })();
+    </script>
 </body>
 </html>
