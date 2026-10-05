@@ -56,7 +56,8 @@ const sceneLn = i => marks.find(m => m.kind === 'scene' && m.obj === edit.scenes
 {
   const mara = marks.find(m => m.kind === 'beat' && m.obj.video === './nanome-mara.mp4');
   const e2 = RS.parse(RS.setAt(SRC, mara.ln, 2.1)).edit;
-  ok(e2.scenes[5].items[0].beats[1].at === 2.1, 'setAt: the MARA beat moves to @2.1');
+  // (found again by its clip, not its place: the item has cut-in beats around it since 2026-10-05)
+  ok(e2.scenes[5].items[0].beats.some(b => b.video === './nanome-mara.mp4' && b.at === 2.1), 'setAt: the MARA beat moves to @2.1');
 }
 {
   // a stat's @ leads its words (the timeline drags it like a beat)

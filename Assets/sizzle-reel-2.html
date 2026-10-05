@@ -94,15 +94,15 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 #bar .qt { padding: 4px 0; border-radius: 4px; }
 #bar .qt.sel { background: rgba(var(--cyan-dim-rgb), 0.38); }
 #bar .caret { display: inline-block; width: 2px; height: 42px; background: var(--cyan); margin-left: 3px; box-shadow: 0 0 10px rgba(var(--cyan-dim-rgb), 0.7); }
-#bar .kbd { font: 500 17px/1 var(--font-mono); color: var(--ink-faint); border: 1px solid rgba(var(--cyan-dim-rgb), 0.3); border-radius: 6px; padding: 7px 9px; letter-spacing: 0.04em; }
 #tiers { left: 96px; top: 146px; width: 1728px; height: 30px; }
 .tg { position: absolute; left: 0; top: 0; display: flex; gap: 10px; }
-.tier { display: inline-flex; align-items: center; gap: 8px; font: 500 15px/1 var(--font-mono); letter-spacing: 0.12em; color: var(--ink-quiet);
-  padding: 6px 12px; border-radius: 999px; border: 1px solid rgba(var(--cyan-dim-rgb), 0.32); background: rgba(var(--surface-rgb), 0.5); }
-.tier i { width: 7px; height: 7px; border-radius: 50%; background: var(--cyan-dim); box-shadow: 0 0 8px rgba(var(--cyan-dim-rgb), 0.8); }
-.tier.gpu { border-color: rgba(var(--cyan-dim-rgb), 0.6); color: var(--cyan); }
-.tier.gold { border-color: rgba(var(--gold-rgb), 0.55); color: var(--gold); }
-.tier.gold i { background: var(--gold); box-shadow: 0 0 8px rgba(var(--gold-rgb), 0.8); }
+.tier { display: inline-grid; place-items: center; width: 32px; height: 32px; box-sizing: border-box; border-radius: 50%; color: var(--ink-quiet);
+  border: 1px solid rgba(var(--cyan-dim-rgb), 0.32); background: rgba(var(--surface-rgb), 0.5); }
+.tier svg { width: 18px; height: 18px; display: block; overflow: visible; }
+.tier svg * { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.tier.t-dot svg * { fill: currentColor; }
+.tier.t-model { border-color: rgba(var(--cyan-dim-rgb), 0.6); color: var(--cyan); box-shadow: 0 0 12px rgba(var(--cyan-dim-rgb), 0.25); }
+.tier.t-scene, .tier.t-intent { border-color: rgba(var(--gold-rgb), 0.55); color: var(--gold); }
 .status { position: absolute; right: 0; top: 0; height: 30px; display: flex; align-items: center; font: 500 16px/1 var(--font-mono);
   letter-spacing: 0.1em; color: var(--ink-quiet); white-space: pre; }
 .status b { color: var(--cyan); font-weight: 600; }
@@ -302,7 +302,8 @@ p, h1, h2, h3 { margin: 0; }
    plays on a phone at about a third of its size, so nothing that reads as copy is set under 27 px
    and labels stay at 20 px or more. A line the script authored on one line may wrap here (its
    mask holds the wrapped block and slides it as one); the wide frame never wraps. */
-#stage.narrow .tier { font-size: 20px; padding: 7px 14px; gap: 9px; }
+#stage.narrow .tier { width: 42px; height: 42px; }
+#stage.narrow .tier svg { width: 24px; height: 24px; }
 #stage.narrow .status { font-size: 20px; }
 #stage.narrow .eyebrow { font-size: 24px; letter-spacing: 0.18em; }
 #stage.narrow .lm.eyebrow, #stage.narrow .lm.ln, #stage.narrow .lm.cite, #stage.narrow .lm.sup, #stage.narrow .lm.qt2, #stage.narrow .lm.qt3,
@@ -359,7 +360,7 @@ p, h1, h2, h3 { margin: 0; }
 #stage.square .three .v { line-height: 1.3; }
 #stage.vertical #bar .q { font-size: 44px; }
 #stage.vertical #bar .caret { height: 48px; }
-#stage.vertical .tier, #stage.vertical .status { font-size: 22px; }
+#stage.vertical .status { font-size: 22px; }
 #stage.vertical .eyebrow { font-size: 26px; }
 #stage.vertical .hl { font-size: 96px; }
 #stage.vertical .ln, #stage.vertical .ln.cap { font-size: 34px; }
@@ -460,7 +461,7 @@ p, h1, h2, h3 { margin: 0; }
     <svg id="chipLead" viewBox="0 0 1920 1080" aria-hidden="true"><line/><circle r="3.5"/></svg>
     <div id="chip" aria-hidden="true"><b></b><span></span></div>
     <div id="glass"><div class="ping"></div></div>
-    <div id="bar"><span class="mag"></span><span class="q"><span class="qt"></span><i class="caret"></i></span><span class="kbd">⌘K</span></div>
+    <div id="bar"><span class="mag"></span><span class="q"><span class="qt"></span><i class="caret"></i></span></div>
     <div id="tiers"></div>
     <div id="scenes" class="measuring"></div>
   </div>
@@ -734,6 +735,12 @@ p, h1, h2, h3 { margin: 0; }
   // answered); the first save is what asks.
   const HOST = !RENDER && window.REEL_HOST ? window.REEL_HOST : null;
   if (HOST && DRAFT == null) boot('your saved version on ' + HOST.name);
+  // the score's saved version is asked for now too, beside the script's (the host reads a file
+  // once a page and the synth rack takes that answer): one wait on a slow store, not two in a row
+  // (unless the rack has a draft of the score in this tab, which it plays instead)
+  const SCORE_PATH = SCRIPT_PATH.replace(/\.script\.txt$/, '.score.txt');
+  let scoreDraft = null; try { scoreDraft = sessionStorage.getItem('reel-draft:' + SCORE_PATH); } catch (e) { /* no drafts */ }
+  if (HOST && scoreDraft == null) Promise.resolve(HOST.load(SCORE_PATH)).catch(() => null);
   const HOSTED = HOST && DRAFT == null ? await Promise.resolve(HOST.load(SCRIPT_PATH)).catch(() => null) : null;
   let hosted = HOSTED != null;                 // playing (and saving to) the host's version
   boot('the script');
@@ -1092,6 +1099,9 @@ p, h1, h2, h3 { margin: 0; }
     return CLIPS.get(src);
   };
   const pooled = key => { const a = POOL.get(key); return a && a.length ? a.shift() : null; };
+  // How much of a beat's picture shows at t: the first is simply there; a later one dissolves in
+  // over the one before (0.35 s), or with `cut` it is there from its time on, a hard cut.
+  const comeIn = (b, j, t, at, M) => j === 0 ? 1 : b.cut ? (t >= at ? 1 : 0) : seg(t, at, M.a(0.35), M.ei(E.outCubic));
   function mediaLayer(host, b, start, end) {
     const layer = document.createElement('div'); layer.className = 'layer';
     let m;
@@ -1105,14 +1115,17 @@ p, h1, h2, h3 { margin: 0; }
         // A clip only seeks if its server answers byte ranges. The renderer does; python's
         // http.server does not, and a clip it serves plays from 0 whatever `from` says. So live,
         // play it from a blob, which always seeks.
-        if (RENDER) m.src = src;
+        // A render gives a clip its file only near its time (REEL.frame): every clip of the cut
+        // decoding at once, in each of a parallel render's pages, took the browser down once the
+        // windows cut on the beat (2026-10-05: eleven clips a page, three pages).
+        if (RENDER) { /* src: see REEL.frame */ }
         else clipURL(src).then(u => {
           m.src = u;
           if (u !== src) m.addEventListener('error', () => { if (m.src.startsWith('blob:')) m.src = src; }, { once: true });   // a page that refuses blob media plays the file
         });
       }
       m.loop = !!b.loop;                        // a clip shorter than its beat (the AROC HUD is 1.3 s) repeats
-      MEDIA.push({ el: m, from: b.from || 0, start, end, loop: !!b.loop });
+      MEDIA.push({ el: m, src, from: b.from || 0, start, end, loop: !!b.loop });
       if (!RENDER) LAYERS.push({ key, el: m });
     } else {
       const src = mediaURL(b.img), key = 'img ' + src;
@@ -1188,7 +1201,25 @@ p, h1, h2, h3 { margin: 0; }
       });
     };
   }
-  const TIERCLASS = { 'LFM2.5 · WebGPU': 'gpu', 'scene language': 'gold', 'intent': 'gold' };
+  // The tiers under the bar are marks, not words (2026-10-05; John: "use logos for the parse types
+  // not specific words/methods"). A tier's name in the script says which kind it is, and its chip
+  // shows that kind's mark: keyword search (BM25), lines of text; semantic search (MiniLM), a small
+  // constellation; a model (LFM2.5 · WebGPU, or a local one), a spark; scene language, the drawn
+  // loop its plan card shows; an intent, the Services star. Any other name, a dot. The name stays
+  // the chip's label for a screen reader and the editor.
+  const TIERKINDS = [[/bm25|keyword|lexical/i, 'keyword'], [/minilm|semantic|vector|embed/i, 'semantic'],
+    [/lfm|webgpu|gpu|llm|model|ollama|lm ?studio|\bai\b/i, 'model'], [/scene/i, 'scene'], [/intent/i, 'intent']];
+  const tierKind = name => (TIERKINDS.find(([re]) => re.test(name)) || [null, 'dot'])[1];
+  const TIERMARK = {
+    keyword: '<path d="M4.5 7h15M4.5 12h10M4.5 17h12.5"/>',
+    semantic: '<circle cx="6" cy="16.5" r="2.2"/><circle cx="11.5" cy="6" r="2.2"/><circle cx="18.5" cy="14" r="2.2"/><path d="M7.1 14.6l3.3-6.6M13.1 7.6l3.9 4.6M8.2 16.1l8.1-1.6"/>',
+    model: '<path d="M12 3.2Q13 11 20.8 12Q13 13 12 20.8Q11 13 3.2 12Q11 11 12 3.2Z"/>',
+    scene: `<g transform="translate(2.4 2.4) scale(0.8)">${JHStrokes.marks.loop()}</g>`,
+    intent: '<polygon points="12,3.4 13.9,9.2 20.2,9.2 15.1,12.9 17,19.6 12,15.4 7,19.6 8.9,12.9 3.8,9.2 10.1,9.2"/>',
+    dot: '<circle cx="12" cy="12" r="3.2"/>',
+  };
+  const tierChip = name => { const k = tierKind(name), n = String(name).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    return `<span class="tier t-${k}" role="img" aria-label="${n}" title="${n}"><svg viewBox="0 0 24 24">${TIERMARK[k]}</svg></span>`; };   // (t-: the offer's card is .intent)
 
   // ── scene builders ────────────────────────────────────────────────────
   const BUILD = {
@@ -1296,7 +1327,7 @@ p, h1, h2, h3 { margin: 0; }
           <div class="meta">${maskLine(`${glyphSvg(r.shape)}${r.page} ↗`, 'badge')}${maskLine(r.title, 'rtitle', tagOf(ownerOf(sc), 'row', i, 'title'))}${maskLine(r.micro, 'micro', tagOf(ownerOf(sc), 'row', i, 'micro'))}</div></div>`).join('');
       // one window; each result is a pane that pushes in from the right through it
       const panes = items.map(it => `<div class="pane"><div class="media"></div><div class="shade"></div>${pageBadge(it)}</div>`).join('');
-      const pager = `<b><span class="od"><span class="ods">${items.map((_, i) => `<i>${i + 1}</i>`).join('')}</span></span></b> / ${items.length}  ·  ${q.text}`;
+      const pager = `<b><span class="od"><span class="ods">${items.map((_, i) => `<i>${i + 1}</i>`).join('')}</span></span></b> / ${items.length}`;   // the bar already says the question
       const el = segEl(sc, `<div class="rows" style="left:${F.results.rows.x}px;top:${F.results.rows.y}px;width:${F.results.rows.w}px">${rowsHtml}</div>${items.map(it => columnMarkup(it, RC.x, RC.w)).join('')}
         <div class="win">${panes}</div>
         <div class="status" style="left:auto;right:${F.M}px;top:${F.tiersTop}px">${pager}</div>`);
@@ -1349,7 +1380,7 @@ p, h1, h2, h3 { margin: 0; }
           if (!vis) return;
           p.style.transform = `translate3d(${fx((1 - kin) * 100 - kout * 32)}%,0,0)`;
           shades[i].style.opacity = (kout * 0.75).toFixed(3);
-          layers[i].forEach(({ b, j, L }) => L.update(t, j === 0 ? 1 : seg(t, starts[i] + b.at, M.a(0.35), M.ei(E.outCubic))));
+          layers[i].forEach(({ b, j, L }) => L.update(t, comeIn(b, j, t, starts[i] + b.at, M)));
           pop(badges[i], t, i === 0 ? starts[0] + M.a(0.5) : starts[i] + M.a(0.25), null, { from: 0.8, rise: 0 });
         });
         // columns: out just before the push, in just after it
@@ -1364,9 +1395,9 @@ p, h1, h2, h3 { margin: 0; }
     feature(sc, q) {
       const R = F.feature.win, FC = F.feature.col;
       const el = segEl(sc, `<div class="win" style="left:${R.x}px;top:${R.y}px;width:${R.w}px;height:${R.h}px"><div class="media"></div>
-          <div class="cap3"><div class="slot">${sc.beats.map(b => maskLine(b.caption, 'c3', tagOf(b, 'caption'))).join('')}</div></div>${pageBadge(sc)}</div>${columnMarkup(sc, FC.x, FC.w, ownerOf(sc))}`);
+          <div class="cap3"><div class="slot">${sc.beats.filter(b => b.caption).map(b => maskLine(b.caption, 'c3', tagOf(b, 'caption'))).join('')}</div></div>${pageBadge(sc)}</div>${columnMarkup(sc, FC.x, FC.w, ownerOf(sc))}`);
       const win = el.querySelector('.win'), media = win.querySelector('.media'), col = el.querySelector('.col');
-      const caps = inner(win, '.c3'), badge = win.querySelector('.wbadge');
+      const caps = inner(win, '.c3'), badge = win.querySelector('.wbadge'), capBeats = sc.beats.filter(b => b.caption);
       const M = sc.motion, IN = q.enter + cue(sc, 'in'), OUT = sc.end - cue(sc, 'out');   // cues in / out
       look(IN, sc.end, R.x + R.w / 2, R.y + R.h / 2, undefined, 'the clip');
       const vis = sc.beats.filter(b => b.video || b.img);
@@ -1380,10 +1411,10 @@ p, h1, h2, h3 { margin: 0; }
         win.style.clipPath = `inset(0 ${fx((1 - a) * 100)}% 0 ${fx(b * 100)}% round 16px)`;
         win.style.visibility = a <= 0 || b >= 1 ? 'hidden' : '';
         media.style.transform = `scale(${(1.14 - 0.14 * a).toFixed(4)})`;
-        layers.forEach((L, j) => L.update(t, j === 0 ? 1 : seg(t, sc.start + vis[j].at, M.a(0.35), M.ei(E.outCubic))));
-        caps.forEach((c, i) => {
-          const nb = sc.beats[i + 1];
-          lines([c], t, i === 0 ? IN + M.a(0.45) : sc.start + sc.beats[i].at + M.a(0.15), nb ? sc.start + nb.at - M.l(0.25) : OUT - M.l(0.05));
+        layers.forEach((L, j) => L.update(t, comeIn(vis[j], j, t, sc.start + vis[j].at, M)));
+        caps.forEach((c, i) => {                // (a beat with no caption of its own keeps the one before)
+          const nb = capBeats[i + 1];
+          lines([c], t, i === 0 ? IN + M.a(0.45) : sc.start + capBeats[i].at + M.a(0.15), nb ? sc.start + nb.at - M.l(0.25) : OUT - M.l(0.05));
         });
         pop(badge, t, IN + M.a(0.4), OUT - M.l(0.05), { from: 0.8, rise: 0 });
         motion(t, IN + M.a(0.1), OUT);
@@ -1478,7 +1509,7 @@ p, h1, h2, h3 { margin: 0; }
         port.style.opacity = (1 - b).toFixed(3);
         ring.style.strokeDashoffset = fx(RL * (1 - seg(t, IN + M.a(0.15), M.a(0.7), M.eio(E.inOutCubic))));
         ring.style.opacity = (1 - b).toFixed(3);
-        layers.forEach((L, j) => L.update(t, j === 0 ? 1 : seg(t, sc.start + sc.beats[j].at, M.a(0.35), M.ei(E.outCubic))));
+        layers.forEach((L, j) => L.update(t, comeIn(sc.beats[j], j, t, sc.start + sc.beats[j].at, M)));
         pop(badge, t, IN + M.a(0.45), OUT, { from: 0.8, rise: 0 });
         motion(t, IN + M.a(0.1), OUT);
       };
@@ -1505,7 +1536,7 @@ p, h1, h2, h3 { margin: 0; }
 
     quotes(sc, q) {
       const n = sc.quotes.length;
-      const pager = `<b><span class="od"><span class="ods">${sc.quotes.map((_, i) => `<i>${i + 1}</i>`).join('')}</span></span></b> / ${n}  ·  ${q.text}`;
+      const pager = `<b><span class="od"><span class="ods">${sc.quotes.map((_, i) => `<i>${i + 1}</i>`).join('')}</span></span></b> / ${n}`;
       const el = segEl(sc, sc.quotes.map(qq => `<div class="qb" style="left:${F.quotes.x}px;top:0;width:${F.quotes.w}px">
           <div>${qq.lines.map((l, i) => maskLine(l, 'qt2' + (qq.lines.length < 3 ? ' big' : ''), tagOf(qq, 'line', i))).join('')}</div>
           <div class="rule"></div>${maskLine(`<strong>${qq.cite[0]}</strong><span>${DOT}${qq.cite[1]}</span>`, 'cite', tagOf(qq, 'cite', null, 'pair'))}</div>`).join('')
@@ -1613,7 +1644,7 @@ p, h1, h2, h3 { margin: 0; }
       const q = { sc, text: Q.text, times: Q.times, t0: Q.t0, typed: Q.typed, enter: Q.enter, clear: Q.clear, last: Q.last, tiers: sc.tiers || [] };
       if (!RENDER) q.tag = tagOf(ownerOf(sc), 'query');   // live: the bar says which line it is typing (see paintBar)
       const g = document.createElement('div'); g.className = 'tg';
-      g.innerHTML = q.tiers.map(name => `<span class="tier ${TIERCLASS[name] || ''}"><i></i>${name}</span>`).join('');
+      g.innerHTML = q.tiers.map(tierChip).join('');
       tiersEl.appendChild(g);
       q.tg = [...g.children]; q.g = g;
       QUERIES.push(q);
@@ -1787,11 +1818,9 @@ p, h1, h2, h3 { margin: 0; }
     await Promise.all(['200 80px Raleway', '300 40px Raleway', '500 32px Raleway', '500 20px "JetBrains Mono"', '600 20px "JetBrains Mono"']
       .map(f => document.fonts.load(f).catch(() => null)));
     await Promise.all([...stage.querySelectorAll('img')].map(i => i.decode().catch(() => null)));
-    // A render waits for every clip. The live preview does not: each save reloads it, and a
-    // preview that waited for its clips sat black for seconds per edit; a clip shows when it lands.
-    if (RENDER) await Promise.all(MEDIA.map(({ el }) => el.readyState >= 2 ? null : new Promise(res => {
-      el.addEventListener('loadeddata', res, { once: true }); el.addEventListener('error', res, { once: true }); setTimeout(res, 20000);
-    })));
+    // A render waits for each clip when its time comes (REEL.frame). The live preview does not
+    // wait at all: each save reloads it, and a preview that waited for its clips sat black for
+    // seconds per edit; a clip shows when it lands.
     LAYOUT.forEach(f => f());
     scenesEl.classList.remove('measuring');
   })();
@@ -1864,11 +1893,22 @@ p, h1, h2, h3 { margin: 0; }
         const want = Math.round(t * 60);
         while (ticks < want) { simulate((ticks + 1) / 60); tank.startAnimation(); CLOCK.tick(STEP); ticks++; for (const fn of TICKS) fn(ticks / 60); }
         simulate(t); paint(t);
+        // A clip holds its file from a second before its layer until half a second after (one
+        // decoder for each clip near t, not one for every clip of the cut); the frame waits for
+        // a clip it shows to load, then to seek.
         const waits = [];
         for (const m of MEDIA) {
+          if (t < m.start - 1 || t > m.end + 0.5) {
+            if (m.on) { m.el.removeAttribute('src'); m.el.load(); m.on = null; }
+            continue;
+          }
+          if (!m.on) m.on = new Promise(res => {
+            const done = () => { clearTimeout(timer); res(); }, timer = setTimeout(done, 20000);
+            m.el.addEventListener('loadeddata', done, { once: true }); m.el.addEventListener('error', done, { once: true });
+            m.el.src = m.src;
+          });
           if (t < m.start - 0.2 || t > m.end + 0.2) continue;
-          const ct = clipTime(m, t);
-          if (Math.abs(m.el.currentTime - ct) > 1e-4) waits.push(seekVideo(m.el, ct));
+          waits.push(m.on.then(() => { const ct = clipTime(m, t); return Math.abs(m.el.currentTime - ct) > 1e-4 ? seekVideo(m.el, ct) : null; }));
         }
         await Promise.all(waits);
       }
@@ -2220,9 +2260,11 @@ p, h1, h2, h3 { margin: 0; }
   // choosing a slot's picture or clip by looking at it (the inspector's img and video lines open it)
   const pk = document.createElement('script'); pk.src = '../scripts/reel-picker.js'; pk.onerror = () => pk.remove(); document.head.appendChild(pk);
   // the music: the score's synths under the preview, and the rack that plays them (M)
-  ['reel-music.js', 'reel-synth.js', 'reel-rack.js'].reduce((p, f) => p.then(() => new Promise((ok, no) => {
-    const el = document.createElement('script'); el.src = '../scripts/' + f; el.onload = ok; el.onerror = no; document.head.appendChild(el);
-  })), Promise.resolve()).catch(e => console.error('the synth rack did not load', e));
+  // (fetched side by side and run in order, async = false: one after another, each waited in line
+  // behind the clips the preview was loading, and the rack came up seconds after the picture)
+  Promise.all(['reel-music.js', 'reel-synth.js', 'reel-rack.js'].map(f => new Promise((ok, no) => {
+    const el = document.createElement('script'); el.src = '../scripts/' + f; el.async = false; el.onload = ok; el.onerror = no; document.head.appendChild(el);
+  }))).catch(e => console.error('the synth rack did not load', e));
   bar.addEventListener('click', e => { const r = bar.getBoundingClientRect(); seekTo((e.clientX - r.left) / r.width * DURATION); });
   let idle; const wake = () => { hud.classList.remove('idle'); clearTimeout(idle); idle = setTimeout(() => hud.classList.add('idle'), 2200); };
   addEventListener('mousemove', wake); wake();

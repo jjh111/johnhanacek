@@ -65,7 +65,17 @@ try {
     const page = await ctx.newPage();
     page.on('pageerror', e => errors.push(e.message));
     await page.goto(`${base}/Assets/sizzle-reel-2.html?script=${name}#${hash}`);
-    await page.waitForFunction(() => window.REEL_LIVE && window.REEL_TIMELINE && window.REEL_FISH && !document.getElementById('boot'), null, { timeout: 60000 });
+    // (and the synth rack, settled: its buttons join the HUD and its sound chip takes its label
+    // when its score has loaded or failed to (these scripts have no score), and the stage fits
+    // above the HUD, so a still taken while one page had them and the other did not differed by a
+    // hair's scale, 4034 pixels of glyph edges, about one run in four once the rack loaded sooner,
+    // 2026-10-05)
+    await page.waitForFunction(() => {
+      const c = document.querySelector('#hud .rk-chip');
+      return window.REEL_LIVE && window.REEL_TIMELINE && window.REEL_FISH && window.REEL_RACK && !document.getElementById('boot')
+        && c && /no score|sound on|click for sound|sound off/.test(c.textContent + ' ' + (c.title || '') + ' ' + (c.getAttribute('aria-label') || ''));
+    }, null, { timeout: 60000 });
+    await sleep(300);                                  // (the HUD refits on the next frame)
     await page.evaluate(() => { window.__mark = true; });
     return { ctx, page };
   };

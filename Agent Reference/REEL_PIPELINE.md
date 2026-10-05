@@ -1100,6 +1100,63 @@ image of me to a relevant about section."
   first it moved 200 and met the big fish). It is an `img` line, so the inspector gives it the
   media picker; the cue sheet lists it, and the shot list uses it as the answer's picture.
 
+## A polish pass: the bar as marks, more pictures per beat (2026-10-05)
+
+John: "simplify the search bar graphic (no commandk, use logos for the parse types not specific
+words/methods) try to bring in more videos/frames per beat, like AR responders. I use youtube
+videos on the site, so I'd need to add local unless you can grab some clips), just do your best
+at another polish pass."
+
+- **The bar.** No ⌘K. The tiers under it are round chips with a mark each, no words: lines of
+  text for keyword search (BM25), a small constellation for semantic search (MiniLM), a spark for
+  a model (LFM2.5 · WebGPU, or a local one), the drawn loop for scene language (the mark its plan
+  card shows), the Services star for an intent; any other name, a dot. `tierKind` reads the name
+  the script gives (`tiers BM25 | MiniLM`), which stays the chip's label for a screen reader and
+  the editor. The kinds' classes are `t-…`: as plain `intent` the chip took the offer card's own
+  `.intent` rule and grew to the card's size (the format suite found it). The pager under the bar
+  says "1 / 3": the bar already says the question.
+- **YouTube is out of reach.** The environment's network policy refuses www.youtube.com (the
+  CONNECT is answered 403), so John's site videos (the A1R first-responder HUD, HoloTRIAGE, the
+  robot twin, the XR design reel) cannot be fetched here. Allowing youtube.com and googlevideo.com
+  in the environment's network settings would let a later pass cut from them.
+- **More pictures per beat, from what is here.** A beat with only a picture keeps the words
+  before it (the column did already; the AvatarMEDIC caption slot now does too, so a feature
+  beat needs no caption of its own). The windows cut on the music's grid:
+  Nanome: the hero's panel, the atom-building clip (`nanome-assisted-building.mp4`, unused
+  until now), MARA's command, MARA in the headset. BadVR: the HUD loop, the hand-tracked close-up
+  ("application · 16 functions", `BadVR 20210616181741853.png`), a closer look at its boards.
+  OpenProse: eight of its approaches, screenshots of the pages in
+  `openprose/canvas-display/brand/` (1600×900, saved 1280×720 in `Assets/openprose-approaches/`,
+  15-37 KB each, a folder the media picker now lists), a sixteenth each while the counters roll
+  to 137 and 471, then the homepage they came to under the quote. AvatarMEDIC: HoloTRIAGE at the
+  patient, at "Keep Going!" and at the green AED, then the Clinic close and wide. Art: Influence's
+  five photographs are one installation, so its screen goes from a spark to a diamond, a cube and
+  an icosahedron while the pull-out runs across them. The manual figure from MunichRE was tried
+  and dropped: its label column is transparent and its callout lines cross the map.
+- **`cut`**, a beat flag: its picture comes in at once on its time, where a beat's picture
+  otherwise dissolves in over the last (0.35 s); the cue sheet marks it `(cut)`.
+- **More pictures, not more pops.** The score's `pop on beat` fired on every @ moment, and 17
+  picture beats would have made its 8 pops 25 (seven in under two seconds through the OpenProse
+  flip). A beat is a sound-effect moment when it brings words (lines, a lead, a quote, a caption):
+  `RM.moments`, which the timeline's cue lane reads too. The pops are the 8 they were.
+- **Rendering many clips.** A render gave every clip of the cut its file when the page loaded,
+  and with eleven clip slots in each of three parallel pages the browser went down before the
+  first frame ("Target page, context or browser has been closed"). Render mode now gives a clip
+  its file only from a second before its layer to half a second after (`REEL.frame`), and waits
+  for it to load before it seeks. Live mode is unchanged.
+- **The editor's start.** The synth rack's three scripts loaded one after another once the
+  preview was up, each waiting behind the clips the preview was fetching, and then the rack
+  waited on the store for the score (up to 2.5 s) after the rig had already waited on it for the
+  script: with a slow store the rack came up at about 8 s with clips Chrome can decode, 9-11 s in
+  hosttest's harness. Now the three are fetched side by side (`async = false` keeps their order),
+  and the host reads each file once a page (`REEL_HOST.load` keeps its first answer): the rig asks
+  for the score's saved version beside the script's (unless the rack has a draft of it), so the
+  two waits overlap. Measured with a 4 s store: the rack follows the picture by 0.2 s (5.8 s)
+  with decodable clips, where it took 8.1 s. hosttest's harness serves H.264, which headless
+  Chromium cannot decode, so each clip element falls back to streaming its whole file from a
+  server with no byte ranges and the start there runs 5-8 s against its 8 s limit; Chrome on
+  claude.ai plays the blobs and never makes those requests.
+
 ## Later
 
 Scene-specific cues (line staggers, the push); moving cut 1 onto the one player; stems out of

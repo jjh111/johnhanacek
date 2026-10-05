@@ -75,25 +75,33 @@
     : e && e.code === 'quota_exceeded' ? "this page's store is full"
     : 'the save did not go through (' + (e && (e.code || e.message) || e) + ')';
 
+  const loading = new Map();
+  function firstLoad(path) {
+    const mine = copy.get(path);
+    if (mine) {
+      loadNow(path).catch(() => null).then(d => { if (d && d.text !== mine.text && d.savedAt > mine.savedAt) offer(path, d, true); });
+      return Promise.resolve(mine.text);
+    }
+    return new Promise(resolve => {
+      let done = false;
+      loadNow(path).catch(() => null).then(d => {
+        if (!done) { done = true; if (d) copy.set(path, d.text, d.savedAt); resolve(d ? d.text : null); } else if (d) offer(path, d, false);
+      });
+      setTimeout(() => { if (!done) { done = true; resolve(null); } }, 2500);
+    });
+  }
   window.REEL_HOST = {
     name: 'claude.ai',
     ready: dbP.then(db => !!db),
     // The saved version, or null: this tab's copy at once, else the store if the viewer has
     // allowed it and it answers within 2.5 s. The store is read either way: a later answer, or a
     // save there newer than this tab's copy, is offered (offer, below).
+    // One read per file per page: the first load starts it and every later load of that file gets
+    // the same answer (the rig starts the score's beside the script's, so the synth rack, which
+    // loads later, never waits on the store a second time).
     load(path) {
-      const mine = copy.get(path);
-      if (mine) {
-        loadNow(path).catch(() => null).then(d => { if (d && d.text !== mine.text && d.savedAt > mine.savedAt) offer(path, d, true); });
-        return Promise.resolve(mine.text);
-      }
-      return new Promise(resolve => {
-        let done = false;
-        loadNow(path).catch(() => null).then(d => {
-          if (!done) { done = true; if (d) copy.set(path, d.text, d.savedAt); resolve(d ? d.text : null); } else if (d) offer(path, d, false);
-        });
-        setTimeout(() => { if (!done) { done = true; resolve(null); } }, 2500);
-      });
+      if (!loading.has(path)) loading.set(path, firstLoad(path));
+      return loading.get(path);
     },
     async save(path, text) {
       const r = await ref(path);

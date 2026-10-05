@@ -133,7 +133,9 @@
   // [name in the script, name the rig reads, kind]
   const ASK = [['query', 'query', 'str'], ['tiers', 'tiers', 'list']];
   const HEAD = [['page', 'page', 'str'], ['shape', 'shape', 'str'], ['eyebrow', 'eyebrow', 'str'], ['headline', 'headline', 'lines']];
-  const BEAT = [['img', 'img', 'str'], ['video', 'video', 'str'], ['from', 'from', 'num'], ['loop', 'loop', 'flag'],
+  // `cut`: the beat's picture comes in at once, on its time, where a beat's picture otherwise
+  // dissolves in over the one before (a flip through frames, a sixteenth each)
+  const BEAT = [['img', 'img', 'str'], ['video', 'video', 'str'], ['from', 'from', 'num'], ['loop', 'loop', 'flag'], ['cut', 'cut', 'flag'],
     ['pan', 'pan', 'flag'], ['focus', 'focus', 'nums'], ['zoom', 'zoom', 'nums'], ['caption', 'caption', 'str'],
     ['line', 'line', 'lines'], ['lead', 'lead', 'str'], ['stat', 'stats', 'stat'], ['quote', 'quote', 'lines'], ['cite', 'cite', 'pair']];
   const VOICE = [['line', 'lines', 'lines'], ['cite', 'cite', 'pair']];
@@ -148,7 +150,7 @@
     command: { fields: ASK.concat([['plan', 'plan', 'plan'], ['receipt', 'receipt', 'str']]), need: ['query', 'plan', 'receipt'] },
     results: { fields: ASK.concat([['row', 'rows', 'row']]), items: true, need: ['query', 'rows', 'items'] },
     feature: { fields: ASK.concat(HEAD, [['award', 'awards', 'award']]), beats: ['beats', BEAT],
-               need: ['query', 'eyebrow', 'headline', 'beats'], beatNeed: ['media', 'caption'] },
+               need: ['query', 'eyebrow', 'headline', 'beats'], beatNeed: ['media'] },   // a caption holds until the next one
     logos:   { fields: ASK.concat([['board', 'board', 'str']]), need: ['query', 'board'] },
     quotes:  { fields: ASK, beats: ['quotes', VOICE], need: ['query', 'quotes'], beatNeed: ['lines', 'cite'] },
     offer:   { fields: ASK.concat([['board', 'board', 'str'], ['three', 'three', 'three'], ['cta', 'cta', 'cta']]), need: ['query', 'board'] },
@@ -539,7 +541,7 @@
     const when = spans(edit), out = [], held = fishHolds(edit);
     const clip = p => p.replace(/^\.\//, '');
     const gist = b => [
-      b.video ? `video ${clip(b.video)}${b.from != null ? ' from ' + b.from : ''}${b.loop ? ' (loop)' : ''}` : b.img ? `img ${clip(b.img)}` : '',
+      (b.video ? `video ${clip(b.video)}${b.from != null ? ' from ' + b.from : ''}${b.loop ? ' (loop)' : ''}` : b.img ? `img ${clip(b.img)}` : '') + (b.cut && (b.video || b.img) ? ' (cut)' : ''),
       b.caption || b.lead || (b.quote || b.line || b.lines || []).join(' / '),
     ].filter(Boolean).join('  ·  ');
     edit.scenes.forEach((sc, i) => {

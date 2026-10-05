@@ -406,13 +406,17 @@
       out.push({ t: q.enter, kind: 'enter' });
       if (isFinite(q.clear)) out.push({ t: q.clear, kind: 'clear' });
     }
+    // A beat is a moment when it brings words (lines, a lead, a quote, a caption); a beat that only
+    // changes the picture (a cut-in, the OpenProse approaches flipping by) is silent, so more
+    // pictures never mean more pops (2026-10-05: 17 picture beats would have made 8 pops 25)
+    const says = b => !!(b.line || b.lines || b.lead || b.quote || b.caption);
     edit.scenes.forEach((sc, i) => {
       const c = when[i], def = RS.SCENES[sc.type];
       out.push({ t: c.start, kind: 'cut', scene: i });
-      if (def.beats) (sc[def.beats[0]] || []).forEach(b => { if (b.at > 0) out.push({ t: c.start + b.at, kind: 'beat' }); });
+      if (def.beats) (sc[def.beats[0]] || []).forEach(b => { if (b.at > 0 && says(b)) out.push({ t: c.start + b.at, kind: 'beat' }); });
       (sc.items || []).forEach((it, k) => {
         out.push({ t: c.items[k].start, kind: 'item' });
-        (it.beats || []).forEach(b => { if (b.at > 0) out.push({ t: c.items[k].start + b.at, kind: 'beat' }); });
+        (it.beats || []).forEach(b => { if (b.at > 0 && says(b)) out.push({ t: c.items[k].start + b.at, kind: 'beat' }); });
       });
     });
     return out.sort((a, b) => a.t - b.t);
