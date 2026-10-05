@@ -725,3 +725,4 @@ Source: John, in session (Agent Reference/ART_PHOTO_INTAKE_PLAN.md). Each claim 
   - *Blink If You Can Hear Me* (2015): actor, selected for the DC Shorts Film Festival (#photography, IMDb tt6064026);
   - *Mirrored Lotus* (2019) (#4dart).
 - 31 — "including camping in the Sierra Nevada mountains" (John: "I also go camping in the Sierra Nevada Mountains"); about.html Off the clock carries the same sentence.
+- 49 — url `services.html#fit` → `services.html#book`: the "Is this a fit?" section was removed (John, 2026-10-05, "not adding anything we haven't already said"); a hiring-availability answer lands on Get in touch. Text unchanged.

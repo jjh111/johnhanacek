@@ -10,8 +10,8 @@
 //   both      ?track=both — the hidden show-everything escape. No tab
 //             selected; nothing in the UI links to it.
 // Entry contract: #coaching, #design, ?track=coaching|design, legacy
-// #design-services, and shared deep links (#testimonials, #fit, #book,
-// #endorsements) land correctly; no anchor resolves to nothing.
+// #design-services, and shared deep links (#testimonials, #book,
+// #endorsements; the retired #fit → #book) land correctly; no anchor resolves to nothing.
 // Sticky contract: once scrolled past, the bar pins directly under #nav
 // (40px + env(safe-area-inset-top)) and stays pinned through the content.
 //
@@ -68,7 +68,6 @@ const SNAP = (VOUCH) => {
     tabs: { coaching: tabState('coaching'), design: tabState('design') },
     tail: {
       testimonials: vis(document.getElementById('testimonials')),
-      fit: vis(document.getElementById('fit')),
       book: vis(document.getElementById('book')),
     },
     vouchers,
@@ -79,7 +78,7 @@ const SNAP = (VOUCH) => {
     })(),
     clientBlocks: [...document.querySelectorAll('#design .client-work .outcome')].filter(vis).length,
     pastBlocks: [...document.querySelectorAll('#design .past-experience .outcome')].filter(vis).length,
-    fitCards: [...document.querySelectorAll('#fit .content-card')].filter(vis).length,
+    fitGone: !document.getElementById('fit'),
     ids: (() => { const seen = new Set(), dup = []; document.querySelectorAll('[id]').forEach(e => { if (seen.has(e.id)) dup.push(e.id); seen.add(e.id); }); return dup; })(),
     hscroll: document.documentElement.scrollWidth - document.documentElement.clientWidth,
   };
@@ -109,8 +108,8 @@ function expectTrack(s, track, label, withVouch = true) {
   if (!s.tabs[track].sel) bad.push(track + ' tab not selected');
   if (s.tabs[other].sel) bad.push(other + ' tab selected');
   if (!s.tabs[track].vis || !s.tabs[other].vis) bad.push('a tab control hidden');
-  if (!s.tail.testimonials || !s.tail.fit || !s.tail.book) bad.push('a tail section hidden');
-  if (s.fitCards !== 2) bad.push('fit has ' + s.fitCards + ' cards (want Good fit + Not a fit only)');
+  if (!s.tail.testimonials || !s.tail.book) bad.push('a tail section hidden');
+  if (!s.fitGone) bad.push('the retired #fit section is back');
   if (track === 'design') {
     if (!s.inline.openprose || !s.inline.muse) bad.push('a client quote hidden on the design tab');
     if (s.clientBlocks !== 3) bad.push('client work blocks=' + s.clientBlocks + ' want 3');
@@ -129,10 +128,10 @@ function expectBoth(s, label) {
   if (s.root !== 'both') bad.push('root=' + s.root);
   if (!s.coaching.body || !s.design.body) bad.push('a track hidden in both-state');
   if (s.tabs.coaching.sel || s.tabs.design.sel) bad.push('a tab selected in both-state');
-  if (!s.tail.testimonials || !s.tail.fit || !s.tail.book) bad.push('a tail section hidden');
+  if (!s.tail.testimonials || !s.tail.book) bad.push('a tail section hidden');
   if (!s.inline.openprose || !s.inline.muse) bad.push('a client quote hidden in both-state');
   if (s.clientBlocks !== 3 || s.pastBlocks !== 2) bad.push('client/past blocks wrong in both-state');
-  if (s.fitCards !== 2) bad.push('fit has ' + s.fitCards + ' cards');
+  if (!s.fitGone) bad.push('the retired #fit section is back');
   if (!s.firstVouch.includes('Ben Shapiro')) bad.push('both-state lead vouch is "' + s.firstVouch.slice(0, 24) + '"');
   for (const k of Object.keys(VOUCH)) if ((EXPECT_VOUCH.coaching[k] || EXPECT_VOUCH.design[k]) && !s.vouchers[k]) bad.push('voucher ' + k + ' hidden');
   bad.length ? fail(label, bad.join('; ')) : ok(label);
@@ -185,7 +184,7 @@ section('no anchor resolves to nothing');
     vis ? ok(`${h} visible on a bare load`) : fail(`${h} resolves to nothing (bare)`);
     await ctx.close();
   }
-  for (const h of ['#testimonials', '#fit', '#book']) {
+  for (const h of ['#testimonials', '#book']) {
     const { ctx, pg } = await open(h);
     const s = await pg.evaluate(SNAP, VOUCH);
     const at = await pg.evaluate(a => { const r = document.querySelector(a).getBoundingClientRect(); return Math.abs(r.top) < 300; }, h);
@@ -217,7 +216,7 @@ section('JS off → the whole page, and no dead control');
   if (s.root !== null) fail('JS off: root attribute present', String(s.root));
   if (s.bar.vis) fail('JS off: tab bar visible (a control that cannot switch)');
   if (!s.coaching.body || !s.design.body) fail('JS off: a track body closed');
-  if (!s.tail.testimonials || !s.tail.fit || !s.tail.book) fail('JS off: tail hidden');
+  if (!s.tail.testimonials || !s.tail.book) fail('JS off: tail hidden');
   if (!s.hscroll && !s.bar.vis && s.coaching.body && s.design.body) ok('JS off shows all content, no bar');
   await ctx.close();
   const { ctx: c2, pg: p2 } = await open('#coaching', { js: false });
@@ -370,7 +369,7 @@ if (MEASURE) {
       const h = sel => { const el = document.querySelector(sel); return el ? Math.round(el.getBoundingClientRect().height) : 0; };
       return {
         track: h('#' + track),
-        tail: h('#testimonials') + h('#fit') + h('#book'),
+        tail: h('#testimonials') + h('#book'),
         doc: document.documentElement.scrollHeight,
       };
     }, track);
