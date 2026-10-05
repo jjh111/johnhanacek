@@ -1258,10 +1258,17 @@ around 20 percent larger too. For badvr content just zoom out a bit to show the 
   water's top (the school had waited under a pellet the big fish came down to eat); a medium fish
   gives way with a berth of 45 px (25), going for food or not; and one near its water's top flees
   level, faster (3.4 px a tick), not up through it (fish right over the big one had fled through
-  the offer card's link line). Measured in wide on the cut's own seed, each fish as points along
-  its body: the big fish over copy 0 s and over a frame 0 s; the school over copy 0 s and over a
-  frame 0.75 s, three grazes of a few px at a frame's foot (2.75 s before); fishtest's contact 0.20 s
-  (0.27 before), square 0.23 s; the big fish over a frame 0 s on seeds 1-4 too. fishdirecttest's
+  the offer card's link line). Measured in wide on the cut's own seed, each fish as its drawn
+  outline (the engine's SVG fish: nose one bodyWidth ahead of its centre, the forked tail fin 1.62
+  behind and 0.58 to either side): no school fish crosses a line of copy (0 s), and the big fish
+  only its own data chip, which rides beside it in the opening. The frames are drawn over the
+  tank, so a fish under a frame's foot passes behind it, hidden by a window's picture or dimmed
+  through the logos' and offer's glass: some fin or nose is behind a frame's lower edge for 11.5 s
+  of the cut (the school) and 11.75 s (the big fish), the most visible the big fish's tail fin
+  rising behind the logos card as it turns round at 39.3 s. A turn cannot clear there: under a
+  frame's foot the tank has 268 px of water, and the big fish is 267 px from nose to fin. (A probe
+  that sampled only the middle half of each fish had read 0 s and 0.75 s.) fishtest's contact 0.20 s
+  (0.27 before), square 0.23 s. fishdirecttest's
   `big to` lands 87 px off at 3.4 s (its limit 90; 80 before) and `school to` 562 px across (536
   before). One thing tried and dropped: letting a fish line's move keep its pace until 180 px out
   landed `big to` at 62 px, but John's own `big to` and `idle circle` in the command scene then
