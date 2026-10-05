@@ -44,8 +44,9 @@
       : sc.headline ? sc.headline.join(' ') : sc.line || '';
     return { said: strip(said), shows: strip(shows) };
   }
-  // its first picture or clip, if it has one
+  // its first picture or clip, if it has one (an answer's portrait is its picture)
   function firstMedia(sc) {
+    if (sc.img) return { path: sc.img, kind: 'picture' };
     const beats = (sc.beats || []).concat(...(sc.items || []).map(it => it.beats || []));
     const b = beats.find(x => x.img || x.video);
     return b ? { path: b.img || b.video, kind: b.img ? 'picture' : 'clip' } : null;

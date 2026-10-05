@@ -109,7 +109,12 @@ function measure() {
       if (b.w > 20 && b.h > 20) blocks.push({ id: tag(el), what: el.className, box: b });
     }
   }
-  for (const el of document.querySelectorAll('#tiers .tier, #bar .q')) if (shown(el)) texts.push({ id: tag(el), what: name(el), box: r(el), clipped: false, owner: -1 });
+  for (const el of document.querySelectorAll('#tiers .tier, #bar .q')) {
+    if (!shown(el)) continue;
+    const tf = getComputedStyle(el).transform;
+    if (tf !== 'none' && !/^matrix\(1, 0, 0, 1, 0, 0\)$/.test(tf)) continue;       // a chip mid-pop (its overshoot is motion)
+    texts.push({ id: tag(el), what: name(el), box: r(el), clipped: false, owner: -1 });
+  }
   return { S: { w: S.width, h: S.height }, texts, blocks };
 }
 

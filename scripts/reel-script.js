@@ -142,7 +142,7 @@
   const SCENES = {
     open:    { fields: [['caption', 'caption', 'str'], ['reveal', 'reveal', 'str']], need: ['caption', 'reveal'] },
     title:   { fields: [['name', 'name', 'str'], ['tagline', 'tagline', 'list']], need: ['name', 'tagline'] },
-    answer:  { fields: ASK.concat([['line', 'lines', 'lines'], ['support', 'support', 'str'], ['stat', 'stats', 'stat']]),
+    answer:  { fields: ASK.concat([['line', 'lines', 'lines'], ['support', 'support', 'str'], ['img', 'img', 'str'], ['stat', 'stats', 'stat']]),
                need: ['query', 'lines', 'stats'] },
     art:     { fields: ASK.concat(HEAD), beats: ['beats', BEAT], need: ['query', 'eyebrow', 'headline', 'beats'], beatNeed: ['media'] },
     command: { fields: ASK.concat([['plan', 'plan', 'plan'], ['receipt', 'receipt', 'str']]), need: ['query', 'plan', 'receipt'] },
@@ -544,6 +544,7 @@
     ].filter(Boolean).join('  ·  ');
     edit.scenes.forEach((sc, i) => {
       const c = when[i], def = SCENES[sc.type], cs = [];
+      if (sc.type === 'answer' && sc.img) cs.push([c.start, 1, `img ${clip(sc.img)}  (the portrait, with the answer)`]);
       (sc.stats || []).forEach(s => { if (s.at != null) cs.push([c.start + s.at, 1, `stat ${s.n} ${s.label}`]); });
       (sc.awards || []).forEach(a => cs.push([c.start + a.at, 1, `award ${a.yr} ${a.text}`]));
       (sc.fish || []).forEach((f, k) => {

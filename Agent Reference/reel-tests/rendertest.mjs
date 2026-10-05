@@ -68,7 +68,9 @@ try {
     ok(/3 jobs\s+frame 300\/300/.test(r3.out), 'one combined progress line reaches 300/300');
     // the chunks start at scene cuts inside the range: as many as there are jobs after the first
     const cutAt = ((/3 jobs, cut at ([^\n]*)/.exec(r3.out) || [])[1] || '').split(',').map(x => parseFloat(x)).filter(Number.isFinite);
-    ok(cutAt.length === Math.min(2, inside.length) && cutAt.every(c => inside.some(x => Math.abs(x - c) < 0.006)),
+    // (a cut between two frames starts its chunk on the frame after it: John's order cuts on quarter
+    // seconds, half a frame at this test's 30 fps, and the log rounds to hundredths)
+    ok(cutAt.length === Math.min(2, inside.length) && cutAt.every(c => inside.some(x => Math.abs(x - c) < 1 / 30)),
       `the chunks start at the scene cuts inside the range (${inside.join(', ')} s)`, (r3.out.match(/\d jobs, cut at [^\n]*/) || [''])[0]);
     // the frames either side of each cut, and a few between
     const near_ = cutAt.flatMap(c => { const n = Math.round((c - FROM) * 30); return [n - 1, n, n + 1]; });
@@ -100,7 +102,10 @@ try {
     ok(c.chapters.length === 11 && c.chapters.length === edit.scenes.length, `${name}: 11 chapters`, `${c.chapters.length}`);
     ok(JSON.stringify(c.chapters.map(x => x.t)) === JSON.stringify(starts) && starts[0] === 0, `${name}: chapter starts from the scene lengths`, c.chapters.map(x => x.t).join(' '));
     ok(c.chapters.map(x => x.kind).join() === edit.scenes.map(s => s.type).join(), `${name}: chapter kinds are the scene kinds`);
-    ok(c.chapters[0].what === 'draw a loop' && c.chapters[1].what === 'John Hanacek' && c.chapters[2].what === 'who is john?' && c.chapters.every(x => typeof x.what === 'string'), `${name}: chapter what = query || name || caption || line`);
+    // each chapter says what its own scene says, in whatever order the scenes are
+    const says = sc => sc.query || sc.name || sc.caption || sc.line || '';
+    ok(c.chapters.every((x, i) => typeof x.what === 'string' && x.what === says(edit.scenes[i])) && c.chapters.some(x => x.what === 'who is john?'),
+      `${name}: chapter what = query || name || caption || line`, c.chapters.map(x => x.what).slice(0, 4).join(' · '));
     ok(Math.abs(c.duration - total) < 1e-6, `${name}: chapters duration is the edit's`, `${c.duration}`);
   }
   ok(leftovers().length === 0, 'no pass-log folders left', leftovers().join(' '));

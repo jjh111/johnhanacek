@@ -1042,6 +1042,64 @@ feature/control set, keep the whole thing at a minute)".
   The page draws about 25 frames a second with the timeline open (13 with the preview filling
   the window) and the screencast keeps about 15 of them; no Chromium flag tried did better.
 
+## The school under the copy, one song, and the portrait (2026-10-05)
+
+John: "fix any visual issues and let's try to drastically simplify the audio track down to just
+some core essentials the score skips and jumps and changes concepts right now. sound effects are
+good but let's strip the song itself down and keep it coherent throughout. also add the oval
+image of me to a relevant about section."
+
+- **What was wrong, measured.** The film was read every quarter second, and at each moment every
+  line of copy on the stage (its text's boxes, clipped by every ancestor that hides overflow, so an
+  odometer's hidden digits do not count) against every fish's body. In John's order the four
+  medium fish are made in the third scene, so they swim through every content scene after it, and
+  the school rose into the copy: the answer's figures, the award rows, the art's captions, the
+  logos panel and the quotes' names. 16.75 s of the 61.75 s cut had a school fish over a line of
+  copy. (The big fish: none in wide or vertical, 0.25 s in square.)
+- **Why.** The engine keeps fish off the canvas's edges (`BUFFER_ZONE` 100 px, `ANTICIPATE_ZONE`
+  180 px ahead), and the tank's canvas starts at mid-frame (stage 540), so the school's water ran
+  up to about stage 580: under the content band's middle. Its waypoint was deep enough (836); its
+  slots, a scatter and a dart out of the big fish's way were not.
+- **`surface(f)`**, a fish-engine host hook (opt-in; inert on every other page): the top of the
+  water for fish `f`, tank px (`f` null for the school's waypoint). The edge avoidance measures
+  its top edge from there (anticipation, buffer, hard edge, emergency push), and the school's
+  waypoint and slot clamps start there. Unset, every number is the old one: the committed rig
+  played with the committed engine and with this one gives the same 1106 fish samples, position
+  and heading, bit for bit. The rig returns `F.surface` for the school (wide 170: stage 710, the
+  window grid's foot; square 170, stage 790; vertical 340, stage 1380, each its band's foot) and
+  0 for the big fish, which is steered beside the copy and keeps the whole tank, as does a school
+  a `fish … school to` line sends somewhere. After: 0.5 s in wide (a fish behind a window, under
+  its caption), 0 in square and vertical.
+- **Square's water is shallow.** Under its copy there are 290 px of tank, and the surface pushed
+  the school down onto the big fish's depth: fishtest found a medium fish within reach of the big
+  fish for 2.38 s of the cut (its limit is 0.5). Six settings were measured on all three counts
+  (contact, the school over copy, the big fish over copy); the big fish standing 24 px deeper
+  (`spotY` 300) gives 0.28 s of contact and no school fish over copy. The big fish's tail grazes
+  the answer's "products shipped" for 0.5 s as it swims to its spot (0.25 s before; aiming its
+  look lower did not change it).
+- **Findings the suites had waited on** (all from John's order, all at the commit before). The
+  format suite measured its tier chips mid-pop (the pop overshoots 1 px past the margin; every
+  other piece of copy was already skipped while it moves, and now the chips are too), and in
+  vertical "Meets Structured Data." at 90 px was 938 px in a 936 px band, its period cut by its
+  mask: 88 px now. The render suite wanted the third chapter to be "who is john?" (each chapter
+  is now checked against its own scene), and a chunk to start within 6 ms of its cut: John's
+  cuts fall on quarter seconds, half a frame at the suite's 30 fps, so a chunk starts on the
+  frame after (within a frame).
+- **One song.** The arrangement is three clips: the chords from the first frame (`in 4`, `out
+  4`), the bass from the title, one soft groove (kick and hats, 0.8) from the first question to
+  the end card, where it fades over two beats and the chords and the bass ring out. No rolls,
+  risers, crashes, hook or arp; the sound effects carry the cuts. Offline: peak -4.5 dBFS,
+  -16.9 LUFS (the mix before, -16.1); from 6 s to 56 s every two seconds sit within 0.3 dB of each
+  other. The pads stay in their parts, so the rack and the timeline can put any of it back.
+- **The portrait.** An answer scene takes `img` (`img ./jjh-20250323-95 flower headshot
+  Large.webp`): the picture the About page shows, in its oval (a 2:3 picture rounded by half, as
+  `.about-portrait` does). It opens out of its centre with the answer, its ring drawn round it,
+  and leaves with it, as the art scene's round window does; inside, a 4% push toward the face.
+  Wide: right of the copy at the window grid's height (336 × 504, on the right margin). Square:
+  140 × 210 beside the headline. Vertical: 186 × 279 above the copy, which moves 60 px down (at
+  first it moved 200 and met the big fish). It is an `img` line, so the inspector gives it the
+  media picker; the cue sheet lists it, and the shot list uses it as the answer's picture.
+
 ## Later
 
 Scene-specific cues (line staggers, the push); moving cut 1 onto the one player; stems out of

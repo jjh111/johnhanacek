@@ -30,13 +30,19 @@
  *                            when it comes within both fishes' reach (bodyWidths plus
  *                            25 px), or within 110 px more while the large fish swims
  *                            at it, then rejoins its school
+ *   surface(f)             → y | null — the top of the water for fish f (tank px; f is
+ *                            null for the school's waypoint). Its edge avoidance, and
+ *                            the school's waypoint and slots, turn back from there the
+ *                            way they do from the canvas top. Unset, or 0, it is the
+ *                            canvas top
  *   schoolPhase('scatter' | 'regroup') — the school's phases on cue (an API call, not
  *                            an option): scatter bursts it apart now, regroup calls it
  *                            together now
  *   remove(fishOrCoral)    — takes one out, as the tank's own caps do (an API call)
- *   The sizzle reel (Assets/sizzle-reel-2.html) uses all four so its fish swim over
- *   and look at what is on screen, schoolPhase for its script's `fish` lines, and
- *   remove when its live preview is scrubbed back past a fish's birth.
+ *   The sizzle reel (Assets/sizzle-reel-2.html) uses the first four so its fish swim over
+ *   and look at what is on screen, surface so the school swims under its copy,
+ *   schoolPhase for its script's `fish` lines, and remove when its live preview is
+ *   scrubbed back past a fish's birth.
  *
  * Usage — ambient single fish (404 page):
  *   FishCanvas.ambient(canvasEl);
@@ -1713,8 +1719,10 @@
             // ---- EDGE-AWARE WAYPOINT CLAMPING ----
             // Ensure waypoint stays in safe zone (not too close to edges)
             const waypointMargin = 100;
+            const schoolTop = opts.surface ? (+opts.surface(null) || 0) : 0;   // the host's water top (0: the canvas top)
+            const waypointTop = 80 + schoolTop, waypointBottom = Math.max(h * 0.55, waypointTop);
             rawTargetX = Math.max(waypointMargin, Math.min(w - waypointMargin, rawTargetX));
-            rawTargetY = Math.max(80, Math.min(h * 0.55, rawTargetY));
+            rawTargetY = Math.max(waypointTop, Math.min(waypointBottom, rawTargetY));
 
             // ---- CORAL AVOIDANCE: nudge school target away from settled coral ----
             // Avoidance radius scales with coral size so large coral gets proper clearance.
@@ -1731,7 +1739,7 @@
                     rawTargetX += (cdx / (cdist + 1)) * 100 * pushAmt;
                     rawTargetY += (cdy / (cdist + 1)) * 100 * pushAmt;
                     rawTargetX = Math.max(waypointMargin, Math.min(w - waypointMargin, rawTargetX));
-                    rawTargetY = Math.max(80, Math.min(h * 0.55, rawTargetY));
+                    rawTargetY = Math.max(waypointTop, Math.min(waypointBottom, rawTargetY));
                 }
             });
 
@@ -3227,7 +3235,8 @@
                             const slotOffX = relX * cos - relY * sin;
                             const slotOffY = relX * sin + relY * cos;
                             const myTargetX = Math.max(FORM_SAFE_MARGIN, Math.min(w - FORM_SAFE_MARGIN, schoolCenterX + slotOffX));
-                            const myTargetY = Math.max(FORM_SAFE_MARGIN, Math.min(h - FORM_SAFE_MARGIN, schoolCenterY + slotOffY));
+                            const slotTop = FORM_SAFE_MARGIN + (opts.surface ? (+opts.surface(f) || 0) : 0);
+                            const myTargetY = Math.max(slotTop, Math.min(h - FORM_SAFE_MARGIN, schoolCenterY + slotOffY));
 
                             // Store for debug
                             f.debugFormationTarget = { x: myTargetX, y: myTargetY, slot: slot };
@@ -3961,6 +3970,10 @@
                     }
                 }
 
+                // The top of the water: the canvas top, or where a host's surface hook puts it for
+                // this fish (every top-edge test below is measured from it)
+                const top = opts.surface ? (+opts.surface(f) || 0) : 0;
+
                 // Current speed for prediction
                 const currentSpeed = Math.sqrt(f.vx * f.vx + f.vy * f.vy) || 1;
 
@@ -3994,8 +4007,8 @@
                     avoidX -= urgency * 0.8 * rightEdgeMultiplier;
                     isAnticipating = true;
                 }
-                if (futureY < ANTICIPATE_ZONE && f.y > BUFFER_ZONE && headingVy < 0) {
-                    const urgency = 1 - (futureY / ANTICIPATE_ZONE);
+                if (futureY - top < ANTICIPATE_ZONE && f.y - top > BUFFER_ZONE && headingVy < 0) {
+                    const urgency = 1 - ((futureY - top) / ANTICIPATE_ZONE);
                     avoidY += urgency * 0.8;
                     isAnticipating = true;
                 }
@@ -4016,8 +4029,8 @@
                     avoidX -= depth * 2 * rightEdgeMultiplier;
                     avoidStrength = Math.max(avoidStrength, depth * 0.5 * rightEdgeMultiplier);
                 }
-                if (f.y < BUFFER_ZONE) {
-                    const depth = (BUFFER_ZONE - f.y) / BUFFER_ZONE;
+                if (f.y - top < BUFFER_ZONE) {
+                    const depth = (BUFFER_ZONE - (f.y - top)) / BUFFER_ZONE;
                     avoidY += depth * 2;
                     avoidStrength = Math.max(avoidStrength, depth * 0.5);
                 }
@@ -4056,7 +4069,7 @@
                         f.reversalPressure = 0;
                     }
                 }
-                if (f.y < HARD_EDGE) {
+                if (f.y - top < HARD_EDGE) {
                     avoidY = 3; avoidStrength = 1; inEmergency = true;
                     if (inFleeState) {
                         f.targetHeading += angleDiff(Math.PI * 0.5, f.targetHeading) * 0.4;
@@ -4096,7 +4109,7 @@
                 const minEscapeV = isLarge ? 1.2 : 0.3; // Large fish need more push to escape walls
                 if (f.x < EMERGENCY_EDGE) { f.x += PUSH_STRENGTH; f.vx = Math.max(f.vx, minEscapeV); }
                 if (f.x > w - EMERGENCY_EDGE) { f.x -= PUSH_STRENGTH; f.vx = Math.min(f.vx, -minEscapeV); }
-                if (f.y < EMERGENCY_EDGE) { f.y += PUSH_STRENGTH; f.vy = Math.max(f.vy, minEscapeV); }
+                if (f.y - top < EMERGENCY_EDGE) { f.y += PUSH_STRENGTH; f.vy = Math.max(f.vy, minEscapeV); }
                 if (f.y > h - EMERGENCY_EDGE) { f.y -= PUSH_STRENGTH; f.vy = Math.min(f.vy, -minEscapeV); }
 
                 // Store debug info
