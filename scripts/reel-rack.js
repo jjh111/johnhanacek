@@ -551,6 +551,8 @@
     head.appendChild(el('b', '', 'take ' + tk.name));
     head.appendChild(el('span', 'rk-kind', `sung by ${singer} · ${S ? `${S.notes} notes, from ${S.sungNotes} sung` : 'no notes'}`));
     head.appendChild(el('span', 'rk-grow'));
+    // the notes, to move, stretch, add and take out on the grid (scripts/reel-notes.js, N)
+    if (window.REEL_NOTES) head.appendChild(btn('Edit notes', 'the notes as a piano roll, at these bars: drag, stretch, add, take out (N)', () => window.REEL_NOTES.show(true, st.bar0 * A.bar), 'sm'));
     head.appendChild(btn('▶ 4 bars', 'hear the four bars shown, on their own', () => {
       ensureAudio(); if (!player) return;
       const t0 = st.bar0 * A.bar, t1 = t0 + TBARS * A.bar;

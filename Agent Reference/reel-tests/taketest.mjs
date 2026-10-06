@@ -255,10 +255,11 @@ try {
   await page.evaluate(() => { const r = document.getElementById('reel-rack'); if (r && !r.hidden) REEL_RACK.open(false); });
   await page.keyboard.press('e');
   const laneOf = () => page.evaluate(() => { const s = document.querySelector('#reel-tl svg.tl-mroll[data-track="voice"]'); return s ? { notes: [...s.querySelectorAll('.tl-n')].map(p => (p.getAttribute('d') || '').length).reduce((a, b) => a + b, 0), bends: ((s.querySelector('.tl-nb') || { getAttribute: () => '' }).getAttribute('d') || '').length, h: s.getBoundingClientRect().height } : null; });
-  await page.waitForFunction(() => { const s = document.querySelector('#reel-tl svg.tl-mroll[data-track="voice"] .tl-n'); return s && (s.getAttribute('d') || '').length > 20; }, null, { timeout: 10000 }).catch(() => {});
+  // the notes are drawn in four paths by how loud (every note at one level fills one of them): all four, summed
+  await page.waitForFunction(() => [...document.querySelectorAll('#reel-tl svg.tl-mroll[data-track="voice"] .tl-n')].reduce((a, p) => a + (p.getAttribute('d') || '').length, 0) > 100, null, { timeout: 20000 }).catch(() => {});
   const lane = await laneOf(), bentAt = tk.nuance > 0;
   ok(lane && lane.notes > 100 && (bentAt ? lane.bends > 20 : lane.bends === 0) && lane.h >= 30,
-    `the timeline's voice lane draws the notes${bentAt ? ' and, over them, how each bends' : ', straight at nuance 0 (no bend drawn)'} (lane ${lane && Math.round(lane.h)} px tall)`);
+    `the timeline's voice lane draws the notes${bentAt ? ' and, over them, how each bends' : ', straight at nuance 0 (no bend drawn)'} (lane ${lane && Math.round(lane.h)} px tall; ${lane && lane.notes} of notes, ${lane && lane.bends} of bends)`);
   const before5 = t;
   await page.evaluate(() => REEL_RACK.change(ReelMusic.setArg(REEL_RACK.src, 'TAKE', 'john', 'nuance', 0, 40)));
   await page.waitForFunction(() => { const s = document.querySelector('#reel-tl svg.tl-mroll[data-track="voice"] .tl-nb'); return s && (s.getAttribute('d') || '').length > 20; }, null, { timeout: 10000 }).catch(() => {});

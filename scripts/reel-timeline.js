@@ -1152,7 +1152,13 @@
     mrecs.push({ el, span: m => [m(cl.t0), m(Math.min(cl.t1, DUR))] });  // past the reel's end, drawn to the end of the view
     CLIPS.push({ el, cl, fI, fO, nm, part: p.name }); ln.els.push(el);
     el.addEventListener('pointerdown', e => clipDown(e, cl, el, p, top));
-    el.addEventListener('dblclick', e => e.stopPropagation());
+    // a clip of a part that sings a take: double-click opens its notes there (scripts/reel-notes.js)
+    const sings = p.pads.some(d => d.voices.some(v => v.take));
+    if (sings) el.title += '\ndouble-click: its notes, to edit (N)';
+    el.addEventListener('dblclick', e => {
+      e.stopPropagation();
+      if (sings && window.REEL_NOTES) window.REEL_NOTES.show(true, (e.clientX - lane.getBoundingClientRect().left) / pxs);
+    });
   }
   function markSel() { CLIPS.forEach(k => k.el.classList.toggle('tl-sel', k.cl.ln === selClip)); }
   // the grid a drag snaps to: the finest of a sixteenth, a beat and a bar still 12 px wide (Shift:

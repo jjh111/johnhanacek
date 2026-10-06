@@ -55,7 +55,7 @@
   // a sung note's pitch as it moved: BEND_RATE points a second, each held to BEND_MAX cents from
   // the note's centre (further is the glide to the next note, or a crack); the first and last
   // BEND_EDGE points keep their scoop and fall when the take is straightened
-  const BEND_RATE = 32, BEND_MAX = 200, BEND_EDGE = 3, TONE_MAX = 6;
+  const BEND_RATE = 32, BEND_MAX = 200, BEND_EDGE = 3, TONE_MAX = 6, EARLY_MAX = 2000;
   // the effects, each field's default and what it means (the rack's knobs read these too)
   const FX = {
     reverb: { size: [2.8, 0.2, 8, 's'], decay: [3, 0.5, 8, ''], tone: [5200, 400, 16000, 'Hz'], return: [0.5, 0, 1.5, ''] },
@@ -318,7 +318,7 @@
     if (vel != null) { const v = num(vel); if (v == null || v < 0 || v > 1.5) { err(r.ln, `a note's level is 0-1.5 ("${vel}")`); return null; } o.vel = v; }
     if (tone != null) { const v = num(tone); if (v == null || Math.abs(v) > 24) { err(r.ln, `a note's tone is dB brighter (+) or darker (-) than the voice, -24 to 24 ("${tone}")`); return null; } o.tone = v; }
     if (sung != null) { const v = sungMidi(sung); if (v == null) { err(r.ln, `what was sung is a note and cents, as in F#2-14 ("${sung}")`); return null; } o.sung = v; }
-    if (early != null) { const v = num(early); if (v == null || Math.abs(v) > 2000) { err(r.ln, `how early or late it came is ms, -2000 to 2000 ("${early}")`); return null; } o.early = v; }
+    if (early != null) { const v = num(early); if (v == null || Math.abs(v) > EARLY_MAX) { err(r.ln, `how early or late it came is ms, -${EARLY_MAX} to ${EARLY_MAX} ("${early}")`); return null; } o.early = v; }
     const cs = curve.map(num);
     if (cs.some(c => c == null || Math.abs(c) > 4800)) { err(r.ln, 'after |, how the pitch moved: whole cents, one a point'); return null; }
     o.curve = cs;
@@ -808,39 +808,126 @@
     if (p.once) words.push('once');
     return setLine(src, 'PART', part, 'pad', pad_(padName, 9) + words.join('  '), p.index);
   }
-  // a take's note, changed: { midi } (another note), { step }, { len }, or { out } (true: left out of
-  // the melody, kept for what was sung; false: put back). The n line keeps its columns, what was sung
-  // and how it moved; moved in time, its early changes by as much, so what was sung stays where it was
-  function setTakeNote(src, take, ln, change) {
-    const P = parse(src), tk = P.score.takes.find(x => x.name === take), n = tk && tk.notes.find(x => x.ln === ln);
-    if (!n) throw withErrors([`TAKE ${take} has no note on line ${ln}`]);
-    const lines = src.split('\n'), m = /^(\s*n\s+)(\S+)(\s+)(\S+)(\s+)(\S+)(.*)$/.exec(lines[ln - 1]);
-    if (!m) throw withErrors([`line ${ln} is not a note`]);
-    const spb = P.score.beatsPerBar * 4, ms = 60000 / P.score.tempo / 4;   // a sixteenth, in ms
+  // One n line written again with a change: { step, midi, len, vel, out }. The place keeps its
+  // column; the note and its length (right-aligned) keep theirs together; what follows the length
+  // (level, tone, sung, early, out) is written again in the take's own columns when what it holds
+  // changes. Moved in time, a sung note's early changes by as much, so what was sung stays where it
+  // was. Null if the line is not a note.
+  function noteLine(text, n, change, spb, ms) {
+    const m = /^(\s*n\s+)(\S+)(\s+)(\S+)(\s+)(\S+)(.*)$/.exec(text);
+    if (!m) return null;
     let at = m[2], note = m[4], len = m[6], rest = m[7];
     // the columns after its length: its head (level, tone, sung, early, out) and the curve after |
     const cut = rest.indexOf('|'), head = cut < 0 ? rest : rest.slice(0, cut), tail = cut < 0 ? '' : rest.slice(cut).trim();
     const words = head.trim() ? head.trim().split(/\s+/) : [], plain = words.filter(w => w !== 'out');   // level, tone, sung, early
     let left = words.includes('out');
     if (change.step != null) {
-      const k = Math.max(0, Math.round(change.step)), bar = Math.floor(k / spb) + 1, r = k - (bar - 1) * spb;
-      at = `${bar}.${Math.floor(r / 4) + 1}.${r % 4 + 1}`;
+      const k = Math.max(0, Math.round(change.step));
+      at = stepPos(k, spb);
       if (n.heard && plain.length >= 4) { const e = Math.round(n.early - (k - n.step) * ms); plain[3] = (e >= 0 ? '+' : '') + e; }
     }
-    if (change.midi != null) { const k = Math.round(change.midi); note = NAMES[mod(k, 12)] + (Math.floor(k / 12) - 1); }
-    if (change.len != null) len = String(Math.max(1, Math.round(change.len)));
+    if (change.midi != null) note = midiName(change.midi);
+    if (change.len != null) len = String(Math.max(1, Math.min(256, Math.round(change.len))));
     if (change.out != null) left = !!change.out;
-    if (change.step != null || change.out != null) {
+    if (change.vel != null) { const v = Math.max(0, Math.min(1.5, +change.vel)).toFixed(2); if (plain.length) plain[0] = v; else plain.push(v); }
+    if (change.step != null || change.out != null || change.vel != null) {
       // the head written again in the take's own columns
       const [v, t, sg, e] = plain;
       rest = (v != null ? '  ' + v : '') + (t != null ? '  ' + t : '') + (sg != null ? '  ' + sg.padEnd(7) : '') + (e != null ? ' ' + e.padStart(4) : '') + (left ? ' out' : '') + (tail ? ' ' + tail : '');
     }
     // the place keeps its column; the note and its length (right-aligned) keep theirs together
     const w1 = m[2].length + m[3].length, w2 = m[4].length + m[5].length + m[6].length;
-    lines[ln - 1] = m[1] + at + ' '.repeat(Math.max(1, w1 - at.length)) + note + ' '.repeat(Math.max(1, w2 - note.length - len.length)) + len + rest;
+    return m[1] + at + ' '.repeat(Math.max(1, w1 - at.length)) + note + ' '.repeat(Math.max(1, w2 - note.length - len.length)) + len + rest;
+  }
+  const stepPos = (k, spb) => { const bar = Math.floor(k / spb) + 1, r = k - (bar - 1) * spb; return `${bar}.${Math.floor(r / 4) + 1}.${r % 4 + 1}`; };
+  const midiName = x => { const k = Math.round(x); return NAMES[mod(k, 12)] + (Math.floor(k / 12) - 1); };
+  // a take's note, changed: { midi } (another note), { step }, { len }, { vel }, or { out } (true:
+  // left out of the melody, kept for what was sung; false: put back). One line, where it stands.
+  function setTakeNote(src, take, ln, change) {
+    const P = parse(src), tk = P.score.takes.find(x => x.name === take), n = tk && tk.notes.find(x => x.ln === ln);
+    if (!n) throw withErrors([`TAKE ${take} has no note on line ${ln}`]);
+    const lines = src.split('\n'), spb = P.score.beatsPerBar * 4, ms = 60000 / P.score.tempo / 4;   // a sixteenth, in ms
+    const next = noteLine(lines[ln - 1], n, change, spb, ms);
+    if (next == null) throw withErrors([`line ${ln} is not a note`]);
+    lines[ln - 1] = next;
     const out = lines.join('\n');
     parse(out);
     return out;
+  }
+  // A take's notes changed together, as one edit (the note editor's: a drag of several, a copy, a
+  // delete). ops, in order:
+  //   { ln, step, midi, len, vel, out }   a note changed (any of them), as setTakeNote
+  //   { ln, remove: true }                 a note taken out: a sung one is left out (its line keeps
+  //                                        what was sung), an added one goes
+  //   { add: { step, midi, len, vel } }    a new note, with nothing sung for it
+  // Then the take's n lines are put in time order (a comment line right above a note goes with it),
+  // so the file reads as the music runs. Returns { text, lns }: the text, and the line each op's
+  // note is on in it (null for an added note taken out).
+  function editTake(src, take, ops) {
+    const P = parse(src), tk = P.score.takes.find(x => x.name === take);
+    if (!tk) throw withErrors([`there is no TAKE ${take}`]);
+    const spb = P.score.beatsPerBar * 4, ms = 60000 / P.score.tempo / 4;
+    const lines = src.split('\n'), byLn = new Map(tk.notes.map(n => [n.ln, n]));
+    // the run of lines from the take's first note to its last (none yet: after the take's own lines)
+    let first, last;
+    if (tk.notes.length) { first = Math.min(...tk.notes.map(n => n.ln)) - 1; last = Math.max(...tk.notes.map(n => n.ln)) - 1; }
+    else {
+      let i = tk.ln;                                                     // the line after TAKE's (0-based)
+      while (i < lines.length && /^\s+\S/.test(lines[i])) i++;
+      first = i; last = i - 1;
+    }
+    const entries = [];
+    let lead = [];
+    for (let i = first; i <= last; i++) {
+      const n = byLn.get(i + 1);
+      if (n) { entries.push({ n, line: lines[i], lead, step: n.step, ln: i + 1 }); lead = []; } else lead.push(lines[i]);
+    }
+    const ofLn = new Map(entries.map(e => [e.ln, e])), touched = new Map(), res = [];
+    for (const op of ops) {
+      if (op.add) {
+        const a = op.add, step = Math.max(0, Math.round(a.step)), len = Math.max(1, Math.min(256, Math.round(a.len || 2))), vel = Math.max(0, Math.min(1.5, a.vel != null ? +a.vel : 0.8));
+        const e = { n: null, line: `  n ${stepPos(step, spb).padEnd(9)} ${midiName(a.midi).padEnd(4)} ${String(len).padStart(2)}  ${vel.toFixed(2)}`, lead: [], step };   // (as added() writes it)
+        entries.push(e); res.push(e); continue;
+      }
+      const e = ofLn.get(op.ln);
+      if (!e) throw withErrors([`TAKE ${take} has no note on line ${op.ln}`]);
+      res.push(e);
+      const ch = touched.get(e) || {};
+      if (op.remove) { if (e.n.heard) ch.out = true; else e.removed = true; }
+      for (const key of ['step', 'midi', 'len', 'vel', 'out']) if (op[key] != null) ch[key] = op[key];
+      touched.set(e, ch);
+    }
+    const added = (k, midi, len, vel, out) => `  n ${stepPos(k, spb).padEnd(9)} ${midiName(midi).padEnd(4)} ${String(Math.max(1, Math.min(256, Math.round(len)))).padStart(2)}  ${Math.max(0, Math.min(1.5, +vel)).toFixed(2)}${out ? ' out' : ''}`;
+    for (const [e, ch] of touched) {
+      if (e.removed || !Object.keys(ch).length) continue;
+      const n = e.n, k = ch.step != null ? Math.max(0, Math.round(ch.step)) : n.step;
+      if (n.heard && Math.abs(n.early - (k - n.step) * ms) > EARLY_MAX) {
+        // too far from where it was sung to keep it: what was sung stays where it was (a sung note
+        // left out, its comment lines with it), and the note goes on with nothing sung for it
+        entries.push({ n, line: noteLine(e.line, n, { out: true }, spb, ms), lead: e.lead, step: n.step });
+        e.lead = [];
+        e.line = added(k, ch.midi != null ? ch.midi : n.midi, ch.len != null ? ch.len : n.len, ch.vel != null ? ch.vel : n.vel, ch.out != null ? ch.out : n.out);
+        e.step = k;
+        continue;
+      }
+      e.line = noteLine(e.line, n, ch, spb, ms);
+      e.step = k;
+    }
+    // a note taken out leaves its comment lines to the note after it (or at the end)
+    const kept = [];
+    let trail = [];
+    entries.forEach((e, i) => {
+      if (!e.removed) { kept.push(e); return; }
+      const nx = entries.slice(i + 1).find(x => !x.removed);
+      if (nx) nx.lead = e.lead.concat(nx.lead); else trail = trail.concat(e.lead);
+    });
+    const order = kept.map((e, i) => [e, i]).sort((a, b) => a[0].step - b[0].step || a[1] - b[1]).map(x => x[0]);
+    const block = [];
+    order.forEach(e => { block.push(...e.lead); e.at = first + block.length; block.push(e.line); });
+    block.push(...trail);
+    const out = lines.slice(0, first).concat(block, lines.slice(last + 1)).join('\n');
+    parse(out);
+    return { text: out, lns: res.map(e => (e.removed ? null : e.at + 1)) };
   }
   const block = (kind, name) => ({ kind, name });
 
@@ -910,6 +997,6 @@
     if (P.warnings.concat(silent).length) console.log('\n' + P.warnings.concat(silent).map(w => 'warning: ' + w).join('\n'));
   }
 
-  return { parse, arrange, moments, sheet, setLine, setArg, setClip, addClip, removeClip, setPad, setTakeNote, padPreview, bendOf, takeSummary, block, chord, noteMidi, hz, voicing, levelAt,
-    readRange, rangeText, posText, clipLine, sungMidi, sungText, driftAt, FX, DRUMS, DRUM_DEF, WAVES, FILTERS, MOMENTS, PLAYS, STEP_VEL, TAKE_MAP, BEND_RATE, BEND_MAX, TONE_MAX, NAMES, fieldLine, fmtNum, main };
+  return { parse, arrange, moments, sheet, setLine, setArg, setClip, addClip, removeClip, setPad, setTakeNote, editTake, padPreview, bendOf, takeSummary, block, chord, noteMidi, hz, voicing, levelAt,
+    readRange, rangeText, posText, clipLine, sungMidi, sungText, driftAt, FX, DRUMS, DRUM_DEF, WAVES, FILTERS, MOMENTS, PLAYS, STEP_VEL, TAKE_MAP, BEND_RATE, BEND_MAX, TONE_MAX, EARLY_MAX, NAMES, fieldLine, fmtNum, main };
 });

@@ -87,6 +87,12 @@
     build: S('<path d="M2 12.5L11 4.5"/><path d="M7.4 4.2H11.4v4"/><path d="M13.8 2.4v11.2" stroke-width="1.2"/>'),
     drop: S('<path d="M2 5h6.5"/><path d="M8.5 5v6.5"/><path d="M6 9l2.5 2.5L11 9"/><path d="M13.8 2.4v11.2" stroke-width="1.2"/>'),
     seamCut: S('<path d="M8 2v12" stroke-width="2"/>'),
+    // the note editor's (scripts/reel-notes.js): the piano roll, rows folded, notes snapped to the grid, the view kept on the playhead
+    notes: S('<rect x="1.8" y="2.5" width="12.4" height="11" rx="1.4"/><path d="M4.8 5.6h3.2M7.6 8h4.2M4.2 10.4h2.6" stroke-width="2"/>'),
+    scale: S('<rect x="1.8" y="3" width="12.4" height="10" rx="1.2"/><path d="M5.9 3v10M10.1 3v10" stroke-width="1.2"/><rect x="4.6" y="3" width="2.6" height="5.6" rx="0.4" style="fill:currentColor;stroke:none"/><rect x="8.8" y="3" width="2.6" height="5.6" rx="0.4" style="fill:currentColor;stroke:none"/>'),
+    fold: S('<path d="M3 8h10" stroke-width="1.2" style="opacity:0.6"/><path d="M5.4 2.6L8 5.2l2.6-2.6M5.4 13.4L8 10.8l2.6 2.6"/>'),
+    quantize: S('<path d="M3 2.5v11M8 2.5v11M13 2.5v11" stroke-width="1" style="opacity:0.55"/><rect x="3" y="6.4" width="5" height="3.2" rx="0.6" style="fill:currentColor;stroke:none"/><path d="M11.8 8H9.4M10.6 6.8L9.4 8l1.2 1.2"/>'),
+    follow: S('<path d="M5 2v12" stroke-width="1.8"/><path d="M8.5 8h5M11.4 5.6L13.8 8l-2.4 2.4"/>'),
     // the sound effects' cues: a question typed, its Enter, the select-all that clears it
     keys: S('<rect x="1.8" y="4.2" width="12.4" height="7.6" rx="1.4"/><path d="M4.4 6.8h.01M7 6.8h.01M9.6 6.8h.01M12 6.8h.01M5.4 9.4h5.2"/>'),
     enter: S('<path d="M12.8 3.6v4.2a1.6 1.6 0 0 1-1.6 1.6H3.6"/><path d="M6 6.8L3.4 9.4 6 12"/>'),

@@ -1398,6 +1398,66 @@ the outputs so it's ok)"
   (0 now), checks each note plays at its own level and tone, octave +2, and the timeline's voice
   lane straight at nuance 0 and bent at 40 (one undo back).
 
+## The notes as a piano roll, and the hiss out of the film (2026-10-06)
+
+John, on the standardized voice: "ok closer! i need to be able to edit the notes/timing of this
+stuff like ableton to dial it in. also there is a loud hiss on the recording so let's try to clean
+up that."
+
+- **The hiss was the score's.** `FX tape hiss 0.04` adds high-passed noise to the master chain,
+  under the whole film. Measured on the rendered soundtrack, it was most of what sounded above
+  6 kHz: in the first 0.3 s, -17.6 dB there against -68.1 dB without it; under the title, -7.5
+  against -20.3; at the end, -29.6 against -57.1. Under the drums it added 2 dB. The music's
+  loudness did not move (-14.1 LUFS either way). The score's hiss is 0 now; the rack's knob is
+  still there.
+- **The note editor** (`scripts/reel-notes.js`, N, the HUD's Notes): the take a pad sings, as a
+  piano roll on the reel's own clock, in the timeline's place at the foot of the window (it hides
+  the timeline while open and shows it again when shut; E brings the timeline back and shuts it;
+  beside the synth rack it keeps left of it; its top edge drags it taller). Drawn on canvases:
+  - a piano down the left (a key clicked plays), the rows of the key lighter; **Key** (on by
+    default) shows only the key's rows, so a note dragged or stepped up or down stays in A minor,
+    and **Fold** only the rows a note is on;
+  - the ruler: bars, beats, each bar's chord, the scenes' cuts as gold notches (their dashed lines
+    run down the rows), and a click or a drag moves the playhead; where the take's clips do not
+    reach is shaded;
+  - the notes at the pitches they play (the take's octaves up), as long as they sound, brighter
+    when louder, their names inside when there is room; a note left out is dotted; what was sung,
+    faintly, under them (**Sung**), between the rows when Key or Fold leaves some out;
+  - a velocity stem a note at the foot, and the whole take in a strip above (a click goes there);
+  - **Hear** plays a note as you choose it or move it (paused: a preview would cut the playing
+    reel); **Follow** pages the view with the playhead while it plays.
+  Editing, as in a music program: click a note (Shift adds or takes one from the choice); drag it
+  (its start snaps to the grid, 1/16, 1/8, 1/4, 1/2 or a bar; Shift keeps the drag to one axis; ⌘
+  to the sixteenth), its right edge to stretch it, its left edge to move its start, Option (or
+  Ctrl) to copy; drag on empty rows for a box; double-click an empty spot for a note as long as the
+  last one made, a note to take it away; drag a stem for the level (the chosen ones move together).
+  Keys with the roll in focus: ←→ the grid (Option a sixteenth; Shift longer or shorter), ↑↓ a row
+  (Shift an octave), ⌫, 0 leaves out or puts back, Q quantizes the starts, ⌘D copies after the
+  choice, ⌘C ⌘V copy and paste at the playhead, ⌘A, ⌘1 ⌘2 a finer or coarser grid, - = zoom, Esc
+  lets go; the wheel scrolls (Shift or sideways: in time; up and down: the rows; ⌘ or a pinch:
+  zoom; Option: the rows' height). ⌘Z and the panel's Undo are the timeline's one Undo. The foot
+  names the choice (how many, where, the pitches, the length, the level, sung or added).
+  The timeline's voice clip, double-clicked, opens it at that moment, and so does the take view's
+  Edit notes at its bars.
+- **One edit a gesture.** `ReelMusic.editTake(src, take, ops)` takes a whole gesture's changes,
+  `{ ln, step, midi, len, vel, out }`, `{ ln, remove }` and `{ add: { step, midi, len, vel } }`,
+  rewrites the lines (the same line writer as `setTakeNote`, `noteLine`, which now takes `vel`
+  too), puts the take's n lines back in time order (a comment line right above a note goes with
+  it) and returns the text and each note's new line, so the choice follows its notes. It goes
+  through the rack (`REEL_RACK.change`): heard at once, saved, one undo. A sung note keeps where
+  it was sung, its `early` taking the move; moved more than a bar from it (`EARLY_MAX`, the
+  format's 2000 ms), what was sung stays where it was as a note left out (its comment with it)
+  and the note goes on as a plain one. Taken away, a sung note is left out (its sung line stays,
+  dotted) and an added one goes.
+- Suite: `reel-tests/notestest.mjs` (editTake's cases in node; then the panel through the dev
+  server: N in the timeline's place, a drag a beat later and a row up to the next note of the key
+  keeping where it was sung, a stretch, the keys, double-click adds and ⌫ takes away, a box, the
+  velocity strip, ⌘D, Option-drag, 0, ⌘C ⌘V, the ruler, 17 undos back to the score byte for byte,
+  E, the timeline's clip and the take view's button). taketest's timeline check waited for the
+  first of the lane's four note paths (they are drawn by how loud); with every note at one level
+  that path is empty, so it waited out its 10 s and, run beside another suite, read the lane before
+  it was drawn. It waits for all four now.
+
 ## Later
 
 Scene-specific cues (line staggers, the push); moving cut 1 onto the one player; stems out of
