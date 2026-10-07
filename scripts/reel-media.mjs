@@ -26,7 +26,7 @@ import { dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-export const FOLDERS = ['', 'grad', 'blokdok', 'posters', 'openprose-approaches'];      // '' is the top of Assets/
+export const FOLDERS = ['', 'grad', 'blokdok', 'posters', 'openprose-finalists'];      // '' is the top of Assets/
 const PICTURE = new Set(['.webp', '.png', '.jpg', '.jpeg', '.gif']), CLIP = new Set(['.mp4', '.webm']);
 const MIN_SIDE = 400, THUMB_W = 320;
 const CACHE = join(ROOT, '.local', 'reel-media'), META = join(CACHE, 'meta.json'), THUMBS = join(CACHE, 'thumbs');

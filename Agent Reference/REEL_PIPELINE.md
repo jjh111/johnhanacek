@@ -1128,7 +1128,8 @@ at another polish pass."
   OpenProse: eight of its approaches, screenshots of the pages in
   `openprose/canvas-display/brand/` (1600×900, saved 1280×720 in `Assets/openprose-approaches/`,
   15-37 KB each, a folder the media picker now lists), a sixteenth each while the counters roll
-  to 137 and 471, then the homepage they came to under the quote. AvatarMEDIC: HoloTRIAGE at the
+  to 137 and 471, then the homepage they came to under the quote. (Replaced on 2026-10-07 by the
+  finalists: see "The OpenProse finalists" below.) AvatarMEDIC: HoloTRIAGE at the
   patient, at "Keep Going!" and at the green AED, then the Clinic close and wide. Art: Influence's
   five photographs are one installation, so its screen goes from a spark to a diamond, a cube and
   an icosahedron while the pull-out runs across them. The manual figure from MunichRE was tried
@@ -1457,6 +1458,66 @@ up that."
   first of the lane's four note paths (they are drawn by how loud); with every note at one level
   that path is empty, so it waited out its 10 s and, run beside another suite, read the lane before
   it was drawn. It waits for all four now.
+
+## The OpenProse finalists (2026-10-07)
+
+John: "I need better screenshots for openprose, the actual stuff that was a finalist not just the
+random stuff."
+
+- **What the flip showed.** Eight pages from across the exploration: Bold High Contrast, the iMac
+  Aqua translucent serif, the manuscript, the reference card, Tideline's whaleshark, the editorial,
+  the black hole, the organism. Five of the eight were not on the case study's canvas at all, and
+  two of the other three carried one star from Dan.
+- **What it shows now.** The canonical set, which openprose.html's Distillation (`#finalists`)
+  names and embeds: the logo collection, the styleguide that pins the defaults, and the homepage
+  concept that lands it. They run in the order the work went, brand to style to page, light and
+  dark in turn, and then the homepage's own hero plays (`openprose-loop.mp4`, from 5.5 s):
+  1. the logo collection: five families of mark and logotype;
+  2. the Style family, the one forwarded as the canonical mark, on light and dark;
+  3. "The canonical spec.", the styleguide's cover;
+  4. the same cover in the canonical dark;
+  5. "A responsibility is a contract, not a prompt.", the homepage's first section;
+  6. the same section in the dark;
+  7. "The runtime is the quiet half of the contract.";
+  8. "Author your first outcome", in the dark.
+  The timing is as it was: a beat each eighth note (0.25 s), each one a `cut`, while the counters
+  roll. (The notes above said a sixteenth; at 120 BPM 0.25 s is an eighth.)
+- **How they are shot.** `node scripts/shoot-openprose.mjs` (`--only=` for some): each page served
+  from `openprose/canvas-display/brand/`, shot at 1440×810 CSS px (1920×1080 pixels), saved
+  1280×720 webp in `Assets/openprose-finalists/` (17-77 KB each, 456 KB for the eleven). Three
+  more stand beside the eight for the media picker: the homepage's hero, its runtime in the dark,
+  the styleguide's typography in the dark. Dark is each page's own: the homepage follows the
+  device (`prefers-color-scheme`), the styleguide its Surface switch (`sg-theme`). The pages'
+  fixed corner chrome (the styleguide's Surface switch, the homepage's disc, mode toggle and scroll
+  bar) is left out: the reel's page chip sits on that corner, and a sliver of it peeking out from
+  under the chip read as a glitch. Kecal, the accent face, loads from jsDelivr, which this
+  environment refuses; `KECAL_DIR` answers those requests from local copies of its OFL web fonts
+  (from the type's own repository, never kept here). Google Fonts go through the session proxy as
+  the renderer's do (`--proxy-server=https=`). The browser is the full Chromium build, as the
+  renderer's is (`chromium.executablePath()`): Playwright's default headless shell sets these
+  pages' mono about 5% wider (the cover's paragraph 650 px against 617, the same font loaded).
+- **Focus.** In wide and vertical the window is the stills' own 16:9. In square it is 450×540, so a
+  still shows 47% of its width, from 0.531 × its `focus` x on. The tool prints each heading's ink
+  as fractions of the frame, and each beat's `focus` keeps that heading's left edge inside through
+  the push (the default zoom, 1.02 to 1.1): 0.18 for the Style family and the spec, 0.03 for the
+  homepage; the logo collection is centred and keeps the default. A heading wider than the window
+  runs off its right edge, as a page wider than its window does.
+- The old screenshots (`Assets/openprose-approaches/`) are gone; the picker lists
+  `openprose-finalists/` in their place (`scripts/reel-media.mjs`).
+- **John's own edits, folded in** from the hosted editor's store (the script saved 2026-10-07, the
+  score 2026-10-06): BadVR's second picture is the MunichRE manual (`badvr-munichre-manual.webp`,
+  which the polish pass had tried and dropped), OpenProse's lead reads "Brand Design Engineering.",
+  and the piano-roll edits to the voice (the take's check: 150 notes play, 104 of them sung and 46
+  added, 36 left out). A three-way merge of the script set John's lead beside the new first picture
+  by hand; the rest merged clean.
+- Suites: every reel suite this touches passes on the merged edit. formattest's wide references
+  were recorded again from it (its stills at 23.5 and 25.5 s show the new pictures and lead; the
+  ones before are in `.local/reel-tests/format/wide-ref-premerge/` and `wide-ref-before-finalists/`)
+  and the second run matched them. hosttest's slow-store check (the reel starts in under 8 s while
+  the store takes 4) is close to its line on this machine: 7.0 s on the clean run, 8.1-8.2 s in two
+  earlier runs, one of them at the commit before this one. The editor takes 5-7 s to start here
+  with a fast store too, its score waiting behind the clips' downloads; the slow store adds about
+  0.5 s, so it is not the store holding the reel.
 
 ## Later
 
