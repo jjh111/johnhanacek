@@ -761,6 +761,11 @@ p, h1, h2, h3 { margin: 0; }
   const SCORE_PATH = SCRIPT_PATH.replace(/\.script\.txt$/, '.score.txt');
   let scoreDraft = null; try { scoreDraft = sessionStorage.getItem('reel-draft:' + SCORE_PATH); } catch (e) { /* no drafts */ }
   if (HOST && scoreDraft == null) Promise.resolve(HOST.load(SCORE_PATH)).catch(() => null);
+  // Live, the score's file is fetched now as well, beside the script, and the rack takes this
+  // answer (REEL_SCORE_FILE): the reel has started once the rack has read the score, and the
+  // clips wait for that (clipURL, below)
+  const SCORE_FILE = RENDER ? null : fetch('./' + SCORE_PATH.replace(/^Assets\//, ''), { cache: 'no-store' }).then(r => r.ok ? r.text() : null, () => null);
+  if (!RENDER) window.REEL_SCORE_FILE = { file: SCORE_PATH, text: SCORE_FILE };
   const HOSTED = HOST && DRAFT == null ? await Promise.resolve(HOST.load(SCRIPT_PATH)).catch(() => null) : null;
   let hosted = HOSTED != null;                 // playing (and saving to) the host's version
   boot('the script');
@@ -1169,9 +1174,27 @@ p, h1, h2, h3 { margin: 0; }
   // Live, each clip is fetched once, as a blob (CLIPS), and the elements a build made wait in
   // POOL, by file, while an edit builds the film again: the new build takes them back still
   // loaded, so a clip or a picture never goes blank for an edit.
+  // A clip's fetch waits until the score's file and the synth rack's scripts are in (CLIPS_GO,
+  // opened at the end of the start). A clip is several MB, and seven of them held every connection
+  // the browser keeps to a host: the score waited behind them, and the reel started in 5 to 7 s on
+  // a local server (2026-10-07).
+  let clipsGo;
+  const CLIPS_GO = new Promise(r => { clipsGo = r; });
+  if (!RENDER) setTimeout(() => clipsGo(), 10000);           // whatever holds the start, the clips come
+  // A page that is leaving stops its clips' fetches: the connections they held kept the next page
+  // (a reload) waiting for its own HTML. A page that stays after all (the leave was a download)
+  // fetches them again a second later.
+  const CLIP_FETCHES = new Set();
+  if (!RENDER) addEventListener('beforeunload', () => CLIP_FETCHES.forEach(c => c.abort()));
+  const fetchClip = src => {
+    const c = new AbortController(); CLIP_FETCHES.add(c);
+    return fetch(src, { signal: c.signal }).then(r => r.ok ? r.blob() : Promise.reject(r.status))
+      .finally(() => CLIP_FETCHES.delete(c))
+      .then(bl => URL.createObjectURL(bl), () => c.signal.aborted ? new Promise(r => setTimeout(r, 1000)).then(() => fetchClip(src)) : src);
+  };
   const CLIPS = new Map(), POOL = new Map(), LAYERS = [];   // file → blob url; file → elements; this build's { key, el }
   const clipURL = src => {
-    if (!CLIPS.has(src)) CLIPS.set(src, fetch(src).then(r => r.ok ? r.blob() : Promise.reject(r.status)).then(bl => URL.createObjectURL(bl), () => src));
+    if (!CLIPS.has(src)) CLIPS.set(src, CLIPS_GO.then(() => fetchClip(src)));
     return CLIPS.get(src);
   };
   const pooled = key => { const a = POOL.get(key); return a && a.length ? a.shift() : null; };
@@ -2374,9 +2397,10 @@ p, h1, h2, h3 { margin: 0; }
   // the music: the score's synths under the preview, and the rack that plays them (M)
   // (fetched side by side and run in order, async = false: one after another, each waited in line
   // behind the clips the preview was loading, and the rack came up seconds after the picture)
+  // The clips are fetched once these and the score's file are in (CLIPS_GO).
   Promise.all(['reel-music.js', 'reel-synth.js', 'reel-rack.js'].map(f => new Promise((ok, no) => {
     const el = document.createElement('script'); el.src = '../scripts/' + f; el.async = false; el.onload = ok; el.onerror = no; document.head.appendChild(el);
-  }))).catch(e => console.error('the synth rack did not load', e));
+  }))).catch(e => console.error('the synth rack did not load', e)).then(() => SCORE_FILE).then(() => clipsGo());
   bar.addEventListener('click', e => { const r = bar.getBoundingClientRect(); seekTo((e.clientX - r.left) / r.width * DURATION); });
   let idle; const wake = () => { hud.classList.remove('idle'); clearTimeout(idle); idle = setTimeout(() => hud.classList.add('idle'), 2200); };
   addEventListener('mousemove', wake); wake();

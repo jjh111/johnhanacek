@@ -534,10 +534,45 @@ storage. Now nothing reloads for an edit.
 - **`applyText(text)`**, live only: parse (a script with mistakes is refused, nothing changes),
   then `timeScenes()`, `build()` and LAYOUT in one task, about 20-30 ms, no frame drawn in
   between. The playhead, the play state and the loop stay. The frame it draws is the frame a
-  fresh load of the edited script draws at that moment, to the pixel (applytest).
+  fresh load of the edited script draws at that moment, to the pixel (applytest), except
+  inside a scaled picture (below).
+- **A scaled picture's raster depends on the page's history** (2026-10-07). Since John's
+  portrait joined the answer scene (2026-10-05), applytest failed every run: 386 pixels at
+  8.45 s. Every one was inside the portrait and one level off in one channel. The picture's
+  file, box, zoom, framing and opacity were identical in both pages. Once a page has drawn a
+  bitmap at more than one zoom, Chrome rasters it one of three ways, cycling every few frames
+  with nothing on the page changing (386, 384 and 760 pixels against the fresh page, for 3 s
+  of frames). A fresh load has drawn it at one zoom only and holds one way. A fresh page sought
+  0.5 s away and back joins the same cycle. The edit moved the answer by 0.5 s, so the
+  portrait's zoom at the playhead changed: the in-place page is in the cycle, the fresh one is
+  not. Waiting does not settle it, and a new copy of the element does not either. So the rig
+  is right and the comparison was too strict. applytest now reads each visible picture's file,
+  box, zoom, framing and opacity from both pages and requires them equal; outside the pictures
+  every pixel must match; inside one a pixel may be one level off. A wrong file, zoom or place
+  fails the DOM check, and moves edges by far more than one level.
+- **The font files are the same in both pages** (2026-10-07). With the picture's raster judged,
+  applytest still failed in 9 runs of 20 on the unchanged rig: every glyph edge in one page
+  differed, up to 175 levels, with the glyphs in the same places. The pages had set the words
+  with different font files. Each test page is a new browser context and asks Google Fonts on
+  its own, and Google answered the same stylesheet URL with two versions (18,372 and 16,893
+  bytes) within 5 runs of 20. The headline measured 1037.48 px in one page and 1037.80 in the
+  other. applytest now asks Google once per URL and gives every page that answer. It passed
+  20 runs of 20 after both changes. Other suites that compare pixels across pages load the
+  same stylesheet.
 - **Clips and pictures are kept.** Live, a clip is fetched once, as a blob (`CLIPS`, by
   file); the `<video>` and `<img>` elements a build made wait in `POOL` while the next build
   takes them back, still loaded. What the new build does not take is let go.
+- **The clips wait for the start** (2026-10-07). The reel has started once the synth rack has
+  read the score. Seven clips of up to 8.4 MB held every connection the browser keeps to a host,
+  and the score's fetch, asked for last, queued behind them: the built editor started in 5 to 7 s
+  on a local server, and hosttest's slow-store check tripped at 8.1 s with the store adding 0.5 s.
+  Now the rig fetches the score's file beside the script (`REEL_SCORE_FILE`, which the rack
+  takes), and a clip's fetch waits on `CLIPS_GO`: open once the score's file and the rack's
+  scripts are in, or after 10 s whatever holds them. A page that is leaving aborts its clip
+  fetches (`beforeunload`), because a reload's own HTML waited behind them too; a page that stays
+  fetches them again a second later. Measured on the built editor with the clips served at
+  0.5 MB/s: a reload started in 2.72 s before, 0.27 s after, the same as with no throttle. Render
+  mode never calls `clipURL` and loads no rack, so a render films as before.
 - **The tank keeps swimming.** Every event has an id: `spawn big`, `spawn fish 2`,
   `food 10 2`, `fish 5 @2.5 big dart` (its scene and its time there, so moving another scene
   does not make it new). An edit regrows the tank only when the spawns already due differ (a
