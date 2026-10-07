@@ -4,7 +4,7 @@
 // A real dev server, the real rig in Chromium, temp copies of the script (Assets/zz-apply-*.script.txt,
 // removed in finally with the dev server's backups of them). Clips are refused (both pages show the
 // same empty windows), and the tank is hidden for the picture checks (the fish swim on their own
-// clock); everything else is compared to the pixel.
+// clock); everything else is compared to the pixel, except a picture's own raster (below).
 //   1. a text edit and a timing edit, applied in place, draw the very frame a fresh load of the
 //      edited script draws at the same moment (the answer, and a moment in the results)
 //   2. nothing leaks: one section per scene, one tier group per query, one <video> per clip slot,
@@ -59,9 +59,25 @@ try {
   });
   browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || chromium.executablePath(), headless: true });
   const errors = [];
+  // Every page gets the same font files: Google Fonts is asked once per URL and its answer is
+  // kept for the run. Each page is a new context with its own cache, and Google does not always
+  // answer the same request with the same bytes: its stylesheet came back in two versions (18,372
+  // and 16,893 bytes) within 5 runs of 20. Then the two pages set the same words with different
+  // files: the headline 1037.48 px wide in one and 1037.80 in the other, every glyph's edge up to
+  // 175 levels apart, and a frame check failed in 9 runs of 20 (2026-10-07).
+  const FONTS = new Map(), fontVariants = new Map();
+  const font = async route => {
+    const url = route.request().url();
+    const got = await route.fetch().catch(() => null);
+    if (got) { const body = await got.body(); const v = fontVariants.get(url) || new Set(); v.add(body.toString('base64')); fontVariants.set(url, v);
+      if (!FONTS.has(url)) FONTS.set(url, { status: got.status(), headers: got.headers(), body }); }
+    const f = FONTS.get(url);
+    return f ? route.fulfill(f) : route.abort();
+  };
   const open = async (name, hash) => {
     const ctx = await browser.newContext({ viewport: { width: 1920, height: 1200 }, deviceScaleFactor: 1, colorScheme: 'dark' });
     await ctx.route(/\.mp4(\?.*)?$/i, r => r.fulfill({ status: 404, body: '' }));
+    await ctx.route(/^https:\/\/fonts\.(googleapis|gstatic)\.com\//, font);
     const page = await ctx.newPage();
     page.on('pageerror', e => errors.push(e.message));
     await page.goto(`${base}/Assets/sizzle-reel-2.html?script=${name}#${hash}`);
@@ -79,25 +95,56 @@ try {
     await page.evaluate(() => { window.__mark = true; });
     return { ctx, page };
   };
-  // the picture without the fish (they swim on their own clock) and without the HUD
+  // the picture without the fish (they swim on their own clock) and without the HUD, and the
+  // pictures on it as the DOM has them: each visible <img>'s file, box (stage px, the same px as
+  // the still), zoom, framing and opacity
   const still = async page => {
     await page.evaluate(() => { ['tank', 'chip', 'chipLead'].forEach(id => { document.getElementById(id).style.visibility = 'hidden'; }); });
     await page.evaluate(() => Promise.all([...document.querySelectorAll('#scenes img')].map(i => i.decode().catch(() => null))));
     await sleep(400);
-    return (await page.locator('#stage').screenshot()).toString('base64');
+    const png = (await page.locator('#stage').screenshot()).toString('base64');
+    const pics = await page.evaluate(() => {
+      const st = document.getElementById('stage').getBoundingClientRect();
+      return [...document.querySelectorAll('#scenes img')].filter(i => i.checkVisibility({ opacityProperty: true, visibilityProperty: true })).map(i => {
+        const r = i.getBoundingClientRect(), layer = i.closest('.layer');
+        return { src: i.getAttribute('src'), box: [r.left - st.left, r.top - st.top, r.width, r.height].map(v => +v.toFixed(2)),
+          transform: i.style.transform, position: i.style.objectPosition, opacity: layer ? layer.style.opacity : '' };
+      }).filter(p => p.box[2] > 0 && p.box[3] > 0);
+    });
+    return { png, pics };
   };
-  // pixels that differ between two PNGs, counted in a page
-  const diff = (page, a, b) => page.evaluate(async ([a, b]) => {
+  // Two stills compared. Outside the pictures, every pixel must match. Inside a picture, its DOM
+  // must match (file, box, zoom, framing, opacity) and its pixels may differ by one level of one
+  // channel at most: Chrome rasters a scaled bitmap one of three ways once a page has shown it at
+  // more than one zoom, cycling frame to frame with nothing on the page changing, so a page that
+  // was edited in place (the zoom at the playhead moved) and a fresh load differ there by one
+  // level (2026-10-07, the answer's portrait: 386 pixels, every one 1 level off; a fresh page
+  // sought 0.5 s away and back joins the same cycle). A real difference (another file, zoom or
+  // place) fails the DOM check, and moves edges by far more than one level.
+  const diff = (page, A, B) => page.evaluate(async ([a, b, boxes]) => {
     const load = s => new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = 'data:image/png;base64,' + s; });
     const [ia, ib] = await Promise.all([load(a), load(b)]);
-    if (ia.width !== ib.width || ia.height !== ib.height) return -1;
+    if (ia.width !== ib.width || ia.height !== ib.height) return { n: -1, raster: 0, worst: 0 };
     const c = document.createElement('canvas'); c.width = ia.width; c.height = ia.height;
     const g = c.getContext('2d');
     g.drawImage(ia, 0, 0); const da = g.getImageData(0, 0, c.width, c.height).data;
     g.clearRect(0, 0, c.width, c.height); g.drawImage(ib, 0, 0); const db = g.getImageData(0, 0, c.width, c.height).data;
-    let n = 0; for (let i = 0; i < da.length; i += 4) if (da[i] !== db[i] || da[i + 1] !== db[i + 1] || da[i + 2] !== db[i + 2]) n++;
-    return n;
-  }, [a, b]);
+    const inPic = (x, y) => boxes.some(([l, t, w, h]) => x >= Math.floor(l) && x < Math.ceil(l + w) && y >= Math.floor(t) && y < Math.ceil(t + h));
+    let n = 0, raster = 0, worst = 0;
+    for (let i = 0; i < da.length; i += 4) {
+      const d = Math.max(Math.abs(da[i] - db[i]), Math.abs(da[i + 1] - db[i + 1]), Math.abs(da[i + 2] - db[i + 2]));
+      if (!d) continue;
+      const p = i / 4;
+      if (d === 1 && inPic(p % c.width, (p / c.width) | 0)) { raster++; continue; }
+      n++; worst = Math.max(worst, d);
+    }
+    return { n, raster, worst };
+  }, [A.png, B.png, B.pics.map(p => p.box)]);
+  // the stills are the same frame: the same pictures in the DOM, and no pixel off but a picture's raster
+  const same = (A, B, d) => JSON.stringify(A.pics) === JSON.stringify(B.pics) && d.n === 0;
+  const said = (A, B, d) => JSON.stringify(A.pics) !== JSON.stringify(B.pics)
+    ? 'the pictures differ: ' + JSON.stringify(A.pics) + ' / ' + JSON.stringify(B.pics)
+    : `${d.n} pixels differ${d.n ? ' (by up to ' + d.worst + ' levels)' : ''}, ${d.raster} inside ${B.pics.length} picture${B.pics.length === 1 ? '' : 's'} by one level`;
 
   // ── 1. the same frame as a fresh load ─────────────────────────────────
   // a text edit (the answer's first line) and a timing edit before it (the title half a second
@@ -113,7 +160,7 @@ try {
   const { ctx: cB, page: pB } = await open(B, `t=${T1}&pause=1`);
   const imgB = await still(pB);
   const d1 = await diff(pB, imgA, imgB);
-  check(d1 === 0, `in place, the answer draws the frame a fresh load of the edited script draws (${d1} pixels differ at ${T1} s)`, d1);
+  check(same(imgA, imgB, d1), `in place, the answer draws the frame a fresh load of the edited script draws (at ${T1} s: ${said(imgA, imgB, d1)})`, JSON.stringify(d1));
   // a picture moved: the results' second item's first beat, later
   const P1 = RS.parse(S1), beat = P1.marks.filter(m => m.kind === 'beat' && m.scene.type === 'results')[3];
   const S2 = RS.setAt(S1, beat.ln, +(beat.obj.at + 0.5).toFixed(2));
@@ -125,7 +172,7 @@ try {
   const { ctx: cB2, page: pB2 } = await open(B, `t=${T2}&pause=1`);
   const imgB2 = await still(pB2);
   const d2 = await diff(pB2, imgA2, imgB2);
-  check(d2 === 0, `and so does the results scene after a moment is moved (${d2} pixels differ at ${T2} s)`, d2);
+  check(same(imgA2, imgB2, d2), `and so does the results scene after a moment is moved (at ${T2} s: ${said(imgA2, imgB2, d2)})`, JSON.stringify(d2));
   await cB2.close();
   await pA.evaluate(() => ['tank', 'chip', 'chipLead'].forEach(id => { document.getElementById(id).style.visibility = ''; }));
 
