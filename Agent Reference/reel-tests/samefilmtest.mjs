@@ -17,6 +17,7 @@ import { tmpdir } from 'node:os';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { serveVerified } from '../../scripts/serve-verified.mjs';
+import { FONT_URLS, fontPin } from '../../scripts/font-pin.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith(`--${k}=`)); return a ? a.slice(k.length + 3) : d; };
@@ -38,10 +39,15 @@ for (const f of git('ls-files', '-z', 'Assets').split('\0').filter(f => f.endsWi
 if (arg('script', null)) writeFileSync(join(WT, 'Assets/sizzle-reel-2.script.txt'), readFileSync(resolve(arg('script')), 'utf8'));
 
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || chromium.executablePath(), headless: true });
+// Both rigs set their words with the same font files (scripts/font-pin.mjs): each is a new
+// context that would ask Google on its own, and Google does not always answer the same stylesheet
+// with the same bytes. A fitted label is measured in its font, so other files would be another style.
+const FONTS = fontPin({ dir: join(ROOT, '.local/reel-tests/fonts') });
 async function states(root, format) {
   const srv = await serveVerified(root);
   const ctx = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
   await ctx.route(/\.mp4(\?.*)?$/i, r => r.abort());
+  await ctx.route(FONT_URLS, FONTS.route);
   const page = await ctx.newPage();
   const errors = []; page.on('pageerror', e => errors.push(e.message));
   await page.goto(`http://127.0.0.1:${srv.port}/Assets/sizzle-reel-2.html?render=1&format=${format}`, { waitUntil: 'load', timeout: 120000 });

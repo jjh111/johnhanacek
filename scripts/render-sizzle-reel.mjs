@@ -48,6 +48,13 @@
 // with a short-GOP VP9 transcode from .local/sizzle-cache/ (made on first use, reused while the
 // source file is unchanged), with byte ranges so the page can seek it. The page itself keeps
 // pointing at the real .mp4 files.
+//
+// Google Fonts are asked once per URL for the whole render and every page is given that answer
+// (scripts/font-pin.mjs): a parallel render opens a context per chunk, and Google does not always
+// answer the same stylesheet with the same bytes, so two chunks of one film could set its words
+// with different files. REEL_FONT_CACHE=<dir> keeps the answers on disk for later renders too;
+// the reel's suites set it, so a still compared with one from an earlier run was set with the
+// same font files.
 // Needs ffmpeg with libx264 and libvpx-vp9. Output lands in Assets/media-kit/ (gitignored).
 import { chromium } from 'playwright-core';
 import { spawn, spawnSync, execFileSync } from 'node:child_process';
@@ -57,6 +64,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve, basename } from 'node:path';
 import { createRequire } from 'node:module';
 import { serveVerified } from './serve-verified.mjs';
+import { FONT_URLS, fontPin } from './font-pin.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const CACHE = resolve(ROOT, '.local/sizzle-cache');
@@ -139,6 +147,7 @@ function webmFor(mp4) {
 for (const sc of reel.scenes) for (const b of [sc, ...(sc.items || [])].flatMap(x => x.beats || [])) if (b.video) webmFor(resolve(ROOT, 'Assets', b.video));
 
 const srv = await serveVerified(ROOT);            // proves the port is ours before a frame is drawn
+const FONTS = fontPin({ dir: process.env.REEL_FONT_CACHE ? resolve(ROOT, process.env.REEL_FONT_CACHE) : null });
 // The page loads its type from Google Fonts. Where outbound HTTPS must go through a proxy (a CI
 // box, a cloud session), hand Chromium the proxy for https:// only, so the local http server the
 // rig is served from stays direct.
@@ -174,6 +183,7 @@ function answerClip(route) {
 async function openRig() {
   const ctx = await browser.newContext({ viewport: { width: VW, height: VH }, deviceScaleFactor: 1, colorScheme: 'dark' });
   await ctx.route(/\.mp4(\?.*)?$/i, answerClip);
+  await ctx.route(FONT_URLS, FONTS.route);      // every chunk's page sets its words with the same files
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));

@@ -28,10 +28,12 @@ const R = createRequire(import.meta.url)(resolve(ROOT, 'scripts/reel-script.js')
 let fails = 0;
 const ok = (cond, what, detail = '') => { console.log(`${cond ? 'ok  ' : 'FAIL'} ${what}${detail ? '  ' + detail : ''}`); if (!cond) fails++; };
 
+// REEL_FONT_CACHE: every render sets its words with the same font files (scripts/font-pin.mjs), so
+// the frames of one film compared with another's differ only by how they were rendered
 function render(flags, env = {}) {
   const t0 = Date.now();
   const r = spawnSync('node', [resolve(ROOT, 'scripts/render-sizzle-reel.mjs'), '--cut=2', ...flags],
-    { cwd: ROOT, env: { ...process.env, ...env }, encoding: 'utf8', maxBuffer: 64e6, timeout: 900000 });
+    { cwd: ROOT, env: { ...process.env, REEL_FONT_CACHE: '.local/reel-tests/fonts', ...env }, encoding: 'utf8', maxBuffer: 64e6, timeout: 900000 });
   const secs = (Date.now() - t0) / 1000;
   if (r.status !== 0) console.log(`  (exit ${r.status})\n  ` + (r.stderr || '').trim().split('\n').slice(-6).join('\n  '));
   return { status: r.status, secs, out: (r.stdout || '').replace(/\r/g, '\n'), err: r.stderr || '' };

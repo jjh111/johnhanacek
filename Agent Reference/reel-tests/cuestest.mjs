@@ -45,8 +45,9 @@ const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); if (!c) fails++
 // one render; returns its stills in time order
 function render(dir, stills, extra = []) {
   rmSync(dir, { recursive: true, force: true }); mkdirSync(dir, { recursive: true });
+  // REEL_FONT_CACHE: every render sets its words with the same font files (scripts/font-pin.mjs)
   const r = spawnSync('node', ['scripts/render-sizzle-reel.mjs', '--cut=2', '--stills=' + stills, '--out=' + join(dir, 'x.mp4'), ...extra],
-    { cwd: ROOT, encoding: 'utf8', timeout: 300000 });
+    { cwd: ROOT, env: { ...process.env, REEL_FONT_CACHE: '.local/reel-tests/fonts' }, encoding: 'utf8', timeout: 300000 });
   if (r.status !== 0) throw new Error(`render failed (${dir}):\n${r.stdout}\n${r.stderr}`);
   return pngs(dir);
 }

@@ -226,7 +226,10 @@ if (process.argv.includes('--layout-only')) {            // while laying out: pa
 }
 const pngs = dir => existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith('.png')).sort() : [];
 rmSync(NOW, { recursive: true, force: true });
-const r = spawnSync('node', ['scripts/render-sizzle-reel.mjs', '--cut=2', '--stills=' + STILLS.join(','), '--out=' + join(NOW, 'x.mp4')], { cwd: ROOT, encoding: 'utf8', timeout: 600000 });
+// REEL_FONT_CACHE: the stills are set with the font files the references were (scripts/font-pin.mjs):
+// a reference filmed in an earlier run, with whatever Google answered then, is still comparable
+const r = spawnSync('node', ['scripts/render-sizzle-reel.mjs', '--cut=2', '--stills=' + STILLS.join(','), '--out=' + join(NOW, 'x.mp4')],
+  { cwd: ROOT, env: { ...process.env, REEL_FONT_CACHE: '.local/reel-tests/fonts' }, encoding: 'utf8', timeout: 600000 });
 ok(r.status === 0, 'wide stills rendered', r.status ? (r.stderr || '').trim().split('\n').slice(-4).join(' / ') : '');
 if (!pngs(REF).length) {
   mkdirSync(REF, { recursive: true });

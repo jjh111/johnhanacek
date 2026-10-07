@@ -31,6 +31,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
 import { inOrder } from './inorder.mjs';   // the scenes in the order the suite was written for
+import { FONT_URLS, fontPin } from '../../scripts/font-pin.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const RS = createRequire(import.meta.url)(path.join(ROOT, 'scripts/reel-script.js'));
@@ -60,24 +61,17 @@ try {
   browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || chromium.executablePath(), headless: true });
   const errors = [];
   // Every page gets the same font files: Google Fonts is asked once per URL and its answer is
-  // kept for the run. Each page is a new context with its own cache, and Google does not always
-  // answer the same request with the same bytes: its stylesheet came back in two versions (18,372
-  // and 16,893 bytes) within 5 runs of 20. Then the two pages set the same words with different
-  // files: the headline 1037.48 px wide in one and 1037.80 in the other, every glyph's edge up to
-  // 175 levels apart, and a frame check failed in 9 runs of 20 (2026-10-07).
-  const FONTS = new Map(), fontVariants = new Map();
-  const font = async route => {
-    const url = route.request().url();
-    const got = await route.fetch().catch(() => null);
-    if (got) { const body = await got.body(); const v = fontVariants.get(url) || new Set(); v.add(body.toString('base64')); fontVariants.set(url, v);
-      if (!FONTS.has(url)) FONTS.set(url, { status: got.status(), headers: got.headers(), body }); }
-    const f = FONTS.get(url);
-    return f ? route.fulfill(f) : route.abort();
-  };
+  // kept (scripts/font-pin.mjs, in .local/reel-tests/fonts/ beside the other reel suites'). Each
+  // page is a new context with its own cache, and Google does not always answer the same request
+  // with the same bytes: its stylesheet came back in two versions (18,372 and 16,893 bytes) within
+  // 5 runs of 20. Then the two pages set the same words with different files: the headline
+  // 1037.48 px wide in one and 1037.80 in the other, every glyph's edge up to 175 levels apart,
+  // and a frame check failed in 9 runs of 20 (2026-10-07).
+  const FONTS = fontPin({ dir: path.join(ROOT, '.local/reel-tests/fonts') });
   const open = async (name, hash) => {
     const ctx = await browser.newContext({ viewport: { width: 1920, height: 1200 }, deviceScaleFactor: 1, colorScheme: 'dark' });
     await ctx.route(/\.mp4(\?.*)?$/i, r => r.fulfill({ status: 404, body: '' }));
-    await ctx.route(/^https:\/\/fonts\.(googleapis|gstatic)\.com\//, font);
+    await ctx.route(FONT_URLS, FONTS.route);
     const page = await ctx.newPage();
     page.on('pageerror', e => errors.push(e.message));
     await page.goto(`${base}/Assets/sizzle-reel-2.html?script=${name}#${hash}`);
