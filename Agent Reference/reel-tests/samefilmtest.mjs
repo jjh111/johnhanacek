@@ -35,7 +35,8 @@ let cleaned = false;
 const cleanup = () => { if (cleaned) return; cleaned = true; try { for (const l of ['node_modules', '.local']) if (existsSync(join(WT, l))) unlinkSync(join(WT, l)); git('worktree', 'remove', '--force', WT); } catch (e) { /* gone */ } };
 process.on('exit', cleanup);
 for (const l of ['node_modules', '.local']) symlinkSync(join(ROOT, l), join(WT, l));
-for (const f of git('ls-files', '-z', 'Assets').split('\0').filter(f => f.endsWith('.mp4'))) { unlinkSync(join(WT, f)); symlinkSync(join(ROOT, f), join(WT, f)); }
+// a clip the ref does not have (added since: main's art videos, 2026-10-05) is not the ref's to play
+for (const f of git('ls-files', '-z', 'Assets').split('\0').filter(f => f.endsWith('.mp4'))) { if (!existsSync(join(WT, f))) continue; unlinkSync(join(WT, f)); symlinkSync(join(ROOT, f), join(WT, f)); }
 if (arg('script', null)) writeFileSync(join(WT, 'Assets/sizzle-reel-2.script.txt'), readFileSync(resolve(arg('script')), 'utf8'));
 
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || chromium.executablePath(), headless: true });
@@ -51,7 +52,9 @@ async function states(root, format) {
   const page = await ctx.newPage();
   const errors = []; page.on('pageerror', e => errors.push(e.message));
   await page.goto(`http://127.0.0.1:${srv.port}/Assets/sizzle-reel-2.html?render=1&format=${format}`, { waitUntil: 'load', timeout: 120000 });
-  await page.waitForFunction(() => window.REEL || document.getElementById('err'), null, { timeout: 60000 });
+  // polling by interval, as the renderer does: in render mode the rig owns requestAnimationFrame, so
+  // rAF polling never fires, and the wait passed only when the rig was up by its first look
+  await page.waitForFunction(() => window.REEL || document.getElementById('err'), null, { timeout: 60000, polling: 100 });
   const failed = await page.$eval('#err', e => e.textContent).catch(() => null);
   if (failed) throw new Error(`${root}: ${failed.slice(0, 300)}`);
   await page.evaluate(() => window.REEL.ready);

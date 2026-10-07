@@ -1554,6 +1554,69 @@ random stuff."
   with a fast store too, its score waiting behind the clips' downloads; the slow store adds about
   0.5 s, so it is not the store holding the reel.
 
+## One branch with main, and the fonts pinned everywhere (2026-10-07)
+
+John, once the sibling session (`claude/nervous-grothendieck-7465e4`, pushed onto this branch as
+`9036a25` and `aa80fa6`) landed the preview's faster start and applytest's two fixes: "take
+control of this, get into a single branch with main intent." Its last note: "Other suites that
+compare pixels across pages load the same font stylesheet. They could flake the same way, and I
+haven't checked them."
+
+- **One branch.** `claude/funny-dirac-ytu5la` holds main (v2.39 to v2.46: the About page, the art
+  and photo intake, the swipe offer, the maze as a reef), the reel's work, and the sibling's two
+  commits. Main merged with two conflicts in CLAUDE.md, both lines added side by side (main's
+  swipe offer before the reel's engine notes; main's gallery and photo lines after the reel's
+  script lines). The fish engine merged clean: main's reef and predation code and the reel's host
+  hooks touch different code. Main's engine changes that need no opt-in (a hunter's pursuit pace,
+  its choice of prey, a fleeing minnow slowed over coral) act on small fish, and the reel has none:
+  formattest's wide stills are byte-identical with it (22 of 24; the other two are its known noise,
+  the reveal line at 1.6 s and the clip windows at 21.2 s).
+- **The fonts, one answer per URL** (`scripts/font-pin.mjs`). Five reel suites compare across
+  pages or renders: applytest (in place against a fresh load), samefilmtest (two rigs' stage, where
+  a fitted label is measured in its font), cuestest (renders byte for byte), rendertest (a film
+  whole and in chunks, by PSNR) and formattest (stills against references from an earlier run).
+  The site's and search suites compare nothing across pages. The renderer itself opened a context
+  per chunk, each asking Google on its own, so one film's chunks could have set its words with
+  different files. Now:
+  - the renderer pins the fonts across its chunk pages, and `REEL_FONT_CACHE=<dir>` keeps the
+    answers on disk for later renders;
+  - formattest, cuestest and rendertest render with `REEL_FONT_CACHE=.local/reel-tests/fonts`;
+    applytest (moved onto the shared module) and samefilmtest route their pages through the same
+    folder;
+  - a font that cannot be fetched and is not kept is refused, so a page in fallback fonts is never
+    compared (the renderer already refused to film one).
+  Rendered plain, pinned while filling the folder, and pinned from it, the stills at 8.45 and
+  24.37 s are byte-identical: pinning changes nothing while Google answers one way (it answered
+  this container's 40 fetches of the stylesheet one way, 16,643 bytes). `route.fetch()` reaches
+  Google through the session proxy here as on a laptop. Suite: `reel-tests/fontpintest.mjs`, no
+  browser (a server that answers two ways, requests at once, a later run from the folder, a
+  failed fetch, the wire headers).
+- **samefilmtest, twice.** It links each clip the tree tracks into the reference's worktree, and
+  main's art videos are not in a reference from before the merge: it stopped at `unlink`. A clip
+  the reference does not have is now left alone. Then it waited for the rig by animation frames,
+  which in render mode the rig owns and never fires: the wait passed only when the rig was up by
+  its first look, and the reference's was not. It polls every 100 ms now, as the renderer does.
+- **John's edits since, folded in** (the hosted editor's store, saved 22:10 UTC): food for the
+  fish at 2.1 s into the title (`fish @2.1 feed 0.54 0.63`), and the results scene's food moved
+  from 1 s to 9.5 s in. The tank differs from 4.6 s on, so formattest's wide references were
+  recorded again from this script (the ones before are in
+  `.local/reel-tests/format/wide-ref-before-john-fish/`) and the next run matched them: 22 stills
+  byte-identical, the clip windows at 21.2 s and 1,026 pixels at 27.5 s inside its noise limits.
+  The hosted editor is at version 31 with the faster start and main's engine.
+- **Suites on the one branch.** Every reel suite passes: fontpintest, scripttest, timelinetest,
+  devservertest, musictest, musiclanestest, taketest, notestest, shotstest, texttest, fishtest,
+  fishdirecttest, fishpaneltest, applytest (both frames 0 pixels off), ordertest, cuestest,
+  rendertest, formattest, hosttest (the slow store's start 3.5 s, 7.0 to 8.2 s before the
+  sibling's fix) and samefilmtest against the reel's last commit before the merges (at 63 moments in each of the three formats every element of the stage and every fish is where that commit's rig put it: main's engine, the sibling's start and the pinned fonts change nothing on film).
+  The site's engine suites pass: enginetest, mazetest, pentest, frusttest, parktest2, walltest,
+  foodtest, zigedge, humantest, schooltest, swipetest. Three maze suites fail on main itself, the
+  same way, since main's reef and swipe-offer work: idletest (penned fish stall, the cruiser's
+  corridor), navtest (sealed food is never given up, which main's food horizon now keeps on
+  purpose) and latchtest (it expects no inline style on the canvas; the swipe offer sets
+  `touch-action`). sitetest fails only on pages whose scripts come from a CDN this environment
+  refuses (three.js, the search libraries), and linkcheck's seven are the template literals its
+  README names.
+
 ## Later
 
 Scene-specific cues (line staggers, the push); moving cut 1 onto the one player; stems out of
