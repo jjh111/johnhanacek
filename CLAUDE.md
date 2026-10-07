@@ -159,6 +159,7 @@ which stamps every `?v=` cache-bust ref across root `*.html` **and** the `Portfo
 - Touch and mouse support for drawing entities
 - See `Assets/FISH_SYSTEM_TECHNICAL.md` for full technical reference
 - Debug mode: "Logic view" checkbox in the hero controls (wired to `heroFish.setDebug`)
+- **Swipe offer** (`scripts/swipe-offer.js`, both tanks via `data-swipe-offer="#target"` on `#heroCanvas`): the tanks own every touch by ruling, so two quick, roughly parallel UPWARD strokes (what a thumb does trying to scroll) offer a "scroll down" pill under the last touch point. Touch only, listens passively, changes no stroke routing; the strokes still do what lines do. Ported from MetaMedium's `swipeRead`. Thresholds are budgeted by `maze-tests/swipelab.mjs`, wiring by `swipetest.mjs`
 - **Shared engine (v1.8):** the whole system lives in `scripts/fish-engine.js` — `FishCanvas(canvasEl, opts)` (full minigame, used by index.html; page hooks: `onDrawingChange`, `onStroke`; opt-in host choreography hooks `steer`, `schoolTarget`, `calmSchool`, `largeRightOfWay`, `surface` (the top of the water for a fish: its edge avoidance and the school's waypoint and slots turn back there instead of at the canvas top, it seeks no food above it, and a fish giving way near it flees level), and the calls `schoolPhase('scatter'|'regroup')` and `remove(fishOrCoral)`, used only by the sizzle reel and inert when absent) and `FishCanvas.ambient(canvasEl)` (single cursor-following fish, used by 404.html). `fish-demo/` still runs its own `fish.js` — that file is a compiled esbuild bundle whose source (`fish-src.js`) lives only on John's machine (gitignored); rebase it onto the engine locally when convenient
 
 **Fish Minigame Architecture:**
@@ -263,6 +264,46 @@ which stamps every `?v=` cache-bust ref across root `*.html` **and** the `Portfo
   **wording ladder** (micro → tldr → brief → full — density picks the wording inside
   a constant LOD via `textFor`, stamped `data-txt` for morphs); **media dedupe** (one
   src per render pass, pane wins). Spec + records: SEARCH_COMMAND_BAR.md Phase 10.
+- **Inquiry composer (Phase 11, v2.28)**: `scripts/inquiry-core.js` turns a paragraph from
+  someone reaching out into a message to John. `detect()` gates it (≥14 words with first-person
+  need language, or an email; questions about John never — 0 of every search-test query), the
+  grammar parse fills the brief instantly, and MiniLM (the semantic tier's WASM embedder, so it
+  works in Safari) matches each sentence to the ten offers services.html names and the paragraph
+  to case studies, upgrading the card in place. The card is editable. **Delivery is one switch,
+  `SITE.inquiryEndpoint` in jh-chrome.js**: empty → Send opens the visitor's mail app (`mailto:`,
+  full text to the clipboard past ~1,900 chars); set to the deployed Apps Script URL → Send POSTs
+  (text/plain, no preflight) and John's Gmail sends it to John's Gmail, Reply-To the visitor, email
+  required, honeypot + 3 s floor (the page holds a fast Send past it) + 3/address and 30/hour
+  limits; any failure falls back to the mail app and Copy. It sends to the script OWNER, not hi@,
+  because hi@ is a Namecheap forward into the same Gmail and Gmail files self-sent forwards under
+  Sent only. Relay source + deploy steps: `Agent Reference/inquiry-relay/` (tested by
+  `search-tests/relaytest.mjs`).
+  **No model writes a word**: their paragraph goes verbatim, generation is suppressed in brief
+  mode, Enter only focuses Send. Two shells: the command bar (search-core loads inquiry-core
+  beside itself) and services.html `#book` (textarea, sessionStorage draft) — there the card is the form:
+  `alwaysCard` stands it at rest under the textarea (v2.35) and the words fill it in; Send waits for 20+
+  characters AND an email in every shell (the relay refuses shorter). GoatCounter gets
+  count-only events. Thresholds in `T` were calibrated by `search-tests/inquirylab.mjs`; plan +
+  build record: `Agent Reference/INQUIRY_COMPOSER_PLAN.md`. **Asked for by name** (v2.31): a
+  leading command ("inquire", "send a message", "message john: …", "get in touch") always opens
+  the card, stripped before parsing, and with nothing after it the card is a prompt to keep
+  typing; every doorway intent card (services/contact/schedule/hire) carries **Write John a
+  message**, which puts `Message John: ` in the bar. **Any page element** with `data-search-query="…"` opens the ⌘K bar holding that string, caret at the end (delegated in search-overlay.js, so it works on any page that loads the overlay); services.html's three **Send a message** buttons use `Send Message: ` (they replaced the per-track "Email about coaching/design" mailto buttons, v2.33). **The bar is a one-row `<textarea>`** in both shells (v2.33) that grows with its text to six rows, then scrolls — a message is a paragraph and an `<input>` showed only its tail. Enter still commits, so no newline is typed; in a wrapped paragraph ↑↓ move the caret, reaching results only from the end (`fitInput` in search-core). Questions ABOUT John ("should i hire him…",
+  "how do i contact him") never raise it. **Around a card** the postcard is re-queried from the
+  brief's track + offer ("Around your message: what John offers"), not from the paragraph's
+  words. `search-tests/servicetest.mjs` guards all of it on the real pipeline
+- **The tier strip collapses to icons when its labels don't fit** — MEASURED (`fitTierStrip` in
+  search-core: the tiers' summed natural widths vs the strip, re-run by a ResizeObserver), not a
+  viewport rule, because the tablet type scale truncated "keyword" to "KEY…" in a 494px row. Icon
+  mode: 16px line glyphs (lines/graph/chip/laptop/link/power) in each tier's state color, the
+  state dot as a badge, a one-glyph note for a loadable tier's cost (↓ / ⚡ / 37%), name in
+  title + aria-label. Desktop at the default overlay width also collapses (its labels needed
+  410px of 384 and were already ellipsizing). ⓘ is hidden on touch (hover-only tooltip)
+- **Early clicks are held, never sent to search.html** (v2.34): search-overlay.js is deferred, so on a slow
+  network a click on the magnifier or a `data-search-query` button used to follow the `href`. Each page's
+  `<head>` carries an inline capture-phase catcher that `preventDefault`s it, stores `__searchPending`
+  and sets `html[data-search-pending]` (the magnifier pulses); the overlay's init opens it. search.html
+  stays the no-JS fallback only
 - **Engine color coding**: WebGPU=blue, LMStudio=purple, Ollama=orange, Custom=green
 - AI toggle: users can disable LLM even when engine detected
 
@@ -463,6 +504,12 @@ scripts/pretext-wrap.js   — flows running prose around obstacles on BOTH sides
                             (`<main itemscope Article>` > `<article itemprop=articleBody>`) so a
                             reader takes the whole case study, not the densest section.
                             Demo/test: Assets/DemosPlayground/pretext-wrap-test.html
+                            index.html's About card is the first-impression use: both
+                            paragraphs around the portrait's ellipse at every width (the
+                            photo floats on phones too; `shape-outside` is the no-JS
+                            curve), rebuilt when the type scale changes the font. Guard:
+                            `maze-tests/aboutwraptest.mjs`. contrasttest measures the
+                            painted `data-text` runs and skips `.pretext-source`.
 scripts/pretext/          — vendored copy of the pretext text-measurement + line-breaking engine
                             (see VENDORED.md). Also usable measurement-only: prepare() + layout()
                             answer "how many lines at width W" arithmetically with no DOM read,
@@ -479,8 +526,19 @@ Assets/
                             media-kit.html and the reel rigs only draw them
   sizzle-reel-2.script.txt — cut 2's edit as a plain-text script (read by scripts/reel-script.js)
   sizzle-reel-2.score.txt — cut 2's music as a plain-text score (read by scripts/reel-music.js)
+  gallery.json            — THE registry of John's art + photos (v2.42): per piece title, year, caption,
+                            alt, the committed web encode, the gitignored MASTER path (local only), placements
+                            and use. Change a caption here first. The reel/video agent reads it too. Plan:
+                            Agent Reference/ART_PHOTO_INTAKE_PLAN.md (3D facade + splat are phases 2–3)
+  photos/, art/           — web encodes only (WebP; mp4 1280w CRF 27 with sound, `-poster.webp`); masters
+                            beside them are listed in .gitignore. Placed with `.photo-wrap` (captioned float
+                            the prose wraps; `.small` keeps floating on phones), `.photo-pair` (two-up,
+                            `.square` crops, `.works` larger captions) and `.art-video` (`preload="none"`,
+                            never autoplay) in shared.css
   favicon-jhsigfrmpaper.png
-  JHsig.svg               — signature used in nav + footer + hero (vector; white fill baked in)
+  JHsig.svg               — the signature's source file. It is SERVED as a data URI (v2.34): `SIG` in
+                            jh-shapes.js feeds the chrome, and the page heroes carry the same URI inline, so
+                            it paints with the markup. Changing the signature = regenerate that URI everywhere
   footer-JHsig.png        — superseded raster signature; still referenced by the frozen Archive/ snapshots, so it stays
   socialgraph-jhcom.webp  — OG image
   FISH_*.md               — fish system design/technical docs

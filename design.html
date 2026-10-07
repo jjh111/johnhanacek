@@ -24,9 +24,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@200;300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles/jh-chrome.css?v=2.27">
-    <link rel="stylesheet" href="./styles/shared.css?v=2.27">
-    <link rel="stylesheet" href="./scripts/search-overlay.css?v=2.27">
+    <link rel="stylesheet" href="./styles/jh-chrome.css?v=2.46">
+    <link rel="stylesheet" href="./styles/shared.css?v=2.46">
+    <link rel="stylesheet" href="./scripts/search-overlay.css?v=2.46">
 
     <!-- Model Viewer is loaded on approach, not at page load — see the
          warm-up observer near the bottom of this file. The library is ~240KB
@@ -335,6 +335,7 @@
             }
         }
     </style>
+    <script>/* Search early-click catcher: search-overlay.js is deferred, so on a slow network a click on the magnifier (or a data-search-query button) used to follow the href to search.html. Hold it; the overlay opens the moment it inits (it reads __searchPending). */document.addEventListener('click',function(e){if(window.__searchOverlayInit||e.defaultPrevented||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey||e.button!==0)return;var t=e.target;if(t&&t.nodeType!==1)t=t.parentNode;if(!t||!t.closest)return;var a=t.closest('[data-search-query],a[data-search-trigger],a.search-icon,a[href="search.html"],a[href="./search.html"]');if(!a)return;if(a.tagName==='A'&&!a.hasAttribute('data-search-query')&&!a.hasAttribute('data-search-trigger')&&!a.querySelector('svg line'))return;e.preventDefault();window.__searchPending=a.getAttribute('data-search-query')||'';document.documentElement.setAttribute('data-search-pending','1');},true);</script>
 </head>
 <body>
     <div id="cursorSpotlight"></div>
@@ -366,9 +367,9 @@
         <!-- Shape nav (hero). Markup rendered by scripts/jh-shapes.js
              (single source; included right below, sync = no flash). -->
         <nav class="shape-nav" aria-label="Page navigation" data-jh-hero-nav="search,home,design,art" data-current="design"></nav>
-        <script src="./scripts/jh-shapes.js?v=2.27"></script>
+        <script src="./scripts/jh-shapes.js?v=2.46"></script>
 
-        <canvas id="heroCanvas"></canvas>
+        <canvas id="heroCanvas" data-swipe-offer="#intro"></canvas>
         <canvas id="fishCanvas" aria-hidden="true"></canvas>
         <div class="hero-hint hidden">
             <span class="hint-icon">✎</span>
@@ -379,27 +380,24 @@
             <button class="guide-close" id="closeGuide" type="button" aria-label="Close instructions">&times;</button>
             <span class="guide-title">✎ &nbsp;draw the maze</span>
             <div class="guide-rows" aria-live="polite">
-                <span class="guide-row" data-step="1"><span class="guide-glyph" data-jh-stroke="square"></span><span>draw a shape: its outline becomes a wall</span></span>
+                <span class="guide-row" data-step="1"><span class="guide-glyph" data-jh-stroke="square"></span><span>draw a shape: its outline becomes a wall — squares become coral, shelter for small fish</span></span>
                 <span class="guide-row" data-step="2"><span class="guide-glyph" data-jh-stroke="loop"></span><span>draw a loop: a fish</span></span>
                 <span class="guide-row" data-step="3"><span class="guide-glyph" data-jh-stroke="tap"></span><span>tap: drop food, and lead fish to it</span></span>
                 <span class="guide-row"><span class="guide-glyph" data-jh-stroke="scribble"></span><span>scribble across a wall: rub it out</span></span>
             </div>
             <span class="guide-done-note"><span aria-hidden="true">✓</span><span>that's the maze. keep going, or hit ℹ for the rest</span></span>
             <div class="guide-progress" data-jh-guide-progress aria-hidden="true"></div>
-            <a href="#intro" class="guide-cta">tap or swipe for content
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 13l5 5 5-5M7 6l5 5 5-5"/></svg>
-            </a>
         </div>
         <!-- Gesture marks for the guide rows above. Non-deferred and placed
              AFTER the card so the fill happens during parse (same contract as
              jh-shapes.js): no flash, no late swap. -->
-        <script src="./scripts/jh-strokes.js?v=2.27"></script>
-        <script src="./scripts/jh-guide.js?v=2.27"></script>
+        <script src="./scripts/jh-strokes.js?v=2.46"></script>
+        <script src="./scripts/jh-guide.js?v=2.46"></script>
 
         <div class="canvas-controls">
             <button class="info-btn" id="toggleGuide" aria-label="Toggle maze instructions" title="How this works">i</button>
             <span class="controls-label" aria-hidden="true">clear</span>
-            <button class="canvas-btn" id="clearCanvas" title="Remove the walls, keep the fish">Walls</button>
+            <button class="canvas-btn" id="clearCanvas" title="Remove the walls and coral, keep the fish">Walls</button>
             <button class="canvas-btn" id="clearFish" title="Empty the tank, keep the walls">Fish</button>
             <label class="canvas-toggle">
                 <input type="checkbox" id="toggleLabels">
@@ -413,7 +411,7 @@
              takes over — identical treatment across index/design/art. -->
         <div class="hero-oval" role="banner">
             <div class="hero-content">
-                <h1><span class="jh-sig"><span class="sr-only">JH</span><img src="./Assets/JHsig.svg" alt="" aria-hidden="true"></span> <span class="meta">Design</span></h1>
+                <h1><span class="jh-sig"><span class="sr-only">JH</span><img src="data:image/svg+xml,%3Csvg role='img' aria-label='John Hanacek signature' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 150 75'%3E%3Cpath fill='%23ffffff' d='m148.6 13.3c-0.3-0.6-2.9 0.3-3.7 0.4l-0.4 0.2-0.8 0.1c-0.2-0.2-1 0.4-1.1 0.2l-0.8 0.3h-0.3l-1.1 0.3-0.7 0.1-0.9 0.3h-0.7l-0.8 0.3h-0.7l-0.7 0.3h-0.9l-0.6 0.3h-0.8l-0.8 0.3-0.9 0.1-0.8 0.2-0.7 0.1-0.3 0.2-0.6-0.1-0.2 0.3h-0.9l-0.8 0.3-0.3-0.1-1 0.4-0.4-0.1-0.3 0.2h-0.5l-1.2 0.4-0.9 0.1-1.1 0.3-0.9 0.1-1.6 0.4h-0.4l-0.4 0.2h-0.4l-1.2 0.3-2.4 0.5-1.4 0.4-1.4 0.2-1.2 0.4h-0.4l-0.9 0.3-0.6 0.1-2.1 0.5-1 0.4-1 0.1-1 0.4h-0.3l-0.4 0.3h-0.4l-2 0.6-0.9 0.1-1.1 0.5-1.2 0.2-0.8 0.3h-0.5l-0.8 0.4-0.6 0.1-2 0.6-0.2-0.2v-0.9h-0.2l0.3-0.4-0.2-0.4 0.2-0.4-0.2-0.1 0.1-2.1-0.2-0.1 0.2-0.5-0.2-0.2 0.2-0.4-0.2-0.3 0.3-0.2-0.2-0.4 0.1-3.5v-1.1l0.3-0.3-0.2-0.4 0.2-1.6 0.1-3.5 0.2-2 0.2-0.4 0.1-2.1 0.2-0.5 0.1-1.9 0.7-0.5c0.2-0.2 0.2-1.1 0-1.1-0.4-0.3-1.9-0.5-2.3 0-0.3 0.5-0.6 1.6-0.6 2.3l-0.1 0.2v1l-0.2 0.3-0.2 1.7-0.1 0.3-0.1 3.1-0.2 0.1v2l-0.2 0.3-0.1 3.1-0.2 0.2v3.1h0.2l-0.4 0.6 0.3 0.3-0.2 0.5 0.2 0.2-0.2 0.4v3l0.2 0.1-0.2 0.4v2.6l0.2 0.3-0.5 0.4-0.3-0.1-0.6 0.4-0.8 0.1-1 0.5-0.5-0.1-0.2 0.3-0.6-0.1-0.1 0.3-0.6-0.1-0.2 0.3-0.4-0.1-0.2 0.3-0.4-0.1-0.2 0.3h-0.4l-1.8 0.5h-0.3l-0.7 0.4-2.3 0.5-0.2-0.8 0.2-0.6-0.2-0.3 0.2-0.2 0.1-3.6 0.2-0.2-0.1-0.9 0.2-0.3-0.2-0.4 0.2-0.1-0.1-1.1 0.2-0.5-0.1-1 0.3-0.4-0.2-0.6 0.2-0.1 0.2-3.4 0.2-0.9v-0.8l0.2-0.3 0.1-2.1 0.2-0.8 0.2-0.6 0.1-1.5 0.2-0.4 0.1-0.7 0.3-0.2c0.3-1.6 1.6-1.1 1.2-2.5-0.5-0.6-1.9-0.9-2.5-0.5-0.6 0.7-1 2.3-1.3 3.3l-0.1 1-0.2 0.2-0.1 1.2-0.2 0.3v0.9l-0.2 0.3v0.8l-0.2 0.1-0.1 2.2-0.2 0.1-0.1 2-0.2 0.1-0.1 2.6-0.1 0.1v1.9l-0.2 0.3v2l-0.3 0.5 0.2 0.2-0.1 3.2h-0.1l0.1 1.5-0.2 0.2 0.2 1.1-0.3 0.3v0.2l-1.3 0.4-0.2 0.2h-0.5l-0.5 0.3-0.8 0.1-1.9 0.7-0.5 0.3h-0.5l-2.4 0.9-1.3 0.5-1.2 0.2-1.7 0.7-0.1-0.2 0.5-1.4 0.6-0.8 0.4-1.4 0.3-0.6v-0.4l0.6-1.7v-0.4l0.4-0.2v-0.5l0.6-1.4 0.1-1 0.4-1.1 0.1-1.5 0.3-0.4 0.1-1.5 0.2-0.3 0.1-2.2 0.2-0.5-0.1-0.7 0.2-0.2-0.1-0.4v-2.2l-0.2-0.5v-1.1l-0.3-0.7v-0.6l-0.3-0.5c-1.1-2.3-3.1-3.3-6.2-3.5h-2.8l-0.2 0.1c-1.3 0.2-3.5 0.6-4.7 1.1l-0.3 0.2-0.5 0.1-2.2 0.9-0.1 0.2-0.7 0.2-1 0.6-2.5 1.2-1.5 0.9-0.3 0.1-1.8 1.1-0.3 0.1-0.3 0.3-2.7 1.6-0.7 0.6-1.7 1-3.2 2.5-0.3 0.2-1.4 1.2-1.6 1.6-0.3 0.1-0.1 0.4-1.5 1.3-0.4 0.5-0.2 0.4-0.5 0.3-0.7 0.9-0.2 0.1v0.3l-1.2 1.5-0.4 0.2-1 1.3-0.3 0.2-0.7 0.9-1.2 1.3-0.2 0.2-0.6 0.9-0.6 0.6-0.1 0.4-0.4 0.3-2.6 3.8c-0.5 1.3 1.1 2.1 1.5 1.8s0.6-1 0.9-1.5l0.3-0.2 0.2-0.6 1.1-1.4 0.3-0.1v-0.4l1.6-1.9 0.3-0.2v-0.2l0.6-0.6 0.8-1.1 0.4-0.1 0.1-0.4 0.9-0.8 0.2-0.5 1.2-1.3 0.2-0.3 0.8-0.7 0.3-0.5 3.1-3.1 1.2-1 0.1-0.2 2.2-1.8 0.2-0.1 1.9-1.5 1.7-1.2 0.4-0.4 2.1-1.3 0.5-0.4 1.1-0.6 0.5-0.4 1.3-0.7 0.4-0.3 1.5-0.8 0.7-0.5 2.4-1.2 0.5-0.2 0.3-0.3 3.4-1.3 2.3-0.7 0.3-0.1 1.2-0.3 1.2-0.2h0.5l0.1-0.1c0.7-0.1 2.4-0.1 2.8 0l0.2 0.2h0.4l1.3 0.4 0.9 1v0.4l0.4 0.7 0.2 2.2v1l-0.2 0.2 0.2 0.2-0.2 0.4 0.2 0.3-0.2 0.2 0.1 0.5-0.3 0.6c0.1 1.3-0.1 2.2-0.6 3.1l-0.1 1.4-0.3 0.3-0.2 2.6-0.8 1.7v0.5l-0.4 0.8-0.1 1.1-0.4 0.9-0.2 0.7-0.2 0.1-0.2 0.9-0.4 0.7v0.4l-0.4 0.6-0.1 0.6-0.3 0.3-0.8 1.9-0.5 0.4-0.1 0.1-1.2 0.5-0.7 0.1-2.7 1.1h-0.3l-0.4 0.3-0.8 0.2-0.9 0.4h-0.4l-0.3 0.3-1.3 0.4-0.3 0.2h-0.4l-0.7 0.4-1.3 0.4-0.3 0.3h-0.5l-0.5 0.3-3.3 1.1-0.3 0.2-0.7 0.2-0.7 0.5-1 0.2-0.5 0.4h-0.5l-1 0.4h-0.3l-0.2 0.4-0.8 0.1-0.5 0.3-0.5 0.1-0.4 0.3-0.6 0.1-0.2 0.2-0.9 0.3-0.3 0.2h-0.3l-0.6 0.4-0.7 0.2-1.5 0.7-1 0.3-0.3 0.2-1.1 0.4-1.8 0.9-0.5 0.1-0.2 0.3-0.6 0.1-0.7 0.5-0.5 0.1-0.8 0.5-0.5 0.1-0.4 0.3-1.1 0.5-0.5 0.3-0.5 0.1-1 0.7-0.5 0.2-1 0.7-0.5 0.2-1.2 0.8-0.5 0.2-2.2 1.4-0.6 0.4-1.5 1.1-0.5 0.5-0.4 0.1-0.2 0.3-2.4 2-2.2 2-0.8 1-0.9 1c-0.6 0.9-1.9 3-1.3 5.2l1.1 1.3 1.4 0.9 0.5 0.2 0.7 0.4 1.5 0.4h0.6l0.4 0.2h3.5 0.3l0.1-0.1 0.5 0.2 0.2-0.2h1.2 0.2l0.3-0.2 1.2-0.1 0.8-0.3h0.7l0.5-0.2 1-0.1 0.6-0.3h0.4l1.1-0.4 0.9-0.2 1-0.5 0.6-0.2 0.7-0.3 0.7-0.2 0.5-0.3 0.5-0.1 1.5-0.7 0.5-0.3 0.5-0.2 0.5-0.3 0.6-0.1 1.2-0.8 0.7-0.2 0.8-0.5 0.5-0.1 1.2-0.8 0.5-0.2 0.5-0.4 0.8-0.5 0.5-0.2 0.9-0.7 0.6-0.3 0.5-0.5 0.6-0.2 1.5-1.1 0.6-0.3 0.3-0.3 0.7-0.4 1.5-1.2 0.5-0.3 1.3-1.1 0.5-0.3 1.5-1.4 0.3-0.3 0.4-0.3 4.8-4.7 1-1.2 0.5-0.5 0.9-1.1 0.3-0.4 0.5-0.7 0.4-0.6 1-1.2 0.6-1.1 0.3-0.3 0.7-1.3 0.4-0.5 0.5-1.1 0.5-0.7 0.6-1.4c0.8-2 2.1-1.8 3.8-2.5l0.7-0.2 0.3-0.2 1-0.3h0.4l0.3-0.2 0.8-0.2 0.3-0.2 1.9-0.5 0.5-0.2 0.6-0.1 0.7-0.4 0.7-0.1 0.5-0.2 0.5-0.1 0.8-0.4 1-0.3 0.2 0.3-0.2 0.6 0.3 0.6-0.1 0.5 0.2 0.3v1.5l0.2 0.1-0.1 0.3 0.1 3.1 0.2 0.9v0.5h0.2l-0.2 0.5 0.2 0.1 0.1 1.6h0.1l0.1 1.4 0.2 0.5v0.7l0.2 0.3v0.6l0.2 0.2 0.1 1.1 0.2 0.2 0.1 1 0.2 0.1v0.7l0.3 0.5 0.1 0.9 0.2 0.1 0.5 1.8 0.2 0.2 0.1 0.6 0.3 0.5 0.1 0.5 0.4 0.4v0.3l0.2 0.3c0.6 1 1.9 3 2.6 3 0.5 0.1 1 0 0.9-0.3 0.1-0.3-0.7-1-1.2-2.3l-0.7-0.9-0.5-1.5-0.3-0.4v-0.4l-0.2-0.2-0.1-0.6-0.3-0.5v-0.5l-0.3-0.5v-0.4l-0.7-2.4v-0.6l-0.2-0.3-0.1-1.3-0.2-0.4v-1l-0.2-0.4-0.1-2.1-0.3-0.1 0.2-0.9-0.3-1.4v-1.2l-0.2-0.3 0.2-0.2-0.1-1.3 0.2-0.2-0.3-0.2v-2l-0.2-0.2 0.2-0.3-0.2-0.4 0.2-0.8-0.2-1.2 1-0.4h0.5l0.2-0.4h0.6l0.4-0.2h0.5l0.8-0.4 0.8-0.1 0.7-0.4h0.5l2.1-0.7 0.6-0.1 0.6-0.3 2.4-0.6 0.4-0.2v1l0.2 0.1v2.3l0.3 0.3-0.3 0.2 0.3 0.6-0.2 0.2 0.2 0.3v1.5h0.1v1.1l0.2 0.3v1.8l0.2 0.3v1.6l0.3 0.4 0.1 1.4 0.2 0.5 0.1 1.2 0.2 0.3v0.5l0.2 0.2v1l0.2 0.4 0.1 1.1 0.2 0.3 0.1 0.8 0.2 0.3 0.1 1 0.2 0.4 0.1 0.8 0.2 0.3 0.1 0.7 0.3 0.4v0.5l0.3 0.4 0.1 0.9 0.3 0.3v0.4l0.3 0.4v0.4l0.3 0.3v0.4l1.6 2.6c0.6 1 1.1 0.9 1 0.7 0.5-0.4-0.4-2.3-0.7-2.9l0.1-0.1-0.8-2.4-0.2-0.1v-0.5l-0.3-0.4-0.1-1-0.3-0.4v-0.6l-0.2-0.3v-0.5l-0.3-0.3-0.1-1.3-0.2-0.2-0.1-0.9-0.2-0.5v-0.6l-0.3-0.4-0.2-1.9-0.3-0.1 0.2-0.4-0.2-1.2h-0.2l0.2-0.5-0.2-0.3-0.2-2.7h-0.2l0.1-1.4-0.3-0.1v-2.3l-0.2-0.2v-3.5l-0.2-0.2 0.2-0.3-0.1-1.5-0.2-0.1 0.2-0.4-0.1-0.8 1.1-0.6 1.1-0.3 2.3-0.7 0.7-0.1 3.8-1 0.7-0.1 1.8-0.5 0.4-0.2 1.3-0.4h0.3l0.5-0.2 0.6-0.1 0.6-0.2h0.5l0.5-0.2 3.5-0.9h0.4l0.2-0.2h0.5l1-0.3h0.4l0.4-0.2 0.4 0.1 0.2-0.2h0.8l2.2-0.6 0.8-0.1 0.2-0.2 0.4 0.1 0.4-0.2h0.6l0.4-0.2h0.5l0.5-0.2 0.6-0.1 0.5-0.2 0.6-0.1 1-0.2 1.2-0.3h0.5l0.4-0.3h0.4l3.5-0.8h0.8l0.5-0.3 1-0.1 2.2-0.6 0.9-0.2h0.5l0.4-0.2 0.8-0.1 1.8-0.5 0.6-0.4v0.4l0.5-0.5h0.4l2.1-0.6 0.8-0.2 1.3-0.6 0.9-0.2 1.3-0.8 0.7-0.2v-0.5zm-91.1 27.3-0.7 1v0.4l-0.4 0.4-0.2 0.6-0.3 0.4-0.3 0.6-0.3 0.2-0.1 0.4-0.5 0.5-0.1 0.5-0.4 0.2-0.1 0.6-1.7 1.7v0.4l-2 2.1-0.3 0.4-4.5 4.1-1.1 0.9-0.4 0.4-0.5 0.3-1.7 1.4-0.3 0.1-0.1 0.3-0.6 0.2-2 1.5-2.3 1.5-0.5 0.3-0.2 0.2-0.3 0.1-2 1.3-0.7 0.3-1.5 0.9-0.5 0.4-0.5 0.2-1.3 0.7-0.5 0.2-1 0.6-0.5 0.1-0.7 0.5-3.3 1.4-0.7 0.2-0.5 0.3-0.5 0.1-1.2 0.4h-0.6l-0.4 0.3-0.6 0.1-1.7 0.7-1.9 0.4h-0.4l-1.2 0.7h-2.5l-0.9 0.8-0.1-0.2-1 0.1-1-0.2h-1l-1.5-0.4-0.5-0.2-0.5-0.5v0.2c-0.8-0.7-0.5-2.6 0.5-3.7l0.2-0.5 0.5-0.4 0.3-0.6 2.2-2.2 0.3-0.2 0.1-0.3 0.4-0.2 1.5-1.4 0.5-0.2 0.2-0.4 1.3-0.9 0.2-0.3 0.5-0.2 1-0.8 0.5-0.5 0.8-0.4 1-0.7 0.5-0.2 0.7-0.6 0.6-0.3 0.4-0.3 0.5-0.2 0.5-0.5 0.5-0.1 1.8-1.1 0.5-0.2 1.2-0.7 0.5-0.2 0.3-0.3 0.7-0.2 0.6-0.4 0.7-0.3 0.6-0.3 1.2-0.7 1.2-0.5 0.2-0.2 0.6-0.1 0.7-0.4 0.5-0.1 0.5-0.3 0.7-0.2 0.5-0.3 1.3-0.4 0.2-0.2 0.8-0.1 0.2-0.4 0.8-0.1 1.7-0.9 0.5-0.1 1-0.5 0.6-0.1 2.2-0.9 0.5-0.1 0.7-0.4 0.8-0.2 0.2-0.2 1-0.3 0.8-0.4 0.5-0.1 0.5-0.3 0.7-0.2 0.5-0.3 0.6-0.1 2.2-0.8 0.5-0.1 0.5-0.3 1.2-0.3 0.3-0.2 0.5-0.1 0.5-0.4 0.7-0.1 1.3-0.5 0.7 0.1v0.1l0.1 0.2-0.2 0.2z'/%3E%3C/svg%3E" alt="" aria-hidden="true"></span> <span class="meta">Design</span></h1>
             </div>
 
             <!-- Persistent way off the fullscreen canvas. .oval-scroll-btn already
@@ -1021,8 +1019,9 @@
 
     <!-- Engines defer; the boot below waits for DOMContentLoaded, which fires
          after deferred scripts — order preserved, parser never blocks. -->
-    <script src="./scripts/shape-detection.js?v=2.27" defer></script>
-    <script src="./scripts/fish-engine.js?v=2.27" defer></script>
+    <script src="./scripts/shape-detection.js?v=2.46" defer></script>
+    <script src="./scripts/fish-engine.js?v=2.46" defer></script>
+    <script src="./scripts/swipe-offer.js?v=2.46" defer></script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         const canvas = document.getElementById('heroCanvas');
@@ -1040,7 +1039,25 @@
             floorAffinity: false,
             fishHue: 'full',
             foodLifetime: 20000,
-            annotateAt: (x, y) => insideEnclosure(x, y) ? 'enclosed' : ''
+            // ---- Ecosystem opts (v1.11) ----
+            // predation: large fish really eat small fish — pursuit, the mouth,
+            // growth of the survivors, coral bloom on a death. The drawn
+            // rectangle stays a wall; only this flag turns the reef wild.
+            // foodHorizon: pellets within 140px of sheltering coral keep an
+            // extra 10s (hoard scent) — stores, not snacks.
+            predation: true,
+            foodHorizon: 140,
+            // "enclosed" = the engine's room model says this water is sealed off
+            // (any wall combo — lines, rings, triangles — at large-fish
+            // clearance). Falls back to the polygon test before the first
+            // field build (annotateAt can fire before any wall exists).
+            annotateAt: (x, y) => {
+                if (fishLayer && typeof fishLayer.navEnclosedAt === 'function') {
+                    ensureMazeField();
+                    return fishLayer.navEnclosedAt(x, y) ? 'enclosed' : '';
+                }
+                return insideEnclosure(x, y) ? 'enclosed' : '';
+            }
         });
         
         const TIMING = {
@@ -1786,6 +1803,46 @@
                     return;
                 }
 
+                // ---- CORAL: shelter squares read as reef, not barrier ----
+                // Same outline, different voice: a faint fill so the interior
+                // reads as "body", corner buds, and a soft green-tinged glow
+                // instead of the wall's hard blue. Bloom growth rings light up
+                // when a fish dies nearby (engine sets bloomUntil).
+                if (shape.type === 'rectangle') {
+                    const isCoral = shape.coral === true;
+                    ctx.strokeStyle = isCoral ? 'rgba(122, 229, 130, 0.75)' : 'rgba(96, 165, 250, 0.9)';
+                    if (isCoral) {
+                        ctx.fillStyle = 'rgba(122, 229, 130, 0.07)';
+                        ctx.fill();
+                        ctx.shadowColor = 'rgba(122, 229, 130, 0.35)';
+                        // Fresh growth after a nearby death — engine bloom
+                        if (shape.bloomUntil && Date.now() < shape.bloomUntil) {
+                            const left = (shape.bloomUntil - Date.now()) / 8000;
+                            ctx.shadowColor = 'rgba(122, 229, 130, ' + (0.35 + 0.3 * left).toFixed(2) + ')';
+                        }
+                    }
+                    ctx.beginPath();
+                    ctx.moveTo(points[0].x, points[0].y);
+                    for (let i = 1; i < points.length; i++) {
+                        ctx.lineTo(points[i].x, points[i].y);
+                    }
+                    ctx.closePath();
+                    ctx.stroke();
+                    // Corner buds
+                    if (isCoral) {
+                        const bs = 3 + 1.5 * morphEase;
+                        for (const p of [points[0], points[14], points[29], points[44]]) {
+                            if (!p) continue;
+                            ctx.beginPath();
+                            ctx.arc(p.x, p.y, bs, 0, Math.PI * 2);
+                            ctx.fillStyle = 'rgba(122, 229, 130, 0.8)';
+                            ctx.fill();
+                        }
+                    }
+                    ctx.shadowBlur = 0;
+                    return;
+                }
+
                 ctx.beginPath();
                 ctx.moveTo(points[0].x, points[0].y);
                 for (let i = 1; i < points.length; i++) {
@@ -2112,17 +2169,20 @@
         }
 
         // Push the current walls into the fish engine as obstacles. Engine
-        // obstacles are coral-style: x = center, y = BOTTOM edge. Walls also
-        // act as shelter — small fish home in them like coral.
+        // obstacles are coral-style: x = center, y = BOTTOM edge. Rectangles
+        // become coral (shelter, not barrier — see the coralKind note in
+        // chainAlong); lines/arrows/circles stay walls.
         // (Note: line/arrow walls use their bounding box, so diagonals read
         // as a fat block to the fish — acceptable for v1.9.)
         function syncObstacles() {
             const obs = [];
             let oid = 0;
-            // Emit a chain of 24px blocks every ~14px along a polyline —
-            // the wall IS the drawn outline, its interior stays open water.
-            // A rectangle is a pen, a circle is a ring tank, a line a barrier.
-            const chainAlong = (pts, closed) => {
+            // Drawn rectangles (squares) become CORAL, not walls: sheltering
+            // solids the minnows can hide in — never barriers. Same outline
+            // chain, different SOLID_KINDS row, so a pen needs three lines or a
+            // circle. The engine's rim_patrol clusters small fish around them,
+            // exactly like engine-drawn coral on the aquarium page.
+            const chainAlong = (pts, closed, kind = 'wall') => {
                 const path = closed ? pts.concat([pts[0]]) : pts;
                 let carry = 0;
                 for (let i = 1; i < path.length; i++) {
@@ -2137,7 +2197,8 @@
                             x: ax + dx * d / segLen,
                             y: ay + dy * d / segLen + 12,
                             width: 24,
-                            height: 24
+                            height: 24,
+                            kind                  // 'coralKind' for rectangles, 'wall' otherwise
                         });
                         d += 14;
                     }
@@ -2147,9 +2208,16 @@
             recognizedShapes.forEach(s => {
                 if (s.type === 'dot') return;
                 if ((s.type === 'line' || s.type === 'arrow') && s.start && s.end) {
-                    chainAlong([s.start, s.end], false);
+                    chainAlong([s.start, s.end], false, 'wall');
                 } else if (s.idealPoints && s.idealPoints.length > 2) {
-                    chainAlong(s.idealPoints, true);
+                    // A chain along the ideal outline leaves the last tip
+                    // segment open (numPoints lands mid-side). Close it by
+                    // chaining back to the start — no gap for small fish to
+                    // slip through. RECTANGLES ARE CORAL (shelter, never
+                    // barriers — squares are the reef); circles/triangles
+                    // stay walls, so a pen is three lines or a circle.
+                    const kind = s.type === 'rectangle' ? 'coralKind' : 'wall';
+                    chainAlong(s.idealPoints.concat([s.idealPoints[0]]), false, kind);
                 } else {
                     const b = shapeBounds(s);
                     obs.push({
@@ -2162,6 +2230,20 @@
                 }
             });
             fishLayer.setObstacles(obs);
+            // Mirror the engine's coral state back onto the drawn shapes:
+            // bloomUntil lights up the square's own rendering (growth ring)
+            // right after a nearby fish is eaten.
+            const extCoral = fishLayer.state.coral.filter(c => c.isExternal);
+            recognizedShapes.forEach(s => {
+                if (s.type !== 'rectangle') { s.coral = false; return; }
+                // External coral keeps host ids in order — match by centre.
+                const match = extCoral.find(c =>
+                    Math.abs(c.x - s.center.x) < 1 && Math.abs(c.y - (s.bounds.maxY ?? shapeBounds(s).maxY)) < 40);
+                if (match) {
+                    s.coral = true;
+                    if (match.bloomUntil) s.bloomUntil = match.bloomUntil;
+                }
+            });
         }
 
         function pointInPoly(px, py, poly) {
@@ -2179,6 +2261,13 @@
                 s.type !== 'dot' && s.type !== 'line' && s.type !== 'arrow' &&
                 s.idealPoints && s.idealPoints.length > 2 &&
                 pointInPoly(px, py, s.idealPoints));
+        }
+
+        // Make sure the engine's nav field reflects the current walls. The
+        // engine rebuilds lazily inside the animation loop; annotating a tap
+        // ("Food · enclosed?") happens outside it, so force the check.
+        function ensureMazeField() {
+            if (fishLayer && typeof fishLayer.ensureNavField === 'function') fishLayer.ensureNavField();
         }
 
         // Scratch-out erase. RELATIONAL, not gestural: count intersections
@@ -2288,7 +2377,8 @@
                     if (fishLayer.state.fish.length > 0) {
                         fishLayer.addFood(center.x, center.y);
                         if (mazeGuide) mazeGuide.notify('food');
-                        const enclosed = insideEnclosure(center.x, center.y);
+                        ensureMazeField();
+                        const enclosed = fishLayer.navEnclosedAt(center.x, center.y);
                         whisperLabels.push({ text: enclosed ? 'Food · enclosed' : 'Food', x: center.x, y: center.y, createdAt: Date.now() });
                     } else {
                         recognizedShapes.push({
@@ -2373,6 +2463,10 @@
         canvas.addEventListener('touchmove', draw, { passive: false });
         canvas.addEventListener('touchend', endDraw);
         canvas.addEventListener('touchcancel', endDraw);
+        // The blueprint owns every finger, by the same ruling as the engine's tank
+        // (fish-engine.js sets this on index). preventDefault in startDraw alone
+        // only holds while the browser delivers touchstart as cancelable.
+        canvas.style.touchAction = 'none';
 
 
         function clearCanvas() {
@@ -2784,7 +2878,7 @@
         };
     });
     </script>
-<script src="./scripts/search-overlay.js?v=2.27" defer></script>
+<script src="./scripts/search-overlay.js?v=2.46" defer></script>
 <script>document.addEventListener('DOMContentLoaded',()=>{const t=document.querySelector('.nav-title');if(t)t.dataset.short='JH';document.querySelectorAll('.nav-right a').forEach(a=>{const w=a.textContent.trim().split(/\s+/);a.dataset.short=w.length>1?w.map(x=>x[0]).join('').toUpperCase().slice(0,2):a.textContent.trim().slice(0,2).toUpperCase()})});</script>
     <script>
         (window.JH_COMMANDS = window.JH_COMMANDS || []).push(
@@ -2839,7 +2933,7 @@
             }
         );
     </script>
-    <script src="./scripts/jh-chrome.js?v=2.27" defer></script>
+    <script src="./scripts/jh-chrome.js?v=2.46" defer></script>
 
     <!-- 3D warm-up: nothing is requested until the awards section is within
          ~1.5 viewports, then the library and (via loading="eager") both models

@@ -19,6 +19,24 @@
     'use strict';
     if (window.JHSearchCore) return;
 
+    // The inquiry composer (scripts/inquiry-core.js) rides alongside the core.
+    // Its URL is derived from THIS script's, so the ?v= cache-bust carries
+    // over and neither shell has to know the file exists.
+    const SELF_SRC = (document.currentScript && document.currentScript.src) || '';
+    let inquiryLoading = null;
+    function ensureInquiryCore(cb) {
+        if (window.JHInquiry) { cb(); return; }
+        if (!inquiryLoading) {
+            inquiryLoading = new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = SELF_SRC ? SELF_SRC.replace(/search-core\.js/, 'inquiry-core.js') : 'scripts/inquiry-core.js';
+                s.onload = resolve; s.onerror = reject;
+                document.head.appendChild(s);
+            });
+        }
+        inquiryLoading.then(cb, () => {});
+    }
+
     // In-browser generation model. LFM2.5-350M replaced Qwen3.5-0.8B on
     // 2026-09-01 after measuring both on the site's real RAG prompt in Chrome
     // WebGPU on an M2 Max: Qwen took 48–109 s to its FIRST token on every
@@ -84,6 +102,11 @@
         { patterns: [/schedul(e|ing)|book\s+(a\s+)?(call|meeting|session)|set\s+up\s+a\s+(call|meeting|time)/i], expanded: 'services coaching intro call consultation contact email', hint: 'How to book time with John', card: 'schedule' },
         // Hiring: the audience this month arrives from applications. One gold
         // card — the resume PDF, the calendar — over the resume + looking-for chunks.
+        // Hiring John FOR something (a project, consulting, a sprint) is a
+        // services question, not a full-time one: "hire john for a project"
+        // used to fire the hiring intent and lead with What John Is Looking
+        // For. Measured by search-tests/servicetest.mjs.
+        { patterns: [/\bhire\s+(him|john|you)\s+(for|to)\b(?!.*\b(full[-\s]?time|role|position|job|w-?2)\b)/i, /\bwork\s+with\s+(him|john|you)\b/i, /what\s+(does|can|could)\s+(he|john)\s+(offer|do\s+for)/i, /can\s+(he|john)\s+help\b/i], expanded: 'services coaching consulting design product workshops retainer sprint deliverables', hint: 'Services and engagement options', card: 'services' },
         { patterns: [/\b(hire|hiring|recruit(ing|er)?|open\s+to\s+work|available|availability|full[-\s]?time|job|role|position|resume|r\u00e9sum\u00e9|\bcv\b|curriculum)\b/i, /looking\s+for\s+(work|a\s+job|a\s+role)/i, /is\s+he\s+(available|open|looking)/i], expanded: 'resume hire available full-time product design engineer looking for role lead designer founding designer', hint: 'Hiring John', card: 'hire' },
         { patterns: [/how\s+(do\s+i|can\s+i|to)\s+(contact|reach|email|message)\s+(him|john)/i, /contact|email|linkedin|twitter|social/i, /send\s+(him|john)\s+a\s+message/i], expanded: 'contact email linkedin bluesky twitter social', hint: 'Contact information', card: 'contact' },
         { patterns: [/what\s+does\s+he\s+(charge|cost)|pricing|rates?|how\s+much/i, /\bcosts?\b|\bprices?\b/i, /services?|consulting|coaching|freelance/i, /can\s+he\s+help\s+(me|us|with)/i, /i\s+need\s+help\s+with/i, /looking\s+for\s+a\s+designer/i], expanded: 'services coaching consulting design product workshops retainer sprint', hint: 'Services and engagement options', card: 'services' },
@@ -238,6 +261,16 @@
             return s;
         }
 
+        // One embedder, several callers (search refine, command vectors, the
+        // inquiry composer). Calls are serialized so two never run on the
+        // same session at once.
+        let semQueue = Promise.resolve();
+        function semEmbed(text) {
+            const run = semQueue.then(() => semanticEx(text, { pooling: 'mean', normalize: true })).then(o => o.data);
+            semQueue = run.catch(() => {});
+            return run;
+        }
+
         function ensureSemantic() {
             if (semanticState !== 'idle' || !chunkVecs) return;
             semanticState = 'loading';
@@ -253,6 +286,7 @@
                     document.body.dataset.searchSemantic = 'ready';
                     renderTierStrip();
                     log(`${logTag} Semantic tier ready (MiniLM 384d · WASM)`);
+                    feedInquiry();
                     if (currentQueryRaw) refineSemantic(currentQueryRaw, ++semanticGen);
                 } catch (err) {
                     semanticState = 'failed';
@@ -312,7 +346,7 @@
             try {
                 const naturalQuery = (rawQuery || '').trim();
                 if (!naturalQuery) return;
-                const out = await semanticEx(naturalQuery, { pooling: 'mean', normalize: true });
+                const out = { data: await semEmbed(naturalQuery) };
                 if (gen !== semanticGen || rawQuery !== currentQueryRaw) return; // stale
                 // The fusion's BM25 leg: intent-expanded query when the
                 // grammar fired (its expansion IS knowledge), pronoun-stripped
@@ -322,7 +356,8 @@
                 // action's hints match here even when keywords whiffed.
                 await ensureCmdVecs();
                 if (gen !== semanticGen || rawQuery !== currentQueryRaw) return;
-                lastCmdMatches = matchCommands(naturalQuery, out.data);
+                // A message to John carries no command cards (see doSearchOnly).
+                lastCmdMatches = inqMode === 'brief' ? [] : matchCommands(naturalQuery, out.data);
                 if (!merged.length && !lastCmdMatches.length) return;
                 renderResults(merged, lastHint);
                 lastSearchResults = merged;
@@ -571,6 +606,78 @@
         let lastCmdMatches = [];
         let lastIntentCard = null;
 
+        // ── Inquiry composer (Agent Reference/INQUIRY_COMPOSER_PLAN.md) ──
+        // A paragraph from someone reaching out becomes a message to John:
+        // inquiry-core.js parses it on-device into a brief card; Send opens
+        // the visitor's own mail app. No model ever touches it.
+        let inqMode = null;            // null | 'offer' (a link) | 'brief' (the card)
+        let inqForced = '';            // the query the visitor asked to send anyway
+        let inqComposer = null;
+        let inqLoadAsked = false;
+        const inqPage = location.pathname.split('/').pop() || 'index.html';
+        function loadInquiryCore() {
+            if (inqLoadAsked) return;
+            inqLoadAsked = true;
+            ensureInquiryCore(() => {
+                feedInquiry();
+                if (currentQueryRaw) doSearchOnly(currentQueryRaw);
+            });
+        }
+        function feedInquiry() {
+            const J = window.JHInquiry;
+            if (!J) return;
+            if (chunkVecs) J.setCorpus(chunks, chunkVecs);
+            if (semanticState === 'ready' && semanticEx) J.setEmbedder(semEmbed);
+        }
+        function inquiryMode(rawQuery) {
+            if (!window.JHInquiry) { loadInquiryCore(); return null; }
+            const t = (rawQuery || '').trim();
+            if (inqForced && inqForced === t) return 'brief';
+            return window.JHInquiry.detect(t);
+        }
+        function ensureComposer() {
+            if (!inqComposer) {
+                inqComposer = window.JHInquiry.composer({
+                    page: inqPage, showWords: true,
+                    resolveHref: (u) => resolveHref(String(u || '').replace(/^\.\//, '')),
+                    // The meaning pass (or the visitor) settled the track or
+                    // offer: re-query what sits around the card.
+                    onRefine: (v) => {
+                        if (inqMode !== 'brief' || !v) return;
+                        const q = inquirySearchQuery(v);
+                        if (q === lastFusionQuery) return;
+                        lastFusionQuery = q; lastIntentFired = true;
+                        const results = search(q);
+                        lastSearchResults = results;
+                        renderResults(results, lastHint);
+                        if (semanticState === 'ready') refineSemantic(currentQueryRaw, ++semanticGen);
+                    },
+                });
+            }
+            return inqComposer;
+        }
+        // What sits around a message card: the offers for its track, not
+        // whatever the paragraph's words happen to match ("What John Is
+        // Looking For" was leading under coaching briefs).
+        const INQ_TRACK_QUERY = {
+            coaching: 'coaching packages guided coaching audit build sprint retainer chief of staff coaching os',
+            design: 'design product services deliverables prototype founding designer client work',
+            hiring: 'hiring availability full time lead designer resume looking for role',
+            unsure: 'services coaching design product workshops deliverables',
+        };
+        function inquirySearchQuery(v) {
+            if (!v) return INQ_TRACK_QUERY.unsure;
+            const offer = v.offer && window.JHInquiry ? (window.JHInquiry.OFFERS.find(o => o.id === v.offer) || {}).name || '' : '';
+            return [INQ_TRACK_QUERY[v.track] || INQ_TRACK_QUERY.unsure, offer, ...(v.domains || [])].join(' ').trim();
+        }
+
+        function attachInquiry(resultsEl, focus) {
+            if (!inqComposer) return;
+            const host = inqMode === 'brief' ? resultsEl.querySelector('[data-inq-host]') : null;
+            inqComposer.attach(host);
+            if (host && focus) inqComposer.restoreFocus(focus);
+        }
+
         // The pages can be navigated and the page's own TOC can be jumped —
         // synthesized from the DOM (the per-page .nav-right list every page
         // already maintains), so there is no anchor JSON to keep in step.
@@ -627,7 +734,7 @@
                 if (cmdVecs.has(c.id)) continue;
                 try {
                     const text = `${c.title}. ${(c.hints || []).join('. ')}`;
-                    const out = await semanticEx(text, { pooling: 'mean', normalize: true });
+                    const out = { data: await semEmbed(text) };
                     cmdVecs.set(c.id, Float32Array.from(out.data));
                 } catch { /* command just stays keyword-matched */ }
             }
@@ -745,7 +852,9 @@
             if (!c) return '';
             const ext = c.alt.href.startsWith('http');
             const altTitle = ext ? ' title="Leaves the site — your search is kept"' : '';
-            return `<div class="intent-card"><div class="intent-card-title">${c.title}</div><div class="intent-card-body">${c.body}</div><div class="intent-card-actions"><a class="intent-cta" href="${resolveHref(c.cta.href)}">${c.cta.label}</a><a class="intent-alt" href="${resolveHref(c.alt.href)}"${ext ? ' target="_blank" rel="me noopener"' : ''}${altTitle}>${c.alt.label}</a></div></div>`;
+            // Every doorway also offers the message itself, right here in the bar.
+            const write = window.JHInquiry ? `<button type="button" class="intent-alt intent-write" data-inq-start>Write John a message</button>` : '';
+            return `<div class="intent-card"><div class="intent-card-title">${c.title}</div><div class="intent-card-body">${c.body}</div><div class="intent-card-actions"><a class="intent-cta" href="${resolveHref(c.cta.href)}">${c.cta.label}</a><a class="intent-alt" href="${resolveHref(c.alt.href)}"${ext ? ' target="_blank" rel="me noopener"' : ''}${altTitle}>${c.alt.label}</a>${write}</div></div>`;
         }
 
         function renderCmdCard(c) {
@@ -812,6 +921,7 @@
                     chunkVecs = new Map(withVecs.map(c => [c.id, decodeVec(c.vec, c.vecScale)]));
                 }
                 log(`${logTag} Loaded ${chunks.length} chunks${chunkVecs ? ` (${chunkVecs.size} with vectors)` : ''}`);
+                loadInquiryCore();
             } catch (err) {
                 console.error(`${logTag} Failed to load search index:`, err);
             }
@@ -843,11 +953,48 @@
         // legible with the detail panel closed. Clicks proxy to the existing
         // panel controls, so consent semantics (Detect = opt-in) are unchanged.
         let browserLoadPct = null;
+        // Icons for the collapsed strip (fitTierStrip): 16px line glyphs in
+        // the tier's own color. keyword = lines of text, semantic = a graph of
+        // meanings, lfm = a chip, local = a laptop, custom = a link, ai = power.
+        const TIER_ICON = {
+            keyword: '<path d="M2.5 4h11M2.5 8h11M2.5 12h7"/>',
+            semantic: '<circle cx="4" cy="11.5" r="1.7"/><circle cx="12" cy="11.5" r="1.7"/><circle cx="8" cy="4.2" r="1.7"/><path d="M4.9 10 7.1 5.8M11.1 10 8.9 5.8M5.8 11.5h4.4"/>',
+            qwen: '<rect x="4.2" y="4.2" width="7.6" height="7.6" rx="1.4"/><path d="M6.6 1.8v2.4M9.4 1.8v2.4M6.6 11.8v2.4M9.4 11.8v2.4M1.8 6.6h2.4M1.8 9.4h2.4M11.8 6.6h2.4M11.8 9.4h2.4"/>',
+            local: '<rect x="3" y="3.2" width="10" height="7.3" rx="1.1"/><path d="M1.5 12.8h13"/>',
+            custom: '<path d="M6.6 9.4l2.8-2.8M7.2 4.6l1-1a2.5 2.5 0 0 1 3.6 3.6l-1 1M8.8 11.4l-1 1a2.5 2.5 0 0 1-3.6-3.6l1-1"/>',
+            ai: '<path d="M8 1.9v5.2"/><path d="M4.7 4.3a5 5 0 1 0 6.6 0"/>',
+        };
+        const tierIcon = (tier) => `<svg class="tier-icon" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${TIER_ICON[tier] || ''}</svg>`;
+
+        // Labels when they fit, icons when they don't. MEASURED, like the nav
+        // (initNavFit), because the answer depends on the panel width AND the
+        // type scale: the tablet band's 1.15 multiplier truncated "keyword" to
+        // "KEY…" in a 494px row that a viewport rule never caught. Each tier's
+        // scrollWidth is its natural width even while flex-shrunk, so the sum
+        // is what the labels need. Toggling the class never changes the
+        // strip's own width (flex:1, basis 0), so it cannot oscillate.
+        let tierFitObserver = null;
+        function fitTierStrip(strip) {
+            if (!strip || !strip.clientWidth) return;   // hidden: wait for the observer
+            strip.classList.remove('tier-strip--icons');
+            const gap = parseFloat(getComputedStyle(strip).columnGap) || 0;
+            let need = 0;
+            for (const t of strip.children) need += t.scrollWidth;
+            need += gap * Math.max(0, strip.children.length - 1);
+            strip.classList.toggle('tier-strip--icons', need > strip.clientWidth + 1);
+            if (!tierFitObserver && typeof ResizeObserver !== 'undefined') {
+                tierFitObserver = new ResizeObserver(() => fitTierStrip(strip));
+                tierFitObserver.observe(strip);
+            }
+        }
+
         function renderTierStrip() {
             const strip = el('tierStrip');
             if (!strip) return;
-            const seg = (tier, dot, label, state, title, color) =>
-                `<button type="button" class="tier tier-${state}" data-tier="${tier}" title="${title}"${color ? ` style="--tier-color:${color}"` : ''}><span class="tier-dot">${dot}</span><span class="tier-label">${label}</span></button>`;
+            // `note` survives the icon collapse: a loadable tier's cost (↓) or
+            // progress (37%) is information an icon alone would drop.
+            const seg = (tier, dot, label, state, title, color, note) =>
+                `<button type="button" class="tier tier-${state}" data-tier="${tier}" title="${title}" aria-label="${label}: ${title}"${color ? ` style="--tier-color:${color}"` : ''}>${tierIcon(tier)}<span class="tier-dot">${dot}</span><span class="tier-label">${label}</span>${note ? `<span class="tier-note">${note}</span>` : ''}</button>`;
             let html = '';
             html += seg('keyword', '\u25cf', 'keyword', 'fact-on', 'BM25 keyword match \u2014 always on');
             const semTitle = 'meaning match \u2014 ~24MB on-device, loads with your first search';
@@ -859,13 +1006,14 @@
             if (!hasWebGPU && enginesChecked) {
                 html += seg('qwen', '\u25cb', 'lfm', 'gone', 'in-browser model needs WebGPU \u2014 unavailable here (Safari: onnxruntime cannot start its WebGPU backend)');
             } else if (browserLoadPct != null) {
-                html += seg('qwen', '\u25d0', `lfm ${browserLoadPct}%`, 'loading', `loading ${MODEL_DISPLAY_NAME}\u2026`, 'var(--engine-browser)');
+                html += seg('qwen', '\u25d0', `lfm ${browserLoadPct}%`, 'loading', `loading ${MODEL_DISPLAY_NAME}\u2026`, 'var(--engine-browser)', `${browserLoadPct}%`);
             } else if (modelReady) {
                 const st = (activeEngine === 'browser' && aiEnabled) ? 'active' : 'ready';
                 html += seg('qwen', '\u25cf', 'lfm', st, `${MODEL_DISPLAY_NAME} in-browser \u2014 tap to answer with it`, 'var(--engine-browser)');
             } else {
                 html += seg('qwen', '\u25cb', modelIsCached ? 'lfm \u26a1' : `lfm \u2193${MODEL_SIZE_LABEL.toLowerCase()}`, 'load',
-                    modelIsCached ? `${MODEL_DISPLAY_NAME} \u2014 cached, tap to load` : `${MODEL_DISPLAY_NAME} in-browser \u2014 tap to download (${MODEL_SIZE_LABEL}, WebGPU)`, 'var(--engine-browser)');
+                    modelIsCached ? `${MODEL_DISPLAY_NAME} \u2014 cached, tap to load` : `${MODEL_DISPLAY_NAME} in-browser \u2014 tap to download (${MODEL_SIZE_LABEL}, WebGPU)`, 'var(--engine-browser)',
+                    modelIsCached ? '\u26a1' : '\u2193');
             }
             // local
             if (localModel) {
@@ -881,6 +1029,7 @@
             }
             html += seg('ai', aiEnabled ? '\u23fb' : '\u25cb', aiEnabled ? 'ai on' : 'ai off', aiEnabled ? 'ai-on' : 'ai-off', 'toggle AI answers');
             strip.innerHTML = html;
+            fitTierStrip(strip);
         }
 
         function updateEngineBar() {
@@ -2320,6 +2469,7 @@
         function renderResults(results, hint) {
             const resultsEl = el('searchResults');
             if (!resultsEl) return;
+            const inqFocus = inqComposer && inqMode === 'brief' ? inqComposer.captureFocus() : null;
             // The frame-scale CSS keys off the ROOT density stamp; only the
             // toggle click used to refresh it, so a density set any other way
             // (storage write + re-render) re-worded the text but never
@@ -2377,6 +2527,10 @@
             if (currentWrap) { try { currentWrap.destroy(); } catch {} currentWrap = null; }
 
             let html = '';
+            // The card's HTML goes in whole (not an empty host) so the fit
+            // loop below measures its height with everything else.
+            if (inqMode === 'brief' && inqComposer) html += `<div class="inq-host" data-inq-host>${inqComposer.html()}</div>`;
+            else if (inqMode === 'offer' && !lastIntentCard) html += `<div class="inq-offer"><button type="button" class="inq-link" data-inq-force>Send this to John as a message</button></div>`;
             if (lastScenePlan) html += renderPlanCard(lastScenePlan);
             if (lastSceneCensus) html += renderCensusHtml();
             if (lastIntentCard) html += renderIntentCard(lastIntentCard);
@@ -2385,6 +2539,7 @@
             if (results.length === 0) {
                 html += `<div class="result" style="color:${mutedColor};font-family:var(--font-display);font-size:0.85rem;">${html ? 'No other results.' : 'No results found.'}</div>`;
                 resultsEl.innerHTML = html;
+                attachInquiry(resultsEl, inqFocus);
                 renderDetailPane([], paneSeedState);
                 return;
             }
@@ -2479,6 +2634,7 @@
                 }
                 fitBudget = budget;
             }
+            attachInquiry(resultsEl, inqFocus);
 
             if (sameQuery) { if (anchor) anchor.scrollTop = saved; else window.scrollTo(0, saved); }
             else if (anchor) anchor.scrollTop = 0;
@@ -2539,6 +2695,9 @@
         // parse IS the confirm), the first action, else the top result.
         function commitTop() {
             if (cursorIdx >= 0) { const it = cursorItems()[cursorIdx]; if (it) { commitItem(it); return; } }
+            // Enter never sends a message: it moves focus to Send, which the
+            // visitor presses deliberately.
+            if (inqMode === 'brief' && inqComposer) { inqComposer.focusSend(); return; }
             if (lastScenePlan && !lastScenePlan.receipts) {
                 const btn = el('searchResults') && el('searchResults').querySelector('[data-scene-run]');
                 if (btn && !btn.disabled) { btn.disabled = true; executeScene(lastScenePlan); return; }
@@ -2916,7 +3075,9 @@
         // ============================================
         // Search Wiring
         // ============================================
+        let fitInput = () => {};
         function doSearchOnly(rawQuery) {
+            fitInput();   // a programmatic value (a seeded button, a restore) never fires input
             const answerEl = el('aiAnswer');
             const sourcesSection = el('sourcesSection');
             const clearBtn = el('clearBtn');
@@ -2939,6 +3100,8 @@
                 currentQueryRaw = ''; lastFusionQuery = '';
                 lastCmdMatches = []; lastIntentCard = null;
                 lastScenePlan = null; lastSceneCensus = null; lastPieceRail = false;
+                inqMode = null; inqForced = '';
+                if (inqComposer) inqComposer.attach(null);
                 clearBtn.style.display = 'none';
                 renderEmptyState();
                 return;
@@ -2951,10 +3114,22 @@
             const scene = parseScene(rawQuery);
             lastScenePlan = scene && scene.kind === 'plan' ? scene : null;
             lastSceneCensus = scene && scene.kind === 'query' ? scene : null;
-            const { query: expanded, hint, originalQuery, card, pieceRail } = expandQuery(rawQuery);
+            let { query: expanded, hint, originalQuery, card, pieceRail } = expandQuery(rawQuery);
             lastIntentCard = card || null;
             lastPieceRail = !!pieceRail;
             lastCmdMatches = lastScenePlan ? [] : matchCommands(rawQuery, null);
+            // The brief card supersedes the doorway card and command matches:
+            // it IS the doorway, with the visitor's own words in it.
+            inqMode = inquiryMode(rawQuery);
+            if (inqMode === 'brief') {
+                lastScenePlan = null; lastSceneCensus = null;
+                lastIntentCard = null; lastCmdMatches = [];
+                ensureComposer().update(rawQuery);
+                expanded = inquirySearchQuery(inqComposer.view());
+                originalQuery = rawQuery;   // trust the expansion in the fusion
+                hint = 'Around your message: what John offers';
+                pieceRail = false; lastPieceRail = false;
+            }
             const results = search(expanded);
             // a real search un-dismisses the residue sentence (10g)
             try { sessionStorage.removeItem('jh-residue-dismissed'); } catch {}
@@ -2980,6 +3155,8 @@
         }
 
         function doAIGeneration() {
+            // A message to John is never answered by a model (plan, decision 3).
+            if (inqMode === 'brief') return;
             if (!lastLlmQuery.trim() || lastSearchResults.length === 0) return;
             if ((activeEngine === 'local' && localModel) || (activeEngine === 'custom' && customModel)) {
                 const model = activeEngine === 'local' ? localModel : customModel;
@@ -3030,6 +3207,23 @@
                 if (!host) continue;
                 host.addEventListener('click', (e) => {
                     if (e.target.closest('a.result-link, a.result-page-link')) { markContinuity(); return; }
+                    if (e.target.closest('[data-inq-force]')) {
+                        inqForced = (currentQueryRaw || '').trim();
+                        doSearchOnly(currentQueryRaw);
+                        return;
+                    }
+                    if (e.target.closest('[data-inq-start]')) {
+                        // The bar becomes the message: the command prefix raises
+                        // the prompt card, and whatever is typed after it parses.
+                        const inp = el('searchInput');
+                        inp.value = 'Message John: ';
+                        inp.focus();
+                        try { inp.setSelectionRange(inp.value.length, inp.value.length); } catch {}
+                        inp.dispatchEvent(new Event('input', { bubbles: true }));
+                        doSearchOnly(inp.value);
+                        return;
+                    }
+                    if (e.target.closest('[data-inq-card]')) return;   // the card handles its own clicks
                     const pw = e.target.closest('[data-piece-src]');
                     if (pw) {
                         hideTip();
@@ -3081,7 +3275,33 @@
                 });
             }
 
+            // The bar is a one-row <textarea> that grows with what is typed:
+            // a message is a paragraph, and an <input> showed only its last
+            // few words. Enter still commits (the keydown below eats it), so
+            // no newline is ever typed. Six rows, then it scrolls.
+            fitInput = function () {
+                if (searchInput.tagName !== 'TEXTAREA') return;
+                const cs = getComputedStyle(searchInput);
+                const line = parseFloat(cs.lineHeight) || 20;
+                const chrome = searchInput.offsetHeight - searchInput.clientHeight;   // borders
+                const pad = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+                const cap = line * 6 + pad + chrome;
+                searchInput.style.height = 'auto';
+                const want = searchInput.scrollHeight + chrome;
+                searchInput.style.height = Math.min(want, cap) + 'px';
+                searchInput.style.overflowY = want > cap + 1 ? 'auto' : 'hidden';
+                searchInput.classList.toggle('is-wrapped', searchInput.scrollHeight > line + pad + 2);
+            };
+            fitInput();
+            if (window.ResizeObserver) {
+                let lastW = 0;
+                new ResizeObserver(() => {
+                    if (searchInput.clientWidth !== lastW) { lastW = searchInput.clientWidth; fitInput(); }
+                }).observe(searchInput);
+            }
+
             searchInput.addEventListener('input', (e) => {
+                fitInput();
                 const val = e.target.value;
                 clearTimeout(searchDebounce); searchDebounce = setTimeout(() => doSearchOnly(val), 200);
                 clearTimeout(aiDebounce);
@@ -3098,6 +3318,13 @@
             // ladder rung stops theirs via stopImmediatePropagation.
             searchInput.addEventListener('keydown', (e) => {
                 if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                    // In a wrapped paragraph the arrows move the caret between
+                    // its lines; they reach the results only from the end of it
+                    // (or once a result already holds the cursor).
+                    if (cursorIdx < 0 && searchInput.classList.contains('is-wrapped')) {
+                        const atEnd = searchInput.selectionStart === searchInput.value.length;
+                        if (e.key === 'ArrowUp' || !atEnd) return;
+                    }
                     e.preventDefault();
                     moveCursor(e.key === 'ArrowDown' ? 1 : -1);
                     return;

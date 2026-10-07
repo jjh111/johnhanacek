@@ -373,7 +373,9 @@ point: they exist to answer design-interview questions the pages were never writ
   coaching; Lead or Senior Designer, founding designer for the right team; a founder's
   experience with an IC's ruthlessness and a Director's vision. **The revenue-stability line
   from the first draft was CUT at John's direction** — "in this era we still need to do
-  posturing".
+  posturing". *2026-09-28:* tags narrowed to hiring terms (dropped `startups consulting
+  coaching`, which made this lead service queries like "work with john"); content
+  unchanged, so no claim changed. Measured by `search-tests/servicetest.mjs`.
 
 ### Nanome title, resolved for the third time
 - [x] The job was labelled XR interaction designer; John was doing PM and lead design and owns
@@ -708,6 +710,17 @@ John's ruling: terse prose, fewer words, no em dashes, no negation-constructivis
 - design.html — dash ×8: four maze guide rows, the done-note, the AsMA award line, both thesis lines
 - art.html — dash ×5: the Writing & Worldbuilding intro, "A Desirable Future in 100 Words", the Earth Star alt text and figcaption, the Granite Omnistump caption
 - Integrator follow-ups (2026-09-16): 17 tldr keeps the coaching outcome (chief-of-staff agent or the skills to build software); 36 names LFM2.5-350M (Qwen was replaced 2026-09-01) and says local models are detected on request, never probed on load.
+## §K Art + photo intake — 2026-10-05
+
+Source: John, in session (Agent Reference/ART_PHOTO_INTAKE_PLAN.md). Each claim is his.
+- 12 — "Godish" → "God-ish", John's spelling; "Leap Motion interactive lightning strike" is his description. The art.html card now plays the self-hosted encode (Assets/art/god-ish.mp4) where the YouTube embed was.
+- 15 — new facts, each placed on art.html:
+  - photographs *Containing Multitudes* and *Aligned Sight* (#photography);
+  - digital illustrations *Galaxy Cat* (2018) and *The Last Frontier* (2016) (#about);
+  - *Blink If You Can Hear Me* (2015): actor, selected for the DC Shorts Film Festival (#photography, IMDb tt6064026);
+  - *Mirrored Lotus* (2019) (#4dart).
+- 31 — "including camping in the Sierra Nevada mountains" (John: "I also go camping in the Sierra Nevada Mountains"); about.html Off the clock carries the same sentence.
+- 49 — url `services.html#fit` → `services.html#book`: the "Is this a fit?" section was removed (John, 2026-10-05, "not adding anything we haven't already said"); a hiring-availability answer lands on Get in touch. Text unchanged.
 
 ## §J Resume compile — 2026-09-16
 

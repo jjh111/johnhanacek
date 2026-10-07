@@ -15,7 +15,7 @@ const r = await page.evaluate(async () => {
   // horizontal line wall at y=400, x 400..700
   const line = []; for (let i = 0; i <= 30; i++) line.push({ x: 400 + i * 10, y: 400 + (Math.random() - 0.5) * 2 });
   draw(line);
-  const lineWall = recognizedShapes.find(s => s.type === 'line' || s.type === 'arrow');
+  const lineWall = F.state.coral.filter(k => k.isExternal).length > 0;
 
   const tap = (x, y) => {
     const before = F.state.food.length;

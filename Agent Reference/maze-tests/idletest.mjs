@@ -97,10 +97,16 @@ const penned = await pageB.evaluate(async () => {
   window.__clear();
   await new Promise(r => setTimeout(r, 300));
   const PEN = { x0: 380, x1: 780, y0: 220, y1: 600 };
-  const r2 = [], seg = (x1, y1, x2, y2) => { for (let i = 0; i <= 12; i++) r2.push({ x: x1 + (x2 - x1) * i / 12, y: y1 + (y2 - y1) * i / 12 }); };
+  // Four separate LINE strokes, not one closed square: since v1.11 a drawn
+  // rectangle is CORAL (shelter, open water — fish correctly cross it). A
+  // room to patrol needs real walls, and lines are walls.
+  const seg = (x1, y1, x2, y2) => {
+    const r2 = [];
+    for (let i = 0; i <= 12; i++) r2.push({ x: x1 + (x2 - x1) * i / 12, y: y1 + (y2 - y1) * i / 12 });
+    window.__h(r2, 20);
+  };
   seg(PEN.x0, PEN.y0, PEN.x1, PEN.y0); seg(PEN.x1, PEN.y0, PEN.x1, PEN.y1);
   seg(PEN.x1, PEN.y1, PEN.x0, PEN.y1); seg(PEN.x0, PEN.y1, PEN.x0, PEN.y0 + 6);
-  window.__h(r2, 20);
   await new Promise(r => setTimeout(r, 500));
   window.__fishAt(580, 400, 24);   // small fish INSIDE the pen
   await new Promise(r => setTimeout(r, 800));

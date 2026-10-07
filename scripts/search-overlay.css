@@ -526,13 +526,17 @@
     outline: none;
     text-align: left;
     transition: border-color 0.2s;
+    display: block;
+    resize: none;
+    overflow-y: hidden;
+    line-height: 1.35;
 }
 .search-overlay #so-searchInput:focus {
     border-color: rgba(var(--cyan-dim-rgb), 0.35);
 }
 .search-overlay #so-searchInput::placeholder { color: var(--so-muted); opacity: 0.65; }
 .search-overlay .clear-btn {
-    position: absolute; right: 0.8rem; top: 50%; transform: translateY(-50%);
+    position: absolute; right: 0.8rem; top: calc(1px + 0.65rem + var(--text-md) * 0.675); transform: translateY(-50%);
     background: none; border: none; color: var(--so-muted); cursor: pointer;
     font-size: var(--text-base); padding: 0.2rem 0.35rem; border-radius: 3px;
     display: none; line-height: 1; opacity: 0.5; transition: opacity 0.15s;
@@ -859,9 +863,9 @@ body.search-overlay-open {
 
 .result-link { color: var(--text-primary); text-decoration: none; }
 .result-link:hover { color: var(--gold); text-decoration: underline; text-underline-offset: 2px; }
-.result-link-ext::after { content: ' ↗'; font-size: 0.7em; opacity: 0.7; }
+.result-link-ext::after { content: ' \2197 '; font-size: 0.7em; opacity: 0.7; }
 /* 9c grammar: titles DECLARE that they navigate (hover underline + ↗) */
-.pc-mod .result-link:not(.result-link-ext):hover::after { content: ' ↗'; font-size: 0.75em; opacity: 0.7; }
+.pc-mod .result-link:not(.result-link-ext):hover::after { content: ' \2197 '; font-size: 0.75em; opacity: 0.7; }
 /* the page badge is the explicit nav affordance */
 .result-page-link { text-decoration: none; transition: color 0.15s, background 0.15s; }
 .result-page-link:hover {
@@ -1240,7 +1244,7 @@ model-viewer.pc-obstacle--float { width: 170px; height: 170px; }
     min-width: 0; overflow: hidden; text-overflow: ellipsis;
 }
 .tier + .tier::before {
-    content: '·';
+    content: '\00b7 ';
     color: var(--so-muted, var(--muted));
     opacity: 0.35; margin-right: 0.25rem;
 }
@@ -1589,6 +1593,13 @@ body.search-overlay-open .so-residue { display: none; }
    #nav, so a sibling selector tracks the nav's own .visible class with no
    scroll listener. Pages without #nav (playground) always show it. */
 #nav:not(.visible) ~ .so-residue { display: none; }
+/* The menu-state bar is 46px (jh-chrome.css #nav.nav-menu), not 40. */
+#nav.nav-menu ~ .so-residue { top: calc(46px + env(safe-area-inset-top)); }
+/* While the sentence shows it is part of the fixed header: --residue-h lets
+   a page's sticky bars (services.html's track tabs) and anchor offsets sit
+   below it instead of under it. 26px: the tabs tuck under the 1px border. */
+:root:has(#nav.visible ~ .so-residue) { --residue-h: 26px; }
+:root:has(body.search-overlay-open) { --residue-h: 0px; }
 .so-residue-open {
     all: unset;
     cursor: pointer;
@@ -1676,12 +1687,163 @@ body.search-overlay-open .so-residue { display: none; }
     .result-page { font-size: var(--text-2xs); }   /* the badge is the nav affordance — thumb-readable */
     .tier { padding: 0.14rem 0.22rem; letter-spacing: 0; }
     .tier + .tier::before { margin-right: 0.15rem; }
-    /* Dots only. Five labelled tiers never fit a phone row, and ellipsis
-       made "keyw…" and "seman…" of the two that always apply. The facts
-       become their dots (the title still explains each); the two that are
-       AFFORDANCES keep their words — a loadable tier's label IS its cost,
-       and the AI toggle is the one control on the strip. */
-    .tier-fact-on .tier-label, .tier-fact-off .tier-label, .tier-gone .tier-label, .tier-loading .tier-label { display: none; }
-    .tier-fact-on .tier-dot, .tier-fact-off .tier-dot, .tier-gone .tier-dot, .tier-loading .tier-dot { margin-right: 0; font-size: 0.85em; }
+    /* (The dots-only rule that lived here is gone: collapsing is now
+       MEASURED by fitTierStrip in search-core, see .tier-strip--icons.) */
     .tier-dot { margin-right: 0.2rem; }
+}
+
+/* ═══ The collapsed strip — icons when the labels don't fit ═══
+   search-core's fitTierStrip adds .tier-strip--icons when the tiers' natural
+   widths overflow the row. Each tier becomes its 16px glyph in its own state
+   color, the state dot rides as a badge, and the name moves to title +
+   aria-label. A loadable tier keeps a one-glyph note (↓ cost, ⚡ cached,
+   37% progress). */
+.tier-note { display: none; }
+/* One glyph per tier in BOTH modes (John, 2026-09-28): expanded, the icon
+   replaces the old generic ●/◐/○ dot beside the label, sized to the text;
+   collapsed, it stands alone at 15px with the dot as a state badge. The
+   tier's color, opacity and pulse carry its state either way. */
+.tier-icon {
+    display: inline-block; width: 1.1em; height: 1.1em;
+    vertical-align: -0.2em; margin-right: 0.3rem;
+}
+.tier-dot { display: none; }
+.tier-strip--icons { gap: 0.1rem; }
+.tier-strip--icons .tier {
+    position: relative; overflow: visible;
+    display: inline-flex; align-items: center; gap: 0.12rem;
+    padding: 0.3rem 0.38rem;
+}
+.tier-strip--icons .tier + .tier::before { content: none; }
+.tier-strip--icons .tier-label { display: none; }
+.tier-strip--icons .tier-icon { display: block; width: 15px; height: 15px; flex: none; margin: 0; vertical-align: baseline; }
+.tier-strip--icons .tier-dot {
+    display: block;
+    position: absolute; top: 0.08rem; right: 0.1rem;
+    margin: 0; font-size: 6px; line-height: 1;
+}
+.tier-strip--icons .tier-ai-on .tier-dot, .tier-strip--icons .tier-ai-off .tier-dot { display: none; }
+/* The toggle's backdrop exists so overflowing labels scroll UNDER it; with
+   icons nothing overflows, and the box read as a stray dark tile. */
+.tier-strip--icons .tier-ai-on, .tier-strip--icons .tier-ai-off { background: none; box-shadow: none; }
+.tier-strip--icons .tier-note { display: inline; font-size: var(--text-4xs); line-height: 1; }
+@media (pointer: coarse) {
+    .tier-strip--icons .tier { padding: 0.45rem 0.5rem; }
+    .tier-strip--icons .tier-icon { width: 17px; height: 17px; }
+    /* ⓘ explains the ranking in a hover tooltip; a touch screen has no hover,
+       so on a phone it was a mark that did nothing. */
+    .pc-controls .pc-info { display: none; }
+}
+
+/* ═══ Inquiry composer — a paragraph becomes a message to John ═══
+   scripts/inquiry-core.js renders this card in the command bar and on
+   services.html #book. Text never dims with alpha (ink tokens carry the
+   per-theme value); alpha is only on borders and fills. */
+.inq-card {
+    position: relative;
+    /* The card sizes its own layout to ITS width, not the viewport's: in the
+       ⤢ workspace list or the tablet band it can be 270px on a wide screen. */
+    container-type: inline-size;
+    border: 1px solid rgba(var(--gold-rgb), 0.3); border-radius: 6px;
+    background: rgba(var(--gold-rgb), 0.04);
+    padding: 0.7rem 0.85rem; margin-bottom: 0.45rem;
+    font-family: var(--font-mono);
+}
+.inq-head { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.4rem; }
+.inq-title { font-size: var(--text-sm); color: var(--gold); }
+.inq-head .cmdbar-group-label { margin: 0; }
+.inq-rows {
+    display: grid; grid-template-columns: max-content minmax(0, 1fr);
+    column-gap: 0.9rem; row-gap: 0.2rem; align-items: center;
+}
+.inq-row { display: contents; }
+.inq-k {
+    font-size: var(--text-3xs); text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--ink-quiet); white-space: nowrap;
+}
+.inq-v {
+    font: inherit; font-size: var(--text-xs); color: var(--text-bright);
+    background: transparent; border: 0; border-radius: 0;
+    border-bottom: 1px solid rgba(var(--cyan-dim-rgb), 0.25);
+    padding: 0.22rem 0.1rem; width: 100%; min-width: 0; box-sizing: border-box;
+}
+.inq-v::placeholder { color: var(--ink-faint); opacity: 1; font-style: italic; }
+.inq-v:focus { outline: none; border-bottom-color: var(--gold); }
+select.inq-v { width: auto; max-width: 100%; justify-self: start; cursor: pointer; }
+select.inq-v option { background: var(--sea-mid); color: var(--text-bright); }
+.inq-lead { display: flex; align-items: center; gap: 0.4rem 0.5rem; flex-wrap: wrap; min-width: 0; }
+.inq-offer-line { display: inline-flex; align-items: center; gap: 0.4rem; min-width: 0; max-width: 100%; }
+.inq-offer-line select { min-width: 0; }
+.inq-arrow { color: var(--ink-quiet); }
+.inq-mark { color: var(--gold); font-size: var(--text-2xs); cursor: help; }
+.inq-mark--weak { color: var(--ink-quiet); }
+.inq-related { font-size: var(--text-xs); }
+.inq-related a { color: var(--cyan); text-decoration: none; border-bottom: 1px dotted rgba(var(--cyan-dim-rgb), 0.45); }
+.inq-related a:hover { color: var(--gold); }
+.inq-sep { margin: 0 0.45rem; color: var(--ink-faint); }
+.inq-missing { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; margin: 0.5rem 0 0.1rem; }
+.inq-missing .inq-k { margin-right: 0.3rem; }
+.inq-add {
+    font: inherit; font-size: var(--text-2xs); color: var(--ink-quiet);
+    background: transparent; border: 1px dashed rgba(var(--cyan-dim-rgb), 0.35);
+    border-radius: 999px; padding: 0.12rem 0.6rem; cursor: pointer;
+}
+.inq-add:hover, .inq-add:focus-visible { color: var(--gold); border-color: rgba(var(--gold-rgb), 0.55); outline: none; }
+.inq-words {
+    margin: 0.6rem 0 0.1rem; padding: 0.35rem 0.65rem;
+    border-left: 2px solid rgba(var(--gold-rgb), 0.4);
+    font-family: var(--font-display); font-size: var(--text-xs);
+    color: var(--text-primary); line-height: 1.5; white-space: pre-wrap;
+    display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
+}
+.inq-actions { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; margin-top: 0.65rem; }
+.inq-actions .intent-cta { cursor: pointer; border: 0; font-family: var(--font-display); }
+.inq-actions .intent-cta:disabled { opacity: 0.5; cursor: default; }
+.inq-receipt--sent { color: var(--gold); }
+/* The honeypot: present for bots, absent for people and screen readers. */
+.inq-hp {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip-path: inset(50%); white-space: nowrap;
+}
+.inq-btn {
+    font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--text-bright);
+    background: transparent; border: 1px solid rgba(var(--cyan-dim-rgb), 0.4);
+    border-radius: 4px; padding: 0.38rem 0.85rem; cursor: pointer;
+}
+.inq-btn:hover, .inq-btn:focus-visible { color: var(--gold); border-color: rgba(var(--gold-rgb), 0.55); outline: none; }
+.inq-note, .inq-receipt { margin-top: 0.5rem; font-size: var(--text-3xs); color: var(--ink-quiet); line-height: 1.5; }
+.inq-receipt { font-size: var(--text-2xs); color: var(--text-bright); }
+.inq-link {
+    font: inherit; color: var(--cyan); background: none; border: 0; padding: 0; cursor: pointer;
+    text-decoration: underline dotted; text-underline-offset: 2px;
+}
+.inq-link:hover { color: var(--gold); }
+.inq-offer { margin: 0.1rem 0 0.4rem; }
+.inq-offer .inq-link {
+    font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--gold);
+    text-decoration: none; border-bottom: 1px dotted rgba(var(--gold-rgb), 0.55);
+}
+.inq-offer .inq-link::after { content: ' \2192'; }
+/* Narrow card: labels stack above their values, each picker gets a full
+   line, and the arrow + offer + mark stay together on the second. */
+@container (max-width: 440px) {
+    .inq-rows { grid-template-columns: 1fr; row-gap: 0; }
+    .inq-k { margin-top: 0.45rem; }
+    .inq-lead { flex-direction: column; align-items: stretch; gap: 0.3rem; }
+    .inq-lead > select, .inq-offer-line { width: 100%; }
+    .inq-offer-line select { flex: 1 1 auto; width: auto; }
+    .inq-head { flex-direction: column; gap: 0.1rem; }
+}
+.inq-prompt-body { margin: 0.2rem 0 0.1rem; font-family: var(--font-display); font-size: var(--text-xs); color: var(--text-bright); line-height: 1.55; }
+.inq-prompt .inq-actions { margin-top: 0.5rem; }
+/* "Write John a message" on the doorway cards: a quiet third action. */
+.intent-write {
+    background: none; border: 0; padding: 0; cursor: pointer;
+    font-family: var(--font-mono); font-size: var(--text-2xs);
+    color: var(--cyan-dim); border-bottom: 1px dotted rgba(var(--cyan-dim-rgb), 0.35);
+}
+.intent-write:hover, .intent-write:focus-visible { color: var(--gold); outline: none; }
+@media (pointer: coarse) {
+    .inq-v { min-height: 36px; }
+    .inq-add, .inq-btn, .inq-actions .intent-cta { min-height: 40px; display: inline-flex; align-items: center; }
 }

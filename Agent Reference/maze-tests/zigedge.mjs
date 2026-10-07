@@ -35,10 +35,10 @@ const r = await page.evaluate(async () => {
     await new Promise(r2 => setTimeout(r2, 200));
     pen();
     await new Promise(r2 => setTimeout(r2, 350));
-    const before = recognizedShapes.length;
+    const before = designFish.state.coral.filter(k => k.isExternal).length;
     fn();
     await new Promise(r2 => setTimeout(r2, 350));
-    return { name, erased: recognizedShapes.length < before };
+    return { name, erased: designFish.state.coral.filter(k => k.isExternal).length < before };
   };
 
   const out = [];

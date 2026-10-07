@@ -21,6 +21,7 @@ in this folder.
 | File | Role |
 |------|------|
 | [SEARCH_COMMAND_BAR.md](./SEARCH_COMMAND_BAR.md) | The command bar's umbrella spec + build records, Phases 1–10 (postcard, scene language, continuity, pieces, truth audit) |
+| [INQUIRY_COMPOSER_PLAN.md](./INQUIRY_COMPOSER_PLAN.md) | BUILT 2026-09-26 (P1 + P2, v2.28): a typed paragraph → on-device brief card → mailto to John. Build record + what was deferred |
 | [PLAYGROUND_CANVAS_PLAN.md](./PLAYGROUND_CANVAS_PLAN.md) | Playground review-canvas plan of record — built on the OpenProse engine; manifest in `scripts/playground-items.js` |
 
 ## Handoffs

@@ -14,16 +14,21 @@
   const SITE = {
     year: 2026,
     org: 'JHDesign LLC',
-    version: '2.27', // ← THE site version. Footer badge, ?v= cache-bust, and README all read this (run scripts/sync-version.mjs after bumping).
+    version: '2.46', // ← THE site version. Footer badge, ?v= cache-bust, and README all read this (run scripts/sync-version.mjs after bumping).
     versionNote: 'Made with Claude Code &amp; OpenCode',
     github: 'https://github.com/jjh111/johnhanacek',
     githubLabel: 'github.com/jjh111/johnhanacek',
-    sig: './Assets/JHsig.svg',
+    sig: (window.JHShapes && window.JHShapes.sig) || './Assets/JHsig.svg',   // inline data URI (jh-shapes.js)
     // Cookieless visit counts. Empty = off. Set to the GoatCounter site code
     // (the part before .goatcounter.com) and every page reports a pageview +
     // referrer with no cookie, no fingerprint, no consent banner needed. The
     // footer states it whenever it is on.
-    goatcounter: 'jjh111'
+    goatcounter: 'jjh111',
+    // The inquiry card's delivery route. Empty = Send opens the visitor's mail
+    // app. Set to the deployed Apps Script web-app URL (…/exec) and Send posts
+    // straight to John's Gmail instead. Deploy steps and the relay source:
+    // Agent Reference/inquiry-relay/. Not a secret: it is a public endpoint.
+    inquiryEndpoint: 'https://script.google.com/macros/s/AKfycbz1kU84mtnPTUxIR8XEus-LuNXLlBgllme8Q63N0r8NWIl84pYqlu51XnHv2-6Rr83J/exec'
   };
   window.JH_SITE = SITE;
 
@@ -91,10 +96,12 @@
           // Version sits on its own line directly above the copyright; the
           // made-with note moves to the end so it does not split the pair.
           '<p class="version">Portfolio v' + SITE.version + '</p>' +
-          '<p class="footer-copyright">© ' + SITE.year + ' John Hanacek · ' + SITE.org + '</p>' +
+          // Lines are spans so a narrow oval breaks them where they read, not
+          // where they run out of room (jh-chrome.css, ≤768px): no dangling "·".
+          '<p class="footer-copyright"><span class="footer-line">© ' + SITE.year + ' John Hanacek</span><span class="footer-sep"> · </span><span class="footer-line">' + SITE.org + '</span></p>' +
           '<p class="footer-github"><a href="' + SITE.github + '" target="_blank" rel="noopener">' + SITE.githubLabel + '</a></p>' +
           '<p class="version version-note">' + SITE.versionNote + '</p>' +
-          (SITE.goatcounter ? '<p class="version version-note footer-privacy">Visits are <a href="https://www.goatcounter.com" target="_blank" rel="noopener" title="GoatCounter — no cookies, nothing about you is stored">counted</a> without cookies</p>' : '') +
+          (SITE.goatcounter ? '<p class="version version-note footer-privacy"><span class="footer-line">Visits <a href="https://www.goatcounter.com" target="_blank" rel="noopener" title="GoatCounter — no cookies, nothing about you is stored">counted</a></span> <span class="footer-line">without cookies</span></p>' : '') +
         '</div>';
     }
   }

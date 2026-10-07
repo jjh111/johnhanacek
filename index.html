@@ -24,9 +24,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@200;300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles/jh-chrome.css?v=2.27">
-    <link rel="stylesheet" href="./styles/shared.css?v=2.27">
-    <link rel="stylesheet" href="./scripts/search-overlay.css?v=2.27">
+    <link rel="stylesheet" href="./styles/jh-chrome.css?v=2.46">
+    <link rel="stylesheet" href="./styles/shared.css?v=2.46">
+    <link rel="stylesheet" href="./scripts/search-overlay.css?v=2.46">
 
     <link rel="alternate" type="application/json" href="./john-hanacek.json" title="Structured data">
     <script type="application/ld+json">
@@ -215,29 +215,33 @@
         }
 
 
-        /* About card portrait — index only.
-           The shared 220px portrait is 328px tall, and this card carries just
-           two paragraphs, so at wide widths the float ran 88px BELOW the last
-           line: the card looked bottom-padded when it was really the image
-           overhanging the text. about.html keeps the shared size — its card has
-           three paragraphs and the text is TALLER than the portrait there
-           (-115px at 1600), so shrinking it globally would only shorten the
-           image for no gain. 187px is 15% down and takes the overhang to 38px.
-           Bounded above 640px: the shared sheet drops the portrait to 160px and
-           un-floats it on mobile, and an id-scoped rule would have out-specified
-           that and left mobile LARGER than before. */
-        @media (min-width: 641px) {
-            #about .about-portrait {
-                max-width: 187px;
-                /* The shared 20px bottom margin only shows when the float is
-                   the tallest thing in the card, which here it is — 20px of
-                   nothing under the picture. At widths where the text runs
-                   longer it never rendered anyway, so dropping it costs
-                   nothing and saves the gap where it was visible. */
-                margin-bottom: 0;
-            }
+        /* About card portrait — index only. A float at EVERY width (the shared
+           sheet stacks it above the text under 640px, which left a phone's
+           first screen of About mostly empty), sized as a share of the card so
+           the wrap keeps its proportion from 320px to desktop. The prose is
+           laid around the photo's actual ellipse by pretext (script at the
+           foot of the page); `shape-outside` is the same curve for the moment
+           before that runs, or if it never does. Fixed aspect ratio, so the
+           obstacle has its true size before the lazy image arrives. Capped at
+           200px: wider, the photo overhangs a two-paragraph card on desktop. */
+        #about .about-portrait {
+            float: right;
+            width: clamp(96px, 40%, 200px);
+            max-width: none;
+            margin: 0.2rem 0 0.4rem 0.75rem;
+            shape-outside: ellipse(50% 50%) border-box;
+            shape-margin: 1rem;
+        }
+        #about .about-portrait img { aspect-ratio: 853 / 1280; }
+        /* Phones: the desktop wrap, shrunk. At the card's ~19px intro size the
+           column beside a 320–430px phone's photo held ~14 characters, so
+           "Founding" and "the" each took a line. One ladder step down holds
+           phrases instead, and the photo keeps its share of the card. */
+        @media (max-width: 600px) {
+            #about .content-card.about p { font-size: var(--text-sm); line-height: 1.65; }
         }
     </style>
+    <script>/* Search early-click catcher: search-overlay.js is deferred, so on a slow network a click on the magnifier (or a data-search-query button) used to follow the href to search.html. Hold it; the overlay opens the moment it inits (it reads __searchPending). */document.addEventListener('click',function(e){if(window.__searchOverlayInit||e.defaultPrevented||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey||e.button!==0)return;var t=e.target;if(t&&t.nodeType!==1)t=t.parentNode;if(!t||!t.closest)return;var a=t.closest('[data-search-query],a[data-search-trigger],a.search-icon,a[href="search.html"],a[href="./search.html"]');if(!a)return;if(a.tagName==='A'&&!a.hasAttribute('data-search-query')&&!a.hasAttribute('data-search-trigger')&&!a.querySelector('svg line'))return;e.preventDefault();window.__searchPending=a.getAttribute('data-search-query')||'';document.documentElement.setAttribute('data-search-pending','1');},true);</script>
 </head>
 <body>
     <div id="cursorSpotlight"></div>
@@ -265,18 +269,18 @@
     </nav>
 
     <header class="hero" id="top">
-        <canvas id="heroCanvas"></canvas>
+        <canvas id="heroCanvas" data-swipe-offer="#about"></canvas>
 
         <!-- Shape nav: direct child of hero, matches design/art positioning.
              Markup rendered by scripts/jh-shapes.js (single source for the
              shape marks + labels; included right below, sync = no flash).
              index's strip includes the search glyph and marks home active. -->
         <nav class="shape-nav" aria-label="Page navigation" data-jh-hero-nav="search,home,design,art" data-current="home"></nav>
-        <script src="./scripts/jh-shapes.js?v=2.27"></script>
+        <script src="./scripts/jh-shapes.js?v=2.46"></script>
 
         <div class="hero-oval" role="banner">
             <div class="hero-content">
-                <img class="hero-sig-inline" src="./Assets/JHsig.svg" alt="John Hanacek signature">
+                <img class="hero-sig-inline" src="data:image/svg+xml,%3Csvg role='img' aria-label='John Hanacek signature' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 150 75'%3E%3Cpath fill='%23ffffff' d='m148.6 13.3c-0.3-0.6-2.9 0.3-3.7 0.4l-0.4 0.2-0.8 0.1c-0.2-0.2-1 0.4-1.1 0.2l-0.8 0.3h-0.3l-1.1 0.3-0.7 0.1-0.9 0.3h-0.7l-0.8 0.3h-0.7l-0.7 0.3h-0.9l-0.6 0.3h-0.8l-0.8 0.3-0.9 0.1-0.8 0.2-0.7 0.1-0.3 0.2-0.6-0.1-0.2 0.3h-0.9l-0.8 0.3-0.3-0.1-1 0.4-0.4-0.1-0.3 0.2h-0.5l-1.2 0.4-0.9 0.1-1.1 0.3-0.9 0.1-1.6 0.4h-0.4l-0.4 0.2h-0.4l-1.2 0.3-2.4 0.5-1.4 0.4-1.4 0.2-1.2 0.4h-0.4l-0.9 0.3-0.6 0.1-2.1 0.5-1 0.4-1 0.1-1 0.4h-0.3l-0.4 0.3h-0.4l-2 0.6-0.9 0.1-1.1 0.5-1.2 0.2-0.8 0.3h-0.5l-0.8 0.4-0.6 0.1-2 0.6-0.2-0.2v-0.9h-0.2l0.3-0.4-0.2-0.4 0.2-0.4-0.2-0.1 0.1-2.1-0.2-0.1 0.2-0.5-0.2-0.2 0.2-0.4-0.2-0.3 0.3-0.2-0.2-0.4 0.1-3.5v-1.1l0.3-0.3-0.2-0.4 0.2-1.6 0.1-3.5 0.2-2 0.2-0.4 0.1-2.1 0.2-0.5 0.1-1.9 0.7-0.5c0.2-0.2 0.2-1.1 0-1.1-0.4-0.3-1.9-0.5-2.3 0-0.3 0.5-0.6 1.6-0.6 2.3l-0.1 0.2v1l-0.2 0.3-0.2 1.7-0.1 0.3-0.1 3.1-0.2 0.1v2l-0.2 0.3-0.1 3.1-0.2 0.2v3.1h0.2l-0.4 0.6 0.3 0.3-0.2 0.5 0.2 0.2-0.2 0.4v3l0.2 0.1-0.2 0.4v2.6l0.2 0.3-0.5 0.4-0.3-0.1-0.6 0.4-0.8 0.1-1 0.5-0.5-0.1-0.2 0.3-0.6-0.1-0.1 0.3-0.6-0.1-0.2 0.3-0.4-0.1-0.2 0.3-0.4-0.1-0.2 0.3h-0.4l-1.8 0.5h-0.3l-0.7 0.4-2.3 0.5-0.2-0.8 0.2-0.6-0.2-0.3 0.2-0.2 0.1-3.6 0.2-0.2-0.1-0.9 0.2-0.3-0.2-0.4 0.2-0.1-0.1-1.1 0.2-0.5-0.1-1 0.3-0.4-0.2-0.6 0.2-0.1 0.2-3.4 0.2-0.9v-0.8l0.2-0.3 0.1-2.1 0.2-0.8 0.2-0.6 0.1-1.5 0.2-0.4 0.1-0.7 0.3-0.2c0.3-1.6 1.6-1.1 1.2-2.5-0.5-0.6-1.9-0.9-2.5-0.5-0.6 0.7-1 2.3-1.3 3.3l-0.1 1-0.2 0.2-0.1 1.2-0.2 0.3v0.9l-0.2 0.3v0.8l-0.2 0.1-0.1 2.2-0.2 0.1-0.1 2-0.2 0.1-0.1 2.6-0.1 0.1v1.9l-0.2 0.3v2l-0.3 0.5 0.2 0.2-0.1 3.2h-0.1l0.1 1.5-0.2 0.2 0.2 1.1-0.3 0.3v0.2l-1.3 0.4-0.2 0.2h-0.5l-0.5 0.3-0.8 0.1-1.9 0.7-0.5 0.3h-0.5l-2.4 0.9-1.3 0.5-1.2 0.2-1.7 0.7-0.1-0.2 0.5-1.4 0.6-0.8 0.4-1.4 0.3-0.6v-0.4l0.6-1.7v-0.4l0.4-0.2v-0.5l0.6-1.4 0.1-1 0.4-1.1 0.1-1.5 0.3-0.4 0.1-1.5 0.2-0.3 0.1-2.2 0.2-0.5-0.1-0.7 0.2-0.2-0.1-0.4v-2.2l-0.2-0.5v-1.1l-0.3-0.7v-0.6l-0.3-0.5c-1.1-2.3-3.1-3.3-6.2-3.5h-2.8l-0.2 0.1c-1.3 0.2-3.5 0.6-4.7 1.1l-0.3 0.2-0.5 0.1-2.2 0.9-0.1 0.2-0.7 0.2-1 0.6-2.5 1.2-1.5 0.9-0.3 0.1-1.8 1.1-0.3 0.1-0.3 0.3-2.7 1.6-0.7 0.6-1.7 1-3.2 2.5-0.3 0.2-1.4 1.2-1.6 1.6-0.3 0.1-0.1 0.4-1.5 1.3-0.4 0.5-0.2 0.4-0.5 0.3-0.7 0.9-0.2 0.1v0.3l-1.2 1.5-0.4 0.2-1 1.3-0.3 0.2-0.7 0.9-1.2 1.3-0.2 0.2-0.6 0.9-0.6 0.6-0.1 0.4-0.4 0.3-2.6 3.8c-0.5 1.3 1.1 2.1 1.5 1.8s0.6-1 0.9-1.5l0.3-0.2 0.2-0.6 1.1-1.4 0.3-0.1v-0.4l1.6-1.9 0.3-0.2v-0.2l0.6-0.6 0.8-1.1 0.4-0.1 0.1-0.4 0.9-0.8 0.2-0.5 1.2-1.3 0.2-0.3 0.8-0.7 0.3-0.5 3.1-3.1 1.2-1 0.1-0.2 2.2-1.8 0.2-0.1 1.9-1.5 1.7-1.2 0.4-0.4 2.1-1.3 0.5-0.4 1.1-0.6 0.5-0.4 1.3-0.7 0.4-0.3 1.5-0.8 0.7-0.5 2.4-1.2 0.5-0.2 0.3-0.3 3.4-1.3 2.3-0.7 0.3-0.1 1.2-0.3 1.2-0.2h0.5l0.1-0.1c0.7-0.1 2.4-0.1 2.8 0l0.2 0.2h0.4l1.3 0.4 0.9 1v0.4l0.4 0.7 0.2 2.2v1l-0.2 0.2 0.2 0.2-0.2 0.4 0.2 0.3-0.2 0.2 0.1 0.5-0.3 0.6c0.1 1.3-0.1 2.2-0.6 3.1l-0.1 1.4-0.3 0.3-0.2 2.6-0.8 1.7v0.5l-0.4 0.8-0.1 1.1-0.4 0.9-0.2 0.7-0.2 0.1-0.2 0.9-0.4 0.7v0.4l-0.4 0.6-0.1 0.6-0.3 0.3-0.8 1.9-0.5 0.4-0.1 0.1-1.2 0.5-0.7 0.1-2.7 1.1h-0.3l-0.4 0.3-0.8 0.2-0.9 0.4h-0.4l-0.3 0.3-1.3 0.4-0.3 0.2h-0.4l-0.7 0.4-1.3 0.4-0.3 0.3h-0.5l-0.5 0.3-3.3 1.1-0.3 0.2-0.7 0.2-0.7 0.5-1 0.2-0.5 0.4h-0.5l-1 0.4h-0.3l-0.2 0.4-0.8 0.1-0.5 0.3-0.5 0.1-0.4 0.3-0.6 0.1-0.2 0.2-0.9 0.3-0.3 0.2h-0.3l-0.6 0.4-0.7 0.2-1.5 0.7-1 0.3-0.3 0.2-1.1 0.4-1.8 0.9-0.5 0.1-0.2 0.3-0.6 0.1-0.7 0.5-0.5 0.1-0.8 0.5-0.5 0.1-0.4 0.3-1.1 0.5-0.5 0.3-0.5 0.1-1 0.7-0.5 0.2-1 0.7-0.5 0.2-1.2 0.8-0.5 0.2-2.2 1.4-0.6 0.4-1.5 1.1-0.5 0.5-0.4 0.1-0.2 0.3-2.4 2-2.2 2-0.8 1-0.9 1c-0.6 0.9-1.9 3-1.3 5.2l1.1 1.3 1.4 0.9 0.5 0.2 0.7 0.4 1.5 0.4h0.6l0.4 0.2h3.5 0.3l0.1-0.1 0.5 0.2 0.2-0.2h1.2 0.2l0.3-0.2 1.2-0.1 0.8-0.3h0.7l0.5-0.2 1-0.1 0.6-0.3h0.4l1.1-0.4 0.9-0.2 1-0.5 0.6-0.2 0.7-0.3 0.7-0.2 0.5-0.3 0.5-0.1 1.5-0.7 0.5-0.3 0.5-0.2 0.5-0.3 0.6-0.1 1.2-0.8 0.7-0.2 0.8-0.5 0.5-0.1 1.2-0.8 0.5-0.2 0.5-0.4 0.8-0.5 0.5-0.2 0.9-0.7 0.6-0.3 0.5-0.5 0.6-0.2 1.5-1.1 0.6-0.3 0.3-0.3 0.7-0.4 1.5-1.2 0.5-0.3 1.3-1.1 0.5-0.3 1.5-1.4 0.3-0.3 0.4-0.3 4.8-4.7 1-1.2 0.5-0.5 0.9-1.1 0.3-0.4 0.5-0.7 0.4-0.6 1-1.2 0.6-1.1 0.3-0.3 0.7-1.3 0.4-0.5 0.5-1.1 0.5-0.7 0.6-1.4c0.8-2 2.1-1.8 3.8-2.5l0.7-0.2 0.3-0.2 1-0.3h0.4l0.3-0.2 0.8-0.2 0.3-0.2 1.9-0.5 0.5-0.2 0.6-0.1 0.7-0.4 0.7-0.1 0.5-0.2 0.5-0.1 0.8-0.4 1-0.3 0.2 0.3-0.2 0.6 0.3 0.6-0.1 0.5 0.2 0.3v1.5l0.2 0.1-0.1 0.3 0.1 3.1 0.2 0.9v0.5h0.2l-0.2 0.5 0.2 0.1 0.1 1.6h0.1l0.1 1.4 0.2 0.5v0.7l0.2 0.3v0.6l0.2 0.2 0.1 1.1 0.2 0.2 0.1 1 0.2 0.1v0.7l0.3 0.5 0.1 0.9 0.2 0.1 0.5 1.8 0.2 0.2 0.1 0.6 0.3 0.5 0.1 0.5 0.4 0.4v0.3l0.2 0.3c0.6 1 1.9 3 2.6 3 0.5 0.1 1 0 0.9-0.3 0.1-0.3-0.7-1-1.2-2.3l-0.7-0.9-0.5-1.5-0.3-0.4v-0.4l-0.2-0.2-0.1-0.6-0.3-0.5v-0.5l-0.3-0.5v-0.4l-0.7-2.4v-0.6l-0.2-0.3-0.1-1.3-0.2-0.4v-1l-0.2-0.4-0.1-2.1-0.3-0.1 0.2-0.9-0.3-1.4v-1.2l-0.2-0.3 0.2-0.2-0.1-1.3 0.2-0.2-0.3-0.2v-2l-0.2-0.2 0.2-0.3-0.2-0.4 0.2-0.8-0.2-1.2 1-0.4h0.5l0.2-0.4h0.6l0.4-0.2h0.5l0.8-0.4 0.8-0.1 0.7-0.4h0.5l2.1-0.7 0.6-0.1 0.6-0.3 2.4-0.6 0.4-0.2v1l0.2 0.1v2.3l0.3 0.3-0.3 0.2 0.3 0.6-0.2 0.2 0.2 0.3v1.5h0.1v1.1l0.2 0.3v1.8l0.2 0.3v1.6l0.3 0.4 0.1 1.4 0.2 0.5 0.1 1.2 0.2 0.3v0.5l0.2 0.2v1l0.2 0.4 0.1 1.1 0.2 0.3 0.1 0.8 0.2 0.3 0.1 1 0.2 0.4 0.1 0.8 0.2 0.3 0.1 0.7 0.3 0.4v0.5l0.3 0.4 0.1 0.9 0.3 0.3v0.4l0.3 0.4v0.4l0.3 0.3v0.4l1.6 2.6c0.6 1 1.1 0.9 1 0.7 0.5-0.4-0.4-2.3-0.7-2.9l0.1-0.1-0.8-2.4-0.2-0.1v-0.5l-0.3-0.4-0.1-1-0.3-0.4v-0.6l-0.2-0.3v-0.5l-0.3-0.3-0.1-1.3-0.2-0.2-0.1-0.9-0.2-0.5v-0.6l-0.3-0.4-0.2-1.9-0.3-0.1 0.2-0.4-0.2-1.2h-0.2l0.2-0.5-0.2-0.3-0.2-2.7h-0.2l0.1-1.4-0.3-0.1v-2.3l-0.2-0.2v-3.5l-0.2-0.2 0.2-0.3-0.1-1.5-0.2-0.1 0.2-0.4-0.1-0.8 1.1-0.6 1.1-0.3 2.3-0.7 0.7-0.1 3.8-1 0.7-0.1 1.8-0.5 0.4-0.2 1.3-0.4h0.3l0.5-0.2 0.6-0.1 0.6-0.2h0.5l0.5-0.2 3.5-0.9h0.4l0.2-0.2h0.5l1-0.3h0.4l0.4-0.2 0.4 0.1 0.2-0.2h0.8l2.2-0.6 0.8-0.1 0.2-0.2 0.4 0.1 0.4-0.2h0.6l0.4-0.2h0.5l0.5-0.2 0.6-0.1 0.5-0.2 0.6-0.1 1-0.2 1.2-0.3h0.5l0.4-0.3h0.4l3.5-0.8h0.8l0.5-0.3 1-0.1 2.2-0.6 0.9-0.2h0.5l0.4-0.2 0.8-0.1 1.8-0.5 0.6-0.4v0.4l0.5-0.5h0.4l2.1-0.6 0.8-0.2 1.3-0.6 0.9-0.2 1.3-0.8 0.7-0.2v-0.5zm-91.1 27.3-0.7 1v0.4l-0.4 0.4-0.2 0.6-0.3 0.4-0.3 0.6-0.3 0.2-0.1 0.4-0.5 0.5-0.1 0.5-0.4 0.2-0.1 0.6-1.7 1.7v0.4l-2 2.1-0.3 0.4-4.5 4.1-1.1 0.9-0.4 0.4-0.5 0.3-1.7 1.4-0.3 0.1-0.1 0.3-0.6 0.2-2 1.5-2.3 1.5-0.5 0.3-0.2 0.2-0.3 0.1-2 1.3-0.7 0.3-1.5 0.9-0.5 0.4-0.5 0.2-1.3 0.7-0.5 0.2-1 0.6-0.5 0.1-0.7 0.5-3.3 1.4-0.7 0.2-0.5 0.3-0.5 0.1-1.2 0.4h-0.6l-0.4 0.3-0.6 0.1-1.7 0.7-1.9 0.4h-0.4l-1.2 0.7h-2.5l-0.9 0.8-0.1-0.2-1 0.1-1-0.2h-1l-1.5-0.4-0.5-0.2-0.5-0.5v0.2c-0.8-0.7-0.5-2.6 0.5-3.7l0.2-0.5 0.5-0.4 0.3-0.6 2.2-2.2 0.3-0.2 0.1-0.3 0.4-0.2 1.5-1.4 0.5-0.2 0.2-0.4 1.3-0.9 0.2-0.3 0.5-0.2 1-0.8 0.5-0.5 0.8-0.4 1-0.7 0.5-0.2 0.7-0.6 0.6-0.3 0.4-0.3 0.5-0.2 0.5-0.5 0.5-0.1 1.8-1.1 0.5-0.2 1.2-0.7 0.5-0.2 0.3-0.3 0.7-0.2 0.6-0.4 0.7-0.3 0.6-0.3 1.2-0.7 1.2-0.5 0.2-0.2 0.6-0.1 0.7-0.4 0.5-0.1 0.5-0.3 0.7-0.2 0.5-0.3 1.3-0.4 0.2-0.2 0.8-0.1 0.2-0.4 0.8-0.1 1.7-0.9 0.5-0.1 1-0.5 0.6-0.1 2.2-0.9 0.5-0.1 0.7-0.4 0.8-0.2 0.2-0.2 1-0.3 0.8-0.4 0.5-0.1 0.5-0.3 0.7-0.2 0.5-0.3 0.6-0.1 2.2-0.8 0.5-0.1 0.5-0.3 1.2-0.3 0.3-0.2 0.5-0.1 0.5-0.4 0.7-0.1 1.3-0.5 0.7 0.1v0.1l0.1 0.2-0.2 0.2z'/%3E%3C/svg%3E" alt="John Hanacek signature">
                 <h1>John <span class="meta">Hanacek</span></h1>
                 <p class="tagline">DESIGN ENGINEER · PRODUCT DESIGNER · ARTIST</p>
                 <p class="byline"><span class="role">Sounds like · (Hana-check)</span></p>
@@ -307,15 +311,12 @@
             </div>
             <span class="guide-done-note"><span aria-hidden="true">✓</span><span>that's the lot. the tank is yours</span></span>
             <div class="guide-progress" data-jh-guide-progress aria-hidden="true"></div>
-            <a href="#about" class="guide-cta" tabindex="-1">tap or swipe for content
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 13l5 5 5-5M7 6l5 5 5-5"/></svg>
-            </a>
         </div>
         <!-- Gesture marks for the guide rows above. Non-deferred and placed
              AFTER the card so the fill happens during parse (same contract as
              jh-shapes.js): no flash, no late swap. -->
-        <script src="./scripts/jh-strokes.js?v=2.27"></script>
-        <script src="./scripts/jh-guide.js?v=2.27"></script>
+        <script src="./scripts/jh-strokes.js?v=2.46"></script>
+        <script src="./scripts/jh-guide.js?v=2.46"></script>
 
         <div class="canvas-controls">
             <button class="info-btn" id="toggleHint" aria-label="Toggle draw instructions" title="How to draw">i</button>
@@ -655,8 +656,9 @@
 
     <!-- Engines defer; the boot below waits for DOMContentLoaded, which fires
          after deferred scripts — order preserved, parser never blocks. -->
-    <script src="./scripts/shape-detection.js?v=2.27" defer></script>
-    <script src="./scripts/fish-engine.js?v=2.27" defer></script>
+    <script src="./scripts/shape-detection.js?v=2.46" defer></script>
+    <script src="./scripts/fish-engine.js?v=2.46" defer></script>
+    <script src="./scripts/swipe-offer.js?v=2.46" defer></script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         const { segmentsIntersect, distance, getLineScore } = window.ShapeDetect;
@@ -869,7 +871,53 @@
         };
     });
     </script>
-<script src="./scripts/search-overlay.js?v=2.27" defer></script>
+<script src="./scripts/search-overlay.js?v=2.46" defer></script>
+    <script type="module">
+        // About: both paragraphs flow around the portrait's ellipse (pretext,
+        // scripts/pretext-wrap.js). Each paragraph is its own wrap with the
+        // photo as the obstacle; the second is laid out after the first has
+        // set its height, which is what moves the second's rows against the
+        // curve. One ResizeObserver on the card re-runs both in that order.
+        // A type-scale breakpoint changes the FONT, which a wrap measures once,
+        // so a font change rebuilds rather than refreshes. Anything that throws
+        // leaves the float + shape-outside layout, which already reads right.
+        const card = document.querySelector('#about .content-card.about');
+        const img = card && card.querySelector('.about-portrait img');
+        const paras = card ? [...card.querySelectorAll(':scope > p')] : [];
+        if (card && img && paras.length) {
+            try {
+                const { default: wrapAround } = await import('./scripts/pretext-wrap.js');
+                let wraps = [], font = '', building = null;
+                const fontOf = () => getComputedStyle(paras[0]).font;
+                const build = async () => {
+                    wraps.forEach(w => w.destroy());
+                    wraps = [];
+                    font = fontOf();
+                    for (const p of paras) {
+                        // minSlot above the widest tip sliver (half a 200px photo
+                        // less hPad = 86px): that sliver beside the tips never
+                        // takes a word. A constant, so a page resized to a width
+                        // lays out exactly as one loaded at it.
+                        wraps.push(await wrapAround(p, {
+                            obstacles: [{ el: img, shape: 'ellipse', hPad: 14, vPad: 2 }],
+                            minSlot: 92,
+                        }));
+                    }
+                    card.dataset.wrap = 'pretext';
+                };
+                building = build();
+                await building;
+                await document.fonts.ready;
+                new ResizeObserver(async () => {
+                    await building;
+                    if (fontOf() !== font) { building = build(); return; }
+                    wraps.forEach(w => w.refresh());
+                }).observe(card);
+            } catch (err) {
+                console.warn('about wrap skipped:', err);
+            }
+        }
+    </script>
 <script>document.addEventListener('DOMContentLoaded',()=>{const t=document.querySelector('.nav-title');if(t)t.dataset.short='JH';document.querySelectorAll('.nav-right a').forEach(a=>{const w=a.textContent.trim().split(/\s+/);a.dataset.short=w.length>1?w.map(x=>x[0]).join('').toUpperCase().slice(0,2):a.textContent.trim().slice(0,2).toUpperCase()})});</script>
     <script>
         (window.JH_COMMANDS = window.JH_COMMANDS || []).push(
@@ -900,6 +948,6 @@
             }
         );
     </script>
-    <script src="./scripts/jh-chrome.js?v=2.27" defer></script>
+    <script src="./scripts/jh-chrome.js?v=2.46" defer></script>
 </body>
 </html>
