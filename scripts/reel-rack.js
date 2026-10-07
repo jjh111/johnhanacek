@@ -965,7 +965,9 @@
   // ── load: the draft, else the file; follow the file when it changes ───
   (async () => {
     let text = null;
-    fileText = await fetch('./' + NAME, { cache: 'no-store' }).then(r => r.ok ? r.text() : null, () => null);
+    // the rig fetched the file already, beside the script (REEL_SCORE_FILE), before any clip
+    const early = window.REEL_SCORE_FILE && window.REEL_SCORE_FILE.file === FILE ? window.REEL_SCORE_FILE.text : null;
+    fileText = await (early || fetch('./' + NAME, { cache: 'no-store' }).then(r => r.ok ? r.text() : null, () => null));
     try { const d = sessionStorage.getItem(DRAFT_KEY); if (d != null) { text = d; draft = true; } } catch (e) { /* no drafts */ }
     if (text == null && HOST) { const h = await Promise.resolve(HOST.load(FILE)).catch(() => null); if (h != null) { text = h; hosted = true; } }
     if (text == null) text = fileText;

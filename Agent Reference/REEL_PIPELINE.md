@@ -538,6 +538,17 @@ storage. Now nothing reloads for an edit.
 - **Clips and pictures are kept.** Live, a clip is fetched once, as a blob (`CLIPS`, by
   file); the `<video>` and `<img>` elements a build made wait in `POOL` while the next build
   takes them back, still loaded. What the new build does not take is let go.
+- **The clips wait for the start** (2026-10-07). The reel has started once the synth rack has
+  read the score. Seven clips of up to 8.4 MB held every connection the browser keeps to a host,
+  and the score's fetch, asked for last, queued behind them: the built editor started in 5 to 7 s
+  on a local server, and hosttest's slow-store check tripped at 8.1 s with the store adding 0.5 s.
+  Now the rig fetches the score's file beside the script (`REEL_SCORE_FILE`, which the rack
+  takes), and a clip's fetch waits on `CLIPS_GO`: open once the score's file and the rack's
+  scripts are in, or after 10 s whatever holds them. A page that is leaving aborts its clip
+  fetches (`beforeunload`), because a reload's own HTML waited behind them too; a page that stays
+  fetches them again a second later. Measured on the built editor with the clips served at
+  0.5 MB/s: a reload started in 2.72 s before, 0.27 s after, the same as with no throttle. Render
+  mode never calls `clipURL` and loads no rack, so a render films as before.
 - **The tank keeps swimming.** Every event has an id: `spawn big`, `spawn fish 2`,
   `food 10 2`, `fish 5 @2.5 big dart` (its scene and its time there, so moving another scene
   does not make it new). An edit regrows the tank only when the spawns already due differ (a
