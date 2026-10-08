@@ -56,7 +56,7 @@ const sung = tk.notes.find(n => n.heard && !n.out && n.early && n.step > 64), ad
   const ad = RM.editTake(SCORE, 'john', [{ ln: added.ln, remove: true }]);
   ok(ad.lns[0] === null && take(ad.text).notes.length === tk.notes.length - 1, 'an added note taken away is gone');
   const v = RM.editTake(SCORE, 'john', [{ ln: sung.ln, vel: 0.55 }]), vl = v.text.split('\n')[v.lns[0] - 1];
-  ok(at(v.text, v.lns[0]).vel === 0.55 && vl.replace('0.55', '0.80') === SCORE.split('\n')[sung.ln - 1], `a level: its one column ("${vl.trim().slice(0, 40)}")`);
+  ok(at(v.text, v.lns[0]).vel === 0.55 && vl.replace('0.55', sung.vel.toFixed(2)) === SCORE.split('\n')[sung.ln - 1], `a level: its one column ("${vl.trim().slice(0, 40)}")`);
   ok(RM.editTake(SCORE, 'john', [{ ln: sung.ln, step: sung.step + 2 }, { ln: sung.ln, step: sung.step }]).text === SCORE, 'two edits of one note that come to nothing: nothing');
   const many = RM.editTake(SCORE, 'john', tk.notes.filter(n => !n.out && n.step >= 128 && n.step < 192).map(n => ({ ln: n.ln, step: n.step + 4, midi: n.midi + 2 })));
   ok(sorted(many.text) && many.lns.every((l, i) => { const n = at(many.text, l), o = tk.notes.filter(x => !x.out && x.step >= 128 && x.step < 192)[i]; return n.step === o.step + 4 && n.midi === o.midi + 2; }), `${many.lns.length} notes moved together, each line where it now belongs`);

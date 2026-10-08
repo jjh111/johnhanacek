@@ -1617,6 +1617,40 @@ haven't checked them."
   refuses (three.js, the search libraries), and linkcheck's seven are the template literals its
   README names.
 
+## Five movements, and the lift marked (2026-10-08)
+
+John, on the piano-rolled voice: "ok the lead and fx rows are empty? looking at the adjusted
+notes, how could we further clean up this composition to highlight the movements but help reduce
+clutter/drift". Then, on the plan: "perfect thanks try that!"
+
+- **What cluttered it.** 150 notes, and from bar 21 on five or six a bar, many of them passing
+  notes off the beat. Bar 4 had seven, its neighbour notes crowding the pulse. Four leaps were
+  wider than a fifth, up to an octave, and the last note was F, over an A minor chord: the song
+  did not land.
+- **Five movements**, written by `.local/probe/recompose.js` (not kept) as one `editTake`, so a
+  single Undo in the editor takes it all back:
+  - *I. Pulse*, bars 1-7: the offbeat eighths, one chord tone a bar (A C D A F C B), at 0.6
+    rising 0.02 a bar.
+  - *II. Theme*, bars 8-16: as John left it, at 0.8.
+  - *III. Theme again*, bars 17-24: bars 9-15 once more, then John's bar 24 turning to the lift.
+  - *IV. Lift*, bars 25-32: one four-bar motif from John's own 21-24 and 29-32 (the climb to F,
+    the rise through C, the fall over G, the turn over Am), four or five notes a bar, played
+    twice at 0.9. The second time its last bar steps C, B.
+  - *V. Landing*, bars 33-34: A, held to the end of the voice's clip.
+  The rules: beats 1 and 3 are chord tones, a note off the chord is one eighth between two on it,
+  and no leap is wider than a fifth but the theme's own drop to E and back (a minor sixth, John's,
+  twice). A target note on the step of a playing note reuses that note's line, so 78 notes keep
+  what was sung for them; 49 are added and 62 sung notes are now left out. 127 play.
+- **The lift, marked.** The arrangement still runs one song, and the lift is the one place it
+  grows: a quiet arp (`CLIP arp 25-32.3.2 updown 0.45 in 8 out 4`), a riser over the half bar
+  into "how do i work with john?" (`CLIP fx 26.3-26.4 rise 0.8`, ending on 27.1) and a crash on
+  the end card (`CLIP fx 32.3 crash 0.7`). The lead stays silent.
+- **Empty lanes fold.** A part with no clips leaves the timeline's lanes for one dashed row at
+  their foot, "▸ unused: lead"; a click shows its lane (to add a clip there) and a second folds
+  it. A part whose pads are open in the inspector stays. The choice is kept for the tab
+  (`reel-tl-unused`). Suite: musiclanestest step 7b.
+- Loudness barely moved: -14.0 LUFS before, -14.1 after, peak -3.9 dBFS.
+
 ## Later
 
 Scene-specific cues (line staggers, the push); moving cut 1 onto the one player; stems out of

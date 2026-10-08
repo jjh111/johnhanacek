@@ -22,6 +22,8 @@
 //      plays from just before it
 //   7. the chevron shuts the music to its ruler and chords; shut stays shut after a reload by
 //      hand, and opens again
+//   7b. a part with no clips (the lead's taken out) folds into one row, "unused: lead"; a click shows
+//      its lane and a second folds it
 //   8. a short window: the panel stops where the preview would get too small, its lanes scroll up
 //      and down under a ruler that stays, and the M and S column moves with them
 //   9. no edit reloads the page; no page errors
@@ -289,6 +291,24 @@ try {
   await page.locator('#reel-tl button.tl-mtog').click();
   await sleep(200);
   check(await page.evaluate(() => document.querySelectorAll('#reel-tl .tl-mk').length) === geo.clips.length, 'and the chevron opens it again');
+
+  // 7b ── a part with no clips folds into one row; a click shows its lane, and again folds it
+  await page.evaluate(() => { const R = REEL_RACK; let t = R.src; for (;;) { const c = R.arrangement && R.parsed.score.clips.find(x => x.part === 'lead'); if (!c) break; t = ReelMusic.removeClip(t, c.ln); R.change(t); } });
+  await until(() => !clipLines(score(), 'lead').length);
+  await sleep(300);
+  const fold = async () => page.evaluate(() => ({ lanes: [...document.querySelectorAll('#reel-tl .tl-mlane')].map(e => e.dataset.part).join(),
+    idle: (document.querySelector('#reel-tl button.tl-midle') || {}).textContent || null, exp: (document.querySelector('#reel-tl button.tl-midle') || { getAttribute: () => null }).getAttribute('aria-expanded'),
+    mms: document.querySelectorAll('#reel-tl .tl-mms').length }));
+  const f0 = await fold();
+  check(!f0.lanes.split(',').includes('lead') && /unused: lead/.test(f0.idle || '') && f0.exp === 'false',
+    `the lead with no clips leaves the lanes (${f0.lanes}) for one row: "${f0.idle}"`, JSON.stringify(f0));
+  await page.locator('#reel-tl button.tl-midle').click(); await sleep(200);
+  const f1 = await fold();
+  check(f1.lanes.split(',').includes('lead') && f1.exp === 'true' && f1.mms === f0.mms + 1, `a click shows its lane again (${f1.lanes}), with its M and S`, JSON.stringify(f1));
+  await page.locator('#reel-tl button.tl-midle').click(); await sleep(200);
+  check(!(await fold()).lanes.split(',').includes('lead'), 'and a second click folds it');
+  await page.keyboard.press('Control+z'); await sleep(200);
+  await until(() => clipLines(score(), 'lead').length > 0);
 
   // 8 ── a short window: the lanes scroll under a ruler that stays
   await page.setViewportSize({ width: 1440, height: 640 });

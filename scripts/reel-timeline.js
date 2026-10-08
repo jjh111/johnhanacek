@@ -65,7 +65,7 @@
   // ── storage for a reload by hand ──────────────────────────────────────
   const get = (k, d) => { try { const v = sessionStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };
   const put = (k, v) => { try { sessionStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } };
-  const K_OPEN = 'reel-tl-open', K_SEL = 'reel-tl-sel:' + L.file, K_UNDO = 'reel-undo:' + L.file, K_REDO = 'reel-redo:' + L.file, K_VIEW = 'reel-tl-view:' + L.file, K_MUS = 'reel-tl-music';
+  const K_OPEN = 'reel-tl-open', K_SEL = 'reel-tl-sel:' + L.file, K_UNDO = 'reel-undo:' + L.file, K_REDO = 'reel-redo:' + L.file, K_VIEW = 'reel-tl-view:' + L.file, K_MUS = 'reel-tl-music', K_IDLE = 'reel-tl-unused';
   const DEPTH = 30;
 
   // ── the model: where everything is, read from the parse (again after every change) ──
@@ -268,6 +268,8 @@
   color: var(--text-bright); background: rgba(var(--surface-rgb), 0.92); border: 1px solid var(--c); border-radius: 3px; }
 #reel-tl button.tl-mlb:hover { border-color: var(--gold); color: var(--gold); }
 #reel-tl .tl-mlb.tl-mute { color: var(--ink-faint); border-style: dashed; }
+#reel-tl .tl-midlerow { position: absolute; left: 0; right: 0; border-bottom: 1px solid rgba(var(--cyan-dim-rgb), 0.08); }
+#reel-tl button.tl-mlb.tl-midle { --c: rgba(var(--cyan-dim-rgb), 0.35); color: var(--ink-quiet); border-style: dashed; font-weight: 500; }
 /* the cues: a tick a key, the Enter, the question while it stands on the bar, the select-all
    that clears it; a dot for each pop */
 #reel-tl .tl-mq { position: absolute; height: 13px; padding: 0 4px 0 9px; border-radius: 3px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: pointer;
@@ -955,9 +957,11 @@
   //   click a clip          the inspector: its bars, its pad (a pad each, to hear and to choose),
   //                         its level and fades, Play from here, Duplicate, Delete (⌫ and ⌘D too)
   //   click a lane's name   its pads: hear one, choose the one a new clip gets
+  // A part with no clips keeps out of the way: one thin row at the foot of the parts names them
+  // ("unused: lead"), and a click shows their lanes (to add a clip) or folds them again.
   // Each change is one line of the score (ReelMusic.setClip, addClip, removeClip) through the rack
   // (REEL_RACK.change), which plays it at once and keeps it; Undo takes it back.
-  let musOpen = get(K_MUS, true), PARTS = [], MX = [], MLB = [], ROLLS = [], CLIPS = [], BARN = [], CUTL = [], musSig = null, musH = 0, bars = null;
+  let musOpen = get(K_MUS, true), showIdle = get(K_IDLE, false), PARTS = [], MX = [], MLB = [], ROLLS = [], CLIPS = [], BARN = [], CUTL = [], musSig = null, musH = 0, bars = null;
   let selClip = null, inspMode = null;               // the selected clip's line; what the inspector shows
   const chosen = {};                                 // a part's pad for the next new clip
   const lanes = new Map();                           // a lane's name → its M and S, and what dims when it is silent
@@ -995,7 +999,7 @@
   function musicSig() {
     const R = RK(), Pm = R && R.parsed, A = R && R.arrangement;
     if (!Pm || !A) return JSON.stringify([musOpen, R ? R.error || 'none' : 'wait']);
-    return JSON.stringify([musOpen, Pm.score.tempo, Pm.score.beatsPerBar, Pm.score.tracks.map(t => [t.name, t.on || '']),
+    return JSON.stringify([musOpen, showIdle, Pm.score.tempo, Pm.score.beatsPerBar, Pm.score.tracks.map(t => [t.name, t.on || '']),
       Pm.score.parts.map(p => [p.name, p.tracks, p.pads.map(d => d.name + ':' + d.voices.map(v => v.track + (v.steps || v.text || '')).join(','))]),
       A.clips.map(c => [c.ln, c.part, c.from, c.to, c.pad, c.level, c.fadeIn, c.fadeOut]), A.harmony.map(x => x.chord.name).join(' '),
       noteHash(A, Pm), RS.queries(EDIT).map(q => q.text), MOMENTS.map(M => M.label), SCENES.map(S => S.start)]);
@@ -1044,7 +1048,10 @@
     });
     if (musOpen) {
       let top = Y.musLanes;
-      PARTS.forEach((p, i) => {
+      // a part with no clips is drawn only when asked for (or while its pads are in the inspector)
+      const used = new Set(A.clips.map(cl => cl.part)), idle = PARTS.filter(p => !used.has(p.name));
+      const shown = PARTS.filter(p => used.has(p.name) || showIdle || (inspMode === 'part' && insp.dataset.part === p.name));
+      shown.forEach((p, i) => {
         const shape = shapeOf(p, A), c = R.colour(p.name), ln = mixRow(p.tracks, top, shape.h, c, p.name);
         const bg = h('div', 'mlane', mcontent); bg.style.top = top + 'px'; bg.style.height = shape.h + 'px'; bg.dataset.part = p.name;
         bg.title = `${p.name}: double-click to add a clip of ${chosenPad(p, A)} here`;
@@ -1055,8 +1062,18 @@
         tag(p.name, `${p.name}: ${p.tracks.join(', ')} · pads ${p.pads.map(d => d.name).join(', ')}\nclick: its pads, to hear and choose · double-click its lane: a new clip`, top, shape.h, c, ln, () => openPart(p.name));
         const lb = MLB[MLB.length - 1];
         CLIPS.filter(k => k.part === p.name).forEach(k => { Object.defineProperty(k, 'tagW', { get: () => lb.offsetWidth, configurable: true }); });
-        top += shape.h + (i < PARTS.length - 1 ? 1 : 0);
+        top += shape.h + (i < shown.length - 1 ? 1 : 0);
       });
+      if (idle.length) {
+        const names = idle.map(p => p.name).join(', ');
+        const row = h('div', 'midlerow', mcontent); row.style.top = (top + 1) + 'px'; row.style.height = (LANE.head + 4) + 'px';
+        const b = h('button', 'mlb midle', mcontent, (showIdle ? '▾ ' : '▸ ') + 'unused: ' + names); b.type = 'button'; b.style.top = (top + 2) + 'px';
+        b.dataset.track = '*idle'; b.setAttribute('aria-expanded', String(showIdle));
+        b.title = showIdle ? `fold the parts with no clips (${names}) into this row` : `${names}: no clips. Click to show ${idle.length > 1 ? 'their lanes' : 'its lane'}, to add one`;
+        b.onclick = e => { e.stopPropagation(); showIdle = !showIdle; put(K_IDLE, showIdle); redrawMusic(true); };
+        b.addEventListener('pointerdown', e => e.stopPropagation());
+        MLB.push(b); top += LANE.head + 5;
+      }
       if (MX.length) { top += MUS.sep; cueLane(top, A, R); top += LANE.cues; }
       musH = top;
     }
