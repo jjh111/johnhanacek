@@ -1651,6 +1651,34 @@ clutter/drift". Then, on the plan: "perfect thanks try that!"
   (`reel-tl-unused`). Suite: musiclanestest step 7b.
 - Loudness barely moved: -14.0 LUFS before, -14.1 after, peak -3.9 dBFS.
 
+## Six quotes, and two bars more music (2026-10-08)
+
+John, after reworking the voice in the hosted editor: "ok i updated the score. I want two more
+endorsement quotes. then render that."
+
+- **John's score is the score.** His version in the store (version 200) reworked most of the
+  voice's notes and took out the arp, the riser and the crash that the five movements had added.
+  It went into the repo as he left it.
+- **Two quotes,** verbatim from the media kit's endorsement boards and not yet in the reel:
+  - Tommy Kronmark, COO, Muse.bio: the first sentence of his ("John recently led a customer
+    journey mapping workshop for my team, and it was an outstanding experience.").
+  - Dr. Hurriyet Ok, Professor, George Washington University: all of hers.
+  They come after Kevin Kelly and before Ben S, whose "talk to John Hanacek" still hands over to
+  "how do i work with john?". The quotes scene grew from 9 to 13 s; each quote holds about 2.2 s,
+  as Sheila's and Ben S's did. Stills at 51.3 and 53.5 s show three balanced lines each, the
+  pager at 4 / 6 and 5 / 6. Ben Reed's board is the one endorsement still out.
+- **Two bars more music.** 4 s is exactly two bars at 120, so the score grew two bars inside the
+  quotes (scratchpad script, not kept):
+  - bars 25-26 play John's 23-24 again (G Am, 11 notes, added);
+  - every n line from his bar 25 on moves 32 sixteenths later, written by position, so a sung
+    note keeps its `early` and what was sung moves with it;
+  - his chords stay with his bars: `CHORDS 25-34 G Am F C G Am F C G Am` and `CHORDS 35-37 Am`
+    (the cycle from bar 1 would have put his F over a G);
+  - the clips that ran to the end run two bars longer, and so does the drums' fade into the end
+    card (32.3 to 34.3); the drift line gets bars 23-24's values again.
+  Checked against his file: every note before bar 25 the same, every note from it on the same
+  two bars later, every bar over the chord it had. The reel is 71.75 s, 36 bars.
+
 ## Later
 
 Scene-specific cues (line staggers, the push); moving cut 1 onto the one player; stems out of
