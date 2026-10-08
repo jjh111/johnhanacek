@@ -1,12 +1,13 @@
-// A one-minute walkthrough of the reel editor: every control set, captioned, with its sound,
+// A walkthrough of the reel editor (about 77 s): every control set, captioned, with its sound,
 // recorded from the build claude.ai hosts (scripts/build-reel-editor.mjs) with a stand-in for
 // claude.ai's store, save dialog and comments, so every control is the one John uses.
 //   node scripts/record-walkthrough.mjs [--dry] [--nobuild] [--film=<mp4>] [--out=<mp4>]
-//     → .local/walk/reel-editor-walkthrough.mp4 (1920×1080, 30 fps, AAC), about 60 s
+//     → .local/walk/reel-editor-walkthrough.mp4 (1920×1080, 30 fps, AAC), about 77 s
 // The story: the preview and its transport; the timeline (a card's edge dragged, its inspector);
 // words retyped on the stage; a picture picked from the library; the shot list (a shot dragged,
 // its transitions); the Fish panel and the fish lanes; the music lanes (a fade, a level, a clip's
-// pads heard); the synth rack (a pad heard, a knob turned); one Undo for all of it; Export (the
+// pads heard); the notes as a piano roll (a note heard, moved, held longer, a phrase's level, Q,
+// the roll following the playhead); the synth rack (a pad heard, a knob turned); one Undo for all of it; Export (the
 // film played in the panel). Each step is timed against the story's clock and waits if early.
 // Frames come from the browser's own screencast, with their times (about 15 a second here: the
 // page draws about 25 with the timeline open, and the cast costs the rest), held to a constant
@@ -266,7 +267,7 @@ try {
   // the film Claude rendered, as Export will list it: from the version the page plays
   const ver = await page.evaluate(() => REEL_EXPORT.version);
   await page.evaluate(([ver, mb]) => localStorage.setItem('fake-db:films/latest', JSON.stringify({ renderedAt: new Date().toISOString(), from: ver,
-    items: [{ format: 'wide', url: 'walk-film.mp4', mb, seconds: +REEL_LIVE.duration.toFixed(2), fps: 60 }] })), [ver, FILM_MB]);
+    items: [{ format: 'wide', url: 'walk-film.mp4', mb, seconds: +REEL_LIVE.duration.toFixed(2), fps: 30 }] })), [ver, FILM_MB]);
   if (!DRY) await startCast();
   await sleep(600);
   // the answer's first line, and a moment it is all the way in (found before the story, so the
@@ -410,34 +411,96 @@ try {
   await until(35.2);
 
   // 6 ── the music lanes ────────────────────────────────────────────────
-  await cap('', 'Music', 'The score on its own bars: every clip meets its cut');
+  await cap('', 'Music', 'The score on its own bars, the chords over them, a gold line at every cut');
   await key('f');                                   // the Fish panel shut: the stage gets its side back
   await clickSel('#reel-tl button.tl-mtog', 450);   // the chevron: the music's lanes open under the scenes
   await sleep(450);
-  await ev(() => { const m = document.querySelector('#reel-tl .tl-mlane[data-part="lead"]'); if (m) m.scrollIntoView({ block: 'nearest' }); });
-  await sleep(300);
-  const leadClip = await ev(() => { const A = REEL_RACK.arrangement, c = A.clips.filter(x => x.part === 'lead')[1]; const el = c && document.querySelector(`#reel-tl .tl-mk[data-ln="${c.ln}"]`); if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; });
-  await glide(leadClip.x + leadClip.w * 0.5, leadClip.y + leadClip.h / 2, 600);
-  await until(37.4);
+  const clipBox = part => ev(part => { const k = document.querySelector(`#reel-tl .tl-mk[data-part="${part}"]`); if (!k) return null; k.scrollIntoView({ block: 'nearest' }); const r = k.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; }, part);
+  const voiceClip = await clipBox('voice');
+  if (!voiceClip) throw new Error('no voice clip in the timeline');
+  await glide(voiceClip.x + voiceClip.w * 0.3, voiceClip.y + voiceClip.h / 2, 700);
+  await until(37.6);
   await cap('', 'Music', 'Drag a clip, its edges, its fades; drag it up or down for its level');
-  await drag(leadClip.x + 4, leadClip.y - 1, 2 * pxs, 0, 650);       // its fade in, a beat or so
+  const drumsClip = await clipBox('drums');
+  await drag(drumsClip.x + drumsClip.w - 4, drumsClip.y - 1, -2 * pxs, 0, 650);   // its fade out, a little longer
   await settled().catch(() => {});
-  const bassClip = await ev(() => { const A = REEL_RACK.arrangement, c = A.clips.filter(x => x.part === 'bass')[1]; const el = c && document.querySelector(`#reel-tl .tl-mk[data-ln="${c.ln}"]`); const r = el.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; });
-  await drag(bassClip.x + Math.min(bassClip.w * 0.3, 160), bassClip.y + bassClip.h - 4, 0, -16, 500);
+  const bassClip = await clipBox('bass');
+  await drag(bassClip.x + Math.min(bassClip.w * 0.3, 260), bassClip.y + bassClip.h - 4, 0, -14, 500);
   await snap('s6-drags');
-  await until(40.6);
+  await until(40.4);
   await cap('', 'Music', 'Click a clip: its pads, each one ready to hear');
-  const drumsClip = await ev(() => { const A = REEL_RACK.arrangement, c = A.clips.filter(x => x.part === 'drums')[3]; const el = c && document.querySelector(`#reel-tl .tl-mk[data-ln="${c.ln}"]`); const r = el.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; });
-  await clickAt(drumsClip.x + Math.min(drumsClip.w * 0.4, 200), drumsClip.y + drumsClip.h / 2, 450);
+  const drums2 = await clipBox('drums');
+  await clickAt(drums2.x + Math.min(drums2.w * 0.4, 300), drums2.y + drums2.h / 2, 450);
   await page.waitForSelector('#reel-tl .tl-insp-col:not([hidden]) .tl-pad', { timeout: 5000 });
   await sleep(300);
   await clickSel('#reel-tl .tl-insp-col .tl-pad[data-pad="groove"] button', 450).catch(() => clickSel('#reel-tl .tl-insp-col .tl-pad >> nth=1', 450));
   await snap('s6-pads');
-  await until(43.6);
+  await until(43.0);
 
-  // 7 ── the synth rack ─────────────────────────────────────────────────
-  await cap('M', 'Synth rack', 'Every sound is built from numbers: hear a pad, turn a knob');
+  // 7 ── the notes: the melody as a piano roll ───────────────────────────
+  await cap('N', 'Notes', 'The melody as a piano roll, on the reel\'s own bars and chords');
   await page.keyboard.press('Escape');
+  await ev(() => { REEL_LIVE.setPlaying(false); REEL_LIVE.seek(15.5); });
+  await sleep(200);
+  await key('n');
+  await page.waitForFunction(() => REEL_NOTES.open && REEL_NOTES.model && !REEL_NOTES.model.none, null, { timeout: 8000 });
+  await sleep(500);
+  // a little closer: a sixteenth wide enough to grab
+  await glide(VW * 0.55, VH - 170, 500);
+  for (let i = 0; i < 2; i++) { await key('='); await sleep(160); }
+  await sleep(300);
+  await snap('s7-open');
+  // a note in view: a played, sung one, an eighth or longer, in the left half of the roll
+  const NV = await ev(() => { const v = REEL_NOTES.view, M = REEL_NOTES.model, r = document.querySelector('#reel-notes .nt-roll canvas').getBoundingClientRect();
+    const w = (r.width - v.keyW) / v.pxs;
+    const inView = M.notes.filter(n => !n.out && n.len >= 2 && n.step * M.step > v.t0 + w * 0.2 && n.step * M.step < v.t0 + w * 0.55);
+    return { step: M.step, pxs: v.pxs, lns: inView.map(n => n.ln) }; });
+  if (NV.lns.length < 3) throw new Error('fewer than three notes in view: ' + JSON.stringify(NV));
+  const nb = ln => ev(ln => REEL_NOTES.box(ln), ln);
+  await until(45.6);
+  await cap('N', 'Notes', 'Click a note to hear it; drag it later, or up to the next note of the key');
+  let b1 = await nb(NV.lns[0]);
+  await clickAt(b1.x + Math.min(10, b1.w / 2), b1.y + b1.h / 2, 500);
+  await sleep(450);
+  b1 = await nb(NV.lns[0]);
+  await drag(b1.x + Math.min(10, b1.w / 2), b1.y + b1.h / 2, 2 * NV.step * NV.pxs, -b1.h, 700);
+  await settled().catch(() => {});
+  await sleep(250);
+  const movedNote = (await ev(() => REEL_NOTES.selection))[0];
+  await until(48.8);
+  await cap('N', 'Notes', 'Drag its edge to hold it longer; faint under every note, what was sung');
+  const b2 = await nb(movedNote);
+  await drag(b2.x + b2.w - 3, b2.y + b2.h / 2, 2 * NV.step * NV.pxs, 0, 600);
+  await settled().catch(() => {});
+  await sleep(300);
+  await clickSel('#reel-notes .nt-bar button[title^="what was sung"]', 400);   // Sung off, then on: the reference under the notes
+  await sleep(500);
+  await clickSel('#reel-notes .nt-bar button[title^="what was sung"]', 250);
+  await snap('s7-edit');
+  await until(52.4);
+  await cap('N', 'Notes', 'Box a phrase, then set its level at the foot, all of it together');
+  const ba = await nb(NV.lns[1]), bz = await nb(NV.lns[NV.lns.length - 1]);
+  const bx0 = Math.min(ba.x, bz.x) - 8, bx1 = Math.max(ba.x + ba.w, bz.x + bz.w) + 8, by0 = Math.min(ba.y, bz.y) - 10, by1 = Math.max(ba.y, bz.y) + 22;
+  await drag(bx0, by0, bx1 - bx0, by1 - by0, 650);
+  await sleep(250);
+  const stem = await ev(ln => { const b = REEL_NOTES.box(ln), r = document.querySelector('#reel-notes .nt-roll canvas').getBoundingClientRect(), v = REEL_NOTES.view; return { x: b.x + 1, y: r.bottom - v.velH / 2 }; }, NV.lns[1]);
+  await drag(stem.x, stem.y, 0, 12, 500);
+  await settled().catch(() => {});
+  await snap('s7-velocity');
+  await until(56.0);
+  await cap('Q', 'Notes', 'Q snaps the starts to the grid; play it, and the roll follows');
+  await key('q');
+  await settled().catch(() => {});
+  await sleep(300);
+  await ev(() => REEL_LIVE.setPlaying(true));
+  await glide(VW * 0.5, VH - 60, 900);
+  await snap('s7-play');
+  await until(61.0);
+
+  // 8 ── the synth rack ─────────────────────────────────────────────────
+  await cap('M', 'Synth rack', 'Every sound is built from numbers: hear a pad, turn a knob');
+  await key('n');                                   // the notes shut
+  await ev(() => REEL_LIVE.setPlaying(false));
   await key('m');
   await sleep(500);
   await clickSel('#reel-rack .rk-prow[data-part="drums"] .rk-tile >> nth=0 >> button', 400);
@@ -446,19 +509,19 @@ try {
   await knob.scrollIntoViewIfNeeded();
   const kb = await knob.boundingBox();
   await drag(kb.x + kb.width / 2, kb.y + 16, 0, -60, 560);
-  await snap('s7-rack');
-  await until(47.8);
+  await snap('s8-rack');
+  await until(65.2);
 
-  // 8 ── one undo ───────────────────────────────────────────────────────
-  await cap('⌘Z', 'Undo', 'One Undo takes back every edit: words, scenes, fish, music');
+  // 9 ── one undo ───────────────────────────────────────────────────────
+  await cap('⌘Z', 'Undo', 'One Undo takes back every edit: words, scenes, fish, music, notes');
   await key('m');
   await sleep(300);
-  for (let i = 0; i < 12; i++) { await page.keyboard.press('Control+z'); await sleep(85); }
+  for (let i = 0; i < 20; i++) { await page.keyboard.press('Control+z'); await sleep(70); }
   await settled();
-  await snap('s8-undo');
-  await until(50.4);
+  await snap('s9-undo');
+  await until(68.0);
 
-  // 9 ── export ─────────────────────────────────────────────────────────
+  // 10 ── export ────────────────────────────────────────────────────────
   await cap('X', 'Export', 'Ask Claude to render what you saved; play or download the film');
   await key('x');
   await page.waitForSelector('#reel-ex .ex-film [data-film="play"]', { timeout: 8000 });
@@ -470,8 +533,8 @@ try {
   await ev(() => { const v = document.querySelector('#reel-ex .ex-film video'); if (!v) return;
     try { v.currentTime = 2.6; } catch (e) { /* not loaded yet */ }      // from the title: the film's first seconds are the dark opening
     if (!window.__dest) return; try { const c = REEL_RACK.ctx, src = c.createMediaElementSource(v); src.connect(window.__dest); src.connect(c.destination); } catch (e) { console.warn('film sound', e); } });
-  await snap('s9-export');
-  await until(60.0);
+  await snap('s10-export');
+  await until(77.0);
   const story1 = Date.now() / 1000;
   log(`story: ${(story1 - story0).toFixed(1)} s`);
 
