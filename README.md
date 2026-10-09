@@ -2,13 +2,13 @@
 
 Portfolio website for John Hanacek — work at the intersection of Creativity, Curiosity, AI & Human Augmentation.
 
-**[www.johnhanacek.com](https://www.johnhanacek.com)** · Portfolio v2.46
+**[www.johnhanacek.com](https://www.johnhanacek.com)** · Portfolio v2.47
 
 ---
 
 ## About
 
-Founding Designer & Design Engineer building AI-native products, agentic systems, and spatial computing interfaces. I design and code across the full stack — from prompt engineering and agent orchestration to Unity prototypes, XR interaction design, and interactive web experiences.
+Product Design Engineer building AI-native products, agentic systems, and spatial computing interfaces. I design and code across the full stack — from prompt engineering and agent orchestration to Unity prototypes, XR interaction design, and interactive web experiences.
 
 Through **JH Design LLC** (est. 2014), I've served as founding designer for startups and R&D teams, leading 0→1 product development, design system creation, and technical prototyping.
 
