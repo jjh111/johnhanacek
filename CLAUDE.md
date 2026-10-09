@@ -394,15 +394,20 @@ scripts/build-chunk-vectors.mjs — dev-time: embeds chunks into search-chunks.j
                             editing chunk text; run `npm install` once — package.json holds the dev deps)
 Assets/resume.json         — THE single career source (v2.07): lanes, evidence-backed highlights,
                             awards, talks, publications, projects. Edit this, never the outputs.
-                            Highlights flagged `lead: true` (≤3 per role) ARE the one-page, LinkedIn
-                            and About bullets; the long CV takes every highlight. (The hand-written
-                            `onePage` arrays drifted and are gone, 2026-09-16.) House prose rules,
+                            ONE list of bullets per role (2026-10-07): those bullets ARE the résumé,
+                            on every surface (one-page, LinkedIn, About). The long CV, the `lead`
+                            flags that picked three of up to ten bullets, and per-bullet lanes are
+                            gone; lanes now only swap the summary/headline. `service` holds the
+                            Leadership section (board seats, advising). House prose rules,
                             linted by the compiler: one clause per sentence, no em dashes, no sentence
                             built on what a thing is not, fact then stop, name never summarize. An em
                             dash or a banned construction in the JSON REFUSES `--apply`; long sentences
                             and semicolon chains warn; the chunks are warned on every rule.
-scripts/build-resume.mjs   — compiles resume.json: designed one-page PDF (fish-tank margin),
-                            ATS twin, 3-page CV, markdown, LinkedIn blocks; `--apply` also writes
+scripts/build-resume.mjs   — compiles resume.json: designed one-page PDF, application PDF (phone +
+                            citizenship), ATS twin, markdown, LinkedIn blocks. The fish-tank margin is
+                            retired (John, 2026-10-07: the space goes to Leadership). The fit loop warns
+                            when the page only fits below scale 0.80 (8.2pt body): cut words, never
+                            shrink the font. `--apply` also writes
                             the served PDF (no phone — the application PDF stays in .local/out/),
                             chunks 4/21/23/26/27/50, john-hanacek.json and about.html resume blocks
                             between `<!-- resume:* -->` markers — and the case-study figures, from
@@ -415,8 +420,39 @@ scripts/build-resume.mjs   — compiles resume.json: designed one-page PDF (fish
                             lane is an ERROR (it used to fall back to designEngineer in silence) and
                             `--apply` REFUSES any lane but designEngineer unless you add `--force-lane`,
                             because none of the public surfaces carry the lane in their name. Guard
-                            suite: `npm run test:lane`. Run build-chunk-vectors.mjs after. Serves
+                            suite: `node "Agent Reference/maze-tests/lanetest.mjs"`. Run build-chunk-vectors.mjs after. Serves
                             itself via serve-verified.mjs.
+scripts/resume-doc.mjs     — the co-editing round trip. `node scripts/resume-doc.mjs export` writes
+                            .local/out/JohnHanacek-resume-edit.md: every entry heading ends in an [id],
+                            then a date line, an optional role summary and the role's bullets. A
+                            date line holding one year is that year (a tour, a challenge); an
+                            ongoing role says "2012–Present". A
+                            heading naming no known section is warned and set aside (a "## Leadership"
+                            once nearly merged into the Earlier line); "Cut list" is never imported. Google
+                            Docs opens .md directly: upload, open with Docs, edit, accept/reject all
+                            suggestions, File → Download → Markdown, then `node scripts/resume-doc.mjs
+                            import <file.md>` writes a proposed resume.json + a change report to
+                            .local/out/ (`--write` replaces the source, refused while it has uncommitted
+                            changes). Bullets are matched back to their records (exact → closest wording
+                            → same slot) so evidence and lanes survive edits; new claims arrive as
+                            `doc:<date>` evidence. Parses by [id] and section title, never by heading
+                            level or list style, so a conversion that drops those is harmless. Guard:
+                            `node "Agent Reference/maze-tests/resumedoctest.mjs"` (no-op round trip byte for
+                            byte, plain and Google-mangled; real edits land and keep their evidence).
+                            The one-page's Skills lines, Earlier line and Talks items live in resume.json
+                            (`skills.lines`, `onePage`) since 2026-10-05; they were literals in the build.
+scripts/claims-audit.mjs   — where is each fact about John stated, and do the statements agree?
+                            Sweeps the source, the compiled tier (including the served PDF), the site
+                            copy, search chunks, JSON-LD, llms.txt, media-kit.json, served-unlinked
+                            markdown and Archive/ for ~32 facts (titles, dates, award years, identity
+                            line, counts, quote versions) → .local/out/claims-audit.md with file:line
+                            (chunk id for search-chunks.json) and a snippet per hit. `--strict` exits
+                            non-zero on any divergence (Archive/ and named benign variants, each with
+                            its reason, are not counted). `--fresh` audits what --apply WOULD publish:
+                            run it before an --apply. A value counts only inside its own list item or
+                            JSON record, read as people write it: right before the thing ("2019
+                            Microsoft Reactor") or after it ("Reactor Hackathon (2019)"). It cannot see
+                            LinkedIn or jhanacek.net (the old Coda site, still live as of 2026-10-07).
 scripts/serve-verified.mjs — shared by both render rigs: probe a genuinely free port, then PROVE
                             the server is ours (sentinel round-trip) before rendering anything.
                             Exists because a stale server once rendered its 404 into the live

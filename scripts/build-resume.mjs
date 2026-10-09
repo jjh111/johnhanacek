@@ -1,13 +1,13 @@
 // Compiles Assets/resume.json (THE career source of truth) into every output.
 //
-//   node scripts/build-resume.mjs            → .local/out/ only (designed + ATS + long PDFs,
+//   node scripts/build-resume.mjs            → .local/out/ only (designed + application + ATS PDFs,
 //                                              markdown, LinkedIn blocks, proposed chunks/JSON-LD)
 //   node scripts/build-resume.mjs --apply    → also writes into the repo: Assets/john-hanacek-resume.md,
 //                                              Assets/JH_Resume_2026_onepage.pdf (no phone), the five
 //                                              career chunks in Assets/search-chunks.json (run
 //                                              `node scripts/build-chunk-vectors.mjs` after), and
 //                                              john-hanacek.json. Commit is still yours.
-//   --lane=designEngineer|productDesigner|foundingDesigner|xr   (summary + bullet emphasis; default designEngineer)
+//   --lane=designEngineer|productDesigner|foundingDesigner|xr   (summary and headline; default designEngineer)
 //                                              An unknown lane is an error, not a silent fallback. --apply
 //                                              REFUSES a non-default lane unless you add --force-lane: the
 //                                              public surfaces carry no lane in their names. Non-default
@@ -62,7 +62,7 @@ carry the lane in their filename.
 const PRIV = existsSync(resolve(ROOT, '.local/private.json')) ? JSON.parse(readFileSync(resolve(ROOT, '.local/private.json'), 'utf8')) : {};
 const YEAR = new Date().getFullYear();
 const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const span = w => `${w.start}–${w.end ?? 'Present'}`;
+const span = w => (w.start === w.end ? w.start : `${w.start}–${w.end ?? 'Present'}`);   // a one-year role is one year
 const host = u => { try { return new URL(u).host.replace(/^www\./, ''); } catch { return u; } };
 
 // ---------------------------------------------------------------- selections
@@ -72,26 +72,16 @@ const lane = R.lanes[LANE];            // validated above — no silent fallback
 // "DESIGN ENGINEER". Falls back silently by design — a lane without one wants the global.
 const headline = lane.headline || R.basics.headline;
 const roles = R.work.filter(w => !w.compressed);
-const earlier = R.work.filter(w => w.compressed);
-// ONE text per fact. The one-page, the LinkedIn blocks and the About timeline all
-// take the highlights flagged `lead: true` (up to three per role); the long CV takes
-// every highlight. The old hand-written `onePage` arrays drifted from the highlights
-// they compressed (2026-09-16: one read "product traces visualization design
-// engineering"), so they are gone. A role with no lead flags falls back to the lane
-// filter, then to its first three highlights.
-const bulletsFor = (w, mode) => {
-  if (mode === 'long') return w.highlights.map(h => h.text);
-  const lead = w.highlights.filter(h => h.lead);
-  if (lead.length) return lead.slice(0, 3).map(h => h.text);
-  const picked = w.highlights.filter(h => !h.lanes.length || h.lanes.includes(LANE));
-  return (picked.length ? picked : w.highlights).slice(0, 3).map(h => h.text);
-};
-const skillLines = [
-  ['Design & research', ['Figma', 'FigJam', 'Blender', 'Unity / C#', 'ShapesXR', 'Adobe Creative Suite', 'Coda'], 'User research, usability testing, qualitative coding, 3D interaction, design systems, brand, workshops, PRDs'],
-  ['Code', ['JavaScript', 'TypeScript', 'React', 'HTML / CSS', 'Three.js', 'WebGL / GLSL', 'WebGPU', 'Node.js', 'Playwright', 'Git'], null],
-  ['AI & agentic', ['Claude Code', 'Opencode', 'Hermes Agent', 'LM Studio', 'Ollama', 'MCP (Blender, Figma)'], 'Context engineering, agent orchestration, tool-use design, RAG, conversational UX'],
-  ['XR & robotics', ['Meta Quest', 'HoloLens 2', 'Magic Leap One', 'visionOS'], 'Digital twins, teleoperation, 3D scanning'],
-];
+const earlier = R.work.filter(w => w.compressed);       // the chunk compiler names them
+// One list per role (John, 2026-10-07): the bullets in resume.json ARE the résumé. The long
+// CV, the `lead` flags that picked three bullets out of ten, and the lanes that filtered
+// them are gone. Every surface (one-page, LinkedIn, About) prints the same list.
+const bullets = w => w.highlights.map(h => h.text);
+// The one-page Skills section. Lived here as a literal until 2026-10-05; it moved into
+// resume.json (skills.lines) so the doc round trip can reach it.
+const skillLines = R.skills.lines.map(l => [l.label, l.tools, l.practice || null]);
+// *asterisks* in a source string mark a title; each renderer decides what that means.
+const emHtml = t => esc(t).replace(/\*([^*]+)\*/g, '<em>$1</em>');
 
 
 // ---------------------------------------------------------------- Prose lint (house rules, 2026-09-16)
@@ -129,7 +119,7 @@ function checkProse() {
     else if (Array.isArray(o)) o.forEach((v, i) => walk(v, `${path}[${i}]`));
     else if (o && typeof o === 'object') for (const k of Object.keys(o)) { if (SKIP_KEYS.has(k)) continue; walk(o[k], path ? `${path}.${k}` : k); }
   };
-  walk({ basics: { headline: R.basics.headline, availability: R.basics.availability, selfDescription: R.basics.selfDescription }, lanes: R.lanes, work: R.work, clients: R.clients, education: R.education, awards: R.awards, talks: R.talks, projects: R.projects, skills: R.skills }, '');
+  walk({ basics: { headline: R.basics.headline, availability: R.basics.availability, selfDescription: R.basics.selfDescription }, lanes: R.lanes, work: R.work, service: R.service, clients: R.clients, education: R.education, awards: R.awards, talks: R.talks, projects: R.projects, skills: R.skills, onePage: R.onePage }, '');
   const strict = issues.filter(i => i.strict);
   const soft = issues.filter(i => !i.strict);
   console.log(`  prose (resume.json): ${strict.length} strict, ${soft.length} soft`);
@@ -160,41 +150,34 @@ const thesisText = (e, fmt) => {
   if (s2) parts.push(`Thesis 2: ${s2.url ? fmt(`“${s2.title}”`, s2.url) : fmt.esc(s2.title)}.`);
   return parts.join(' ').replace(/\.\./g, '.').replace(/\?\./g, '?');
 };
-const plain = Object.assign((txt) => esc(txt), { esc });
 
 function html(mode, withPhone) {
-  const one = mode !== 'long';
   const ats = mode === 'ats';
-  const contact = [R.basics.email, withPhone && PRIV.phone, host(R.basics.website), 'linkedin.com/in/johnhanacek', 'github.com/jjh111', R.basics.workMode, R.basics.citizenship].filter(Boolean);
+  // The city, never "or remote" (John, 2026-10-05). Citizenship rides on the application
+  // PDF only, beside the phone: it matters to some screeners and is nobody else's business.
+  const contact = [R.basics.email, withPhone && PRIV.phone, host(R.basics.website), 'linkedin.com/in/johnhanacek', 'github.com/jjh111', R.basics.location, withPhone && R.basics.citizenship].filter(Boolean);
+  const when = w => (w.start ? `${span(w)}${w.location ? ` · ${w.location}` : ''}` : (w.location || ''));
   const role = w => `
     <section class="role">
-      <div class="role-head"><h3>${esc(w.title)}<span class="org"> · ${esc(w.org)}</span>${ats ? `<span class="dates"> · ${esc(span(w))}${w.location ? ` · ${esc(w.location)}` : ''}</span>` : ''}</h3>${ats ? '' : `<span class="dates">${esc(span(w))}${w.location ? ` · ${esc(w.location)}` : ''}</span>`}</div>
-      <ul>${bulletsFor(w, mode).map(t => `<li>${esc(t)}</li>`).join('')}</ul>
+      <div class="role-head"><h3>${esc(w.title)}${w.org ? `<span class="org"> · ${esc(w.org)}</span>` : ''}${ats && when(w) ? `<span class="dates"> · ${esc(when(w))}</span>` : ''}</h3>${!ats && when(w) ? `<span class="dates">${esc(when(w))}</span>` : ''}</div>
+      <ul>${bullets(w).map(t => `<li>${esc(t)}</li>`).join('')}</ul>
     </section>`;
   // ^ ATS mode: dates inline in the h3 text run (same paint block as the title)
   // so raw text order keeps header and dates adjacent for proximity parsers.
-  // The designed modes keep the right-aligned flexbox date column (looks better,
+  // The designed mode keeps the right-aligned flexbox date column (looks better,
   // and human readers parse it fine — only naive ATS portals read raw order).
-  const earlierLine = one ? 'Photographer, Qualcomm Institute (Calit2) and UCSD Guardian; Ocean Lifeguard, California State Parks (2007–2012)' : earlier.map(w => `${esc(w.title)}, ${esc(w.org)} (${span(w)})`).join(' · ');
-  const awards = R.awards.map(a => `<li><span class="y">${a.year}</span> ${one ? esc(a.short || a.title) : `${esc(a.title)}, ${esc(a.org)}${a.for ? `: ${esc(a.for)}` : ''}`}</li>`).join('');
+  const awards = R.awards.map(a => `<li><span class="y">${a.year}</span> ${esc(a.short || a.title)}</li>`).join('');
   // ATS mode: single-column awards. The 3-column layout paints year+text as
   // separate blocks in raw text order (column by column, not award by award),
   // which fragments each award into unparseable pieces.
-  const awardsHtml = ats ? `<ul>${awards}</ul>` : `<ul class="${one ? 'three' : ''}">${awards}</ul>`;
-  const talksLine = [`AWE USA 2024 Lightning Round`, `XRDC 2024 mentor`, `contributor, <em>Spatial Design: Breaking the 2D Paradigm</em> (2024)`, `EDULEARN15 paper`, `Atlantic Council essays on answer engines (2014)`].join(' · ');
-  const talks = [
-    ...R.talks.map(t => `<li><span class="y">${t.year}</span> ${esc(t.title)}, ${esc(t.event)}</li>`),
-    ...R.features.map(f => `<li><span class="y">${f.year}</span> Contributor, <em>${esc(f.title)}</em> (${esc(f.authors)})</li>`),
-  ].join('');
-  const pubs = R.publications.filter(p => p.year && p.id !== 'writing-archive').map(p => `<li><span class="y">${String(p.year).slice(0, 4)}</span> ${esc(p.title)}${p.authors ? `, ${esc(p.authors)}` : ''}. <em>${esc(p.venue)}</em></li>`).join('');
+  const awardsHtml = ats ? `<ul>${awards}</ul>` : `<ul class="three">${awards}</ul>`;
+  const talksLine = R.onePage.talks.map(emHtml).join(' · ');
   const edu = R.education.map(e => `
     <section class="role">
       <div class="role-head"><h3>${esc(e.degree)}<span class="org"> · ${esc(e.school)}</span>${ats ? `<span class="dates"> · ${e.start}–${e.end}</span>` : ''}</h3>${ats ? '' : `<span class="dates">${e.start}–${e.end}</span>`}</div>
-      ${one ? (e.thesis?.title ? `<p class="note">Thesis: “${esc(e.thesis.title)}”${e.honors ? ` · ${esc(e.honors[0])}` : ''}</p>` : '') :
-        `<p class="note">${thesisText(e, plain)}${e.honors ? ` ${esc(e.honors.join('; '))}.` : ''}</p>`}
+      ${e.thesis?.title ? `<p class="note">Thesis: “${esc(e.thesis.title)}”${e.thesis.line ? `. ${esc(e.thesis.line)}` : ''}</p>` : ''}
     </section>`).join('');
-  const projects = R.projects.map(p => `<li><strong>${esc(p.name)}</strong>${p.period ? ` (${esc(p.period)})` : ''}: ${esc(p.summary)}</li>`).join('');
-  const art = ats ? '' : `<div class="tank" aria-hidden="true"><canvas id="tank"></canvas></div>`;
+  const service = (R.service || []).length ? `<h2>Leadership</h2>\n${R.service.map(role).join('')}` : '';
   return `<!doctype html><html lang="en" data-theme="light"><head><meta charset="utf-8"><title>John Hanacek Resume</title>
 <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../styles/jh-chrome.css">
@@ -203,8 +186,7 @@ function html(mode, withPhone) {
 :root { --s: 1; }
 html { font-size: calc(10.2pt * var(--s)); }
 body { margin: 0; background: #fff; color: var(--text-subhead); font-family: 'Raleway', system-ui, sans-serif; font-weight: 400; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-.page { width: 8.5in; ${one ? 'height: 11in; overflow: hidden;' : 'min-height: 11in;'} box-sizing: border-box; padding: 0.42in 0.55in ${ats ? '0.45in' : '1.02in'}; position: relative; background: #fff; }
-${one ? '' : '.page { page-break-after: auto; }'}
+.page { width: 8.5in; height: 11in; overflow: hidden; box-sizing: border-box; padding: 0.42in 0.55in 0.45in; position: relative; background: #fff; }
 header { margin-bottom: 0.6rem; }
 .name { font-weight: 200; font-size: 2.35rem; line-height: 1; letter-spacing: 0.02em; margin: 0; color: var(--text-subhead); }
 .headline { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--cyan-dim); margin: 0.35rem 0 0.25rem; }
@@ -226,18 +208,8 @@ li { margin: 0.08rem 0; line-height: 1.3; font-size: 0.93rem; }
 .skills b { font-weight: 600; }
 .skills .tools { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--text-subhead); }
 .y { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--muted); margin-right: 0.35em; }
-.two { columns: 2; column-gap: 1.4rem; }
 .three { columns: 3; column-gap: 1.2rem; }
 .three li { break-inside: avoid; font-size: 0.86rem; }
-.two li { break-inside: avoid; }
-.tank { position: absolute; left: 0; right: 0; bottom: 0; height: 1.15in; }
-.tank canvas { width: 100%; height: 100%; display: block; }
-/* The fade is a painted gradient, not a CSS mask: a mask-image on the canvas
-   forces the PDF export into a soft-mask transparency group that some viewers
-   composite as white boxes over the coral (fish vanish with it). A plain
-   white→transparent gradient is ordinary paint — identical on screen, robust
-   in every PDF renderer. */
-.tank::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, #fff 0%, rgba(255, 255, 255, 0) 60%); pointer-events: none; }
 </style></head><body><div class="page">
 <header>
   <h1 class="name">${esc(R.basics.name)}</h1>
@@ -248,28 +220,16 @@ li { margin: 0.08rem 0; line-height: 1.3; font-size: 0.93rem; }
 <p class="summary">${esc(lane.summary)}</p>
 <h2>Experience</h2>
 ${roles.map(role).join('')}
-${one ? `<p class="earlier"><b>Earlier:</b> ${earlierLine}</p>` : earlier.map(role).join('')}
+<p class="earlier"><b>Earlier:</b> ${esc(R.onePage.earlier)}</p>
+${service}
 <h2>Education</h2>
 ${edu}
 <h2>Skills</h2>
 <div class="skills"><ul>${skillLines.map(([k, tools, practice]) => `<li><b>${k}:</b> ${practice ? esc(practice) + '. ' : ''}<span class="tools">${tools.join(' · ')}</span></li>`).join('')}</ul></div>
 <h2>Awards</h2>
 ${awardsHtml}
-${one ? `<h2>Talks & writing</h2><p class="earlier">${talksLine}</p>` : `<h2>Talks & features</h2><ul>${talks}</ul><h2>Publications</h2><ul>${pubs}</ul><h2>Projects</h2><ul>${projects}</ul>`}
-${art}
+<h2>Talks & writing</h2><p class="earlier">${talksLine}</p>
 </div>
-${ats ? '' : `<script src="../../scripts/shape-detection.js"></script><script src="../../scripts/fish-engine.js"></script>
-<script>
-  // The margin tank: the site's own engine on paper. Coral on the seabed, a few fish, one pellet.
-  const c = document.getElementById('tank');
-  const f = FishCanvas(c, { transparent: true, seedFish: false });
-  const W = c.clientWidth, H = c.clientHeight, rnd = (a, b) => a + Math.random() * (b - a);
-  const sq = (cx, cy, s) => { const h = s / 2, cs = [[-h,-h],[h,-h],[h,h],[-h,h]], pts = []; for (let e = 0; e < 4; e++) { const [x1,y1] = cs[e], [x2,y2] = cs[(e+1)%4]; for (let i = 0; i < 7; i++) pts.push({ x: cx + x1 + (x2-x1)*i/7, y: cy + y1 + (y2-y1)*i/7 }); } pts.push({ x: cx + cs[0][0], y: cy + cs[0][1] }); return pts; };
-  const fish = (cx, cy, S) => { const rx = 45*S, ry = 32*S, ov = 0.55, tx = 75*S, ty = 28*S, pts = [], a0 = ov, a1 = Math.PI*2 - ov; const sx = cx + rx*Math.cos(a0), sy = cy + ry*Math.sin(a0); for (let i = 0; i <= 3; i++) pts.push({ x: (cx+tx) + (sx-cx-tx)*i/4, y: (cy-ty) + (sy-cy+ty)*i/4 }); for (let i = 0; i <= 26; i++) { const a = a0 + (a1-a0)*i/26; pts.push({ x: cx + rx*Math.cos(a), y: cy + ry*Math.sin(a) }); } const ex = cx + rx*Math.cos(a1), ey = cy + ry*Math.sin(a1); for (let i = 1; i <= 4; i++) pts.push({ x: ex + (cx+tx-ex)*i/4, y: ey + (cy+ty-ey)*i/4 }); return pts; };
-  [0.17, 0.5, 0.83].forEach(x => f.processStroke(sq(W * x + rnd(-10, 10), H - 4, rnd(96, 112)), ['coral']));
-  [[0.08, 0.5], [0.3, 0.62], [0.4, 0.42], [0.62, 0.56], [0.7, 0.36], [0.93, 0.6]].forEach(([x, y], i) => f.processStroke(fish(W * x, H * y, i % 3 === 1 ? 0.52 : 0.42), ['fish']));
-  window.JH_FEED = () => f.addFood(W * 0.45, H * 0.8);
-</script>`}
 </body></html>`;
 }
 
@@ -283,6 +243,14 @@ function markdown() {
     L.push(`### ${w.title}`, `**${w.org}** · ${span(w)}${w.location ? ` · ${w.location}` : ''}`, '');
     if (w.summary) L.push(w.summary, '');
     L.push(...w.highlights.map(h => `- ${h.text}`), '');
+  }
+  if ((R.service || []).length) {
+    L.push('---', '', '## Leadership', '');
+    for (const s of R.service) {
+      L.push(`### ${s.org ? `${s.title}, ${s.org}` : s.title}${s.start ? ` (${span(s)})` : ''}`, '');
+      if (s.summary) L.push(s.summary, '');
+      L.push(...s.highlights.map(h => `- ${h.text}`), '');
+    }
   }
   L.push('---', '', '## Education', '');
   for (const e of R.education) {
@@ -309,7 +277,7 @@ function markdown() {
 function linkedin() {
   const L = ['# LinkedIn paste blocks', '', '## Headline (≤220 chars)', '', headline + ' · Independent, JHDesign LLC · ex-Nanome, BadVR · AvatarMEDIC co-founder', '', '## About', '', lane.summary, '', R.basics.availability, ''];
   for (const w of R.work.filter(w => !w.compressed)) {
-    L.push(`## ${w.title}, ${w.org} (${span(w)})`, '', ...bulletsFor(w, 'one').map(t => `• ${t}`), '');
+    L.push(`## ${w.title}, ${w.org} (${span(w)})`, '', ...bullets(w).map(t => `• ${t}`), '');
   }
   return L.join('\n');
 }
@@ -317,6 +285,7 @@ function linkedin() {
 // ---------------------------------------------------------------- chunks
 function chunkPatches() {
   const A = R.awards;
+  const yearOf = re => { const a = A.find(x => re.test(x.title)); if (!a) throw new Error(`chunk 21: no award matches ${re}`); return a.year; };
   const awardsFacts = A.map(a => ({ t: a.title, d: `${a.org}${a.for ? `: ${a.for}` : ''}`, y: a.year, ...(a.year === '2022' ? { media: true } : {}) }));
   const timelineFacts = R.work.filter(w => !w.compressed).map(w => ({ t: w.org, d: w.id === 'jhdesign-llc' ? `${w.title}: OpenProse (26), Muse.bio (24, 26), Transfyr (25)` : w.title, y: span(w).replace(/20(\d\d)/g, '$1') }));
   return {
@@ -327,20 +296,21 @@ function chunkPatches() {
     },
     21: {
       content: `Awards and recognition: ${A.map(a => `${a.title}, ${a.org} (${a.year})${a.for ? `, ${a.for}` : ''}`).join('. ')}. Contributor, interviewed as an expert, to Spatial Design: Breaking the 2D Paradigm (Dominique Wu, 2024). Lightning Round speaker at AWE USA 2024. Mentor at XRDC 2024.`,
-      tldr: 'AsMA R&D Innovation Award (2022) · NIST CHARIoT Phase 2 (2021) · Microsoft Reactor (2020) · AT&T 5G Hackathon (2019) · FI SF grad · Most Meta · Kevin Kelly challenge (2014).',
+      // years come from the award records: a literal here kept "Microsoft Reactor (2020)" alive after the record changed
+      tldr: `AsMA R&D Innovation Award (${yearOf(/Innovation Award/)}) · NIST CHARIoT Phase 2 (${yearOf(/CHARIoT/)}) · Microsoft Reactor (${yearOf(/Microsoft Reactor/)}) · AT&T 5G Hackathon (${yearOf(/AT&T/)}) · FI SF grad · Most Meta · Kevin Kelly challenge (${yearOf(/future vision/)}).`,
       micro: 'AsMA, NIST, Microsoft, AT&T 5G, Founder Institute.',
       tags: 'awards innovation aerospace nist microsoft att 5g hackathon founder institute kevin kelly technium awe xrdc book spatial design accomplishment won speaker talk',
       facts: awardsFacts,
     },
     23: {
       content: `${R.work.filter(w => !w.compressed).map(w => `${w.org} (${span(w)}): ${w.title}${w.summary ? `: ${w.summary.replace(/\.$/, '')}` : ''}`).join('. ')}. Independent media and design practice since 2012 under the JHphotography and JHDesign names. JHDesign LLC registered 2024. Earlier: ${earlier.map(w => `${w.title}, ${w.org} (${span(w)})`).join('. ')}.`,
-      tldr: 'JHDesign LLC (24–now: OpenProse 26, Muse.bio 24/26, Transfyr 25), Nanome (22–24), BadVR (21–22), AvatarMEDIC CEO/CTO (19–21), Collaborate.org (15–18). Independent since 2012.',
+      tldr: 'JHDesign LLC (24–now: OpenProse 26, Muse.bio 24/26, Transfyr 25), Nanome (22–24), BadVR (21–22), AvatarMEDIC CEO (19–21), Collaborate.org (15–18). Independent since 2012.',
       micro: 'JHDesign ← Nanome ← BadVR ← AvatarMEDIC ← Georgetown.',
       facts: timelineFacts,
     },
     26: {
-      content: 'Leadership: co-founded AvatarMEDIC and led it as CEO/CTO with co-founder Susan Ip-Jewell MD: product strategy, pitching, engineering direction, fundraising. At Nanome, Lead XR Product Designer and product lead inside a PM, project manager and design triad: user interviews, the PRD template and tracking system, the Coda knowledge base, team workshops, feedback turned into development cycles. Art directed look development and production. UI/UX Design Lead at Collaborate.org. Runs client engagements and workshops through JHDesign LLC and hands teams systems they operate themselves (Muse.bio). Product management: roadmaps and pitching as AvatarMEDIC CEO, MVP scoping and PRD handoffs for JHDesign clients (Transfyr). Startup titles ran lean. The scope was director-level in practice, most of all at Nanome.',
-      tldr: 'Led AvatarMEDIC as CEO/CTO. Product lead for Nanome 2 inside a PM, project manager and design triad. Runs client engagements and workshops through JHDesign LLC.',
+      content: 'Leadership: co-founded AvatarMEDIC and led it as CEO with co-founder Susan Ip-Jewell MD: product strategy, pitching, engineering direction, fundraising. At Nanome, Lead XR Product & Interaction Designer and product lead inside a PM, project manager and design triad: user interviews, the PRD template and tracking system, the Coda knowledge base, team workshops, feedback turned into development cycles. Art directed look development and production. Lead UI/UX Designer at Collaborate.org. Runs client engagements and workshops through JHDesign LLC and hands teams systems they operate themselves (Muse.bio). Product management: roadmaps and pitching as AvatarMEDIC CEO, MVP scoping and PRD handoffs for JHDesign clients (Transfyr). Startup titles ran lean. The scope was director-level in practice, most of all at Nanome.',
+      tldr: 'Led AvatarMEDIC as CEO. Product lead for Nanome 2 inside a PM, project manager and design triad. Runs client engagements and workshops through JHDesign LLC.',
       micro: 'Founder-led teams; product lead at Nanome.',
     },
     27: {
@@ -411,7 +381,7 @@ function aboutBlocks() {
                         ${lis ? `<ul class="muted">${lis.map(l => `<li>${esc(l)}</li>`).join('')}</ul>` : ''}
                     </div>
                 </div>`;
-  const experience = `\n            <div class="timeline">` + R.work.map(w => item(span(w).replace('now', 'Present'), esc(w.title), link(w.org, w.orgUrl), w.compressed ? [w.highlights[0].text] : bulletsFor(w, 'one'))).join('') + `\n            </div>\n            `;
+  const experience = `\n            <div class="timeline">` + R.work.map(w => item(span(w).replace('now', 'Present'), esc(w.title), link(w.org, w.orgUrl), w.compressed ? [w.highlights[0].text] : bullets(w))).join('') + `\n            </div>\n            `;
   const education = `\n            <div class="card-grid cols-2">` + R.education.map(e => `
                 <div class="content-card">
                     <h4>${esc(e.school)}</h4>
@@ -474,7 +444,8 @@ const figuresOf = (what, where) => { const f = where?.figures; if (!f) throw new
 
 function nanome2Blocks() {
   const F = figuresOf('work[id=nanome]', R.work.find(w => w.id === 'nanome'));
-  const sessions = `${F.sessions.approx ? 'around ' : ''}${F.sessions.value} ${F.sessions.note}`;
+  // John, 2026-10-07: no session count. A null value renders the sessions without a number.
+  const sessions = F.sessions.value == null ? F.sessions.note : `${F.sessions.approx ? 'around ' : ''}${F.sessions.value} ${F.sessions.note}`;
   return {
     'nanome-testing': `we ran ${sessions} with real pharmaceutical company user groups at ${esc(listOf(F.sites))}, ${esc(F.usersPerSession)} users per session, both existing Nanome 1 users and new users`,
     'nanome-pivot': `removing ${esc(F.pivot.from)} entirely and introducing the <strong>${esc(F.pivot.to)}</strong> paradigm`,
@@ -562,7 +533,7 @@ async function pdfs() {
   const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true });
   const made = [];
   try {
-    for (const [file, mode, withPhone] of [['resume-designed', 'one', false], ['resume-apply', 'one', true], ['resume-ats', 'ats', true], ['resume-long', 'long', true]]) {
+    for (const [file, mode, withPhone] of [['resume-designed', 'one', false], ['resume-apply', 'one', true], ['resume-ats', 'ats', true]]) {
       writeFileSync(`${OUT}/${f(file)}.html`, html(mode, withPhone));
       const ctx = await browser.newContext({ viewport: { width: 816, height: 1056 }, deviceScaleFactor: 3 });
       const page = await ctx.newPage();
@@ -573,22 +544,18 @@ async function pdfs() {
       const named = await page.evaluate(() => document.querySelector('.page .name')?.textContent?.trim() || '');
       if (named !== R.basics.name) throw new Error(`${f(file)}.html rendered "${named || '(no .name)'}" instead of ${R.basics.name} — refusing to print it`);
       await page.evaluate(() => document.fonts.ready);
-      if (mode !== 'long') {
-        // fit to one page: shrink the root scale until the content clears the page
-        // The tank is 1.15in (110px) tall and its top 60% is a white fade — a line
-        // that ends inside that band prints half-erased (the 2026-09-16 talks line).
-        // Designed modes stop 8px above the tank; ATS has no tank.
-        const limit = Math.round(11 * 96) - (mode === 'ats' ? 43 : 118);
-        let s = 1;
-        for (let i = 0; i < 40; i++) {
-          const h = await page.evaluate(() => Math.max(...[...document.querySelectorAll('.page > *:not(.tank)')].map(e => e.getBoundingClientRect().bottom)));
-          if (h <= limit) break;
-          s = +(s - 0.01).toFixed(2);
-          await page.evaluate(v => document.documentElement.style.setProperty('--s', v), s);
-        }
-        console.log(`  ${f(file)}: scale ${s}`);
+      // fit to one page: shrink the root scale until the content clears the bottom margin
+      const limit = Math.round(11 * 96) - 43;
+      let s = 1;
+      for (let i = 0; i < 40; i++) {
+        const h = await page.evaluate(() => Math.max(...[...document.querySelectorAll('.page > *')].map(e => e.getBoundingClientRect().bottom)));
+        if (h <= limit) break;
+        s = +(s - 0.01).toFixed(2);
+        await page.evaluate(v => document.documentElement.style.setProperty('--s', v), s);
       }
-      if (mode !== 'ats') { await page.waitForTimeout(1800); await page.evaluate(() => window.JH_FEED && window.JH_FEED()); await page.waitForTimeout(700); }
+      // Body text is 10.2pt × scale. Below 0.80 (8.2pt) the page is too full to read
+      // comfortably: the fix is fewer words, never a smaller font.
+      console.log(`  ${f(file)}: scale ${s}${s < 0.8 ? `  ← body text ${(10.2 * s).toFixed(1)}pt: cut words, the page is too full` : ''}`);
       await page.pdf({ path: `${OUT}/${f(file)}.pdf`, format: 'Letter', printBackground: true, preferCSSPageSize: true, margin: { top: 0, right: 0, bottom: 0, left: 0 } });
       await page.screenshot({ path: `${OUT}/${f(file)}.png`, fullPage: true });
       made.push(f(file));
