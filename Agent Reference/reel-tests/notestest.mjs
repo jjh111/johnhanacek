@@ -109,7 +109,12 @@ try {
   ok(M0.notes.length === tk.notes.length && M0.rows.every(p => [0, 2, 3, 5, 7, 8, 10].includes(((p - 9) % 12 + 12) % 12)), `every note of the take is drawn (${M0.notes.length}), on the rows of A minor (Key: ${M0.rows.length} rows)`);
 
   // a note in view, dragged a beat later and a row up
-  const pick = M0.notes.find(n => !n.out && n.heard && n.step * M0.step > 16.2 && n.step * M0.step < 22 && n.len >= 2);
+  // a sung note in view with room after it on the row above (a beat to move into, an eighth more to
+  // grow into), so the edge grabbed is its own whatever the score's notes are
+  const rowUp = n => M0.rows[M0.rows.indexOf(n.pitch) - 1];
+  const roomy = n => !M0.notes.some(o => o !== n && !o.out && (o.pitch === rowUp(n) || o.pitch === n.pitch) && o.step < n.step + 4 + n.len + 6 && o.step + o.len > n.step + 4);
+  const pick = M0.notes.find(n => !n.out && n.heard && n.step * M0.step > 16.2 && n.step * M0.step < 22 && n.len >= 2 && rowUp(n) != null && roomy(n))
+    || M0.notes.find(n => !n.out && n.heard && n.step * M0.step > 16.2 && n.step * M0.step < 22 && n.len >= 2);
   let b = await box(pick.ln);
   let before = file();
   const pxs = (await page.evaluate(() => REEL_NOTES.view)).pxs;
@@ -147,8 +152,12 @@ try {
 
   // double-click an empty spot: a new note there, an eighth long (the grid), chosen
   now = await model();
-  const row = now.rows[2], tAt = 19.0;
-  const free = now.notes.every(n => n.pitch !== row || n.step * now.step > tAt + 0.3 || (n.step + n.len) * now.step < tAt);
+  // an empty spot in view: the first row and moment from 19 s on with no note within 0.3 s of it
+  // (the score's own notes decide where that is; the high rows first, where a melody is thinnest)
+  const emptyAt = (r, tt) => now.notes.every(n => n.pitch !== r || n.step * now.step > tt + 0.3 || (n.step + n.len) * now.step < tt - 0.05);
+  let row = now.rows[2], tAt = 19.0;
+  find: for (const r of now.rows.slice(0, 6)) for (let tt = 19.0; tt < 23; tt += 0.25) if (emptyAt(r, tt)) { row = r; tAt = tt; break find; }
+  const free = emptyAt(row, tAt);
   const p0 = await page.evaluate(([tt, r]) => REEL_NOTES.point(tt, r), [tAt + 0.06, row]);
   before = file();
   await page.mouse.dblclick(p0.x, p0.y);

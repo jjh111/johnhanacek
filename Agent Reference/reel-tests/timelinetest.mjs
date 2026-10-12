@@ -257,16 +257,19 @@ try {
   check(await page.locator(stat).count() === 1, 'the answer\'s second stat is a moment of its own');
   await page.locator(stat).scrollIntoViewIfNeeded();
   s = await pxs();
+  // the second stat's words, as the script has them (a number or a word, then its label)
+  const STAT2 = (/^\s*stat\s+@1\.15 (.+)$/m.exec(file()) || [, ''])[1].trim();
+  const esc = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   await saving('stat', () => dragBy(stat, 0.35 * s, false));
-  const statLine = (/^\s*stat\s+@\S+ 3 products shipped$/m.exec(file()) || [''])[0];
+  const statLine = (new RegExp(`^\\s*stat\\s+@\\S+ ${esc(STAT2)}$`, 'm').exec(file()) || [''])[0];
   check(/@1\.5 /.test(statLine), 'dragging it +0.35 s rewrote its @ on the 0.25 s grid (@1.5)', statLine);
   check(await page.evaluate(() => REEL_TIMELINE.zoomLevel) > 9, 'the zoom stays through a save');
   await saving('undo stat', () => page.locator('#reel-tl [data-act="undo"]').click());
-  check(/^\s*stat\s+@1\.15 3 products shipped$/m.test(file()), 'the Undo button takes it back');
+  check(new RegExp(`^\\s*stat\\s+@1\\.15 ${esc(STAT2)}$`, 'm').test(file()), 'the Undo button takes it back');
   await page.locator(stat).scrollIntoViewIfNeeded();
   await page.locator(stat).click();
   const lit = await page.evaluate(() => { const r = document.querySelector('#reel-tl .tl-insp-col .tl-hl'); const i = r && r.querySelector('input'); return i ? i.value : null; });
-  check(lit === '@1.15 3 products shipped', 'clicking a moment opens its scene in the inspector, its line lit', lit);
+  check(lit === '@1.15 ' + STAT2, 'clicking a moment opens its scene in the inspector, its line lit', lit);
   await page.locator('#reel-tl [data-act="fit"]').click();
   check(await page.evaluate(() => REEL_TIMELINE.zoomLevel) === 1, 'Fit shows the whole reel again');
   await page.locator('#reel-tl [data-act="export"]').click();
