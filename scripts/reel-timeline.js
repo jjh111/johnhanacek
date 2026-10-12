@@ -103,7 +103,7 @@
       if (!v || v.at == null) return;
       const stat = f.key === 'stat';
       MOMENTS.push({ ln: f.ln, own: S, S, at: v.at, len: S.end - S.start, kind: f.key, field: true,
-        gist: stat ? `stat ${v.n} ${v.label}` : `award ${v.yr} ${v.text}`, label: stat ? `${v.n} ${words(v.label, 2)}` : `${v.yr} ${words(v.text, 2)}` });
+        gist: stat ? `stat ${v.word != null ? v.word : v.n} ${v.label}` : `award ${v.yr} ${v.text}`, label: stat ? `${v.word != null ? v.word : v.n} ${words(v.label, 2)}` : `${v.yr} ${words(v.text, 2)}` });
     });
     OUTS = SCENES.filter(S => RS.cueNames(S.sc.type).includes('out'))
       .map(S => ({ S, out: RS.cue(S.sc, 'out', EDIT), set: !!(S.sc.cues && S.sc.cues.out != null) }));

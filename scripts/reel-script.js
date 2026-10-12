@@ -82,10 +82,12 @@
                if (!m) throw new Error('should read "@1.5 14 years designing" (the @ time is optional)');
                const s = {};
                if (m[1] != null) s.at = number(m[1], 'its @ time');
-               s.n = number(m[2], 'the stat'); s.label = m[3];
+               // a number rolls in like an odometer; a word (AI, Web, XR) is the same gold, and slides
+               if (/^[\d.]+$/.test(m[2])) s.n = number(m[2], 'the stat'); else s.word = m[2];
+               s.label = m[3];
                return s;
              },
-             write: s => `${s.at != null ? '@' + s.at + ' ' : ''}${s.n} ${s.label}` },
+             write: s => `${s.at != null ? '@' + s.at + ' ' : ''}${s.word != null ? s.word : s.n} ${s.label}` },
     award: { many: true,
              read: v => {
                const m = /^@(\S+)\s+(\S+)\s+(.+)$/.exec(words(v));
@@ -116,6 +118,15 @@
              write: c => `${c.lead} | ${c.strong}` },
     // one direction for the fish: its @ time, who, and what (FISH below)
     fish:  { many: true, read: v => readFish(words(v)), write: v => writeFish(v) },
+    // where a scene sits in one frame: "place square 0 -40" moves all of it 40 px up in the square
+    // frame only (frame pixels; the other frames keep their own). Collected by frame: { square: { x, y } }
+    place: { many: true, place: true,
+             read: v => {
+               const m = /^(wide|square|vertical)\s+(-?[\d.]+)\s+(-?[\d.]+)$/.exec(words(v));
+               if (!m) throw new Error('should read "square 0 -40": the frame (wide, square or vertical), then how far right and down, in its pixels');
+               return [m[1], { x: number(m[2], 'how far right'), y: number(m[3], 'how far down') }];
+             },
+             write: ([k, p]) => `${k} ${p.x} ${p.y}` },
     // one named timing point: collected into an object, { out: 0.5 }, not a list (a cue that
     // takes a word, the ease, reads its word)
     cue:   { many: true, map: true,
@@ -158,7 +169,7 @@
     end:     { fields: [['board', 'board', 'str'], ['line', 'line', 'str']], need: ['board', 'line'] },
   };
   const ITEM = { fields: HEAD, beats: ['beats', BEAT], need: ['eyebrow', 'headline', 'beats'] };
-  Object.values(SCENES).forEach(d => d.fields.push(['cue', 'cues', 'cue'], ['fish', 'fish', 'fish']));
+  Object.values(SCENES).forEach(d => d.fields.push(['cue', 'cues', 'cue'], ['fish', 'fish', 'fish'], ['place', 'place', 'place']));
 
   // ── named timing points inside a scene: its transitions ───────────────
   // A scene's choreography keeps its shape; a cue moves one of its joints or changes how fast or
@@ -399,7 +410,11 @@
           if (p === scene) item = beat = null; else if (p === item) beat = null;
           const f = p.fields.get(head), v = f.kind.read(value);
           let index = null;
-          if (f.kind.map) {                             // a cue: named, once each, and only where it applies
+          if (f.kind.place) {                           // a place: once a frame
+            const [k, x] = v, o = p.obj[f.j] = p.obj[f.j] || {};
+            if (k in o) throw new Error(`this scene's place in the ${k} frame is already given`);
+            o[k] = x; index = k;
+          } else if (f.kind.map) {                      // a cue: named, once each, and only where it applies
             const [k, x] = v, type = p.obj.type, o = p.obj[f.j] = p.obj[f.j] || {};
             if (!CUES[k]) throw new Error(`there is no "${k}" cue; ${a(type)} scene has ${cueNames(type).join(', ') || 'none'}`);
             if (!cueNames(type).includes(k)) throw new Error(`${a(type)} scene has no ${k} cue${CUES[k].asks && !asks(type) ? ': it types no question' : ''}`);
@@ -548,7 +563,7 @@
     edit.scenes.forEach((sc, i) => {
       const c = when[i], def = SCENES[sc.type], cs = [];
       if (sc.type === 'answer' && sc.img) cs.push([c.start, 1, `img ${clip(sc.img)}  (the portrait, with the answer)`]);
-      (sc.stats || []).forEach(s => { if (s.at != null) cs.push([c.start + s.at, 1, `stat ${s.n} ${s.label}`]); });
+      (sc.stats || []).forEach(s => { if (s.at != null) cs.push([c.start + s.at, 1, `stat ${s.word != null ? s.word : s.n} ${s.label}`]); });
       (sc.awards || []).forEach(a => cs.push([c.start + a.at, 1, `award ${a.yr} ${a.text}`]));
       (sc.fish || []).forEach((f, k) => {
         // a line that holds says until when: the reel's end, or where a later line changes it
@@ -627,6 +642,19 @@
     if (there && value != null) return setField(src, there.ln, `${name} ${cueText(name, value)}`);
     if (there) lines.splice(there.ln - 1, 1);
     else if (value != null) lines.splice(after, 0, `${indent}${'cue'.padEnd(9)}${name} ${cueText(name, value)}`);
+    else return src;
+    return retime(lines.join('\n'));
+  }
+  // where a scene sits in one frame: its place line rewritten, added, or (0 0) taken out
+  function setPlace(src, sceneLn, fmt, x, y) {
+    if (!['wide', 'square', 'vertical'].includes(fmt)) throw new Error(`there is no ${fmt} frame`);
+    const { own, lines, after, indent } = sceneSlot(src, sceneLn);
+    const there = own.find(f => f.key === 'place' && f.index === fmt);
+    const r = v => Math.round(v);
+    const zero = !r(x) && !r(y), text = `${fmt} ${r(x)} ${r(y)}`;
+    if (there && !zero) return setField(src, there.ln, text);
+    if (there) lines.splice(there.ln - 1, 1);
+    else if (!zero) lines.splice(after, 0, `${indent}${'place'.padEnd(9)}${text}`);
     else return src;
     return retime(lines.join('\n'));
   }
@@ -764,7 +792,7 @@
   // (a stat's label, a row's title) and writes the whole field back.
   const writeValue = (kind, v) => { const K = KINDS[kind]; if (!K) throw new Error('no field kind ' + kind); return K.write(v); };
 
-  return { parse, format, retime, spans, queries, cueSheet, SCENES, CUES, EASES, cue, cueNames, setDur, setAt, setField, setCue, setReelCue, addLine, removeLine,
+  return { parse, format, retime, spans, queries, cueSheet, SCENES, CUES, EASES, cue, cueNames, setDur, setAt, setField, setCue, setPlace, setReelCue, addLine, removeLine,
     moveScene, duplicateScene, removeScene,
     FISH, IDLES, WHO, RESET, readFish, writeFish, fishHolds, moveFish, writeValue, main };
 });

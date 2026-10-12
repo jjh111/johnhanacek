@@ -55,7 +55,18 @@
 <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@200;300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../styles/jh-chrome.css">
 <style>
-:root { color-scheme: dark; }
+:root { color-scheme: dark;
+  /* The glass every panel over the water is made of (2026-10-12; John: "the blue occlusion over the
+     fish tank is too opaque it should be frosted glass ... i never want to clip the fish visual
+     under the content"): a thin tint of the sea, the water behind it blurred and a little brighter,
+     an edge that catches the light, a soft shadow. A fish behind a panel is seen through it,
+     softened, never hidden: the panels had been 55-62% of the sea's own colour with an 80 px black
+     shadow under them, which over this dark water read as solid. */
+  --glass-tint: rgba(var(--surface-rgb), 0.3);
+  --glass-blur: blur(12px) saturate(1.4) brightness(1.08);
+  --glass-edge: rgba(var(--cyan-dim-rgb), 0.3);
+  --glass-sheen: linear-gradient(to bottom, rgba(234, 245, 250, 0.07), rgba(234, 245, 250, 0) 42%);
+  --glass-shadow: 0 18px 48px rgba(0, 0, 0, 0.2); }
 html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 /* font-size and line-height are stated, not inherited: a page that hosts the rig brings its own body
    font (claude.ai's frame sets 14px), and every line box sized by line-height: normal would follow it,
@@ -81,9 +92,9 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 .vignette { inset: 0; pointer-events: none; background: radial-gradient(ellipse 80% 85% at 50% 42%, transparent 58%, rgba(0, 0, 0, 0.45) 100%); }
 
 /* ── the glass: hero oval → command bar → hero oval ── */
-#glass { background: rgba(var(--surface-rgb), 0.55); backdrop-filter: blur(8px) saturate(1.1); -webkit-backdrop-filter: blur(8px) saturate(1.1);
-  border: 1px solid rgba(var(--cyan-dim-rgb), 0.24); filter: drop-shadow(0 8px 40px var(--elevation)); pointer-events: none; }
-#glass::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(to bottom, rgba(var(--cyan-dim-rgb), 0.08), transparent 55%); }
+#glass { background: var(--glass-tint); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-edge); box-shadow: var(--glass-shadow); pointer-events: none; }
+#glass::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: var(--glass-sheen); }
 #glass .ping { position: absolute; inset: -1px; border-radius: inherit; box-shadow: 0 0 0 1px rgba(var(--cyan-dim-rgb), 0.9), 0 0 24px rgba(var(--cyan-dim-rgb), 0.55); opacity: 0; }
 #bar { left: 96px; top: 56px; width: 1728px; height: 76px; display: flex; align-items: center; gap: 22px; padding: 0 28px; box-sizing: border-box; opacity: 0; }
 #bar .mag { width: 34px; height: 34px; color: var(--cyan); flex: none; }
@@ -135,6 +146,8 @@ p, h1, h2, h3 { margin: 0; }
 .stats { display: flex; gap: 56px; }
 .bt .stats { margin-top: 26px; }
 .stat .num { display: block; font: 200 100px/1 var(--font-display); color: var(--gold); white-space: nowrap; }
+.stat .num.word { overflow: hidden; padding-bottom: 0.08em; margin-bottom: -0.08em; }
+.stat .num.word .wd { display: inline-block; }
 .col .stat .num { font-size: 88px; }
 .od { display: inline-block; height: 1em; overflow: hidden; vertical-align: top; }
 .ods { display: flex; flex-direction: column; align-items: center; will-change: transform; }
@@ -165,7 +178,7 @@ p, h1, h2, h3 { margin: 0; }
 #chipLead line { stroke: rgba(var(--cyan-dim-rgb), 0.6); stroke-width: 1; }
 #chipLead circle { fill: var(--cyan); }
 #chip { opacity: 0; display: flex; flex-direction: column; gap: 3px; padding: 7px 10px 8px; border-radius: 6px; white-space: pre; pointer-events: none;
-  font: 500 13px/1.25 var(--font-mono); background: rgba(var(--surface-rgb), 0.72); border: 1px solid rgba(var(--cyan-dim-rgb), 0.38); }
+  font: 500 13px/1.25 var(--font-mono); background: var(--glass-tint); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border: 1px solid rgba(var(--cyan-dim-rgb), 0.38); }
 #chip b { font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--cyan); }
 #chip span { color: var(--ink-quiet); font-variant-numeric: tabular-nums; }
 
@@ -217,7 +230,8 @@ p, h1, h2, h3 { margin: 0; }
 
 /* plan card (scene language) → receipt */
 .plan { left: 610px; top: 307px; width: 700px; padding: 30px 36px 34px; box-sizing: border-box; border-radius: 20px;
-  background: rgba(var(--surface-rgb), 0.62); border: 1px solid rgba(var(--gold-rgb), 0.45); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5); transform-origin: 50% 0; }
+  background: var(--glass-sheen), var(--glass-tint); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid rgba(var(--gold-rgb), 0.45); box-shadow: var(--glass-shadow); transform-origin: 50% 0; }
 .plan .ptop { display: flex; justify-content: space-between; align-items: baseline; font: 500 17px/1 var(--font-mono); letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); }
 .plan .ptop .lang { color: var(--ink-faint); letter-spacing: 0.12em; }
 .plan .pts, .plan .cnt, .plan .pact { display: grid; }
@@ -257,7 +271,7 @@ p, h1, h2, h3 { margin: 0; }
 .cta { font: 500 30px/1 var(--font-mono); color: var(--text-bright); white-space: nowrap; }
 .cta strong { color: var(--gold); font-weight: 500; }
 .pill { display: flex; gap: 22px; align-items: center; padding: 14px 28px; border-radius: 999px; border: 1px solid rgba(var(--cyan-dim-rgb), 0.22);
-  background: rgba(var(--surface-rgb), 0.55); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  background: var(--glass-sheen), var(--glass-tint); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); }
 .pill .ic { width: 34px; height: 34px; display: block; color: var(--cyan-dim); }
 .pill .ic svg { width: 100%; height: 100%; display: block; overflow: visible; }
 .pill .ic svg * { fill: none; stroke: currentColor; stroke-width: 1.8; vector-effect: non-scaling-stroke; }
@@ -265,7 +279,8 @@ p, h1, h2, h3 { margin: 0; }
 
 /* logos: the media kit's client wall */
 .panel { left: 96px; top: 204px; width: 1728px; height: 506px; border-radius: 22px; overflow: hidden;
-  background: rgba(var(--surface-rgb), 0.55); border: 1px solid rgba(var(--cyan-dim-rgb), 0.2); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5); }
+  background: var(--glass-sheen), var(--glass-tint); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-edge); box-shadow: var(--glass-shadow); }
 .panel-in { position: absolute; inset: 0; padding: 44px 64px 48px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
 .panel .eyebrow { margin-bottom: 36px; }
 .group + .group { margin-top: 52px; }
@@ -286,7 +301,8 @@ p, h1, h2, h3 { margin: 0; }
 
 /* intent card (how do I work with John?) */
 .intent { left: 96px; top: 204px; width: 1728px; height: 506px; border-radius: 22px; box-sizing: border-box; padding: 40px 64px 42px;
-  background: rgba(var(--surface-rgb), 0.6); border: 1px solid rgba(var(--gold-rgb), 0.5); box-shadow: 0 0 60px rgba(var(--gold-rgb), 0.06), 0 30px 80px rgba(0, 0, 0, 0.5);
+  background: var(--glass-sheen), var(--glass-tint); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid rgba(var(--gold-rgb), 0.5); box-shadow: 0 0 60px rgba(var(--gold-rgb), 0.06), var(--glass-shadow);
   display: flex; flex-direction: column; transform-origin: 50% 0; }
 .intent .eyebrow { color: var(--gold); margin-bottom: 20px; }
 .intent .oh { font: 200 64px/1.12 var(--font-display); color: var(--text-subhead); }
@@ -374,6 +390,7 @@ p, h1, h2, h3 { margin: 0; }
 #stage.vertical .ans { font-size: 88px; }   /* "Meets Structured Data." in the 936 px band (at 90 its period was cut by 2 px) */
 #stage.vertical .sup { font-size: 34px; }
 #stage.vertical .stat .num { font-size: 110px; }
+#stage.vertical .astats .stat .num.word { font-size: 84px; }   /* a word is wider than a two-figure number: Web in a quarter of 936 px */
 #stage.vertical .col .stat .num { font-size: 96px; }
 #stage.vertical .stat .lab { font-size: 24px; }
 #stage.vertical .lrow .yr { font-size: 42px; }
@@ -570,6 +587,9 @@ p, h1, h2, h3 { margin: 0; }
   const FORMAT = FORMATS[Q.get('format')] ? Q.get('format') : 'wide';
   const F = FORMATS[FORMAT];
   const W = F.W, H = F.H, CX = W / 2;
+  // the frame's safe areas, as a share of it (SMPTE ST 2046-1): what matters inside action safe,
+  // every word inside title safe. scripts/reel-safe.js draws them (G) and marks what crosses them.
+  const SAFE = { action: 0.93, title: 0.9 };
   const STEP = 1000 / 60;
   const TANK_Y = F.tankY, TANK_H = F.tankH;
   const COL_Y = F.colY;
@@ -706,11 +726,18 @@ p, h1, h2, h3 { margin: 0; }
     });
   }
   // a stat: the number fades up and rolls, its label slides up after it
-  function statMotion(node, n) {
-    const num = node.querySelector('.num'), roll = odometer(num, n), lab = node.querySelector('.lab > .li');
+  // (a word, AI or XR, is the same gold: it rises into place as the number would roll)
+  function statMotion(node, st) {
+    const num = node.querySelector('.num'), lab = node.querySelector('.lab > .li');
+    let roll;
+    if (st.word != null) {
+      num.classList.add('word'); num.innerHTML = '<span class="wd"></span>'; num.firstChild.textContent = st.word;
+      const wd = num.firstChild;
+      roll = k => { wd.style.transform = `translate3d(0,${fx((1 - E.outExpo(k)) * 0.45)}em,0)`; };
+    } else roll = odometer(num, st.n);
     return (t, tin, tout) => {
       const M = MO;
-      roll(seg(t, tin + M.a(0.05), M.a(1.1)));
+      roll(seg(t, tin + M.a(0.05), M.a(st.word != null ? 0.7 : 1.1)));
       num.style.opacity = (seg(t, tin, M.a(0.25)) * (tout == null ? 1 : 1 - seg(t, tout, M.l(0.2)))).toFixed(3);
       lines([lab], t, tin + M.a(0.12), tout);
     };
@@ -1134,6 +1161,11 @@ p, h1, h2, h3 { margin: 0; }
   function segEl(sc, html) {
     const el = document.createElement('section');
     el.className = 'seg ' + sc.type;
+    if (sc.i != null) el.dataset.scene = sc.i;
+    // its place in this frame (`place square 0 -40`): all its own content moved, in frame px; the
+    // bar, the glass and the fish keep the grid (scripts/reel-safe.js drags it, G)
+    const pl = sc.place && sc.place[FORMAT];
+    if (pl) el.style.translate = `${pl.x}px ${pl.y}px`;
     el.innerHTML = html;
     scenesEl.appendChild(el);
     return el;
@@ -1291,7 +1323,7 @@ p, h1, h2, h3 { margin: 0; }
       b: beats[i],
       lines: inner(node, '.ll > .lm, .ql > .lm'),
       cite: inner(node, ':scope > .cite'),
-      stats: [...node.querySelectorAll('.stat')].map((s, j) => statMotion(s, beats[i].stats[j].n)),
+      stats: [...node.querySelectorAll('.stat')].map((s, j) => statMotion(s, beats[i].stats[j])),
     }));
     const rows = [...colEl.querySelectorAll('.lrow')].map((r, i) => ({ a: it.awards[i], rule: r.querySelector('.lrule'), ls: inner(r, '.lm') }));
     return (t, tin, tout) => {
@@ -1346,6 +1378,11 @@ p, h1, h2, h3 { margin: 0; }
       const main = el.querySelector('.main'), glow = el.querySelector('.glow'), L = main.getTotalLength();
       paths.forEach(p => { p.style.strokeDasharray = `${L} ${L}`; });
       const g1 = inner(el, '.g1'), g2 = inner(el, '.g2'), guide = el.querySelector('.guide');
+      // its width on screen is the camera's zoom times its own (2.1 × 660 px in close): kept inside
+      // the frame's title-safe width (90%), so a narrow frame never cuts it off (in square it ran off
+      // both edges, "aw a ... ali"; wide has the room and is unchanged)
+      let gw = 0;
+      LAYOUT.push(() => { gw = [...guide.querySelectorAll(':scope > .lm')].reduce((a, e) => a + e.offsetWidth, 0); });
       const M = sc.motion, D0 = 0.2, D1 = 0.95, DONE = D0 + D1, OUT = sc.dur - cue(sc, 'out');   // cue out: when the guide leaves
       // The loop becomes the fish where it was drawn. (The engine lifts a new large fish into the
       // upper half of the tank, its territory on the site; here that put it 115 px above the loop,
@@ -1369,8 +1406,8 @@ p, h1, h2, h3 { margin: 0; }
         // The camera is in close on the loop (paintCamera), zoomed about it, not about the stage's
         // middle: the caption, centred on the stage, rode 76 px right of the screen's middle and into
         // a narrow frame's margin. It keeps to the middle of the screen instead, the whole way out.
-        const kc = camK(lt);
-        guide.style.transform = kc >= 1 ? '' : `translate3d(${fx(lerp(cx, CX, kc) - CX)}px,0,0)`;
+        const kc = camK(lt), zoom = lerp(2.1, 1, kc), fit = gw ? Math.min(1, W * SAFE.title / (gw * zoom)) : 1;
+        guide.style.transform = kc >= 1 && fit >= 1 ? '' : `translate3d(${fx(lerp(cx, CX, kc) - CX)}px,0,0)${fit < 1 ? ` scale(${fit.toFixed(4)})` : ''}`;
         lines(g1, lt, M.a(0.22), OUT, { dur: 0.5 });
         lines(g2, lt, DONE + M.a(0.06), OUT, { dur: 0.45 });
       };
@@ -1408,7 +1445,7 @@ p, h1, h2, h3 { margin: 0; }
         <svg class="ring" style="left:${P.x - 16}px;top:${P.y - 16}px;width:${P.w + 32}px;height:${P.h + 32}px" viewBox="0 0 ${P.w + 32} ${P.h + 32}"><ellipse cx="${P.w / 2 + 16}" cy="${P.h / 2 + 16}" rx="${P.w / 2 + 12}" ry="${P.h / 2 + 12}"/></svg>` : ''}`);
       centreColumn(el.querySelector('.ansc'), CY);
       const ls = inner(el, '.ansb > .lm'), sup = inner(el, '.lm.sup');
-      const stats = [...el.querySelectorAll('.stat')].map((s, j) => statMotion(s, sc.stats[j].n));
+      const stats = [...el.querySelectorAll('.stat')].map((s, j) => statMotion(s, sc.stats[j]));
       // cues in / out: the answer arrives after the question's Enter, leaves before the cut
       const M = sc.motion, IN = q.enter - sc.start + cue(sc, 'in'), OUT = sc.dur - cue(sc, 'out');
       look(sc.start + IN, sc.end, F.answer.look, CY, undefined, 'the answer');
@@ -1703,6 +1740,14 @@ p, h1, h2, h3 { margin: 0; }
         const ohs = [...card.querySelectorAll('.lm.oh')];
         let fs = ohs.length ? parseFloat(getComputedStyle(ohs[0]).fontSize) : 0;
         while (fs > 40 && card.scrollHeight > card.clientHeight + 1) { fs -= 2; ohs.forEach(o => { o.style.fontSize = fs + 'px'; }); }
+        // still more than it holds (the design services' three rows in square ran out of the card,
+        // its last row cut off): the card grows down, as far as the frame's title-safe line (the
+        // glass lets the fish under it show), and only then do the rows' words get smaller
+        const over = card.scrollHeight - card.clientHeight;
+        if (over > 1) card.style.height = Math.min(P.h + over, H * (1 + SAFE.title) / 2 - P.y) + 'px';
+        const vs = [...card.querySelectorAll('.three .lm.v')];
+        let vf = vs.length ? parseFloat(getComputedStyle(vs[0]).fontSize) : 0;
+        while (vf > 22 && card.scrollHeight > card.clientHeight + 1) { vf -= 1; vs.forEach(v => { v.style.fontSize = vf + 'px'; }); }
       });
       const cols = [...el.querySelectorAll('.three > div')].map(c => ({ rule: c.querySelector('.trule'), ls: inner(c, '.lm') }));
       const cta = inner(el, '.lm.cta');
@@ -2301,6 +2346,8 @@ p, h1, h2, h3 { margin: 0; }
     // the stage on screen: its element, its frame (W × H stage px) and where it is drawn
     // (client px = VIEW.x + stage px × VIEW.s)
     stage, frame: [W, H], view: () => Object.assign({}, VIEW),
+    // the frame this page plays (?format=) and its safe areas, for the Safe tool (scripts/reel-safe.js, G)
+    format: FORMAT, safe: Object.assign({}, SAFE),
     // the fish, for the Fish panel (scripts/reel-fish.js): the water a spot is kept in (stage px),
     // where the fish are now (stage px), and what each has been told at t
     fish: {
@@ -2388,6 +2435,8 @@ p, h1, h2, h3 { margin: 0; }
   const sh = document.createElement('script'); sh.src = '../scripts/reel-shots.js'; sh.onerror = () => sh.remove(); document.head.appendChild(sh);
   // the voice's notes as a piano roll, edited on the grid as a music program edits a clip (N)
   const nt = document.createElement('script'); nt.src = '../scripts/reel-notes.js'; nt.onerror = () => nt.remove(); document.head.appendChild(nt);
+  // the frame's safe areas, what crosses them, and each scene's place in this frame, dragged (G)
+  const sf = document.createElement('script'); sf.src = '../scripts/reel-safe.js'; sf.onerror = () => sf.remove(); document.head.appendChild(sf);
   // the words on the stage, changed where they stand: double-click a line (scripts/reel-text.js)
   const tx = document.createElement('script'); tx.src = '../scripts/reel-text.js'; tx.onerror = () => tx.remove(); document.head.appendChild(tx);
   // how the script becomes a film: render it here (dev server), or ask Claude (the editor on claude.ai)

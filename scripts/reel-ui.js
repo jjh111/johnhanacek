@@ -37,6 +37,7 @@
     download: S('<path d="M8 2v8.5"/><path d="M4.8 7.3L8 10.5l3.2-3.2"/><path d="M3 12.5V14h10v-1.5"/>'),
     undo: S('<path d="M5 6.5h5.2a3.3 3.3 0 0 1 0 6.6H7"/><path d="M7.5 4L5 6.5 7.5 9"/>'),
     redo: S('<path d="M11 6.5H5.8a3.3 3.3 0 0 0 0 6.6H9"/><path d="M8.5 4L11 6.5 8.5 9"/>'),
+    safe: S('<rect x="1.8" y="2.8" width="12.4" height="10.4" rx="1"/><rect x="4.2" y="5" width="7.6" height="6" rx="0.4" stroke-dasharray="1.6 1.3"/>'),
     zoomIn: S('<path d="M8 3v10M3 8h10"/>'),
     zoomOut: S('<path d="M3 8h10"/>'),
     fit: S('<path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10"/>'),
