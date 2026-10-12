@@ -1679,6 +1679,56 @@ endorsement quotes. then render that."
   Checked against his file: every note before bar 25 the same, every note from it on the same
   two bars later, every bar over the chord it had. The reel is 71.75 s, 36 bars.
 
+## Safe areas, a scene's place, frosted glass (2026-10-12)
+
+John: "ok we need screensafe markers and abilities for me to layout in the timeline view, the
+first text is clipped. the materiality of the scene could be improved too the blue occlusion over
+the fish tank is too opaque it should be frosted glass to style - in renders it looks totally
+opaque, i never want to clip the fish visual under the content. for the 'who is john' i want to
+use 14 years but then do the domains as the other yellow text (not more numbers) could do like AI
+- subtitle, web - subtitle, XR subtitle; the subtitles are the subdomain aspects"
+
+- **What was clipped.** The opening's caption sits inside the camera, which starts in close on the
+  drawn loop at 2.1×: 660 px of caption became about 1,390 on screen, inside wide's 1,920 but past
+  both edges of square and vertical (1,080: "aw a ... ali"). It is now scaled, only when it would
+  overflow, to the frame's title-safe width at the camera's zoom of the moment (wide unchanged). The
+  same stills showed the design services' card in square cutting off its third row: a card whose
+  copy outgrows it after its headline has shrunk to 40 px now grows down, as far as title safe,
+  and only then do its rows' words get smaller (to 22 px at least).
+- **Safe areas (G, `scripts/reel-safe.js`).** Action safe 93% and title safe 90% (SMPTE ST 2046-1;
+  `SAFE` in the rig) drawn over the stage, a cross at the middle; every line of copy that runs
+  outside title safe, or is cut off by what it sits in, is outlined in red and counted in a bar
+  over the HUD. A line still sliding in or out of its mask, or under half opacity, is not judged.
+  The bar also switches the frame: Wide, Square and Vertical reopen the preview in that frame at
+  the same moment.
+- **A scene's place.** `place square 0 -40` in a scene moves all of its own content 40 px up in
+  the square frame only (frame pixels; once a frame; the bar, the glass and the fish keep the
+  grid). Paused with Safe on, a drag anywhere on the stage writes it for the scene at the
+  playhead (`ReelScript.setPlace`: rewritten, added, or taken out at 0 0), on the timeline's one
+  Undo; Shift keeps a drag to one axis; Reset puts the scene back.
+- **The sweep.** `node scripts/reel-safe.mjs` plays the cut in render mode in every frame, looks
+  at every scene every half second once its copy has settled, and names each line that crosses,
+  with its scene, time and words (exit 1). The clips are not loaded and a seek is answered at once
+  (samefilmtest's way): a frame no longer waits on a clip, and the three frames take seconds. After
+  the two fixes above, every line of the cut is inside title safe in wide, square and vertical.
+  Proved by placing the answer 700 px right in square: every one of its lines named, by how far.
+- **Frosted glass.** One material for every panel over the water (`--glass-tint`, `--glass-blur`,
+  `--glass-edge`, `--glass-sheen`, `--glass-shadow`): a 30% tint of the sea over the water blurred
+  12 px, saturated 1.4 and brightened 1.08, an edge, a top sheen, an 18/48 px shadow at 20%. It is
+  on the bar and the ovals, the plan card, the client wall, the offer cards, the pills and the
+  fish's data chip. They had been 55 to 62% of the sea's own colour (the frame's own ground) over
+  an 80 px shadow at 50% black, which over this dark water read as solid; in renders a fish behind
+  a card now shows through it, softened (stills at 40.5, 58.5 and 62.5 s, wide and square). The
+  windows onto the work stay opaque: they are pictures.
+- **Words as stats.** A stat's value may be a word (`stat @1.15 AI agents, coaching`): the same gold,
+  rising into place where a number rolls like an odometer. "who is john?" is now 14 years
+  designing, then AI (agents, coaching), Web (design systems) and XR (molecular, HUDs), from
+  resume.json's headline domains and the work that names them (JH Coaching OS, context and design
+  systems, Nanome, BadVR). The subtitles were cut to two parts each so each stays one line in wide;
+  a word in vertical is 84 px (Web did not fit a quarter of the band at 110).
+- Suite: `reel-tests/safetest.mjs` (G, the guides' shares, a drag's one line, the outline, Shift,
+  Reset and Undo byte for byte, the opening's caption in close).
+
 ## Later
 
 Scene-specific cues (line staggers, the push); moving cut 1 onto the one player; stems out of

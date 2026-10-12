@@ -34,6 +34,10 @@ try {
     const failed = await page.$eval('#err', e => e.textContent).catch(() => null);
     if (failed) throw new Error(failed.slice(0, 300));
     await page.evaluate(() => window.REEL.ready);
+    // the clips are not loaded (the copy is judged, not the pictures): a seek is answered at once,
+    // as samefilmtest answers it, so a frame never waits on a clip that will not come
+    await page.evaluate(() => document.querySelectorAll('video').forEach(v => Object.defineProperty(v, 'currentTime', {
+      get() { return this.__ct || 0; }, set(x) { this.__ct = x; this.dispatchEvent(new Event('seeked')); } })));
     const found = await page.evaluate(async STEP => {
       const R = window.REEL, [W, H] = R.size, m = 0.05, TS = { x0: W * m, y0: H * m, x1: W * (1 - m), y1: H * (1 - m) };
       const stage = document.getElementById('stage'), out = [], seen = new Set();
