@@ -4,7 +4,8 @@
 //    1080×1080 and 1080×1920, and an unknown format falls back to wide.
 // 2. Square and vertical are laid out, not letterboxed. Every half second of the cut, every
 //    piece of copy that has settled (a line at rest in its mask, a chip or card fully in) must lie
-//    inside the frame, inside the side margins, and unclipped by its own mask; no two may
+//    inside the frame, inside the side margins (the opening's zoomed caption: inside title safe),
+//    and unclipped by its own mask; no two may
 //    overlap; and none may overlap a window, port, card or panel it does not belong to.
 //    Wide gets the same measurement, printed for information (it is the frame the cut was made
 //    in, and its reference is the stills below).
@@ -157,7 +158,10 @@ try {
       if (fmt === 'wide' && !Number.isInteger(t * 2)) continue;   // the stills' extra moments are for the clips only
       const sc = scenes.find(s => t >= s.start && t < s.end);
       const at = `${t.toFixed(1)} s ${sc ? sc.type : ''}`;
-      const frame = { x: 0, y: 0, w: size[0], h: size[1] }, band = { x: M, y: 0, w: size[0] - 2 * M, h: size[1] };
+      // the opening's caption rides the camera's zoom, and is fitted to title safe (90%) instead of
+      // the layout's margins (2026-10-12: in square it had run off both edges); reel-safe.mjs judges it
+      const ts = size[0] * 0.05, band = sc && sc.type === 'open' ? { x: ts, y: 0, w: size[0] - 2 * ts, h: size[1] } : { x: M, y: 0, w: size[0] - 2 * M, h: size[1] };
+      const frame = { x: 0, y: 0, w: size[0], h: size[1] };
       for (const x of m.texts) {
         measured++;
         if (!inside(x.box, frame)) bad.push(`${at}: out of frame ${x.what} ${f1(x.box)}`);

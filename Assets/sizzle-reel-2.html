@@ -286,11 +286,11 @@ p, h1, h2, h3 { margin: 0; }
 .group + .group { margin-top: 52px; }
 .grp { font: 500 19px/1 var(--font-mono); letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-quiet); margin-bottom: 24px; }
 .panel .what { display: none; }
-.wall { list-style: none; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; gap: 84px; }
-.wall.teams { gap: 52px; }
-.wm { font-family: var(--font-display); font-weight: 300; font-size: 50px; color: var(--text-subhead); line-height: 1.1; display: inline-flex; align-items: center; min-height: 54px; white-space: nowrap; }
+.wall { list-style: none; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; gap: 64px; }   /* one gap, both rows */
+/* --k: each mark's own size, so every one carries about the same ink (WALL_K, measured by scripts/reel-wall.mjs) */
+.wm { font-family: var(--font-display); font-weight: 300; font-size: calc(50px * var(--k, 1)); color: var(--text-subhead); line-height: 1.1; display: inline-flex; align-items: center; min-height: 54px; white-space: nowrap; }
 .wm em { font-style: normal; color: var(--muted); }
-.wm-svg { height: 44px; width: auto; color: var(--text-subhead); }
+.wm-svg { height: 0.88em; width: auto; color: var(--text-subhead); }
 .wm .mark { display: inline-block; height: 0.8em; width: auto; vertical-align: -0.04em; margin-right: 0.38em; }
 .wm .mark-muse, .wm .mark-badvr { background: currentColor; }
 .wm .mark-muse { aspect-ratio: 360 / 64; -webkit-mask: url("./muse-wordmark.png") no-repeat center / contain; mask: url("./muse-wordmark.png") no-repeat center / contain; }
@@ -352,10 +352,11 @@ p, h1, h2, h3 { margin: 0; }
 #stage.narrow .endc .lm.endline { max-width: 640px; }
 #stage.narrow .panel-in { padding: 40px 36px 44px; }
 #stage.narrow .grp { font-size: 22px; }
-#stage.narrow .wall { flex-wrap: wrap; row-gap: 26px; gap: 26px 56px; }
-#stage.narrow .wall.teams { gap: 26px 48px; }
-#stage.narrow .wm { font-size: 44px; }
-#stage.narrow .wm-svg { height: 40px; }
+#stage.narrow .wall { flex-wrap: wrap; gap: 26px 56px; }
+/* the four teams two by two, each column's marks centred on one line (it wrapped 2 + 2 ragged) */
+#stage.narrow .wall.teams { display: grid; grid-template-columns: repeat(2, 1fr); width: fit-content; margin: 0 auto; justify-items: center; gap: 26px 56px; }   /* two equal columns: their centres sit evenly either side of the middle */
+#stage.narrow .wm { font-size: calc(44px * var(--k, 1)); }
+#stage.narrow .wm-svg { height: 0.91em; }
 #stage.narrow .intent { padding: 36px 44px 38px; }
 #stage.narrow .three { grid-template-columns: 1fr; gap: 18px; margin: 28px 0 26px; }
 #stage.narrow .three > div { display: grid; grid-template-columns: 150px 1fr; column-gap: 24px; align-items: baseline; padding-top: 16px; }
@@ -408,9 +409,9 @@ p, h1, h2, h3 { margin: 0; }
 #stage.vertical .plan .no { font-size: 26px; }
 #stage.vertical .panel .eyebrow { font-size: 28px; }
 #stage.vertical .grp { font-size: 26px; }
-#stage.vertical .wm { font-size: 50px; min-height: 58px; }
+#stage.vertical .wm { font-size: calc(46px * var(--k, 1)); min-height: 58px; }
 #stage.vertical .wall, #stage.vertical .wall.teams { gap: 28px 44px; }
-#stage.vertical .wm-svg { height: 46px; }
+#stage.vertical .wm-svg { height: 0.92em; }
 #stage.vertical .intent .oh { font-size: 66px; }
 #stage.vertical .three .k { font-size: 40px; }
 #stage.vertical .three .v { font-size: 32px; }
@@ -545,7 +546,7 @@ p, h1, h2, h3 { margin: 0; }
       oval: { cy: 380, w: 1200, h: 400 }, eoval: { cy: 430, w: 1160, h: 360 }, titleLook: 390, pillTop: 156,
       answer: { x: 96, look: 560, portrait: { x: 1824 - 404, y: 205, w: 404, h: 606 } },   // the window grid's height, 2:3
       art: { col: { x: 96, w: 900 }, port: { x: 1824 - 300, y: 508, r: 300 } },
-      command: { fish: [[470, 872], [595, 930], [720, 866], [845, 924]], coral: [[330, 1002, 300, 92], [1630, 1006, 280, 86]] },
+      command: { fish: [[470, 872], [595, 930], [720, 866], [845, 924]], coral: [[330, 990, 360, 116], [1630, 995, 340, 108]] },
       results: { rows: { x: 96, y: 204, w: 780 }, col: { x: 96, w: 600, cy: 432 }, win: { x: 744, y: 204, w: 1080, h: 608 } },
       feature: { win: { x: 96, y: 204, w: 1080, h: 608 }, col: { x: 1224, w: 600, cy: 432 } },
       panel: { x: 96, y: 204, w: 1728, h: 608 },
@@ -560,7 +561,7 @@ p, h1, h2, h3 { margin: 0; }
       oval: { cy: 400, w: 936, h: 460 }, eoval: { cy: 450, w: 936, h: 420 }, titleLook: 410, pillTop: 148,
       answer: { x: 72, look: 540, portrait: { x: 1008 - 140, y: 200, w: 140, h: 210 } },   // beside the headline, clear of its longest line and the support
       art: { col: { x: 72, w: 470 }, port: { x: 1008 - 215, y: 487, r: 215 } },
-      command: { fish: [[210, 900], [330, 950], [450, 894], [570, 944]], coral: [[200, 1010, 250, 80], [870, 1014, 230, 74]] },
+      command: { fish: [[210, 900], [330, 950], [450, 894], [570, 944]], coral: [[200, 1000, 300, 100], [870, 1005, 276, 92]] },
       results: { rows: { x: 72, y: 184, w: 936 }, col: { x: 72, w: 450, cy: 487 }, win: { x: 558, y: 217, w: 450, h: 540 } },
       feature: { win: { x: 72, y: 217, w: 450, h: 540 }, col: { x: 558, w: 450, cy: 487 } },
       panel: { x: 72, y: 217, w: 936, h: 540 }, intent: { x: 72, y: 184, w: 936, h: 606 },
@@ -575,7 +576,7 @@ p, h1, h2, h3 { margin: 0; }
       oval: { cy: 740, w: 936, h: 520 }, eoval: { cy: 800, w: 936, h: 460 }, titleLook: 750, pillTop: 476,
       answer: { x: 72, look: 540, portrait: { x: 72, y: 290, w: 186, h: 279, colY: 885 } },   // above the copy (moved down 60 px, still clear of the big fish)
       art: { col: { x: 72, w: 936, cy: 1090 }, port: { x: 540, y: 526, r: 240 } },
-      command: { fish: [[210, 1700], [330, 1750], [450, 1694], [570, 1744]], coral: [[200, 1850, 250, 84], [870, 1854, 230, 78]] },
+      command: { fish: [[210, 1700], [330, 1750], [450, 1694], [570, 1744]], coral: [[200, 1840, 300, 105], [870, 1844, 276, 98]] },
       results: { rows: { x: 72, y: 270, w: 936 }, col: { x: 72, w: 936, cy: 530 }, win: { x: 72, y: 830, w: 936, h: 527 } },
       feature: { win: { x: 72, y: 270, w: 936, h: 527 }, col: { x: 72, w: 936, cy: 1100 } },
       panel: { x: 72, y: 495, w: 936, h: 660 }, intent: { x: 72, y: 405, w: 936, h: 840 },
@@ -1805,10 +1806,17 @@ p, h1, h2, h3 { margin: 0; }
 
   // Client wall items: the media kit's doctrine — inline SVG reads currentColor, pixel logos are masks.
   const MARKS = { muse: { cls: 'mark-full mark-muse', aria: 'Muse.Bio' }, badvr: { cls: 'mark mark-badvr', aria: null } };
+  // Each mark's size on the wall (×, as --k), so a heavy one (Nanome's, Muse.Bio's bold) and a light
+  // one (Collaborate.org's thin face) carry about the same ink: equal ink reads as equal weight.
+  // Measured, not judged: node scripts/reel-wall.mjs prints each mark's ink and the k that evens it.
+  // These take three quarters of that step (k^0.75), so a thin face grows a little less than its ink
+  // asks and each mark keeps some of its own weight; every mark lands within 10% of the mean.
+  const WALL_K = { 'op-mark': 1.07, muse: 0.93, transfyr: 1.10, nanome: 0.87, badvr: 0.985, avatarmedic: 0.945, 'wm-collab': 1.12 };
   function itemHTML(it) {
     const mark = k => { const M = MARKS[k]; return M.aria ? `<span class="${M.cls}" role="img" aria-label="${M.aria}"></span>` : `<span class="${M.cls}" aria-hidden="true"></span>`; };
     const body = it.svg ? (MK.svgs[it.svg] || '') + (it.label || '') : it.mark ? mark(it.mark) + (it.label || '') : (it.label || '');
-    return `<li><span class="wm ${it.labelClass || ''}">${body}</span><span class="what">${it.what}</span></li>`;
+    const k = WALL_K[it.svg || it.mark || it.labelClass];
+    return `<li><span class="wm ${it.labelClass || ''}"${k ? ` style="--k:${k}"` : ''}>${body}</span><span class="what">${it.what}</span></li>`;
   }
 
   // ── the command bar's queries ─────────────────────────────────────────

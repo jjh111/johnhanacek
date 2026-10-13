@@ -3,7 +3,8 @@
 // Writes a copy of the cut with fish lines in its results scene (Assets/zz-fish-test.script.txt,
 // removed in finally), plays it in render mode (?render=1, the virtual clock, every engine tick)
 // and reads the tank as it goes:
-//   1. `big to 0.8 0.85`: the big fish swims to that point and holds there
+//   1. `big to 0.8 0.8`: the big fish swims to that point and holds there (open water: the coral
+//      beds grew in 2026-10-13 and the right one now reaches 0.85 down there, which a fish keeps off)
 //   2. `school to 0.2 0.78`: the school's centre goes there
 //   3. `school scatter`: the school's phase is scatter at once and the school spreads out
 //   4. `big idle circle`: the big fish swims round its spot
@@ -38,7 +39,7 @@ let src = inOrder(readFileSync(resolve(ROOT, 'Assets/sizzle-reel-2.script.txt'),
 const P0 = RS.parse(src);
 const resIdx = P0.edit.scenes.findIndex(s => s.type === 'results');
 const res = P0.marks.find(m => m.kind === 'scene' && m.obj === P0.edit.scenes[resIdx]);
-const LINES = ['@0.5 big to 0.8 0.85', '@0.5 school to 0.2 0.78', '@4 school scatter', '@5 big idle circle',
+const LINES = ['@0.5 big to 0.8 0.8', '@0.5 school to 0.2 0.78', '@4 school scatter', '@5 big idle circle',
   '@9.5 big dart', '@10.5 big turn', '@12 all look off', '@12 big idle wander carry', '@12.5 feed 0.5 0.8'];
 for (const l of LINES.slice().reverse()) src = RS.addLine(src, res.ln, 'fish', l);
 { const Q = RS.parse(src), f = Q.edit.scenes.findIndex(s => s.type === 'feature');
@@ -86,9 +87,9 @@ async function run(format) {
   // (the clock only runs forward: going back would regrow the tank, so the samples are in time order)
   // 1-2. the spots, 3. the scatter
   const s35 = await walk(T(3.9));
-  const spot = { x: 0.8 * W, y: 0.85 * H };
+  const spot = { x: 0.8 * W, y: 0.8 * H };
   const dBig = Math.hypot(s35.big.x - spot.x, s35.big.y - spot.y);
-  ok(dBig < 90, `${format}: "big to 0.8 0.85": the big fish is at its spot 3.4 s later (${dBig.toFixed(0)} px off)`);
+  ok(dBig < 90, `${format}: "big to 0.8 0.8": the big fish is at its spot 3.4 s later (${dBig.toFixed(0)} px off)`);
   ok(Math.abs(s35.school.x - 0.2 * W) < 220, `${format}: "school to 0.2 0.78": the school's centre is there (${s35.school.x.toFixed(0)} px across, the spot ${(0.2 * W).toFixed(0)}, sweeping ±170)`);
   const pre = s35;
   const post = await walk(T(4.1));

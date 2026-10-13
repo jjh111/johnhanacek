@@ -1729,6 +1729,34 @@ use 14 years but then do the domains as the other yellow text (not more numbers)
 - Suite: `reel-tests/safetest.mjs` (G, the guides' shares, a drag's one line, the outline, Shift,
   Reset and Undo byte for byte, the opening's caption in close).
 
+## The wall balanced, the coral grown, Web last (2026-10-13)
+
+John: "flip 'web' and 'xr' on the who is john so web is last shown. make the spawned coral ever so
+taller and wider to fill frame better. the worked with area logos are a bit jumbled, we need to best
+center them and visually verify balance."
+
+- **Web last.** The answer's stats read 14 years, AI, XR, Web; each word keeps its subtitle.
+- **The wall.** Measured before: every row was centred, but the marks' ink ran 1923 to 3805 (Nanome
+  twice Collaborate.org), the rows had two gaps (84 and 52 px), and in square and vertical the teams
+  wrapped 2 + 2, ragged. Now each mark has a size (`WALL_K`, set on its `.wm` as `--k`; the mark's
+  font size and its SVG, in em, follow it) that takes three quarters of the step to equal ink, the
+  rows share one 64 px gap, the vertical frame's base is 46 px so the three clients keep one row,
+  and the narrow frames set the teams in two equal columns (`repeat(2, 1fr)` on a fit-content grid),
+  so each column's marks share a centre and the two centres sit evenly either side of the middle.
+  `node scripts/reel-wall.mjs` plays the logos scene in render mode, hides the tank, shoots the
+  frame and reads each mark's ink off the pixels: its mass, its box, every row's offset (a grid's by
+  its marks' middles) and the block's, with the k that would even each mark. Every mark is within
+  11% of the mean in all three frames, every row within 2 px of the middle, the block within 3 px.
+- **The coral.** The command's beds are about 20% wider and 25% taller, their floors where they
+  were: wide 360 × 116 and 340 × 108, square 300 × 100 and 276 × 92, vertical 300 × 105 and 276 × 98.
+  fishdirecttest's `big to` spot moved from 0.8 0.85 to 0.8 0.8: the right bed now reaches the old
+  spot, and a fish keeps off coral.
+- **`place` writes back.** `ReelScript.format` could not write a scene's `place` (a map, not a list);
+  John's `place square -2 -28` on the logos found it. scripttest covers it, and safetest counts
+  only the place lines its own drags write.
+- fishtest's right-of-way count was over its 0.5 s already at the last commit (wide 0.83 s, square
+  1.33 s); with the larger beds wide reads 3.22 s. Not fixed here.
+
 ## Later
 
 Scene-specific cues (line staggers, the push); moving cut 1 onto the one player; stems out of

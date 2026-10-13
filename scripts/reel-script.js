@@ -120,7 +120,7 @@
     fish:  { many: true, read: v => readFish(words(v)), write: v => writeFish(v) },
     // where a scene sits in one frame: "place square 0 -40" moves all of it 40 px up in the square
     // frame only (frame pixels; the other frames keep their own). Collected by frame: { square: { x, y } }
-    place: { many: true, place: true,
+    place: { many: true, map: true, place: true,     // (map: written back one line a frame)
              read: v => {
                const m = /^(wide|square|vertical)\s+(-?[\d.]+)\s+(-?[\d.]+)$/.exec(words(v));
                if (!m) throw new Error('should read "square 0 -40": the frame (wide, square or vertical), then how far right and down, in its pixels');

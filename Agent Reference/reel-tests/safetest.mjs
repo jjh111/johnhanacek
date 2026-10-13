@@ -23,7 +23,9 @@ const ORIG = fs.readFileSync(path.join(ROOT, 'Assets/sizzle-reel-2.script.txt'),
 let fails = 0, passes = 0;
 const check = (ok, what, extra = '') => { if (ok) passes++; else fails++; console.log(`${ok ? 'ok  ' : 'FAIL'} ${what}${ok || !extra ? '' : '  (' + extra + ')'}`); };
 const file = () => fs.readFileSync(FILE, 'utf8');
-const places = () => file().split('\n').filter(l => /^\s*place\s/.test(l)).map(l => l.trim().replace(/\s+/g, ' '));
+// the place lines the test's own drags wrote (a place John set elsewhere in the cut is left out)
+const placesIn = t => t.split('\n').filter(l => /^\s*place\s/.test(l)).map(l => l.trim().replace(/\s+/g, ' '));
+const places = () => { const had = placesIn(ORIG); return placesIn(file()).filter(l => !had.includes(l)); };
 const freePort = () => new Promise(r => { const s = net.createServer().listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => r(p)); }); });
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const until = async (fn, ms = 6000) => { const t0 = Date.now(); for (;;) { if (fn()) return true; if (Date.now() - t0 > ms) return false; await sleep(80); } };
