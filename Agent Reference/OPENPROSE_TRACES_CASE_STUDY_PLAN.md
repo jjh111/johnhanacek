@@ -53,6 +53,46 @@ flame pages, which are not in this set of ten.
 - `build-traces-cut.mjs` is the gated cut.
 - `render-frames.mjs` does deterministic video capture.
 
+## Landing contract (2026-10-15)
+
+For the agent delivering the views and the synthetic data. The page is built
+against exactly this, so a cut in another shape waits until it is reshaped.
+
+- **Where:** `openprose-traces/` at the repo root, the same shape as
+  `jh-deng-template/traces`: `viz/<page>.html`, `lib/data-slot.js`,
+  `data/<page>.js` (one per view, `window.TRACE_DATA = {…}`), and optionally
+  `posters/<page>.webp` (1600 px wide, from `render-frames.mjs`) for the
+  poster-first embeds. Schema docs may come along; they are dev notes.
+- **The gate:** `node scripts/check-traces-cut.mjs` must PASS before the cut is
+  committed. It runs design-iteration's `trace-firewall.mjs` on the folder,
+  checks every view has its data file, and loads each view headless at
+  1440×900 and 390×844: no `#trace-slot-notice`, no page errors, something
+  drawn. `--only a,b` gates a subset while the rest is in progress. Proven
+  2026-10-15 both ways: the empty template FAILs with the missing keys named;
+  a three-row synthetic heatmap PASSes.
+- **Names the firewall rejects even when invented:** its proper-noun list
+  holds common words that also occur in the private corpus. Seen so far:
+  *Studio*, *Brooklyn*, *Cursor*, *Corner*, *Lake*, *Tan*, *Captions*, *Vertex*.
+  A fixture organization called "Kelp Street Studio" failed on *Studio*; the
+  design-studio world in design-iteration §8.2 will hit this. Pick names that
+  avoid these, or add a reviewed line to `openprose-traces/.firewall-allow.txt`
+  (`token:<token>:<path-part>  # why`), never a blanket allow.
+- **Say synthetic:** every data file's header comment says the data is
+  invented, and the generator's seed is recorded there. The gate WARNs when a
+  rendered view never says "synthetic"; the case-study page labels every view
+  either way.
+- **Weight:** the gate WARNs past 1 MB per data file. Views load only on tap.
+- **Commit rule:** nothing from `customers/`, no client screenshots, no
+  client run ids. The firewall is the proof; a FAIL means the cut does not
+  ship, whatever the reason.
+
+**State on 2026-10-15:** the ten views are still untracked in
+`jh-deng-template/traces` with empty slots. design-iteration §8 decisions are
+still open (slug, world, own runs, client-context sentence, founder quotes,
+film). The site's one hard firewall hit (a client program slug in
+`direction-styleguide.html`'s card specimen) was fixed in v2.48; the other 37
+hits on the published OpenProse payload are the common words above.
+
 ## The data: one invented world, ten views of it
 
 Write **one seeded generator** that builds a single coherent invented world.
