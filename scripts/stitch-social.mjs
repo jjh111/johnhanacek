@@ -40,7 +40,9 @@ const SEGMENTS = [
 // square: each moment's window onto the walkthrough (its left edge and width; it keeps the band's
 // shape and sits on the page's foot, so a narrower one is the piano roll closer), and its
 // captions, by the walkthrough's clock: [from, key, section, words]
-const CROP = [{ x: 240, w: 1440 }, { x: 0, w: 1440 }, { x: 0, w: 1440 }, { x: 0, w: 1260 }];
+// (the notes' window is the preview stage's own width, x 431-1488 in the walkthrough: any wider and
+// the page's empty margin beside the stage showed as a black block over the roll, 2026-10-15)
+const CROP = [{ x: 240, w: 1440 }, { x: 0, w: 1440 }, { x: 0, w: 1440 }, { x: 432, w: 1056 }];
 const SQ_CAPS = [
   [[5.2, 'E', 'Timeline', 'Every scene is a card'], [7.0, 'E', 'Timeline', 'Drag a card\'s edge to retime it']],
   [[21.3, 'S', 'Shot list', 'Drag a shot to reorder the reel']],
