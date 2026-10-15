@@ -1792,6 +1792,35 @@ a beat off the beat.
   - the landing is G4 to the bar line and A4 held through the end card (it had ended on C4).
   149 notes play. The suites' fixture score is unchanged.
 
+## The lead's timbre, the wall's headings, the OpenProse run (2026-10-15)
+
+John: "ok we need to improve the timbre of the lead a bit, i made some updates to the song i think
+it's pretty nice haha learning a lot, and the 'teams i shipped with' should say 'teams' and get rid
+of 'worked with' it's already in the typed question. for openprose screens i don't want just
+black/white cycled i want to show the variance of the work converging into the core styles."
+
+- John's notes (store score version 876, 91 `n` lines) and his `cue out 0.15` on the art (script
+  version 166) are in the repo as he saved them.
+- **The voice** (`SYNTH voice`), his measured harmonics untouched: a second harmonics voice 8 cents
+  up at 0.3 (the double), a sine on the fundamental at 0.14 (rounder), `lfo pitch 5.2 7` (a slow
+  vibrato), `filter lowpass 3400 0.5` (the flat top of the harmonics, -37 to -45 dB out to the 16th,
+  was what buzzed), `env 0.035 0.5 0.6 0.22` (it held at 0.35 and let go in 0.12 s: plucked) and
+  `level 0.33` for the same loudness. The voice alone, 16-66 s: centroid 896 to 818 Hz, 1-3 kHz
+  -4.9 to -6.2 dB, 3-6 kHz -23.9 to -26.6, above 6 kHz -41.4 to -44.0, rms -18.5 to -18.2.
+- **The wall**: no eyebrow (the bar asks "who has he worked with?"); the teams group's
+  `reelHeading: "Teams"` in media-kit.json, which only the reel reads. reel-wall.mjs groups a
+  list's marks into rows by distance (12 px) now: with the eyebrow gone, Nanome's taller mark put
+  its middle across a rounded bucket's edge and split the row in two.
+- **OpenProse**: the item's eight beats were the finalists in light and dark by turns. They are now
+  the directions in the order they were made, from openprose/canvas-display/brand/, shot by
+  shoot-openprose.mjs into `Assets/openprose-explorations/`: approach-c-v2 (bold high contrast),
+  approach-e-v3-translucent (Aqua glass), approach-f-v5-openprose (red editorial),
+  direction-gamma-manuscript-concept-kecal (the manuscript), direction-delta-machine-concept (the
+  terminal), direction-nu-tideline (the ocean), direction-lambda-inkwell-concept-kecal (the inkwell,
+  where the mark arrives), then styleguide-cover (the canonical spec) and the homepage loop under
+  Dan's quote. Each beat's `focus` keeps its heading's left edge inside the square frame's window.
+  The picker lists the new folder.
+
 ## Later
 
 Scene-specific cues (line staggers, the push); moving cut 1 onto the one player; stems out of

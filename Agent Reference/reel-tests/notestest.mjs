@@ -25,7 +25,9 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const req = createRequire(import.meta.url);
 const RM = req(join(ROOT, 'scripts/reel-music.js'));
 const SCRIPT = readFileSync(join(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8');
-const SCORE = readFileSync(join(ROOT, 'Assets/sizzle-reel-2.score.txt'), 'utf8');
+// a take of its own (the score as of 2026-10-15's rephrasing), so John's own note edits in the
+// piano roll never move what this suite boxes, drags and copies
+const SCORE = readFileSync(join(ROOT, 'Agent Reference/reel-tests/fixtures/sizzle-reel-2-take.score.txt'), 'utf8');
 const T_SCRIPT = 'Assets/zz-notes-test.script.txt', T_SCORE = 'Assets/zz-notes-test.score.txt';
 
 let fails = 0;
@@ -191,7 +193,7 @@ try {
   await page.mouse.move(a1.x, a1.y - 6); await page.mouse.down(); await page.mouse.move(a2.x, a2.y + 6, { steps: 8 }); await page.mouse.up();
   S = await sel();
   const want = now.notes.filter(n => { const x0 = n.step * now.step, x1 = (n.step + n.len) * now.step; return x1 >= BW - 0.03 && x0 <= BW + 1.97 && n.pitch >= lo && n.pitch <= hi; }).map(n => n.ln).sort();
-  ok(clear && S.slice().sort().join() === want.join() && S.length >= 3, `a box drawn on the rows chooses the notes it touches (${S.length}, ${BW}-${BW + 2} s)`);
+  ok(clear && S.slice().sort().join() === want.join() && S.length >= 3, `a box drawn on the rows chooses the notes it touches (${S.length}, ${BW}-${BW + 2} s${S.slice().sort().join() === want.join() ? "" : ": chose " + S.slice().sort().join(",") + ", want " + want.join(",")})`);
   // the velocity strip: the chosen ones softer together
   const vb = await page.evaluate(() => { const r = document.querySelector('#reel-notes .nt-roll canvas').getBoundingClientRect(), v = REEL_NOTES.view; return { bottom: r.bottom, velH: v.velH }; });
   const first = now.notes.find(n => n.ln === S[0]), fp = await page.evaluate(t0 => REEL_NOTES.point(t0, 0), first.step * now.step);
