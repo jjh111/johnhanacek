@@ -13,6 +13,38 @@
  *   });
  *   game.setDebug(true); game.scareFishAt(x, y); game.state.fish; ...
  *
+ * Host hooks (opt-in; without them nothing below runs):
+ *   steer(f, now)          → { heading, speed } | null — take the wheel of a calm
+ *                            fish for a frame (fleeing / seeking / hunting stay ours)
+ *   schoolTarget(c, now)   → { x, y, pace? } | null — where a calm school patrols
+ *                            (pace scales its speed on the way); a threat, food and
+ *                            regrouping still come first
+ *   calmSchool: true       — the school stops reading large fish as predators (no
+ *                            school flee, no scatter from them); for a host that
+ *                            choreographs both, so they can share the water
+ *   largeRightOfWay: true  — size decides who gives way. A bigger fish takes no push,
+ *                            steer or separation from a smaller one and holds its
+ *                            line; the smaller fish resolves the whole overlap. With
+ *                            calmSchool on, a medium fish is scared off by a large
+ *                            one: it darts away, mostly sideways, for under a second
+ *                            when it comes within both fishes' reach (bodyWidths plus
+ *                            45 px), or within 110 px more while the large fish swims
+ *                            at it, then rejoins its school
+ *   surface(f)             → y | null — the top of the water for fish f (tank px; f is
+ *                            null for the school's waypoint). Its edge avoidance, and
+ *                            the school's waypoint and slots, turn back from there the
+ *                            way they do from the canvas top, and it seeks no food
+ *                            above it (food sinking into its water is food again).
+ *                            Unset, or 0, it is the canvas top
+ *   schoolPhase('scatter' | 'regroup') — the school's phases on cue (an API call, not
+ *                            an option): scatter bursts it apart now, regroup calls it
+ *                            together now
+ *   remove(fishOrCoral)    — takes one out, as the tank's own caps do (an API call)
+ *   The sizzle reel (Assets/sizzle-reel-2.html) uses the first four so its fish swim over
+ *   and look at what is on screen, surface so the school swims under its copy,
+ *   schoolPhase for its script's `fish` lines, and remove when its live preview is
+ *   scrubbed back past a fish's birth.
+ *
  * Usage — ambient single fish (404 page):
  *   FishCanvas.ambient(canvasEl);
  *
@@ -1672,7 +1704,7 @@
             let threat = null;
             let threatDist = Infinity;
 
-            fish.forEach(other => {
+            if (!opts.calmSchool) fish.forEach(other => {
                 const otherBw = other.bodyWidth || 20;
                 if (otherBw < 60) return;  // Only large fish are threats
                 // Large fish focused on each other (challenging/retreating) are not a school threat
@@ -1766,7 +1798,16 @@
             }
 
             // Priority 3: Patrol smoothly when no threats or food
-            if (schoolTargetReason === 'patrol') {
+            // A host page may choose the patrol waypoint (opts.schoolTarget, opt-in);
+            // it replaces only the random pick, so threats, food and regrouping above
+            // still come first and the scatter/regroup phases still run.
+            const hostWaypoint = schoolTargetReason === 'patrol' && mediumCount > 0 && opts.schoolTarget
+                ? opts.schoolTarget({ x: schoolCenterX, y: schoolCenterY }, now) : null;
+            this.schoolHostPace = hostWaypoint && hostWaypoint.pace ? hostWaypoint.pace : 1;
+            if (hostWaypoint) {
+                rawTargetX = hostWaypoint.x;
+                rawTargetY = hostWaypoint.y;
+            } else if (schoolTargetReason === 'patrol') {
                 this.schoolTargetTimer = (this.schoolTargetTimer || 0) - deltaTime;
 
                 if (!this.schoolTarget || this.schoolTargetTimer <= 0) {
@@ -1788,8 +1829,10 @@
             // ---- EDGE-AWARE WAYPOINT CLAMPING ----
             // Ensure waypoint stays in safe zone (not too close to edges)
             const waypointMargin = 100;
+            const schoolTop = opts.surface ? (+opts.surface(null) || 0) : 0;   // the host's water top (0: the canvas top)
+            const waypointTop = 80 + schoolTop, waypointBottom = Math.max(h * 0.55, waypointTop);
             rawTargetX = Math.max(waypointMargin, Math.min(w - waypointMargin, rawTargetX));
-            rawTargetY = Math.max(80, Math.min(h * 0.55, rawTargetY));
+            rawTargetY = Math.max(waypointTop, Math.min(waypointBottom, rawTargetY));
 
             // ---- CORAL AVOIDANCE: nudge school target away from settled coral ----
             // Avoidance radius scales with coral size so large coral gets proper clearance.
@@ -1806,7 +1849,7 @@
                     rawTargetX += (cdx / (cdist + 1)) * 100 * pushAmt;
                     rawTargetY += (cdy / (cdist + 1)) * 100 * pushAmt;
                     rawTargetX = Math.max(waypointMargin, Math.min(w - waypointMargin, rawTargetX));
-                    rawTargetY = Math.max(80, Math.min(h * 0.55, rawTargetY));
+                    rawTargetY = Math.max(waypointTop, Math.min(waypointBottom, rawTargetY));
                 }
             });
 
@@ -1927,7 +1970,7 @@
                     if (reformed || this.schoolPhaseTimer <= 0) { this.schoolPhase = 'schooling'; this.schoolPhaseTimer = 12000 + Math.random() * 10000; }
                 }
                 // The school's pace breathes on a slow cycle; regrouping hurries.
-                this.schoolSpeedMod = (0.95 + 0.25 * Math.sin(now / 3500)) * (this.schoolPhase === 'regroup' ? 1.5 : 1);
+                this.schoolSpeedMod = (0.95 + 0.25 * Math.sin(now / 3500)) * (this.schoolPhase === 'regroup' ? 1.5 : 1) * (this.schoolHostPace || 1);
                 window.debugSchoolPhase = this.schoolPhase;
 
                 // ---- STAGNATION DETECTION: inject randomness if school is stuck ----
@@ -2048,6 +2091,10 @@
                     return; // skip all AI/physics for dissolving fish
                 }
 
+                // A host-steered fish (opts.steer) turns from here: the engine's own turn this
+                // frame (cruise lanes clamp large fish to ±12° of horizontal) is discarded.
+                const headingAtStart = f.heading, bendAtStart = f.bendAmount || 0;
+
                 // ---- Fish AI: seek visible food (not inside bubbles) ----
                 // Calculate mouth position - 78% toward nose from center
                 const rawNoseOffset = f.useSvgPath
@@ -2080,9 +2127,14 @@
                 // the unreachable nearest only as a fallback (it can still lure
                 // the fish once a wall opens).
                 let reachFood = null, reachDist = Infinity, reachMouthDist = Infinity;
+                // a host's water top for this fish (opts.surface): food above it is out of its water
+                // until it sinks in (the reel's school, kept under its copy, swam up under a pellet
+                // the big fish had come down to eat, 2026-10-05)
+                const waterTop = opts.surface ? (+opts.surface(f) || 0) : 0;
                 food.forEach(fd => {
                     if (fd.inBubble) return;
                     if (f.ignoredFood && f.ignoredFood[fd.id] > now) return; // gave up on it (walled off)
+                    if (waterTop && fd.y < waterTop) return;
                     // Detection uses body center — fish notices food when their body is near it
                     const cd = Math.sqrt((centerX - fd.x) ** 2 + (centerY - fd.y) ** 2);
                     // Eat check uses mouth — but much more generous range
@@ -3231,16 +3283,23 @@
                     // ---- MEDIUM FISH: Scatter from large fish ----
                     // Two-zone: always flee when very close, facing check required at medium range
                     // canChangeState gate is bypassed in the close zone (emergency scatter)
-                    if (isMedium && f.state === 'idle') {
+                    // With calmSchool and largeRightOfWay, a medium fish gives way instead: it darts off
+                    // when a large fish comes close, then rejoins after a much shorter flight. Its zones
+                    // grow with the two sizes (bodyWidth is about half a fish's drawn length), so it
+                    // leaves before it touches a big fish's nose or tail, not after.
+                    const giveWay = !!opts.calmSchool && !!opts.largeRightOfWay;
+                    // (giving way, a medium fish going for food gives way too: size decides, whatever it is doing)
+                    if (isMedium && (f.state === 'idle' || (giveWay && f.state === 'seeking')) && (!opts.calmSchool || giveWay)) {
                         let threat = null;
                         let threatDist = Infinity;
-                        const SCATTER_CLOSE = 90;   // Always scatter regardless of facing or cooldown
-                        const SCATTER_FAR  = 150;   // Only scatter if large fish is facing us (requires canChangeState)
 
                         fish.forEach(other => {
                             if (other.id === f.id) return;
                             const otherBw = other.bodyWidth || 20;
                             if (otherBw < MEDIUM_THRESHOLD) return;
+                            const reach = otherBw + (f.bodyWidth || 20);
+                            const SCATTER_CLOSE = giveWay ? reach + 45 : 90;    // Always scatter regardless of facing or cooldown (giving way: a berth of 45 px, so it is gone before it is within reach; 25 left it inside for a few frames)
+                            const SCATTER_FAR  = giveWay ? reach + 110 : 150;   // Only scatter if large fish is facing us (requires canChangeState)
                             // Only skip retreating large fish (they are backing OFF — not a threat)
                             // Challenging large fish ARE a threat and should scatter medium fish
                             if (other.state === 'retreating') return;
@@ -3255,9 +3314,11 @@
                                 if (d < threatDist) { threat = other; threatDist = d; threat._close = true; }
                             } else if (canChangeState) {
                                 // Far zone: only scatter if not on cooldown AND large fish is facing us
+                                // (giving way: and coming at us; a large fish hovering in place is no threat)
                                 const angleToMe = Math.atan2(-dy, -dx);
                                 const facingDiff = Math.abs(angleDiff(angleToMe, other.heading || 0));
-                                if (facingDiff < Math.PI * 0.50 && d < threatDist) {
+                                const coming = !giveWay || Math.hypot(other.vx || 0, other.vy || 0) > 0.6;
+                                if (facingDiff < Math.PI * 0.50 && coming && d < threatDist) {
                                     threat = other; threatDist = d; threat._close = false;
                                 }
                             }
@@ -3266,11 +3327,18 @@
                         // Fire scatter if: close-zone threat (always) or far-zone threat (needs cooldown clear)
                         if (threat && (threat._close || canChangeState)) {
                             f.state = 'fleeing';
-                            f.stateChangeCooldown = 2000;
-                            f.fleeTimer = 1800 + nervousness * 1000; // 1.8-2.8s scatter
+                            f.stateChangeCooldown = giveWay ? 1200 : 2000;
+                            f.fleeTimer = giveWay ? 600 + nervousness * 500 : 1800 + nervousness * 1000; // give way 0.6-1.1s, scatter 1.8-2.8s
                             f.lastThreatId = threat.id; // Remember which predator we fled
                             // Scatter away from threat - direct escape
-                            const scatterAngle = Math.atan2(f.y - threat.y, f.x - threat.x);
+                            // (giving way: mostly sideways, along the band the school swims in, and never up
+                            // through a host's water top within 140 px: a fish right over the big one
+                            // fled straight up through it, into the copy above, 2026-10-05)
+                            let fdy = (f.y - threat.y) * (giveWay ? 0.35 : 1), fdx = f.x - threat.x;
+                            let level = false;
+                            if (giveWay && fdy < 0 && opts.surface) { const wt = +opts.surface(f) || 0; if (wt && f.y - wt < 140) { fdy = 0; level = true; } }
+                            if (Math.abs(fdx) < 1 && fdy === 0) fdx = Math.cos(f.heading) >= 0 ? 1 : -1;
+                            const scatterAngle = Math.atan2(fdy, fdx);
                             f.targetHeading = scatterAngle;
                             // Fast blend instead of instant snap — prevents one-frame visual blink
                             // when noseOffset causes the drawn body to teleport on 180° flip
@@ -3278,7 +3346,7 @@
                             f.committedHeading = scatterAngle;
                             f.reversalPressure = 0;
                             // IMMEDIATE velocity kick — direction matches target, not current heading
-                            const kickSpeed = 3.2;
+                            const kickSpeed = giveWay ? (level ? 3.4 : 2.6) : 3.2;   // a level flight goes faster: it gains no distance by rising
                             f.vx = Math.cos(scatterAngle) * kickSpeed;
                             f.vy = Math.sin(scatterAngle) * kickSpeed;
                         }
@@ -3379,7 +3447,8 @@
                             const slotOffX = relX * cos - relY * sin;
                             const slotOffY = relX * sin + relY * cos;
                             const myTargetX = Math.max(FORM_SAFE_MARGIN, Math.min(w - FORM_SAFE_MARGIN, schoolCenterX + slotOffX));
-                            const myTargetY = Math.max(FORM_SAFE_MARGIN, Math.min(h - FORM_SAFE_MARGIN, schoolCenterY + slotOffY));
+                            const slotTop = FORM_SAFE_MARGIN + (opts.surface ? (+opts.surface(f) || 0) : 0);
+                            const myTargetY = Math.max(slotTop, Math.min(h - FORM_SAFE_MARGIN, schoolCenterY + slotOffY));
 
                             // Store for debug
                             f.debugFormationTarget = { x: myTargetX, y: myTargetY, slot: slot };
@@ -3684,6 +3753,14 @@
                     else if (otherBw < MEDIUM_THRESHOLD) otherSize = 'medium';
                     else otherSize = 'large';
 
+                    // opts.largeRightOfWay: size decides who gives way. The bigger fish takes no
+                    // push, no steer and no separation from a smaller one; the smaller one yields
+                    // the whole overlap (below), so a school parts around a large fish instead of
+                    // shoving it off its line.
+                    const SIZE_RANK = { small: 0, medium: 1, large: 2 };
+                    if (opts.largeRightOfWay && SIZE_RANK[sizeCategory] > SIZE_RANK[otherSize]) return;
+                    const yielding = !!opts.largeRightOfWay && SIZE_RANK[sizeCategory] < SIZE_RANK[otherSize];
+
                     // ---- PHASE 2: Cross-size awareness multiplier ----
                     // Smaller fish detect predators from farther away
                     const awarenessMultiplier = getAwarenessMultiplier(sizeCategory, otherSize);
@@ -3737,11 +3814,13 @@
                                 // EMERGENCY: Severe overlap - strong steering + direct position push
                                 // SKIP position push when close to food
                                 inEmergencyCollision = true;
-                                const emergencyStrength = (bothMedium ? 0.10 : 0.08) * collisionReduction;
+                                const emergencyStrength = (yielding ? 0.14 : bothMedium ? 0.10 : 0.08) * collisionReduction;
                                 f.targetHeading += angleDiff(avoidAngle, f.heading) * emergencyStrength;
 
                                 // Emergency position nudge - SKIP when seeking food nearby
-                                const pushStrength = bothMedium
+                                // (a fish yielding to a bigger one resolves the whole overlap itself)
+                                const pushStrength = yielding ? Math.min(3.5, overlap * 0.3)
+                                    : bothMedium
                                     ? Math.min(3, overlap * 0.25)
                                     : Math.min(2, overlap * 0.15);
                                 f.x += (dx / d) * pushStrength;
@@ -3749,7 +3828,7 @@
                             } else {
                                 // BUFFER: Normal overlap - moderate steering
                                 // Large-vs-large: halve the steer to reduce oscillation during challenge/retreat
-                                const baseSteeer = bothMedium ? 0.035 : bothLarge ? 0.022 : 0.045;
+                                const baseSteeer = yielding ? 0.06 : bothMedium ? 0.035 : bothLarge ? 0.022 : 0.045;
                                 const steerStrength = baseSteeer * collisionReduction;
                                 const overlapFactor = Math.min(1.5, overlap / 15);
                                 f.targetHeading += angleDiff(avoidAngle, f.heading) * steerStrength * (1 + overlapFactor);
@@ -4103,6 +4182,10 @@
                     }
                 }
 
+                // The top of the water: the canvas top, or where a host's surface hook puts it for
+                // this fish (every top-edge test below is measured from it)
+                const top = opts.surface ? (+opts.surface(f) || 0) : 0;
+
                 // Current speed for prediction
                 const currentSpeed = Math.sqrt(f.vx * f.vx + f.vy * f.vy) || 1;
 
@@ -4136,8 +4219,8 @@
                     avoidX -= urgency * 0.8 * rightEdgeMultiplier;
                     isAnticipating = true;
                 }
-                if (futureY < ANTICIPATE_ZONE && f.y > BUFFER_ZONE && headingVy < 0) {
-                    const urgency = 1 - (futureY / ANTICIPATE_ZONE);
+                if (futureY - top < ANTICIPATE_ZONE && f.y - top > BUFFER_ZONE && headingVy < 0) {
+                    const urgency = 1 - ((futureY - top) / ANTICIPATE_ZONE);
                     avoidY += urgency * 0.8;
                     isAnticipating = true;
                 }
@@ -4158,8 +4241,8 @@
                     avoidX -= depth * 2 * rightEdgeMultiplier;
                     avoidStrength = Math.max(avoidStrength, depth * 0.5 * rightEdgeMultiplier);
                 }
-                if (f.y < BUFFER_ZONE) {
-                    const depth = (BUFFER_ZONE - f.y) / BUFFER_ZONE;
+                if (f.y - top < BUFFER_ZONE) {
+                    const depth = (BUFFER_ZONE - (f.y - top)) / BUFFER_ZONE;
                     avoidY += depth * 2;
                     avoidStrength = Math.max(avoidStrength, depth * 0.5);
                 }
@@ -4198,7 +4281,7 @@
                         f.reversalPressure = 0;
                     }
                 }
-                if (f.y < HARD_EDGE) {
+                if (f.y - top < HARD_EDGE) {
                     avoidY = 3; avoidStrength = 1; inEmergency = true;
                     if (inFleeState) {
                         f.targetHeading += angleDiff(Math.PI * 0.5, f.targetHeading) * 0.4;
@@ -4238,7 +4321,7 @@
                 const minEscapeV = isLarge ? 1.2 : 0.3; // Large fish need more push to escape walls
                 if (f.x < EMERGENCY_EDGE) { f.x += PUSH_STRENGTH; f.vx = Math.max(f.vx, minEscapeV); }
                 if (f.x > w - EMERGENCY_EDGE) { f.x -= PUSH_STRENGTH; f.vx = Math.min(f.vx, -minEscapeV); }
-                if (f.y < EMERGENCY_EDGE) { f.y += PUSH_STRENGTH; f.vy = Math.max(f.vy, minEscapeV); }
+                if (f.y - top < EMERGENCY_EDGE) { f.y += PUSH_STRENGTH; f.vy = Math.max(f.vy, minEscapeV); }
                 if (f.y > h - EMERGENCY_EDGE) { f.y -= PUSH_STRENGTH; f.vy = Math.min(f.vy, -minEscapeV); }
 
                 // Store debug info
@@ -4549,6 +4632,26 @@
                 } else {
                     speed = IDLE_SPEED * speedMult * turnSlowdown;
                 }
+                // ---- HOST STEER (opt-in): a host page may take the wheel of a calm fish ----
+                // opts.steer(f, now) → { heading, speed } or null. Fleeing, seeking and
+                // hunting stay the engine's; the turn is capped like any other, so the
+                // host gets arcs, not snaps.
+                let hostSteered = false;
+                if (opts.steer && f.state !== 'fleeing' && f.state !== 'seeking' && f.state !== 'hunting') {
+                    const hs = opts.steer(f, now);
+                    if (hs) {
+                        const want = angleDiff(hs.heading, headingAtStart);
+                        const cap = MAX_TURN_PER_FRAME * 1.5;
+                        const turn = Math.max(-cap, Math.min(cap, want * 0.1));
+                        f.heading = headingAtStart + turn;
+                        f.targetHeading = f.committedHeading = f.heading;
+                        if (f.cruiseAngle !== undefined) f.cruiseAngle = f.heading;
+                        f.bendAmount = bendAtStart * 0.7 + (turn / cap) * 0.3;   // curls while it turns, straight when not
+                        f.spinTime = 0;                                          // the host is steering: not stuck
+                        speed = hs.speed * speedMult;
+                        hostSteered = true;
+                    }
+                }
                 // ---- VELOCITY SMOOTHING: Blend for smooth movement ----
                 const targetVx = Math.cos(f.heading) * speed;
                 const targetVy = Math.sin(f.heading) * speed;
@@ -4577,6 +4680,8 @@
                     smoothNew = 0.25 + burstFade * 0.15; // 0.40→0.25
                 } else if (isSeeking) {
                     smoothOld = 0.78; smoothNew = 0.22; // Quick acceleration to food
+                } else if (hostSteered) {
+                    smoothOld = 0.88; smoothNew = 0.12; // velocity follows the host's heading
                 } else if (isMedium && f.state === 'idle') {
                     // A schooling fish pays its slot error in pace; 0.95/0.05 took ~20
                     // frames to change speed, so it crowded its neighbour before it
@@ -7175,6 +7280,28 @@
             },
             addFood(x, y) {
                 spawnClassified({ type: 'food', center: { x, y }, points: [] });
+            },
+            // Take one fish or one piece of coral out of the tank, the way the tank's own caps do
+            // (whoever was chasing or rivalling it lets go). For a host whose clock steps back
+            // past the moment it was drawn in (the sizzle reel's live preview, scrubbed).
+            remove(entity) {
+                let i = fish.indexOf(entity);
+                if (i >= 0) { fish.splice(i, 1); cleanupFishRefs(entity.id); markNavDirty(); startAnimation(); return true; }
+                i = coral.indexOf(entity);
+                if (i >= 0) { coral.splice(i, 1); markNavDirty(); startAnimation(); return true; }
+                return false;
+            },
+            // The school's phases on cue, for a host that choreographs the school (the sizzle
+            // reel's `fish @t school scatter`): 'scatter' bursts it apart, each member on its own
+            // ray out of the centre for about a second, after which it regroups; 'regroup' calls
+            // it together now. It sets the same shared phase the school's own clock drives
+            // (drawFishEntities keeps it on the global object), so the clock carries on from there.
+            schoolPhase(name) {
+                const S = globalThis;
+                if (name === 'scatter') { S.schoolPhase = 'scatter'; S.schoolPhaseTimer = 1300; }
+                else if (name === 'regroup') { S.schoolPhase = 'regroup'; S.schoolPhaseTimer = 5000; }
+                startAnimation();
+                return S.schoolPhase;
             },
             setObstacles(list) {
                 for (let i = coral.length - 1; i >= 0; i--) {

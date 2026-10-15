@@ -1,0 +1,331 @@
+// The reel's dev server: it makes the live preview an editor.
+//   node scripts/reel-dev.mjs [--port=1337]   → http://127.0.0.1:1337/Assets/sizzle-reel-2.html
+//
+// The rig (Assets/sizzle-reel-2.html) asks GET /__reel/ping on load. When this server answers,
+// the timeline's edits save to the script file itself (POST /__reel/save), and the rig listens
+// on GET /__reel/events for any change to that file on disk, so a save from any text editor
+// plays in the preview at once, in place (its own saves it knows, and skips). Without it the rig
+// still plays, and edits stay a draft.
+//
+// The same goes for a script's score (Assets/<name>.score.txt, the music): the synth rack saves
+// it through /__reel/save, parsed by scripts/reel-music.js, and listens on /__reel/events so a
+// save from a text editor reaches the rack (which updates in place, as the preview does).
+//
+// A save is parsed with scripts/reel-script.js before a byte is written: a script with a mistake
+// answers 422 with the parser's "line N: …" rows and leaves the file alone. A good one first
+// copies the file it replaces to .local/reel-backups/ (the newest 20 per script; .local is
+// gitignored), then lands atomically (a temp file in the same folder, then a rename), so the
+// preview and the renderer never read half a script.
+//
+// It is also a plain static server for the repo, with two things `python3 -m http.server` lacks.
+// Byte ranges on every file: a media element only seeks a file it can range-request, and served
+// whole every seek snaps back to 0 (why both cuts once filmed each clip as its first frame).
+// And no stale copies: text (the script, the rig, the timeline) is sent no-store, so a read
+// after a save always gets the new version. Media is sent no-cache with an ETag, so the
+// browser keeps its clips and a reload re-asks for them, answered 304 at no cost.
+//
+// It knows the media, too: GET /__reel/media lists every picture and clip a script could name
+// (scripts/reel-media.mjs), for the editor's media picker, and GET /__reel/thumb/<key>.webp
+// answers each one's thumbnail, made on the first ask and kept in .local/reel-media/.
+//
+// It renders, too: the editor's Export (scripts/reel-export.js) asks POST /__reel/render for a
+// film of the script in any of its formats, and this server runs scripts/render-sizzle-reel.mjs
+// for each in turn. GET /__reel/render says how far it has got (frame, frames, seconds left) and,
+// for each film done, where it is (Assets/media-kit/video/, served here like any file); POST
+// /__reel/render/cancel stops it. One job at a time. The same guard as a save: this server's own
+// pages only, as JSON.
+//
+// Listens on 127.0.0.1 only: it writes files. If the port is busy it tries the next 20.
+import http from 'node:http';
+import fs from 'node:fs';
+import os from 'node:os';
+import { spawn } from 'node:child_process';
+import path from 'node:path';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import { scan as mediaScan, thumb as mediaThumb } from './reel-media.mjs';
+
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(HERE, '..');
+const ReelScript = createRequire(import.meta.url)('./reel-script.js');
+const ReelMusic = createRequire(import.meta.url)('./reel-music.js');
+const BACKUPS = path.join(ROOT, '.local', 'reel-backups');
+const KEEP = 20, MAX_BODY = 2 * 1024 * 1024;
+const SCRIPT_RE = /^Assets\/[\w.-]+\.(script|score)\.txt$/;       // a script, or its score (the music)
+const arg = (k, d) => { const a = process.argv.find(x => x.startsWith(`--${k}=`)); return a ? a.slice(k.length + 3) : d; };
+const PORT = parseInt(arg('port', '1337'), 10);
+
+const TYPES = {
+  html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', mjs: 'text/javascript; charset=utf-8',
+  css: 'text/css; charset=utf-8', json: 'application/json; charset=utf-8', txt: 'text/plain; charset=utf-8',
+  md: 'text/markdown; charset=utf-8', svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+  webp: 'image/webp', gif: 'image/gif', ico: 'image/x-icon', mp4: 'video/mp4', webm: 'video/webm',
+  woff: 'font/woff', woff2: 'font/woff2', ttf: 'font/ttf', glb: 'model/gltf-binary', gltf: 'model/gltf+json',
+  wasm: 'application/wasm', pdf: 'application/pdf',
+};
+const typeOf = f => TYPES[path.extname(f).slice(1).toLowerCase()] || 'application/octet-stream';
+const FRESH = new Set(['html', 'js', 'mjs', 'css', 'json', 'txt', 'md']);   // always re-read: a save must show
+const log = (...a) => console.log(`reel-dev: ${new Date().toTimeString().slice(0, 8)}`, ...a);
+
+const send = (res, code, body, type = 'text/plain; charset=utf-8', extra = {}) => {
+  res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store', 'Content-Length': Buffer.byteLength(body), ...extra });
+  res.end(body);
+};
+const json = (res, code, obj) => send(res, code, JSON.stringify(obj), 'application/json; charset=utf-8');
+
+// A path from a client is trusted only if it is exactly Assets/<name>.script.txt or .score.txt.
+const scriptPath = f => (typeof f === 'string' && SCRIPT_RE.test(f) && !f.includes('..')) ? path.join(ROOT, f) : null;
+
+// ── static files ─────────────────────────────────────────────────────────
+function serveStatic(req, res, pathname) {
+  let rel;
+  try { rel = decodeURIComponent(pathname); } catch { return send(res, 400, 'bad path'); }
+  if (rel.includes('\0')) return send(res, 400, 'bad path');
+  // Resolve, then refuse anything that left the root: covers ../ however it was encoded.
+  const file = path.resolve(ROOT, '.' + path.posix.normalize('/' + rel));
+  const inside = f => f === ROOT || f.startsWith(ROOT + path.sep);
+  if (!inside(path.resolve(ROOT, '.' + rel)) || !inside(file)) return send(res, 403, 'forbidden');
+  let st, target = file;
+  try {
+    st = fs.statSync(target);
+    if (st.isDirectory()) { target = path.join(target, 'index.html'); st = fs.statSync(target); }
+    if (!inside(fs.realpathSync(target))) return send(res, 403, 'forbidden');   // a symlink out of the repo
+  } catch { return send(res, 404, 'not found'); }
+  if (!st.isFile()) return send(res, 404, 'not found');
+
+  const size = st.size, head = { 'Content-Type': typeOf(target), 'Cache-Control': 'no-store', 'Accept-Ranges': 'bytes' };
+  // Clips, pictures and fonts are kept by the browser and re-asked (no-cache + ETag): a reload
+  // by hand re-asks for 16 MB of clips, answered 304 at no cost. Text stays no-store.
+  if (!FRESH.has(path.extname(target).slice(1).toLowerCase())) {
+    const tag = `W/"${size.toString(16)}-${Math.round(st.mtimeMs).toString(16)}"`;
+    Object.assign(head, { 'Cache-Control': 'no-cache', ETag: tag, 'Last-Modified': st.mtime.toUTCString() });
+    if (req.headers['if-none-match'] === tag) { res.writeHead(304, head); return res.end(); }
+  }
+  let start = 0, end = size - 1, code = 200;
+  const range = req.headers.range;
+  if (range) {
+    const m = /^bytes=(\d*)-(\d*)$/.exec(range.trim());   // one range; a multi-range ask is answered whole
+    if (m && (m[1] || m[2])) {
+      if (m[1]) { start = +m[1]; end = m[2] ? Math.min(+m[2], size - 1) : size - 1; }
+      else { const n = +m[2]; start = Math.max(0, size - n); end = size - 1; if (!n) start = size; }
+      if (start >= size || start > end) {
+        res.writeHead(416, { ...head, 'Content-Range': `bytes */${size}`, 'Content-Length': 0 });
+        return res.end();
+      }
+      code = 206; head['Content-Range'] = `bytes ${start}-${end}/${size}`;
+    }
+  }
+  head['Content-Length'] = size ? end - start + 1 : 0;
+  res.writeHead(code, head);
+  if (req.method === 'HEAD' || !size) return res.end();
+  const s = fs.createReadStream(target, { start, end });
+  s.on('error', () => res.destroy());
+  res.on('close', () => s.destroy());
+  s.pipe(res);
+}
+
+// ── saving a script ──────────────────────────────────────────────────────
+function backup(file) {
+  if (!fs.existsSync(file)) return null;
+  fs.mkdirSync(BACKUPS, { recursive: true });
+  const base = path.basename(file);
+  // an ISO stamp sorts by time as text; the colons go because some filesystems refuse them
+  const out = path.join(BACKUPS, `${base}.${new Date().toISOString().replace(/[:.]/g, '-')}.txt`);
+  fs.copyFileSync(file, out);
+  const mine = fs.readdirSync(BACKUPS).filter(n => n.startsWith(base + '.') && n.endsWith('.txt')).sort();
+  mine.slice(0, Math.max(0, mine.length - KEEP)).forEach(n => { try { fs.unlinkSync(path.join(BACKUPS, n)); } catch { /* gone already */ } });
+  return out;
+}
+
+function save(req, res) {
+  // Only this server's own pages may save. A page from anywhere else can still POST to
+  // localhost with a "simple" text/plain body, which skips the browser's CORS preflight, so
+  // demand JSON (a cross-origin JSON POST must preflight, and nothing here answers one) and,
+  // when the browser names an Origin, that it is this server.
+  const origin = req.headers.origin, host = req.headers.host;
+  if (origin && origin !== `http://${host}`) return json(res, 403, { ok: false, errors: ['saves come only from pages this server serves'] });
+  if (!/^application\/json\b/i.test(req.headers['content-type'] || '')) return json(res, 415, { ok: false, errors: ['send the script as JSON: {"file", "text"}'] });
+  const chunks = []; let len = 0, over = false;
+  req.on('data', c => {
+    if (over) return;
+    len += c.length;
+    if (len > MAX_BODY) { over = true; json(res, 413, { ok: false, errors: ['the script is over 2 MB'] }); req.resume(); return; }
+    chunks.push(c);
+  });
+  req.on('end', () => {
+    if (over) return;
+    let body;
+    try { body = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { return json(res, 400, { ok: false, errors: ['the body is not JSON'] }); }
+    const file = scriptPath(body && body.file);
+    if (!file) return json(res, 400, { ok: false, errors: ['file should be Assets/<name>.script.txt or Assets/<name>.score.txt'] });
+    if (typeof body.text !== 'string') return json(res, 400, { ok: false, errors: ['text should be the whole script as a string'] });
+    let parsed;
+    const isScore = body.file.endsWith('.score.txt');
+    try { parsed = isScore ? ReelMusic.parse(body.text) : ReelScript.parse(body.text); } catch (e) {
+      log(`refused ${body.file}: ${(e.errors || [e.message]).length} mistake(s)`);
+      return json(res, 422, { ok: false, errors: e.errors || [e.message] });
+    }
+    try {
+      backup(file);
+      const tmp = path.join(path.dirname(file), `.${path.basename(file)}.${process.pid}.${Date.now()}.tmp`);
+      fs.writeFileSync(tmp, body.text);
+      try { fs.renameSync(tmp, file); } catch (e) { try { fs.unlinkSync(tmp); } catch { /* never landed */ } throw e; }
+    } catch (e) {
+      log(`error saving ${body.file}: ${e.message}`);
+      return json(res, 500, { ok: false, errors: [`could not write the file: ${e.message}`] });
+    }
+    if (isScore) {
+      log(`saved ${body.file} (${parsed.score.tracks.length} tracks)`);
+      return json(res, 200, { ok: true, warnings: parsed.warnings });
+    }
+    const sp = ReelScript.spans(parsed.edit), total = sp.length ? sp[sp.length - 1].end : 0;
+    log(`saved ${body.file} (${total} s${parsed.warnings.length ? `, ${parsed.warnings.length} warning(s)` : ''})`);
+    json(res, 200, { ok: true, warnings: parsed.warnings, total });
+  });
+}
+
+// ── telling the preview a script changed ─────────────────────────────────
+// Watch the folder, not the file: editors (and our own save) replace a file by renaming a new
+// one over it, and a watch on the old file would go quiet. Events come in bursts, so wait
+// ~150 ms, then believe only a real change of mtime or size.
+function events(req, res, q) {
+  const rel = q.get('file'), file = scriptPath(rel);
+  if (!file) return json(res, 400, { ok: false, errors: ['file should be Assets/<name>.script.txt or Assets/<name>.score.txt'] });
+  const stamp = () => { try { const s = fs.statSync(file); return `${s.mtimeMs}:${s.size}`; } catch { return 'missing'; } };
+  let last = stamp(), timer = null, watcher;
+  res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive' });
+  res.write(': reel-dev watching ' + rel + '\n\n');
+  try {
+    watcher = fs.watch(path.dirname(file), (ev, name) => {
+      if (name && name !== path.basename(file)) return;
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const now = stamp();
+        if (now === last) return;
+        last = now;
+        res.write(`event: change\ndata: ${JSON.stringify({ file: rel })}\n\n`);
+      }, 150);
+    });
+    watcher.on('error', () => {});
+  } catch (e) { log(`error watching ${rel}: ${e.message}`); }
+  const beat = setInterval(() => res.write(': heartbeat\n\n'), 15000);
+  req.on('close', () => { clearInterval(beat); clearTimeout(timer); if (watcher) watcher.close(); });
+}
+
+// ── the media library: the picker's catalogue and thumbnails ───────────────
+// A scan stats every file (ffmpeg reads only new or changed ones); one every 5 s at most.
+let library = null, libraryAt = 0;
+const libraryNow = () => { if (!library || Date.now() - libraryAt > 5000) { library = mediaScan(ROOT); libraryAt = Date.now(); } return library; };
+function media(res) {
+  try { json(res, 200, { ok: true, items: libraryNow().map(it => ({ ...it, thumb: `/__reel/thumb/${it.key}.webp` })) }); }
+  catch (e) { log(`error listing media: ${e.message}`); json(res, 500, { ok: false, errors: [e.message] }); }
+}
+function mediaThumbReq(req, res, key) {
+  const it = (library || libraryNow()).find(i => i.key === key) || libraryNow().find(i => i.key === key);
+  if (!it) return send(res, 404, 'no such thumbnail');
+  const f = mediaThumb(it, ROOT);
+  if (!f) return send(res, 500, 'ffmpeg could not make that thumbnail');
+  const buf = fs.readFileSync(f);                                   // the key names this version of the file: keep it
+  res.writeHead(200, { 'Content-Type': 'image/webp', 'Cache-Control': 'max-age=31536000, immutable', 'Content-Length': buf.length });
+  res.end(req.method === 'HEAD' ? undefined : buf);
+}
+
+// ── rendering: the editor's Export ──────────────────────────────────────
+// A job renders one script in the formats asked for, one film after another, by running the
+// renderer as a person would; its progress is read off the renderer's own lines.
+const FORMATS = ['wide', 'square', 'vertical'];
+const JOBS = Math.max(1, Math.min(3, os.cpus().length - 1));      // the renderer's --jobs: chunks in parallel
+let job = null, jobChild = null;
+const jobView = () => job && { ...job, items: job.items.map(({ log: _, ...it }) => it) };
+function guard(req, res) {                                          // the save's guard (see save())
+  const origin = req.headers.origin, host = req.headers.host;
+  if (origin && origin !== `http://${host}`) { json(res, 403, { ok: false, errors: ['only pages this server serves may render'] }); return false; }
+  if (!/^application\/json\b/i.test(req.headers['content-type'] || '')) { json(res, 415, { ok: false, errors: ['send JSON'] }); return false; }
+  return true;
+}
+function renderStart(req, res) {
+  if (!guard(req, res)) return;
+  const chunks = [];
+  req.on('data', c => { if (chunks.length < 64) chunks.push(c); });
+  req.on('end', () => {
+    let b;
+    try { b = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { return json(res, 400, { ok: false, errors: ['the body is not JSON'] }); }
+    const file = scriptPath(b && b.file);
+    if (!file || !b.file.endsWith('.script.txt')) return json(res, 400, { ok: false, errors: ['file should be Assets/<name>.script.txt'] });
+    if (!fs.existsSync(file)) return json(res, 400, { ok: false, errors: [`there is no ${b.file}`] });
+    const formats = Array.isArray(b.formats) ? [...new Set(b.formats)] : [];
+    if (!formats.length || formats.some(f => !FORMATS.includes(f))) return json(res, 400, { ok: false, errors: [`formats should be some of ${FORMATS.join(', ')}`] });
+    const fps = b.fps == null ? 60 : +b.fps;
+    if (![60, 30].includes(fps)) return json(res, 400, { ok: false, errors: ['fps should be 60 or 30'] });
+    if (job && job.state === 'running') return json(res, 409, { ok: false, errors: ['a render is running: wait for it, or stop it'], job: jobView() });
+    try { ReelScript.parse(fs.readFileSync(file, 'utf8')); } catch (e) { return json(res, 422, { ok: false, errors: e.errors || [e.message] }); }
+    job = { id: Date.now().toString(36), file: b.file, fps, startedAt: new Date().toISOString(), state: 'running',
+      items: formats.sort((a, c) => FORMATS.indexOf(a) - FORMATS.indexOf(c)).map(format => ({ format, state: 'waiting' })) };
+    log(`render ${b.file}: ${formats.join(', ')} at ${fps} fps`);
+    runNext();
+    json(res, 202, { ok: true, job: jobView() });
+  });
+}
+function runNext() {
+  const it = job.items.find(i => i.state === 'waiting');
+  if (!it) { job.state = job.items.every(i => i.state === 'done') ? 'done' : 'failed'; job.endedAt = new Date().toISOString(); log(`render ${job.state}`); return; }
+  it.state = 'running'; it.log = '';
+  const args = [path.join(HERE, 'render-sizzle-reel.mjs'), `--script=${job.file}`, `--fps=${job.fps}`, `--jobs=${JOBS}`];
+  if (it.format !== 'wide') args.push(`--format=${it.format}`);
+  const child = jobChild = spawn(process.execPath, args, { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] });
+  const read = d => {
+    it.log = (it.log + d).slice(-4000);
+    const all = [...it.log.matchAll(/frame (\d+)\/(\d+)\s+[\d.]+ fps\s+eta (\d+) s/g)], m = all[all.length - 1];
+    if (m) { it.frame = +m[1]; it.frames = +m[2]; it.eta = +m[3]; }
+    const w = /wrote (\S+\.mp4) \(([\d.]+) MB, ([\d.]+) s at (\d+) fps\)/.exec(it.log);
+    if (w && !it.file) { it.file = w[1]; it.url = '/' + w[1]; it.mb = +w[2]; it.seconds = +w[3]; }
+  };
+  child.stdout.on('data', read); child.stderr.on('data', read);
+  child.on('exit', code => {
+    jobChild = null;
+    if (job.state === 'cancelled') { it.state = 'cancelled'; job.items.forEach(i => { if (i.state === 'waiting') i.state = 'cancelled'; }); return; }
+    it.state = code === 0 && it.file ? 'done' : 'failed';
+    if (it.state === 'failed') it.error = (it.log.trim().split('\n').filter(l => /error|Error|must|no /.test(l)).pop() || `the renderer stopped (${code})`).slice(0, 300);
+    log(`render ${it.format}: ${it.state}${it.file ? ' → ' + it.file : ''}`);
+    runNext();
+  });
+}
+function renderCancel(req, res) {
+  if (!guard(req, res)) return;
+  if (!job || job.state !== 'running') return json(res, 200, { ok: true, job: jobView() });
+  job.state = 'cancelled'; job.endedAt = new Date().toISOString();
+  if (jobChild) jobChild.kill('SIGTERM');
+  log('render cancelled');
+  json(res, 200, { ok: true, job: jobView() });
+}
+process.on('exit', () => { if (jobChild) jobChild.kill('SIGTERM'); });
+['SIGINT', 'SIGTERM'].forEach(s => process.on(s, () => process.exit(0)));
+
+const server = http.createServer((req, res) => {
+  let u;
+  try { u = new URL(req.url, 'http://127.0.0.1'); } catch { return send(res, 400, 'bad url'); }
+  if (u.pathname === '/__reel/ping') return json(res, 200, { ok: true, server: 'reel-dev' });
+  if (u.pathname === '/__reel/save') return req.method === 'POST' ? save(req, res) : send(res, 405, 'POST only', undefined, { Allow: 'POST' });
+  if (u.pathname === '/__reel/events') return events(req, res, u.searchParams);
+  if (u.pathname === '/__reel/media') return media(res);
+  const th = /^\/__reel\/thumb\/([\w.-]+)\.webp$/.exec(u.pathname);
+  if (th) return mediaThumbReq(req, res, th[1]);
+  if (u.pathname === '/__reel/render') return req.method === 'POST' ? renderStart(req, res) : json(res, 200, { ok: true, job: jobView(), formats: FORMATS });
+  if (u.pathname === '/__reel/render/cancel') return req.method === 'POST' ? renderCancel(req, res) : send(res, 405, 'POST only', undefined, { Allow: 'POST' });
+  if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'GET or HEAD only', undefined, { Allow: 'GET, HEAD' });
+  try { serveStatic(req, res, u.pathname); } catch (e) { log(`error serving ${u.pathname}: ${e.message}`); if (!res.headersSent) send(res, 500, 'error'); }
+});
+
+// the next free port, up to 20 past the one asked for
+(function listen(port) {
+  const fail = e => {
+    if (e.code === 'EADDRINUSE' && port < PORT + 20) return listen(port + 1);
+    console.error(`reel-dev: cannot listen (${e.message})`); process.exit(1);
+  };
+  server.once('error', fail);
+  server.listen(port, '127.0.0.1', () => {
+    server.off('error', fail);
+    server.on('error', e => log(`error: ${e.message}`));
+    console.log(`reel-dev: http://127.0.0.1:${port}/Assets/sizzle-reel-2.html`);
+  });
+})(PORT);
