@@ -1757,6 +1757,41 @@ center them and visually verify balance."
 - fishtest's right-of-way count was over its 0.5 s already at the last commit (wide 0.83 s, square
   1.33 s); with the larger beds wide reads 3.22 s. Not fixed here.
 
+## The music on the beat, and the voice rephrased (2026-10-15)
+
+John asked how to "better normalize to the beat and find the clear patterns and clean up drift
+and awkward transitions between motifs", read the proposal, and said "go ahead and do it all".
+
+Measured first: every cut was exactly on the sixteenth grid, but 109 of 151 key ticks, every Enter
+and every select-all were 30-50 ms off it (the typing is humanised, and the select-all sat 0.3 s
+before a cut), four word pops were off an eighth, and every cut after the title (3.25 s) fell half
+a beat off the beat.
+
+- **`cue sync`** (seconds; 0 the default, as typed): a question's Enter lands on the next step of
+  the grid, its select-all one step before the cut, its first key on a half step, and each key,
+  at its own pace, on an eighth of a step and never on the last one. Cut 2 says `cue sync 0.25`
+  above its first scene (an eighth note at 120): every Enter and select-all on an eighth, the
+  keys an even roll of 64ths (32 a second, from about 40). `ReelScript.queries` does it, so the
+  rig types from the same times the score's `on key|enter|clear` sounds play at. The shot list
+  shows it as "On the beat".
+- **The title is 3 s**, so every cut lands on a beat: command 3.4, answer 6.1, results 8.2,
+  feature 14.4, art 17.2, logos 19.4, quotes 22.3, offer 28.3, offer 31.2, end 34.1. 70.5 s.
+- **The pops**: the four @ beats that bring words off an eighth moved to the nearest one
+  (results 18.75, art 35.0, quotes 53.5, and the hidden quote that sounds at the offer's cut, 56.0).
+- **The groove** starts on the command's cut (`CLIP drums 3.4-34.3.2`).
+- **The voice**, one `editTake` of 58 changes:
+  - theme 1 (8-15) now speaks theme 2's grammar: 8 and 9 calls with stepwise pickups, 10-11 the
+    answer that was at 14-15, 12-13 calls that foretell 16-17 (A B E, A B D), 14-15 the answer of
+    18-19;
+  - every call is one of two forms: the long note held to the bar's end, or held to beat 4 with
+    one quarter after it (24, 27, 28, 31 lost their extra notes);
+  - bar 5's pulse is G4 A4, not E4 F4 (it had dropped a sixth out of the line); bar 6, where the
+    answer's cut is a downbeat, walks C5 D5 E5 D5 into bar 7;
+  - beat 1 is a chord tone where the note did not resolve: 10, 14 and 18 open on G4, 22 on G4 G4
+    (not E4 E4), 23 on D5;
+  - the landing is G4 to the bar line and A4 held through the end card (it had ended on C4).
+  149 notes play. The suites' fixture score is unchanged.
+
 ## Later
 
 Scene-specific cues (line staggers, the push); moving cut 1 onto the one player; stems out of

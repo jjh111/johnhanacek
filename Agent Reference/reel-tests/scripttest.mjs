@@ -175,15 +175,28 @@ const S = t => Object.assign({}, edit.scenes.find(s => s.type === t), { cues: {}
 ok(RS.cue(S('open'), 'out') === 0.45 && RS.cue(S('title'), 'out') === 0.65 && RS.cue(S('answer'), 'out') === 0.32, 'out defaults: open 0.45, title 0.65, answer 0.32');
 ok(RS.cue(S('results'), 'out') === 0.34 && RS.cue(S('quotes'), 'out') === 0.34 && RS.cue(S('offer'), 'out') === 0.34, 'out defaults: results, quotes, offer 0.34');
 ok(RS.cue(S('answer'), 'in') === 0.04 && RS.cue(S('answer'), 'typing') === 40, 'in 0.04 and typing 40 by default');
-ok(RS.cueNames('title').join() === 'arrive,out,leave,ease' && RS.cueNames('end').join() === 'arrive,ease' && RS.cueNames('answer').join() === 'typing,in,arrive,out,leave,ease', 'which scenes have which cues');
+ok(RS.cueNames('title').join() === 'arrive,out,leave,ease' && RS.cueNames('end').join() === 'arrive,ease' && RS.cueNames('answer').join() === 'typing,sync,in,arrive,out,leave,ease', 'which scenes have which cues');
 ok(RS.cue(S('answer'), 'arrive') === 0.6 && RS.cue(S('answer'), 'leave') === 0.3 && RS.cue(S('answer'), 'ease') === 'own', 'arrive 0.6, leave 0.3 and ease own by default: the rig\'s own');
+
+// ── sync: the questions on the music's grid ──
+{
+  const on = (t, g) => Math.abs(t / g - Math.round(t / g)) < 1e-6;
+  const Q = RS.queries(RS.parse(RS.setReelCue(SRC, 'sync', 0.25)).edit);
+  ok(Q.every(q => on(q.enter, 0.25) && (q.last || on(q.clear, 0.25)) && on(q.t0, 0.125) && q.times.every(t => on(t, 0.03125))
+      && q.times.every((t, j) => j === 0 || t > q.times[j - 1]) && q.enter > q.typed),
+    'sync 0.25: every Enter and select-all on an eighth, the first key on a sixteenth, the keys on 64ths in order, the Enter after the last key');
+  const off = RS.parse(RS.setReelCue(SRC, 'sync', null)).edit, Q0 = RS.queries(off), sp = RS.spans(off);
+  ok(Q0.every(q => Math.abs(q.enter - q.typed - 0.06) < 1e-9 && (q.last || Math.abs(q.clear - (sp[q.scene].end - 0.3)) < 1e-9)), 'no sync: typed as it always was (Enter 0.06 s after the last key, the select-all 0.3 s before the cut)');
+}
 
 // ── transitions for every scene: cue lines above the first SCENE ──
 {
   let r = RS.setReelCue(SRC, 'arrive', 0.4);
   r = RS.setReelCue(r, 'ease', 'cubic');
   const PR = RS.parse(r), first = PR.marks.find(m => m.kind === 'scene').ln;
-  ok(same(PR.edit.cues, { arrive: 0.4, ease: 'cubic' }) && lines(r).slice(0, first).filter(l => /^cue\s/.test(l)).length === 2 && changedLines(SRC, r).length >= 1,
+  // (beside the reel's own: cut 2 says `cue sync 0.25` up there already)
+  const had = Object.keys(edit.cues || {}).length;
+  ok(same(PR.edit.cues, Object.assign({}, edit.cues, { arrive: 0.4, ease: 'cubic' })) && lines(r).slice(0, first).filter(l => /^cue\s/.test(l)).length === had + 2 && changedLines(SRC, r).length >= 1,
     'setReelCue writes cue lines above the first scene, after the seed');
   const ans = PR.edit.scenes.find(x => x.type === 'answer');
   ok(RS.cue(ans, 'arrive', PR.edit) === 0.4 && RS.cue(ans, 'ease', PR.edit) === 'cubic' && RS.cue(ans, 'arrive') === 0.6, 'a scene without its own takes every scene\'s (passed the edit)');

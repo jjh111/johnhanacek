@@ -182,6 +182,11 @@
   const EASES = ['own', 'expo', 'cubic', 'sine', 'back', 'linear'];
   const CUES = {
     typing: { about: 'characters a second the question is typed at', def: () => 40, asks: true, min: 1 },
+    // the music's grid under the typing (2026-10-15; John: "normalize to the beat"): a question's
+    // Enter lands on the next step of it, its select-all one step before the cut, and its keys,
+    // as fast as they were, on an eighth of a step from a half step (0.25 at 120: an eighth note,
+    // the keys on 64ths from a 16th); 0 types as it always did
+    sync:   { about: 'the beat grid in seconds that a question\'s Enter and select-all land on, its keys on an eighth of it (0: as typed; 0.25 is an eighth note at 120)', def: () => 0, asks: true, min: 0 },
     in:     { about: 'seconds from the question\'s Enter to the answer starting to arrive', def: () => 0.04, asks: true },
     arrive: { about: 'seconds the content takes to arrive: every motion and stagger of the arrival scales with it (the rig\'s own is 0.6)', def: () => 0.6, min: 0.05 },
     out:    { about: 'seconds before the scene ends that its content starts to leave', def: t => (OUT[t] != null ? OUT[t] : 0.32), skip: ['end'] },
@@ -318,12 +323,19 @@
     const when = spans(edit), asked = [];
     edit.scenes.forEach((sc, i) => { if (sc.query) asked.push([sc, i]); });
     return asked.map(([sc, i], k) => {
-      const t0 = when[i].start + (k === 0 ? 0.1 : -0.08);
+      const G = cue(sc, 'sync', edit), on = (t, g) => Math.round(t / g) * g;
+      const t0 = G ? on(when[i].start + (k === 0 ? 0.1 : -0.08), G / 2) : when[i].start + (k === 0 ? 0.1 : -0.08);
       const times = []; let tt = t0;
       const CPS = cue(sc, 'typing', edit);
-      for (let j = 0; j < sc.query.length; j++) { tt += (1 / CPS) * (0.6 + 0.8 * hash01(j + 31 * i)); times.push(tt); }
-      const last = k === asked.length - 1;
-      return { scene: i, text: sc.query, times, t0, typed: tt, enter: tt + 0.06, clear: last ? Infinity : when[i].end - 0.3, last };
+      for (let j = 0; j < sc.query.length; j++) {
+        tt += (1 / CPS) * (0.6 + 0.8 * hash01(j + 31 * i));
+        // on the grid each key keeps its own pace, moved to the nearest 64th, never onto the last
+        times.push(G ? Math.max(times.length ? times[times.length - 1] + G / 8 : t0 + G / 8, on(tt, G / 8)) : tt);
+      }
+      const typed = times.length ? times[times.length - 1] : t0, last = k === asked.length - 1;
+      const enter = G ? Math.ceil((typed + 0.06) / G - 1e-9) * G : typed + 0.06;
+      const clear = last ? Infinity : G ? on(when[i].end - 0.3, G) : when[i].end - 0.3;
+      return { scene: i, text: sc.query, times, t0, typed, enter, clear, last };
     });
   }
 
