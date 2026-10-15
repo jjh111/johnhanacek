@@ -1,0 +1,1429 @@
+<!DOCTYPE html>
+<html lang="en" data-mode="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+  /* Theme bootstrap, before first paint. Same contract as openprose.html: this
+     page keeps the OpenProse palette on `data-mode`, the site chrome rides on
+     `data-theme`, and both follow the one shared 'jh-theme' preference. */
+  (function () {
+    var m;
+    try { m = localStorage.getItem('jh-theme'); } catch (e) {}
+    if (m !== 'light' && m !== 'dark') {
+      m = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+    }
+    document.documentElement.setAttribute('data-mode', m);
+    if (m === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    else document.documentElement.removeAttribute('data-theme');
+  })();
+</script>
+<title>Making Agent Runs Legible · OpenProse × JHDesign</title>
+<meta name="description" content="Eleven live views that make OpenProse agent runs legible, from one paragraph to a fleet. Every trace is synthetic: an invented aquarium, its five programs and the fleet around it. A JHDesign case study.">
+
+<meta name="theme-color" content="#f5f0e8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14110d" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<meta name="format-detection" content="telephone=no">
+
+<link rel="canonical" href="https://www.johnhanacek.com/openprose-traces.html">
+
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "name": "OpenProse Traces Case Study",
+    "headline": "Making agent runs legible: trace views for OpenProse",
+    "description": "Eleven live views of OpenProse agent runs, from a one-paragraph summary to a fleet of organizations, all reading one synthetic world.",
+    "url": "https://www.johnhanacek.com/openprose-traces.html",
+    "image": "https://www.johnhanacek.com/openprose-traces/posters/run-strata.webp",
+    "author": {
+        "@type": "Person",
+        "name": "John Hanacek",
+        "url": "https://www.johnhanacek.com"
+    },
+    "about": ["Data visualization", "Agent observability", "Trace visualization", "Design engineering", "three.js", "d3"],
+    "mentions": {
+        "@type": "Organization",
+        "name": "OpenProse",
+        "url": "https://prose.md"
+    }
+}
+</script>
+<meta property="og:type" content="article">
+<meta property="og:title" content="Making Agent Runs Legible · OpenProse × JHDesign">
+<meta property="og:description" content="Eleven live views that make agent runs legible, from one paragraph to a fleet. Every trace is synthetic.">
+<meta property="og:url" content="https://www.johnhanacek.com/openprose-traces.html">
+<meta property="og:image" content="https://www.johnhanacek.com/openprose-traces/posters/run-strata.webp">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Making Agent Runs Legible · OpenProse × JHDesign">
+<meta name="twitter:description" content="Eleven live views that make agent runs legible, from one paragraph to a fleet. Every trace is synthetic.">
+<meta name="twitter:image" content="https://www.johnhanacek.com/openprose-traces/posters/run-strata.webp">
+
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 142 142'%3E%3Cpath d='M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z' fill='%232a2520'/%3E%3C/svg%3E">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preload" as="font" type="font/woff2" crossorigin
+      href="https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extrabold-web.woff2">
+
+<!-- jhcom chrome (nav only), NOT shared.css: this page speaks the OpenProse
+     language, like openprose.html. Loaded BEFORE the OpenProse tokens so
+     _tokens.css wins on every name they share. -->
+<link rel="stylesheet" href="./styles/jh-chrome.css?v=2.48">
+<link rel="stylesheet" href="./scripts/search-overlay.css?v=2.48">
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="openprose/_tokens.css?v=2.48">
+<link rel="stylesheet" href="openprose/_pairings.css?v=2.48">
+<style>
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root { --content-max: 1400px; }
+
+/* Accent role, as on openprose.html: --accent-ink, never --accent (a FONT
+   FAMILY in _tokens.css). Dark points at --amber, redeclared to an ink tone. */
+:root { --accent-ink: var(--teal); --accent-ink-deep: var(--teal-deep); --err-ink: #a8432f; }
+
+/* Quiet-ink ramp, solid per theme (alpha inks fail AA on paper). The selector
+   reaches body[data-palette] because _tokens.css redeclares the inks there. */
+body,
+body[data-palette] {
+  --ink-3: #6b655c;  /* 5.2:1 */
+  --ink-4: #565046;  /* 6.7:1 */
+}
+
+html[data-mode="dark"],
+html[data-mode="dark"] body,
+html[data-mode="dark"] body[data-palette] {
+  --accent-ink: var(--amber); --accent-ink-deep: var(--amber-deep);
+  --err-ink: #e8957f;
+
+  --paper:      #14110d;
+  --paper-warm: #1c1814;
+  --paper-lt:   #1f1b15;
+  --paper-deep: #08080a;
+  --paper-elev: #1f1b15;
+
+  --ink:        #f5f0e0;
+  --ink-2:      #d6cfba;
+  --ink-3:      #a39a85;  /* 6.74:1 */
+  --ink-4:      #8c8472;  /* 5.07:1 */
+
+  --rule:       #2d2820;
+  --rule-mid:   #221d17;
+
+  --amber:       #f5f0e0;
+  --amber-deep:  #d6cfba;
+  --amber-soft:  #a39a85;
+  --amber-faint: rgba(245, 240, 224, 0.10);
+  --amber-tint:  rgba(245, 240, 224, 0.18);
+}
+
+html, body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--type-body);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background 0.25s ease, color 0.25s ease;
+}
+body { overflow-x: hidden; }
+
+em {
+  font-family: var(--type-display-em);
+  font-style: var(--i-display-em);
+  font-weight: var(--w-display-em);
+  font-size: 1em;
+  letter-spacing: 0;
+  color: var(--ink);
+}
+strong { font-family: var(--type-mono, inherit); font-weight: 700; color: var(--ink); }
+code { font-family: var(--type-mono); font-size: 0.92em; }
+
+a { color: var(--accent-ink); text-decoration: none; transition: color 0.15s ease; }
+a:hover { color: var(--accent-ink-deep, var(--ink)); }
+
+.skip-link {
+  position: absolute; top: 0; left: 0; z-index: 1000;
+  padding: 0.6rem 1rem;
+  font-family: var(--type-mono); font-size: 0.94rem;
+  color: var(--ink); background: var(--paper);
+  border: 1px solid var(--rule); border-bottom-right-radius: 6px;
+  transform: translateY(-130%); transition: transform 0.16s ease;
+}
+.skip-link:focus { transform: translateY(0); outline: 2px solid var(--accent-ink); }
+#main-content:focus { outline: none; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 3px; border-radius: 3px; }
+
+/* ---------------------------------------------------------------- top chrome
+   The brand disc and the theme disc, as on openprose.html. */
+.brand-nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+  pointer-events: none;
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 1.5rem 2rem 0;
+}
+.scroll-progress {
+  position: fixed; top: 0; left: 0; width: 100%; height: 2px;
+  z-index: 60; pointer-events: none;
+}
+.scroll-progress::before {
+  content: ''; display: block; width: 100%; height: 100%;
+  background: var(--accent-ink);
+  transform-origin: left center; transform: scaleX(var(--p, 0));
+  will-change: transform;
+}
+.brand-logo, .mode-toggle {
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 52px; height: 52px; padding: 0;
+  border-radius: 50%;
+  pointer-events: auto; cursor: pointer;
+  font: inherit; color: var(--ink-2);
+  background: rgba(245, 240, 232, 0.62);
+  border: 1px solid rgba(255, 255, 248, 0.55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 4px 18px rgba(20, 18, 16, 0.18);
+  transition: background 0.2s ease, color 0.15s ease;
+}
+.mode-toggle { font-size: 1.1rem; line-height: 1; }
+.brand-logo svg { width: 28px; height: 28px; fill: var(--ink); display: block; }
+.brand-logo:hover, .mode-toggle:hover { color: var(--ink); background: rgba(245, 240, 232, 0.58); }
+html[data-mode="dark"] .brand-logo,
+html[data-mode="dark"] .mode-toggle {
+  background: rgba(20, 18, 16, 0.55);
+  border-color: rgba(255, 255, 248, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 4px 18px rgba(0, 0, 0, 0.45);
+}
+html[data-mode="dark"] .brand-logo:hover,
+html[data-mode="dark"] .mode-toggle:hover { background: rgba(20, 18, 16, 0.62); }
+
+/* JHCOM CHROME: nav only, no <jh-footer> (§VII closes the page on its own
+   colophon, as openprose.html does). Once .visible the bar takes the top 40px;
+   these sibling selectors push the progress line and the discs clear of it. */
+#nav.visible ~ .scroll-progress { top: calc(40px + env(safe-area-inset-top)); }
+#nav.visible ~ .brand-nav { padding-top: calc(1.5rem + 40px + env(safe-area-inset-top)); }
+.scroll-progress, .brand-nav { transition: top 0.25s ease, padding-top 0.25s ease; }
+@media (max-width: 768px) {
+  #nav.visible ~ .scroll-progress { top: calc(36px + env(safe-area-inset-top)); }
+  #nav.visible ~ .brand-nav { padding-top: calc(1.1rem + 36px + env(safe-area-inset-top)); }
+}
+@media (max-width: 480px) {
+  #nav.visible ~ .scroll-progress { top: calc(34px + env(safe-area-inset-top)); }
+  #nav.visible ~ .brand-nav { padding-top: calc(1.1rem + 34px + env(safe-area-inset-top)); }
+}
+
+/* ---------------------------------------------------------------- the bloom
+   μ Bloom: blank warm paper and the bloom wave field, no photograph. One
+   canvas in the hero, one under the conclusion; each runs only while its
+   section is on screen. */
+.bloom-canvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  z-index: 0;
+  cursor: crosshair;
+  touch-action: pan-y;
+  background: var(--paper);
+  transition: background 0.25s ease;
+}
+/* The field's fading wash settles a few levels off --paper (8-bit alpha
+   blending), so each canvas fades out where it meets the page. */
+.hero .bloom-canvas { -webkit-mask-image: linear-gradient(to bottom, #000 75%, transparent); mask-image: linear-gradient(to bottom, #000 75%, transparent); }
+.cta-bloom .bloom-canvas { -webkit-mask-image: linear-gradient(to bottom, transparent, #000 22%); mask-image: linear-gradient(to bottom, transparent, #000 22%); }
+
+.hero {
+  position: relative;
+  min-height: 92vh;
+  min-height: 92svh;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  padding: 6rem 1rem 4rem;
+}
+.hero-content {
+  position: relative; z-index: 2;
+  pointer-events: none;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  gap: 0.9rem;
+  max-width: min(92vw, 52rem);
+  padding: 2.4rem 3.6rem 1.9rem;
+  background: rgba(248, 244, 238, 0.68);
+  border: 1px solid rgba(255, 255, 248, 0.42);
+  border-radius: 48px;
+  backdrop-filter: blur(18px) saturate(1.3);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 18px 72px rgba(34, 28, 16, 0.18);
+}
+html[data-mode="dark"] .hero-content {
+  background: rgba(20, 18, 16, 0.55);
+  border-color: rgba(255, 255, 248, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 18px 72px rgba(0, 0, 0, 0.45);
+}
+.hero-logotype { display: block; width: clamp(150px, 18vw, 220px); height: auto; fill: var(--ink); }
+.hero h1 {
+  font-family: var(--type-display);
+  font-weight: var(--w-display);
+  font-size: clamp(2.3rem, 6vw, 4.4rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-wrap: balance;
+}
+.hero-sub {
+  font-family: var(--type-mono);
+  font-size: var(--fs-caption);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+html[data-mode="dark"] .hero-sub { color: var(--ink-2); }
+.hero-synthetic {
+  font-family: var(--type-body);
+  font-size: 1.08rem;
+  color: var(--ink-2);
+}
+.synthetic-tag {
+  display: inline-block;
+  font-family: var(--type-mono);
+  font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--accent-ink-deep);
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 0.1em 0.7em;
+  margin-right: 0.5em;
+  vertical-align: 0.12em;
+}
+
+/* ---------------------------------------------------------------- sections */
+.section { position: relative; z-index: 1; scroll-margin-top: 24px; }
+.section .inner {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: 3rem 2rem;
+}
+.section + .section .inner { border-top: 1px solid var(--rule); }
+.section-kicker {
+  font-family: var(--type-mono);
+  font-size: 0.87rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+}
+.section h2 {
+  font-family: var(--type-display);
+  font-weight: var(--w-display);
+  font-size: clamp(1.8rem, 3.4vw, 2.6rem);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  margin-bottom: 0.75rem;
+  max-width: 22ch;
+  text-wrap: balance;
+}
+.section h3 {
+  font-family: var(--type-display);
+  font-weight: var(--w-display);
+  font-size: clamp(1.35rem, 2.2vw, 1.7rem);
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: var(--space-xl) 0 0.6rem;
+}
+.section .lede {
+  font-family: var(--type-body);
+  font-size: 1.19rem;
+  color: var(--ink-2);
+  max-width: 62ch;
+  line-height: 1.7;
+  text-wrap: pretty;
+  hyphens: auto; -webkit-hyphens: auto;
+}
+.section .lede + .lede { margin-top: var(--space-sm); }
+.section .lede em { color: var(--ink); }
+#openprose .lede { font-size: 1.12rem; max-width: 70ch; }
+
+/* ---------------------------------------------------------------- §I anatomy
+   The hero run's directory, one row per part: the real files on the left,
+   what the part holds on the right. Files open raw. */
+.anat {
+  margin-top: var(--space-lg);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--paper-elev) 70%, transparent);
+  font-family: var(--type-mono);
+}
+.anat-head {
+  display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.25rem 1.5rem;
+  padding: 0.9rem 1.25rem;
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.92rem;
+}
+.anat-head .anat-path { color: var(--ink); font-weight: 600; }
+.anat-head .anat-meta { color: var(--ink-3); }
+.anat-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  border-bottom: 1px dotted var(--rule-mid, var(--rule));
+}
+.anat-row:last-child { border-bottom: 0; }
+.anat-files {
+  list-style: none;
+  padding: 1rem 1.25rem;
+  font-size: 0.9rem;
+  line-height: 1.75;
+  border-right: 1px solid var(--rule);
+  min-width: 0;
+}
+.anat-files li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.anat-files .d1 { padding-left: 1.4em; }
+.anat-files .d2 { padding-left: 2.8em; }
+.anat-files .d3 { padding-left: 4.2em; }
+.anat-files .dir { color: var(--ink-3); }
+.anat-files a { color: var(--ink-2); border-bottom: 1px solid var(--rule); }
+.anat-files a:hover { color: var(--accent-ink); border-bottom-color: currentColor; }
+.anat-files .err a, .anat-files .err .mark { color: var(--err-ink); }
+.anat-files .mark { font-size: 0.86em; margin-left: 0.4em; color: var(--ink-3); }
+.anat-log {
+  margin: 0.4rem 0 0;
+  padding: 0.6rem 0.8rem;
+  font-family: var(--type-mono);
+  font-size: 0.84rem;
+  line-height: 1.6;
+  color: var(--ink-2);
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+  border-radius: 4px;
+  overflow-x: auto;
+  white-space: pre;
+}
+.anat-log .err { color: var(--err-ink); }
+.anat-part { padding: 1rem 1.25rem; }
+.anat-part .num {
+  display: block;
+  font-size: 0.8rem; letter-spacing: 0.16em; font-weight: 600;
+  color: var(--accent-ink);
+}
+.anat-part h3 {
+  font-family: var(--type-display);
+  font-weight: var(--w-display);
+  font-size: 1.3rem;
+  margin: 0.15rem 0 0.35rem;
+  color: var(--ink);
+}
+.anat-part p { font-family: var(--type-body); font-size: 1.02rem; line-height: 1.6; color: var(--ink-2); max-width: 44ch; }
+@media (max-width: 760px) {
+  .anat-row { grid-template-columns: 1fr; }
+  .anat-part { order: -1; padding-bottom: 0.25rem; }
+  .anat-files { border-right: 0; padding-top: 0.5rem; }
+  .anat-head, .anat-files, .anat-part { padding-left: 1rem; padding-right: 1rem; }
+}
+
+/* ---------------------------------------------------------------- embeds
+   Poster first, live on click or tap. The poster is the view's first frame at
+   1440 × 900, so on a wide panel the live view renders at that same size and
+   scales to fit: the swap lands on the same picture. Under 900px of panel the
+   live view lays itself out at the panel's own width instead. */
+.cs-figure { margin-top: var(--space-lg); }
+.embed-live {
+  position: relative;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+  background: var(--paper-warm);
+  contain: content;
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+}
+.embed-live.natural-live { aspect-ratio: auto; }
+.embed-live .poster {
+  position: absolute; inset: 0; z-index: 2;
+  display: block; width: 100%; height: 100%;
+  padding: 0; border: 0; background: var(--paper-warm);
+  cursor: pointer; font: inherit; color: inherit;
+}
+.embed-live .poster img {
+  display: block; width: 100%; height: 100%;
+  object-fit: cover; object-position: top left;
+  transition: filter 0.25s ease;
+}
+.embed-live .poster:hover img { filter: brightness(0.97); }
+html[data-mode="dark"] .embed-live .poster img { filter: brightness(0.86); }
+.poster-hint {
+  position: absolute; left: 50%; bottom: var(--space-sm);
+  transform: translateX(-50%);
+  font-family: var(--type-mono);
+  font-size: 0.82rem; letter-spacing: 0.04em;
+  white-space: nowrap;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 0.5em 1.1em;
+  box-shadow: 0 2px 12px rgba(20, 17, 13, 0.16);
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.embed-live .poster:hover .poster-hint,
+.embed-live .poster:focus-visible .poster-hint { border-color: var(--accent-ink); color: var(--accent-ink-deep); }
+.embed-live .poster:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: -4px; }
+.embed-live.loading .poster-hint::after { content: ' …'; }
+.embed-live.live .poster { display: none; }
+.embed-live iframe {
+  position: absolute; top: 0; left: 0; z-index: 1;
+  border: 0;
+  transform-origin: top left;
+  background: var(--paper);
+  opacity: 0; transition: opacity 0.35s ease;
+}
+.embed-live iframe.ready { opacity: 1; }
+.embed-stop {
+  position: absolute; top: 8px; right: 8px; z-index: 3;
+  display: none;
+  font-family: var(--type-mono); font-size: 0.78rem; letter-spacing: 0.04em;
+  color: var(--ink-2);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 0.35em 0.9em;
+  min-height: 32px;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(20, 17, 13, 0.14);
+}
+.embed-stop:hover { color: var(--accent-ink); border-color: var(--accent-ink); }
+.embed-live.live .embed-stop { display: inline-flex; align-items: center; }
+
+.embed-bar {
+  display: flex; flex-wrap: wrap; justify-content: space-between;
+  gap: var(--space-3xs) var(--space-xs);
+  margin-top: var(--space-3xs);
+  font-family: var(--type-mono);
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
+.embed-bar .view-name { color: var(--ink-2); font-weight: 600; }
+.embed-bar a,
+.cs-figcap a { color: var(--teal); }
+html[data-mode="dark"] .embed-bar a,
+html[data-mode="dark"] .cs-figcap a { color: #6fb3a2; } /* teal lifted for dark paper, as on openprose.html */
+.cs-figcap {
+  margin-top: var(--space-2xs);
+  font-family: var(--type-mono);
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+  letter-spacing: 0.03em;
+  max-width: 78ch;
+}
+
+/* Stills: a highlighted moment of a view, as a picture that opens the view. */
+.still-pair {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
+  margin-top: var(--space-lg);
+}
+@media (max-width: 720px) { .still-pair { grid-template-columns: 1fr; } }
+.still { margin: 0; }
+.still a { display: block; }
+.still img {
+  display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; object-position: top left;
+  border: 1px solid var(--rule); border-radius: var(--radius-md);
+  transition: border-color 0.15s ease;
+}
+.still a:hover img { border-color: var(--accent-ink); }
+html[data-mode="dark"] .still img { filter: brightness(0.86); }
+.still.single { margin-top: var(--space-lg); max-width: 920px; }
+
+/* ---------------------------------------------------------------- conclusion
+   Closes on the bloom, the way openprose.html does. */
+.cta-bloom {
+  position: relative; z-index: 2;
+  width: 100%; min-height: 64vh;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  border-top: 1px solid var(--rule);
+}
+.cta-inner {
+  position: relative; z-index: 3;
+  max-width: var(--content-max); width: 100%;
+  margin: 0 auto;
+  padding: 5rem 2rem 0;
+  pointer-events: none;
+  display: flex; flex-direction: column; flex: 1 0 auto;
+}
+.cta-inner a, .cta-inner button { pointer-events: auto; }
+.cta-copy {
+  max-width: 40rem;
+  padding: 1.8rem 2rem;
+  background: rgba(248, 244, 238, 0.7);
+  border: 1px solid rgba(255, 255, 248, 0.42);
+  border-radius: 20px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+html[data-mode="dark"] .cta-copy { background: rgba(20, 18, 16, 0.6); border-color: rgba(255, 255, 248, 0.14); }
+.cta-copy h2 { margin-bottom: 0.85rem; }
+.cta-copy .lede { margin-bottom: 0; }
+.colophon-counts {
+  display: flex; flex-wrap: wrap;
+  gap: var(--space-2xs) var(--space-md);
+  margin-top: var(--space-lg);
+  font-family: var(--type-mono);
+  font-size: var(--fs-small, 0.82rem);
+  color: var(--ink-2);
+}
+.colophon-counts strong { color: var(--ink); }
+.cta-row { display: flex; gap: 0.85rem; flex-wrap: wrap; align-items: center; margin-top: var(--space-md); }
+.ui-btn {
+  display: inline-flex; align-items: center; gap: 0.55rem;
+  font-family: var(--type-mono); font-size: 0.99rem; font-weight: 500;
+  padding: 0.85rem 1.25rem; min-height: 44px;
+  border-radius: 4px; border: 1px solid;
+  touch-action: manipulation;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.ui-btn.primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.ui-btn.primary:hover { background: var(--accent-ink); color: var(--paper); border-color: var(--accent-ink); }
+.ui-btn.ghost { background: var(--paper); color: var(--ink-2); border-color: var(--rule); }
+.ui-btn.ghost:hover { color: var(--accent-ink); border-color: var(--accent-ink); }
+
+.page-foot { position: relative; z-index: 3; padding: 1.6rem 0 1.8rem; margin-top: auto; padding-top: 4rem; }
+.page-foot .inner {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 1.25rem 2rem; flex-wrap: wrap;
+  font-family: var(--type-mono); font-size: 0.87rem; line-height: 1.5;
+  color: var(--ink-3); letter-spacing: 0.04em;
+}
+.page-foot .foot-left { display: flex; align-items: center; gap: 0.75rem; }
+.page-foot .foot-mark { width: 28px; height: 28px; fill: var(--ink-3); }
+.page-foot .foot-sig { height: 18px; width: auto; opacity: 0.5; }
+html[data-mode="dark"] .page-foot .foot-sig { filter: invert(1); opacity: 0.55; }
+.page-foot .foot-right { display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; }
+.page-foot .foot-right a {
+  display: inline-flex; align-items: center;
+  min-height: 44px; padding: 0.55rem 0.4rem; margin: -0.55rem -0.4rem;
+  color: var(--ink-3);
+}
+.page-foot .foot-right a:hover { color: var(--accent-ink); }
+
+/* ---------------------------------------------------------------- narrow */
+@media (max-width: 980px) {
+  .section .inner, .cta-inner { padding-left: 1.75rem; padding-right: 1.75rem; }
+}
+@media (max-width: 640px) {
+  .brand-nav { padding: 1.1rem 1.25rem 0; }
+  .brand-logo, .mode-toggle { width: 44px; height: 44px; }
+  .brand-logo svg { width: 24px; height: 24px; }
+  .hero { padding: 5.5rem 1rem 3rem; }
+  .hero-content { padding: 1.8rem 1.4rem 1.5rem; border-radius: 32px; }
+  .section .inner { padding: 2.5rem 1.25rem; }
+  .section .lede { font-size: 1.08rem; }
+  .cta-inner { padding: 3rem 1.25rem 0; }
+  .cta-copy { padding: 1.4rem 1.25rem; }
+  .page-foot .inner { flex-direction: column; align-items: flex-start; }
+  .poster-hint { font-size: 0.74rem; bottom: 0.6rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .embed-live iframe, .embed-live .poster img, .scroll-progress, .brand-nav { transition: none; }
+}
+</style>
+    <script>/* Search early-click catcher: search-overlay.js is deferred, so on a slow network a click on the magnifier (or a data-search-query button) used to follow the href to search.html. Hold it; the overlay opens the moment it inits (it reads __searchPending). */document.addEventListener('click',function(e){if(window.__searchOverlayInit||e.defaultPrevented||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey||e.button!==0)return;var t=e.target;if(t&&t.nodeType!==1)t=t.parentNode;if(!t||!t.closest)return;var a=t.closest('[data-search-query],a[data-search-trigger],a.search-icon,a[href="search.html"],a[href="./search.html"]');if(!a)return;if(a.tagName==='A'&&!a.hasAttribute('data-search-query')&&!a.hasAttribute('data-search-trigger')&&!a.querySelector('svg line'))return;e.preventDefault();window.__searchPending=a.getAttribute('data-search-query')||'';document.documentElement.setAttribute('data-search-pending','1');},true);</script>
+</head>
+
+<body data-direction="μ"
+      data-palette="light-warm-teal"
+      data-pairing="A"
+      data-mono="plex"
+      data-layout="homepage"
+      data-mark="bloom">
+<a class="skip-link" href="#main-content">Skip to content</a>
+
+<svg width="0" height="0" style="position: absolute;" aria-hidden="true">
+    <symbol id="opStyle" viewBox="0 0 142 142">
+      <g transform="translate(4.4 4.45) scale(0.94)">
+        <path d="M73.9,24.3C79.1,23.6 84.5,23 90.4,23C113.6,23 140.5,33.9 140.5,50.7C140.5,59.6 132.4,66.6 110.8,69.7C104.4,70.4 96.9,71.5 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.9,60.9 90.1,65.3 86,61.4C83.3,58.9 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4C86.1,76.1 89.6,66.1 104.9,62.9C111.3,61.7 121,58.6 121,50.6C121,37.6 100.9,27.3 73.9,24.3Z"/>
+      </g>
+    </symbol>
+    <symbol id="opStyleType" viewBox="0 0 3840 998">
+      <g transform="matrix(1,0,0,0.461843,0,0)"><g transform="matrix(9.67009,0,0,20.9381,46.3437,-426.712)"><path d="M84.1,83.4C85.206,79.362 96.732,71.983 96.732,71.983C96.732,71.983 95.683,77.806 94.7,82.9C92.4,94.4 82.4,119.4 50,119.4C20.2,119.8 1.2,98.7 1.2,71.5C1.2,44.2 20.8,22.2 47.3,22.2C69.9,22.2 86.3,35.7 93.6,57.2C94.32,59.25 95.117,62.595 91.927,64.086C88.649,65.618 87.58,63.568 86,61.4C83.953,58.591 83.4,55.5 78.6,48.7C74.3,42.5 64.5,32.2 46.6,32.2C27.3,32.2 8.4,47.1 8.4,69.3C8.4,89.6 21.9,109.7 47.7,109.7C67,109.7 79.9,98.5 84.1,83.4Z" style="fill-rule:nonzero;"/></g><g transform="matrix(20.8204,0,0,45.081,376.732,587.069)"><path d="M47.6,19.2C47.6,23.6 45.2,28.5 39.5,28.5C36.7,28.5 34.4,27.4 33,25L33,33.071C33,33.071 32.758,33.891 32.027,34.219C31.452,34.477 29.5,34.5 29.5,34.5L29.5,10.9L30.3,10.9C31.9,10.9 32.7,12.6 32.8,14.1C34,11.8 36.2,10.2 39.3,10.2C44.4,10.2 47.6,14 47.6,19.2ZM44,19.4C44,16.3 42.3,12.9 38.5,12.9C35.1,12.9 32.9,15.6 32.9,19.4C32.9,22.5 34.8,25.7 38.5,25.7C41.7,25.7 44,23 44,19.4Z" style="fill-rule:nonzero;"/></g><g transform="matrix(21.5033,0,0,46.5599,334.885,571.985)"><path d="M66.5,23.7C65.9,25.9 63.4,28.5 58.9,28.5C53.5,28.5 50.2,25 49.2,20.6C48.6,14.5 52.3,10.2 58.4,10.2C62.1,10.2 66.4,12 66.4,15.8C66.4,18.4 64.1,19.8 59.2,20.4C56.7,20.7 54.8,21.3 54.8,23.1C54.8,25.1 57.2,26 59.6,26C61.9,26.1 64.6,25.3 66.5,23.7ZM53.3,22.7C54.2,17.1 61.7,19.1 61.7,15.5C61.7,13.8 60.2,12.7 58.1,12.7C55.5,12.7 52.6,15 52.6,19.1C52.6,20.4 52.9,21.8 53.3,22.7Z" style="fill-rule:nonzero;"/></g><g transform="matrix(21.3153,0,0,46.1527,2366.82,576.138)"><path d="M66.5,23.7C65.9,25.9 63.4,28.5 58.9,28.5C53.5,28.5 50.2,25 49.2,20.6C48.6,14.5 52.3,10.2 58.4,10.2C62.1,10.2 66.4,12 66.4,15.8C66.4,18.4 64.1,19.8 59.2,20.4C56.7,20.7 54.8,21.3 54.8,23.1C54.8,25.1 57.2,26 59.6,26C61.9,26.1 64.6,25.3 66.5,23.7ZM53.3,22.7C54.2,17.1 61.7,19.1 61.7,15.5C61.7,13.8 60.2,12.7 58.1,12.7C55.5,12.7 52.6,15 52.6,19.1C52.6,20.4 52.9,21.8 53.3,22.7Z" style="fill-rule:nonzero;"/></g><g transform="matrix(20.8204,0,0,47.1462,359.825,566.004)"><path d="M83.9,28.2C81.9,28.2 80.5,27.7 80.5,24.8L80.5,17.9C80.5,14.6 79.2,12.8 76.6,12.8C74.1,12.8 72,14.6 72,19.1L72,28.2L68.6,28.2L68.6,10.8L69,10.8C70.6,10.8 71.6,12.3 71.7,14.1C72.7,11.9 74.6,10.2 77.7,10.2C81.9,10.2 83.9,12.9 83.9,17.4L83.9,28.2Z" style="fill-rule:nonzero;"/></g><g transform="matrix(21.747,0,0,47.0874,150.341,566.604)"><path d="M117.8,10.5C118.4,11.9 117.2,13.3 115.3,13.3C112.1,13.1 110.1,15.2 110.1,19.3L110.1,28.2L106.6,28.2L106.6,10.9L107.3,10.9C108.9,10.9 109.7,12.4 109.8,14.4C110.8,11.9 112.8,10.2 115.4,10.2C116.1,10.2 117,10.3 117.8,10.5Z" style="fill-rule:nonzero;"/></g><g transform="matrix(21.4007,0,0,46.3376,179.308,574.252)"><path d="M135.6,19.4C135.6,23.8 132.7,28.5 126.4,28.5C120.6,28.5 117.1,24.5 117.1,19.4C117.1,14.8 120.3,10.2 126.3,10.2C131.8,10.2 135.6,14 135.6,19.4ZM132.1,19.4C132.1,15.9 129.9,12.9 126.4,12.9C122.9,12.9 120.5,15.6 120.5,19.4C120.5,22.7 122.7,25.7 126.3,25.7C129.7,25.8 132.1,23 132.1,19.4Z" style="fill-rule:nonzero;"/></g><g transform="matrix(26.9157,0,0,71.5109,-151.465,-124.38)"><path d="M86,2.4C83.4,2.7 81.1,3.6 82,5.9C82.5,7.2 85.4,8.5 87.5,12.9C88.6,15.2 89.463,15.088 88.663,12.588C86.263,6.788 83.477,6.006 84.477,4.406C84.977,3.606 99.303,3.255 99.1,9.9C99.018,12.599 96.5,13.8 93.3,14.6C91.4,15.1 88.4,16.7 88.1,19.9C87.9,22.4 88,24.1 86,28.2C87.7,28.4 89.6,27.9 90.5,26.7C91.8,25.1 91.6,21.1 91.7,19.5C91.9,17.6 93.6,16.9 95.4,16.6C99.9,15.7 104.9,14.7 104.9,10C104.9,4.4 96.9,1.4 86,2.4Z" style="fill-rule:nonzero;"/></g><g transform="matrix(20.4887,0,0,44.3629,217.988,633.895)"><path d="M144.6,14.2C144.6,12.9 146,11.7 147.9,11.7C151.2,11.7 152.1,14.4 153.9,14.4C154.6,14.4 155.2,13.6 155,13C154.6,11.1 151.5,9.3 148.5,9.3C145.5,9.3 141,10.4 141,14.4C141,20.9 152.3,18.6 152.3,23.1C152.3,25.3 149.6,25.9 148.1,25.8C144,25.6 140.266,22.027 140.266,22.027C140.266,22.027 140.3,23.55 140.3,23.9C140.3,25.6 143.1,28.4 148.3,28.4C152.1,28.4 155.6,27 155.6,23.1C155.6,16.7 144.6,18.4 144.6,14.2Z" style="fill-rule:nonzero;"/></g></g>
+    </symbol>
+</svg>
+
+<!-- jhcom site nav: slides in once the hero is scrolled past (scripts/shared.js).
+     It precedes .scroll-progress and .brand-nav, which sibling selectors push
+     clear of the bar. -->
+<nav id="nav" role="navigation" aria-label="Main navigation">
+    <div class="nav-inner">
+        <jh-nav current="design"></jh-nav>
+        <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+        <ul class="nav-right">
+            <li><a href="#problem">Problem</a></li>
+            <li><a href="#reframe">Reframe</a></li>
+            <li><a href="#strata">Strata</a></li>
+            <li><a href="#four-ways">Four ways</a></li>
+            <li><a href="#scaling">Scaling</a></li>
+            <li><a href="#document">Document</a></li>
+        </ul>
+    </div>
+</nav>
+
+<div class="scroll-progress" aria-hidden="true"></div>
+
+<nav class="brand-nav" aria-label="Brand">
+  <button class="brand-logo" id="brand-logo" type="button" aria-label="Switch to dark mode">
+    <svg viewBox="0 0 142 142" aria-hidden="true"><use href="#opStyle"/></svg>
+  </button>
+  <!-- .jh-theme-btn: this IS the site theme button on this page (THEME.foreign). -->
+  <button class="mode-toggle jh-theme-btn" id="mode-toggle" type="button" aria-label="Toggle dark mode">
+    <span class="theme-glyph" aria-hidden="true">◐</span>
+  </button>
+</nav>
+
+<main id="main-content" tabindex="-1" itemscope itemtype="https://schema.org/Article">
+<article itemprop="articleBody">
+
+<section class="hero" id="top">
+  <canvas class="bloom-canvas" id="bloom-hero" aria-hidden="true"></canvas>
+  <div class="hero-content">
+    <svg class="hero-logotype" viewBox="0 0 3840 998" role="img" aria-label="OpenProse">
+      <use href="#opStyleType"/>
+    </svg>
+    <h1 itemprop="headline">Making agent runs <em>legible</em>.</h1>
+    <p class="hero-synthetic"><span class="synthetic-tag">synthetic</span>Every trace on this page is synthetic.</p>
+    <p class="hero-sub">OpenProse × JHDesign · Traces</p>
+  </div>
+</section>
+
+<section class="section" id="openprose">
+  <div class="inner">
+    <div class="section-kicker">OpenProse</div>
+    <p class="lede">OpenProse programs are contracts. Each one says what it requires, what it ensures, and what to do when things go sideways. Agents run them on a cadence and write every step to disk.</p>
+    <p class="lede">Dan Barrett, OpenProse's CEO, hired me for two tracks. The brand is <a href="openprose.html">the first case study</a>. This page is the second track: views that make agent runs legible.</p>
+    <p class="lede">I designed these views on real customer runs, which stay private. Here every view reads one invented world. <em>Saltlight Aquarium</em> is a public aquarium with eleven exhibits. Its agents keep five responsibilities current. Five other organizations make up the fleet around it.</p>
+    <p class="lede">The week is June 22 to 28, 2026. Most views center on one run: Friday's livestock health memo.</p>
+  </div>
+</section>
+
+<section class="section" id="problem">
+  <div class="inner">
+    <div class="section-kicker">I The Problem</div>
+    <h2>The whole run is on disk. <em>Nobody</em> sees it.</h2>
+    <p class="lede">Friday's memo run left a folder behind. It holds the program, six services, the bindings between them, and a private workspace for each service. A log records every step. Everything that happened is in there. Reading it takes a terminal and some patience.</p>
+
+    <figure class="anat" aria-labelledby="anat-cap">
+      <div class="anat-head">
+        <span class="anat-path">runs/20260626-143012-09b3c9/</span>
+        <span class="anat-meta">livestock-health-memo · Fri Jun 26 · 11m 36s · synthetic</span>
+      </div>
+
+      <div class="anat-row">
+        <ul class="anat-files">
+          <li><a href="openprose-traces/data/synthetic/runs/20260626-143012-09b3c9/root.prose.md" target="_blank" rel="noopener">root.prose.md</a></li>
+        </ul>
+        <div class="anat-part"><span class="num">01</span><h3>Program</h3><p>The contract: what the run requires, what it ensures, and its strategies.</p></div>
+      </div>
+
+      <div class="anat-row">
+        <ul class="anat-files">
+          <li><span class="dir">sources/</span></li>
+          <li class="d1"><a href="openprose-traces/data/synthetic/runs/20260626-143012-09b3c9/sources/roster-profiler.prose.md" target="_blank" rel="noopener">roster-profiler.prose.md</a></li>
+          <li class="d1"><a href="openprose-traces/data/synthetic/runs/20260626-143012-09b3c9/sources/behavior-scout.prose.md" target="_blank" rel="noopener">behavior-scout.prose.md</a></li>
+          <li class="d1"><a href="openprose-traces/data/synthetic/runs/20260626-143012-09b3c9/sources/feeding-scout.prose.md" target="_blank" rel="noopener">feeding-scout.prose.md</a></li>
+          <li class="d1"><a href="openprose-traces/data/synthetic/runs/20260626-143012-09b3c9/sources/photo-scout.prose.md" target="_blank" rel="noopener">photo-scout.prose.md</a></li>
+          <li class="d1"><a href="openprose-traces/data/synthetic/runs/20260626-143012-09b3c9/sources/water-scout.prose.md" target="_blank" rel="noopener">water-scout.prose.md</a></li>
+          <li class="d1"><a href="openprose-traces/data/synthetic/runs/20260626-143012-09b3c9/sources/husbandry-compiler.prose.md" target="_blank" rel="noopener">husbandry-compiler.prose.md</a></li>
+        </ul>
+        <div class="anat-part"><span class="num">02</span><h3>Services</h3><p>The six services it resolved: a profiler, four scouts and a compiler.</p></div>
+      </div>
+
+      <div class="anat-row">
+        <ul class="anat-files">
+          <li><a href="openprose-traces/data/synthetic/runs/20260626-143012-09b3c9/forme.manifest.json" target="_blank" rel="noopener">forme.manifest.json</a></li>
+          <li><a href="openprose-traces/data/synthetic/runs/20260626-143012-09b3c9/vm.log.md" target="_blank" rel="noopener">vm.log.md</a></li>
+          <li><a href="openprose-traces/data/synthetic/runs/20260626-143012-09b3c9/timing.json" target="_blank" rel="noopener">timing.json</a></li>
+          <li aria-hidden="true"><pre class="anat-log">6→ ∥start behavior-scout,feeding-scout,photo-scout,water-scout
+<span class="err">6c→ photo-scout ✗ export-incomplete</span>
+7→ photo-scout ⇒ image-reader (delegate: req-001)
+7→ photo-scout ⟳ (resumed)
+8→ photo-scout ✓</pre></li>
+        </ul>
+        <div class="anat-part"><span class="num">03</span><h3>Record</h3><p>The wiring, the step log, and how long each step took.</p></div>
+      </div>
+
+      <div class="anat-row">
+        <ul class="anat-files">
+          <li><span class="dir">bindings/</span></li>
+          <li class="d1"><span class="dir">caller/</span></li>
+          <li class="d2"><a href="openprose-traces/data/synthetic/runs/20260626-143012-09b3c9/bindings/caller/week_of.md" target="_blank" rel="noopener">week_of.md</a></li>
+          <li class="d2"><a href="openprose-traces/data/synthetic/runs/20260626-143012-09b3c9/bindings/caller/keeper_notes.md" target="_blank" rel="noopener">keeper_notes.md</a></li>
+          <li class="d2"><a href="openprose-traces/data/synthetic/runs/20260626-143012-09b3c9/bindings/caller/tank_roster.md" target="_blank" rel="noopener">tank_roster.md</a></li>
+          <li class="d2"><a href="openprose-traces/data/synthetic/runs/20260626-143012-09b3c9/bindings/caller/photo_survey.md" target="_blank" rel="noopener">photo_survey.md</a></li>
+          <li class="d1"><span class="dir">roster-profiler/</span> <a href="openprose-traces/data/synthetic/runs/20260626-143012-09b3c9/bindings/roster-profiler/watchlist.md" target="_blank" rel="noopener">watchlist.md</a></li>
+          <li class="d1"><span class="dir">behavior-scout/</span> <a href="openprose-traces/data/synthetic/runs/20260626-143012-09b3c9/bindings/behavior-scout/behavior.md" target="_blank" rel="noopener">behavior.md</a></li>
+          <li class="d1"><span class="dir">feeding-scout/</span> <a href="openprose-traces/data/synthetic/runs/20260626-143012-09b3c9/bindings/feeding-scout/refusals.md" target="_blank" rel="noopener">refusals.md</a></li>
+          <li class="d1"><span class="dir">photo-scout/</span> <a href="openprose-traces/data/synthetic/runs/20260626-143012-09b3c9/bindings/photo-scout/photos.md" target="_blank" rel="noopener">photos.md</a></li>
+          <li class="d1"><span class="dir">water-scout/</span> <a href="openprose-traces/data/synthetic/runs/20260626-143012-09b3c9/bindings/water-scout/water.md" target="_blank" rel="noopener">water.md</a></li>
+          <li class="d1"><span class="dir">husbandry-compiler/</span> <a href="openprose-traces/data/synthetic/runs/20260626-143012-09b3c9/bindings/husbandry-compiler/memo.md" target="_blank" rel="noopener">memo.md</a></li>
+        </ul>
+        <div class="anat-part"><span class="num">04</span><h3>Bindings</h3><p>What crosses between services: the caller's four inputs and each service's public output.</p></div>
+      </div>
+
+      <div class="anat-row">
+        <ul class="anat-files">
+          <li><span class="dir">workspace/</span></li>
+          <li class="d1"><span class="dir">photo-scout/</span></li>
+          <li class="d2 err"><a href="openprose-traces/data/synthetic/runs/20260626-143012-09b3c9/workspace/photo-scout/__error.md" target="_blank" rel="noopener">__error.md</a><span class="mark">✗ export-incomplete</span></li>
+          <li class="d2"><span class="dir">__delegate/image-reader/</span></li>
+          <li class="d3"><a href="openprose-traces/data/synthetic/runs/20260626-143012-09b3c9/workspace/photo-scout/__delegate/image-reader/req-001.md" target="_blank" rel="noopener">req-001.md</a></li>
+          <li class="d3"><a href="openprose-traces/data/synthetic/runs/20260626-143012-09b3c9/workspace/photo-scout/__delegate/image-reader/req-001-response.md" target="_blank" rel="noopener">req-001-response.md</a></li>
+          <li class="d2"><a href="openprose-traces/data/synthetic/runs/20260626-143012-09b3c9/workspace/photo-scout/photos.md" target="_blank" rel="noopener">photos.md</a></li>
+          <li class="d1"><span class="dir">roster-profiler/</span> <a href="openprose-traces/data/synthetic/runs/20260626-143012-09b3c9/workspace/roster-profiler/watchlist.md" target="_blank" rel="noopener">watchlist.md</a></li>
+          <li class="d1"><span class="dir">behavior-scout/</span> <a href="openprose-traces/data/synthetic/runs/20260626-143012-09b3c9/workspace/behavior-scout/behavior.md" target="_blank" rel="noopener">behavior.md</a></li>
+          <li class="d1"><span class="dir">feeding-scout/</span> <a href="openprose-traces/data/synthetic/runs/20260626-143012-09b3c9/workspace/feeding-scout/refusals.md" target="_blank" rel="noopener">refusals.md</a></li>
+          <li class="d1"><span class="dir">water-scout/</span> <a href="openprose-traces/data/synthetic/runs/20260626-143012-09b3c9/workspace/water-scout/water.md" target="_blank" rel="noopener">water.md</a></li>
+          <li class="d1"><span class="dir">husbandry-compiler/</span> <a href="openprose-traces/data/synthetic/runs/20260626-143012-09b3c9/workspace/husbandry-compiler/memo.md" target="_blank" rel="noopener">memo.md</a></li>
+        </ul>
+        <div class="anat-part"><span class="num">05</span><h3>Workspace</h3><p>Each service's private files. The photo scout's error and its delegate's request live here.</p></div>
+      </div>
+    </figure>
+    <p class="cs-figcap" id="anat-cap">The hero run's directory, laid out the way OpenProse v0.14 writes one. Every file opens raw.</p>
+  </div>
+</section>
+
+<section class="section" id="reframe">
+  <div class="inner">
+    <div class="section-kicker">II The Reframe</div>
+    <h2>Are my <em>responsibilities</em> handled?</h2>
+    <p class="lede">A customer asks one question of their agents. Are my responsibilities handled? So the first view answers in one paragraph.</p>
+    <p class="lede">Sparklines sit inside the sentences. Under the paragraph, a ledger lists each responsibility with its cadence and its last delivery. The latest delivery opens the run itself, in the next view.</p>
+    <figure class="cs-figure">
+      <div class="embed-live" data-view="run-story" data-name="Run story">
+        <button class="poster" type="button" aria-label="Run the Run story view live">
+          <img src="openprose-traces/posters/run-story.webp" alt="The run story view: one paragraph on Saltlight Aquarium's week 26, with sparklines inline, above the ledger of its five responsibilities." width="1600" height="1000" loading="lazy" decoding="async">
+          <span class="poster-hint">▶ run it live</span>
+        </button>
+      </div>
+      <figcaption class="embed-bar"><span><span class="view-name">Run story</span> · Saltlight's week 26 as one paragraph and a ledger · synthetic</span><a href="openprose-traces/viz/run-story.html" target="_blank" rel="noopener">open full view ↗</a></figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="section" id="strata">
+  <div class="inner">
+    <div class="section-kicker">III Strata</div>
+    <h2>One run in five <em>strata</em>.</h2>
+    <p class="lede">Friday's memo run took 11m 36s. The strata view stacks it by phase: inputs, profile, scouts, compile, deliver. Three scouts were back in under four minutes. The photo scout failed on a late camera export.</p>
+    <p class="lede">The contract had a strategy for exactly that. Let the other scouts finish, retry the photo scout once, and name the missing photos. The run did all three. A delegate called image-reader read the late set, and the photo scout recovered.</p>
+    <p class="lede">The memo shipped at 07:41 PT with three flags and one photo short. The inspector re-read the run against its contract and passed 7 of 8 checks.</p>
+    <figure class="cs-figure">
+      <div class="embed-live" data-view="run-strata" data-name="Run strata" data-min-width="700">
+        <button class="poster" type="button" aria-label="Run the Run strata view live">
+          <img src="openprose-traces/posters/run-strata.webp" alt="The run strata view on its deliver stratum: the memo with its flags and actions, and the inspector's 7 of 8 checks beside it." width="1600" height="1000" loading="lazy" decoding="async">
+          <span class="poster-hint">▶ run it live</span>
+        </button>
+      </div>
+      <figcaption class="embed-bar"><span><span class="view-name">Run strata</span> · Friday's memo run in five strata · synthetic</span><a href="openprose-traces/viz/run-strata.html" target="_blank" rel="noopener">open full view ↗</a></figcaption>
+    </figure>
+    <figure class="still single">
+      <a href="openprose-traces/viz/run-strata.html" target="_blank" rel="noopener"><img src="openprose-traces/posters/run-strata-tilted.webp" alt="The same run tilted into 3D: five strata as stacked floors, each service on its phase, edges to what it read." width="1600" height="1000" loading="lazy" decoding="async"></a>
+      <figcaption class="cs-figcap">Tilt the stack and each phase becomes a floor. Services sit on their phase, wired to what they read.</figcaption>
+    </figure>
+
+    <h3>Hearing a run</h3>
+    <p class="lede">The audio view plays the run as music. Each stratum sits an octave above the last. Each kind of node takes a note of one chord. Played from inputs to delivery, the run climbs as an arpeggio.</p>
+    <figure class="cs-figure">
+      <div class="embed-live" data-view="strata-audio" data-name="Strata audio">
+        <button class="poster" type="button" aria-label="Run the Strata audio view live">
+          <img src="openprose-traces/posters/strata-audio.webp" alt="The strata audio view: the run's five strata in 3D, with a play control at the top." width="1600" height="1000" loading="lazy" decoding="async">
+          <span class="poster-hint">▶ run it live · sound on</span>
+        </button>
+      </div>
+      <figcaption class="embed-bar"><span><span class="view-name">Strata audio</span> · the same run, played · synthetic · sound on</span><a href="openprose-traces/viz/strata-audio.html" target="_blank" rel="noopener">open full view ↗</a></figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="section" id="four-ways">
+  <div class="inner">
+    <div class="section-kicker">IV One Run, Four Ways</div>
+    <h2>The same run, <em>four</em> ways at once.</h2>
+    <p class="lede">The codex shows the run four ways at once. A paragraph tells it. A file tree lists it. A 3D graph draws it. A panel details whatever you pick. Click a node in any of them and the other three follow.</p>
+    <figure class="cs-figure">
+      <div class="embed-live" data-view="run-codex" data-name="Run codex">
+        <button class="poster" type="button" aria-label="Run the Run codex view live">
+          <img src="openprose-traces/posters/run-codex.webp" alt="The run codex: a file tree, the run as one paragraph over a 3D graph, and a detail panel on the deliver stratum." width="1600" height="1000" loading="lazy" decoding="async">
+          <span class="poster-hint">▶ run it live</span>
+        </button>
+      </div>
+      <figcaption class="embed-bar"><span><span class="view-name">Run codex</span> · four synced views of one run · synthetic</span><a href="openprose-traces/viz/run-codex.html" target="_blank" rel="noopener">open full view ↗</a></figcaption>
+    </figure>
+    <p class="lede" style="margin-top: var(--space-xl);">The trees view lays the same run out as a delegation tree beside a force graph. The photo scout's detour to its delegate shows up as a branch.</p>
+    <figure class="cs-figure">
+      <div class="embed-live" data-view="trace-trees-graph" data-name="Trace trees">
+        <button class="poster" type="button" aria-label="Run the Trace trees view live">
+          <img src="openprose-traces/posters/trace-trees-graph.webp" alt="The trace trees view: the run's nodes as a tree by stratum, a detail panel, and a force graph of the same run." width="1600" height="1000" loading="lazy" decoding="async">
+          <span class="poster-hint">▶ run it live</span>
+        </button>
+      </div>
+      <figcaption class="embed-bar"><span><span class="view-name">Trace trees</span> · the run as a delegation tree · synthetic</span><a href="openprose-traces/viz/trace-trees-graph.html" target="_blank" rel="noopener">open full view ↗</a></figcaption>
+    </figure>
+    <div class="still-pair">
+      <figure class="still">
+        <a href="openprose-traces/viz/run-codex.html" target="_blank" rel="noopener"><img src="openprose-traces/posters/run-codex-photo-scout.webp" alt="The run codex with the photo scout selected." width="1600" height="1000" loading="lazy" decoding="async"></a>
+      </figure>
+      <figure class="still">
+        <a href="openprose-traces/viz/trace-trees-graph.html" target="_blank" rel="noopener"><img src="openprose-traces/posters/trace-trees-graph-photo-scout.webp" alt="The trace trees view with the photo scout's delegation selected." width="1600" height="1000" loading="lazy" decoding="async"></a>
+      </figure>
+    </div>
+    <p class="cs-figcap">The photo scout selected, in the codex and in the trees.</p>
+  </div>
+</section>
+
+<section class="section" id="scaling">
+  <div class="inner">
+    <div class="section-kicker">V Scaling Up</div>
+    <h2>One organization, then the <em>fleet</em>.</h2>
+    <p class="lede">Saltlight's agents made 21 runs in week 26. The run atrium sets every one of them in a single 3D room, by program and by day. Friday's memo links back to the codex.</p>
+    <figure class="cs-figure">
+      <div class="embed-live" data-view="run-atrium" data-name="Run atrium">
+        <button class="poster" type="button" aria-label="Run the Run atrium view live">
+          <img src="openprose-traces/posters/run-atrium.webp" alt="The run atrium: Saltlight's week of runs as blocks in a 3D room, programs on one axis and days on another, Friday's memo selected." width="1600" height="1000" loading="lazy" decoding="async">
+          <span class="poster-hint">▶ run it live</span>
+        </button>
+      </div>
+      <figcaption class="embed-bar"><span><span class="view-name">Run atrium</span> · Saltlight's week in one room · synthetic</span><a href="openprose-traces/viz/run-atrium.html" target="_blank" rel="noopener">open full view ↗</a></figcaption>
+    </figure>
+
+    <p class="lede" style="margin-top: var(--space-xl);">The periscope reads all of June for four programs: 70 runs, 65 of them over the bar. It cuts the month three ways: a band per program, a slice per day, a strip per run.</p>
+    <figure class="cs-figure">
+      <div class="embed-live" data-view="periscope" data-name="Periscope">
+        <button class="poster" type="button" aria-label="Run the Periscope view live">
+          <img src="openprose-traces/posters/periscope.webp" alt="The periscope: four programs across June 2026 as sparklines, one point per day." width="1600" height="1000" loading="lazy" decoding="async">
+          <span class="poster-hint">▶ run it live</span>
+        </button>
+      </div>
+      <figcaption class="embed-bar"><span><span class="view-name">Periscope</span> · June 2026, four programs · synthetic</span><a href="openprose-traces/viz/periscope.html" target="_blank" rel="noopener">open full view ↗</a></figcaption>
+    </figure>
+
+    <p class="lede" style="margin-top: var(--space-xl);">Five more organizations make up the fleet: Paperwhale Design, Graywind Observatory, Windfall Row Cidery, Ninefold Press, and OpenProse itself. The fleet atrium is the same room at fleet scale.</p>
+    <figure class="cs-figure">
+      <div class="embed-live" data-view="fleet-atrium" data-name="Fleet atrium">
+        <button class="poster" type="button" aria-label="Run the Fleet atrium view live">
+          <img src="openprose-traces/posters/fleet-atrium.webp" alt="The fleet atrium: every organization's runs for the week in one 3D room, clustered by organization." width="1600" height="1000" loading="lazy" decoding="async">
+          <span class="poster-hint">▶ run it live</span>
+        </button>
+      </div>
+      <figcaption class="embed-bar"><span><span class="view-name">Fleet atrium</span> · six organizations, one week · synthetic</span><a href="openprose-traces/viz/fleet-atrium.html" target="_blank" rel="noopener">open full view ↗</a></figcaption>
+    </figure>
+
+    <p class="lede" style="margin-top: var(--space-xl);">The radar and the heatmap score every program on four dimensions. They are runtime fidelity, task effectiveness, contract satisfaction and domain score. One visual language holds from one run to six organizations.</p>
+    <figure class="cs-figure">
+      <div class="embed-live" data-view="confidence-radar" data-name="Confidence radar">
+        <button class="poster" type="button" aria-label="Run the Confidence radar view live">
+          <img src="openprose-traces/posters/confidence-radar.webp" alt="The confidence radar: one card per program with a four-axis radar and its dimension scores." width="1600" height="1000" loading="lazy" decoding="async">
+          <span class="poster-hint">▶ run it live</span>
+        </button>
+      </div>
+      <figcaption class="embed-bar"><span><span class="view-name">Confidence radar</span> · four dimensions per program · synthetic</span><a href="openprose-traces/viz/confidence-radar.html" target="_blank" rel="noopener">open full view ↗</a></figcaption>
+    </figure>
+    <figure class="cs-figure">
+      <div class="embed-live" data-view="fleet-heatmap" data-name="Fleet heatmap">
+        <button class="poster" type="button" aria-label="Run the Fleet heatmap view live">
+          <img src="openprose-traces/posters/fleet-heatmap.webp" alt="The fleet heatmap: one row per program, a heat cell for each of the four dimensions, grouped by organization." width="1600" height="1000" loading="lazy" decoding="async">
+          <span class="poster-hint">▶ run it live</span>
+        </button>
+      </div>
+      <figcaption class="embed-bar"><span><span class="view-name">Fleet heatmap</span> · every program, every dimension · synthetic</span><a href="openprose-traces/viz/fleet-heatmap.html" target="_blank" rel="noopener">open full view ↗</a></figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="section" id="document">
+  <div class="inner">
+    <div class="section-kicker">VI A Run as a Document</div>
+    <h2>A run, read like a <em>document</em>.</h2>
+    <p class="lede">The last view reads four of Saltlight's runs as an essay with charts. Each run gets a flow diagram, a radar and a few sentences. Every diagram comes from a real chart-library primitive. The layout is data.</p>
+    <figure class="cs-figure">
+      <div class="embed-live" data-view="syntax-charted" data-name="Syntax charted">
+        <button class="poster" type="button" aria-label="Run the Syntax charted view live">
+          <img src="openprose-traces/posters/syntax-charted.webp" alt="The syntax charted view: four programs' score trends as small multiples over an essay about the run as a graph." width="1600" height="1000" loading="lazy" decoding="async">
+          <span class="poster-hint">▶ run it live</span>
+        </button>
+      </div>
+      <figcaption class="embed-bar"><span><span class="view-name">Syntax charted</span> · four runs as a charted document · synthetic</span><a href="openprose-traces/viz/syntax-charted.html" target="_blank" rel="noopener">open full view ↗</a></figcaption>
+    </figure>
+    <figure class="still single">
+      <a href="openprose-traces/viz/syntax-charted.html" target="_blank" rel="noopener"><img src="openprose-traces/posters/syntax-charted-memo.webp" alt="Friday's memo run as a flow diagram with a radar and a short paragraph, beside the supplier scan." width="1600" height="1000" loading="lazy" decoding="async"></a>
+      <figcaption class="cs-figcap">Friday's memo as a flow. Four scouts, one retry, 7 of 8 checks.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="cta-bloom section" id="cta">
+  <canvas class="bloom-canvas" id="bloom-cta" aria-hidden="true"></canvas>
+  <div class="cta-inner">
+    <div class="cta-copy">
+      <div class="section-kicker">VII Conclusion</div>
+      <h2>The views are <em>disposable</em>.</h2>
+      <p class="lede">Eleven views drew one invented week. Any of them could be redrawn tomorrow. The run record is what lasts: the contract, the log and the files on disk. Every view here is one reading of that record.</p>
+      <div class="colophon-counts">
+        <span><strong>11</strong> views</span>
+        <span><strong>5</strong> programs</span>
+        <span><strong>21</strong> runs</span>
+        <span><strong>6</strong> organizations</span>
+        <span><strong>1</strong> photo short</span>
+      </div>
+      <div class="cta-row">
+        <a class="ui-btn primary" href="openprose.html"><span>The brand case study</span></a>
+        <a class="ui-btn ghost" href="https://prose.md/" target="_blank" rel="noopener noreferrer"><span>OpenProse ↗</span></a>
+      </div>
+    </div>
+    <footer class="page-foot">
+      <div class="inner">
+        <div class="foot-left">
+          <img class="foot-sig" src="openprose/Assets/JHsig.svg" alt="JH signature" decoding="async">
+          <span>×</span>
+          <svg class="foot-mark" viewBox="0 0 142 142" aria-hidden="true"><use href="#opStyle"/></svg>
+          <span>OpenProse · 2026</span>
+        </div>
+        <div class="foot-right">
+          <a href="#problem">Problem</a>
+          <a href="#strata">Strata</a>
+          <a href="#scaling">Scaling</a>
+          <a href="openprose.html">Brand</a>
+        </div>
+      </div>
+    </footer>
+  </div>
+</section>
+</article>
+</main>
+
+<script>
+/* Theme: one preference, two attributes (see openprose.html). jh-chrome.js
+   owns data-theme and persistence; this block mirrors it onto data-mode. */
+(function () {
+  var KEY  = 'jh-theme';
+  var btn  = document.getElementById('mode-toggle');
+  var logo = document.getElementById('brand-logo');
+  if (!btn) return;
+  var glyph = btn.querySelector('.theme-glyph') || btn;
+  function applyMode(m, persist) {
+    document.documentElement.setAttribute('data-mode', m);
+    var label = m === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+    if (glyph) glyph.textContent = m === 'dark' ? '◑' : '◐';
+    btn.setAttribute('aria-label', label);
+    if (logo) logo.setAttribute('aria-label', label);
+    if (persist) { try { localStorage.setItem(KEY, m); } catch (e) {} }
+  }
+  applyMode(document.documentElement.getAttribute('data-mode') === 'dark' ? 'dark' : 'light', false);
+  window.addEventListener('jh-theme-change', function (e) {
+    var m = (e.detail && e.detail.theme) === 'light' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-mode', m);
+    if (logo) logo.setAttribute('aria-label', m === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+  });
+  function flip() {
+    if (window.JH_THEME) { window.JH_THEME.toggle(); return; }
+    var cur = document.documentElement.getAttribute('data-mode') === 'dark' ? 'dark' : 'light';
+    applyMode(cur === 'dark' ? 'light' : 'dark', true);
+  }
+  btn.addEventListener('click', flip);
+  if (logo) logo.addEventListener('click', flip);
+})();
+</script>
+
+<script>
+(function () {
+  var bar = document.querySelector('.scroll-progress');
+  if (!bar) return;
+  var ticking = false;
+  function update() {
+    var doc = document.documentElement;
+    var max = (doc.scrollHeight - window.innerHeight) || 1;
+    var p = Math.min(1, Math.max(0, (window.scrollY || doc.scrollTop || 0) / max));
+    bar.style.setProperty('--p', p.toFixed(4));
+    ticking = false;
+  }
+  function onScroll() { if (!ticking) { ticking = true; requestAnimationFrame(update); } }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll, { passive: true });
+  update();
+})();
+</script>
+
+<script>
+/* μ Bloom: the wave field from openprose.html's closing section, made into one
+   function so the hero and the conclusion each run their own canvas. A canvas
+   steps only while its section is on screen and the tab is visible. Under
+   prefers-reduced-motion it starts as blank paper and moves only where it is
+   touched. */
+(function () {
+  'use strict';
+  var REDUCE = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  var cfg = {
+    CELL: 8, C2: 0.24, DAMP_PREV: 0.995, DECAY: 0.9864, DEAD: 0.0006, ANTISTRIPE: 0.0001,
+    SEED_THR: 0.40, SEED_PROB: 0.0006, SEED_RADIUS: 8, SEED_AMP: 1.00,
+    CLICK_RADIUS: 40, CLICK_PEAK: 1.6, DRAG_PULSE_DIST: 48,
+    DROP_INTERVAL_MIN: 5000, DROP_INTERVAL_VAR: 7500,
+    DROP_RADIUS_MIN: 3, DROP_RADIUS_VAR: 13, DROP_PEAK_MIN: 0.38, DROP_PEAK_VAR: 0.44,
+    STABLE_AMP: 0.30, STABLE_LAP: 0.012, STABLE_CLICK_MULT: 2.5
+  };
+
+  var WARM, COOL, FADE, STABLE;
+  function readPaletteColors() {
+    var cs = getComputedStyle(document.body || document.documentElement);
+    function rgbOf(name, fallback) {
+      var v = cs.getPropertyValue(name).trim();
+      if (v.charAt(0) !== '#') return fallback;
+      var h = v.slice(1);
+      if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+      return [parseInt(h.substr(0, 2), 16) | 0, parseInt(h.substr(2, 2), 16) | 0, parseInt(h.substr(4, 2), 16) | 0];
+    }
+    var w = rgbOf('--teal', [58, 122, 106]);
+    var c = rgbOf('--ink-3', [106, 100, 92]);
+    var f = rgbOf('--paper', [245, 240, 232]);
+    WARM   = 'rgba(' + w.join(', ') + ', ';
+    COOL   = 'rgba(' + c.join(', ') + ', ';
+    STABLE = WARM;
+    FADE   = 'rgba(' + f.join(', ') + ', 0.16)';
+  }
+  readPaletteColors();
+  var fields = [];
+  if (typeof MutationObserver === 'function') {
+    new MutationObserver(function () {
+      readPaletteColors();
+      fields.forEach(function (fd) { fd.wash(); });
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-mode'] });
+  }
+
+  function makeField(canvas, host) {
+    var ctx = canvas && canvas.getContext('2d');
+    if (!ctx || !host) return;
+    var W = 0, H = 0, DPR = 1, cellPx = 0, cols = 0, rows = 0;
+    var u_curr = null, u_prev = null, u_next = null;
+    var activated = false, holding = false, holdX = 0, holdY = 0, lastEmitX = 0, lastEmitY = 0, DRAG_SQ = 0;
+    var visible = false, frame = 0, seeded = false, autoTimer = 0;
+
+    function step() {
+      var c = cols, r = rows, u = u_curr, p = u_prev, nb = u_next;
+      for (var ry = 0; ry < r; ry++) {
+        var base = ry * c, up = ry === 0 ? base : base - c, dn = ry === r - 1 ? base : base + c;
+        for (var cx = 0; cx < c; cx++) {
+          var i = base + cx;
+          var iL = cx === 0 ? i : i - 1, iR = cx === c - 1 ? i : i + 1;
+          var lap = u[up + cx] + u[dn + cx] + u[iL] + u[iR] - 4 * u[i];
+          var nx = (2 * u[i] - cfg.DAMP_PREV * p[i] + cfg.C2 * lap) * cfg.DECAY;
+          nx += (Math.random() - 0.5) * cfg.ANTISTRIPE;
+          if (nx > 1) nx = 1; else if (nx < -1) nx = -1;
+          if (nx > -cfg.DEAD && nx < cfg.DEAD) nx = 0;
+          nb[i] = nx;
+          var a = nx < 0 ? -nx : nx;
+          if (a >= cfg.SEED_THR && Math.random() < cfg.SEED_PROB) {
+            var sx = cx + (Math.random() * (cfg.SEED_RADIUS * 2 + 1) | 0) - cfg.SEED_RADIUS;
+            var sy = ry + (Math.random() * (cfg.SEED_RADIUS * 2 + 1) | 0) - cfg.SEED_RADIUS;
+            if (sx >= 0 && sx < c && sy >= 0 && sy < r) nb[sy * c + sx] += (nx < 0 ? -1 : 1) * cfg.SEED_AMP * (0.6 + Math.random() * 0.8);
+          }
+        }
+      }
+      var t = u_prev; u_prev = u_curr; u_curr = u_next; u_next = t;
+    }
+    function render() {
+      ctx.fillStyle = FADE;
+      ctx.fillRect(0, 0, W, H);
+      var u = u_curr, c = cols, r = rows, cur = '';
+      for (var ry = 0; ry < r; ry++) {
+        var base = ry * c, py = ry * cellPx, up = ry === 0 ? base : base - c, dn = ry === r - 1 ? base : base + c;
+        for (var cx = 0; cx < c; cx++) {
+          var i = base + cx, v = u[i], a = v < 0 ? -v : v;
+          if (a < 0.05) continue;
+          var iL = cx === 0 ? i : i - 1, iR = cx === c - 1 ? i : i + 1;
+          var lap = u[up + cx] + u[dn + cx] + u[iL] + u[iR] - 4 * v;
+          var stable = a >= cfg.STABLE_AMP && (lap < 0 ? -lap : lap) < cfg.STABLE_LAP;
+          var style;
+          if (stable) style = STABLE + Math.min(0.92, 0.45 + (a - cfg.STABLE_AMP) * 0.85) + ')';
+          else if (a < cfg.SEED_THR) style = COOL + (a * 0.55) + ')';
+          else style = WARM + Math.min(0.95, 0.42 + (a - cfg.SEED_THR) * 0.95) + ')';
+          if (style !== cur) { ctx.fillStyle = style; cur = style; }
+          ctx.fillRect(cx * cellPx, py, cellPx, cellPx);
+        }
+      }
+    }
+    function isStableAt(x, y) {
+      var cx = Math.floor(x / cellPx), cy = Math.floor(y / cellPx);
+      if (!u_curr || cx < 1 || cy < 1 || cx >= cols - 1 || cy >= rows - 1) return false;
+      var i = cy * cols + cx, v = u_curr[i];
+      if ((v < 0 ? -v : v) < cfg.STABLE_AMP) return false;
+      var lap = u_curr[i - cols] + u_curr[i + cols] + u_curr[i - 1] + u_curr[i + 1] - 4 * v;
+      return Math.abs(lap) < cfg.STABLE_LAP;
+    }
+    function pluck(x, y, radius, peak, force) {
+      if (!u_curr) return;
+      var cx = Math.floor(x / cellPx), cy = Math.floor(y / cellPx);
+      var rr = Math.max(2, Math.floor(radius / cellPx)), rr2 = rr * rr;
+      for (var dy = -rr; dy <= rr; dy++) for (var dx = -rr; dx <= rr; dx++) {
+        var d2 = dx * dx + dy * dy;
+        if (d2 > rr2) continue;
+        var ny = cy + dy, nx = cx + dx;
+        if (ny < 0 || ny >= rows || nx < 0 || nx >= cols) continue;
+        var i = ny * cols + nx, fall = 1 - Math.sqrt(d2) / rr;
+        if (force) { u_curr[i] = peak * fall; u_prev[i] = 0; }
+        else { u_curr[i] += peak * fall; u_prev[i] = u_curr[i] * 0.55; }
+      }
+    }
+    function drop() {
+      pluck(Math.random() * W, Math.random() * H,
+        (cfg.DROP_RADIUS_MIN + Math.random() * cfg.DROP_RADIUS_VAR) * DPR,
+        cfg.DROP_PEAK_MIN + Math.random() * cfg.DROP_PEAK_VAR, false);
+    }
+    function resize() {
+      DPR = Math.min(window.devicePixelRatio || 1, 1.5);
+      var rect = canvas.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      var nW = Math.floor(rect.width * DPR), nH = Math.floor(rect.height * DPR);
+      if (nW === W && nH === H && u_curr) return;
+      W = nW; H = nH; canvas.width = W; canvas.height = H;
+      cellPx = cfg.CELL * DPR;
+      cols = Math.ceil(W / cellPx) + 1; rows = Math.ceil(H / cellPx) + 1;
+      var n = cols * rows;
+      u_curr = new Float32Array(n); u_prev = new Float32Array(n); u_next = new Float32Array(n);
+      var dd = cfg.DRAG_PULSE_DIST * DPR; DRAG_SQ = dd * dd;
+      ctx.clearRect(0, 0, W, H);
+    }
+    function loop() {
+      if (!activated || !u_curr) return;
+      if (holding) {
+        var dx = holdX - lastEmitX, dy = holdY - lastEmitY;
+        if (dx * dx + dy * dy >= DRAG_SQ) {
+          pluck(holdX, holdY, cfg.CLICK_RADIUS * (isStableAt(holdX, holdY) ? cfg.STABLE_CLICK_MULT : 1) * DPR, cfg.CLICK_PEAK, true);
+          lastEmitX = holdX; lastEmitY = holdY;
+        }
+      }
+      step(); render();
+    }
+    function kick() {
+      if (frame || !visible || document.visibilityState === 'hidden') return;
+      frame = requestAnimationFrame(function tick() {
+        frame = 0; loop();
+        if (visible && document.visibilityState !== 'hidden') frame = requestAnimationFrame(tick);
+      });
+    }
+    function seed() {
+      if (seeded || REDUCE || !u_curr) return;
+      seeded = true; activated = true;
+      for (var s = 0; s < 8; s++) drop();
+    }
+    function scheduleAuto() {
+      if (REDUCE) return;
+      clearTimeout(autoTimer);
+      autoTimer = setTimeout(function () {
+        if (visible && document.visibilityState !== 'hidden' && activated) drop();
+        scheduleAuto();
+      }, cfg.DROP_INTERVAL_MIN + Math.random() * cfg.DROP_INTERVAL_VAR);
+    }
+    function pos(e) {
+      var r = canvas.getBoundingClientRect(), pt = (e.touches && e.touches[0]) ? e.touches[0] : e;
+      return { x: (pt.clientX - r.left) * DPR, y: (pt.clientY - r.top) * DPR };
+    }
+    function plop(p) {
+      activated = true;
+      holdX = lastEmitX = p.x; holdY = lastEmitY = p.y;
+      pluck(p.x, p.y, cfg.CLICK_RADIUS * (isStableAt(p.x, p.y) ? cfg.STABLE_CLICK_MULT : 1) * DPR, cfg.CLICK_PEAK, true);
+      kick();
+    }
+    var tStart = null, tDrawing = false, INTENT = 12;
+    canvas.addEventListener('mousedown', function (e) { e.preventDefault(); holding = true; plop(pos(e)); });
+    canvas.addEventListener('mousemove', function (e) { if (holding) { var p = pos(e); holdX = p.x; holdY = p.y; } });
+    canvas.addEventListener('touchstart', function (e) { var p = pos(e); tStart = p; tDrawing = false; holding = true; plop(p); }, { passive: true });
+    canvas.addEventListener('touchmove', function (e) {
+      if (!tStart) return;
+      var p = pos(e);
+      if (!tDrawing) {
+        var dx = Math.abs(p.x - tStart.x), dy = Math.abs(p.y - tStart.y);
+        if (dx > INTENT * DPR && dx > dy) tDrawing = true;
+        else if (dy > INTENT * DPR) { tStart = null; holding = false; return; }
+        else return;
+      }
+      e.preventDefault();
+      holdX = p.x; holdY = p.y;
+    }, { passive: false });
+    function release() { holding = false; tStart = null; tDrawing = false; }
+    window.addEventListener('mouseup', release);
+    window.addEventListener('touchend', release);
+    window.addEventListener('touchcancel', release);
+    window.addEventListener('resize', function () {
+      var r = canvas.getBoundingClientRect();
+      if (Math.abs(Math.floor(r.width * (window.devicePixelRatio || 1)) - W) > 30 || Math.abs(Math.floor(r.height * (window.devicePixelRatio || 1)) - H) > 60) resize();
+    });
+    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') kick(); });
+
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (en) {
+        var was = visible;
+        visible = en[0].isIntersecting;
+        if (visible && !was) { resize(); seed(); kick(); }
+      }, { threshold: 0 }).observe(host);
+    } else { visible = true; resize(); seed(); kick(); }
+    scheduleAuto();
+
+    fields.push({ wash: function () { if (W && H) { ctx.fillStyle = FADE; ctx.fillRect(0, 0, W, H); } } });
+  }
+
+  makeField(document.getElementById('bloom-hero'), document.getElementById('top'));
+  makeField(document.getElementById('bloom-cta'), document.getElementById('cta'));
+})();
+</script>
+
+<script>
+/* Embeds: poster first, live on click or tap, never on scroll.
+   Budget: ONE live view on touch or a narrow screen, three elsewhere. Five of
+   these views are three.js scenes, and openprose.html once crashed phones by
+   stacking live embeds (its commit "stop the mobile crash from stacked live
+   embeds"). Waking past the budget sleeps the view woken longest ago: its
+   iframe is removed, so its document and WebGL context are released, and its
+   poster comes back. A live view that stays off screen for 8 s sleeps too. */
+(function () {
+  'use strict';
+  var COARSE = !!(window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches);
+  function budget() { return (COARSE || window.innerWidth < 700) ? 1 : 3; }
+  var VIEW_W = 1440, VIEW_H = 900;   // the posters' viewport
+  var SCALE_MIN_PANEL = 900;         // narrower panels lay the view out at their own width
+  var embeds = [];
+  var seq = 0;
+
+  function layout(e) {
+    if (!e.iframe) return;
+    var w = e.root.clientWidth;
+    if (w >= SCALE_MIN_PANEL) {
+      var s = w / VIEW_W;
+      e.root.classList.remove('natural-live');
+      e.root.style.height = '';
+      e.iframe.style.width = VIEW_W + 'px';
+      e.iframe.style.height = VIEW_H + 'px';
+      e.iframe.style.transform = 'scale(' + s + ')';
+    } else {
+      e.root.classList.add('natural-live');
+      var h = Math.max(360, Math.round(Math.min(window.innerHeight * 0.8, w * 1.33)));
+      e.root.style.height = h + 'px';
+      if (e.minW > w) {
+        // A view whose narrow layout breaks (run-strata under 640px) renders
+        // at its minimum width and scales down to the panel.
+        var k = w / e.minW;
+        e.iframe.style.width = e.minW + 'px';
+        e.iframe.style.height = Math.round(h / k) + 'px';
+        e.iframe.style.transform = 'scale(' + k + ')';
+      } else {
+        e.iframe.style.width = '100%';
+        e.iframe.style.height = '100%';
+        e.iframe.style.transform = 'none';
+      }
+    }
+  }
+
+  function sleep(e) {
+    if (!e.live) return;
+    if (e.iframe) { e.iframe.remove(); e.iframe = null; }
+    e.live = false;
+    e.root.classList.remove('live', 'loading', 'natural-live');
+    e.root.style.height = '';
+    e.hint.textContent = e.hintIdle;
+  }
+
+  function wake(e) {
+    if (e.live) return;
+    var lives = embeds.filter(function (x) { return x.live; });
+    while (lives.length >= budget()) {
+      lives.sort(function (a, b) { return a.wokeAt - b.wokeAt; });
+      sleep(lives.shift());
+    }
+    var f = document.createElement('iframe');
+    f.title = e.name + ' (live view, synthetic data)';
+    f.setAttribute('allow', 'fullscreen; autoplay');
+    f.addEventListener('load', function () {
+      f.classList.add('ready');
+      e.root.classList.remove('loading');
+      e.root.classList.add('live');
+    }, { once: true });
+    e.iframe = f;
+    e.live = true;
+    e.wokeAt = ++seq;
+    e.lastSeen = performance.now();
+    e.root.classList.add('loading');
+    e.hint.textContent = 'loading';
+    e.root.insertBefore(f, e.root.firstChild);
+    layout(e);
+    f.src = e.src;
+  }
+
+  document.querySelectorAll('.embed-live[data-view]').forEach(function (root) {
+    var poster = root.querySelector('.poster');
+    var hint = root.querySelector('.poster-hint');
+    var e = {
+      root: root, poster: poster, hint: hint, hintIdle: hint.textContent,
+      name: root.getAttribute('data-name') || root.getAttribute('data-view'),
+      minW: parseInt(root.getAttribute('data-min-width'), 10) || 0,
+      src: 'openprose-traces/viz/' + root.getAttribute('data-view') + '.html',
+      live: false, iframe: null, wokeAt: 0, lastSeen: 0, onScreen: false
+    };
+    var stop = document.createElement('button');
+    stop.type = 'button';
+    stop.className = 'embed-stop';
+    stop.textContent = '■ stop';
+    stop.setAttribute('aria-label', 'Stop the ' + e.name + ' view and show its poster');
+    stop.addEventListener('click', function () { sleep(e); poster.focus({ preventScroll: true }); });
+    root.appendChild(stop);
+    poster.addEventListener('click', function () { wake(e); });
+    embeds.push(e);
+  });
+
+  var resizeTick = 0;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTick);
+    resizeTick = setTimeout(function () {
+      var lives = embeds.filter(function (x) { return x.live; }).sort(function (a, b) { return b.wokeAt - a.wokeAt; });
+      lives.slice(budget()).forEach(sleep);
+      lives.forEach(layout);
+    }, 150);
+  });
+
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        var e = embeds.find(function (x) { return x.root === en.target; });
+        if (!e) return;
+        e.onScreen = en.isIntersecting;
+        if (e.onScreen) e.lastSeen = performance.now();
+      });
+    }, { rootMargin: '200px 0px' });
+    embeds.forEach(function (e) { io.observe(e.root); });
+    setInterval(function () {
+      var now = performance.now();
+      embeds.forEach(function (e) {
+        if (e.onScreen) e.lastSeen = now;
+        else if (e.live && now - e.lastSeen > 8000) sleep(e);
+      });
+    }, 2000);
+  }
+
+  window.__traceEmbeds = function () {
+    return embeds.map(function (e) { return { name: e.name, live: e.live, iframe: !!e.iframe }; });
+  };
+})();
+</script>
+
+<script src="./scripts/shared.js?v=2.48"></script>
+<script src="./scripts/search-overlay.js?v=2.48" defer></script>
+<script src="./scripts/jh-shapes.js?v=2.48"></script>
+<script src="./scripts/jh-chrome.js?v=2.48" defer></script>
+</body>
+</html>
