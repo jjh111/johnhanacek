@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Confidence Radar</title>
+
+<!-- ============================================================
+     CONFIDENCE RADAR · TUFTE · KECAL · TEAL
+     ============================================================
+     Code-only template. One card per program: four dimensional
+     scores as a quiet radar plus a dotted column, an overall
+     figure, and one italic note. Tabs group programs by
+     organization, with a computed "all" aggregate tab first.
+     Type and tokens: fog-cream paper, warm brown-black ink, Kecal
+     serif/sans, IBM Plex Mono for figures/labels, teal #3a7a6a as
+     the editorial accent, amber #c49a5c for the .watch band and
+     the partial-verdict badge.
+
+     Data: none ships with this page. It reads window.TRACE_DATA
+     through ../lib/data-slot.js from ../data/confidence-radar.js.
+     Shape: ../data/confidence-radar.schema.md
+     ============================================================ -->
+
+<!-- Kecal (FungiType) — seven weights hosted on jsDelivr. -->
+<style>
+@font-face { font-family: 'Kecal'; font-weight: 200; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extralight-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 300; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Light-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 400; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Regular-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 500; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Medium-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 600; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Semibold-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 700; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Bold-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 800; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extrabold-web.woff2') format('woff2'); }
+</style>
+
+<!-- IBM Plex Mono for figures, run-IDs, and label kickers. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+
+<style>
+/* ============================================
+   CONFIDENCE RADAR · TUFTE · KECAL · TEAL
+   Fog-cream paper, warm brown-black ink, Kecal
+   serif italic accent in teal, amber for the
+   warning band + partial verdict. Highlighter
+   reads as soft amber (was yellow).
+   ============================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Paper + ink — fog cream over warm brown-black */
+  --paper:     #f5f0e8;
+  --paper-dk:  #e8e0d0;
+  --paper-lt:  #fbf7ef;
+  --ink:       #2a2520;
+  --ink-2:     rgba(42,37,32,0.78);
+  --ink-3:     rgba(42,37,32,0.55);
+  --ink-4:     rgba(42,37,32,0.32);
+
+  /* Teal is the editorial accent (italic emphasis, radar polygon,
+     active tab, kicker numeral). */
+  --teal:      #3a7a6a;
+  --teal-soft: #4a8a7a;
+  --teal-deep: #2e6456;
+
+  /* Amber is the warm complement — used for the .watch band and
+     the partial-verdict badge so the warning reads as a separate
+     temperature from the editorial accent. */
+  --amber:      #c49a5c;
+  --amber-deep: #a87f44;
+  --amber-soft: #d4aa6c;
+
+  /* Hairlines keyed off the warm ink */
+  --rule:      rgba(42,37,32,0.14);
+  --rule-mid:  rgba(42,37,32,0.06);
+
+  /* Highlighter — amber tint, replacing the yellow editorial mark.
+     The "hot" variant is a slightly deeper amber for the one figure
+     that carries the paragraph. */
+  --hl:     rgba(212, 170, 108, 0.48);
+  --hl-hot: rgba(196, 154, 92, 0.42);
+
+  /* Score bands — strong (green) and ok (ochre) carry over; the
+     watch band is amber, not red, since teal is now the editorial
+     accent and using red here would re-introduce hard contrast. */
+  --band-strong:      #14803e;
+  --band-strong-soft: rgba(20, 128, 62, 0.08);
+  --band-ok:          #b4751f;
+  --band-ok-soft:     rgba(180, 117, 31, 0.08);
+  --band-watch:       #c49a5c;
+  --band-watch-soft:  rgba(196, 154, 92, 0.12);
+
+  --serif: 'Kecal', system-ui, -apple-system, sans-serif;
+  --sans:  'Kecal', system-ui, -apple-system, sans-serif;
+  --mono:  'IBM Plex Mono', 'SF Mono', 'JetBrains Mono', monospace;
+  --wide: 1180px;
+  --measure: 860px;
+}
+
+html { font-size: 17px; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--serif);
+  font-weight: 300;
+  line-height: 1.55;
+  letter-spacing: 0;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  position: relative;
+}
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 15% 8%, rgba(58,122,106,0.03), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 95% 95%, rgba(58,122,106,0.02), transparent 60%);
+}
+body > * { position: relative; z-index: 1; }
+
+/* Brand-wide em rule — Kecal italic 800, teal. Anywhere an <em>
+   appears in body prose it picks up this register. Per-component
+   overrides (score bands on .overall) extend this. */
+em {
+  font-style: italic;
+  font-weight: 700;
+  color: var(--teal);
+  letter-spacing: 0;
+}
+
+/* Tufte highlight effects for underlines. The amber highlighter bands
+   are replaced with the β-direction's dotted/dashed underline gestures
+   so emphasis sits on the line, not on a coloured band. Same
+   .hl / .hl-hot markup; different rendering — skim is dotted, hot is
+   dashed. */
+.hl, .hl-hot {
+  background: transparent;
+  padding: 0;
+  border-bottom: 1px dotted var(--ink-3);
+  text-underline-offset: 3px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+.hl-hot {
+  border-bottom-color: var(--ink-2);
+  border-bottom-style: dashed;
+}
+
+/* ===== MASTHEAD ===== */
+.masthead {
+  max-width: var(--wide); margin: 0 auto;
+  padding: 2.25rem 2rem 1.25rem;
+  border-bottom: 1px solid var(--rule);
+  display: grid; grid-template-columns: 1fr auto; gap: 2rem; align-items: baseline;
+}
+.masthead .mh-left { display: flex; flex-direction: column; gap: 0.55rem; }
+.masthead .mh-eyebrow {
+  font-family: var(--sans); font-size: 0.68rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--teal); font-weight: 600;
+  display: inline-flex; align-items: center; gap: 0.7rem;
+}
+.masthead .mh-eyebrow::before {
+  content: ''; width: 24px; height: 1px; background: var(--teal);
+}
+.masthead h1 {
+  font-family: var(--serif);
+  font-size: clamp(1.75rem, 2.8vw, 2.3rem);
+  font-weight: 400; line-height: 1.15;
+  letter-spacing: -0.012em;
+}
+.masthead h1 em {
+  font-style: italic;
+  font-weight: 700;
+  color: var(--teal);
+}
+.masthead .mh-sub {
+  font-family: var(--serif); font-style: italic;
+  font-weight: 400;
+  font-size: 1.02rem; color: var(--ink-3);
+  max-width: 52ch;
+}
+.masthead .mh-meta {
+  font-family: var(--mono); font-size: 0.68rem;
+  letter-spacing: 0.08em; color: var(--ink-3);
+  text-align: right;
+  display: flex; flex-direction: column; gap: 0.2rem; align-items: flex-end;
+}
+
+/* ===== ORGANIZATION TABS ===== */
+.tab-strip {
+  max-width: var(--wide); margin: 0 auto;
+  padding: 1rem 2rem 0;
+  display: flex; flex-wrap: wrap; gap: 0.3rem;
+  border-bottom: 1px solid var(--rule-mid);
+}
+.tab {
+  font-family: var(--sans); font-size: 0.68rem; font-weight: 600;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  padding: 0.55rem 0.95rem 0.7rem;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  margin-bottom: -1px;
+  border-radius: 0;
+}
+.tab:hover { color: var(--ink); }
+.tab.active {
+  color: var(--teal);
+  border-bottom-color: var(--teal);
+}
+
+/* ===== PRETEXT PARAGRAPH ===== */
+.pretext {
+  max-width: var(--wide); margin: 0 auto;
+  padding: 1.8rem 2rem 0.25rem;
+}
+.pretext p {
+  font-family: var(--serif);
+  font-weight: 300;
+  font-size: 1.02rem; line-height: 1.65;
+  color: var(--ink-2);
+  max-width: 64ch;
+  text-wrap: pretty;
+}
+.pretext p::first-line {
+  font-variant: small-caps; letter-spacing: 0.04em;
+}
+.pretext p em {
+  font-style: italic;
+  font-weight: 700;
+  color: var(--teal);
+}
+.pretext p strong { color: var(--ink); font-weight: 500; }
+.pretext p .fig {
+  font-family: var(--mono); font-variant-numeric: tabular-nums;
+  font-size: 0.92em; color: var(--ink);
+  font-weight: 400;
+}
+
+/* ===== FLEET GRID ===== */
+.fleet {
+  max-width: var(--wide); margin: 0 auto;
+  padding: 1.25rem 2rem 4rem;
+}
+.fleet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.1rem;
+}
+.card {
+  background: var(--paper-lt);
+  border: 1px solid var(--rule);
+  border-radius: 0;
+  padding: 1.25rem 1.35rem 1.1rem;
+  display: flex; flex-direction: column;
+  position: relative;
+  transition: border-color 0.18s;
+}
+.card:hover { border-color: var(--teal-soft); }
+
+/* Section kicker — tiny teal numeral above each card */
+.card .kicker {
+  font-family: var(--sans); font-size: 0.58rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--teal); font-weight: 600;
+  margin-bottom: 0.4rem;
+  display: flex; align-items: center; gap: 0.65rem;
+}
+.card .kicker::after {
+  content: ''; flex: 1; height: 1px; background: var(--rule-mid);
+}
+
+.card .prog-name {
+  font-family: var(--serif); font-size: 1.05rem;
+  font-weight: 400; color: var(--ink);
+  letter-spacing: -0.01em;
+  margin-bottom: 0.15rem;
+}
+.card .run-meta {
+  font-family: var(--mono); font-size: 0.66rem;
+  color: var(--ink-3); letter-spacing: 0.08em;
+  display: flex; gap: 0.7rem; flex-wrap: wrap;
+  margin-bottom: 0.85rem;
+}
+.card .run-meta .sep { color: var(--ink-4); }
+
+/* Overall block — floats in top-right of each card. */
+.card .overall {
+  position: absolute; top: 1.15rem; right: 1.35rem;
+  font-family: var(--serif); font-size: 1.9rem;
+  font-weight: 400; line-height: 1;
+  letter-spacing: -0.02em;
+  text-align: right;
+}
+.card .overall em {
+  font-style: italic;
+  font-weight: 700;
+  color: var(--teal);
+}
+.card .overall.strong em { color: var(--band-strong); }
+.card .overall.ok em { color: var(--band-ok); }
+.card .overall.watch em { color: var(--band-watch); }
+.card .overall .lab {
+  display: block;
+  font-family: var(--sans); font-size: 0.52rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink-3); font-weight: 600;
+  margin-top: -0.2rem;
+}
+
+/* Radar canvas centered in the card */
+.card canvas {
+  display: block; margin: 0 auto 0.9rem;
+}
+
+/* Dimension table — hairline rows under the radar, Tufte-style */
+.dims {
+  width: 100%; border-collapse: collapse;
+  font-family: var(--serif); font-size: 0.82rem;
+  font-weight: 300;
+  margin-top: 0.25rem;
+}
+.dims th {
+  font-family: var(--sans); font-size: 0.56rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink-3); font-weight: 600;
+  text-align: left;
+  padding: 0.35rem 0.2rem;
+  border-bottom: 1px solid var(--rule-mid);
+}
+.dims th.num { text-align: right; }
+.dims td {
+  padding: 0.3rem 0.2rem;
+  border-bottom: 1px dotted var(--rule-mid);
+  color: var(--ink-2);
+}
+.dims tr:last-child td { border-bottom: none; }
+.dims td.num {
+  font-family: var(--mono); font-variant-numeric: tabular-nums;
+  text-align: right; color: var(--ink);
+  font-weight: 400;
+}
+.dims td.bar {
+  width: 78px; padding-right: 0;
+}
+.dims td.bar .track {
+  height: 3px; background: var(--rule-mid); position: relative;
+}
+.dims td.bar .fill {
+  position: absolute; left: 0; top: 0; height: 100%;
+}
+
+/* Notes — italic prose, ties card together */
+.card .notes {
+  font-family: var(--serif); font-style: italic;
+  font-weight: 400;
+  font-size: 0.88rem; line-height: 1.45;
+  color: var(--ink-3);
+  margin-top: 0.85rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--rule-mid);
+}
+.card .notes em {
+  color: var(--teal); font-style: italic; font-weight: 700;
+}
+/* Override the per-context highlighter bands to match the tufte-style
+   underlines applied globally above. */
+.card .notes .hl { background: transparent; border-bottom: 1px dotted var(--ink-3); }
+.card .notes .hl-hot { background: transparent; border-bottom: 1px dashed var(--ink-2); }
+
+/* Verdict badge — only shows if partial (warrants attention).
+   Amber instead of red — the rare warm note. */
+.card .verdict {
+  position: absolute; top: 1.2rem; right: 1.35rem;
+  font-family: var(--sans); font-size: 0.52rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--amber-deep); font-weight: 600;
+  padding: 0.15rem 0.45rem;
+  border: 1px solid var(--amber-deep);
+  background: rgba(196,154,92,0.08);
+  border-radius: 0;
+}
+
+/* When verdict shows, overall drops below it */
+.card.has-verdict .overall { top: 2.7rem; }
+
+/* ===== LEGEND ===== */
+.legend {
+  max-width: var(--wide); margin: 0 auto;
+  padding: 1.25rem 2rem 0;
+  border-top: 1px solid var(--rule);
+  display: flex; gap: 1.4rem; flex-wrap: wrap; align-items: center;
+  font-family: var(--sans); font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+  font-weight: 500;
+}
+.legend .g-band {
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  text-transform: uppercase;
+}
+.legend .g-band .sw {
+  width: 22px; height: 3px;
+}
+.legend .g-glossary {
+  margin-left: auto;
+  font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.03em;
+  color: var(--ink-3);
+  text-transform: none;
+  font-weight: 400;
+}
+
+/* ===== COLOPHON ===== */
+.colophon {
+  max-width: var(--wide); margin: 0 auto;
+  padding: 1.5rem 2rem 3rem;
+  font-family: var(--sans); font-size: 0.68rem;
+  letter-spacing: 0.06em; color: var(--ink-3);
+  text-align: center;
+  font-weight: 500;
+}
+.colophon .rule { width: 48px; height: 1px; background: var(--teal); margin: 0 auto 1.1rem; }
+.colophon .line { margin: 0.25rem 0; }
+.colophon .line.italic {
+  font-family: var(--serif); font-style: italic;
+  font-weight: 400;
+  color: var(--ink-2); letter-spacing: 0; font-size: 0.85rem;
+  margin-bottom: 0.8rem;
+}
+.colophon a {
+  color: var(--teal); text-decoration: none; margin: 0 0.6rem;
+  transition: color 0.15s;
+}
+.colophon a:hover { color: var(--teal-deep); }
+
+/* ===== TOOLTIP ===== */
+.tip {
+  position: fixed;
+  background: var(--paper-lt);
+  border: 1px solid var(--rule);
+  box-shadow: 0 4px 18px rgba(42,37,32,0.08);
+  padding: 0.7rem 0.9rem;
+  font-family: var(--serif); font-size: 0.82rem;
+  font-weight: 300;
+  color: var(--ink-2); line-height: 1.45;
+  pointer-events: none;
+  max-width: 240px;
+  z-index: 100;
+  display: none;
+  border-radius: 0;
+}
+.tip .tip-head {
+  font-family: var(--sans); font-size: 0.58rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--teal); font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+.tip .tip-val {
+  font-family: var(--mono); font-variant-numeric: tabular-nums;
+  color: var(--ink); font-weight: 500;
+}
+
+@media (max-width: 880px) {
+  .masthead { grid-template-columns: 1fr; padding: 1.75rem 1.25rem 1rem; }
+  .masthead .mh-meta { text-align: left; align-items: flex-start; }
+  .tab-strip { padding: 1rem 1.25rem 0; }
+  .pretext, .fleet, .legend, .colophon { padding-left: 1.25rem; padding-right: 1.25rem; }
+  .legend { flex-direction: column; align-items: flex-start; }
+  .legend .g-glossary { margin-left: 0; }
+}
+
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+
+}
+</style>
+</head>
+<body>
+
+<section class="masthead">
+  <div class="mh-left">
+    <span class="mh-eyebrow">Fleet &middot; Confidence radar &middot; Tufte teal</span>
+    <h1>The four dimensions, per <em>program</em>, at a glance.</h1>
+    <p class="mh-sub">Each card reads as a small editorial note: the program, the four dimensional scores as a quiet radar and a dotted column, and one italic line on the thing worth watching.</p>
+  </div>
+  <div class="mh-meta">
+    <span>II &middot; Confidence radar</span>
+    <span id="meta-updated">Updated &middot;</span>
+    <span id="meta-count">&mdash;</span>
+  </div>
+</section>
+
+<div class="tab-strip" id="tab-strip" role="tablist" aria-label="Organization"></div>
+
+<section class="pretext" id="pretext"></section>
+
+<main class="fleet">
+  <div class="fleet-grid" id="fleet-grid"></div>
+</main>
+
+<section class="legend">
+  <span class="g-band"><span class="sw" style="background: var(--band-strong)"></span>90 + &middot; strong</span>
+  <span class="g-band"><span class="sw" style="background: var(--band-ok)"></span>70 &ndash; 89 &middot; adequate</span>
+  <span class="g-band"><span class="sw" style="background: var(--band-watch)"></span>&lt; 70 &middot; investigate</span>
+  <span class="g-glossary">RF &middot; runtime fidelity &nbsp; TE &middot; task effectiveness &nbsp; CS &middot; contract satisfaction &nbsp; DS &middot; domain score</span>
+</section>
+
+<section class="colophon">
+  <div class="rule"></div>
+  <div class="line italic">Confidence radar &middot; Tufte &middot; Kecal &middot; Teal &middot; <span class="hl">humanist computer in the teal register</span></div>
+  <div class="line">Kecal &middot; Kecal &middot; IBM Plex Mono</div>
+  <div class="line" style="margin-top: 1rem;">
+    <a href="fleet-heatmap.html">fleet heatmap &rarr;</a>
+  </div>
+</section>
+
+<div class="tip" id="tip"></div>
+
+<script src="../lib/data-slot.js"></script>
+<script src="../data/confidence-radar.js"></script>
+<script>
+// =====================================================
+// DATA: read from the slot (../data/confidence-radar.js).
+// FLEET_DATA  { organization: { program: scores } }
+// PRETEXT     optional { tab label: lede HTML }
+// UPDATED     optional string for the masthead
+// =====================================================
+const TRACE = TraceSlot.require('confidence-radar', ['FLEET_DATA']);
+const ALL_TAB = 'All organizations';
+const FLEET_DATA = { [ALL_TAB]: {} };
+// An empty organization entry (e.g. a placeholder aggregate key) is skipped;
+// the aggregate tab is always built below.
+for (const [org, programs] of Object.entries(TRACE.FLEET_DATA)) {
+  if (org !== ALL_TAB && programs && Object.keys(programs).length) FLEET_DATA[org] = programs;
+}
+const PRETEXT = TRACE.PRETEXT || {};
+if (TRACE.UPDATED) document.getElementById('meta-updated').textContent = 'Updated ' + TRACE.UPDATED;
+
+// Build the aggregate tab
+for (const [customer, programs] of Object.entries(FLEET_DATA)) {
+  if (customer === ALL_TAB) continue;
+  for (const [program, data] of Object.entries(programs)) {
+    FLEET_DATA[ALL_TAB][customer + ' · ' + program] = { ...data, customer };
+  }
+}
+
+// Dimension config (UI): labels for the table, keys into each score record,
+// short codes for the radar axes.
+const DIM_LABELS = [
+  'Runtime Fidelity',      // rf
+  'Task Effectiveness',    // te
+  'Contract Satisfaction', // cs
+  'Domain Score'           // ds
+];
+const DIM_KEYS   = ['rf', 'te', 'cs', 'ds'];
+const DIM_SHORT  = ['RF', 'TE', 'CS', 'DS'];
+
+let currentCustomer = ALL_TAB;
+const tabStrip   = document.getElementById('tab-strip');
+const fleetGrid  = document.getElementById('fleet-grid');
+const pretextEl  = document.getElementById('pretext');
+const metaCount  = document.getElementById('meta-count');
+const tip        = document.getElementById('tip');
+
+// =====================================================
+// SCORE BAND → colour + overall-class
+// =====================================================
+function bandColor(v) {
+  if (v >= 90) return 'var(--band-strong)';
+  if (v >= 70) return 'var(--band-ok)';
+  return 'var(--band-watch)';
+}
+function bandClass(v) {
+  if (v >= 90) return 'strong';
+  if (v >= 70) return 'ok';
+  return 'watch';
+}
+
+// =====================================================
+// RADAR CHART — paper ground, teal ink polygon, warm ink dots
+// =====================================================
+function drawRadar(canvas, scores) {
+  const DPR = window.devicePixelRatio || 1;
+  const cssW = 260, cssH = 200;
+  canvas.width  = cssW * DPR;
+  canvas.height = cssH * DPR;
+  canvas.style.width  = cssW + 'px';
+  canvas.style.height = cssH + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(DPR, DPR);
+
+  const cx = cssW / 2;
+  const cy = cssH / 2 + 4;
+  const r  = Math.min(cx, cy) - 30;
+  const n  = DIM_KEYS.length;
+
+  ctx.clearRect(0, 0, cssW, cssH);
+
+  // Concentric guide rings — four warm-ink hairlines
+  const rings = [0.5, 0.7, 0.9, 1];
+  rings.forEach(ring => {
+    ctx.beginPath();
+    for (let i = 0; i <= n; i++) {
+      const a = (Math.PI * 2 * (i % n)) / n - Math.PI / 2;
+      const x = cx + Math.cos(a) * r * ring;
+      const y = cy + Math.sin(a) * r * ring;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = ring === 1 ? 'rgba(42,37,32,0.14)' : 'rgba(42,37,32,0.06)';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  });
+
+  // Spokes + axis short-labels
+  ctx.font = '600 9px "Kecal", system-ui, sans-serif';
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i < n; i++) {
+    const a = (Math.PI * 2 * i) / n - Math.PI / 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+    ctx.strokeStyle = 'rgba(42,37,32,0.08)';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+
+    const lr = r + 14;
+    const lx = cx + Math.cos(a) * lr;
+    const ly = cy + Math.sin(a) * lr;
+    ctx.fillStyle = 'rgba(42,37,32,0.55)';
+    ctx.textAlign = Math.abs(Math.cos(a)) < 0.2 ? 'center' : (Math.cos(a) > 0 ? 'left' : 'right');
+    ctx.fillText(DIM_SHORT[i], lx, ly);
+  }
+
+  // Score polygon — teal fill + stroke
+  ctx.beginPath();
+  for (let i = 0; i <= n; i++) {
+    const a = (Math.PI * 2 * (i % n)) / n - Math.PI / 2;
+    const val = (scores[DIM_KEYS[i % n]] || 0) / 100;
+    const x = cx + Math.cos(a) * r * val;
+    const y = cy + Math.sin(a) * r * val;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.fillStyle   = 'rgba(58, 122, 106, 0.14)';
+  ctx.fill();
+  ctx.strokeStyle = '#3a7a6a';
+  ctx.lineWidth   = 1.4;
+  ctx.stroke();
+
+  // Score dots — warm ink-dark circles at each vertex
+  for (let i = 0; i < n; i++) {
+    const a = (Math.PI * 2 * i) / n - Math.PI / 2;
+    const val = (scores[DIM_KEYS[i]] || 0) / 100;
+    const x = cx + Math.cos(a) * r * val;
+    const y = cy + Math.sin(a) * r * val;
+    ctx.beginPath();
+    ctx.arc(x, y, 2.8, 0, Math.PI * 2);
+    ctx.fillStyle = '#2a2520';
+    ctx.fill();
+  }
+}
+
+// =====================================================
+// RENDER
+// =====================================================
+function renderTabs() {
+  tabStrip.innerHTML = '';
+  Object.keys(FLEET_DATA).forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'tab' + (c === currentCustomer ? ' active' : '');
+    btn.textContent = c;
+    btn.setAttribute('role', 'tab');
+    btn.setAttribute('aria-selected', c === currentCustomer ? 'true' : 'false');
+    btn.onclick = () => {
+      currentCustomer = c;
+      renderTabs();
+      renderPretext();
+      renderFleet();
+    };
+    tabStrip.appendChild(btn);
+  });
+}
+
+function renderPretext() {
+  pretextEl.innerHTML = PRETEXT[currentCustomer] || '';
+}
+
+function renderFleet() {
+  const programs = FLEET_DATA[currentCustomer];
+  const entries = Object.entries(programs);
+  entries.sort((a, b) => (b[1].overall || 0) - (a[1].overall || 0));
+
+  metaCount.textContent = entries.length + ' programs';
+
+  let rn = 1;
+  fleetGrid.innerHTML = entries.map(([name, data]) => {
+    const kicker = 'No. ' + String(rn++).padStart(2, '0');
+    const ovClass = bandClass(data.overall);
+    const partial = data.verdict === 'partial';
+
+    return `<article class="card${partial ? ' has-verdict' : ''}">
+      <span class="kicker">${kicker} &middot; ${data.customer || currentCustomer}</span>
+      ${partial ? `<span class="verdict">partial</span>` : ''}
+      <h3 class="prog-name">${name.split(' · ').slice(-1)[0]}</h3>
+      <div class="run-meta">
+        <span>${data.runId}</span>
+        <span class="sep">&middot;</span>
+        <span>${data.verdict}</span>
+      </div>
+      <div class="overall ${ovClass}">
+        <em>${data.overall}</em>
+        <span class="lab">overall</span>
+      </div>
+      <canvas id="r-${cssSafe(name)}" width="260" height="200"></canvas>
+      <table class="dims">
+        <thead><tr>
+          <th>Dimension</th>
+          <th class="num">Score</th>
+          <th></th>
+        </tr></thead>
+        <tbody>
+          ${DIM_KEYS.map((k, i) => {
+            const v = data[k] || 0;
+            const c = bandColor(v);
+            return `<tr>
+              <td>${DIM_LABELS[i]}</td>
+              <td class="num" style="color:${c}">${v}</td>
+              <td class="bar"><div class="track"><div class="fill" style="width:${v}%;background:${c}"></div></div></td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+      <p class="notes">${data.notes}</p>
+    </article>`;
+  }).join('');
+
+  // Draw radars after DOM paint
+  requestAnimationFrame(() => {
+    entries.forEach(([name, data]) => {
+      const canvas = document.getElementById('r-' + cssSafe(name));
+      if (canvas) drawRadar(canvas, data);
+    });
+  });
+}
+
+function cssSafe(s) { return s.replace(/[^a-z0-9]/gi, '_'); }
+
+// =====================================================
+// INIT
+// =====================================================
+renderTabs();
+renderPretext();
+renderFleet();
+</script>
+</body>
+</html>

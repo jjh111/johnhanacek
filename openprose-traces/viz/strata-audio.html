@@ -1,0 +1,1627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TraceStrata · audio · OpenProse traces</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      overflow: hidden;
+      background: linear-gradient(180deg, #faf7f2 0%, #f0ebe3 100%);
+      font-family: Georgia, 'Times New Roman', serif;
+      color: #1c1917;
+    }
+    canvas { display: block; }
+
+    #loading {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: #faf7f2; z-index: 200;
+      font-size: 15px; letter-spacing: 3px; text-transform: uppercase;
+      color: #1c1917; opacity: 0.5;
+      transition: opacity 0.8s ease;
+    }
+    #loading.hidden { opacity: 0; pointer-events: none; }
+
+    #tooltip {
+      position: fixed; pointer-events: none; z-index: 100;
+      background: #1c1917; color: #faf7f2;
+      padding: 10px 16px; border-radius: 4px;
+      font-family: Georgia, serif; font-size: 13px; line-height: 1.6;
+      opacity: 0; transition: opacity 0.15s ease;
+      max-width: 240px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+    }
+    #tooltip.visible { opacity: 1; }
+    #tooltip .tt-type {
+      font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px;
+      opacity: 0.45; margin-bottom: 2px;
+    }
+    #tooltip .tt-label { font-weight: bold; font-size: 14px; }
+    #tooltip .tt-state { opacity: 0.6; font-style: italic; }
+
+    #mode-indicator {
+      position: fixed; top: 20px; right: 24px; z-index: 50;
+      font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+      opacity: 0.35;
+    }
+
+    #ui-bar {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 18px 28px; pointer-events: none;
+    }
+
+    #brand {
+      font-size: 12px; letter-spacing: 1.5px; opacity: 0.4;
+    }
+    #brand strong { font-weight: bold; letter-spacing: 3px; }
+
+    #controls {
+      display: flex; align-items: center; gap: 18px;
+      pointer-events: auto;
+    }
+
+    #hint {
+      font-size: 11px; opacity: 0.3; font-style: italic;
+    }
+
+    #toggle-btn {
+      background: #1c1917; color: #faf7f2; border: none;
+      padding: 9px 22px; font-family: Georgia, serif;
+      font-size: 12px; letter-spacing: 0.8px;
+      cursor: pointer; border-radius: 3px;
+      transition: background 0.3s ease, transform 0.1s ease;
+    }
+    #toggle-btn:hover { background: #d97706; }
+    #toggle-btn:active { transform: scale(0.96); }
+
+    #slice-nav {
+      position: fixed; left: 24px; top: 50%; transform: translateY(-50%);
+      z-index: 50; display: flex; flex-direction: column; gap: 6px;
+      pointer-events: auto;
+    }
+    .slice-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      border: 1.5px solid #1c1917; background: transparent;
+      cursor: pointer; transition: all 0.3s ease; opacity: 0.3;
+    }
+    .slice-dot.active { background: #d97706; border-color: #d97706; opacity: 0.8; }
+    .slice-dot:hover { opacity: 0.7; transform: scale(1.3); }
+
+    #audio-controls {
+      position: fixed; top: 20px; left: 24px; z-index: 60;
+      display: flex; align-items: center; gap: 10px;
+      pointer-events: auto;
+    }
+    #mute-btn {
+      width: 52px; height: 52px; border-radius: 50%;
+      border: 1.5px solid #1c1917; background: rgba(250,247,242,0.85);
+      cursor: pointer; font-size: 24px; line-height: 52px;
+      text-align: center; opacity: 0.5; flex-shrink: 0;
+      transition: opacity 0.2s ease, background 0.2s ease;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+    #mute-btn:hover { opacity: 0.8; background: rgba(250,247,242,0.95); }
+    #vol-wrap {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    #vol-track {
+      display: flex; align-items: center; gap: 5px;
+    }
+    .vol-end {
+      font-family: Georgia, serif; font-size: 9px; letter-spacing: 0.5px;
+      color: #1c1917; opacity: 0.35; user-select: none;
+    }
+    #vol-thumb-label {
+      position: relative; height: 14px;
+      pointer-events: none;
+    }
+    #vol-thumb-label span {
+      position: absolute; transform: translateX(-50%);
+      font-family: 'JetBrains Mono', monospace; font-size: 9px;
+      color: #1c1917; opacity: 0.55; white-space: nowrap;
+      top: 0; line-height: 14px;
+    }
+    #volume-slider {
+      -webkit-appearance: none; appearance: none;
+      width: 88px; height: 3px;
+      background: rgba(28,25,23,0.25); border-radius: 2px;
+      outline: none; opacity: 0.5;
+      transition: opacity 0.2s ease;
+    }
+    #volume-slider:hover { opacity: 0.8; }
+    #volume-slider::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #1c1917; cursor: pointer;
+    }
+    #volume-slider::-moz-range-thumb {
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #1c1917; cursor: pointer; border: none;
+    }
+
+    /* ── Play controls — step through the strata as music ── */
+    #play-btn {
+      width: 52px; height: 52px; border-radius: 50%;
+      border: 1.5px solid #1c1917; background: rgba(250,247,242,0.85);
+      cursor: pointer;
+      font-family: Georgia, serif; font-size: 22px; line-height: 49px;
+      text-align: center; opacity: 0.5; flex-shrink: 0;
+      padding: 0; color: #1c1917;
+      transition: opacity 0.2s ease, background 0.2s ease, color 0.2s ease;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+    #play-btn:hover { opacity: 0.95; background: rgba(250,247,242,0.95); }
+    #play-btn.active {
+      opacity: 1;
+      background: #d97706; color: #faf7f2;
+      border-color: #d97706;
+    }
+    #play-mode-btn {
+      border: 1.5px solid #1c1917; background: rgba(250,247,242,0.85);
+      cursor: pointer;
+      height: 26px; padding: 0 10px; border-radius: 13px;
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      letter-spacing: 0.06em; color: #1c1917; opacity: 0.55;
+      transition: opacity 0.2s ease, background 0.2s ease;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      text-transform: uppercase; white-space: nowrap;
+    }
+    #play-mode-btn:hover { opacity: 0.9; background: rgba(250,247,242,0.95); }
+    #play-mode-label {
+      font-family: Georgia, serif; font-size: 9px; letter-spacing: 0.5px;
+      color: #1c1917; opacity: 0.35; margin-top: 3px;
+      text-align: center;
+    }
+    #play-mode-wrap {
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+    }
+  
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+
+}
+</style>
+</head>
+<body>
+
+  <div id="loading">Loading TraceStrata…</div>
+
+  <div id="tooltip">
+    <div class="tt-type"></div>
+    <div class="tt-label"></div>
+    <div class="tt-state"></div>
+  </div>
+
+  <div id="mode-indicator">Tilted View</div>
+
+  <div id="slice-nav"></div>
+
+  <div id="ui-bar">
+    <div id="brand"><strong>TRACESTRATA</strong> &middot; OpenProse &middot; synthetic run</div>
+    <div id="controls">
+      <span id="hint">Drag to orbit &middot; Scroll to zoom &middot; Hover nodes for info</span>
+      <button id="toggle-btn">Flat View</button>
+    </div>
+  </div>
+
+  <div id="audio-controls">
+    <button id="mute-btn" title="Toggle sound">&#x1f507;</button>
+    <div id="vol-wrap">
+      <div id="vol-thumb-label"><span id="vol-num">0.4</span></div>
+      <div id="vol-track">
+        <span class="vol-end">0</span>
+        <input id="volume-slider" type="range" min="0" max="1" step="0.01" value="0.4" title="Volume">
+        <span class="vol-end">1</span>
+      </div>
+    </div>
+    <button id="play-btn" title="Play through strata as music">&#x25B6;</button>
+    <div id="play-mode-wrap">
+      <button id="play-mode-btn" data-mode="once" title="Cycle play mode">Once</button>
+      <span id="play-mode-label">mode</span>
+    </div>
+  </div>
+
+  <script src="../lib/data-slot.js"></script>
+  <script src="../data/strata-audio.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // ────────────────────────────────────────────────
+    // CONFIGURATION
+    // ────────────────────────────────────────────────
+
+    const SLICE_GAP   = 3;
+    const PLANE_W     = 14;
+    const PLANE_D     = 10;
+    const NODE_R      = 0.55;
+    const RECT_W      = 1.5;
+    const RECT_H      = 0.85;
+    const PARA_SKEW   = 0.28;
+    const TRI_SIZE    = 1.05;
+    const LERP_SPEED  = 0.045;
+    const HOVER_SCALE = 1.18;
+
+    const C = {
+      ink:         0x1c1917,
+      gold:        0xd97706,
+      grey:        0xd1d5db,
+      planeBorder: 0xe5e0d8,
+    };
+
+    const TYPE_LABELS = {
+      circle:        'Agent',
+      triangle:      'Delegation',
+      rectangle:     'Data',
+      parallelogram: 'Output',
+    };
+
+    const STATE_ICONS = {
+      active:    '●',
+      waiting:   '○',
+      spawning:  '◌',
+      completed: '✓',
+      produced:  '◆',
+      potential: '◇',
+      collected: '✦',
+      consumed:  '✧',
+      deciding:  '▷',
+    };
+
+    // ────────────────────────────────────────────────
+    // WEB AUDIO — "Warm Editorial Mechanics"
+    // ────────────────────────────────────────────────
+
+    let audioCtx = null;
+    let audioEnabled = false;
+    let audioReady = false;
+
+    function ensureAudioReady() {
+      if (audioReady) return true;
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      audioReady = audioCtx.state === 'running';
+      return audioReady;
+    }
+
+    // Master gain for mute
+    let masterGain = null;
+    let userVolume = 0.4;
+
+    function getMaster() {
+      if (!masterGain) {
+        masterGain = audioCtx.createGain();
+        masterGain.gain.value = audioEnabled ? userVolume : 0;
+        masterGain.connect(audioCtx.destination);
+      }
+      return masterGain;
+    }
+
+    function playIntroChord() {
+      for (let i = 0; i < timeSlices.length; i++) {
+        setTimeout(() => soundEntrance(i, timeSlices.length), i * ENTRANCE_DELAY * 1000);
+      }
+    }
+
+    // Volume slider — updates userVolume, thumb label, and live gain if unmuted
+    const volumeSlider = document.getElementById('volume-slider');
+    const volNum = document.getElementById('vol-num');
+    const SLIDER_W = 88, THUMB_W = 14;
+
+    function updateVolThumb(val) {
+      const pct = val / (parseFloat(volumeSlider.max) || 1);
+      const left = pct * (SLIDER_W - THUMB_W) + THUMB_W / 2;
+      volNum.style.left = left + 'px';
+      volNum.textContent = val.toFixed(1);
+    }
+
+    updateVolThumb(userVolume);
+
+    volumeSlider.addEventListener('input', () => {
+      userVolume = parseFloat(volumeSlider.value);
+      updateVolThumb(userVolume);
+      if (masterGain && audioEnabled) masterGain.gain.value = userVolume;
+    });
+
+    // Mute toggle
+    const muteBtn = document.getElementById('mute-btn');
+    muteBtn.addEventListener('click', () => {
+      ensureAudioReady();
+      const wasEnabled = audioEnabled;
+      audioEnabled = !audioEnabled;
+      muteBtn.innerHTML = audioEnabled ? '&#x1f50a;' : '&#x1f507;';
+      if (masterGain) masterGain.gain.value = audioEnabled ? userVolume : 0;
+      if (!wasEnabled && audioEnabled) playIntroChord();
+    });
+
+    // --- Sound functions ---
+
+    // Musical hover sounds — each stratum is an octave (T1=C2, T2=C3,
+    // T3=C4, T4=C5, T5=C6), each node type is a note of that octave's
+    // major-seventh chord:
+    //   circle (agent)        → C  (root)
+    //   triangle (delegation) → E  (major third)
+    //   rectangle (data)      → G  (perfect fifth)
+    //   parallelogram (output)→ B  (major seventh)
+    // Hover and play-mode use the SAME functions so the two experiences
+    // are the same instrument. Constants (STRATUM_BASE_FREQS,
+    // NODE_SEMITONES, noteForNode) live in the MUSICAL PLAYBACK block
+    // further down.
+
+    // 1. Node hover — agent (circle): warm sustained sine on the root
+    function soundNodeAgent(sliceIndex) {
+      if (!audioEnabled || !ensureAudioReady()) return;
+      const t = audioCtx.currentTime;
+      const freq = noteForNode(sliceIndex || 0, 'circle');
+      const dur = 0.42;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.14, t + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      osc.connect(gain);
+      gain.connect(getMaster());
+      osc.start(t);
+      osc.stop(t + dur + 0.02);
+    }
+
+    // 2. Node hover — delegation (triangle): triangle wave, chirps
+    //    from the fifth down to the third (G → E) at the stratum's
+    //    octave. Keeps the original "decision sweep" character but
+    //    now always lands on an in-chord note.
+    function soundNodeDelegation(sliceIndex) {
+      if (!audioEnabled || !ensureAudioReady()) return;
+      const t = audioCtx.currentTime;
+      const si = sliceIndex || 0;
+      const base = STRATUM_BASE_FREQS[si] || STRATUM_BASE_FREQS[0];
+      const startFreq = base * Math.pow(2, 7 / 12);  // fifth (G)
+      const endFreq   = base * Math.pow(2, 4 / 12);  // third (E)
+      const dur = 0.40;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(startFreq, t);
+      osc.frequency.exponentialRampToValueAtTime(endFreq, t + dur * 0.65);
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.12, t + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      osc.connect(gain);
+      gain.connect(getMaster());
+      osc.start(t);
+      osc.stop(t + dur + 0.02);
+    }
+
+    // 3. Node hover — data (rectangle): soft sine on the fifth, short
+    //    decay. Shorter than the other types — data is a ping, not a
+    //    statement.
+    function soundNodeData(sliceIndex) {
+      if (!audioEnabled || !ensureAudioReady()) return;
+      const t = audioCtx.currentTime;
+      const freq = noteForNode(sliceIndex || 0, 'rectangle');
+      const dur = 0.28;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.16, t + 0.005);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      osc.connect(gain);
+      gain.connect(getMaster());
+      osc.start(t);
+      osc.stop(t + dur + 0.02);
+    }
+
+    // 4. Node hover — output (parallelogram): the major seventh (B)
+    //    plus an octave above, staggered, to read as a bright chime.
+    function soundNodeOutput(sliceIndex) {
+      if (!audioEnabled || !ensureAudioReady()) return;
+      const t = audioCtx.currentTime;
+      const freq = noteForNode(sliceIndex || 0, 'parallelogram');
+      const dur = 0.42;
+
+      [freq, freq * 2].forEach((f, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = f;
+        const offset = i * 0.05;
+        gain.gain.setValueAtTime(0, t + offset);
+        gain.gain.linearRampToValueAtTime(i === 0 ? 0.12 : 0.06, t + offset + 0.008);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + offset + dur);
+        osc.connect(gain);
+        gain.connect(getMaster());
+        osc.start(t + offset);
+        osc.stop(t + offset + dur + 0.02);
+      });
+    }
+
+    // 5. Node click: play the same hover note one octave lower +
+    //    a short square burst for the lock. Keeps click in the same
+    //    musical key as the stratum, just an octave deeper to read
+    //    as "committed" rather than "brushed".
+    function soundNodeClick(nodeType, sliceIndex) {
+      if (!audioEnabled || !ensureAudioReady()) return;
+      const t = audioCtx.currentTime;
+      const lowerSlice = Math.max(0, (sliceIndex || 0) - 1);
+      switch (nodeType) {
+        case 'circle':        soundNodeAgent(lowerSlice); break;
+        case 'triangle':      soundNodeDelegation(lowerSlice); break;
+        case 'rectangle':     soundNodeData(lowerSlice); break;
+        case 'parallelogram': soundNodeOutput(lowerSlice); break;
+      }
+
+      // Lock click — very short square burst
+      const lockOsc = audioCtx.createOscillator();
+      const lockGain = audioCtx.createGain();
+      lockOsc.type = 'square';
+      lockOsc.frequency.value = 1000;
+      lockGain.gain.setValueAtTime(0, t + 0.01);
+      lockGain.gain.linearRampToValueAtTime(0.08, t + 0.011);
+      lockGain.gain.linearRampToValueAtTime(0, t + 0.014);
+      lockOsc.connect(lockGain);
+      lockGain.connect(getMaster());
+      lockOsc.start(t + 0.01);
+      lockOsc.stop(t + 0.02);
+    }
+
+    // 6. Edge hover — solid (gold): low hum
+    function soundEdgeSolid() {
+      if (!audioEnabled || !ensureAudioReady()) return;
+      const t = audioCtx.currentTime;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = 180;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.08, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+      osc.connect(gain);
+      gain.connect(getMaster());
+      osc.start(t);
+      osc.stop(t + 0.13);
+    }
+
+    // 7. Edge hover — dashed (grey): ethereal filtered tone
+    function soundEdgeDashed() {
+      if (!audioEnabled || !ensureAudioReady()) return;
+      const t = audioCtx.currentTime;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = 500;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.06, t + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+      osc.connect(gain);
+      gain.connect(getMaster());
+      osc.start(t);
+      osc.stop(t + 0.13);
+    }
+
+    // 8. View toggle: noise-like sweep via rapid oscillator
+    function soundViewToggle(ascending) {
+      if (!audioEnabled || !ensureAudioReady()) return;
+      const t = audioCtx.currentTime;
+      const dur = 0.3;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sawtooth';
+
+      if (ascending) {
+        osc.frequency.setValueAtTime(120, t);
+        osc.frequency.exponentialRampToValueAtTime(800, t + dur);
+      } else {
+        osc.frequency.setValueAtTime(800, t);
+        osc.frequency.exponentialRampToValueAtTime(120, t + dur);
+      }
+
+      // Lowpass filter for warmth
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 1200;
+      filter.Q.value = 0.7;
+
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.07, t + 0.02);
+      gain.gain.setValueAtTime(0.07, t + dur * 0.6);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(getMaster());
+      osc.start(t);
+      osc.stop(t + dur + 0.01);
+    }
+
+    // 9. Slice navigation: pentatonic bell tones
+    const SLICE_TONES = [262, 294, 330, 392, 440]; // C4 D4 E4 G4 A4
+    function soundSliceNav(sliceIndex) {
+      if (!audioEnabled || !ensureAudioReady()) return;
+      const t = audioCtx.currentTime;
+      const freq = SLICE_TONES[sliceIndex % SLICE_TONES.length];
+
+      // Fundamental sine
+      const osc1 = audioCtx.createOscillator();
+      const gain1 = audioCtx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.value = freq;
+      gain1.gain.setValueAtTime(0, t);
+      gain1.gain.linearRampToValueAtTime(0.15, t + 0.005);
+      gain1.gain.exponentialRampToValueAtTime(0.001, t + 0.205);
+      osc1.connect(gain1); gain1.connect(getMaster());
+      osc1.start(t); osc1.stop(t + 0.21);
+
+      // Quiet triangle harmonic octave above
+      const osc2 = audioCtx.createOscillator();
+      const gain2 = audioCtx.createGain();
+      osc2.type = 'triangle';
+      osc2.frequency.value = freq * 2;
+      gain2.gain.setValueAtTime(0, t);
+      gain2.gain.linearRampToValueAtTime(0.06, t + 0.005);
+      gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.205);
+      osc2.connect(gain2); gain2.connect(getMaster());
+      osc2.start(t); osc2.stop(t + 0.21);
+    }
+
+    // 10. Entrance animation: harmonic chord building
+    const ENTRANCE_FREQS = [130, 165, 196, 262, 330]; // C3 E3 G3 C4 E4
+    function soundEntrance(planeIndex, totalPlanes) {
+      if (!audioEnabled || !ensureAudioReady()) return;
+      const t = audioCtx.currentTime;
+      const freq = ENTRANCE_FREQS[planeIndex % ENTRANCE_FREQS.length];
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+
+      // Build up then decay — last plane triggers the 2-second group decay
+      const buildEnd = 0.2;
+      const isLast = planeIndex === totalPlanes - 1;
+      const holdEnd = isLast ? buildEnd + 0.3 : buildEnd + 2.0;
+      const decayEnd = holdEnd + 2.0;
+
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.1, t + buildEnd);
+      gain.gain.setValueAtTime(0.1, t + holdEnd);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + decayEnd);
+
+      osc.connect(gain);
+      gain.connect(getMaster());
+      osc.start(t);
+      osc.stop(t + decayEnd + 0.01);
+    }
+
+    // ────────────────────────────────────────────────
+    // MUSICAL PLAYBACK — walk every stratum's nodes as notes
+    //
+    // Each stratum is one octave: T1 = C2, T2 = C3 ... T5 = C6.
+    // Within a stratum, each node type maps to a note of the root
+    // major-seventh chord so the arpeggio across a stratum always
+    // resolves as C-E-G-B at its own octave:
+    //   circle (agent)        → root (C)
+    //   triangle (delegation) → major third (E)
+    //   rectangle (data)      → perfect fifth (G)
+    //   parallelogram (output)→ major seventh (B)
+    // Walking the run from T1 to T5 is therefore a rising arpeggio.
+    // ────────────────────────────────────────────────
+
+    const STRATUM_BASE_FREQS = [65.41, 130.81, 261.63, 523.25, 1046.50]; // C2, C3, C4, C5, C6
+    const NODE_SEMITONES = {
+      circle:        0,    // C
+      triangle:      4,    // E
+      rectangle:     7,    // G
+      parallelogram: 11,   // B
+    };
+    const PLAY_NOTE_DUR     = 0.40;   // seconds per note
+    const PLAY_NOTE_GAP     = 0.08;   // inside a stratum
+    const PLAY_STRATUM_GAP  = 0.38;   // between strata
+    const PLAY_LOOP_GAP     = 0.7;    // before the next lap starts
+
+    const PLAY_MODES = ['once', '2×', '∞'];
+    const PLAY_MODE_LAPS = { 'once': 1, '2×': 2, '∞': Infinity };
+
+    function noteForNode(sliceIndex, nodeType) {
+      const base = STRATUM_BASE_FREQS[sliceIndex] || STRATUM_BASE_FREQS[0];
+      const semis = NODE_SEMITONES[nodeType] ?? 0;
+      return base * Math.pow(2, semis / 12);
+    }
+
+    // Play-mode calls the SAME hover sound functions so the two
+    // experiences are the same instrument — the play button is just
+    // the computer walking through what the user would walk through
+    // by hovering.
+    function playNodeSound(sliceIndex, nodeType) {
+      switch (nodeType) {
+        case 'circle':        soundNodeAgent(sliceIndex); break;
+        case 'triangle':      soundNodeDelegation(sliceIndex); break;
+        case 'rectangle':     soundNodeData(sliceIndex); break;
+        case 'parallelogram': soundNodeOutput(sliceIndex); break;
+      }
+    }
+
+    function highlightNodeById(nodeId, holdMs) {
+      const mesh = nodeIdToMesh[nodeId];
+      if (!mesh) return;
+      mesh.userData.emissiveFlash = 1.0;
+      mesh.userData.targetScale = HOVER_SCALE;
+      setTimeout(() => {
+        if (mesh.userData) mesh.userData.targetScale = 1;
+      }, holdMs);
+    }
+
+    const playState = {
+      active: false,
+      stratumIdx: 0,
+      nodeIdx: 0,
+      lapsDone: 0,
+      mode: 'once',
+      timer: null,
+    };
+
+    function stopPlayback() {
+      if (playState.timer) { clearTimeout(playState.timer); playState.timer = null; }
+      playState.active = false;
+      const btn = document.getElementById('play-btn');
+      if (btn) {
+        btn.classList.remove('active');
+        btn.innerHTML = '&#x25B6;';   // ▶
+        btn.title = 'Play through strata as music';
+      }
+    }
+
+    function stepPlayback() {
+      if (!playState.active) return;
+      const slice = timeSlices[playState.stratumIdx];
+      if (!slice) { stopPlayback(); return; }
+      const node = slice.nodes[playState.nodeIdx];
+
+      if (node) {
+        playNodeSound(playState.stratumIdx, node.type);
+        highlightNodeById(node.id, PLAY_NOTE_DUR * 1000);
+      }
+
+      // Advance cursor
+      playState.nodeIdx++;
+      let isStratumBoundary = false;
+      if (playState.nodeIdx >= slice.nodes.length) {
+        playState.nodeIdx = 0;
+        playState.stratumIdx++;
+        isStratumBoundary = true;
+      }
+
+      // End-of-run handling
+      if (playState.stratumIdx >= timeSlices.length) {
+        playState.lapsDone++;
+        const totalLaps = PLAY_MODE_LAPS[playState.mode] || 1;
+        if (playState.lapsDone >= totalLaps) {
+          // Let the final note ring a moment before stopping.
+          playState.timer = setTimeout(stopPlayback, PLAY_NOTE_DUR * 1000);
+          return;
+        }
+        playState.stratumIdx = 0;
+        playState.nodeIdx = 0;
+        playState.timer = setTimeout(stepPlayback, PLAY_LOOP_GAP * 1000);
+        return;
+      }
+
+      const delay = isStratumBoundary
+        ? PLAY_NOTE_DUR + PLAY_STRATUM_GAP
+        : PLAY_NOTE_DUR + PLAY_NOTE_GAP;
+      playState.timer = setTimeout(stepPlayback, delay * 1000);
+    }
+
+    function startPlayback() {
+      if (playState.active) { stopPlayback(); return; }
+      if (!ensureAudioReady()) return;
+      // Auto-unmute so the user hears the walk even if they hadn't
+      // clicked the speaker first.
+      if (!audioEnabled) {
+        audioEnabled = true;
+        if (masterGain) masterGain.gain.value = userVolume;
+        muteBtn.innerHTML = '&#x1f50a;';
+      }
+      playState.active = true;
+      playState.stratumIdx = 0;
+      playState.nodeIdx = 0;
+      playState.lapsDone = 0;
+
+      const btn = document.getElementById('play-btn');
+      if (btn) {
+        btn.classList.add('active');
+        btn.innerHTML = '&#x25A0;';   // ■ stop
+        btn.title = 'Stop playback';
+      }
+      stepPlayback();
+    }
+
+    // Wire up play + mode controls
+    (function wirePlayControls() {
+      const playBtn = document.getElementById('play-btn');
+      const modeBtn = document.getElementById('play-mode-btn');
+      if (!playBtn || !modeBtn) return;
+      playBtn.addEventListener('click', () => {
+        if (playState.active) stopPlayback();
+        else startPlayback();
+      });
+      modeBtn.addEventListener('click', () => {
+        const cur = PLAY_MODES.indexOf(playState.mode);
+        playState.mode = PLAY_MODES[(cur + 1) % PLAY_MODES.length];
+        modeBtn.textContent = playState.mode === 'once' ? 'Once'
+          : playState.mode === '2×' ? 'Loop 2×'
+          : 'Loop ∞';
+        modeBtn.dataset.mode = playState.mode;
+      });
+    })();
+
+    // ────────────────────────────────────────────────
+    // DATA: the run, from its data slot (data/strata-audio.js)
+    // ────────────────────────────────────────────────
+
+    const { timeSlices, verticalEdges } = TraceSlot.require("strata-audio", ["timeSlices", "verticalEdges"]);
+
+    // ────────────────────────────────────────────────
+    // SCENE SETUP
+    // ────────────────────────────────────────────────
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(0x000000, 0);
+    document.body.prepend(renderer.domElement);
+
+    const scene  = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 200);
+    camera.position.set(20, 28, 20);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping  = true;
+    controls.dampingFactor  = 0.06;
+    controls.minDistance     = 5;
+    controls.maxDistance     = 50;
+    controls.maxPolarAngle  = Math.PI / 2 - 0.05;
+    controls.target.set(0, 6, 0);
+    controls.update();
+
+    // ────────────────────────────────────────────────
+    // CAMERA MODES
+    // ────────────────────────────────────────────────
+
+    let isTilted    = true;
+    let isAnimating = true;
+
+    const cameraViews = {
+      tilted: { pos: new THREE.Vector3(14, 11, 14), target: new THREE.Vector3(0, 6, 0) },
+      flat:   { pos: new THREE.Vector3(0, 26, 0.01), target: new THREE.Vector3(0, 12, 0) },
+    };
+
+    let targetPos    = cameraViews.tilted.pos.clone();
+    let targetLookAt = cameraViews.tilted.target.clone();
+
+    function setView(mode) {
+      const view = cameraViews[mode];
+      targetPos.copy(view.pos);
+      targetLookAt.copy(view.target);
+      isAnimating = true;
+    }
+
+    document.getElementById('toggle-btn').addEventListener('click', () => {
+      ensureAudioReady();
+      const wasTilted = isTilted;
+      isTilted = !isTilted;
+      setView(isTilted ? 'tilted' : 'flat');
+      document.getElementById('toggle-btn').textContent = isTilted ? 'Flat View' : 'Tilted View';
+      document.getElementById('mode-indicator').textContent = isTilted ? 'Tilted View' : 'Flat View';
+      // Tilt→Flat = descending, Flat→Tilt = ascending
+      soundViewToggle(!wasTilted);
+    });
+
+    // ────────────────────────────────────────────────
+    // GEOMETRY HELPERS  (all output in XZ plane)
+    // ────────────────────────────────────────────────
+
+    function circleFillGeo(radius, segs = 32) {
+      const g = new THREE.CircleGeometry(radius, segs);
+      g.rotateX(-Math.PI / 2);
+      return g;
+    }
+
+    function circleOutlinePts(radius, segs = 64) {
+      const pts = [];
+      for (let i = 0; i <= segs; i++) {
+        const a = (i / segs) * Math.PI * 2;
+        pts.push(new THREE.Vector3(Math.cos(a) * radius, 0, -Math.sin(a) * radius));
+      }
+      return pts;
+    }
+
+    function triangleFillGeo(size) {
+      const h = size * Math.sqrt(3) / 2;
+      const v = new Float32Array([
+        0, 0, -h * 2 / 3,
+        -size / 2, 0, h / 3,
+        size / 2, 0, h / 3,
+      ]);
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(v, 3));
+      g.setIndex([0, 1, 2]);
+      g.computeVertexNormals();
+      return g;
+    }
+
+    function triangleOutlinePts(size) {
+      const h = size * Math.sqrt(3) / 2;
+      return [
+        new THREE.Vector3(0, 0, -h * 2 / 3),
+        new THREE.Vector3(-size / 2, 0, h / 3),
+        new THREE.Vector3(size / 2, 0, h / 3),
+        new THREE.Vector3(0, 0, -h * 2 / 3),
+      ];
+    }
+
+    function rectFillGeo(w, h) {
+      const g = new THREE.PlaneGeometry(w, h);
+      g.rotateX(-Math.PI / 2);
+      return g;
+    }
+
+    function rectOutlinePts(w, h) {
+      const hw = w / 2, hh = h / 2;
+      return [
+        new THREE.Vector3(-hw, 0, -hh),
+        new THREE.Vector3( hw, 0, -hh),
+        new THREE.Vector3( hw, 0,  hh),
+        new THREE.Vector3(-hw, 0,  hh),
+        new THREE.Vector3(-hw, 0, -hh),
+      ];
+    }
+
+    function paraFillGeo(w, h, skew) {
+      const hw = w / 2, hh = h / 2;
+      const v = new Float32Array([
+        -hw + skew, 0, -hh,
+         hw + skew, 0, -hh,
+         hw - skew, 0,  hh,
+        -hw - skew, 0,  hh,
+      ]);
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(v, 3));
+      g.setIndex([0, 1, 2, 0, 2, 3]);
+      g.computeVertexNormals();
+      return g;
+    }
+
+    function paraOutlinePts(w, h, skew) {
+      const hw = w / 2, hh = h / 2;
+      return [
+        new THREE.Vector3(-hw + skew, 0, -hh),
+        new THREE.Vector3( hw + skew, 0, -hh),
+        new THREE.Vector3( hw - skew, 0,  hh),
+        new THREE.Vector3(-hw - skew, 0,  hh),
+        new THREE.Vector3(-hw + skew, 0, -hh),
+      ];
+    }
+
+    // ────────────────────────────────────────────────
+    // TEXT SPRITE HELPER
+    // ────────────────────────────────────────────────
+
+    function makeTextSprite(text, opts = {}) {
+      const fontSize = opts.fontSize || 36;
+      const color    = opts.color    || '#1c1917';
+      const opacity  = opts.opacity ?? 0.5;
+      const scale    = opts.scale   || 1.0;
+
+      const canvas = document.createElement('canvas');
+      const ctx    = canvas.getContext('2d');
+      ctx.font = `${fontSize}px Georgia, serif`;
+      const tw = ctx.measureText(text).width;
+
+      canvas.width  = Math.ceil(tw) + 24;
+      canvas.height = fontSize + 20;
+
+      ctx.font         = `${fontSize}px Georgia, serif`;
+      ctx.fillStyle    = color;
+      ctx.globalAlpha  = opacity;
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.minFilter = THREE.LinearFilter;
+
+      const mat = new THREE.SpriteMaterial({
+        map: tex, transparent: true, depthTest: false, depthWrite: false,
+      });
+      const sprite  = new THREE.Sprite(mat);
+      const aspect  = canvas.width / canvas.height;
+      sprite.scale.set(scale * aspect, scale, 1);
+      return sprite;
+    }
+
+    // ────────────────────────────────────────────────
+    // BUILD SCENE
+    // ────────────────────────────────────────────────
+
+    const nodeGroups     = [];
+    const nodeFillMeshes = [];
+    const planeMeshes    = [];
+    const nodePositions  = {};
+
+    // Lookup: nodeId → world position
+    timeSlices.forEach(slice => {
+      slice.nodes.forEach(n => {
+        nodePositions[n.id] = { x: n.x, y: slice.y, z: n.z };
+      });
+    });
+
+    // Compute depth ratio for each node (for pitch mapping)
+    // root nodes at slice 0 → 0.0, leaf nodes at slice 4 → 1.0
+    const nodeDepthRatio = {};
+    timeSlices.forEach((slice, i) => {
+      slice.nodes.forEach(n => {
+        nodeDepthRatio[n.id] = i / (timeSlices.length - 1);
+      });
+    });
+
+    // ── Slice navigation dots ──
+    const sliceNav = document.getElementById('slice-nav');
+    timeSlices.forEach((slice, i) => {
+      const dot = document.createElement('div');
+      dot.className = 'slice-dot' + (i === timeSlices.length - 1 ? ' active' : '');
+      dot.title = slice.label;
+      dot.addEventListener('click', () => {
+        ensureAudioReady();
+        soundSliceNav(i);
+        flyToSlice(i);
+      });
+      sliceNav.appendChild(dot);
+    });
+
+    function flyToSlice(idx) {
+      const y = timeSlices[idx].y;
+      targetLookAt.set(0, y, 0);
+      if (isTilted) {
+        targetPos.set(14, y + 5, 14);
+      } else {
+        targetPos.set(0, y + 14, 0.01);
+      }
+      isAnimating = true;
+      document.querySelectorAll('.slice-dot').forEach((d, i) =>
+        d.classList.toggle('active', i === idx));
+    }
+
+    // ── Planes (initially hidden for staggered entrance) ──
+    timeSlices.forEach((slice, i) => {
+      const planeGroup = new THREE.Group();
+      planeGroup.visible = false; // hidden until entrance
+      planeGroup.userData.sliceIndex = i;
+
+      // Plane fill
+      const geo = new THREE.PlaneGeometry(PLANE_W, PLANE_D);
+      geo.rotateX(-Math.PI / 2);
+      const mat = new THREE.MeshBasicMaterial({
+        color: 0xffffff, transparent: true, opacity: 0.15,
+        side: THREE.DoubleSide, depthWrite: false,
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.renderOrder = 0;
+      planeGroup.add(mesh);
+      planeMeshes.push(mesh);
+
+      // Plane border
+      const hw = PLANE_W / 2, hd = PLANE_D / 2;
+      const bPts = [
+        new THREE.Vector3(-hw, 0, -hd),
+        new THREE.Vector3( hw, 0, -hd),
+        new THREE.Vector3( hw, 0,  hd),
+        new THREE.Vector3(-hw, 0,  hd),
+        new THREE.Vector3(-hw, 0, -hd),
+      ];
+      const bGeo = new THREE.BufferGeometry().setFromPoints(bPts);
+      const bMat = new THREE.LineBasicMaterial({
+        color: C.planeBorder, transparent: true, opacity: 0.35,
+      });
+      planeGroup.add(new THREE.Line(bGeo, bMat));
+
+      // Plane label
+      const lbl = makeTextSprite(slice.label, {
+        fontSize: 28, opacity: 0.3, scale: 0.9,
+      });
+      lbl.position.set(-hw + 1.2, 0.08, hd - 0.6);
+      lbl.renderOrder = 2;
+      planeGroup.add(lbl);
+
+      planeGroup.position.set(0, slice.y, 0);
+      scene.add(planeGroup);
+    });
+
+    // ── Nodes ──
+    // Map nodeId → fill mesh for edge hover glow
+    const nodeIdToMesh = {};
+
+    timeSlices.forEach((slice, sliceIdx) => {
+      slice.nodes.forEach(n => {
+        const group = new THREE.Group();
+        group.visible = false; // hidden until entrance
+        group.userData.sliceIndex = sliceIdx;
+        const pot   = n.potential;
+
+        const fillMat = new THREE.MeshBasicMaterial({
+          color:     pot ? 0xf5f0eb : 0xffffff,
+          transparent: true,
+          opacity:     pot ? 0.3 : 0.8,
+          side:        THREE.DoubleSide,
+          depthWrite:  false,
+        });
+
+        let outlineMat;
+        if (pot) {
+          outlineMat = new THREE.LineDashedMaterial({
+            color: C.grey, transparent: true, opacity: 0.55,
+            dashSize: 0.15, gapSize: 0.1, depthWrite: false,
+          });
+        } else {
+          outlineMat = new THREE.LineBasicMaterial({
+            color: C.ink, transparent: true, opacity: 0.85, depthWrite: false,
+          });
+        }
+
+        let fillGeo, outlinePts;
+
+        switch (n.type) {
+          case 'circle':
+            fillGeo    = circleFillGeo(NODE_R);
+            outlinePts = circleOutlinePts(NODE_R);
+            break;
+          case 'triangle':
+            fillGeo    = triangleFillGeo(TRI_SIZE);
+            outlinePts = triangleOutlinePts(TRI_SIZE);
+            break;
+          case 'rectangle':
+            fillGeo    = rectFillGeo(RECT_W, RECT_H);
+            outlinePts = rectOutlinePts(RECT_W, RECT_H);
+            break;
+          case 'parallelogram':
+            fillGeo    = paraFillGeo(RECT_W, RECT_H, PARA_SKEW);
+            outlinePts = paraOutlinePts(RECT_W, RECT_H, PARA_SKEW);
+            break;
+        }
+
+        // Fill mesh (raycast target)
+        const fillMesh = new THREE.Mesh(fillGeo, fillMat);
+        fillMesh.renderOrder = 3;
+        fillMesh.userData = {
+          nodeId:     n.id,
+          label:      n.label,
+          state:      n.state,
+          type:       n.type,
+          sliceIndex: sliceIdx,     // surfaced for musical hover/click
+          potential:  pot,
+          groupIndex: nodeGroups.length,
+          targetScale: 1,
+          emissiveFlash: 0,     // for audio-visual pulse
+          baseOpacity: pot ? 0.3 : 0.8,
+        };
+        group.add(fillMesh);
+        nodeFillMeshes.push(fillMesh);
+        nodeIdToMesh[n.id] = fillMesh;
+
+        // Outline
+        const outGeo = new THREE.BufferGeometry().setFromPoints(outlinePts);
+        const outline = new THREE.Line(outGeo, outlineMat);
+        if (pot) outline.computeLineDistances();
+        outline.renderOrder = 4;
+        group.add(outline);
+
+        // Label
+        const lbl = makeTextSprite(n.label, {
+          fontSize: 22, opacity: pot ? 0.25 : 0.45, scale: 0.65,
+        });
+        lbl.position.set(0, 0.08, NODE_R + 0.55);
+        lbl.renderOrder = 5;
+        group.add(lbl);
+
+        group.position.set(n.x, slice.y + 0.04, n.z);
+        scene.add(group);
+        nodeGroups.push(group);
+      });
+    });
+
+    // ── Within-slice edges ──
+    const edgeLines = []; // track all edges for hover detection
+
+    timeSlices.forEach(slice => {
+      slice.edges.forEach(e => {
+        const src = nodePositions[e.source];
+        const tgt = nodePositions[e.target];
+        if (!src || !tgt) return;
+
+        const y   = slice.y + 0.02;
+        const pts = [
+          new THREE.Vector3(src.x, y, src.z),
+          new THREE.Vector3(tgt.x, y, tgt.z),
+        ];
+        const geo = new THREE.BufferGeometry().setFromPoints(pts);
+
+        let mat;
+        if (e.type === 'dashed') {
+          mat = new THREE.LineDashedMaterial({
+            color: C.grey, transparent: true, opacity: 0.45,
+            dashSize: 0.2, gapSize: 0.12, depthWrite: false,
+          });
+        } else {
+          mat = new THREE.LineBasicMaterial({
+            color: C.gold, transparent: true, opacity: 0.55, depthWrite: false,
+          });
+        }
+
+        const line = new THREE.Line(geo, mat);
+        if (e.type === 'dashed') line.computeLineDistances();
+        line.renderOrder = 2;
+        line.visible = false; // hidden until entrance
+        line.userData = {
+          sliceIndex: slice.id,
+          edgeType: e.type,
+          sourceId: e.source,
+          targetId: e.target,
+          baseOpacity: e.type === 'dashed' ? 0.45 : 0.55,
+        };
+        scene.add(line);
+        edgeLines.push(line);
+      });
+    });
+
+    // ── Vertical edges ──
+    const vertEdgeObjects = [];
+
+    verticalEdges.forEach(e => {
+      const src = nodePositions[e.sourceId];
+      const tgt = nodePositions[e.targetId];
+      if (!src || !tgt) return;
+
+      const pts = [
+        new THREE.Vector3(src.x, src.y + 0.05, src.z),
+        new THREE.Vector3(tgt.x, tgt.y - 0.05, tgt.z),
+      ];
+      const geo = new THREE.BufferGeometry().setFromPoints(pts);
+
+      let mat;
+      if (e.type === 'dashed') {
+        mat = new THREE.LineDashedMaterial({
+          color: C.grey, transparent: true, opacity: 0.4,
+          dashSize: 0.25, gapSize: 0.15, depthWrite: false,
+        });
+      } else {
+        mat = new THREE.LineBasicMaterial({
+          color: C.gold, transparent: true, opacity: 0.5, depthWrite: false,
+        });
+      }
+
+      const line = new THREE.Line(geo, mat);
+      if (e.type === 'dashed') line.computeLineDistances();
+      line.renderOrder = 2;
+      line.visible = false; // hidden until entrance
+      line.userData = {
+        edgeType: e.type,
+        sourceId: e.sourceId,
+        targetId: e.targetId,
+        baseOpacity: e.type === 'dashed' ? 0.4 : 0.5,
+        isVertical: true,
+      };
+      scene.add(line);
+      edgeLines.push(line);
+      vertEdgeObjects.push({ line, pts, data: e });
+
+      // Endpoint dots on solid edges
+      if (e.type === 'solid') {
+        [pts[0], pts[pts.length - 1]].forEach(p => {
+          const dGeo = new THREE.SphereGeometry(0.06, 8, 8);
+          const dMat = new THREE.MeshBasicMaterial({
+            color: C.gold, transparent: true, opacity: 0.6, depthWrite: false,
+          });
+          const dot = new THREE.Mesh(dGeo, dMat);
+          dot.position.copy(p);
+          dot.renderOrder = 3;
+          dot.visible = false;
+          dot.userData.sliceIndex = Math.max(e.sourceSlice, e.targetSlice);
+          scene.add(dot);
+        });
+      }
+    });
+
+    // ────────────────────────────────────────────────
+    // EDGE HOVER DETECTION (proximity-based)
+    // ────────────────────────────────────────────────
+
+    let hoveredEdge = null;
+    const _edgeRay = new THREE.Raycaster();
+    const _edgePlane = new THREE.Plane();
+    const _edgeIntersect = new THREE.Vector3();
+
+    function closestDistToSegment(point, a, b) {
+      const ab = new THREE.Vector3().subVectors(b, a);
+      const ap = new THREE.Vector3().subVectors(point, a);
+      let t = ap.dot(ab) / ab.dot(ab);
+      t = Math.max(0, Math.min(1, t));
+      const closest = new THREE.Vector3().copy(a).addScaledVector(ab, t);
+      return point.distanceTo(closest);
+    }
+
+    function findHoveredEdge(mouseVec, cam) {
+      // Project a ray from camera through mouse, find closest edge
+      _edgeRay.setFromCamera(mouseVec, cam);
+      let bestDist = 0.6; // threshold in world units
+      let bestEdge = null;
+
+      for (const line of edgeLines) {
+        if (!line.visible) continue;
+        const pos = line.geometry.attributes.position;
+        const a = new THREE.Vector3(pos.getX(0), pos.getY(0), pos.getZ(0));
+        const b = new THREE.Vector3(pos.getX(1), pos.getY(1), pos.getZ(1));
+        const mid = new THREE.Vector3().addVectors(a, b).multiplyScalar(0.5);
+
+        // Use a horizontal plane at the midpoint for intersection
+        _edgePlane.setFromNormalAndCoplanarPoint(
+          new THREE.Vector3(0, 1, 0), mid
+        );
+        if (!_edgeRay.ray.intersectPlane(_edgePlane, _edgeIntersect)) continue;
+
+        const dist = closestDistToSegment(_edgeIntersect, a, b);
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestEdge = line;
+        }
+      }
+      return bestEdge;
+    }
+
+    // ────────────────────────────────────────────────
+    // INTERACTION — RAYCASTING & TOOLTIP
+    // ────────────────────────────────────────────────
+
+    const raycaster = new THREE.Raycaster();
+    const mouse     = new THREE.Vector2(-10, -10);
+    let hoveredMesh = null;
+    let lastMouseEvent = null;
+
+    const tooltipEl = document.getElementById('tooltip');
+    const ttType    = tooltipEl.querySelector('.tt-type');
+    const ttLabel   = tooltipEl.querySelector('.tt-label');
+    const ttState   = tooltipEl.querySelector('.tt-state');
+
+    function showTooltip(cx, cy, data) {
+      ttType.textContent   = TYPE_LABELS[data.type] || data.type;
+      ttLabel.textContent  = data.label;
+      ttState.textContent  = (STATE_ICONS[data.state] || '') + ' ' + data.state;
+
+      const tx = Math.min(cx + 14, window.innerWidth  - 260);
+      const ty = Math.max(cy - 10, 10);
+      tooltipEl.style.left = tx + 'px';
+      tooltipEl.style.top  = ty + 'px';
+      tooltipEl.classList.add('visible');
+    }
+
+    function hideTooltip() {
+      tooltipEl.classList.remove('visible');
+    }
+
+    renderer.domElement.addEventListener('mousemove', ev => {
+      mouse.x =  (ev.clientX / window.innerWidth)  * 2 - 1;
+      mouse.y = -(ev.clientY / window.innerHeight) * 2 + 1;
+      lastMouseEvent = ev;
+    });
+
+    renderer.domElement.addEventListener('mouseleave', () => {
+      mouse.set(-10, -10);
+      if (hoveredMesh) {
+        hoveredMesh.userData.targetScale = 1;
+        hoveredMesh = null;
+        hideTooltip();
+      }
+      if (hoveredEdge) {
+        clearEdgeHover();
+        hoveredEdge = null;
+      }
+    });
+
+    // Click handler for node click sound
+    renderer.domElement.addEventListener('click', () => {
+      ensureAudioReady();
+      if (hoveredMesh) {
+        const ud = hoveredMesh.userData;
+        soundNodeClick(ud.type, ud.sliceIndex);
+        // Stronger visual pulse on click
+        ud.emissiveFlash = 1.5;
+      }
+    });
+
+    // Glow state for edge-hovered nodes
+    const edgeGlowNodes = new Set();
+
+    function clearEdgeHover() {
+      edgeGlowNodes.forEach(nodeId => {
+        const m = nodeIdToMesh[nodeId];
+        if (m) m.userData.edgeGlow = 0;
+      });
+      edgeGlowNodes.clear();
+    }
+
+    function updateHover() {
+      raycaster.setFromCamera(mouse, camera);
+      const hits = raycaster.intersectObjects(nodeFillMeshes, false);
+
+      if (hits.length > 0) {
+        const mesh = hits[0].object;
+        if (hoveredMesh !== mesh) {
+          if (hoveredMesh) hoveredMesh.userData.targetScale = 1;
+          hoveredMesh = mesh;
+          hoveredMesh.userData.targetScale = HOVER_SCALE;
+
+          // Play hover sound based on node type AND stratum — hover is
+          // now the same instrument as play-mode, so both experiences
+          // share one musical language.
+          const ud = mesh.userData;
+          const si = ud.sliceIndex;
+          switch (ud.type) {
+            case 'circle':        soundNodeAgent(si); break;
+            case 'triangle':      soundNodeDelegation(si); break;
+            case 'rectangle':     soundNodeData(si); break;
+            case 'parallelogram': soundNodeOutput(si); break;
+          }
+          // Trigger emissive flash
+          ud.emissiveFlash = 1.0;
+        }
+
+        const wp = new THREE.Vector3();
+        mesh.getWorldPosition(wp);
+        wp.project(camera);
+        const sx = ( wp.x * 0.5 + 0.5) * window.innerWidth;
+        const sy = (-wp.y * 0.5 + 0.5) * window.innerHeight;
+        showTooltip(sx, sy, mesh.userData);
+        renderer.domElement.style.cursor = 'pointer';
+
+        // Clear edge hover when on a node
+        if (hoveredEdge) { clearEdgeHover(); hoveredEdge = null; }
+      } else {
+        if (hoveredMesh) {
+          hoveredMesh.userData.targetScale = 1;
+          hoveredMesh = null;
+        }
+        hideTooltip();
+        renderer.domElement.style.cursor = 'grab';
+
+        // Check edge hover
+        const edge = findHoveredEdge(mouse, camera);
+        if (edge !== hoveredEdge) {
+          clearEdgeHover();
+          hoveredEdge = edge;
+          if (edge) {
+            const ud = edge.userData;
+            // Play edge hover sound
+            if (ud.edgeType === 'solid') soundEdgeSolid();
+            else soundEdgeDashed();
+
+            // Glow endpoint nodes (for vertical edges)
+            if (ud.isVertical) {
+              [ud.sourceId, ud.targetId].forEach(nid => {
+                const m = nodeIdToMesh[nid];
+                if (m) {
+                  m.userData.edgeGlow = 1.0;
+                  edgeGlowNodes.add(nid);
+                }
+              });
+            }
+          }
+        }
+      }
+    }
+
+    // ────────────────────────────────────────────────
+    // STAGGERED ENTRANCE ANIMATION
+    // ────────────────────────────────────────────────
+
+    let entranceDone = false;
+    let entranceStartTime = -1;
+    const ENTRANCE_DELAY = 0.2; // seconds between each plane
+
+    function updateEntrance(elapsed) {
+      if (entranceDone) return;
+      if (entranceStartTime < 0) entranceStartTime = elapsed;
+
+      const dt = elapsed - entranceStartTime;
+      let allVisible = true;
+
+      for (let i = 0; i < timeSlices.length; i++) {
+        const threshold = i * ENTRANCE_DELAY;
+        if (dt >= threshold) {
+          // Show this plane's group and its nodes/edges
+          const planeGroup = planeMeshes[i].parent;
+          if (!planeGroup.visible) {
+            planeGroup.visible = true;
+            // Play entrance tone
+            soundEntrance(i, timeSlices.length);
+          }
+
+          // Show nodes for this slice
+          nodeGroups.forEach(g => {
+            if (g.userData.sliceIndex === i && !g.visible) g.visible = true;
+          });
+
+          // Show edges for this slice
+          edgeLines.forEach(l => {
+            if (!l.visible) {
+              const ud = l.userData;
+              if (ud.isVertical) {
+                // Show vertical edge when target slice appears
+                const tgtSlice = verticalEdges.find(
+                  ve => ve.sourceId === ud.sourceId && ve.targetId === ud.targetId
+                );
+                if (tgtSlice && i >= tgtSlice.targetSlice) l.visible = true;
+              } else if (ud.sliceIndex === i) {
+                l.visible = true;
+              }
+            }
+          });
+
+          // Show endpoint dots
+          scene.children.forEach(ch => {
+            if (!ch.visible && ch.userData.sliceIndex === i && ch.isMesh && ch.geometry.type === 'SphereGeometry') {
+              ch.visible = true;
+            }
+          });
+        } else {
+          allVisible = false;
+        }
+      }
+
+      if (allVisible && dt > timeSlices.length * ENTRANCE_DELAY + 0.5) {
+        entranceDone = true;
+      }
+    }
+
+    // ────────────────────────────────────────────────
+    // ANIMATION LOOP
+    // ────────────────────────────────────────────────
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const t = clock.getElapsedTime();
+
+      // Staggered entrance
+      updateEntrance(t);
+
+      // Smooth camera lerp
+      if (isAnimating) {
+        camera.position.lerp(targetPos, LERP_SPEED);
+        controls.target.lerp(targetLookAt, LERP_SPEED);
+        if (camera.position.distanceTo(targetPos) < 0.05) {
+          camera.position.copy(targetPos);
+          controls.target.copy(targetLookAt);
+          isAnimating = false;
+        }
+      }
+
+      controls.update();
+
+      // Plane breathing
+      planeMeshes.forEach((pm, i) => {
+        pm.material.opacity = 0.15 + 0.025 * Math.sin(t * 0.4 + i * 0.7);
+      });
+
+      // Node hover scale + emissive flash + edge glow
+      nodeFillMeshes.forEach(fm => {
+        const grp = nodeGroups[fm.userData.groupIndex];
+        if (!grp) return;
+        const ts = fm.userData.targetScale || 1;
+        const cs = grp.scale.x;
+        const ns = cs + (ts - cs) * 0.12;
+        grp.scale.set(ns, ns, ns);
+
+        // Emissive flash (audio-visual pulse)
+        if (fm.userData.emissiveFlash > 0) {
+          fm.userData.emissiveFlash *= 0.88; // decay
+          if (fm.userData.emissiveFlash < 0.01) fm.userData.emissiveFlash = 0;
+          const flash = fm.userData.emissiveFlash;
+          // Brighten: lerp toward white based on flash intensity
+          const base = fm.userData.potential ? 0xf5f0eb : 0xffffff;
+          fm.material.opacity = fm.userData.baseOpacity + flash * 0.2;
+        } else {
+          fm.material.opacity = fm.userData.baseOpacity;
+        }
+
+        // Edge glow: faint gold tint when a connected edge is hovered
+        if (fm.userData.edgeGlow > 0) {
+          fm.userData.edgeGlow *= 0.95;
+          if (fm.userData.edgeGlow < 0.01) fm.userData.edgeGlow = 0;
+          const glow = fm.userData.edgeGlow;
+          // Tint toward gold
+          const r = 0xff + (0xd9 - 0xff) * glow;
+          const g = 0xff + (0x77 - 0xff) * glow;
+          const b = 0xff + (0x06 - 0xff) * glow;
+          fm.material.color.setRGB(r / 255, g / 255, b / 255);
+        } else if (!fm.userData.emissiveFlash) {
+          fm.material.color.set(fm.userData.potential ? 0xf5f0eb : 0xffffff);
+        }
+      });
+
+      updateHover();
+      renderer.render(scene, camera);
+    }
+
+    // ────────────────────────────────────────────────
+    // RESIZE
+    // ────────────────────────────────────────────────
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // ────────────────────────────────────────────────
+    // INIT
+    // ────────────────────────────────────────────────
+
+    // Ensure audio context is created on first user gesture
+    ['click', 'touchstart', 'keydown'].forEach(evt => {
+      document.addEventListener(evt, ensureAudioReady, { once: false });
+    });
+
+    setView('tilted');
+    requestAnimationFrame(() => {
+      document.getElementById('loading').classList.add('hidden');
+    });
+    animate();
+
+    window.captureFrame = function() {
+      renderer.render(scene, camera);
+      return renderer.domElement;
+    };
+
+  </script>
+</body>
+</html>

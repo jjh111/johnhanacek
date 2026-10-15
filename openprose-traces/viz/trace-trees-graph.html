@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trace Trees Graph</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+
+<!-- ============================================================
+     TRACE TREES + D3 CONTROL-FLOW GRAPH · TUFTE · MONO · KECAL · TEAL
+     ============================================================
+     Code-only template. A run's trace as a file tree (one folder
+     per time slice, nodes as files, delegation outputs nested
+     under their delegation), a detail panel with a slice-aggregate
+     roll-up, a timeline minimap, and a d3-force control-flow graph
+     that mirrors the tree's selection.
+
+     Type + tokens: Kecal sans, IBM Plex Mono body, fog-cream paper,
+     warm brown-black ink, teal editorial accent, amber and red for
+     delegation / attention semantics.
+
+     Data: none ships with this page. It reads window.TRACE_DATA
+     through ../lib/data-slot.js from ../data/trace-trees-graph.js.
+     Shape: ../data/trace-trees-graph.schema.md
+     ============================================================ -->
+
+<style>
+  /* §0 FONT FACES — Kecal seven-weight ramp, hosted on jsDelivr */
+  @font-face { font-family: 'Kecal'; font-weight: 200; font-style: normal; font-display: swap;
+    src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extralight-web.woff2') format('woff2'); }
+  @font-face { font-family: 'Kecal'; font-weight: 300; font-style: normal; font-display: swap;
+    src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Light-web.woff2') format('woff2'); }
+  @font-face { font-family: 'Kecal'; font-weight: 400; font-style: normal; font-display: swap;
+    src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Regular-web.woff2') format('woff2'); }
+  @font-face { font-family: 'Kecal'; font-weight: 500; font-style: normal; font-display: swap;
+    src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Medium-web.woff2') format('woff2'); }
+  @font-face { font-family: 'Kecal'; font-weight: 600; font-style: normal; font-display: swap;
+    src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Semibold-web.woff2') format('woff2'); }
+  @font-face { font-family: 'Kecal'; font-weight: 700; font-style: normal; font-display: swap;
+    src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Bold-web.woff2') format('woff2'); }
+  @font-face { font-family: 'Kecal'; font-weight: 800; font-style: normal; font-display: swap;
+    src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extrabold-web.woff2') format('woff2'); }
+
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&display=swap');
+
+  *{margin:0;padding:0;box-sizing:border-box}
+
+  :root{
+    /* Paper + ink — fog cream over warm brown-black */
+    --paper:       #f5f0e8;
+    --paper-dk:    #e8e0d0;
+    --paper-lt:    #fbf7ef;
+    --paper-cream: #fbf7ef;
+    --paper-warm:  #f0e8d8;
+    --ink:         #2a2520;
+    --ink-2:       rgba(42,37,32,0.78);
+    --ink-3:       rgba(42,37,32,0.55);
+    --ink-4:       rgba(42,37,32,0.32);
+    --ink-5:       rgba(42,37,32,0.18);
+
+    /* Teal editorial accent (replaces gold); amber warm; red attention */
+    --teal:        #3a7a6a;
+    --teal-deep:   #2e6456;
+    --teal-soft:   #4a8a7a;
+    --teal-tint:   rgba(58,122,106,0.14);
+    --teal-faint:  rgba(58,122,106,0.06);
+
+    --amber:       #c49a5c;
+    --amber-deep:  #a87f44;
+    --amber-soft:  #d4aa6c;
+    --amber-tint:  rgba(196,154,92,0.18);
+
+    --red:         #c0392b;
+    --red-muted:   #d4604f;
+    --red-deep:    #8e2b20;
+    --red-tint:    rgba(192,57,43,0.12);
+    --red-faint:   rgba(192,57,43,0.05);
+
+    --rule:        rgba(42,37,32,0.14);
+    --rule-mid:    rgba(42,37,32,0.06);
+
+    /* Legacy alias map — original page used these names */
+    --bg:          var(--paper);
+    --border:      var(--rule);
+    --hover:       var(--teal-faint);
+    --gold:        var(--teal);        /* gold was the source's accent — now teal */
+    --agent:       var(--ink);         /* agent node: ink-dark */
+    --deleg:       var(--amber-deep);  /* delegation: amber (warm complement) */
+    --data:        var(--ink-3);       /* data: ink-3 (neutral) */
+    --output:      var(--teal-deep);   /* output: deep teal */
+    --cream-dark:  var(--paper-warm);
+    --subtle:      var(--ink-4);
+
+    /* Type faces */
+    --sans:  'Kecal', system-ui, -apple-system, sans-serif;
+    --serif: 'Kecal', system-ui, -apple-system, sans-serif;
+    --mono:  'IBM Plex Mono', 'JetBrains Mono', 'SF Mono', monospace;
+  }
+
+  html,body{height:100%;overflow:hidden;background:var(--paper);color:var(--ink);
+    font-family:var(--mono);font-size:13px;line-height:1.55;letter-spacing:0;
+    -webkit-font-smoothing:antialiased}
+
+  /* Global em rule — Kecal italic 800, teal-tinted */
+  em{font-family:'Kecal',system-ui,sans-serif;font-style:italic;font-weight:800;
+    font-size:1em;letter-spacing:0;color:var(--teal)}
+
+  #app{display:flex;height:100vh;flex-direction:column}
+
+  /* ── Top bar ── */
+  #topbar{display:flex;align-items:center;gap:12px;padding:10px 16px;
+    border-bottom:1px solid var(--rule);background:var(--paper);flex-shrink:0}
+  #topbar h1{font-family:'Kecal',system-ui,sans-serif;font-size:13px;
+    font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-2);white-space:nowrap}
+  #topbar h1 span{color:var(--teal);font-weight:500;font-style:italic;font-family:'Kecal',sans-serif}
+
+  #search-box{flex:1;max-width:320px;padding:6px 10px;border:1px solid var(--rule);
+    border-radius:0;font-size:12px;background:var(--paper-lt);outline:none;
+    font-family:var(--mono);color:var(--ink)}
+  #search-box:focus{border-color:var(--teal);box-shadow:0 0 0 2px var(--teal-tint)}
+  #search-box::placeholder{color:var(--ink-4)}
+
+  .filter-group{display:flex;gap:4px;margin-left:8px}
+  .filter-btn{padding:3px 8px;border:1px solid var(--rule);border-radius:0;
+    font-size:10px;font-family:var(--mono);cursor:pointer;
+    background:var(--paper-lt);color:var(--ink);letter-spacing:.3px;transition:all .15s}
+  .filter-btn.active{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  .filter-btn:hover:not(.active){background:var(--teal-faint)}
+
+  .kbd-hint{font-size:10px;color:var(--ink-4);margin-left:auto;white-space:nowrap;
+    font-family:var(--mono)}
+  .kbd{display:inline-block;padding:1px 5px;border:1px solid var(--rule);
+    border-radius:0;font-size:9px;background:var(--paper-lt);margin:0 1px;color:var(--ink-2)}
+
+  /* ── Main layout ── */
+  #main{display:flex;flex:1;overflow:hidden}
+
+  /* ── Tree panel ── */
+  /* Tree narrowed to make room for the graph pane. */
+  #tree-panel{width:30%;min-width:260px;border-right:1px solid var(--rule);
+    display:flex;flex-direction:column;overflow:hidden;background:var(--paper)}
+  #tree-header{padding:8px 12px;border-bottom:1px solid var(--rule);
+    font-size:11px;color:var(--ink-3);display:flex;justify-content:space-between;align-items:center;
+    font-family:var(--mono);letter-spacing:.04em}
+  #tree-container{flex:1;overflow-y:auto;overflow-x:hidden;padding:4px 0}
+  #tree-container::-webkit-scrollbar{width:6px}
+  #tree-container::-webkit-scrollbar-thumb{background:var(--rule);border-radius:0}
+
+  /* Tree nodes */
+  .tree-row{display:flex;align-items:center;padding:2px 8px 2px 0;cursor:pointer;
+    height:26px;transition:background .1s;user-select:none;white-space:nowrap}
+  .tree-row:hover{background:var(--teal-faint)}
+  .tree-row.selected{background:var(--teal-tint)}
+  .tree-row.selected:hover{background:var(--teal-tint)}
+  .tree-row.hidden-node{display:none}
+
+  .tree-indent{flex-shrink:0;width:16px;display:inline-block}
+  .tree-toggle{width:16px;height:16px;display:inline-flex;align-items:center;
+    justify-content:center;flex-shrink:0;font-size:10px;color:var(--ink-4);
+    cursor:pointer;transition:transform .15s}
+  .tree-toggle.collapsed{transform:rotate(-90deg)}
+  .tree-toggle.leaf{visibility:hidden}
+  .tree-icon{width:16px;height:16px;display:inline-flex;align-items:center;
+    justify-content:center;flex-shrink:0;margin-right:4px;font-size:11px}
+  .tree-icon.agent{color:var(--ink)}
+  .tree-icon.delegation{color:var(--amber-deep)}
+  .tree-icon.data{color:var(--ink-3)}
+  .tree-icon.output{color:var(--teal-deep)}
+  .tree-icon.folder{color:var(--ink-4)}
+  .tree-label{flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;
+    font-family:var(--mono);color:var(--ink)}
+  .tree-label .ext{opacity:.4}
+  .tree-status{font-family:var(--mono);font-size:10px;
+    margin-left:6px;padding:1px 4px;border-radius:0;flex-shrink:0;letter-spacing:.3px}
+  .tree-status.M{background:var(--amber-tint);color:var(--amber-deep)}
+  .tree-status.A{background:var(--teal-tint);color:var(--teal-deep)}
+  .tree-status.U{background:rgba(42,37,32,0.08);color:var(--ink-3)}
+  .tree-status.D{background:var(--teal-tint);color:var(--teal)}
+
+  /* ── Mini-map ── */
+  #minimap{padding:10px 12px;border-top:1px solid var(--rule);flex-shrink:0;background:var(--paper)}
+  #minimap-label{font-size:10px;color:var(--ink-3);margin-bottom:6px;
+    text-transform:uppercase;letter-spacing:.18em;font-family:var(--mono)}
+  #minimap-bar{display:flex;gap:3px;height:24px}
+  .mm-slice{flex:1;border-radius:0;border:1px solid var(--rule);
+    cursor:pointer;transition:all .2s;position:relative;display:flex;
+    align-items:center;justify-content:center;font-size:9px;
+    font-family:var(--mono);color:var(--ink-3);background:var(--paper-lt)}
+  .mm-slice:hover{border-color:var(--teal)}
+  .mm-slice.active{background:var(--teal-tint);border-color:var(--teal);
+    color:var(--ink);font-weight:500}
+  .mm-slice .mm-dot{position:absolute;bottom:2px;width:4px;height:4px;
+    border-radius:50%;background:var(--teal);opacity:0;transition:opacity .2s}
+  .mm-slice.has-selection .mm-dot{opacity:1}
+
+  /* ── Detail panel ── */
+  /* Detail pane shares space with new graph pane. */
+  #detail-panel{flex:1;min-width:280px;overflow-y:auto;padding:0;background:var(--paper-lt);border-right:1px solid var(--rule)}
+  /* GRAPH PANEL: d3 force-directed control-flow graph. */
+  #graph-panel{width:34%;min-width:300px;display:flex;flex-direction:column;background:var(--paper);position:relative}
+  #graph-header{display:flex;justify-content:space-between;align-items:baseline;padding:0.7rem 0.9rem;border-bottom:1px solid var(--rule);font-family:var(--mono);font-size:0.74rem;color:var(--ink-2)}
+  #graph-header #graph-title{font-weight:600;letter-spacing:0.04em;color:var(--ink)}
+  #graph-header #graph-meta{font-size:0.66rem;color:var(--ink-3);letter-spacing:0.06em;text-transform:uppercase}
+  #graph-svg{flex:1;width:100%;height:100%;display:block}
+  #graph-legend{display:flex;flex-wrap:wrap;gap:0.7rem;padding:0.55rem 0.9rem;border-top:1px solid var(--rule);font-family:var(--mono);font-size:0.66rem;color:var(--ink-3);background:var(--paper-warm)}
+  #graph-legend .g-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:0.25rem;vertical-align:middle}
+  #graph-legend .g-orch{background:var(--teal)}
+  #graph-legend .g-delg{background:var(--amber)}
+  #graph-legend .g-out{background:var(--ink-3)}
+  #graph-legend .g-data{background:var(--ink-2)}
+  /* d3 graph styling */
+  .g-link{stroke:var(--rule);stroke-width:1.2;fill:none;opacity:0.55}
+  .g-link.active{stroke:var(--teal);stroke-width:1.8;opacity:0.95}
+  .g-node{cursor:pointer;stroke-width:1.4}
+  .g-node-agent{fill:var(--teal-tint,rgba(58,122,106,0.18));stroke:var(--teal)}
+  .g-node-delegation{fill:var(--amber-tint,rgba(196,154,92,0.18));stroke:var(--amber)}
+  .g-node-output{fill:var(--paper-lt);stroke:var(--ink-3)}
+  .g-node-data{fill:var(--paper-warm);stroke:var(--ink-2)}
+  .g-node.selected{stroke:var(--ink);stroke-width:2.5}
+  .g-label{font-family:var(--mono);font-size:9pt;fill:var(--ink-2);pointer-events:none;font-weight:500;
+    paint-order:stroke;stroke:var(--paper);stroke-width:2.5px;stroke-linejoin:round}
+  .g-label.selected{fill:var(--ink);font-weight:700}
+  #detail-panel::-webkit-scrollbar{width:6px}
+  #detail-panel::-webkit-scrollbar-thumb{background:var(--rule);border-radius:0}
+
+  #detail-empty{display:flex;align-items:center;justify-content:center;
+    height:100%;color:var(--ink-3);font-style:italic;font-family:'Kecal',sans-serif;font-weight:800;font-size:14px}
+
+  #detail-content{padding:24px;opacity:0;transition:opacity .25s;display:none}
+  #detail-content.visible{opacity:1;display:block}
+
+  .detail-badge{display:inline-flex;align-items:center;gap:6px;
+    padding:4px 10px;border-radius:0;font-size:11px;font-weight:500;
+    text-transform:uppercase;letter-spacing:.14em;margin-bottom:16px;font-family:var(--mono)}
+  .detail-badge.agent{background:rgba(42,37,32,0.08);color:var(--ink)}
+  .detail-badge.delegation{background:var(--amber-tint);color:var(--amber-deep)}
+  .detail-badge.data{background:rgba(42,37,32,0.08);color:var(--ink-3)}
+  .detail-badge.output{background:var(--teal-tint);color:var(--teal-deep)}
+
+  .detail-name{font-family:'Kecal',system-ui,sans-serif;font-size:24px;font-weight:600;
+    margin-bottom:4px;letter-spacing:-0.012em;color:var(--ink);line-height:1.15}
+  .detail-path{font-family:var(--mono);font-size:11px;
+    color:var(--ink-3);margin-bottom:20px;word-break:break-all;letter-spacing:.02em}
+
+  .detail-section{margin-bottom:20px}
+  .detail-section h3{font-size:10px;text-transform:uppercase;letter-spacing:.18em;
+    color:var(--ink-3);margin-bottom:8px;font-family:var(--mono);font-weight:500}
+
+  /* Timeline bar */
+  .timeline{display:flex;gap:2px;margin-bottom:4px}
+  .tl-slice{flex:1;height:20px;border-radius:0;background:var(--paper-warm);
+    position:relative;display:flex;align-items:center;justify-content:center;
+    font-size:9px;color:var(--ink-3);font-family:var(--mono);letter-spacing:.04em}
+  .tl-slice.active-slice{background:var(--teal);color:var(--paper);font-weight:500}
+  .tl-labels{display:flex;gap:2px;margin-bottom:12px}
+  .tl-labels span{flex:1;text-align:center;font-size:9px;color:var(--ink-3);
+    font-family:var(--mono);letter-spacing:.04em}
+
+  /* Connections */
+  .conn-list{list-style:none}
+  .conn-item{padding:5px 8px;border:1px solid var(--rule);border-radius:0;
+    margin-bottom:4px;font-size:12px;cursor:pointer;display:flex;
+    align-items:center;gap:6px;transition:all .15s;background:var(--paper);font-family:var(--mono)}
+  .conn-item:hover{background:var(--teal-faint);border-color:var(--teal)}
+  .conn-dir{font-size:10px;color:var(--ink-3);width:14px;text-align:center}
+  .conn-name{flex:1;color:var(--ink)}
+  .conn-type{font-size:10px;padding:1px 5px;border-radius:0;
+    font-family:var(--mono)}
+
+  /* Metadata grid */
+  .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .meta-item{padding:8px 10px;border:1px solid var(--rule);border-radius:0;background:var(--paper)}
+  .meta-label{font-size:10px;color:var(--ink-3);text-transform:uppercase;
+    letter-spacing:.16em;margin-bottom:2px;font-family:var(--mono)}
+  .meta-value{font-size:13px;font-weight:500;font-family:var(--mono);color:var(--ink)}
+
+  /* Code block — kept dark on a Tufte page because code wants to read
+     as a distinct artifact, not body prose. The dark background here
+     is anchored on ink (not pure black) so it lives in the same warm
+     temperature as the rest of the page. */
+  .code-block{background:var(--ink);color:var(--paper);padding:14px 16px;
+    border-radius:0;font-family:var(--mono);font-size:11px;
+    line-height:1.6;overflow-x:auto;white-space:pre}
+  .code-block .ck{color:var(--teal-soft)}
+  .code-block .cs{color:#a8d0c4}
+  .code-block .cn{color:var(--amber-soft)}
+  .code-block .cc{color:var(--ink-4)}
+
+  /* Slice aggregate — shown when a folder is selected. Summarizes
+     every node inside the stratum so the reader can scan the whole
+     slice without drilling into each child. */
+  .detail-badge.folder{background:var(--teal-tint);color:var(--teal-deep)}
+  .slice-composition{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+  .comp-chip{font-family:var(--mono);font-size:10px;
+    padding:3px 8px;border-radius:0;letter-spacing:.06em;font-weight:500;
+    display:inline-flex;align-items:center;gap:5px}
+  .comp-chip.agent{background:rgba(42,37,32,0.08);color:var(--ink)}
+  .comp-chip.delegation{background:var(--amber-tint);color:var(--amber-deep)}
+  .comp-chip.data{background:rgba(42,37,32,0.08);color:var(--ink-3)}
+  .comp-chip.output{background:var(--teal-tint);color:var(--teal-deep)}
+  .comp-chip .count{font-weight:600}
+
+  .agg-list{list-style:none;display:flex;flex-direction:column;gap:6px}
+  .agg-item{border:1px solid var(--rule);border-radius:0;padding:10px 12px;
+    cursor:pointer;transition:all .15s;background:var(--paper)}
+  .agg-item:hover{border-color:var(--teal);background:var(--teal-faint)}
+  .agg-head{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+  .agg-badge{font-family:var(--mono);font-size:9px;font-weight:500;
+    text-transform:uppercase;letter-spacing:.16em;padding:2px 6px;border-radius:0}
+  .agg-badge.agent{background:rgba(42,37,32,0.08);color:var(--ink)}
+  .agg-badge.delegation{background:var(--amber-tint);color:var(--amber-deep)}
+  .agg-badge.data{background:rgba(42,37,32,0.08);color:var(--ink-3)}
+  .agg-badge.output{background:var(--teal-tint);color:var(--teal-deep)}
+  .agg-name{font-family:'Kecal',system-ui,sans-serif;font-size:15px;font-weight:500;color:var(--ink);letter-spacing:-0.005em}
+  .agg-status{font-family:var(--mono);font-size:9px;
+    padding:1px 5px;border-radius:0;margin-left:auto;letter-spacing:.08em;font-weight:500}
+  .agg-status.M{background:var(--amber-tint);color:var(--amber-deep)}
+  .agg-status.A{background:var(--teal-tint);color:var(--teal-deep)}
+  .agg-status.U{background:rgba(42,37,32,0.08);color:var(--ink-3)}
+  .agg-status.D{background:var(--teal-tint);color:var(--teal)}
+  .agg-meta{font-family:var(--mono);font-size:10px;
+    color:var(--ink-3);letter-spacing:.04em;display:flex;gap:10px;flex-wrap:wrap;
+    margin-bottom:5px}
+  .agg-meta .sep{color:var(--ink-5)}
+  .agg-detail{font-family:var(--mono);font-size:12px;line-height:1.6;
+    color:var(--ink-2);margin-top:4px}
+  .agg-detail em{font-family:'Kecal',sans-serif;font-style:italic;font-weight:800;color:var(--teal)}
+  .agg-conn{font-family:var(--mono);font-size:10px;
+    color:var(--ink-3);margin-top:6px;letter-spacing:.02em}
+  .agg-conn em{font-family:'Kecal',sans-serif;font-style:italic;font-weight:800;color:var(--ink)}
+
+
+
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+  div.filter-group { width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: auto; word-break: break-word; }
+  span.kbd-hint { width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: auto; word-break: break-word; }
+  div.detail-badge.folder { width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: auto; word-break: break-word; }
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="topbar">
+    <h1>TraceStrata <span>Trees</span></h1>
+    <input id="search-box" type="text" placeholder="Search trace nodes... (agent, type, status)">
+    <div class="filter-group">
+      <button class="filter-btn active" data-filter="M" title="Currently executing">M</button>
+      <button class="filter-btn active" data-filter="A" title="Newly spawned">A</button>
+      <button class="filter-btn active" data-filter="U" title="Untracked">U</button>
+      <button class="filter-btn active" data-filter="D" title="Has descendants">&#x25CF;</button>
+    </div>
+    <span class="kbd-hint">
+      <kbd class="kbd">1</kbd>-<kbd class="kbd">9</kbd> jump slices
+      <kbd class="kbd">/</kbd> search
+    </span>
+  </div>
+
+  <div id="main">
+    <div id="tree-panel">
+      <div id="tree-header">
+        <span id="tree-count"></span>
+        <span id="tree-run"></span>
+      </div>
+      <div id="tree-container" tabindex="0"></div>
+      <div id="minimap">
+        <div id="minimap-label">Timeline</div>
+        <div id="minimap-bar"></div>
+      </div>
+    </div>
+
+    <div id="detail-panel">
+      <div id="detail-empty">Select a trace node to inspect</div>
+      <div id="detail-content"></div>
+    </div>
+
+    <!-- d3 control-flow network graph pane (right) -->
+    <div id="graph-panel">
+      <div id="graph-header">
+        <span id="graph-title">Control flow · d3-force</span>
+        <span id="graph-meta"></span>
+      </div>
+      <svg id="graph-svg" preserveAspectRatio="xMidYMid meet"></svg>
+      <div id="graph-legend">
+        <span><span class="g-dot g-orch"></span> orchestrator</span>
+        <span><span class="g-dot g-delg"></span> delegation</span>
+        <span><span class="g-dot g-out"></span> output</span>
+        <span><span class="g-dot g-data"></span> data</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../lib/data-slot.js"></script>
+<script src="../data/trace-trees-graph.js"></script>
+<script>
+(function(){
+  // ────────────────────────────────────────────────
+  // TRACE DATA: read from the slot (../data/trace-trees-graph.js).
+  // TRACE  { id, slices: [ { id, label, phase, nodes: [...] } ] }
+  // ────────────────────────────────────────────────
+
+  const { TRACE } = TraceSlot.require('trace-trees-graph', ['TRACE']);
+  document.getElementById('tree-run').textContent = TRACE.id;
+
+  // ────────────────────────────────────────────────
+  // BUILD TREE DATA from trace
+  // ────────────────────────────────────────────────
+
+  const EXT_MAP = { agent: '.agent', delegation: '.delegation', data: '.data', output: '.output' };
+  const ICON_MAP = {
+    agent: '<svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="4" fill="currentColor" opacity=".8"/></svg>',
+    delegation: '<svg width="12" height="12" viewBox="0 0 12 12"><polygon points="6,2 10,10 2,10" fill="currentColor" opacity=".8"/></svg>',
+    data: '<svg width="12" height="12" viewBox="0 0 12 12"><rect x="2" y="3" width="8" height="6" fill="currentColor" opacity=".8" rx="1"/></svg>',
+    output: '<svg width="12" height="12" viewBox="0 0 12 12"><polygon points="3,2 10,2 9,10 2,10" fill="currentColor" opacity=".8"/></svg>',
+    folder: '<svg width="12" height="12" viewBox="0 0 12 12"><path d="M1 3h4l1-1h5v8H1z" fill="currentColor" opacity=".5"/></svg>'
+  };
+
+  // Flat lookup for all trace nodes
+  const nodeMap = {};
+  TRACE.slices.forEach(slice => {
+    slice.nodes.forEach(n => { nodeMap[n.id] = { ...n, sliceId: slice.id }; });
+  });
+
+  // Build tree structure
+  function buildTree() {
+    const root = { id: '__root', name: TRACE.id, type: 'folder', children: [], depth: 0, expanded: true, path: TRACE.id };
+    TRACE.slices.forEach(slice => {
+      const sliceFolder = {
+        id: slice.id, name: slice.label.replace(' ', '-').toLowerCase(),
+        type: 'folder', children: [], depth: 1, expanded: true,
+        path: root.path + '/' + slice.label.replace(' ', '-').toLowerCase(),
+        sliceId: slice.id
+      };
+      slice.nodes.forEach(n => {
+        // Determine if this node has children (downstream that are in same slice)
+        const sameSliceChildren = n.downstream.filter(did =>
+          slice.nodes.some(sn => sn.id === did)
+        );
+        const nodeEntry = {
+          id: n.id, name: n.name + EXT_MAP[n.type], type: n.type,
+          status: n.status, depth: 2, expanded: true, children: [],
+          path: sliceFolder.path + '/' + n.name + EXT_MAP[n.type],
+          sliceId: slice.id, traceNode: n
+        };
+
+        // Nest outputs under their parent delegation if applicable
+        const parentInSlice = slice.nodes.find(pn =>
+          pn.downstream.includes(n.id) && (pn.type === 'delegation')
+        );
+        if (parentInSlice && n.type === 'output') {
+          // Find or create delegation folder
+          let delegFolder = sliceFolder.children.find(c => c.id === parentInSlice.id);
+          if (!delegFolder) {
+            delegFolder = {
+              id: parentInSlice.id, name: parentInSlice.name + EXT_MAP[parentInSlice.type],
+              type: parentInSlice.type, status: parentInSlice.status, depth: 2,
+              expanded: true, children: [],
+              path: sliceFolder.path + '/' + parentInSlice.name + EXT_MAP[parentInSlice.type],
+              sliceId: slice.id, traceNode: parentInSlice
+            };
+            sliceFolder.children.push(delegFolder);
+          }
+          nodeEntry.depth = 3;
+          nodeEntry.path = delegFolder.path + '/' + n.name + EXT_MAP[n.type];
+          delegFolder.children.push(nodeEntry);
+        } else if (!sliceFolder.children.find(c => c.id === n.id)) {
+          sliceFolder.children.push(nodeEntry);
+        }
+      });
+      root.children.push(sliceFolder);
+    });
+    return root;
+  }
+
+  const treeRoot = buildTree();
+
+  // ────────────────────────────────────────────────
+  // FLATTEN TREE for rendering
+  // ────────────────────────────────────────────────
+
+  function flattenTree(node, list) {
+    list = list || [];
+    if (node.id !== '__root') list.push(node);
+    if (node.children && node.expanded) {
+      node.children.forEach(c => flattenTree(c, list));
+    }
+    return list;
+  }
+
+  // Index: id -> tree node
+  const treeIndex = {};
+  function indexTree(node) {
+    treeIndex[node.id] = node;
+    if (node.children) node.children.forEach(indexTree);
+  }
+  indexTree(treeRoot);
+
+  // ────────────────────────────────────────────────
+  // STATE
+  // ────────────────────────────────────────────────
+
+  let selectedId = null;
+  let focusIdx = -1;
+  let searchTerm = '';
+  const activeFilters = { M: true, A: true, U: true, D: true };
+
+  // ────────────────────────────────────────────────
+  // RENDER TREE
+  // ────────────────────────────────────────────────
+
+  const treeContainer = document.getElementById('tree-container');
+  const treeCountEl = document.getElementById('tree-count');
+
+  function isNodeVisible(node) {
+    if (node.type === 'folder') return true;
+    // Status filter
+    if (node.status && !activeFilters[node.status]) return false;
+    // Search filter
+    if (searchTerm) {
+      const hay = (node.name + ' ' + node.type + ' ' + (node.status || '')).toLowerCase();
+      if (!hay.includes(searchTerm)) return false;
+    }
+    return true;
+  }
+
+  function renderTree() {
+    const flat = flattenTree(treeRoot);
+    let totalNodes = 0;
+    let html = '';
+
+    flat.forEach((node, idx) => {
+      const isFolder = node.type === 'folder';
+      const hasChildren = node.children && node.children.length > 0;
+      const visible = isNodeVisible(node);
+      if (!isFolder) totalNodes++;
+
+      // If folder, check if any children visible
+      let folderHasVisibleChild = true;
+      if (isFolder && searchTerm) {
+        folderHasVisibleChild = (node.children || []).some(c => {
+          if (c.type === 'folder') return (c.children || []).some(isNodeVisible);
+          return isNodeVisible(c);
+        });
+      }
+
+      const hidden = (!visible && !isFolder) || (isFolder && searchTerm && !folderHasVisibleChild);
+      const depth = node.depth || 0;
+      const indentPx = (depth - 1) * 16;
+
+      html += `<div class="tree-row${node.id === selectedId ? ' selected' : ''}${hidden ? ' hidden-node' : ''}"
+        data-id="${node.id}" data-idx="${idx}" style="padding-left:${indentPx}px">`;
+
+      // Toggle
+      if (hasChildren) {
+        html += `<span class="tree-toggle${node.expanded ? '' : ' collapsed'}" data-toggle="${node.id}">&#x25BE;</span>`;
+      } else {
+        html += `<span class="tree-toggle leaf"></span>`;
+      }
+
+      // Icon
+      const iconClass = isFolder ? 'folder' : node.type;
+      html += `<span class="tree-icon ${iconClass}">${ICON_MAP[isFolder ? 'folder' : node.type]}</span>`;
+
+      // Label
+      const nameParts = node.name.split('.');
+      if (nameParts.length > 1 && !isFolder) {
+        html += `<span class="tree-label">${nameParts[0]}<span class="ext">.${nameParts.slice(1).join('.')}</span></span>`;
+      } else {
+        html += `<span class="tree-label">${node.name}</span>`;
+      }
+
+      // Status badge
+      if (node.status) {
+        const statusLabel = node.status === 'D' ? '●' : node.status;
+        html += `<span class="tree-status ${node.status}">${statusLabel}</span>`;
+      }
+
+      html += '</div>';
+    });
+
+    treeContainer.innerHTML = html;
+    treeCountEl.textContent = totalNodes + ' nodes';
+
+    // Re-bind events
+    treeContainer.querySelectorAll('.tree-row').forEach(row => {
+      row.addEventListener('click', (e) => {
+        const toggleEl = e.target.closest('.tree-toggle');
+        const id = row.dataset.id;
+        if (toggleEl && toggleEl.dataset.toggle) {
+          const tn = treeIndex[toggleEl.dataset.toggle];
+          if (tn) { tn.expanded = !tn.expanded; renderTree(); }
+          return;
+        }
+        selectNode(id);
+      });
+    });
+  }
+
+  // ────────────────────────────────────────────────
+  // SELECT NODE
+  // ────────────────────────────────────────────────
+
+  function selectNode(id) {
+    selectedId = id;
+    renderTree();
+    renderDetail(id);
+    updateMinimap();
+
+    // Scroll selected into view
+    const el = treeContainer.querySelector(`.tree-row[data-id="${id}"]`);
+    if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+
+    /* Sync the d3 graph if it has finished initialising. */
+    if (typeof window.__graphSelect === 'function') window.__graphSelect(id);
+  }
+
+  // ────────────────────────────────────────────────
+  // DETAIL PANEL
+  // ────────────────────────────────────────────────
+
+  const detailContent = document.getElementById('detail-content');
+  const detailEmpty = document.getElementById('detail-empty');
+
+  function renderDetail(id) {
+    const treeNode = treeIndex[id];
+    if (!treeNode) {
+      detailContent.classList.remove('visible');
+      detailEmpty.style.display = 'flex';
+      detailEmpty.textContent = 'Select a trace node to inspect';
+      return;
+    }
+
+    // Folder (stratum / T-slice) — render a readable aggregate of every
+    // node inside the slice. Each row is clickable to drill into that
+    // specific node. The detail panel scrolls, so long slices stay
+    // readable without truncation.
+    if (treeNode.type === 'folder' && treeNode.sliceId) {
+      renderSliceAggregate(treeNode);
+      return;
+    }
+
+    if (treeNode.type === 'folder') {
+      detailContent.classList.remove('visible');
+      detailEmpty.style.display = 'flex';
+      detailEmpty.textContent = 'Select a trace node to inspect';
+      return;
+    }
+
+    const n = treeNode.traceNode;
+    if (!n) { detailEmpty.style.display = 'flex'; detailContent.classList.remove('visible'); return; }
+
+    detailEmpty.style.display = 'none';
+    detailContent.classList.remove('visible');
+
+    // Build detail HTML
+    let h = '';
+
+    // Badge
+    h += `<div class="detail-badge ${n.type}">${ICON_MAP[n.type]} ${n.type}</div>`;
+
+    // Name + path
+    h += `<div class="detail-name">${n.name}</div>`;
+    h += `<div class="detail-path">${treeNode.path}</div>`;
+
+    // Timeline
+    h += '<div class="detail-section"><h3>Execution Timeline</h3><div class="timeline">';
+    TRACE.slices.forEach(slice => {
+      const isActive = slice.id === treeNode.sliceId;
+      h += `<div class="tl-slice${isActive ? ' active-slice' : ''}">${slice.id}</div>`;
+    });
+    h += '</div><div class="tl-labels">';
+    TRACE.slices.forEach(slice => {
+      h += `<span>${slice.phase.slice(0,5)}</span>`;
+    });
+    h += '</div></div>';
+
+    // Connections
+    const allConn = [...(n.upstream || []).map(u => ({ id: u, dir: 'up' })),
+                     ...(n.downstream || []).map(d => ({ id: d, dir: 'down' }))];
+    if (allConn.length > 0) {
+      h += '<div class="detail-section"><h3>Connections</h3><ul class="conn-list">';
+      allConn.forEach(c => {
+        const cn = nodeMap[c.id];
+        if (!cn) return;
+        const arrow = c.dir === 'up' ? '←' : '→';
+        const typeClass = cn.type;
+        h += `<li class="conn-item" data-nav="${c.id}">
+          <span class="conn-dir">${arrow}</span>
+          <span class="conn-name">${cn.name}</span>
+          <span class="conn-type detail-badge ${typeClass}" style="margin:0;padding:1px 6px;font-size:9px">${cn.type}</span>
+        </li>`;
+      });
+      h += '</ul></div>';
+    }
+
+    // Metadata
+    h += '<div class="detail-section"><h3>Metadata</h3><div class="meta-grid">';
+    h += metaItem('Tokens', n.tokens ? n.tokens.toLocaleString() : '—');
+    h += metaItem('Latency', n.latency || '—');
+    h += metaItem('Model', n.model ? n.model.split('-').slice(0,2).join(' ') : '—');
+    h += metaItem('Status', n.state || '—');
+    h += '</div></div>';
+
+    // Code
+    h += `<div class="detail-section"><h3>Invocation</h3><div class="code-block">${n.code}</div></div>`;
+
+    detailContent.innerHTML = h;
+    requestAnimationFrame(() => { detailContent.classList.add('visible'); });
+
+    // Bind connection clicks
+    detailContent.querySelectorAll('.conn-item[data-nav]').forEach(el => {
+      el.addEventListener('click', () => {
+        const navId = el.dataset.nav;
+        // Expand parent folders
+        expandToNode(navId);
+        selectNode(navId);
+      });
+    });
+  }
+
+  function metaItem(label, value) {
+    return `<div class="meta-item"><div class="meta-label">${label}</div><div class="meta-value">${value}</div></div>`;
+  }
+
+  function countSliceNodes(sliceId) {
+    const slice = TRACE.slices.find(s => s.id === sliceId);
+    return slice ? slice.nodes.length : 0;
+  }
+
+  // ── Slice aggregate — render a readable roll-up of every node in
+  // the slice when the folder itself is selected. The top-level T
+  // nav (minimap + keyboard 1-5) lands here too, so the reader can
+  // scan the whole stratum in one view before drilling down.
+  function renderSliceAggregate(treeNode) {
+    const slice = TRACE.slices.find(s => s.id === treeNode.sliceId);
+    if (!slice) return;
+
+    detailEmpty.style.display = 'none';
+    detailContent.classList.remove('visible');
+
+    // Compose a tiny type-count line: "2 agents · 2 delegations · ..."
+    const typeCounts = {};
+    slice.nodes.forEach(n => { typeCounts[n.type] = (typeCounts[n.type] || 0) + 1; });
+    const typeOrder = ['agent', 'delegation', 'output', 'data'];
+    const compHtml = typeOrder
+      .filter(t => typeCounts[t])
+      .map(t => `<span class="comp-chip ${t}">${ICON_MAP[t]}<span class="count">${typeCounts[t]}</span> ${t}${typeCounts[t] > 1 ? 's' : ''}</span>`)
+      .join('');
+
+    // Estimate slice elapsed by summing node latencies where available.
+    // Crude but honest — each node's latency string is the source.
+    let h = '';
+    h += `<div class="detail-badge folder">${ICON_MAP.folder} stratum &middot; ${slice.id}</div>`;
+    h += `<div class="detail-name">${slice.label.replace(slice.id, '').trim() || slice.id}</div>`;
+    h += `<div class="detail-path">${treeNode.path} &middot; ${slice.nodes.length} nodes</div>`;
+    h += `<div class="slice-composition">${compHtml}</div>`;
+
+    // Timeline — reuse the existing strip, highlight the active slice
+    h += '<div class="detail-section"><h3>Position in trace</h3><div class="timeline">';
+    TRACE.slices.forEach(s => {
+      const isActive = s.id === slice.id;
+      h += `<div class="tl-slice${isActive ? ' active-slice' : ''}">${s.id}</div>`;
+    });
+    h += '</div><div class="tl-labels">';
+    TRACE.slices.forEach(s => { h += `<span>${s.phase.slice(0,5)}</span>`; });
+    h += '</div></div>';
+
+    // Every node in the slice, as a readable list
+    h += `<div class="detail-section"><h3>Nodes (${slice.nodes.length})</h3><ul class="agg-list">`;
+    slice.nodes.forEach(n => {
+      const summary = aggNodeSummary(n);
+      const connBits = [];
+      if (n.upstream && n.upstream.length) {
+        const names = n.upstream.map(u => nodeMap[u]?.name || u).join(', ');
+        connBits.push(`&larr; <em>${names}</em>`);
+      }
+      if (n.downstream && n.downstream.length) {
+        const names = n.downstream.map(d => nodeMap[d]?.name || d).join(', ');
+        connBits.push(`&rarr; <em>${names}</em>`);
+      }
+      h += `<li class="agg-item" data-nav="${n.id}">
+        <div class="agg-head">
+          <span class="agg-badge ${n.type}">${ICON_MAP[n.type]} ${n.type}</span>
+          <span class="agg-name">${n.name}</span>
+          ${n.status ? `<span class="agg-status ${n.status}">${n.status}</span>` : ''}
+        </div>
+        <div class="agg-meta">
+          ${n.latency ? `<span>${n.latency}</span>` : ''}
+          ${n.tokens ? `<span class="sep">&middot;</span><span>${n.tokens.toLocaleString()} tok</span>` : ''}
+          ${n.state ? `<span class="sep">&middot;</span><span>${n.state}</span>` : ''}
+        </div>
+        <div class="agg-detail">${summary}</div>
+        ${connBits.length ? `<div class="agg-conn">${connBits.join(' &nbsp; ')}</div>` : ''}
+      </li>`;
+    });
+    h += '</ul></div>';
+
+    detailContent.innerHTML = h;
+    requestAnimationFrame(() => detailContent.classList.add('visible'));
+
+    // Each row drills into the matching node
+    detailContent.querySelectorAll('.agg-item[data-nav]').forEach(el => {
+      el.addEventListener('click', () => {
+        const navId = el.dataset.nav;
+        expandToNode(navId);
+        selectNode(navId);
+      });
+    });
+  }
+
+  // Short derived summary per node — the mock data has no prose
+  // "summary" field, so we compose one from type + state + shape
+  // of connections. Honest, terse; matches the node-detail register.
+  function aggNodeSummary(n) {
+    const ups = (n.upstream || []).length;
+    const downs = (n.downstream || []).length;
+    switch (n.type) {
+      case 'agent':
+        return `Executes with <em>${n.model ? n.model.split('-').slice(0, 2).join('-') : 'model'}</em>; ` +
+               `reads ${ups} input${ups !== 1 ? 's' : ''}, produces ${downs} downstream node${downs !== 1 ? 's' : ''}.`;
+      case 'delegation':
+        return `Delegates a subtask (<em>${n.state || 'dispatched'}</em>). ` +
+               `Fanning out to ${downs} child${downs !== 1 ? 'ren' : ''}.`;
+      case 'output':
+        return `Produced artifact (<em>${n.state || 'produced'}</em>). ` +
+               `${downs > 0 ? `Consumed downstream by ${downs} node${downs !== 1 ? 's' : ''}.` : 'Terminal — no further consumers.'}`;
+      case 'data':
+        return `Data binding (<em>${n.state || 'loaded'}</em>). ` +
+               `Read by ${downs} downstream node${downs !== 1 ? 's' : ''}.`;
+      default:
+        return n.state || '';
+    }
+  }
+
+  function expandToNode(nodeId) {
+    // Walk tree to find and expand parents
+    function findAndExpand(node, target) {
+      if (node.id === target) return true;
+      if (node.children) {
+        for (const child of node.children) {
+          if (findAndExpand(child, target)) {
+            node.expanded = true;
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+    findAndExpand(treeRoot, nodeId);
+  }
+
+  // ────────────────────────────────────────────────
+  // MINIMAP
+  // ────────────────────────────────────────────────
+
+  const minimapBar = document.getElementById('minimap-bar');
+
+  function renderMinimap() {
+    let h = '';
+    TRACE.slices.forEach(slice => {
+      h += `<div class="mm-slice" data-slice="${slice.id}">
+        ${slice.id}
+        <div class="mm-dot"></div>
+      </div>`;
+    });
+    minimapBar.innerHTML = h;
+
+    minimapBar.querySelectorAll('.mm-slice').forEach(el => {
+      el.addEventListener('click', () => {
+        jumpToSlice(el.dataset.slice);
+      });
+    });
+  }
+
+  function updateMinimap() {
+    const node = treeIndex[selectedId];
+    const activeSlice = node ? node.sliceId : null;
+    minimapBar.querySelectorAll('.mm-slice').forEach(el => {
+      el.classList.toggle('active', el.dataset.slice === activeSlice);
+      el.classList.toggle('has-selection', el.dataset.slice === activeSlice);
+    });
+  }
+
+  function jumpToSlice(sliceId) {
+    const sliceNode = treeIndex[sliceId];
+    if (!sliceNode) return;
+    // Target the folder itself so the reader lands on the slice-level
+    // aggregate — the roll-up of every node inside this stratum.
+    // Expanding lets them see the tree children below; clicking any
+    // of them drills into that node's detail.
+    sliceNode.expanded = true;
+    selectNode(sliceId);
+  }
+
+  // ────────────────────────────────────────────────
+  // SEARCH
+  // ────────────────────────────────────────────────
+
+  const searchBox = document.getElementById('search-box');
+  searchBox.addEventListener('input', () => {
+    searchTerm = searchBox.value.trim().toLowerCase();
+    renderTree();
+  });
+
+  // ────────────────────────────────────────────────
+  // FILTERS
+  // ────────────────────────────────────────────────
+
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const f = btn.dataset.filter;
+      activeFilters[f] = !activeFilters[f];
+      btn.classList.toggle('active', activeFilters[f]);
+      renderTree();
+    });
+  });
+
+  // ────────────────────────────────────────────────
+  // KEYBOARD NAVIGATION
+  // ────────────────────────────────────────────────
+
+  document.addEventListener('keydown', (e) => {
+    // / to focus search
+    if (e.key === '/' && document.activeElement !== searchBox) {
+      e.preventDefault();
+      searchBox.focus();
+      return;
+    }
+
+    // Escape to clear search
+    if (e.key === 'Escape' && document.activeElement === searchBox) {
+      searchBox.value = '';
+      searchTerm = '';
+      searchBox.blur();
+      renderTree();
+      return;
+    }
+
+    // 1-9 jump to time slices (by position)
+    if (e.key >= '1' && e.key <= '9' && TRACE.slices[+e.key - 1] && document.activeElement !== searchBox) {
+      e.preventDefault();
+      jumpToSlice(TRACE.slices[+e.key - 1].id);
+      return;
+    }
+
+    // Arrow navigation in tree
+    if (document.activeElement === treeContainer || document.activeElement === document.body) {
+      const visibleRows = [...treeContainer.querySelectorAll('.tree-row:not(.hidden-node)')];
+      if (!visibleRows.length) return;
+
+      const currentIdx = visibleRows.findIndex(r => r.dataset.id === selectedId);
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const next = Math.min(currentIdx + 1, visibleRows.length - 1);
+        selectNode(visibleRows[next].dataset.id);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        const prev = Math.max(currentIdx - 1, 0);
+        selectNode(visibleRows[prev].dataset.id);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        const node = treeIndex[selectedId];
+        if (node && node.children && node.children.length && !node.expanded) {
+          node.expanded = true;
+          renderTree();
+        }
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        const node = treeIndex[selectedId];
+        if (node && node.children && node.expanded) {
+          node.expanded = false;
+          renderTree();
+        }
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        // If detail panel has a focused connection, navigate to it
+        treeContainer.focus();
+      }
+    }
+  });
+
+  // ────────────────────────────────────────────────
+  // INIT
+  // ────────────────────────────────────────────────
+
+  renderMinimap();
+  renderTree();
+
+  // The first slice's aggregate roll-up shows on page load, not the
+  // first node's detail.
+  if (TRACE.slices.length) jumpToSlice(TRACE.slices[0].id);
+
+  treeContainer.focus();
+
+  /* ==========================================================
+     d3 control-flow network graph (right pane).
+     Pulls every node + upstream/downstream edge from TRACE,
+     lays out via d3-force, mirrors the tree's selection state.
+     ========================================================== */
+  (function initGraph() {
+    if (typeof d3 === 'undefined') {
+      console.warn('[graph] d3 not loaded — graph pane will stay empty.');
+      return;
+    }
+    const svg = d3.select('#graph-svg');
+    const panel = document.getElementById('graph-panel');
+    const meta = document.getElementById('graph-meta');
+    if (!svg.node() || !panel) return;
+
+    // Flatten every TRACE node from every slice into a single graph.
+    const allNodes = [];
+    const allLinks = [];
+    const nodeIdx = new Map();
+    (TRACE.slices || []).forEach(slice => {
+      (slice.nodes || []).forEach(n => {
+        nodeIdx.set(n.id, n);
+        allNodes.push({ id: n.id, name: n.name, type: n.type, status: n.status, slice: slice.id });
+      });
+    });
+    (TRACE.slices || []).forEach(slice => {
+      (slice.nodes || []).forEach(n => {
+        (n.downstream || []).forEach(dst => {
+          if (nodeIdx.has(dst)) allLinks.push({ source: n.id, target: dst });
+        });
+      });
+    });
+
+    meta.textContent = allNodes.length + ' nodes · ' + allLinks.length + ' edges';
+
+    function size() {
+      const r = panel.getBoundingClientRect();
+      return { w: Math.max(280, r.width), h: Math.max(360, r.height - 90) };
+    }
+    let { w, h } = size();
+    svg.attr('viewBox', `0 0 ${w} ${h}`);
+
+    const sim = d3.forceSimulation(allNodes)
+      .force('link',   d3.forceLink(allLinks).id(d => d.id).distance(58).strength(0.6))
+      .force('charge', d3.forceManyBody().strength(-180))
+      .force('center', d3.forceCenter(w / 2, h / 2))
+      .force('collide', d3.forceCollide().radius(18))
+      .alphaDecay(0.04);
+
+    const linkSel = svg.append('g').attr('class', 'links')
+      .selectAll('path').data(allLinks).join('path')
+      .attr('class', 'g-link')
+      .attr('marker-end', 'url(#arrow)');
+
+    // arrow head
+    svg.append('defs').append('marker')
+      .attr('id', 'arrow').attr('viewBox', '0 -4 8 8')
+      .attr('refX', 14).attr('refY', 0)
+      .attr('markerWidth', 7).attr('markerHeight', 7)
+      .attr('orient', 'auto')
+      .append('path').attr('d', 'M0,-4L8,0L0,4').attr('fill', 'var(--ink-3)');
+
+    const nodeSel = svg.append('g').attr('class', 'nodes')
+      .selectAll('circle').data(allNodes).join('circle')
+      .attr('class', d => 'g-node g-node-' + (d.type || 'data'))
+      .attr('r', d => d.type === 'agent' ? 10 : (d.type === 'delegation' ? 8 : 6))
+      .on('click', (_ev, d) => {
+        // Light up the graph; nudge the existing tree selection if its
+        // node is currently rendered.
+        const treeNode = treeContainer.querySelector(`[data-id="${d.id}"]`);
+        if (treeNode && treeNode.click) treeNode.click();
+        else { /* fall back: just visually highlight in the graph */
+          selectInGraph(d.id);
+        }
+      })
+      .call(drag(sim));
+
+    const labelSel = svg.append('g').attr('class', 'labels')
+      .selectAll('text').data(allNodes).join('text')
+      .attr('class', 'g-label')
+      .attr('text-anchor', 'start')
+      .attr('dx', 12).attr('dy', 4)
+      .text(d => d.name);
+
+    sim.on('tick', () => {
+      linkSel.attr('d', d => {
+        const dx = d.target.x - d.source.x, dy = d.target.y - d.source.y;
+        const mx = (d.source.x + d.target.x) / 2;
+        const my = (d.source.y + d.target.y) / 2 - Math.abs(dy) * 0.08;
+        return `M ${d.source.x} ${d.source.y} Q ${mx} ${my} ${d.target.x} ${d.target.y}`;
+      });
+      nodeSel.attr('cx', d => d.x).attr('cy', d => d.y);
+      labelSel.attr('x', d => d.x).attr('y', d => d.y);
+    });
+
+    function drag(sim) {
+      return d3.drag()
+        .on('start', (e, d) => { if (!e.active) sim.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+        .on('drag',  (e, d) => { d.fx = e.x; d.fy = e.y; })
+        .on('end',   (e, d) => { if (!e.active) sim.alphaTarget(0); d.fx = null; d.fy = null; });
+    }
+
+    function selectInGraph(id) {
+      nodeSel.classed('selected', d => d.id === id);
+      labelSel.classed('selected', d => d.id === id);
+      linkSel.classed('active', l => l.source.id === id || l.target.id === id);
+    }
+    // Expose for the tree-side click handler to call.
+    window.__graphSelect = selectInGraph;
+
+    // Resize on window resize.
+    window.addEventListener('resize', () => {
+      const s = size();
+      svg.attr('viewBox', `0 0 ${s.w} ${s.h}`);
+      sim.force('center', d3.forceCenter(s.w / 2, s.h / 2));
+      sim.alpha(0.3).restart();
+    });
+  })();
+})();
+</script>
+</body>
+</html>

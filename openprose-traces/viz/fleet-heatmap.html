@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fleet Heatmap</title>
+<!-- ============================================
+     FLEET HEATMAP · TUFTE · KECAL · TEAL
+     ============================================
+     Code-only template. One row per program, four heat cells per
+     row (one per scored dimension), an overall figure and a verdict.
+     Summary cells, a computed lede, sortable columns and a
+     tooltip on each heat cell.
+
+     Treatment
+       · Palette: cream paper, warm ink, teal accent (editorial
+         role), amber warm complement, red attention flag. The heat
+         bands map onto teal-deep at the strong end, teal/amber in
+         the middle, red-muted at the watch end.
+       · Type: Kecal (FungiType, jsDelivr) for italic / display;
+         IBM Plex Mono for body + scores.
+
+     Data: none ships with this page. It reads window.TRACE_DATA
+     through ../lib/data-slot.js from ../data/fleet-heatmap.js.
+     Shape: ../data/fleet-heatmap.schema.md
+     ============================================ -->
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+@font-face { font-family: 'Kecal'; font-weight: 200; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extralight-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 300; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Light-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 400; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Regular-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 500; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Medium-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 600; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Semibold-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 700; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Bold-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 800; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extrabold-web.woff2') format('woff2'); }
+
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&display=swap');
+
+:root {
+  --paper:     #f5f0e8;
+  --paper-dk:  #e8e0d0;
+  --paper-lt:  #fbf7ef;
+  --paper-warm:#f0e8d8;
+  --ink:       #2a2520;
+  --ink-2:     rgba(42,37,32,0.78);
+  --ink-3:     rgba(42,37,32,0.55);
+  --ink-4:     rgba(42,37,32,0.32);
+  --ink-5:     rgba(42,37,32,0.18);
+
+  --teal:      #3a7a6a;
+  --teal-deep: #2e6456;
+  --teal-soft: #4a8a7a;
+  --teal-tint: rgba(58,122,106,0.14);
+
+  --amber:     #c49a5c;
+  --amber-deep:#a87f44;
+  --amber-soft:#d4aa6c;
+
+  --red:       #c0392b;
+  --red-muted: #d4604f;
+  --red-deep:  #8e2b20;
+
+  --rule:      rgba(42,37,32,0.14);
+  --rule-mid:  rgba(42,37,32,0.06);
+
+  --hl:        rgba(196,154,92,0.32);
+  --hl-hot:    rgba(192,57,43,0.30);
+
+  /* Heat palette — teal at the strong end, amber middle, red at watch. */
+  --heat-95:  rgba(46,100,86,0.55);
+  --heat-90:  rgba(46,100,86,0.34);
+  --heat-85:  rgba(58,122,106,0.22);
+  --heat-80:  rgba(58,122,106,0.12);
+  --heat-75:  rgba(196,154,92,0.24);
+  --heat-70:  rgba(196,154,92,0.16);
+  --heat-60:  rgba(192,57,43,0.22);
+  --heat-lo:  rgba(192,57,43,0.40);
+
+  --band-strong:  var(--teal-deep);
+  --band-ok:      var(--amber-deep);
+  --band-watch:   var(--red);
+
+  --serif: 'Kecal', system-ui, -apple-system, sans-serif;
+  --sans:  'Kecal', system-ui, -apple-system, sans-serif;
+  --mono:  'IBM Plex Mono', 'JetBrains Mono', 'SF Mono', monospace;
+  --wide:  1220px;
+}
+
+html { font-size: 17px; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--mono);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  position: relative;
+}
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 15% 8%, rgba(58,122,106,0.04), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 95% 95%, rgba(196,154,92,0.04), transparent 60%);
+}
+body > * { position: relative; z-index: 1; }
+
+/* The canonical italic em — Kecal 800 across <em> */
+em, h1 em, .pretext em, .mh-sub em, .sum-val em, .colophon em, .ledger .overall em, .colophon .line.italic em {
+  font-family: 'Kecal', system-ui, sans-serif;
+  font-style: italic;
+  font-weight: 800;
+  font-size: 1em;
+  color: var(--teal);
+}
+
+/* Tufte underline paradigm replaces amber highlighter bands with the
+   β-direction dotted/dashed underline gestures. */
+.hl, .hl-hot {
+  background: transparent;
+  padding: 0;
+  border-bottom: 1px dotted var(--ink-3);
+  text-underline-offset: 3px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+.hl-hot {
+  border-bottom-color: var(--ink-2);
+  border-bottom-style: dashed;
+}
+
+.masthead {
+  max-width: var(--wide); margin: 0 auto;
+  padding: 2.25rem 2rem 1.25rem;
+  border-bottom: 1px solid var(--ink);
+  display: grid; grid-template-columns: 1fr auto; gap: 2rem; align-items: baseline;
+}
+.mh-left { display: flex; flex-direction: column; gap: 0.55rem; }
+.mh-eyebrow {
+  font-family: var(--mono); font-size: 0.68rem;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--teal); font-weight: 500;
+  display: inline-flex; align-items: center; gap: 0.7rem;
+}
+.mh-eyebrow::before {
+  content: ''; width: 24px; height: 1px; background: var(--teal);
+}
+.masthead h1 {
+  font-family: 'Kecal', system-ui, sans-serif;
+  font-size: clamp(1.9rem, 3vw, 2.6rem);
+  font-weight: 400; line-height: 1.12;
+  letter-spacing: -0.018em;
+}
+.masthead h1 em { color: var(--teal); }
+.mh-sub {
+  font-family: var(--mono); font-size: 1rem; color: var(--ink-2);
+  max-width: 64ch; line-height: 1.6;
+}
+.mh-meta {
+  font-family: var(--mono); font-size: 0.68rem;
+  letter-spacing: 0.06em; color: var(--ink-3);
+  text-align: right;
+  display: flex; flex-direction: column; gap: 0.2rem; align-items: flex-end;
+}
+
+.summary {
+  max-width: var(--wide); margin: 0 auto;
+  padding: 1.25rem 2rem 0.5rem;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0;
+  border-bottom: 1px solid var(--rule-mid);
+}
+.sum-cell {
+  padding: 0.65rem 1.05rem 0.95rem;
+  border-right: 1px dotted var(--rule-mid);
+  display: flex; flex-direction: column; gap: 0.15rem;
+}
+.sum-cell:last-child { border-right: none; }
+.sum-lab {
+  font-family: var(--mono); font-size: 0.58rem;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--teal); font-weight: 500;
+}
+.sum-val {
+  font-family: 'Kecal', sans-serif;
+  font-size: 1.85rem;
+  font-weight: 400; line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.sum-val em { color: var(--teal); }
+.sum-val.strong { color: var(--band-strong); }
+.sum-val.ok { color: var(--band-ok); }
+.sum-val.watch { color: var(--band-watch); }
+.sum-note {
+  font-family: var(--mono);
+  font-size: 0.76rem; color: var(--ink-3);
+  margin-top: 0.15rem;
+}
+
+.sort-bar {
+  max-width: var(--wide); margin: 0 auto;
+  padding: 1rem 2rem 0.5rem;
+  display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap;
+}
+.sort-label {
+  font-family: var(--mono); font-size: 0.62rem;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--ink-3); font-weight: 500;
+  margin-right: 0.6rem;
+}
+.sort-btn {
+  font-family: var(--mono); font-size: 0.7rem; font-weight: 500;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 0.4rem 0.75rem;
+  background: transparent;
+  border: 1px solid var(--rule);
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.sort-btn:hover { color: var(--ink); border-color: var(--ink-4); }
+.sort-btn.active {
+  color: var(--paper);
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.pretext {
+  max-width: var(--wide); margin: 0 auto;
+  padding: 1.25rem 2rem 0.25rem;
+}
+.pretext p {
+  font-family: var(--mono); font-size: 1rem; line-height: 1.7;
+  color: var(--ink-2);
+  max-width: 78ch;
+  text-wrap: pretty;
+}
+.pretext p::first-line {
+  font-variant: small-caps; letter-spacing: 0.05em;
+}
+.pretext p em { color: var(--teal); }
+.pretext p strong { color: var(--ink); font-weight: 500; }
+.pretext p .fig {
+  font-family: var(--mono); font-variant-numeric: tabular-nums;
+  font-size: 0.95em; color: var(--ink);
+}
+
+.ledger-wrap {
+  max-width: var(--wide); margin: 0 auto;
+  padding: 1.5rem 2rem 3rem;
+  overflow-x: auto;
+}
+.ledger {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--mono);
+}
+.ledger thead th {
+  font-family: var(--mono); font-size: 0.62rem; font-weight: 500;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--teal);
+  text-align: left;
+  padding: 0.85rem 0.7rem;
+  border-bottom: 2px solid var(--ink);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.ledger thead th:hover { color: var(--teal-deep); }
+.ledger thead th.sorted { color: var(--ink); }
+.ledger thead th.sorted::after {
+  content: ' \25BE'; font-size: 0.7em; margin-left: 0.2em;
+}
+.ledger thead th.sorted.asc::after { content: ' \25B4'; }
+.ledger thead th.num { text-align: right; }
+
+.ledger tbody tr {
+  border-bottom: 1px dotted var(--rule-mid);
+  transition: background 0.1s;
+}
+.ledger tbody tr:hover { background: rgba(58,122,106,0.05); }
+.ledger tbody tr.partial { background: rgba(192,57,43,0.06); }
+.ledger tbody tr.partial:hover { background: rgba(192,57,43,0.10); }
+
+.ledger td {
+  padding: 0.55rem 0.7rem;
+  font-size: 0.92rem;
+  vertical-align: middle;
+}
+.ledger .customer-cell {
+  font-family: 'Kecal', sans-serif;
+  font-style: italic; font-weight: 800;
+  color: var(--ink); font-size: 1rem;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+}
+.ledger .program-cell {
+  font-family: var(--mono);
+  color: var(--ink-2); font-size: 0.92rem;
+  white-space: nowrap;
+}
+.ledger .program-cell em { color: var(--teal); }
+.ledger .program-cell .run {
+  font-family: var(--mono); font-size: 0.64rem;
+  color: var(--ink-4); letter-spacing: 0.02em;
+  display: block;
+  margin-top: 0.1rem;
+}
+
+.ledger .heat {
+  width: 92px;
+  padding: 0.4rem 0.45rem;
+}
+.ledger .heat-block {
+  display: flex; align-items: center; justify-content: center;
+  height: 26px;
+  padding: 0 0.4rem;
+  font-family: var(--mono); font-variant-numeric: tabular-nums;
+  font-size: 0.78rem; font-weight: 500;
+  color: var(--ink);
+  cursor: help;
+  border: 1px solid transparent;
+  transition: border-color 0.12s, transform 0.12s;
+}
+.ledger .heat-block:hover {
+  border-color: var(--ink);
+  transform: scale(1.04);
+}
+
+.ledger .overall {
+  font-family: 'Kecal', sans-serif;
+  font-size: 1.35rem;
+  font-weight: 400; line-height: 1;
+  letter-spacing: -0.015em;
+  text-align: right;
+  padding: 0.4rem 0.7rem;
+}
+.ledger .overall em { color: var(--teal); font-style: italic; font-weight: 800; }
+.ledger .overall.strong em { color: var(--band-strong); }
+.ledger .overall.ok em { color: var(--band-ok); }
+.ledger .overall.watch em { color: var(--band-watch); }
+
+.ledger .verdict {
+  text-align: center; width: 78px;
+}
+.ledger .verdict .vd {
+  display: inline-block;
+  font-family: var(--mono); font-size: 0.52rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  padding: 0.15rem 0.45rem;
+  font-weight: 500;
+}
+.ledger .verdict .vd.pass {
+  color: var(--ink-3);
+  border: 1px solid var(--rule);
+}
+.ledger .verdict .vd.partial {
+  color: var(--red);
+  border: 1px solid var(--red);
+  background: rgba(192,57,43,0.06);
+}
+
+.ledger tr.customer-group { background: transparent !important; }
+.ledger tr.customer-group td {
+  font-family: var(--mono); font-size: 0.68rem;
+  color: var(--teal); font-weight: 500;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  padding: 1.25rem 0.7rem 0.4rem;
+  border-bottom: 1px solid var(--ink);
+}
+.ledger tr.customer-group td .count {
+  color: var(--ink-4); font-style: normal;
+  font-family: var(--mono); font-size: 0.66rem;
+  letter-spacing: 0.04em; margin-left: 0.5rem;
+  text-transform: none;
+}
+
+.legend {
+  max-width: var(--wide); margin: 0 auto;
+  padding: 1.25rem 2rem 0;
+  border-top: 1px solid var(--rule);
+  display: flex; gap: 1.4rem; flex-wrap: wrap; align-items: center;
+  font-family: var(--mono); font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+  text-transform: uppercase;
+}
+.legend .g-band {
+  display: inline-flex; align-items: center; gap: 0.45rem;
+}
+.legend .g-band .sw {
+  width: 28px; height: 14px;
+  border: 1px solid var(--rule);
+}
+.legend .g-glossary {
+  margin-left: auto;
+  font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.03em;
+  color: var(--ink-3);
+  text-transform: none;
+}
+
+.colophon {
+  max-width: var(--wide); margin: 0 auto;
+  padding: 1.5rem 2rem 3rem;
+  font-family: var(--mono); font-size: 0.68rem;
+  letter-spacing: 0.04em; color: var(--ink-3);
+  text-align: center;
+}
+.colophon .rule { width: 48px; height: 1px; background: var(--teal); margin: 0 auto 1.1rem; }
+.colophon .line { margin: 0.25rem 0; }
+.colophon .line.italic {
+  font-family: 'Kecal', sans-serif; font-style: italic; font-weight: 800;
+  color: var(--ink-2); letter-spacing: 0; font-size: 0.92rem;
+  margin-bottom: 0.8rem;
+}
+.colophon a {
+  color: var(--teal); text-decoration: none; margin: 0 0.6rem;
+  transition: color 0.15s;
+}
+.colophon a:hover { color: var(--teal-deep); }
+
+.tip {
+  position: fixed;
+  background: var(--paper-lt);
+  border: 1px solid var(--ink);
+  box-shadow: 0 4px 18px rgba(42,37,32,0.10);
+  padding: 0.7rem 0.9rem;
+  font-family: var(--mono); font-size: 0.82rem;
+  color: var(--ink-2); line-height: 1.5;
+  pointer-events: none;
+  max-width: 280px;
+  z-index: 100;
+  display: none;
+}
+.tip .tip-head {
+  font-family: var(--mono); font-size: 0.58rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--teal); font-weight: 500;
+  margin-bottom: 0.3rem;
+}
+.tip .tip-prog {
+  font-family: 'Kecal', sans-serif;
+  font-style: italic; font-weight: 800;
+  font-size: 1rem;
+  color: var(--ink); margin-bottom: 0.25rem;
+}
+.tip .tip-score {
+  font-family: var(--mono); font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+.tip .tip-note {
+  font-family: var(--mono);
+  color: var(--ink-3);
+  margin-top: 0.4rem;
+  font-size: 0.78rem;
+}
+.tip .tip-note em { color: var(--teal); font-style: italic; font-weight: 800; }
+
+@media (max-width: 880px) {
+  .masthead { grid-template-columns: 1fr; padding: 1.75rem 1.25rem 1rem; }
+  .masthead .mh-meta { text-align: left; align-items: flex-start; }
+  .summary { grid-template-columns: repeat(2, 1fr); padding: 1rem 1.25rem 0.5rem; }
+  .sum-cell { border-right: none; border-bottom: 1px dotted var(--rule-mid); padding: 0.55rem 0.85rem 0.75rem; }
+  .sort-bar { padding: 1rem 1.25rem 0.5rem; }
+  .pretext, .legend, .colophon { padding-left: 1.25rem; padding-right: 1.25rem; }
+  .ledger-wrap { padding-left: 1.25rem; padding-right: 1.25rem; }
+  .legend { flex-direction: column; align-items: flex-start; }
+  .legend .g-glossary { margin-left: 0; }
+}
+
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+
+}
+</style>
+</head>
+<body>
+
+<section class="masthead">
+  <div class="mh-left">
+    <span class="mh-eyebrow">Fleet &middot; Heatmap ledger</span>
+    <h1>Programs <em>&times;</em> dimensions: the whole fleet on one page.</h1>
+    <p class="mh-sub">One row per program, a heat cell for each scored dimension. Read down a column to see the shape of the fleet.</p>
+  </div>
+  <div class="mh-meta">
+    <span>V &middot; Fleet heatmap</span>
+    <span id="mh-updated">Updated &middot;</span>
+    <span id="mh-count">&mdash;</span>
+  </div>
+</section>
+
+<section class="summary" id="summary"></section>
+
+<section class="pretext" id="pretext"></section>
+
+<section class="sort-bar">
+  <span class="sort-label">Sort by</span>
+  <button class="sort-btn active" data-field="customer">Organization</button>
+  <button class="sort-btn" data-field="overall">Overall</button>
+  <button class="sort-btn" data-field="rf">Runtime fidelity</button>
+  <button class="sort-btn" data-field="te">Task effectiveness</button>
+  <button class="sort-btn" data-field="cs">Contract satisfaction</button>
+  <button class="sort-btn" data-field="ds">Domain score</button>
+</section>
+
+<section class="ledger-wrap">
+  <table class="ledger" id="ledger">
+    <thead>
+      <tr>
+        <th data-field="customer">Organization</th>
+        <th data-field="program">Program</th>
+        <th class="num" data-field="rf">RF</th>
+        <th class="num" data-field="te">TE</th>
+        <th class="num" data-field="cs">CS</th>
+        <th class="num" data-field="ds">DS</th>
+        <th class="num" data-field="overall">Overall</th>
+        <th data-field="verdict">Verdict</th>
+      </tr>
+    </thead>
+    <tbody id="ledger-body"></tbody>
+  </table>
+</section>
+
+<section class="legend">
+  <span class="g-band"><span class="sw" style="background: var(--heat-95)"></span>95 +</span>
+  <span class="g-band"><span class="sw" style="background: var(--heat-90)"></span>90 &ndash; 94</span>
+  <span class="g-band"><span class="sw" style="background: var(--heat-85)"></span>85 &ndash; 89</span>
+  <span class="g-band"><span class="sw" style="background: var(--heat-80)"></span>80 &ndash; 84</span>
+  <span class="g-band"><span class="sw" style="background: var(--heat-75)"></span>75 &ndash; 79</span>
+  <span class="g-band"><span class="sw" style="background: var(--heat-70)"></span>70 &ndash; 74</span>
+  <span class="g-band"><span class="sw" style="background: var(--heat-60)"></span>&lt; 70</span>
+  <span class="g-glossary">RF &middot; runtime fidelity &nbsp; TE &middot; task effectiveness &nbsp; CS &middot; contract satisfaction &nbsp; DS &middot; domain score</span>
+</section>
+
+<section class="colophon">
+  <div class="rule"></div>
+  <div class="line italic">Fleet heatmap &middot; Tufte · Kecal · Teal &middot; <span class="hl">humanist computer with a reader's pen</span></div>
+  <div class="line">Kecal &middot; IBM Plex Mono</div>
+  <div class="line" style="margin-top: 1rem;">
+    <a href="confidence-radar.html">&larr; confidence radar</a>
+  </div>
+</section>
+
+<div class="tip" id="tip"></div>
+
+<script src="../lib/data-slot.js"></script>
+<script src="../data/fleet-heatmap.js"></script>
+<script>
+// =====================================================
+// DATA: read from the slot (../data/fleet-heatmap.js).
+// FLEET    [ { customer, program, rf, te, cs, ds, runId, notes, verdict? } ]
+//          (customer = the organization label)
+// UPDATED  optional string for the masthead
+// =====================================================
+const TRACE = TraceSlot.require('fleet-heatmap', ['FLEET']);
+const FLEET = TRACE.FLEET;
+if (TRACE.UPDATED) document.getElementById('mh-updated').textContent = 'Updated ' + TRACE.UPDATED;
+
+FLEET.forEach(r => {
+  r.overall = Math.round(((r.rf + r.te + r.cs + r.ds) / 4) * 10) / 10;
+  r.verdict = r.verdict || 'pass';
+});
+
+function heatColor(v) {
+  if (v >= 95) return 'var(--heat-95)';
+  if (v >= 90) return 'var(--heat-90)';
+  if (v >= 85) return 'var(--heat-85)';
+  if (v >= 80) return 'var(--heat-80)';
+  if (v >= 75) return 'var(--heat-75)';
+  if (v >= 70) return 'var(--heat-70)';
+  if (v >= 60) return 'var(--heat-60)';
+  return 'var(--heat-lo)';
+}
+function bandClass(v) {
+  if (v >= 90) return 'strong';
+  if (v >= 70) return 'ok';
+  return 'watch';
+}
+
+let sortField = 'customer';
+let sortAsc = true;
+const tip = document.getElementById('tip');
+const body = document.getElementById('ledger-body');
+const mhCount = document.getElementById('mh-count');
+
+function renderSummary() {
+  const n = FLEET.length;
+  const avgO = Math.round(FLEET.reduce((s, r) => s + r.overall, 0) / n * 10) / 10;
+  const avgRF = Math.round(FLEET.reduce((s, r) => s + r.rf, 0) / n);
+  const avgCS = Math.round(FLEET.reduce((s, r) => s + r.cs, 0) / n);
+  const partial = FLEET.filter(r => r.verdict === 'partial').length;
+  const strong = FLEET.filter(r => r.overall >= 90).length;
+  const customers = new Set(FLEET.map(r => r.customer)).size;
+
+  const cell = (lab, val, cls, note) =>
+    `<div class="sum-cell">
+      <span class="sum-lab">${lab}</span>
+      <span class="sum-val ${cls || ''}">${val}</span>
+      ${note ? `<span class="sum-note">${note}</span>` : ''}
+    </div>`;
+
+  document.getElementById('summary').innerHTML =
+    cell('Programs', `<em>${n}</em>`, null, `across ${customers} organization${customers === 1 ? '' : 's'}`) +
+    cell('Avg overall', avgO, bandClass(avgO), 'fleet-wide mean') +
+    cell('Avg RF', avgRF, bandClass(avgRF), 'runtime fidelity') +
+    cell('Avg CS', avgCS, bandClass(avgCS), 'contract satisfaction') +
+    cell('Strong (90+)', `<em>${strong}</em>`, 'strong', 'clear the bar') +
+    cell('Partial verdicts', `<em>${partial}</em>`, 'watch', 'worth reading first');
+
+  mhCount.textContent = n + ' programs';
+}
+
+function renderPretext() {
+  const n = FLEET.length;
+  const strong = FLEET.filter(r => r.overall >= 90).length;
+  const partials = FLEET.filter(r => r.verdict === 'partial');
+  const partNames = partials.map(p => `<em>${p.customer} / ${p.program}</em>`).join(', ');
+  const lowestCS = [...FLEET].sort((a,b) => a.cs - b.cs)[0];
+  const orgs = new Set(FLEET.map(r => r.customer)).size;
+  document.getElementById('pretext').innerHTML =
+    `<p><strong>${n} programs</strong> across ${orgs} organization${orgs === 1 ? '' : 's'} fit on this ledger. ` +
+    `<span class="hl">${strong} clear 90</span>; the other ${n - strong} sit in adequate ` +
+    `with <em>contract satisfaction</em> and <em>domain</em> as the two dimensions that ` +
+    `most often carry the weakness. ` +
+    `<span class="hl-hot">${partials.length} programs return partial verdicts</span>` +
+    `${partials.length ? ': ' + partNames : ''}. The most visibly stressed single score is ` +
+    `<strong>${lowestCS.customer} / ${lowestCS.program}</strong> at ` +
+    `<span class="fig">CS ${lowestCS.cs}</span>.</p>`;
+}
+
+function render() {
+  const sorted = [...FLEET].sort((a, b) => {
+    if (sortField === 'customer') {
+      const cmp = a.customer.localeCompare(b.customer);
+      if (cmp !== 0) return sortAsc ? cmp : -cmp;
+      return a.program.localeCompare(b.program);
+    }
+    if (sortField === 'program') {
+      const cmp = a.program.localeCompare(b.program);
+      return sortAsc ? cmp : -cmp;
+    }
+    if (sortField === 'verdict') {
+      const w = { 'partial': 0, 'pass': 1 };
+      const cmp = (w[a.verdict] || 2) - (w[b.verdict] || 2);
+      return sortAsc ? cmp : -cmp;
+    }
+    const va = a[sortField] || 0;
+    const vb = b[sortField] || 0;
+    return sortAsc ? va - vb : vb - va;
+  });
+
+  let html = '';
+  let lastCustomer = '';
+  const grouped = sortField === 'customer';
+
+  sorted.forEach(row => {
+    if (grouped && row.customer !== lastCustomer) {
+      lastCustomer = row.customer;
+      const custRows = sorted.filter(r => r.customer === row.customer);
+      const custAvg = Math.round(custRows.reduce((s, r) => s + r.overall, 0) / custRows.length * 10) / 10;
+      html += `<tr class="customer-group">
+        <td colspan="8">${row.customer} <span class="count">${custRows.length} programs · avg ${custAvg}</span></td>
+      </tr>`;
+    }
+
+    const heatCell = (dim, lab, v) =>
+      `<td class="heat">
+        <div class="heat-block"
+             style="background:${heatColor(v)}"
+             data-dim="${lab}" data-v="${v}"
+             data-prog="${row.program}" data-cust="${row.customer}"
+             data-notes="${row.notes.replace(/"/g, '&quot;')}">${v}</div>
+      </td>`;
+
+    html += `<tr${row.verdict === 'partial' ? ' class="partial"' : ''}>
+      <td class="customer-cell">${grouped ? '' : row.customer}</td>
+      <td class="program-cell">
+        ${row.program}
+        <span class="run">${row.runId}</span>
+      </td>
+      ${heatCell('rf', 'Runtime fidelity', row.rf)}
+      ${heatCell('te', 'Task effectiveness', row.te)}
+      ${heatCell('cs', 'Contract satisfaction', row.cs)}
+      ${heatCell('ds', 'Domain score', row.ds)}
+      <td class="overall ${bandClass(row.overall)}"><em>${row.overall}</em></td>
+      <td class="verdict"><span class="vd ${row.verdict}">${row.verdict}</span></td>
+    </tr>`;
+  });
+
+  body.innerHTML = html;
+  wireTooltips();
+}
+
+function wireTooltips() {
+  body.querySelectorAll('.heat-block').forEach(el => {
+    el.addEventListener('mouseenter', (e) => {
+      tip.innerHTML =
+        `<div class="tip-head">${el.dataset.dim}</div>
+         <div class="tip-prog">${el.dataset.cust} &middot; ${el.dataset.prog}</div>
+         <div><span class="tip-score">${el.dataset.v}</span> / 100</div>
+         <div class="tip-note">${el.dataset.notes}</div>`;
+      tip.style.display = 'block';
+      moveTip(e);
+    });
+    el.addEventListener('mousemove', moveTip);
+    el.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+  });
+}
+
+function moveTip(e) {
+  const x = Math.min(window.innerWidth - 300, e.clientX + 14);
+  const y = Math.min(window.innerHeight - 140, e.clientY + 14);
+  tip.style.left = x + 'px';
+  tip.style.top = y + 'px';
+}
+
+function wireSort() {
+  document.querySelectorAll('.sort-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const f = btn.dataset.field;
+      if (sortField === f) sortAsc = !sortAsc;
+      else { sortField = f; sortAsc = f === 'customer' || f === 'program'; }
+      document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      render();
+      syncHeadSort();
+    });
+  });
+  document.querySelectorAll('.ledger thead th').forEach(th => {
+    th.addEventListener('click', () => {
+      const f = th.dataset.field;
+      if (sortField === f) sortAsc = !sortAsc;
+      else { sortField = f; sortAsc = f === 'customer' || f === 'program'; }
+      document.querySelectorAll('.sort-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.field === f);
+      });
+      render();
+      syncHeadSort();
+    });
+  });
+}
+function syncHeadSort() {
+  document.querySelectorAll('.ledger thead th').forEach(th => {
+    th.classList.toggle('sorted', th.dataset.field === sortField);
+    th.classList.toggle('asc', th.dataset.field === sortField && sortAsc);
+  });
+}
+
+renderSummary();
+renderPretext();
+wireSort();
+render();
+syncHeadSort();
+</script>
+</body>
+</html>

@@ -86,7 +86,14 @@ against exactly this, so a cut in another shape waits until it is reshaped.
   client run ids. The firewall is the proof; a FAIL means the cut does not
   ship, whatever the reason.
 
-**State on 2026-10-15:** the ten views are still untracked in
+**Landed 2026-10-15 (later the same day):** the kit is in `openprose-traces/`,
+eleven views on one invented world (Saltlight Aquarium and its fleet; see its
+`HANDOFF.md`). `check-traces-cut.mjs` PASSes: firewall clean, every view has
+its data, all eleven render at 1440 and 390. The page is next, briefed for a
+cloud agent in `OPENPROSE_TRACES_CLOUD_BRIEF.md` (branch only; John runs the
+firewall locally before merge).
+
+**Earlier on 2026-10-15:** the ten views were still untracked in
 `jh-deng-template/traces` with empty slots. design-iteration §8 decisions are
 still open (slug, world, own runs, client-context sentence, founder quotes,
 film). The site's one hard firewall hit (a client program slug in

@@ -1,0 +1,275 @@
+{
+  "id": "20260626-143012-09b3c9",
+  "systemName": "livestock-health-memo",
+  "sourcePath": "src/livestock-health-memo.prose.md",
+  "caller": {
+    "requires": [
+      {
+        "name": "week_of",
+        "description": "the Monday that opens the week being reported"
+      },
+      {
+        "name": "keeper_notes",
+        "description": "the keepers' free-text notes for the week, one entry per observation"
+      },
+      {
+        "name": "tank_roster",
+        "description": "every exhibit with its species list and the ranges each tank should hold"
+      },
+      {
+        "name": "photo_survey",
+        "description": "the week's photo survey from the gallery cameras, one set per exhibit"
+      }
+    ],
+    "returns": [
+      {
+        "name": "memo",
+        "source": "husbandry-compiler"
+      }
+    ]
+  },
+  "graph": [
+    {
+      "id": "roster-profiler",
+      "sourcePath": "sources/roster-profiler.prose.md",
+      "workspacePath": "workspace/roster-profiler/",
+      "inputs": [
+        {
+          "name": "tank_roster",
+          "from": "caller",
+          "sourceNodeId": null,
+          "sourceOutput": null,
+          "path": "bindings/caller/tank_roster.md"
+        },
+        {
+          "name": "week_of",
+          "from": "caller",
+          "sourceNodeId": null,
+          "sourceOutput": null,
+          "path": "bindings/caller/week_of.md"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "watchlist",
+          "workspacePath": "workspace/roster-profiler/watchlist.md",
+          "bindingPath": "bindings/roster-profiler/watchlist.md",
+          "public": true
+        }
+      ],
+      "errors": [],
+      "delegates": []
+    },
+    {
+      "id": "behavior-scout",
+      "sourcePath": "sources/behavior-scout.prose.md",
+      "workspacePath": "workspace/behavior-scout/",
+      "inputs": [
+        {
+          "name": "keeper_notes",
+          "from": "caller",
+          "sourceNodeId": null,
+          "sourceOutput": null,
+          "path": "bindings/caller/keeper_notes.md"
+        },
+        {
+          "name": "watchlist",
+          "from": "roster-profiler",
+          "sourceNodeId": "roster-profiler",
+          "sourceOutput": "watchlist",
+          "path": "bindings/roster-profiler/watchlist.md"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "behavior",
+          "workspacePath": "workspace/behavior-scout/behavior.md",
+          "bindingPath": "bindings/behavior-scout/behavior.md",
+          "public": true
+        }
+      ],
+      "errors": [],
+      "delegates": []
+    },
+    {
+      "id": "feeding-scout",
+      "sourcePath": "sources/feeding-scout.prose.md",
+      "workspacePath": "workspace/feeding-scout/",
+      "inputs": [
+        {
+          "name": "watchlist",
+          "from": "roster-profiler",
+          "sourceNodeId": "roster-profiler",
+          "sourceOutput": "watchlist",
+          "path": "bindings/roster-profiler/watchlist.md"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "refusals",
+          "workspacePath": "workspace/feeding-scout/refusals.md",
+          "bindingPath": "bindings/feeding-scout/refusals.md",
+          "public": true
+        }
+      ],
+      "errors": [],
+      "delegates": []
+    },
+    {
+      "id": "photo-scout",
+      "sourcePath": "sources/photo-scout.prose.md",
+      "workspacePath": "workspace/photo-scout/",
+      "inputs": [
+        {
+          "name": "photo_survey",
+          "from": "caller",
+          "sourceNodeId": null,
+          "sourceOutput": null,
+          "path": "bindings/caller/photo_survey.md"
+        },
+        {
+          "name": "watchlist",
+          "from": "roster-profiler",
+          "sourceNodeId": "roster-profiler",
+          "sourceOutput": "watchlist",
+          "path": "bindings/roster-profiler/watchlist.md"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "photos",
+          "workspacePath": "workspace/photo-scout/photos.md",
+          "bindingPath": "bindings/photo-scout/photos.md",
+          "public": true
+        }
+      ],
+      "errors": [
+        {
+          "name": "export-incomplete",
+          "description": "the photo survey is missing a set"
+        }
+      ],
+      "delegates": [
+        "image-reader"
+      ]
+    },
+    {
+      "id": "water-scout",
+      "sourcePath": "sources/water-scout.prose.md",
+      "workspacePath": "workspace/water-scout/",
+      "inputs": [
+        {
+          "name": "watchlist",
+          "from": "roster-profiler",
+          "sourceNodeId": "roster-profiler",
+          "sourceOutput": "watchlist",
+          "path": "bindings/roster-profiler/watchlist.md"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "water",
+          "workspacePath": "workspace/water-scout/water.md",
+          "bindingPath": "bindings/water-scout/water.md",
+          "public": true
+        }
+      ],
+      "errors": [],
+      "delegates": []
+    },
+    {
+      "id": "husbandry-compiler",
+      "sourcePath": "sources/husbandry-compiler.prose.md",
+      "workspacePath": "workspace/husbandry-compiler/",
+      "inputs": [
+        {
+          "name": "watchlist",
+          "from": "roster-profiler",
+          "sourceNodeId": "roster-profiler",
+          "sourceOutput": "watchlist",
+          "path": "bindings/roster-profiler/watchlist.md"
+        },
+        {
+          "name": "behavior",
+          "from": "behavior-scout",
+          "sourceNodeId": "behavior-scout",
+          "sourceOutput": "behavior",
+          "path": "bindings/behavior-scout/behavior.md"
+        },
+        {
+          "name": "refusals",
+          "from": "feeding-scout",
+          "sourceNodeId": "feeding-scout",
+          "sourceOutput": "refusals",
+          "path": "bindings/feeding-scout/refusals.md"
+        },
+        {
+          "name": "photos",
+          "from": "photo-scout",
+          "sourceNodeId": "photo-scout",
+          "sourceOutput": "photos",
+          "path": "bindings/photo-scout/photos.md"
+        },
+        {
+          "name": "water",
+          "from": "water-scout",
+          "sourceNodeId": "water-scout",
+          "sourceOutput": "water",
+          "path": "bindings/water-scout/water.md"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "memo",
+          "workspacePath": "workspace/husbandry-compiler/memo.md",
+          "bindingPath": "bindings/husbandry-compiler/memo.md",
+          "public": true
+        }
+      ],
+      "errors": [],
+      "delegates": []
+    }
+  ],
+  "executionOrder": [
+    {
+      "nodeId": "roster-profiler",
+      "dependsOn": []
+    },
+    {
+      "nodeId": "behavior-scout",
+      "dependsOn": [
+        "roster-profiler"
+      ]
+    },
+    {
+      "nodeId": "feeding-scout",
+      "dependsOn": [
+        "roster-profiler"
+      ]
+    },
+    {
+      "nodeId": "photo-scout",
+      "dependsOn": [
+        "roster-profiler"
+      ]
+    },
+    {
+      "nodeId": "water-scout",
+      "dependsOn": [
+        "roster-profiler"
+      ]
+    },
+    {
+      "nodeId": "husbandry-compiler",
+      "dependsOn": [
+        "behavior-scout",
+        "feeding-scout",
+        "photo-scout",
+        "water-scout"
+      ]
+    }
+  ],
+  "environment": [],
+  "tools": [],
+  "warnings": []
+}

@@ -1,0 +1,1874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Run Codex &middot; Tufte/Kecal/Teal</title>
+
+<!-- ============================================================
+     RUN CODEX: TUFTE / KECAL / TEAL
+     A four-view, shared-selection codex of one run: filetree,
+     3D strata, aggregate/node detail and a sparkline pretext.
+     Dressing: fog-cream paper, warm brown-black ink, Kecal
+     serif/sans typography, IBM Plex Mono for IDs, teal #3a7a6a as
+     the editorial accent on delegation lines and sparklines, amber
+     #c49a5c as the warm complement for eval ochre and "look up"
+     moments. Sharp corners throughout (border-radius: 0), except
+     where roundness is data-meaningful (eval donuts, status dots).
+     Code only: the trace arrives through data/run-codex.js.
+     ============================================================ -->
+
+<!-- §0.1 FONT FACES — Kecal (FungiType) hosted on jsDelivr. Seven
+     weights loaded so any downstream call to font-weight: 200..800
+     resolves. IBM Plex Mono via Google Fonts. -->
+<style>
+@font-face { font-family: 'Kecal'; font-weight: 200; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extralight-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 300; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Light-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 400; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Regular-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 500; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Medium-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 600; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Semibold-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 700; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Bold-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 800; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extrabold-web.woff2') format('woff2'); }
+
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&display=swap');
+
+/* ============================================
+   RUN CODEX: TEAL DIRECTION
+   Teal styleguide palette (fog cream paper, warm brown-black ink,
+   teal accent, amber warm complement) and the Kecal / IBM Plex
+   Mono pair over the shared-selection codex.
+   ============================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Paper + ink — fog cream over warm brown-black */
+  --paper-cream:  #fbf7ef;
+  --paper-warm:   #f0e8d8;
+  --paper-aged:   #e8e0d0;
+  --paper-shadow: #ddd0ba;
+  --paper-lt:     #fbf7ef;
+  --ink-dark:     #2a2520;
+  --ink-medium:   rgba(42,37,32,0.78);
+  --ink-light:    rgba(42,37,32,0.55);
+  --ink-faded:    rgba(42,37,32,0.32);
+
+  /* Teal — editorial accent (italic emphasis, delegation, eyebrow
+     rules, hover wash, active gate). Replaces the previous orange. */
+  --accent:       #3a7a6a;
+  --accent-soft:  rgba(58,122,106,0.14);
+  --accent-wash:  rgba(58,122,106,0.06);
+  --accent-deep:  #2e6456;
+
+  /* Amber — warm complement. Held for the eval ochre band, the
+     "organism breathes" moments, and partial-source pills. */
+  --amber:        #c49a5c;
+  --amber-deep:   #a87f44;
+  --amber-soft:   #d4aa6c;
+  --amber-tint:   rgba(196,154,92,0.18);
+
+  --rule:         rgba(42,37,32,0.14);
+  --rule-mid:     rgba(42,37,32,0.06);
+  --hover:        rgba(58,122,106,0.06);
+
+  /* Semantic node colors — agent stays warm black, delegation
+     adopts teal, data stays slate but slightly warmer to match
+     the cream palette, output keeps green for identity. Eval
+     uses amber-deep so the ochre band reads against teal accent. */
+  --agent:        var(--ink-dark);
+  --delegation:   var(--accent);
+  --data:         #5a7080;
+  --output:       #059669;
+  --eval:         var(--amber-deep);
+
+  --eval-pass:     #22c55e;
+  --eval-pass-ink: #15803e;
+  --eval-pass-soft:rgba(34,197,94,0.16);
+  --eval-fail:     #dc2626;
+  --eval-fail-soft:rgba(220,38,38,0.12);
+
+  /* Glass surfaces — cream-tinted with teal hairline. */
+  --glass-bg:       rgba(245,240,232,0.72);
+  --glass-bg-deep:  rgba(245,240,232,0.92);
+  --glass-border:   1px solid rgba(58,122,106,0.16);
+  --glass-shadow:   0 4px 24px rgba(42,37,32,0.06), inset 0 1px 0 rgba(255,255,255,0.4);
+  --glass-blur:     blur(14px) saturate(1.12);
+
+  --font-prose: 'Kecal', system-ui, -apple-system, sans-serif;
+  --font-code:  'IBM Plex Mono', 'SF Mono', 'JetBrains Mono', Consolas, monospace;
+}
+
+html, body { overflow: hidden; height: 100%; font-size: 16px; }
+body {
+  font-family: var(--font-prose);
+  font-weight: 300;
+  color: var(--ink-dark);
+  -webkit-font-smoothing: antialiased;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 35%, #fbf7ef 0%, #f0e8d8 55%, #e8e0d0 100%);
+  background-attachment: fixed;
+}
+
+/* ===== LAYOUT GRID =====
+   Four zones — top / left / [pretext + stage] / right. Pretext now
+   sits in the middle column above the diagram so left & right rails
+   stay full-height. At 1440+ the whole tome fits; under 1100 we drop
+   the right rail into an overlay.
+   // feedback: "move the bottom paragraph to the top
+   // and have it just be in the middle area above the diagram so left
+   // and right columns still there as they are now." */
+.codex {
+  display: grid;
+  grid-template-columns: 320px 1fr 420px;
+  grid-template-rows: auto auto 1fr;
+  grid-template-areas:
+    "top  top      top"
+    "tree pretext  detail"
+    "tree stage    detail";
+  height: 100vh; width: 100vw;
+}
+
+.cx-top { grid-area: top; }
+.cx-tree { grid-area: tree; overflow: hidden; }
+.cx-stage { grid-area: stage; position: relative; overflow: hidden; }
+.cx-detail { grid-area: detail; overflow: hidden; }
+.cx-pretext { grid-area: pretext; }
+
+/* ===== TOP BAR =====
+   Brand + company on the left, run-id + elapsed in the middle,
+   eval status on the right. One line only — the pretext below
+   handles all other context. */
+.cx-top {
+  display: flex; align-items: center; gap: 1.5rem;
+  padding: 0.65rem 1.25rem;
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper-cream);
+  position: relative;
+  z-index: 20;
+}
+.cx-brand { display: flex; flex-direction: column; gap: 0.05rem; line-height: 1.1; }
+.cx-brand .t {
+  font-family: var(--font-prose); font-size: 0.92rem; font-weight: 600;
+  color: var(--ink-dark); letter-spacing: -0.012em;
+}
+.cx-brand .t em {
+  font-style: italic; color: var(--accent); font-weight: 800;
+}
+.cx-brand .sub {
+  font-family: var(--font-code); font-size: 0.62rem;
+  color: var(--ink-light); letter-spacing: 0.16em; text-transform: uppercase;
+  font-weight: 400;
+}
+.cx-sep {
+  width: 1px; height: 26px; background: var(--rule);
+  flex-shrink: 0;
+}
+.cx-runid {
+  display: flex; flex-direction: column; gap: 0.08rem;
+  font-family: var(--font-code); font-size: 0.64rem;
+  color: var(--ink-light); letter-spacing: 0.08em;
+}
+.cx-runid .id { color: var(--ink-dark); font-size: 0.72rem; font-weight: 500; letter-spacing: 0.04em; }
+.cx-runid .co {
+  color: var(--accent); font-family: var(--font-prose);
+  font-size: 0.84rem; font-style: italic; font-weight: 800;
+  letter-spacing: 0; text-transform: none;
+}
+
+.cx-elapsed {
+  margin-left: auto;
+  display: flex; align-items: center; gap: 0.85rem;
+  font-family: var(--font-code); font-size: 0.72rem;
+  color: var(--ink-light); letter-spacing: 0.04em;
+}
+.cx-elapsed .fig {
+  color: var(--ink-dark); font-variant-numeric: tabular-nums;
+}
+.cx-gate {
+  font-family: var(--font-code); font-size: 0.6rem; font-weight: 600;
+  padding: 0.18rem 0.55rem;
+  border-radius: 0; letter-spacing: 0.16em; text-transform: uppercase;
+  background: var(--accent-soft); color: var(--accent);
+}
+
+/* ===== LEFT RAIL — TREE ===== */
+.cx-tree {
+  display: flex; flex-direction: column;
+  border-right: 1px solid var(--rule);
+  background: var(--paper-cream);
+}
+.cx-tree-head {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--font-code); font-size: 0.62rem;
+  letter-spacing: 0.16em; color: var(--ink-light); text-transform: uppercase;
+}
+.cx-tree-head .count { color: var(--accent); font-weight: 600; }
+.cx-search {
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper-warm);
+}
+.cx-search input {
+  width: 100%; padding: 0.32rem 0.55rem;
+  border: 1px solid var(--rule); border-radius: 0;
+  background: var(--paper-cream); outline: none;
+  font-family: var(--font-prose); font-size: 0.82rem; font-weight: 400;
+  color: var(--ink-dark);
+}
+.cx-search input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+.cx-search input::placeholder { color: var(--ink-faded); }
+.cx-filters {
+  display: flex; gap: 0.25rem; padding: 0.45rem 0.75rem 0.55rem;
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper-warm);
+}
+.cx-filter {
+  flex: 1;
+  padding: 0.22rem 0.4rem;
+  border: 1px solid var(--rule); border-radius: 0;
+  background: var(--paper-cream);
+  font-family: var(--font-code); font-size: 0.6rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink-medium); font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.cx-filter.active {
+  background: var(--ink-dark); color: var(--paper-cream);
+  border-color: var(--ink-dark);
+}
+.cx-filter:hover:not(.active) { background: var(--hover); }
+
+.cx-tree-body {
+  flex: 1; overflow-y: auto; padding: 0.25rem 0;
+}
+.cx-tree-body::-webkit-scrollbar { width: 6px; }
+.cx-tree-body::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 0; }
+
+.tree-row {
+  display: flex; align-items: center;
+  padding: 2px 0.75rem 2px 0; height: 26px;
+  cursor: pointer; user-select: none; white-space: nowrap;
+  transition: background 0.1s;
+}
+.tree-row:hover { background: var(--hover); }
+.tree-row.selected { background: var(--accent-soft); }
+.tree-row.selected:hover { background: rgba(58,122,106,0.20); }
+.tree-row.hovered { background: rgba(58,122,106,0.09); }
+.tree-row.hidden-row { display: none; }
+.tree-toggle {
+  width: 16px; height: 16px;
+  display: inline-flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-size: 10px; color: var(--ink-faded);
+  transition: transform 0.12s;
+}
+.tree-toggle.collapsed { transform: rotate(-90deg); }
+.tree-toggle.leaf { visibility: hidden; }
+.tree-icon {
+  width: 14px; height: 14px;
+  display: inline-flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-right: 5px;
+}
+.tree-icon.agent { color: var(--agent); }
+.tree-icon.delegation { color: var(--delegation); }
+.tree-icon.data { color: var(--data); }
+.tree-icon.output { color: var(--output); }
+.tree-icon.folder { color: var(--ink-faded); }
+.tree-label {
+  flex: 1; font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis;
+  font-family: var(--font-prose); font-weight: 400; color: var(--ink-dark);
+}
+.tree-label .ext { opacity: 0.45; font-family: var(--font-code); font-size: 0.7rem; }
+.tree-status {
+  margin-left: 6px; flex-shrink: 0;
+  font-family: var(--font-code); font-size: 0.58rem; font-weight: 600;
+  padding: 1px 5px; border-radius: 0; letter-spacing: 0.04em;
+}
+.tree-status.M { background: rgba(58,122,106,0.16); color: var(--delegation); }
+.tree-status.A { background: rgba(5,150,105,0.12); color: var(--output); }
+.tree-status.U { background: rgba(90,112,128,0.12); color: var(--data); }
+.tree-status.P { background: var(--amber-tint); color: var(--eval); }
+.tree-status.D { background: var(--accent-soft); color: var(--accent); }
+
+/* ===== STAGE — 3D ===== */
+.cx-stage canvas { display: block; cursor: grab; }
+.cx-stage canvas:active { cursor: grabbing; }
+
+/* Axes widget — tiny HUD in upper-left (coord labels)
+   Floating so the 3D can paint behind it. */
+.cx-axes {
+  position: absolute; top: 0.75rem; left: 0.75rem;
+  z-index: 6;
+  font-family: var(--font-code); font-size: 0.6rem;
+  color: var(--ink-light);
+  display: flex; flex-direction: column; gap: 0.1rem;
+}
+.cx-axes em {
+  font-style: italic; color: var(--accent); font-weight: 800;
+  font-family: var(--font-prose);
+}
+
+/* Preset bar — pitched / topdown / side + coord readout + gimbals */
+.cx-preset-bar {
+  position: absolute; bottom: 1rem; left: 50%; transform: translateX(-50%);
+  z-index: 10;
+  background: var(--glass-bg-deep);
+  border: var(--glass-border);
+  border-radius: 0;
+  box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  padding: 0.45rem 0.7rem;
+  display: flex; align-items: center; gap: 0.5rem;
+  flex-wrap: wrap; justify-content: center;
+  max-width: calc(100% - 2rem);
+}
+.cx-preset-bar button {
+  font-family: var(--font-code); font-size: 0.64rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  padding: 0.32rem 0.65rem;
+  border: 1px solid var(--rule);
+  background: var(--paper-cream); color: var(--ink-medium);
+  border-radius: 0; cursor: pointer;
+  transition: all 0.12s; font-weight: 600;
+}
+.cx-preset-bar button:hover {
+  color: var(--ink-dark); border-color: rgba(42,37,32,0.34);
+}
+.cx-preset-bar button.active {
+  background: var(--ink-dark); color: var(--paper-cream);
+  border-color: var(--ink-dark);
+}
+.cx-coords {
+  font-family: var(--font-code); font-size: 0.62rem;
+  color: var(--ink-medium); letter-spacing: 0.04em;
+  padding: 0 0.35rem; min-width: 10rem; text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.cx-gimbals {
+  display: inline-flex; gap: 0.2rem; align-items: center;
+  padding-left: 0.45rem; margin-left: 0.15rem;
+  border-left: 1px dotted rgba(42,37,32,0.28);
+}
+.cx-gimbals .g-label {
+  font-family: var(--font-code); font-size: 0.55rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink-faded); font-weight: 600;
+  margin-right: 0.15rem;
+}
+.g-knob {
+  font-family: var(--font-code); font-size: 0.58rem;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 0.28rem 0.5rem;
+  border: 1px solid var(--rule);
+  background: var(--paper-cream); color: var(--ink-medium);
+  border-radius: 0; cursor: grab;
+  transition: all 0.12s; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  touch-action: none; user-select: none;
+}
+.g-knob:hover {
+  color: var(--accent); border-color: rgba(58,122,106,0.42);
+}
+.g-knob.active {
+  background: var(--accent); color: var(--paper-cream);
+  border-color: var(--accent); cursor: grabbing;
+}
+.g-knob .g-glyph { font-size: 0.7rem; color: var(--accent); }
+.g-knob.active .g-glyph { color: var(--paper-cream); }
+.g-reset {
+  font-family: var(--font-code); font-size: 0.58rem;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 0.28rem 0.45rem;
+  border: 1px solid var(--rule);
+  background: transparent; color: var(--ink-light);
+  border-radius: 0; cursor: pointer;
+  transition: all 0.12s; font-weight: 600;
+}
+.g-reset:hover { color: var(--ink-dark); border-color: var(--ink-light); }
+
+/* 3D tooltip — cream glass card, anchored under cursor */
+.cx-tooltip {
+  position: fixed;
+  background: var(--glass-bg-deep);
+  border: var(--glass-border);
+  border-radius: 0;
+  box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  padding: 0.6rem 0.75rem;
+  font-family: var(--font-prose); font-size: 0.82rem; font-weight: 400;
+  color: var(--ink-medium);
+  max-width: 280px;
+  z-index: 50;
+  display: none;
+  pointer-events: none;
+}
+.cx-tooltip .tt-kind {
+  font-family: var(--font-code); font-size: 0.56rem;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--accent); font-weight: 600; margin-bottom: 0.2rem;
+}
+.cx-tooltip .tt-name {
+  font-family: var(--font-prose); font-size: 0.95rem;
+  color: var(--ink-dark); font-weight: 500;
+  margin-bottom: 0.18rem;
+  letter-spacing: -0.012em;
+}
+.cx-tooltip .tt-stat {
+  font-family: var(--font-code); font-size: 0.68rem;
+  color: var(--ink-medium); letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== RIGHT RAIL — DETAIL ===== */
+.cx-detail {
+  display: flex; flex-direction: column;
+  border-left: 1px solid var(--rule);
+  background: var(--paper-cream);
+}
+.cx-detail-body {
+  flex: 1; overflow-y: auto;
+  padding: 1.25rem 1.4rem 2rem;
+}
+.cx-detail-body::-webkit-scrollbar { width: 6px; }
+.cx-detail-body::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 0; }
+
+.detail-eyebrow {
+  font-family: var(--font-code); font-size: 0.56rem;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--accent); font-weight: 600;
+  display: inline-flex; align-items: center; gap: 0.65rem;
+  margin-bottom: 0.7rem;
+}
+.detail-eyebrow::before { content: ''; width: 22px; height: 1px; background: var(--accent); }
+
+.detail-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 9px; border-radius: 0;
+  font-family: var(--font-code); font-size: 0.6rem; font-weight: 600;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  margin-bottom: 0.6rem;
+}
+.detail-badge.agent      { background: rgba(42,37,32,0.08);  color: var(--agent); }
+.detail-badge.delegation { background: rgba(58,122,106,0.12); color: var(--delegation); }
+.detail-badge.data       { background: rgba(90,112,128,0.10); color: var(--data); }
+.detail-badge.output     { background: rgba(5,150,105,0.10);  color: var(--output); }
+.detail-badge.eval       { background: var(--amber-tint);     color: var(--eval); }
+.detail-badge.folder     { background: var(--accent-soft);    color: var(--accent); }
+
+.detail-name {
+  font-family: var(--font-prose); font-size: 1.45rem;
+  font-weight: 500; letter-spacing: -0.012em; line-height: 1.15;
+  margin-bottom: 0.2rem;
+}
+.detail-name em { font-style: italic; color: var(--accent); font-weight: 800; }
+.detail-path {
+  font-family: var(--font-code); font-size: 0.7rem;
+  color: var(--ink-light); letter-spacing: 0.04em;
+  word-break: break-all; margin-bottom: 1rem;
+}
+
+.detail-summary {
+  font-family: var(--font-prose); font-size: 0.95rem; font-weight: 300; line-height: 1.6;
+  color: var(--ink-medium);
+  padding-left: 0.9rem;
+  border-left: 2px solid var(--accent);
+  margin-bottom: 1.2rem;
+  max-width: 62ch;
+}
+.detail-summary em { font-style: italic; color: var(--accent); font-weight: 800; }
+.detail-summary code {
+  font-family: var(--font-code); font-size: 0.82em; font-weight: 400;
+  background: var(--paper-aged); color: var(--ink-dark);
+  padding: 0.05em 0.32em; border-radius: 0;
+}
+.detail-summary::first-line { font-variant: small-caps; letter-spacing: 0.06em; }
+
+.detail-section { margin-bottom: 1.1rem; }
+.detail-section h3 {
+  font-family: var(--font-code); font-size: 0.62rem; font-weight: 600;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+
+.tl-bar {
+  display: flex; gap: 2px; margin-bottom: 0.3rem;
+}
+.tl-slice {
+  flex: 1; height: 22px; border-radius: 0;
+  background: var(--paper-warm);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-code); font-size: 0.6rem; font-weight: 500;
+  color: var(--ink-light);
+}
+.tl-slice.active { background: var(--accent); color: var(--paper-cream); font-weight: 600; }
+.tl-labels { display: flex; gap: 2px; margin-bottom: 0.75rem; }
+.tl-labels span {
+  flex: 1; text-align: center;
+  font-family: var(--font-code); font-size: 0.58rem;
+  color: var(--ink-faded); letter-spacing: 0.04em;
+}
+
+.conn-list { list-style: none; display: flex; flex-direction: column; gap: 3px; }
+.conn-item {
+  padding: 5px 8px; border: 1px solid var(--rule); border-radius: 0;
+  background: var(--paper-cream);
+  display: flex; align-items: center; gap: 7px;
+  cursor: pointer; transition: all 0.12s;
+  font-size: 0.8rem;
+}
+.conn-item:hover { background: var(--hover); border-color: var(--accent); }
+.conn-dir {
+  font-family: var(--font-code); font-size: 0.7rem;
+  color: var(--ink-light); width: 16px; text-align: center;
+}
+.conn-name { flex: 1; font-family: var(--font-prose); font-weight: 400; }
+.conn-tag {
+  font-family: var(--font-code); font-size: 0.55rem; font-weight: 600;
+  padding: 2px 6px; border-radius: 0;
+  letter-spacing: 0.12em; text-transform: uppercase;
+}
+.conn-tag.agent      { background: rgba(42,37,32,0.08);  color: var(--agent); }
+.conn-tag.delegation { background: rgba(58,122,106,0.12); color: var(--delegation); }
+.conn-tag.data       { background: rgba(90,112,128,0.10); color: var(--data); }
+.conn-tag.output     { background: rgba(5,150,105,0.10);  color: var(--output); }
+
+.sources-list, .fields-list {
+  list-style: none; display: flex; flex-wrap: wrap; gap: 5px;
+}
+.src-pill {
+  font-family: var(--font-code); font-size: 0.7rem;
+  padding: 3px 7px; border: 1px solid var(--rule);
+  background: var(--paper-warm); color: var(--ink-medium);
+  border-radius: 0; letter-spacing: 0.04em;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.src-pill .kind {
+  color: var(--ink-faded); font-size: 0.58rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+}
+.src-pill.partial {
+  border-color: var(--eval);
+  background: var(--amber-tint);
+}
+.src-pill.partial .kind { color: var(--eval); }
+
+/* Field pills (binding fields) keep the rounded shape — they read
+   as discrete tokens regardless of the sharp-corner doctrine. */
+.field-pill {
+  font-family: var(--font-prose); font-size: 0.78rem; font-weight: 400;
+  padding: 3px 9px;
+  background: rgba(5,150,105,0.08);
+  border: 1px solid rgba(5,150,105,0.3);
+  color: var(--output);
+  border-radius: 99px;
+}
+
+.meta-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+}
+.meta-cell {
+  padding: 7px 10px;
+  border: 1px solid var(--rule); border-radius: 0;
+  background: var(--paper-cream);
+}
+.meta-cell .lab {
+  font-family: var(--font-code); font-size: 0.58rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink-light); font-weight: 600;
+  margin-bottom: 2px;
+}
+.meta-cell .val {
+  font-family: var(--font-code); font-size: 0.82rem;
+  color: var(--ink-dark); font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Slice aggregate — when a T-folder is selected */
+.slice-composition { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 1rem; }
+.comp-chip {
+  font-family: var(--font-code); font-size: 0.6rem; font-weight: 600;
+  padding: 3px 8px; border-radius: 0;
+  letter-spacing: 0.06em;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.comp-chip.agent      { background: rgba(42,37,32,0.08);  color: var(--agent); }
+.comp-chip.delegation { background: rgba(58,122,106,0.12); color: var(--delegation); }
+.comp-chip.data       { background: rgba(90,112,128,0.10); color: var(--data); }
+.comp-chip.output     { background: rgba(5,150,105,0.10);  color: var(--output); }
+.comp-chip .n { font-weight: 700; }
+
+.agg-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.agg-item {
+  border: 1px solid var(--rule); border-radius: 0;
+  padding: 10px 12px; background: var(--paper-cream);
+  cursor: pointer; transition: all 0.12s;
+}
+.agg-item:hover { border-color: var(--accent); background: var(--hover); }
+.agg-head {
+  display: flex; align-items: center; gap: 7px; margin-bottom: 4px;
+}
+.agg-badge {
+  font-family: var(--font-code); font-size: 0.56rem; font-weight: 600;
+  padding: 2px 6px; border-radius: 0;
+  letter-spacing: 0.16em; text-transform: uppercase;
+}
+.agg-badge.agent      { background: rgba(42,37,32,0.08);  color: var(--agent); }
+.agg-badge.delegation { background: rgba(58,122,106,0.12); color: var(--delegation); }
+.agg-badge.data       { background: rgba(90,112,128,0.10); color: var(--data); }
+.agg-badge.output     { background: rgba(5,150,105,0.10);  color: var(--output); }
+.agg-name {
+  font-family: var(--font-prose); font-size: 0.92rem; font-weight: 500;
+  color: var(--ink-dark); letter-spacing: -0.012em;
+}
+.agg-status {
+  font-family: var(--font-code); font-size: 0.56rem; font-weight: 600;
+  padding: 1px 5px; border-radius: 0;
+  margin-left: auto; letter-spacing: 0.04em;
+}
+.agg-status.M { background: rgba(58,122,106,0.16); color: var(--delegation); }
+.agg-status.A { background: rgba(5,150,105,0.12); color: var(--output); }
+.agg-status.U { background: rgba(90,112,128,0.12); color: var(--data); }
+.agg-status.P { background: var(--amber-tint); color: var(--eval); }
+.agg-meta {
+  font-family: var(--font-code); font-size: 0.66rem;
+  color: var(--ink-light); letter-spacing: 0.02em;
+  display: flex; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.agg-meta .sep { color: var(--ink-faded); }
+.agg-detail {
+  font-family: var(--font-prose); font-size: 0.82rem; font-weight: 300; line-height: 1.5;
+  color: var(--ink-medium);
+}
+.agg-detail em { font-style: italic; color: var(--accent); font-weight: 800; }
+.agg-conn {
+  font-family: var(--font-code); font-size: 0.62rem;
+  color: var(--ink-faded); letter-spacing: 0.02em;
+  margin-top: 4px;
+}
+.agg-conn em {
+  font-style: italic; color: var(--accent); font-weight: 800;
+  font-family: var(--font-prose); font-size: 0.76rem;
+}
+
+/* Eval checks (when the eval aggregate is selected). Status dots
+   stay round — round is data-meaningful here. */
+.eval-list {
+  list-style: none; display: flex; flex-direction: column; gap: 3px;
+}
+.eval-row {
+  display: grid; grid-template-columns: auto 1fr auto;
+  gap: 8px; align-items: center;
+  padding: 5px 8px; border-radius: 0;
+  background: var(--paper-cream); border: 1px solid var(--rule);
+}
+.eval-row.pass .dot { background: var(--eval-pass-ink); }
+.eval-row.fail .dot { background: var(--eval); }
+.eval-row .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.eval-row .lab {
+  font-family: var(--font-code); font-size: 0.72rem;
+  color: var(--ink-dark); letter-spacing: 0.02em;
+}
+.eval-row .st {
+  font-family: var(--font-code); font-size: 0.56rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.16em;
+}
+.eval-row.pass .st { color: var(--eval-pass-ink); }
+.eval-row.fail .st { color: var(--eval); }
+.eval-row .note {
+  grid-column: 2 / 4;
+  font-family: var(--font-prose); font-size: 0.78rem; font-style: italic; font-weight: 400;
+  color: var(--ink-medium); line-height: 1.45; margin-top: 3px;
+}
+
+/* Empty state */
+.cx-detail-empty {
+  padding: 2rem 1.4rem;
+  font-family: var(--font-prose); font-style: italic; font-weight: 400;
+  color: var(--ink-faded); font-size: 0.88rem;
+  text-align: center;
+}
+
+/* ===== PRETEXT — MIDDLE-COLUMN NARRATIVE (above the diagram) =====
+   // feedback: "move the bottom paragraph to the top
+   // and have it just be in the middle area above the diagram so left
+   // and right columns still there as they are now." */
+.cx-pretext {
+  padding: 0.9rem 1.5rem 1rem;
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper-cream);
+  max-height: 30vh; overflow-y: auto;
+}
+.cx-pretext::-webkit-scrollbar { height: 6px; }
+.cx-pretext-inner {
+  max-width: 94ch;
+  margin: 0 auto;
+}
+.cx-pretext .pre-eyebrow {
+  font-family: var(--font-code); font-size: 0.56rem;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--accent); font-weight: 600;
+  margin-bottom: 0.35rem;
+  display: inline-flex; align-items: center; gap: 0.65rem;
+}
+.cx-pretext .pre-eyebrow::before { content: ''; width: 22px; height: 1px; background: var(--accent); }
+.cx-pretext p {
+  font-family: var(--font-prose); font-size: 0.95rem; font-weight: 300; line-height: 1.65;
+  color: var(--ink-medium);
+  text-wrap: pretty;
+}
+.cx-pretext p::first-line {
+  font-variant: small-caps; letter-spacing: 0.06em;
+}
+.cx-pretext p em { font-style: italic; color: var(--accent); font-weight: 800; }
+.cx-pretext p strong { color: var(--ink-dark); font-weight: 600; }
+.cx-pretext p .fig {
+  font-family: var(--font-code); font-variant-numeric: tabular-nums; font-weight: 400;
+  font-size: 0.9em; color: var(--ink-dark);
+}
+.cx-pretext p code {
+  font-family: var(--font-code); font-weight: 400;
+  background: var(--paper-aged); color: var(--ink-dark);
+  padding: 0.05em 0.32em; border-radius: 0;
+  font-size: 0.85em;
+}
+.cx-pretext p .spark {
+  display: inline-block; vertical-align: -3px; margin: 0 0.15em;
+}
+.cx-pretext p .spark svg { display: block; }
+.cx-pretext p .spark path {
+  fill: none; stroke: var(--accent); stroke-width: 1.8;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.cx-pretext p .spark rect { fill: var(--accent); }
+.cx-pretext p .spark .bg { fill: rgba(58,122,106,0.15); stroke: none; }
+/* Eval donut — round shape is data-meaningful; keep circular geometry,
+   only the stroke colors shift. Background ring uses amber-tint so the
+   donut reads as the ochre eval band, pass stays green, fail stays red. */
+.cx-pretext p .spark .donut-bg { fill: none; stroke: var(--amber-tint); stroke-width: 3; }
+.cx-pretext p .spark .donut-fg { fill: none; stroke: var(--eval-pass-ink); stroke-width: 3; stroke-linecap: butt; }
+.cx-pretext p .spark .donut-fail { fill: none; stroke: var(--eval); stroke-width: 3; stroke-linecap: butt; }
+.cx-pretext p .spark circle.end { fill: var(--accent); }
+.cx-pretext p .pre-tap {
+  color: var(--accent); cursor: pointer;
+  border-bottom: 1px dotted rgba(58,122,106,0.4);
+  transition: border-color 0.12s;
+}
+.cx-pretext p .pre-tap:hover { border-bottom-color: var(--accent); }
+
+/* Axes gizmo — minimal, lives inside the 3D stage */
+.cx-stage-hint {
+  position: absolute; top: 0.75rem; right: 0.75rem;
+  z-index: 6;
+  font-family: var(--font-code); font-size: 0.58rem;
+  letter-spacing: 0.12em; color: var(--ink-faded);
+  text-align: right; line-height: 1.4;
+  pointer-events: none;
+}
+.cx-stage-hint em {
+  font-style: italic; color: var(--accent); font-weight: 800;
+  font-family: var(--font-prose);
+}
+
+/* Under 1200 viewport — collapse right rail into overlay, tree fixed */
+@media (max-width: 1200px) {
+  .codex { grid-template-columns: 280px 1fr 360px; }
+}
+@media (max-width: 1000px) {
+  /* // narrow viewport: stack with pretext above stage
+     so the new "paragraph above the diagram" ordering survives the
+     responsive collapse. */
+  .codex {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto 1fr auto;
+    grid-template-areas:
+      "top"
+      "tree"
+      "pretext"
+      "stage"
+      "detail";
+  }
+  .cx-tree { max-height: 28vh; border-right: none; border-bottom: 1px solid var(--rule); }
+  .cx-detail { max-height: 40vh; border-left: none; border-top: 1px solid var(--rule); }
+}
+
+
+
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+  header.cx-top { width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: auto; word-break: break-word; }
+  aside.cx-tree { width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: auto; word-break: break-word; }
+  section#stage.cx-stage { width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: auto; word-break: break-word; }
+}
+</style>
+</head>
+<body>
+
+<div class="codex" id="codex">
+
+  <!-- TOP BAR -->
+  <header class="cx-top">
+    <div class="cx-brand">
+      <span class="t">Run <em>Codex</em></span>
+      <span class="sub">X &middot; Four simultaneous views of one trace</span>
+    </div>
+    <div class="cx-sep"></div>
+    <div class="cx-runid">
+      <span class="id" id="run-id"></span>
+      <span class="co" id="run-co"></span>
+    </div>
+    <div class="cx-elapsed">
+      <span><span class="fig" id="run-elapsed"></span> elapsed</span>
+      <span><span class="fig" id="run-nodes"></span> nodes &middot; <span class="fig" id="run-strata"></span> strata</span>
+      <span class="cx-gate" id="run-gate"></span>
+    </div>
+  </header>
+
+  <!-- LEFT RAIL · TREE -->
+  <aside class="cx-tree">
+    <div class="cx-tree-head">
+      <span class="count" id="tree-count">0 nodes</span>
+      <span style="margin-left:auto;" id="tree-strata"></span>
+    </div>
+    <div class="cx-search">
+      <input id="search" type="text" placeholder="Search nodes">
+    </div>
+    <div class="cx-filters">
+      <button class="cx-filter active" data-filter="M" title="In progress">M</button>
+      <button class="cx-filter active" data-filter="A" title="Produced">A</button>
+      <button class="cx-filter active" data-filter="U" title="Consumed">U</button>
+      <button class="cx-filter active" data-filter="P" title="Partial">P</button>
+    </div>
+    <div class="cx-tree-body" id="tree-body"></div>
+  </aside>
+
+  <!-- CENTER · 3D STAGE -->
+  <section class="cx-stage" id="stage">
+    <div class="cx-axes" id="axes-hint">
+      <span>axis <em>y</em> &middot; time (<span id="axis-range"></span>)</span>
+    </div>
+    <div class="cx-stage-hint">
+      click any node &mdash; <em>all four views sync</em>
+    </div>
+
+    <div class="cx-preset-bar" role="group" aria-label="3D controls">
+      <button class="active" data-preset="pitched">Pitched</button>
+      <button data-preset="topdown">Top-down</button>
+      <button data-preset="side">Side</button>
+      <span class="cx-coords" id="coords">cam &mdash;</span>
+      <div class="cx-gimbals">
+        <span class="g-label">gimbal</span>
+        <button class="g-knob" data-axis="pitch"  title="Pitch &mdash; drag vertical"><span class="g-glyph">&#x2195;</span>pitch</button>
+        <button class="g-knob" data-axis="spin"   title="Spin &mdash; drag horizontal"><span class="g-glyph">&#x2194;</span>spin</button>
+        <button class="g-knob" data-axis="zoom"   title="Zoom &mdash; drag vertical"><span class="g-glyph">&#x229A;</span>zoom</button>
+        <button class="g-knob" data-axis="tilt-x" title="Tilt X &mdash; drag vertical"><span class="g-glyph">&#x21BB;</span>tilt&#x2011;x</button>
+        <button class="g-knob" data-axis="tilt-z" title="Tilt Z &mdash; drag horizontal"><span class="g-glyph">&#x21BA;</span>tilt&#x2011;z</button>
+        <button class="g-reset" type="button" title="Reset to active preset" id="g-reset">reset</button>
+      </div>
+    </div>
+
+    <div class="cx-tooltip" id="tooltip"></div>
+  </section>
+
+  <!-- RIGHT RAIL · DETAIL -->
+  <aside class="cx-detail">
+    <div class="cx-detail-body" id="detail">
+      <div class="cx-detail-empty" id="detail-empty">Click any node or stratum</div>
+    </div>
+  </aside>
+
+  <!-- BOTTOM · PRETEXT NARRATIVE -->
+  <footer class="cx-pretext">
+    <div class="cx-pretext-inner">
+      <span class="pre-eyebrow">The run in one paragraph</span>
+      <p id="pretext-p"></p>
+    </div>
+  </footer>
+
+</div>
+
+<script src="../lib/data-slot.js"></script>
+<script src="../data/run-codex.js"></script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* ============================================
+   1. TRACE DATA (from the data slot)
+   The single source of truth. Tree, 3D, detail,
+   pretext all derive from TRACE. This page ships
+   as code only: data/run-codex.js supplies it,
+   data/run-codex.schema.md describes the shape.
+   ============================================ */
+const { TRACE, PRETEXT_HTML, EDGE_SPECS } = TraceSlot.require('run-codex', ['TRACE', 'PRETEXT_HTML']);
+
+// Flat index
+const nodeMap = {};
+TRACE.slices.forEach(s => s.nodes.forEach(n => { nodeMap[n.id] = { ...n, sliceId: s.id, y: s.y }; }));
+
+// Run-level figures derived from the trace (eval tally, node count)
+const ALL_TRACE_NODES = TRACE.slices.flatMap(s => s.nodes);
+const EVAL_NODE  = ALL_TRACE_NODES.find(n => n.evalChecks);
+const EVAL_TOTAL = EVAL_NODE ? EVAL_NODE.evalChecks.length : 0;
+const EVAL_PASS  = EVAL_NODE ? EVAL_NODE.evalChecks.filter(c => c.state === 'pass').length : 0;
+
+// Top bar, rail head and axis hint, bound from the trace
+(function bindRunHeader() {
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  const first = TRACE.slices[0], last = TRACE.slices[TRACE.slices.length - 1];
+  set('run-id', TRACE.id || '');
+  set('run-co', [TRACE.customer, TRACE.subject].filter(Boolean).join(' \u00b7 '));
+  set('run-elapsed', TRACE.totalTime || '');
+  set('run-nodes', String(TRACE.totalNodes ?? ALL_TRACE_NODES.length));
+  set('run-strata', String(TRACE.slices.length));
+  set('tree-strata', TRACE.slices.length + ' strata');
+  set('axis-range', first && last ? `${first.id} \u2192 ${last.id}` : '');
+  const gate = document.getElementById('run-gate');
+  if (gate) {
+    if (EVAL_TOTAL) gate.textContent = `${EVAL_PASS} / ${EVAL_TOTAL} pass`;
+    else gate.style.display = 'none';
+  }
+})();
+
+/* ============================================
+   2. SHARED STATE
+   ============================================ */
+const state = {
+  selectedId: null,   // node id or slice id
+  hoveredId: null,
+  searchTerm: '',
+  filters: { M: true, A: true, U: true, P: true, D: true },
+};
+const listeners = { select: [], hover: [] };
+function onSelect(fn) { listeners.select.push(fn); }
+function onHover(fn)  { listeners.hover.push(fn); }
+function setSelected(id) {
+  if (id === state.selectedId) return;
+  state.selectedId = id;
+  listeners.select.forEach(fn => fn(id));
+}
+function setHovered(id) {
+  if (id === state.hoveredId) return;
+  state.hoveredId = id;
+  listeners.hover.forEach(fn => fn(id));
+}
+
+/* ============================================
+   3. TREE VIEW — left rail
+   ============================================ */
+const ICON = {
+  agent:      '<svg width="11" height="11" viewBox="0 0 12 12"><circle cx="6" cy="6" r="4" fill="currentColor" opacity=".85"/></svg>',
+  delegation: '<svg width="11" height="11" viewBox="0 0 12 12"><polygon points="6,2 10,10 2,10" fill="currentColor" opacity=".85"/></svg>',
+  data:       '<svg width="11" height="11" viewBox="0 0 12 12"><rect x="2" y="3" width="8" height="6" fill="currentColor" opacity=".85" rx="1"/></svg>',
+  output:     '<svg width="11" height="11" viewBox="0 0 12 12"><polygon points="3,2 10,2 9,10 2,10" fill="currentColor" opacity=".85"/></svg>',
+  folder:     '<svg width="11" height="11" viewBox="0 0 12 12"><path d="M1 3h4l1-1h5v8H1z" fill="currentColor" opacity=".55"/></svg>'
+};
+const EXT = { agent: '.agent', delegation: '.delegation', data: '.data', output: '.output' };
+
+// Build tree model: root → slice folders → nodes
+function buildTree() {
+  const root = { id: '__root', type: 'folder', expanded: true, children: [] };
+  TRACE.slices.forEach(s => {
+    const folder = {
+      id: s.id, type: 'folder', expanded: true,
+      name: s.label.toLowerCase().replace(/\s+/g, '-'),
+      sliceId: s.id, depth: 1,
+      path: TRACE.id + '/' + s.label.toLowerCase().replace(/\s+/g, '-'),
+      children: []
+    };
+    s.nodes.forEach(n => {
+      // Nest outputs under their parent agent (when parent is in same slice)
+      const parentAgent = s.nodes.find(p => p.downstream.includes(n.id) && p.type === 'agent');
+      const entry = {
+        id: n.id, type: n.type, status: n.status,
+        name: n.name + (EXT[n.type] || ''), depth: 2,
+        path: folder.path + '/' + n.name + (EXT[n.type] || ''),
+        sliceId: s.id, node: n, children: []
+      };
+      if (parentAgent && n.type === 'output') {
+        let parent = folder.children.find(c => c.id === parentAgent.id);
+        if (!parent) {
+          parent = {
+            id: parentAgent.id, type: parentAgent.type, status: parentAgent.status,
+            name: parentAgent.name + (EXT[parentAgent.type] || ''), depth: 2,
+            path: folder.path + '/' + parentAgent.name + (EXT[parentAgent.type] || ''),
+            sliceId: s.id, node: parentAgent, expanded: true, children: []
+          };
+          folder.children.push(parent);
+        }
+        entry.depth = 3;
+        entry.path = parent.path + '/' + n.name + (EXT[n.type] || '');
+        parent.children.push(entry);
+      } else if (!folder.children.find(c => c.id === n.id)) {
+        folder.children.push(entry);
+      }
+    });
+    root.children.push(folder);
+  });
+  return root;
+}
+const tree = buildTree();
+const treeIndex = {};
+(function indexTree(n) { treeIndex[n.id] = n; (n.children || []).forEach(indexTree); })(tree);
+
+function flattenTree(n, out = []) {
+  if (n.id !== '__root') out.push(n);
+  if (n.children && n.expanded) n.children.forEach(c => flattenTree(c, out));
+  return out;
+}
+
+const $tree = document.getElementById('tree-body');
+const $treeCount = document.getElementById('tree-count');
+
+function nodeVisible(n) {
+  if (n.type === 'folder') return true;
+  if (n.status && !state.filters[n.status]) return false;
+  if (state.searchTerm) {
+    const hay = (n.name + ' ' + n.type + ' ' + (n.status || '')).toLowerCase();
+    if (!hay.includes(state.searchTerm)) return false;
+  }
+  return true;
+}
+
+function renderTree() {
+  const flat = flattenTree(tree);
+  let count = 0;
+  let html = '';
+  flat.forEach(n => {
+    const isFolder = n.type === 'folder';
+    const hasChildren = n.children && n.children.length > 0;
+    const visible = nodeVisible(n);
+    if (!isFolder) count++;
+
+    let folderHasVisible = true;
+    if (isFolder && state.searchTerm) {
+      const walk = (x) => x.type !== 'folder' ? nodeVisible(x) : (x.children || []).some(walk);
+      folderHasVisible = (n.children || []).some(walk);
+    }
+    const hidden = (!visible && !isFolder) || (isFolder && state.searchTerm && !folderHasVisible);
+
+    const indent = ((n.depth || 0) - 1) * 16;
+    const cls = ['tree-row'];
+    if (n.id === state.selectedId) cls.push('selected');
+    if (n.id === state.hoveredId) cls.push('hovered');
+    if (hidden) cls.push('hidden-row');
+
+    html += `<div class="${cls.join(' ')}" data-id="${n.id}" style="padding-left:${indent}px">`;
+    if (hasChildren) {
+      html += `<span class="tree-toggle${n.expanded ? '' : ' collapsed'}" data-toggle="${n.id}">&#x25BE;</span>`;
+    } else {
+      html += `<span class="tree-toggle leaf"></span>`;
+    }
+    const iconType = isFolder ? 'folder' : n.type;
+    html += `<span class="tree-icon ${iconType}">${ICON[iconType]}</span>`;
+    const parts = n.name.split('.');
+    if (parts.length > 1 && !isFolder) {
+      html += `<span class="tree-label">${parts[0]}<span class="ext">.${parts.slice(1).join('.')}</span></span>`;
+    } else {
+      html += `<span class="tree-label">${n.name}</span>`;
+    }
+    if (n.status) html += `<span class="tree-status ${n.status}">${n.status}</span>`;
+    html += '</div>';
+  });
+  $tree.innerHTML = html;
+  $treeCount.textContent = count + ' nodes';
+
+  $tree.querySelectorAll('.tree-row').forEach(row => {
+    row.addEventListener('click', e => {
+      const tog = e.target.closest('.tree-toggle');
+      const id = row.dataset.id;
+      if (tog && tog.dataset.toggle) {
+        const t = treeIndex[tog.dataset.toggle];
+        if (t) { t.expanded = !t.expanded; renderTree(); }
+        return;
+      }
+      setSelected(id);
+    });
+    row.addEventListener('mouseenter', () => setHovered(row.dataset.id));
+    row.addEventListener('mouseleave', () => setHovered(null));
+  });
+}
+
+document.getElementById('search').addEventListener('input', e => {
+  state.searchTerm = e.target.value.trim().toLowerCase();
+  renderTree();
+});
+document.querySelectorAll('.cx-filter').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const f = btn.dataset.filter;
+    state.filters[f] = !state.filters[f];
+    btn.classList.toggle('active', state.filters[f]);
+    renderTree();
+  });
+});
+
+// Expand a parent chain to reveal a target node in the tree
+function expandToId(id) {
+  function walk(n, target) {
+    if (n.id === target) return true;
+    if (n.children) for (const c of n.children) {
+      if (walk(c, target)) { n.expanded = true; return true; }
+    }
+    return false;
+  }
+  walk(tree, id);
+}
+
+/* ============================================
+   4. DETAIL PANEL — right rail
+   ============================================ */
+const $detail = document.getElementById('detail');
+
+function renderDetail() {
+  const id = state.selectedId;
+  if (!id) {
+    $detail.innerHTML = `<div class="cx-detail-empty">Click any node or stratum &mdash; all four views update together.</div>`;
+    return;
+  }
+  const treeNode = treeIndex[id];
+  if (!treeNode) {
+    $detail.innerHTML = `<div class="cx-detail-empty">Select a trace node to inspect</div>`;
+    return;
+  }
+  if (treeNode.type === 'folder' && treeNode.sliceId) {
+    renderSliceAggregate(treeNode);
+  } else {
+    renderNode(treeNode);
+  }
+}
+
+function renderSliceAggregate(treeNode) {
+  const slice = TRACE.slices.find(s => s.id === treeNode.sliceId);
+  if (!slice) return;
+  const counts = {};
+  slice.nodes.forEach(n => { counts[n.type] = (counts[n.type] || 0) + 1; });
+  const order = ['agent', 'delegation', 'output', 'data'];
+  const comp = order.filter(t => counts[t])
+    .map(t => `<span class="comp-chip ${t}">${ICON[t]}<span class="n">${counts[t]}</span> ${t}${counts[t] > 1 ? 's' : ''}</span>`)
+    .join('');
+
+  let h = '';
+  h += `<span class="detail-eyebrow">${slice.id} &middot; ${slice.phase}</span>`;
+  h += `<div><span class="detail-badge folder">${ICON.folder} stratum &middot; ${slice.id}</span></div>`;
+  h += `<div class="detail-name">${slice.label.replace(slice.id, '').trim() || slice.id}</div>`;
+  h += `<div class="detail-path">${treeNode.path} &middot; ${slice.nodes.length} nodes &middot; elapsed at close ${slice.time}</div>`;
+  h += `<div class="slice-composition">${comp}</div>`;
+  h += `<div class="detail-summary">${slice.summary}</div>`;
+
+  // Timeline strip
+  h += '<div class="detail-section"><h3>Position in trace</h3><div class="tl-bar">';
+  TRACE.slices.forEach(s => {
+    h += `<div class="tl-slice${s.id === slice.id ? ' active' : ''}">${s.id}</div>`;
+  });
+  h += '</div><div class="tl-labels">';
+  TRACE.slices.forEach(s => { h += `<span>${s.time}</span>`; });
+  h += '</div></div>';
+
+  // Node aggregate
+  h += `<div class="detail-section"><h3>Nodes (${slice.nodes.length})</h3><ul class="agg-list">`;
+  slice.nodes.forEach(n => {
+    const connBits = [];
+    if (n.upstream.length) connBits.push(`&larr; <em>${n.upstream.map(u => nodeMap[u]?.name || u).join(', ')}</em>`);
+    if (n.downstream.length) connBits.push(`&rarr; <em>${n.downstream.map(d => nodeMap[d]?.name || d).join(', ')}</em>`);
+    const isEval = n.type === 'data' && n.evalChecks;
+    const badgeCls = isEval ? 'data' : n.type;
+    h += `<li class="agg-item" data-nav="${n.id}">
+      <div class="agg-head">
+        <span class="agg-badge ${badgeCls}">${ICON[n.type]} ${isEval ? 'eval' : n.type}</span>
+        <span class="agg-name">${n.name}</span>
+        ${n.status ? `<span class="agg-status ${n.status}">${n.status}</span>` : ''}
+      </div>
+      <div class="agg-meta">
+        ${n.latency ? `<span>${n.latency}</span>` : ''}
+        ${n.tokens ? `<span class="sep">&middot;</span><span>${n.tokens.toLocaleString()} tok</span>` : ''}
+        ${n.state ? `<span class="sep">&middot;</span><span>${n.state}</span>` : ''}
+      </div>
+      ${n.summary ? `<div class="agg-detail">${n.summary}</div>` : ''}
+      ${connBits.length ? `<div class="agg-conn">${connBits.join(' &nbsp; ')}</div>` : ''}
+    </li>`;
+  });
+  h += '</ul></div>';
+
+  $detail.innerHTML = h;
+  $detail.querySelectorAll('.agg-item[data-nav]').forEach(el => {
+    el.addEventListener('click', () => {
+      expandToId(el.dataset.nav);
+      renderTree();
+      setSelected(el.dataset.nav);
+    });
+    el.addEventListener('mouseenter', () => setHovered(el.dataset.nav));
+    el.addEventListener('mouseleave', () => setHovered(null));
+  });
+}
+
+function renderNode(treeNode) {
+  const n = treeNode.node;
+  if (!n) return;
+  const isEval = n.type === 'data' && n.evalChecks;
+  const badgeCls = isEval ? 'eval' : n.type;
+  const badgeLab = isEval ? `eval · ${n.evalChecks.length} checks` : n.type;
+
+  let h = '';
+  h += `<span class="detail-eyebrow">${treeNode.sliceId} &middot; ${n.kind || n.type}</span>`;
+  h += `<div><span class="detail-badge ${badgeCls}">${ICON[n.type]} ${badgeLab}</span></div>`;
+  h += `<div class="detail-name">${n.name}</div>`;
+  h += `<div class="detail-path">${treeNode.path}</div>`;
+  if (n.summary) h += `<div class="detail-summary">${n.summary}</div>`;
+
+  // Timeline
+  h += '<div class="detail-section"><h3>Execution timeline</h3><div class="tl-bar">';
+  TRACE.slices.forEach(s => {
+    h += `<div class="tl-slice${s.id === treeNode.sliceId ? ' active' : ''}">${s.id}</div>`;
+  });
+  h += '</div><div class="tl-labels">';
+  TRACE.slices.forEach(s => { h += `<span>${s.time}</span>`; });
+  h += '</div></div>';
+
+  // Connections
+  const conn = [...(n.upstream || []).map(u => ({ id: u, dir: 'up' })),
+                ...(n.downstream || []).map(d => ({ id: d, dir: 'down' }))];
+  if (conn.length) {
+    h += '<div class="detail-section"><h3>Connections</h3><ul class="conn-list">';
+    conn.forEach(c => {
+      const cn = nodeMap[c.id];
+      if (!cn) return;
+      h += `<li class="conn-item" data-nav="${c.id}">
+        <span class="conn-dir">${c.dir === 'up' ? '&larr;' : '&rarr;'}</span>
+        <span class="conn-name">${cn.name}</span>
+        <span class="conn-tag ${cn.type}">${cn.type}</span>
+      </li>`;
+    });
+    h += '</ul></div>';
+  }
+
+  if (n.sources && n.sources.length) {
+    h += '<div class="detail-section"><h3>Sources</h3><ul class="sources-list">';
+    n.sources.forEach(s => {
+      h += `<li class="src-pill${s.state === 'partial' ? ' partial' : ''}">${s.name}<span class="kind">· ${s.kind}${s.state === 'partial' ? ' · partial' : ''}</span></li>`;
+    });
+    h += '</ul></div>';
+  }
+
+  if (n.fields && n.fields.length) {
+    h += '<div class="detail-section"><h3>Binding fields</h3><ul class="fields-list">';
+    n.fields.forEach(f => { h += `<li class="field-pill">${f}</li>`; });
+    h += '</ul></div>';
+  }
+
+  if (n.evalChecks) {
+    const evPass = n.evalChecks.filter(c => c.state === 'pass').length;
+    h += `<div class="detail-section"><h3>Eval checks &middot; ${evPass} / ${n.evalChecks.length} pass</h3><ul class="eval-list">`;
+    n.evalChecks.forEach(c => {
+      h += `<li class="eval-row ${c.state}">
+        <span class="dot"></span>
+        <span class="lab">${c.label}</span>
+        <span class="st">${c.state}</span>
+        <span class="note">${c.detail}</span>
+      </li>`;
+    });
+    h += '</ul></div>';
+  }
+
+  // Metadata
+  h += '<div class="detail-section"><h3>Metadata</h3><div class="meta-grid">';
+  h += cell('Tokens',  n.tokens ? n.tokens.toLocaleString() : '—');
+  h += cell('Latency', n.latency || '—');
+  h += cell('State',   n.state || '—');
+  h += cell('Kind',    n.kind || n.type);
+  h += '</div></div>';
+
+  $detail.innerHTML = h;
+  $detail.querySelectorAll('.conn-item[data-nav]').forEach(el => {
+    el.addEventListener('click', () => {
+      expandToId(el.dataset.nav);
+      renderTree();
+      setSelected(el.dataset.nav);
+    });
+    el.addEventListener('mouseenter', () => setHovered(el.dataset.nav));
+    el.addEventListener('mouseleave', () => setHovered(null));
+  });
+}
+function cell(lab, val) {
+  return `<div class="meta-cell"><div class="lab">${lab}</div><div class="val">${val}</div></div>`;
+}
+
+/* ============================================
+   5. 3D SCENE — center stage (preserved from source)
+   Same scene, same materials, same shapes — only the
+   warm-tinted hex values shift to the teal palette.
+   ============================================ */
+const stage = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(stage.clientWidth, stage.clientHeight);
+renderer.setClearColor(0x000000, 0);
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(32, stage.clientWidth / stage.clientHeight, 0.1, 200);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.1;
+controls.minDistance = 6;
+controls.maxDistance = 50;
+controls.panSpeed = 0.6;
+
+const PLANE_W = 12, PLANE_D = 9;
+const NODE_R = 0.48, RECT_W = 1.6, RECT_H = 0.78, PARA_SKEW = 0.26;
+const STACK_CENTER_Y = 6;
+const PIVOT_BIAS = 0.2;
+
+// Materials — re-toned to the teal direction. Ink stays as the warm
+// brown-black (#2a2520). Teal (#3a7a6a) takes the editorial accent
+// slot the previous edition gave to orange. Amber-deep (#a87f44)
+// carries the eval ochre. Grey is re-toned to the warmer slate so
+// it sits in the same temperature as the body type.
+const ink  = new THREE.Color(0x2a2520);
+const teal = new THREE.Color(0x3a7a6a);
+const grey = new THREE.Color(0x9c958a);
+const eval_amber = new THREE.Color(0xa87f44);
+const pass = new THREE.Color(0x22c55e);
+
+// Axes hint — thin 3-line gizmo anchored at origin. Y axis (time)
+// now shows in teal to mirror the editorial accent.
+(function addAxes() {
+  const mkLine = (a, b, color) => {
+    const g = new THREE.BufferGeometry().setFromPoints([a, b]);
+    return new THREE.Line(g, new THREE.LineBasicMaterial({ color, opacity: 0.25, transparent: true }));
+  };
+  const O = new THREE.Vector3(0, 0, 0);
+  scene.add(mkLine(O, new THREE.Vector3(2.5, 0, 0), 0x9c958a));  // x
+  scene.add(mkLine(O, new THREE.Vector3(0, 14, 0), 0x3a7a6a));   // y — time (teal)
+  scene.add(mkLine(O, new THREE.Vector3(0, 0, 2.5), 0x9c958a));  // z
+})();
+
+// Slice planes + node meshes
+const planeMeshes = []; // { mesh, slice }
+const nodeMeshes = [];  // { mesh, node, halo }
+
+function mkPlane(slice) {
+  const group = new THREE.Group();
+  group.position.y = slice.y;
+
+  // Plane fill — fog-cream tint matching the body gradient.
+  const planeGeo = new THREE.PlaneGeometry(PLANE_W, PLANE_D);
+  const planeMat = new THREE.MeshBasicMaterial({
+    color: 0xfbf7ef, transparent: true, opacity: 0.14,
+    side: THREE.DoubleSide
+  });
+  const plane = new THREE.Mesh(planeGeo, planeMat);
+  plane.rotation.x = -Math.PI / 2;
+  group.add(plane);
+
+  // Hairline border — warm-aged paper edge.
+  const edges = new THREE.EdgesGeometry(new THREE.PlaneGeometry(PLANE_W, PLANE_D));
+  const border = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({
+    color: 0xe8e0d0, transparent: true, opacity: 0.45
+  }));
+  border.rotation.x = -Math.PI / 2;
+  group.add(border);
+
+  // Plane label — Kecal italic at the slice id, ink color in the
+  // warm brown-black register. Visible after side-view rotation.
+  const labelCanvas = document.createElement('canvas');
+  labelCanvas.width = 512; labelCanvas.height = 128;
+  const lctx = labelCanvas.getContext('2d');
+  lctx.fillStyle = '#2a2520';
+  lctx.font = '600 46px "Kecal", system-ui, sans-serif';
+  lctx.textBaseline = 'top';
+  lctx.fillText(slice.id, 18, 12);
+  lctx.font = 'italic 800 36px "Kecal", system-ui, sans-serif';
+  lctx.fillStyle = '#3a7a6a';
+  lctx.fillText(slice.label.replace(slice.id, '').trim(), 86, 22);
+  const labelTex = new THREE.CanvasTexture(labelCanvas);
+  const labelMat = new THREE.MeshBasicMaterial({ map: labelTex, transparent: true, opacity: 0.92, side: THREE.DoubleSide });
+  const labelGeo = new THREE.PlaneGeometry(4, 1);
+  const label = new THREE.Mesh(labelGeo, labelMat);
+  label.position.set(-PLANE_W / 2 + 2, 0.02, -PLANE_D / 2 + 0.5);
+  label.rotation.x = -Math.PI / 2;
+  group.add(label);
+
+  return { group, plane, border, label };
+}
+
+function colorFor(node) {
+  if (node.type === 'agent')      return ink;
+  if (node.type === 'delegation') return teal;
+  if (node.type === 'data')       return node.status === 'P' ? eval_amber : grey;
+  if (node.type === 'output')     return new THREE.Color(0x059669);
+  return grey;
+}
+
+function mkNodeMesh(node) {
+  const mat = new THREE.MeshBasicMaterial({
+    color: colorFor(node), transparent: true, opacity: 0.88
+  });
+  let geo;
+  if (node.type === 'agent') {
+    geo = new THREE.CircleGeometry(NODE_R, 32);
+  } else if (node.type === 'output') {
+    // Parallelogram — rectangle with skewed top
+    const s = PARA_SKEW;
+    const half = RECT_W / 2, halfH = RECT_H / 2;
+    const shape = new THREE.Shape();
+    shape.moveTo(-half + s, halfH);
+    shape.lineTo(half, halfH);
+    shape.lineTo(half - s, -halfH);
+    shape.lineTo(-half, -halfH);
+    shape.closePath();
+    geo = new THREE.ShapeGeometry(shape);
+  } else if (node.type === 'data' && node.evalChecks) {
+    // Octagon
+    const r = NODE_R * 1.15;
+    const shape = new THREE.Shape();
+    for (let i = 0; i < 8; i++) {
+      const a = (Math.PI * 2 * i) / 8 - Math.PI / 8;
+      const x = Math.cos(a) * r;
+      const y = Math.sin(a) * r;
+      if (i === 0) shape.moveTo(x, y); else shape.lineTo(x, y);
+    }
+    shape.closePath();
+    geo = new THREE.ShapeGeometry(shape);
+  } else {
+    // Data/binding — rectangle
+    geo = new THREE.PlaneGeometry(RECT_W, RECT_H);
+  }
+
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.position.set(node.pos3d.x, 0.04, node.pos3d.z);
+  mesh.userData = { nodeId: node.id };
+
+  // Halo — slight glow ring that activates on hover/select.
+  // Color is the editorial teal so selection reads as an
+  // intentional editorial mark, not an alert.
+  const haloGeo = (node.type === 'agent')
+    ? new THREE.RingGeometry(NODE_R * 1.15, NODE_R * 1.45, 32)
+    : (() => {
+        // box outline matching the rect/para footprint
+        const w = (node.type === 'output' ? RECT_W + 0.25 : RECT_W + 0.15);
+        const h = (node.type === 'output' ? RECT_H + 0.25 : RECT_H + 0.15);
+        const shape = new THREE.Shape();
+        shape.moveTo(-w/2, -h/2); shape.lineTo(w/2, -h/2);
+        shape.lineTo(w/2, h/2);   shape.lineTo(-w/2, h/2); shape.closePath();
+        const inner = new THREE.Path();
+        inner.moveTo(-w/2 + 0.1, -h/2 + 0.1); inner.lineTo(w/2 - 0.1, -h/2 + 0.1);
+        inner.lineTo(w/2 - 0.1, h/2 - 0.1); inner.lineTo(-w/2 + 0.1, h/2 - 0.1); inner.closePath();
+        shape.holes.push(inner);
+        return new THREE.ShapeGeometry(shape);
+      })();
+  const haloMat = new THREE.MeshBasicMaterial({
+    color: teal, transparent: true, opacity: 0
+  });
+  const halo = new THREE.Mesh(haloGeo, haloMat);
+  halo.rotation.x = -Math.PI / 2;
+  halo.position.copy(mesh.position);
+  halo.position.y = 0.03;
+
+  return { mesh, halo };
+}
+
+// Build the scene
+TRACE.slices.forEach(slice => {
+  const p = mkPlane(slice);
+  scene.add(p.group);
+  planeMeshes.push({ slice, ...p });
+  slice.nodes.forEach(node => {
+    const { mesh, halo } = mkNodeMesh(node);
+    mesh.position.y = slice.y + 0.04;
+    halo.position.y = slice.y + 0.03;
+    scene.add(mesh);
+    scene.add(halo);
+    nodeMeshes.push({ mesh, halo, node, sliceY: slice.y });
+  });
+});
+
+// Edges: solid for data flow, dashed for optional. Solid lines take a
+// warm-ink tone so they read as graphite hairlines; dashed lines stay
+// grey to signal "optional / not supplied". EDGE_SPECS ({ s, t, dashed })
+// comes from the data slot; when it is absent the edges are derived from
+// each node's downstream list, dashed when the source kind says optional.
+const edgeSpecs = EDGE_SPECS || ALL_TRACE_NODES.flatMap(n =>
+  (n.downstream || []).map(t => (/optional/.test(n.kind || '') ? { s: n.id, t, dashed: true } : { s: n.id, t })));
+const edgeLines = [];
+edgeSpecs.forEach(e => {
+  const a = nodeMap[e.s], b = nodeMap[e.t];
+  if (!a || !b) return;
+  const pA = new THREE.Vector3(a.pos3d.x, a.y + 0.02, a.pos3d.z);
+  const pB = new THREE.Vector3(b.pos3d.x, b.y + 0.02, b.pos3d.z);
+  const geo = new THREE.BufferGeometry().setFromPoints([pA, pB]);
+  const mat = e.dashed
+    ? new THREE.LineDashedMaterial({ color: 0x9c958a, dashSize: 0.3, gapSize: 0.25, transparent: true, opacity: 0.42 })
+    : new THREE.LineBasicMaterial({ color: 0x6a604f, transparent: true, opacity: 0.48 });
+  const line = new THREE.Line(geo, mat);
+  if (e.dashed) line.computeLineDistances();
+  line.userData = { edge: e };
+  scene.add(line);
+  edgeLines.push({ line, edge: e });
+});
+
+// Camera presets (identical rotation + pose scheme to v3, including the
+// just-updated side preset with sceneRotX PI/2 and corrected offset).
+const CAMERA_PRESETS = {
+  pitched: { offset: new THREE.Vector3(-0.3, 11.3, 25.9), up: new THREE.Vector3(0, 1, 0), sceneRotX: 0, sceneRotZ: 0 },
+  topdown: { offset: new THREE.Vector3(0, 21.5, 5.0), up: new THREE.Vector3(0, 1, 0), sceneRotX: 0, sceneRotZ: 0, polarCone: Math.PI / 6 },
+  side:    { offset: new THREE.Vector3(6.9, 1.3, 21.4), up: new THREE.Vector3(0, 1, 0), sceneRotX: Math.PI / 2, sceneRotZ: -Math.PI / 2 }
+};
+let cameraPreset = 'pitched';
+let currentSlice = TRACE.slices.length - 1; // start on the last stratum
+
+function computeTarget(sliceIdx) {
+  const y = TRACE.slices[sliceIdx].y;
+  const pivotMag = STACK_CENTER_Y + (y - STACK_CENTER_Y) * PIVOT_BIAS;
+  const preset = CAMERA_PRESETS[cameraPreset];
+  let pivot;
+  if (preset.sceneRotZ) pivot = new THREE.Vector3(pivotMag, 0, 0);
+  else if (preset.sceneRotX) pivot = new THREE.Vector3(0, 0, pivotMag);
+  else pivot = new THREE.Vector3(0, pivotMag, 0);
+  return { pos: pivot.clone().add(preset.offset), target: pivot, up: preset.up };
+}
+function applySceneRotation() {
+  const p = CAMERA_PRESETS[cameraPreset];
+  scene.rotation.x = p.sceneRotX || 0;
+  scene.rotation.z = p.sceneRotZ || 0;
+  if (p.polarCone) {
+    controls.minPolarAngle = 0;
+    controls.maxPolarAngle = p.polarCone;
+  } else {
+    controls.minPolarAngle = 0;
+    controls.maxPolarAngle = Math.PI / 2 - 0.04;
+  }
+}
+function snapCamera() {
+  const t = computeTarget(currentSlice);
+  camera.up.copy(t.up);
+  camera.position.copy(t.pos);
+  controls.target.copy(t.target);
+  controls.update();
+  updateCoordReadout();
+}
+function setPreset(name) {
+  if (!CAMERA_PRESETS[name] || name === cameraPreset) return;
+  cameraPreset = name;
+  document.querySelectorAll('.cx-preset-bar [data-preset]').forEach(b =>
+    b.classList.toggle('active', b.dataset.preset === name));
+  applySceneRotation();
+  snapCamera();
+}
+document.querySelectorAll('.cx-preset-bar [data-preset]').forEach(b =>
+  b.addEventListener('click', () => setPreset(b.dataset.preset)));
+
+const coordsEl = document.getElementById('coords');
+function fmt(v) { return (Math.abs(v) < 0.05 ? 0 : v).toFixed(1); }
+function updateCoordReadout() {
+  const p = camera.position;
+  coordsEl.textContent = `cam ${fmt(p.x)}, ${fmt(p.y)}, ${fmt(p.z)}`;
+}
+controls.addEventListener('change', updateCoordReadout);
+
+// Gimbals — manual spherical adjustments that override the preset cone
+const _sphere = new THREE.Spherical();
+const _offset = new THREE.Vector3();
+const gimbalButtons = document.querySelectorAll('.g-knob');
+let activeGimbal = null, gimbalStartX = 0, gimbalStartY = 0;
+let gimbalOpenPolar = null;
+function onGimbalDown(e) {
+  const btn = e.currentTarget;
+  activeGimbal = btn.dataset.axis;
+  btn.classList.add('active');
+  btn.setPointerCapture?.(e.pointerId);
+  gimbalStartX = e.clientX; gimbalStartY = e.clientY;
+  // Relax the polar cone while the reader is dragging freely
+  gimbalOpenPolar = { min: controls.minPolarAngle, max: controls.maxPolarAngle };
+  controls.minPolarAngle = 0; controls.maxPolarAngle = Math.PI - 0.04;
+}
+function onGimbalMove(e) {
+  if (!activeGimbal) return;
+  const dx = e.clientX - gimbalStartX;
+  const dy = e.clientY - gimbalStartY;
+  gimbalStartX = e.clientX; gimbalStartY = e.clientY;
+  if (activeGimbal === 'pitch' || activeGimbal === 'spin' || activeGimbal === 'zoom') {
+    _offset.copy(camera.position).sub(controls.target);
+    _sphere.setFromVector3(_offset);
+    if (activeGimbal === 'pitch') _sphere.phi = Math.max(0.002, Math.min(Math.PI - 0.04, _sphere.phi + dy * 0.0075));
+    else if (activeGimbal === 'spin') _sphere.theta -= dx * 0.0075;
+    else if (activeGimbal === 'zoom') _sphere.radius = Math.max(controls.minDistance, Math.min(controls.maxDistance, _sphere.radius * (1 + dy * 0.004)));
+    _offset.setFromSpherical(_sphere);
+    camera.position.copy(controls.target).add(_offset);
+    controls.update();
+  } else if (activeGimbal === 'tilt-x') {
+    scene.rotation.x += dy * 0.006;
+  } else if (activeGimbal === 'tilt-z') {
+    scene.rotation.z += dx * 0.006;
+  }
+}
+function onGimbalUp(e) {
+  document.querySelectorAll('.g-knob').forEach(b => b.classList.remove('active'));
+  if (gimbalOpenPolar) {
+    controls.minPolarAngle = gimbalOpenPolar.min;
+    controls.maxPolarAngle = gimbalOpenPolar.max;
+    gimbalOpenPolar = null;
+  }
+  activeGimbal = null;
+}
+gimbalButtons.forEach(btn => btn.addEventListener('pointerdown', onGimbalDown));
+window.addEventListener('pointermove', onGimbalMove);
+window.addEventListener('pointerup', onGimbalUp);
+document.getElementById('g-reset').addEventListener('click', () => {
+  applySceneRotation();
+  snapCamera();
+});
+
+// Raycaster — click + hover on 3D nodes
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+const tooltip = document.getElementById('tooltip');
+let hoveredMesh = null;
+
+function hit(clientX, clientY) {
+  const r = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((clientX - r.left) / r.width) * 2 - 1;
+  mouse.y = -((clientY - r.top) / r.height) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  const meshes = nodeMeshes.map(n => n.mesh);
+  const hits = raycaster.intersectObjects(meshes, false);
+  return hits.length ? hits[0] : null;
+}
+renderer.domElement.addEventListener('pointermove', (e) => {
+  const h = hit(e.clientX, e.clientY);
+  if (h) {
+    const id = h.object.userData.nodeId;
+    setHovered(id);
+    const n = nodeMap[id];
+    tooltip.style.display = 'block';
+    tooltip.innerHTML = `<div class="tt-kind">${n.sliceId} · ${n.kind || n.type}</div>
+      <div class="tt-name">${n.name}</div>
+      <div class="tt-stat">${n.state || ''}${n.latency ? ` · ${n.latency}` : ''}</div>`;
+    tooltip.style.left = Math.min(e.clientX + 14, window.innerWidth - 300) + 'px';
+    tooltip.style.top  = Math.min(e.clientY + 14, window.innerHeight - 100) + 'px';
+  } else {
+    setHovered(null);
+    tooltip.style.display = 'none';
+  }
+});
+renderer.domElement.addEventListener('pointerleave', () => {
+  setHovered(null);
+  tooltip.style.display = 'none';
+});
+renderer.domElement.addEventListener('click', (e) => {
+  const h = hit(e.clientX, e.clientY);
+  if (h) {
+    const id = h.object.userData.nodeId;
+    expandToId(id);
+    renderTree();
+    setSelected(id);
+  }
+});
+
+applySceneRotation();
+snapCamera();
+
+// Animation loop — always-on, with gentle node pulse on select/hover
+const clock = new THREE.Clock();
+function tick() {
+  requestAnimationFrame(tick);
+  const t = clock.getElapsedTime();
+  controls.update();
+
+  // Halos — opacity driven by hover/select state
+  nodeMeshes.forEach(({ mesh, halo, node }) => {
+    let targetOp = 0;
+    const isSelected = state.selectedId === node.id;
+    const isHovered  = state.hoveredId === node.id;
+    const isSliceSelected = state.selectedId && nodeMap[state.selectedId]?.sliceId === node.sliceId;
+    const isFolderSelected = state.selectedId === node.sliceId;
+    if (isSelected) targetOp = 0.9 + Math.sin(t * 3) * 0.08;
+    else if (isHovered) targetOp = 0.55;
+    else if (isFolderSelected) targetOp = 0.28;
+    else if (isSliceSelected) targetOp = 0.18;
+    halo.material.opacity += (targetOp - halo.material.opacity) * 0.18;
+
+    // Node brightness — selected/hovered pop, others retreat slightly
+    let targetNodeOp = 0.88;
+    if (state.selectedId && !isSelected && !isSliceSelected && !isFolderSelected) targetNodeOp = 0.32;
+    if (isSelected || isHovered) targetNodeOp = 1.0;
+    mesh.material.opacity += (targetNodeOp - mesh.material.opacity) * 0.14;
+  });
+
+  // Plane brightness — selected slice pops, others retreat
+  planeMeshes.forEach(({ plane, border, slice }) => {
+    const sel = state.selectedId
+      ? (nodeMap[state.selectedId]?.sliceId === slice.id || state.selectedId === slice.id)
+      : false;
+    const targetOp = sel ? 0.3 : 0.14;
+    plane.material.opacity += (targetOp - plane.material.opacity) * 0.15;
+    const borderOp = sel ? 0.7 : 0.35;
+    border.material.opacity += (borderOp - border.material.opacity) * 0.15;
+  });
+
+  // Edge brightness — edges that touch the selected node glow
+  edgeLines.forEach(({ line, edge }) => {
+    const touch = state.selectedId && (edge.s === state.selectedId || edge.t === state.selectedId);
+    const targetOp = touch ? 0.95 : 0.42;
+    line.material.opacity += (targetOp - line.material.opacity) * 0.2;
+  });
+
+  renderer.render(scene, camera);
+}
+tick();
+
+function onResize() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', onResize);
+
+/* ============================================
+   6. PRETEXT — bottom narrative paragraph
+   Builds a one-paragraph tome summary drawn from
+   TRACE. Inline sparklines + clickable figures
+   that jump the selection to the matching node.
+   Stroke colors now teal-accent; donut shape stays
+   round (data-meaningful) but takes amber-tinted bg.
+   ============================================ */
+const $pretext = document.getElementById('pretext-p');
+
+function buildPretext() {
+  // Sparkline A — waterfall of stratum durations (log-ish scaled)
+  // Per-stratum durations from the elapsed-at-close series
+  const durations = (TRACE.elapsedEvents || []).map((e, i, a) => (i ? e - a[i - 1] : e));
+  const maxD = Math.max(...durations.map(d => Math.sqrt(d)));
+  const barW = 10, gap = 2;
+  const bars = durations.map((d, i) => {
+    const h = 14 * (Math.sqrt(d) / maxD || 0);
+    const y = 16 - h;
+    return `<rect x="${2 + i * (barW + gap)}" y="${y}" width="${barW}" height="${Math.max(2, h)}" rx="0"/>`;
+  }).join('');
+  const sparkA = `<span class="spark" aria-hidden="true"><svg width="72" height="18" viewBox="0 0 72 18">${bars}</svg></span>`;
+
+  // Sparkline B — eval donut (pass ratio). Round shape preserved
+  // because the donut encodes ratio; only the stroke colors shift.
+  const pct = EVAL_TOTAL ? EVAL_PASS / EVAL_TOTAL : 1;
+  const R = 6;
+  const circ = 2 * Math.PI * R;
+  const sparkB = `<span class="spark" aria-hidden="true"><svg width="18" height="18" viewBox="-10 -10 20 20">
+    <circle class="donut-bg" cx="0" cy="0" r="${R}"/>
+    <circle class="donut-fg" cx="0" cy="0" r="${R}" stroke-dasharray="${(circ * pct).toFixed(2)} ${circ}" transform="rotate(-90)"/>
+    <circle class="donut-fail" cx="0" cy="0" r="${R}" stroke-dasharray="${(circ * (1 - pct)).toFixed(2)} ${circ}" stroke-dashoffset="${-(circ * pct).toFixed(2)}" transform="rotate(-90)"/>
+  </svg></span>`;
+
+  // Sparkline C — fan-out glyph (parallel branches). Strokes are teal.
+  const sparkC = `<span class="spark" aria-hidden="true"><svg width="48" height="18" viewBox="0 0 48 18">
+    <path d="M2,9 L18,3 M2,9 L18,9 M2,9 L18,15 M2,9 L34,6" stroke-width="1.3"/>
+    <circle class="end" cx="18" cy="3" r="1.5"/>
+    <circle class="end" cx="18" cy="9" r="1.5"/>
+    <circle class="end" cx="18" cy="15" r="1.5"/>
+    <circle class="end" cx="34" cy="6" r="1.5"/>
+  </svg></span>`;
+
+  // PRETEXT_HTML carries the narrative; {{sparkA}} / {{sparkB}} /
+  // {{sparkC}} mark where the three inline sparklines go, and any
+  // .pre-tap[data-nav] span jumps the selection to that node or slice.
+  const p = String(PRETEXT_HTML)
+    .split('{{sparkA}}').join(sparkA)
+    .split('{{sparkB}}').join(sparkB)
+    .split('{{sparkC}}').join(sparkC);
+
+  $pretext.innerHTML = p;
+  $pretext.querySelectorAll('.pre-tap').forEach(el => {
+    el.addEventListener('click', () => {
+      const id = el.dataset.nav;
+      expandToId(id);
+      renderTree();
+      setSelected(id);
+    });
+  });
+}
+
+/* ============================================
+   7. SELECTION SYNC — bind all four views
+   ============================================ */
+onSelect(id => {
+  renderTree();
+  renderDetail();
+
+  // 3D: if id is a slice, focus the slice camera; otherwise, if node,
+  // the scene already centers on active currentSlice. Move currentSlice
+  // to the node's slice so the pivot follows (camera-preset aware).
+  if (id) {
+    let targetSliceIdx = currentSlice;
+    if (treeIndex[id] && treeIndex[id].type === 'folder' && treeIndex[id].sliceId) {
+      targetSliceIdx = TRACE.slices.findIndex(s => s.id === treeIndex[id].sliceId);
+    } else if (nodeMap[id]) {
+      targetSliceIdx = TRACE.slices.findIndex(s => s.id === nodeMap[id].sliceId);
+    }
+    if (targetSliceIdx >= 0 && targetSliceIdx !== currentSlice) {
+      currentSlice = targetSliceIdx;
+      snapCamera();
+    }
+  }
+
+  // Scroll tree row into view
+  const row = $tree.querySelector(`.tree-row[data-id="${id}"]`);
+  if (row) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+});
+onHover(id => { renderTree(); });
+
+/* ============================================
+   8. INIT
+   ============================================ */
+renderTree();
+renderDetail();
+buildPretext();
+onResize();
+
+// Open on the last stratum's aggregate so the page lands on the
+// final delivery + eval step.
+const LAST_SLICE_ID = TRACE.slices[TRACE.slices.length - 1].id;
+setTimeout(() => {
+  expandToId(LAST_SLICE_ID);
+  renderTree();
+  setSelected(LAST_SLICE_ID);
+}, 80);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,3821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Run Strata · Tufte/Kecal/Teal</title>
+
+<!-- Kecal (FungiType) hosted on jsDelivr — seven weights from 200 → 800.
+     IBM Plex Mono + Cormorant Garamond load via @import inside the
+     style block. Same font block as the styleguide-teal direction so
+     this fork inherits the brand typography exactly. -->
+<style>
+@font-face { font-family: 'Kecal'; font-weight: 200; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extralight-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 300; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Light-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 400; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Regular-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 500; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Medium-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 600; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Semibold-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 700; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Bold-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 800; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extrabold-web.woff2') format('woff2'); }
+
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&display=swap');
+
+/* ============================================
+   TRACE-STRATA · RUN META-PAGE
+   · Tufte/Kecal/Teal fork ·
+
+   Full-viewport 3D strata with frosted-glass overlays.
+   Visual identity follows the styleguide-teal direction:
+   fog cream paper, warm brown-black ink, teal #3a7a6a as
+   the editorial accent, amber #c49a5c as the rare warm
+   complement, Kecal serif/sans + IBM Plex Mono, sharp
+   corners (radius: 0) on every chrome surface.
+
+   Flat view is protected from rotation: camera locks
+   top-down, orbit disabled, non-active strata fade out
+   to create the tunnel effect. Slice-nav dots advance
+   to the exact stratum's Y position with zero drift.
+   ============================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Paper + ink — fog cream over warm brown-black. Names retained
+     from the source fork so downstream selectors don't need
+     rewriting; only the values shift to the teal direction. */
+  --paper-cream:  #f5f0e8;
+  --paper-warm:   #f0e8d8;
+  --paper-aged:   #e8e0d0;
+  --paper-lt:     #fbf7ef;
+  --paper-shadow: #e0d6c4;
+  --ink-dark:     #2a2520;
+  --ink-medium:   rgba(42,37,32,0.78);
+  --ink-light:    rgba(42,37,32,0.55);
+  --ink-faded:    rgba(42,37,32,0.32);
+
+  /* Teal is the editorial accent — italic emphasis, active chips,
+     section markers, hairline rules. Amber is the rare warm
+     complement, held back for the "look up" moments (verdict, one
+     or two key highlights). Most accent usage stays on teal. */
+  --accent:       #3a7a6a;
+  --accent-deep:  #2e6456;
+  --accent-soft:  rgba(58,122,106,0.14);
+  --accent-wash:  rgba(58,122,106,0.06);
+
+  --amber:        #c49a5c;
+  --amber-deep:   #a87f44;
+  --amber-soft:   #d4aa6c;
+  --amber-tint:   rgba(196,154,92,0.18);
+
+  --rule:         rgba(42,37,32,0.14);
+  --rule-mid:     rgba(42,37,32,0.06);
+
+  /* Eval success/failure — pass green / fail red carry data identity
+     so they remain the same hues across every fork. */
+  --eval-pass:    #22c55e;
+  --eval-pass-ink:#15803e;   /* darker variant for thin strokes on cream */
+  --eval-pass-soft: rgba(34,197,94,0.16);
+  --eval-fail:    #dc2626;
+  --eval-fail-soft: rgba(220,38,38,0.12);
+
+  /* Glass recipe — cream-tinted, teal-edge. Same pattern as the
+     source fork, but the edge tint follows the teal accent. */
+  --glass-bg:       rgba(245, 240, 232, 0.72);
+  --glass-bg-deep:  rgba(245, 240, 232, 0.88);
+  --glass-border:   1px solid rgba(58, 122, 106, 0.16);
+  --glass-shadow:   0 4px 24px rgba(42, 37, 32, 0.06), inset 0 1px 0 rgba(255,255,255,0.4);
+  --glass-blur:     blur(14px) saturate(1.12);
+
+  --font-prose:   'Kecal', system-ui, -apple-system, sans-serif;
+  --font-code:    'IBM Plex Mono', 'JetBrains Mono', 'SF Mono', monospace;
+  --font-accent:  'Cormorant Garamond', 'Kecal', serif;
+
+  /* Sharp corners only — Tufte direction. Every border-radius below
+     resolves to 0 so the chrome reads as cut hairlines. Circular
+     status dots and donut sparks override locally where the round
+     shape carries meaning (dot = unit, donut = ratio). */
+  --radius:       0;
+}
+
+html { font-size: 17px; }
+html, body { overflow: hidden; height: 100%; }
+body {
+  font-family: var(--font-prose);
+  font-weight: 300;
+  color: var(--ink-dark);
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: 0;
+  /* Warm radial ambient — the "room" the strata sit in.
+     Re-toned to a cream-teal hint so the paper reads in the same
+     temperature as the chrome. */
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 35%, #fbf7ef 0%, #f0e8d8 55%, #e8e0d0 100%);
+  background-attachment: fixed;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Brand-wide em rule — anything wrapped in <em> renders as Kecal
+   italic 800 at the parent size, coloured to the teal accent.
+   This is the single most important typographic rule in the
+   direction — italic emphasis carries the editorial voice. */
+em {
+  font-family: 'Kecal', system-ui, sans-serif;
+  font-style: italic;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: 0;
+}
+
+/* ===== FULL-VIEWPORT 3D STAGE =====
+   Page is locked to 100vh now — no scroll, no footer beneath. */
+.stage {
+  position: relative;
+  width: 100vw; height: 100vh;
+  overflow: hidden;
+}
+.stage canvas { display: block; cursor: grab; }
+.stage canvas:active { cursor: grabbing; }
+.stage.flat canvas { cursor: default; }
+
+/* ===== GLASS — shared base =====
+   Sharp corners only (radius:0) per Tufte direction. The .pill class
+   used to render fully-rounded; in this fork pills become hairline
+   rectangles too — the brand vocabulary is hairlines + sharp edges,
+   not chrome capsules. */
+.glass {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  border-radius: 0;
+  box-shadow: var(--glass-shadow);
+}
+.glass.deep { background: var(--glass-bg-deep); }
+.glass.pill { border-radius: 0; }
+
+/* ===== UNIFIED TOP PANEL =====
+   Single glass panel: stacked brand/company on left, action sentence
+   in the middle (always on — it's the answer), Hide/Show button on
+   the right. Below: expandable drop-cap paragraph. The run-id moved
+   out of the header and now titles the eval strip at the bottom. */
+.top-panel {
+  position: absolute; top: 1.25rem; left: 50%; transform: translateX(-50%);
+  width: min(920px, calc(100vw - 3rem));
+  z-index: 20;
+  overflow: hidden;
+}
+.top-panel .tp-bar {
+  display: flex; align-items: center; gap: 1.25rem;
+  padding: 0.75rem 0.95rem 0.75rem 1.2rem;
+  border-bottom: 1px solid var(--rule);
+}
+.top-panel.collapsed .tp-bar { border-bottom: none; }
+
+/* Expanded state: bar merges into body — brand becomes a compact
+   byline on one line, Hide button pops out to a floating corner,
+   and the drop-cap paragraph starts immediately below the byline
+   with no wasted gutter between them. */
+.top-panel:not(.collapsed) .tp-bar {
+  padding: 0.55rem 2.8rem 0.2rem 1.2rem;
+  border-bottom: none;
+  align-items: flex-start;
+  gap: 0.55rem;
+}
+.top-panel:not(.collapsed) .tp-brand-col {
+  flex-direction: row; align-items: baseline; gap: 0.5rem;
+  line-height: 1.15;
+}
+.top-panel:not(.collapsed) .tp-brand-col .tp-brand  { font-size: 0.82rem; }
+.top-panel:not(.collapsed) .tp-brand-col .tp-company { font-size: 0.64rem; }
+.top-panel:not(.collapsed) .tp-fold {
+  position: absolute; top: 0.5rem; right: 0.8rem;
+}
+.top-panel:not(.collapsed) .tp-body {
+  padding: 0.3rem 1.6rem 1rem;
+}
+
+/* Left column — brand stacked over customer */
+.tp-brand-col {
+  display: flex; flex-direction: column; gap: 0.12rem;
+  flex-shrink: 0; line-height: 1.2;
+}
+.tp-brand-col .tp-brand {
+  font-family: var(--font-prose); font-size: 1.02rem; font-weight: 500;
+  color: var(--ink-dark); letter-spacing: -0.012em;
+}
+.tp-brand-col .tp-company {
+  font-family: var(--font-code); font-size: 0.7rem;
+  letter-spacing: 0.04em; color: var(--ink-light);
+}
+.tp-brand-col .tp-company em {
+  font-family: 'Kecal', system-ui, sans-serif;
+  font-style: italic; font-weight: 800;
+  color: var(--accent); font-size: 0.78rem;
+  letter-spacing: 0;
+}
+
+/* Divider between brand and action sentence */
+.tp-sep {
+  width: 1px; height: 28px;
+  background: var(--rule);
+  flex-shrink: 0;
+}
+
+/* Action sentence — only visible when the paragraph body is
+   collapsed. When expanded, the brand/company + Hide button fill
+   the bar; the sentence lives inside the drop-cap paragraph below.
+   When collapsed, the sentence fills the middle of the bar — the
+   single line the reader sees if they skip the expanded story. */
+.tp-action {
+  flex: 1; min-width: 0;
+  font-family: var(--font-prose); font-size: 0.92rem; line-height: 1.45;
+  color: var(--ink-medium); margin: 0;
+  text-wrap: pretty;
+  display: none;
+}
+.top-panel.collapsed .tp-action { display: block; }
+.tp-sep { display: none; }
+.top-panel.collapsed .tp-sep { display: block; }
+.top-panel:not(.collapsed) .tp-brand-col { margin-right: auto; }
+.tp-action .tp-kicker {
+  font-family: var(--font-prose); text-transform: uppercase;
+  letter-spacing: 0.16em; color: var(--accent);
+  font-weight: 600; font-size: 0.72rem;
+}
+.tp-action .fig {
+  font-family: var(--font-code); font-variant-numeric: tabular-nums;
+  color: var(--ink-dark); font-size: 0.88em;
+}
+/* Verdict is one of the rare "look up" moments — amber tint instead
+   of teal so it reads as the warm complement, not the editorial
+   default. */
+.tp-action .verdict {
+  background: var(--amber-tint);
+  padding: 0.05em 0.4em; border-radius: 0;
+  font-weight: 600; color: var(--ink-dark);
+  border-left: 2px solid var(--amber);
+}
+.tp-action em { color: var(--accent); font-style: italic; font-weight: 800; }
+
+/* Hide/Show button — same slot in both states (location consistency).
+   Sharp corners; hairline border; teal accent on hover. */
+.tp-fold {
+  flex-shrink: 0;
+  font-family: var(--font-code); font-size: 0.62rem;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-light); cursor: pointer;
+  background: rgba(42,37,32,0.04); border: 1px solid var(--rule);
+  border-radius: 0; padding: 0.3rem 0.75rem;
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  transition: color 0.1s ease, border-color 0.1s ease, background 0.1s ease;
+}
+.tp-fold:hover { color: var(--accent); border-color: var(--accent); }
+.tp-fold .caret { display: inline-block; font-size: 0.8em; transition: transform 0.14s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.top-panel.collapsed .tp-fold .caret { transform: rotate(180deg); }
+
+/* Paragraph body — drop-cap prose. Hidden when panel is collapsed.
+   Opening lands softly (200ms ease-out). Closing snaps: the fade
+   (40ms) finishes well before the collapse (90ms) so the paragraph
+   vanishes immediately and we only watch the empty shell shrink.
+   max-height is set near actual content height (240px) so the
+   transition doesn't spend ms of 'slack' on invisible max-height
+   territory before the collapse becomes visible. */
+.tp-body {
+  padding: 1.15rem 1.75rem 1.3rem 1.75rem;
+  max-height: 240px; overflow: auto;
+  transition:
+    max-height 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+    padding 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.14s ease;
+}
+.top-panel.collapsed .tp-body {
+  max-height: 0; padding-top: 0; padding-bottom: 0; opacity: 0;
+  pointer-events: none;
+  transition:
+    max-height 0.09s ease-in,
+    padding 0.09s ease-in,
+    opacity 0.04s ease-in;
+}
+.pretext {
+  font-family: var(--font-prose);
+  font-weight: 300;
+  font-size: 1rem; line-height: 1.6;
+  color: var(--ink-medium);
+  text-wrap: pretty;
+  margin: 0;
+}
+/* Proper drop cap — 2 lines tall, top-aligned to the cap height of
+   line 1, baseline at line 2 baseline. float+line-height tuned to
+   match the Kecal body line-height so the D meets the first line
+   cleanly and drops into the second line. */
+.pretext::first-letter {
+  font-family: var(--font-accent);
+  font-weight: 500;
+  font-style: italic;
+  -webkit-initial-letter: 2; initial-letter: 2;
+  font-size: 3.6rem;
+  line-height: 0.82;
+  float: left;
+  /* Sits lower: nudged down so the D-cap lines up with the x-height
+     of line 1 rather than the cap-height, which reads as a cleaner
+     two-line drop (head slightly below the text top). */
+  margin: 0.42rem 0.34rem -0.05rem 0;
+  padding: 0;
+  color: var(--accent);
+}
+.pretext em { color: var(--accent); font-style: italic; font-weight: 800; }
+.pretext strong { color: var(--ink-dark); font-weight: 600; }
+.pretext .fig {
+  font-family: var(--font-code); font-variant-numeric: tabular-nums;
+  color: var(--ink-dark); font-size: 0.95em;
+}
+/* ===== INLINE SPARK VOCABULARY =====
+   Strict 1:1 mapping between data type and glyph so the prose
+   reads as one coherent language:
+
+     duration    → .spark.pie-hour  (N/60 wedge of a clock face)
+     ratio N/M   → .spark.donut     (pass arc green + fail arc red)
+     score 0..1  → .spark.donut     (continuous fill arc)
+     trajectory  → .spark.line      (rise/convergence curve)
+     count       → .spark.dots      (discrete pips) — reserved
+     tally       → .spark.tally     — reserved
+
+   Number formatting rules:
+     durations  → always abbreviated: "14m", "3m", "8m 52s"
+     ratios     → "N / M" with thin-space around slash
+     scores     → "N / 100" (implicit percentage)
+
+   Each SVG inherits the accent palette; donut carries its own
+   pass/fail colours. */
+.spark {
+  display: inline-block; vertical-align: -4px; margin: 0 0.22em;
+}
+.spark svg { display: block; overflow: visible; }
+.spark.line path { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.spark.line circle.end { fill: var(--accent); }
+
+/* Pie-of-an-hour — 60-minute clock face with a minutes-wedge filled.
+   Track ring shows the full hour; wedge shows elapsed minutes.
+   Wedge starts at 12-o'clock and sweeps clockwise. Teal accent. */
+.spark.pie-hour .track { fill: none; stroke: var(--rule); stroke-width: 1.2; }
+.spark.pie-hour .wedge { fill: var(--accent); opacity: 0.85; }
+.spark.pie-hour .hub   { fill: var(--accent); }
+
+/* Mini-donut — ring with a filled arc representing a continuous
+   ratio. Used for percentages / 0..1 values like a confidence
+   score. For discrete pass/fail counts, use .spark.dots instead. */
+.spark.donut .track { fill: none; stroke: var(--rule); stroke-width: 2.2; }
+.spark.donut .fill  { fill: none; stroke: var(--accent); stroke-width: 2.2; stroke-linecap: butt; }
+.spark.donut .pass  { fill: none; stroke: var(--eval-pass); stroke-width: 2.2; stroke-linecap: butt; }
+.spark.donut .fail  { fill: none; stroke: var(--eval-fail); stroke-width: 2.2; stroke-linecap: butt; }
+
+/* Dots — one circle per discrete unit (check, retry, etc.).
+   .on      = passing / filled
+   .off     = not passing / hollow
+   .part    = fractional fill (used for percentage dot-ramps)
+   .fail-dot = exception in the sequence, red-tinted */
+.spark.dots circle.off  { fill: var(--ink-faded); }
+.spark.dots circle.part { fill: var(--accent); }
+.spark.dots circle.on   { fill: var(--accent); }
+.spark.dots circle.fail-dot { fill: var(--eval-fail); }
+.pretext .verdict {
+  background: var(--amber-tint);
+  padding: 0.05em 0.4em; border-radius: 0;
+  font-weight: 600; color: var(--ink-dark);
+  border-left: 2px solid var(--amber);
+}
+.pretext code {
+  font-family: var(--font-code); font-size: 0.88em;
+  background: var(--paper-aged); color: var(--ink-dark);
+  padding: 0.05em 0.35em; border-radius: 0;
+  white-space: nowrap;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
+}
+
+/* ===== SLICE NAVIGATION (left-rail) =====
+   Container shrinks to fit just the T-letters by default; on hover
+   (over any item) the whole column expands to reveal italic labels. */
+.slice-nav {
+  position: absolute; left: 1.1rem; top: 50%; transform: translateY(-50%);
+  z-index: 15;
+  padding: 0.7rem 0.75rem 0.85rem;
+  width: auto;
+  display: flex; flex-direction: column; gap: 0.55rem;
+}
+.slice-nav .sn-inner {
+  display: flex; flex-direction: column; gap: 0.75rem;
+  align-items: flex-start;
+}
+/* View-mode toggle — icon pair ABOVE the strata list.
+   Tilt = three stacked parallelograms (reads as the 3D stratum stack);
+   Flat = a single rectangle (the one-slide-at-a-time slideshow). Icons
+   match the T-letter chip width so the rail stays thin and consistent. */
+.sn-mode-toggle {
+  display: flex; flex-direction: column; gap: 0.22rem;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.15rem;
+  border-bottom: 1px solid var(--rule);
+  align-items: stretch;
+}
+.sn-mode-toggle button {
+  background: transparent; border: none; padding: 0.26rem 0.34rem;
+  border-radius: 0; cursor: pointer;
+  color: var(--ink-faded);
+  display: flex; align-items: center; justify-content: center;
+  transition: color 0.1s ease, background 0.1s ease;
+}
+.sn-mode-toggle button:hover { color: var(--ink-dark); }
+.sn-mode-toggle button.active {
+  color: var(--paper-lt); background: var(--accent);
+}
+.sn-mode-toggle button svg { display: block; }
+.sn-mode-toggle .sn-mode-sep { display: none; }
+.sn-item {
+  display: flex; align-items: center; gap: 0;
+  cursor: pointer;
+  transition: gap 0.16s cubic-bezier(0.2, 0.8, 0.2, 1);
+  white-space: nowrap;
+  background: transparent; border: none; padding: 0;
+  position: relative;
+}
+.slice-nav:hover .sn-item { gap: 0.55rem; }
+.sn-short {
+  font-family: var(--font-code); font-weight: 500;
+  font-size: 0.78rem; letter-spacing: 0.06em;
+  color: var(--ink-faded);
+  padding: 0.22rem 0.42rem;
+  border-radius: 0;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+.sn-item:hover .sn-short { color: var(--ink-dark); }
+/* Active state: teal chip, cream letter — unambiguous. */
+.sn-item.active .sn-short {
+  color: var(--paper-lt);
+  background: var(--accent);
+}
+.sn-item.active:hover .sn-short { color: var(--paper-lt); }
+
+/* Label: zero-width + zero-opacity by default. On slice-nav hover
+   the container grows and labels fade in together (so the whole
+   rail expands as a group, not per-item). Italic Kecal 800 carries
+   the editorial voice. */
+.sn-label {
+  font-family: 'Kecal', system-ui, sans-serif;
+  font-style: italic; font-weight: 800;
+  font-size: 0.85rem; letter-spacing: 0;
+  color: var(--accent);
+  max-width: 0; opacity: 0; overflow: hidden;
+  transition:
+    max-width 0.16s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.12s ease;
+  pointer-events: none;
+}
+.slice-nav:hover .sn-label { max-width: 180px; opacity: 1; }
+
+/* Help (?) button — sits below the T-chip stack with a thin divider,
+   toggles a glass popover to the right of the rail that explains
+   the page's two modes, navigation, and keyboard shortcuts. */
+.sn-help {
+  margin-top: 0.55rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--rule);
+  display: flex; justify-content: center;
+}
+.sn-help-btn {
+  background: transparent;
+  border: 1px solid var(--rule);
+  color: var(--ink-light);
+  font-family: var(--font-code); font-size: 0.72rem; font-weight: 500;
+  width: 1.55rem; height: 1.55rem; line-height: 1;
+  border-radius: 0; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: color 0.1s ease, border-color 0.1s ease, background 0.1s ease;
+}
+.sn-help-btn:hover { color: var(--accent); border-color: var(--accent); }
+.sn-help-btn.active {
+  color: var(--paper-lt); background: var(--accent); border-color: var(--accent);
+}
+
+.help-pop {
+  position: absolute;
+  left: 6.5rem;            /* just right of the slice-nav */
+  top: 50%;
+  transform: translateY(-50%);
+  width: 340px;
+  max-height: calc(100vh - 10rem);
+  overflow-y: auto;
+  padding: 1rem 1.15rem 1.1rem;
+  z-index: 18;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.14s ease, transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform: translate(-4px, -50%);
+  font-family: var(--font-prose); font-weight: 300;
+  font-size: 0.84rem; line-height: 1.55;
+  color: var(--ink-medium);
+}
+.help-pop.open {
+  opacity: 1; pointer-events: auto;
+  transform: translate(0, -50%);
+}
+.help-pop h4 {
+  font-family: var(--font-code); font-size: 0.6rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--accent); font-weight: 600;
+  margin-bottom: 0.55rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid var(--rule);
+}
+.help-pop h5 {
+  font-family: var(--font-code); font-size: 0.58rem;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-light); font-weight: 600;
+  margin: 0.8rem 0 0.35rem;
+}
+.help-pop p { margin-bottom: 0.55rem; }
+.help-pop em { color: var(--accent); font-style: italic; font-weight: 800; }
+.help-pop code {
+  font-family: var(--font-code); font-size: 0.78em;
+  background: var(--paper-aged); color: var(--ink-dark);
+  padding: 0.04em 0.3em; border-radius: 0;
+}
+.help-pop ul { list-style: none; padding: 0; margin: 0 0 0.45rem; }
+.help-pop li { padding: 0.16rem 0; }
+.help-pop kbd {
+  font-family: var(--font-code); font-size: 0.74em;
+  background: var(--paper-lt); color: var(--ink-dark);
+  padding: 0.1em 0.42em; border-radius: 0;
+  border: 1px solid var(--rule);
+  margin-right: 0.18rem;
+}
+
+/* ===== RIGHT RAIL =====
+   Vertical stack of view-toggle (on top) + delta ledger (below). The
+   toggle sits JUST above the ledger so both are in one visual group
+   on the right edge, rather than split corners. */
+.right-rail {
+  position: absolute; right: 1.25rem; top: 50%;
+  transform: translateY(-50%);
+  z-index: 15;
+  display: flex; flex-direction: column; gap: 0.55rem;
+  align-items: flex-end;
+  max-height: calc(100vh - 120px);
+}
+
+/* ===== DELTA LEDGER =====
+   Height sized to content inside the rail. */
+.delta-panel {
+  width: 272px;
+  max-height: calc(100vh - 220px);
+  padding: 1rem 1.15rem 0.9rem;
+  overflow-y: auto;
+  display: flex; flex-direction: column;
+}
+.delta-panel .dp-head {
+  font-family: var(--font-code); font-size: 0.58rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--accent); font-weight: 600;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--accent-soft);
+  margin-bottom: 0.5rem;
+  display: flex; flex-direction: column; gap: 0.18rem;
+}
+.delta-panel .dp-head .dp-run {
+  font-size: 0.54rem; letter-spacing: 0.06em;
+  text-transform: none;
+  color: var(--ink-faded); font-weight: 400;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.delta-panel .dp-head .dp-run code {
+  font-family: var(--font-code); color: var(--ink-light);
+}
+.delta-panel .dp-head .dp-title { /* inherits dp-head */ }
+.delta-row {
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--rule-mid);
+  font-family: var(--font-prose); font-weight: 300;
+  font-size: 0.82rem; line-height: 1.5;
+  color: var(--ink-medium);
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.delta-row:hover { color: var(--ink-dark); }
+.delta-row:last-child { border-bottom: none; padding-bottom: 0; }
+.delta-row.active { color: var(--ink-dark); }
+.delta-row.active .d-arrow { color: var(--accent); }
+.delta-row .d-arrow {
+  font-family: var(--font-code); font-size: 0.6rem;
+  letter-spacing: 0.1em; color: var(--ink-light);
+  display: block; margin-bottom: 0.3rem;
+  transition: color 0.15s;
+}
+.delta-row .d-arrow .t { color: var(--ink-faded); }
+.delta-row em { color: var(--accent); font-style: italic; font-weight: 800; }
+.delta-row .fig {
+  font-family: var(--font-code); font-size: 0.82em;
+  color: var(--ink-dark); font-variant-numeric: tabular-nums;
+}
+.delta-row code {
+  font-family: var(--font-code); font-size: 0.78em;
+  background: var(--paper-aged); color: var(--ink-dark);
+  padding: 0.04em 0.3em; border-radius: 0;
+}
+
+/* ===== EVAL / RUN CARD (now in the right-rail) =====
+   Run-id titles the card; eval score + chips stack beneath. Lives
+   above the delta ledger as a sibling card in the right rail so
+   everything right-side reads as one consolidated run-context
+   column. No longer bottom-center. */
+.eval-strip {
+  padding: 0.8rem 1rem 0.85rem;
+  display: flex; flex-direction: column; gap: 0.55rem;
+  font-family: var(--font-code); font-size: 0.7rem;
+  width: 272px;  /* match delta-panel width */
+}
+.eval-strip .es-title {
+  display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap;
+  font-size: 0.58rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-light); font-weight: 500;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid var(--rule-mid);
+}
+.eval-strip .es-title .es-run-label { color: var(--ink-faded); }
+.eval-strip .es-title code {
+  font-family: var(--font-code); font-size: 0.64rem;
+  color: var(--ink-medium); letter-spacing: 0.02em;
+  text-transform: none;
+  overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+.eval-strip .es-title .es-head {
+  margin-left: auto;
+  color: var(--accent); font-weight: 600;
+  font-size: 0.58rem; letter-spacing: 0.14em;
+}
+.eval-strip .es-body { display: flex; align-items: center; gap: 0.5rem; }
+.eval-strip .es-chips { display: flex; gap: 0.25rem; flex-wrap: wrap; }
+.es-chip {
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  font-family: var(--font-code); font-size: 0.6rem;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--rule); border-radius: 0;
+  color: var(--ink-medium); background: rgba(245,240,232,0.5);
+  cursor: default;
+  transition: all 0.15s;
+}
+.es-chip.pass {
+  border-color: rgba(34,197,94,0.45);
+  color: var(--eval-pass-ink);
+  background: var(--eval-pass-soft);
+}
+.es-chip.fail {
+  border-color: rgba(220,38,38,0.6);
+  color: var(--eval-fail);
+  background: var(--eval-fail-soft);
+}
+.es-chip .glyph { font-weight: 700; }
+
+/* Old .view-controls glass pill retired — toggle is now a T/F item
+   pair inside the slice-nav left rail. Kept class rules stripped to
+   prevent stray styling. */
+.view-controls { display: none; }
+.view-btn {
+  font-family: var(--font-code); font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid transparent; border-radius: 0;
+  background: transparent; color: var(--ink-medium);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.view-btn:hover { color: var(--ink-dark); background: rgba(245,240,232,0.5); }
+.view-btn.active {
+  background: var(--ink-dark); color: var(--paper-lt);
+  border-color: var(--ink-dark);
+}
+
+/* ===== CURRENT SLICE INDICATOR =====
+   Removed — redundant with always-on slice-nav labels. The nav rail
+   on the left already shows active stratum prominently. */
+.slice-indicator { display: none; }
+
+/* ===== HOVER CARD =====
+   Hover a 3D node → preview card with the same content that would
+   open in the click modal (type, label, meta, detail). Click still
+   opens the full modal (which adds the rich memo body + CTA). */
+.sv-tooltip {
+  position: fixed; pointer-events: none; z-index: 40;
+  background: rgba(42, 37, 32, 0.94);
+  color: var(--paper-lt);
+  padding: 11px 15px 13px; border-radius: 0;
+  border: 1px solid var(--accent-soft);
+  font-family: var(--font-code); font-size: 0.7rem; line-height: 1.5;
+  opacity: 0; transition: opacity 0.1s ease;
+  max-width: 380px; min-width: 200px;
+  box-shadow: 0 6px 20px rgba(42,37,32,0.22);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+.sv-tooltip.visible { opacity: 1; }
+/* Tooltip accents go AMBER on dark — teal would muddy against the
+   cocoa background, but warm amber (the rare complement) catches
+   the eye and signals attention. */
+.sv-tooltip .tt-type {
+  font-size: 0.56rem; text-transform: uppercase; letter-spacing: 0.16em;
+  margin-bottom: 3px; color: var(--amber-soft); font-weight: 600;
+  display: inline-flex; align-items: center; gap: 0.35rem;
+}
+.sv-tooltip .tt-type .tt-state {
+  margin-left: 0.4rem; opacity: 0.55; font-weight: 500;
+}
+.sv-tooltip .tt-type .tt-state.pass { color: #4ade80; }  /* light green on dark tooltip */
+.sv-tooltip .tt-type .tt-state.fail { color: #f87171; }  /* visible red on dark tooltip */
+.sv-tooltip .tt-label {
+  font-family: var(--font-prose); font-size: 0.95rem; font-weight: 400;
+  line-height: 1.25;
+  letter-spacing: -0.005em;
+}
+.sv-tooltip .tt-meta {
+  opacity: 0.75; margin-top: 3px; font-size: 0.62rem;
+  font-style: italic;
+  padding-bottom: 6px; margin-bottom: 6px;
+  border-bottom: 1px solid rgba(245,240,232,0.12);
+}
+.sv-tooltip .tt-detail {
+  font-family: var(--font-prose); font-weight: 300;
+  font-size: 0.78rem; line-height: 1.5;
+  opacity: 0.9; font-style: normal; color: var(--paper-lt);
+}
+.sv-tooltip .tt-detail em { color: var(--amber-soft); font-style: italic; font-weight: 800; }
+.sv-tooltip .tt-detail code {
+  font-family: var(--font-code); font-size: 0.85em;
+  background: rgba(245,240,232,0.08); color: var(--amber-soft);
+  padding: 0.05em 0.35em; border-radius: 0;
+}
+/* Removed the 'click for more' cue — flat mode makes the full body
+   inline and the modal is obvious enough on hover. No fluff. */
+
+/* ===== SHARED NODE EXTRAS =====
+   Sources / Fields / Reads / Feeds pill rows that appear in BOTH
+   the hover tooltip and the modal body. Base styling assumes a
+   light background; .sv-tooltip overrides recolor for dark. */
+.n-sec { margin-top: 0.55rem; }
+.n-sec:first-child { margin-top: 0.3rem; }
+.n-sec-t {
+  font-family: var(--font-code); font-size: 0.54rem;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-faded); font-weight: 500;
+  display: block; margin-bottom: 0.28rem;
+}
+.n-row {
+  display: flex; flex-wrap: wrap; gap: 0.28rem;
+}
+.n-pill {
+  font-family: var(--font-code); font-size: 0.62rem;
+  padding: 0.16rem 0.44rem;
+  border-radius: 0;
+  border: 1px solid var(--rule);
+  background: rgba(245,240,232,0.65);
+  color: var(--ink-medium);
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  white-space: nowrap;
+  line-height: 1.25;
+}
+/* Status dot keeps the circle — round shape carries meaning (unit). */
+.n-pill-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--ink-light);
+  display: inline-block; flex-shrink: 0;
+}
+.n-pill-kind { font-size: 0.78em; color: var(--ink-faded); }
+.n-pill-prefix {
+  font-size: 0.72em; color: var(--ink-faded);
+  letter-spacing: 0.06em; text-transform: uppercase; font-weight: 600;
+  padding-right: 0.28rem;
+  border-right: 1px solid var(--rule);
+  margin-right: 0.05rem;
+}
+.n-pill.fail    { background: var(--eval-fail-soft); border-color: rgba(220,38,38,0.4); color: var(--eval-fail); }
+.n-pill.fail .n-pill-dot { background: var(--eval-fail); }
+.n-pill.partial { background: var(--accent-wash); border-color: var(--accent-soft); color: var(--accent); }
+.n-pill.partial .n-pill-dot { background: var(--accent); }
+.n-pill.field   { background: var(--accent-wash); border-color: var(--accent-soft); color: var(--ink-dark); }
+.n-pill.ref.dir-feeds  { background: var(--accent-wash); border-color: var(--accent-soft); color: var(--ink-dark); }
+.n-pill.ref.dashed     { border-style: dashed; opacity: 0.85; }
+
+/* Modal variant — a little more breathing room than the tooltip. */
+.node-viewer .n-extras { margin-top: 0.85rem; }
+.node-viewer .n-extras .n-sec { margin-top: 0.75rem; }
+.node-viewer .n-extras .n-pill { font-size: 0.66rem; padding: 0.18rem 0.5rem; }
+
+/* Dark-tooltip variant — flip the pill palette for contrast.
+   Amber accents on the dark cocoa background (teal would muddy). */
+.sv-tooltip .tt-extras { margin-top: 2px; }
+.sv-tooltip .n-sec-t {
+  color: rgba(212,170,108,0.78);
+}
+.sv-tooltip .n-pill {
+  background: rgba(245,240,232,0.08);
+  border-color: rgba(245,240,232,0.16);
+  color: var(--paper-lt);
+}
+.sv-tooltip .n-pill-dot    { background: rgba(212,170,108,0.72); }
+.sv-tooltip .n-pill-kind   { color: rgba(245,240,232,0.48); }
+.sv-tooltip .n-pill-prefix {
+  color: rgba(212,170,108,0.78);
+  border-right-color: rgba(245,240,232,0.18);
+}
+.sv-tooltip .n-pill.fail {
+  background: rgba(248,113,113,0.14);
+  border-color: rgba(248,113,113,0.5);
+  color: #fca5a5;
+}
+.sv-tooltip .n-pill.fail .n-pill-dot { background: #fca5a5; }
+.sv-tooltip .n-pill.partial {
+  background: rgba(212,170,108,0.12);
+  border-color: rgba(212,170,108,0.4);
+  color: var(--amber-soft);
+}
+.sv-tooltip .n-pill.partial .n-pill-dot { background: var(--amber-soft); }
+.sv-tooltip .n-pill.field {
+  background: rgba(212,170,108,0.12);
+  border-color: rgba(212,170,108,0.35);
+  color: var(--amber-soft);
+}
+.sv-tooltip .n-pill.ref.dir-feeds {
+  background: rgba(212,170,108,0.1);
+  border-color: rgba(212,170,108,0.32);
+  color: var(--amber-soft);
+}
+
+/* Tooltip stratum chip — matches the modal and left-rail letter. */
+.sv-tooltip .tt-stratum {
+  font-family: var(--font-code); font-size: 0.54rem;
+  letter-spacing: 0.14em; font-weight: 600;
+  background: var(--accent); color: var(--paper-lt);
+  padding: 0.14rem 0.35rem;
+  border-radius: 0;
+  margin-right: 0.35rem;
+}
+
+/* 3D axes widget lives IN the scene (as Three.js lines + sprites),
+   not as DOM — see the scene-building JS for the implementation.
+   The old 2D ruler below is removed; a true XYZ gadget now sits at
+   the stack's origin corner. */
+
+/* ===== CAMERA PRESETS BAR (tilted only) =====
+   Sits at the bottom of the stage and snaps between camera angles:
+   pitched (current entry view), top-down (straight-down), side
+   (low-angle elevation). Hidden in flat mode — flat has its own
+   camera logic. */
+.tilt-presets {
+  position: absolute; bottom: 1.1rem; left: 50%;
+  transform: translateX(-50%);
+  z-index: 15;
+  display: flex; gap: 0.15rem;
+  padding: 0.3rem 0.4rem;
+  font-family: var(--font-code); font-size: 0.58rem;
+  letter-spacing: 0.12em; text-transform: uppercase;
+}
+.stage.flat .tilt-presets { display: none; }
+.tilt-presets button {
+  background: transparent; border: none;
+  padding: 0.28rem 0.6rem;
+  border-radius: 0; cursor: pointer;
+  color: var(--ink-light);
+  font-family: inherit; font-size: inherit; letter-spacing: inherit;
+  transition: color 0.1s ease, background 0.1s ease;
+}
+.tilt-presets button:hover { color: var(--ink-dark); }
+.tilt-presets button.active {
+  color: var(--paper-lt); background: var(--accent);
+}
+/* Gimbal knobs — override-style camera + scene controls that sit to
+   the right of the coord readout. Each knob is a drag handle; dragging
+   applies a delta to one axis (camera pitch / spin / zoom, or scene
+   tilt X / tilt Z). Dragging any knob unlocks the current preset's
+   polar/azimuth cone so the reader can explore outside the preset's
+   intended envelope. A reset button snaps everything back to the
+   active preset. */
+.tilt-presets .gimbals {
+  display: flex; align-items: center; gap: 0.15rem;
+  padding: 0 0.35rem 0 0.45rem;
+  margin-left: 0.2rem;
+  border-left: 1px solid var(--rule);
+}
+.tilt-presets .gimbals .g-label {
+  font-family: var(--font-code); font-size: 0.5rem;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-faded); font-weight: 600;
+  margin-right: 0.2rem;
+}
+.tilt-presets .g-knob {
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 0;
+  padding: 0.22rem 0.34rem;
+  font-family: var(--font-code); font-size: 0.58rem;
+  color: var(--ink-light); font-weight: 500;
+  cursor: ew-resize;
+  line-height: 1;
+  user-select: none;
+  transition: color 0.1s ease, border-color 0.1s ease, background 0.1s ease;
+  display: inline-flex; align-items: center; gap: 0.18rem;
+  min-height: 1.4rem;
+}
+.tilt-presets .g-knob:hover,
+.tilt-presets .g-knob.active {
+  color: var(--accent); border-color: var(--accent);
+  background: var(--accent-wash);
+}
+.tilt-presets .g-knob.active {
+  cursor: grabbing;
+}
+.tilt-presets .g-knob .g-glyph {
+  font-family: var(--font-prose); font-size: 0.8rem; line-height: 0.8;
+  color: inherit; margin-right: 0.1rem;
+}
+.tilt-presets .g-knob[data-axis="zoom"]  { cursor: ns-resize; }
+.tilt-presets .g-knob[data-axis="tilt-x"] { cursor: ns-resize; }
+.tilt-presets .g-reset {
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 0;
+  padding: 0.22rem 0.4rem;
+  font-family: var(--font-code); font-size: 0.58rem;
+  color: var(--ink-light); cursor: pointer;
+  line-height: 1;
+  margin-left: 0.18rem;
+  transition: color 0.1s ease, border-color 0.1s ease;
+}
+.tilt-presets .g-reset:hover { color: var(--accent); border-color: var(--accent); }
+
+.tilt-presets .tilt-coords {
+  font-family: var(--font-code); font-size: 0.52rem;
+  letter-spacing: 0.04em; text-transform: none;
+  color: var(--ink-faded); font-variant-numeric: tabular-nums;
+  padding: 0 0.35rem;
+  border-left: 1px solid var(--rule);
+  margin-left: 0.2rem;
+  align-self: center;
+  white-space: nowrap;
+}
+
+/* ===== NODE VIEWER (click-to-open card) =====
+   Opens when a 3D node is clicked. Centered glass card with the
+   node's type, label, meta, and a short narrative. Each stratum's
+   nodes carry their own detail content. */
+/* Modal is TOP-aligned, not centered vertically — that way the prev/
+   next/close chips in the top nav stay at the exact same pixel
+   position between nodes, and the card's height can grow with
+   content without shifting the controls. */
+.node-viewer {
+  position: absolute; top: 4.5rem; left: 50%;
+  transform: translate(-50%, -6px) scale(0.98);
+  width: min(520px, calc(100vw - 4rem));
+  max-height: calc(100vh - 6.5rem);
+  overflow: auto;
+  padding: 1.3rem 1.7rem 1.4rem;
+  z-index: 25;
+  opacity: 0; pointer-events: none;
+  transition:
+    opacity 0.14s ease,
+    transform 0.16s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.node-viewer.open {
+  opacity: 1; pointer-events: auto;
+  transform: translate(-50%, 0) scale(1);
+}
+/* Top nav inside modal — prev/next/progress/close on a single row.
+   Sits above the content so the reader can step through all nodes
+   without closing the modal. */
+.node-viewer .nv-top-nav {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding-bottom: 0.85rem; margin-bottom: 0.9rem;
+  border-bottom: 1px solid var(--rule);
+}
+.node-viewer .nv-prev,
+.node-viewer .nv-next,
+.node-viewer .nv-close {
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 0;
+  padding: 0.26rem 0.55rem;
+  font-family: var(--font-code); font-size: 0.58rem;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--ink-light); cursor: pointer;
+  transition: color 0.1s ease, border-color 0.1s ease, background 0.1s ease;
+}
+.node-viewer .nv-prev:hover,
+.node-viewer .nv-next:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-wash); }
+.node-viewer .nv-close:hover { color: var(--accent); border-color: var(--accent); }
+.node-viewer .nv-close { border-radius: 0; margin-left: auto; }
+.node-viewer .nv-prev[disabled],
+.node-viewer .nv-next[disabled] {
+  opacity: 0.35; cursor: default;
+  pointer-events: none;
+}
+.node-viewer .nv-prev { margin-right: 0; }
+.node-viewer .nv-next { margin-left: -0.2rem; }
+.node-viewer .nv-progress {
+  font-family: var(--font-code); font-size: 0.58rem;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--ink-faded);
+  margin-left: 0.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.node-viewer .nv-kicker {
+  font-family: var(--font-code); font-size: 0.6rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--accent); font-weight: 600; margin-bottom: 0.5rem;
+  display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+}
+.node-viewer .nv-kicker .nv-stratum {
+  color: var(--paper-lt); background: var(--accent);
+  padding: 0.18rem 0.4rem;
+  border-radius: 0;
+  font-size: 0.58rem; letter-spacing: 0.14em;
+}
+.node-viewer .nv-kicker .nv-state {
+  color: var(--ink-faded); font-weight: 500;
+}
+.node-viewer .nv-kicker .nv-state.pass { color: var(--eval-pass-ink); }
+.node-viewer .nv-kicker .nv-state.fail { color: var(--eval-fail); }
+.node-viewer .nv-label {
+  font-family: var(--font-prose); font-size: 1.35rem; line-height: 1.25;
+  font-weight: 400; color: var(--ink-dark);
+  margin-bottom: 0.15rem; letter-spacing: -0.012em;
+}
+.node-viewer .nv-meta {
+  font-family: var(--font-code); font-size: 0.68rem;
+  color: var(--ink-light); letter-spacing: 0.02em;
+  margin-bottom: 1rem; padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--rule-mid);
+}
+.node-viewer .nv-detail {
+  font-family: var(--font-prose); font-weight: 300;
+  font-size: 0.94rem;
+  line-height: 1.65; color: var(--ink-medium);
+  text-wrap: pretty;
+}
+.node-viewer .nv-detail em { font-style: italic; color: var(--accent); font-weight: 800; }
+.node-viewer .nv-detail code {
+  font-family: var(--font-code); font-size: 0.85em;
+  background: var(--paper-aged); color: var(--ink-dark);
+  padding: 0.05em 0.35em; border-radius: 0;
+}
+.node-viewer .nv-cta {
+  display: inline-block; margin-top: 1rem;
+  font-family: var(--font-code); font-size: 0.68rem;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--accent); text-decoration: none;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--accent-soft); border-radius: 0;
+  transition: all 0.15s;
+}
+.node-viewer .nv-cta:hover { background: var(--accent-soft); border-color: var(--accent); }
+
+/* Rich mode — for 'memo (delivered)' which carries the full deliverable */
+.node-viewer.rich {
+  width: min(720px, calc(100vw - 4rem));
+  max-height: calc(100vh - 6rem);
+  top: 3.5rem;
+}
+.node-viewer.rich .nv-detail {
+  padding-top: 0.25rem;
+}
+.nv-detail .memo-kicker {
+  font-family: var(--font-code); font-size: 0.62rem;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--accent); font-weight: 600; margin: 0.25rem 0 0.85rem;
+}
+.nv-detail .memo-h1 {
+  font-family: var(--font-prose); font-size: 1.65rem; font-weight: 400;
+  line-height: 1.2; letter-spacing: -0.018em; color: var(--ink-dark);
+  margin: 0 0 0.4rem;
+}
+.nv-detail .memo-h1 .memo-sub {
+  color: var(--accent); font-style: italic; font-weight: 800;
+  font-size: 1.05rem;
+  font-family: 'Kecal', system-ui, sans-serif;
+}
+.nv-detail .memo-meta-row {
+  font-family: var(--font-code); font-size: 0.68rem;
+  color: var(--ink-light); letter-spacing: 0.02em;
+  display: flex; gap: 1rem; flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--rule-mid);
+}
+/* Conviction pill is one of the rare amber moments — the verdict
+   of the memo deserves the warm "look up" treatment. */
+.nv-detail .memo-conviction {
+  display: inline-block;
+  font-family: var(--font-code); font-size: 0.64rem;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 0.25rem 0.6rem; border-radius: 0;
+  background: var(--amber-tint); color: var(--amber-deep);
+  font-weight: 600; margin-bottom: 1rem;
+  border-left: 2px solid var(--amber);
+}
+.nv-detail .memo-h2 {
+  font-family: var(--font-prose); font-size: 1.08rem; font-weight: 500;
+  color: var(--ink-dark); letter-spacing: -0.012em;
+  margin: 1.4rem 0 0.5rem;
+}
+.nv-detail p { color: var(--ink-medium); line-height: 1.65; margin-bottom: 0.85rem; }
+.nv-detail strong { color: var(--ink-dark); font-weight: 600; }
+.nv-detail .memo-footnote-row {
+  font-family: var(--font-code); font-size: 0.7rem;
+  color: var(--ink-light); font-style: italic;
+  margin-top: 1.25rem; padding-top: 0.9rem;
+  border-top: 1px solid var(--rule-mid);
+  line-height: 1.55;
+}
+
+/* Eval list — each row carries a pass/fail glyph, check name in
+   mono, and one-line description. Failed rows lean red. */
+.nv-detail .eval-list {
+  list-style: none; padding: 0; margin: 0.25rem 0 1rem;
+  display: flex; flex-direction: column; gap: 0.55rem;
+}
+.nv-detail .eval-row {
+  display: grid; grid-template-columns: 1.2rem 1fr; gap: 0.65rem;
+  align-items: baseline;
+  padding: 0.55rem 0.7rem;
+  border-radius: 0;
+  background: rgba(245,240,232,0.4);
+  border: 1px solid var(--rule-mid);
+}
+.nv-detail .eval-row-fail {
+  background: var(--eval-fail-soft);
+  border-color: rgba(220,38,38,0.35);
+}
+.nv-detail .eval-glyph {
+  font-family: var(--font-code); font-size: 0.95rem;
+  color: var(--eval-pass-ink); font-weight: 700;
+  line-height: 1.15;
+}
+.nv-detail .eval-row-fail .eval-glyph { color: var(--eval-fail); }
+.nv-detail .eval-body-col { min-width: 0; }
+.nv-detail .eval-name {
+  font-family: var(--font-code); font-size: 0.78rem;
+  color: var(--ink-dark); background: var(--paper-aged);
+  padding: 0.05em 0.35em; border-radius: 0;
+  display: inline-block; margin-bottom: 0.25rem;
+}
+.nv-detail .eval-row-fail .eval-name {
+  background: var(--eval-fail-soft); color: var(--eval-fail);
+}
+.nv-detail .eval-detail {
+  font-family: var(--font-prose); font-weight: 300;
+  font-size: 0.84rem;
+  line-height: 1.55; color: var(--ink-medium); margin: 0;
+}
+
+/* Backdrop while viewer is open — darken the 3D so the card reads */
+.viewer-backdrop {
+  position: absolute; inset: 0; z-index: 22;
+  background: rgba(42,37,32,0.18);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.14s ease;
+}
+.viewer-backdrop.open { opacity: 1; pointer-events: auto; }
+
+/* ===== TUNNEL VIGNETTE (flat mode only) =====
+   A subtle radial darkening around the edges when in flat view,
+   focusing attention on the centered active stratum. */
+.tunnel-vignette {
+  position: absolute; inset: 0;
+  pointer-events: none; z-index: 5;
+  background: radial-gradient(
+    ellipse 60% 50% at 50% 50%,
+    transparent 0%,
+    transparent 40%,
+    rgba(42, 37, 32, 0.06) 75%,
+    rgba(42, 37, 32, 0.14) 100%
+  );
+  opacity: 0;
+  transition: opacity 0.45s;
+}
+.stage.flat .tunnel-vignette { opacity: 1; }
+
+/* Memo-section + scroll-hint CSS removed — memo is now a modal,
+   page doesn't extend below the stage. Colophon remains below via
+   the footer element. */
+
+/* Colophon removed — page is now locked to 100vh; nothing renders
+   below the stage. Credits live in the commit history + STRATA-PLAN.md. */
+
+/* ===== FLAT MODE SLIDESHOW =====
+   In flat mode we drop the 3D canvas entirely and render each stratum
+   as a rich, responsive HTML panel. Left nav drives which slide is
+   active; modals are redundant here because the per-node detail,
+   source pills, memo body, and eval list are all inline. Tilted
+   stays 3D; flat becomes a readable slideshow.
+*/
+.stage.flat canvas,
+.stage.flat .tunnel-vignette { display: none !important; }
+.stage.flat .delta-panel,
+.stage.flat .sv-tooltip { display: none !important; }
+
+/* "Show all the t4 onward all on
+   one view just scrolling, snap to position scroll. fix the margin
+   for way less padding on the edges." Flat-mode is now a vertical
+   scroll-snap stack: every slide is laid out one-after-another, the
+   container has scroll-snap-type: y mandatory, and each slide is a
+   full-container-height snap point. The active class still drives
+   the rest of the UI sync (left rail / delta ledger), now updated
+   from scroll position. Side padding reduced from 9rem/1.5rem to
+   2.5rem/0.75rem so the slide claims more of the stage. */
+/* way less edge padding so the
+   slide content reaches the rail and the right viewport edge.  The
+   slice-nav rail is the only chrome on the left; reserve ~4.7rem for
+   it and let the slide hug. */
+/* CONTINUOUS-SCROLL mode.  Each
+   slide is auto-height and lives in a vertical scroll-stack.  The
+   snap was `mandatory` + `stop:always` (one slide = one viewport); now
+   `proximity` + no stop so the reader can scroll freely across slide
+   boundaries without the viewport pinning to a single panel.  Each
+   panel grows to fit its own content (no internal clip). */
+.flat-slides {
+  position: absolute;
+  top: 0;
+  left: 4.7rem;
+  right: 0.3rem;
+  bottom: 0.3rem;
+  overflow-y: auto;
+  scroll-snap-type: y proximity;
+  overscroll-behavior: contain;
+  z-index: 8;
+  display: none;
+  /* breathing room above the first slide so its T-chip clears the top
+     glass panel even when the stack scrolls to the very top */
+  scroll-padding-top: 3.4rem;
+}
+.stage.flat .flat-slides { display: block; }
+
+.flat-slide {
+  position: relative;
+  height: auto;
+  min-height: 0;
+  scroll-snap-align: start;
+  opacity: 1; pointer-events: auto;
+  overflow: visible;
+  /* Top padding clears the glass top-panel only on the FIRST slide;
+     subsequent slides get a tighter top gap since they follow the
+     previous slide's end.  Padding now uses the smaller value; the
+     extra top clearance on slide 1 is provided by scroll-padding-top
+     on the container. */
+  padding: 1.4rem 0.25rem 1.6rem;
+  display: flex; flex-direction: column;
+  gap: 0.2rem;
+  border-bottom: 1px dashed var(--rule);
+}
+/* First slide keeps the legacy top padding so the head clears the
+   glass top-panel. */
+.flat-slide:first-child { padding-top: 3.4rem; }
+.flat-slide:last-child { border-bottom: 0; }
+.flat-slide.active {
+  /* Active is now driven by scroll position, not opacity. The class
+     is kept on so left-rail + delta-ledger highlight in sync. */
+}
+
+.flat-slide .fs-head {
+  display: flex; align-items: flex-start; gap: 0.65rem;
+  padding: 0.4rem 0.7rem 0.7rem;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+.flat-slide .fs-t {
+  font-family: var(--font-code); font-size: 0.62rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--paper-lt); font-weight: 600;
+  background: var(--accent);
+  padding: 0.24rem 0.45rem;
+  border-radius: 0;
+  line-height: 1;
+}
+/* Title's TOP edge aligns with T-marker's TOP edge (not baseline).
+   Matching line-height pulls the cap-line right up to the same
+   visual line so the two elements read as one row. */
+.flat-slide .fs-title {
+  font-family: var(--font-prose); font-size: 1.18rem; font-weight: 400;
+  color: var(--ink-dark); letter-spacing: -0.012em;
+  line-height: 1;
+  margin-top: -0.05rem;  /* tiny nudge to line cap-top with chip-top */
+}
+.flat-slide .fs-time {
+  margin-left: auto;
+  font-family: var(--font-code); font-size: 0.6rem;
+  color: var(--ink-faded); letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1; padding-top: 0.1rem;
+}
+
+/* Prev/Next buttons — sit right after the T-marker and advance the
+   current slice. Auto-hide on the boundary slides (no prev on T1,
+   no next on T5) by omitting them from render. */
+.flat-slide .fs-nav-btn {
+  background: transparent;
+  border: 1px solid var(--rule);
+  color: var(--ink-light);
+  padding: 0.16rem 0.42rem;
+  border-radius: 0;
+  font-family: var(--font-code); font-size: 0.7rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.1s ease, border-color 0.1s ease, background 0.1s ease;
+  display: inline-flex; align-items: center;
+}
+.flat-slide .fs-nav-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-wash);
+}
+.flat-slide .fs-summary {
+  font-family: var(--font-prose); font-weight: 300;
+  font-size: 0.92rem; line-height: 1.55;
+  color: var(--ink-medium);
+  margin: 0 0.7rem 1rem;
+  text-wrap: pretty; max-width: 70ch;
+}
+.flat-slide .fs-summary em {
+  font-family: 'Kecal', system-ui, sans-serif;
+  font-style: italic; font-weight: 800;
+  color: var(--accent);
+}
+.flat-slide .fs-summary code {
+  font-family: var(--font-code); font-size: 0.84em; font-style: normal;
+  background: var(--paper-aged); padding: 0.05em 0.32em;
+  border-radius: 0; color: var(--ink-dark);
+}
+
+.fs-grid {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0 0.25rem;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+.fs-grid.one  { grid-template-columns: 1fr; }
+.fs-grid.two  { grid-template-columns: repeat(2, 1fr); }
+.fs-grid.four { grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(2, 1fr); }
+/* T5 split — memo is the hero, eval a slim fixed-width sidebar.
+   Eval column fixed so the memo always gets the extra pixels.
+   280px fits the longest check-name without wrap at the new
+   0.78rem size. */
+.fs-grid.split {
+  grid-template-columns: minmax(0, 1fr) 300px;
+  align-items: start;
+  gap: 1rem;
+}
+.fs-grid.quad-row { grid-template-columns: repeat(4, 1fr); }
+
+.fs-card {
+  padding: 0.8rem 0.95rem 0.85rem;
+  background: rgba(245,240,232,0.62);
+  border: 1px solid var(--rule);
+  border-radius: 0;
+  display: flex; flex-direction: column; gap: 0.38rem;
+  min-height: 0;
+  overflow: hidden;  /* slide handles its own overflow; cards clip */
+  box-shadow: 0 1px 2px rgba(42,37,32,0.03);
+}
+.fs-card.binding {
+  background: var(--accent-wash);
+  border-color: var(--accent-soft);
+}
+.fs-card.service {
+  background: rgba(245,240,232,0.7);
+  border-color: var(--rule);
+}
+.fs-card.input  { background: var(--paper-aged); }
+.fs-card.input.empty {
+  opacity: 0.7; border-style: dashed;
+  background: rgba(232,224,208,0.35);
+}
+.fs-card.input.empty .fsc-detail { color: var(--ink-light); font-size: 0.8rem; }
+.fs-card .fsc-head {
+  display: flex; align-items: baseline; gap: 0.55rem; flex-wrap: wrap;
+}
+.fs-card .fsc-kicker {
+  font-family: var(--font-code); font-size: 0.54rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--accent); font-weight: 600;
+}
+.fs-card .fsc-state {
+  font-family: var(--font-code); font-size: 0.54rem;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-faded);
+}
+.fs-card .fsc-state.pass     { color: var(--eval-pass-ink); }
+.fs-card .fsc-state.fail     { color: var(--eval-fail); }
+.fs-card .fsc-state.partial  { color: var(--accent); }
+.fs-card .fsc-state.completed{ color: var(--eval-pass-ink); }
+.fs-card .fsc-state.collected{ color: var(--eval-pass-ink); }
+.fs-card .fsc-state.produced { color: var(--accent); }
+.fs-card .fsc-label {
+  font-family: var(--font-prose); font-size: 1rem; font-weight: 400;
+  color: var(--ink-dark); letter-spacing: -0.012em; line-height: 1.25;
+}
+.fs-card .fsc-meta {
+  font-family: var(--font-code); font-size: 0.62rem;
+  color: var(--ink-light); letter-spacing: 0.02em;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--rule-mid);
+}
+.fs-card .fsc-detail {
+  font-family: var(--font-prose); font-weight: 300;
+  font-size: 0.84rem; line-height: 1.55;
+  color: var(--ink-medium); margin: 0;
+  text-wrap: pretty;
+}
+.fs-card .fsc-detail em { font-style: italic; color: var(--accent); font-weight: 800; }
+.fs-card .fsc-detail code {
+  font-family: var(--font-code); font-size: 0.86em;
+  background: var(--paper-aged); padding: 0.05em 0.32em;
+  border-radius: 0; color: var(--ink-dark);
+}
+.fs-card .fsc-sublist { margin-top: 0.25rem; }
+.fs-card .fsc-sub-title {
+  font-family: var(--font-code); font-size: 0.52rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink-faded); font-weight: 500;
+  margin: 0.2rem 0 0.32rem;
+}
+.fs-card .fsc-pill-row {
+  display: flex; flex-wrap: wrap; gap: 0.3rem;
+}
+.fs-pill {
+  font-family: var(--font-code); font-size: 0.62rem;
+  padding: 0.17rem 0.5rem;
+  border-radius: 0;
+  border: 1px solid var(--rule);
+  background: rgba(245,240,232,0.62);
+  color: var(--ink-medium);
+  display: inline-flex; align-items: center; gap: 0.34rem;
+  white-space: nowrap;
+}
+.fs-pill .fs-pill-kind {
+  font-size: 0.78em; color: var(--ink-faded);
+  letter-spacing: 0.02em;
+}
+.fs-pill .fs-pill-prefix {
+  font-size: 0.72em; color: var(--ink-faded);
+  letter-spacing: 0.06em; text-transform: uppercase;
+  font-weight: 600;
+  padding-right: 0.3rem;
+  margin-right: 0.05rem;
+  border-right: 1px solid var(--rule);
+}
+/* Source dot — small filled circle prefix, mirrors the satellite
+   dots ringing the tilt service circles. Visual parity. Round shape
+   carries unit meaning, kept circular by design. */
+.fs-pill .fs-pill-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--ink-light);
+  display: inline-block;
+  flex-shrink: 0;
+}
+.fs-pill.fail .fs-pill-dot    { background: var(--eval-fail); }
+.fs-pill.partial .fs-pill-dot { background: var(--accent); }
+.fs-pill.field {
+  background: var(--accent-wash);
+  border-color: var(--accent-soft);
+  color: var(--ink-dark);
+}
+.fs-pill.fail {
+  background: var(--eval-fail-soft);
+  border-color: rgba(220,38,38,0.4);
+  color: var(--eval-fail);
+}
+.fs-pill.partial {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+/* Cross-stratum reference pills — tinted by direction so reads
+   (upstream, what feeds me) and feeds (downstream, what I feed)
+   read distinctly. Dashed edge type uses dashed border to match
+   the dashed vertical edges in tilt mode (caller/optional refs). */
+.fs-pill.ref {
+  background: rgba(245,240,232,0.55);
+  border-color: var(--rule);
+  color: var(--ink-medium);
+}
+.fs-pill.ref.dir-reads  { background: var(--paper-aged); }
+.fs-pill.ref.dir-feeds  { background: var(--accent-wash); border-color: var(--accent-soft); color: var(--ink-dark); }
+.fs-pill.ref.dashed     { border-style: dashed; opacity: 0.85; }
+
+/* Slide transition callout — moved to the TOP of each slide (just
+   below the head). Mirrors the delta-ledger row describing the move
+   from this stratum to the next; reads like a chapter intro. Teal
+   accent left-bar, fog-cream-tinted wash. */
+.fs-transition {
+  margin: 0 0.7rem 0.8rem;
+  padding: 0.5rem 0.8rem;
+  background: var(--accent-wash);
+  border-left: 2px solid var(--accent);
+  border-radius: 0;
+  font-family: var(--font-prose); font-weight: 300;
+  font-size: 0.8rem; line-height: 1.5;
+  color: var(--ink-medium);
+  display: flex; gap: 0.7rem; align-items: baseline;
+  flex-wrap: wrap;
+}
+.fs-transition .fs-trans-arrow {
+  font-family: var(--font-code); font-size: 0.58rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--accent); font-weight: 600;
+  white-space: nowrap;
+}
+.fs-transition .fs-trans-copy { flex: 1 1 280px; min-width: 0; }
+.fs-transition em { font-style: italic; color: var(--accent); font-weight: 800; }
+.fs-transition .fig {
+  font-family: var(--font-code); font-size: 0.84em;
+  color: var(--ink-dark); font-variant-numeric: tabular-nums;
+}
+.fs-transition code {
+  font-family: var(--font-code); font-size: 0.84em;
+  background: var(--paper-aged); color: var(--ink-dark);
+  padding: 0.05em 0.32em; border-radius: 0;
+}
+
+/* CTA inside a card — link to raw source artifact, parity with
+   the tilt modal's Open-raw CTA. */
+.fsc-cta, .fs-memo .memo-cta {
+  align-self: flex-start;
+  margin-top: 0.5rem;
+  font-family: var(--font-code); font-size: 0.62rem;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--accent); text-decoration: none;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--accent-soft); border-radius: 0;
+  transition: background 0.1s ease, color 0.1s ease, border-color 0.1s ease;
+  display: inline-block;
+}
+.fsc-cta:hover, .fs-memo .memo-cta:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+/* Memo action bar — sits at the bottom of the memo panel with the
+   Expand/Collapse toggle and the raw-memo link on a single row. */
+.fs-memo-actions {
+  display: flex; align-items: center; gap: 0.55rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+.fs-memo-actions .memo-cta { margin-top: 0; }
+.fs-memo-toggle {
+  font-family: var(--font-code); font-size: 0.62rem;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--ink-light);
+  background: rgba(42,37,32,0.04);
+  border: 1px solid var(--rule);
+  border-radius: 0;
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  transition: color 0.1s ease, border-color 0.1s ease, background 0.1s ease;
+  display: inline-flex; align-items: center; gap: 0.3rem;
+}
+.fs-memo-toggle:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* 'Show more' content — lives BELOW the memo action bar and is
+   hidden by default. The short memo (exec summary + reasons) is
+   always visible above; clicking Show more reveals the extended
+   sections (market sizing, comparables, open questions). */
+.fs-memo .memo-content-more {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  margin-top: 0;
+  transition:
+    max-height 0.14s ease-in,
+    opacity 0.08s ease-in,
+    margin-top 0.14s ease-in;
+}
+.fs-memo.expanded .memo-content-more {
+  max-height: 4000px;
+  opacity: 1;
+  margin-top: 1rem;
+  transition:
+    max-height 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.2s ease,
+    margin-top 0.25s ease;
+}
+
+/* Placeholder table styling inside the memo-more block — cream
+   rows, mono figures, hairline row separators so it reads as part
+   of the memo typography rather than a generic HTML table. */
+.fs-memo .memo-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.4rem 0 0.6rem;
+  font-family: var(--font-prose); font-weight: 300;
+  font-size: 0.86rem;
+}
+.fs-memo .memo-table th {
+  font-family: var(--font-code); font-size: 0.58rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink-light); font-weight: 600;
+  text-align: left;
+  padding: 0.35rem 0.55rem 0.3rem;
+  border-bottom: 1px solid var(--rule);
+}
+.fs-memo .memo-table td {
+  padding: 0.38rem 0.55rem;
+  border-bottom: 1px solid var(--rule-mid);
+  color: var(--ink-medium);
+  vertical-align: top;
+}
+.fs-memo .memo-table tr:last-child td { border-bottom: none; }
+.fs-memo .memo-table .fig {
+  font-family: var(--font-code); color: var(--ink-dark);
+  font-variant-numeric: tabular-nums;
+}
+
+/* T5 split — memo panel (wide, hero) + eval panel (slim sidebar).
+   Horizontal padding uses 10% of the panel width on each side so the
+   memo body reads as a centered column with generous left+right margin,
+   matching how the delivered memo would look on paper. Vertical padding
+   stays tight so the title and footnote rows hug the card edges. */
+.fs-memo {
+  padding: 1rem 10% 1.15rem 10%;
+  background: rgba(245,240,232,0.7);
+  border: 1px solid var(--rule);
+  border-radius: 0;
+  overflow: auto; min-height: 0;
+  box-shadow: 0 1px 2px rgba(42,37,32,0.03);
+}
+.fs-eval {
+  padding: 0.9rem 1rem 1rem;
+  background: rgba(245,240,232,0.6);   /* neutral — no heavy green wash */
+  border: 1px solid var(--rule);
+  border-radius: 0;
+  overflow: auto; min-height: 0;
+  box-shadow: 0 1px 2px rgba(42,37,32,0.03);
+  font-family: var(--font-prose);
+}
+.fs-memo .memo-kicker { margin-top: 0; }
+
+/* Compact eval header — kicker + ratio + donut spark + gate pill on a
+   single row. Drops the big Quality-gate H1 that duplicated info. */
+.fs-eval .eval-compact-head {
+  display: flex; align-items: center; gap: 0.55rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 0.65rem;
+  flex-wrap: wrap;
+}
+.fs-eval .eval-kicker {
+  font-family: var(--font-code); font-size: 0.55rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--accent); font-weight: 600;
+}
+.fs-eval .eval-ratio {
+  display: inline-flex; align-items: center; gap: 0.32rem;
+  font-family: var(--font-code); font-size: 0.88rem;
+  color: var(--ink-dark); font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.fs-eval .eval-gate {
+  margin-left: auto;
+  font-family: var(--font-code); font-size: 0.54rem;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 0.18rem 0.48rem;
+  border-radius: 0; font-weight: 600;
+}
+.fs-eval .eval-gate.clean { background: var(--eval-pass-soft); color: var(--eval-pass-ink); }
+.fs-eval .eval-gate.soft  { background: var(--accent-soft);    color: var(--accent); }
+.fs-eval .eval-sect-head {
+  font-family: var(--font-code); font-size: 0.54rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  margin: 0.6rem 0 0.3rem; font-weight: 600;
+}
+.fs-eval .eval-sect-head.flag { color: var(--eval-fail); }
+.fs-eval .eval-sect-head.pass { color: var(--eval-pass-ink); }
+.fs-eval .eval-sect-head .fig {
+  font-family: inherit; font-size: inherit;
+  color: var(--ink-faded); font-weight: 500;
+  margin-left: 0.3rem;
+}
+
+/* Compact list — pass rows single-line (glyph + name), fail row
+   expanded with detail below. Color does the work of the heading. */
+.fs-eval .eval-list {
+  list-style: none; padding: 0; margin: 0;
+  display: flex; flex-direction: column; gap: 0.18rem;
+}
+.fs-eval .eval-row {
+  display: grid;
+  grid-template-columns: 0.9rem 1fr;
+  gap: 0.45rem; align-items: baseline;
+  padding: 0.24rem 0.45rem;
+  border-radius: 0;
+  background: transparent; border: 1px solid transparent;
+}
+.fs-eval .eval-glyph {
+  font-family: var(--font-code); font-size: 0.85rem;
+  font-weight: 700; color: var(--eval-pass-ink);
+  line-height: 1; text-align: center;
+}
+.fs-eval .eval-row-fail {
+  background: var(--eval-fail-soft);
+  border-color: rgba(220,38,38,0.3);
+  padding: 0.45rem 0.55rem 0.55rem;
+  grid-template-rows: auto auto;
+}
+.fs-eval .eval-row-fail .eval-glyph {
+  color: var(--eval-fail);
+  grid-row: 1;
+}
+/* Names stay on one line; the wider eval column now fits the
+   longest names without breaking. Font bumped 0.72 → 0.8rem. */
+.fs-eval .eval-name {
+  font-family: var(--font-code); font-size: 0.8rem;
+  color: var(--ink-dark); background: transparent;
+  padding: 0; border-radius: 0; margin: 0;
+  display: inline-block;
+  white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+  max-width: 100%;
+  word-break: normal;
+}
+.fs-eval .eval-row-fail .eval-name {
+  background: transparent; color: var(--eval-fail);
+  font-weight: 500;
+  white-space: normal;   /* fail row can wrap — it's the exception */
+}
+.fs-eval .eval-detail {
+  font-family: var(--font-prose); font-weight: 300;
+  font-size: 0.8rem;
+  line-height: 1.5; color: var(--ink-medium); margin: 0.14rem 0 0;
+  grid-column: 2;
+}
+.fs-eval .eval-detail em { font-style: italic; color: var(--accent); font-weight: 800; }
+
+/* Inline spark — small donut / pie-hour inside the memo header and
+   eval header. Carries the same visual language as the pretext. */
+.fs-memo .memo-meta-row .spark,
+.fs-eval .eval-ratio .spark { margin: 0 0 0 0.12rem; }
+
+@media (max-width: 900px) {
+  .delta-panel { display: none; }
+  .pretext-panel { top: 56px; padding: 1.25rem 1.5rem; }
+  .eval-strip { flex-wrap: wrap; bottom: 5rem; }
+  .slice-nav { left: 0.5rem; }
+  /* mobile breakpoint padding also trimmed. */
+  .flat-slides { left: 4.4rem; right: 0.4rem; }
+  .fs-grid.two, .fs-grid.four, .fs-grid.split, .fs-grid.quad-row {
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+  }
+}
+
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+
+}
+</style>
+</head>
+<body>
+
+<!-- ===== FULL-VIEWPORT STAGE ===== -->
+<main class="stage" id="stage">
+  <!-- Unified top panel. Header row: stacked brand/company (left),
+       action sentence (middle, always visible), Hide/Show (right).
+       Body below: drop-cap paragraph expanded by default. -->
+  <section class="top-panel glass" id="top-panel" aria-label="Run overview">
+    <div class="tp-bar">
+      <div class="tp-brand-col">
+        <span class="tp-brand" id="tp-brand"></span>
+        <span class="tp-company" id="tp-company"></span>
+      </div>
+      <div class="tp-sep" aria-hidden="true"></div>
+      <p class="tp-action" id="tp-action"></p>
+      <button class="tp-fold" id="tp-fold" aria-expanded="true" aria-controls="tp-body" title="Hide / show overview">
+        <span class="tp-fold-text">Hide</span><span class="caret">▾</span>
+      </button>
+    </div>
+    <div class="tp-body" id="tp-body">
+      <p class="pretext" id="tp-pretext"></p>
+    </div>
+  </section>
+
+  <!-- Slice navigation (left-rail) -->
+  <nav class="slice-nav glass" id="slice-nav" aria-label="Slice navigation">
+    <div class="sn-mode-toggle" role="radiogroup" aria-label="View mode">
+      <button id="btn-tilted" data-mode="tilted" role="radio" aria-checked="false" title="Tilted \u2014 3D strata stack" aria-label="Tilted 3D view">
+        <svg width="18" height="14" viewBox="0 0 20 14" aria-hidden="true">
+          <path d="M 6 1 L 19 1 L 14 4 L 1 4 Z" fill="currentColor" opacity="0.4"/>
+          <path d="M 6 5 L 19 5 L 14 8 L 1 8 Z" fill="currentColor" opacity="0.72"/>
+          <path d="M 6 9 L 19 9 L 14 12 L 1 12 Z" fill="currentColor"/>
+        </svg>
+      </button>
+      <button class="active" id="btn-flat" data-mode="flat" role="radio" aria-checked="true" title="Flat \u2014 slide per stratum" aria-label="Flat slideshow view">
+        <svg width="18" height="14" viewBox="0 0 20 14" aria-hidden="true">
+          <rect x="1" y="4" width="18" height="6" rx="0.6" fill="currentColor"/>
+        </svg>
+      </button>
+    </div>
+    <div class="sn-inner" id="sn-inner"></div>
+    <div class="sn-help">
+      <button class="sn-help-btn" id="help-btn" type="button" aria-label="How this page reads" aria-expanded="false" aria-controls="help-pop" title="How this page reads">?</button>
+    </div>
+  </nav>
+
+  <!-- Help popover — pops right of the rail when the ? is clicked. -->
+  <aside class="help-pop glass deep" id="help-pop" aria-hidden="true" aria-labelledby="help-btn">
+    <h4>How this page reads</h4>
+    <p>One run of a program laid out across its strata, from <em>caller inputs</em> at the bottom to the <em>delivered output</em> at the top.</p>
+    <h5>Modes</h5>
+    <ul>
+      <li><em>Flat</em> &mdash; one stratum at a time as a reading slide (the top stratum is the deliverable &middot; eval).</li>
+      <li><em>Tilted</em> &mdash; the whole run as a 3D stack, strata laid up in time.</li>
+    </ul>
+    <h5>Navigating</h5>
+    <ul>
+      <li>Left rail: click a stratum chip (<code>T1</code>, <code>T2</code>, &hellip;) to jump, or hover the rail to read each stratum&rsquo;s name.</li>
+      <li>Tilted: <em>click a node</em> to open its detail modal; hover for a quick preview. Prev/Next chips in the modal walk every node in the run.</li>
+      <li>Camera presets sit at the bottom: <em>Pitched</em>, <em>Top-down</em>, <em>Side</em>.</li>
+      <li>The <em>Delta ledger</em> on the right narrates stratum &rarr; stratum; click a row to jump.</li>
+    </ul>
+    <h5>Keys</h5>
+    <ul>
+      <li><kbd>&uarr;</kbd> <kbd>&darr;</kbd> advance / retreat the active stratum</li>
+      <li><kbd>&larr;</kbd> <kbd>&rarr;</kbd> toggle flat / tilted (or walk nodes while a modal is open)</li>
+      <li><kbd>1</kbd>&hellip;<kbd>5</kbd> jump to a stratum</li>
+      <li><kbd>Esc</kbd> close the node modal</li>
+    </ul>
+  </aside>
+
+  <!-- Right rail — delta ledger. Eval/run info now lives on the T5
+       compound-octagon node (click to open). Run-id titles the ledger. -->
+  <aside class="right-rail" aria-label="Deltas">
+    <aside class="delta-panel glass" id="delta-panel" aria-label="Stratum-to-stratum deltas">
+      <div class="dp-head">
+        <span class="dp-run">run · <code id="dp-run-id"></code></span>
+        <span class="dp-title">Delta ledger</span>
+      </div>
+      <!-- delta rows are built from DELTA_LEDGER on boot -->
+    </aside>
+  </aside>
+
+  <!-- Eval strip relocated into the right-rail above the delta ledger -->
+
+  <!-- Camera preset bar (tilted only) — three preset angles the
+       user can snap between: the default pitched overview, a
+       clamped top-down, and the book-shelf side view. A live
+       coord readout reports camera + target so tweaks can be made
+       by naming the numbers. -->
+  <div class="tilt-presets glass" id="tilt-presets" role="radiogroup" aria-label="Camera preset">
+    <button class="active" data-preset="pitched" role="radio" aria-checked="true" title="Pitched overview">Pitched</button>
+    <button data-preset="topdown" role="radio" aria-checked="false" title="Top-down">Top-down</button>
+    <button data-preset="side" role="radio" aria-checked="false" title="Side elevation">Side</button>
+    <span class="tilt-coords" id="tilt-coords" aria-live="polite">&mdash;</span>
+    <div class="gimbals" id="gimbals" aria-label="Free-rotate gimbals">
+      <span class="g-label">gimbal</span>
+      <button class="g-knob" data-axis="pitch"  title="Pitch &mdash; drag vertically to rotate camera up/down (ignores preset cone)"><span class="g-glyph">&#x2195;</span>pitch</button>
+      <button class="g-knob" data-axis="spin"   title="Spin &mdash; drag horizontally to orbit camera around the stack"><span class="g-glyph">&#x2194;</span>spin</button>
+      <button class="g-knob" data-axis="zoom"   title="Zoom &mdash; drag vertically to dolly in/out"><span class="g-glyph">&#x229A;</span>zoom</button>
+      <button class="g-knob" data-axis="tilt-x" title="Tilt X &mdash; drag vertically to rotate the T1-T5 stack around world-X"><span class="g-glyph">&#x21BB;</span>tilt&#x2011;x</button>
+      <button class="g-knob" data-axis="tilt-z" title="Tilt Z &mdash; drag horizontally to rotate the T1-T5 stack around world-Z"><span class="g-glyph">&#x21BA;</span>tilt&#x2011;z</button>
+      <button class="g-reset" id="g-reset" type="button" title="Reset to active preset">reset</button>
+    </div>
+  </div>
+
+  <!-- Tunnel vignette (activates in flat mode) -->
+  <div class="tunnel-vignette" aria-hidden="true"></div>
+
+  <!-- 3D axes widget is drawn inside the Three.js scene -->
+
+  <!-- Hover card — dense read of the node's essentials: type badge,
+       label, meta stat, short detail, then pill rows for sources,
+       fields, inbound/outbound refs. Click still opens the modal for
+       the full body where relevant. -->
+  <div class="sv-tooltip" id="sv-tooltip">
+    <div class="tt-type"><span class="tt-stratum"></span><span class="tt-type-text"></span><span class="tt-state"></span></div>
+    <div class="tt-label"></div>
+    <div class="tt-meta"></div>
+    <div class="tt-detail"></div>
+    <div class="tt-extras"></div>
+  </div>
+
+  <!-- Flat-mode slideshow — rich HTML panels, one per stratum. Hidden
+       unless .stage.flat. Populated from strata data on boot. -->
+  <div class="flat-slides" id="flat-slides" aria-label="Stratum panels"></div>
+
+  <!-- Viewer backdrop + node-viewer card (opens on node click).
+       A top nav bar carries prev/next chips and a progress counter;
+       arrow keys while open walk the same sequence, and left-rail
+       T-chips swap the modal to that stratum's first node so the
+       reader can browse the whole run without closing. -->
+  <div class="viewer-backdrop" id="viewer-backdrop" aria-hidden="true"></div>
+  <section class="node-viewer glass deep" id="node-viewer" role="dialog" aria-modal="true" aria-hidden="true">
+    <nav class="nv-top-nav" aria-label="Node navigation">
+      <button class="nv-prev" id="nv-prev" aria-label="Previous node" title="Previous (&larr;)">&larr; Prev</button>
+      <button class="nv-next" id="nv-next" aria-label="Next node" title="Next (&rarr;)">Next &rarr;</button>
+      <span class="nv-progress"><span id="nv-progress-text">0 / 0</span></span>
+      <button class="nv-close" id="nv-close" aria-label="Close viewer" title="Close (Esc)">Close &middot; Esc</button>
+    </nav>
+    <div class="nv-kicker">
+      <span class="nv-stratum" id="nv-stratum">T0</span>
+      <span id="nv-type">Node</span>
+      <span class="nv-state" id="nv-state"></span>
+    </div>
+    <h3 class="nv-label" id="nv-label">&mdash;</h3>
+    <div class="nv-meta" id="nv-meta">&mdash;</div>
+    <div class="nv-detail" id="nv-detail"></div>
+    <div class="nv-extras" id="nv-extras"></div>
+    <a class="nv-cta" id="nv-cta" href="#" style="display:none" target="_blank" rel="noopener"></a>
+  </section>
+</main>
+
+<!-- Memo section + colophon removed — page is locked to 100vh. All
+     content lives inside the stage; deeper views open as modals. -->
+
+<!-- ============================================
+     3D STRATA: Three.js, data from the slot
+     ============================================ -->
+<script src="../lib/data-slot.js"></script>
+<script src="../data/run-strata.js"></script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// Tufte/Kecal/Teal direction — `gold` is the legacy property name kept
+// from the v2 source; the value here is teal #3a7a6a so every Three.js
+// material that referenced C.gold now pulls the editorial accent.
+const C = {
+  ink: 0x2a2520,         // warm brown-black to match --ink-dark
+  gold: 0x3a7a6a,        // teal — editorial accent (legacy name kept for call-site stability)
+  grey: 0x6b6258,        // warm-grey at 0.32 alpha equivalent in solid form
+  paperBorder: 0xe8e0d0, // paper-aged
+  pass: 0x22c55e,        // light green — matches --eval-pass CSS var (data identity)
+  fail: 0xdc2626,        // bright red — matches --eval-fail CSS var (data identity)
+};
+
+const TYPE_LABELS = {
+  circle:             'Service',
+  rectangle:          'Binding',
+  parallelogram:      'Output',
+  octagon:            'Eval',
+  'octagon-compound': 'Eval aggregate',
+};
+
+// ---- Run data: from the data slot ----
+// This page ships as code only. data/run-strata.js supplies the run;
+// data/run-strata.schema.md describes every key.
+const RUN_DATA = TraceSlot.require('run-strata', ['strata', 'EVAL_CHECKS', 'verticalEdges', 'RUN_META']);
+const { strata, EVAL_CHECKS, verticalEdges, RUN_META } = RUN_DATA;
+const PRETEXT_HTML   = RUN_DATA.PRETEXT_HTML || '';
+const DELTA_LEDGER   = RUN_DATA.DELTA_LEDGER || [];
+const DELTA_COPY     = RUN_DATA.DELTA_COPY || null;
+const MEMO_BODY_HTML = RUN_DATA.MEMO_BODY_HTML || '';
+const MEMO_MORE_HTML = RUN_DATA.MEMO_MORE_HTML || '';
+
+// Run-level figures derived from the data
+const EVAL_PASSED   = EVAL_CHECKS.filter(c => c.state === 'pass').length;
+const EVAL_TOTAL    = EVAL_CHECKS.length;
+const RUNTIME_LABEL = RUN_META.runtimeLabel || `${RUN_META.runtimeMinutes || 0}m`;
+
+// ---- Inline sparks (same vocabulary everywhere on the page) ----
+// pie-hour: wedge = share of an hour. donut: pass (green) + fail (red)
+// arcs. ratio: single filled arc.
+const DONUT_CIRC = 43.98;   // 2 * PI * r, r = 7
+function sparkPieHour(minutes, size) {
+  const a = Math.max(0, Math.min(59.99, Number(minutes) || 0)) / 60 * Math.PI * 2;
+  const x = (10 + 8 * Math.sin(a)).toFixed(2), y = (10 - 8 * Math.cos(a)).toFixed(2);
+  const large = a > Math.PI ? 1 : 0;
+  return `<span class="spark pie-hour" aria-hidden="true"><svg width="${size}" height="${size}" viewBox="0 0 20 20"><circle class="track" cx="10" cy="10" r="8"/><path class="wedge" d="M 10 10 L 10 2 A 8 8 0 ${large} 1 ${x} ${y} Z"/><circle class="hub" cx="10" cy="10" r="0.8"/></svg></span>`;
+}
+function sparkEvalDonut(passed, total, size) {
+  const pass = DONUT_CIRC * (total ? passed / total : 1);
+  const fail = DONUT_CIRC - pass;
+  return `<span class="spark donut" aria-hidden="true"><svg width="${size}" height="${size}" viewBox="0 0 20 20"><circle class="track" cx="10" cy="10" r="7"/><circle class="pass" cx="10" cy="10" r="7" stroke-dasharray="${pass.toFixed(2)} ${DONUT_CIRC}" stroke-dashoffset="0" transform="rotate(-90 10 10)"/><circle class="fail" cx="10" cy="10" r="7" stroke-dasharray="${fail.toFixed(2)} ${DONUT_CIRC}" stroke-dashoffset="-${pass.toFixed(2)}" transform="rotate(-90 10 10)"/></svg></span>`;
+}
+function sparkRatioDonut(ratio, size) {
+  const fill = DONUT_CIRC * Math.max(0, Math.min(1, Number(ratio) || 0));
+  return `<span class="spark donut" aria-hidden="true"><svg width="${size}" height="${size}" viewBox="0 0 20 20"><circle class="track" cx="10" cy="10" r="7"/><circle class="fill" cx="10" cy="10" r="7" stroke-dasharray="${fill.toFixed(2)} ${DONUT_CIRC}" stroke-dashoffset="0" transform="rotate(-90 10 10)"/></svg></span>`;
+}
+// Spark tokens in data HTML: {{pie:MINUTES}}, {{eval}}, {{ratio:A/B}}
+function expandSparks(html, size) {
+  return String(html || '')
+    .replace(/\{\{pie:([\d.]+)\}\}/g, (_, m) => sparkPieHour(parseFloat(m), size))
+    .replace(/\{\{eval\}\}/g, () => sparkEvalDonut(EVAL_PASSED, EVAL_TOTAL, size))
+    .replace(/\{\{ratio:([\d.]+)\/([\d.]+)\}\}/g, (_, a, b) => sparkRatioDonut(parseFloat(a) / parseFloat(b), size));
+}
+
+// ---- Overview panel + delta ledger, bound from the data ----
+(function bindRunOverview() {
+  const M = RUN_META;
+  const brand = document.getElementById('tp-brand');
+  if (brand) brand.textContent = M.brand || '';
+  const company = document.getElementById('tp-company');
+  if (company) company.innerHTML = M.subjectHtml || '';
+  const action = document.getElementById('tp-action');
+  if (action) {
+    const lead = [M.kicker ? `<span class="tp-kicker">${M.kicker}</span>` : '', M.customer || '']
+      .filter(Boolean).join(' \u00b7 ');
+    action.innerHTML = `${lead}${lead ? ' \u00b7 ' : ''}ran <span class="fig">${RUNTIME_LABEL}</span>${sparkPieHour(M.runtimeMinutes, 16)}across ${strata.length} strata, `
+      + `<span class="fig">${EVAL_PASSED} / ${EVAL_TOTAL}</span>${sparkEvalDonut(EVAL_PASSED, EVAL_TOTAL, 16)}checks passed.`
+      + (M.verdict ? ` <span class="verdict">${M.verdict}</span>` : '');
+  }
+  const pre = document.getElementById('tp-pretext');
+  if (pre) pre.innerHTML = expandSparks(PRETEXT_HTML, 18);
+  const runId = document.getElementById('dp-run-id');
+  if (runId) runId.textContent = M.runId || '';
+  // One ledger row per stratum transition: DELTA_LEDGER[i] narrates
+  // strata[i] -> strata[i + 1]; clicking it jumps to strata[i + 1].
+  const panel = document.getElementById('delta-panel');
+  if (panel) {
+    panel.insertAdjacentHTML('beforeend', DELTA_LEDGER.slice(0, Math.max(0, strata.length - 1)).map((d, i) => `
+      <div class="delta-row" data-target="${i + 1}">
+        <span class="d-arrow">${strata[i].short} \u2192 ${strata[i + 1].short}${d.time ? ` <span class="t">\u00b7 ${d.time}</span>` : ''}</span>
+        ${expandSparks(d.html, 14)}
+      </div>`).join(''));
+  }
+})();
+
+// ---- Tunables ----
+// Plane dimensions use a 4:3 aspect ratio so each stratum reads as
+// a portrait-friendly card that fits non-widescreen viewports and
+// flat-mode framing cleanly. Previous 2:1 landscape overflowed on
+// narrower viewports and under-used vertical space in flat mode.
+const PLANE_W     = 12;
+const PLANE_D     = 9;
+const NODE_R      = 0.55;
+const OCTA_R      = 0.3;
+const RECT_W      = 1.8;
+const RECT_H      = 0.85;
+const PARA_SKEW   = 0.28;
+const LERP_SPEED  = 0.16;   // camera lerp per frame — 2x snappier
+const OPACITY_LERP = 0.18;  // plane + node opacity lerp
+const SCALE_LERP  = 0.22;   // node scale lerp
+const RAISE_LERP  = 0.24;   // active-stratum Y raise lerp
+const HOVER_SCALE = 1.22;
+
+// Camera paradigm — "wide edge on, subtle pivot"
+//   Tilted mode ALWAYS frames the full stack. The pivot shifts only
+//   slightly toward the active stratum (20% of the way, not 100%)
+//   so the layer gets a whisker of perspective-emphasis without the
+//   rest of the stack sliding out of view. The active stratum's
+//   VISUAL state does the real work (brighter plane, node scale +
+//   small Y raise). For zoom-in-on-one-layer, the user switches to
+//   Flat mode.
+//
+//   Orbit grab works naturally at every slice because the pivot
+//   stays near stack center — previous version pivoted ON the
+//   stratum itself, which meant rotating around y=0 or y=12 swung
+//   the stack wildly out of frame.
+
+// Geometry constants
+//   More top-down entry view: camera sits high above the pivot so
+//   the reader looks DOWN into the strata, with T5 read strongest
+//   (it's the active slice on load and closest to the camera Y).
+//   Tilt angle lands around atan(TILT_Y_ABOVE / TILT_Z) = ~26°.
+const STACK_CENTER_Y = 6;       // (0 + 12) / 2
+const PIVOT_BIAS     = 0.2;     // fraction of the way from centre → active
+const TILT_X         = 0;       // plane parallel to world-X — no 3/4 on entry
+const TILT_Z         = 22;      // closer, makes pitch feel steeper
+const TILT_Y_ABOVE   = 11;      // much higher — reads the stack top-down
+
+// FLAT_HEIGHT: camera above active stratum, looking straight down.
+// Bumped so the 12×9 plane sits with comfortable margin on all sides
+// of the viewport (was clipping right edge behind the delta rail).
+const FLAT_HEIGHT = 18;
+
+// Tilted-mode camera presets. Each preset defines an offset from the
+// active pivot, the camera up-vector, and optional scene rotations
+// that reorient the planes themselves.
+//   pitched — default overview: camera above-and-behind
+//   topdown — high above, almost straight down; sliver of Z avoids
+//             OrbitControls' gimbal lock
+//   side    — planes stand VERTICALLY and spread LEFT-TO-RIGHT like
+//             books on a shelf. scene.rotation.z = -PI/2 maps the
+//             time axis from world-Y → world-X; each plane's normal
+//             flips from +Y → +X. Camera sits off-axis (positive X,
+//             above, and forward) so the planes read at an oblique
+//             angle — time visibly spreads, content still legible.
+const CAMERA_PRESETS = {
+  // All presets keep camera.up = (0, 1, 0) so OrbitControls' azimuth
+  // always rotates around world-Y. This lets the reader spin around
+  // the stack in every preset.
+  //
+  // pitched: default overview, nudged out 5% from v2.13.
+  // topdown: starts at a ~13° tilt forward so there's polar room in
+  //   both directions (drag up → toward straight-down, drag down →
+  //   further forward); polar bounds 0..30° cap the reach.
+  // side: near-overhead of the horizontally-laid stack (sceneRotZ
+  //   = -PI/2 puts time on world-X). Small +Z offset avoids the
+  //   overhead gimbal and lets the reader orbit.
+  pitched: { offset: new THREE.Vector3(0, 9.9, 19.6), up: new THREE.Vector3(0, 1, 0), sceneRotX: 0, sceneRotZ: 0 },
+  // Top-down — anchors to absolute world position (0, 29.3, ~0) so
+  // the readout reads clean regardless of which stratum is active.
+  // The tiny z offset (0.8) is enough to keep OrbitControls out of
+  // gimbal lock at polar=0 so horizontal drags register immediately;
+  // the coord readout clamps small z to display "0.0". Pivot is
+  // free in all four directions (polar + azimuth) up to a 45° cone;
+  // releasing the mouse springs the camera back home.
+  topdown: { worldPos: new THREE.Vector3(0, 29.3, 0.8), up: new THREE.Vector3(0, 1, 0), sceneRotX: 0, sceneRotZ: 0,      polarCone: Math.PI / 4, springBack: true },
+  // Side elevation — scene is y-rotated so time runs HORIZONTALLY on
+  // screen (T1 on the left, T5 on the right). sceneRotZ = -PI/2 puts
+  // the time axis on world +X; the camera then sits in front of the
+  // rotated stack with a slight lift, reading like a film strip or
+  // timeline laid out left-to-right.
+  side:    { offset: new THREE.Vector3(0, 5, 22), up: new THREE.Vector3(0, 1, 0), sceneRotX: 0, sceneRotZ: -Math.PI / 2 },
+};
+let cameraPreset = 'pitched';
+
+/* ===== OBSERVED 3D UX ISSUES + OPTIMIZATION NOTES =====
+   Collected while driving the scene in real usage.
+
+   1. Cropping at narrow aspect ratios. Vertical FOV is fixed; at
+      tall viewports the full 12-unit stack still fits but at short
+      wide ones (< ~800px tall) the edges get clipped. FIX: compute
+      camera distance dynamically from viewport height so the stack
+      always fills a consistent fraction of vertical FOV.
+
+   2. Horizontal label overflow. Node labels (long binding or
+      service names) are fixed-world-size sprites that can
+      bleed past the plane edge and under the delta panel. FIX:
+      (a) clamp label width to plane bounds, or (b) render each
+      stratum as an HTML card via CSS3DRenderer — real CSS layout,
+      no label overflow, responsive per-stratum typography.
+
+   3. Flat-mode horizontal under-use. In flat, a 4-node stratum fills
+      center but leaves lots of negative space on the sides. Could
+      auto-fit zoom per stratum so nodes spread naturally.
+
+   4. Tooltip clashes with overlays. Hover tooltip is positioned via
+      screen-space projection and can slide under delta or eval.
+      FIX: clamp tooltip to avoid panel rects (compute panel bboxes
+      and offset).
+
+   5. Plane labels compete with nav labels. Both repeat the
+      stratum label. Redundant. FIX: drop plane labels in tilted once nav
+      is active — plane labels only appear in flat mode (where nav
+      is the sole reference).
+
+   6. Vertical edges (caller dashes) are noise in the far-away view.
+      FIX: fade them on distance or hide entirely in tilted, show
+      only when hovering a node.
+
+   7. Overlay panels cover parts of the 3D. Pretext/delta/eval all
+      overlap the stack. FIX: layout the 3D inside a content box
+      that EXCLUDES panel regions, not full-viewport behind them.
+
+   8. Mouse-wheel zoom can break the framing. OrbitControls allows
+      free zoom; user can scroll into uselessness. FIX: disable
+      zoom, rely on mode toggle + nav for scale changes.
+
+   9. In tilted, multiple strata visible but only one is 'active'.
+      The visual difference between active and inactive is subtle —
+      plane fill brighter, scale 1.08×. Could be stronger: raise
+      active stratum a few units in Y, or spotlight it.
+
+  10. First-load framing jumps. Camera init lerps briefly before
+      snapping. FIX: already done (snap=true on boot), but the
+      renderer's first-frame pre-paint occasionally shows the
+      interim state. Use requestAnimationFrame gating.
+
+  These are scoped to viability of the current 3D-in-Three.js
+  approach. The bigger architectural question (html2canvas /
+  CSS3DRenderer per stratum) would solve (2), (3), (5), and (7) in
+  one stroke — each stratum becomes a real HTML card with real CSS
+  layout, mapped onto a 3D plane. Tradeoff: more plumbing, and WebGL
+  and CSS3D don't perfectly compose for z-ordered edges between
+  cards. */
+
+// ---- Scene setup ----
+const stage = document.getElementById('stage');
+const W0 = window.innerWidth, H0 = window.innerHeight;
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(W0, H0);
+renderer.setClearColor(0x000000, 0);
+stage.insertBefore(renderer.domElement, stage.firstChild);
+
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(48, W0 / H0, 0.1, 200);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = false;  // damping fought the camera.position lerp; turn off globally
+controls.minDistance   = 6;
+controls.maxDistance   = 60;
+controls.maxPolarAngle = Math.PI / 2 - 0.04;
+controls.minPolarAngle = 0;      // permit full top-down in flat mode
+controls.enablePan     = false;
+// Scroll-to-zoom disabled by default so page scroll isn't hijacked.
+// Trackpad pinch (wheel + ctrlKey) and Shift+scroll are opt-in zoom
+// gestures, handled manually below.
+controls.enableZoom    = false;
+
+renderer.domElement.addEventListener('wheel', (e) => {
+  const isPinch  = e.ctrlKey;    // macOS trackpad pinch arrives as wheel + ctrlKey
+  const isShift  = e.shiftKey;
+  if (!isPinch && !isShift) return;   // normal scroll → let the page scroll
+  e.preventDefault();
+  // Dolly camera along its view vector, clamped to OrbitControls' range.
+  const dir = new THREE.Vector3().subVectors(camera.position, controls.target);
+  const dist = dir.length();
+  const factor = e.deltaY > 0 ? 1.08 : 0.92;
+  const next = Math.max(controls.minDistance, Math.min(controls.maxDistance, dist * factor));
+  dir.setLength(next);
+  camera.position.copy(controls.target).add(dir);
+  controls.update();
+}, { passive: false });
+
+// ---- State ----
+let mode = 'tilted';              // 'tilted' | 'flat'
+let currentSlice = strata.length - 1;  // start on T5
+let targetCameraPos = new THREE.Vector3();
+let targetLookAt    = new THREE.Vector3();
+let isFlying        = true;       // camera-lerping to target
+let targetPlaneOpacities = new Map(); // slice.id -> target opacity
+
+function applyModeControls() {
+  controls.enableRotate = (mode === 'tilted');
+  stage.classList.toggle('flat', mode === 'flat');
+}
+
+function computeCameraTarget(sliceIdx, mode) {
+  const y = strata[sliceIdx].y;
+  if (mode === 'flat') {
+    // Zoom down onto the active stratum — top-down only. Tiny Z
+    // offset keeps OrbitControls stable (avoids gimbal lock).
+    return {
+      pos:    new THREE.Vector3(0, y + FLAT_HEIGHT, 0.001),
+      lookAt: new THREE.Vector3(0, y, 0),
+    };
+  }
+  const pivotMag = STACK_CENTER_Y + (y - STACK_CENTER_Y) * PIVOT_BIAS;
+  const preset   = CAMERA_PRESETS[cameraPreset] || CAMERA_PRESETS.pitched;
+  // Scene rotation moves the time axis off +Y. Pivot follows.
+  //   sceneRotZ = -PI/2  → time axis on world +X  (side preset)
+  //   sceneRotX =  PI/2  → time axis on world +Z  (legacy)
+  let pivot;
+  if (preset.sceneRotZ) {
+    pivot = new THREE.Vector3(pivotMag, 0, 0);
+  } else if (preset.sceneRotX) {
+    pivot = new THREE.Vector3(0, 0, pivotMag);
+  } else {
+    pivot = new THREE.Vector3(0, pivotMag, 0);
+  }
+  // Presets can pin the camera to an absolute world position
+  // (independent of the stratum pivot). Used by top-down so the
+  // readout reads clean regardless of which stratum is active.
+  const pos = preset.worldPos
+    ? preset.worldPos.clone()
+    : pivot.clone().add(preset.offset);
+  return { pos, lookAt: pivot, up: preset.up };
+}
+
+function snapCameraToTarget() {
+  camera.position.copy(targetCameraPos);
+  controls.target.copy(targetLookAt);
+  controls.update();
+  isFlying = false;
+}
+
+function setSlice(idx, opts = {}) {
+  const snap = opts.snap === true;
+  currentSlice = Math.max(0, Math.min(idx, strata.length - 1));
+  const t = computeCameraTarget(currentSlice, mode);
+  targetCameraPos.copy(t.pos);
+  targetLookAt.copy(t.lookAt);
+  if (t.up) {
+    // Set the up-vector immediately; OrbitControls resolves from here.
+    camera.up.copy(t.up);
+  }
+  if (snap) snapCameraToTarget(); else isFlying = true;
+
+  // Update plane opacities per mode.
+  // Flat mode: only active plane visible (tunnel); others fully hidden.
+  // Tilted mode: all planes softly visible.
+  strata.forEach((s, i) => {
+    const isActive = (i === currentSlice);
+    if (mode === 'flat') {
+      targetPlaneOpacities.set(s.id, isActive ? 0.82 : 0.0);
+    } else {
+      targetPlaneOpacities.set(s.id, 0.11);
+    }
+  });
+
+  // Update target node + edge opacities
+  updateTargetOpacities();
+
+  // Sync UI — left-rail nav (reversed DOM order) + delta-ledger rows
+  document.querySelectorAll('.sn-item').forEach(el =>
+    el.classList.toggle('active', Number(el.dataset.sliceIdx) === currentSlice));
+  document.querySelectorAll('.delta-row').forEach(el =>
+    el.classList.toggle('active', Number(el.dataset.target) === currentSlice));
+  // Flat-mode slideshow: activate the matching panel + scroll-snap
+  // into view. flat mode now scrolls
+  // a vertical stack of slides; sync scroll position to currentSlice
+  // when setSlice is called from outside (left-rail click, etc.).
+  document.querySelectorAll('.flat-slide').forEach(el =>
+    el.classList.toggle('active', Number(el.dataset.sliceIdx) === currentSlice));
+  if (mode === 'flat') {
+    const target = document.querySelector(`.flat-slide[data-slice-idx="${currentSlice}"]`);
+    if (target && !_suppressFlatScroll) {
+      target.scrollIntoView({ behavior: snap ? 'auto' : 'smooth', block: 'start' });
+    }
+  }
+}
+
+// when scroll position itself drives
+// setSlice (via the scroll-snap listener below), don't loop back to
+// re-scroll. _suppressFlatScroll is true while we're inside that path.
+let _suppressFlatScroll = false;
+
+function setMode(next) {
+  if (next === mode) return;
+  mode = next;
+  document.getElementById('btn-tilted').classList.toggle('active', mode === 'tilted');
+  document.getElementById('btn-flat').classList.toggle('active', mode === 'flat');
+  applyModeControls();
+  // Flat mode ignores camera presets — reset any scene rotation so
+  // the per-stratum flat view lands on the horizontal plane.
+  applyScenePresetRotation();
+  // Flat mode: auto-collapse the top panel so the slides get room.
+  // (User can still Show the overview paragraph on top of the slide.)
+  // Tilted: leave the panel state alone — reader controls it.
+  if (mode === 'flat') {
+    const tp = document.getElementById('top-panel');
+    if (!tp.classList.contains('collapsed')) {
+      tp.classList.add('collapsed');
+      const tpFoldBtn = document.getElementById('tp-fold');
+      tpFoldBtn.setAttribute('aria-expanded', 'false');
+      tpFoldBtn.querySelector('.tp-fold-text').textContent = 'Show';
+    }
+  }
+  // Per review: flat mode must SNAP instantly — no rotate-around.
+  // Tilted→flat and flat→tilted both snap; smooth only within a mode
+  // when the user dots between strata (flat) or does nothing (tilted).
+  setSlice(currentSlice, { snap: true });
+}
+
+// ---- Geometry helpers (XZ plane) ----
+function circleFillGeo(r, s = 32) { const g = new THREE.CircleGeometry(r, s); g.rotateX(-Math.PI / 2); return g; }
+function circleOutlinePts(r, s = 64) {
+  const pts = [];
+  for (let i = 0; i <= s; i++) { const a = (i / s) * Math.PI * 2; pts.push(new THREE.Vector3(Math.cos(a) * r, 0, -Math.sin(a) * r)); }
+  return pts;
+}
+function rectFillGeo(w, h) { const g = new THREE.PlaneGeometry(w, h); g.rotateX(-Math.PI / 2); return g; }
+function rectOutlinePts(w, h) {
+  const hw = w / 2, hh = h / 2;
+  return [
+    new THREE.Vector3(-hw, 0, -hh), new THREE.Vector3(hw, 0, -hh),
+    new THREE.Vector3(hw, 0, hh),   new THREE.Vector3(-hw, 0, hh),
+    new THREE.Vector3(-hw, 0, -hh),
+  ];
+}
+function paraFillGeo(w, h, skew) {
+  const hw = w / 2, hh = h / 2;
+  const v = new Float32Array([
+    -hw + skew, 0, -hh, hw + skew, 0, -hh, hw - skew, 0, hh, -hw - skew, 0, hh,
+  ]);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(v, 3));
+  g.setIndex([0, 1, 2, 0, 2, 3]);
+  g.computeVertexNormals();
+  return g;
+}
+function paraOutlinePts(w, h, skew) {
+  const hw = w / 2, hh = h / 2;
+  return [
+    new THREE.Vector3(-hw + skew, 0, -hh), new THREE.Vector3(hw + skew, 0, -hh),
+    new THREE.Vector3(hw - skew, 0, hh),   new THREE.Vector3(-hw - skew, 0, hh),
+    new THREE.Vector3(-hw + skew, 0, -hh),
+  ];
+}
+function octaFillGeo(r) {
+  const pts = [];
+  for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2 + Math.PI / 8; pts.push(new THREE.Vector2(Math.cos(a) * r, Math.sin(a) * r)); }
+  const g = new THREE.ShapeGeometry(new THREE.Shape(pts)); g.rotateX(-Math.PI / 2); return g;
+}
+function octaOutlinePts(r) {
+  const pts = [];
+  for (let i = 0; i <= 8; i++) { const a = (i / 8) * Math.PI * 2 + Math.PI / 8; pts.push(new THREE.Vector3(Math.cos(a) * r, 0, -Math.sin(a) * r)); }
+  return pts;
+}
+
+// Text sprite renderer — 2x DPR supersample + cream outline so labels
+// stay crisp against the node fills and strata planes. Outline creates
+// a subtle halo that reads as legibility without looking stroked.
+function makeTextSprite(text, opts = {}) {
+  const fontSize     = opts.fontSize || 32;
+  const color        = opts.color    || '#2a2520';
+  const opacity      = opts.opacity ?? 0.8;
+  const scale        = opts.scale   || 0.65;
+  const outline      = opts.outline !== false;
+  const outlineColor = opts.outlineColor || 'rgba(245,240,232,0.85)';
+  const outlineWidth = opts.outlineWidth ?? 2.5;
+  const fontWeight   = opts.fontWeight || 500;
+
+  // Supersample: 2x hardware pixels so Kecal's curves don't alias
+  // when the sprite is scaled up in world space.
+  const dpr = 2;
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const fontStr = `${fontWeight} ${fontSize}px 'Kecal', system-ui, sans-serif`;
+  ctx.font = fontStr;
+  const tw = ctx.measureText(text).width;
+  const padX = Math.max(outlineWidth * 1.5, 10);
+  const padY = Math.max(outlineWidth * 1.5, 10);
+  const cw = Math.ceil(tw) + padX * 2;
+  const ch = Math.ceil(fontSize) + padY * 2;
+
+  canvas.width  = cw * dpr;
+  canvas.height = ch * dpr;
+  ctx.scale(dpr, dpr);
+  ctx.font = fontStr;
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.globalAlpha  = opacity;
+
+  if (outline) {
+    ctx.lineWidth   = outlineWidth;
+    ctx.strokeStyle = outlineColor;
+    ctx.lineJoin    = 'round';
+    ctx.miterLimit  = 2;
+    ctx.strokeText(text, cw / 2, ch / 2);
+  }
+  ctx.fillStyle = color;
+  ctx.fillText(text, cw / 2, ch / 2);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.minFilter = THREE.LinearMipmapLinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.generateMipmaps = true;
+  tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy?.() || 8);
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false });
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(scale * (cw / ch), scale, 1);
+  return sprite;
+}
+
+// ---- Build scene ----
+const nodeGroups = [];
+const nodeFillMeshes = [];
+const planeRecords = []; // { slice, fillMesh, borderLine, labelSprite, nodesInGroup[], edgesInGroup[] }
+const nodePositions = {};
+
+// Slice nav DOM build — T-letter only, italic label on hover.
+// Render T5 at the TOP so the nav order matches the visual stack
+// (T5 floats above T1 in the 3D layout, so the rail reads the same
+// way).
+const snInner = document.getElementById('sn-inner');
+for (let i = strata.length - 1; i >= 0; i--) {
+  const s = strata[i];
+  const item = document.createElement('button');
+  const name = s.label.split('·').slice(1).join('·').trim();
+  item.className = 'sn-item' + (i === currentSlice ? ' active' : '');
+  item.type = 'button';
+  item.dataset.sliceIdx = String(i);
+  item.setAttribute('aria-label', `${s.short} — ${name}`);
+  item.innerHTML = `<span class="sn-short">${s.short}</span><span class="sn-label">${name}</span>`;
+  item.addEventListener('click', () => {
+    setSlice(i, { snap: mode === 'flat' });
+    // If the modal is open, swap to this stratum's first node so the
+    // rail still navigates the run while the reader is deep in detail.
+    if (nv.classList.contains('open')) openViewerForStratum(i);
+  });
+  snInner.appendChild(item);
+}
+
+// View-mode toggle buttons (above the nav) — wire clicks to setMode.
+document.querySelectorAll('.sn-mode-toggle button').forEach(btn => {
+  btn.addEventListener('click', () => setMode(btn.dataset.mode));
+});
+
+function applyScenePresetRotation() {
+  const preset = CAMERA_PRESETS[cameraPreset] || CAMERA_PRESETS.pitched;
+  scene.rotation.x = (mode === 'tilted') ? (preset.sceneRotX || 0) : 0;
+  scene.rotation.z = (mode === 'tilted') ? (preset.sceneRotZ || 0) : 0;
+  // Top-down preset: polar clamped to a 45° cone but azimuth is free,
+  // so the user can pivot right/left and up/down off straight-down.
+  // When the user stops dragging (springBack), the camera lerps back
+  // to the preset's home position — a stable default the eye returns
+  // to between probes. Other presets get the full orbit range.
+  if (mode === 'tilted' && preset.polarCone) {
+    controls.minPolarAngle   = 0;
+    controls.maxPolarAngle   = preset.polarCone;
+    controls.minAzimuthAngle = -Infinity;
+    controls.maxAzimuthAngle = Infinity;
+  } else {
+    controls.minPolarAngle   = 0;
+    controls.maxPolarAngle   = Math.PI / 2 - 0.04;
+    controls.minAzimuthAngle = -Infinity;
+    controls.maxAzimuthAngle = Infinity;
+  }
+}
+
+function setCameraPreset(name) {
+  if (!CAMERA_PRESETS[name] || cameraPreset === name) return;
+  cameraPreset = name;
+  document.querySelectorAll('.tilt-presets button').forEach(b =>
+    b.classList.toggle('active', b.dataset.preset === name));
+  // Clicking a preset re-applies its constraints and ends any
+  // gimbal-exploration session.
+  if (typeof presetSuspended !== 'undefined') presetSuspended = false;
+  scene.rotation.x = 0;
+  scene.rotation.z = 0;
+  applyScenePresetRotation();
+  // Jump the camera to the preset — presets are about the reader
+  // changing how they look, not watching a smooth sweep.
+  if (mode === 'tilted') setSlice(currentSlice, { snap: true });
+}
+document.querySelectorAll('.tilt-presets button').forEach(btn => {
+  btn.addEventListener('click', () => setCameraPreset(btn.dataset.preset));
+});
+
+// Live camera-coord readout next to the preset bar — updates whenever
+// OrbitControls fires change, or per frame during camera-lerp. The
+// readout is camera-position only; the look-target was dropped
+// because it stays fixed during orbit and read as dead telemetry.
+const tiltCoordsEl = document.getElementById('tilt-coords');
+// Values under 0.9 clamp to 0.0 — the top-down preset uses a small
+// intentional Z bias (0.8) to avoid OrbitControls gimbal lock, and
+// the reader should see "cam 0.0, 29.3, 0.0" not "0.0, 29.3, 0.8".
+function fmt(n) { return (Math.abs(n) < 0.9 ? 0 : n).toFixed(1); }
+function updateTiltCoords() {
+  const p = camera.position;
+  tiltCoordsEl.textContent = `cam ${fmt(p.x)}, ${fmt(p.y)}, ${fmt(p.z)}`;
+}
+controls.addEventListener('change', updateTiltCoords);
+updateTiltCoords();
+
+// ---- Gimbal knobs ----
+// Five override-style drag controls that let the reader manipulate
+// the camera and the scene rotation independently of any preset cone
+// restrictions. Each knob captures pointer input and accumulates a
+// per-frame delta; dragging any knob unlocks polar/azimuth bounds so
+// the reader can reach parts of the view the preset cone would
+// otherwise block. The reset button re-applies the active preset.
+//
+// `presetSuspended` also blocks the preset's spring-back on canvas
+// drag-release, so the reader can combine a canvas orbit with a
+// gimbal tilt without the camera snapping away on mouse-up.
+let presetSuspended = false;
+(function wireGimbals() {
+  const gimbalEl = document.getElementById('gimbals');
+  const resetBtn = document.getElementById('g-reset');
+  if (!gimbalEl) return;
+
+  let active = null;        // which axis is being dragged
+  let activeBtn = null;     // the knob button
+  let lastX = 0, lastY = 0;
+
+  function unlockForExploration() {
+    controls.minPolarAngle   = 0.001;
+    controls.maxPolarAngle   = Math.PI - 0.04;
+    controls.minAzimuthAngle = -Infinity;
+    controls.maxAzimuthAngle = Infinity;
+    presetSuspended = true;
+  }
+
+  const _spherical = new THREE.Spherical();
+  const _offset = new THREE.Vector3();
+  function applyDelta(dx, dy) {
+    const SPIN_RATE  = 0.0075;   // radians per px
+    const PITCH_RATE = 0.0075;
+    const ZOOM_RATE  = 0.004;
+    const TILT_RATE  = 0.006;
+    // OrbitControls in Three.js r160 doesn't expose setPolarAngle /
+    // setAzimuthalAngle publicly on this build, so we mutate the
+    // camera in spherical coordinates directly. The camera's
+    // position relative to controls.target becomes (radius, phi,
+    // theta); we adjust phi / theta and convert back.
+    if (active === 'pitch' || active === 'spin' || active === 'zoom') {
+      _offset.copy(camera.position).sub(controls.target);
+      _spherical.setFromVector3(_offset);
+      if (active === 'pitch') {
+        _spherical.phi = Math.max(0.002, Math.min(Math.PI - 0.04, _spherical.phi + dy * PITCH_RATE));
+      } else if (active === 'spin') {
+        _spherical.theta -= dx * SPIN_RATE;
+      } else if (active === 'zoom') {
+        _spherical.radius = Math.max(controls.minDistance, Math.min(controls.maxDistance, _spherical.radius * (1 + dy * ZOOM_RATE)));
+      }
+      _offset.setFromSpherical(_spherical);
+      camera.position.copy(controls.target).add(_offset);
+      controls.update();
+    } else if (active === 'tilt-x') {
+      scene.rotation.x += dy * TILT_RATE;
+    } else if (active === 'tilt-z') {
+      scene.rotation.z += dx * TILT_RATE;
+    }
+    updateTiltCoords();
+  }
+
+  gimbalEl.querySelectorAll('.g-knob').forEach(btn => {
+    btn.addEventListener('pointerdown', (e) => {
+      if (mode !== 'tilted') return;
+      e.preventDefault();
+      active = btn.dataset.axis;
+      activeBtn = btn;
+      btn.classList.add('active');
+      lastX = e.clientX; lastY = e.clientY;
+      // Cancel any in-flight camera lerp so our drag takes over.
+      isFlying = false;
+      targetCameraPos.copy(camera.position);
+      targetLookAt.copy(controls.target);
+      unlockForExploration();
+      // setPointerCapture makes subsequent pointermove/up fire on the
+      // button even when the cursor leaves its bounds.
+      try { btn.setPointerCapture(e.pointerId); } catch (_) {}
+    });
+  });
+  // Listen for pointermove/up on the window so drags that travel
+  // outside the button (or that miss setPointerCapture, e.g.,
+  // synthetic events) still update the camera.
+  window.addEventListener('pointermove', (e) => {
+    if (!active) return;
+    const dx = e.clientX - lastX;
+    const dy = e.clientY - lastY;
+    lastX = e.clientX; lastY = e.clientY;
+    applyDelta(dx, dy);
+  });
+  const end = () => {
+    if (!active) return;
+    activeBtn && activeBtn.classList.remove('active');
+    active = null; activeBtn = null;
+  };
+  window.addEventListener('pointerup', end);
+  window.addEventListener('pointercancel', end);
+
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      // Re-apply the active preset: restores scene rotation, polar
+      // cone, and snaps the camera home.
+      scene.rotation.x = 0;
+      scene.rotation.z = 0;
+      applyScenePresetRotation();
+      setSlice(currentSlice, { snap: true });
+      presetSuspended = false;
+    });
+  }
+})();
+
+// Spring-back on drag-end — when a preset has springBack:true
+// (currently just top-down), releasing the mouse triggers a smooth
+// lerp back to the preset's home pose so the reader doesn't have to
+// manually restore the view.
+controls.addEventListener('end', () => {
+  if (mode !== 'tilted') return;
+  // Gimbal exploration temporarily suspends the preset spring-back so
+  // the reader can hold a custom pose without it snapping away.
+  if (presetSuspended) return;
+  const preset = CAMERA_PRESETS[cameraPreset];
+  if (!preset || !preset.springBack) return;
+  // User drag cancels in-flight lerps elsewhere; here we explicitly
+  // kick one off by rebuilding the target from the preset.
+  const t = computeCameraTarget(currentSlice, mode);
+  targetCameraPos.copy(t.pos);
+  targetLookAt.copy(t.lookAt);
+  if (t.up) camera.up.copy(t.up);
+  isFlying = true;
+});
+
+// Delta-row click → jump to target slice (snap in flat, highlight in tilted)
+document.querySelectorAll('.delta-row').forEach(row => {
+  row.addEventListener('click', () => setSlice(Number(row.dataset.target), { snap: mode === 'flat' }));
+});
+
+// Mode buttons are created inline with the nav items above.
+
+// Top-panel fold — Hide/Show toggle pinned in the header bar so the
+// button lives in the SAME place in both states (location consistency).
+const topPanel = document.getElementById('top-panel');
+const tpFold   = document.getElementById('tp-fold');
+const tpFoldText = tpFold.querySelector('.tp-fold-text');
+tpFold.addEventListener('click', () => {
+  const isCollapsed = topPanel.classList.toggle('collapsed');
+  tpFold.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+  tpFoldText.textContent = isCollapsed ? 'Show' : 'Hide';
+});
+
+// ---- Help popover ----
+// Click the ? chip under the nav to toggle a short explainer that
+// covers modes, navigation, and keyboard shortcuts. Click anywhere
+// outside (or hit Esc) to dismiss.
+(function wireHelpPop() {
+  const btn = document.getElementById('help-btn');
+  const pop = document.getElementById('help-pop');
+  if (!btn || !pop) return;
+  function setOpen(open) {
+    pop.classList.toggle('open', open);
+    btn.classList.toggle('active', open);
+    btn.setAttribute('aria-expanded', String(open));
+    pop.setAttribute('aria-hidden', String(!open));
+  }
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setOpen(!pop.classList.contains('open'));
+  });
+  document.addEventListener('click', (e) => {
+    if (!pop.classList.contains('open')) return;
+    if (pop.contains(e.target) || btn.contains(e.target)) return;
+    setOpen(false);
+  });
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && pop.classList.contains('open')) setOpen(false);
+  });
+})();
+
+
+// ---- Node viewer (click-to-open) ----
+const nv         = document.getElementById('node-viewer');
+const nvBackdrop = document.getElementById('viewer-backdrop');
+const nvStratum  = document.getElementById('nv-stratum');
+const nvType     = document.getElementById('nv-type');
+const nvState    = document.getElementById('nv-state');
+const nvLabel    = document.getElementById('nv-label');
+const nvMeta     = document.getElementById('nv-meta');
+const nvDetail   = document.getElementById('nv-detail');
+const nvCta      = document.getElementById('nv-cta');
+const nvClose    = document.getElementById('nv-close');
+const nvPrev     = document.getElementById('nv-prev');
+const nvNext     = document.getElementById('nv-next');
+const nvProgress = document.getElementById('nv-progress-text');
+const nvExtras   = document.getElementById('nv-extras');
+
+// Flat list of every node in strata / visual order. Modal nav walks
+// this sequence via prev/next chips, ArrowLeft/ArrowRight, and via
+// T-chip rail clicks (which snap to the stratum's first node).
+const ALL_NODES = [];
+strata.forEach((s, sIdx) => s.nodes.forEach(n => {
+  ALL_NODES.push({ node: n, sIdx, sliceShort: s.short });
+}));
+let nvIndex = 0;
+
+let modalLockedMesh = null;   // 3D node held in its hover-scale state
+                              // while the modal is showing it
+
+function openViewer(nodeData) {
+  // Sync nvIndex so prev/next know where we are.
+  const hit = ALL_NODES.findIndex(x => x.node.id === nodeData.id);
+  if (hit !== -1) nvIndex = hit;
+  const stratumShort = hit !== -1 ? ALL_NODES[hit].sliceShort : (strata[currentSlice] && strata[currentSlice].short) || '\u2014';
+
+  // Lock the matching 3D node to its hover/expanded state so the
+  // reader can see which shape they're reading about. Release the
+  // previous lock first.
+  if (modalLockedMesh) modalLockedMesh.userData.targetScale = 1;
+  const lockMesh = nodeFillMeshes.find(m => m.userData.id === nodeData.id);
+  if (lockMesh) {
+    lockMesh.userData.targetScale = HOVER_SCALE;
+    modalLockedMesh = lockMesh;
+  } else {
+    modalLockedMesh = null;
+  }
+
+  nvStratum.textContent = stratumShort;
+  nvType.textContent    = (TYPE_LABELS[nodeData.type] || nodeData.type);
+  nvLabel.textContent   = nodeData.label;
+  nvMeta.textContent    = nodeData.meta || nodeData.state;
+  nvState.textContent   = '';
+  nvState.className     = 'nv-state';
+  if (nodeData.state === 'pass')      { nvState.textContent = '\u00b7 pass';  nvState.classList.add('pass'); }
+  else if (nodeData.state === 'fail') { nvState.textContent = '\u00b7 fail';  nvState.classList.add('fail'); }
+  else if (nodeData.state)            { nvState.textContent = `\u00b7 ${nodeData.state}`; }
+
+  if (nodeData.richBody === 'memo') {
+    nv.classList.add('rich');
+    nvDetail.innerHTML = MEMO_BODY_HTML;
+    nvExtras.innerHTML = '';   // rich bodies have their own content
+  } else if (nodeData.richBody === 'eval') {
+    nv.classList.add('rich');
+    nvDetail.innerHTML = buildEvalBodyHTML();
+    nvExtras.innerHTML = '';
+  } else {
+    nv.classList.remove('rich');
+    nvDetail.innerHTML = nodeData.detail || `<em>${nodeData.label}</em> \u2014 no additional narrative attached to this node yet.`;
+    nvExtras.innerHTML = renderNodeExtrasHTML(nodeData);
+  }
+
+  if (nodeData.cta && nodeData.cta.href) {
+    nvCta.textContent = nodeData.cta.label;
+    nvCta.href = nodeData.cta.href;
+    nvCta.style.display = 'inline-block';
+  } else {
+    nvCta.style.display = 'none';
+  }
+
+  // Progress + prev/next enabled state
+  nvProgress.textContent = `${nvIndex + 1} / ${ALL_NODES.length}`;
+  nvPrev.toggleAttribute('disabled', nvIndex === 0);
+  nvNext.toggleAttribute('disabled', nvIndex === ALL_NODES.length - 1);
+
+  nv.classList.add('open');
+  nvBackdrop.classList.add('open');
+  nv.setAttribute('aria-hidden', 'false');
+  nvBackdrop.setAttribute('aria-hidden', 'false');
+  nv.scrollTop = 0;
+  tooltipEl && tooltipEl.classList.remove('visible');
+}
+
+function openViewerByIndex(idx) {
+  if (idx < 0 || idx >= ALL_NODES.length) return;
+  const { node, sIdx } = ALL_NODES[idx];
+  // Move the stratum under the camera (no snap in tilted so we pan;
+  // snap in flat so the slide swaps cleanly).
+  if (sIdx !== currentSlice) setSlice(sIdx, { snap: mode === 'flat' });
+  openViewer(node);
+}
+
+function openViewerForStratum(sIdx) {
+  const firstIdx = ALL_NODES.findIndex(x => x.sIdx === sIdx);
+  if (firstIdx !== -1) openViewerByIndex(firstIdx);
+}
+
+// Eval body — two forms:
+//   `compact`  → used in the T5 flat-mode side-panel. Single-line pass
+//                rows, expanded fail row. Header line has a donut
+//                spark mirroring the pretext language.
+//   `modal`    → legacy rich form for the tilt-mode click modal, with
+//                h1 + meta-row + memo-conviction pill.
+// Pass-row detail lives only in the fail panel to keep the sidebar
+// from dwarfing the memo.
+function buildEvalBodyHTML(form = 'modal') {
+  const fails = EVAL_CHECKS.filter(c => c.state === 'fail');
+  const passes = EVAL_CHECKS.filter(c => c.state === 'pass');
+  const passed = passes.length;
+  const total = EVAL_CHECKS.length;
+
+  if (form === 'compact') {
+    const donut = sparkEvalDonut(passed, total, 14);
+    const gateClass = fails.length === 0 ? 'clean' : 'soft';
+    const gateText  = fails.length === 0 ? 'Clean gate' : 'Soft pass';
+    const renderPass = (c) => `
+      <li class="eval-row eval-row-pass">
+        <span class="eval-glyph">\u2713</span>
+        <code class="eval-name">${c.label}</code>
+      </li>`;
+    const renderFail = (c) => `
+      <li class="eval-row eval-row-fail">
+        <span class="eval-glyph">\u2717</span>
+        <code class="eval-name">${c.label}</code>
+        <p class="eval-detail">${c.detail}</p>
+      </li>`;
+    return `
+      <div class="eval-compact-head">
+        <span class="eval-kicker">Eval</span>
+        <span class="eval-ratio"><span class="fig">${passed} / ${total}</span>${donut}</span>
+        <span class="eval-gate ${gateClass}">${gateText}</span>
+      </div>
+      ${fails.length ? `<div class="eval-sect-head flag">Flagged <span class="fig">${fails.length}</span></div><ul class="eval-list">${fails.map(renderFail).join('')}</ul>` : ''}
+      <div class="eval-sect-head pass">Passed <span class="fig">${passed}</span></div>
+      <ul class="eval-list">${passes.map(renderPass).join('')}</ul>`;
+  }
+
+  // Default: modal form (unchanged, keeps parity with tilt click modal)
+  const renderRow = (c) => `
+    <li class="eval-row eval-row-${c.state}">
+      <span class="eval-glyph">${c.state === 'pass' ? '\u2713' : '\u2717'}</span>
+      <div class="eval-body-col">
+        <code class="eval-name">${c.label}</code>
+        <p class="eval-detail">${c.detail}</p>
+      </div>
+    </li>`;
+  return `
+    <div class="memo-kicker">Eval \u00b7 ${passed} / ${total} checks passed</div>
+    <h1 class="memo-h1">Quality gate</h1>
+    <div class="memo-meta-row">
+      <span>${total} checks ran in parallel</span>
+      ${RUN_META.evalNote ? `<span>${RUN_META.evalNote}</span>` : ''}
+      <span>${fails.length} flagged</span>
+    </div>
+    <span class="memo-conviction">Gate \u00b7 ${fails.length === 0 ? 'CLEAN' : 'SOFT PASS'}</span>
+    ${fails.length ? `<h2 class="memo-h2">Flagged</h2><ul class="eval-list">${fails.map(renderRow).join('')}</ul>` : ''}
+    <h2 class="memo-h2">Passed</h2>
+    <ul class="eval-list">${passes.map(renderRow).join('')}</ul>`;
+}
+
+// Deliverable body (MEMO_BODY_HTML) and its "Show more" continuation
+// (MEMO_MORE_HTML) come from the data slot (see the require above).
+// The body opens in the modal when a node with richBody: 'memo' is
+// clicked, and heads the flat slide of the stratum that holds it.
+
+// ---- Flat-mode slideshow builder ----
+// Renders each stratum as a rich HTML panel. The nodes' detail/sources/
+// fields/edge-relationships that were formerly hover/modal/3D-only
+// become first-class inline content here — flat mode is a readable
+// slideshow, tilted is the 3D overview. Each card knows what it
+// reads from upstream and what it feeds downstream so the data flow
+// reads inline (parity with tilt's vertical edges).
+function nodeMetaById(id) {
+  for (let i = 0; i < strata.length; i++) {
+    const n = strata[i].nodes.find(x => x.id === id);
+    if (n) return { node: n, sliceShort: strata[i].short, sliceIdx: i };
+  }
+  return null;
+}
+
+// Shared node-extras renderer — builds the Sources / Fields / Reads /
+// Feeds pill rows used inside both the hover tooltip and the modal
+// body. One source of truth so the two views never drift.
+function renderNodeExtrasHTML(n) {
+  const refs = computeNodeRefs(n.id);
+  const sections = [];
+  const sourcePill = (src) => {
+    const c = ['n-pill', 'src'];
+    if (src.state === 'fail')    c.push('fail');
+    if (src.state === 'partial') c.push('partial');
+    const kind = src.kind ? `<span class="n-pill-kind">${src.kind}</span>` : '';
+    return `<span class="${c.join(' ')}"><span class="n-pill-dot" aria-hidden="true"></span>${src.name}${kind}</span>`;
+  };
+  const fieldPill = f => `<span class="n-pill field">${f}</span>`;
+  const refPill = (r, dir) => {
+    const c = ['n-pill', 'ref', `dir-${dir}`];
+    if (r.edgeType === 'dashed') c.push('dashed');
+    return `<span class="${c.join(' ')}"><span class="n-pill-prefix">${r.sliceShort}</span>${r.label}</span>`;
+  };
+  if (Array.isArray(n.sources) && n.sources.length) {
+    sections.push(`<div class="n-sec"><span class="n-sec-t">Sources \u00b7 ${n.sources.length}</span><div class="n-row">${n.sources.map(sourcePill).join('')}</div></div>`);
+  }
+  if (Array.isArray(n.fields) && n.fields.length) {
+    sections.push(`<div class="n-sec"><span class="n-sec-t">Fields \u00b7 ${n.fields.length}</span><div class="n-row">${n.fields.map(fieldPill).join('')}</div></div>`);
+  }
+  if (refs.reads.length) {
+    sections.push(`<div class="n-sec"><span class="n-sec-t">Reads \u2191 \u00b7 ${refs.reads.length}</span><div class="n-row">${refs.reads.map(r => refPill(r, 'reads')).join('')}</div></div>`);
+  }
+  if (refs.feeds.length) {
+    sections.push(`<div class="n-sec"><span class="n-sec-t">Feeds \u2193 \u00b7 ${refs.feeds.length}</span><div class="n-row">${refs.feeds.map(r => refPill(r, 'feeds')).join('')}</div></div>`);
+  }
+  return sections.join('');
+}
+
+function computeNodeRefs(nodeId) {
+  // Walk verticalEdges + within-stratum edges to build inbound/outbound
+  // reference lists. A "ref" is { id, label, sliceShort, edgeType } so
+  // pills can render compactly with the source/target stratum prefix.
+  const reads = [];
+  const feeds = [];
+  verticalEdges.forEach(e => {
+    if (e.targetId === nodeId) {
+      const m = nodeMetaById(e.sourceId);
+      if (m) reads.push({ id: e.sourceId, label: m.node.label, sliceShort: m.sliceShort, edgeType: e.type });
+    }
+    if (e.sourceId === nodeId) {
+      const m = nodeMetaById(e.targetId);
+      if (m) feeds.push({ id: e.targetId, label: m.node.label, sliceShort: m.sliceShort, edgeType: e.type });
+    }
+  });
+  // within-stratum produces (svc → produced binding)
+  strata.forEach(s => s.edges.forEach(e => {
+    if (e.target === nodeId) {
+      const m = nodeMetaById(e.source);
+      if (m) reads.push({ id: e.source, label: m.node.label, sliceShort: m.sliceShort, edgeType: 'solid' });
+    }
+    if (e.source === nodeId) {
+      const m = nodeMetaById(e.target);
+      if (m) feeds.push({ id: e.target, label: m.node.label, sliceShort: m.sliceShort, edgeType: 'solid' });
+    }
+  }));
+  return { reads, feeds };
+}
+
+function renderRefBlock(refs, kind) {
+  if (!refs.length) return '';
+  const titleLabel = kind === 'reads' ? 'Reads ↑' : 'Feeds ↓';
+  return `
+    <div class="fsc-sublist fsc-refs">
+      <div class="fsc-sub-title">${titleLabel} · ${refs.length}</div>
+      <div class="fsc-pill-row">
+        ${refs.map(r => {
+          const cls = ['fs-pill', 'ref', `dir-${kind}`];
+          if (r.edgeType === 'dashed') cls.push('dashed');
+          return `<span class="${cls.join(' ')}"><span class="fs-pill-prefix">${r.sliceShort}</span>${r.label}</span>`;
+        }).join('')}
+      </div>
+    </div>`;
+}
+
+function renderFlatCard(n) {
+  const kind = TYPE_LABELS[n.type] || n.type;
+  const cls = ['fs-card'];
+  if (n.type === 'parallelogram') cls.push('binding');
+  if (n.type === 'rectangle')     cls.push('input');
+  if (n.type === 'rectangle' && /empty/.test(n.meta || '')) cls.push('empty');
+  if (n.state === 'fail')         cls.push('fail');
+  if (n.type === 'circle')        cls.push('service');
+  const refs = computeNodeRefs(n.id);
+  const sourcesBlock = (Array.isArray(n.sources) && n.sources.length) ? `
+    <div class="fsc-sublist">
+      <div class="fsc-sub-title">Sources · ${n.sources.length}</div>
+      <div class="fsc-pill-row">
+        ${n.sources.map(src => {
+          const pcls = ['fs-pill', 'src'];
+          if (src.state === 'fail')    pcls.push('fail');
+          if (src.state === 'partial') pcls.push('partial');
+          return `<span class="${pcls.join(' ')}"><span class="fs-pill-dot" aria-hidden="true"></span>${src.name}${src.kind ? `<span class="fs-pill-kind">· ${src.kind}</span>` : ''}</span>`;
+        }).join('')}
+      </div>
+    </div>` : '';
+  const fieldsBlock = (Array.isArray(n.fields) && n.fields.length) ? `
+    <div class="fsc-sublist">
+      <div class="fsc-sub-title">Fields · ${n.fields.length}</div>
+      <div class="fsc-pill-row">
+        ${n.fields.map(f => `<span class="fs-pill field">${f}</span>`).join('')}
+      </div>
+    </div>` : '';
+  const ctaBlock = (n.cta && n.cta.href) ? `
+    <a class="fsc-cta" href="${n.cta.href}" target="_blank" rel="noopener">${n.cta.label}</a>` : '';
+  return `
+    <article class="${cls.join(' ')}">
+      <div class="fsc-head">
+        <span class="fsc-kicker">${kind}</span>
+        <span class="fsc-state ${n.state || ''}">${n.state || ''}</span>
+      </div>
+      <div class="fsc-label">${n.label}</div>
+      <div class="fsc-meta">${n.meta || ''}</div>
+      <p class="fsc-detail">${n.detail || ''}</p>
+      ${sourcesBlock}
+      ${fieldsBlock}
+      ${renderRefBlock(refs.reads, 'reads')}
+      ${renderRefBlock(refs.feeds, 'feeds')}
+      ${ctaBlock}
+    </article>`;
+}
+
+// Each stratum gets a small "where this goes next" callout at the TOP
+// of the slide (between head and summary). Mirrors the delta-ledger
+// row connecting this stratum to the next, so the slideshow reads
+// like chapters with their own intro leading line.
+function transitionCallout(sIdx) {
+  if (sIdx >= strata.length - 1) return '';
+  const next = strata[sIdx + 1];
+  // Callout copy per transition: DELTA_COPY[i] when supplied, else the
+  // matching delta-ledger row.
+  const deltaCopy = DELTA_COPY || DELTA_LEDGER.map(d => d.html);
+  const copy = expandSparks(deltaCopy[sIdx] || '', 14);
+  return `
+    <div class="fs-transition">
+      <span class="fs-trans-arrow">${strata[sIdx].short} \u2192 ${next.short}</span>
+      <span class="fs-trans-copy">${copy}</span>
+    </div>`;
+}
+
+// Inline sparks reused in the T5 memo panel — same visual vocabulary
+// as the pretext paragraph so the page reads as one language.
+const SPARK_PIE_HOUR = sparkPieHour(RUN_META.runtimeMinutes, 14);
+const SPARK_DONUT_RATIO = sparkEvalDonut(EVAL_PASSED, EVAL_TOTAL, 14);
+
+function memoPanelHTML() {
+  // Inject a runtime + eval spark-pair into the memo meta row so the
+  // memo header carries the same quick-read glyphs the pretext does.
+  const extraMeta = `<span>Runtime \u00b7 <span class="fig">${RUNTIME_LABEL}</span>${SPARK_PIE_HOUR}</span><span>Eval \u00b7 <span class="fig">${EVAL_PASSED} / ${EVAL_TOTAL}</span>${SPARK_DONUT_RATIO}</span>`;
+  // Splice extraMeta into the end of the body's first .memo-meta-row
+  // so it sits next to the existing meta spans without rewriting
+  // MEMO_BODY_HTML.
+  return MEMO_BODY_HTML.replace(
+    /(<div class="memo-meta-row">[\s\S]*?)(<\/div>)/,
+    (_, row, close) => `${row}  ${extraMeta}\n  ${close}`
+  );
+}
+
+function buildFlatSlides() {
+  const container = document.getElementById('flat-slides');
+  // flat mode only renders T4
+  // onward. T1-T3 still live in the rail/tilted view but the flat
+  // scroll-snap stack starts at T4. FLAT_START_IDX = 3 (0-based, T4).
+  /* "show the top result and all others
+     right underneath it as a scrolling list, snap to via the sidebar."
+     Flat view now renders the WHOLE chain (was T4-onward); the
+     highest-index stratum (the deliverable / "top result", T5) is
+     pinned FIRST, followed by T1 -> T(last-1) chronologically.
+     Sidebar clicks call setSlice -> scrollIntoView, which lines the
+     picked panel against the top of the proximity scroll-snap stack
+     -- i.e. the sidebar IS the snap controller. */
+  const last = strata.length - 1;
+  const topResult = strata[last];
+  const others = strata.slice(0, last);
+  const flatOrder = [topResult].concat(others);     // [T5, T1, T2, T3, T4]
+  const visualIndexById = {};
+  flatOrder.forEach((s, i) => { visualIndexById[s.id] = i; });
+  const html = flatOrder.map((s, visualIdx) => {
+    const sIdx = s.id;                                  // original index
+    const name = s.label.split('·').slice(1).join('·').trim();
+    // Prev/next slide buttons — boundaries of the FLAT range. No prev
+    // on T4 (first flat slide); no next on T5 (last). Tilted-mode
+    // keyboard nav still walks the full T1..T5.
+    /* prev/next walk the FLAT VISUAL order
+       ([T5, T1, T2, T3, T4]) rather than the chronological strata
+       array, so the arrows match the scroll-snap stack order. */
+    const prevBtn = visualIdx > 0
+      ? `<button class="fs-nav-btn" data-dir="prev" aria-label="Previous stratum" title="Previous stratum (\u2190)">\u2190</button>`
+      : '';
+    const nextBtn = visualIdx < flatOrder.length - 1
+      ? `<button class="fs-nav-btn" data-dir="next" aria-label="Next stratum" title="Next stratum (\u2192)">\u2192</button>`
+      : '';
+    const head = `
+      <div class="fs-head">
+        <span class="fs-t">${s.short}</span>
+        ${prevBtn}${nextBtn}
+        <span class="fs-title">${name}</span>
+        <span class="fs-time">t = ${s.time}</span>
+      </div>`;
+    let body;
+    const memoNode = s.nodes.find(n => n.richBody === 'memo');
+    if (memoNode && MEMO_BODY_HTML) {
+      // Memo body (hero) stays always visible. The action bar sits
+      // below it with a Show more toggle + raw-memo link on one row;
+      // clicking Show more reveals the extended memo sections below.
+      // The raw link is the memo node's own cta, when the data has one.
+      const rawLink = (memoNode.cta && memoNode.cta.href)
+        ? `<a class="fsc-cta memo-cta" href="${memoNode.cta.href}" target="_blank" rel="noopener">${memoNode.cta.label}</a>`
+        : '';
+      const memoActions = `
+        <div class="fs-memo-actions">
+          <button class="fs-memo-toggle" type="button" aria-expanded="false">Show more \u25be</button>
+          ${rawLink}
+        </div>`;
+      const memoMore = `<div class="memo-content-more">${MEMO_MORE_HTML}</div>`;
+      body = `
+        <div class="fs-grid split">
+          <div class="fs-memo">${memoPanelHTML()}${memoActions}${memoMore}</div>
+          <div class="fs-eval">${buildEvalBodyHTML('compact')}</div>
+        </div>`;
+    } else {
+      const layoutClass = s.nodes.length === 4 ? 'four' : 'two';
+      const cards = s.nodes.map(n => renderFlatCard(n)).join('');
+      body = `<div class="fs-grid ${layoutClass}">${cards}</div>`;
+    }
+    return `
+      <section class="flat-slide" data-slice-idx="${s.id}" aria-label="${s.label}">
+        ${head}
+        ${transitionCallout(sIdx)}
+        <p class="fs-summary">${s.summary}</p>
+        ${body}
+      </section>`;
+  }).join('');
+  container.innerHTML = html;
+
+  // Delegated click handler — prev/next slide nav + memo collapse.
+  /* prev/next must walk the FLAT VISUAL
+     order (flatOrder), not the chronological strata array.  Map
+     currentSlice -> its visual index, step, map back to a stratum id. */
+  container.addEventListener('click', (e) => {
+    const navBtn = e.target.closest('.fs-nav-btn');
+    if (navBtn) {
+      const dir = navBtn.dataset.dir === 'prev' ? -1 : 1;
+      const curVisual = visualIndexById[currentSlice];
+      if (curVisual !== undefined) {
+        const nextVisual = Math.max(0, Math.min(flatOrder.length - 1, curVisual + dir));
+        setSlice(flatOrder[nextVisual].id, { snap: true });
+      } else {
+        setSlice(currentSlice + dir, { snap: true });   // fallback
+      }
+      return;
+    }
+    const memoToggle = e.target.closest('.fs-memo-toggle');
+    if (memoToggle) {
+      const memoPanel = memoToggle.closest('.fs-memo');
+      const isNowExpanded = memoPanel.classList.toggle('expanded');
+      memoToggle.innerHTML = isNowExpanded ? 'Show less \u25b4' : 'Show more \u25be';
+      memoToggle.setAttribute('aria-expanded', String(isNowExpanded));
+    }
+  });
+
+  // flat-mode scroll-snap: whichever
+  // slide is centered in the viewport drives currentSlice. Debounced
+  // so we don't re-enter setSlice on micro-pixels of scroll.
+  let scrollTimer = null;
+  container.addEventListener('scroll', () => {
+    if (mode !== 'flat') return;
+    if (scrollTimer) clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => {
+      const containerMid = container.scrollTop + container.clientHeight * 0.5;
+      let bestIdx = currentSlice, bestDist = Infinity;
+      container.querySelectorAll('.flat-slide').forEach(el => {
+        const elMid = el.offsetTop + el.offsetHeight * 0.5;
+        const d = Math.abs(elMid - containerMid);
+        if (d < bestDist) { bestDist = d; bestIdx = Number(el.dataset.sliceIdx); }
+      });
+      if (bestIdx !== currentSlice) {
+        _suppressFlatScroll = true;
+        setSlice(bestIdx, { snap: true });
+        _suppressFlatScroll = false;
+      }
+    }, 90);
+  });
+}
+function closeViewer() {
+  nv.classList.remove('open');
+  nvBackdrop.classList.remove('open');
+  nv.setAttribute('aria-hidden', 'true');
+  nvBackdrop.setAttribute('aria-hidden', 'true');
+  if (modalLockedMesh) {
+    modalLockedMesh.userData.targetScale = 1;
+    modalLockedMesh = null;
+  }
+}
+nvClose.addEventListener('click', closeViewer);
+nvBackdrop.addEventListener('click', closeViewer);
+nvPrev.addEventListener('click', () => openViewerByIndex(nvIndex - 1));
+nvNext.addEventListener('click', () => openViewerByIndex(nvIndex + 1));
+window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeViewer(); });
+
+// node position map
+strata.forEach(s => s.nodes.forEach(n => { nodePositions[n.id] = { x: n.x, y: s.y, z: n.z }; }));
+
+// ---- 3D axes widget ----
+// XYZ indicator anchored near the stack's origin corner. The Z axis
+// is TIME (runs vertically through the stack, Three.js world-Y),
+// X and Y are the in-plane spatial coordinates of each stratum
+// (Three.js world-X and world-Z respectively). Labels carry the
+// display names so the user reads x/y/z, not Three.js conventions.
+(function buildAxesWidget() {
+  // Anchor BEHIND the stack (back-left corner of T1 plane). The
+  // axes sit in the deep of the scene and the camera reads them
+  // through the translucent planes — background context, not
+  // foreground chrome. Tones kept very low-contrast so they whisper.
+  const origin = new THREE.Vector3(-7.2, -0.6, -5.4);
+  const AXIS_COL  = 0x8e857a;   // warm-grey, even softer — sits in the same temperature as the paper
+  const AXIS_OP   = 0.22;       // whisper — fades into the paper
+  // Labels are darker and slightly larger than the axis lines so a
+  // reader can resolve x / y / z / time without them competing with
+  // the axes themselves.
+  const LABEL_COL = '#4a4339';  // ink-medium shade — readable on cream
+  const LABEL_OP  = 0.65;
+  const TIME_OP   = 0.55;
+  const X_LEN     = 2.4;
+  const Y_LEN     = 2.4;
+  const Z_LEN     = 13;         // reaches past T5, emphasising time
+  const mat = new THREE.LineBasicMaterial({ color: AXIS_COL, transparent: true, opacity: AXIS_OP, depthWrite: false });
+
+  function axisLine(dir, len) {
+    const end = origin.clone().add(dir.clone().multiplyScalar(len));
+    const geo = new THREE.BufferGeometry().setFromPoints([origin, end]);
+    const line = new THREE.Line(geo, mat);
+    line.renderOrder = 0;   // behind strata
+    scene.add(line);
+    return end;
+  }
+  function arrowHead(end, dir, size = 0.09) {
+    const cap = new THREE.Mesh(
+      new THREE.ConeGeometry(size, size * 2.2, 8),
+      new THREE.MeshBasicMaterial({ color: AXIS_COL, transparent: true, opacity: AXIS_OP, depthWrite: false })
+    );
+    cap.position.copy(end);
+    const up = new THREE.Vector3(0, 1, 0);
+    cap.quaternion.setFromUnitVectors(up, dir.clone().normalize());
+    cap.renderOrder = 0;
+    scene.add(cap);
+  }
+  function axisLabel(text, end, offset) {
+    const s = makeTextSprite(text, { fontSize: 30, opacity: LABEL_OP, scale: 0.38, color: LABEL_COL, fontWeight: 600 });
+    s.position.copy(end).add(offset);
+    s.renderOrder = 0;
+    scene.add(s);
+  }
+
+  // x axis
+  const xEnd = axisLine(new THREE.Vector3(1, 0, 0), X_LEN);
+  arrowHead(xEnd, new THREE.Vector3(1, 0, 0));
+  axisLabel('x', xEnd, new THREE.Vector3(0.35, 0, 0));
+
+  // y axis (depth)
+  const yEnd = axisLine(new THREE.Vector3(0, 0, 1), Y_LEN);
+  arrowHead(yEnd, new THREE.Vector3(0, 0, 1));
+  axisLabel('y', yEnd, new THREE.Vector3(0, 0, 0.35));
+
+  // z axis (time, up)
+  const zEnd = axisLine(new THREE.Vector3(0, 1, 0), Z_LEN);
+  arrowHead(zEnd, new THREE.Vector3(0, 1, 0));
+  axisLabel('z', zEnd, new THREE.Vector3(0, 0.38, 0));
+  // 'time' annotation next to the z axis, about mid-stack
+  const zMid = origin.clone().add(new THREE.Vector3(0, Z_LEN * 0.5, 0));
+  const zAnnotation = makeTextSprite('time', { fontSize: 22, opacity: TIME_OP, scale: 0.34, color: LABEL_COL, fontWeight: 500 });
+  zAnnotation.position.copy(zMid).add(new THREE.Vector3(-0.5, 0, 0));
+  zAnnotation.renderOrder = 0;
+  scene.add(zAnnotation);
+})();
+
+// Build planes
+strata.forEach(s => {
+  const geo = new THREE.PlaneGeometry(PLANE_W, PLANE_D); geo.rotateX(-Math.PI / 2);
+  const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.11, side: THREE.DoubleSide, depthWrite: false });
+  const mesh = new THREE.Mesh(geo, mat); mesh.position.set(0, s.y, 0); mesh.renderOrder = 0; scene.add(mesh);
+
+  const hw = PLANE_W / 2, hd = PLANE_D / 2;
+  const bPts = [
+    new THREE.Vector3(-hw, s.y, -hd), new THREE.Vector3(hw, s.y, -hd),
+    new THREE.Vector3(hw, s.y, hd),   new THREE.Vector3(-hw, s.y, hd),
+    new THREE.Vector3(-hw, s.y, -hd),
+  ];
+  const bGeo = new THREE.BufferGeometry().setFromPoints(bPts);
+  const bMat = new THREE.LineBasicMaterial({ color: C.paperBorder, transparent: true, opacity: 0.4 });
+  const border = new THREE.Line(bGeo, bMat); scene.add(border);
+
+  const lbl = makeTextSprite(s.label, { fontSize: 26, opacity: 0.45, scale: 0.85 });
+  lbl.position.set(-hw + 1.0, s.y + 0.05, hd - 0.4);
+  lbl.renderOrder = 2; scene.add(lbl);
+
+  planeRecords.push({ slice: s, fillMesh: mesh, borderLine: border, labelSprite: lbl, nodeObjs: [], edgeObjs: [] });
+  targetPlaneOpacities.set(s.id, 0.11);
+});
+
+// Per-stratum node greys — widely-spread ramp so each layer reads as
+// a genuinely distinct material. Warm-greys (not pure neutral) so the
+// fog-cream ambient feels continuous across the stack.
+//   T1 = darkest graphite      (early, most-raw)
+//   T2 = dusk
+//   T3 = ashen (mid-grey)
+//   T4 = pale ivory
+//   T5 = near-paper fog cream  (final, polished)
+const STRATUM_FILL = [
+  0x4a443d,  // T1 — dark graphite-warm
+  0x857e71,  // T2 — dusk
+  0xb3aa99,  // T3 — ashen
+  0xd6cdb9,  // T4 — pale ivory
+  0xf5f0e8,  // T5 — fog cream (matches --paper-cream)
+];
+
+// Build nodes, group by stratum for fade control
+strata.forEach((s, sIdx) => {
+  const rec = planeRecords[sIdx];
+  s.nodes.forEach(n => {
+    const group = new THREE.Group();
+    const isFail = n.state === 'fail';
+    const stratumTone = STRATUM_FILL[sIdx] ?? 0xffffff;
+    const fillColor = isFail ? 0xfceee8 : stratumTone;
+    const outlineColor = isFail ? C.fail : (n.state === 'pass' ? C.pass : C.ink);
+    const fillMat = new THREE.MeshBasicMaterial({ color: fillColor, transparent: true, opacity: 0.88, side: THREE.DoubleSide, depthWrite: false });
+    const outlineMat = new THREE.LineBasicMaterial({ color: outlineColor, transparent: true, opacity: 0.9, depthWrite: false });
+
+    // Shrunk to live alongside the other T5 shapes (RECT_W = 1.8
+     // for the memo parallelogram): the eval aggregate was reading
+     // as a poster next to everything else.
+    const BIG_OCTA = 0.9;
+    const INSET_OCTA = 0.22;
+
+    let fillGeo, outlinePts;
+    switch (n.type) {
+      case 'circle':           fillGeo = circleFillGeo(NODE_R);                 outlinePts = circleOutlinePts(NODE_R); break;
+      case 'rectangle':        fillGeo = rectFillGeo(RECT_W, RECT_H);           outlinePts = rectOutlinePts(RECT_W, RECT_H); break;
+      case 'parallelogram':    fillGeo = paraFillGeo(RECT_W, RECT_H, PARA_SKEW); outlinePts = paraOutlinePts(RECT_W, RECT_H, PARA_SKEW); break;
+      case 'octagon':          fillGeo = octaFillGeo(OCTA_R);                   outlinePts = octaOutlinePts(OCTA_R); break;
+      case 'octagon-compound': fillGeo = octaFillGeo(BIG_OCTA);                 outlinePts = octaOutlinePts(BIG_OCTA); break;
+    }
+
+    const fillMesh = new THREE.Mesh(fillGeo, fillMat);
+    fillMesh.renderOrder = 3;
+    fillMesh.userData = { ...n, targetScale: 1, groupIndex: nodeGroups.length, sliceIdx: sIdx };
+    group.add(fillMesh);
+    nodeFillMeshes.push(fillMesh);
+
+    const outGeo = new THREE.BufferGeometry().setFromPoints(outlinePts);
+    const outline = new THREE.Line(outGeo, outlineMat);
+    outline.renderOrder = 4;
+    group.add(outline);
+
+    // Compound octagon: inset smaller octagon indicating an exception.
+    // For 'partial' state (some checks failed), a small red inset
+    // renders on the face. For 'pass' state, the aggregate is clean.
+    if (n.type === 'octagon-compound' && n.state !== 'pass') {
+      const insetFillMat = new THREE.MeshBasicMaterial({ color: 0xfceee8, transparent: true, opacity: 0.95, side: THREE.DoubleSide, depthWrite: false });
+      const insetOutMat  = new THREE.LineBasicMaterial({ color: C.fail, transparent: true, opacity: 0.95, depthWrite: false });
+      const insetFill = new THREE.Mesh(octaFillGeo(INSET_OCTA), insetFillMat);
+      insetFill.position.set(0.33, 0.06, -0.18);
+      insetFill.renderOrder = 5;
+      const insetOut = new THREE.Line(new THREE.BufferGeometry().setFromPoints(octaOutlinePts(INSET_OCTA)), insetOutMat);
+      insetOut.position.copy(insetFill.position);
+      insetOut.renderOrder = 6;
+      group.add(insetFill);
+      group.add(insetOut);
+
+      // Inline "passed/total" mono label at the centre of the aggregate —
+      // scaled to fit the shrunk octagon. Warm brown-black ink.
+      const statMat = makeTextSprite(`${EVAL_PASSED}/${EVAL_TOTAL}`, { fontSize: 32, opacity: 0.85, scale: 0.4, color: '#2a2520' });
+      statMat.position.set(-0.08, 0.12, 0);
+      statMat.renderOrder = 5;
+      group.add(statMat);
+    }
+
+    // ---- Label + always-on meta stat (tilted at-a-glance) ----
+    // Each node shows its label and a dimmer mono-stat directly beneath.
+    // The stat is the single most important number (duration, lines,
+    // eval ratio). Reading the stack tilted tells you 'what + how-much'
+    // without hover. Label/stat positions vary by node shape.
+    let labelZ, statZ;
+    if (n.type === 'octagon' || n.type === 'octagon-compound') {
+      labelZ = (n.type === 'octagon-compound' ? BIG_OCTA : OCTA_R) + 0.55;
+      statZ  = labelZ + 0.55;
+    } else if (n.type === 'circle') {
+      labelZ = NODE_R + 0.5;
+      statZ  = labelZ + 0.5;
+    } else {
+      // rectangle / parallelogram
+      labelZ = RECT_H / 2 + 0.48;
+      statZ  = labelZ + 0.45;
+    }
+    if (n.type !== 'octagon-compound') {
+      const lbl = makeTextSprite(n.label, { fontSize: 22, opacity: 0.65, scale: 0.58 });
+      lbl.position.set(0, 0.08, labelZ);
+      lbl.renderOrder = 5;
+      group.add(lbl);
+    }
+    if (n.type === 'octagon-compound') {
+      const lbl = makeTextSprite(n.label, { fontSize: 22, opacity: 0.72, scale: 0.58 });
+      lbl.position.set(0, 0.08, labelZ);
+      lbl.renderOrder = 5;
+      group.add(lbl);
+    }
+    if (n.stat) {
+      const statSprite = makeTextSprite(n.stat, { fontSize: 16, opacity: 0.5, scale: 0.44, color: '#6b6258' });
+      statSprite.position.set(0, 0.08, statZ);
+      statSprite.renderOrder = 5;
+      group.add(statSprite);
+    }
+
+    // ---- Satellite source dots — services only (circles with sources) ----
+    // Each external signal the service reads becomes a small dot orbiting
+    // the node perimeter. No tether lines — dots alone read cleanly as
+    // a halo of references; the visual association with the node is
+    // obvious from proximity alone.
+    if (Array.isArray(n.sources) && n.sources.length && n.type === 'circle') {
+      const ringR = NODE_R + 0.28;
+      const count = n.sources.length;
+      n.sources.forEach((src, i) => {
+        const a = -Math.PI / 2 + (i / count) * Math.PI * 2;
+        const dx = Math.cos(a) * ringR;
+        const dz = Math.sin(a) * ringR;
+        const bad = src.state === 'fail' || src.state === 'partial';
+        const dotColor = bad ? C.fail : 0x6b6258;
+        const dotMat = new THREE.MeshBasicMaterial({ color: dotColor, transparent: true, opacity: bad ? 0.88 : 0.68, depthWrite: false });
+        const dot = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 12), dotMat);
+        dot.position.set(dx, 0.1, dz);
+        dot.renderOrder = 4;
+        group.add(dot);
+      });
+    }
+
+    group.position.set(n.x, s.y + 0.04, n.z);
+    group.userData.materials = [fillMat, outlineMat];
+    group.userData.childrenWithOpacity = [fillMesh, outline, ...(group.children.filter(c => c.isSprite))];
+    scene.add(group);
+    nodeGroups.push(group);
+    rec.nodeObjs.push({ group, fillMat, outlineMat });
+  });
+});
+
+// within-slice edges
+strata.forEach((s, sIdx) => {
+  const rec = planeRecords[sIdx];
+  s.edges.forEach(e => {
+    const src = nodePositions[e.source], tgt = nodePositions[e.target];
+    if (!src || !tgt) return;
+    const pts = [new THREE.Vector3(src.x, s.y + 0.02, src.z), new THREE.Vector3(tgt.x, s.y + 0.02, tgt.z)];
+    const geo = new THREE.BufferGeometry().setFromPoints(pts);
+    const mat = e.type === 'dashed'
+      ? new THREE.LineDashedMaterial({ color: C.grey, transparent: true, opacity: 0.45, dashSize: 0.2, gapSize: 0.12, depthWrite: false })
+      : new THREE.LineBasicMaterial({ color: C.gold, transparent: true, opacity: 0.6, depthWrite: false });
+    const line = new THREE.Line(geo, mat);
+    if (e.type === 'dashed') line.computeLineDistances();
+    line.renderOrder = 2;
+    scene.add(line);
+    rec.edgeObjs.push({ mat, baseOpacity: mat.opacity });
+  });
+});
+
+// vertical edges — bound to both source + target strata, fade with whichever end is inactive
+const verticalEdgeRecords = [];
+verticalEdges.forEach(e => {
+  const src = nodePositions[e.sourceId], tgt = nodePositions[e.targetId];
+  if (!src || !tgt) return;
+  const pts = [new THREE.Vector3(src.x, src.y + 0.05, src.z), new THREE.Vector3(tgt.x, tgt.y - 0.05, tgt.z)];
+  const geo = new THREE.BufferGeometry().setFromPoints(pts);
+  const mat = e.type === 'dashed'
+    ? new THREE.LineDashedMaterial({ color: C.grey, transparent: true, opacity: 0.38, dashSize: 0.25, gapSize: 0.15, depthWrite: false })
+    : new THREE.LineBasicMaterial({ color: C.gold, transparent: true, opacity: 0.55, depthWrite: false });
+  const line = new THREE.Line(geo, mat);
+  if (e.type === 'dashed') line.computeLineDistances();
+  line.renderOrder = 2;
+  scene.add(line);
+  const dots = [];
+  if (e.type === 'solid') {
+    [pts[0], pts[pts.length - 1]].forEach(p => {
+      const dMat = new THREE.MeshBasicMaterial({ color: C.gold, transparent: true, opacity: 0.65, depthWrite: false });
+      const dot = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), dMat);
+      dot.position.copy(p); dot.renderOrder = 3; scene.add(dot);
+      dots.push(dMat);
+    });
+  }
+  verticalEdgeRecords.push({ s0: e.s0, s1: e.s1, mat, baseOpacity: mat.opacity, dotMats: dots });
+});
+
+// Target opacity state per node / edge
+const targetNodeOpacity = new Map();       // sliceIdx -> 0..1
+const targetEdgeOpacity = new Map();       // verticalEdge record -> 0..1
+function updateTargetOpacities() {
+  strata.forEach((s, i) => {
+    if (mode === 'flat') {
+      // Hard fade to 0 so the tunnel truly isolates the active stratum.
+      targetNodeOpacity.set(i, i === currentSlice ? 1 : 0.0);
+    } else {
+      targetNodeOpacity.set(i, 1);
+    }
+  });
+  verticalEdgeRecords.forEach((rec, i) => {
+    if (mode === 'flat') {
+      // In flat mode, hide vertical edges entirely — they'd be lines crossing
+      // an isolated plane with nowhere to land. The delta ledger tells the story.
+      targetEdgeOpacity.set(i, 0.0);
+    } else {
+      targetEdgeOpacity.set(i, 1);
+    }
+  });
+}
+updateTargetOpacities();
+
+// ---- Interaction: hover / tooltip ----
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2(-10, -10);
+let hoveredMesh = null;
+const tooltipEl = document.getElementById('sv-tooltip');
+const ttStratum  = tooltipEl.querySelector('.tt-stratum');
+const ttTypeText = tooltipEl.querySelector('.tt-type-text');
+const ttState    = tooltipEl.querySelector('.tt-state');
+const ttLabel    = tooltipEl.querySelector('.tt-label');
+const ttMeta     = tooltipEl.querySelector('.tt-meta');
+const ttDetail   = tooltipEl.querySelector('.tt-detail');
+const ttExtras   = tooltipEl.querySelector('.tt-extras');
+
+renderer.domElement.addEventListener('mousemove', ev => {
+  mouse.x =  (ev.clientX / window.innerWidth)  * 2 - 1;
+  mouse.y = -(ev.clientY / window.innerHeight) * 2 + 1;
+});
+renderer.domElement.addEventListener('mouseleave', () => {
+  mouse.set(-10, -10);
+  if (hoveredMesh) { hoveredMesh.userData.targetScale = 1; hoveredMesh = null; tooltipEl.classList.remove('visible'); }
+});
+
+// User drag cancels any in-flight camera lerp so OrbitControls takes
+// over immediately. Also tracks pointerdown position so we can
+// distinguish a click (open viewer) from a drag (orbit).
+let pdX = 0, pdY = 0, pdT = 0;
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  pdX = e.clientX; pdY = e.clientY; pdT = Date.now();
+  if (isFlying) {
+    isFlying = false;
+    targetCameraPos.copy(camera.position);
+    targetLookAt.copy(controls.target);
+  }
+});
+renderer.domElement.addEventListener('pointerup', (e) => {
+  const moved = Math.hypot(e.clientX - pdX, e.clientY - pdY);
+  const quick = (Date.now() - pdT) < 400;
+  if (moved > 5 || !quick) return;   // it was a drag, not a click
+
+  const mx = (e.clientX / window.innerWidth) * 2 - 1;
+  const my = -(e.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera({ x: mx, y: my }, camera);
+  const hits = raycaster.intersectObjects(nodeFillMeshes, false);
+  if (hits.length === 0) return;
+  const d = hits[0].object.userData;
+  // In flat mode, only open nodes on the active stratum (others hidden).
+  if (mode === 'flat' && d.sliceIdx !== currentSlice) return;
+  openViewer(d);
+});
+
+function updateHover() {
+  // Suppress hover tooltip while the viewer card is open
+  if (nv.classList.contains('open')) {
+    if (hoveredMesh) { hoveredMesh.userData.targetScale = 1; hoveredMesh = null; }
+    tooltipEl.classList.remove('visible');
+    return;
+  }
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObjects(nodeFillMeshes, false);
+  if (hits.length > 0) {
+    const mesh = hits[0].object;
+    // don't hover faded nodes in flat mode
+    if (mode === 'flat' && mesh.userData.sliceIdx !== currentSlice) {
+      if (hoveredMesh) { hoveredMesh.userData.targetScale = 1; hoveredMesh = null; }
+      tooltipEl.classList.remove('visible');
+      renderer.domElement.style.cursor = '';
+      return;
+    }
+    if (hoveredMesh !== mesh) {
+      if (hoveredMesh) hoveredMesh.userData.targetScale = 1;
+      hoveredMesh = mesh;
+      hoveredMesh.userData.targetScale = HOVER_SCALE;
+    }
+    const d = mesh.userData;
+    ttStratum.textContent  = strata[d.sliceIdx] ? strata[d.sliceIdx].short : '';
+    ttTypeText.textContent = TYPE_LABELS[d.type] || d.type;
+    ttState.textContent = '';
+    ttState.className   = 'tt-state';
+    if (d.state === 'pass')      { ttState.textContent = '\u00b7 pass'; ttState.classList.add('pass'); }
+    else if (d.state === 'fail') { ttState.textContent = '\u00b7 fail'; ttState.classList.add('fail'); }
+    else if (d.state)            { ttState.textContent = `\u00b7 ${d.state}`; }
+    ttLabel.textContent = d.label;
+    ttMeta.textContent  = d.meta || d.state || '';
+    ttDetail.innerHTML  = d.detail || (d.richBody ? (d.richBody === 'memo' ? 'Delivered memo body \u2014 click to read inline.' : 'Full check-list inside \u2014 click to open.') : '');
+    ttDetail.style.display = (d.detail || d.richBody) ? 'block' : 'none';
+    ttExtras.innerHTML = d.richBody ? '' : renderNodeExtrasHTML(d);
+
+    const wp = new THREE.Vector3(); mesh.getWorldPosition(wp); wp.project(camera);
+    const sx = (wp.x * 0.5 + 0.5) * window.innerWidth;
+    const sy = (-wp.y * 0.5 + 0.5) * window.innerHeight;
+    // Measure once the content's in, then clamp position to viewport.
+    const TT_W = tooltipEl.offsetWidth || 360;
+    const TT_H = tooltipEl.offsetHeight || 200;
+    tooltipEl.style.left = Math.min(sx + 14, window.innerWidth - TT_W - 16) + 'px';
+    tooltipEl.style.top  = Math.min(Math.max(sy - 10, 10), window.innerHeight - TT_H - 16) + 'px';
+    tooltipEl.classList.add('visible');
+    renderer.domElement.style.cursor = 'pointer';
+  } else {
+    if (hoveredMesh) { hoveredMesh.userData.targetScale = 1; hoveredMesh = null; }
+    tooltipEl.classList.remove('visible');
+    renderer.domElement.style.cursor = (mode === 'tilted') ? 'grab' : '';
+  }
+}
+
+// ---- Animation ----
+const clock = new THREE.Clock();
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+function animate() {
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+
+  if (isFlying) {
+    camera.position.lerp(targetCameraPos, LERP_SPEED);
+    controls.target.lerp(targetLookAt, LERP_SPEED);
+    if (camera.position.distanceTo(targetCameraPos) < 0.03 && controls.target.distanceTo(targetLookAt) < 0.02) {
+      camera.position.copy(targetCameraPos);
+      controls.target.copy(targetLookAt);
+      isFlying = false;
+    }
+    updateTiltCoords();   // live readout while the camera is in motion
+  }
+  controls.update();
+
+  // Plane visibility + gentle breathing.
+  // Flat: only the active plane (+ border + label) is visible.
+  // Tilted: all planes softly visible, ACTIVE brighter so nav clicks
+  // give visible feedback (plane lights up, border sharpens, label
+  // strengthens). Inactives stay muted. This is how clicking T1 vs T5
+  // reads without a camera move.
+  planeRecords.forEach(rec => {
+    const isActive = (rec.slice.id === strata[currentSlice].id);
+    if (mode === 'flat') {
+      rec.fillMesh.visible    = isActive;
+      rec.borderLine.visible  = isActive;
+      rec.labelSprite.visible = isActive;
+      if (isActive) {
+        rec.fillMesh.material.opacity   = 0.18 + 0.03 * Math.sin(t * 0.4);
+        rec.borderLine.material.opacity = 0.7;
+        rec.labelSprite.material.opacity = 0.6;
+      }
+    } else {
+      rec.fillMesh.visible    = true;
+      rec.borderLine.visible  = true;
+      rec.labelSprite.visible = true;
+      const planeTarget  = isActive ? 0.22 : 0.08;
+      const borderTarget = isActive ? 0.75 : 0.32;
+      const labelTarget  = isActive ? 0.82 : 0.38;
+      rec.fillMesh.material.opacity   = lerp(rec.fillMesh.material.opacity,   planeTarget + 0.018 * Math.sin(t * 0.4 + rec.slice.id * 0.7), OPACITY_LERP);
+      rec.borderLine.material.opacity = lerp(rec.borderLine.material.opacity, borderTarget, OPACITY_LERP);
+      rec.labelSprite.material.opacity = lerp(rec.labelSprite.material.opacity, labelTarget, OPACITY_LERP);
+    }
+  });
+
+  // Node visibility + hover + active-layer emphasis. In tilted mode
+  // the active stratum pops via scale (1.15×) and a tiny Y raise
+  // (~0.25 units) since the camera barely moves. Flat mode hides
+  // non-active strata entirely (tunnel).
+  nodeFillMeshes.forEach(fm => {
+    const sIdx = fm.userData.sliceIdx;
+    const grp  = nodeGroups[fm.userData.groupIndex];
+    const shouldShow = (mode === 'tilted') ? true : (sIdx === currentSlice);
+    grp.visible = shouldShow;
+    if (shouldShow) {
+      const isActive = (mode === 'tilted' && sIdx === currentSlice);
+      const hoverScale = fm.userData.targetScale || 1;
+      const activeScale = isActive ? 1.15 : 1.0;
+      const ts = hoverScale * activeScale;
+      const ns = grp.scale.x + (ts - grp.scale.x) * SCALE_LERP;
+      grp.scale.set(ns, ns, ns);
+
+      // Subtle lift for active stratum nodes in tilted mode.
+      // baseY stored once; animated toward base + raise.
+      if (fm.userData.baseY === undefined) fm.userData.baseY = grp.position.y;
+      const raise = isActive ? 0.25 : 0;
+      const targetY = fm.userData.baseY + raise;
+      grp.position.y = lerp(grp.position.y, targetY, RAISE_LERP);
+    }
+  });
+
+  // Vertical edges — hide in flat mode (no destination to land on when
+  // neighbouring strata are gone); show in tilted.
+  verticalEdgeRecords.forEach((rec) => {
+    const showEdge = (mode === 'tilted');
+    rec.mat.visible = showEdge;
+    rec.dotMats.forEach(dm => { dm.visible = showEdge; });
+  });
+
+  updateHover();
+  renderer.render(scene, camera);
+}
+
+// ---- Resize ----
+window.addEventListener('resize', () => {
+  const w = window.innerWidth, h = window.innerHeight;
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+});
+
+// ---- Keyboard shortcuts ----
+//   Up / Down       : advance / retreat the active stratum
+//   Left / Right    : toggle flat <-> tilted mode (or walk modal nodes
+//                     when the viewer is open)
+//   f               : toggle flat <-> tilted (legacy)
+//   1 .. 5          : jump to stratum by index
+window.addEventListener('keydown', (e) => {
+  const snap = (mode === 'flat');
+  const modalOpen = nv.classList.contains('open');
+  if (e.key === 'ArrowUp')   {
+    if (modalOpen) openViewerByIndex(nvIndex + 1);
+    else setSlice(currentSlice + 1, { snap });
+    e.preventDefault();
+  }
+  if (e.key === 'ArrowDown') {
+    if (modalOpen) openViewerByIndex(nvIndex - 1);
+    else setSlice(currentSlice - 1, { snap });
+    e.preventDefault();
+  }
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+    if (modalOpen) {
+      openViewerByIndex(e.key === 'ArrowLeft' ? nvIndex - 1 : nvIndex + 1);
+    } else {
+      setMode(mode === 'flat' ? 'tilted' : 'flat');
+    }
+    e.preventDefault();
+  }
+  if (e.key === 'f' || e.key === 'F') { setMode(mode === 'flat' ? 'tilted' : 'flat'); }
+  if (e.key >= '1' && e.key <= '5') {
+    const idx = parseInt(e.key, 10) - 1;
+    if (idx < strata.length) {
+      if (modalOpen) openViewerForStratum(idx);
+      else setSlice(idx, { snap });
+    }
+  }
+});
+
+// ---- Debug hooks ----
+window.__strata = { camera, controls, scene, setSlice, setMode, getMode: () => mode, getCurrentSlice: () => currentSlice, openViewer, openViewerByIndex, openViewerForStratum, getNvIndex: () => nvIndex };
+
+// ---- Init ----
+// Boot in FLAT mode landing on T5. Flat is the readable-first mode
+// now: the reader enters on the memo + eval (the 'answer' slide),
+// and can rewind through T4 \u2192 T1 via the left rail, or toggle
+// to tilt for the 3D overview. Starting on T5 preserves the
+// 'enter-on-verdict' convention from the tilt-default era.
+mode = 'tilted';                     // seed so setMode('flat') transitions
+currentSlice = strata.length - 1;    // T5
+buildFlatSlides();                   // slides must exist before setMode touches them
+setMode('flat');                     // transitions, collapses top panel, sets slice
+animate();
+</script>
+
+</body>
+</html>

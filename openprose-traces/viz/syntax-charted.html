@@ -1,0 +1,1452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Run Traces · Tufte · Kecal · Teal · Charted</title>
+
+<!-- ============================================================
+     PROSE · SYNTAX  ·  TUFTE · KECAL · TEAL · CHARTED FORK
+     (code only, data from the slot)
+     ============================================================
+     First fork    2026-05-21 · d3-sankey replaces hand-rolled .run-diagram SVGs
+     Wide pass     2026-05-21 · every remaining hand-rolled SVG now data-driven
+                   through a real chart-library primitive. Eight forms:
+                     1. d3.line + scales        → fleet & lede sparklines
+                     2. d3-force                → syntax-float hero glyph
+                     3. d3 small-multiples      → per-program score trend grid
+                     4. d3-sankey               → one run topology diagram per run
+                     5. d3 radial radar         → per-run confidence shape
+                     6. d3 heatmap              → eval × run cross-section
+                     7. d3 horizontal bars      → per-scout delta contribution
+                     8. drawShape()/W auto-gen  → glossary legends, tip mini-bars
+     Library       D3 v7 + d3-sankey v0.12
+
+     DATA          Ships empty. Every run, program, score, tooltip and
+                   note comes from window.TRACE_DATA, loaded from
+                   ../data/syntax-charted.js; the shape is documented in
+                   ../data/syntax-charted.schema.md. Run cards are
+                   generated from RUNS.
+
+     Brand chrome preserved: Kecal headlines, IBM Plex Mono body,
+     palette tokens, pretext, row-end-stable expand, hover-tip
+     wiring (reading the same drawShape() vocabulary).
+     ============================================================ -->
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+@font-face { font-family: 'Kecal'; font-weight: 200; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extralight-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 300; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Light-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 400; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Regular-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 500; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Medium-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 600; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Semibold-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 700; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Bold-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 800; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extrabold-web.woff2') format('woff2'); }
+
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&display=swap');
+
+:root {
+  --paper:       #f5f0e8;
+  --paper-dk:    #e8e0d0;
+  --paper-lt:    #fbf7ef;
+  --paper-cream: #fbf7ef;
+  --paper-warm:  #f0e8d8;
+  --ink:         #2a2520;
+  --ink-2:       rgba(42,37,32,0.78);
+  --ink-3:       rgba(42,37,32,0.55);
+  --ink-4:       rgba(42,37,32,0.32);
+  --ink-5:       rgba(42,37,32,0.18);
+
+  --teal:        #3a7a6a;
+  --teal-deep:   #2e6456;
+  --teal-soft:   #4a8a7a;
+  --teal-tint:   rgba(58,122,106,0.14);
+  --teal-faint:  rgba(58,122,106,0.06);
+
+  --amber:       #c49a5c;
+  --amber-deep:  #a87f44;
+  --amber-soft:  #d4aa6c;
+  --amber-tint:  rgba(196,154,92,0.18);
+
+  --red:         #c0392b;
+  --red-muted:   #d4604f;
+  --red-deep:    #8e2b20;
+  --red-tint:    rgba(192,57,43,0.12);
+  --red-faint:   rgba(192,57,43,0.05);
+
+  --rule:        rgba(42,37,32,0.14);
+  --rule-mid:    rgba(42,37,32,0.06);
+
+  --serif:  'Kecal', system-ui, -apple-system, sans-serif;
+  --sans:   'Kecal', system-ui, -apple-system, sans-serif;
+  --mono:   'IBM Plex Mono', 'JetBrains Mono', 'SF Mono', monospace;
+  --accent: 'Kecal', system-ui, -apple-system, sans-serif;
+}
+
+html { font-size: 17px; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 0.96rem;
+  line-height: 1.7;
+  letter-spacing: 0;
+  -webkit-font-smoothing: antialiased;
+  padding: 4rem clamp(2rem, 4vw, 4rem) 4rem;
+  max-width: 1480px;
+  margin: 0 auto;
+}
+
+em, h1 em, .pretext em, .run-note em, .glossary-lede em, .colophon em, .cross-lede em {
+  font-family: 'Kecal', system-ui, sans-serif;
+  font-style: italic;
+  font-weight: 800;
+  font-size: 1em;
+  letter-spacing: 0;
+  color: var(--teal);
+}
+
+.kicker {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin-bottom: 0.55rem;
+  font-weight: 500;
+}
+h1 {
+  font-family: 'Kecal', system-ui, sans-serif;
+  font-size: clamp(2.4rem, 4.5vw, 3.6rem);
+  font-weight: 400;
+  letter-spacing: -0.022em;
+  line-height: 1.06;
+  margin-bottom: 0.7rem;
+  color: var(--ink);
+}
+h1 em { color: var(--teal); }
+.subtitle {
+  font-family: var(--mono);
+  font-size: 1.05rem;
+  color: var(--ink-2);
+  margin-bottom: 1.6rem;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 1.1rem;
+  max-width: 80ch;
+}
+.fork-banner {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--amber-deep);
+  margin: 0 0 1.8rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--rule);
+  background: var(--paper-warm);
+}
+.fork-banner b { color: var(--ink); font-weight: 600; }
+.fork-banner .lib-pill {
+  display: inline-block;
+  padding: 1px 6px;
+  margin: 0 2px;
+  background: var(--paper-cream);
+  border: 1px solid var(--rule);
+  color: var(--teal);
+}
+
+.pretext {
+  font-family: var(--mono);
+  font-size: 1.05rem;
+  line-height: 1.78;
+  color: var(--ink);
+  margin-bottom: 2.4rem;
+}
+.pretext::first-line { font-variant: small-caps; letter-spacing: 0.05em; }
+.pretext strong { color: var(--ink); font-weight: 500; }
+.pretext .fig { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 0.94em; color: var(--ink); }
+.pretext .syntax-float {
+  float: left;
+  shape-outside: ellipse(48% 48% at 50% 50%);
+  width: 300px; height: 280px;
+  margin: 4pt 28pt 6pt -8pt;
+  position: relative;
+}
+.pretext .syntax-float svg { width: 100%; height: 100%; display: block; }
+.pretext .syntax-float .force-caption {
+  position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%);
+  font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--teal); pointer-events: none;
+}
+@media (max-width: 880px) {
+  .pretext .syntax-float { float: none; width: 100%; height: 280px; margin: 0 0 1rem 0; }
+}
+
+.spark-inline {
+  display: inline-block;
+  width: 52px; height: 14px;
+  vertical-align: -1px;
+  margin: 0 2px;
+}
+
+.chip {
+  display: inline-block;
+  width: 14pt;
+  height: 14pt;
+  vertical-align: -2pt;
+  margin: 0 1pt;
+}
+
+.section-head {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 0.5rem 0 0.6rem;
+  font-weight: 500;
+}
+.section-head .count { font-family: var(--mono); color: var(--ink-4); margin-left: 0.5rem; }
+.section-head .form-tag { color: var(--teal); margin-left: 0.5rem; }
+.section-head .form-tag::before { content: '· '; color: var(--ink-4); }
+
+/* Small-multiples grid (replaces fleet-strip) */
+.fleet-multiples {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 1rem 0 1.1rem;
+  margin: 0 0 2.4rem;
+}
+.fleet-multiples .fm-panel {
+  padding: 0 1.1rem;
+  border-right: 1px dotted var(--rule-mid);
+  display: flex; flex-direction: column; gap: 0.35rem;
+}
+.fleet-multiples .fm-panel:last-child { border-right: none; }
+.fleet-multiples .fm-name {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--teal);
+  font-weight: 500;
+}
+.fleet-multiples .fm-svg { width: 100%; height: 96px; display: block; }
+.fleet-multiples .fm-foot {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-family: var(--mono); font-size: 0.78rem; color: var(--ink-2); font-variant-numeric: tabular-nums;
+}
+.fleet-multiples .fm-foot .fm-score { color: var(--ink); font-size: 0.95rem; }
+.fleet-multiples .fm-foot .fm-delta { color: var(--teal); }
+.fleet-multiples .fm-foot .fm-delta.down { color: var(--red); }
+
+/* Run grid + per-card sankey + radar */
+.run-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.6rem 2rem;
+  margin: 1.2rem 0 2.2rem 0;
+}
+
+.run-card {
+  padding: 1.4rem 1.6rem;
+  background: var(--paper);
+  border-top: 1px solid var(--ink);
+  border-left: 1px solid var(--rule-mid);
+  position: relative;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.run-card:hover { background: var(--paper-lt); }
+.run-card.open  { background: var(--paper-lt); }
+
+.run-meta { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.45rem; gap: 1rem; }
+
+.run-name {
+  font-family: 'Kecal', sans-serif;
+  font-size: 1.55rem;
+  font-weight: 800;
+  font-style: italic;
+  color: var(--ink);
+  letter-spacing: -0.012em;
+}
+
+.run-score {
+  font-family: var(--mono);
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: var(--teal);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.run-score .pct { font-size: 0.62rem; color: var(--ink-4); margin-left: 4px; }
+
+.run-id { font-family: var(--mono); font-size: 0.72rem; color: var(--amber-deep); margin-bottom: 0.85rem; }
+.run-topology { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 0.95rem; font-weight: 500; }
+.run-topology .lib-tag { color: var(--teal); margin-left: 0.5rem; }
+.run-topology .lib-tag::before { content: '· '; color: var(--ink-4); }
+
+.run-diagram {
+  width: 100%;
+  min-height: 320px;
+  display: block;
+  position: relative;
+  overflow: visible;
+}
+.run-diagram svg { width: 100%; height: 320px; display: block; overflow: visible; }
+.run-diagram .sankey-link { transition: opacity 0.15s ease; }
+.run-diagram .sankey-link:hover { opacity: 1 !important; }
+.run-diagram .node-shape { cursor: pointer; transition: filter 0.12s ease; }
+.run-diagram .node-shape:hover { filter: brightness(1.12) drop-shadow(0 0 2px rgba(58,122,106,0.55)); }
+/* chart-label legibility pass.
+   Every label that sits over a chart now uses paint-order: stroke so a
+   paper-cream outline rings each glyph and lifts it off the underlying
+   marks.  Sizes bumped one step; weights pushed to 600 so the labels
+   read at small chart scales without an HD display. */
+.run-diagram .nl-label { font-family: 'IBM Plex Mono', monospace; font-size: 9pt; fill: var(--ink-2); font-weight: 600; pointer-events: none;
+  paint-order: stroke; stroke: var(--paper-lt); stroke-width: 2.5px; stroke-linejoin: round; }
+.run-diagram .nl-label.weak { fill: var(--amber-deep); }
+.run-diagram .nl-label.fail { fill: var(--red); }
+.run-diagram .nl-num   { font-family: 'IBM Plex Mono', monospace; font-size: 9.5pt; font-variant-numeric: tabular-nums; font-weight: 600; pointer-events: none;
+  paint-order: stroke; stroke: var(--paper-lt); stroke-width: 2.5px; stroke-linejoin: round; }
+.run-diagram .nl-note  { font-family: 'IBM Plex Mono', monospace; font-size: 7.5pt; letter-spacing: 0.06em; fill: var(--teal-deep); font-weight: 600; pointer-events: none;
+  paint-order: stroke; stroke: var(--paper-lt); stroke-width: 2.25px; stroke-linejoin: round; }
+.run-diagram .nl-note.weak { fill: var(--amber-deep); }
+.run-diagram .nl-note.fail { fill: var(--red); }
+.run-diagram .annot-loop circle { fill: none; stroke: var(--amber); stroke-width: 1.2; }
+.run-diagram .annot-loop .arrow { fill: var(--amber); }
+.run-diagram .annot-loop text { font-family: 'IBM Plex Mono', monospace; font-size: 7pt; letter-spacing: 0.06em; fill: var(--amber-deep); }
+.run-diagram .terminal-num { font-family: 'IBM Plex Mono', monospace; font-size: 9pt; font-variant-numeric: tabular-nums; font-weight: 500; pointer-events: none; }
+
+.run-readout {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 1.2rem;
+  margin-top: 1.1rem;
+  padding-top: 0.9rem;
+  border-top: 1px dashed var(--rule);
+  align-items: start;
+}
+.run-readout .run-radar { width: 200px; }
+.run-readout .run-radar svg { width: 200px; height: 200px; display: block; overflow: visible; }
+.run-readout .run-radar .rr-axis { stroke: var(--rule); stroke-width: 0.6; }
+.run-readout .run-radar .rr-grid { fill: none; stroke: var(--rule); stroke-width: 0.5; }
+.run-readout .run-radar .rr-grid.pass { stroke: var(--teal-soft); stroke-width: 0.9; stroke-dasharray: 2.5,2; }
+.run-readout .run-radar .rr-poly { fill: var(--teal-tint); stroke: var(--teal-deep); stroke-width: 1.2; stroke-linejoin: round; }
+.run-readout .run-radar .rr-vertex { fill: var(--teal-deep); }
+.run-readout .run-radar .rr-vertex.weak { fill: var(--amber); }
+.run-readout .run-radar .rr-vertex.strong { fill: var(--teal-deep); stroke: var(--ink); stroke-width: 0.8; }
+/* radar labels bumped + outlined. */
+.run-readout .run-radar .rr-axis-label { font-family: 'IBM Plex Mono', monospace; font-size: 9pt; fill: var(--ink-2); font-weight: 600;
+  paint-order: stroke; stroke: var(--paper-lt); stroke-width: 2.5px; stroke-linejoin: round; }
+.run-readout .run-radar .rr-axis-label.hi { font-weight: 700; fill: var(--ink); }
+.run-readout .run-radar .rr-tick-label { font-family: 'IBM Plex Mono', monospace; font-size: 7pt; fill: var(--ink-3); font-weight: 500;
+  paint-order: stroke; stroke: var(--paper-lt); stroke-width: 2px; stroke-linejoin: round; }
+.run-readout .run-radar .rr-score { font-family: 'IBM Plex Mono', monospace; font-size: 8.5pt; font-variant-numeric: tabular-nums; fill: var(--ink); font-weight: 600;
+  paint-order: stroke; stroke: var(--paper-lt); stroke-width: 2.5px; stroke-linejoin: round; }
+.run-readout .run-radar .rr-caption { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--teal); display: block; margin-top: 0.3rem; }
+
+.run-note {
+  font-family: var(--mono);
+  font-size: 0.92rem;
+  line-height: 1.62;
+  color: var(--ink-2);
+}
+
+@media (max-width: 720px) {
+  .run-readout { grid-template-columns: 1fr; }
+  .run-readout .run-radar { margin: 0 auto; }
+}
+
+.run-detail {
+  display: none;
+  padding: 1.2rem 1.4rem 1.4rem;
+  background: var(--paper-warm);
+  border-top: 1px solid var(--rule);
+  margin-top: -1px;
+  grid-column: 1 / -1;
+}
+.run-detail.open { display: block; }
+.run-detail .detail-head {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin-bottom: 0.7rem;
+  font-weight: 500;
+}
+.run-detail .detail-head .form-tag { color: var(--ink-3); margin-left: 0.4rem; }
+.scout-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(190pt, 1fr)); gap: 0.7rem; }
+.scout-card {
+  background: var(--paper-cream);
+  border: 1px solid var(--rule);
+  padding: 0.7rem 0.8rem 0.85rem;
+  font-family: var(--mono);
+  font-size: 0.86rem;
+  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+}
+.scout-card .scout-name { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 0.18rem; font-weight: 500; }
+.scout-card .scout-headline { font-family: 'Kecal', sans-serif; font-style: italic; font-weight: 800; color: var(--ink); font-size: 0.98rem; line-height: 1.25; }
+.scout-card .scout-num { font-family: var(--mono); font-size: 0.84rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.scout-card .scout-bar { margin-top: 0.45rem; width: 100%; height: 18px; display: block; }
+.scout-card.weak { border-color: var(--red-muted); }
+.scout-card.weak .scout-num { color: var(--red); }
+.scout-card.strong .scout-num { color: var(--teal); }
+.scout-card .sb-zero { stroke: var(--ink-4); stroke-width: 0.5; }
+.scout-card .sb-bar-pos { fill: var(--teal-deep); }
+.scout-card .sb-bar-neg { fill: var(--red); }
+.scout-card .sb-bar-zero { fill: var(--amber-deep); }
+/* scout-bar labels bumped + outlined. */
+.scout-card .sb-label { font-family: 'IBM Plex Mono', monospace; font-size: 8pt; font-variant-numeric: tabular-nums; fill: var(--ink); font-weight: 600;
+  paint-order: stroke; stroke: var(--paper-cream); stroke-width: 2.25px; stroke-linejoin: round; }
+
+/* Eval × Run cross-section (heatmap) */
+.cross-section {
+  margin: 0 0 2.4rem 0;
+}
+.cross-section .cross-lede {
+  font-family: var(--mono); font-size: 0.96rem; line-height: 1.7;
+  color: var(--ink-2); max-width: 80ch; margin: 0.5rem 0 1.1rem 0;
+}
+.cross-section .cross-grid { display: block; width: 100%; }
+.cross-section .cross-grid svg { display: block; margin: 0 auto; overflow: visible; }
+.cross-section .cell-rect { stroke: var(--paper); stroke-width: 1.2; }
+/* heatmap labels: cell numerals get a tight
+   outline so they read on any cell fill; axis / row / col / mean
+   labels bumped one step + weight 600 + outlined.  Letter-spacing
+   on the column-name reduced (0 from 0.12em) to prevent overlap when
+   the column count is dense. */
+.cross-section .cell-num { font-family: 'IBM Plex Mono', monospace; font-size: 11pt; font-variant-numeric: tabular-nums; font-weight: 600; pointer-events: none;
+  paint-order: stroke; stroke: var(--paper-lt); stroke-width: 2.4px; stroke-linejoin: round; }
+.cross-section .axis-label { font-family: 'IBM Plex Mono', monospace; font-size: 10pt; fill: var(--ink-2); font-weight: 600;
+  paint-order: stroke; stroke: var(--paper-lt); stroke-width: 2.5px; stroke-linejoin: round; }
+.cross-section .row-label { font-family: 'Kecal', sans-serif; font-size: 11pt; font-style: italic; font-weight: 800; fill: var(--ink);
+  paint-order: stroke; stroke: var(--paper-lt); stroke-width: 2.5px; stroke-linejoin: round; }
+.cross-section .col-label { font-family: 'IBM Plex Mono', monospace; font-size: 10pt; letter-spacing: 0.06em; text-transform: uppercase; fill: var(--ink-2); font-weight: 700;
+  paint-order: stroke; stroke: var(--paper-lt); stroke-width: 2.5px; stroke-linejoin: round; }
+.cross-section .col-name  { font-family: 'IBM Plex Mono', monospace; font-size: 7.5pt; fill: var(--ink-3); font-weight: 500;
+  paint-order: stroke; stroke: var(--paper-lt); stroke-width: 2px; stroke-linejoin: round; }
+.cross-section .row-mean  { font-family: 'IBM Plex Mono', monospace; font-size: 9pt; font-variant-numeric: tabular-nums; fill: var(--ink-2); font-weight: 600;
+  paint-order: stroke; stroke: var(--paper-lt); stroke-width: 2.25px; stroke-linejoin: round; }
+.cross-section .col-mean  { font-family: 'IBM Plex Mono', monospace; font-size: 9pt; font-variant-numeric: tabular-nums; fill: var(--ink-2); font-weight: 600;
+  paint-order: stroke; stroke: var(--paper-lt); stroke-width: 2.25px; stroke-linejoin: round; }
+.cross-section .scale-tick { font-family: 'IBM Plex Mono', monospace; font-size: 7.5pt; fill: var(--ink-3); font-weight: 500;
+  paint-order: stroke; stroke: var(--paper-lt); stroke-width: 2px; stroke-linejoin: round; }
+
+.tip {
+  position: fixed;
+  pointer-events: none;
+  background: var(--paper-cream);
+  color: var(--ink);
+  border: 1px solid var(--ink);
+  box-shadow: 0 4px 18px rgba(42,37,32,0.10);
+  padding: 0.6rem 0.8rem;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  opacity: 0;
+  transition: opacity 0.1s ease;
+  z-index: 100;
+  max-width: 260pt;
+  transform: translate(-50%, -100%);
+  margin-top: -8pt;
+}
+.tip.on { opacity: 1; }
+.tip .tip-title { font-family: 'Kecal', sans-serif; font-style: italic; font-weight: 800; color: var(--teal); margin-bottom: 0.3rem; font-size: 0.98rem; }
+.tip .tip-row { display: flex; justify-content: space-between; gap: 0.8rem; font-family: var(--mono); font-size: 0.74rem; font-variant-numeric: tabular-nums; }
+.tip .tip-row span:first-child { color: var(--ink-3); }
+.tip .tip-mini { margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px solid var(--rule); }
+.tip .tip-mini svg { display: block; width: 100%; }
+/* tip-mini labels bumped to match the main chart spec. */
+.tip .tip-mini .tm-label { font-family: 'IBM Plex Mono', monospace; font-size: 7.5pt; fill: var(--ink-2); font-weight: 600;
+  paint-order: stroke; stroke: var(--paper-cream); stroke-width: 2px; stroke-linejoin: round; }
+.tip .tip-mini .tm-track { fill: var(--paper-warm); stroke: var(--rule); stroke-width: 0.5; }
+.tip .tip-mini .tm-fill  { fill: var(--amber); }
+.tip .tip-mini .tm-fill.pass { fill: var(--teal); }
+.tip .tip-mini .tm-fill.weak { fill: var(--red); }
+.tip .tip-mini .tm-val { font-family: 'IBM Plex Mono', monospace; font-size: 8.5pt; font-variant-numeric: tabular-nums; fill: var(--ink); font-weight: 600;
+  paint-order: stroke; stroke: var(--paper-cream); stroke-width: 2px; stroke-linejoin: round; }
+.tip .tip-mini .tm-hi  { fill: rgba(58,122,106,0.10); }
+
+.glossary { margin: 3rem 0 0 0; padding: 1.8rem 0 0 0; border-top: 1px solid var(--rule); }
+.glossary-lede { font-family: var(--mono); font-size: 0.96rem; line-height: 1.7; color: var(--ink-2); max-width: 80ch; margin: 0.5rem 0 1.2rem 0; }
+
+.gloss-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.6rem; margin-top: 1rem; }
+.gloss-block { padding: 1rem 1.1rem; background: var(--paper-warm); border-top: 1px solid var(--ink); }
+.gloss-block .gloss-head { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--teal); margin-bottom: 0.7rem; font-weight: 500; }
+.gloss-row { display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.55rem; font-family: var(--mono); font-size: 0.88rem; line-height: 1.45; }
+.gloss-shape { width: 16pt; height: 16pt; flex-shrink: 0; }
+.gloss-row .gloss-name { font-family: 'Kecal', sans-serif; font-style: italic; font-weight: 800; color: var(--ink); width: 80pt; font-size: 0.98rem; }
+.gloss-row .gloss-desc { color: var(--ink-2); font-size: 0.85rem; line-height: 1.45; }
+.gloss-line-row { display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.55rem; }
+.gloss-line-row svg { flex-shrink: 0; }
+.gloss-line-row .gloss-wt { font-family: var(--mono); font-size: 0.78rem; color: var(--ink); width: 40pt; font-variant-numeric: tabular-nums; }
+.gloss-block .gloss-foot {
+  font-family: var(--mono); font-size: 0.68rem; color: var(--ink-3);
+  margin-top: 0.6rem; padding-top: 0.55rem; border-top: 1px dashed var(--rule-mid);
+}
+.gloss-block .gloss-foot code { font-family: var(--mono); color: var(--teal); }
+
+.colophon { margin-top: 3rem; padding-top: 0.9rem; border-top: 1px solid var(--ink); font-family: var(--mono); font-size: 0.76rem; color: var(--ink-3); line-height: 1.6; }
+.colophon code { font-family: var(--mono); font-size: 0.76rem; color: var(--ink); background: var(--paper-warm); padding: 1px 4px; }
+
+@media (max-width: 1080px) {
+  .run-grid { grid-template-columns: 1fr; }
+  .gloss-grid { grid-template-columns: 1fr; }
+  .fleet-multiples { grid-template-columns: repeat(2, 1fr); }
+  .fleet-multiples .fm-panel:nth-child(2) { border-right: none; }
+}
+</style>
+</head>
+<body>
+
+<p class="kicker" id="page-kicker">OpenProse · Run Traces</p>
+<h1>The diagram <em>is</em> the run.</h1>
+<p class="subtitle">Topology encodes causality. Line weight encodes intensity. Node type encodes role. <span id="subtitle-counts">Orchestrators, scouts, evaluation gates</span> — drawn at the dispatch level, then drawn again at the verdict.</p>
+
+<p class="fork-banner"><b>Charted.</b> Every diagram and legend on this page is produced by a real chart-library primitive, not a hand-placed coordinate. Eight forms in play:
+<span class="lib-pill">d3.line</span><span class="lib-pill">d3-force</span><span class="lib-pill">d3 multiples</span><span class="lib-pill">d3-sankey</span><span class="lib-pill">d3 radar</span><span class="lib-pill">d3 heatmap</span><span class="lib-pill">d3 bars</span><span class="lib-pill">auto-legend</span>.
+Read horizontally: layout is data, paint is library.</p>
+
+<div class="section-head">Programs · Score Trend<span class="form-tag">d3 small-multiples</span><span class="count" id="trend-range"></span></div>
+<div class="fleet-multiples" id="fleet-multiples"></div>
+
+<p class="pretext">
+  <span class="syntax-float">
+    <svg id="force-glyph" viewBox="0 0 300 280" preserveAspectRatio="xMidYMid meet" aria-label="Reference syntax node — d3-force layout"></svg>
+    <span class="force-caption">d3-force · canonical run</span>
+  </span>
+  An agent run is a directed graph of delegations. So we draw the graph — only this time, with a <em>real chart library</em>. The figure beside this sentence is a tiny canonical run laid out by <em>d3-force</em>: eight nodes (one orchestrator, three scouts, one synthesizer, two evals, one terminal) settle under charge-repulsion and link-attraction. The same five-shape vocabulary closes every diagram on the page. <strong>The figure is still the trace.</strong>
+  <span id="pretext-fleet">Across the fleet</span>, the harness dispatches <span id="n-orch">&mdash;</span> orchestrators
+  <svg class="chip" viewBox="0 0 14 14"><circle cx="7" cy="7" r="6" fill="#3a7a6a"/></svg>,
+  <span id="n-scout">&mdash;</span> scouts
+  <svg class="chip" viewBox="0 0 14 14"><rect x="2" y="2" width="10" height="10" fill="#2a2520"/></svg>,
+  <span id="n-eval">&mdash;</span> evaluation gates
+  <svg class="chip" viewBox="0 0 14 14"><polygon points="7,1 13,7 7,13 1,7" fill="#c49a5c"/></svg>,
+  and one synthesizer
+  <svg class="chip" viewBox="0 0 14 14"><polygon points="7,1 13,4 13,10 7,13 1,10 1,4" fill="#2a2520"/></svg>
+  per run, reconverging on a single terminal verdict
+  <svg class="chip" viewBox="0 0 14 14"><rect x="2" y="2" width="10" height="10" fill="#2a2520"/></svg>.
+  <span id="pretext-sparks"></span>
+  Each run below uses its own connection pattern<span id="pretext-patterns"></span>.
+  Read horizontally: the same eval diamonds <span class="fig" id="pretext-dims"></span> close every run.
+</p>
+
+<div class="section-head">The Runs<span class="form-tag">d3-sankey · d3 radar</span><span class="count" id="runs-label"></span></div>
+
+<div class="run-grid" id="run-grid">
+  <!-- run cards + run-detail panels generated from RUNS -->
+</div>
+
+<section class="cross-section">
+  <div class="section-head">Eval × Run · Cross-Section<span class="form-tag">d3 heatmap · diverging at 75 (pass threshold)</span></div>
+  <p class="cross-lede">
+    Sankey shows the <em>shape of a run</em>; the radar shows the <em>shape of its eval</em>. The cross-section shows the <em>shape of the fleet's evals</em> — every dimension across every run, on one shared scale. <strong>Row means</strong> tell you which run was strongest overall; <strong>column means</strong> tell you which dimension the harness reliably nails<span id="cross-best"></span> and which it struggles with<span id="cross-worst"></span>. Cells below 75 trip the amber threshold.
+  </p>
+  <div class="cross-grid" id="cross-grid"></div>
+</section>
+
+<div class="glossary">
+  <div class="section-head">Glossary — Shapes, Colours, Weights<span class="form-tag">auto-rendered from drawShape() + W constants</span></div>
+  <p class="glossary-lede">
+    The vocabulary is small and bears all the meaning. <em>Shape is the noun, colour is the role, weight is the verb.</em>
+    Every glyph below is rendered by the same <code>drawShape()</code> call the sankey nodes use, and every weight is read off the same <code>W</code> constant the link ribbons use. Legend and chart can't drift — they share the source.
+  </p>
+
+  <div class="gloss-grid">
+    <div class="gloss-block">
+      <div class="gloss-head">Shape · node type</div>
+      <div id="gloss-shapes"></div>
+      <div class="gloss-foot">source — <code>drawShape(g, {type})</code></div>
+    </div>
+    <div class="gloss-block">
+      <div class="gloss-head">Colour · semantic role</div>
+      <div id="gloss-colors"></div>
+      <div class="gloss-foot">source — <code>linkColor(kind)</code></div>
+    </div>
+    <div class="gloss-block">
+      <div class="gloss-head">Weight · intensity</div>
+      <div id="gloss-weights"></div>
+      <div class="gloss-head" style="margin-top: 1rem;">Topology · connection pattern</div>
+      <div id="gloss-topologies"></div>
+      <div class="gloss-foot">source — <code>W</code> + <code>TOPOLOGIES</code></div>
+    </div>
+  </div>
+</div>
+
+<div class="colophon">
+  <em>Run Traces · Charted.</em> Run data from the data slot, <code>data/syntax-charted.js</code><span id="colophon-runs"></span>. Charts by <code>d3@7</code> + <code>d3-sankey@0.12.3</code> over the shared <code>drawShape()</code> vocabulary. Visual grammar after Oliver Byrne's <em>Elements of Euclid</em> (1847), Feynman diagrams, and Edward Tufte, <em>Beautiful Evidence</em> (small multiples, p. 47; heatmap-as-cross-section, p. 110). <em>Layout is data, paint is library.</em>
+</div>
+
+<div class="tip" id="tip"></div>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
+<script src="../lib/data-slot.js"></script>
+<script src="../data/syntax-charted.js"></script>
+<script>
+(function() {
+
+  /* PART 1 — palette, constants */
+  const PAL = {
+    paper:      '#f5f0e8',
+    paperWarm:  '#f0e8d8',
+    paperCream: '#fbf7ef',
+    ink:        '#2a2520',
+    ink3:       'rgba(42,37,32,0.55)',
+    ink4:       'rgba(42,37,32,0.32)',
+    teal:       '#3a7a6a',
+    'teal-deep':'#2e6456',
+    tealSoft:   '#4a8a7a',
+    tealTint:   'rgba(58,122,106,0.14)',
+    amber:      '#c49a5c',
+    'amber-deep':'#a87f44',
+    red:        '#c0392b',
+    redMuted:   '#d4604f',
+    rule:       'rgba(42,37,32,0.14)',
+  };
+  const W = { thin: 0.7, normal: 1.2, strong: 1.8, critical: 2.5 };
+
+  /* PART 2 — data: everything below comes from the data slot.
+     programData   per-program score trend (small multiples + inline sparks)
+     RUNS          one entry per run card, in display order
+     RUN_DATA      sankey nodes + links per run key
+     runDims       eval scores per run key, keyed by RADAR_DIMS[].key
+     RADAR_DIMS    the eval dimensions (radar axes, heatmap columns)
+     SCOUT_DELTAS  optional: per-scout delta cards per run key
+     TIP_DATA      optional: hover-tip strings per run key, per node id
+     PAGE          optional: page-level labels
+     Shapes: ../data/syntax-charted.schema.md */
+  const D = TraceSlot.require('syntax-charted',
+    ['programData', 'RUNS', 'RUN_DATA', 'runDims', 'RADAR_DIMS']);
+  const { programData, RUNS, RUN_DATA, runDims, RADAR_DIMS } = D;
+  const SCOUT_DELTAS = D.SCOUT_DELTAS || {};
+  const TIP_DATA = D.TIP_DATA || {};
+  const PAGE = D.PAGE || {};
+  const RUN_KEYS = RUNS.map(r => r.key);
+  const DIM_KEYS = RADAR_DIMS.map(d => d.key);
+  const runByKey = k => RUNS.find(r => r.key === k) || {};
+
+  /* PART 3 — run cards + page text, generated from the data.
+     Card markup mirrors the original hand-written cards exactly
+     (same classes, same id scheme: card-, diag-, radar-, detail-,
+     scout-row- + run key). */
+  const NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six',
+    'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen',
+    'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'];
+  const numberWord = n => NUMBER_WORDS[n] || String(n);
+  const capFirst = t => t.charAt(0).toUpperCase() + t.slice(1);
+  function setHtml(id, html) { const el = document.getElementById(id); if (el) el.innerHTML = html; }
+
+  function buildRunCards() {
+    const grid = document.getElementById('run-grid');
+    const dimCaption = 'Confidence shape · ' + RADAR_DIMS.map(d => escapeHtml(d.label)).join(' · ');
+    let cardsHtml = '', detailsHtml = '';
+    RUNS.forEach(r => {
+      const ds = RUN_DATA[r.key] || { nodes: [] };
+      const tags = ['d3-sankey'];
+      if ((ds.nodes || []).some(n => n.loop)) tags.push('loop annot');
+      if (ds.exchange) tags.push('back-edge annot');
+      const idLine = [r.runId, r.verdict].concat(r.facts || []).filter(Boolean).map(escapeHtml).join(' · ');
+      cardsHtml += `
+  <div class="run-card" data-run="${escapeHtml(r.key)}" id="card-${escapeHtml(r.key)}">
+    <div class="run-meta">
+      <div class="run-name">${escapeHtml(r.name)}</div>
+      <div class="run-score">${Number(r.score).toFixed(1)}<span class="pct">/100</span></div>
+    </div>
+    <div class="run-id">${idLine}</div>
+    <div class="run-topology">Topology · ${escapeHtml(r.topologyLabel || '')}<span class="lib-tag">${tags.join(' · ')}</span></div>
+    <div class="run-diagram" id="diag-${escapeHtml(r.key)}"></div>
+    <div class="run-readout">
+      <div class="run-radar" id="radar-${escapeHtml(r.key)}">
+        <svg></svg>
+        <span class="rr-caption">${dimCaption}</span>
+      </div>
+      <div class="run-note">${r.note || ''}</div>
+    </div>
+  </div>`;
+      detailsHtml += `
+  <div class="run-detail" id="detail-${escapeHtml(r.key)}">
+    <div class="detail-head">${escapeHtml(r.name)} · ${escapeHtml(r.detailTitle || 'per-scout findings')}<span class="form-tag">d3 horizontal bars (${escapeHtml(r.detailTag || 'delta to score')})</span></div>
+    <div class="scout-row" id="scout-row-${escapeHtml(r.key)}"></div>
+  </div>`;
+    });
+    grid.innerHTML = cardsHtml + detailsHtml;
+  }
+
+  function renderPageText() {
+    if (PAGE.kicker) setHtml('page-kicker', escapeHtml(PAGE.kicker));
+    setHtml('trend-range', PAGE.trendRange ? escapeHtml(PAGE.trendRange) : '');
+    setHtml('runs-label', PAGE.runsLabel ? escapeHtml(PAGE.runsLabel) : '');
+
+    // Counts across every run's sankey: orchestrators, scouts, gates.
+    let nOrch = 0, nScout = 0, nEval = 0;
+    RUN_KEYS.forEach(k => (RUN_DATA[k] ? RUN_DATA[k].nodes : []).forEach(n => {
+      if (n.type === 'orch') nOrch++;
+      else if (n.type === 'scout') nScout++;
+      else if (n.type === 'eval' || n.type === 'gate') nEval++;
+    }));
+    setHtml('subtitle-counts', `${capFirst(numberWord(nOrch))} orchestrators, ${numberWord(nScout)} scouts, ${numberWord(nEval)} evaluation gates`);
+    setHtml('n-orch', numberWord(nOrch));
+    setHtml('n-scout', numberWord(nScout));
+    setHtml('n-eval', numberWord(nEval));
+    setHtml('pretext-fleet', `Across ${numberWord(programData.length)} programs and ${numberWord(RUNS.length)} runs`);
+
+    // One inline sparkline per program, filled by renderAll().
+    setHtml('pretext-sparks', programData.map((p, i) =>
+      `<em>${escapeHtml(p.name)}</em> trends <svg class="spark-inline" id="spark-l${i + 1}" viewBox="0 0 52 14" preserveAspectRatio="none"></svg>`
+    ).join('; ') + (programData.length ? '.' : ''));
+
+    const patterns = RUNS.map(r => r.topologyLabel).filter(Boolean);
+    setHtml('pretext-patterns', patterns.length
+      ? ': ' + patterns.map(t => `<em>${escapeHtml(t.toLowerCase())}</em>`).join(', ')
+      : '');
+    setHtml('pretext-dims', '(' + RADAR_DIMS.map(d => escapeHtml(d.label)).join(' · ') + ')');
+
+    // Best and worst dimension by column mean across all runs.
+    const colMeans = RADAR_DIMS.map(d => ({
+      d, mean: d3.mean(RUN_KEYS.map(k => (runDims[k] || {})[d.key]).filter(v => v != null)),
+    })).filter(c => c.mean != null);
+    if (colMeans.length) {
+      const best = colMeans.reduce((a, b) => (b.mean > a.mean ? b : a));
+      const worst = colMeans.reduce((a, b) => (b.mean < a.mean ? b : a));
+      setHtml('cross-best', ` (${escapeHtml(best.d.label)} · ${escapeHtml(best.d.desc)})`);
+      setHtml('cross-worst', ` (${escapeHtml(worst.d.label)} · ${escapeHtml(worst.d.desc)})`);
+    }
+    const ids = RUNS.map(r => r.runId).filter(Boolean);
+    setHtml('colophon-runs', ids.length ? ': ' + ids.map(escapeHtml).join(', ') : '');
+  }
+
+  buildRunCards();
+  renderPageText();
+
+  /* PART 4 — shared helpers */
+  function linkColor(kind) {
+    switch (kind) {
+      case 'dispatch': return PAL.teal;
+      case 'process':  return PAL.ink;
+      case 'pass':     return PAL['teal-deep'];
+      case 'partial':  return PAL.amber;
+      case 'weak':     return PAL['amber-deep'];
+      case 'fail':     return PAL.red;
+      default:         return PAL.ink;
+    }
+  }
+  function linkOpacity(kind) {
+    if (kind === 'weak') return 0.32;
+    if (kind === 'process') return 0.48;
+    return 0.62;
+  }
+  function drawShape(g, node) {
+    const t = node.type;
+    if (t === 'orch') {
+      g.append('circle').attr('class', 'node-shape').attr('r', node._r || 7.5).attr('fill', PAL.teal);
+    } else if (t === 'scout') {
+      const s = node._s || 12;
+      g.append('rect').attr('class', 'node-shape')
+        .attr('x', -s/2).attr('y', -s/2).attr('width', s).attr('height', s)
+        .attr('fill', node.weak ? PAL['amber-deep'] : PAL.ink);
+    } else if (t === 'source') {
+      const c = node.weak ? PAL['amber-deep'] : PAL['teal-deep'];
+      g.append('polygon').attr('class', 'node-shape').attr('points', '0,-6 6,5 -6,5').attr('fill', c);
+    } else if (t === 'gate' || t === 'eval') {
+      const fill = (t === 'eval' && node.strong) ? PAL['teal-deep']
+                 : (t === 'eval' && node.weak)   ? PAL.amber
+                 : PAL.amber;
+      g.append('polygon').attr('class', 'node-shape').attr('points', '0,-6 6,0 0,6 -6,0').attr('fill', fill);
+    } else if (t === 'synth') {
+      g.append('polygon').attr('class', 'node-shape')
+        .attr('points', '0,-7 6,-3.5 6,3.5 0,7 -6,3.5 -6,-3.5')
+        .attr('fill', node.amber ? PAL.amber : PAL.ink);
+    } else if (t === 'dot') {
+      const c = node.kind === 'fail' ? PAL.red : PAL.amber;
+      g.append('circle').attr('class', 'node-shape').attr('r', 2.4).attr('fill', c);
+    } else if (t === 'verdict') {
+      g.append('polygon').attr('class', 'node-shape').attr('points', '0,-5 6,0 0,5').attr('fill', PAL.ink);
+    } else if (t === 'terminal') {
+      const s = node._s || 14;
+      g.append('rect').attr('class', 'node-shape')
+        .attr('x', -s/2).attr('y', -s/2).attr('width', s).attr('height', s)
+        .attr('fill', PAL.ink);
+    }
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+  }
+
+  /* PART 5 — Form 1: d3.line sparkline */
+  function renderSpark(svg, data, opts) {
+    opts = opts || {};
+    const vb = svg.viewBox.baseVal;
+    const Wpx = vb && vb.width  ? vb.width  : (parseFloat(svg.getAttribute('width'))  || 52);
+    const Hpx = vb && vb.height ? vb.height : (parseFloat(svg.getAttribute('height')) || 14);
+    const pad = opts.pad != null ? opts.pad : 1.5;
+    const x = d3.scaleLinear().domain([0, data.length - 1]).range([pad, Wpx - pad]);
+    const y = d3.scaleLinear().domain(d3.extent(data)).range([Hpx - pad, pad]);
+    const line = d3.line().x((_, i) => x(i)).y(d => y(d)).curve(d3.curveCatmullRom.alpha(0.5));
+    const sel = d3.select(svg);
+    sel.selectAll('*').remove();
+    sel.append('path')
+      .attr('d', line(data))
+      .attr('fill', 'none')
+      .attr('stroke', opts.color || PAL.teal)
+      .attr('stroke-width', opts.w || 1.2)
+      .attr('stroke-linecap', 'round')
+      .attr('stroke-linejoin', 'round');
+    if (opts.dots) {
+      const min = d3.min(data), max = d3.max(data);
+      const minI = data.indexOf(min), maxI = data.indexOf(max);
+      sel.append('circle').attr('cx', x(minI)).attr('cy', y(min)).attr('r', opts.dotR || 1.6).attr('fill', PAL.red);
+      sel.append('circle').attr('cx', x(maxI)).attr('cy', y(max)).attr('r', opts.dotR || 1.6).attr('fill', PAL.teal);
+    }
+  }
+
+  /* PART 6 — Form 2: d3-force syntax-float hero glyph */
+  function renderForceGlyph() {
+    const svg = d3.select('#force-glyph');
+    if (svg.empty()) return;
+    const vb = svg.node().viewBox.baseVal;
+    const W_ = vb.width, H_ = vb.height;
+    svg.selectAll('*').remove();
+    const nodes = [
+      { id: 'orch',     type: 'orch',     fx: W_/2, fy: 30 },
+      { id: 'scout-a',  type: 'scout' },
+      { id: 'scout-b',  type: 'scout' },
+      { id: 'scout-c',  type: 'scout',    weak: true },
+      { id: 'synth',    type: 'synth' },
+      { id: 'eval-l',   type: 'eval' },
+      { id: 'eval-r',   type: 'eval',     strong: true },
+      { id: 'terminal', type: 'terminal', fx: W_/2, fy: H_ - 30, _s: 16 },
+    ];
+    const links = [
+      { source: 'orch', target: 'scout-a', kind: 'dispatch' },
+      { source: 'orch', target: 'scout-b', kind: 'dispatch' },
+      { source: 'orch', target: 'scout-c', kind: 'weak' },
+      { source: 'scout-a', target: 'synth', kind: 'process' },
+      { source: 'scout-b', target: 'synth', kind: 'process' },
+      { source: 'scout-c', target: 'synth', kind: 'weak' },
+      { source: 'synth', target: 'eval-l', kind: 'process' },
+      { source: 'synth', target: 'eval-r', kind: 'process' },
+      { source: 'eval-l', target: 'terminal', kind: 'pass' },
+      { source: 'eval-r', target: 'terminal', kind: 'pass' },
+    ];
+    const sim = d3.forceSimulation(nodes)
+      .force('charge', d3.forceManyBody().strength(-120))
+      .force('link', d3.forceLink(links).id(d => d.id).distance(40).strength(0.8))
+      .force('x', d3.forceX(W_/2).strength(0.05))
+      .force('y', d3.forceY().y(d => {
+        if (d.type === 'orch') return 30;
+        if (d.type === 'scout') return 100;
+        if (d.type === 'synth') return 150;
+        if (d.type === 'eval')  return 205;
+        return H_ - 30;
+      }).strength(0.5))
+      .force('collide', d3.forceCollide(14))
+      .stop();
+    for (let i = 0; i < 250; i++) sim.tick();
+    svg.append('g').attr('class', 'fg-links').selectAll('line')
+      .data(links).join('line')
+      .attr('stroke', d => linkColor(d.kind))
+      .attr('stroke-width', d => d.kind === 'weak' ? 0.7 : 1.3)
+      .attr('stroke-opacity', d => d.kind === 'weak' ? 0.45 : 0.7)
+      .attr('stroke-dasharray', d => d.kind === 'weak' ? '3,2.5' : null)
+      .attr('stroke-linecap', 'round')
+      .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+    const nodeG = svg.append('g').attr('class', 'fg-nodes').selectAll('g.fg-node')
+      .data(nodes).join('g').attr('class', 'fg-node')
+      .attr('transform', d => `translate(${d.x},${d.y})`);
+    nodeG.each(function(d) { drawShape(d3.select(this), d); });
+  }
+
+  /* PART 7 — Form 3: d3 small-multiples */
+  function renderMultiples() {
+    const root = d3.select('#fleet-multiples');
+    root.selectAll('*').remove();
+    programData.forEach(p => {
+      const panel = root.append('div').attr('class', 'fm-panel');
+      panel.append('span').attr('class', 'fm-name').text(p.name);
+      const svg = panel.append('svg').attr('class', 'fm-svg')
+        .attr('viewBox', '0 0 180 96').attr('preserveAspectRatio', 'none');
+      drawMultiplePanel(svg, p);
+      const foot = panel.append('div').attr('class', 'fm-foot');
+      const delta = p.data[p.data.length-1] - p.data[0];
+      foot.append('span').attr('class', 'fm-score').text(p.score.toFixed(1));
+      foot.append('span').attr('class', 'fm-delta' + (delta < 0 ? ' down' : '')).text((delta >= 0 ? '+' : '') + delta.toFixed(0) + ' / ' + p.data.length + 'w');
+    });
+  }
+  function drawMultiplePanel(svg, p) {
+    const W_ = 180, H_ = 96;
+    const m = { t: 6, r: 22, b: 16, l: 4 };
+    const x = d3.scaleLinear().domain([0, p.data.length - 1]).range([m.l, W_ - m.r]);
+    const y = d3.scaleLinear().domain([66, 100]).range([H_ - m.b, m.t]);
+    [75, 90].forEach(v => {
+      svg.append('line').attr('x1', m.l).attr('x2', W_ - m.r).attr('y1', y(v)).attr('y2', y(v))
+        .attr('stroke', v === 90 ? PAL.teal : PAL['amber-deep'])
+        .attr('stroke-width', 0.6)
+        .attr('stroke-dasharray', '2.5,2')
+        .attr('opacity', 0.55);
+      svg.append('text').attr('x', W_ - m.r + 3).attr('y', y(v) + 3)
+        .attr('font-family', 'IBM Plex Mono').attr('font-size', '7pt')
+        .attr('fill', v === 90 ? PAL.teal : PAL['amber-deep'])
+        .text(v);
+    });
+    const line = d3.line().x((_, i) => x(i)).y(d => y(d)).curve(d3.curveCatmullRom.alpha(0.5));
+    svg.append('path').attr('d', line(p.data))
+      .attr('fill', 'none').attr('stroke', PAL.teal).attr('stroke-width', 1.4)
+      .attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+    const min = d3.min(p.data);
+    const minI = p.data.indexOf(min);
+    svg.append('circle').attr('cx', x(minI)).attr('cy', y(min)).attr('r', 2.2).attr('fill', PAL.red);
+    const lastI = p.data.length - 1;
+    svg.append('circle').attr('cx', x(lastI)).attr('cy', y(p.data[lastI])).attr('r', 2.8).attr('fill', PAL['teal-deep']);
+    svg.append('text').attr('x', m.l).attr('y', H_ - 3)
+      .attr('font-family', 'IBM Plex Mono').attr('font-size', '7pt').attr('fill', PAL.ink4).text('w1');
+    svg.append('text').attr('x', W_ - m.r - 14).attr('y', H_ - 3)
+      .attr('font-family', 'IBM Plex Mono').attr('font-size', '7pt').attr('fill', PAL.ink4).text('w' + p.data.length);
+  }
+
+  /* PART 8 — Form 4: d3-sankey */
+  function renderSankey(containerId, runId) {
+    const dataset = RUN_DATA[runId];
+    if (!dataset) return;
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = '';
+    const rect = container.getBoundingClientRect();
+    const W_px = Math.max(360, Math.floor(rect.width));
+    const H_px = 320;
+    const margin = { top: 22, right: 84, bottom: 18, left: 60 };
+    const svg = d3.select(container).append('svg')
+      .attr('viewBox', `0 0 ${W_px} ${H_px}`)
+      .attr('preserveAspectRatio', 'xMidYMid meet')
+      .style('width', '100%').style('height', H_px + 'px');
+    const sankey = d3.sankey()
+      .nodeId(d => d.id)
+      .nodeAlign(d3.sankeyJustify)
+      .nodeWidth(1)
+      .nodePadding(dataset.nodePadding || 14)
+      .extent([[margin.left, margin.top], [W_px - margin.right, H_px - margin.bottom]]);
+    const graph = sankey({
+      nodes: dataset.nodes.map(d => Object.assign({}, d)),
+      // A link value is a W weight name ('thin' … 'critical') or a number.
+      links: dataset.links.map(d => Object.assign({}, d, {
+        value: typeof d.value === 'string' ? W[d.value] : d.value,
+      })),
+    });
+    const linkPath = d3.sankeyLinkHorizontal();
+    svg.append('g').attr('class', 'sankey-links').attr('fill', 'none')
+      .selectAll('path').data(graph.links).join('path')
+      .attr('class', d => 'sankey-link ' + (d.kind || ''))
+      .attr('d', linkPath)
+      .attr('stroke', d => linkColor(d.kind))
+      .attr('stroke-opacity', d => linkOpacity(d.kind))
+      .attr('stroke-width', d => Math.max(0.8, d.width))
+      .attr('stroke-dasharray', d => (d.kind === 'weak' ? '3,2.5' : null));
+    const nodeG = svg.append('g').attr('class', 'sankey-nodes')
+      .selectAll('g.node-g').data(graph.nodes).join('g').attr('class', 'node-g')
+      .attr('transform', d => `translate(${(d.x0 + d.x1) / 2}, ${(d.y0 + d.y1) / 2})`);
+    nodeG.each(function(d) { drawShape(d3.select(this), d); });
+    nodeG.append('text')
+      .attr('class', d => 'nl-label' + (d.weak ? ' weak' : ''))
+      .attr('y', d => {
+        if (d.type === 'eval' || d.type === 'verdict') return 4;
+        if (d.type === 'terminal') return 4;
+        if (d.type === 'orch') return -12;
+        if (d.type === 'synth') return 18;
+        if (d.type === 'dot') return -6;
+        return -10;
+      })
+      .attr('x', d => {
+        if (d.type === 'eval')     return 12;
+        if (d.type === 'verdict')  return 10;
+        if (d.type === 'terminal') return 14;
+        return 0;
+      })
+      .attr('text-anchor', d => {
+        if (d.type === 'eval' || d.type === 'verdict' || d.type === 'terminal') return 'start';
+        return 'middle';
+      })
+      .text(d => d.label || '');
+    /* push eval score/note further
+       right so short eval names (e.g. "verdict") never overlap
+       the numeric score.  Score was x=28; bumped to x=36.  Note moves
+       from x=50 to x=64 to clear "→" + 2-digit score. */
+    nodeG.filter(d => d.type === 'eval').each(function(d) {
+      const sel = d3.select(this);
+      const fill = d.strong ? PAL['teal-deep'] : (d.weak ? PAL.amber : PAL['teal-deep']);
+      sel.append('text').attr('class', 'terminal-num').attr('x', 36).attr('y', 4).attr('fill', fill).text(d.score != null ? d.score : '');
+      if (d.strong) sel.append('text').attr('class', 'nl-note').attr('x', 64).attr('y', 4).text('← strong');
+      else if (d.weak) sel.append('text').attr('class', 'nl-note weak').attr('x', 64).attr('y', 4).text('← weak');
+    });
+    // Self-refinement loop: drawn above every node flagged loop: true.
+    graph.nodes.filter(n => n.loop).forEach(synthNode => {
+        const cx = (synthNode.x0 + synthNode.x1) / 2;
+        const cy = (synthNode.y0 + synthNode.y1) / 2;
+        const annot = svg.append('g').attr('class', 'annot-loop').attr('transform', `translate(${cx}, ${cy - 22})`);
+        annot.append('circle').attr('cx', 0).attr('cy', 0).attr('r', 8);
+        annot.append('line').attr('x1', 0).attr('y1', 8).attr('x2', 0).attr('y2', 14).attr('stroke', PAL.amber).attr('stroke-width', 1.2);
+        annot.append('polygon').attr('class', 'arrow').attr('points', '-4,-2 -2,-6 2,-4');
+        annot.append('text').attr('x', 12).attr('y', 3).text('self-refine');
+    });
+    // Bidirectional exchange: two nodes trading through a hub, named by
+    // the run's optional exchange: { hub, a, b } node ids.
+    if (dataset.exchange) {
+      const ex = dataset.exchange;
+      const hub = graph.nodes.find(n => n.id === ex.hub);
+      const nodeA = graph.nodes.find(n => n.id === ex.a);
+      const nodeB = graph.nodes.find(n => n.id === ex.b);
+      if (hub && nodeA && nodeB) {
+        const hx = (hub.x0 + hub.x1) / 2, hy = (hub.y0 + hub.y1) / 2;
+        const tx = (nodeA.x0 + nodeA.x1) / 2, ty = (nodeA.y0 + nodeA.y1) / 2;
+        const mx = (nodeB.x0 + nodeB.x1) / 2, my = (nodeB.y0 + nodeB.y1) / 2;
+        const g = svg.append('g').attr('class', 'annot-bi');
+        g.append('path')
+          .attr('d', `M${hx - 6},${hy - 6} C${(hx + tx)/2},${hy - 28} ${(hx + tx)/2},${ty - 24} ${tx + 8},${ty - 4}`)
+          .attr('fill', 'none').attr('stroke', PAL.red).attr('stroke-width', 1.2)
+          .attr('stroke-dasharray', '3,2.5').attr('opacity', 0.7);
+        g.append('polygon').attr('points', `${tx + 8},${ty - 4} ${tx + 14},${ty - 8} ${tx + 14},${ty}`)
+          .attr('fill', PAL.red).attr('opacity', 0.8);
+        g.append('path')
+          .attr('d', `M${hx - 6},${hy + 6} C${(hx + mx)/2},${hy + 28} ${(hx + mx)/2},${my + 24} ${mx + 8},${my + 4}`)
+          .attr('fill', 'none').attr('stroke', PAL.teal).attr('stroke-width', 1.2)
+          .attr('stroke-dasharray', '3,2.5').attr('opacity', 0.7);
+        g.append('polygon').attr('points', `${mx + 8},${my + 4} ${mx + 14},${my} ${mx + 14},${my + 8}`)
+          .attr('fill', PAL.teal).attr('opacity', 0.8);
+        /* bumped clearance to 30
+           so the annotation no longer overlaps the upper node's label. */
+        g.append('text').attr('x', (hx + tx) / 2).attr('y', Math.min(ty, hy) - 30)
+          .attr('text-anchor', 'middle').attr('font-family', 'IBM Plex Mono').attr('font-size', '7pt')
+          .attr('fill', PAL['amber-deep']).attr('letter-spacing', '0.06em')
+          .text(ex.label || 'bidirectional exchange');
+      }
+    }
+    /* verdict score now sits a
+       half-row below the "verdict" label rather than baseline-aligned,
+       so the label and number read as two clean rows. */
+    const term = graph.nodes.find(n => n.id === 'terminal');
+    if (term) {
+      const cx = (term.x0 + term.x1) / 2;
+      const cy = (term.y0 + term.y1) / 2;
+      svg.append('text').attr('class', 'terminal-num').attr('x', cx + 14).attr('y', cy + 18).attr('fill', PAL.ink)
+        .text(runByKey(runId).score != null ? Number(runByKey(runId).score).toFixed(1) : '');
+    }
+    nodeG.on('mouseenter', function(event, d) { showTip(event, d, runId); })
+         .on('mousemove',  function(event)    { positionTip(event); })
+         .on('mouseleave', function()         { hideTip(); });
+  }
+
+  /* PART 9 — Form 5: per-run confidence radar */
+  // RADAR_DIMS comes from the data slot (PART 2).
+  function renderRadar(slotId, runId) {
+    const dims = runDims[runId];
+    const slot = document.getElementById(slotId);
+    if (!dims || !slot) return;
+    const svg = d3.select(slot).select('svg');
+    svg.selectAll('*').remove();
+    const size = 200;
+    svg.attr('viewBox', `0 0 ${size} ${size}`);
+    const cx = size / 2, cy = size / 2 + 4;
+    const r = 70;
+    const N = RADAR_DIMS.length;
+    const angle = i => -Math.PI/2 + i * (Math.PI * 2 / N);
+    /* tick labels moved to the NW
+       diagonal (angle = -3π/4) so they no longer collide with the top
+       vertex's rr-score.  This keeps the canonical 75/100 reference
+       readable without sitting on top of the data point. */
+    [25, 50, 75, 100].forEach(v => {
+      const rr = r * (v / 100);
+      const cls = 'rr-grid' + (v === 75 ? ' pass' : '');
+      const path = d3.range(N + 1).map(i => {
+        const a = angle(i % N);
+        return (i === 0 ? 'M' : 'L') + (cx + rr * Math.cos(a)) + ',' + (cy + rr * Math.sin(a));
+      }).join(' ');
+      svg.append('path').attr('class', cls).attr('d', path);
+      const tickA = -3 * Math.PI / 4;
+      svg.append('text').attr('class', 'rr-tick-label')
+        .attr('x', cx + (rr - 2) * Math.cos(tickA))
+        .attr('y', cy + (rr - 2) * Math.sin(tickA) + 3)
+        .attr('text-anchor', 'end')
+        .text(v);
+    });
+    /* axis-label radius bumped
+       r+14 → r+22 so the label clears the rr-score (which sits at
+       r+6 outside the vertex) when the vertex is at high values.
+       At top/bottom we also nudge by an extra few px to avoid the
+       collapse where text-anchor:middle stacks both labels at cx. */
+    RADAR_DIMS.forEach((d, i) => {
+      const a = angle(i);
+      const x2 = cx + r * Math.cos(a);
+      const y2 = cy + r * Math.sin(a);
+      svg.append('line').attr('class', 'rr-axis').attr('x1', cx).attr('y1', cy).attr('x2', x2).attr('y2', y2);
+      const labRad = (i === 0 || i === 2) ? (r + 26) : (r + 22);
+      const labx = cx + labRad * Math.cos(a);
+      const laby = cy + labRad * Math.sin(a);
+      const isHi = dims[d.key] >= 90;
+      svg.append('text').attr('class', 'rr-axis-label' + (isHi ? ' hi' : ''))
+        .attr('x', labx).attr('y', laby + 3)
+        .attr('text-anchor', i === 0 ? 'middle' : (i === 2 ? 'middle' : (Math.cos(a) > 0 ? 'start' : 'end')))
+        .text(d.label);
+    });
+    const poly = RADAR_DIMS.map((d, i) => {
+      const v = dims[d.key];
+      const rr = r * (v / 100);
+      const a = angle(i);
+      return [cx + rr * Math.cos(a), cy + rr * Math.sin(a)];
+    });
+    svg.append('polygon').attr('class', 'rr-poly').attr('points', poly.map(p => p.join(',')).join(' '));
+    RADAR_DIMS.forEach((d, i) => {
+      const v = dims[d.key];
+      const [px, py] = poly[i];
+      const cls = v >= 95 ? 'rr-vertex strong' : (v < 75 ? 'rr-vertex weak' : 'rr-vertex');
+      svg.append('circle').attr('class', cls).attr('cx', px).attr('cy', py).attr('r', 2.6);
+      const a = angle(i);
+      const lx = cx + (r + 6) * Math.cos(a);
+      const ly = cy + (r + 6) * Math.sin(a);
+      svg.append('text').attr('class', 'rr-score').attr('x', lx).attr('y', ly + 3)
+        .attr('text-anchor', i === 0 ? 'middle' : (i === 2 ? 'middle' : (Math.cos(a) > 0 ? 'start' : 'end')))
+        .text(v);
+    });
+  }
+
+  /* PART 10 — Form 6: eval × run heatmap */
+  function renderHeatmap() {
+    const root = d3.select('#cross-grid');
+    root.selectAll('*').remove();
+    const runs = RUN_KEYS;
+    const evals = RADAR_DIMS;
+    const cellW = 110, cellH = 56;
+    const m = { t: 60, r: 110, b: 32, l: 110 };
+    const W_ = m.l + cellW * evals.length + m.r;
+    const H_ = m.t + cellH * runs.length + m.b;
+    const svg = root.append('svg')
+      .attr('viewBox', `0 0 ${W_} ${H_}`).style('width', '100%').style('max-width', W_ + 'px');
+    const color = d3.scaleLinear()
+      .domain([70, 75, 85, 92, 100])
+      .range([PAL.red, PAL.amber, PAL.paperWarm, PAL.tealSoft, PAL['teal-deep']])
+      .interpolate(d3.interpolateRgb).clamp(true);
+    const txt = v => (v >= 92 || v < 75) ? PAL.paperCream : PAL.ink;
+    evals.forEach((e, j) => {
+      const cx = m.l + j * cellW + cellW / 2;
+      svg.append('text').attr('class', 'col-label').attr('x', cx).attr('y', m.t - 22).attr('text-anchor', 'middle').text(e.label);
+      svg.append('text').attr('class', 'col-name').attr('x', cx).attr('y', m.t - 9).attr('text-anchor', 'middle').text(e.desc);
+    });
+    runs.forEach((r, i) => {
+      const cy = m.t + i * cellH + cellH / 2;
+      svg.append('text').attr('class', 'row-label').attr('x', m.l - 10).attr('y', cy + 4).attr('text-anchor', 'end').text(runByKey(r).short || r);
+    });
+    runs.forEach((r, i) => {
+      evals.forEach((e, j) => {
+        const v = runDims[r][e.key];
+        const x = m.l + j * cellW;
+        const y = m.t + i * cellH;
+        svg.append('rect').attr('class', 'cell-rect')
+          .attr('x', x).attr('y', y).attr('width', cellW).attr('height', cellH)
+          .attr('fill', color(v));
+        svg.append('text').attr('class', 'cell-num')
+          .attr('x', x + cellW / 2).attr('y', y + cellH / 2 + 4)
+          .attr('text-anchor', 'middle').attr('fill', txt(v)).text(v);
+      });
+    });
+    svg.append('text').attr('class', 'axis-label')
+      .attr('x', m.l + cellW * evals.length + 6).attr('y', m.t - 22).text('row mean');
+    runs.forEach((r, i) => {
+      const cy = m.t + i * cellH + cellH / 2;
+      const mean = d3.mean(evals.map(e => runDims[r][e.key])).toFixed(1);
+      svg.append('text').attr('class', 'row-mean')
+        .attr('x', m.l + cellW * evals.length + 8).attr('y', cy + 4).text(mean);
+    });
+    svg.append('text').attr('class', 'axis-label')
+      .attr('x', m.l - 10).attr('y', m.t + cellH * runs.length + 18).attr('text-anchor', 'end').text('col mean');
+    evals.forEach((e, j) => {
+      const cx = m.l + j * cellW + cellW / 2;
+      const mean = d3.mean(runs.map(r => runDims[r][e.key])).toFixed(1);
+      svg.append('text').attr('class', 'col-mean')
+        .attr('x', cx).attr('y', m.t + cellH * runs.length + 18)
+        .attr('text-anchor', 'middle').text(mean);
+    });
+    const scaleW = 220, scaleH = 8;
+    const scaleX = m.l + (cellW * evals.length - scaleW) / 2;
+    const scaleY = H_ - 12;
+    const stops = [70, 75, 85, 92, 100];
+    const grad = svg.append('defs').append('linearGradient').attr('id', 'cross-grad').attr('x1', '0%').attr('x2', '100%');
+    stops.forEach(v => grad.append('stop').attr('offset', ((v - 70) / 30 * 100) + '%').attr('stop-color', color(v)));
+    svg.append('rect').attr('x', scaleX).attr('y', scaleY - scaleH).attr('width', scaleW).attr('height', scaleH)
+      .attr('fill', 'url(#cross-grad)').attr('stroke', PAL.rule).attr('stroke-width', 0.5);
+    [70, 75, 90, 100].forEach(v => {
+      const px = scaleX + (v - 70) / 30 * scaleW;
+      svg.append('line').attr('x1', px).attr('x2', px).attr('y1', scaleY).attr('y2', scaleY + 3).attr('stroke', PAL.ink3).attr('stroke-width', 0.5);
+      svg.append('text').attr('class', 'scale-tick').attr('x', px).attr('y', scaleY + 11).attr('text-anchor', 'middle').text(v);
+    });
+  }
+
+  /* PART 11 — Form 7: per-scout delta bars */
+  function renderScoutBars(runId) {
+    const rowId = 'scout-row-' + runId;
+    const row = d3.select('#' + rowId);
+    if (row.empty()) return;
+    row.selectAll('*').remove();
+    const scouts = SCOUT_DELTAS[runId] || [];
+    const maxAbs = Math.max(6, d3.max(scouts, s => Math.abs(s.delta)) || 6);
+    scouts.forEach(s => {
+      const card = row.append('div').attr('class', 'scout-card' + (s.weak ? ' weak' : (s.strong ? ' strong' : '')));
+      card.append('div').attr('class', 'scout-name').text(s.name);
+      card.append('div').attr('class', 'scout-headline').text(s.headline);
+      card.append('div').attr('class', 'scout-num').text(s.num);
+      const svgEl = card.append('svg').attr('class', 'scout-bar').attr('viewBox', '0 0 180 18').attr('preserveAspectRatio', 'none');
+      const x = d3.scaleLinear().domain([-maxAbs, maxAbs]).range([4, 176]);
+      const zeroX = x(0);
+      svgEl.append('line').attr('class', 'sb-zero').attr('x1', zeroX).attr('x2', zeroX).attr('y1', 2).attr('y2', 16);
+      const cls = s.delta > 0 ? 'sb-bar-pos' : (s.delta < 0 ? 'sb-bar-neg' : 'sb-bar-zero');
+      const bx = s.delta >= 0 ? zeroX : x(s.delta);
+      const bw = Math.max(1.5, Math.abs(x(s.delta) - zeroX));
+      svgEl.append('rect').attr('class', cls).attr('x', bx).attr('y', 5).attr('width', bw).attr('height', 8);
+      const labelX = s.delta >= 0 ? Math.min(176, x(s.delta) + 4) : Math.max(4, x(s.delta) - 4);
+      const anchor = s.delta >= 0 ? 'start' : 'end';
+      svgEl.append('text').attr('class', 'sb-label').attr('x', labelX).attr('y', 12).attr('text-anchor', anchor)
+        .text((s.delta > 0 ? '+' : '') + s.delta);
+    });
+  }
+
+  /* PART 12 — Form 8a: tip mini-bars as d3 svg */
+  function renderTipMini(container, dims, hi) {
+    const order = DIM_KEYS;
+    const names = {};
+    RADAR_DIMS.forEach(d => { names[d.key] = d.desc; });
+    const W_ = 240, rowH = 14, gap = 2;
+    const H_ = order.length * (rowH + gap);
+    const sel = d3.select(container);
+    sel.selectAll('*').remove();
+    const svg = sel.append('svg').attr('viewBox', `0 0 ${W_} ${H_}`).attr('width', '100%').attr('height', H_);
+    order.forEach((k, i) => {
+      const v = dims[k];
+      const y = i * (rowH + gap);
+      const cls = v >= 90 ? 'pass' : (v < 75 ? 'weak' : '');
+      if (k === hi) {
+        svg.append('rect').attr('class', 'tm-hi').attr('x', 0).attr('y', y - 1).attr('width', W_).attr('height', rowH + 2);
+      }
+      svg.append('text').attr('class', 'tm-label').attr('x', 0).attr('y', y + rowH - 4).text(names[k]);
+      const trackX = 60, trackW = 120;
+      svg.append('rect').attr('class', 'tm-track').attr('x', trackX).attr('y', y + 4).attr('width', trackW).attr('height', rowH - 8);
+      svg.append('rect').attr('class', 'tm-fill ' + cls).attr('x', trackX).attr('y', y + 4).attr('width', trackW * (v / 100)).attr('height', rowH - 8);
+      svg.append('text').attr('class', 'tm-val').attr('x', trackX + trackW + 6).attr('y', y + rowH - 4).text(v);
+    });
+  }
+
+  /* PART 13 — Form 8b: glossary auto-render */
+  const SHAPE_LEGEND = [
+    { type: 'orch',     name: 'orchestrator',     desc: 'dispatches work, holds the contract' },
+    { type: 'scout',    name: 'scout / executor', desc: 'calls a tool, returns a finding' },
+    { type: 'gate',     name: 'eval / gate',      desc: 'scores a result, may branch' },
+    { type: 'synth',    name: 'synthesizer',      desc: 'merges branches into one artifact' },
+    { type: 'source',   name: 'source / data',    desc: 'an external input, e.g. a tracked entity' },
+    { type: 'terminal', name: 'terminal',         desc: 'final answer · square filled ink' },
+  ];
+  const COLOR_LEGEND = [
+    { kind: 'dispatch', name: 'teal',       desc: 'orchestration · control flow · dispatch' },
+    { kind: 'pass',     name: 'teal deep',  desc: 'pass · accept · within bounds' },
+    { kind: 'partial',  name: 'amber',      desc: 'gate · branch · self-correction · partial' },
+    { kind: 'fail',     name: 'red',        desc: 'fail · attention required · used only when warranted' },
+    { kind: 'process',  name: 'ink',        desc: 'terminal · primary edges · gravity' },
+    { kind: 'weak',     name: 'amber-deep', desc: 'no-data trace · thin dashed link' },
+  ];
+  const WEIGHT_LEGEND = [
+    { key: 'thin',     desc: 'weak fan-in, light bind, no-data trace' },
+    { key: 'normal',   desc: 'normal delegation, standard exchange' },
+    { key: 'strong',   desc: 'high-priority dispatch, strong signal' },
+    { key: 'critical', desc: 'critical path, alert, terminal commit' },
+  ];
+  // Connection patterns. The exemplar is whichever run in RUNS names
+  // this pattern (RUNS[].pattern); a pattern with no run shows no exemplar.
+  const TOPOLOGIES = [
+    { key: 'parallel',     name: 'parallel',      desc: 'one orchestrator, many scouts at once' },
+    { key: 'self-refine',  name: 'self-refine',   desc: 'an agent revises its own output' },
+    { key: 'bidirectional',name: 'bidirectional', desc: 'two agents exchange through a hub' },
+    { key: 'branch-gate',  name: 'branch gate',   desc: 'eval splits into pass / fail paths' },
+  ];
+  TOPOLOGIES.forEach(t => {
+    const ex = RUNS.find(r => r.pattern === t.key);
+    t.exemplar = ex ? (ex.short || ex.key) : null;
+  });
+  function renderGlossary() {
+    const sRoot = d3.select('#gloss-shapes');
+    sRoot.selectAll('*').remove();
+    SHAPE_LEGEND.forEach(item => {
+      const row = sRoot.append('div').attr('class', 'gloss-row');
+      const svg = row.append('svg').attr('class', 'gloss-shape').attr('viewBox', '0 0 24 24');
+      const g = svg.append('g').attr('transform', 'translate(12,12)');
+      drawShape(g, { type: item.type, _r: 7, _s: 12 });
+      const text = row.append('div');
+      text.append('div').attr('class', 'gloss-name').text(item.name);
+      text.append('div').attr('class', 'gloss-desc').text(item.desc);
+    });
+    const cRoot = d3.select('#gloss-colors');
+    cRoot.selectAll('*').remove();
+    COLOR_LEGEND.forEach(item => {
+      const row = cRoot.append('div').attr('class', 'gloss-row');
+      const svg = row.append('svg').attr('class', 'gloss-shape').attr('viewBox', '0 0 24 14');
+      svg.append('line').attr('x1', 1).attr('y1', 7).attr('x2', 23).attr('y2', 7)
+        .attr('stroke', linkColor(item.kind)).attr('stroke-width', 2.5).attr('stroke-linecap', 'round');
+      const text = row.append('div');
+      text.append('div').attr('class', 'gloss-name').text(item.name);
+      text.append('div').attr('class', 'gloss-desc').text(item.desc);
+    });
+    const wRoot = d3.select('#gloss-weights');
+    wRoot.selectAll('*').remove();
+    WEIGHT_LEGEND.forEach(item => {
+      const row = wRoot.append('div').attr('class', 'gloss-line-row');
+      const svg = row.append('svg').attr('width', 40).attr('height', 14);
+      svg.append('line').attr('x1', 0).attr('y1', 7).attr('x2', 40).attr('y2', 7)
+        .attr('stroke', PAL.ink).attr('stroke-width', W[item.key]).attr('stroke-linecap', 'round');
+      row.append('span').attr('class', 'gloss-wt').text(W[item.key].toFixed(1) + 'pt');
+      row.append('span').attr('class', 'gloss-desc').text(item.desc);
+    });
+    const tRoot = d3.select('#gloss-topologies');
+    tRoot.selectAll('*').remove();
+    TOPOLOGIES.forEach(item => {
+      const row = tRoot.append('div').attr('class', 'gloss-row');
+      const svg = row.append('svg').attr('class', 'gloss-shape').attr('viewBox', '0 0 24 24');
+      drawTopologyGlyph(svg, item.key);
+      const text = row.append('div');
+      text.append('div').attr('class', 'gloss-name').text(item.name);
+      text.append('div').attr('class', 'gloss-desc').text(item.exemplar ? item.desc + ' — see ' + item.exemplar : item.desc);
+    });
+  }
+  function drawTopologyGlyph(svg, key) {
+    const drawAt = (x, y, node) => {
+      const g = svg.append('g').attr('transform', `translate(${x},${y})`);
+      drawShape(g, Object.assign({}, node, { _r: 1.6, _s: 3 }));
+    };
+    if (key === 'parallel') {
+      svg.append('line').attr('x1', 5).attr('y1', 12).attr('x2', 19).attr('y2', 5).attr('stroke', PAL.teal).attr('stroke-width', 0.7);
+      svg.append('line').attr('x1', 5).attr('y1', 12).attr('x2', 19).attr('y2', 12).attr('stroke', PAL.teal).attr('stroke-width', 0.7);
+      svg.append('line').attr('x1', 5).attr('y1', 12).attr('x2', 19).attr('y2', 19).attr('stroke', PAL.teal).attr('stroke-width', 0.7);
+      drawAt(4, 12, { type: 'orch' });
+      drawAt(19, 5, { type: 'scout' });
+      drawAt(19, 12, { type: 'scout' });
+      drawAt(19, 19, { type: 'scout' });
+    } else if (key === 'self-refine') {
+      svg.append('circle').attr('cx', 12).attr('cy', 12).attr('r', 6).attr('fill', 'none').attr('stroke', PAL.amber).attr('stroke-width', 1);
+      drawAt(12, 12, { type: 'synth' });
+    } else if (key === 'bidirectional') {
+      drawAt(5, 12, { type: 'scout' });
+      drawAt(19, 12, { type: 'scout' });
+      drawAt(12, 12, { type: 'gate' });
+      svg.append('line').attr('x1', 6).attr('y1', 11.3).attr('x2', 10).attr('y2', 11.3).attr('stroke', PAL.ink).attr('stroke-width', 0.5);
+      svg.append('line').attr('x1', 14).attr('y1', 12.7).attr('x2', 18).attr('y2', 12.7).attr('stroke', PAL.ink).attr('stroke-width', 0.5);
+    } else if (key === 'branch-gate') {
+      drawAt(8, 12, { type: 'gate' });
+      svg.append('line').attr('x1', 11).attr('y1', 11).attr('x2', 20).attr('y2', 5).attr('stroke', PAL['teal-deep']).attr('stroke-width', 0.7);
+      svg.append('line').attr('x1', 11).attr('y1', 13).attr('x2', 20).attr('y2', 19).attr('stroke', PAL.red).attr('stroke-width', 0.7);
+    }
+  }
+
+  /* PART 14 — tip + expand interaction */
+  const tip = document.getElementById('tip');
+  function isEvalKey(k) { return DIM_KEYS.indexOf(k) >= 0; }
+  function showTip(event, d, runId) {
+    const txt = (TIP_DATA[runId] || {})[d.id];
+    if (!txt) return;
+    const parts = txt.split(' · ');
+    let html = `<div class="tip-title">${escapeHtml(parts[0])}</div>`;
+    parts.slice(1).forEach(r => {
+      const kv = r.split(/\s—\s|\s-\s/);
+      html += `<div class="tip-row"><span>${escapeHtml(kv[0])}</span><span style="text-align:right">${escapeHtml(kv[1] || '')}</span></div>`;
+    });
+    if (isEvalKey(d.id) && runDims[runId]) {
+      html += `<div class="tip-mini" id="tip-mini-mount"></div>`;
+    }
+    tip.innerHTML = html;
+    if (isEvalKey(d.id) && runDims[runId]) {
+      renderTipMini(document.getElementById('tip-mini-mount'), runDims[runId], d.id);
+    }
+    tip.classList.add('on');
+    positionTip(event);
+  }
+  function positionTip(event) {
+    tip.style.left = event.clientX + 'px';
+    tip.style.top  = event.clientY + 'px';
+  }
+  function hideTip() { tip.classList.remove('on'); }
+
+  /* PART 15 — initial render + resize */
+  function renderAll() {
+    renderMultiples();
+    programData.forEach((p, i) => {
+      const el = document.getElementById('spark-l' + (i + 1));
+      if (el) renderSpark(el, p.data, { color: PAL.teal, w: 1, pad: 1 });
+    });
+    renderForceGlyph();
+    RUN_KEYS.forEach(r => {
+      renderSankey('diag-' + r, r);
+      renderRadar('radar-' + r, r);
+    });
+    renderHeatmap();
+    RUN_KEYS.forEach(renderScoutBars);
+    renderGlossary();
+  }
+  renderAll();
+  let resizeT;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeT);
+    resizeT = setTimeout(renderAll, 180);
+  });
+
+  /* PART 16 — row-end-stable detail expand */
+  const detailMap = {};
+  RUN_KEYS.forEach(k => { detailMap[k] = 'detail-' + k; });
+  const grid = document.getElementById('run-grid');
+  const cards = Array.from(grid.querySelectorAll('.run-card'));
+  function rowEndCardFor(card) {
+    const idx = cards.indexOf(card);
+    if (idx < 0) return card;
+    const cols = window.matchMedia('(min-width: 980px)').matches ? 2 : 1;
+    const pairStart = Math.floor(idx / cols) * cols;
+    const pairEnd   = Math.min(pairStart + cols - 1, cards.length - 1);
+    return cards[pairEnd];
+  }
+  function placeDetail(card) {
+    const detail = document.getElementById(detailMap[card.dataset.run]);
+    if (!detail) return;
+    const endCard = rowEndCardFor(card);
+    grid.insertBefore(detail, endCard.nextSibling);
+  }
+  cards.forEach(placeDetail);
+  window.matchMedia('(min-width: 980px)').addEventListener('change', () => {
+    cards.forEach(placeDetail);
+  });
+  cards.forEach(card => {
+    card.addEventListener('click', (event) => {
+      if (event.target.closest('.node-shape')) return;
+      if (event.target.closest('.run-radar')) return;
+      const run = card.getAttribute('data-run');
+      const detail = document.getElementById(detailMap[run]);
+      const isOpen = detail.classList.contains('open');
+      document.querySelectorAll('.run-detail').forEach(d => d.classList.remove('open'));
+      cards.forEach(c => c.classList.remove('open'));
+      if (!isOpen) {
+        placeDetail(card);
+        detail.classList.add('open');
+        card.classList.add('open');
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>
