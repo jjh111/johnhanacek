@@ -488,10 +488,18 @@ scripts/build-reel-editor.mjs — packs the live rig (preview, timeline, rack, e
 scripts/record-walkthrough.mjs — a 77 s captioned walkthrough of the hosted editor, every control set (the notes view's
                             piano roll its longest chapter, 2026-10-08), with its sound: the build served with a stand-in claude.ai host, the browser's screencast held to
                             30 fps, captions drawn in a band above the page; `--dry` checks every step (a click that
-                            would miss its target stops the take) → .local/walk/reel-editor-walkthrough.mp4
+                            would miss its target stops the take; `--crf=`) → .local/walk/reel-editor-walkthrough.mp4 and its
+                            captions beside it (`.captions.json`: each one's time, key, section and words)
+scripts/square-walkthrough.mjs — the whole walkthrough as a square film: each caption's moment through a window onto where
+                            its work happens (WINDOWS: the stage and timeline, the panels at the left, the inspector and rack at
+                            the right, the piano roll at the stage's width), the caption drawn again above it, wrapped to the
+                            square; one near-lossless piece per caption, joined (a single filter graph ran out of memory)
+                            → .local/walk/reel-editor-walkthrough-square.mp4
 scripts/stitch-social.mjs — one video for socials: the rendered reel whole, a "Behind the reel" card, the walkthrough's
                             timeline, shot list, fish and notes moments (SEGMENTS), an end card; dissolves at the joins,
-                            the walkthrough's sound brought to the reel's loudness → Assets/media-kit/video/sizzle-reel-2-social.mp4
+                            the walkthrough's sound brought to the reel's loudness; 60 fps (the reel's own frames) and CRF 17
+                            by default (`--fps=`, `--crf=`), its pieces near lossless with PCM sound so only the join is
+                            lossy → Assets/media-kit/video/sizzle-reel-2-social.mp4
 scripts/playground-items.js — manifest for playground.html (31 items). `featured: true` leads
                             the default sequence sort (stable partition; `date` and `?items=` exempt). `nested: true` marks a
                             page that embeds the canvas itself (recursion guard); `weight: 'heavy'`

@@ -1840,3 +1840,27 @@ room for content."
 Scene-specific cues (line staggers, the push); moving cut 1 onto the one player; stems out of
 the renderer; per-format cues, should a narrow frame ever need its own timing; the score's
 patterns and knobs from the timeline (today they are the rack's).
+
+## Release candidates (2026-10-16)
+
+John: "render wide and square with the tutorial mini stitched, and also the more full tutorial
+square and wide so four total videos (use good quality/high framerate, these are release candidates)".
+
+- **The reels** were rendered from the saved edit (script v207, score v985, John's last notes) at
+  60 fps and CRF 16, wide (`--deliver`) and square, `--jobs=3`: 30.4 and 21.8 MB, -13.9 LUFS.
+- **The social cuts** (`stitch-social.mjs`) now run at 60 fps, so the reel keeps its own frames,
+  and end at CRF 17. Their pieces are near lossless (CRF 10) with PCM sound in Matroska, so only
+  the join is lossy. Before this, the pieces were CRF 18 with AAC and the join was CRF 20 at 30 fps.
+  Wide is 101.9 s and 37.7 MB; square is 101.7 s and 26.7 MB.
+- **The walkthrough** was recorded again on an idle machine at CRF 16, with Export playing the
+  new film. The screencast kept 21.7 frames a second. The film is 30 fps, because a screencast
+  cannot give more: the page draws about 25 frames a second with the timeline open. It writes
+  its captions beside it (`.captions.json`).
+- **`scripts/square-walkthrough.mjs`** makes the whole walkthrough square. Each caption's moment
+  is shown through a window onto where its work happens (`WINDOWS`), and the caption is drawn
+  again above the window. The first version was one filter graph that `split` the film 22 ways,
+  and it ran out of memory (12 GB): a branch waiting for its turn holds every frame. Now each
+  caption is one near-lossless piece, counted in frames, and the pieces are joined.
+- Delivered as `Assets/media-kit/video/sizzle-reel-2-social.mp4`, `-social-square.mp4`,
+  `-tutorial.mp4` and `-tutorial-square.mp4`. Video files are not committed (`Assets/media-kit/`
+  is ignored).

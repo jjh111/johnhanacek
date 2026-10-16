@@ -1,10 +1,11 @@
 // One video for socials: the sizzle reel, then a short look at the editor it was made in.
-//   node scripts/stitch-social.mjs [--format=wide|square] [--reel=<mp4>] [--walk=<mp4>] [--out=<mp4>]
+//   node scripts/stitch-social.mjs [--format=wide|square] [--reel=<mp4>] [--walk=<mp4>] [--out=<mp4>] [--fps=60] [--crf=17]
 //     reel  the rendered cut with its soundtrack (default Assets/media-kit/video/sizzle-reel-2.mp4,
 //           or sizzle-reel-2-square.mp4 for square: render-sizzle-reel.mjs --format=square)
 //     walk  the editor walkthrough (default .local/walk/reel-editor-walkthrough.mp4, from
 //           scripts/record-walkthrough.mjs)
-//     → Assets/media-kit/video/sizzle-reel-2-social.mp4 (1920×1080, 30 fps, AAC), or
+//     → Assets/media-kit/video/sizzle-reel-2-social.mp4 (1920×1080, 60 fps by default so the reel's
+//       own 60 frames a second come through, the walkthrough's 30 each held twice; AAC), or
 //       sizzle-reel-2-social-square.mp4 (1080×1080)
 // Square: the walkthrough is a 1920×1080 screen, so each moment shows a window of it
 // (CROP: where the work happens, the panels at the left), its caption band left out and the
@@ -52,7 +53,7 @@ const SQ_CAPS = [
    [56.0, 'Q', 'Notes', 'Q snaps it to the grid; the roll follows']],
 ];
 const BAND = 162;                                 // square: the bands above and below the window
-const CARD = 2.6, END = 3.2, XF = 0.5, XS = 0.3, FPS = 30;
+const CARD = 2.6, END = 3.2, XF = 0.5, XS = 0.3, FPS = +arg('fps', '60'), CRF = arg('crf', '17');
 const ff = (...a) => execFileSync('ffmpeg', ['-y', '-loglevel', 'error', ...a], { stdio: 'inherit' });
 const durOf = f => {
   let o = '';
@@ -104,18 +105,18 @@ if (SQ) {
 }
 await browser.close();
 
-// ── the pieces, each to one format: W×H, 30 fps, yuv420p, stereo 48 kHz ──
+// ── the pieces, each to one format: W×H, FPS, yuv420p, stereo 48 kHz (near lossless: they are encoded again) ──
 const V = `scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:color=0x020a12,fps=${FPS},format=yuv420p,setsar=1`;
 const A = 'aresample=48000,aformat=channel_layouts=stereo';
-const enc = ['-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-c:a', 'aac', '-b:a', '192k'];
+const enc = ['-c:v', 'libx264', '-preset', 'medium', '-crf', '10', '-c:a', 'pcm_s16le'];
 const pieces = [];
-const reelP = path.join(TMP, 'p0-reel.mp4');
+const reelP = path.join(TMP, 'p0-reel.mkv');
 ff('-i', REEL, '-vf', V, '-af', A, ...enc, reelP); pieces.push(reelP);
 const still = (png, secs, name) => { const f = path.join(TMP, name); ff('-loop', '1', '-t', String(secs), '-i', png, '-f', 'lavfi', '-t', String(secs), '-i', 'anullsrc=r=48000:cl=stereo', '-vf', V, '-af', A, ...enc, '-shortest', f); return f; };
-pieces.push(still(path.join(TMP, 'card.png'), CARD, 'p1-card.mp4'));
+pieces.push(still(path.join(TMP, 'card.png'), CARD, 'p1-card.mkv'));
 // the walkthrough's sound brought to the reel's loudness (the reel mixes to about -14 LUFS)
 SEGMENTS.forEach(([a, b], i) => {
-  const f = path.join(TMP, `p${2 + i}-walk.mp4`);
+  const f = path.join(TMP, `p${2 + i}-walk.mkv`);
   const af = `${A},loudnorm=I=-16:TP=-1.5:LRA=11`;
   if (!SQ) ff('-ss', String(a), '-t', String(b - a), '-i', WALK, '-vf', V, '-af', af, ...enc, f);
   else {
@@ -130,7 +131,7 @@ SEGMENTS.forEach(([a, b], i) => {
   }
   pieces.push(f);
 });
-pieces.push(still(path.join(TMP, 'end.png'), END, `p${2 + SEGMENTS.length}-end.mp4`));
+pieces.push(still(path.join(TMP, 'end.png'), END, `p${2 + SEGMENTS.length}-end.mkv`));
 
 // ── joined: a dissolve at every join, longer around the cards ───────────
 const durs = pieces.map(durOf);
@@ -144,5 +145,6 @@ for (let i = 1; i < pieces.length; i++) {
 }
 fc = fc.replace(/;$/, '');
 ff(...pieces.flatMap(p => ['-i', p]), '-filter_complex', fc, '-map', vPrev, '-map', aPrev,
-  '-c:v', 'libx264', '-preset', 'slow', '-crf', '20', '-r', String(FPS), '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', OUT);
+  '-c:v', 'libx264', '-preset', 'slow', '-crf', CRF, '-x264-params', 'aq-mode=3', '-r', String(FPS), '-pix_fmt', 'yuv420p', '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709',
+  '-c:a', 'aac', '-b:a', '256k', '-movflags', '+faststart', OUT);
 console.log(`wrote ${path.relative(ROOT, OUT)}: ${t.toFixed(1)} s, ${(fs.statSync(OUT).size / 1e6).toFixed(1)} MB (the reel ${durs[0].toFixed(1)} s, then ${(t - durs[0]).toFixed(1)} s of the editor)`);
