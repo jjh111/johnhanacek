@@ -182,9 +182,16 @@ ok(RS.cue(S('answer'), 'arrive') === 0.6 && RS.cue(S('answer'), 'leave') === 0.3
 {
   const on = (t, g) => Math.abs(t / g - Math.round(t / g)) < 1e-6;
   const Q = RS.queries(RS.parse(RS.setReelCue(SRC, 'sync', 0.25)).edit);
-  ok(Q.every(q => on(q.enter, 0.25) && (q.last || on(q.clear, 0.25)) && on(q.t0, 0.125) && q.times.every(t => on(t, 0.03125))
+  // (keys on 64ths; a question typed faster than 64ths allow, cut 2's first at 80, on 128ths)
+  ok(Q.every(q => on(q.enter, 0.25) && (q.last || on(q.clear, 0.25)) && on(q.t0, 0.125) && q.times.every(t => on(t, 0.015625))
       && q.times.every((t, j) => j === 0 || t > q.times[j - 1]) && q.enter > q.typed),
-    'sync 0.25: every Enter and select-all on an eighth, the first key on a sixteenth, the keys on 64ths in order, the Enter after the last key');
+    'sync 0.25: every Enter and select-all on an eighth, the first key on a sixteenth, the keys on the grid in order, the Enter after the last key');
+  // the grid halves for a faster question: typing 80 is twice typing 40's 32 keys a second
+  const at = cps => { const P2 = RS.parse(RS.setReelCue(SRC, 'sync', 0.25)), i = P2.edit.scenes.findIndex(x => x.query);
+    const ln = P2.marks.find(m => m.kind === 'scene' && m.obj === P2.edit.scenes[i]).ln;
+    const q = RS.queries(RS.parse(RS.setCue(RS.setReelCue(SRC, 'sync', 0.25), ln, 'typing', cps)).edit)[0];
+    return q.text.length / (q.typed - q.t0); };
+  ok(Math.abs(at(40) - 32) < 0.01 && Math.abs(at(80) - 64) < 0.01 && at(80) / at(40) === 2, `on the grid, typing 80 runs twice as fast as typing 40 (${at(40).toFixed(1)} and ${at(80).toFixed(1)} keys a second)`);
   const off = RS.parse(RS.setReelCue(SRC, 'sync', null)).edit, Q0 = RS.queries(off), sp = RS.spans(off);
   ok(Q0.every(q => Math.abs(q.enter - q.typed - 0.06) < 1e-9 && (q.last || Math.abs(q.clear - (sp[q.scene].end - 0.3)) < 1e-9)), 'no sync: typed as it always was (Enter 0.06 s after the last key, the select-all 0.3 s before the cut)');
 }

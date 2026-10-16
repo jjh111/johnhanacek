@@ -1821,6 +1821,20 @@ black/white cycled i want to show the variance of the work converging into the c
   Dan's quote. Each beat's `focus` keeps its heading's left edge inside the square frame's window.
   The picker lists the new folder.
 
+## The first question, twice as fast (2026-10-16)
+
+John, after his own timing pass (script version 193): "the first typing moment is too long overall
+the content is getting squished for time, can we get the initial typing double fast to have more
+room for content."
+
+- Under `cue sync 0.25` every key sat on a 64th, so no question could type faster than 32 keys a
+  second whatever its `cue typing` said. The key grid now halves until the asked pace fits:
+  `KG = G/8 / 2^max(0, ceil(log2(G/8 · CPS / 1.25)))`. At the default 40 it stays on 64ths (every
+  question's times unchanged, checked against the queries before the change); at 80 it is 128ths.
+- The command scene says `cue typing 80`: "add 4 medium fish and 2 coral" types in 0.45 s (64 a
+  second, from 0.9 s at 32), its Enter at 6.25 s (was 6.75), so the plan card, the strokes and the
+  receipt all arrive half a second sooner in the same 4.5 s. scripttest checks 80 runs at twice 40.
+
 ## Later
 
 Scene-specific cues (line staggers, the push); moving cut 1 onto the one player; stems out of

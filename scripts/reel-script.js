@@ -327,10 +327,13 @@
       const t0 = G ? on(when[i].start + (k === 0 ? 0.1 : -0.08), G / 2) : when[i].start + (k === 0 ? 0.1 : -0.08);
       const times = []; let tt = t0;
       const CPS = cue(sc, 'typing', edit);
+      const KG = G ? G / 8 / Math.pow(2, Math.max(0, Math.ceil(Math.log2(G / 8 * CPS / 1.25) - 1e-9))) : 0;
       for (let j = 0; j < sc.query.length; j++) {
         tt += (1 / CPS) * (0.6 + 0.8 * hash01(j + 31 * i));
         // on the grid each key keeps its own pace, moved to the nearest 64th, never onto the last
-        times.push(G ? Math.max(times.length ? times[times.length - 1] + G / 8 : t0 + G / 8, on(tt, G / 8)) : tt);
+        // (a question typed faster than 64ths allow halves its grid until it fits: typing 80 runs on
+        // 128ths, twice as fast; the default, 40, stays on 64ths, as it always played)
+        times.push(G ? Math.max(times.length ? times[times.length - 1] + KG : t0 + KG, on(tt, KG)) : tt);
       }
       const typed = times.length ? times[times.length - 1] : t0, last = k === asked.length - 1;
       const enter = G ? Math.ceil((typed + 0.06) / G - 1e-9) * G : typed + 0.06;
