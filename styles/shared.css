@@ -2212,6 +2212,49 @@ code, kbd, samp, pre {
     .swipe-offer svg { animation: none; }
 }
 
+/* Hand pointer (scripts/hand-pointer.js): the webcam as a pen. The layer is the
+   hand's ghost and nib over the water (above the ovals, under the nav); the HUD
+   is the mirrored preview that says the camera is on. A coarse pointer has a
+   finger on the glass already, so the toggle is for mouse devices. */
+.hand-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    pointer-events: none;
+}
+.hand-hud {
+    position: fixed;
+    left: 1rem;
+    bottom: 3.6rem;
+    z-index: 101;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    pointer-events: none;
+}
+.hand-hud video {
+    width: 128px;
+    height: 96px;
+    object-fit: cover;
+    transform: scaleX(-1);   /* a mirror, so moving right moves right */
+    border: 1px solid rgba(var(--cyan-dim-rgb), 0.35);
+    border-radius: 6px;
+    background: rgba(var(--surface-rgb), 0.6);
+}
+.hand-hud[data-state="error"] video { display: none; }
+.hand-hud-note {
+    max-width: 16rem;
+    font-family: var(--font-mono);
+    font-size: var(--text-3xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+}
+.hand-hud[data-state="error"] .hand-hud-note { color: var(--gold); }
+@media (pointer: coarse) {
+    .hand-toggle { display: none; }
+}
+
 /* Hero oval on touch: clear the labelled pill. Since v2.18 the touch pill wears
    its labels in 44px targets, so it ends at 1.5rem + 44px + 0.4rem of padding +
    2px of border (~76px) and the oval's 4–4.5rem top ran 12px under it on every
