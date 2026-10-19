@@ -115,6 +115,9 @@ window.CANVAS_ITEMS = [
   { file: 'nanome2.html', name: 'nanome2', cat: 'case study',
     desc: 'Nanome 2 — XR product design case study',
     created: '2026-02-14T00:00:00-08:00' },
+  { file: 'sizzlereel.html', name: 'sizzlereel', cat: 'case study',
+    desc: 'Sizzle Reel — a portfolio film made of this site, and how it evolved',
+    created: '2026-10-19T00:00:00-07:00' },
 
   // ---- tools --------------------------------------------------------------
   { file: 'Assets/DemosPlayground/sna-drawing-demo.html', name: 'social-network-viz', cat: 'tools',
