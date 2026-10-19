@@ -48,7 +48,7 @@
  *
  * Types (Aug 2026 revision, John; `external` added 2026-09-14): site · case
  * study · tools · experiments · demos · external. `demos` is software you can
- * use, wherever it is hosted (READI and MetaMedium live off-site and are still
+ * use, wherever it is hosted (READI and dyna.ink live off-site and are still
  * demos); `external` is writing and portfolios — the Substacks, the photography.
  * The old `ideas` style-reference set is parked at the bottom, out of view —
  * uncomment an entry to bring it back.
@@ -145,8 +145,8 @@ window.CANVAS_ITEMS = [
     created: '2025-12-01T00:00:00-08:00' },
 
   // ---- demos --------------------------------------------------------------
-  { file: 'https://jjh111.github.io/MetaMedium/', name: 'metamedium', cat: 'demos',
-    desc: 'MetaMedium — drawing-as-programming parsing system, live build',
+  { file: 'https://jjh111.github.io/MetaMedium/', name: 'dynaink', cat: 'demos',
+    desc: 'dyna.ink (formerly MetaMedium) — semantic drawing as AI interface, live build',
     external: true, created: '2026-08-26T00:00:00-07:00' },
   { file: 'Assets/DemosPlayground/aethereal-flight/index.html', name: 'cyberbird', cat: 'demos',
     desc: 'Radical aerial flight simulator in 3D space',
