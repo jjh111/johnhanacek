@@ -1,0 +1,2096 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Periscope · run-space lens (1 sentence to 1 prompt)</title>
+
+<!-- ============================================================
+     OPENPROSE · THE PERISCOPE (code only, data from the slot)
+     ============================================================
+     A trace concept that combines the slices of single runs in
+     context with the larger run space: complexity zooms in and
+     out seamlessly, and everything on screen at any state helps
+     the reader understand what happened in each run, from one
+     sentence down to a deep drilldown into the time slices.
+
+     THE METAPHOR
+       The run-space is a CUBE: programs × time × depth.
+       The Periscope shows three orthogonal SLICES through that
+       cube simultaneously, plus the agent topology that lives
+       inside the focused cell. Nothing collapses, nothing modes.
+       You move your eye, not the app.
+
+     COMPLEXITY LADDER: every row gives one level deeper detail
+       at the focused cell, while keeping the higher levels visible.
+
+       L0  Headline ............ one sentence summary
+       L1  Run-space band ...... one program sparkline per row over time
+       L2  Time-slice column ... what every program did on day T
+       L2′ Run-strip strip ..... the eval dimensions of the focused run
+       L3  Node tree ........... agent topology of the focused run
+       L4  Node detail ......... prompt / output / eval of one node
+
+     READING THE PAGE
+       At rest the band shows the fleet and the lower panels show
+       the most recent run of the most recent program (a sensible
+       default: the operator's "what's the latest" question).
+       Hover any sparkline dot to refocus; every panel reflows.
+       Click a dot to lock focus. Click any node in L3 to expand
+       L4. ESC unlocks.
+
+     STYLE
+       Pulls from the β-tufte-mono-kecal-styleguide-teal direction:
+       fog-cream paper, warm brown-black ink, teal #3a7a6a as
+       editorial accent, amber #c49a5c as the rare warm complement
+       (used for "focus highlight" and "look up" moments). Kecal
+       throughout (display + italic emphasis), IBM Plex Mono for IDs
+       and numbers. Sharp corners, hairlines only, tabular numerics,
+       direct labels.
+
+     DATA
+       Ships empty. All trace content comes from window.TRACE_DATA,
+       loaded from ../data/periscope.js; the shape is documented in
+       ../data/periscope.schema.md. Per-run historical points are
+       interpolated between the actual run dates; the run dots
+       themselves carry the canonical scores.
+     ============================================================ -->
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ============================================================
+   §0  TYPE — Kecal (FungiType) + IBM Plex Mono.
+   Cormorant Garamond removed.  Kecal
+   carries every body / heading surface AND the italic emphasis
+   (em + lede). IBM Plex Mono takes IDs, dates, and tabular
+   numerics.
+   ============================================================ */
+@font-face { font-family: 'Kecal'; font-weight: 200; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extralight-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 300; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Light-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 400; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Regular-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 500; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Medium-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 600; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Semibold-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 700; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Bold-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 800; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extrabold-web.woff2') format('woff2'); }
+
+/* Cormorant Garamond import dropped.
+   Per "clean style: remove all serif fonts and replace with mono or
+   kecal as appropriate", the type system now stands on Kecal
+   (display + italic emphasis) + IBM Plex Mono (IDs + numerics) only.
+   Inline serif overrides further down were also retargeted to Kecal. */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&display=swap');
+
+/* ============================================================
+   §1  TOKENS — Tufte/Kecal/Teal direction.
+   ============================================================ */
+:root {
+  /* Paper + ink — fog cream over warm brown-black */
+  --paper:       #f5f0e8;
+  --paper-warm:  #f0e8d8;
+  --paper-lt:    #fbf7ef;
+  --paper-aged:  #e8e0d0;
+  --paper-deep:  #ded2bd;
+
+  --ink:         #2a2520;
+  --ink-2:       rgba(42,37,32,0.78);
+  --ink-3:       rgba(42,37,32,0.55);
+  --ink-4:       rgba(42,37,32,0.32);
+  --ink-5:       rgba(42,37,32,0.18);
+  --ink-6:       rgba(42,37,32,0.10);
+
+  /* Editorial accent — teal. Anything italic / focused / authorial. */
+  --teal:        #3a7a6a;
+  --teal-deep:   #2e6456;
+  --teal-soft:   #4a8a7a;
+  --teal-tint:   rgba(58,122,106,0.14);
+  --teal-faint:  rgba(58,122,106,0.06);
+  --teal-deep-tint: rgba(46,100,86,0.22);
+
+  /* Amber — the rare warm complement. Used ONLY for the focus
+     cross-hair and the one "look up" moment per panel. */
+  --amber:       #c49a5c;
+  --amber-deep:  #a87f44;
+  --amber-soft:  #d4aa6c;
+  --amber-tint:  rgba(196,154,92,0.22);
+  --amber-faint: rgba(196,154,92,0.08);
+
+  /* Data identity — semantic only. */
+  --pass:        #2e7d4f;
+  --pass-soft:   rgba(46,125,79,0.12);
+  --fail:        #b34a3e;
+  --fail-soft:   rgba(179,74,62,0.12);
+  --partial:     var(--amber-deep);
+  --partial-soft:rgba(168,127,68,0.12);
+
+  /* Hairlines */
+  --rule:        rgba(42,37,32,0.16);
+  --rule-mid:    rgba(42,37,32,0.08);
+  --rule-faint:  rgba(42,37,32,0.04);
+
+  /* Type stack */
+  /* "clean style: remove all serif fonts
+     and replace with mono or kecal as appropriate".  --serif token
+     kept as an alias for back-compat with rule selectors, but resolves
+     to the Kecal stack (no Cormorant Garamond reference anywhere). */
+  --serif:  'Kecal', system-ui, -apple-system, sans-serif;
+  --kecal:  'Kecal', system-ui, -apple-system, sans-serif;
+  --mono:   'IBM Plex Mono', 'SF Mono', 'JetBrains Mono', Consolas, monospace;
+
+  /* Spacing scale */
+  --s-3xs: 0.25rem;
+  --s-2xs: 0.5rem;
+  --s-xs:  0.75rem;
+  --s-sm:  1rem;
+  --s-md:  1.5rem;
+  --s-lg:  2rem;
+  --s-xl:  3rem;
+  --s-2xl: 4rem;
+
+  /* Layout */
+  --wide:    1380px;
+  --measure: 860px;
+}
+
+html { font-size: 16px; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--kecal);
+  font-weight: 300;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  letter-spacing: 0;
+  position: relative;
+}
+
+/* Faint paper ambient — teal hint at the edges so the page
+   feels like it sits inside a Tufte volume rather than on a
+   flat slab. */
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse 50% 30% at 12% 6%, var(--teal-faint), transparent 60%),
+    radial-gradient(ellipse 60% 35% at 95% 95%, var(--amber-faint), transparent 60%);
+}
+body > * { position: relative; z-index: 1; }
+
+/* ============================================================
+   §2  MASTHEAD — kicker + h1 + sub. The H1 is one sentence;
+   the lede is one sentence; together they ARE the L0 layer.
+   ============================================================ */
+.masthead {
+  max-width: var(--wide); margin: 0 auto;
+  padding: var(--s-2xl) var(--s-lg) var(--s-md);
+  display: grid; grid-template-columns: 1fr auto;
+  gap: var(--s-lg); align-items: baseline;
+  border-bottom: 1px solid var(--rule);
+}
+.masthead .mh-left { display: flex; flex-direction: column; gap: var(--s-2xs); }
+.masthead .kicker {
+  font-family: var(--kecal); font-size: 0.68rem;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--teal); font-weight: 700;
+  display: inline-flex; align-items: center; gap: var(--s-xs);
+}
+.masthead .kicker::before {
+  content: ''; width: 24px; height: 1px; background: var(--teal);
+}
+.masthead h1 {
+  font-family: var(--kecal);
+  font-size: clamp(1.85rem, 2.6vw, 2.4rem);
+  font-weight: 400; line-height: 1.12;
+  letter-spacing: -0.018em;
+  color: var(--ink);
+  max-width: 24ch;
+}
+.masthead h1 em {
+  font-family: var(--serif);
+  font-style: italic; font-weight: 500;
+  color: var(--teal);
+  letter-spacing: -0.005em;
+}
+.masthead .mh-sub {
+  font-family: var(--serif);
+  font-style: italic; font-size: 1.04rem;
+  color: var(--ink-3); max-width: 56ch;
+  line-height: 1.45;
+  margin-top: 0.1rem;
+}
+.masthead .mh-sub strong {
+  font-family: var(--kecal);
+  font-style: normal; font-weight: 600;
+  color: var(--ink); letter-spacing: -0.005em;
+}
+.masthead .mh-meta {
+  font-family: var(--mono); font-size: 0.66rem;
+  letter-spacing: 0.04em; color: var(--ink-3);
+  text-align: right;
+  display: flex; flex-direction: column; gap: 0.18rem; align-items: flex-end;
+  font-variant-numeric: tabular-nums;
+}
+.masthead .mh-meta .stat { color: var(--ink); font-weight: 500; }
+
+/* ============================================================
+   §3  HEADLINE LEDE — L0 summary expanded slightly with inline
+   shape-chips. The lede DOES NOT change as the focus moves;
+   it's the always-true sentence about the whole window.
+   ============================================================ */
+.lede {
+  max-width: var(--wide); margin: 0 auto;
+  padding: var(--s-md) var(--s-lg) var(--s-md);
+  border-bottom: 1px solid var(--rule-mid);
+}
+.lede p {
+  font-family: var(--kecal); font-size: 1.04rem;
+  line-height: 1.62; color: var(--ink-2);
+  max-width: 78ch;
+  text-wrap: pretty;
+}
+.lede p em {
+  font-family: var(--serif);
+  font-style: italic; font-weight: 500;
+  color: var(--teal);
+}
+.lede p strong {
+  font-family: var(--kecal);
+  font-weight: 700; color: var(--ink);
+  letter-spacing: -0.005em;
+}
+.lede p .fig {
+  font-family: var(--mono); font-variant-numeric: tabular-nums;
+  font-size: 0.92em; color: var(--ink); font-weight: 500;
+}
+.lede .chip {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 12px; height: 12px;
+  margin: 0 0.1em -0.12em;
+}
+.lede .chip svg { width: 100%; height: 100%; display: block; }
+
+/* ============================================================
+   §4  BAND — L1 — Run-space sparklines. Each program is one
+   horizontal row; one row maps to the program's score over
+   the month. Run instances are highlighted as filled dots on
+   the line. The X-axis is shared with §5's time-slice column.
+   ============================================================ */
+.band-wrap {
+  max-width: var(--wide); margin: 0 auto;
+  padding: var(--s-lg) var(--s-lg) var(--s-sm);
+}
+.section-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--s-md);
+  margin-bottom: var(--s-sm);
+}
+.section-head .sh-left {
+  display: flex; align-items: baseline; gap: var(--s-sm);
+}
+.section-head .sh-num {
+  font-family: var(--kecal); font-size: 0.62rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--teal); font-weight: 700;
+}
+.section-head .sh-title {
+  font-family: var(--kecal); font-size: 0.84rem;
+  font-weight: 500; color: var(--ink); letter-spacing: -0.005em;
+}
+.section-head .sh-note {
+  font-family: var(--serif); font-size: 0.92rem;
+  font-style: italic; color: var(--ink-3);
+}
+.section-head .sh-right {
+  font-family: var(--mono); font-size: 0.66rem;
+  color: var(--ink-3); letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* band-controls (play/loop/speed) for
+   the L1 timeline. Slots between sh-left and sh-right in the band
+   section-head. Mono labels, hairline borders. */
+.band-controls {
+  display: inline-flex; align-items: center; gap: var(--s-2xs);
+  font-family: var(--mono); font-size: 0.66rem;
+  color: var(--ink-3); letter-spacing: 0.04em;
+}
+/* fixed width so the pill never reshapes
+   when state changes (Play↔Pause glyph, speed-output text, etc.).  All
+   children are flex-shrink:0 to lock against subpixel jitter. */
+.band-controls--right {
+  flex: 0 0 auto;
+  min-width: 16.5rem; max-width: 16.5rem;
+  justify-content: flex-end;
+}
+.band-controls--right > * { flex-shrink: 0; }
+.band-controls .bc-btn,
+.band-controls .bc-speed-out { flex-shrink: 0; }
+#band-date {
+  font-family: var(--mono); font-size: 0.78rem;
+  color: var(--ink); font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em; margin-right: 0.25rem; font-weight: 500;
+}
+.band-controls .bc-btn {
+  background: transparent;
+  border: 1px solid var(--rule-mid);
+  color: var(--ink-2);
+  font-family: var(--mono); font-size: 0.78rem;
+  width: 1.55rem; height: 1.55rem; padding: 0; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: border-color 0.15s, color 0.15s;
+}
+.band-controls .bc-btn:hover { border-color: var(--teal); color: var(--teal); }
+.band-controls .bc-btn[aria-pressed="true"] { border-color: var(--teal); color: var(--teal); }
+.band-controls .bc-btn.playing { color: var(--teal); border-color: var(--teal); }
+.band-controls .bc-speed-label {
+  font-family: var(--mono); font-size: 0.6rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink-3); margin-left: 0.3rem;
+}
+.band-controls input[type="range"] {
+  -webkit-appearance: none; appearance: none;
+  width: 5.5rem; height: 14px; background: transparent; cursor: pointer;
+}
+.band-controls input[type="range"]::-webkit-slider-runnable-track {
+  height: 1px; background: var(--ink-4);
+}
+.band-controls input[type="range"]::-moz-range-track {
+  height: 1px; background: var(--ink-4);
+}
+.band-controls input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 9px; height: 9px; border-radius: 0;
+  background: var(--ink-2); margin-top: -4px; border: 0;
+}
+.band-controls input[type="range"]::-moz-range-thumb {
+  width: 9px; height: 9px; border-radius: 0;
+  background: var(--ink-2); border: 0;
+}
+.band-controls .bc-speed-out {
+  font-family: var(--mono); font-size: 0.66rem;
+  color: var(--ink-2); font-variant-numeric: tabular-nums;
+  min-width: 3.2rem; text-align: right;
+}
+
+.band {
+  display: grid;
+  /* Row | Sparkline canvas | Direct-label final value */
+  grid-template-columns: 200px 1fr 70px;
+  row-gap: 0.18rem;
+  align-items: stretch;
+  position: relative;
+}
+.band .b-row-label {
+  font-family: var(--kecal); font-size: 0.92rem;
+  color: var(--ink-2); font-weight: 400;
+  display: flex; align-items: center; justify-content: space-between;
+  padding-right: var(--s-sm);
+  border-right: 1px solid var(--rule-mid);
+}
+.band .b-row-label .b-row-name { display: flex; flex-direction: column; gap: 0.05rem; }
+.band .b-row-label .b-row-name .pn {
+  font-family: var(--kecal); font-weight: 500;
+  letter-spacing: -0.005em; color: var(--ink);
+  font-size: 0.92rem;
+}
+.band .b-row-label .b-row-name .pmeta {
+  font-family: var(--mono); font-size: 0.62rem;
+  color: var(--ink-3); letter-spacing: 0.04em;
+}
+.band .b-row-label .b-row-kicker {
+  font-family: var(--kecal); font-size: 0.56rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--teal); font-weight: 600;
+}
+.band .b-row-spark {
+  padding: 0 var(--s-2xs);
+  position: relative;
+  height: 56px;
+  border-bottom: 1px dotted var(--rule-faint);
+}
+.band .b-row-spark svg {
+  width: 100%; height: 100%; display: block;
+  overflow: visible;
+}
+.band .b-row-final {
+  padding-left: var(--s-sm);
+  display: flex; flex-direction: column; align-items: flex-start;
+  justify-content: center;
+  border-left: 1px solid var(--rule-mid);
+}
+.band .b-row-final .fv {
+  font-family: var(--serif);
+  font-style: italic; font-weight: 600;
+  font-size: 1.2rem;
+  color: var(--teal);
+  line-height: 1; letter-spacing: -0.01em;
+}
+.band .b-row-final .fv .unit {
+  font-family: var(--mono);
+  font-style: normal; font-weight: 400;
+  font-size: 0.62rem; color: var(--ink-3);
+  letter-spacing: 0.06em; margin-left: 0.18em;
+}
+.band .b-row-final .fv-cap {
+  font-family: var(--kecal); font-size: 0.56rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--ink-3); margin-top: 0.18rem;
+  font-weight: 600;
+}
+
+/* The time-axis at the bottom of the band — also serves as
+   the shared X-axis label for the time-slice column below. */
+.band-axis {
+  grid-column: 2 / 3;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0 var(--s-2xs);
+  margin-top: 0.2rem;
+  font-family: var(--mono); font-size: 0.62rem;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  border-top: 1px solid var(--rule-mid);
+  padding-top: 0.3rem;
+}
+.band-axis .tick {
+  position: relative;
+  text-align: center;
+}
+.band-axis .tick::before {
+  content: '';
+  position: absolute; top: -0.36rem; left: 50%;
+  width: 1px; height: 4px;
+  background: var(--rule);
+  transform: translateX(-0.5px);
+}
+
+/* ============================================================
+   §5  TWO-PANE — L2 — Time-slice column (left) + Run-strip
+   strip (right). These are the two ORTHOGONAL cross-sections
+   through the run-space cube, meeting at the focus point.
+   Time-slice = vertical slice through the band at a given day
+   Run-strip  = horizontal slice through the band on a given row
+   ============================================================ */
+.lens {
+  max-width: var(--wide); margin: 0 auto;
+  padding: var(--s-md) var(--s-lg) var(--s-md);
+  display: grid;
+  grid-template-columns: minmax(340px, 1fr) minmax(380px, 1.2fr);
+  gap: var(--s-lg);
+  border-top: 1px solid var(--rule-mid);
+  border-bottom: 1px solid var(--rule-mid);
+}
+
+/* L2 — time slice column.  Shows ALL programs' state at the
+   focused day, including those not under the cursor. */
+.tslice .tslice-rows {
+  display: grid;
+  grid-template-columns: 1fr 60px 70px;
+  row-gap: 0.42rem;
+  align-items: center;
+  margin-top: var(--s-2xs);
+}
+.tslice .tr-name {
+  font-family: var(--kecal); font-size: 0.92rem;
+  color: var(--ink-2);
+}
+.tslice .tr-name.focus { color: var(--ink); font-weight: 500; }
+.tslice .tr-name.focus::before {
+  content: '◆'; color: var(--amber); font-size: 0.78em;
+  margin-right: 0.4rem; vertical-align: 0.05em;
+}
+.tslice .tr-name:not(.focus)::before {
+  content: '◇'; color: var(--ink-4); font-size: 0.72em;
+  margin-right: 0.4rem; vertical-align: 0.05em;
+}
+.tslice .tr-bar {
+  height: 4px; background: var(--ink-6);
+  position: relative;
+}
+.tslice .tr-bar::after {
+  content: ''; position: absolute; inset: 0;
+  background: var(--teal); transform-origin: left;
+  transform: scaleX(var(--w, 0));
+}
+.tslice .tr-bar.focus::after { background: var(--amber); }
+.tslice .tr-bar.fail::after { background: var(--fail); }
+.tslice .tr-num {
+  font-family: var(--mono); font-size: 0.78rem;
+  color: var(--ink); text-align: right;
+  font-variant-numeric: tabular-nums; font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.tslice .tr-num.focus { color: var(--amber-deep); font-weight: 600; }
+
+/* The narrative under the time-slice column — one sentence
+   that updates with the focused day. */
+.tslice .tnote {
+  margin-top: var(--s-sm);
+  padding-top: var(--s-2xs);
+  border-top: 1px dotted var(--rule-mid);
+  font-family: var(--serif);
+  font-style: italic; font-size: 0.94rem;
+  color: var(--ink-3); line-height: 1.5;
+  max-width: 48ch;
+}
+.tslice .tnote em { color: var(--ink); font-weight: 500; font-style: italic; }
+
+/* L2′ — run strip.  The dimension scores of the focused run.
+   Each dimension gets a small horizontal bar with direct label. */
+.rstrip .rs-meta {
+  display: flex; gap: var(--s-md); flex-wrap: wrap;
+  margin-top: var(--s-2xs); margin-bottom: var(--s-sm);
+  font-family: var(--mono); font-size: 0.66rem;
+  color: var(--ink-3); letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.rstrip .rs-meta .k {
+  color: var(--ink-3); margin-right: 0.4em; letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.rstrip .rs-meta .v { color: var(--ink); font-weight: 500; }
+.rstrip .rs-rows {
+  display: grid;
+  grid-template-columns: 200px 1fr 70px;
+  row-gap: 0.42rem;
+  align-items: center;
+}
+.rstrip .rr-name {
+  font-family: var(--kecal); font-size: 0.92rem;
+  color: var(--ink-2);
+  display: flex; align-items: baseline; gap: 0.5rem;
+}
+.rstrip .rr-name .rrn-short {
+  font-family: var(--mono); font-size: 0.62rem;
+  color: var(--ink-3); letter-spacing: 0.08em;
+  text-transform: uppercase; font-weight: 500;
+}
+.rstrip .rr-bar {
+  height: 6px; background: var(--ink-6);
+  position: relative;
+}
+.rstrip .rr-bar::after {
+  content: ''; position: absolute; inset: 0;
+  background: var(--teal); transform-origin: left;
+  transform: scaleX(var(--w, 0));
+}
+.rstrip .rr-bar.weak::after { background: var(--amber-deep); }
+.rstrip .rr-bar.fail::after { background: var(--fail); }
+.rstrip .rr-num {
+  font-family: var(--mono); font-size: 0.92rem;
+  color: var(--ink); text-align: right;
+  font-variant-numeric: tabular-nums; font-weight: 500;
+}
+.rstrip .rr-num.weak { color: var(--amber-deep); font-weight: 600; }
+.rstrip .rr-num.fail { color: var(--fail); font-weight: 600; }
+.rstrip .rstrip-foot {
+  margin-top: var(--s-sm);
+  padding-top: var(--s-2xs);
+  border-top: 1px dotted var(--rule-mid);
+  display: flex; justify-content: space-between;
+  gap: var(--s-md);
+}
+.rstrip .rstrip-foot .verdict {
+  font-family: var(--kecal); font-size: 0.62rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--pass); font-weight: 700;
+}
+.rstrip .rstrip-foot .verdict.partial { color: var(--partial); }
+.rstrip .rstrip-foot .verdict.fail { color: var(--fail); }
+.rstrip .rstrip-foot .rnote {
+  font-family: var(--serif);
+  font-style: italic; font-size: 0.94rem;
+  color: var(--ink-3); line-height: 1.5;
+  flex: 1;
+  text-align: right;
+}
+.rstrip .rstrip-foot .rnote em { color: var(--teal); font-style: italic; font-weight: 500; }
+
+/* ============================================================
+   §6  TREE — L3 — Agent topology of the focused run. Uses
+   the spirit-2 symbol vocabulary:  ○ orchestrator
+                                    □ scout
+                                    ◇ eval-gate
+                                    ⬡ writer / synthesizer
+                                    ▣ terminal
+   Line weight encodes delegation intensity; line colour
+   encodes role (teal control, ink default, red fail, amber
+   gate/branch, green pass).
+   ============================================================ */
+.tree-wrap {
+  max-width: var(--wide); margin: 0 auto;
+  padding: var(--s-md) var(--s-lg) var(--s-md);
+}
+.tree {
+  position: relative;
+  width: 100%;
+  height: 280px;
+  border-top: 1px dotted var(--rule-mid);
+  border-bottom: 1px dotted var(--rule-mid);
+  padding: var(--s-md) 0;
+}
+.tree svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.tree .node-label {
+  font-family: var(--mono); font-size: 9.5px;
+  fill: var(--ink-2); letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.tree .node-label.faded { fill: var(--ink-3); }
+.tree .role-tag {
+  font-family: var(--kecal); font-size: 8.5px;
+  fill: var(--ink-3); letter-spacing: 0.12em;
+  text-transform: uppercase; font-weight: 600;
+}
+.tree .score-tag {
+  font-family: var(--mono); font-size: 9.5px;
+  font-variant-numeric: tabular-nums; font-weight: 500;
+  fill: var(--ink);
+}
+.tree .score-tag.weak { fill: var(--amber-deep); font-weight: 600; }
+.tree .score-tag.fail { fill: var(--fail); font-weight: 600; }
+.tree .score-tag.strong { fill: var(--pass); font-weight: 600; }
+.tree .glyph { cursor: pointer; transition: filter 0.15s; }
+.tree .glyph:hover { filter: drop-shadow(0 0 4px var(--amber-tint)); }
+.tree .glyph.selected { filter: drop-shadow(0 0 6px var(--amber-tint)); }
+.tree .selected-ring {
+  fill: none; stroke: var(--amber); stroke-width: 1.4;
+  stroke-dasharray: 2 2;
+}
+
+/* L4 — node detail. Hidden until a node is clicked.  Slides
+   in below the tree with the prompt / output / eval. */
+.detail {
+  max-width: var(--wide); margin: 0 auto;
+  padding: 0 var(--s-lg);
+}
+.detail-card {
+  background: var(--paper-lt);
+  border: 1px solid var(--rule);
+  border-top: 1px solid var(--amber);
+  padding: var(--s-md) var(--s-lg);
+  display: grid;
+  grid-template-columns: 110px 1fr 220px;
+  gap: var(--s-md);
+  align-items: start;
+  font-family: var(--kecal);
+}
+.detail-card.hidden { display: none; }
+.detail-card .dc-meta {
+  font-family: var(--mono); font-size: 0.66rem;
+  color: var(--ink-3); letter-spacing: 0.06em;
+  display: flex; flex-direction: column; gap: 0.18rem;
+}
+.detail-card .dc-meta .dc-kind {
+  color: var(--teal); font-weight: 600; letter-spacing: 0.18em;
+  text-transform: uppercase; font-size: 0.62rem;
+  margin-bottom: 0.18rem;
+}
+.detail-card .dc-meta .dc-id {
+  color: var(--ink); font-weight: 500;
+  font-size: 0.78rem; word-break: break-all; line-height: 1.3;
+}
+.detail-card .dc-body {
+  font-family: var(--kecal); font-size: 0.94rem;
+  color: var(--ink-2); line-height: 1.55;
+  max-width: 62ch;
+}
+.detail-card .dc-body p { margin: 0.4rem 0; }
+.detail-card .dc-body p.lead { color: var(--ink); }
+.detail-card .dc-body em {
+  font-family: var(--serif); font-style: italic;
+  color: var(--teal); font-weight: 500;
+}
+.detail-card .dc-body .quote {
+  display: block;
+  border-left: 2px solid var(--teal);
+  padding: 0.18rem 0.7rem;
+  font-family: var(--serif); font-style: italic;
+  color: var(--ink); font-size: 0.94rem; line-height: 1.45;
+  margin: 0.3rem 0;
+}
+.detail-card .dc-eval {
+  display: grid; grid-template-columns: 1fr auto; gap: 0.2rem 0.6rem;
+  font-family: var(--mono); font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+  align-items: baseline;
+}
+.detail-card .dc-eval .ek {
+  letter-spacing: 0.08em; color: var(--ink-3);
+  font-size: 0.66rem; text-transform: uppercase;
+}
+.detail-card .dc-eval .ev { color: var(--ink); text-align: right; font-weight: 500; }
+.detail-card .dc-eval .ev.weak { color: var(--amber-deep); font-weight: 600; }
+.detail-card .dc-eval .ev.fail { color: var(--fail); font-weight: 600; }
+.detail-card .dc-eval .ev.strong { color: var(--pass); font-weight: 600; }
+.detail-card .dc-eval .esep {
+  grid-column: 1 / -1;
+  border-top: 1px dotted var(--rule-mid);
+  margin: 0.2rem 0;
+}
+
+/* ============================================================
+   §7  GLOSSARY — bottom strip that documents the symbol +
+   colour vocabulary in the SAME visual register as the tree.
+   ============================================================ */
+.glossary {
+  max-width: var(--wide); margin: 0 auto;
+  padding: var(--s-md) var(--s-lg) var(--s-lg);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-lg);
+  border-top: 1px solid var(--rule-mid);
+}
+.glossary .gloss-shapes,
+.glossary .gloss-lines {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 0.4rem 0.7rem;
+  align-items: center;
+}
+.glossary .gloss-head {
+  grid-column: 1 / -1;
+  font-family: var(--kecal); font-size: 0.62rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--teal); font-weight: 700;
+  margin-bottom: 0.2rem;
+  display: flex; align-items: center; gap: 0.6rem;
+}
+.glossary .gloss-head::after {
+  content: ''; flex: 1; height: 1px; background: var(--rule-mid);
+}
+.glossary .gloss-shapes svg,
+.glossary .gloss-lines svg {
+  width: 100%; height: 22px; display: block; overflow: visible;
+}
+.glossary .gloss-shapes .gtext,
+.glossary .gloss-lines .gtext {
+  font-family: var(--kecal); font-size: 0.88rem;
+  color: var(--ink-2);
+}
+.glossary .gloss-shapes .gtext em,
+.glossary .gloss-lines .gtext em {
+  font-family: var(--serif); font-style: italic;
+  color: var(--teal); font-weight: 500;
+}
+
+/* ============================================================
+   §8  COLOPHON — citation strip, links, signature.
+   ============================================================ */
+.colophon {
+  max-width: var(--wide); margin: 0 auto;
+  padding: var(--s-md) var(--s-lg) var(--s-2xl);
+  text-align: center;
+  border-top: 1px solid var(--rule-mid);
+  font-family: var(--kecal); font-size: 0.66rem;
+  color: var(--ink-3); letter-spacing: 0.06em;
+}
+.colophon .crule { width: 48px; height: 1px; background: var(--teal); margin: 0 auto var(--s-sm); }
+.colophon .line { margin: 0.2rem 0; }
+.colophon .line.italic {
+  font-family: var(--serif); font-style: italic;
+  color: var(--ink-2); font-size: 0.92rem;
+  letter-spacing: 0; margin-bottom: 0.45rem;
+}
+.colophon a {
+  color: var(--teal); text-decoration: none;
+  margin: 0 0.5rem; border-bottom: 1px dotted var(--teal-tint);
+  transition: color 0.15s, border-color 0.15s;
+}
+.colophon a:hover { color: var(--teal-deep); border-bottom-color: var(--teal); }
+
+/* ============================================================
+   §9  FOCUS CURSOR — the cross-hair that links band cell to
+   slice column to run strip to tree.  It's the visual "thread"
+   that says "this cell is current focus."
+   ============================================================ */
+.focus-rail {
+  position: absolute;
+  top: 0; bottom: 0; width: 1px;
+  background: var(--amber);
+  pointer-events: none;
+  opacity: 0.55;
+  z-index: 4;
+}
+.focus-rail .fr-tick {
+  position: absolute;
+  top: -6px; left: -3px;
+  width: 7px; height: 7px;
+  background: var(--amber);
+  transform: rotate(45deg);
+}
+.focus-rail .fr-label {
+  position: absolute;
+  top: -22px; left: 0;
+  transform: translateX(-50%);
+  font-family: var(--mono); font-size: 0.62rem;
+  color: var(--amber-deep); font-weight: 600;
+  background: var(--paper-lt);
+  padding: 0.1rem 0.36rem;
+  border: 1px solid var(--amber-tint);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   §10  RESPONSIVE — narrow viewport collapse. The two-pane
+   stacks; the band keeps its grid (just narrower).
+   ============================================================ */
+@media (max-width: 1100px) {
+  .lens { grid-template-columns: 1fr; gap: var(--s-md); }
+  .band { grid-template-columns: 160px 1fr 60px; }
+  .band .b-row-final .fv { font-size: 1.05rem; }
+  .glossary { grid-template-columns: 1fr; }
+  .detail-card { grid-template-columns: 1fr; }
+}
+@media (max-width: 720px) {
+  .masthead { grid-template-columns: 1fr; }
+  .masthead .mh-meta { text-align: left; align-items: flex-start; }
+  .band { grid-template-columns: 120px 1fr 50px; }
+  .band .b-row-label .pn { font-size: 0.82rem; }
+  .band .b-row-label .pmeta { display: none; }
+}
+
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     §M  MASTHEAD — kicker / one-sentence h1 / one-sentence sub
+     ============================================================ -->
+<header class="masthead">
+  <div class="mh-left">
+    <span class="kicker">The periscope &middot; one sentence to one prompt</span>
+    <h1 id="mh-title">Every program, every run &middot; one diagram, every level on screen.</h1>
+    <p class="mh-sub">
+      <strong>The Periscope</strong> shows three orthogonal slices through the
+      run-space cube at once &mdash; the program band, the time-slice column,
+      and the run-strip strip &mdash; with the agent topology of the focused
+      cell living inside.
+    </p>
+  </div>
+  <div class="mh-meta">
+    <span>OpenProse &middot; trace lens</span>
+    <span id="mh-period">&mdash;</span>
+    <span><span class="stat" id="mh-nprog">&mdash;</span> programs &middot; <span class="stat" id="mh-nrun">&mdash;</span> runs</span>
+    <span>median overall <span class="stat" id="mh-median">&mdash;</span></span>
+  </div>
+</header>
+
+<!-- ============================================================
+     §L  LEDE — L0 — one paragraph headline.  Stays put; reflects
+     the always-true sentence about the window.
+     ============================================================ -->
+<section class="lede">
+  <p>
+    <span id="lede-open">Across the window, every program in the fleet is summarized here.</span>
+    The fleet runs
+    <span class="chip" title="orchestrator"><svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.6" fill="#3a7a6a"/></svg></span>
+    one orchestrator per run that fans out to
+    <span class="chip" title="scout"><svg viewBox="0 0 12 12"><rect x="1.4" y="1.4" width="9.2" height="9.2" fill="none" stroke="#2a2520" stroke-width="1.3"/></svg></span>
+    <span id="lede-scouts">its</span> scouts in total and reconverges through
+    <span class="chip" title="writer"><svg viewBox="0 0 12 12"><polygon points="6,1.2 10.6,3.8 10.6,8.2 6,10.8 1.4,8.2 1.4,3.8" fill="none" stroke="#3a7a6a" stroke-width="1.4"/></svg></span>
+    a writer into
+    <span class="chip" title="eval gate"><svg viewBox="0 0 12 12"><polygon points="6,1.2 10.8,6 6,10.8 1.2,6" fill="none" stroke="#a87f44" stroke-width="1.3"/></svg></span>
+    <span id="lede-gates">its</span> eval gates<span id="lede-close">.</span>
+    <em>The trace is the run; the diagram is the trace.</em>
+  </p>
+</section>
+
+<!-- ============================================================
+     §B  BAND — L1 — run-space sparklines, one per program.
+     Built in JS from the PROGRAMS array.
+     ============================================================ -->
+<section class="band-wrap">
+  <div class="section-head">
+    <div class="sh-left">
+      <span class="sh-num">L1 &middot; Run-space band</span>
+      <!-- date stays on the left.  Was a
+           generic sparklines descriptor; now the current playback date
+           is the always-visible signal here. -->
+      <span class="sh-title"><span id="band-date">&mdash;</span> &middot; one sparkline per program &middot; one point per day, dots are real runs.</span>
+    </div>
+    <!-- playback controls anchored to the
+         right of the L1 head as a fixed-width pill so the buttons
+         never move or change size when state changes.  The descriptive
+         band-readout text is gone; the date sits on the left instead. -->
+    <div class="band-controls band-controls--right" id="band-controls" aria-label="Timeline playback">
+      <button type="button" class="bc-btn" id="bc-play" aria-label="Play/pause timeline">▶</button>
+      <button type="button" class="bc-btn" id="bc-loop" aria-pressed="true" aria-label="Toggle loop">↻</button>
+      <span class="bc-speed-label">spd</span>
+      <input type="range" id="bc-speed" min="1" max="8" step="0.5" value="3" aria-label="Playback speed (days/sec)">
+      <span class="bc-speed-out" id="bc-speed-out">3·0/s</span>
+    </div>
+  </div>
+
+  <div class="band" id="band">
+    <!-- rows injected -->
+  </div>
+  <div class="band-axis" id="band-axis"><!-- ticks injected --></div>
+</section>
+
+<!-- ============================================================
+     §S  TWO-PANE — L2 — time-slice column + run-strip strip.
+     ============================================================ -->
+<section class="lens">
+
+  <div class="tslice">
+    <div class="section-head">
+      <div class="sh-left">
+        <span class="sh-num">L2 &middot; Time slice</span>
+        <span class="sh-title" id="tslice-title">All programs at day &mdash;</span>
+      </div>
+      <span class="sh-right" id="tslice-day">&mdash;</span>
+    </div>
+    <div class="tslice-rows" id="tslice-rows"><!-- rows injected --></div>
+    <p class="tnote" id="tslice-note">Move the cursor across the band above to read every program at any moment in the window.</p>
+  </div>
+
+  <div class="rstrip">
+    <div class="section-head">
+      <div class="sh-left">
+        <span class="sh-num">L2&prime; &middot; Run strip</span>
+        <span class="sh-title" id="rstrip-title">Run &mdash;</span>
+      </div>
+      <span class="sh-right" id="rstrip-meta">&mdash;</span>
+    </div>
+    <div class="rs-meta" id="rstrip-runmeta"><!-- meta injected --></div>
+    <div class="rs-rows" id="rstrip-rows"><!-- rows injected --></div>
+    <div class="rstrip-foot" id="rstrip-foot"><!-- foot injected --></div>
+  </div>
+
+</section>
+
+<!-- ============================================================
+     §T  TREE — L3 — agent topology of focused run.
+     ============================================================ -->
+<section class="tree-wrap">
+  <div class="section-head">
+    <div class="sh-left">
+      <span class="sh-num">L3 &middot; Node tree</span>
+      <span class="sh-title" id="tree-title">Topology of the focused run &mdash; click any node to drill.</span>
+    </div>
+    <span class="sh-right" id="tree-meta">&mdash;</span>
+  </div>
+  <div class="tree" id="tree">
+    <svg id="tree-svg" viewBox="0 0 1200 240" preserveAspectRatio="xMidYMid meet">
+      <!-- topology injected -->
+    </svg>
+  </div>
+</section>
+
+<!-- ============================================================
+     §D  DETAIL — L4 — node-level deep dive (hidden by default).
+     ============================================================ -->
+<section class="detail">
+  <article class="detail-card hidden" id="detail">
+    <div class="dc-meta">
+      <span class="dc-kind" id="d-kind">node</span>
+      <span class="dc-id" id="d-name">&mdash;</span>
+      <span id="d-runId">&mdash;</span>
+      <span id="d-dur">&mdash;</span>
+      <span id="d-step">&mdash;</span>
+    </div>
+    <div class="dc-body" id="d-body"></div>
+    <div class="dc-eval" id="d-eval"></div>
+  </article>
+</section>
+
+<!-- ============================================================
+     §G  GLOSSARY — symbol + line vocabulary, same register
+     as the tree.
+     ============================================================ -->
+<section class="glossary">
+
+  <div class="gloss-shapes">
+    <div class="gloss-head">Shape vocabulary &mdash; the node IS its role</div>
+
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5" fill="#3a7a6a"/></svg>
+    <div class="gtext"><em>Orchestrator</em> &mdash; the top of the run; dispatches work to scouts.</div>
+
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" fill="none" stroke="#2a2520" stroke-width="1.6"/></svg>
+    <div class="gtext"><em>Scout</em> &mdash; reads one corner of the world and returns a finding.</div>
+
+    <svg viewBox="0 0 24 24"><polygon points="12,2 22,12 12,22 2,12" fill="none" stroke="#a87f44" stroke-width="1.6"/></svg>
+    <div class="gtext"><em>Eval gate</em> &mdash; a dimension's pass / fail decision.</div>
+
+    <svg viewBox="0 0 24 24"><polygon points="12,2 21,7 21,17 12,22 3,17 3,7" fill="none" stroke="#3a7a6a" stroke-width="1.6"/></svg>
+    <div class="gtext"><em>Writer</em> &mdash; the synthesizer; folds scout findings into prose.</div>
+
+    <svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" fill="#2a2520"/></svg>
+    <div class="gtext"><em>Terminal</em> &mdash; the run's final deliverable.</div>
+  </div>
+
+  <div class="gloss-lines">
+    <div class="gloss-head">Line vocabulary &mdash; weight is intensity, colour is role</div>
+
+    <svg viewBox="0 0 24 24"><line x1="2" y1="12" x2="22" y2="12" stroke="#3a7a6a" stroke-width="0.7" stroke-linecap="round"/></svg>
+    <div class="gtext">0.7 px &middot; <em>light bind</em> &mdash; quiet read or weak fan-in.</div>
+
+    <svg viewBox="0 0 24 24"><line x1="2" y1="12" x2="22" y2="12" stroke="#3a7a6a" stroke-width="1.3" stroke-linecap="round"/></svg>
+    <div class="gtext">1.3 px &middot; <em>delegation</em> &mdash; the default dispatch line.</div>
+
+    <svg viewBox="0 0 24 24"><line x1="2" y1="12" x2="22" y2="12" stroke="#3a7a6a" stroke-width="2.1" stroke-linecap="round"/></svg>
+    <div class="gtext">2.1 px &middot; <em>critical path</em> &mdash; the run-defining branch.</div>
+
+    <svg viewBox="0 0 24 24"><line x1="2" y1="12" x2="22" y2="12" stroke="#a87f44" stroke-width="1.5" stroke-linecap="round"/></svg>
+    <div class="gtext">amber &middot; <em>branch / gate</em> &mdash; control flow through an eval.</div>
+
+    <svg viewBox="0 0 24 24"><line x1="2" y1="12" x2="22" y2="12" stroke="#b34a3e" stroke-width="1.5" stroke-linecap="round"/></svg>
+    <div class="gtext">red &middot; <em>fail</em> &mdash; a dimension fell below threshold; pen this in.</div>
+  </div>
+
+</section>
+
+<!-- ============================================================
+     §C  COLOPHON
+     ============================================================ -->
+<footer class="colophon">
+  <div class="crule"></div>
+  <div class="line italic">The Periscope &middot; one diagram, every level on screen &mdash; from one sentence to one prompt.</div>
+  <div class="line">Kecal &middot; IBM Plex Mono</div>
+  <div class="line" style="margin-top: 0.75rem;">
+    <a href="run-strata.html">strata &rarr;</a>
+    <a href="run-atrium.html">atrium &rarr;</a>
+    <a href="run-codex.html">codex &rarr;</a>
+    <a href="syntax-charted.html">syntax &rarr;</a>
+  </div>
+</footer>
+
+<script src="../lib/data-slot.js"></script>
+<script src="../data/periscope.js"></script>
+<script>
+'use strict';
+
+/* ==============================================================
+   §0  DATA: everything below comes from the data slot.
+   PROGRAMS        programs, each with its runs (dims, overall, verdict)
+   DIM_LABELS      the eval dimensions, in display order
+   TOPOLOGY_SPECS  agent-tree specs keyed by PROGRAMS[].topology
+   WINDOW          optional: { days, month, period } for the time axis
+   Shapes: ../data/periscope.schema.md
+   ============================================================== */
+const { PROGRAMS, DIM_LABELS, TOPOLOGY_SPECS } =
+  TraceSlot.require('periscope', ['PROGRAMS', 'DIM_LABELS', 'TOPOLOGY_SPECS']);
+const WINDOW = Object.assign({ days: 30, month: null, period: null },
+                             window.TRACE_DATA.WINDOW || {});
+const DIM_KEYS = DIM_LABELS.map(d => d.k);
+
+// Day label for the time axis: "<month> 07" when the window names a
+// month, otherwise "Day 07".
+function fmtDay(d) {
+  return (WINDOW.month ? WINDOW.month + ' ' : 'Day ') + String(d).padStart(2, '0');
+}
+
+/* ==============================================================
+   §0.5  TOPOLOGIES: symbolic agent trees.
+   Each topology is a stack of nodes with x positions in the
+   normalised 0..1 range and y positions in 0..1 too.  The SVG
+   renderer scales to the viewport.  A spec's layout picks the
+   builder ('fan': scouts, writer, evals, terminal; 'gate': one
+   gated branch per scout, merging into the writer).  A branch
+   with weakOnDim is drawn weak when the run's weak dimension
+   matches it.
+   ============================================================== */
+
+const NODE_KIND = {
+  ORCHESTRATOR: 'orchestrator',
+  SCOUT:        'scout',
+  EVAL:         'eval',
+  WRITER:       'writer',
+  TERMINAL:     'terminal',
+};
+
+function topologySpec(prog) {
+  return TOPOLOGY_SPECS[prog.topology] || { layout: 'fan', branches: [] };
+}
+
+const TOPOLOGY = {};
+Object.keys(TOPOLOGY_SPECS).forEach(key => {
+  const spec = TOPOLOGY_SPECS[key];
+  TOPOLOGY[key] = (run, prog) => {
+    const branches = (spec.branches || []).map(b => Object.assign({}, b, {
+      weak: b.weakOnDim ? run.weak === b.weakOnDim : !!b.weak,
+    }));
+    return spec.layout === 'gate'
+      ? buildGateTopology(run, prog, branches)
+      : buildFanTopology(run, prog, branches);
+  };
+});
+
+function buildFanTopology(run, prog, scouts) {
+  // Layout: orchestrator at x=0.06 / y=0.5,
+  // scouts stacked between x=0.20 .. x=0.32,
+  // writer at x=0.52 / y=0.5,
+  // 4 evals stacked between x=0.70 .. x=0.78,
+  // terminal at x=0.92 / y=0.5.
+  const nodes = [];
+  const edges = [];
+
+  const orchY = 0.5;
+  nodes.push({ id: 'orch', kind: NODE_KIND.ORCHESTRATOR, x: 0.06, y: orchY,
+               label: 'orchestrator', note: prog.name + ' driver',
+               role: 'control', selectable: true,
+               desc: 'Receives the request, plans the fan-out, and posts the writer\'s output as the run\'s answer.' });
+
+  const nScouts = scouts.length;
+  scouts.forEach((s, i) => {
+    const y = (i + 0.5) / nScouts;
+    nodes.push({ id: 's-' + s.id, kind: NODE_KIND.SCOUT, x: 0.24, y,
+                 label: s.label, note: s.note,
+                 role: s.weak ? 'weak' : 'scout', selectable: true,
+                 desc: 'Reads one corner of the world and returns a finding for the writer to fold in.' });
+    edges.push({ from: 'orch', to: 's-' + s.id,
+                 weight: s.weak ? 1.6 : 1.0, role: s.weak ? 'weak' : 'control' });
+    edges.push({ from: 's-' + s.id, to: 'writer',
+                 weight: s.weak ? 1.6 : 1.0, role: s.weak ? 'weak' : 'data' });
+  });
+
+  nodes.push({ id: 'writer', kind: NODE_KIND.WRITER, x: 0.52, y: 0.5,
+               label: 'writer', note: 'folds findings into prose',
+               role: 'control', selectable: true,
+               desc: 'Synthesizes scout findings into the run\'s final deliverable.' });
+
+  const dims = DIM_KEYS;
+  dims.forEach((d, i) => {
+    const y = (i + 0.5) / dims.length;
+    const score = run.evals[d];
+    const role = score < 70 ? 'fail' : (score < 80 ? 'weak' : (score >= 90 ? 'strong' : 'pass'));
+    nodes.push({ id: 'e-' + d, kind: NODE_KIND.EVAL, x: 0.74, y,
+                 label: 'eval &middot; ' + d.toUpperCase(), note: d.toUpperCase() + ' = ' + score,
+                 role, score, selectable: true,
+                 desc: DIM_LABELS.find(x => x.k === d).long + ' &mdash; ' + score + ' of 100.' });
+    edges.push({ from: 'writer', to: 'e-' + d,
+                 weight: 1.1, role: 'gate' });
+    edges.push({ from: 'e-' + d, to: 'term',
+                 weight: role === 'fail' ? 1.6 : 1.0, role });
+  });
+
+  nodes.push({ id: 'term', kind: NODE_KIND.TERMINAL, x: 0.92, y: 0.5,
+               label: 'terminal', note: prog.deliverable || 'deliverable',
+               role: 'control', selectable: true,
+               desc: 'The run\'s final deliverable, returned to the operator.' });
+
+  return { nodes, edges };
+}
+
+function buildGateTopology(run, prog, branches) {
+  // One branch per entry, each with its own gate, all merge to the verdict.
+  const nodes = [];
+  const edges = [];
+
+  nodes.push({ id: 'orch', kind: NODE_KIND.ORCHESTRATOR, x: 0.06, y: 0.5,
+               label: 'orchestrator', note: prog.name + ' driver',
+               role: 'control', selectable: true,
+               desc: 'Sets up ' + branches.length + ' branches and waits for every gate to close.' });
+
+  branches.forEach((b, i) => {
+    const y = (i + 0.5) / branches.length;
+    // scout
+    nodes.push({ id: 's-' + b.id, kind: NODE_KIND.SCOUT, x: 0.26, y,
+                 label: b.label, note: b.note, role: 'scout', selectable: true,
+                 desc: 'Runs one scenario branch and returns its impact.' });
+    edges.push({ from: 'orch', to: 's-' + b.id, weight: 1.2, role: 'control' });
+    // gate (eval per branch)
+    nodes.push({ id: 'g-' + b.id, kind: NODE_KIND.EVAL, x: 0.46, y,
+                 label: 'gate &middot; ' + b.id, note: 'pass / fail', role: 'gate', selectable: true,
+                 desc: 'Closes the branch only if the scenario produced a clean impact estimate.' });
+    edges.push({ from: 's-' + b.id, to: 'g-' + b.id, weight: 1.0, role: 'data' });
+    edges.push({ from: 'g-' + b.id, to: 'writer', weight: 1.2, role: 'gate' });
+  });
+
+  nodes.push({ id: 'writer', kind: NODE_KIND.WRITER, x: 0.68, y: 0.5,
+               label: 'writer', note: 'folds ' + branches.length + ' branches into a verdict',
+               role: 'control', selectable: true,
+               desc: 'Combines the branch outputs into a single verdict.' });
+
+  const dims = DIM_KEYS;
+  dims.forEach((d, i) => {
+    const y = (i + 0.5) / dims.length;
+    const score = run.evals[d];
+    const role = score < 70 ? 'fail' : (score < 80 ? 'weak' : (score >= 90 ? 'strong' : 'pass'));
+    nodes.push({ id: 'e-' + d, kind: NODE_KIND.EVAL, x: 0.84, y,
+                 label: 'eval &middot; ' + d.toUpperCase(), note: d.toUpperCase() + ' = ' + score,
+                 role, score, selectable: true,
+                 desc: DIM_LABELS.find(x => x.k === d).long + ' &mdash; ' + score + ' of 100.' });
+    edges.push({ from: 'writer', to: 'e-' + d, weight: 0.9, role: 'gate' });
+  });
+
+  // No single terminal — the verdict node IS the writer's output for this topology.
+  return { nodes, edges };
+}
+
+/* ==============================================================
+   §1  HISTORY — sparkline points generated as a smooth ramp
+   from a sensible start value up to the run's actual baseline.
+   For each program we lay down 30 daily points; the actual run
+   dates carry the canonical scores from PROGRAMS[].runs[].
+   ============================================================== */
+
+function buildHistory(prog) {
+  const days = WINDOW.days;
+  // Start from a value about 10 points below the earliest actual
+  // run, ramp smoothly between actual runs, then continue trend
+  // gently after the final run.
+  // Note: PROGRAMS[].runs use `overall` as the score field; we
+  // normalise anchors to {day, score} here so the interpolation
+  // below is field-name agnostic.
+  const sorted = prog.runs.slice().sort((a, b) => a.day - b.day);
+  const points = [];
+  let prev = { day: 0, score: Math.max(50, sorted[0].overall - 8) };
+
+  let runIdx = 0;
+  for (let d = 1; d <= days; d++) {
+    // Advance to the next un-passed anchor.
+    while (runIdx < sorted.length && sorted[runIdx].day < d) runIdx++;
+    let anchor;
+    if (runIdx < sorted.length) {
+      anchor = { day: sorted[runIdx].day, score: sorted[runIdx].overall };
+    } else {
+      anchor = { day: days + 6, score: sorted[sorted.length - 1].overall + 1.2 };
+    }
+    const span = Math.max(1, anchor.day - prev.day);
+    const t = (d - prev.day) / span;
+    // Smooth cubic ease so the line breathes instead of zig-zags.
+    const e = 1 - Math.pow(1 - t, 2);
+    const base = prev.score + (anchor.score - prev.score) * e;
+    // Small editorial noise so the line isn't sterile (deterministic
+    // by day so re-renders don't dance).
+    const noise = (Math.sin(d * 1.7 + prog.id.length) * 0.6);
+    points.push({ day: d, score: Math.max(40, Math.min(99, base + noise)) });
+    if (sorted[runIdx] && sorted[runIdx].day === d) {
+      points[points.length - 1].score = sorted[runIdx].overall;
+      points[points.length - 1].isRun = true;
+      points[points.length - 1].runRef = sorted[runIdx];
+      prev = { day: sorted[runIdx].day, score: sorted[runIdx].overall };
+    }
+  }
+  return points;
+}
+
+PROGRAMS.forEach(p => { p.history = buildHistory(p); });
+
+/* ==============================================================
+   §2  STATE — current focus (day, programId).  At rest we pick
+   the most recent run of the most recent program — the operator's
+   "what's the latest" default.
+   ============================================================== */
+
+const STATE = {
+  day: 1,
+  programId: null,
+  locked: false,
+  selectedNodeId: null,
+};
+
+function defaultFocus() {
+  // Find the very latest run across all programs.
+  let latest = { day: -1, prog: null, run: null };
+  PROGRAMS.forEach(p => {
+    p.runs.forEach(r => {
+      if (r.day > latest.day) latest = { day: r.day, prog: p, run: r };
+    });
+  });
+  STATE.day = latest.day;
+  STATE.programId = latest.prog.id;
+}
+defaultFocus();
+
+function activeProgram() { return PROGRAMS.find(p => p.id === STATE.programId); }
+function activeRun() {
+  const prog = activeProgram();
+  // Choose the run whose day is closest to (and ≤) STATE.day; if
+  // none yet, pick the earliest.  If STATE.day equals an actual run
+  // day we get an exact match.
+  let closest = null;
+  prog.runs.forEach(r => {
+    if (r.day <= STATE.day && (!closest || r.day > closest.day)) closest = r;
+  });
+  if (!closest) closest = prog.runs[0];
+  return closest;
+}
+function pointAtDay(prog, day) {
+  return prog.history.find(p => p.day === day) || prog.history[prog.history.length - 1];
+}
+
+/* ==============================================================
+   §3  BAND — render one sparkline per program + run dots.
+   ============================================================== */
+
+const bandEl = document.getElementById('band');
+const bandAxisEl = document.getElementById('band-axis');
+// band-readout removed from markup; the
+// current date now lives in #band-date in the sh-left area.  Both
+// references are null-safe via the helper below.
+const bandReadout = document.getElementById('band-readout');
+const bandDate    = document.getElementById('band-date');
+function setBandDate(day) {
+  if (!bandDate) return;
+  if (day == null) { bandDate.textContent = (WINDOW.month || 'Day') + ' —'; return; }
+  bandDate.textContent = fmtDay(day);
+}
+function setBandReadout(/* text */) { /* no-op: band-readout retired */ }
+
+const DAYS = WINDOW.days;
+const BAND_W = 1000;   // SVG width unit — scales by CSS
+const BAND_H = 56;     // SVG height unit
+const SCORE_MIN = 40;
+const SCORE_MAX = 100;
+
+function dayToX(d)  { return ((d - 1) / (DAYS - 1)) * BAND_W; }
+function scoreToY(s){ return BAND_H - ((s - SCORE_MIN) / (SCORE_MAX - SCORE_MIN)) * (BAND_H - 6) - 3; }
+
+function buildBand() {
+  bandEl.innerHTML = '';
+  PROGRAMS.forEach((prog, i) => {
+    // Row label
+    const lab = document.createElement('div');
+    lab.className = 'b-row-label';
+    lab.innerHTML = `
+      <div class="b-row-name">
+        <span class="pn">${prog.name}</span>
+        <span class="pmeta">${prog.register} &middot; ${prog.cadence}</span>
+      </div>
+      <span class="b-row-kicker">${String(i + 1).padStart(2, '0')}</span>
+    `;
+    bandEl.appendChild(lab);
+
+    // Sparkline (SVG)
+    const spark = document.createElement('div');
+    spark.className = 'b-row-spark';
+    spark.dataset.programId = prog.id;
+
+    // Path string
+    const pts = prog.history.map(p => `${dayToX(p.day)},${scoreToY(p.score)}`).join(' ');
+    // Run dots
+    const dots = prog.history
+      .filter(p => p.isRun)
+      .map(p => {
+        const x = dayToX(p.day);
+        const y = scoreToY(p.score);
+        return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="var(--ink)" stroke="var(--paper)" stroke-width="1.6" data-day="${p.day}" class="bd-dot"/>`;
+      })
+      .join('');
+
+    spark.innerHTML = `
+      <svg viewBox="0 -8 ${BAND_W} ${BAND_H + 12}" preserveAspectRatio="none">
+        <!-- Faint baseline at 75 (adequate threshold) -->
+        <line x1="0" y1="${scoreToY(75)}" x2="${BAND_W}" y2="${scoreToY(75)}"
+              stroke="var(--rule-mid)" stroke-width="1" stroke-dasharray="2 3"/>
+        <!-- Faint top-line at 90 (strong threshold) -->
+        <line x1="0" y1="${scoreToY(90)}" x2="${BAND_W}" y2="${scoreToY(90)}"
+              stroke="var(--teal-tint)" stroke-width="1"/>
+        <!-- Score polyline -->
+        <polyline points="${pts}"
+                  fill="none" stroke="var(--teal)" stroke-width="1.4"
+                  stroke-linejoin="round" stroke-linecap="round"/>
+        <!-- Run dots -->
+        ${dots}
+        <!-- Focus dot (overlay, positioned by JS) -->
+        <circle id="focus-dot-${prog.id}" cx="-50" cy="-50" r="5"
+                fill="none" stroke="var(--amber)" stroke-width="1.4"/>
+      </svg>
+    `;
+    bandEl.appendChild(spark);
+
+    // Final-value direct label
+    const fv = document.createElement('div');
+    fv.className = 'b-row-final';
+    const lastRun = prog.runs[prog.runs.length - 1];
+    fv.innerHTML = `
+      <span class="fv">${lastRun.overall.toFixed(1)}<span class="unit">final</span></span>
+      <span class="fv-cap">${prog.runs.length} runs</span>
+    `;
+    bandEl.appendChild(fv);
+  });
+
+  // Time-axis ticks at day 1, every 5 days, and the last day
+  bandAxisEl.innerHTML = '';
+  const ticks = [1];
+  for (let d = 5; d < DAYS; d += 5) ticks.push(d);
+  if (DAYS > 1) ticks.push(DAYS);
+  ticks.forEach((d, i) => {
+    const t = document.createElement('span');
+    t.className = 'tick';
+    t.textContent = fmtDay(d);
+    bandAxisEl.appendChild(t);
+  });
+}
+
+/* ==============================================================
+   §4  BAND INTERACTION — hover anywhere in a sparkline maps
+   pixel-x → day; clicking on a run dot locks focus to that run.
+   Pointer movement bubbles up the focus to STATE then triggers
+   a full re-render of the lens + tree.
+   ============================================================== */
+
+function attachBandHandlers() {
+  Array.from(bandEl.querySelectorAll('.b-row-spark')).forEach(spark => {
+    const programId = spark.dataset.programId;
+
+    spark.addEventListener('mousemove', (ev) => {
+      if (STATE.locked) return;
+      const rect = spark.getBoundingClientRect();
+      const xPct = (ev.clientX - rect.left) / rect.width;
+      const day = Math.max(1, Math.min(DAYS, Math.round(xPct * (DAYS - 1)) + 1));
+      // If the pointer is near a run dot, snap to that run's day.
+      const prog = PROGRAMS.find(p => p.id === programId);
+      const nearRun = prog.runs.reduce((best, r) => {
+        const px = (r.day - 1) / (DAYS - 1) * rect.width;
+        const dist = Math.abs(ev.clientX - rect.left - px);
+        if (dist < 14 && (!best || dist < best.dist)) return { run: r, dist };
+        return best;
+      }, null);
+      STATE.programId = programId;
+      STATE.day = nearRun ? nearRun.run.day : day;
+      renderLens();
+      renderTree();
+      drawFocusRail();
+    });
+
+    spark.addEventListener('mouseleave', () => {
+      if (STATE.locked) return;
+      // Return to default focus rather than stale stuck state.
+      defaultFocus();
+      renderLens();
+      renderTree();
+      drawFocusRail();
+    });
+
+    spark.addEventListener('click', (ev) => {
+      // "enable click to position so
+      // the l3 is more controllable." Click anywhere on the band
+      // (not just a dot) locks focus to that day. Clicking near a
+      // run dot still snaps to that run's day.
+      const rect = spark.getBoundingClientRect();
+      const xPct = (ev.clientX - rect.left) / rect.width;
+      const dayFromX = Math.max(1, Math.min(DAYS, Math.round(xPct * (DAYS - 1)) + 1));
+      const prog = PROGRAMS.find(p => p.id === programId);
+      const nearRun = prog.runs.reduce((best, r) => {
+        const px = (r.day - 1) / (DAYS - 1) * rect.width;
+        const dist = Math.abs(ev.clientX - rect.left - px);
+        if (dist < 14 && (!best || dist < best.dist)) return { run: r, dist };
+        return best;
+      }, null);
+      STATE.programId = programId;
+      STATE.day = nearRun ? nearRun.run.day : dayFromX;
+      STATE.locked = true;
+      STATE.selectedNodeId = null;
+      renderLens();
+      renderTree();
+      drawFocusRail();
+      // descriptive band-readout removed.
+      // Date already lives in #band-date via setBandDate(STATE.day),
+      // which renderLens/renderTree call.  No textContent here.
+      setBandDate(STATE.day);
+    });
+  });
+
+  // playback + loop for the band.
+  // Auto-advances STATE.day at `speed` days/sec. Loops back to day 1
+  // when looping is enabled; otherwise stops at DAYS.
+  (function wirePlayback() {
+    const btnPlay  = document.getElementById('bc-play');
+    const btnLoop  = document.getElementById('bc-loop');
+    const speedIn  = document.getElementById('bc-speed');
+    const speedOut = document.getElementById('bc-speed-out');
+    if (!btnPlay || !btnLoop || !speedIn || !speedOut) return;
+
+    let playing = false;
+    let looping = btnLoop.getAttribute('aria-pressed') === 'true';
+    let speed   = parseFloat(speedIn.value) || 3;     // days per second
+    let lastT   = 0;
+    let rafId   = null;
+    let accumDay = STATE.day || 1;
+
+    function fmtSpeed(v) { return v.toFixed(1).replace('.', '·') + '/s'; }
+    speedOut.textContent = fmtSpeed(speed);
+
+    function tick(t) {
+      if (!playing) return;
+      const dt = lastT ? (t - lastT) / 1000 : 0;
+      lastT = t;
+      accumDay += dt * speed;
+      let nextDay = Math.floor(accumDay);
+      if (nextDay > DAYS) {
+        if (looping) { accumDay = 1; nextDay = 1; }
+        else { playing = false; btnPlay.textContent = '▶'; btnPlay.classList.remove('playing'); rafId = null; lastT = 0; return; }
+      }
+      if (nextDay >= 1 && nextDay !== STATE.day) {
+        STATE.day = nextDay;
+        STATE.locked = true;
+        renderLens();
+        renderTree();
+        drawFocusRail();
+        setBandDate(STATE.day);
+      }
+      rafId = requestAnimationFrame(tick);
+    }
+
+    btnPlay.addEventListener('click', () => {
+      // bug: clicking play after a non-loop
+      // playthrough did nothing because STATE.day == DAYS and the very
+      // next tick re-tripped the terminator. Reset to day 1 whenever we
+      // start playing from the end so the click always restarts the run.
+      /* "the node tree is not updating
+         during playback".  Root cause: on play-from-end, STATE.day
+         was reset but renderTree/renderLens were NOT called from the
+         click handler — they only fire from tick() once nextDay
+         crosses an integer boundary.  Result: after click-play at
+         the end, the tree visibly LAGS on day 28's run for the first
+         few hundred ms until the tick advances.  Fix: render the
+         whole stack immediately on play-from-end so the tree snaps to
+         the new starting day at click time. */
+      const atEnd = STATE.day >= DAYS;
+      playing = !playing;
+      btnPlay.textContent = playing ? '❚❚' : '▶';
+      btnPlay.classList.toggle('playing', playing);
+      if (playing) {
+        if (atEnd) {
+          STATE.day = 1;
+          STATE.locked = true;
+          renderLens();
+          renderTree();
+          drawFocusRail();
+          setBandDate(STATE.day);
+        }
+        accumDay = STATE.day || 1;
+        lastT = 0;
+        setBandDate(STATE.day);
+        rafId = requestAnimationFrame(tick);
+      } else {
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = null; lastT = 0;
+      }
+    });
+
+    btnLoop.addEventListener('click', () => {
+      looping = !looping;
+      btnLoop.setAttribute('aria-pressed', String(looping));
+    });
+
+    speedIn.addEventListener('input', () => {
+      speed = parseFloat(speedIn.value) || 3;
+      speedOut.textContent = fmtSpeed(speed);
+    });
+
+    // Stop on Escape (extends the existing Escape handler's effect).
+    document.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Escape' && playing) {
+        playing = false;
+        btnPlay.textContent = '▶';
+        btnPlay.classList.remove('playing');
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = null; lastT = 0;
+      }
+    });
+  })();
+
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape') {
+      STATE.locked = false;
+      STATE.selectedNodeId = null;
+      hideDetail();
+      // band-readout retired; ESC just resets state, the
+      // date display goes back to em-dash to signal unlocked.
+      setBandDate(null);
+      renderLens();
+      renderTree();
+      drawFocusRail();
+    }
+  });
+}
+
+/* ==============================================================
+   §5  FOCUS RAIL — vertical amber line drawn through the focused
+   day across all sparkline rows AND down the time-slice column.
+   It's the cross-hair tying L1 → L2.
+   ============================================================== */
+
+function drawFocusRail() {
+  // Remove any existing rails
+  Array.from(document.querySelectorAll('.focus-rail')).forEach(n => n.remove());
+
+  // Add focus dots in each sparkline at (STATE.day, that prog's score at that day)
+  PROGRAMS.forEach(prog => {
+    const dot = document.getElementById('focus-dot-' + prog.id);
+    if (!dot) return;
+    const pt = pointAtDay(prog, STATE.day);
+    dot.setAttribute('cx', dayToX(pt.day));
+    dot.setAttribute('cy', scoreToY(pt.score));
+  });
+
+  // Vertical rail spanning the band (relative to the band itself)
+  const firstSpark = bandEl.querySelector('.b-row-spark');
+  if (!firstSpark) return;
+  const sparkRect = firstSpark.getBoundingClientRect();
+  const bandRect = bandEl.getBoundingClientRect();
+  const xPct = (STATE.day - 1) / (DAYS - 1);
+  const railX = (sparkRect.left - bandRect.left) + xPct * sparkRect.width;
+
+  const rail = document.createElement('div');
+  rail.className = 'focus-rail';
+  rail.style.left = railX + 'px';
+  rail.innerHTML = `<span class="fr-tick"></span><span class="fr-label">${fmtDay(STATE.day)}</span>`;
+  bandEl.appendChild(rail);
+}
+
+/* ==============================================================
+   §6  LENS — render time-slice column + run-strip strip.
+   ============================================================== */
+
+const tsRows = document.getElementById('tslice-rows');
+const tsTitle = document.getElementById('tslice-title');
+const tsDay = document.getElementById('tslice-day');
+const tsNote = document.getElementById('tslice-note');
+const rsRows = document.getElementById('rstrip-rows');
+const rsTitle = document.getElementById('rstrip-title');
+const rsMeta = document.getElementById('rstrip-meta');
+const rsRunMeta = document.getElementById('rstrip-runmeta');
+const rsFoot = document.getElementById('rstrip-foot');
+
+function renderLens() {
+  // ---- Time-slice column ----
+  tsTitle.textContent = `All programs at day ${String(STATE.day).padStart(2, '0')}`;
+  tsDay.textContent = fmtDay(STATE.day);
+  tsRows.innerHTML = PROGRAMS.map(p => {
+    const pt = pointAtDay(p, STATE.day);
+    const w = (pt.score - SCORE_MIN) / (SCORE_MAX - SCORE_MIN);
+    const isFocus = p.id === STATE.programId;
+    // Below 70 = below the adequate threshold and worth flagging
+    // red on the slice column.  72–79 is "weak" (amber); 80+ pass.
+    const isFail = pt.score < 70;
+    const cls = (isFocus ? ' focus' : '') + (isFail ? ' fail' : '');
+    return `
+      <div class="tr-name${cls}">${p.name}</div>
+      <div class="tr-bar${cls}" style="--w: ${w.toFixed(3)}"></div>
+      <div class="tr-num${isFocus ? ' focus' : ''}">${pt.score.toFixed(1)}</div>
+    `;
+  }).join('');
+
+  // Time-slice note — name the leader and weakest at this day.
+  const slice = PROGRAMS.map(p => ({ p, pt: pointAtDay(p, STATE.day) }));
+  const leader = slice.reduce((a, b) => b.pt.score > a.pt.score ? b : a);
+  const weak   = slice.reduce((a, b) => b.pt.score < a.pt.score ? b : a);
+  tsNote.innerHTML = `At day <em>${String(STATE.day).padStart(2, '0')}</em> the fleet's leader is <em>${leader.p.name}</em> (${leader.pt.score.toFixed(1)}); its weakest is <em>${weak.p.name}</em> (${weak.pt.score.toFixed(1)}).`;
+
+  // ---- Run-strip strip ----
+  const prog = activeProgram();
+  const run = activeRun();
+
+  rsTitle.innerHTML = `Run &middot; <em style="font-family: var(--kecal); color: var(--teal); font-style: italic;">${prog.name}</em> on ${fmtDay(run.day)}`;
+  rsMeta.textContent = run.runId;
+
+  rsRunMeta.innerHTML = `
+    <span><span class="k">run</span><span class="v">${run.runId}</span></span>
+    <span><span class="k">dur</span><span class="v">${run.dur}</span></span>
+    <span><span class="k">steps</span><span class="v">${run.steps}</span></span>
+    <span><span class="k">cadence</span><span class="v">${prog.cadence}</span></span>
+  `;
+
+  rsRows.innerHTML = DIM_LABELS.map(dim => {
+    const score = run.evals[dim.k];
+    const w = score / 100;
+    // Bands: <70 fail (red) · 70–79 weak (amber) · 80+ pass.
+    const cls = score < 70 ? 'fail' : (score < 80 ? 'weak' : '');
+    return `
+      <div class="rr-name">
+        ${dim.long}
+        <span class="rrn-short">${dim.short}</span>
+      </div>
+      <div class="rr-bar ${cls}" style="--w: ${w.toFixed(3)}"></div>
+      <div class="rr-num ${cls}">${score}</div>
+    `;
+  }).join('');
+
+  const verdictClass = run.verdict === 'pass'    ? '' :
+                       run.verdict === 'partial' ? ' partial' :
+                       run.verdict === 'fail'    ? ' fail' : '';
+  rsFoot.innerHTML = `
+    <span class="verdict${verdictClass}">${run.verdict} &middot; overall ${run.overall.toFixed(1)}</span>
+    <span class="rnote">${prog.note}</span>
+  `;
+}
+
+/* ==============================================================
+   §7  TREE — render agent topology as SVG.
+   ============================================================== */
+
+const treeSvg = document.getElementById('tree-svg');
+const treeTitle = document.getElementById('tree-title');
+const treeMeta = document.getElementById('tree-meta');
+
+const TREE_W = 1200;
+const TREE_H = 240;
+const TREE_MARGIN = { top: 24, right: 80, bottom: 24, left: 80 };
+
+function nodeRoleStroke(role) {
+  switch (role) {
+    case 'fail':    return 'var(--fail)';
+    case 'weak':    return 'var(--amber-deep)';
+    case 'strong':  return 'var(--pass)';
+    case 'pass':    return 'var(--teal)';
+    case 'gate':    return 'var(--amber-deep)';
+    case 'data':    return 'var(--ink-3)';
+    case 'scout':   return 'var(--ink)';
+    case 'control': return 'var(--teal)';
+    default:        return 'var(--ink)';
+  }
+}
+function nodeRoleFill(role) {
+  switch (role) {
+    case 'fail':    return 'var(--fail)';
+    case 'weak':    return 'var(--amber)';
+    case 'strong':  return 'var(--pass)';
+    case 'pass':    return 'var(--teal)';
+    case 'gate':    return 'transparent';
+    case 'control': return 'var(--teal)';
+    default:        return 'transparent';
+  }
+}
+
+function renderTree() {
+  const prog = activeProgram();
+  const run = activeRun();
+
+  // show STATE.day in the title (not just
+  // the underlying run.day), so the tree visibly updates every tick of
+  // playback even when the active run doesn't change.  If they differ,
+  // show both ("Day 03 · run from Day 01") so the operator sees we're
+  // between-runs.
+  const dayLabel = String(STATE.day || run.day).padStart(2, '0');
+  const runDayLabel = String(run.day).padStart(2, '0');
+  const dayClause = (STATE.day && STATE.day !== run.day)
+    ? `${fmtDay(dayLabel)} <span style="color: var(--ink-3); font-size: 0.78em">&middot; run from ${fmtDay(runDayLabel)}</span>`
+    : fmtDay(dayLabel);
+  treeTitle.innerHTML = `Topology of <em style="font-family: var(--kecal); color: var(--teal); font-style: italic;">${prog.name}</em> on ${dayClause} &mdash; click any node to drill.`;
+  treeMeta.textContent = `${run.runId} · ${run.steps} steps · ${run.dur}`;
+
+  const builder = TOPOLOGY[prog.topology];
+  const { nodes, edges } = builder(run, prog);
+
+  const innerW = TREE_W - TREE_MARGIN.left - TREE_MARGIN.right;
+  const innerH = TREE_H - TREE_MARGIN.top - TREE_MARGIN.bottom;
+  const px = (xPct) => TREE_MARGIN.left + xPct * innerW;
+  const py = (yPct) => TREE_MARGIN.top  + yPct * innerH;
+
+  // Build SVG string
+  const svgEdges = edges.map(e => {
+    const a = nodes.find(n => n.id === e.from);
+    const b = nodes.find(n => n.id === e.to);
+    if (!a || !b) return '';
+    const x1 = px(a.x), y1 = py(a.y);
+    const x2 = px(b.x), y2 = py(b.y);
+    const stroke = nodeRoleStroke(e.role);
+    const w = e.weight || 1.2;
+    // Smooth curve when nodes aren't at the same Y — Bezier through midpoint.
+    if (Math.abs(y2 - y1) > 1) {
+      const mx = (x1 + x2) / 2;
+      return `<path d="M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}"
+                    fill="none" stroke="${stroke}" stroke-width="${w}"
+                    stroke-linecap="round" opacity="0.85"/>`;
+    } else {
+      return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"
+                    stroke="${stroke}" stroke-width="${w}"
+                    stroke-linecap="round" opacity="0.85"/>`;
+    }
+  }).join('\n');
+
+  const svgNodes = nodes.map(n => {
+    const x = px(n.x), y = py(n.y);
+    const stroke = nodeRoleStroke(n.role);
+    const fill = nodeRoleFill(n.role);
+    let glyph = '';
+    const sel = STATE.selectedNodeId === n.id ? ' selected' : '';
+
+    switch (n.kind) {
+      case NODE_KIND.ORCHESTRATOR:
+        glyph = `<circle cx="${x}" cy="${y}" r="9.5" fill="${fill}" stroke="${stroke}" stroke-width="1.4"
+                         class="glyph${sel}" data-id="${n.id}"/>`;
+        break;
+      case NODE_KIND.SCOUT:
+        glyph = `<rect x="${x - 8}" y="${y - 8}" width="16" height="16"
+                       fill="${n.role === 'weak' ? 'var(--amber-tint)' : 'transparent'}"
+                       stroke="${stroke}" stroke-width="${n.role === 'weak' ? 1.8 : 1.4}"
+                       class="glyph${sel}" data-id="${n.id}"/>`;
+        break;
+      case NODE_KIND.EVAL: {
+        const r = 9;
+        glyph = `<polygon points="${x},${y - r} ${x + r},${y} ${x},${y + r} ${x - r},${y}"
+                          fill="${fill === 'transparent' ? 'var(--paper-lt)' : fill}"
+                          stroke="${stroke}" stroke-width="1.4"
+                          class="glyph${sel}" data-id="${n.id}"/>`;
+        break;
+      }
+      case NODE_KIND.WRITER: {
+        const r = 10;
+        const ps = [];
+        for (let i = 0; i < 6; i++) {
+          const a = Math.PI / 2 + (Math.PI * 2 * i) / 6;
+          ps.push(`${(x + Math.cos(a) * r).toFixed(1)},${(y + Math.sin(a) * r).toFixed(1)}`);
+        }
+        glyph = `<polygon points="${ps.join(' ')}"
+                          fill="transparent" stroke="${stroke}" stroke-width="1.4"
+                          class="glyph${sel}" data-id="${n.id}"/>`;
+        break;
+      }
+      case NODE_KIND.TERMINAL:
+        glyph = `<rect x="${x - 7}" y="${y - 7}" width="14" height="14"
+                       fill="${stroke}"
+                       class="glyph${sel}" data-id="${n.id}"/>`;
+        break;
+    }
+
+    // Selected ring (amber dashed) when this is the selected node.
+    const ring = STATE.selectedNodeId === n.id
+      ? `<circle cx="${x}" cy="${y}" r="16" class="selected-ring"/>`
+      : '';
+
+    // Label / role tag — position depends on kind to avoid overlap.
+    let labelX = x, labelY = y, anchor = 'middle';
+    let roleY = y;
+    if (n.kind === NODE_KIND.ORCHESTRATOR) {
+      labelY = y + 26; roleY = y - 16;
+    } else if (n.kind === NODE_KIND.TERMINAL) {
+      labelY = y + 24; roleY = y - 16;
+    } else if (n.kind === NODE_KIND.WRITER) {
+      labelY = y + 26; roleY = y - 18;
+    } else if (n.kind === NODE_KIND.SCOUT) {
+      labelX = x - 14; labelY = y + 3; anchor = 'end'; roleY = y - 16;
+    } else if (n.kind === NODE_KIND.EVAL) {
+      labelX = x + 14; labelY = y + 3; anchor = 'start'; roleY = y - 14;
+    }
+
+    // For evals, append the score
+    let scoreNode = '';
+    if (n.kind === NODE_KIND.EVAL && typeof n.score === 'number') {
+      const scoreClass = n.role;
+      scoreNode = `<text x="${labelX + (anchor === 'start' ? 60 : -60)}" y="${labelY}"
+                         text-anchor="${anchor === 'start' ? 'start' : 'end'}"
+                         class="score-tag ${scoreClass}">${n.score}</text>`;
+    }
+
+    return `
+      ${ring}
+      ${glyph}
+      <text x="${labelX}" y="${labelY}" text-anchor="${anchor}" class="node-label">${n.label}</text>
+    `;
+  }).join('\n');
+
+  treeSvg.innerHTML = svgEdges + svgNodes;
+
+  // Attach click handlers
+  Array.from(treeSvg.querySelectorAll('.glyph')).forEach(g => {
+    g.addEventListener('click', () => {
+      const id = g.getAttribute('data-id');
+      const node = nodes.find(n => n.id === id);
+      if (!node) return;
+      STATE.selectedNodeId = id;
+      showDetail(node, run, prog);
+      renderTree();
+    });
+  });
+}
+
+/* ==============================================================
+   §8  DETAIL — show the selected node's full record.
+   ============================================================== */
+
+const detailEl = document.getElementById('detail');
+const dKind = document.getElementById('d-kind');
+const dName = document.getElementById('d-name');
+const dRunId = document.getElementById('d-runId');
+const dDur = document.getElementById('d-dur');
+const dStep = document.getElementById('d-step');
+const dBody = document.getElementById('d-body');
+const dEval = document.getElementById('d-eval');
+
+function showDetail(node, run, prog) {
+  detailEl.classList.remove('hidden');
+  dKind.textContent = node.kind;
+  dName.innerHTML = node.label;
+  dRunId.textContent = run.runId;
+  dDur.textContent = run.dur;
+  dStep.textContent = run.steps + ' steps';
+
+  // Body — synthesize from the node + program + run.
+  let body = '';
+  switch (node.kind) {
+    case NODE_KIND.ORCHESTRATOR:
+      body = `
+        <p class="lead">The <em>${prog.name}</em> orchestrator received the request,
+        planned the fan-out, and waited for every scout to return before handing
+        off to the writer.</p>
+        <p class="quote">"Plan ${numberWord((topologySpec(prog).branches || []).length)} concurrent reads, hold for &lt; 5 min, then synthesize."</p>
+        <p>Total run cost stayed under cadence target; no retries needed.</p>
+      `;
+      break;
+    case NODE_KIND.SCOUT:
+      body = `
+        <p class="lead">The <em>${node.label.replace(/&middot;|·/g, '·')}</em> read its corner of the world and returned a finding for the writer.</p>
+        <p class="quote">${node.note}</p>
+        ${node.role === 'weak' ? `<p>This scout's contribution sat below threshold &mdash; weighted accordingly in the synthesis.</p>` : `<p>Finding folded into the writer's input bundle.</p>`}
+      `;
+      break;
+    case NODE_KIND.EVAL: {
+      const score = node.score;
+      const dim = DIM_LABELS.find(d => d.short === node.label.split('·').slice(-1)[0].trim());
+      body = `
+        <p class="lead"><em>${dim ? dim.long : node.label}</em> &mdash; ${score} of 100.</p>
+        <p class="quote">${score >= 90 ? 'Strong &mdash; well above adequate threshold.' :
+                          score >= 80 ? 'Pass &mdash; above adequate threshold.' :
+                          score >= 75 ? 'Pass with attention &mdash; close to the line.' :
+                          score >= 70 ? 'Partial &mdash; below adequate, above failure.' :
+                          'Fail &mdash; below acceptable threshold for this dimension.'}</p>
+        <p>This gate ${score >= 80 ? 'closed cleanly' : score >= 70 ? 'closed with a note' : 'flagged for review'}.</p>
+      `;
+      break;
+    }
+    case NODE_KIND.WRITER:
+      body = `
+        <p class="lead">The writer synthesized ${topologySpec(prog).layout === 'gate' ? (topologySpec(prog).branches || []).length + ' branch outputs' : 'all scout findings'} into the run's deliverable.</p>
+        <p class="quote">Followed the ${prog.name} template &mdash; structured by dimension, with weak findings explicitly flagged.</p>
+        <p>Output sent to the ${DIM_LABELS.length} eval gates before being handed back to the operator.</p>
+      `;
+      break;
+    case NODE_KIND.TERMINAL:
+      body = `
+        <p class="lead">The run's deliverable &mdash;
+          <em>${prog.deliverableLong || prog.deliverable || 'deliverable'}</em>.</p>
+        <p class="quote">Overall ${run.overall.toFixed(1)} &middot; verdict ${run.verdict}.</p>
+        <p>Returned to the operator &mdash; available in their workspace inbox.</p>
+      `;
+      break;
+    default:
+      body = `<p>${node.desc || node.note || ''}</p>`;
+  }
+  dBody.innerHTML = body;
+
+  // Eval block — show the run's dim scores so the operator
+  // never loses sight of the run's overall state when drilling.
+  dEval.innerHTML = DIM_LABELS.map(d => {
+    const score = run.evals[d.k];
+    const cls = score < 70 ? 'fail' : (score < 80 ? 'weak' : (score >= 90 ? 'strong' : ''));
+    return `<span class="ek">${d.short}</span><span class="ev ${cls}">${score}</span>`;
+  }).join('') + `<div class="esep"></div>
+                 <span class="ek">overall</span><span class="ev strong">${run.overall.toFixed(1)}</span>
+                 <span class="ek">verdict</span><span class="ev">${run.verdict}</span>`;
+}
+
+function hideDetail() {
+  detailEl.classList.add('hidden');
+}
+
+/* ==============================================================
+   §8.5  HEADLINE: L0 masthead + lede, bound from the data.
+   ============================================================== */
+
+const NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six',
+  'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen',
+  'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'];
+function numberWord(n) { return NUMBER_WORDS[n] || String(n); }
+function capFirst(t) { return t.charAt(0).toUpperCase() + t.slice(1); }
+
+function renderHeadline() {
+  const allRuns = [];
+  PROGRAMS.forEach(p => p.runs.forEach(r => allRuns.push(r)));
+  const nProg = PROGRAMS.length;
+  const nRun = allRuns.length;
+  const nPass = allRuns.filter(r => r.verdict === 'pass').length;
+  const overalls = allRuns.map(r => r.overall).sort((a, b) => a - b);
+  const mid = Math.floor(overalls.length / 2);
+  const median = overalls.length
+    ? (overalls.length % 2 ? overalls[mid] : (overalls[mid - 1] + overalls[mid]) / 2)
+    : 0;
+
+  const passClause = nPass === nRun ? 'all <em>pass</em>' : `${numberWord(nPass)} <em>pass</em>`;
+  const title = document.getElementById('mh-title');
+  if (title) title.innerHTML = `${capFirst(numberWord(nProg))} programs, ${numberWord(nRun)} runs, ${passClause}; one diagram, every level on screen.`;
+  const set = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
+  set('mh-period', WINDOW.period || (WINDOW.days + ' days'));
+  set('mh-nprog', String(nProg));
+  set('mh-nrun', String(nRun));
+  set('mh-median', median.toFixed(1));
+
+  // Lede: program names, scout and gate totals, partial dimensions.
+  const names = PROGRAMS.map(p => `<strong>${p.name}</strong>`);
+  const nameList = names.length > 1
+    ? names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1]
+    : names.join('');
+  const thresholdClause = nPass === nRun
+    ? 'cleared every overall threshold'
+    : `cleared the overall threshold on ${nPass} of ${nRun} runs`;
+  set('lede-open', `Across ${WINDOW.period || 'the window'}, the ${numberWord(nProg)} programs (${nameList}) ${thresholdClause}.`);
+
+  let scouts = 0, gates = 0, partial = 0;
+  PROGRAMS.forEach(p => {
+    const spec = topologySpec(p);
+    const n = (spec.branches || []).length;
+    scouts += n;
+    gates += DIM_LABELS.length + (spec.layout === 'gate' ? n : 0);
+    const last = p.runs[p.runs.length - 1];
+    if (last) DIM_KEYS.forEach(k => { if (last.evals[k] < 80) partial++; });
+  });
+  set('lede-scouts', numberWord(scouts));
+  set('lede-gates', numberWord(gates));
+  set('lede-close', partial
+    ? `; on the latest runs, <em>${numberWord(partial)}</em> ${partial === 1 ? 'dimension' : 'dimensions'} dipped into the partial band, leaving the rest comfortably <em>strong</em>.`
+    : '; every dimension on the latest runs sits comfortably <em>strong</em>.');
+}
+
+/* ==============================================================
+   §9  BOOT
+   ============================================================== */
+
+function boot() {
+  renderHeadline();
+  buildBand();
+  attachBandHandlers();
+  renderLens();
+  renderTree();
+  drawFocusRail();
+
+  // Reflow the focus rail whenever the viewport changes (sparkline
+  // dimensions shift when the band container resizes).
+  let raf = 0;
+  window.addEventListener('resize', () => {
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(() => {
+      drawFocusRail();
+    });
+  });
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', boot);
+} else {
+  boot();
+}
+</script>
+
+</body>
+</html>

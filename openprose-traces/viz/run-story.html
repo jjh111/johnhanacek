@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Run Story</title>
+
+<!-- ============================================================
+     RUN STORY · TUFTE · MONO · KECAL · TEAL
+     ============================================================
+     Code-only template for one organization's recurring runs:
+     a lede paragraph with inline word-size sparklines, a ledger
+     with one row per responsibility, a grid of small multiples,
+     and a latest-delivery card with a message preview.
+
+     Type + tokens: Kecal sans/serif, IBM Plex Mono body, fog-cream
+     paper, warm brown-black ink, teal editorial accent (italic em),
+     amber warm complement, red attention signal, hairline rules.
+
+     Data: none ships with this page. Every content section is
+     rendered from window.TRACE_DATA, read through
+     ../lib/data-slot.js from ../data/run-story.js.
+     Shape: ../data/run-story.schema.md
+     ============================================================ -->
+
+<style>
+/* §0 FONT FACES — Kecal (FungiType) hosted on jsDelivr.
+   Seven-weight ramp wired even though the page uses only a few. */
+@font-face { font-family: 'Kecal'; font-weight: 200; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extralight-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 300; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Light-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 400; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Regular-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 500; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Medium-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 600; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Semibold-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 700; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Bold-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 800; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extrabold-web.woff2') format('woff2'); }
+
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&display=swap');
+
+/* ============================================
+   RUN STORY: a recurring-run report (tufte-teal style)
+   A precision-numeral answer to "are my responsibilities being
+   taken care of?": a lede with inline sparklines, a ledger of
+   responsibilities, small multiples, and the latest delivery.
+   ============================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Paper + ink — fog cream over warm brown-black */
+  --paper:       #f5f0e8;
+  --paper-dk:    #e8e0d0;
+  --paper-lt:    #fbf7ef;
+  --paper-cream: #fbf7ef;
+  --paper-warm:  #f0e8d8;
+  --ink:         #2a2520;
+  --ink-2:       rgba(42,37,32,0.78);
+  --ink-3:       rgba(42,37,32,0.55);
+  --ink-4:       rgba(42,37,32,0.32);
+  --ink-5:       rgba(42,37,32,0.18);
+
+  /* Teal editorial accent; amber warm complement; red attention signal. */
+  --teal:        #3a7a6a;
+  --teal-deep:   #2e6456;
+  --teal-soft:   #4a8a7a;
+  --teal-tint:   rgba(58,122,106,0.14);
+  --teal-faint:  rgba(58,122,106,0.06);
+
+  --amber:       #c49a5c;
+  --amber-deep:  #a87f44;
+  --amber-soft:  #d4aa6c;
+  --amber-tint:  rgba(196,154,92,0.18);
+
+  --red:         #c0392b;
+  --red-muted:   #d4604f;
+  --red-deep:    #8e2b20;
+  --red-tint:    rgba(192,57,43,0.12);
+  --red-faint:   rgba(192,57,43,0.05);
+
+  /* Hairlines */
+  --rule:        rgba(42,37,32,0.14);
+  --rule-mid:    rgba(42,37,32,0.06);
+
+  /* Legacy alias map — original page used these names */
+  --bg: var(--paper);
+  --bg-warm: var(--paper-warm);
+  --bg-card: var(--paper-lt);
+  --bg-code: var(--paper-dk);
+  --ink-2: rgba(42,37,32,0.78);
+  --ink-3: rgba(42,37,32,0.55);
+  --ink-4: rgba(42,37,32,0.32);
+  --border: var(--rule);
+  --border-mid: var(--rule-mid);
+  --accent: var(--teal);
+  --accent-deep: var(--teal-deep);
+  --accent-faint: var(--teal-faint);
+  --ok: var(--teal);
+  --ok-tint: var(--teal-tint);
+  --warn: var(--amber-deep);
+  --warn-tint: var(--amber-tint);
+  --err: var(--red);
+  --err-tint: var(--red-tint);
+
+  /* Type faces */
+  --serif:  'Kecal', system-ui, -apple-system, sans-serif;
+  --sans:   'Kecal', system-ui, -apple-system, sans-serif;
+  --mono:   'IBM Plex Mono', 'JetBrains Mono', 'SF Mono', monospace;
+}
+
+html { font-size: 17px; scroll-behavior: smooth; }
+body {
+  background: var(--paper); color: var(--ink);
+  font-family: var(--mono); font-weight: 400; line-height: 1.7;
+  letter-spacing: 0;
+  -webkit-font-smoothing: antialiased; position: relative;
+}
+
+/* The brand-wide em rule — Kecal italic 800 at 1em, teal-tinted. */
+em,
+.lede em, .pretext .lede em,
+h1 em, h2 em, h3 em, h4 em,
+.section-head h2 em,
+.latest .left h3 em,
+.preview h4 em,
+.panel em {
+  font-family: 'Kecal', system-ui, sans-serif;
+  font-style: italic;
+  font-weight: 800;
+  font-size: 1em;
+  letter-spacing: 0;
+  color: var(--teal);
+}
+
+/* NAV: identifying who this is for, not marketing */
+nav {
+  padding: 1.2rem 2.5rem;
+  background: rgba(245,240,232,0.88);
+  backdrop-filter: saturate(1.2) blur(12px);
+  -webkit-backdrop-filter: saturate(1.2) blur(12px);
+  border-bottom: 1px solid var(--rule);
+  position: sticky; top: 0; z-index: 50;
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;
+}
+.nav-left { display: flex; align-items: baseline; gap: 0.6rem; }
+.nav-left .for { font-family: var(--mono); font-size: 0.64rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3); }
+.nav-left .who { font-family: 'Kecal', system-ui, sans-serif; font-size: 1.1rem; font-weight: 600; color: var(--ink); letter-spacing: -0.01em; }
+.nav-right { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.06em; color: var(--ink-3); }
+.nav-right .live { color: var(--teal); }
+.nav-right .live::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--teal); margin-right: 0.45rem; vertical-align: 1px; animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity:1 } 50% { opacity: 0.4 } }
+
+/* THE PRETEXT — a single paragraph that tells the week's story, with
+   inline word-size sparklines doing the heavy lifting. */
+.pretext {
+  max-width: 820px; margin: 0 auto;
+  padding: 4.5rem 2rem 3.5rem;
+}
+.pretext .kicker {
+  font-family: var(--mono); font-size: 0.68rem;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--ink-3); margin-bottom: 1.75rem;
+  display: flex; align-items: center; gap: 0.75rem;
+}
+.pretext .kicker::before, .pretext .kicker::after {
+  content: ''; flex: 0 0 28px; height: 1px; background: var(--ink-3); opacity: 0.4;
+}
+.pretext .kicker::after { flex: 1; opacity: 0.15; }
+.pretext .lede {
+  font-family: var(--mono);
+  font-size: clamp(1.0rem, 1.6vw, 1.18rem);
+  font-weight: 400;
+  line-height: 1.7;
+  letter-spacing: 0;
+  color: var(--ink);
+  max-width: 64ch;
+}
+.pretext .lede .fig {
+  font-family: var(--mono);
+  font-size: 0.95em;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  white-space: nowrap;
+}
+/* Inline word-size sparkline — sits immediately after the figure it explains. */
+.pretext .lede svg.inline-spark {
+  display: inline-block;
+  vertical-align: -4px;
+  width: 52px; height: 16px;
+  margin: 0 0.1em 0 0.25em;
+  opacity: 0.95;
+}
+.pretext .coda {
+  margin-top: 1.5rem;
+  font-family: var(--mono); font-size: 0.7rem;
+  color: var(--ink-3); letter-spacing: 0.08em;
+  text-transform: uppercase;
+  display: flex; align-items: baseline; gap: 1rem; flex-wrap: wrap;
+}
+.pretext .coda .c-item strong { color: var(--ink); font-variant-numeric: tabular-nums; font-weight: 500; }
+.pretext .coda .c-sep { color: var(--ink-4); }
+
+/* THE LEDGER — one row per responsibility, the body of the answer */
+.ledger-section {
+  max-width: 1080px; margin: 3.5rem auto 0;
+  padding: 0 2rem;
+}
+.section-head {
+  margin-bottom: 1.25rem;
+}
+.section-head .kicker {
+  font-family: var(--mono); font-size: 0.62rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--teal); margin-bottom: 0.3rem;
+}
+.section-head h2 {
+  font-family: var(--mono); font-size: 1.4rem;
+  font-weight: 500; letter-spacing: -0.005em;
+  color: var(--ink);
+}
+
+.ledger {
+  width: 100%; border-collapse: collapse;
+  font-family: var(--mono); font-size: 0.9rem;
+  background: var(--paper-lt);
+  border: 1px solid var(--rule);
+  overflow: hidden;
+}
+.ledger thead th {
+  font-family: var(--mono); font-size: 0.6rem; font-weight: 500;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3);
+  text-align: left; padding: 0.9rem 1rem;
+  background: var(--paper-warm);
+  border-bottom: 1px solid var(--ink);
+}
+.ledger thead th.num { text-align: right; }
+.ledger tbody td {
+  padding: 1rem; border-bottom: 1px solid var(--rule);
+  vertical-align: middle;
+}
+.ledger tbody tr:last-child td { border-bottom: none; }
+.ledger tbody tr:hover td { background: var(--teal-faint); }
+.ledger td.resp .r-name { font-family: 'Kecal', system-ui, sans-serif; font-weight: 500; font-size: 1rem; letter-spacing: -0.003em; color: var(--ink); }
+.ledger td.resp .r-sub { display: block; font-family: var(--mono); font-size: 0.68rem; color: var(--ink-3); letter-spacing: 0.02em; margin-top: 0.2rem; }
+.ledger td.cad, .ledger td.last { font-family: var(--mono); font-size: 0.82rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.ledger td.trend { width: 120px; }
+.ledger td.trend svg { display: block; }
+.ledger td.sla { font-family: var(--mono); font-size: 0.76rem; letter-spacing: 0.04em; text-align: right; font-weight: 500; }
+.ledger td.sla.ok { color: var(--teal); }
+.ledger td.sla.warn { color: var(--amber-deep); }
+.ledger td.sla.err { color: var(--red); }
+.ledger td.count { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 0.9rem; color: var(--ink); text-align: right; }
+.ledger td.count .pct { color: var(--ink-3); font-size: 0.78em; margin-left: 0.25em; }
+
+/* PANEL: this week at a glance — 6 small multiples, one per responsibility */
+.panel-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;
+  margin-top: 1.25rem;
+}
+.panel {
+  background: var(--paper-lt);
+  border: 1px solid var(--rule);
+  padding: 1rem 1.15rem;
+}
+.panel .p-head {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; margin-bottom: 0.4rem;
+}
+.panel .p-name {
+  font-family: 'Kecal', system-ui, sans-serif; font-size: 0.98rem; font-weight: 500; letter-spacing: -0.005em; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.panel .p-status {
+  font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 500;
+  flex-shrink: 0;
+}
+.panel .p-status.ok { color: var(--teal); }
+.panel .p-status.warn { color: var(--amber-deep); }
+.panel .p-body svg { display: block; width: 100%; height: 34px; }
+.panel .p-meta {
+  font-family: var(--mono); font-size: 0.66rem;
+  color: var(--ink-3); letter-spacing: 0.02em;
+  margin-top: 0.35rem;
+  display: flex; justify-content: space-between;
+}
+.panel .p-meta .hl { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* LATEST DELIVERY — what just landed */
+.latest {
+  background: var(--paper-lt);
+  border: 1px solid var(--rule);
+  padding: 1.75rem 2rem;
+  margin-top: 1.25rem;
+  display: grid; grid-template-columns: 1fr 1.35fr; gap: 2rem;
+  align-items: start;
+}
+.latest .left .tag { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--teal); margin-bottom: 0.5rem; }
+.latest .left h3 { font-family: 'Kecal', system-ui, sans-serif; font-size: 1.3rem; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 0.5rem; color: var(--ink); }
+.latest .left p { font-family: var(--mono); font-size: 0.88rem; color: var(--ink-2); line-height: 1.65; margin-bottom: 0.75rem; max-width: 50ch; }
+.latest .left p .hl { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--ink); font-size: 1em; font-weight: 500; }
+.latest .left .viewlink { display: inline-block; margin-top: 0.25rem; font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--teal); text-decoration: none; border-bottom: 1px solid var(--teal); padding-bottom: 0.1rem; }
+.latest .left .viewlink:hover { color: var(--ink); border-color: var(--ink); }
+
+.preview {
+  background: var(--paper-warm);
+  padding: 1.25rem 1.4rem;
+  border-left: 3px solid var(--teal);
+  position: relative;
+}
+.preview::before {
+  content: attr(data-stamp);
+  position: absolute; top: -9px; left: 1rem;
+  font-family: var(--mono); font-size: 0.54rem;
+  letter-spacing: 0.18em;
+  background: var(--paper-lt); color: var(--teal);
+  padding: 0.2rem 0.55rem;
+}
+.preview .subj {
+  font-family: var(--mono); font-size: 0.68rem; color: var(--ink-3);
+  letter-spacing: 0.04em; margin-bottom: 0.65rem;
+  padding-bottom: 0.4rem; border-bottom: 1px dotted var(--rule-mid);
+}
+.preview h4 { font-family: 'Kecal', system-ui, sans-serif; font-size: 1.05rem; font-weight: 600; margin-bottom: 0.55rem; letter-spacing: -0.005em; color: var(--ink); }
+.preview p { font-family: var(--mono); font-size: 0.84rem; color: var(--ink-2); line-height: 1.6; margin-bottom: 0.45rem; }
+.preview p:last-child { margin-bottom: 0; }
+.preview p .fig { font-family: var(--mono); font-size: 1em; color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
+
+/* FOOT */
+.page-foot {
+  max-width: 1080px; margin: 3rem auto;
+  padding: 2rem 2rem 4rem;
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;
+  font-family: var(--mono); font-size: 0.68rem; color: var(--ink-3); letter-spacing: 0.04em;
+  border-top: 1px solid var(--rule);
+}
+.page-foot a { color: var(--ink-3); text-decoration: none; margin-left: 1.25rem; }
+.page-foot a:hover { color: var(--teal); }
+
+@media (max-width: 780px) {
+  nav { padding: 1rem 1.25rem; }
+  .pretext { padding: 3rem 1.25rem 2rem; }
+  .pretext .lede svg.inline-spark { width: 42px; height: 14px; vertical-align: -3px; }
+  .ledger-section { padding: 0 1rem; }
+  .ledger { font-size: 0.82rem; }
+  .ledger thead th.cad, .ledger td.cad { display: none; }
+  .panel-grid { grid-template-columns: 1fr 1fr; }
+  .latest { grid-template-columns: 1fr; gap: 1.25rem; padding: 1.4rem 1.5rem; }
+}
+
+
+
+
+/* mobile-safety-640 (autogen by mobile-audit) */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  body img, body svg:not(.no-shrink), body canvas, body video, body iframe { max-width: 100% !important; height: auto !important; }
+  body table { display: block; overflow-x: auto; max-width: 100%; }
+  body pre { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+  body code, body kbd, body samp, body tt { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i, body strong, body b, body span { word-break: break-word; overflow-wrap: anywhere; }
+  body em, body i { white-space: normal; }
+  .nav-links, .nav-row, .run-tabs, .customer-tabs, .filter-group, .controls, .hero-actions, .actions, .toolbar, .topbar, .pretext, .axis-bar, .atm-top, .atm-pretext, .atm-axis-bar, .cx-top, .cx-tree, .cx-stage { flex-wrap: wrap !important; min-width: 0 !important; }
+  .stamp, .hero-orb, .hero-card, .hero-visual, .hero-below, .ui-demo, .panel, .run-card, .app-card, .meet-card, .variation-tile, .b-meta, .h-meta, .h-eyebrow, .h-title, .verse-body, .benefit-copy, .benefit-visual, .compare-table, .install-cmd, .atm-stage, .atm-ledger, .axis-bar, .pui-kpi-pill, .detail-badge, .kbd-hint, .waterfall-chart, .dim-compare, .sparkline, .sparkline-table, .ledger, .lineage, .sg-table, .d-table { width: auto !important; max-width: 100% !important; min-width: 0 !important; }
+  /* preserve brand wordmark integrity — don't break inside logo containers */
+  .nav-logo, .nav-logo *, .h-mark, .h-mark *, .stamp-wordmark, .stamp-wordmark *, .wordmark, .wordmark *, .brand-mark, .brand-mark *, .logo, .logo *, .brand-logo, .brand-logo *, .stamp, .stamp *, .logo-wordmark, .logo-wordmark *, .footer-logo, .footer-logo *, .hero-wordmark, .hero-wordmark * { word-break: keep-all !important; overflow-wrap: normal !important; white-space: nowrap !important; }
+  h1 em, h1 i, h1 span, h2 em, h2 i, h2 span, .h-title em, .h-title span, .hero-title em, .hero-title span { word-break: normal !important; overflow-wrap: normal !important; }
+  table.ledger { width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: auto; word-break: break-word; }
+  div.panel { width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: auto; word-break: break-word; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-left">
+    <span class="for">Operating ledger · for</span>
+    <span class="who" id="nav-who">Organization</span>
+  </div>
+  <div class="nav-right">
+    <span class="live" id="nav-live">live</span>
+  </div>
+</nav>
+
+<!-- PRETEXT: paragraph with inline sparklines; data IS the answer -->
+<section class="pretext" id="pretext">
+  <div class="kicker" id="pretext-kicker">Organization &middot; period &middot; operating ledger</div>
+  <p class="lede" id="lede"></p>
+  <div class="coda" id="coda"></div>
+</section>
+
+<!-- THE LEDGER: one row per responsibility -->
+<section class="ledger-section" id="ledger-section">
+  <div class="section-head">
+    <div class="kicker">The Ledger</div>
+    <h2 id="ledger-title">What the system is <em>carrying</em>.</h2>
+  </div>
+
+  <table class="ledger">
+    <thead>
+      <tr>
+        <th style="width:30%">Responsibility</th>
+        <th class="cad">Cadence</th>
+        <th>Last delivered</th>
+        <th class="num" id="runs-head">Runs</th>
+        <th style="width:15%">Trend</th>
+        <th class="num" style="width:10%">Status</th>
+      </tr>
+    </thead>
+    <tbody id="ledger-body"></tbody>
+  </table>
+</section>
+
+<!-- AT A GLANCE: small multiples, one per responsibility -->
+<section class="ledger-section" id="glance-section">
+  <div class="section-head" style="margin-top: 3rem;">
+    <div class="kicker" id="glance-kicker">This week &middot; at a glance</div>
+    <h2 id="glance-title">Responsibilities. <em>Deliveries</em>.</h2>
+  </div>
+  <div class="panel-grid" id="panel-grid"></div>
+</section>
+
+<!-- LATEST DELIVERY: what landed most recently -->
+<section class="ledger-section" id="latest-section">
+  <div class="section-head" style="margin-top: 3rem;">
+    <div class="kicker" id="latest-kicker">Latest delivery</div>
+    <h2 id="latest-headline">The latest delivery.</h2>
+  </div>
+  <div class="latest">
+    <div class="left" id="latest-left"></div>
+    <div class="preview" id="latest-preview" data-stamp="PREVIEW"></div>
+  </div>
+</section>
+
+<footer class="page-foot">
+  <span id="foot-text">Operating ledger</span>
+  <div>
+    <a href="#">Manage responsibilities</a>
+    <a href="#">History</a>
+    <a href="#">Support</a>
+  </div>
+</footer>
+
+<script src="../lib/data-slot.js"></script>
+<script src="../data/run-story.js"></script>
+<script>
+// =====================================================
+// DATA: read from the slot (../data/run-story.js).
+// Required: ORG, LEDE, LEDGER. Optional: LIVE, PERIOD, CODA, RUNS_LABEL,
+// GLANCE, GLANCE_KICKER, LATEST, FOOTER. Shapes: ../data/run-story.schema.md
+// Fields documented as HTML are inserted as markup; all others as text.
+// =====================================================
+const DATA = TraceSlot.require('run-story', ['ORG', 'LEDE', 'LEDGER']);
+const { ORG, LEDE, LEDGER } = DATA;
+
+const INK_TEAL = '#3a7a6a';
+
+function esc(v) {
+  return String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+function $(id) { return document.getElementById(id); }
+
+const WORDS = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve'];
+function countWord(n) { return WORDS[n] || String(n); }
+
+// -----------------------------------------------------
+// SPARKLINES: a spark spec is { values: number[], kind?: 'line' | 'dots' }.
+// Values map bottom-to-top across the viewBox; 'dots' draws a marker per
+// value joined by hairlines (for sparse, periodic deliveries).
+// -----------------------------------------------------
+function sparkMarks(spec, w, h, o) {
+  const vals = (spec && spec.values) || [];
+  if (!vals.length) return '';
+  const kind = spec.kind === 'dots' ? 'dots' : 'line';
+  const lo = Math.min(...vals), hi = Math.max(...vals);
+  const top = h * 0.15, bot = h * 0.75;
+  const y = (v) => hi === lo ? (top + bot) / 2 : bot - ((v - lo) / (hi - lo)) * (bot - top);
+  const r1 = (n) => Math.round(n * 10) / 10;
+  if (kind === 'line') {
+    const step = vals.length > 1 ? w / (vals.length - 1) : 0;
+    const pts = vals.map((v, i) => r1(i * step) + ',' + r1(y(v))).join(' ');
+    return `<polyline points="${pts}" fill="none" stroke="${INK_TEAL}" stroke-width="${o.sw}"/>`;
+  }
+  const inset = w * o.inset;
+  const step = vals.length > 1 ? (w - 2 * inset) / (vals.length - 1) : 0;
+  const xy = vals.map((v, i) => [r1(inset + i * step), r1(y(v))]);
+  let out = '';
+  for (let i = 1; i < xy.length; i++) {
+    out += `<line x1="${xy[i - 1][0]}" y1="${xy[i - 1][1]}" x2="${xy[i][0]}" y2="${xy[i][1]}" stroke="${INK_TEAL}" stroke-width="${o.lineSw}"/>`;
+  }
+  return xy.map(([cx, cy]) => `<circle cx="${cx}" cy="${cy}" r="${o.r}" fill="${INK_TEAL}"/>`).join('') + out;
+}
+const sparkInline = (spec) =>
+  `<svg class="inline-spark" viewBox="0 0 52 16" preserveAspectRatio="none">${sparkMarks(spec, 52, 16, { sw: 1.4, r: 2, lineSw: 1, inset: 0.15 })}</svg>`;
+const sparkTrend = (spec) =>
+  `<svg viewBox="0 0 100 18" preserveAspectRatio="none" style="width:100%;height:18px">${sparkMarks(spec, 100, 18, { sw: 1.2, r: 2, lineSw: 0.8, inset: 0.14 })}</svg>`;
+const sparkPanel = (spec) =>
+  `<svg viewBox="0 0 100 34" preserveAspectRatio="none">${sparkMarks(spec, 100, 34, { sw: 1.3, r: 3, lineSw: 1, inset: 0.2 })}</svg>`;
+
+// -----------------------------------------------------
+// RENDER
+// -----------------------------------------------------
+function renderHeader() {
+  document.title = ORG + ' · responsibilities';
+  $('nav-who').textContent = ORG;
+  if (DATA.LIVE) $('nav-live').textContent = DATA.LIVE;
+  else $('nav-live').style.display = 'none';
+  $('pretext-kicker').innerHTML = [esc(ORG), DATA.PERIOD ? esc(DATA.PERIOD) : null, 'operating ledger']
+    .filter(Boolean).join(' &middot; ');
+  $('foot-text').textContent = DATA.FOOTER || ('Operating ledger for ' + ORG);
+}
+
+// LEDE: array of parts. A string is HTML; an object { spark } is an
+// inline word-size sparkline placed right after the figure it explains.
+function renderLede() {
+  $('lede').innerHTML = LEDE.map(part =>
+    typeof part === 'string' ? part : (part && part.spark ? sparkInline(part.spark) : '')
+  ).join('');
+  const coda = DATA.CODA || [];
+  $('coda').innerHTML = coda.map(c =>
+    `<span class="c-item"><strong>${esc(c.value)}</strong> ${esc(c.label)}</span>`
+  ).join('<span class="c-sep">&middot;</span>');
+}
+
+function renderLedger() {
+  $('ledger-title').innerHTML = `What the system is <em>carrying</em> for ${esc(ORG)}.`;
+  if (DATA.RUNS_LABEL) $('runs-head').textContent = DATA.RUNS_LABEL;
+  $('ledger-body').innerHTML = LEDGER.map(r => `<tr>
+      <td class="resp">
+        <span class="r-name">${esc(r.name)}</span>
+        ${r.route ? `<span class="r-sub">&rarr; ${esc(r.route)}</span>` : ''}
+      </td>
+      <td class="cad">${esc(r.cadence)}</td>
+      <td class="last">${esc(r.last)}</td>
+      <td class="count">${esc(r.runs)}${r.pct != null ? ` <span class="pct">${esc(r.pct)}</span>` : ''}</td>
+      <td class="trend">${sparkTrend(r.trend)}</td>
+      <td class="sla ${esc(r.status || 'ok')}">${esc(r.statusLabel || r.status || 'ok')}</td>
+    </tr>`).join('');
+}
+
+function renderGlance() {
+  const panels = DATA.GLANCE;
+  if (!panels || !panels.length) { $('glance-section').style.display = 'none'; return; }
+  if (DATA.GLANCE_KICKER) $('glance-kicker').textContent = DATA.GLANCE_KICKER;
+  const delivered = panels.filter(p => (p.status || 'ok') === 'ok').length;
+  $('glance-title').innerHTML =
+    `${countWord(LEDGER.length)} responsibilities. <em>${countWord(delivered)} deliveries</em>.`;
+  $('panel-grid').innerHTML = panels.map(p => `<div class="panel">
+      <div class="p-head">
+        <span class="p-name">${esc(p.name)}</span>
+        <span class="p-status ${esc(p.status || 'ok')}">${esc(p.statusLabel || p.status || 'ok')}</span>
+      </div>
+      <div class="p-body">${sparkPanel(p.spark)}</div>
+      <div class="p-meta"><span>${esc(p.meta)}</span><span class="hl">${esc(p.figure)}</span></div>
+    </div>`).join('');
+}
+
+function renderLatest() {
+  const L = DATA.LATEST;
+  if (!L) { $('latest-section').style.display = 'none'; return; }
+  $('latest-kicker').innerHTML = ['Latest delivery', L.when ? esc(L.when) : null].filter(Boolean).join(' &middot; ');
+  if (L.headline) $('latest-headline').innerHTML = L.headline;
+  $('latest-left').innerHTML =
+    (L.tag ? `<span class="tag">${esc(L.tag)}</span>` : '') +
+    (L.title ? `<h3>${L.title}</h3>` : '') +
+    (L.body || []).map(p => `<p>${p}</p>`).join('') +
+    (L.link ? `<a href="${esc(L.link)}" class="viewlink">${esc(L.linkLabel || 'View the full delivery')} &rarr;</a>` : '');
+  const P = L.preview;
+  const prev = $('latest-preview');
+  if (!P) { prev.style.display = 'none'; return; }
+  prev.dataset.stamp = P.stamp || 'PREVIEW';
+  prev.innerHTML =
+    (P.subject ? `<div class="subj">${esc(P.subject)}</div>` : '') +
+    (P.heading ? `<h4>${P.heading}</h4>` : '') +
+    (P.body || []).map(p => `<p>${p}</p>`).join('') +
+    (P.footnote ? `<p style="color: var(--ink-3); font-size: 0.72rem; font-family: var(--mono); margin-top: 0.6rem;">${P.footnote}</p>` : '');
+}
+
+renderHeader();
+renderLede();
+renderLedger();
+renderGlance();
+renderLatest();
+</script>
+
+</body>
+</html>

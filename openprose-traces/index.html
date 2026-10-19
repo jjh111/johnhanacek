@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>OpenProse traces · the kit</title>
+<meta name="description" content="Eleven views of agent runs, all reading one invented world. Every trace here is synthetic.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+@font-face { font-family: 'Kecal'; font-weight: 500; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Medium-web.woff2') format('woff2'); }
+@font-face { font-family: 'Kecal'; font-weight: 800; font-style: normal; font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/FungiType/Kecal@main/export/Web/Kecal-Extrabold-web.woff2') format('woff2'); }
+:root {
+  --paper: #f5f0e8; --paper-lt: #fbf7ef; --paper-dk: #e8e0d0;
+  --ink: #2a2520; --ink-2: rgba(42,37,32,0.74); --ink-3: rgba(42,37,32,0.52);
+  --rule: rgba(42,37,32,0.14);
+  --teal: #3a7a6a; --teal-deep: #2e6456; --amber: #a87f44;
+  --mono: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+  --display: 'Kecal', system-ui, -apple-system, sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--paper); color: var(--ink); font-family: var(--mono); font-size: 15px; line-height: 1.6; }
+a { color: var(--teal-deep); text-decoration: none; border-bottom: 1px solid rgba(46,100,86,0.35); }
+a:hover { border-bottom-color: var(--teal-deep); }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 56px 32px 72px; }
+.kicker { font-size: 0.7rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--teal); display: flex; align-items: center; gap: 12px; }
+.kicker::before { content: ''; width: 28px; height: 1px; background: var(--teal); }
+h1 { font-family: var(--display); font-weight: 500; font-size: clamp(2rem, 4.6vw, 3.2rem); line-height: 1.08; letter-spacing: -0.02em; margin: 18px 0 16px; }
+h1 em { font-style: normal; font-weight: 800; color: var(--teal); }
+.lede { max-width: 46rem; color: var(--ink-2); }
+.lede strong { color: var(--ink); font-weight: 500; }
+.synthetic { display: inline-block; font-size: 0.66rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--amber); border: 1px solid rgba(168,127,68,0.45); padding: 2px 8px; margin-left: 4px; vertical-align: 1px; }
+.hero { margin: 40px 0 8px; padding: 22px 24px; background: var(--paper-lt); border: 1px solid var(--rule); display: grid; grid-template-columns: 1.4fr 1fr; gap: 28px; }
+.hero h2 { font-family: var(--display); font-weight: 500; font-size: 1.3rem; letter-spacing: -0.01em; margin-bottom: 8px; }
+.hero p { color: var(--ink-2); font-size: 0.92rem; }
+.hero .id { font-size: 0.78rem; color: var(--ink-3); margin-bottom: 10px; }
+.hero ul { list-style: none; font-size: 0.86rem; }
+.hero li { padding: 6px 0; border-bottom: 1px solid var(--rule); display: flex; justify-content: space-between; gap: 12px; }
+.hero li:last-child { border-bottom: none; }
+.hero li span { color: var(--ink-3); }
+section.family { margin-top: 52px; }
+.family h2 { font-family: var(--display); font-weight: 500; font-size: 1.45rem; letter-spacing: -0.01em; }
+.family > p { color: var(--ink-3); font-size: 0.86rem; margin: 2px 0 18px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 22px; }
+.card { background: var(--paper-lt); border: 1px solid var(--rule); display: flex; flex-direction: column; }
+.card .shot { display: block; aspect-ratio: 16 / 10; overflow: hidden; border-bottom: 1px solid var(--rule); background: var(--paper-dk); }
+.card .shot img { width: 100%; height: 100%; object-fit: cover; object-position: top left; display: block; transition: transform 0.4s ease; }
+.card .shot:hover img { transform: scale(1.02); }
+.card .shot { border-bottom-color: var(--rule); }
+.card .body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.card h3 { font-size: 0.95rem; font-weight: 500; }
+.card p { color: var(--ink-2); font-size: 0.84rem; flex: 1; }
+.card .links { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.76rem; }
+.card .links a.live { font-weight: 500; }
+.card .weight { font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+footer { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--rule); color: var(--ink-3); font-size: 0.8rem; }
+footer code { color: var(--ink-2); }
+@media (max-width: 760px) {
+  .wrap { padding: 36px 16px 56px; }
+  .hero { grid-template-columns: 1fr; gap: 16px; padding: 18px 16px; }
+  .grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="kicker">OpenProse traces · the kit</div>
+  <h1>Eleven views of agent runs, <em>one invented world</em>.</h1>
+  <p class="lede">Every view reads the same synthetic week at <strong>Saltlight Aquarium</strong>, a public aquarium whose agents keep five responsibilities current, plus five neighbouring organizations that make up a fleet. <span class="synthetic">synthetic data</span></p>
+
+  <div class="hero">
+    <div>
+      <div class="id">the hero run · <a data-kit="log" href="data/synthetic/runs/20260626-143012-09b3c9/vm.log.md"><span data-kit-id="hero">20260626-143012-09b3c9</span></a></div>
+      <h2>Friday's livestock health memo</h2>
+      <p>Four scouts read the week in parallel. The photo scout fails on a late camera export, re-runs through a delegate and recovers. The memo ships with three flags and one photo missing, and the inspector passes 7 of 8 checks. Most views center on this run; the fleet views place it among everything else.</p>
+    </div>
+    <ul>
+      <li><a data-kit="log" href="data/synthetic/runs/20260626-143012-09b3c9/vm.log.md">vm.log.md</a><span>the execution log</span></li>
+      <li><a data-kit="memo" href="data/synthetic/runs/20260626-143012-09b3c9/bindings/husbandry-compiler/memo.md">memo.md</a><span>the deliverable</span></li>
+      <li><a data-kit="manifest" href="data/synthetic/runs/20260626-143012-09b3c9/forme.manifest.json">forme.manifest.json</a><span>the wiring</span></li>
+      <li><a data-kit="inspection" href="data/synthetic/runs/20260626-144357-8a43a6/bindings/inspector/inspection.md">inspection.md</a><span>the inspector's checks</span></li>
+    </ul>
+  </div>
+
+  <section class="family">
+    <h2>One run</h2>
+    <p>The hero run, four ways.</p>
+    <div class="grid">
+      <article class="card"><a class="shot" href="viz/run-strata.html"><img src="posters/run-strata.webp" alt="Strata: the memo delivered, beside the inspector's checks" loading="lazy"></a>
+        <div class="body"><h3>Strata</h3><p>The run as five stacked strata, bottom to top in time. Flat mode reads it slide by slide with the deliverable first; tilted mode shows the whole stack.</p>
+        <div class="links"><a class="live" href="viz/run-strata.html">open live</a><a href="posters/run-strata-tilted.webp">tilted poster</a><a href="data/run-strata.js">data</a><a href="data/run-strata.schema.md">schema</a></div><div class="weight">three.js</div></div></article>
+      <article class="card"><a class="shot" href="viz/run-codex.html"><img src="posters/run-codex-photo-scout.webp" alt="Codex: tree, 3D stack, paragraph and detail, with the photo scout selected" loading="lazy"></a>
+        <div class="body"><h3>Codex</h3><p>The same run four ways at once: a file tree, a 3D stack, one paragraph and a detail panel. Select anything and all four follow.</p>
+        <div class="links"><a class="live" href="viz/run-codex.html">open live</a><a href="data/run-codex.js">data</a><a href="data/run-codex.schema.md">schema</a></div><div class="weight">three.js</div></div></article>
+      <article class="card"><a class="shot" href="viz/trace-trees-graph.html"><img src="posters/trace-trees-graph-photo-scout.webp" alt="Trees: the run as a file tree beside its control-flow graph" loading="lazy"></a>
+        <div class="body"><h3>Trees</h3><p>The run as a file tree, one folder per stratum, with a force-directed control-flow graph beside it.</p>
+        <div class="links"><a class="live" href="viz/trace-trees-graph.html">open live</a><a href="data/trace-trees-graph.js">data</a><a href="data/trace-trees-graph.schema.md">schema</a></div><div class="weight">d3</div></div></article>
+      <article class="card"><a class="shot" href="viz/strata-audio.html"><img src="posters/strata-audio.webp" alt="TraceStrata audio: the run's five planes" loading="lazy"></a>
+        <div class="body"><h3>Strata, heard</h3><p>The run as sound. Each stratum is an octave and each node type a note of one chord; press play to walk the run upward.</p>
+        <div class="links"><a class="live" href="viz/strata-audio.html">open live</a><a href="data/strata-audio.js">data</a></div><div class="weight">three.js · Web Audio</div></div></article>
+    </div>
+  </section>
+
+  <section class="family">
+    <h2>One organization</h2>
+    <p>Saltlight's week, and its month.</p>
+    <div class="grid">
+      <article class="card"><a class="shot" href="viz/run-story.html"><img src="posters/run-story.webp" alt="Ledger: the week in one paragraph with inline sparklines" loading="lazy"></a>
+        <div class="body"><h3>Ledger</h3><p>The week as a paragraph with sparklines where the sentence needs them, then one row per responsibility and the latest delivery.</p>
+        <div class="links"><a class="live" href="viz/run-story.html">open live</a><a href="data/run-story.js">data</a><a href="data/run-story.schema.md">schema</a></div></div></article>
+      <article class="card"><a class="shot" href="viz/run-atrium.html"><img src="posters/run-atrium.webp" alt="Atrium: every run of the week as a cube" loading="lazy"></a>
+        <div class="body"><h3>Atrium</h3><p>Every run of the week as a cube, every step a slab inside it. Bind any field to colour, width or edge, live.</p>
+        <div class="links"><a class="live" href="viz/run-atrium.html">open live</a><a href="data/run-atrium.js">data</a><a href="data/run-atrium.schema.md">schema</a></div><div class="weight">three.js</div></div></article>
+      <article class="card"><a class="shot" href="viz/periscope.html"><img src="posters/periscope.webp" alt="Periscope: a month of runs, one sentence down to one node" loading="lazy"></a>
+        <div class="body"><h3>Periscope</h3><p>A month of runs from one headline sentence down to one node, with every level on screen at once.</p>
+        <div class="links"><a class="live" href="viz/periscope.html">open live</a><a href="data/periscope.js">data</a><a href="data/periscope.schema.md">schema</a></div></div></article>
+      <article class="card"><a class="shot" href="viz/syntax-charted.html"><img src="posters/syntax-charted-memo.webp" alt="Syntax, charted: the memo run as a sankey beside its eval radar" loading="lazy"></a>
+        <div class="body"><h3>Syntax, charted</h3><p>Each program's latest run drawn as a document: a sankey for its shape, a radar for its eval, small multiples for its trend.</p>
+        <div class="links"><a class="live" href="viz/syntax-charted.html">open live</a><a href="posters/syntax-charted.webp">top poster</a><a href="data/syntax-charted.js">data</a><a href="data/syntax-charted.schema.md">schema</a></div><div class="weight">d3 · d3-sankey</div></div></article>
+    </div>
+  </section>
+
+  <section class="family">
+    <h2>The fleet</h2>
+    <p>Six organizations, sixteen programs.</p>
+    <div class="grid">
+      <article class="card"><a class="shot" href="viz/fleet-atrium.html"><img src="posters/fleet-atrium.webp" alt="Fleet atrium: runs across six organizations" loading="lazy"></a>
+        <div class="body"><h3>Fleet atrium</h3><p>The atrium across six organizations, with presets and an organization picker. The neighbours' runs come from the page's own seeded generator.</p>
+        <div class="links"><a class="live" href="viz/fleet-atrium.html">open live</a><a href="data/fleet-atrium.js">data</a><a href="data/fleet-atrium.schema.md">schema</a></div><div class="weight">three.js</div></div></article>
+      <article class="card"><a class="shot" href="viz/confidence-radar.html"><img src="posters/confidence-radar.webp" alt="Confidence radar: one radar per program" loading="lazy"></a>
+        <div class="body"><h3>Confidence radar</h3><p>One radar per program: four eval scores, an overall figure, and one line on what to watch.</p>
+        <div class="links"><a class="live" href="viz/confidence-radar.html">open live</a><a href="data/confidence-radar.js">data</a><a href="data/confidence-radar.schema.md">schema</a></div></div></article>
+      <article class="card"><a class="shot" href="viz/fleet-heatmap.html"><img src="posters/fleet-heatmap.webp" alt="Fleet heatmap: programs against four eval dimensions" loading="lazy"></a>
+        <div class="body"><h3>Fleet heatmap</h3><p>Every program against four eval dimensions on one sortable page.</p>
+        <div class="links"><a class="live" href="viz/fleet-heatmap.html">open live</a><a href="data/fleet-heatmap.js">data</a><a href="data/fleet-heatmap.schema.md">schema</a></div></div></article>
+    </div>
+  </section>
+
+  <footer>
+    Every trace here comes from <code>data/synthetic/generate.mjs</code>, seeded, reading the invented world in <code>world.mjs</code>: the same seed gives the same bytes. Posters are rendered from these pages: <code>posters/&lt;view&gt;.webp</code> is each view as it first loads, and the longer names are highlights. <a href="HANDOFF.md">HANDOFF.md</a> says how the kit fits together.
+  </footer>
+</div>
+<script src="data/kit.js"></script>
+<script>
+  // Run ids change when the world does; data/kit.js carries the current ones.
+  if (window.KIT) {
+    document.querySelectorAll('[data-kit]').forEach((a) => { const f = KIT.files[a.dataset.kit]; if (f) a.href = 'data/synthetic/' + f; });
+    document.querySelectorAll('[data-kit-id]').forEach((el) => { el.textContent = KIT[el.dataset.kitId]; });
+  }
+</script>
+</body>
+</html>
