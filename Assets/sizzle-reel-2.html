@@ -1674,9 +1674,10 @@ p, h1, h2, h3 { margin: 0; }
     logos(sc, q) {
       const bd = boardNamed(sc.board);
       const P = F.panel;
+      // no eyebrow ("Worked with"): the question in the bar already says it (2026-10-15); a group may
+      // give the reel a shorter heading than the board's (`reelHeading`: "Teams")
       const el = segEl(sc, `<div class="panel" style="left:${P.x}px;top:${P.y}px;width:${P.w}px;height:${P.h}px"><div class="panel-in">
-        ${maskLine(bd.eyebrow, 'eyebrow')}
-        ${bd.groups.map(g => `<section class="group">${maskLine(g.heading, 'grp')}<ul class="wall${g.wall ? ' ' + g.wall : ''}">${g.items.map(itemHTML).join('')}</ul></section>`).join('')}
+        ${bd.groups.map(g => `<section class="group">${maskLine(g.reelHeading || g.heading, 'grp')}<ul class="wall${g.wall ? ' ' + g.wall : ''}">${g.items.map(itemHTML).join('')}</ul></section>`).join('')}
       </div></div>`);
       const panel = el.querySelector('.panel'), eb = inner(el, '.lm.eyebrow');
       const heads = inner(el, '.lm.grp'), items = [...el.querySelectorAll('.wall li')];

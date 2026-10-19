@@ -70,7 +70,7 @@ try {
           if (e > 20) { const x = i % w, y = (i / w) | 0; X0 = Math.min(X0, x); X1 = Math.max(X1, x); Y0 = Math.min(Y0, y); Y1 = Math.max(Y1, y); } });
         const name = wm.querySelector('[aria-label]')?.getAttribute('aria-label') || wm.textContent.trim();
         return { name, k: +(getComputedStyle(wm).getPropertyValue('--k') || 1), mass: mass / px / px,
-          grid: getComputedStyle(wm.closest('ul')).display === 'grid', ink: { x0: x0 / px + X0 / px, x1: x0 / px + X1 / px, y0: y0 / px + Y0 / px, y1: y0 / px + Y1 / px }, row: wm.closest('ul').offsetTop + '|' + Math.round((wm.closest('li').offsetTop + wm.closest('li').offsetHeight / 2) / 12) };
+          grid: getComputedStyle(wm.closest('ul')).display === 'grid', ink: { x0: x0 / px + X0 / px, x1: x0 / px + X1 / px, y0: y0 / px + Y0 / px, y1: y0 / px + Y1 / px }, ul: wm.closest('ul').offsetTop, mid: wm.closest('li').offsetTop + wm.closest('li').offsetHeight / 2 };
       });
       const heads = [...panel.querySelectorAll('.lm.eyebrow, .lm.grp')].map(e => box(e.querySelector(':scope > .li') || e));
       return { P, marks, top: Math.min(...heads.map(h => h.y)) };
@@ -83,7 +83,14 @@ try {
       if (flag) bad++;
       console.log(`  ${flag ? '✗' : ' '} ${m.name.padEnd(16)} ink ${String(Math.round(m.mass)).padStart(5)} (${off >= 0 ? '+' : ''}${(off * 100).toFixed(0)}%)  ${Math.round(m.ink.x1 - m.ink.x0)}×${Math.round(m.ink.y1 - m.ink.y0)}  k ${m.k.toFixed(2)} → ${(m.k * Math.sqrt(gm / m.mass)).toFixed(2)}`);
     }
-    const rows = {}; marks.forEach(m => (rows[m.row] = rows[m.row] || []).push(m));
+    // rows: a list's marks whose middles lie within 12 px of the row's first (a taller mark, Nanome's,
+    // sits a few px off its neighbours' middles, and a rounded bucket split its row in two)
+    const rows = {}, byUl = {};
+    marks.forEach(m => (byUl[m.ul] = byUl[m.ul] || []).push(m));
+    Object.values(byUl).forEach(list => list.sort((a, b) => a.mid - b.mid).forEach(m => {
+      const key = Object.keys(rows).find(k => rows[k][0].ul === m.ul && Math.abs(rows[k][0].mid - m.mid) <= 12);
+      (rows[key || m.ul + '|' + m.mid] = rows[key || m.ul + '|' + m.mid] || []).push(m);
+    }));
     Object.values(rows).forEach(row => row.sort((a, b) => a.ink.x0 - b.ink.x0));
     for (const row of Object.values(rows)) {
       // a row's ink, end to end, centred; in a grid each mark is centred in an equal column, so the

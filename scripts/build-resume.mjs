@@ -314,17 +314,17 @@ function chunkPatches() {
       micro: 'Founder-led teams; product lead at Nanome.',
     },
     27: {
-      content: 'Shipped products: (1) AROC situational-awareness AR HUD at BadVR, hand tracking on Meta Quest and HoloLens 2. (2) Nanome 2 on Meta Quest, its companion web portal and the MARA AI assistant, to pharma customers. (3) JH Coaching OS, an adaptive AI coaching product with agent, materials, context docs and dashboard. (4) A workshop system for Muse.bio: FigJam workshop plus a Claude Code + Figma MCP ingestion tool, handed off. (5) OpenProse founding design: brand and a live homepage, delivered as code. Experiments: MetaMedium, an AI-interpreted drawing interface. This site\'s command bar: BM25 and MiniLM retrieval, LFM2.5 in the browser on WebGPU, local-model support, scene language for the canvases. READI, a live emergency-resource dashboard. Blok Dok (2013), a wooden iPhone dock designed, made and sold.',
-      tldr: 'Shipped: AROC (BadVR), Nanome 2 + web portal + MARA AI, JH Coaching OS, the Muse.bio workshop system, OpenProse. Experiments: MetaMedium, this site\'s search, READI.',
+      content: 'Shipped products: (1) AROC situational-awareness AR HUD at BadVR, hand tracking on Meta Quest and HoloLens 2. (2) Nanome 2 on Meta Quest, its companion web portal and the MARA AI assistant, to pharma customers. (3) JH Coaching OS, an adaptive AI coaching product with agent, materials, context docs and dashboard. (4) A workshop system for Muse.bio: FigJam workshop plus a Claude Code + Figma MCP ingestion tool, handed off. (5) OpenProse founding design: brand and a live homepage, delivered as code. Experiments: dyna.ink (formerly MetaMedium), an AI-interpreted drawing interface. This site\'s command bar: BM25 and MiniLM retrieval, LFM2.5 in the browser on WebGPU, local-model support, scene language for the canvases. READI, a live emergency-resource dashboard. Blok Dok (2013), a wooden iPhone dock designed, made and sold.',
+      tldr: 'Shipped: AROC (BadVR), Nanome 2 + web portal + MARA AI, JH Coaching OS, the Muse.bio workshop system, OpenProse. Experiments: dyna.ink, this site\'s search, READI.',
       micro: 'Shipped: XR + AI, agentic tools, web products.',
-      tags: 'shipped AI products built delivered LLM agent launched output nanome aroc coaching os openprose muse readi metamedium blok dok',
+      tags: 'shipped AI products built delivered LLM agent launched output nanome aroc coaching os openprose muse readi dyna.ink dynaink metamedium blok dok',
       facts: [
         { t: 'AROC (BadVR)', d: 'situational-awareness AR HUD, hand tracking on Quest and HoloLens 2' },
         { t: 'Nanome 2 + web portal + MARA AI', d: 'XR and AI molecular design, shipped to pharma customers' },
         { t: 'JH Coaching OS', d: 'adaptive AI coaching product with dashboard' },
         { t: 'Muse.bio workshop system', d: 'FigJam workshop + Claude Code / Figma MCP ingestion, handed off' },
         { t: 'OpenProse', d: 'founding design: brand and a live homepage, delivered as code' },
-        { t: 'MetaMedium', d: 'experiment: AI-interpreted drawing interface' },
+        { t: 'dyna.ink', d: 'experiment: AI-interpreted drawing interface' },
         { t: 'This site\'s search', d: 'experiment: retrieval + in-browser LFM2.5 on WebGPU' },
         { t: 'Blok Dok', d: '2013: wooden iPhone dock, designed, made and sold', url: 'design.html#blokdok' },
       ],
@@ -360,7 +360,7 @@ function jsonld() {
   const J = JSON.parse(readFileSync(path, 'utf8'));
   J.jobTitle = ['Product Design Engineer', 'Product Designer', 'Design Engineer', 'Founding Designer'];
   J.description = lane.summary;
-  J.knowsAbout = [...R.skills.technologies, ...R.skills.practice, 'MetaMedium', 'Creative coding', 'WebGL and GLSL shader programming', 'three.js'];
+  J.knowsAbout = [...R.skills.technologies, ...R.skills.practice, 'dyna.ink', 'Creative coding', 'WebGL and GLSL shader programming', 'three.js'];
   J.award = R.awards.map(a => `${a.title}, ${a.org} (${a.year})`);
   if (J.worksFor) J.worksFor.description = 'Independent product design engineering: founding design, product design, workshops and agentic coaching for startups and R&D teams.';
   J.sameAs = Array.from(new Set([...(J.sameAs || []), 'https://jhanacek.net/writing-4']));

@@ -722,6 +722,21 @@ Source: John, in session (Agent Reference/ART_PHOTO_INTAKE_PLAN.md). Each claim 
 - 31 — "including camping in the Sierra Nevada mountains" (John: "I also go camping in the Sierra Nevada Mountains"); about.html Off the clock carries the same sentence.
 - 49 — url `services.html#fit` → `services.html#book`: the "Is this a fit?" section was removed (John, 2026-10-05, "not adding anything we haven't already said"); a hiring-availability answer lands on Get in touch. Text unchanged.
 
+## §O MetaMedium is dyna.ink — 2026-10-19
+
+Source: John, in session ("change the 'metamedium' to be 'dyna.ink' ... yes rename those too"), and the
+MetaMedium repository's own README ("dyna.ink was formerly MetaMedium"; the whitepaper is "dyna.ink: AI
+Beyond Chat"). The project's links stay at jjh111.github.io/MetaMedium/: the repository's RENAME-PLAN.md
+says the dyna.ink domain is held and not yet deployed.
+- 3 — title "dyna.ink: AI Beyond Chat"; content says "formerly called MetaMedium"; tags gain `dyna.ink`
+  and `dynaink` and keep `metamedium` and `meta`, so the old name still finds it; image is the
+  whitepaper's new card (Assets/thumb-dynaink.webp); the piece is "dyna.ink: live build".
+- 27 — compiled: the experiment is dyna.ink (formerly MetaMedium), through `scripts/build-resume.mjs`
+  and `resume.json` projects[metamedium].name.
+- 39 — unchanged: the essays are about the metamedium idea and keep their titles.
+- Vectors for 3 and 27 are still the old text's: huggingface.co is refused by this environment's network
+  policy, so `node scripts/build-chunk-vectors.mjs` could not run. Run it where it can.
+
 ## §J Resume compile — 2026-09-16
 
 Chunks 4, 21, 23, 26, 27, 50 are COMPILED from `Assets/resume.json` by `scripts/build-resume.mjs --apply` (source: the 2026-09-09 interview; evidence links live in the JSON). Edit the JSON, not the chunk text. Rebuild vectors after each compile (`node scripts/build-chunk-vectors.mjs`).

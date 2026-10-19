@@ -49,7 +49,10 @@ try {
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
-  await page.goto(`${base}/Assets/sizzle-reel-2.html?script=${NAME}#t=10&pause=1`);
+  // the answer, its lines in (it starts at 10 s since the cut went on the beat; it was 10.25)
+  const RS0 = (await import('node:module')).createRequire(import.meta.url)(path.join(ROOT, 'scripts/reel-script.js'));
+  const E0 = RS0.parse(ORIG).edit, ansT = RS0.spans(E0)[E0.scenes.findIndex(x => x.type === 'answer')].start + 2;
+  await page.goto(`${base}/Assets/sizzle-reel-2.html?script=${NAME}#t=${ansT}&pause=1`);
   await page.waitForFunction(() => window.REEL_LIVE && window.REEL_TEXT && window.REEL_TIMELINE && !document.getElementById('boot'), null, { timeout: 60000 });
   await page.evaluate(() => { window.__mark = true; });
   const P = await page.evaluate(() => REEL_LIVE.parsed.fields.map(f => ({ ln: f.ln, key: f.key, kind: f.kind, index: f.index, scene: REEL_LIVE.parsed.edit.scenes.indexOf(f.owner) })));

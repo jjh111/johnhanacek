@@ -12,7 +12,7 @@ if (!vMatch) throw new Error("Couldn't read version from scripts/jh-chrome.js â€
 const EXPECTED_VERSION = 'v' + vMatch[1];
 
 const BASE = 'http://127.0.0.1:1337';
-const STANDARD = ['index.html', 'design.html', 'art.html', 'about.html', 'services.html', 'search.html', 'nanome2.html', 'openprose.html', '404.html'];
+const STANDARD = ['index.html', 'design.html', 'art.html', 'about.html', 'services.html', 'search.html', 'nanome2.html', 'sizzlereel.html', 'openprose.html', '404.html'];
 const OTHER = ['playground.html', 'writing.html', 'tidepool.html', 'beach-beers.html', 'onagents.html', 'fish-demo/index.html'];
 // Standard pages that deliberately carry the nav but NOT <jh-footer>.
 // openprose.html closes on its own Â§VII colophon; the site's glass oval landing

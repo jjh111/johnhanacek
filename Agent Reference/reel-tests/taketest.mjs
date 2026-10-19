@@ -27,7 +27,9 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const req = createRequire(import.meta.url);
 const RM = req(join(ROOT, 'scripts/reel-music.js')), RS = req(join(ROOT, 'scripts/reel-script.js'));
 const SCRIPT = readFileSync(join(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8');
-const SCORE = readFileSync(join(ROOT, 'Assets/sizzle-reel-2.score.txt'), 'utf8');
+// a take of its own (the score as of 2026-10-15's rephrasing, as notestest has), so John's note edits
+// in the piano roll never move the notes this suite picks
+const SCORE = readFileSync(join(ROOT, 'Agent Reference/reel-tests/fixtures/sizzle-reel-2-take.score.txt'), 'utf8');
 const T_SCRIPT = 'Assets/zz-take-test.script.txt', T_SCORE = 'Assets/zz-take-test.score.txt';
 
 let fails = 0;
