@@ -86,7 +86,7 @@ try {
     await page.mouse.dblclick(c.x, c.y); await sleep(80);
     const on = await page.evaluate(() => REEL_TEXT.editing);   // never type into the preview's keys
     if (!on || on.ln !== ln) throw new Error(`line ${ln} (${part}): a double-click did not start editing it (${JSON.stringify(on)})`);
-    if (how === 'all') { await page.keyboard.press('Control+a'); await page.keyboard.type(text); }
+    if (how === 'all') { await page.keyboard.press('ControlOrMeta+a'); await page.keyboard.type(text); }
     else if (how === 'end') { await page.keyboard.press('End'); await page.keyboard.type(text); }
     await page.keyboard.press('Enter');
     await page.waitForFunction(v => REEL_LIVE.version > v, v0, { timeout: 8000 }).catch(() => {});
@@ -162,7 +162,7 @@ try {
   {
     const v0 = await page.evaluate(() => REEL_LIVE.version);
     await page.mouse.dblclick(bar.x, bar.y); await sleep(80);
-    await page.keyboard.press('Control+a'); await page.keyboard.type('what did he ship?'); await page.keyboard.press('Enter');
+    await page.keyboard.press('ControlOrMeta+a'); await page.keyboard.type('what did he ship?'); await page.keyboard.press('Enter');
     await page.waitForFunction(v => REEL_LIVE.version > v, v0, { timeout: 8000 }).catch(() => {});
     await page.evaluate(() => REEL_LIVE.settled());
   }
@@ -173,14 +173,14 @@ try {
   await showing('answer', ans.ln);
   c = await centre(ans.ln);
   await page.mouse.dblclick(c.x, c.y); await sleep(80);
-  await page.keyboard.press('Control+a'); await page.keyboard.type('not this');
+  await page.keyboard.press('ControlOrMeta+a'); await page.keyboard.type('not this');
   await page.keyboard.press('Escape'); await sleep(300);
   const esc = await page.evaluate(ln => document.querySelector(`#stage [data-ln="${ln}"] .li`).textContent, ans.ln);
   check(file() === before && esc === 'Freehand drawing' && !(await page.evaluate(() => REEL_TEXT.editing)), 'Esc puts the words back and writes nothing', esc);
   await showing('results', row.ln, 'title');
   c = await centre(row.ln, 'title');
   await page.mouse.dblclick(c.x, c.y); await sleep(80);
-  await page.keyboard.press('Control+a'); await page.keyboard.type('a | b'); await page.keyboard.press('Enter'); await sleep(400);
+  await page.keyboard.press('ControlOrMeta+a'); await page.keyboard.type('a | b'); await page.keyboard.press('Enter'); await sleep(400);
   const tipBad = await page.evaluate(() => document.getElementById('reel-tx-tip').textContent);
   check(file() === before && /\|/.test(tipBad), `a | in a part is refused, and says why ("${tipBad}")`);
 

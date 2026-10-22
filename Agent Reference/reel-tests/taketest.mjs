@@ -176,7 +176,7 @@ try {
   // the nuance knob, typed
   const nk = page.locator('#reel-rack .rk-take .rk-knob', { hasText: 'nuance' });
   await nk.dblclick();
-  await page.keyboard.press('Control+A'); await page.keyboard.type('40'); await page.keyboard.press('Enter');
+  await page.keyboard.press('ControlOrMeta+a'); await page.keyboard.type('40'); await page.keyboard.press('Enter');
   let t = await waitFile(x => /^ {2}nuance +40$/m.test(x));
   ok(t && diff(SCORE, t).length === 1, 'typing 40 into the nuance knob writes that one line of the score');
   const heard = await page.evaluate(() => REEL_RACK.parsed.score.takes[0].nuance);

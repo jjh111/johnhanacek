@@ -21,7 +21,7 @@
 // relative to Assets/, where the rig lives.
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -83,8 +83,14 @@ export function thumb(entry, root = ROOT) {
   const assets = join(root, 'Assets');
   const src = join(assets, (entry.poster || entry.path).replace(/^\.\//, ''));
   const seek = entry.kind === 'clip' && !entry.poster ? ['-ss', String(Math.min(1, (entry.dur || 2) / 2))] : [];
-  const r = spawnSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', ...seek, '-i', src, '-frames:v', '1',
-    '-vf', `scale=${THUMB_W}:-2:flags=lanczos`, '-c:v', 'libwebp', '-quality', '72', out], { encoding: 'utf8' });
+  const frame = (dst, codec) => spawnSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', ...seek, '-i', src, '-frames:v', '1',
+    '-vf', `scale=${THUMB_W}:-2:flags=lanczos`, ...codec, dst], { encoding: 'utf8' }).status === 0 && existsSync(dst);
+  if (frame(out, ['-c:v', 'libwebp', '-quality', '72'])) return out;
+  // an ffmpeg built without libwebp (Homebrew's 8.x): the frame as a png, then cwebp makes the webp
+  const png = out.replace(/\.webp$/, '.png');
+  if (!frame(png, [])) return null;
+  const r = spawnSync('cwebp', ['-quiet', '-q', '72', png, '-o', out], { encoding: 'utf8' });
+  rmSync(png, { force: true });
   return r.status === 0 && existsSync(out) ? out : null;
 }
 
