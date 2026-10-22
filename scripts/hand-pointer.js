@@ -90,7 +90,7 @@
         if (!canvas) return null;
         const o = Object.assign({}, T, options);
         let on = false, landmarker = null, video = null, stream = null, raf = 0;
-        let lastVideoTime = -1, lastSeen = 0, present = false, down = false, vote = 0;
+        let lastVideoTime = -1, lastSeen = 0, present = false, down = false, vote = 0, runs = 0;
         let nib = null, sent = null, pinch = 1, lm = null, aspect = 4 / 3, fade = 0;
         const fx = oneEuro(o.MIN_CUTOFF, o.BETA), fy = oneEuro(o.MIN_CUTOFF, o.BETA), fp = oneEuro(8, 0);
         const listeners = new Set();
@@ -296,14 +296,22 @@
             if (opts.camera === false) { say('track', 'feeding'); return api; }
             say('load', 'starting camera…');
             video = hud.querySelector('video');
+            const run = ++runs;
+            const current = () => on && run === runs;
             try {
-                const [s, lmk] = await Promise.all([
-                    navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }, audio: false }),
+                // The camera is kept the moment it is granted, so stop() ends it even
+                // while the model still loads; one granted after this start was
+                // abandoned is stopped at once. Nothing is left on when either fails.
+                const [cam, model] = await Promise.allSettled([
+                    navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }, audio: false })
+                        .then(s => { if (current()) stream = s; else s.getTracks().forEach(t => t.stop()); return s; }),
                     (say('load', 'loading hand model…'), load()),
                 ]);
-                if (!on) { s.getTracks().forEach(t => t.stop()); return api; }
-                stream = s; landmarker = lmk;
-                video.srcObject = s;
+                const drop = () => { if (model.status === 'fulfilled') { try { model.value.close(); } catch (e) { /* gone */ } } };
+                if (!current()) { drop(); return api; }
+                if (cam.status === 'rejected' || model.status === 'rejected') { drop(); throw cam.status === 'rejected' ? cam.reason : model.reason; }
+                landmarker = model.value;
+                video.srcObject = stream;
                 await video.play();
                 aspect = (video.videoWidth || 4) / (video.videoHeight || 3);
                 say('seek', 'show your hand to the camera');
