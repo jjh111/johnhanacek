@@ -9,21 +9,36 @@
  * stroke routing changes. Hovering moves the cursor too, so the tank's glow,
  * the page spotlight and anything else that follows the mouse follow the hand.
  *
+ * One scale. The camera's frame maps onto the canvas at one scale on both
+ * axes (a circle drawn is a circle received), and the drawn hand is the
+ * camera's hand at that same scale: nearer the camera it grows, further away
+ * it shrinks, and the strokes it makes grow and shrink with it. A small hand
+ * on screen is a fine pen; a big one sweeps.
+ *
+ * Steady ink. Every landmark runs through a One Euro filter (still when the
+ * hand is slow, quick when it moves; the pinch reads the raw fingertips, so it
+ * stays quick), and the ink follows the nib on a short string, so the tremor
+ * inside the string never reaches the stroke. A stroke
+ * starts where the pinch began closing and the pen holds still while the
+ * fingers part to lift, so neither end draws a hook.
+ *
  * Presence: a fixed overlay draws a ghost of the hand (its 21 joints as line
- * art, at a constant size around the nib) and the nib itself: an open ring
- * that closes as the fingers approach, like a pen nearing paper, and a gold
- * point while it is down. The pinch is visible before it happens.
+ * art) and the nib itself: an open ring that closes as the fingers approach,
+ * like a pen nearing paper, and a gold point while it is down. The pinch is
+ * visible before it happens.
  *
  * Opt-in only. Nothing loads until the visitor turns it on: then the camera
  * (getUserMedia) and MediaPipe's hand landmarker (WASM + a 7.8 MB model, from
  * jsDelivr and Google's model bucket). Every frame stays on the device. A small
- * mirrored preview shows the camera is on; off stops the tracks.
+ * mirrored preview shows the camera is on, with an off switch that is still
+ * there after the hero has scrolled away; off stops the tracks.
  *
- * Declarative: an <input type="checkbox" data-hand-pointer="#heroCanvas"> is
- * wired on load. Or by hand: JHHandPointer.attach(canvas).start()
- * `feed(landmarks, tMs)` is the seam the suite drives
- * (Agent Reference/maze-tests/handpointertest.mjs): synthetic hands in, real
- * strokes out, with no camera.
+ * Declarative: a <button data-hand-pointer="#heroCanvas" hidden> is wired on
+ * load (shown on a mouse device with a camera API, its aria-pressed kept), and
+ * the command bar learns "Draw with your hand". Or by hand:
+ * JHHandPointer.attach(canvas).start(). `feed(landmarks, tMs)` is the seam the
+ * suite drives (Agent Reference/maze-tests/handpointertest.mjs): synthetic
+ * hands in, real strokes out, with no camera.
  */
 (function () {
     'use strict';
@@ -34,21 +49,31 @@
 
     const T = {
         // The part of the camera frame that maps onto the canvas. A hand
-        // rarely reaches the frame's edges (or its foot, under the desk), so
-        // the inner box is the whole canvas.
+        // rarely reaches the frame's edges (or its foot, under the desk). One
+        // scale on both axes, as large as the canvas needs: the box covers the
+        // canvas, centred, and a nib past an edge stays on it.
         BOX: { x0: 0.12, x1: 0.88, y0: 0.08, y1: 0.72 },
-        // Pinch = thumb-index gap over wrist→middle-knuckle length. Hysteresis:
-        // closing past DOWN puts the pen down, opening past UP lifts it.
+        // Pinch = thumb-index gap over the palm's size. Hysteresis: closing past
+        // DOWN puts the pen down, opening past UP lifts it. Between them the pen
+        // holds still, so the fingers parting to lift draw nothing.
         DOWN: 0.24,
         UP: 0.36,
         OPEN: 0.9,       // the ring is widest at this gap
         SETTLE: 2,       // frames the pinch must agree before the pen changes
         LOST_MS: 180,    // a hand missing this long lifts the pen and leaves
         STEP: 10,        // px: longer moves between frames are filled in
-        GHOST: 74,       // px: wrist→middle-knuckle length of the drawn hand
-        // One Euro filter (Casiez et al. 2012): steady when slow, quick when fast.
-        MIN_CUTOFF: 1.4,
-        BETA: 0.012,
+        // The drawn hand: the camera's hand at the canvas's scale, times GHOST.
+        // Its palm (wrist to middle knuckle) stays within GHOST_MIN px and
+        // GHOST_MAX of the canvas's height.
+        GHOST: 0.7,
+        GHOST_MIN: 40,
+        GHOST_MAX: 0.24,
+        // One Euro filter (Casiez et al. 2012) on every landmark, in frame
+        // units: MIN_CUTOFF Hz when still, BETA more per frame-width a second.
+        MIN_CUTOFF: 0.9,
+        BETA: 12,
+        // px: the ink follows the nib on a string this long (a lazy brush)
+        STRING: 8,
     };
 
     const BONES = [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8],
@@ -73,15 +98,16 @@
 
     // Everything the pinch read needs from 21 landmarks: the nib (between the
     // fingertips, so it holds still as they close), the gap, the hand's size.
-    // Pure, so the suite can check the read without a page.
+    // The size is the palm's length or, when the hand tips toward the camera
+    // and its length foreshortens, its width: a tilted hand neither shrinks on
+    // screen nor reads as a pinch. Pure, so the suite can check the read.
     function readHand(lm, aspect) {
         const P = i => ({ x: (1 - lm[i].x) * aspect, y: lm[i].y });   // mirrored, square units
         const d = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
-        const thumb = P(4), index = P(8);
-        const scale = Math.max(1e-4, d(P(0), P(9)));
+        const scale = Math.max(1e-4, d(P(0), P(9)), 1.25 * d(P(5), P(17)));
         return {
             nib: { u: 1 - (lm[4].x + lm[8].x) / 2, v: (lm[4].y + lm[8].y) / 2 },
-            pinch: d(thumb, index) / scale,
+            pinch: d(P(4), P(8)) / scale,
             scale,
         };
     }
@@ -89,10 +115,11 @@
     function attach(canvas, options = {}) {
         if (!canvas) return null;
         const o = Object.assign({}, T, options);
-        let on = false, landmarker = null, video = null, stream = null, raf = 0;
-        let lastVideoTime = -1, lastSeen = 0, present = false, down = false, vote = 0, runs = 0;
-        let nib = null, sent = null, pinch = 1, lm = null, aspect = 4 / 3, fade = 0;
-        const fx = oneEuro(o.MIN_CUTOFF, o.BETA), fy = oneEuro(o.MIN_CUTOFF, o.BETA), fp = oneEuro(8, 0);
+        let on = false, landmarker = null, video = null, stream = null, raf = 0, runs = 0;
+        let lastVideoTime = -1, lastSeen = 0, present = false, down = false, vote = 0;
+        let nib = null, pen = null, onset = null, sent = null, pinch = 1, palm = 0, lm = null, aspect = 4 / 3, fade = 0;
+        const lmf = Array.from({ length: 21 }, () => [oneEuro(o.MIN_CUTOFF, o.BETA), oneEuro(o.MIN_CUTOFF, o.BETA)]);
+        const fp = oneEuro(8, 0);
         const listeners = new Set();
         let status = 'off';
 
@@ -116,11 +143,14 @@
             lctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         }
 
-        // ---- the HUD: mirrored preview + one line of status
+        // ---- the HUD: mirrored preview, one line of status, and an off switch
         const hud = document.createElement('div');
         hud.className = 'hand-hud';
-        hud.innerHTML = '<video muted playsinline></video><span class="hand-hud-note" role="status"></span>';
+        hud.innerHTML = '<video muted playsinline></video>' +
+            '<div class="hand-hud-row"><span class="hand-hud-note" role="status"></span>' +
+            '<button type="button" class="hand-hud-off" aria-label="Turn the webcam off">off</button></div>';
         const note = hud.querySelector('.hand-hud-note');
+        hud.querySelector('.hand-hud-off').addEventListener('click', () => stop());
         function say(s, text) {
             status = s;
             note.textContent = text;
@@ -137,12 +167,21 @@
             if (x1 - x0 < 80 || (y1 - y0) < Math.min(200, r.height * 0.3)) return null;
             return { x0, y0, x1, y1 };
         }
-        function toScreen(u, v) {
+        // The map from the camera's square units to screen px: one gain `g`,
+        // the box's centre on the area's centre.
+        function frame() {
             const a = area() || { x0: 0, y0: 0, x1: innerWidth, y1: innerHeight };
             const b = o.BOX;
-            const s = Math.min(1, Math.max(0, (u - b.x0) / (b.x1 - b.x0)));
-            const t = Math.min(1, Math.max(0, (v - b.y0) / (b.y1 - b.y0)));
-            return { x: a.x0 + s * (a.x1 - a.x0), y: a.y0 + t * (a.y1 - a.y0) };
+            const g = Math.max((a.x1 - a.x0) / ((b.x1 - b.x0) * aspect), (a.y1 - a.y0) / (b.y1 - b.y0));
+            return { a, g, cx: (b.x0 + b.x1) / 2 * aspect, cy: (b.y0 + b.y1) / 2, mx: (a.x0 + a.x1) / 2, my: (a.y0 + a.y1) / 2 };
+        }
+        function toScreen(u, v, f = frame()) {
+            const x = f.mx + (u * aspect - f.cx) * f.g, y = f.my + (v - f.cy) * f.g;
+            return { x: Math.min(f.a.x1, Math.max(f.a.x0, x)), y: Math.min(f.a.y1, Math.max(f.a.y0, y)) };
+        }
+        // Where a nib (mirrored u, v) lands at screen point (x, y): the suite's way in
+        function fromScreen(x, y, f = frame()) {
+            return { u: ((x - f.mx) / f.g + f.cx) / aspect, v: (y - f.my) / f.g + f.cy };
         }
 
         function mouse(type, p) {
@@ -162,16 +201,25 @@
             mouse('mousemove', p);
             sent = p;
         }
+        // The ink moves only when the nib pulls its string taut
+        function follow() {
+            const dx = nib.x - pen.x, dy = nib.y - pen.y, d = Math.hypot(dx, dy);
+            if (d <= o.STRING) return;
+            const k = (d - o.STRING) / d;
+            pen = { x: pen.x + dx * k, y: pen.y + dy * k };
+            moveTo(pen);
+        }
         function penUp() {
             if (!down) return;
             down = false;
-            mouse('mouseup', sent || nib);
+            mouse('mouseup', sent || pen || nib);
         }
         function leave() {
             penUp();
             if (present && sent) mouse('mouseleave', sent);
-            present = false; sent = null; lm = null; vote = 0;
-            fx.reset(); fy.reset(); fp.reset();
+            present = false; sent = null; lm = null; pen = null; onset = null; vote = 0;
+            lmf.forEach(([fx, fy]) => { fx.reset(); fy.reset(); });
+            fp.reset();
         }
 
         // One frame of tracking: landmarks or null (no hand). The suite's seam.
@@ -181,11 +229,15 @@
                 return;
             }
             lastSeen = t;
-            lm = marks;
-            const h = readHand(marks, aspect);
-            const raw = toScreen(h.nib.u, h.nib.v);
-            nib = { x: fx.filter(raw.x, t), y: fy.filter(raw.y, t) };
-            pinch = fp.filter(h.pinch, t);
+            // Where the hand is, smoothed hard; whether it pinches, read from the
+            // raw fingertips and smoothed lightly: a pinch is a small, quick
+            // move the landmark filter would hold back for frames.
+            lm = marks.map((p, i) => ({ x: lmf[i][0].filter(p.x, t), y: lmf[i][1].filter(p.y, t) }));
+            const h = readHand(lm, aspect);
+            const f = frame();
+            nib = toScreen(h.nib.u, h.nib.v, f);
+            pinch = fp.filter(readHand(marks, aspect).pinch, t);
+            palm = Math.min(o.GHOST_MAX * (f.a.y1 - f.a.y0), Math.max(o.GHOST_MIN, h.scale * f.g * o.GHOST));
             const live = !!area();
             if (!present) {
                 present = true;
@@ -193,15 +245,25 @@
                 say('track', 'pinch to draw · open to lift');
             }
             if (!live) { penUp(); return; }
-            // The pen changes only when SETTLE frames in a row agree
+            // The pen changes only when SETTLE frames in a row agree. The nib
+            // where they began agreeing is where a stroke starts.
             const want = down ? pinch < o.UP : pinch < o.DOWN;
-            vote = want === down ? 0 : vote + 1;
+            if (want === down) vote = 0;
+            else if (vote++ === 0) onset = nib;
             if (vote >= o.SETTLE) {
                 vote = 0;
-                if (want) { moveTo(nib); down = true; mouse('mousedown', nib); sent = nib; return; }
+                if (want) {
+                    moveTo(onset);
+                    down = true; pen = onset;
+                    mouse('mousedown', pen);
+                    follow();
+                    return;
+                }
                 penUp();
             }
-            moveTo(nib);
+            if (!down) { pen = nib; moveTo(nib); return; }
+            // Drawing: the pen holds while the fingers part, else follows
+            if (pinch < o.DOWN) follow();
         }
 
         function paint() {
@@ -211,7 +273,7 @@
             fade += ((present && area() ? 1 : 0) - fade) * 0.2;
             if (fade < 0.02 || !lm || !nib) return;
             const g = readHand(lm, aspect);
-            const k = o.GHOST / g.scale;
+            const k = palm / g.scale;
             const nibSq = { x: g.nib.u * aspect, y: g.nib.v };
             const at = i => ({
                 x: nib.x + ((1 - lm[i].x) * aspect - nibSq.x) * k,
@@ -227,7 +289,8 @@
             for (const [a, b] of BONES) { lctx.moveTo(pts[a].x, pts[a].y); lctx.lineTo(pts[b].x, pts[b].y); }
             lctx.stroke();
             lctx.fillStyle = ink.line;
-            for (const p of pts) { lctx.beginPath(); lctx.arc(p.x, p.y, 1.8, 0, Math.PI * 2); lctx.fill(); }
+            const r = Math.max(1.5, palm / 50);
+            for (const p of pts) { lctx.beginPath(); lctx.arc(p.x, p.y, r, 0, Math.PI * 2); lctx.fill(); }
             // The pincer: thumb tip to index tip, brighter as it closes
             const close = Math.min(1, Math.max(0, (o.OPEN - pinch) / (o.OPEN - o.DOWN)));
             lctx.globalAlpha = (0.25 + 0.5 * close) * fade;
@@ -237,10 +300,17 @@
 
             lctx.save();
             lctx.globalAlpha = fade;
-            if (down) {
+            if (down && pen) {
+                // The string, when the hand has pulled ahead of the ink
+                if (Math.hypot(nib.x - pen.x, nib.y - pen.y) > 2) {
+                    lctx.globalAlpha = 0.5 * fade;
+                    lctx.strokeStyle = ink.down; lctx.lineWidth = 1;
+                    lctx.beginPath(); lctx.moveTo(pen.x, pen.y); lctx.lineTo(nib.x, nib.y); lctx.stroke();
+                    lctx.globalAlpha = fade;
+                }
                 lctx.shadowColor = ink.down; lctx.shadowBlur = 14;
                 lctx.fillStyle = ink.down;
-                lctx.beginPath(); lctx.arc(nib.x, nib.y, 4.5, 0, Math.PI * 2); lctx.fill();
+                lctx.beginPath(); lctx.arc(pen.x, pen.y, 4.5, 0, Math.PI * 2); lctx.fill();
             } else {
                 // The ring closes on the nib as the fingers approach
                 const r = 5 + 19 * (1 - close);
@@ -302,8 +372,9 @@
                 // The camera is kept the moment it is granted, so stop() ends it even
                 // while the model still loads; one granted after this start was
                 // abandoned is stopped at once. Nothing is left on when either fails.
+                // A larger frame gives a far hand more pixels, so its landmarks shake less.
                 const [cam, model] = await Promise.allSettled([
-                    navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }, audio: false })
+                    navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 60 }, facingMode: 'user' }, audio: false })
                         .then(s => { if (current()) stream = s; else s.getTracks().forEach(t => t.stop()); return s; }),
                     (say('load', 'loading hand model…'), load()),
                 ]);
@@ -313,9 +384,11 @@
                 landmarker = model.value;
                 video.srcObject = stream;
                 await video.play();
+                if (!current()) return api;
                 aspect = (video.videoWidth || 4) / (video.videoHeight || 3);
                 say('seek', 'show your hand to the camera');
             } catch (e) {
+                if (!current()) return api;
                 const blocked = e && (e.name === 'NotAllowedError' || e.name === 'SecurityError');
                 say('error', blocked ? 'camera blocked: allow it in the address bar' : 'hand tracking could not start');
                 console.warn('hand-pointer:', e);
@@ -324,6 +397,7 @@
             return api;
         }
 
+        // Off. `keepNote` leaves an error on screen for a few seconds.
         function stop(keepNote) {
             on = false;
             leave();
@@ -338,39 +412,49 @@
             removeEventListener('resize', sizeLayer);
             removeEventListener('jh-theme-change', readInk);
             document.removeEventListener('visibilitychange', onVisible);
-            if (keepNote) setTimeout(() => { if (!on) hud.remove(); }, 4000);
-            else { hud.remove(); say('off', ''); }
+            if (keepNote) {
+                say(status, note.textContent);       // listeners see `on` is false
+                setTimeout(() => { if (!on) hud.remove(); }, 4000);
+            } else { hud.remove(); say('off', ''); }
             return api;
         }
 
         const api = {
-            start, stop, feed,
+            start, stop, feed, fromScreen,
             get on() { return on; },
             get down() { return down; },
             get status() { return status; },
             get nib() { return nib && { x: nib.x, y: nib.y }; },
+            get pen() { return pen && { x: pen.x, y: pen.y }; },
+            get palm() { return palm; },
             setAspect(a) { aspect = a; },
             onStatus(f) { listeners.add(f); return () => listeners.delete(f); },
         };
         return api;
     }
 
+    // A <button data-hand-pointer="#canvas" hidden>: shown where it can work
+    // (a mouse device with a camera API; a coarse pointer has a finger on the
+    // glass already), pressed while the camera is on.
     function wire() {
-        document.querySelectorAll('input[data-hand-pointer]').forEach(input => {
-            const label = input.closest('label') || input;
-            if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) { label.hidden = true; return; }
-            const canvas = document.querySelector(input.dataset.handPointer);
-            const hp = attach(canvas);
+        if (matchMedia('(pointer: coarse)').matches) return;
+        if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) return;
+        document.querySelectorAll('[data-hand-pointer]').forEach(btn => {
+            const hp = attach(document.querySelector(btn.dataset.handPointer));
             if (!hp) return;
-            input._handPointer = hp;
-            hp.onStatus(s => { if (s === 'error') input.checked = false; });
-            input.addEventListener('change', () => { input.checked ? hp.start() : hp.stop(); });
+            btn._handPointer = hp;
+            btn.hidden = false;
+            hp.onStatus(s => {
+                btn.dataset.state = hp.on ? s : 'off';
+                btn.setAttribute('aria-pressed', String(hp.on));
+            });
+            btn.addEventListener('click', () => { hp.on ? hp.stop() : hp.start(); });
             (window.JH_COMMANDS = window.JH_COMMANDS || []).push({
                 id: 'hand.draw', title: 'Draw with your hand',
                 detail: 'Your webcam as a pen: pinch to draw, open to lift',
                 tags: 'webcam camera hand gesture draw pinch tracking air pen presence',
                 hints: ['draw with my hand', 'use the webcam to draw', 'hand tracking'],
-                run: () => { input.checked = !input.checked; input.dispatchEvent(new Event('change')); },
+                run: () => btn.click(),
             });
         });
     }
