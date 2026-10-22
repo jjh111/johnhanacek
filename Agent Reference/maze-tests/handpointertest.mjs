@@ -5,7 +5,7 @@
 // pinch gap), so every stroke goes through the module's own mapping, filters,
 // pinch hysteresis, string and MouseEvent dispatch into the page's real
 // startDraw/draw/endDraw, and asserts:
-//   1. the webcam button is on both pages (fine pointer), unpressed, and the
+//   1. the Webcam toggle is on both pages (fine pointer), off, and the
 //      command bar knows "Draw with your hand"
 //   2. an open hand hovers: mousemoves reach the canvas, the pen stays up
 //   3. a pinched loop spawns a fish (index) / a pinched box makes a wall (design)
@@ -16,10 +16,14 @@
 //   8. no hook: fingers parting to lift do not drag the stroke's end
 //   9. depth: the drawn hand doubles when the hand comes twice as near, and
 //      stops at GHOST_MAX
-//  10. on a touch device the button stays hidden and the command is absent
-// Part 2 turns the button on with Chromium's fake camera and no model (the
-// downloads refused or held): the camera must end when the model fails, and
-// end at once when the button goes off mid-load.
+//  10. on a touch device the toggle stays hidden and the command is absent
+// Part 2 turns the toggle on with three of Chromium's fake cameras and no model
+// (the downloads refused or held): the camera must end when the model fails
+// and at once when the toggle goes off mid-load; the request names a device
+// and nothing else (a size or frame-rate wish let a virtual camera beat the
+// real one, 2026-10-22); the preview shows before the model is in; the picker
+// lists the cameras, switches live, and its choice is the next start's, or the
+// default when that camera is gone.
 // Part 3 turns it on for real, with the MediaPipe bundle + model served from
 // .local/handpointer/ (an environment that refuses jsDelivr): camera starts,
 // the model loads, detection runs on frames and the status reaches "show your
@@ -143,16 +147,11 @@ for (const file of ['index.html', 'design.html']) {
     pg.on('pageerror', e => errors.push(e.message));
     await ready(pg, file);
 
-    const btn = await pg.evaluate(() => {
-        const b = document.querySelector('.hero-cam-toggle'), t = document.querySelector('.hero-theme-toggle');
-        if (!b) return null;
-        const r = b.getBoundingClientRect(), q = t && t.getBoundingClientRect();
-        return { shown: !b.hidden && getComputedStyle(b).display !== 'none', pressed: b.getAttribute('aria-pressed'),
-            leftOfTheme: !!q && Math.round(r.top) === Math.round(q.top) && r.right <= q.left && q.left - r.right < 16,
-            oldSwitch: !!document.querySelector('.hand-toggle') };
+    const tog = await pg.evaluate(() => {
+        const l = document.querySelector('.canvas-controls .hand-toggle');
+        return l && { shown: !l.hidden && getComputedStyle(l).display !== 'none', on: l.querySelector('input').checked, label: l.textContent.trim() };
     });
-    check(btn && btn.shown && btn.pressed === 'false' && btn.leftOfTheme && !btn.oldSwitch,
-        `the webcam button shows beside the theme toggle, unpressed (${JSON.stringify(btn)})`);
+    check(tog && tog.shown && !tog.on && tog.label === 'Webcam', `the Webcam toggle shows in the canvas controls, off (${JSON.stringify(tog)})`);
     const cmd = await pg.evaluate(() => (window.JH_COMMANDS || []).some(c => c.id === 'hand.draw'));
     check(cmd, 'the command bar knows "Draw with your hand"');
 
@@ -216,9 +215,9 @@ for (const file of ['index.html', 'design.html']) {
     const off = await pg.evaluate(() => ({
         on: document.querySelector('[data-hand-pointer]')._handPointer.on,
         layer: !!document.querySelector('.hand-layer'), hud: !!document.querySelector('.hand-hud'),
-        pressed: document.querySelector('.hero-cam-toggle').getAttribute('aria-pressed'),
+        toggle: document.querySelector('input[data-hand-pointer]').checked,
     }));
-    check(!off.on && !off.layer && !off.hud && off.pressed === 'false', `the HUD's off switch turns it all off (${JSON.stringify(off)})`);
+    check(!off.on && !off.layer && !off.hud && !off.toggle, `the HUD's off switch turns it all off (${JSON.stringify(off)})`);
     check(errors.length === 0, `no page errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
     await ctx.close();
 }
@@ -303,10 +302,10 @@ for (const file of ['index.html', 'design.html']) {
     await pg.goto(`${BASE}/index.html`, { waitUntil: 'domcontentloaded' });
     await pg.waitForTimeout(1200);
     const t = await pg.evaluate(() => {
-        const b = document.querySelector('.hero-cam-toggle');
-        return { hidden: !b || b.hidden || getComputedStyle(b).display === 'none', cmd: (window.JH_COMMANDS || []).some(c => c.id === 'hand.draw') };
+        const l = document.querySelector('.hand-toggle');
+        return { hidden: !l || l.hidden || getComputedStyle(l).display === 'none', cmd: (window.JH_COMMANDS || []).some(c => c.id === 'hand.draw') };
     });
-    check(t.hidden, 'the webcam button stays hidden on a coarse pointer');
+    check(t.hidden, 'the Webcam toggle stays hidden on a coarse pointer');
     check(!t.cmd, 'and the command bar does not offer "Draw with your hand" there');
     await ctx.close();
 }
@@ -314,49 +313,82 @@ await browser.close();
 
 // ---------------------------------------------------------------- part 2
 {
-    console.log('\nindex.html — fake camera, the camera\'s life when the model is not there');
-    const cam = await chromium.launch({ executablePath: exe, args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] });
-    const run = async (name, routeFn, act) => {
-        const ctx = await cam.newContext({ viewport: { width: 1280, height: 800 }, permissions: ['camera'] });
-        await ctx.route(/cdn\.jsdelivr\.net|storage\.googleapis\.com/, routeFn);
-        const pg = await ctx.newPage();
-        const errors = [];
-        pg.on('pageerror', e => errors.push(e.message));
-        await pg.addInitScript(() => {
-            window.__tracks = [];
-            const gum = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
-            navigator.mediaDevices.getUserMedia = async c => { const s = await gum(c); window.__tracks.push(...s.getTracks()); return s; };
-        });
-        await pg.goto(`${BASE}/index.html`, { waitUntil: 'domcontentloaded' });
-        await pg.waitForFunction(() => document.querySelector('[data-hand-pointer]')?._handPointer, null, { timeout: 15000 });
-        await pg.click('.hero-cam-toggle');
-        const r = await act(pg);
-        check(errors.length === 0, `${name}: no page errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
-        await ctx.close();
-        return r;
-    };
-    const state = pg => pg.evaluate(() => ({
-        tracks: window.__tracks.map(t => t.readyState), note: document.querySelector('.hand-hud-note')?.textContent || '',
-        pressed: document.querySelector('.hero-cam-toggle').getAttribute('aria-pressed'),
+    console.log('\nindex.html — three fake cameras, no model: the camera\'s life and choice');
+    const cam = await chromium.launch({ executablePath: exe, args: ['--use-fake-device-for-media-stream=device-count=3', '--use-fake-ui-for-media-stream'] });
+    const ctx = await cam.newContext({ viewport: { width: 1280, height: 800 }, permissions: ['camera'] });
+    let answer = 'refuse';
+    await ctx.route(/cdn\.jsdelivr\.net|storage\.googleapis\.com/, r => { if (answer === 'refuse') r.abort(); /* else held: never answered */ });
+    const pg = await ctx.newPage();
+    const errors = [];
+    pg.on('pageerror', e => errors.push(e.message));
+    // Every camera request and every track it opened
+    await pg.addInitScript(() => {
+        window.__tracks = []; window.__asks = [];
+        const gum = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+        navigator.mediaDevices.getUserMedia = async c => { window.__asks.push(c); const s = await gum(c); window.__tracks.push(...s.getTracks()); return s; };
+    });
+    await pg.goto(`${BASE}/index.html`, { waitUntil: 'domcontentloaded' });
+    await pg.waitForFunction(() => document.querySelector('[data-hand-pointer]')?._handPointer, null, { timeout: 15000 });
+    const state = () => pg.evaluate(() => ({
+        tracks: window.__tracks.map(t => `${t.label}:${t.readyState}`), note: document.querySelector('.hand-hud-note')?.textContent || '',
+        toggle: document.querySelector('input[data-hand-pointer]').checked, status: document.querySelector('[data-hand-pointer]')._handPointer.status,
     }));
+    const live = () => pg.evaluate(() => window.__tracks.filter(t => t.readyState === 'live').map(t => t.label));
+    const toggle = () => pg.click('.hand-toggle');
+    const asked = () => pg.evaluate(() => JSON.stringify(window.__asks[window.__asks.length - 1]));
 
-    const failed = await run('model refused', r => r.abort(), async pg => {
-        await pg.waitForFunction(() => document.querySelector('[data-hand-pointer]')._handPointer.status === 'error', null, { timeout: 15000 }).catch(() => {});
-        await pg.waitForTimeout(300);
-        return state(pg);
-    });
-    check(failed.tracks.length > 0 && failed.tracks.every(t => t === 'ended') && failed.pressed === 'false' && /could not start/.test(failed.note),
-        `the model fails to load: the camera ends, the button is up, the HUD says so (${JSON.stringify(failed)})`);
+    // the model refused
+    await toggle();
+    await pg.waitForFunction(() => document.querySelector('[data-hand-pointer]')._handPointer.status === 'error', null, { timeout: 15000 }).catch(() => {});
+    await pg.waitForTimeout(300);
+    const failed = await state();
+    check(failed.tracks.length > 0 && failed.tracks.every(t => t.endsWith(':ended')) && !failed.toggle && /could not start/.test(failed.note),
+        `the model fails to load: the camera ends, the toggle goes off, the HUD says so (${JSON.stringify(failed)})`);
+    check(await asked() === '{"video":true,"audio":false}', `the first request names no camera, size or rate: the system's default (${await asked()})`);
+    await pg.waitForTimeout(4200);    // the error note leaves
 
-    const held = await run('model held', () => { /* never answered: the model is still loading */ }, async pg => {
-        await pg.waitForFunction(() => window.__tracks.length > 0 && window.__tracks[0].readyState === 'live', null, { timeout: 15000 }).catch(() => {});
-        const before = await state(pg);
-        await pg.click('.hero-cam-toggle');
-        await pg.waitForTimeout(150);
-        return { before, after: await state(pg) };
-    });
-    check(held.before.tracks[0] === 'live' && held.after.tracks.every(t => t === 'ended') && held.after.pressed === 'false',
-        `off while the model is still loading ends the camera at once (${JSON.stringify(held)})`);
+    // the model held: everything below happens while it loads
+    answer = 'hold';
+    await pg.evaluate(() => { window.__tracks = []; });
+    await toggle();
+    await pg.waitForFunction(() => window.__tracks.some(t => t.readyState === 'live'), null, { timeout: 15000 }).catch(() => {});
+    await pg.waitForFunction(() => document.querySelector('.hand-hud video')?.videoWidth > 0, null, { timeout: 5000 }).catch(() => {});
+    const early = await pg.evaluate(() => ({ status: document.querySelector('[data-hand-pointer]')._handPointer.status, vw: document.querySelector('.hand-hud video')?.videoWidth || 0 }));
+    check(early.status === 'load', `after a failed start the next one tries the download again (${early.status}; a failed import() is cached per URL)`);
+    check(early.vw > 0, `the preview shows the camera while the model still loads (${early.vw}px wide)`);
+    await pg.waitForFunction(() => document.querySelectorAll('.hand-hud-cam option').length === 3, null, { timeout: 5000 }).catch(() => {});
+    const picker = await pg.evaluate(() => { const p = document.querySelector('.hand-hud-cam'); return { shown: !p.hidden, options: [...p.options].map(o => o.textContent), chosen: p.selectedOptions[0]?.textContent }; });
+    check(picker.shown && picker.options.length === 3 && picker.chosen === 'fake_device_0', `the picker lists the cameras, the one in use chosen (${JSON.stringify(picker)})`);
+
+    await pg.selectOption('.hand-hud-cam', { label: 'fake_device_2' });
+    await pg.waitForFunction(() => window.__tracks.some(t => t.label === 'fake_device_2' && t.readyState === 'live'), null, { timeout: 5000 }).catch(() => {});
+    await pg.waitForTimeout(200);
+    const switched = { live: await live(), saved: await pg.evaluate(() => localStorage.getItem('jh-hand-camera')), chosen: await pg.evaluate(() => document.querySelector('.hand-hud-cam').selectedOptions[0]?.textContent) };
+    check(switched.live.length === 1 && switched.live[0] === 'fake_device_2' && !!switched.saved && switched.chosen === 'fake_device_2',
+        `picking another camera switches to it live, the old one ends, the choice is kept (${JSON.stringify(switched)})`);
+
+    await toggle();
+    await pg.waitForTimeout(150);
+    const offNow = await state();
+    check(offNow.tracks.every(t => t.endsWith(':ended')) && !offNow.toggle, `off while the model is still loading ends the camera at once (${JSON.stringify(offNow.tracks)})`);
+
+    await toggle();
+    await pg.waitForFunction(() => window.__tracks.filter(t => t.readyState === 'live').length === 1, null, { timeout: 5000 }).catch(() => {});
+    const again = { asked: JSON.parse(await asked()), live: await live() };
+    check(!!again.asked.video.deviceId?.exact && Object.keys(again.asked.video).length === 1 && again.live[0] === 'fake_device_2',
+        `the next start opens the camera picked last time, by device alone (${JSON.stringify(again)})`);
+    await toggle();
+    await pg.waitForTimeout(150);
+
+    await pg.evaluate(() => localStorage.setItem('jh-hand-camera', 'a-camera-since-unplugged'));
+    await toggle();
+    await pg.waitForFunction(() => window.__tracks.filter(t => t.readyState === 'live').length === 1, null, { timeout: 5000 }).catch(() => {});
+    const gone = await live();
+    check(gone.length === 1 && gone[0] === 'fake_device_0', `a remembered camera that is gone falls back to the default (${JSON.stringify(gone)})`);
+    await toggle();
+    await pg.waitForTimeout(150);
+    check((await live()).length === 0, 'and off ends it');
+    check(errors.length === 0, `no page errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
     await cam.close();
 }
 
@@ -386,20 +418,20 @@ if (!haveMP) {
     await pg.goto(`${BASE}/index.html`, { waitUntil: 'domcontentloaded' });
     await pg.waitForFunction(() => document.querySelector('[data-hand-pointer]')?._handPointer, null, { timeout: 15000 });
     await pg.waitForTimeout(800);
-    await pg.click('.hero-cam-toggle');
+    await pg.click('.hand-toggle');
     let state = null;
     try {
         await pg.waitForFunction(() => ['seek', 'track', 'error'].includes(document.querySelector('[data-hand-pointer]')._handPointer.status), null, { timeout: 60000 });
     } catch (e) { /* reported below */ }
-    state = await pg.evaluate(() => ({ s: document.querySelector('[data-hand-pointer]')._handPointer.status, note: document.querySelector('.hand-hud-note')?.textContent, vw: document.querySelector('.hand-hud video')?.videoWidth, pressed: document.querySelector('.hero-cam-toggle').getAttribute('aria-pressed') }));
-    check((state.s === 'seek' || state.s === 'track') && state.pressed === 'true', `camera + model start, the button pressed (${state.s}: "${state.note}", ${state.vw}px video)`);
+    state = await pg.evaluate(() => ({ s: document.querySelector('[data-hand-pointer]')._handPointer.status, note: document.querySelector('.hand-hud-note')?.textContent, vw: document.querySelector('.hand-hud video')?.videoWidth, toggle: document.querySelector('input[data-hand-pointer]').checked }));
+    check((state.s === 'seek' || state.s === 'track') && state.toggle, `camera + model start, the toggle on (${state.s}: "${state.note}", ${state.vw}px video)`);
     await pg.waitForTimeout(1500);
     const still2 = await pg.evaluate(() => document.querySelector('[data-hand-pointer]')._handPointer.status);
     check(still2 === 'seek', `detection runs on the fake feed without finding a hand (${still2})`);
-    await pg.click('.hero-cam-toggle');
+    await pg.click('.hand-toggle');
     await pg.waitForTimeout(200);
-    const off = await pg.evaluate(() => ({ on: document.querySelector('[data-hand-pointer]')._handPointer.on, hud: !!document.querySelector('.hand-hud'), pressed: document.querySelector('.hero-cam-toggle').getAttribute('aria-pressed') }));
-    check(!off.on && !off.hud && off.pressed === 'false', 'turning it off stops the camera and clears the HUD');
+    const off = await pg.evaluate(() => ({ on: document.querySelector('[data-hand-pointer]')._handPointer.on, hud: !!document.querySelector('.hand-hud'), toggle: document.querySelector('input[data-hand-pointer]').checked }));
+    check(!off.on && !off.hud && !off.toggle, 'turning it off stops the camera and clears the HUD');
     check(errors.length === 0, `no page errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
     await cam.close();
 }

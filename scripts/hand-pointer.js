@@ -30,12 +30,19 @@
  * Opt-in only. Nothing loads until the visitor turns it on: then the camera
  * (getUserMedia) and MediaPipe's hand landmarker (WASM + a 7.8 MB model, from
  * jsDelivr and Google's model bucket). Every frame stays on the device. A small
- * mirrored preview shows the camera is on, with an off switch that is still
- * there after the hero has scrolled away; off stops the tracks.
+ * mirrored preview shows the camera is on from the moment it opens, with a
+ * camera picker and an off switch that are still there after the hero has
+ * scrolled away; off stops the tracks.
  *
- * Declarative: a <button data-hand-pointer="#heroCanvas" hidden> is wired on
- * load (shown on a mouse device with a camera API, its aria-pressed kept), and
- * the command bar learns "Draw with your hand". Or by hand:
+ * Which camera: the one the visitor picked last time (localStorage
+ * `jh-hand-camera`), else the system's default. The request names a device
+ * and nothing else: a size or frame-rate wish makes the browser rank every
+ * camera against it, and a virtual camera offering 60 fps beat the real one
+ * (2026-10-22). The size is raised afterwards on the camera already chosen.
+ *
+ * Declarative: an <input type="checkbox" data-hand-pointer="#heroCanvas"> is
+ * wired on load (its label shown on a mouse device with a camera API, and only
+ * there does the command bar learn "Draw with your hand"). Or by hand:
  * JHHandPointer.attach(canvas).start(). `feed(landmarks, tMs)` is the seam the
  * suite drives (Agent Reference/maze-tests/handpointertest.mjs): synthetic
  * hands in, real strokes out, with no camera.
@@ -76,6 +83,31 @@
         STRING: 8,
     };
 
+    // MediaPipe's bundle, loaded once. A failed import() is cached by the
+    // browser for that URL, so a retry asks under a new one: one dropped
+    // download no longer means no hand until a reload.
+    let bundleP = null, bundleTries = 0;
+    function bundle() {
+        if (!bundleP) {
+            const url = `${MP_BASE}/vision_bundle.mjs` + (bundleTries++ ? `?retry=${bundleTries}` : '');
+            bundleP = import(url).catch(e => { bundleP = null; throw e; });
+        }
+        return bundleP;
+    }
+
+    // The camera the visitor picked, kept for next time
+    const CAM_KEY = 'jh-hand-camera';
+    const savedCam = () => { try { return localStorage.getItem(CAM_KEY) || ''; } catch (e) { return ''; } };
+    const saveCam = id => { try { localStorage.setItem(CAM_KEY, id); } catch (e) { /* private window */ } };
+    // A device and nothing else (see the header): an unplugged one falls back to the default
+    async function openCamera(id) {
+        if (id) {
+            try { return await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: id } }, audio: false }); }
+            catch (e) { if (e.name !== 'OverconstrainedError' && e.name !== 'NotFoundError') throw e; }
+        }
+        return navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    }
+
     const BONES = [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8],
         [5, 9], [9, 10], [10, 11], [11, 12], [9, 13], [13, 14], [14, 15], [15, 16],
         [13, 17], [0, 17], [17, 18], [18, 19], [19, 20]];
@@ -115,7 +147,7 @@
     function attach(canvas, options = {}) {
         if (!canvas) return null;
         const o = Object.assign({}, T, options);
-        let on = false, landmarker = null, video = null, stream = null, raf = 0, runs = 0;
+        let on = false, landmarker = null, stream = null, raf = 0, runs = 0;
         let lastVideoTime = -1, lastSeen = 0, present = false, down = false, vote = 0;
         let nib = null, pen = null, onset = null, sent = null, pinch = 1, palm = 0, lm = null, aspect = 4 / 3, fade = 0;
         const lmf = Array.from({ length: 21 }, () => [oneEuro(o.MIN_CUTOFF, o.BETA), oneEuro(o.MIN_CUTOFF, o.BETA)]);
@@ -143,14 +175,18 @@
             lctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         }
 
-        // ---- the HUD: mirrored preview, one line of status, and an off switch
+        // ---- the HUD: mirrored preview, one line of status, the camera, an off switch
         const hud = document.createElement('div');
         hud.className = 'hand-hud';
         hud.innerHTML = '<video muted playsinline></video>' +
-            '<div class="hand-hud-row"><span class="hand-hud-note" role="status"></span>' +
+            '<span class="hand-hud-note" role="status"></span>' +
+            '<div class="hand-hud-row"><select class="hand-hud-cam" aria-label="Camera" hidden></select>' +
             '<button type="button" class="hand-hud-off" aria-label="Turn the webcam off">off</button></div>';
+        const video = hud.querySelector('video');
         const note = hud.querySelector('.hand-hud-note');
+        const pick = hud.querySelector('.hand-hud-cam');
         hud.querySelector('.hand-hud-off').addEventListener('click', () => stop());
+        pick.addEventListener('change', () => useCamera(pick.value));
         function say(s, text) {
             status = s;
             note.textContent = text;
@@ -324,8 +360,9 @@
 
         function loop() {
             raf = requestAnimationFrame(loop);
-            if (landmarker && video && video.readyState >= 2 && video.currentTime !== lastVideoTime) {
+            if (landmarker && video.readyState >= 2 && video.currentTime !== lastVideoTime) {
                 lastVideoTime = video.currentTime;
+                if (video.videoWidth) aspect = video.videoWidth / video.videoHeight;
                 const t = performance.now();
                 let res = null;
                 try { res = landmarker.detectForVideo(video, t); } catch (e) { /* a dropped frame */ }
@@ -337,7 +374,7 @@
         }
 
         async function load() {
-            const vision = await import(`${MP_BASE}/vision_bundle.mjs`);
+            const vision = await bundle();
             const files = await vision.FilesetResolver.forVisionTasks(`${MP_BASE}/wasm`);
             const make = delegate => vision.HandLandmarker.createFromOptions(files, {
                 baseOptions: { modelAssetPath: MODEL_URL, delegate },
@@ -347,12 +384,47 @@
             try { return await make('GPU'); } catch (e) { return make('CPU'); }
         }
 
+        // A granted camera goes on screen at once, so the visitor sees which one
+        // it is while the model loads, then asks for a larger frame on that same
+        // device: more pixels on a far hand, so its landmarks shake less.
+        function showCamera(s) {
+            stream = s;
+            video.srcObject = s;
+            video.play().catch(() => { /* it plays once the page may */ });
+            const track = s.getVideoTracks()[0];
+            if (track && track.applyConstraints) track.applyConstraints({ width: { ideal: 1280 }, height: { ideal: 720 } }).catch(() => {});
+            listCameras();
+        }
+        // The picker: every camera, the one in use chosen; shown when there is a choice
+        async function listCameras() {
+            if (!stream) return;
+            let cams = [];
+            try { cams = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput'); } catch (e) { /* none to list */ }
+            const track = stream && stream.getVideoTracks()[0];
+            const id = track && track.getSettings ? track.getSettings().deviceId : '';
+            pick.textContent = '';
+            cams.forEach((c, i) => pick.add(new Option(c.label || `camera ${i + 1}`, c.deviceId, false, c.deviceId === id)));
+            pick.hidden = cams.length < 2;
+        }
+        // Another camera, picked while on; kept for next time
+        async function useCamera(id) {
+            const run = runs;
+            let s;
+            try { s = await openCamera(id); } catch (e) { note.textContent = 'that camera would not start'; listCameras(); return; }
+            if (!on || run !== runs) { s.getTracks().forEach(t => t.stop()); return; }
+            if (stream) stream.getTracks().forEach(t => t.stop());
+            saveCam(id);
+            leave();          // a new view: the filters start again
+            showCamera(s);
+        }
+
         function mount() {
             readInk(); sizeLayer();
             document.body.append(layer, hud);
             addEventListener('resize', sizeLayer);
             addEventListener('jh-theme-change', readInk);
             document.addEventListener('visibilitychange', onVisible);
+            if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) navigator.mediaDevices.addEventListener('devicechange', listCameras);
             if (!raf) loop();
         }
         function onVisible() { if (document.hidden && present) leave(); }
@@ -365,27 +437,21 @@
             mount();
             if (opts.camera === false) { say('track', 'feeding'); return api; }
             say('load', 'starting camera…');
-            video = hud.querySelector('video');
             const run = ++runs;
             const current = () => on && run === runs;
             try {
-                // The camera is kept the moment it is granted, so stop() ends it even
-                // while the model still loads; one granted after this start was
-                // abandoned is stopped at once. Nothing is left on when either fails.
-                // A larger frame gives a far hand more pixels, so its landmarks shake less.
+                // The camera is kept (and shown) the moment it is granted, so stop()
+                // ends it even while the model still loads; one granted after this
+                // start was abandoned is stopped at once. Nothing is left on when
+                // either fails.
                 const [cam, model] = await Promise.allSettled([
-                    navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 60 }, facingMode: 'user' }, audio: false })
-                        .then(s => { if (current()) stream = s; else s.getTracks().forEach(t => t.stop()); return s; }),
+                    openCamera(savedCam()).then(s => { if (current()) showCamera(s); else s.getTracks().forEach(t => t.stop()); return s; }),
                     (say('load', 'loading hand model…'), load()),
                 ]);
                 const drop = () => { if (model.status === 'fulfilled') { try { model.value.close(); } catch (e) { /* gone */ } } };
                 if (!current()) { drop(); return api; }
                 if (cam.status === 'rejected' || model.status === 'rejected') { drop(); throw cam.status === 'rejected' ? cam.reason : model.reason; }
                 landmarker = model.value;
-                video.srcObject = stream;
-                await video.play();
-                if (!current()) return api;
-                aspect = (video.videoWidth || 4) / (video.videoHeight || 3);
                 say('seek', 'show your hand to the camera');
             } catch (e) {
                 if (!current()) return api;
@@ -403,7 +469,9 @@
             leave();
             if (stream) stream.getTracks().forEach(t => t.stop());
             stream = null;
-            if (video) video.srcObject = null;
+            video.srcObject = null;
+            pick.hidden = true;
+            if (navigator.mediaDevices && navigator.mediaDevices.removeEventListener) navigator.mediaDevices.removeEventListener('devicechange', listCameras);
             if (landmarker) { try { landmarker.close(); } catch (e) { /* gone */ } }
             landmarker = null; lastVideoTime = -1;
             cancelAnimationFrame(raf); raf = 0;
@@ -433,28 +501,25 @@
         return api;
     }
 
-    // A <button data-hand-pointer="#canvas" hidden>: shown where it can work
-    // (a mouse device with a camera API; a coarse pointer has a finger on the
-    // glass already), pressed while the camera is on.
+    // An <input type="checkbox" data-hand-pointer="#canvas"> in its label: the
+    // label shows where it can work (a mouse device with a camera API; a coarse
+    // pointer has a finger on the glass already), checked while the camera is on.
     function wire() {
-        if (matchMedia('(pointer: coarse)').matches) return;
-        if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) return;
-        document.querySelectorAll('[data-hand-pointer]').forEach(btn => {
-            const hp = attach(document.querySelector(btn.dataset.handPointer));
+        const can = !matchMedia('(pointer: coarse)').matches && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+        document.querySelectorAll('input[data-hand-pointer]').forEach(input => {
+            const label = input.closest('label') || input;
+            if (!can) { label.hidden = true; return; }
+            const hp = attach(document.querySelector(input.dataset.handPointer));
             if (!hp) return;
-            btn._handPointer = hp;
-            btn.hidden = false;
-            hp.onStatus(s => {
-                btn.dataset.state = hp.on ? s : 'off';
-                btn.setAttribute('aria-pressed', String(hp.on));
-            });
-            btn.addEventListener('click', () => { hp.on ? hp.stop() : hp.start(); });
+            input._handPointer = hp;
+            hp.onStatus(() => { input.checked = hp.on; });
+            input.addEventListener('change', () => { input.checked ? hp.start() : hp.stop(); });
             (window.JH_COMMANDS = window.JH_COMMANDS || []).push({
                 id: 'hand.draw', title: 'Draw with your hand',
                 detail: 'Your webcam as a pen: pinch to draw, open to lift',
                 tags: 'webcam camera hand gesture draw pinch tracking air pen presence',
                 hints: ['draw with my hand', 'use the webcam to draw', 'hand tracking'],
-                run: () => btn.click(),
+                run: () => { input.checked = !input.checked; input.dispatchEvent(new Event('change')); },
             });
         });
     }

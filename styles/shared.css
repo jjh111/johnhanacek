@@ -2212,61 +2212,16 @@ code, kbd, samp, pre {
     .swipe-offer svg { animation: none; }
 }
 
-/* Hand pointer (scripts/hand-pointer.js): the webcam as a pen. The button is
-   the theme toggle's glass twin, one step to its left (.hero-theme-toggle in
-   jh-chrome.css: 40px from the same 1.5rem top, so it lines up with the
-   shape-nav pill); its light turns gold while the camera is on. The script
-   unhides it on a mouse device with a camera API: a coarse pointer has a
-   finger on the glass already. The layer is the hand's ghost and nib over the
-   water (above the ovals, under the nav); the HUD is the mirrored preview that
-   says the camera is on, with an off switch that outlasts the hero. */
-.hero-cam-toggle {
-    position: absolute;
-    top: 1.5rem;
-    right: calc(1.5rem + 48px);
-    z-index: 6;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    background: rgba(var(--surface-rgb), 0.70);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(var(--cyan-dim-rgb), 0.18);
-    border-radius: 50%;
-    color: var(--accent-ink);
-    cursor: pointer;
-    box-shadow:
-        0 0 0 1px rgba(var(--cyan-dim-rgb), 0.05),
-        0 4px 20px var(--elevation-soft);
-    transition: color 0.2s ease, border-color 0.2s ease;
-}
-.hero-cam-toggle[hidden] { display: none; }
-.hero-cam-toggle svg { width: 20px; height: 20px; display: block; }
-.hero-cam-toggle .cam-led { opacity: 0; transition: opacity 0.2s ease; }
-.hero-cam-toggle:hover,
-.hero-cam-toggle:focus-visible {
-    color: var(--accent-warm);
-    border-color: rgba(var(--gold-rgb), 0.4);
-}
-.hero-cam-toggle[aria-pressed="true"] {
-    color: var(--accent-warm);
-    border-color: rgba(var(--gold-rgb), 0.55);
-}
-.hero-cam-toggle[aria-pressed="true"] .cam-led { opacity: 1; color: var(--gold); }
-.hero-cam-toggle[data-state="load"] .cam-led { animation: cam-led-wait 1s ease-in-out infinite alternate; }
-@keyframes cam-led-wait { from { opacity: 0.2; } to { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) {
-    .hero-cam-toggle[data-state="load"] .cam-led { animation: none; }
-}
-@media (max-width: 600px) {
-    .hero-cam-toggle { right: calc(0.9rem + 48px); }
-}
-/* Under 440px it would touch the shape-nav pill (measured: -3px at 400) */
-@media (pointer: coarse), (max-width: 440px) {
-    .hero-cam-toggle { display: none; }
+/* Hand pointer (scripts/hand-pointer.js): the webcam as a pen, switched by a
+   Webcam toggle in the canvas controls. The script hides its label where it
+   cannot work (.canvas-toggle's display:flex would beat a bare [hidden]), and
+   a coarse pointer has a finger on the glass already. The layer is the hand's
+   ghost and nib over the water (above the ovals, under the nav); the HUD is the
+   mirrored preview that says the camera is on, with the camera picker and an
+   off switch that outlast the hero. */
+.hand-toggle[hidden] { display: none; }
+@media (pointer: coarse) {
+    .hand-toggle { display: none; }
 }
 .hand-layer {
     position: fixed;
@@ -2308,7 +2263,8 @@ code, kbd, samp, pre {
     color: var(--ink-quiet);
 }
 .hand-hud[data-state="error"] .hand-hud-note { color: var(--gold); }
-.hand-hud-off {
+.hand-hud-off,
+.hand-hud-cam {
     pointer-events: auto;
     padding: 0.1rem 0.5rem;
     background: rgba(var(--surface-rgb), 0.7);
@@ -2321,8 +2277,16 @@ code, kbd, samp, pre {
     text-transform: uppercase;
     cursor: pointer;
 }
+.hand-hud-cam {
+    max-width: 13rem;
+    text-overflow: ellipsis;
+}
+.hand-hud-cam[hidden] { display: none; }
+.hand-hud-cam option { text-transform: none; color: var(--text-primary); background: var(--sea-mid); }
 .hand-hud-off:hover,
-.hand-hud-off:focus-visible {
+.hand-hud-off:focus-visible,
+.hand-hud-cam:hover,
+.hand-hud-cam:focus-visible {
     color: var(--accent-warm);
     border-color: rgba(var(--gold-rgb), 0.5);
 }
