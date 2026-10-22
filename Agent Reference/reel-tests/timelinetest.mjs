@@ -10,8 +10,9 @@
 //   0. no edit reloads the page: every one plays in place (a mark set on the page before each
 //      edit is still there after it), and each lands in the file before the next check
 //   3. the inspector's first line input saves its words; Ctrl+Z twice gives the file back byte for byte
-//   4. dragging the MARA beat (@2.35 in the first ITEM) +0.5 s with Shift rewrites it as @3: a
-//      drag snaps the time to the grid, and Shift's grid is the 0.5 s beat
+//   4. dragging the MARA beat (in the first ITEM; @2.25 since the cut went on the beat) +0.65 s with
+//      Shift rewrites it on the 0.5 s grid (@3): a drag snaps the time to the grid, and Shift's
+//      grid is the 0.5 s beat
 //   5. with no dev server (ping answered 404) an edit is a draft: the file is untouched, the
 //      status offers Download and Discard, and Discard plays the file again
 // And every key is a button: the HUD's transport (play, next scene) and tools (Timeline, Synths,
@@ -232,12 +233,15 @@ try {
 
   // 4 ── drag the MARA beat
   s = await pxs();
-  const mara = '#reel-tl .tl-bt[title^="@2.35"]';
-  check(await page.locator(mara).count() === 1, 'there is one marker for the MARA beat');
-  await saving('beat', () => dragBy(mara, 0.5 * s, true));
+  const maraAt = /^\s*@(\S+).*\n\s*video\s+\.\/nanome-mara\.mp4/m.exec(file())[1];
+  const atCount = () => (file().match(new RegExp(`^\\s*@${maraAt.replace('.', '\\.')}\\b`, 'gm')) || []).length, atBefore = atCount();
+  const want = String(Math.round((+maraAt + 0.65) / 0.5) * 0.5);
+  const mara = `#reel-tl .tl-bt[title^="@${maraAt} · "][title*="nanome-mara"]`;   // (its gist is its file: another beat may share the time)
+  check(await page.locator(mara).count() === 1, `there is one marker for the MARA beat (@${maraAt})`);
+  await saving('beat', () => dragBy(mara, 0.65 * s, true));
   const at = /^\s*@(\S+).*\n\s*video\s+\.\/nanome-mara\.mp4/m.exec(file());
-  check(at && at[1] === '3', 'dragging the MARA beat +0.5 s with Shift rewrote its @ line, on the 0.5 s grid (@3)', at && at[1]);
-  check(!/^\s*@2\.35\b/m.test(file()), 'no @2.35 is left');
+  check(at && at[1] === want, `dragging the MARA beat +0.65 s with Shift rewrote its @ line, on the 0.5 s grid (@${want})`, at && at[1]);
+  check(atCount() === atBefore - 1, `one @${maraAt} fewer (${atBefore} → ${atCount()}: other beats share the time)`);
 
   // a script the parser refuses is never saved: an item longer than its results scene allows
   const before = file();

@@ -202,7 +202,7 @@
     const cell = (c, wide) => {
       const f = el('div', 'f' + (wide ? ' wide' : ''), box);
       if (!c || !names.includes(c[0])) { if (c) el('span', null, f, '—').title = `a ${type} shot has no ${c[0]}`; return f; }
-      numField(f, c[0], val(c[0]), def(c[0]), c[1], c[0] === 'typing' ? 1 : 0.05, v => set(c[0], v)).title = c[2] + ' (empty: the default, greyed)';
+      numField(f, c[0], val(c[0]), def(c[0]), c[1], c[0] === 'typing' ? 1 : c[0] === 'sync' ? 0.125 : 0.05, v => set(c[0], v)).title = c[2] + ' (empty: the default, greyed)';
       return f;
     };
     if (i != null) {
@@ -226,6 +226,7 @@
       easeField(f, val('ease'), def('ease'), v => set('ease', v), i == null ? 'own' : `(${def('ease')})`);
     }
     if (names.includes('typing')) { el('span', null, box, 'Typing'); cell(['typing', '/s', 'characters a second its question types at'], true); }
+    if (names.includes('sync')) { el('span', null, box, 'On the beat'); cell(['sync', 's', 'the grid its Enter and select-all land on, its keys on an eighth of it (0: as typed; 0.25 is an eighth note at 120)'], true); }
     if (i == null) return;
     const acts = el('div', 'acts', box);
     const play = btn(acts, 'play', 'Play here', 'play from the start of this shot'); play.dataset.act = 'play';

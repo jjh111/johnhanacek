@@ -1,8 +1,10 @@
 // A walkthrough of the reel editor (about 77 s): every control set, captioned, with its sound,
 // recorded from the build claude.ai hosts (scripts/build-reel-editor.mjs) with a stand-in for
 // claude.ai's store, save dialog and comments, so every control is the one John uses.
-//   node scripts/record-walkthrough.mjs [--dry] [--nobuild] [--film=<mp4>] [--out=<mp4>]
-//     → .local/walk/reel-editor-walkthrough.mp4 (1920×1080, 30 fps, AAC), about 77 s
+//   node scripts/record-walkthrough.mjs [--dry] [--nobuild] [--film=<mp4>] [--out=<mp4>] [--crf=20]
+//     → .local/walk/reel-editor-walkthrough.mp4 (1920×1080, 30 fps, AAC), about 77 s, and its
+//       captions beside it (<out>.captions.json: each one's time, key, section and words), which
+//       scripts/square-walkthrough.mjs draws again for the square film
 // The story: the preview and its transport; the timeline (a card's edge dragged, its inspector);
 // words retyped on the stage; a picture picked from the library; the shot list (a shot dragged,
 // its transitions); the Fish panel and the fish lanes; the music lanes (a fade, a level, a clip's
@@ -31,6 +33,7 @@ const W = path.join(ROOT, '.local/walk'), SITE = path.join(W, 'editor'), FR = pa
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith(`--${k}=`)); return a ? a.slice(k.length + 3) : d; };
 const DRY = process.argv.includes('--dry');
 const OUT = path.resolve(arg('out', path.join(W, 'reel-editor-walkthrough.mp4')));
+const CRF = arg('crf', '20');
 const CACHE = path.join(ROOT, '.local/sizzle-cache');
 fs.mkdirSync(W, { recursive: true });
 // the film Export lists and plays: the last render's web copy, as VP9 for this Chromium (made once)
@@ -569,9 +572,10 @@ try {
     fc += `;[v${pngs.length}]format=yuv420p[vout]`;
     execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', path.join(W, 'frames.txt'),
       '-ss', off.toFixed(3), '-i', path.join(W, 'audio.webm'), ...ins,
-      '-filter_complex', fc, '-map', '[vout]', '-map', '1:a', '-c:v', 'libx264', '-preset', 'slow', '-crf', '20', '-tune', 'animation', '-r', String(FPS),
+      '-filter_complex', fc, '-map', '[vout]', '-map', '1:a', '-c:v', 'libx264', '-preset', 'slow', '-crf', CRF, '-tune', 'animation', '-r', String(FPS),
       '-c:a', 'aac', '-b:a', '160k', '-af', 'afade=t=out:st=' + Math.max(0, DUR - 1.2).toFixed(2) + ':d=1.2',
       '-t', DUR.toFixed(3), '-movflags', '+faststart', out], { stdio: 'inherit' });
+    fs.writeFileSync(out.replace(/\.mp4$/, '') + '.captions.json', JSON.stringify({ duration: +DUR.toFixed(3), captions: CAPS.map(c => ({ ...c, at: +c.at.toFixed(3) })) }, null, 1) + '\n');
     log('wrote', out, (fs.statSync(out).size / 1e6).toFixed(1) + ' MB');
   }
   const own = errors.filter(e => !/NotSupportedError|no supported source|play\(\) request was interrupted|The element has no supported sources/i.test(e));

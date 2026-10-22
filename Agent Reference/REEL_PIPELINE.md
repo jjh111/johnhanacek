@@ -1757,8 +1757,110 @@ center them and visually verify balance."
 - fishtest's right-of-way count was over its 0.5 s already at the last commit (wide 0.83 s, square
   1.33 s); with the larger beds wide reads 3.22 s. Not fixed here.
 
+## The music on the beat, and the voice rephrased (2026-10-15)
+
+John asked how to "better normalize to the beat and find the clear patterns and clean up drift
+and awkward transitions between motifs", read the proposal, and said "go ahead and do it all".
+
+Measured first: every cut was exactly on the sixteenth grid, but 109 of 151 key ticks, every Enter
+and every select-all were 30-50 ms off it (the typing is humanised, and the select-all sat 0.3 s
+before a cut), four word pops were off an eighth, and every cut after the title (3.25 s) fell half
+a beat off the beat.
+
+- **`cue sync`** (seconds; 0 the default, as typed): a question's Enter lands on the next step of
+  the grid, its select-all one step before the cut, its first key on a half step, and each key,
+  at its own pace, on an eighth of a step and never on the last one. Cut 2 says `cue sync 0.25`
+  above its first scene (an eighth note at 120): every Enter and select-all on an eighth, the
+  keys an even roll of 64ths (32 a second, from about 40). `ReelScript.queries` does it, so the
+  rig types from the same times the score's `on key|enter|clear` sounds play at. The shot list
+  shows it as "On the beat".
+- **The title is 3 s**, so every cut lands on a beat: command 3.4, answer 6.1, results 8.2,
+  feature 14.4, art 17.2, logos 19.4, quotes 22.3, offer 28.3, offer 31.2, end 34.1. 70.5 s.
+- **The pops**: the four @ beats that bring words off an eighth moved to the nearest one
+  (results 18.75, art 35.0, quotes 53.5, and the hidden quote that sounds at the offer's cut, 56.0).
+- **The groove** starts on the command's cut (`CLIP drums 3.4-34.3.2`).
+- **The voice**, one `editTake` of 58 changes:
+  - theme 1 (8-15) now speaks theme 2's grammar: 8 and 9 calls with stepwise pickups, 10-11 the
+    answer that was at 14-15, 12-13 calls that foretell 16-17 (A B E, A B D), 14-15 the answer of
+    18-19;
+  - every call is one of two forms: the long note held to the bar's end, or held to beat 4 with
+    one quarter after it (24, 27, 28, 31 lost their extra notes);
+  - bar 5's pulse is G4 A4, not E4 F4 (it had dropped a sixth out of the line); bar 6, where the
+    answer's cut is a downbeat, walks C5 D5 E5 D5 into bar 7;
+  - beat 1 is a chord tone where the note did not resolve: 10, 14 and 18 open on G4, 22 on G4 G4
+    (not E4 E4), 23 on D5;
+  - the landing is G4 to the bar line and A4 held through the end card (it had ended on C4).
+  149 notes play. The suites' fixture score is unchanged.
+
+## The lead's timbre, the wall's headings, the OpenProse run (2026-10-15)
+
+John: "ok we need to improve the timbre of the lead a bit, i made some updates to the song i think
+it's pretty nice haha learning a lot, and the 'teams i shipped with' should say 'teams' and get rid
+of 'worked with' it's already in the typed question. for openprose screens i don't want just
+black/white cycled i want to show the variance of the work converging into the core styles."
+
+- John's notes (store score version 876, 91 `n` lines) and his `cue out 0.15` on the art (script
+  version 166) are in the repo as he saved them.
+- **The voice** (`SYNTH voice`), his measured harmonics untouched: a second harmonics voice 8 cents
+  up at 0.3 (the double), a sine on the fundamental at 0.14 (rounder), `lfo pitch 5.2 7` (a slow
+  vibrato), `filter lowpass 3400 0.5` (the flat top of the harmonics, -37 to -45 dB out to the 16th,
+  was what buzzed), `env 0.035 0.5 0.6 0.22` (it held at 0.35 and let go in 0.12 s: plucked) and
+  `level 0.33` for the same loudness. The voice alone, 16-66 s: centroid 896 to 818 Hz, 1-3 kHz
+  -4.9 to -6.2 dB, 3-6 kHz -23.9 to -26.6, above 6 kHz -41.4 to -44.0, rms -18.5 to -18.2.
+- **The wall**: no eyebrow (the bar asks "who has he worked with?"); the teams group's
+  `reelHeading: "Teams"` in media-kit.json, which only the reel reads. reel-wall.mjs groups a
+  list's marks into rows by distance (12 px) now: with the eyebrow gone, Nanome's taller mark put
+  its middle across a rounded bucket's edge and split the row in two.
+- **OpenProse**: the item's eight beats were the finalists in light and dark by turns. They are now
+  the directions in the order they were made, from openprose/canvas-display/brand/, shot by
+  shoot-openprose.mjs into `Assets/openprose-explorations/`: approach-c-v2 (bold high contrast),
+  approach-e-v3-translucent (Aqua glass), approach-f-v5-openprose (red editorial),
+  direction-gamma-manuscript-concept-kecal (the manuscript), direction-delta-machine-concept (the
+  terminal), direction-nu-tideline (the ocean), direction-lambda-inkwell-concept-kecal (the inkwell,
+  where the mark arrives), then styleguide-cover (the canonical spec) and the homepage loop under
+  Dan's quote. Each beat's `focus` keeps its heading's left edge inside the square frame's window.
+  The picker lists the new folder.
+
+## The first question, twice as fast (2026-10-16)
+
+John, after his own timing pass (script version 193): "the first typing moment is too long overall
+the content is getting squished for time, can we get the initial typing double fast to have more
+room for content."
+
+- Under `cue sync 0.25` every key sat on a 64th, so no question could type faster than 32 keys a
+  second whatever its `cue typing` said. The key grid now halves until the asked pace fits:
+  `KG = G/8 / 2^max(0, ceil(log2(G/8 · CPS / 1.25)))`. At the default 40 it stays on 64ths (every
+  question's times unchanged, checked against the queries before the change); at 80 it is 128ths.
+- The command scene says `cue typing 80`: "add 4 medium fish and 2 coral" types in 0.45 s (64 a
+  second, from 0.9 s at 32), its Enter at 6.25 s (was 6.75), so the plan card, the strokes and the
+  receipt all arrive half a second sooner in the same 4.5 s. scripttest checks 80 runs at twice 40.
+
 ## Later
 
 Scene-specific cues (line staggers, the push); moving cut 1 onto the one player; stems out of
 the renderer; per-format cues, should a narrow frame ever need its own timing; the score's
 patterns and knobs from the timeline (today they are the rack's).
+
+## Release candidates (2026-10-16)
+
+John: "render wide and square with the tutorial mini stitched, and also the more full tutorial
+square and wide so four total videos (use good quality/high framerate, these are release candidates)".
+
+- **The reels** were rendered from the saved edit (script v207, score v985, John's last notes) at
+  60 fps and CRF 16, wide (`--deliver`) and square, `--jobs=3`: 30.4 and 21.8 MB, -13.9 LUFS.
+- **The social cuts** (`stitch-social.mjs`) now run at 60 fps, so the reel keeps its own frames,
+  and end at CRF 17. Their pieces are near lossless (CRF 10) with PCM sound in Matroska, so only
+  the join is lossy. Before this, the pieces were CRF 18 with AAC and the join was CRF 20 at 30 fps.
+  Wide is 101.9 s and 37.7 MB; square is 101.7 s and 26.7 MB.
+- **The walkthrough** was recorded again on an idle machine at CRF 16, with Export playing the
+  new film. The screencast kept 21.7 frames a second. The film is 30 fps, because a screencast
+  cannot give more: the page draws about 25 frames a second with the timeline open. It writes
+  its captions beside it (`.captions.json`).
+- **`scripts/square-walkthrough.mjs`** makes the whole walkthrough square. Each caption's moment
+  is shown through a window onto where its work happens (`WINDOWS`), and the caption is drawn
+  again above the window. The first version was one filter graph that `split` the film 22 ways,
+  and it ran out of memory (12 GB): a branch waiting for its turn holds every frame. Now each
+  caption is one near-lossless piece, counted in frames, and the pieces are joined.
+- Delivered as `Assets/media-kit/video/sizzle-reel-2-social.mp4`, `-social-square.mp4`,
+  `-tutorial.mp4` and `-tutorial-square.mp4`. Video files are not committed (`Assets/media-kit/`
+  is ignored).

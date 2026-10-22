@@ -25,7 +25,9 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const req = createRequire(import.meta.url);
 const RM = req(join(ROOT, 'scripts/reel-music.js'));
 const SCRIPT = readFileSync(join(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8');
-const SCORE = readFileSync(join(ROOT, 'Assets/sizzle-reel-2.score.txt'), 'utf8');
+// a take of its own (the score as of 2026-10-15's rephrasing), so John's own note edits in the
+// piano roll never move what this suite boxes, drags and copies
+const SCORE = readFileSync(join(ROOT, 'Agent Reference/reel-tests/fixtures/sizzle-reel-2-take.score.txt'), 'utf8');
 const T_SCRIPT = 'Assets/zz-notes-test.script.txt', T_SCORE = 'Assets/zz-notes-test.score.txt';
 
 let fails = 0;
@@ -174,14 +176,24 @@ try {
 
   // a box: drag on empty space chooses what it touches
   now = await model();
-  const inBox = now.notes.filter(n => !n.out && n.step * now.step >= 20 && n.step * now.step < 22);
-  const lo = Math.min(...inBox.map(n => n.pitch)), hi = Math.max(...inBox.map(n => n.pitch));
-  const a1 = await page.evaluate(([tt, r]) => REEL_NOTES.point(tt, r), [19.97, hi]), a2 = await page.evaluate(([tt, r]) => REEL_NOTES.point(tt, r), [21.97, lo]);
-  const clear = now.notes.every(n => { const x0 = n.step * now.step, x1 = (n.step + n.len) * now.step; return !(x0 <= 19.97 && x1 >= 19.97 && n.pitch === hi); });
+  // two seconds of the take whose top-left corner is empty water (a note there would be dragged,
+  // not boxed) and that holds three notes or more: from 20 s, the first such window on the half second
+  const boxAt = W => {
+    const inBox = now.notes.filter(n => !n.out && n.step * now.step >= W && n.step * now.step < W + 2);
+    if (inBox.length < 3) return null;
+    const lo = Math.min(...inBox.map(n => n.pitch)), hi = Math.max(...inBox.map(n => n.pitch)), c = W - 0.03;
+    const clear = now.notes.every(n => { const x0 = n.step * now.step, x1 = (n.step + n.len) * now.step; return !(x0 <= c && x1 >= c && n.pitch === hi); });
+    // (and no left-out note in it: those keep their own sung levels, so they would not soften alike)
+    const touched = now.notes.filter(n => { const x0 = n.step * now.step, x1 = (n.step + n.len) * now.step; return x1 >= c && x0 <= W + 1.97 && n.pitch >= lo && n.pitch <= hi; });
+    return clear && touched.every(n => !n.out) ? { W, lo, hi, clear } : null;
+  };
+  let bx = null; for (const W of [20, 20.5, 21, 21.5, 22, 19.5, 19, 22.5, 23, 23.5, 24, 18.5, 18]) if ((bx = boxAt(W))) break;
+  const { W: BW, lo, hi, clear } = bx || { W: 20, lo: 0, hi: 0, clear: false };
+  const a1 = await page.evaluate(([tt, r]) => REEL_NOTES.point(tt, r), [BW - 0.03, hi]), a2 = await page.evaluate(([tt, r]) => REEL_NOTES.point(tt, r), [BW + 1.97, lo]);
   await page.mouse.move(a1.x, a1.y - 6); await page.mouse.down(); await page.mouse.move(a2.x, a2.y + 6, { steps: 8 }); await page.mouse.up();
   S = await sel();
-  const want = now.notes.filter(n => { const x0 = n.step * now.step, x1 = (n.step + n.len) * now.step; return x1 >= 19.97 && x0 <= 21.97 && n.pitch >= lo && n.pitch <= hi; }).map(n => n.ln).sort();
-  ok(clear && S.slice().sort().join() === want.join() && S.length >= 3, `a box drawn on the rows chooses the notes it touches (${S.length})`);
+  const want = now.notes.filter(n => { const x0 = n.step * now.step, x1 = (n.step + n.len) * now.step; return x1 >= BW - 0.03 && x0 <= BW + 1.97 && n.pitch >= lo && n.pitch <= hi; }).map(n => n.ln).sort();
+  ok(clear && S.slice().sort().join() === want.join() && S.length >= 3, `a box drawn on the rows chooses the notes it touches (${S.length}, ${BW}-${BW + 2} s${S.slice().sort().join() === want.join() ? "" : ": chose " + S.slice().sort().join(",") + ", want " + want.join(",")})`);
   // the velocity strip: the chosen ones softer together
   const vb = await page.evaluate(() => { const r = document.querySelector('#reel-notes .nt-roll canvas').getBoundingClientRect(), v = REEL_NOTES.view; return { bottom: r.bottom, velH: v.velH }; });
   const first = now.notes.find(n => n.ln === S[0]), fp = await page.evaluate(t0 => REEL_NOTES.point(t0, 0), first.step * now.step);
@@ -191,7 +203,7 @@ try {
   t = await waitFile(x => x !== before);
   now = await model();
   const softer = S.map(l => now.notes.find(n => n.ln === l)).filter(Boolean);
-  ok(t && softer.length === S.length && softer.every(n => n.vel < 0.8 && Math.abs(n.vel - softer[0].vel) < 0.011), `the velocity strip: dragged down, the ${S.length} chosen ones softer together (${softer[0] && softer[0].vel})`);
+  ok(t && softer.length === S.length && softer.every(n => n.vel < 0.8 && Math.abs(n.vel - softer[0].vel) < 0.011), `the velocity strip: dragged down, the ${S.length} chosen ones softer together (${softer.map(n => n.vel).join(" ")})`);
   // ⌘D: a copy right after them; Option-drag: another copy, where it is dropped
   before = file();
   await page.keyboard.press('Meta+d');

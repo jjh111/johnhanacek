@@ -18,6 +18,13 @@
 // KECAL_DIR answers its requests from local copies of the OFL web fonts
 // (Kecal-<Weight>-web.woff2, from github.com/FungiType/Kecal export/Web). Never commit them.
 //
+// The explorations (2026-10-15; John: "for openprose screens i don't want just black/white cycled i
+// want to show the variance of the work converging into the core styles") are the first screens
+// of the directions that came before the canonical set, from openprose/canvas-display/brand/, in
+// the order they were made, into Assets/openprose-explorations/: bold high contrast, Aqua glass,
+// red editorial, the manuscript, the terminal, the ocean, then the inkwell, where the mark arrives
+// (after them the reel lands on styleguide-cover, the canonical spec, and the homepage's loop).
+//
 // Each shot prints its heading's ink as fractions of the frame (left, top, right, bottom): the
 // reel's square frame shows 47% of a still's width, and a beat's `focus` x is chosen from it so
 // the heading's left edge stays inside (visible from 0.531 × focus to that + 0.469, less the push).
@@ -48,6 +55,14 @@ const SHOTS = [
   { name: 'homepage-runtime', page: 'direction-canonical-homepage', sel: '#runtime', dy: -50, measure: '#runtime h2' },
   { name: 'homepage-runtime-dark', page: 'direction-canonical-homepage', sel: '#runtime', dy: -50, dark: true, measure: '#runtime h2' },
   { name: 'homepage-get-started-dark', page: 'direction-canonical-homepage', sel: '#cta', dy: -30, dark: true, measure: '#cta h2' },
+  // the explorations: a first screen each, light as each was made (the terminal is dark by design)
+  { name: 'bold-high-contrast', dir: 'openprose-explorations', page: 'approach-c-v2', measure: 'h1' },
+  { name: 'aqua-glass', dir: 'openprose-explorations', page: 'approach-e-v3-translucent', measure: 'h1' },
+  { name: 'red-editorial', dir: 'openprose-explorations', page: 'approach-f-v5-openprose', measure: 'h1' },
+  { name: 'manuscript', dir: 'openprose-explorations', page: 'direction-gamma-manuscript-concept-kecal', measure: 'h1' },
+  { name: 'terminal', dir: 'openprose-explorations', page: 'direction-delta-machine-concept', measure: 'h1' },
+  { name: 'tideline', dir: 'openprose-explorations', page: 'direction-nu-tideline', measure: 'h1' },
+  { name: 'inkwell', dir: 'openprose-explorations', page: 'direction-lambda-inkwell-concept-kecal' },
 ].filter(s => !ONLY.length || ONLY.includes(s.name));
 if (!SHOTS.length) throw new Error(`no shot named ${ONLY.join(', ')}`);
 
@@ -96,7 +111,8 @@ try {
       const r = el.tagName === 'IMG' ? el.getBoundingClientRect() : range.getBoundingClientRect();
       return [r.left / innerWidth, r.top / innerHeight, r.right / innerWidth, r.bottom / innerHeight].map(v => +v.toFixed(3));
     }, s.measure) : null;
-    const png = join(TMP, `${s.name}.png`), webp = join(OUT, `${s.name}.webp`);
+    const png = join(TMP, `${s.name}.png`), webp = join(s.dir ? resolve(ROOT, 'Assets', s.dir) : OUT, `${s.name}.webp`);
+    mkdirSync(dirname(webp), { recursive: true });
     await page.screenshot({ path: png });
     execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', png, '-vf', 'scale=1280:720:flags=lanczos', '-c:v', 'libwebp', '-quality', '82', '-compression_level', '6', webp]);
     console.log(`${s.name.padEnd(32)} ${ink ? 'ink ' + ink.join(' ') : ''}${failed.length ? '  FAILED: ' + failed.join(' | ') : ''}`);

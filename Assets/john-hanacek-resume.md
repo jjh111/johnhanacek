@@ -166,7 +166,7 @@ Thesis: [“Remote Controlled Warfare”](https://johnhanacek.substack.com/p/rem
 ## Projects
 
 - **johnhanacek.com** (2025–2026): Portfolio site built as a product. A command bar with BM25 and MiniLM retrieval, an in-browser language model on WebGPU, local-model support and a scene language that drives the site's canvases. A fish ecosystem engine shared across pages. A review canvas of every page and demo. · [johnhanacek.com](https://www.johnhanacek.com)
-- **MetaMedium** (2016–): AI-interpreted drawing interface that turns sketches into executable programs. Continues the 2016 thesis.
+- **dyna.ink** (2016–): AI-interpreted drawing interface that turns sketches into executable programs, formerly MetaMedium. Continues the 2016 thesis.
 - **READI** (2026): Live neighborhood emergency-resource-allocation dashboard for San Diego. · [teamreadi.xyz](https://teamreadi.xyz)
 - **Blok Dok** (2013): Hand-made wooden iPhone dock with cable capture. Product, packaging, labels, instructions, photography.
 - **AvatarMEDIC website (archive)** (2019–2021): Web design and graphics for the company; site offline, archive held locally.
