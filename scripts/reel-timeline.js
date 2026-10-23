@@ -631,8 +631,10 @@
   const where = h('span', 'where', status);
   const err = h('span', 'err', status); err.setAttribute('role', 'status');
   h('span', 'gap', status);
-  // where saves go: the file (dev server), the page's host (claude.ai), or a draft in this tab
-  const home = (busy) => L.dev ? `Saving to ${L.file}${busy ? '…' : ''}` : L.host ? `Saving to ${L.host}${busy ? '…' : ''}`
+  // where saves go: the file (dev server), the page's host (claude.ai), or a draft in this tab; at
+  // rest it says Saved, so it does not read as a save that never finished (2026-10-16: John took
+  // "Saving to claude.ai" for one stuck, while every edit was in the store)
+  const home = (busy) => L.dev ? `${busy ? 'Saving to' : 'Saved to'} ${L.file}${busy ? '…' : ''}` : L.host ? `${busy ? 'Saving to' : 'Saved to'} ${L.host}${busy ? '…' : ''}`
     : busy ? 'Keeping a draft in this tab…' : 'Draft in this tab: no dev server';
   // a version kept here or with the host (not the file) can be downloaded, or dropped for the file
   const dl = button(status, 'Download', 'save this version as ' + L.file.replace(/^.*\//, ''), 'download', null, 'download');

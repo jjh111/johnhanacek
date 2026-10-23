@@ -27,7 +27,9 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const req = createRequire(import.meta.url);
 const RM = req(join(ROOT, 'scripts/reel-music.js')), RS = req(join(ROOT, 'scripts/reel-script.js'));
 const SCRIPT = readFileSync(join(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8');
-const SCORE = readFileSync(join(ROOT, 'Assets/sizzle-reel-2.score.txt'), 'utf8');
+// a take of its own (the score as of 2026-10-15's rephrasing, as notestest has), so John's note edits
+// in the piano roll never move the notes this suite picks
+const SCORE = readFileSync(join(ROOT, 'Agent Reference/reel-tests/fixtures/sizzle-reel-2-take.score.txt'), 'utf8');
 const T_SCRIPT = 'Assets/zz-take-test.script.txt', T_SCORE = 'Assets/zz-take-test.score.txt';
 
 let fails = 0;
@@ -174,7 +176,7 @@ try {
   // the nuance knob, typed
   const nk = page.locator('#reel-rack .rk-take .rk-knob', { hasText: 'nuance' });
   await nk.dblclick();
-  await page.keyboard.press('Control+A'); await page.keyboard.type('40'); await page.keyboard.press('Enter');
+  await page.keyboard.press('ControlOrMeta+a'); await page.keyboard.type('40'); await page.keyboard.press('Enter');
   let t = await waitFile(x => /^ {2}nuance +40$/m.test(x));
   ok(t && diff(SCORE, t).length === 1, 'typing 40 into the nuance knob writes that one line of the score');
   const heard = await page.evaluate(() => REEL_RACK.parsed.score.takes[0].nuance);

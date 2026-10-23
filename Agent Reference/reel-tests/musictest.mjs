@@ -96,7 +96,8 @@ ok(keys.length === typed.length && keys.every((t, i) => Math.abs(t - typed[i]) <
   const hash01 = i => { let h = Math.imul(i ^ 0x9e3779b9, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
   let acc = 0; const SC = edit.scenes.map((s, i) => { const o = Object.assign({}, s, { i, start: acc, end: acc + s.dur }); acc += s.dur; return o; });
   const QS = SC.filter(s => s.query), old = QS.map((sc, k) => { const t0 = sc.start + (k === 0 ? 0.1 : -0.08); const times = []; let tt = t0; const CPS = RS.cue(sc, 'typing'); for (let i = 0; i < sc.query.length; i++) { tt += (1 / CPS) * (0.6 + 0.8 * hash01(i + 31 * sc.i)); times.push(tt); } return { times, enter: tt + 0.06 }; });
-  const now = RS.queries(edit);
+  // (the old formula types as typed: the script without its `cue sync`, which puts the keys on the grid)
+  const now = RS.queries(RS.parse(RS.setReelCue(SCRIPT, 'sync', null)).edit);
   ok(now.length === old.length && now.every((q, k) => q.enter === old[k].enter && q.times.every((t, i) => t === old[k].times[i])), 'ReelScript.queries gives the rig\'s typing times to the bit');
 }
 {
@@ -178,7 +179,10 @@ try {
   const dur = (w1.length - 44) / (48000 * 4);
   ok(Math.abs(dur - CUT) < 0.01, `the mix is the cut's ${CUT} s (${dur.toFixed(3)} s)`);
   const at = stats(wav);
-  const loud = scenes.map(s => ({ s, v: at(s.start + 0.1, Math.min(1.5, s.end - s.start - 0.2)) }));   // a stretch a scene
+  // a stretch a scene, for the scenes the fixture's arrangement reaches (it was written for a 60 s
+  // cut; the real script now runs past its last clip, where only the sound effects play)
+  const reach = Math.max(...A.clips.map(c => c.t1));
+  const loud = scenes.filter(s => s.start + 0.1 < reach).map(s => ({ s, v: at(s.start + 0.1, Math.min(1.5, s.end - s.start - 0.2)) }));
   ok(loud.every(x => x.v.mean > -40), 'every section sounds: ' + loud.map(x => `${x.s.type} ${x.v.mean}`).join(', '));
   ok(loud.every(x => x.v.max < -0.5), `no section clips (loudest peak ${Math.max(...loud.map(x => x.v.max))} dBFS)`);
   const tail = at(CUT - 0.2, 0.2), res = loud.find(x => x.s.type === 'results').v.mean, art = loud.find(x => x.s.type === 'art').v.mean;

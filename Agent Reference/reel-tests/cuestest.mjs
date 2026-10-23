@@ -71,10 +71,11 @@ try {
   // ── 1. defaults are the rig's own timing ──────────────────────────
   const plain = inOrder(readFileSync(join(ROOT, 'Assets/sizzle-reel-2.script.txt'), 'utf8'));
   let spelled = plain;
+  const plainEdit = ReelScript.parse(plain).edit;   // (each cue as it holds there: a reel-wide one, cut 2's `sync`, counts)
   for (const m of ReelScript.parse(plain).marks.filter(k => k.kind === 'scene'))
     for (const name of ReelScript.cueNames(m.obj.type)) {
       const at = ReelScript.parse(spelled).marks.find(k => k.kind === 'scene' && k.obj.type === m.obj.type);
-      spelled = ReelScript.setCue(spelled, at.ln, name, ReelScript.cue(m.obj, name));
+      spelled = ReelScript.setCue(spelled, at.ln, name, ReelScript.cue(m.obj, name, plainEdit));
     }
   writeFileSync(join(ROOT, TEMP), spelled);
   writeFileSync(join(ROOT, PLAIN), plain);

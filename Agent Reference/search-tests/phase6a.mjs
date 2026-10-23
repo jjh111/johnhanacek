@@ -29,7 +29,7 @@ await page.fill('#so-searchInput', 'meta');
 await page.waitForTimeout(700);
 check('"meta": exactly one dossier', await page.locator('[data-lod="3"]').count() === 1);
 const l3title = await page.locator('[data-lod="3"] .result-title').textContent();
-check('dossier is MetaMedium', l3title.includes('MetaMedium'), l3title);
+check('dossier is dyna.ink (formerly MetaMedium)', l3title.includes('dyna.ink'), l3title);
 check('dossier prose is pretext-wrapped', await page.locator('[data-lod="3"] .pretext-line').count() > 3);
 // 10f: MetaMedium's piece is frameable → it wakes at dossier scale (the big
 // card), and the 9e no-scroll doctrine trades the L1 field for that depth.

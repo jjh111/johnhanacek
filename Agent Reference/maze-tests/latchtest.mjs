@@ -25,7 +25,9 @@ const r = await page.evaluate(async () => {
   const snap = () => ({
     rect: Math.round(el.getBoundingClientRect().width),
     backing: el.width,
-    inline: el.getAttribute('style') || null
+    inline: el.getAttribute('style') || null,
+    // only an inline SIZE latches; touch-action:none is set on purpose (touch doctrine)
+    inlineSize: (el.style.width || el.style.height) ? `${el.style.width}×${el.style.height}` : null
   });
 
   const onLoad = snap();
@@ -52,12 +54,12 @@ const pass =
   r.onLoad.backing > 0 &&
   r.afterRestore.backing > 0 &&
   r.afterRestore.rect > 0 &&
-  !r.afterRestore.inline;   // must never pin an inline size
+  !r.afterRestore.inlineSize;   // must never pin an inline size
 
 console.log(JSON.stringify({
   ...r,
   errs,
-  note: 'afterRestore.backing must be > 0 and inline must be null — under the old code it stayed 0 with inline "width:0px;height:0px"',
+  note: 'afterRestore.backing must be > 0 and inlineSize must be null — under the old code it stayed 0 with inline "width:0px;height:0px"',
   ALL_PASS: pass && !errs.length
 }, null, 1));
 await b.close();
