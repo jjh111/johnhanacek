@@ -2212,6 +2212,85 @@ code, kbd, samp, pre {
     .swipe-offer svg { animation: none; }
 }
 
+/* Hand pointer (scripts/hand-pointer.js): the webcam as a pen, switched by a
+   Webcam toggle in the canvas controls. The script hides its label where it
+   cannot work (.canvas-toggle's display:flex would beat a bare [hidden]), and
+   a coarse pointer has a finger on the glass already. The layer is the hand's
+   ghost and nib over the water (above the ovals, under the nav); the HUD is the
+   mirrored preview that says the camera is on, with the camera picker and an
+   off switch that outlast the hero. */
+.hand-toggle[hidden] { display: none; }
+@media (pointer: coarse) {
+    .hand-toggle { display: none; }
+}
+.hand-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    pointer-events: none;
+}
+.hand-hud {
+    position: fixed;
+    left: 1rem;
+    bottom: 3.6rem;
+    z-index: 101;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    pointer-events: none;
+}
+.hand-hud video {
+    width: 128px;
+    height: 96px;
+    object-fit: cover;
+    transform: scaleX(-1);   /* a mirror, so moving right moves right */
+    border: 1px solid rgba(var(--cyan-dim-rgb), 0.35);
+    border-radius: 6px;
+    background: rgba(var(--surface-rgb), 0.6);
+}
+.hand-hud[data-state="error"] video { display: none; }
+.hand-hud-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+.hand-hud-note {
+    max-width: 16rem;
+    font-family: var(--font-mono);
+    font-size: var(--text-3xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+}
+.hand-hud[data-state="error"] .hand-hud-note { color: var(--gold); }
+.hand-hud-off,
+.hand-hud-cam {
+    pointer-events: auto;
+    padding: 0.1rem 0.5rem;
+    background: rgba(var(--surface-rgb), 0.7);
+    border: 1px solid rgba(var(--cyan-dim-rgb), 0.35);
+    border-radius: 999px;
+    color: var(--ink-quiet);
+    font-family: var(--font-mono);
+    font-size: var(--text-3xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+.hand-hud-cam {
+    max-width: 13rem;
+    text-overflow: ellipsis;
+}
+.hand-hud-cam[hidden] { display: none; }
+.hand-hud-cam option { text-transform: none; color: var(--text-primary); background: var(--sea-mid); }
+.hand-hud-off:hover,
+.hand-hud-off:focus-visible,
+.hand-hud-cam:hover,
+.hand-hud-cam:focus-visible {
+    color: var(--accent-warm);
+    border-color: rgba(var(--gold-rgb), 0.5);
+}
+
 /* Hero oval on touch: clear the labelled pill. Since v2.18 the touch pill wears
    its labels in 44px targets, so it ends at 1.5rem + 44px + 0.4rem of padding +
    2px of border (~76px) and the oval's 4–4.5rem top ran 12px under it on every
