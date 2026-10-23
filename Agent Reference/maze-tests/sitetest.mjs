@@ -12,12 +12,12 @@ if (!vMatch) throw new Error("Couldn't read version from scripts/jh-chrome.js �
 const EXPECTED_VERSION = 'v' + vMatch[1];
 
 const BASE = 'http://127.0.0.1:1337';
-const STANDARD = ['index.html', 'design.html', 'art.html', 'about.html', 'services.html', 'search.html', 'nanome2.html', 'sizzlereel.html', 'openprose.html', '404.html'];
+const STANDARD = ['index.html', 'design.html', 'art.html', 'about.html', 'services.html', 'search.html', 'nanome2.html', 'sizzlereel.html', 'openprose.html', 'openprose-traces.html', '404.html'];
 const OTHER = ['playground.html', 'writing.html', 'tidepool.html', 'beach-beers.html', 'onagents.html', 'fish-demo/index.html'];
 // Standard pages that deliberately carry the nav but NOT <jh-footer>.
-// openprose.html closes on its own §VII colophon; the site's glass oval landing
+// openprose.html (and openprose-traces.html) close on their own §VII colophon; the site's glass oval landing
 // under it read as a second ending. Nav + canonical are still asserted.
-const NO_FOOTER = ['openprose.html'];
+const NO_FOOTER = ['openprose.html', 'openprose-traces.html'];
 
 // Console noise emitted by EMBEDDED THIRD-PARTY PLAYERS, not by this site.
 // Both come from YouTube's iframe: the permissions-policy warnings are the

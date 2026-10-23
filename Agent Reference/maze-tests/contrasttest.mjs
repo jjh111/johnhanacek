@@ -12,7 +12,7 @@
 import { chromium } from 'playwright-core';
 
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:1337';
-const PAGES = (process.env.PAGES || 'index,design,art,about,services,search,writing,playground,nanome2,sizzlereel,404').split(',');
+const PAGES = (process.env.PAGES || 'index,design,art,about,services,search,writing,playground,nanome2,sizzlereel,openprose-traces,404').split(',');
 
 const SWEEP = () => {
   const L = c => { c /= 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
