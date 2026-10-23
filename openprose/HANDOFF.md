@@ -37,6 +37,9 @@ font CDNs (Google Fonts + Kecal via jsDelivr) and outbound links.
    here. This cut was built under a whitelist; if you ever regenerate or add
    exhibits, nothing outside brand explorations may be served. This repo is
    public and served — treat any mention of trace/customers as a leak.
+   (2026-10-23, jhsite: the trace track now has its own page, `openprose-traces.html`,
+   on synthetic data only, through design-iteration's trace firewall. openprose.html
+   links to it by name; this folder still carries brand material only.)
 2. **No em dashes in visible copy** (JH rule). Use commas, periods, or ·.
 3. Header style is `[roman numeral] [Title Case]`, no dot separator
    (e.g. "II The Tooling"). No colored left-border callouts anywhere.

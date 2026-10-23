@@ -740,3 +740,26 @@ says the dyna.ink domain is held and not yet deployed.
 ## §J Resume compile — 2026-09-16
 
 Chunks 4, 21, 23, 26, 27, 50 are COMPILED from `Assets/resume.json` by `scripts/build-resume.mjs --apply` (source: the 2026-09-09 interview; evidence links live in the JSON). Edit the JSON, not the chunk text. Rebuild vectors after each compile (`node scripts/build-chunk-vectors.mjs`).
+
+## §P The traces case study — 2026-10-23
+
+Source: the page itself (openprose-traces.html; its prose is openprose-traces/COPY.md), approved by
+John in session on 2026-10-23 ("Approved, defaults as they stand"), and his 2026-10-15 ruling that the
+eval labels may be published. Every claim below is on the page.
+- 60 — new: "OpenProse Traces: Making Agent Runs Legible", url `openprose-traces.html#openprose`,
+  image the Run strata poster.
+  - the second OpenProse case study, the trace track after the brand (COPY.md, the opening: "hired me
+    for two tracks");
+  - OpenProse programs are contracts agents run on a cadence, writing every step to disk (the opening);
+  - eleven views (the conclusion's counts); the first answers "are my responsibilities handled?" (§II);
+  - a run as a paragraph and a ledger (§II), five strata by phase (§III), music (§III, Hearing a run),
+    four synced views (§IV), a delegation tree (§IV); a week in one 3D room, a month per program,
+    six organizations scored on four dimensions (§V); runs as a charted document (§VI);
+  - every trace synthetic, one invented world, Saltlight Aquarium and its fleet (the hero, the opening);
+  - designed on real customer runs, which stay private: the brief's question 1, kept at its default
+    (one sentence, no detail);
+  - the four dimensions are counted, not named: the names are cleared, and the chunk does not need them.
+- The page goes through design-iteration's client firewall as well as the kit
+  (`openprose-traces/.firewall-allow.txt` holds the one reviewed passage, the four eval labels in a row).
+- Vectors rebuilt for the whole file (`node scripts/build-chunk-vectors.mjs`), which also brings chunks 3
+  and 27 up to their §O text.

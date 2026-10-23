@@ -69,7 +69,7 @@ OpenProse is a way to *author outcomes*. The approach is to contract the LLM rat
 
 (gap: sm) In April 2026, Dan, the CEO of the newly funded [OpenProse](https://prose.md/), hired JHDesign for a founding design project with two tracks of exploration: the brand, and the design of solutions for visualizing trace data from the RLM product.
 
-(gap: sm) The trace track is still confidential. This page is the brand and web-craft journey.
+(gap: sm) The trace track has its own case study: [Making agent runs legible](openprose-traces.html). This page is the brand and web-craft journey.
 
 Upfront please understand that the exact copy for most of this work is intentionally left as LLM-ese; it stands in for lorem ipsum as a placeholder with a twist.
 

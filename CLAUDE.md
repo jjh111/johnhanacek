@@ -25,6 +25,7 @@ Each page is a standalone HTML document with embedded CSS and JavaScript. All pa
 | `nanome2.html` | — | Nanome 2 Redesign case study (subpage of Design) |
 | `sizzlereel.html` | — | Sizzle Reel case study (subpage of Design): the cut 2 film, five versions of the same moments rendered from the code as it stood each day (`Assets/sizzlereel/`, a moment and version picker), a dated timeline of how it grew, the editor's tools, the walkthrough. Linked from design.html's Overview, under the film |
 | `openprose.html` | — | OpenProse founding-design case study (subpage of Design). Brings its own design language (IBM Plex + Kecal, warm paper) and loads `styles/jh-chrome.css` **instead of** `shared.css` — see below |
+| `openprose-traces.html` | — | OpenProse traces case study, "Making agent runs legible" (subpage of Design, linked from openprose.html): eleven trace views live on ONE synthetic world (Saltlight Aquarium), poster-first, one live view on touch or under 700px and three elsewhere. Same language as openprose.html (`jh-chrome.css`, not `shared.css`). The views and data are the kit in `openprose-traces/`; `node scripts/check-traces-cut.mjs` must PASS (design-iteration's client firewall, a dataset per view, every view renders) and the page itself goes through the firewall too; reviewed exceptions live in `openprose-traces/.firewall-allow.txt`. Prose for editing: `openprose-traces/COPY.md`. Plan: `Agent Reference/OPENPROSE_TRACES_CASE_STUDY_PLAN.md` |
 | `playground.html` | Hexagon | Playground — a Review Canvas of the whole site: every page and every demo, live, in canvas/grid/focus modes |
 | `writing.html` | — | Writing index/reader — fetches and renders the `writing/*.md` essays (EduOS + MetaMedium sets); linked from art.html |
 | `search.html` | 🔍 | AI-powered search (3-tier: BM25 / WebGPU / local LLM) |
@@ -317,7 +318,7 @@ removed along with their CSS and the vestigial `?footer=` config.
 
 - Three view modes: canvas (pan/zoom), grid, focus. `?mode=`, `?items=`,
   `?budget=`, `?zoom=`, `?cols=`, `?sort=` all URL-editable
-- Manifest: `scripts/playground-items.js` — 35 items, the whole site plus the
+- Manifest: `scripts/playground-items.js` — 33 items, the whole site plus the
   demo collection carried over from the old board
 - **Budgeted LRU lifecycle, not naive lazy-load.** `maxLive` iframes (8 by
   default), an IntersectionObserver at 400px, nearest-first wake, eviction with
@@ -540,7 +541,7 @@ scripts/stitch-social.mjs — one video for socials: the rendered reel whole, a 
                             the walkthrough's sound brought to the reel's loudness; 60 fps (the reel's own frames) and CRF 17
                             by default (`--fps=`, `--crf=`), its pieces near lossless with PCM sound so only the join is
                             lossy → Assets/media-kit/video/sizzle-reel-2-social.mp4
-scripts/playground-items.js — manifest for playground.html (35 items). `featured: true` leads
+scripts/playground-items.js — manifest for playground.html (33 items). `featured: true` leads
                             the default sequence sort (stable partition; `date` and `?items=` exempt). `nested: true` marks a
                             page that embeds the canvas itself (recursion guard); `weight: 'heavy'`
                             records cost for the staged perf work.
@@ -578,7 +579,7 @@ scripts/pretext/          — vendored copy of the pretext text-measurement + li
 scripts/sync-version.mjs  — dev-time version stamper (reads version from jh-chrome.js)
 john-hanacek.json         — structured data for AI/Search (Schema.org Person)
 robots.txt                — allows AI crawlers explicitly; points to sitemap
-sitemap.xml               — the 11 public pages (www host); secrets stay out
+sitemap.xml               — the 12 public pages (www host); secrets stay out
 llms.txt                  — AI-readable site summary
 CNAME                     — www.johnhanacek.com (GitHub Pages)
 Assets/
