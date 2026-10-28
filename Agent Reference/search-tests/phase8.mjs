@@ -117,14 +117,16 @@ const lodsOf = (page) => page.evaluate(() =>
   await ctx.close();
 }
 
-// ───────── 2. Shallows light theme (overlay on index) ─────────
+// ───────── 2. Shallows light theme (overlay on openprose-traces) ─────────
+// The site's own pages are dark only (SITE.themes off, 2026-10-28); the
+// OpenProse pages still switch, so the overlay's light skin ships there.
 {
-  console.log('light theme — overlay:');
+  console.log('light theme — overlay (openprose-traces):');
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 920 } });   // tall: 9e no-scroll sheds depth on short panels
   await ctx.route(/(localhost|127\.0\.0\.1):(1234|11434)/, r => r.abort());
   const { page, errors } = await freshPage(ctx);
   await page.addInitScript(() => { try { localStorage.setItem('jh-theme', 'light'); } catch {} });
-  await page.goto(`${BASE}/index.html`, { waitUntil: 'domcontentloaded' });
+  await page.goto(`${BASE}/openprose-traces.html`, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(1800);
   check('light theme is active', await page.evaluate(() =>
     document.documentElement.getAttribute('data-theme') === 'light'));
@@ -153,7 +155,7 @@ const lodsOf = (page) => page.evaluate(() =>
   await ctx.close();
 }
 
-// ───────── 3. search.html — stylesheet present, themes both ways ─────────
+// ───────── 3. search.html — stylesheet present, dark only ─────────
 {
   console.log('search.html:');
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 920 } });   // tall: 9e no-scroll sheds depth on short panels
@@ -178,9 +180,8 @@ const lodsOf = (page) => page.evaluate(() =>
     const t = document.querySelector('.pc-mod .result-title, .result-title');
     return { bodyLum: lum(body.backgroundColor), titleLum: t ? lum(getComputedStyle(t).color) : -1 };
   });
-  check('page ground is light', light.bodyLum > 180, String(light.bodyLum));
-  check('result text is ink-dark', light.titleLum >= 0 && light.titleLum < 120, String(light.titleLum));
-  await page.screenshot({ path: SHOTDIR + '/light-searchpage.png' });
+  check('a stored light preference is ignored: the ground stays dark', light.bodyLum < 40, String(light.bodyLum));
+  check('result text stays light ink', light.titleLum > 150, String(light.titleLum));
 
   check('no console errors', errors.length === 0, errors.slice(0, 3).join(' | '));
   await ctx.close();

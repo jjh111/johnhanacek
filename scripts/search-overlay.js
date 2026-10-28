@@ -565,6 +565,12 @@
     function isOverlayOpen() {
         return overlayEl && overlayEl.getAttribute('aria-hidden') === 'false';
     }
+    // For other scripts: hand-pointer.js opens the bar when both hands open wide
+    window.JHSearchOverlay = {
+        open: q => openSearch(q),
+        close: () => closeSearch(),
+        get isOpen() { return !!isOverlayOpen(); },
+    };
 
     // ============================================
     // Global Keyboard Shortcuts

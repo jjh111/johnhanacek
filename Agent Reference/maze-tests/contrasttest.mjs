@@ -8,6 +8,10 @@
  * The toggle path is the one that caught the stuck-transition bug: an element
  * with a transition on `color` keeps the previous theme's resolved color when
  * data-theme flips, so it strands in the other palette's ink.
+ *
+ * With SITE.themes off (2026-10-28) the site's own pages are dark only: a page
+ * that does not take a stored "light" is swept dark and its light row reads
+ * "dark only". The OpenProse pages still switch, and are swept both ways.
  */
 import { chromium } from 'playwright-core';
 
@@ -77,6 +81,12 @@ for (const name of PAGES) {
     await page.evaluate(t => { try { localStorage.setItem('jh-theme', t); } catch (e) {} }, theme);
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(1600);
+    const reached = await page.evaluate(t => (document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark') === t, theme);
+    if (!reached) {
+      await page.close();
+      results.push({ page: name + '.html', theme, darkOnly: true, load: 0, toggle: 0, worstLoad: [], worstToggle: [] });
+      continue;
+    }
     const loadFails = await page.evaluate(SWEEP);
     await page.close();
 
@@ -109,6 +119,7 @@ console.log('\n  PAGE                THEME   LOADED   TOGGLED');
 console.log('  ' + '─'.repeat(48));
 for (const r of results) {
   const f = n => (n === 0 ? '   ok' : String(n).padStart(5));
+  if (r.darkOnly) { console.log(`  ${r.page.padEnd(18)} ${r.theme.padEnd(7)}  dark only`); continue; }
   console.log(`  ${r.page.padEnd(18)} ${r.theme.padEnd(7)} ${f(r.load)}    ${r.hasToggle ? f(r.toggle) : '    –'}`);
 }
 console.log('  ' + '─'.repeat(48));

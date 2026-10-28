@@ -4,7 +4,8 @@
 // laid out like an open right hand, the nib between thumb and index tip, a
 // pinch gap), so every stroke goes through the module's own mapping, filters,
 // pinch hysteresis, string and MouseEvent dispatch into the page's real
-// startDraw/draw/endDraw, and asserts:
+// startDraw/draw/endDraw. Two hands draw, so every drawing frame carries a
+// second hand resting at the frame's left edge. It asserts:
 //   1. the Webcam toggle is on both pages (fine pointer), off, and the
 //      command bar knows "Draw with your hand"
 //   2. an open hand hovers: mousemoves reach the canvas, the pen stays up
@@ -17,6 +18,16 @@
 //   9. depth: the drawn hand doubles when the hand comes twice as near, and
 //      stops at GHOST_MAX
 //  10. on a touch device the toggle stays hidden and the command is absent
+//  11. one hand scrolls and sends the canvas nothing (pinch and drag; an open
+//      one does not; let go moving and it coasts, then stops); two hands draw,
+//      either one pinching, the right one hovering first; a stroke goes on when
+//      the other hand drops away, a scroll when one arrives, and a hand pinched
+//      across the change draws nothing
+//  12. both hands open wide, held OPEN_MS, open the search bar (a shorter hold
+//      does not, a hand at rest is not open), once per opening
+//  13. the real mouse wins: moved over the canvas, the hands send it nothing;
+//      a mouse stroke takes no hand points; a press ends a hand's stroke first,
+//      and the mouse's moves never reach a hand's stroke
 // Part 2 turns the toggle on with three of Chromium's fake cameras and no model
 // (the downloads refused or held): the camera must end when the model fails
 // and at once when the toggle goes off mid-load; the request names a device
@@ -59,35 +70,58 @@ const HELPERS = () => {
         [0, -1], [0, -1.4], [0, -1.65], [0, -1.85],
         [0.3, -0.92], [0.32, -1.3], [0.33, -1.5], [0.34, -1.68],
         [0.35, -0.8], [0.42, -1.05], [0.45, -1.22], [0.48, -1.38]];
+    // A hand open wide: the thumb out, the fingers fanned from their knuckles
+    const OPEN_J = (() => {
+        const j = J.map(p => p && [...p]);
+        j[2] = [-0.62, -0.32]; j[3] = [-0.88, -0.5]; j[4] = [-1.12, -0.66]; j[8] = [-0.44, -1.62];
+        const fan = (k, ids, a) => {
+            const [cx, cy] = j[k];
+            for (const i of ids) { const [x, y] = j[i]; j[i] = [cx + (x - cx) * Math.cos(a) - (y - cy) * Math.sin(a), cy + (x - cx) * Math.sin(a) + (y - cy) * Math.cos(a)]; }
+        };
+        fan(5, [6, 7, 8], -0.3); fan(9, [10, 11, 12], -0.08); fan(13, [14, 15, 16], 0.14); fan(17, [18, 19, 20], 0.36);
+        return j;
+    })();
     let seed = 7;
     const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647 - 0.5; };
     window.__hand = (hp, aspect = 4 / 3) => {
         hp.setAspect(aspect);
-        const marks = (x, y, pinch, { S = 0.12, lean = 0, noise = 0 } = {}) => {
-            const n = hp.fromScreen(x, y);
+        // cam: x, y are the nib in the camera's own (mirrored) units, which
+        // no scroll moves; else screen px through the module's own map
+        const marks = (x, y, pinch, { S = 0.12, lean = 0, noise = 0, cam = false, open = false } = {}) => {
+            const n = cam ? { u: x, v: y } : hp.fromScreen(x, y);
             const perPx = (hp.fromScreen(x + 100, y).u - n.u) * aspect / 100;
-            const X = n.u * aspect, Y = n.v, gap = pinch * S;
+            const X = n.u * aspect, Y = n.v, gap = (open ? 1 : pinch) * S;
             const tx = X - gap / 2 + lean * gap / 2, ix = tx + gap;
             const wrist = { x: ix + 0.44 * S, y: Y + 1.62 * S };
-            const sq = J.map(j => j && { x: wrist.x + j[0] * S, y: wrist.y + j[1] * S });
-            sq[4] = { x: tx, y: Y };
-            sq[8] = { x: ix, y: Y };
+            const sq = (open ? OPEN_J : J).map(j => j && { x: wrist.x + j[0] * S, y: wrist.y + j[1] * S });
+            if (!open) { sq[4] = { x: tx, y: Y }; sq[8] = { x: ix, y: Y }; }
             return sq.map(p => ({ x: 1 - (p.x + 2 * rnd() * noise * perPx) / aspect, y: p.y + 2 * rnd() * noise * perPx, z: 0 }));
         };
+        // The second hand drawing needs, at rest by the frame's left edge
+        const rest = () => marks(0.13, 0.62, 1.0, { cam: true });
         return {
+            marks,
             // Real time, 30 fps: the engine's classifier reads stroke timing,
-            // and the module's rAF loop retires a hand that stops arriving
-            async frame(x, y, pinch, opts) { hp.feed(marks(x, y, pinch, opts), performance.now()); await new Promise(r => setTimeout(r, 33)); },
+            // and the module's rAF loop retires a hand that stops arriving.
+            // `alone` leaves the resting hand out.
+            async frame(x, y, pinch, opts = {}) {
+                const m = marks(x, y, pinch, opts);
+                hp.feed(opts.alone ? m : [m, rest()], performance.now());
+                await new Promise(r => setTimeout(r, 33));
+            },
+            // Several hands in one frame, as MediaPipe hands them over
+            async hands(list) { hp.feed(list.map(h => marks(h.x, h.y, h.pinch, { ...h, cam: true })), performance.now()); await new Promise(r => setTimeout(r, 33)); },
         };
     };
     // Every pointer event the canvas receives, in order
     window.__track = () => {
         const c = document.getElementById('heroCanvas');
-        window.__ev = { move: 0, down: 0, up: 0, pts: [] };
+        window.__ev = { move: 0, down: 0, up: 0, fake: 0, pts: [] };
         for (const type of ['mousemove', 'mousedown', 'mouseup']) {
             c.addEventListener(type, e => {
                 window.__ev[type.slice(5)]++;
-                window.__ev.pts.push({ type, x: e.clientX, y: e.clientY });
+                if (!e.isTrusted && type === 'mousemove') window.__ev.fake++;
+                window.__ev.pts.push({ type, x: e.clientX, y: e.clientY, real: e.isTrusted });
             });
         }
     };
@@ -291,6 +325,179 @@ for (const file of ['index.html', 'design.html']) {
     check(far > 30 && near / far > 1.85 && near / far < 2.15,
         `the drawn hand grows as the hand nears the camera (palm ${far.toFixed(0)} px → ${near.toFixed(0)} px, ×${(near / far).toFixed(2)})`);
     check(Math.abs(closest - maxPalm) < 1, `and stops at GHOST_MAX (${closest.toFixed(0)} px of ${maxPalm.toFixed(0)})`);
+    check(errors.length === 0, `no page errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
+    await ctx.close();
+}
+
+{
+    // Hands placed in camera units: R at u .65 (your right), L at u .30 (your left)
+    console.log('\nindex.html — one hand scrolls, two draw, both open search, the mouse wins (1440 × 900)');
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const pg = await ctx.newPage();
+    const errors = [];
+    pg.on('pageerror', e => errors.push(e.message));
+    await ready(pg, 'index.html');
+    await pg.evaluate(() => { window.__track(); document.querySelector('[data-hand-pointer]')._handPointer.start({ camera: false }); });
+    // frames: [[hand, hand], ...]; a null hand is out of view
+    const two = (frames) => pg.evaluate(async frames => {
+        const hp = document.querySelector('[data-hand-pointer]')._handPointer;
+        const h = window.__hand(hp);
+        for (const f of frames) await h.hands(f.filter(Boolean));
+    }, frames);
+    const at = () => pg.evaluate(() => {
+        const hp = document.querySelector('[data-hand-pointer]')._handPointer;
+        return {
+            y: Math.round(scrollY), hands: hp.hands, mode: hp.mode, scrolling: hp.scrolling, coasting: hp.coasting,
+            down: hp.down, nibX: hp.nib && Math.round(hp.nib.x), charge: hp.charge,
+            downs: window.__ev.down, ups: window.__ev.up, fake: window.__ev.fake,
+            note: document.querySelector('.hand-hud-note').textContent,
+            search: !!(window.JHSearchOverlay && window.JHSearchOverlay.isOpen),
+        };
+    });
+    const R = (v = 0.4, pinch = 1.0, extra = {}) => ({ x: 0.65, y: v, pinch, ...extra });
+    const L = (v = 0.5, pinch = 1.0, extra = {}) => ({ x: 0.30, y: v, pinch, ...extra });
+    const steps = (n, f) => Array.from({ length: n }, (_, i) => f(i, n));
+    const OPEN = { open: true };
+
+    // The open-hand read itself
+    const reads = await pg.evaluate(() => {
+        const hp = document.querySelector('[data-hand-pointer]')._handPointer;
+        const h = window.__hand(hp);
+        const r = (pinch, o = {}) => window.JHHandPointer.readOpen(h.marks(0.5, 0.5, pinch, { cam: true, ...o }), 4 / 3);
+        return { rest: r(1.0), pinched: r(0.1), open: r(1.0, { open: true }), K: window.JHHandPointer.OPEN };
+    });
+    check(reads.open.open && !reads.rest.open && !reads.pinched.open,
+        `a hand open wide reads open (spread ${reads.open.spread.toFixed(2)}, thumb ${reads.open.thumb.toFixed(2)}), a resting one does not (spread ${reads.rest.spread.toFixed(2)} of ${reads.K.SPREAD}), nor a pinched one`);
+
+    // One hand: it scrolls, and the canvas hears nothing from it
+    await two(steps(6, () => [L(0.55)]));
+    const s0 = await at();
+    check(s0.hands === 1 && s0.mode === 'scroll' && /pinch and drag to scroll/.test(s0.note), `one hand in view is the scroll hand (${s0.mode}, "${s0.note}")`);
+    await two(steps(10, i => [L(0.55 - i * 0.02)]));
+    const s1 = await at();
+    check(s1.y === 0 && !s1.scrolling, `open and moving, it does not scroll (scrollY ${s1.y})`);
+    check(s1.fake === 0 && s1.downs === 0, `one hand sends the canvas nothing (${s1.fake} moves, ${s1.downs} downs)`);
+
+    // Pinch and drag up: the page follows
+    await two([...steps(4, () => [L(0.55, 0.1)]), ...steps(12, i => [L(0.55 - (i + 1) * 0.25 / 12, 0.1)]), ...steps(8, () => [L(0.30, 0.1)])]);
+    const s3 = await at();
+    const expect = Math.round(0.25 * 900 / 0.64 * 1.5);
+    check(s3.scrolling && Math.abs(s3.y - expect) < expect * 0.15, `pinch and drag up scrolls the page down with the hand (${s3.y} px, the hand's sweep × 1.5 is ${expect})`);
+    check(!s3.coasting, 'holding still, it holds');
+    await two(steps(4, i => [L(0.30 + (i + 1) * 0.05, 0.1)]));
+    const s3b = await at();
+    check(s3b.y < s3.y, `dragging back down scrolls back up (${s3.y} → ${s3b.y})`);
+
+    // Let go mid-move: it coasts, then stops
+    await two([...steps(3, i => [L(0.50 - (i + 1) * 0.04, 0.1)]), ...steps(3, i => [L(0.38 - (i + 1) * 0.04, 1.0)])]);
+    const r0 = await at();
+    await pg.waitForTimeout(250);
+    const r1 = await at();
+    await pg.waitForTimeout(2000);
+    const r2 = await at();
+    await pg.waitForTimeout(300);
+    const r3 = await at();
+    check(!r0.scrolling && r1.y > r0.y && !r2.coasting && r3.y === r2.y, `let go moving, it coasts on and stops (${r0.y} → ${r1.y} → ${r2.y})`);
+    check(r3.downs === 0 && r3.fake === 0, `the scroll hand never draws (${r3.downs} strokes, ${r3.fake} moves)`);
+
+    // A scroll goes on when a second hand arrives, and its pinch draws nothing after
+    await two([...steps(3, () => [L(0.6, 1.0)]), ...steps(4, () => [L(0.6, 0.1)]), ...steps(6, i => [L(0.6 - (i + 1) * 0.02, 0.1)])]);
+    const g0 = await at();
+    await two(steps(6, i => [L(0.48 - (i + 1) * 0.02, 0.1), R(0.4)]));
+    const g1 = await at();
+    check(g1.scrolling && g1.mode === 'scroll' && g1.y > g0.y, `a second hand arriving mid-scroll lets the scroll go on (${g0.y} → ${g1.y}, ${g1.mode})`);
+    await two(steps(6, () => [L(0.36, 1.0), R(0.4)]));
+    const g2 = await at();
+    check(!g2.scrolling && g2.mode === 'draw' && g2.downs === 0 && /pinch either to draw/.test(g2.note), `let go, two hands draw ("${g2.note}")`);
+    const downs0 = g2.downs;
+    await pg.evaluate(() => window.scrollTo(0, 0));
+    await pg.waitForTimeout(600);
+
+    // A hand pinched across the change does not draw until it opens
+    await pg.waitForTimeout(400);    // no frames: both hands leave
+    await two([...steps(4, () => [L(0.5, 0.1)]), ...steps(6, () => [L(0.5, 0.1), R(0.4)])]);
+    const c0 = await at();
+    check(c0.mode === 'draw' && !c0.down && c0.downs === downs0, `a hand pinched as the second arrives draws nothing (${c0.downs - downs0} strokes)`);
+
+    // Two hands draw: the right hovers first, either one pinching draws
+    await two(steps(4, () => [L(0.5), R(0.4)]));
+    const d0 = await at();
+    check(d0.nibX > 720, `two hands hovering, the one on your right leads (nib at x ${d0.nibX})`);
+    await two([...steps(4, () => [L(0.5), R(0.4, 0.1)]), ...steps(10, i => [L(0.5), R(0.4 + i * 0.01, 0.1)]), ...steps(4, () => [L(0.5), R(0.5, 1.0)])]);
+    const d1 = await at();
+    check(d1.downs === downs0 + 1 && !d1.down, `the right hand pinches and draws (${d1.downs - downs0} stroke)`);
+    await two([...steps(4, () => [L(0.5, 0.1), R(0.4)]), ...steps(10, i => [L(0.5 + i * 0.01, 0.1), R(0.4)]), ...steps(4, () => [L(0.6, 1.0), R(0.4)])]);
+    const d2 = await at();
+    const leftStroke = await pg.evaluate(() => { const s = window.__lastStroke(); return Math.round(s.reduce((a, p) => a + p.x, 0) / Math.max(1, s.length)); });
+    check(d2.downs === downs0 + 2 && leftStroke < 720, `so does the left (${d2.downs - downs0} strokes, the last at x ${leftStroke})`);
+    check(d2.nibX < 720, `and leads after (nib at x ${d2.nibX})`);
+
+    // A stroke goes on when the other hand drops away; lifted, one hand scrolls
+    await two([...steps(4, () => [L(0.5), R(0.4, 0.1)]), ...steps(4, i => [L(0.5), R(0.4 + i * 0.01, 0.1)])]);
+    await two(steps(12, i => [null, R(0.44 + i * 0.01, 0.1)]));
+    const k0 = await at();
+    await two(steps(4, () => [null, R(0.56, 1.0)]));
+    await two(steps(3, () => [null, R(0.56, 1.0)]));
+    const k1 = await at();
+    check(k0.down && k0.hands === 1 && k1.downs === downs0 + 3 && k1.ups === k1.downs && k1.mode === 'scroll',
+        `a stroke goes on when the other hand drops away (still down with ${k0.hands} hand), then one hand scrolls (${k1.mode})`);
+    await pg.waitForTimeout(400);
+
+    // Both open wide: the search bar. A short hold does not; once per opening.
+    const before = await at();
+    check(!before.search, 'hands at rest and drawing never opened the search bar');
+    await two(steps(12, () => [L(0.5, 1.0, OPEN), R(0.4, 1.0, OPEN)]));
+    const o0 = await at();
+    check(!o0.search && o0.charge > 0.2 && o0.charge < 1, `held open briefly, the bar waits (charge ${o0.charge.toFixed(2)})`);
+    await two(steps(16, () => [L(0.5, 1.0, OPEN), R(0.4, 1.0, OPEN)]));
+    const o1 = await at();
+    check(o1.search && o1.mode === 'wait' && /search is open/.test(o1.note), `both hands open wide, held, open the search bar (${o1.mode}, "${o1.note}")`);
+    await pg.keyboard.press('Escape');
+    await pg.waitForTimeout(100);
+    await two(steps(30, () => [L(0.5, 1.0, OPEN), R(0.4, 1.0, OPEN)]));
+    const o2 = await at();
+    check(!o2.search && o2.mode === 'draw', `closed with Esc, hands still open do not open it again (${o2.mode})`);
+    await two([...steps(4, () => [L(0.5), R(0.4, 1.0, OPEN)]), ...steps(30, () => [L(0.5, 1.0, OPEN), R(0.4, 1.0, OPEN)])]);
+    const o3 = await at();
+    check(o3.search, 'a hand closed and opened again, it opens');
+    await pg.keyboard.press('Escape');
+    await pg.waitForTimeout(100);
+    await two(steps(4, () => [L(0.5), R(0.4)]));
+
+    // The real mouse wins, wherever it is over the canvas itself
+    const spot = await pg.evaluate(() => {
+        const c = document.getElementById('heroCanvas');
+        for (const [x, y] of [[500, 300], [400, 520], [300, 650], [1100, 650], [700, 760], [200, 420]]) if (document.elementFromPoint(x, y) === c && document.elementFromPoint(x + 120, y + 60) === c) return { x, y };
+        return null;
+    });
+    check(!!spot, `a point where the mouse is on the canvas (${JSON.stringify(spot)})`);
+    await pg.mouse.move(spot.x, spot.y);
+    const m0 = await at();
+    await two(steps(10, i => [L(0.5), R(0.4 + i * 0.01)]));
+    const m1 = await at();
+    check(m1.fake === m0.fake, `the real mouse over the canvas, the hands send it nothing (${m1.fake - m0.fake} moves)`);
+    await pg.mouse.down();
+    await pg.mouse.move(spot.x + 60, spot.y + 30, { steps: 4 });
+    await two(steps(5, i => [L(0.5), R(0.3 + i * 0.02)]));
+    await pg.mouse.move(spot.x + 120, spot.y + 60, { steps: 4 });
+    await pg.mouse.up();
+    const mouseStroke = await pg.evaluate(() => window.__lastStroke());
+    check(mouseStroke.length > 4 && mouseStroke.every(p => p.real), `a mouse stroke takes no hand points (${mouseStroke.filter(p => !p.real).length} of ${mouseStroke.length})`);
+    await pg.mouse.move(1400, 880);
+    await pg.waitForTimeout(1100);    // the hands left meanwhile: back in view, open first
+    await two([...steps(4, () => [L(0.5), R(0.4)]), ...steps(4, () => [L(0.5), R(0.4, 0.1)]), ...steps(6, i => [L(0.5), R(0.4 + i * 0.01, 0.1)])]);
+    const h0 = await at();
+    await pg.mouse.move(spot.x, spot.y, { steps: 3 });
+    await two(steps(3, i => [L(0.5), R(0.46 + i * 0.01, 0.1)]));
+    const h1 = await at();
+    const handStroke = await pg.evaluate(() => { const p = window.__ev.pts; let d = -1; for (let i = p.length - 1; i >= 0; i--) if (p[i].type === 'mousedown') { d = i; break; } return p.slice(d); });
+    check(h0.down && h1.down && handStroke.every(p => !p.real), `while a hand draws, the mouse's moves never reach its stroke (${handStroke.filter(p => p.real).length} real of ${handStroke.length})`);
+    await pg.mouse.down();
+    const h2 = await at();
+    const order = await pg.evaluate(() => window.__ev.pts.slice(-2).map(p => `${p.real ? 'real' : 'hand'} ${p.type}`));
+    await pg.mouse.up();
+    check(!h2.down && order[0] === 'hand mouseup' && order[1] === 'real mousedown', `a press ends the hand's stroke before the mouse's begins (${order.join(', ')})`);
+    await pg.waitForTimeout(400);
     check(errors.length === 0, `no page errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
     await ctx.close();
 }
