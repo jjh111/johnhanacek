@@ -22,6 +22,15 @@
  * starts where the pinch began closing and the pen holds still while the
  * fingers part to lift, so neither end draws a hook.
  *
+ * Two hands. One hand draws. A second hand in view scrolls the page: pinch
+ * and the page follows it, the way a finger drags a touchscreen, and let go
+ * mid-move to fling it. The hand drawing stays the pen and the other scrolls,
+ * each followed by its wrist; two arriving at once, the one on your right
+ * draws; the pen hand gone, the scroll hand picks up the pen. A hand that
+ * takes up the pen opens once before it can draw, so a hand that was holding
+ * the page never starts a stroke. The scroll hand's height is read from the
+ * camera alone, so the page moving under it cannot feed back into it.
+ *
  * Presence: a fixed overlay draws a ghost of the hand (its 21 joints as line
  * art) and the nib itself: an open ring that closes as the fingers approach,
  * like a pen nearing paper, and a gold point while it is down. The pinch is
@@ -81,6 +90,12 @@
         BETA: 12,
         // px: the ink follows the nib on a string this long (a lazy brush)
         STRING: 8,
+        // The second hand scrolls. Pinched, the page follows it, SCROLL_GAIN
+        // screens for a sweep of the box's height; let go, it coasts on,
+        // slowing by FLING_DECAY a second until it is under FLING_MIN px a second.
+        SCROLL_GAIN: 1.5,
+        FLING_DECAY: 4,
+        FLING_MIN: 40,
     };
 
     // MediaPipe's bundle, loaded once. A failed import() is cached by the
@@ -148,10 +163,14 @@
         if (!canvas) return null;
         const o = Object.assign({}, T, options);
         let on = false, landmarker = null, stream = null, raf = 0, runs = 0;
-        let lastVideoTime = -1, lastSeen = 0, present = false, down = false, vote = 0;
-        let nib = null, pen = null, onset = null, sent = null, pinch = 1, palm = 0, lm = null, aspect = 4 / 3, fade = 0;
-        const lmf = Array.from({ length: 21 }, () => [oneEuro(o.MIN_CUTOFF, o.BETA), oneEuro(o.MIN_CUTOFF, o.BETA)]);
-        const fp = oneEuro(8, 0);
+        let lastVideoTime = -1, aspect = 4 / 3, fade = 0, sFade = 0;
+        // The pen hand: present, its pen down or up, the vote that changes it,
+        // and `armed`, which a hand earns by opening once before it may draw
+        let present = false, down = false, vote = 0, armed = false;
+        let pen = null, onset = null, sent = null;
+        // The scroll hand: present, gripping the page or not, and the coast after
+        let sPresent = false, grab = false, sVote = 0, sArmed = false;
+        let sY = 0, sT = 0, vel = 0, fling = 0, flingT = 0;
         const listeners = new Set();
         let status = 'off';
 
@@ -193,6 +212,8 @@
             hud.dataset.state = s;
             listeners.forEach(f => { try { f(s, text); } catch (e) { /* a listener's problem */ } });
         }
+        const ONE = 'pinch to draw · open to lift · a second hand scrolls';
+        const TWO = 'one hand draws · the other pinches and drags to scroll';
 
         // The canvas's visible part: where the box maps. Null when it has
         // scrolled away, and the hand then only shows, it does not draw.
@@ -220,6 +241,34 @@
             return { u: ((x - f.mx) / f.g + f.cx) / aspect, v: (y - f.my) / f.g + f.cy };
         }
 
+        // One tracked hand: its landmark filters and what was last read from it.
+        // Where it is, smoothed hard; whether it pinches, read from the raw
+        // fingertips and smoothed lightly: a pinch is a small, quick move the
+        // landmark filter would hold back for frames.
+        function hand() {
+            const lmf = Array.from({ length: 21 }, () => [oneEuro(o.MIN_CUTOFF, o.BETA), oneEuro(o.MIN_CUTOFF, o.BETA)]);
+            const fp = oneEuro(8, 0);
+            return {
+                lm: null, nib: null, v: 0, pinch: 1, palm: 0, wrist: null, seen: 0,
+                read(marks, t) {
+                    this.seen = t;
+                    this.lm = marks.map((p, i) => ({ x: lmf[i][0].filter(p.x, t), y: lmf[i][1].filter(p.y, t) }));
+                    const h = readHand(this.lm, aspect), f = frame();
+                    this.nib = toScreen(h.nib.u, h.nib.v, f);
+                    this.v = h.nib.v;
+                    this.pinch = fp.filter(readHand(marks, aspect).pinch, t);
+                    this.palm = Math.min(o.GHOST_MAX * (f.a.y1 - f.a.y0), Math.max(o.GHOST_MIN, h.scale * f.g * o.GHOST));
+                    this.wrist = { u: 1 - marks[0].x, v: marks[0].y };
+                },
+                reset() {
+                    lmf.forEach(([fx, fy]) => { fx.reset(); fy.reset(); });
+                    fp.reset();
+                    this.lm = null; this.nib = null; this.wrist = null; this.pinch = 1;
+                },
+            };
+        }
+        let P = hand(), S = hand();      // the pen hand and the scroll hand
+
         function mouse(type, p) {
             canvas.dispatchEvent(new MouseEvent(type, {
                 clientX: p.x, clientY: p.y, bubbles: type !== 'mouseenter' && type !== 'mouseleave',
@@ -239,7 +288,7 @@
         }
         // The ink moves only when the nib pulls its string taut
         function follow() {
-            const dx = nib.x - pen.x, dy = nib.y - pen.y, d = Math.hypot(dx, dy);
+            const dx = P.nib.x - pen.x, dy = P.nib.y - pen.y, d = Math.hypot(dx, dy);
             if (d <= o.STRING) return;
             const k = (d - o.STRING) / d;
             pen = { x: pen.x + dx * k, y: pen.y + dy * k };
@@ -248,44 +297,65 @@
         function penUp() {
             if (!down) return;
             down = false;
-            mouse('mouseup', sent || pen || nib);
+            mouse('mouseup', sent || pen || P.nib);
         }
         function leave() {
             penUp();
             if (present && sent) mouse('mouseleave', sent);
-            present = false; sent = null; lm = null; pen = null; onset = null; vote = 0;
-            lmf.forEach(([fx, fy]) => { fx.reset(); fy.reset(); });
-            fp.reset();
+            present = false; sent = null; pen = null; onset = null; vote = 0; armed = false;
+            P.reset();
+        }
+        // A hand takes up the pen: it says so, and opens before it can draw
+        function enter(live) {
+            present = true; armed = false;
+            if (live) mouse('mouseenter', P.nib);
+            say('track', sPresent ? TWO : ONE);
         }
 
-        // One frame of tracking: landmarks or null (no hand). The suite's seam.
-        function feed(marks, t) {
-            if (!marks) {
-                if (present && t - lastSeen > o.LOST_MS) { leave(); if (on) say('seek', 'show your hand to the camera'); }
-                return;
+        // One frame of tracking: no hand, one hand's 21 landmarks, or a list of
+        // up to two hands (MediaPipe's `landmarks`). The suite's seam.
+        //
+        // Which hand is which: the hand drawing stays the pen and the other
+        // scrolls (each by its wrist, nearest to where it was). Two arriving at
+        // once: the one on your right draws. The pen hand gone, the scroll hand
+        // picks up the pen.
+        function feed(input, t) {
+            const hands = !input || !input.length ? [] : Array.isArray(input[0]) ? input.slice(0, 2) : [input];
+            const near = (m, h) => h.wrist ? Math.hypot(1 - m[0].x - h.wrist.u, m[0].y - h.wrist.v) : Infinity;
+            let pm = null, sm = null;
+            if (hands.length === 2) {
+                const [a, b] = hands;
+                const aPens = present ? near(a, P) <= near(b, P)
+                    : sPresent ? near(a, S) > near(b, S)
+                    : (1 - a[0].x) >= (1 - b[0].x);
+                [pm, sm] = aPens ? [a, b] : [b, a];
+            } else if (hands.length === 1) {
+                const m = hands[0];
+                if (present && sPresent) { if (near(m, P) <= near(m, S)) pm = m; else sm = m; }
+                else if (sPresent) sm = m;
+                else pm = m;
             }
-            lastSeen = t;
-            // Where the hand is, smoothed hard; whether it pinches, read from the
-            // raw fingertips and smoothed lightly: a pinch is a small, quick
-            // move the landmark filter would hold back for frames.
-            lm = marks.map((p, i) => ({ x: lmf[i][0].filter(p.x, t), y: lmf[i][1].filter(p.y, t) }));
-            const h = readHand(lm, aspect);
-            const f = frame();
-            nib = toScreen(h.nib.u, h.nib.v, f);
-            pinch = fp.filter(readHand(marks, aspect).pinch, t);
-            palm = Math.min(o.GHOST_MAX * (f.a.y1 - f.a.y0), Math.max(o.GHOST_MIN, h.scale * f.g * o.GHOST));
+            if (pm) penFrame(pm, t);
+            else if (present && t - P.seen > o.LOST_MS) {
+                leave();
+                if (sPresent && t - S.seen <= o.LOST_MS) promote();
+                else if (on) say('seek', 'show your hand to the camera');
+            }
+            if (sm) scrollFrame(sm, t);
+            else if (sPresent && t - S.seen > o.LOST_MS) scrollLeave(true, t);
+        }
+
+        function penFrame(marks, t) {
+            P.read(marks, t);
             const live = !!area();
-            if (!present) {
-                present = true;
-                if (live) mouse('mouseenter', nib);
-                say('track', 'pinch to draw · open to lift');
-            }
+            if (!present) enter(live);
             if (!live) { penUp(); return; }
+            if (P.pinch > o.UP) armed = true;
             // The pen changes only when SETTLE frames in a row agree. The nib
             // where they began agreeing is where a stroke starts.
-            const want = down ? pinch < o.UP : pinch < o.DOWN;
+            const want = down ? P.pinch < o.UP : armed && P.pinch < o.DOWN;
             if (want === down) vote = 0;
-            else if (vote++ === 0) onset = nib;
+            else if (vote++ === 0) onset = P.nib;
             if (vote >= o.SETTLE) {
                 vote = 0;
                 if (want) {
@@ -297,27 +367,76 @@
                 }
                 penUp();
             }
-            if (!down) { pen = nib; moveTo(nib); return; }
+            if (!down) { pen = P.nib; moveTo(P.nib); return; }
             // Drawing: the pen holds while the fingers part, else follows
-            if (pinch < o.DOWN) follow();
+            if (P.pinch < o.DOWN) follow();
         }
 
-        function paint() {
-            const w = innerWidth, h = innerHeight;
-            lctx.clearRect(0, 0, w, h);
-            // Over the water only: scrolled into the content, the hand stays out of the way
-            fade += ((present && area() ? 1 : 0) - fade) * 0.2;
-            if (fade < 0.02 || !lm || !nib) return;
-            const g = readHand(lm, aspect);
-            const k = palm / g.scale;
+        // The scroll hand's height in px, read from the camera alone: the page
+        // moving under it must not move it
+        const handY = () => S.v * innerHeight / (o.BOX.y1 - o.BOX.y0);
+        // Pinched, the page follows the hand (up moves it up); let go, it coasts
+        function scrollFrame(marks, t) {
+            S.read(marks, t);
+            if (!sPresent) { sPresent = true; sArmed = false; say('track', TWO); }
+            if (S.pinch > o.UP) sArmed = true;
+            const want = grab ? S.pinch < o.UP : sArmed && S.pinch < o.DOWN;
+            if (want === grab) sVote = 0;
+            else sVote++;
+            if (sVote >= o.SETTLE) {
+                sVote = 0;
+                grab = want;
+                if (grab) { sY = handY(); sT = t; vel = 0; fling = 0; return; }
+                release(t);
+            }
+            if (!grab) return;
+            const y = handY(), dt = Math.max(1, t - sT) / 1000;
+            const d = -(y - sY) * o.SCROLL_GAIN;
+            if (d) window.scrollBy({ top: d, behavior: 'instant' });
+            vel += (d / dt - vel) * 0.5;      // px a second, lightly smoothed, for the coast
+            sY = y; sT = t;
+        }
+        function release(t) {
+            grab = false;
+            fling = Math.abs(vel) > o.FLING_MIN ? vel : 0;
+            flingT = t;
+        }
+        function scrollLeave(coast, t) {
+            if (grab && coast) release(t);
+            else if (!coast) fling = 0;
+            grab = false; sVote = 0; sArmed = false; sPresent = false;
+            S.reset();
+            if (present && on) say('track', ONE);
+        }
+        // The scroll hand picks up the pen: its filters carry on, it opens first
+        function promote() {
+            [P, S] = [S, P];
+            grab = false; sVote = 0; sArmed = false; sPresent = false; fling = 0;
+            S.reset();
+            enter(!!area());
+        }
+        // A fling slows to a stop; the wheel or a new grip stops it at once
+        function coast(now) {
+            if (!fling) return;
+            const dt = Math.min(0.05, Math.max(0, now - flingT) / 1000);
+            flingT = now;
+            window.scrollBy({ top: fling * dt, behavior: 'instant' });
+            fling *= Math.exp(-o.FLING_DECAY * dt);
+            if (Math.abs(fling) < o.FLING_MIN) fling = 0;
+        }
+        function onWheel() { fling = 0; }
+
+        // A hand's 21 joints as line art around its nib, at its palm's size
+        function ghost(h, alpha) {
+            const g = readHand(h.lm, aspect);
+            const k = h.palm / g.scale;
             const nibSq = { x: g.nib.u * aspect, y: g.nib.v };
-            const at = i => ({
-                x: nib.x + ((1 - lm[i].x) * aspect - nibSq.x) * k,
-                y: nib.y + (lm[i].y - nibSq.y) * k,
-            });
-            const pts = lm.map((_, i) => at(i));
+            const pts = h.lm.map(p => ({
+                x: h.nib.x + ((1 - p.x) * aspect - nibSq.x) * k,
+                y: h.nib.y + (p.y - nibSq.y) * k,
+            }));
             lctx.save();
-            lctx.globalAlpha = 0.38 * fade;
+            lctx.globalAlpha = alpha;
             lctx.strokeStyle = ink.line;
             lctx.lineWidth = 1.25;
             lctx.lineCap = 'round';
@@ -325,12 +444,30 @@
             for (const [a, b] of BONES) { lctx.moveTo(pts[a].x, pts[a].y); lctx.lineTo(pts[b].x, pts[b].y); }
             lctx.stroke();
             lctx.fillStyle = ink.line;
-            const r = Math.max(1.5, palm / 50);
+            const r = Math.max(1.5, h.palm / 50);
             for (const p of pts) { lctx.beginPath(); lctx.arc(p.x, p.y, r, 0, Math.PI * 2); lctx.fill(); }
+            lctx.restore();
+            return pts;
+        }
+
+        function paint() {
+            lctx.clearRect(0, 0, innerWidth, innerHeight);
+            // The pen hand, over the water only: scrolled into the content it stays out of the way
+            fade += ((present && area() ? 1 : 0) - fade) * 0.2;
+            if (fade >= 0.02 && P.lm && P.nib) paintPen();
+            // The scroll hand anywhere, so it can bring the water back
+            sFade += ((sPresent ? 1 : 0) - sFade) * 0.2;
+            if (sFade >= 0.02 && S.lm && S.nib) paintScroll();
+        }
+        function paintPen() {
+            const pts = ghost(P, 0.38 * fade);
+            const nib = P.nib;
             // The pincer: thumb tip to index tip, brighter as it closes
-            const close = Math.min(1, Math.max(0, (o.OPEN - pinch) / (o.OPEN - o.DOWN)));
+            const close = Math.min(1, Math.max(0, (o.OPEN - P.pinch) / (o.OPEN - o.DOWN)));
+            lctx.save();
             lctx.globalAlpha = (0.25 + 0.5 * close) * fade;
             lctx.strokeStyle = down ? ink.down : ink.nib;
+            lctx.lineWidth = 1.25;
             lctx.beginPath(); lctx.moveTo(pts[4].x, pts[4].y); lctx.lineTo(pts[8].x, pts[8].y); lctx.stroke();
             lctx.restore();
 
@@ -357,19 +494,39 @@
             }
             lctx.restore();
         }
+        // The scroll hand wears a grip: a ring between two chevrons, gold while it holds the page
+        function paintScroll() {
+            ghost(S, 0.26 * sFade);
+            const { x, y } = S.nib;
+            const c = grab ? ink.down : ink.nib;
+            lctx.save();
+            lctx.globalAlpha = sFade;
+            lctx.strokeStyle = c; lctx.fillStyle = c; lctx.lineWidth = 1.5;
+            lctx.lineCap = 'round'; lctx.lineJoin = 'round';
+            lctx.beginPath(); lctx.arc(x, y, grab ? 6 : 9, 0, Math.PI * 2);
+            if (grab) { lctx.shadowColor = c; lctx.shadowBlur = 12; lctx.fill(); lctx.shadowBlur = 0; } else lctx.stroke();
+            const gap = grab ? 20 : 17;
+            for (const s of [-1, 1]) {
+                lctx.beginPath();
+                lctx.moveTo(x - 6, y + s * gap); lctx.lineTo(x, y + s * (gap + 6)); lctx.lineTo(x + 6, y + s * gap);
+                lctx.stroke();
+            }
+            lctx.restore();
+        }
 
         function loop() {
             raf = requestAnimationFrame(loop);
+            const now = performance.now();
             if (landmarker && video.readyState >= 2 && video.currentTime !== lastVideoTime) {
                 lastVideoTime = video.currentTime;
                 if (video.videoWidth) aspect = video.videoWidth / video.videoHeight;
-                const t = performance.now();
                 let res = null;
-                try { res = landmarker.detectForVideo(video, t); } catch (e) { /* a dropped frame */ }
-                feed(res && res.landmarks && res.landmarks[0] || null, t);
-            } else if (present && !landmarker) {
-                feed(null, performance.now());     // driven by feed(): lost hands still leave
+                try { res = landmarker.detectForVideo(video, now); } catch (e) { /* a dropped frame */ }
+                feed(res && res.landmarks, now);
+            } else if ((present || sPresent) && !landmarker) {
+                feed(null, now);     // driven by feed(): lost hands still leave
             }
+            coast(now);
             paint();
         }
 
@@ -378,7 +535,7 @@
             const files = await vision.FilesetResolver.forVisionTasks(`${MP_BASE}/wasm`);
             const make = delegate => vision.HandLandmarker.createFromOptions(files, {
                 baseOptions: { modelAssetPath: MODEL_URL, delegate },
-                runningMode: 'VIDEO', numHands: 1,
+                runningMode: 'VIDEO', numHands: 2,
                 minHandDetectionConfidence: 0.6, minHandPresenceConfidence: 0.6, minTrackingConfidence: 0.5,
             });
             try { return await make('GPU'); } catch (e) { return make('CPU'); }
@@ -414,7 +571,7 @@
             if (!on || run !== runs) { s.getTracks().forEach(t => t.stop()); return; }
             if (stream) stream.getTracks().forEach(t => t.stop());
             saveCam(id);
-            leave();          // a new view: the filters start again
+            leave(); scrollLeave(false);      // a new view: the filters start again
             showCamera(s);
         }
 
@@ -423,11 +580,12 @@
             document.body.append(layer, hud);
             addEventListener('resize', sizeLayer);
             addEventListener('jh-theme-change', readInk);
+            addEventListener('wheel', onWheel, { passive: true });
             document.addEventListener('visibilitychange', onVisible);
             if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) navigator.mediaDevices.addEventListener('devicechange', listCameras);
             if (!raf) loop();
         }
-        function onVisible() { if (document.hidden && present) leave(); }
+        function onVisible() { if (document.hidden) { if (present) leave(); if (sPresent) scrollLeave(false); } }
 
         // Start with camera + model; `{ camera: false }` mounts the overlay
         // alone, for feed()-driven tests.
@@ -466,7 +624,7 @@
         // Off. `keepNote` leaves an error on screen for a few seconds.
         function stop(keepNote) {
             on = false;
-            leave();
+            leave(); scrollLeave(false);
             if (stream) stream.getTracks().forEach(t => t.stop());
             stream = null;
             video.srcObject = null;
@@ -479,6 +637,7 @@
             layer.remove();
             removeEventListener('resize', sizeLayer);
             removeEventListener('jh-theme-change', readInk);
+            removeEventListener('wheel', onWheel);
             document.removeEventListener('visibilitychange', onVisible);
             if (keepNote) {
                 say(status, note.textContent);       // listeners see `on` is false
@@ -492,9 +651,12 @@
             get on() { return on; },
             get down() { return down; },
             get status() { return status; },
-            get nib() { return nib && { x: nib.x, y: nib.y }; },
+            get nib() { return P.nib && { x: P.nib.x, y: P.nib.y }; },
             get pen() { return pen && { x: pen.x, y: pen.y }; },
-            get palm() { return palm; },
+            get palm() { return P.palm; },
+            get hands() { return (present ? 1 : 0) + (sPresent ? 1 : 0); },
+            get scrolling() { return grab; },
+            get coasting() { return !!fling; },
             setAspect(a) { aspect = a; },
             onStatus(f) { listeners.add(f); return () => listeners.delete(f); },
         };
@@ -516,8 +678,8 @@
             input.addEventListener('change', () => { input.checked ? hp.start() : hp.stop(); });
             (window.JH_COMMANDS = window.JH_COMMANDS || []).push({
                 id: 'hand.draw', title: 'Draw with your hand',
-                detail: 'Your webcam as a pen: pinch to draw, open to lift',
-                tags: 'webcam camera hand gesture draw pinch tracking air pen presence',
+                detail: 'Your webcam as a pen: pinch to draw, open to lift; a second hand pinches and drags to scroll',
+                tags: 'webcam camera hand gesture draw pinch tracking air pen presence two hands scroll',
                 hints: ['draw with my hand', 'use the webcam to draw', 'hand tracking'],
                 run: () => { input.checked = !input.checked; input.dispatchEvent(new Event('change')); },
             });

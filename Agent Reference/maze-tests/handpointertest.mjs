@@ -17,6 +17,10 @@
 //   9. depth: the drawn hand doubles when the hand comes twice as near, and
 //      stops at GHOST_MAX
 //  10. on a touch device the toggle stays hidden and the command is absent
+//  11. two hands: the second scrolls (pinch and drag; an open one does not;
+//      let go moving and it coasts, then stops), the first still draws, the
+//      scroll hand never draws, the pen hand gone the other picks up the pen
+//      only after it opens, and two arriving at once give the pen to the right
 // Part 2 turns the toggle on with three of Chromium's fake cameras and no model
 // (the downloads refused or held): the camera must end when the model fails
 // and at once when the toggle goes off mid-load; the request names a device
@@ -63,8 +67,10 @@ const HELPERS = () => {
     const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647 - 0.5; };
     window.__hand = (hp, aspect = 4 / 3) => {
         hp.setAspect(aspect);
-        const marks = (x, y, pinch, { S = 0.12, lean = 0, noise = 0 } = {}) => {
-            const n = hp.fromScreen(x, y);
+        // cam: x, y are the nib in the camera's own (mirrored) units, which
+        // no scroll moves; else screen px through the module's own map
+        const marks = (x, y, pinch, { S = 0.12, lean = 0, noise = 0, cam = false } = {}) => {
+            const n = cam ? { u: x, v: y } : hp.fromScreen(x, y);
             const perPx = (hp.fromScreen(x + 100, y).u - n.u) * aspect / 100;
             const X = n.u * aspect, Y = n.v, gap = pinch * S;
             const tx = X - gap / 2 + lean * gap / 2, ix = tx + gap;
@@ -78,6 +84,8 @@ const HELPERS = () => {
             // Real time, 30 fps: the engine's classifier reads stroke timing,
             // and the module's rAF loop retires a hand that stops arriving
             async frame(x, y, pinch, opts) { hp.feed(marks(x, y, pinch, opts), performance.now()); await new Promise(r => setTimeout(r, 33)); },
+            // Several hands in one frame, as MediaPipe hands them over
+            async hands(list) { hp.feed(list.map(h => marks(h.x, h.y, h.pinch, { ...h, cam: true })), performance.now()); await new Promise(r => setTimeout(r, 33)); },
         };
     };
     // Every pointer event the canvas receives, in order
@@ -291,6 +299,89 @@ for (const file of ['index.html', 'design.html']) {
     check(far > 30 && near / far > 1.85 && near / far < 2.15,
         `the drawn hand grows as the hand nears the camera (palm ${far.toFixed(0)} px → ${near.toFixed(0)} px, ×${(near / far).toFixed(2)})`);
     check(Math.abs(closest - maxPalm) < 1, `and stops at GHOST_MAX (${closest.toFixed(0)} px of ${maxPalm.toFixed(0)})`);
+    check(errors.length === 0, `no page errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
+    await ctx.close();
+}
+
+{
+    // Two hands, placed in camera units: the pen at u .65 (your right), the scroll hand at u .30
+    console.log('\nindex.html — two hands (1440 × 900)');
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const pg = await ctx.newPage();
+    const errors = [];
+    pg.on('pageerror', e => errors.push(e.message));
+    await ready(pg, 'index.html');
+    await pg.evaluate(() => { window.__track(); document.querySelector('[data-hand-pointer]')._handPointer.start({ camera: false }); });
+    // frames: [[pen, scroll], ...]; a null hand is out of view
+    const two = (frames) => pg.evaluate(async frames => {
+        const hp = document.querySelector('[data-hand-pointer]')._handPointer;
+        const h = window.__hand(hp);
+        for (const f of frames) await h.hands(f.filter(Boolean));
+    }, frames);
+    const at = () => pg.evaluate(() => {
+        const hp = document.querySelector('[data-hand-pointer]')._handPointer;
+        return { y: Math.round(scrollY), hands: hp.hands, scrolling: hp.scrolling, coasting: hp.coasting, down: hp.down, downs: window.__ev.down, note: document.querySelector('.hand-hud-note').textContent };
+    });
+    const PEN = (v = 0.4, pinch = 1.0) => ({ x: 0.65, y: v, pinch });
+    const SCR = (v, pinch) => ({ x: 0.30, y: v, pinch });
+    const steps = (n, f) => Array.from({ length: n }, (_, i) => f(i, n));
+
+    await two(steps(6, () => [PEN()]));
+    await two(steps(5, () => [PEN(), SCR(0.55, 1.0)]));
+    const s0 = await at();
+    check(s0.hands === 2 && /other pinches and drags to scroll/.test(s0.note), `a second hand in view joins as the scroll hand (${s0.hands} hands, "${s0.note}")`);
+    await two(steps(10, i => [PEN(), SCR(0.55 - i * 0.02, 1.0)]));
+    const s1 = await at();
+    check(s1.y === 0 && !s1.scrolling, `an open scroll hand moving does not scroll (scrollY ${s1.y})`);
+
+    // The pen still draws beside it
+    await two([...steps(4, () => [PEN(0.4, 0.1), SCR(0.35, 1.0)]), ...steps(10, i => [PEN(0.4 + i * 0.01, 0.1), SCR(0.35, 1.0)]), ...steps(4, () => [PEN(0.5, 1.0), SCR(0.35, 1.0)])]);
+    const s2 = await at();
+    check(s2.downs >= 1 && !s2.down, `the pen hand still draws beside it (${s2.downs} stroke)`);
+
+    // Pinch and drag up: the page follows
+    const downsBefore = s2.downs;
+    await two([...steps(4, () => [PEN(), SCR(0.55, 0.1)]), ...steps(12, i => [PEN(), SCR(0.55 - (i + 1) * 0.25 / 12, 0.1)]), ...steps(8, () => [PEN(), SCR(0.30, 0.1)])]);
+    const s3 = await at();
+    const expect = Math.round(0.25 * 900 / 0.64 * 1.5);
+    check(s3.scrolling && Math.abs(s3.y - expect) < expect * 0.15, `pinch and drag up scrolls the page down with the hand (${s3.y} px, the hand's sweep × 1.5 is ${expect})`);
+    check(!s3.coasting, 'holding still, it holds');
+    await two(steps(4, i => [PEN(), SCR(0.30 + (i + 1) * 0.05, 0.1)]));
+    const s3b = await at();
+    check(s3b.y < s3.y, `dragging back down scrolls back up (${s3.y} → ${s3b.y})`);
+
+    // Let go mid-move: it coasts, then stops
+    await two([...steps(3, i => [PEN(), SCR(0.50 - (i + 1) * 0.04, 0.1)]), ...steps(3, i => [PEN(), SCR(0.38 - (i + 1) * 0.04, 1.0)])]);
+    const r0 = await at();
+    await pg.waitForTimeout(250);
+    const r1 = await at();
+    await pg.waitForTimeout(2000);
+    const r2 = await at();
+    await pg.waitForTimeout(300);
+    const r3 = await at();
+    check(!r0.scrolling && r1.y > r0.y && !r2.coasting && r3.y === r2.y, `let go moving, it coasts on and stops (${r0.y} → ${r1.y} → ${r2.y})`);
+    check(r3.downs === downsBefore, `the scroll hand never draws (${r3.downs - downsBefore} strokes from it)`);
+
+    // The pen hand leaves: the other picks up the pen, but only after it opens
+    await pg.evaluate(() => window.scrollTo(0, 0));
+    await pg.waitForTimeout(200);
+    await two(steps(4, () => [PEN(), SCR(0.5, 0.1)]));
+    await two(steps(10, () => [null, SCR(0.5, 0.1)]));
+    const p0 = await at();
+    check(p0.hands === 1 && !p0.scrolling && p0.downs === downsBefore, `the pen hand gone, the scroll hand takes the pen without drawing while still pinched (${p0.hands} hand, ${p0.downs - downsBefore} strokes)`);
+    await two([...steps(3, () => [SCR(0.5, 1.0)]), ...steps(4, () => [SCR(0.5, 0.1)]), ...steps(6, i => [SCR(0.5 + i * 0.01, 0.1)]), ...steps(3, () => [SCR(0.56, 1.0)])]);
+    const p1 = await at();
+    check(p1.downs === downsBefore + 1, `opened, then pinched, it draws (${p1.downs - downsBefore} stroke)`);
+    await pg.waitForTimeout(400);    // everyone leaves
+
+    // Two at once: the one on your right draws
+    await two([...steps(3, () => [SCR(0.4, 1.0), PEN(0.4, 1.0)]), ...steps(4, () => [SCR(0.4, 1.0), PEN(0.4, 0.1)])]);
+    const both = await pg.evaluate(() => {
+        const hp = document.querySelector('[data-hand-pointer]')._handPointer;
+        return { down: hp.down, nibX: Math.round(hp.nib.x), hands: hp.hands };
+    });
+    check(both.hands === 2 && both.down && both.nibX > 720, `two hands arriving together: the one on your right draws (pen at x ${both.nibX})`);
+    await pg.waitForTimeout(400);
     check(errors.length === 0, `no page errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
     await ctx.close();
 }
