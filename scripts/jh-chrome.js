@@ -28,7 +28,14 @@
     // app. Set to the deployed Apps Script web-app URL (…/exec) and Send posts
     // straight to John's Gmail instead. Deploy steps and the relay source:
     // Agent Reference/inquiry-relay/. Not a secret: it is a public endpoint.
-    inquiryEndpoint: 'https://script.google.com/macros/s/AKfycbz1kU84mtnPTUxIR8XEus-LuNXLlBgllme8Q63N0r8NWIl84pYqlu51XnHv2-6Rr83J/exec'
+    inquiryEndpoint: 'https://script.google.com/macros/s/AKfycbz1kU84mtnPTUxIR8XEus-LuNXLlBgllme8Q63N0r8NWIl84pYqlu51XnHv2-6Rr83J/exec',
+    // Light and dark. false = the site's own pages are dark only: no toggle,
+    // no following the OS, a stored "light" ignored, and the signature in the
+    // bar is a link home (John, 2026-10-28). The OpenProse case studies keep
+    // their own light/dark switch either way: warm paper is that brand's look.
+    // Turning it back on: true here, and the light line back in each page's
+    // head bootstrap (they were a static theme-color meta from v2.52 on).
+    themes: false
   };
   window.JH_SITE = SITE;
 
@@ -55,6 +62,7 @@
     },
     apply: function (mode, persist) {
       const root = document.documentElement;
+      if (!SITE.themes && !THEME.foreign) mode = 'dark';
       // Transitions must not straddle the swap: an element with a transition
       // on `color` keeps the OLD theme's resolved color forever (see
       // .jh-theme-switching in jh-chrome.css). Drop it two frames later —
@@ -135,12 +143,13 @@
         return '<a href="' + n.href + '" class="' + n.cls + (on ? ' active' : '') + '" aria-label="' + n.aria + '"' + (on ? ' aria-current="page"' : '') + '>' + n.svg + n.label + '</a>';
       }).join('');
       // Signature = theme toggle, leftmost in the bar (not on openprose,
-      // which themes itself via data-mode).
-      const sigBtn = THEME.foreign ? '' :
+      // which themes itself via data-mode). With themes off it links home.
+      const sigBtn = THEME.foreign ? '' : SITE.themes ?
         '<button type="button" class="nav-sig-toggle jh-theme-btn" aria-label="Switch theme">' +
-          '<img src="' + SITE.sig + '" alt=""></button>';
+          '<img src="' + SITE.sig + '" alt=""></button>' :
+        '<a href="index.html" class="nav-sig-toggle" aria-label="John Hanacek, home"><img src="' + SITE.sig + '" alt=""></a>';
       this.innerHTML = '<div class="nav-left">' + sigBtn + links + '</div>';
-      const btn = this.querySelector('.nav-sig-toggle');
+      const btn = this.querySelector('.nav-sig-toggle.jh-theme-btn');
       if (btn) btn.addEventListener('click', THEME.toggle);
     }
   }
@@ -153,6 +162,13 @@
     // injection below, not the resolve/persist/OS-follow that follows it. It used
     // to gate the whole function, which is why openprose never stamped data-theme
     // and had nothing to click.
+    // Themes off: this page is dark, and a theme button of its own (the
+    // writing reader's) is put away. openprose keeps all of what follows.
+    if (!SITE.themes && !THEME.foreign) {
+      document.querySelectorAll('.jh-theme-btn').forEach(function (b) { b.hidden = true; });
+      THEME.apply('dark', false);
+      return;
+    }
     if (!THEME.foreign) {
       // Right-edge toggle balances the bar; appended after the page's .nav-right.
       const inner = document.querySelector('#nav .nav-inner');

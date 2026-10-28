@@ -22,14 +22,23 @@
  * starts where the pinch began closing and the pen holds still while the
  * fingers part to lift, so neither end draws a hook.
  *
- * Two hands. One hand draws. A second hand in view scrolls the page: pinch
- * and the page follows it, the way a finger drags a touchscreen, and let go
- * mid-move to fling it. The hand drawing stays the pen and the other scrolls,
- * each followed by its wrist; two arriving at once, the one on your right
- * draws; the pen hand gone, the scroll hand picks up the pen. A hand that
- * takes up the pen opens once before it can draw, so a hand that was holding
- * the page never starts a stroke. The scroll hand's height is read from the
- * camera alone, so the page moving under it cannot feed back into it.
+ * How many hands, what they do. One hand in view scrolls the page: pinch and
+ * the page follows it, the way a finger drags a touchscreen, and let go
+ * mid-move to fling it. Its height is read from the camera alone, so the page
+ * moving under it cannot feed back into it. Two hands in view draw: either one
+ * pinches and it is the pen (the hand that drew last hovers, else the one on
+ * your right). A hand at rest by the keyboard is one hand, and one hand sends
+ * the canvas nothing. Whatever a hand is doing finishes first: a stroke goes on
+ * if the other hand drops away, a scroll goes on if one arrives. After every
+ * change the hands open once before they can pinch, so a hand that was holding
+ * the page never starts a stroke. Both hands open wide, held for OPEN_MS (a
+ * gold arc fills round each palm), open the search bar.
+ *
+ * The real mouse wins. Moved over the canvas or held, the hands send it
+ * nothing for MOUSE_MS, so a hand in view never puts its points into a mouse
+ * stroke (2026-10-28, John: drawing with the cursor while a hand was in view
+ * was buggy). A press ends a hand's stroke before the mouse's begins, and while
+ * a hand draws the mouse's stray moves and its leaving are held back.
  *
  * Presence: a fixed overlay draws a ghost of the hand (its 21 joints as line
  * art) and the nib itself: an open ring that closes as the fingers approach,
@@ -90,12 +99,16 @@
         BETA: 12,
         // px: the ink follows the nib on a string this long (a lazy brush)
         STRING: 8,
-        // The second hand scrolls. Pinched, the page follows it, SCROLL_GAIN
-        // screens for a sweep of the box's height; let go, it coasts on,
-        // slowing by FLING_DECAY a second until it is under FLING_MIN px a second.
+        // One hand scrolls. Pinched, the page follows it, SCROLL_GAIN screens
+        // for a sweep of the box's height; let go, it coasts on, slowing by
+        // FLING_DECAY a second until it is under FLING_MIN px a second.
         SCROLL_GAIN: 1.5,
         FLING_DECAY: 4,
         FLING_MIN: 40,
+        // Both hands open wide this long open the search bar (see readOpen)
+        OPEN_MS: 700,
+        // ms after the real mouse last moved over the canvas that the hands keep off it
+        MOUSE_MS: 1000,
     };
 
     // MediaPipe's bundle, loaded once. A failed import() is cached by the
@@ -159,18 +172,40 @@
         };
     }
 
+    // A hand open wide, the way you show a palm: four fingers straight (each
+    // knuckle-to-tip span over the length of its joints), the thumb away from
+    // the index tip, and the fingers fanned (index tip to little-finger tip,
+    // over the hand's size). A hand hovering to draw keeps its fingers
+    // together (about 0.6-0.95 of its size), so fanned past SPREAD is a sign.
+    const OPEN = { STRAIGHT: 0.9, THUMB: 0.8, SPREAD: 1.15 };
+    function readOpen(lm, aspect) {
+        const P = i => ({ x: lm[i].x * aspect, y: lm[i].y });
+        const d = (a, b) => Math.hypot(P(a).x - P(b).x, P(a).y - P(b).y);
+        const straight = (a, b, c, e) => d(a, e) / Math.max(1e-6, d(a, b) + d(b, c) + d(c, e));
+        const scale = Math.max(1e-4, d(0, 9), 1.25 * d(5, 17));
+        const fingers = Math.min(straight(5, 6, 7, 8), straight(9, 10, 11, 12), straight(13, 14, 15, 16), straight(17, 18, 19, 20));
+        const thumb = d(4, 8) / scale, spread = d(8, 20) / scale;
+        return { fingers, thumb, spread, open: fingers > OPEN.STRAIGHT && thumb > OPEN.THUMB && spread > OPEN.SPREAD };
+    }
+
     function attach(canvas, options = {}) {
         if (!canvas) return null;
         const o = Object.assign({}, T, options);
         let on = false, landmarker = null, stream = null, raf = 0, runs = 0;
-        let lastVideoTime = -1, aspect = 4 / 3, fade = 0, sFade = 0;
-        // The pen hand: present, its pen down or up, the vote that changes it,
-        // and `armed`, which a hand earns by opening once before it may draw
-        let present = false, down = false, vote = 0, armed = false;
-        let pen = null, onset = null, sent = null;
-        // The scroll hand: present, gripping the page or not, and the coast after
-        let sPresent = false, grab = false, sVote = 0, sArmed = false;
-        let sY = 0, sT = 0, vel = 0, fling = 0, flingT = 0;
+        let lastVideoTime = -1, aspect = 4 / 3;
+        // What the hands are doing: 'scroll' (one), 'draw' (two), 'wait'
+        // (the search bar is open) or null (none in view)
+        let mode = null;
+        // Drawing: the pen down or up, the hand holding it, the hand hovering,
+        // the ink, and the last point sent (each hand's `armed`, earned by
+        // opening once, and its `vote` live on the hand)
+        let down = false, penAt = -1, hoverAt = -1, pen = null, sent = null, entered = false;
+        // Scrolling: gripping the page or not, by which hand, and the coast after
+        let grab = false, grabAt = -1, sY = 0, sT = 0, vel = 0, fling = 0, flingT = 0;
+        // Both hands open: the hold's start, how full it is, once per opening
+        let chargeT = 0, charge = 0, fired = false;
+        // The real mouse over the canvas: last moved, or held
+        let mouseT = -Infinity, mouseHeld = false;
         const listeners = new Set();
         let status = 'off';
 
@@ -212,8 +247,11 @@
             hud.dataset.state = s;
             listeners.forEach(f => { try { f(s, text); } catch (e) { /* a listener's problem */ } });
         }
-        const ONE = 'pinch to draw · open to lift · a second hand scrolls';
-        const TWO = 'one hand draws · the other pinches and drags to scroll';
+        const NOTE = {
+            scroll: 'one hand: pinch and drag to scroll · two hands draw',
+            draw: 'two hands: pinch either to draw · open both wide to search',
+            wait: 'search is open · Esc closes it',
+        };
 
         // The canvas's visible part: where the box maps. Null when it has
         // scrolled away, and the hand then only shows, it does not draw.
@@ -244,14 +282,17 @@
         // One tracked hand: its landmark filters and what was last read from it.
         // Where it is, smoothed hard; whether it pinches, read from the raw
         // fingertips and smoothed lightly: a pinch is a small, quick move the
-        // landmark filter would hold back for frames.
+        // landmark filter would hold back for frames. `fresh` is true for the
+        // frame it was seen in: a hand missed for a frame keeps its place (and
+        // its count) but casts no vote on what it last showed.
         function hand() {
             const lmf = Array.from({ length: 21 }, () => [oneEuro(o.MIN_CUTOFF, o.BETA), oneEuro(o.MIN_CUTOFF, o.BETA)]);
             const fp = oneEuro(8, 0);
             return {
+                present: false, fresh: false, armed: false, vote: 0, onset: null, open: false, fade: 0,
                 lm: null, nib: null, v: 0, pinch: 1, palm: 0, wrist: null, seen: 0,
                 read(marks, t) {
-                    this.seen = t;
+                    this.seen = t; this.fresh = true;
                     this.lm = marks.map((p, i) => ({ x: lmf[i][0].filter(p.x, t), y: lmf[i][1].filter(p.y, t) }));
                     const h = readHand(this.lm, aspect), f = frame();
                     this.nib = toScreen(h.nib.u, h.nib.v, f);
@@ -259,15 +300,19 @@
                     this.pinch = fp.filter(readHand(marks, aspect).pinch, t);
                     this.palm = Math.min(o.GHOST_MAX * (f.a.y1 - f.a.y0), Math.max(o.GHOST_MIN, h.scale * f.g * o.GHOST));
                     this.wrist = { u: 1 - marks[0].x, v: marks[0].y };
+                    this.open = readOpen(this.lm, aspect).open;
                 },
                 reset() {
                     lmf.forEach(([fx, fy]) => { fx.reset(); fy.reset(); });
                     fp.reset();
-                    this.lm = null; this.nib = null; this.wrist = null; this.pinch = 1;
+                    this.present = this.fresh = this.armed = this.open = false;
+                    this.vote = 0; this.fade = 0;
+                    this.lm = null; this.nib = null; this.wrist = null; this.onset = null; this.pinch = 1;
                 },
             };
         }
-        let P = hand(), S = hand();      // the pen hand and the scroll hand
+        const H = [hand(), hand()];
+        const live = () => H.filter(h => h.present);
 
         function mouse(type, p) {
             canvas.dispatchEvent(new MouseEvent(type, {
@@ -287,8 +332,8 @@
             sent = p;
         }
         // The ink moves only when the nib pulls its string taut
-        function follow() {
-            const dx = P.nib.x - pen.x, dy = P.nib.y - pen.y, d = Math.hypot(dx, dy);
+        function follow(h) {
+            const dx = h.nib.x - pen.x, dy = h.nib.y - pen.y, d = Math.hypot(dx, dy);
             if (d <= o.STRING) return;
             const k = (d - o.STRING) / d;
             pen = { x: pen.x + dx * k, y: pen.y + dy * k };
@@ -297,123 +342,158 @@
         function penUp() {
             if (!down) return;
             down = false;
-            mouse('mouseup', sent || pen || P.nib);
+            mouse('mouseup', sent || pen || H[penAt].nib);
         }
-        function leave() {
-            penUp();
-            if (present && sent) mouse('mouseleave', sent);
-            present = false; sent = null; pen = null; onset = null; vote = 0; armed = false;
-            P.reset();
+        function hover(h) {
+            hoverAt = H.indexOf(h);
+            if (!entered) { mouse('mouseenter', h.nib); entered = true; }
+            pen = h.nib;
+            moveTo(h.nib);
         }
-        // A hand takes up the pen: it says so, and opens before it can draw
-        function enter(live) {
-            present = true; armed = false;
-            if (live) mouse('mouseenter', P.nib);
-            say('track', sPresent ? TWO : ONE);
+
+        // The real mouse on the canvas. In use, the hands keep off it; its
+        // press ends a hand's stroke first; mid-stroke, its moves and its
+        // leaving are held back from the page, which would take them into the
+        // hand's stroke (or end it). Capture on window: before the page sees it.
+        function onMouse(e) {
+            if (!e.isTrusted) return;
+            if (e.type === 'mouseup') { mouseHeld = false; if (down && e.target === canvas) e.stopImmediatePropagation(); return; }
+            if (e.target !== canvas) return;
+            if (e.type === 'mousedown') { penUp(); mouseHeld = true; mouseT = performance.now(); return; }
+            if (down) { e.stopImmediatePropagation(); return; }
+            if (e.type === 'mousemove') mouseT = performance.now();
         }
+        const MOUSE_EVENTS = ['mousedown', 'mousemove', 'mouseup', 'mouseleave', 'mouseenter'];
+        const mouseBusy = () => mouseHeld || performance.now() - mouseT < o.MOUSE_MS;
+        const searchOpen = () => !!(window.JHSearchOverlay && window.JHSearchOverlay.isOpen);
 
         // One frame of tracking: no hand, one hand's 21 landmarks, or a list of
-        // up to two hands (MediaPipe's `landmarks`). The suite's seam.
-        //
-        // Which hand is which: the hand drawing stays the pen and the other
-        // scrolls (each by its wrist, nearest to where it was). Two arriving at
-        // once: the one on your right draws. The pen hand gone, the scroll hand
-        // picks up the pen.
+        // up to two hands (MediaPipe's `landmarks`). The suite's seam. Each hand
+        // goes to the one whose wrist was nearest last frame, a new one to a
+        // free place; then how many are in view says what they do.
         function feed(input, t) {
-            const hands = !input || !input.length ? [] : Array.isArray(input[0]) ? input.slice(0, 2) : [input];
-            const near = (m, h) => h.wrist ? Math.hypot(1 - m[0].x - h.wrist.u, m[0].y - h.wrist.v) : Infinity;
-            let pm = null, sm = null;
-            if (hands.length === 2) {
-                const [a, b] = hands;
-                const aPens = present ? near(a, P) <= near(b, P)
-                    : sPresent ? near(a, S) > near(b, S)
-                    : (1 - a[0].x) >= (1 - b[0].x);
-                [pm, sm] = aPens ? [a, b] : [b, a];
-            } else if (hands.length === 1) {
-                const m = hands[0];
-                if (present && sPresent) { if (near(m, P) <= near(m, S)) pm = m; else sm = m; }
-                else if (sPresent) sm = m;
-                else pm = m;
+            const seen = !input || !input.length ? [] : Array.isArray(input[0]) ? input.slice(0, 2) : [input];
+            const far = 10;
+            const dist = (m, h) => h.present && h.wrist ? Math.hypot(1 - m[0].x - h.wrist.u, m[0].y - h.wrist.v) : far;
+            let pairs = [];
+            if (seen.length === 2) {
+                const [a, b] = seen;
+                pairs = dist(a, H[0]) + dist(b, H[1]) <= dist(b, H[0]) + dist(a, H[1]) ? [[a, H[0]], [b, H[1]]] : [[b, H[0]], [a, H[1]]];
+            } else if (seen.length === 1) {
+                pairs = [[seen[0], dist(seen[0], H[0]) <= dist(seen[0], H[1]) ? H[0] : H[1]]];
             }
-            if (pm) penFrame(pm, t);
-            else if (present && t - P.seen > o.LOST_MS) {
-                leave();
-                if (sPresent && t - S.seen <= o.LOST_MS) promote();
-                else if (on) say('seek', 'show your hand to the camera');
+            for (const [m, h] of pairs) {
+                if (!h.present) { h.reset(); h.present = true; }
+                h.read(m, t);
             }
-            if (sm) scrollFrame(sm, t);
-            else if (sPresent && t - S.seen > o.LOST_MS) scrollLeave(true, t);
+            for (const h of H) if (h.present && !h.fresh && t - h.seen > o.LOST_MS) lose(h, t);
+            step(t);
+            H.forEach(h => { h.fresh = false; });
         }
 
-        function penFrame(marks, t) {
-            P.read(marks, t);
-            const live = !!area();
-            if (!present) enter(live);
-            if (!live) { penUp(); return; }
-            if (P.pinch > o.UP) armed = true;
-            // The pen changes only when SETTLE frames in a row agree. The nib
-            // where they began agreeing is where a stroke starts.
-            const want = down ? P.pinch < o.UP : armed && P.pinch < o.DOWN;
-            if (want === down) vote = 0;
-            else if (vote++ === 0) onset = P.nib;
-            if (vote >= o.SETTLE) {
-                vote = 0;
-                if (want) {
-                    moveTo(onset);
-                    down = true; pen = onset;
-                    mouse('mousedown', pen);
-                    follow();
+        // A hand gone: what it held lets go (a stroke lifts, a scroll coasts)
+        function lose(h, t) {
+            const i = H.indexOf(h);
+            if (down && penAt === i) penUp();
+            if (grab && grabAt === i) release(t);
+            if (hoverAt === i) hoverAt = -1;
+            h.reset();
+        }
+
+        // One hand scrolls, two draw; whatever is held finishes first; the search bar open, they wait
+        function step(t) {
+            const n = live().length;
+            let want = n === 2 ? 'draw' : n === 1 ? 'scroll' : null;
+            if (down) want = 'draw';
+            else if (grab) want = 'scroll';
+            if (want && searchOpen()) want = 'wait';
+            if (want !== mode) setMode(want, t);
+            if (mode === 'draw') drawStep(t);
+            else if (mode === 'scroll') scrollStep(grab ? H[grabAt] : live()[0], t);
+            gesture(t);
+        }
+        function setMode(m, t) {
+            if (mode === 'draw') {
+                penUp();
+                if (entered && sent) mouse('mouseleave', sent);
+                entered = false; sent = null; pen = null; hoverAt = -1;
+            }
+            if (grab) release(t);
+            mode = m;
+            // Every change starts open: no pinch carries over into the new mode
+            H.forEach(h => { h.armed = false; h.vote = 0; });
+            if (m) say('track', NOTE[m]);
+            else if (on) say('seek', 'show your hand to the camera');
+        }
+
+        function drawStep(t) {
+            const hands = live();
+            hands.forEach(h => { if (h.fresh && h.pinch > o.UP) h.armed = true; });
+            if (!area()) { penUp(); return; }
+            if (down) {
+                const h = H[penAt];
+                if (!h.fresh) return;
+                // Lifts when SETTLE frames agree the fingers have opened; between
+                // DOWN and UP the pen holds still, so parting fingers draw nothing
+                if (h.pinch >= o.UP) {
+                    if (++h.vote >= o.SETTLE) { h.vote = 0; penUp(); hover(h); }
                     return;
                 }
-                penUp();
+                h.vote = 0;
+                if (h.pinch < o.DOWN) follow(h);
+                return;
             }
-            if (!down) { pen = P.nib; moveTo(P.nib); return; }
-            // Drawing: the pen holds while the fingers part, else follows
-            if (P.pinch < o.DOWN) follow();
+            if (mouseBusy()) { hands.forEach(h => { h.vote = 0; }); return; }
+            // Either hand pinching takes the pen. Where its pinch began closing
+            // is where the stroke starts.
+            for (const h of hands) {
+                if (!h.fresh) continue;
+                if (h.armed && h.pinch < o.DOWN) { if (h.vote++ === 0) h.onset = h.nib; }
+                else h.vote = 0;
+            }
+            const p = hands.find(h => h.vote >= o.SETTLE);
+            if (p) {
+                p.vote = 0;
+                penAt = hoverAt = H.indexOf(p);
+                if (!entered) { mouse('mouseenter', p.onset); entered = true; }
+                moveTo(p.onset);
+                down = true; pen = p.onset;
+                mouse('mousedown', pen);
+                follow(p);
+                return;
+            }
+            // Hovering: the hand that drew last, else the one on your right
+            const h = hoverAt >= 0 && H[hoverAt].present ? H[hoverAt]
+                : hands.reduce((a, b) => (b.nib.x > a.nib.x ? b : a));
+            if (h.fresh) hover(h);
         }
 
         // The scroll hand's height in px, read from the camera alone: the page
         // moving under it must not move it
-        const handY = () => S.v * innerHeight / (o.BOX.y1 - o.BOX.y0);
+        const handY = h => h.v * innerHeight / (o.BOX.y1 - o.BOX.y0);
         // Pinched, the page follows the hand (up moves it up); let go, it coasts
-        function scrollFrame(marks, t) {
-            S.read(marks, t);
-            if (!sPresent) { sPresent = true; sArmed = false; say('track', TWO); }
-            if (S.pinch > o.UP) sArmed = true;
-            const want = grab ? S.pinch < o.UP : sArmed && S.pinch < o.DOWN;
-            if (want === grab) sVote = 0;
-            else sVote++;
-            if (sVote >= o.SETTLE) {
-                sVote = 0;
-                grab = want;
-                if (grab) { sY = handY(); sT = t; vel = 0; fling = 0; return; }
+        function scrollStep(h, t) {
+            if (!h || !h.fresh) return;
+            if (h.pinch > o.UP) h.armed = true;
+            const want = grab ? h.pinch < o.UP : h.armed && h.pinch < o.DOWN && !mouseHeld;
+            if (want === grab) h.vote = 0;
+            else h.vote++;
+            if (h.vote >= o.SETTLE) {
+                h.vote = 0;
+                if (want) { grab = true; grabAt = H.indexOf(h); sY = handY(h); sT = t; vel = 0; fling = 0; return; }
                 release(t);
             }
             if (!grab) return;
-            const y = handY(), dt = Math.max(1, t - sT) / 1000;
+            const y = handY(h), dt = Math.max(1, t - sT) / 1000;
             const d = -(y - sY) * o.SCROLL_GAIN;
             if (d) window.scrollBy({ top: d, behavior: 'instant' });
             vel += (d / dt - vel) * 0.5;      // px a second, lightly smoothed, for the coast
             sY = y; sT = t;
         }
         function release(t) {
-            grab = false;
+            grab = false; grabAt = -1;
             fling = Math.abs(vel) > o.FLING_MIN ? vel : 0;
             flingT = t;
-        }
-        function scrollLeave(coast, t) {
-            if (grab && coast) release(t);
-            else if (!coast) fling = 0;
-            grab = false; sVote = 0; sArmed = false; sPresent = false;
-            S.reset();
-            if (present && on) say('track', ONE);
-        }
-        // The scroll hand picks up the pen: its filters carry on, it opens first
-        function promote() {
-            [P, S] = [S, P];
-            grab = false; sVote = 0; sArmed = false; sPresent = false; fling = 0;
-            S.reset();
-            enter(!!area());
         }
         // A fling slows to a stop; the wheel or a new grip stops it at once
         function coast(now) {
@@ -425,6 +505,29 @@
             if (Math.abs(fling) < o.FLING_MIN) fling = 0;
         }
         function onWheel() { fling = 0; }
+
+        // Every hand let go of at once: a new camera, a hidden tab, off
+        function clear() {
+            const t = performance.now();
+            H.forEach(h => { if (h.present) lose(h, t); });
+            setMode(null, t);
+            fling = 0;
+        }
+        // The hand that leads: the pen, else the one hovering, else the first in view
+        const lead = () => [down ? H[penAt] : null, hoverAt >= 0 ? H[hoverAt] : null, ...live()].find(h => h && h.present && h.nib) || null;
+
+        // Both hands open wide and held: the search bar. Once per opening: a
+        // hand has to close (or leave) before it can open the bar again.
+        function gesture(t) {
+            const hands = live();
+            if (hands.length < 2 || !hands.every(h => h.open)) { chargeT = 0; charge = 0; fired = false; return; }
+            if (fired || down || grab || mode !== 'draw') { chargeT = 0; charge = 0; return; }
+            if (!chargeT) chargeT = t;
+            charge = Math.min(1, (t - chargeT) / o.OPEN_MS);
+            if (charge < 1) return;
+            fired = true; charge = 0; chargeT = 0;
+            if (window.JHSearchOverlay) window.JHSearchOverlay.open();
+        }
 
         // A hand's 21 joints as line art around its nib, at its palm's size
         function ghost(h, alpha) {
@@ -452,28 +555,37 @@
 
         function paint() {
             lctx.clearRect(0, 0, innerWidth, innerHeight);
-            // The pen hand, over the water only: scrolled into the content it stays out of the way
-            fade += ((present && area() ? 1 : 0) - fade) * 0.2;
-            if (fade >= 0.02 && P.lm && P.nib) paintPen();
-            // The scroll hand anywhere, so it can bring the water back
-            sFade += ((sPresent ? 1 : 0) - sFade) * 0.2;
-            if (sFade >= 0.02 && S.lm && S.nib) paintScroll();
+            if (mode === 'wait') { H.forEach(h => { h.fade = 0; }); return; }   // the search bar is over it all
+            // Drawing hands wear their nibs over the water only (scrolled into the
+            // content they are a faint ghost); the scrolling hand wears its grip anywhere
+            const water = !!area();
+            const scroller = mode === 'scroll' ? (grab ? H[grabAt] : live()[0]) : null;
+            const lead = down ? penAt : hoverAt;
+            H.forEach((h, i) => {
+                h.fade += ((h.present ? 1 : 0) - h.fade) * 0.2;
+                if (h.fade < 0.02 || !h.lm || !h.nib) return;
+                const pts = h === scroller ? paintScroll(h)
+                    : mode === 'draw' && water ? paintPen(h, i === lead)
+                    : ghost(h, 0.2 * h.fade);
+                if (charge > 0) paintCharge(h, pts);
+            });
         }
-        function paintPen() {
-            const pts = ghost(P, 0.38 * fade);
-            const nib = P.nib;
+        function paintPen(h, lead) {
+            const fade = h.fade * (lead ? 1 : 0.6);
+            const pts = ghost(h, 0.38 * fade);
+            const nib = h.nib, inking = down && H[penAt] === h && pen;
             // The pincer: thumb tip to index tip, brighter as it closes
-            const close = Math.min(1, Math.max(0, (o.OPEN - P.pinch) / (o.OPEN - o.DOWN)));
+            const close = Math.min(1, Math.max(0, (o.OPEN - h.pinch) / (o.OPEN - o.DOWN)));
             lctx.save();
             lctx.globalAlpha = (0.25 + 0.5 * close) * fade;
-            lctx.strokeStyle = down ? ink.down : ink.nib;
+            lctx.strokeStyle = inking ? ink.down : ink.nib;
             lctx.lineWidth = 1.25;
             lctx.beginPath(); lctx.moveTo(pts[4].x, pts[4].y); lctx.lineTo(pts[8].x, pts[8].y); lctx.stroke();
             lctx.restore();
 
             lctx.save();
             lctx.globalAlpha = fade;
-            if (down && pen) {
+            if (inking) {
                 // The string, when the hand has pulled ahead of the ink
                 if (Math.hypot(nib.x - pen.x, nib.y - pen.y) > 2) {
                     lctx.globalAlpha = 0.5 * fade;
@@ -493,14 +605,15 @@
                 lctx.beginPath(); lctx.arc(nib.x, nib.y, 1.5, 0, Math.PI * 2); lctx.fill();
             }
             lctx.restore();
+            return pts;
         }
-        // The scroll hand wears a grip: a ring between two chevrons, gold while it holds the page
-        function paintScroll() {
-            ghost(S, 0.26 * sFade);
-            const { x, y } = S.nib;
+        // The scrolling hand wears a grip: a ring between two chevrons, gold while it holds the page
+        function paintScroll(h) {
+            const pts = ghost(h, 0.26 * h.fade);
+            const { x, y } = h.nib;
             const c = grab ? ink.down : ink.nib;
             lctx.save();
-            lctx.globalAlpha = sFade;
+            lctx.globalAlpha = h.fade;
             lctx.strokeStyle = c; lctx.fillStyle = c; lctx.lineWidth = 1.5;
             lctx.lineCap = 'round'; lctx.lineJoin = 'round';
             lctx.beginPath(); lctx.arc(x, y, grab ? 6 : 9, 0, Math.PI * 2);
@@ -511,6 +624,17 @@
                 lctx.moveTo(x - 6, y + s * gap); lctx.lineTo(x, y + s * (gap + 6)); lctx.lineTo(x + 6, y + s * gap);
                 lctx.stroke();
             }
+            lctx.restore();
+            return pts;
+        }
+        // Both hands held open: a gold arc fills round each palm until the search bar opens
+        function paintCharge(h, pts) {
+            lctx.save();
+            lctx.globalAlpha = 0.9 * h.fade;
+            lctx.strokeStyle = ink.down; lctx.lineWidth = 2; lctx.lineCap = 'round';
+            lctx.beginPath();
+            lctx.arc(pts[9].x, pts[9].y, h.palm, -Math.PI / 2, -Math.PI / 2 + charge * Math.PI * 2);
+            lctx.stroke();
             lctx.restore();
         }
 
@@ -523,7 +647,7 @@
                 let res = null;
                 try { res = landmarker.detectForVideo(video, now); } catch (e) { /* a dropped frame */ }
                 feed(res && res.landmarks, now);
-            } else if ((present || sPresent) && !landmarker) {
+            } else if (H.some(h => h.present) && !landmarker) {
                 feed(null, now);     // driven by feed(): lost hands still leave
             }
             coast(now);
@@ -571,7 +695,7 @@
             if (!on || run !== runs) { s.getTracks().forEach(t => t.stop()); return; }
             if (stream) stream.getTracks().forEach(t => t.stop());
             saveCam(id);
-            leave(); scrollLeave(false);      // a new view: the filters start again
+            clear();      // a new view: the filters start again
             showCamera(s);
         }
 
@@ -581,11 +705,12 @@
             addEventListener('resize', sizeLayer);
             addEventListener('jh-theme-change', readInk);
             addEventListener('wheel', onWheel, { passive: true });
+            MOUSE_EVENTS.forEach(type => addEventListener(type, onMouse, true));
             document.addEventListener('visibilitychange', onVisible);
             if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) navigator.mediaDevices.addEventListener('devicechange', listCameras);
             if (!raf) loop();
         }
-        function onVisible() { if (document.hidden) { if (present) leave(); if (sPresent) scrollLeave(false); } }
+        function onVisible() { if (document.hidden) clear(); }
 
         // Start with camera + model; `{ camera: false }` mounts the overlay
         // alone, for feed()-driven tests.
@@ -624,7 +749,7 @@
         // Off. `keepNote` leaves an error on screen for a few seconds.
         function stop(keepNote) {
             on = false;
-            leave(); scrollLeave(false);
+            clear();
             if (stream) stream.getTracks().forEach(t => t.stop());
             stream = null;
             video.srcObject = null;
@@ -638,6 +763,7 @@
             removeEventListener('resize', sizeLayer);
             removeEventListener('jh-theme-change', readInk);
             removeEventListener('wheel', onWheel);
+            MOUSE_EVENTS.forEach(type => removeEventListener(type, onMouse, true));
             document.removeEventListener('visibilitychange', onVisible);
             if (keepNote) {
                 say(status, note.textContent);       // listeners see `on` is false
@@ -651,10 +777,12 @@
             get on() { return on; },
             get down() { return down; },
             get status() { return status; },
-            get nib() { return P.nib && { x: P.nib.x, y: P.nib.y }; },
+            get nib() { const h = lead(); return h && { x: h.nib.x, y: h.nib.y }; },
             get pen() { return pen && { x: pen.x, y: pen.y }; },
-            get palm() { return P.palm; },
-            get hands() { return (present ? 1 : 0) + (sPresent ? 1 : 0); },
+            get palm() { const h = lead(); return h ? h.palm : 0; },
+            get hands() { return live().length; },
+            get mode() { return mode; },
+            get charge() { return charge; },
             get scrolling() { return grab; },
             get coasting() { return !!fling; },
             setAspect(a) { aspect = a; },
@@ -678,15 +806,15 @@
             input.addEventListener('change', () => { input.checked ? hp.start() : hp.stop(); });
             (window.JH_COMMANDS = window.JH_COMMANDS || []).push({
                 id: 'hand.draw', title: 'Draw with your hand',
-                detail: 'Your webcam as a pen: pinch to draw, open to lift; a second hand pinches and drags to scroll',
-                tags: 'webcam camera hand gesture draw pinch tracking air pen presence two hands scroll',
+                detail: 'Your webcam as a pen: one hand pinches and drags to scroll, two hands draw (pinch either), both open wide opens search',
+                tags: 'webcam camera hand gesture draw pinch tracking air pen presence two hands scroll search',
                 hints: ['draw with my hand', 'use the webcam to draw', 'hand tracking'],
                 run: () => { input.checked = !input.checked; input.dispatchEvent(new Event('change')); },
             });
         });
     }
 
-    window.JHHandPointer = { attach, readHand, T };
+    window.JHHandPointer = { attach, readHand, readOpen, T, OPEN };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire);
     else wire();
 })();
