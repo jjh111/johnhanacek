@@ -99,8 +99,6 @@ never a text color, only borders and glows, so decoration weight is unchanged.
    way (2.6–4.3:1 dark, 1.7–2.3:1 light). Use `--ink-quiet` / `--ink-faint`, which carry
    a real per-theme value. Alpha on *borders, fills and glows* is fine.
 
-**The site's own pages are dark only** (v2.52, John, 2026-10-28: "turn light and dark mode off"): `themes: false` in `SITE` (jh-chrome.js) injects no toggle, ignores the OS and a stored "light", hides any `.jh-theme-btn` a page carries (the writing reader's), and makes the nav signature a link home; each page's head bootstrap is now a static `<meta name="theme-color" content="#020a12">`. The two OpenProse case studies keep their own light/dark switch (warm paper is that brand's look), so the light "Shallows" palette still ships under them and the two rules below still bind. Turning themes back on: `themes: true` and the light line back in the nine bootstraps (git history, v2.51).
-
 **Theme flips must not straddle a transition.** An element with a `transition` on `color`
 does not re-resolve a `var()`-derived color when `data-theme` flips — it keeps the old
 theme's computed value indefinitely. jh-chrome.js adds `.jh-theme-switching` around the
@@ -136,8 +134,7 @@ a theme was always fine; only the live toggle broke, which is why it went unnoti
 
 **Accessibility:**
 - WCAG AA compliant color contrast — **verified, not assumed**: `Agent Reference/maze-tests/contrasttest.mjs`
-  sweeps 12 pages × both themes × both entry paths (a page that does not take a stored light,
-  every one but the OpenProse pages since v2.52, reads "dark only"; loaded into a theme, and the real
+  sweeps 10 pages × both themes × both entry paths (loaded into a theme, and the real
   `.jh-theme-btn` clicked) and exits non-zero on any failure. Currently 0. Run it after
   any color, weight or size change; measuring by flipping `data-theme` from JS alone
   reads mid-transition values and will lie to you.
